@@ -202,6 +202,18 @@ export default defineConfig({
       "lib/projects/miniatura-en-vuelo.test.ts",
       // La carpeta (pieza 9 de Len 2.5): su huella publicable.
       "lib/projects/files-hash.test.ts",
+      // F2 de las apps web: deshacer un turno entero, todo o nada (el plan, puro;
+      // la sentencia, contra Postgres).
+      "lib/projects/deshacer-turno-plan.test.ts",
+      "lib/projects/deshacer-turno.pg.test.ts",
+      // Compartir el proyecto: quién entra a qué, y las invitaciones.
+      "lib/projects/miembros.pg.test.ts",
+      "lib/projects/hilos.pg.test.ts",
+      "lib/projects/chat-equipo.pg.test.ts",
+      "lib/agent/turnos-desde-el-servidor.test.ts",
+      "lib/projects/autor-del-cambio.test.ts",
+      "lib/projects/correos-del-proyecto.test.ts",
+      "lib/projects/nacer-como-app.pg.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
@@ -315,6 +327,8 @@ export default defineConfig({
       "lib/agent/diario-del-turno.test.ts",
       // H4 parte 3: el historial desde la base, con su microcompact.
       "lib/agent/transcripcion.test.ts",
+      "lib/agent/equipo.test.ts",
+      "lib/agent/plegar-equipo.test.ts",
       // A · las fotos de la conversación (del almacén en dev, de internet si
       // no). `include` es LISTA BLANCA: sin esta línea no correría.
       "lib/agent/fotos-de-la-conversacion.test.ts",
@@ -439,6 +453,10 @@ export default defineConfig({
       "lib/agent/reloj-de-silencio.test.ts",
       "lib/agent/context.test.ts",
       "lib/agent/manual-de-la-plataforma.test.ts",
+      // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
+      "lib/agent/modo-app.test.ts",
+      "lib/agent/compila-la-app.test.ts",
+      "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
@@ -521,6 +539,9 @@ export default defineConfig({
       // salvo `documento.ts` (binding nativo, que vitest SÍ carga). `include`
       // es LISTA BLANCA: sin esta línea estas pruebas no corren nunca.
       "lib/lienzo/**/*.test.ts",
+      // Las apps web (spec local 2026-10-07-apps): el catálogo, el compilador
+      // y el documento de la app. Puro salvo lo que lee `public/app-vendor/`.
+      "lib/apps/**/*.test.ts",
       // `fixRedirectHost` del middleware: producción en la caja vs. producción en local.
       "lib/middleware-redirect-host.test.ts",
       "lib/publish/base-host.test.ts",
@@ -559,6 +580,14 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
+      "app/api/projects/[id]/hilos/route.test.ts",
+      // El chat del equipo: escribir a una persona del proyecto.
+      "app/api/projects/[id]/chat/mensajes/route.test.ts",
+      // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
+      "app/api/projects/[id]/publish/route.test.ts",
+      // F2 de las apps web: deshacer un turno entero.
+      "app/api/projects/[id]/turnos/[turnId]/deshacer/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
       "app/api/projects/*/ficheros/versions/**/*.test.ts",
       // Exportar lleva la carpeta (pieza 9 de Len 2.5).

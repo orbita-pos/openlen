@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Imagem enviada",
     "imagesSent": "{count} imagens enviadas",
-    "homePage": "Início"
+    "homePage": "Início",
+    "desdeElHilo": "da conversa · {donde}"
   },
   "proceso": {
     "completadoEn": "Concluído em <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "O de todos os dias: rápido e para quase tudo",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Para trabalhos grandes: pensa o máximo possível antes de cada passo. Demora mais e gasta mais créditos",
-    "effortDynamis": "O Len Odyssey sempre pensa o máximo possível"
+    "effortDynamis": "O Len Odyssey sempre pensa o máximo possível",
+    "soloLectura": "Você pode ver este projeto, mas não alterá-lo. Peça ao dono acesso de editor."
+  },
+  "equipo": {
+    "paraLen": "Para o Len",
+    "paraPersonas": "Para {nombres} · o Len não responde",
+    "paraLenYPersonas": "Para o Len e {nombres}",
+    "soloEditoresLen": "Só editores podem pedir coisas ao Len",
+    "enviarA": "Enviar para {nombre}",
+    "deA": "{autor} → {para} · o Len não responde",
+    "mencionar": "Mencionar {nombre}",
+    "error": "Não foi possível enviar. Tente de novo.",
+    "placeholder": "Escreva ao Len, ou @ para falar com alguém do projeto…"
   },
   "noChange": {
     "label": "Nada mudou na página"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
     "failedNetwork": "Não foi possível desfazer: o servidor não respondeu — a alteração continua aplicada. Tenta de novo.",
-    "failedResponse": "Não foi possível desfazer: o servidor respondeu sem a página — a alteração continua aplicada. Tenta de novo."
+    "failedResponse": "Não foi possível desfazer: o servidor respondeu sem a página — a alteração continua aplicada. Tenta de novo.",
+    "failedOverlap": "Não foi possível desfazer: {rutas} mudou depois deste turno, e desfazê-lo apagaria isso. Nada foi desfeito.",
+    "notUndone": "Desfeito, exceto {rutas}: desfazer um turno não traz de volta a base de dados, a memória nem as configurações."
   },
   "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
   "memoria": {

@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
+import { exigirAcceso } from "@/lib/projects/acceso";
+import { cabeEnElTope, sumarGasto } from "@/lib/projects/miembros";
 import { AI_IMAGE_EDIT_CREDIT_COST, debitCredits, getCreditState } from "@/lib/credits";
 import { editImage, realImageEditTransport } from "@/lib/ai/image-edit-core";
 
@@ -41,13 +41,12 @@ export async function POST(
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
 
-  // Ownership gate.
-  const rows = await db
-    .select({ id: schema.projects.id })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
-    .limit(1);
-  if (rows.length === 0) return json({ error: "not_found" }, 404);
+  // Access gate: the owner and the project's editors. PAYS THE OWNER — a
+  // member's spend counts against the project's monthly members cap.
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
+  const pagador = acceso.duenoId;
+  const esMiembro = acceso.rol !== "dueno";
 
   let bodyJson: unknown;
   try {
@@ -78,7 +77,10 @@ export async function POST(
   }
 
   // Credit gate. Flat cost; only enough to guarantee the user can pay.
-  const credit = await getCreditState(userId);
+  if (esMiembro && !(await cabeEnElTope(id, AI_IMAGE_EDIT_CREDIT_COST))) {
+    return json({ error: "tope_de_miembros" }, 402);
+  }
+  const credit = await getCreditState(pagador);
   if (credit.balance < AI_IMAGE_EDIT_CREDIT_COST) {
     return json(
       { error: "insufficient_credits", needed: AI_IMAGE_EDIT_CREDIT_COST, balance: credit.balance },
@@ -88,7 +90,13 @@ export async function POST(
 
   const result = await editImage(
     { imageBase64, mimeType, prompt: cleanPrompt },
-    { callProvider: realImageEditTransport(), debit: (cost) => debitCredits(userId, cost) },
+    {
+      callProvider: realImageEditTransport(),
+      debit: async (cost) => {
+        await debitCredits(pagador, cost);
+        if (esMiembro) await sumarGasto(id, userId, cost);
+      },
+    },
   );
   if ("error" in result) return json(result.body, result.status);
   return json(

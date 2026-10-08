@@ -214,5 +214,11 @@
   },
   "sections": {
     "comingSoon": "Coming here in the next step."
+  },
+  "compartidos": {
+    "titulo": "Shared with you",
+    "de": "by {nombre}",
+    "rolEditor": "Editor",
+    "rolLector": "View only"
   }
 }

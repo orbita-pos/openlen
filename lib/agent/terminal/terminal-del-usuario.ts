@@ -13,8 +13,9 @@
  * tanto), con dos diferencias:
  *   · PERSISTE entre comandos, como una terminal de verdad: una por usuario y
  *     proyecto, cerrada a los 10 minutos sin uso.
- *   · Va con `autor: "usuario"`: no puede meter código que el sitio no tenía
- *     (`javascript-del-usuario.ts`) y su versión dice que fue la terminal.
+ *   · Va con `autor: "usuario"`: su versión dice que fue la terminal. Escribe
+ *     JavaScript como cualquier otro texto desde el 2026-10-07 (el ⚰️ de
+ *     `guardarEnLaCarpeta` en herramientas-de-ficheros.ts).
  * Un comando cada vez por terminal: dos a la vez se pisarían la copia.
  */
 import "server-only";
@@ -49,13 +50,19 @@ export interface ComandoDelUsuario {
   readonly cambios?: CambiosDelComando;
 }
 
+/**
+ * `userId` es el DUEÑO del proyecto (con él se leen y guardan los ficheros);
+ * `quien`, la persona que teclea: un miembro del proyecto tiene su propia
+ * terminal, no la del dueño (compartir el proyecto, lib/projects/acceso.ts).
+ */
 export function ejecutarEnLaTerminalDelUsuario(
   projectId: string,
   userId: string,
   command: string,
   deps: AgentDeps = realDeps(),
+  quien: string = userId,
 ): Promise<ComandoDelUsuario> {
-  const clave = `${userId}\u0000${projectId}`;
+  const clave = `${quien}\u0000${projectId}`;
   let a = abiertas.get(clave);
   if (!a) {
     if (abiertas.size >= MAX_ABIERTAS) {

@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, one {# Seite gelöscht} other {# Seiten gelöscht}}",
     "bulkArchived": "{count, plural, one {# Seite archiviert} other {# Seiten archiviert}}",
     "somethingWrong": "Etwas ist schiefgelaufen"
+  },
+  "compartidos": {
+    "titulo": "Mit dir geteilt",
+    "de": "von {nombre}",
+    "rolEditor": "Bearbeiter",
+    "rolLector": "Nur ansehen"
   }
 }

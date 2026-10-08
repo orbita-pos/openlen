@@ -81,7 +81,8 @@
       "pagina": "미리보기",
       "codigo": "코드",
       "terminal": "터미널",
-      "cambios": "변경 사항"
+      "cambios": "변경 사항",
+      "app": "앱"
     },
     "toolbar": {
       "editPage": "페이지 편집 (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, other {그 외 #건.}}",
       "sinContenido": "{count, plural, other {열 때 계산되는 파일 #개는 이름으로만 검색합니다.}}",
       "marcaNuevo": "이번 세션에서 새로 생김",
-      "marcaCambiado": "이번 세션에서 변경됨"
+      "marcaCambiado": "이번 세션에서 변경됨",
+      "titleApp": "앱의 코드"
     },
     "terminal": {
       "title": "Len의 터미널",
@@ -202,16 +204,83 @@
       "tope": "이미 댓글 10개가 대기 중입니다. 먼저 메시지를 보내세요."
     },
     "editar": {
-      "editar": "편집",
       "guardar": "저장",
       "guardando": "저장 중…",
-      "descartar": "취소",
       "cargando": "불러오는 중…",
       "cambio": "편집하는 동안 이 파일이 바뀌었습니다(Len, 편집기 또는 내 터미널). 아무것도 저장되지 않았습니다.",
       "cargarAhora": "현재 내용 불러오기",
       "rechazado": "저장되지 않음:",
       "error": "저장하지 못했습니다.",
       "nota": "내 버전으로 저장되며, Len은 다음 턴에 확인합니다."
+    },
+    "appSinLienzo": "여기서는 앱을 실행할 수 없습니다: 실제 캔버스가 응답하지 않습니다. 코드는 코드 렌즈에 있고, 게시하면 작동합니다.",
+    "verCodigo": "코드 보기",
+    "direccionApp": "앱",
+    "ide": {
+      "nuevoArchivo": "새 파일",
+      "nuevaCarpeta": "새 폴더",
+      "contraer": "폴더 접기",
+      "actualizar": "새로 고침",
+      "acciones": "추가 작업",
+      "renombrar": "이름 바꾸기",
+      "borrar": "삭제",
+      "copiarRuta": "경로 복사",
+      "nombre": "이름",
+      "nombreInvalido": "영문자, 숫자, “-”, “_”, “.”만 쓰고 공백은 넣지 마세요. “/”로 폴더를 만듭니다.",
+      "existe": "{ruta}이(가) 이미 있습니다.",
+      "pagina": "페이지는 여기서 이름을 바꾸거나 옮길 수 없습니다: 주소와 링크가 이름에 달려 있습니다.",
+      "portada": "홈 페이지(/index.html)는 삭제할 수 없습니다.",
+      "confirmarBorrar": "{ruta}을(를) 삭제할까요? 버전에 남고, Len은 다음 턴에 확인합니다.",
+      "confirmarBorrarCarpeta": "{ruta} 폴더와 그 안의 모든 것을 삭제할까요?",
+      "confirmarCerrar": "{nombre}에 저장하지 않은 변경이 있습니다. 닫고 버릴까요?",
+      "cerrarPestana": "닫기",
+      "sinGuardar": "저장 안 됨",
+      "vacio": "탐색기에서 파일을 열거나 새로 만드세요.",
+      "comentarAyuda": "줄 번호를 클릭하면 그 줄을 Len에게 코멘트할 수 있습니다.",
+      "carpetaVacia": "비어 있음: 안에 파일을 만들면 저장됩니다.",
+      "cerrarAviso": "알림 닫기",
+      "noSeHizo": "실행되지 않음:",
+      "editor": {
+        "Find": "찾기",
+        "Replace": "바꾸기",
+        "next": "다음",
+        "previous": "이전",
+        "all": "모두",
+        "match_case": "대소문자",
+        "regexp": "정규식",
+        "by_word": "단어 단위",
+        "replace": "바꾸기",
+        "replace_all": "모두 바꾸기",
+        "close": "닫기",
+        "Go_to_line": "줄로 이동",
+        "go": "이동",
+        "Fold_line": "접기",
+        "Unfold_line": "펼치기"
+      },
+      "dividir": "오른쪽으로 분할",
+      "subidos": "{count, plural, other {파일 #개를 업로드했습니다.}}",
+      "noSubidos": "업로드되지 않음:",
+      "motivoTipo": "텍스트 파일(코드, CSS, JSON, SVG 등)만 업로드됩니다. 사진은 이미지에 올리세요",
+      "motivoGrande": "1MB를 넘습니다",
+      "motivoNombre": "이름에 공백이나 허용되지 않는 문자가 있습니다",
+      "motivoDemasiados": "한 번에 너무 많습니다(최대 {max}개)",
+      "reemplazar": "{count, plural, one {{lista}이(가) 이미 있습니다. 바꿀까요?} other {{lista}이(가) 이미 있습니다. 바꿀까요?}}",
+      "abrirAlLado": "여기에 놓으면 옆에 엽니다",
+      "subiendo": "업로드 중…",
+      "hilos": {
+        "placeholder": "바꿀 내용… @를 입력해 Len이나 프로젝트 멤버를 언급하세요.",
+        "comentar": "댓글",
+        "responder": "답글",
+        "placeholderRespuesta": "답글… (@로 언급)",
+        "resolver": "해결",
+        "reabrir": "다시 열기",
+        "resuelto": "해결됨",
+        "len": "Len",
+        "soloEditoresLen": "편집 권한이 있는 사람만 Len에게 변경을 요청할 수 있습니다.",
+        "error": "실패했습니다. 다시 시도하세요.",
+        "mencionado": "여기서 언급되었습니다",
+        "trabajando": "Len이 작업 중…"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "또는 내 HTML 붙여넣기",
     "galleryHeading": "검증된 템플릿",
     "search": "템플릿 검색…",
-    "noResults": "“{query}”에 대한 결과가 없습니다"
+    "noResults": "“{query}”에 대한 결과가 없습니다",
+    "kind": {
+      "label": "무엇을 만들까요?",
+      "page": "페이지",
+      "pageHint": "비즈니스용 웹사이트: 랜딩, 메뉴, 포트폴리오",
+      "app": "앱",
+      "appHint": "사용하는 것: POS, 예약, 로그인이 있는 대시보드",
+      "appPlaceholder": "앱을 설명하세요: 무엇을 하고, 누가 쓰는지…",
+      "headline": "다음 앱은 여기서 시작됩니다",
+      "subtitle": "무엇을 해야 하는지 Len에게 말하면 화면, 데이터, 로그인까지 만들어 줍니다."
+    }
   },
   "empty": {
     "badge": "OpenLen 워크스페이스",

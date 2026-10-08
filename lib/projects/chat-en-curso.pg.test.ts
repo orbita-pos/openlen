@@ -145,4 +145,11 @@ describe("la fila del turno en curso, contra Postgres", () => {
     // Y un turno sin foto la trae vacía, no inventada.
     expect(historial.find((f) => f.assistantReasoning === "Hecho.")?.attachedImage).toBeNull();
   });
+
+  it("🔴 cada turno dice quién lo pidió: el miembro que lo pidió, o el dueño si no lo dice", async () => {
+    await abrirFilaDelTurno(PROYECTO, { id: "fila-de-otro", userText: "el miembro pide", page: null, autorId: OTRO });
+    const conversacion = await getChatMessages(PROYECTO);
+    expect(conversacion.find((t) => t.id === "fila-de-otro")?.autor).toBe(`${OTRO}@ejemplo.invalido`);
+    expect(conversacion.find((t) => t.id === "fila-a")?.autor).toBe(`${USUARIO}@ejemplo.invalido`);
+  });
 });

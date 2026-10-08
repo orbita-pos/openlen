@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Imagen enviada",
     "imagesSent": "{count} imágenes enviadas",
-    "homePage": "Inicio"
+    "homePage": "Inicio",
+    "desdeElHilo": "desde el hilo · {donde}"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "El de todos los días: rápido y para casi todo",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Para encargos grandes: piensa todo lo que puede antes de cada paso. Tarda más y gasta más créditos",
-    "effortDynamis": "Len Odyssey siempre piensa todo lo que puede"
+    "effortDynamis": "Len Odyssey siempre piensa todo lo que puede",
+    "soloLectura": "Puedes ver este proyecto, pero no cambiarlo. Pídele al dueño acceso de editor."
+  },
+  "equipo": {
+    "paraLen": "Para Len",
+    "paraPersonas": "Para {nombres} · Len no responde",
+    "paraLenYPersonas": "Para Len y {nombres}",
+    "soloEditoresLen": "Solo los editores pueden pedirle cosas a Len",
+    "enviarA": "Enviar a {nombre}",
+    "deA": "{autor} → {para} · Len no responde",
+    "mencionar": "Mencionar a {nombre}",
+    "error": "No se pudo enviar. Inténtalo de nuevo.",
+    "placeholder": "Escribe a Len, o @ para hablar con alguien del proyecto…"
   },
   "noChange": {
     "label": "No cambió nada de la página"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
     "failedNetwork": "No se pudo deshacer: el servidor no respondió — el cambio sigue aplicado. Inténtalo otra vez.",
-    "failedResponse": "No se pudo deshacer: el servidor respondió sin la página — el cambio sigue aplicado. Inténtalo otra vez."
+    "failedResponse": "No se pudo deshacer: el servidor respondió sin la página — el cambio sigue aplicado. Inténtalo otra vez.",
+    "failedOverlap": "No se pudo deshacer: {rutas} cambió después de este turno, y deshacerlo lo borraría. No se deshizo nada.",
+    "notUndone": "Deshecho, salvo {rutas}: deshacer un turno no devuelve la base de datos, la memoria ni los ajustes."
   },
   "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
   "memoria": {

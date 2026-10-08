@@ -81,7 +81,8 @@
       "pagina": "Vorschau",
       "codigo": "Code",
       "terminal": "Terminal",
-      "cambios": "Änderungen"
+      "cambios": "Änderungen",
+      "app": "App"
     },
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, one {Und # weiterer Treffer.} other {Und # weitere Treffer.}}",
       "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}",
       "marcaNuevo": "Neu in dieser Sitzung",
-      "marcaCambiado": "In dieser Sitzung geändert"
+      "marcaCambiado": "In dieser Sitzung geändert",
+      "titleApp": "Der Code deiner App"
     },
     "terminal": {
       "title": "Lens Terminal",
@@ -202,16 +204,83 @@
       "tope": "Es warten schon 10 Kommentare: schick zuerst die Nachricht."
     },
     "editar": {
-      "editar": "Bearbeiten",
       "guardar": "Speichern",
       "guardando": "Wird gespeichert…",
-      "descartar": "Verwerfen",
       "cargando": "Wird geladen…",
       "cambio": "Diese Datei hat sich geändert, während du sie bearbeitet hast (Len, der Editor oder dein Terminal). Es wurde nichts gespeichert.",
       "cargarAhora": "Aktuelle Fassung laden",
       "rechazado": "Nicht gespeichert:",
       "error": "Konnte nicht speichern.",
       "nota": "Wird als deine Version gespeichert; Len sieht es in seinem nächsten Durchlauf."
+    },
+    "appSinLienzo": "Die App kann hier nicht laufen: Die echte Leinwand antwortet nicht. Ihr Code ist in der Ansicht Code, und veröffentlicht funktioniert sie.",
+    "verCodigo": "Code ansehen",
+    "direccionApp": "App",
+    "ide": {
+      "nuevoArchivo": "Neue Datei",
+      "nuevaCarpeta": "Neuer Ordner",
+      "contraer": "Ordner einklappen",
+      "actualizar": "Aktualisieren",
+      "acciones": "Weitere Aktionen",
+      "renombrar": "Umbenennen",
+      "borrar": "Löschen",
+      "copiarRuta": "Pfad kopieren",
+      "nombre": "Name",
+      "nombreInvalido": "Buchstaben, Zahlen, „-“, „_“ und „.“, ohne Leerzeichen. Ein „/“ legt Ordner an.",
+      "existe": "{ruta} existiert bereits.",
+      "pagina": "Seiten werden hier nicht umbenannt oder verschoben: Ihre Adresse und ihre Links hängen vom Namen ab.",
+      "portada": "Die Startseite (/index.html) kann nicht gelöscht werden.",
+      "confirmarBorrar": "{ruta} löschen? Es bleibt in Versionen, und Len sieht es in seinem nächsten Zug.",
+      "confirmarBorrarCarpeta": "Den Ordner {ruta} mit allem Inhalt löschen?",
+      "confirmarCerrar": "{nombre} hat ungespeicherte Änderungen. Schließen und verwerfen?",
+      "cerrarPestana": "Schließen",
+      "sinGuardar": "Nicht gespeichert",
+      "vacio": "Öffne eine Datei im Explorer oder erstelle eine neue.",
+      "comentarAyuda": "Klicke auf eine Zeilennummer, um sie für Len zu kommentieren.",
+      "carpetaVacia": "Leer: wird gespeichert, sobald du darin eine Datei anlegst.",
+      "cerrarAviso": "Hinweis schließen",
+      "noSeHizo": "Nicht ausgeführt:",
+      "editor": {
+        "Find": "Suchen",
+        "Replace": "Ersetzen",
+        "next": "weiter",
+        "previous": "zurück",
+        "all": "alle",
+        "match_case": "Groß/klein",
+        "regexp": "Regex",
+        "by_word": "ganzes Wort",
+        "replace": "ersetzen",
+        "replace_all": "alle ersetzen",
+        "close": "schließen",
+        "Go_to_line": "Gehe zu Zeile",
+        "go": "los",
+        "Fold_line": "Einklappen",
+        "Unfold_line": "Ausklappen"
+      },
+      "dividir": "Rechts teilen",
+      "subidos": "{count, plural, one {# Datei hochgeladen.} other {# Dateien hochgeladen.}}",
+      "noSubidos": "Nicht hochgeladen:",
+      "motivoTipo": "nur Textdateien werden hochgeladen (Code, CSS, JSON, SVG…); Fotos gehören zu Bilder",
+      "motivoGrande": "größer als 1 MB",
+      "motivoNombre": "der Name enthält Leerzeichen oder unzulässige Zeichen",
+      "motivoDemasiados": "zu viele auf einmal (höchstens {max})",
+      "reemplazar": "{count, plural, one {{lista} existiert bereits. Ersetzen?} other {{lista} existieren bereits. Ersetzen?}}",
+      "abrirAlLado": "Hier ablegen, um es daneben zu öffnen",
+      "subiendo": "Wird hochgeladen…",
+      "hilos": {
+        "placeholder": "Was ändern … Tippe @, um Len oder jemanden aus dem Projekt zu erwähnen.",
+        "comentar": "Kommentieren",
+        "responder": "Antworten",
+        "placeholderRespuesta": "Antworten … (@ zum Erwähnen)",
+        "resolver": "Erledigt",
+        "reabrir": "Wieder öffnen",
+        "resuelto": "Erledigt",
+        "len": "Len",
+        "soloEditoresLen": "Nur wer bearbeiten darf, kann Len um Änderungen bitten.",
+        "error": "Das hat nicht geklappt. Versuch es noch einmal.",
+        "mencionado": "Du wurdest hier erwähnt",
+        "trabajando": "Len ist dran …"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "oder füge dein eigenes HTML ein",
     "galleryHeading": "Geprüfte Vorlagen",
     "search": "Vorlagen suchen…",
-    "noResults": "Keine Ergebnisse für „{query}“"
+    "noResults": "Keine Ergebnisse für „{query}“",
+    "kind": {
+      "label": "Was möchtest du erstellen?",
+      "page": "Seite",
+      "pageHint": "Eine Website für dein Business: Landingpage, Speisekarte, Portfolio",
+      "app": "App",
+      "appHint": "Etwas zum Benutzen: Kasse, Terminbuchung, Dashboard mit Login",
+      "appPlaceholder": "Beschreibe deine App: was sie tut, wer sie nutzt…",
+      "headline": "Deine nächste App beginnt hier",
+      "subtitle": "Sag Len, was sie können soll, und er baut sie: ihre Screens, ihre Daten und ihren Login."
+    }
   },
   "empty": {
     "badge": "OpenLen Workspace",

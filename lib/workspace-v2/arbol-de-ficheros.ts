@@ -27,19 +27,24 @@ interface Carpeta {
 const porNombre = (a: NodoDelArbol, b: NodoDelArbol) =>
   a.tipo !== b.tipo ? (a.tipo === "carpeta" ? -1 : 1) : a.nombre.localeCompare(b.nombre, "es");
 
-export function arbolDeFicheros(ficheros: readonly { readonly ruta: string; readonly perezoso?: boolean }[]): NodoDelArbol[] {
+/** `carpeta: true` es una carpeta VACÍA que el dueño acaba de crear en el
+ *  explorador: una carpeta son sus ficheros, así que hasta que tenga uno sólo
+ *  existe aquí. */
+export function arbolDeFicheros(
+  ficheros: readonly { readonly ruta: string; readonly perezoso?: boolean; readonly carpeta?: boolean }[],
+): NodoDelArbol[] {
   const raiz: Carpeta = { carpetas: new Map(), ficheros: new Map() };
-  for (const { ruta, perezoso } of ficheros) {
+  for (const { ruta, perezoso, carpeta } of ficheros) {
     const partes = ruta.split("/").filter(Boolean);
-    const nombre = partes.pop();
-    if (!nombre) continue;
+    const nombre = carpeta ? undefined : partes.pop();
+    if (!nombre && !carpeta) continue;
     let aqui = raiz;
     for (const p of partes) {
       let dentro = aqui.carpetas.get(p);
       if (!dentro) aqui.carpetas.set(p, (dentro = { carpetas: new Map(), ficheros: new Map() }));
       aqui = dentro;
     }
-    aqui.ficheros.set(nombre, perezoso === true);
+    if (nombre) aqui.ficheros.set(nombre, perezoso === true);
   }
   const nodos = (c: Carpeta, base: string): NodoDelArbol[] =>
     [

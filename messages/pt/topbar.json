@@ -112,5 +112,70 @@
     "passcodeSet": "Definir",
     "passcodeSetToast": "Senha definida",
     "passcodeClearedToast": "Senha removida"
+  },
+  "miembros": {
+    "boton": "Convidar",
+    "titulo": "Membros do projeto",
+    "subtitulo": "Trabalham neste projeto com você. O que pedem ao Len é pago com seus créditos.",
+    "subtituloMiembro": "Quem trabalha neste projeto.",
+    "correo": "E-mail",
+    "rol": "Função",
+    "invitar": "Convidar",
+    "rolEditor": "Editor",
+    "rolLector": "Somente leitura",
+    "rolEditorAyuda": "Edita o código e as páginas, fala com o Len e publica.",
+    "rolLectorAyuda": "Vê o projeto sem mudar nada.",
+    "dueno": "Dono",
+    "tu": "(você)",
+    "pendiente": "Convite enviado",
+    "cancelar": "Cancelar convite",
+    "quitar": "Remover",
+    "salir": "Sair do projeto",
+    "confirmarSalir": "Sair de “{titulo}”? Você precisará de um novo convite para voltar.",
+    "confirmarQuitar": "Remover {nombre} do projeto?",
+    "enviada": "Convite enviado para {correo}.",
+    "vacio": "Ainda não há mais ninguém. Convide por e-mail.",
+    "tope": "Limite do Len para membros",
+    "topeAyuda": "Créditos por mês que podem gastar, somando todos. Vazio = sem limite.",
+    "sinTope": "Sem limite",
+    "guardarTope": "Salvar",
+    "topeGuardado": "Limite salvo.",
+    "gastado": "Este mês: {gastado} créditos.",
+    "gastadoDe": "Este mês: {gastado} de {tope} créditos.",
+    "gastoDeMiembro": "{n} créditos este mês",
+    "cargando": "Carregando…",
+    "cerrar": "Fechar",
+    "errores": {
+      "tuMismo": "Esse e-mail é o seu.",
+      "yaEsMiembro": "Já é membro.",
+      "limite": "No máximo {max} pessoas por projeto.",
+      "generico": "Não deu certo. Tente de novo."
+    },
+    "email": {
+      "asuntoEditor": "{quien} convidou você para trabalhar em {titulo} no OpenLen",
+      "asuntoLector": "{quien} convidou você para ver {titulo} no OpenLen",
+      "fraseEditor": "{quien} convidou você para trabalhar em “{titulo}”: editar o código e as páginas, e pedir mudanças ao Len.",
+      "fraseLector": "{quien} convidou você para ver “{titulo}”.",
+      "titulo": "Você foi convidado",
+      "aceptar": "Aceitar o convite",
+      "cuenta": "Se ainda não tem conta no OpenLen, você cria uma grátis ao aceitar. O link vale por 7 dias.",
+      "pegar": "Ou cole este link no navegador:",
+      "ignorar": "Se você não esperava este convite, pode ignorar este e-mail.",
+      "alguien": "Alguém"
+    },
+    "mencion": {
+      "asunto": "{quien} mencionou você em {titulo}",
+      "donde": "Em {ruta}, linha {linea}:",
+      "ver": "Abrir a conversa",
+      "dondeChat": "No chat do projeto:",
+      "verChat": "Abrir o chat"
+    },
+    "hilo": {
+      "fallo": "Não consegui fazer: {motivo}",
+      "falloSinMotivo": "Não cheguei a fazer. Peça de novo pela conversa.",
+      "topeAgotado": "o limite mensal do Len para os membros deste projeto acabou. O dono pode aumentá-lo em «Convidar».",
+      "sinCreditos": "não há mais créditos na conta do dono do projeto.",
+      "interrumpido": "O servidor reiniciou enquanto eu fazia isto, então pode ter ficado pela metade. Confira as alterações e, se precisar, peça de novo pela conversa."
+    }
   }
 }

@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, other {# 件のページを削除しました}}",
     "bulkArchived": "{count, plural, other {# 件のページをアーカイブしました}}",
     "somethingWrong": "問題が発生しました"
+  },
+  "compartidos": {
+    "titulo": "共有されたプロジェクト",
+    "de": "{nombre} さん",
+    "rolEditor": "編集者",
+    "rolLector": "閲覧のみ"
   }
 }

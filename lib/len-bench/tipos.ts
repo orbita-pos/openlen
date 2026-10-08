@@ -18,6 +18,23 @@ import type { ProjectData } from "@/lib/projects/types";
 
 export type Nivel = "N1" | "N2" | "N3";
 
+/**
+ * UN PROYECTO DEL CASO: lo de `projects.data` y, en una APP, los ficheros de su
+ * carpeta (`projectFiles`: /src y compañía), que no viven en `data`. Al crear el
+ * proyecto de usar y tirar se separan (`createThrowawayProject`).
+ */
+export type DatosDelCaso = ProjectData & { readonly ficheros?: Readonly<Record<string, string>> };
+
+/** Lo que dio la verificación de la app (compila y el cascarón la arranca) al
+ *  cerrar un paso del guion. Ver `app-verificada.ts`. */
+export interface VerificacionDeLaApp {
+  /** El paso del guion (0 = el primer mensaje). */
+  readonly paso: number;
+  readonly ok: boolean;
+  /** Lo que falla, como lo dice el compilador. Vacío si `ok`. */
+  readonly problemas: readonly string[];
+}
+
 /** Un resultado de buscar en la web, con los campos que da un buscador de verdad. */
 export interface ResultadoDeBusqueda {
   readonly titulo: string;
@@ -80,6 +97,9 @@ export interface ContextoDeCalificacion {
   readonly datos: ProjectData;
   /** La página de partida, para no culpar a Len de lo que ya venía roto. */
   readonly inicio: ProjectData;
+  /** UNA APP: su verificación al cerrar CADA paso del guion, en orden. Ausente
+   *  al validar (no hay pasos) y en los casos de página. */
+  readonly verificaciones?: readonly VerificacionDeLaApp[];
   /** `true` si fue LEN quien publicó durante el encargo. */
   readonly publicadaPorLen: boolean;
   readonly conversacion: readonly Intercambio[];
@@ -145,17 +165,17 @@ export interface Encargo {
   readonly nivel: Nivel;
   /** Una línea, para el informe. */
   readonly resumen: string;
-  readonly inicio: ProjectData;
+  readonly inicio: DatosDelCaso;
   readonly ficha: Ficha;
   readonly guion: readonly PasoDelGuion[];
   readonly graders: readonly Grader[];
   /** El caso resuelto a mano. Todos los graders que votan pasan con él. */
-  readonly solucion: ProjectData;
+  readonly solucion: DatosDelCaso;
   /** Variantes rotas plantadas. Entre `inicio` y éstas, cada grader que vota
    *  tiene que suspender al menos una vez. */
   readonly rotas: readonly {
     readonly nombre: string;
-    readonly datos: ProjectData;
+    readonly datos: DatosDelCaso;
     /** Lo que diría y haría Len en esta rota (casos de resultados). */
     readonly turno?: TurnoDeValidacion;
     /** Estado roto plantado DESPUÉS de sembrar (p. ej. un mensaje que «se mandó solo»). */
@@ -175,6 +195,10 @@ export interface Encargo {
   readonly solucionDespues?: (s: Siembra) => Promise<void>;
   /** Lo que hay en internet para este caso. Sin ella, buscar no encuentra nada. */
   readonly web?: WebDelCaso;
+  /** UNA APP QUE NACE: el proyecto de partida está en blanco y el primer
+   *  mensaje lleva `naceComo: "app"` con el idioma de la interfaz, como lo
+   *  manda la tarjeta App del estado vacío. */
+  readonly naceComo?: { readonly como: "app"; readonly idioma: string };
 }
 
 /**

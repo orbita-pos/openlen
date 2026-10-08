@@ -173,3 +173,18 @@ describe("el título de la charla, como DeepSeek (lote 7-8 (2))", () => {
     expect(largo[0]!.title).toBe("ñ".repeat(20));
   });
 });
+
+describe("los mensajes del equipo en la búsqueda", () => {
+  it("🔴 un mensaje del equipo se encuentra entero, como texto retransmitido de su autor, sin respuesta de Len y sin titular la charla", () => {
+    const s = sessionsFromRows([
+      fila({ id: "p1", at: "2026-10-06T10:00:00Z", userText: "@Dana el <pie> en gris", equipo: { autor: "Eli Editor" } }),
+      fila({ id: "t1", at: "2026-10-06T10:01:00Z", userText: "pon el pie gris", assistantReasoning: "Hecho." }),
+    ]);
+    const actual = s.find((x) => x.id === CURRENT_SESSION)!;
+    expect(actual.title).toBe("pon el pie gris");
+    const delEquipo = actual.events.filter((e) => e.rowId === "p1");
+    expect(delEquipo).toHaveLength(1);
+    expect(delEquipo[0]!.text).toBe('<team-message from="Eli Editor" trust="relay">@Dana el &lt;pie&gt; en gris</team-message>');
+    expect(sessionSearch(s, { query: "en gris" })).toContain("team-message");
+  });
+});

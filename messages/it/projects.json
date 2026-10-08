@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, one {# pagina eliminata} other {# pagine eliminate}}",
     "bulkArchived": "{count, plural, one {# pagina archiviata} other {# pagine archiviate}}",
     "somethingWrong": "Qualcosa è andato storto"
+  },
+  "compartidos": {
+    "titulo": "Condivisi con te",
+    "de": "di {nombre}",
+    "rolEditor": "Editor",
+    "rolLector": "Sola lettura"
   }
 }

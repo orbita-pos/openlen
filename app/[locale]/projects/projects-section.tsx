@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { ProjectSummary } from "@/lib/projects";
-import { ProjectsView } from "./projects-view";
+import { ProjectsView, type SharedProjectSummary } from "./projects-view";
 
 export function ProjectsSection({
   onOpenExplore,
@@ -17,15 +17,16 @@ export function ProjectsSection({
 }) {
   const [state, setState] = useState<{
     projects: ProjectSummary[];
+    shared: SharedProjectSummary[];
   } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     void fetch("/api/projects")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { projects?: unknown[] } | null) => {
+      .then((d: { projects?: unknown[]; shared?: unknown[] } | null) => {
         if (cancelled || !d) return;
-        const projects = (d.projects ?? []).map((raw) => {
+        const revivir = (raw: unknown) => {
           const p = raw as ProjectSummary & {
             createdAt: string;
             updatedAt: string;
@@ -37,8 +38,14 @@ export function ProjectsSection({
             updatedAt: new Date(p.updatedAt),
             publishedAt: p.publishedAt ? new Date(p.publishedAt) : null,
           } as ProjectSummary;
-        });
-        setState({ projects });
+        };
+        const projects = (d.projects ?? []).map(revivir);
+        // Los compartidos contigo (compartir el proyecto): traen de quién son y tu rol.
+        const shared = (d.shared ?? []).map((raw) => ({
+          ...revivir(raw),
+          compartido: (raw as SharedProjectSummary).compartido,
+        }));
+        setState({ projects, shared });
       })
       .catch(() => {});
     return () => {
@@ -51,6 +58,7 @@ export function ProjectsSection({
       {state ? (
         <ProjectsView
           projects={state.projects}
+          shared={state.shared}
           onOpenExplore={onOpenExplore}
         />
       ) : (

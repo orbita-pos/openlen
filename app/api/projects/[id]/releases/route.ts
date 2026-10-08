@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { listReleases } from "@/lib/publish/filesystem";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   const rows = await db
     .select({
@@ -31,7 +35,7 @@ export async function GET(
     .limit(1);
   const row = rows[0];
   if (!row) return json({ error: "not_found" }, 404);
-  if (row.userId !== session.user.id) {
+  if (row.userId !== duenoId) {
     return json({ error: "forbidden" }, 403);
   }
   if (!row.subdomain) {

@@ -34,7 +34,7 @@ import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSel
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
-import { ejecutarUndo, ficherosDelEvento, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
+import { ejecutarUndo, ficherosDelEvento, ofreceDeshacer, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
@@ -61,6 +61,7 @@ import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { httpErrorText } from "./http-error";
+import { camposDeNacer, type PideNacer } from "./nace-como";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
  *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
@@ -87,6 +88,19 @@ export type TurnStatus = "streaming" | "applied" | "error" | "reverted";
 export interface DesignTurn {
   id: string;
   userText: string;
+  /** Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo». */
+  origen?: { hiloId: string; ruta: string; linea: number };
+  /** Quién lo pidió, si viene del servidor (`StoredChatTurn.autor`). Sin él,
+   *  es de quien mira: lo acaba de mandar desde aquí. */
+  autor?: string;
+  /** EL CHAT DEL EQUIPO (`StoredChatTurn.tipo`): un mensaje entre personas. */
+  tipo?: "persona";
+  /** Quién escribió la fila, para su color (`StoredChatTurn.autorId`). */
+  autorId?: string;
+  /** A quién menciona. */
+  menciones?: string[];
+  /** El nombre de cada mencionado (`StoredChatTurn.nombres`). */
+  nombres?: Record<string, string>;
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
@@ -162,6 +176,13 @@ export interface DesignTurn {
   cortado?: boolean;
   /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
   undoFallo?: FalloDeUndo;
+  /** F2 de las apps web: el id con el que el servidor guardó lo que cambió el
+   *  turno (evento `deshacible`): con él, Deshacer lo hace el servidor entero.
+   *  Ver `TurnoParaUndo.deshacerEnServidor`. */
+  deshacerEnServidor?: string;
+  /** Lo que el turno cambió y NO volvió al deshacerlo (la base de datos de
+   *  /supabase, la memoria, los ajustes): se dice bajo «Revertido». */
+  noSeDeshizo?: string[];
   /** Deshacer en vuelo — el botón espera al servidor antes de cantar nada. */
   undoEnCurso?: boolean;
   postEditHtml?: string;
@@ -254,9 +275,12 @@ export interface AgentChatOptions {
 }
 
 /** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
-export interface PendingAttachments {
+export interface PendingAttachments extends PideNacer {
   readonly images: readonly AttachedImage[];
   readonly styleDirection: StyleDirection | null;
+  // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
+  // convierte el proyecto en blanco en app antes del turno
+  // (`lib/projects/nacer-como-app.ts`), con el idioma de la interfaz de `lang`.
 }
 
 export function useAgentChat({
@@ -636,6 +660,27 @@ export function useAgentChat({
           ? { ...t, actions: upsertActionInto(t.actions, action) }
           : t,
       ),
+    );
+  }, []);
+
+  /** `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya lo empezó (como Claude
+   *  Tag); se pinta en marcha y el efecto de abajo lo sigue desde su fila. */
+  const seguirTurnoDelHilo = useCallback((turno: { filaId: string; texto: string; origen: NonNullable<DesignTurn["origen"]> }) => {
+    setTurns((prev) =>
+      prev.some((t) => t.id === turno.filaId)
+        ? prev
+        : [
+            ...prev,
+            restoreTurn({
+              id: turno.filaId,
+              userText: turno.texto,
+              assistantReasoning: "",
+              status: "applied",
+              appliedAt: Date.now(),
+              enCurso: true,
+              origen: turno.origen,
+            }),
+          ],
     );
   }, []);
 
@@ -1056,6 +1101,9 @@ export function useAgentChat({
         readonly images?: readonly AttachedImage[];
         /** Crear es Len: la referencia por URL, que viaja con ESTE mensaje. */
         readonly styleDirection?: StyleDirection | null;
+        /** El primer mensaje de un proyecto en blanco que nace como app. */
+        readonly naceComo?: PideNacer["naceComo"];
+        readonly idioma?: string;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1141,7 +1189,12 @@ export function useAgentChat({
       // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO — ver
       // `lib/chat/historial-del-agente.ts`, que es también lo que el arnés de
       // evals manda para reproducir una conversación.
-      const { history, historyTotal, dichoAntes } = historialParaElAgente(turnsRef.current, turnPage);
+      const { history, historyTotal, dichoAntes } = historialParaElAgente(
+        // Los mensajes entre personas no son turnos de Len (el servidor los
+        // pliega en su sobre, `lib/agent/plegar-equipo.ts`).
+        turnsRef.current.filter((t) => t.tipo !== "persona"),
+        turnPage,
+      );
 
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
@@ -1225,6 +1278,8 @@ export function useAgentChat({
         // cambió, en orden (evento `ficheros`). Para Deshacer: van con la
         // página o el botón no se ofrece.
         const ficherosTocados: Array<{ ruta: string; versionPrevia: string | null }> = [];
+        // F2: el servidor guardó lo que cambió el turno para deshacerlo entero.
+        let deshacerEnServidor: string | null = null;
         // LA DIRECCIÓN DEL DESHACER, y se queda el PRIMERO. `persistPage`
         // archiva un «antes» por cada escritura, así que un turno con dos
         // `editar_pagina` deja dos versiones — y sólo la primera es el
@@ -1295,6 +1350,10 @@ export function useAgentChat({
               // LA HORA DEL USUARIO: «hoy» es su día, no el de UTC
               // (plans/len-resultados/diseno.md §7).
               zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              // EL IDIOMA DE LA INTERFAZ: el de los avisos de una mención que
+              // salga de este turno (el chat del equipo), y el `lang` de una app
+              // que nace (`camposDeNacer` lo pisa con el suyo si viene).
+              idioma: locale,
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,
@@ -1310,6 +1369,8 @@ export function useAgentChat({
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
               ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
+              // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
+              ...camposDeNacer(opciones),
             }),
             signal: abort.signal,
           });
@@ -1599,6 +1660,10 @@ export function useAgentChat({
                 const ficheros = (payload as { ficheros?: unknown } | null)?.ficheros;
                 const validos = Array.isArray(ficheros) ? ficheros.filter(esFicheroCambiado) : [];
                 if (validos.length > 0) cambiosEnVivo.guardar(projectId, { turnId, pedido: prompt, ficheros: validos });
+              } else if (evName === "deshacible") {
+                // F2 de las apps web: Deshacer lo hará el servidor, entero.
+                const id = (payload as { turnId?: unknown } | null)?.turnId;
+                if (typeof id === "string" && id) deshacerEnServidor = id;
               } else if (evName === "ficheros") {
                 // LA CARPETA (pieza 9 de Len 2.5): lo que cambió de la carpeta
                 // una herramienta, con la versión de su «antes».
@@ -1885,6 +1950,7 @@ export function useAgentChat({
             // son las que tocó. Cuando no coinciden, Deshacer no puede cumplir.
             paginasTocadas: [...paginasTocadas],
             ...(ficherosTocados.length > 0 ? { ficherosTocados: [...ficherosTocados] } : {}),
+            ...(deshacerEnServidor ? { deshacerEnServidor } : {}),
             versionPrevia,
             // Aplicado CON aviso: el cambio está y el usuario tiene que ver el
             // aviso. La marca de corte, en cambio, sólo si de verdad se cortó
@@ -2048,6 +2114,7 @@ export function useAgentChat({
     void send(texto, undefined, {
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
       ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
+      ...camposDeNacer(adjuntos),
     });
   }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);
 
@@ -2117,12 +2184,12 @@ export function useAgentChat({
 
   const handleUndo = useCallback(
     async (turn: DesignTurn) => {
-      // Una sola decisión, la misma que pinta el botón (ver TurnFooter):
-      // turno aplicado, con preimagen, y sin haber tocado otra página.
-      // Restored (pre-reload) turns carry no preEditHtml — their revisions
-      // are reachable via the Versions tab, not this inline Undo.
+      // Una sola decisión, la misma que pinta el botón (`ofreceDeshacer`):
+      // con preimagen («restaurar») o con registro en el servidor («servidor»,
+      // F2). Antes salía si no era «restaurar»: el Deshacer del servidor se
+      // pintaba y no hacía nada (ensayo de caja, 08/10).
       const plan = planDeUndo(turn, pageRef.current ?? null);
-      if (plan.kind !== "restaurar") return;
+      if (!ofreceDeshacer(plan)) return;
       if (turn.undoEnCurso) return;
 
       updateTurn(turn.id, { undoEnCurso: true, undoFallo: undefined });
@@ -2140,6 +2207,7 @@ export function useAgentChat({
         // Los ficheros devueltos no cambian el documento: el lienzo se recarga
         // con el aviso (lib/lienzo/carpeta-cambiada.ts).
         ficherosRestaurados: () => notifyFolderChanged(projectId),
+        noSeDeshizo: (rutas) => updateTurn(turn.id, { noSeDeshizo: [...rutas] }),
         marcarRevertido: () =>
           updateTurn(turn.id, { status: "reverted", undoEnCurso: false }),
         marcarFallo: (fallo) =>
@@ -2419,6 +2487,7 @@ export function useAgentChat({
     resumeGoal,
     clearGoal,
     goalOffered: agentModeUI,
+    seguirTurnoDelHilo,
   };
 }
 
@@ -2455,9 +2524,17 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Guardado como cortado por el servidor: el aviso se compone al pintar,
     // en el idioma de quien lo mira (`AvisoDeTurno`).
     ...(s.cortado ? { cortado: true } : {}),
+    // Deshacer tras recargar: el servidor aún tiene lo que cambió el turno.
+    ...(s.deshacible ? { deshacerEnServidor: s.id } : {}),
     // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
+    ...(s.origen ? { origen: s.origen } : {}),
+    ...(s.autor ? { autor: s.autor } : {}),
+    ...(s.tipo ? { tipo: s.tipo } : {}),
+    ...(s.autorId ? { autorId: s.autorId } : {}),
+    ...(s.menciones ? { menciones: s.menciones } : {}),
+    ...(s.nombres ? { nombres: s.nombres } : {}),
   };
 }
 

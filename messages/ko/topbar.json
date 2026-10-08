@@ -112,5 +112,70 @@
     "passcodeSet": "설정",
     "passcodeSetToast": "비밀번호를 설정했습니다",
     "passcodeClearedToast": "비밀번호를 제거했습니다"
+  },
+  "miembros": {
+    "boton": "초대",
+    "titulo": "프로젝트 멤버",
+    "subtitulo": "이 프로젝트에서 함께 작업합니다. 멤버가 Len에게 요청한 비용은 내 크레딧으로 지불됩니다.",
+    "subtituloMiembro": "이 프로젝트에서 작업하는 사람.",
+    "correo": "이메일",
+    "rol": "역할",
+    "invitar": "초대하기",
+    "rolEditor": "편집자",
+    "rolLector": "보기 전용",
+    "rolEditorAyuda": "코드와 페이지를 편집하고, Len과 대화하고, 게시합니다.",
+    "rolLectorAyuda": "아무것도 바꾸지 않고 프로젝트를 봅니다.",
+    "dueno": "소유자",
+    "tu": "(나)",
+    "pendiente": "초대 보냄",
+    "cancelar": "초대 취소",
+    "quitar": "제거",
+    "salir": "프로젝트 나가기",
+    "confirmarSalir": "“{titulo}”에서 나갈까요? 다시 들어오려면 새 초대가 필요합니다.",
+    "confirmarQuitar": "{nombre} 님을 프로젝트에서 제거할까요?",
+    "enviada": "{correo}(으)로 초대를 보냈습니다.",
+    "vacio": "아직 다른 사람이 없습니다. 이메일로 초대하세요.",
+    "tope": "멤버의 Len 한도",
+    "topeAyuda": "멤버 전체가 한 달에 쓸 수 있는 크레딧. 비워 두면 = 한도 없음.",
+    "sinTope": "한도 없음",
+    "guardarTope": "저장",
+    "topeGuardado": "한도를 저장했습니다.",
+    "gastado": "이번 달: {gastado} 크레딧.",
+    "gastadoDe": "이번 달: {tope} 크레딧 중 {gastado}.",
+    "gastoDeMiembro": "이번 달 {n} 크레딧",
+    "cargando": "불러오는 중…",
+    "cerrar": "닫기",
+    "errores": {
+      "tuMismo": "내 이메일입니다.",
+      "yaEsMiembro": "이미 멤버입니다.",
+      "limite": "프로젝트당 최대 {max}명입니다.",
+      "generico": "실패했습니다. 다시 시도하세요."
+    },
+    "email": {
+      "asuntoEditor": "{quien} 님이 OpenLen의 {titulo} 작업에 초대했습니다",
+      "asuntoLector": "{quien} 님이 OpenLen의 {titulo} 보기에 초대했습니다",
+      "fraseEditor": "{quien} 님이 “{titulo}” 작업에 초대했습니다. 코드와 페이지를 편집하고 Len에게 변경을 요청할 수 있습니다.",
+      "fraseLector": "{quien} 님이 “{titulo}” 보기에 초대했습니다.",
+      "titulo": "초대가 도착했습니다",
+      "aceptar": "초대 수락",
+      "cuenta": "아직 OpenLen 계정이 없다면 수락할 때 무료로 만들 수 있습니다. 링크는 7일 동안 유효합니다.",
+      "pegar": "또는 이 링크를 브라우저에 붙여 넣으세요:",
+      "ignorar": "이 초대를 예상하지 못했다면 이 이메일을 무시해도 됩니다.",
+      "alguien": "누군가"
+    },
+    "mencion": {
+      "asunto": "{quien} 님이 {titulo}에서 나를 언급했습니다",
+      "donde": "{ruta} {linea}번째 줄:",
+      "ver": "스레드 열기",
+      "dondeChat": "프로젝트 채팅에서:",
+      "verChat": "채팅 열기"
+    },
+    "hilo": {
+      "fallo": "하지 못했습니다: {motivo}",
+      "falloSinMotivo": "처리하지 못했습니다. 스레드에서 다시 요청해 주세요.",
+      "topeAgotado": "이 프로젝트 멤버의 월간 Len 한도를 모두 썼습니다. 소유자가 «초대»에서 한도를 올릴 수 있습니다.",
+      "sinCreditos": "프로젝트 소유자 계정에 남은 크레딧이 없습니다.",
+      "interrumpido": "작업 중에 서버가 다시 시작되어 절반만 처리됐을 수 있습니다. 변경 사항을 확인하고, 필요하면 스레드에서 다시 요청해 주세요."
+    }
   }
 }

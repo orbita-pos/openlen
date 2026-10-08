@@ -247,6 +247,12 @@ export const projects = pgTable(
     // to identify which entry is currently live. Updated atomically with
     // publishedHtml.
     publishedReleaseSha: text("publishedReleaseSha"),
+    // EL TOPE DE LOS MIEMBROS (compartir el proyecto): cuántos créditos al mes
+    // pueden gastar con Len, entre todos, quienes no son el dueño. Paga siempre
+    // el dueño —como un canal en Claude Tag, que paga la organización—; esto es
+    // lo que impide que un miembro le vacíe el saldo. NULL = sin tope.
+    // `npm run miembros:migrate`.
+    topeMensualMiembros: integer("topeMensualMiembros"),
     // ⚰️ LAS DOS COLUMNAS DE LA CÁPSULA se retiraron el 2026-08-26. El
     // JavaScript del modelo vive DENTRO de `data.html` y de cada
     // `data.pages[slug].html`, como cualquier `<script>` de cualquier página.
@@ -307,6 +313,9 @@ export const projectVersions = pgTable(
     // "restore" | "manual".
     source: text("source").notNull(),
     // Human-readable label (truncated chat prompt, "Published to X", etc.).
+    // QUIÉN pidió el cambio (compartir el proyecto: `lib/projects/autor-del-cambio.ts`).
+    // NULL = sin autor conocido (fila anterior, o un camino sin sesión).
+    autorId: text("autorId"),
     label: text("label").notNull(),
     // Full HTML at this snapshot. text() not jsonb — html is opaque to us.
     html: text("html").notNull(),
@@ -393,6 +402,22 @@ export const projectChatMessages = pgTable(
     transcript: jsonb("transcript").$type<TranscripcionGuardada>(),
     // 'applied' on insert; flipped to 'reverted' by Undo. 'error' turns are
     // never persisted (transient — they changed nothing).
+    // QUIÉN pidió el turno, cuando no fue el dueño (compartir el proyecto): el
+    // turno lo paga el dueño, pero el historial dice quién lo pidió. NULL = el
+    // dueño, o una fila anterior a esta columna. `npm run miembros:migrate`.
+    autorId: text("autorId"),
+    // Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
+    // hilo, el fichero y la línea, para la etiqueta del chat. NULL = desde el chat.
+    // `npm run hilos:migrate`.
+    origen: jsonb("origen").$type<{ hiloId: string; ruta: string; linea: number }>(),
+    // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
+    // NULL = un turno con Len (todo lo de siempre); "persona" = un mensaje entre
+    // personas del proyecto, sin respuesta de Len. Sin migración de datos: las
+    // filas de antes son turnos.
+    tipo: text("tipo"),
+    // A quién menciona la fila (ids de usuario): en un mensaje entre personas, y
+    // en un turno con Len que además menciona a alguien.
+    menciones: jsonb("menciones").$type<string[]>(),
     status: text("status").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     // LA CHARLA A LA QUE PERTENECE (plans/new-chat/, «Empezar de cero»). NULL =
@@ -971,11 +996,49 @@ export const projectFileVersions = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     path: text("path").notNull(),
     content: text("content"),
+    // QUIÉN pidió el cambio (`lib/projects/autor-del-cambio.ts`). NULL = sin autor conocido.
+    autorId: text("autorId"),
     label: text("label").notNull(),
     source: text("source").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("projectFileVersions_project_path_idx").on(t.projectId, t.path, t.createdAt)],
+);
+
+// LO QUE CAMBIÓ CADA TURNO DE LEN, para deshacerlo ENTERO (F2 de las apps web,
+// spec local docs/superpowers/specs/2026-10-07-apps-design.md, H7). Una fila
+// por fichero que el turno cambió —páginas y carpeta—, con lo que había al
+// empezar y lo que dejó al acabar, sacados de las dos fotos que el turno ya
+// toma (`lib/agent/cambios-del-turno.ts`). `contentBefore` nulo = no existía;
+// `contentAfter` nulo = el turno lo borró. `undoable` falso = cambió pero no se
+// deshace con el turno (la base de datos de /supabase, la memoria, los
+// ajustes): se guarda sin contenido, para poder DECIR que no vuelve.
+// Deshacer comprueba que cada fichero sigue como lo dejó el turno y lo escribe
+// todo en UNA sentencia (`lib/projects/deshacer-turno.ts`).
+export const projectTurnChanges = pgTable(
+  "projectTurnChanges",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** El id del turno: el de su fila en `projectChatMessages`. */
+    turnId: text("turnId").notNull(),
+    path: text("path").notNull(),
+    contentBefore: text("contentBefore"),
+    contentAfter: text("contentAfter"),
+    undoable: boolean("undoable").notNull(),
+    /** Cuándo se deshizo. Un turno deshecho no se deshace otra vez: lo que se
+     *  deshace entonces es el deshacer, que tiene su propio turno. */
+    undoneAt: timestamp("undoneAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("projectTurnChanges_project_turn_idx").on(t.projectId, t.turnId),
+    index("projectTurnChanges_project_createdAt_idx").on(t.projectId, t.createdAt),
+  ],
 );
 
 export const memberLoginTokens = pgTable("memberLoginTokens", {
@@ -1189,6 +1252,129 @@ export const chatAgentInviteTokens = pgTable("chatAgentInviteTokens", {
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+// ─── Compartir el proyecto — miembros del EDITOR ─────────────────────────────
+// Quien no es el dueño y puede abrir el proyecto en el editor. A diferencia de
+// `chatAgents` (que atienden el chat de visitantes), éstos trabajan en la
+// página o la app: `editor` edita, habla con Len y publica; `lector` sólo mira.
+// Quién entra a qué lo decide UN sitio: `lib/projects/acceso.ts`.
+// `npm run miembros:migrate`.
+export const projectMembers = pgTable(
+  "projectMembers",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    rol: text("rol").$type<"editor" | "lector">().notNull(),
+    invitedBy: text("invitedBy"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("projectMembers_project_user_uq").on(t.projectId, t.userId),
+    index("projectMembers_userId_idx").on(t.userId),
+  ],
+);
+
+// Las invitaciones: el enlace va por correo y sólo se guarda su sha256; de un
+// uso, 7 días, y sólo la acepta quien entra con ESE correo (la forma de
+// `chatAgentInviteTokens`).
+export const projectInvites = pgTable(
+  "projectInvites",
+  {
+    tokenHash: text("tokenHash").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    email: text("email").notNull(), // en minúsculas
+    rol: text("rol").$type<"editor" | "lector">().notNull(),
+    invitedBy: text("invitedBy").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+    used: boolean("used").notNull().default(false),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("projectInvites_projectId_idx").on(t.projectId)],
+);
+
+// Lo que gastó cada miembro con Len, por mes: de aquí sale el tope del
+// proyecto y el «quién gastó qué» del dueño. Una fila por proyecto, persona y
+// mes ('2026-10'), que se va sumando.
+export const projectMemberSpend = pgTable(
+  "projectMemberSpend",
+  {
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull(),
+    mes: text("mes").notNull(),
+    creditos: integer("creditos").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.userId, t.mes] })],
+);
+
+// ─── Hilos en el código — @Len y @persona sobre una línea ─────────────────────
+// Un comentario con menciones sobre una línea de un fichero se queda como hilo
+// (lib/projects/hilos.ts): @Len lo atiende en un turno y contesta en el hilo;
+// a una persona del proyecto le llega un aviso. `npm run hilos:migrate`.
+export const codeThreads = pgTable(
+  "codeThreads",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    ruta: text("ruta").notNull(),
+    linea: integer("linea").notNull(),
+    /** La línea tal como estaba al abrir el hilo (el fichero cambia después). */
+    codigo: text("codigo").notNull(),
+    estado: text("estado").$type<"abierto" | "resuelto">().notNull().default("abierto"),
+    creadoPor: text("creadoPor").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeThreads_project_ruta_idx").on(t.projectId, t.ruta)],
+);
+
+export const codeThreadMessages = pgTable(
+  "codeThreadMessages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    threadId: text("threadId").notNull().references(() => codeThreads.id, { onDelete: "cascade" }),
+    /** NULL = Len. */
+    autorId: text("autorId"),
+    texto: text("texto").notNull(),
+    /** El turno de Len: el que lanzó este mensaje, o el que lo escribió. */
+    filaId: text("filaId"),
+    /** En un mensaje que le pide algo a `@Len`: lo que hace falta para
+     *  retomarlo si el servidor se reinicia antes de que conteste
+     *  (`retomarPedidosDelHilo`). */
+    pedidoALen: jsonb("pedidoALen").$type<{ idioma: string; url: string }>(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeThreadMessages_thread_idx").on(t.threadId, t.createdAt)],
+);
+
+/** Una mención a una persona: de aquí salen el aviso y el «sin ver». */
+export const codeMentions = pgTable(
+  "codeMentions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    threadId: text("threadId").notNull().references(() => codeThreads.id, { onDelete: "cascade" }),
+    messageId: text("messageId").notNull(),
+    userId: text("userId").notNull(),
+    vistaAt: timestamp("vistaAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("codeMentions_user_idx").on(t.userId, t.projectId)],
+);
+
+/** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
+export const projectChatMentions = pgTable(
+  "projectChatMentions",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    mensajeId: text("mensajeId").notNull().references(() => projectChatMessages.id, { onDelete: "cascade" }),
+    userId: text("userId").notNull(),
+    vistaAt: timestamp("vistaAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("projectChatMentions_user_idx").on(t.userId, t.projectId)],
+);
 
 // ─── Broadcast module — email your audience (members-only, v1) ──────────────
 // Applied in prod via `npm run broadcast:migrate`. Shares the members monthly

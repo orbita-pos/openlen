@@ -112,5 +112,70 @@
     "passcodeSet": "Imposta",
     "passcodeSetToast": "Password impostata",
     "passcodeClearedToast": "Password rimossa"
+  },
+  "miembros": {
+    "boton": "Invita",
+    "titulo": "Membri del progetto",
+    "subtitulo": "Lavorano a questo progetto con te. Ciò che chiedono a Len si paga con i tuoi crediti.",
+    "subtituloMiembro": "Chi lavora a questo progetto.",
+    "correo": "Email",
+    "rol": "Ruolo",
+    "invitar": "Invita",
+    "rolEditor": "Editor",
+    "rolLector": "Sola lettura",
+    "rolEditorAyuda": "Modifica il codice e le pagine, parla con Len e pubblica.",
+    "rolLectorAyuda": "Vede il progetto senza cambiare nulla.",
+    "dueno": "Proprietario",
+    "tu": "(tu)",
+    "pendiente": "Invito inviato",
+    "cancelar": "Annulla invito",
+    "quitar": "Rimuovi",
+    "salir": "Esci dal progetto",
+    "confirmarSalir": "Uscire da “{titulo}”? Ti servirà un nuovo invito per tornare.",
+    "confirmarQuitar": "Rimuovere {nombre} dal progetto?",
+    "enviada": "Invito inviato a {correo}.",
+    "vacio": "Non c’è ancora nessun altro. Invita via email.",
+    "tope": "Limite di Len per i membri",
+    "topeAyuda": "Crediti al mese che possono spendere in totale. Vuoto = nessun limite.",
+    "sinTope": "Nessun limite",
+    "guardarTope": "Salva",
+    "topeGuardado": "Limite salvato.",
+    "gastado": "Questo mese: {gastado} crediti.",
+    "gastadoDe": "Questo mese: {gastado} di {tope} crediti.",
+    "gastoDeMiembro": "{n} crediti questo mese",
+    "cargando": "Caricamento…",
+    "cerrar": "Chiudi",
+    "errores": {
+      "tuMismo": "Questa è la tua email.",
+      "yaEsMiembro": "È già membro.",
+      "limite": "Al massimo {max} persone per progetto.",
+      "generico": "Non è andata. Riprova."
+    },
+    "email": {
+      "asuntoEditor": "{quien} ti ha invitato a lavorare su {titulo} su OpenLen",
+      "asuntoLector": "{quien} ti ha invitato a vedere {titulo} su OpenLen",
+      "fraseEditor": "{quien} ti ha invitato a lavorare su “{titulo}”: modificare il codice e le pagine, e chiedere modifiche a Len.",
+      "fraseLector": "{quien} ti ha invitato a vedere “{titulo}”.",
+      "titulo": "Sei stato invitato",
+      "aceptar": "Accetta l’invito",
+      "cuenta": "Se non hai ancora un account OpenLen, lo crei gratis accettando. Il link vale 7 giorni.",
+      "pegar": "Oppure incolla questo link nel browser:",
+      "ignorar": "Se non aspettavi questo invito, puoi ignorare questa email.",
+      "alguien": "Qualcuno"
+    },
+    "mencion": {
+      "asunto": "{quien} ti ha menzionato in {titulo}",
+      "donde": "In {ruta}, riga {linea}:",
+      "ver": "Apri la conversazione",
+      "dondeChat": "Nella chat del progetto:",
+      "verChat": "Apri la chat"
+    },
+    "hilo": {
+      "fallo": "Non sono riuscito a farlo: {motivo}",
+      "falloSinMotivo": "Non ci sono arrivato. Chiedimelo di nuovo dalla conversazione.",
+      "topeAgotado": "il limite mensile di Len per i membri di questo progetto è esaurito. Il proprietario può aumentarlo in «Invita».",
+      "sinCreditos": "non ci sono più crediti sull’account del proprietario del progetto.",
+      "interrumpido": "Il server si è riavviato mentre ci lavoravo, quindi potrebbe essere fatto a metà. Controlla le modifiche e, se serve, chiedimelo di nuovo dalla conversazione."
+    }
   }
 }

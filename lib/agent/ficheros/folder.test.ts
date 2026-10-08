@@ -84,7 +84,7 @@ describe("qué rutas son de la carpeta", () => {
       "/.env",
       "/js/.secreto.js",
       "/logo.png",
-      "/js/app.ts",
+      "/js/app.py",
       "/fuente.woff2",
       "/js//app.js",
       "/js/app.js/",
@@ -100,7 +100,24 @@ describe("qué rutas son de la carpeta", () => {
   it("el motivo de una extensión de fuera nombra las que valen (es lo que lee Len)", () => {
     const c = classifyFolderPath("/logo.png");
     expect(c.ok).toBe(false);
-    if (!c.ok) expect(c.reason).toContain(".js .mjs .css .json .webmanifest .txt .svg .md");
+    if (!c.ok) expect(c.reason).toContain(".js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md");
+  });
+
+  it("los fuentes de una app (.jsx, .tsx, .ts) son de la carpeta y se publican; se sirven como JavaScript", () => {
+    // Spec local 2026-10-07-apps: se guardan como se escriben y salen compilados.
+    for (const p of ["/src/App.jsx", "/src/App.tsx", "/src/lib/util.ts", "/js/app.ts"]) {
+      expect(kind(p), p).toBe("web");
+      expect(isPublishableFolderPath(p), p).toBe(true);
+      expect(contentTypeFor(p), p).toBe("text/javascript; charset=utf-8");
+    }
+    // Las pruebas siguen siendo pruebas: /tests/ manda sobre la extensión.
+    expect(kind("/tests/app.spec.ts")).toBe("tests");
+  });
+
+  it("🔴 /openlen/ es de la plataforma: ahí se sirven las dependencias de las apps", () => {
+    const c = classifyFolderPath("/openlen/vendor/2026-10/react.js");
+    expect(c.ok).toBe(false);
+    if (!c.ok) expect(c.reason).toMatch(/\/openlen\/ is reserved/);
   });
 });
 

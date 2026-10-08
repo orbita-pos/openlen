@@ -24,9 +24,15 @@ export interface ChatRowForSearch {
   actions: { tool: string; status: string; summary: string }[] | null;
   createdAt: Date;
   status: string;
+  /** EL CHAT DEL EQUIPO: un mensaje entre personas (no un turno de Len), con
+   *  quién lo escribió. Se encuentra entero —es como Len lee lo que el sobre
+   *  recortó— y va marcado como texto retransmitido, igual que en el sobre. */
+  equipo?: { autor: string };
 }
 
 export const CURRENT_SESSION = "current";
+
+const escaparXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 /** `DEFAULT_MAX_SEARCH_RESULTS` de DeepSeek (tool-session-query/src/index.ts). */
 export const DEFAULT_MAX_SEARCH_RESULTS = 100;
 /** El turno que está corriendo (`ESTADO_EN_CURSO` de lib/projects/chat.ts). */
@@ -72,10 +78,16 @@ export function sessionsFromRows(rows: readonly ChatRowForSearch[]): Session[] {
     // Lote 7-8 (2), como el `session-title` de DeepSeek: del primer mensaje
     // HUMANO (una ronda del encargo es `source.kind: 'goal'` allí y no cuenta);
     // sin ninguno, vacío, y se enseña `untitled`.
-    title: filas.map((f) => (goalRoundOf(f.userText) ? "" : fallbackTitle(f.userText))).find(Boolean) ?? "",
+    // Los mensajes del equipo no titulan la charla (son de personas entre sí).
+    title: filas.map((f) => (f.equipo || goalRoundOf(f.userText) ? "" : fallbackTitle(f.userText))).find(Boolean) ?? "",
     createdAt: filas[0]!.createdAt.getTime(),
     events: filas.flatMap((f, i) => {
       const time = f.createdAt.getTime();
+      // Un mensaje del equipo: un solo evento, retransmitido y sin respuesta.
+      if (f.equipo) {
+        const texto = `<team-message from="${escaparXml(f.equipo.autor)}" trust="relay">${escaparXml(f.userText)}</team-message>`;
+        return [{ seq: 2 * i + 1, type: "user" as const, time, text: texto, rowId: f.id }];
+      }
       const acciones = (f.actions ?? []).map((a) => `${a.tool}: ${a.summary}`.trim());
       return [
         // Lote 7-8: las rondas del encargo guardan aquí su mensaje de ronda

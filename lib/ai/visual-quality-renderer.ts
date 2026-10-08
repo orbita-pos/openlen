@@ -2,6 +2,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
+import { textoDelError } from "@/lib/ai/sitio-del-error";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
@@ -178,6 +179,9 @@ interface PageLike {
    *  (origen-de-medida.ts) en vez de volcar el documento en `about:blank`,
    *  que es un origen OPACO donde `localStorage` lanza. */
   goto?(url: string, options?: { waitUntil?: "load"; timeout?: number }): Promise<unknown>;
+  /** Una app espera a que su red se calme tras cargar (H12). Opcional como
+   *  `goto`: un doble que no lo trae, no espera. */
+  waitForNetworkIdle?(options?: { idleTime?: number; timeout?: number }): Promise<unknown>;
   /** Opcional a propósito: los dobles de prueba implementan esta interfaz a
    *  mano y exigirlo los rompería a todos por una señal que no piden. */
   on?(event: string, handler: (payload: unknown) => void): unknown;
@@ -369,6 +373,10 @@ function paginaConPlazo(
     // siendo opcionales por lo mismo que en `PageLike`: los dobles de prueba
     // implementan la interfaz a mano.
     ...(page.goto ? { goto: (url: string, options?: { waitUntil?: "load"; timeout?: number }) => paso(() => page.goto!(url, options)) } : {}),
+    // Con su propio tope (`ESPERA_A_LA_RED_MS`), por debajo del del paso.
+    ...(page.waitForNetworkIdle
+      ? { waitForNetworkIdle: (options?: { idleTime?: number; timeout?: number }) => paso(() => page.waitForNetworkIdle!(options)) }
+      : {}),
     // El censo de clic entra y sale por aquí; sin estas dos líneas el adaptador
     // se lo comía y la precondición callaba igual que antes de instalarla.
     ...(page.evaluateOnNewDocument
@@ -1015,7 +1023,8 @@ async function captureWithPage(
   const dialogos: string[] = [];
   buzonDialogos = dialogos;
   page.on?.("pageerror", (e) => {
-    gritos.push(String(e instanceof Error ? e.message : e).slice(0, 300));
+    // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src.
+    gritos.push(textoDelError(e, 300));
   });
   page.on?.("console", (m) => {
     const mensaje = m as { type?: () => string; text?: () => string };

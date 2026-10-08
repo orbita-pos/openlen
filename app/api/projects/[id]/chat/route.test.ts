@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Lo que esta prueba sujeta es el ESQUEMA: qué campos de la tarjeta sobreviven
 // la validación y llegan a `appendChatMessage`. La base, la sesión y la
 // comprobación de propiedad se simulan; el guardado se espía.
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("drizzle-orm", () => ({ and: vi.fn(), eq: vi.fn() }));
 vi.mock("@/lib/db", () => ({

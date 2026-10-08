@@ -128,9 +128,13 @@ async function logDelivery(args: {
 export async function scheduleNotification(
   event: NotificationEvent,
   dedupeKey?: string,
+  /** `retrasoMs`: el aviso espera (lo saca el drenador, cada minuto). Con la
+   *  misma `dedupeKey`, lo que llegue mientras espera se junta en ESE aviso. */
+  opts?: { retrasoMs?: number },
 ): Promise<void> {
   const id = crypto.randomUUID();
   const dk = dedupeKey ?? null;
+  const retrasoSeg = Math.max(0, Math.round((opts?.retrasoMs ?? 0) / 1000));
   const payload = event as unknown as Record<string, unknown>;
 
   const result = await db.execute(sql`
@@ -142,7 +146,7 @@ export async function scheduleNotification(
       ${dk},
       'pending',
       0,
-      now(),
+      now() + make_interval(secs => ${retrasoSeg}),
       now(),
       now()
     )
@@ -212,6 +216,27 @@ export async function runJob(jobId: string): Promise<void> {
         eventType: event.type,
         conversationId: event.type === "chat_message" ? event.conversationId : null,
         detail: "staff online",
+      });
+      return;
+    }
+  }
+
+  // 1b. EL CHAT DEL EQUIPO, como Slack: una mención que ya se vio cuando le
+  //     llega la hora (el aviso espera un minuto) no se avisa.
+  if (event.type === "mencion" && event.donde === "chat") {
+    const { mencionesDelChatSinVer } = await import("@/lib/projects/chat-equipo");
+    if ((await mencionesDelChatSinVer(event.projectId, event.recipientUserId)) === 0) {
+      await db
+        .update(schema.notificationJobs)
+        .set({ status: "done", updatedAt: new Date() })
+        .where(eq(schema.notificationJobs.id, jobId));
+      await logDelivery({
+        userId: event.recipientUserId,
+        channel: "presence",
+        status: "skipped",
+        eventType: event.type,
+        conversationId: null,
+        detail: "ya visto",
       });
       return;
     }

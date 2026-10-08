@@ -195,6 +195,8 @@ export const KNOWN_TOOLS = new Set([
   // F4 (plans/len-agente-2026); se queda, como aquélla, por el historial.
   "TodoWrite",
   "undo_last_change",
+  // F4 de las apps: una página que crece se convierte en app.
+  "convert_to_app",
   "verificar_diseno",
   "redisenar_pagina",
   // Los almacenes de datos (2026-08-29). Sin estar AQUÍ, la tarjeta enseña el

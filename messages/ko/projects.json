@@ -214,5 +214,11 @@
     "bulkDeleted": "{count, plural, other {페이지 #개를 삭제했습니다}}",
     "bulkArchived": "{count, plural, other {페이지 #개를 보관했습니다}}",
     "somethingWrong": "문제가 발생했습니다"
+  },
+  "compartidos": {
+    "titulo": "나와 공유됨",
+    "de": "{nombre} 님",
+    "rolEditor": "편집자",
+    "rolLector": "보기 전용"
   }
 }

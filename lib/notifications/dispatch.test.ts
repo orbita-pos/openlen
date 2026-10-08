@@ -5,11 +5,14 @@ import type { NotificationEvent } from "@/lib/notifications/types";
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
 // Must be hoisted so vi.mock factories can reference them.
 
-const { mockWebPushSend, mockEmailSend, mockIsOnline } = vi.hoisted(() => ({
+const { mockWebPushSend, mockEmailSend, mockIsOnline, mockSinVer } = vi.hoisted(() => ({
   mockWebPushSend: vi.fn(),
   mockEmailSend: vi.fn(),
   mockIsOnline: vi.fn(() => false),
+  mockSinVer: vi.fn(async () => 1),
 }));
+
+vi.mock("@/lib/projects/chat-equipo", () => ({ mencionesDelChatSinVer: mockSinVer }));
 
 vi.mock("@/lib/notifications/channels/index", () => ({
   CHANNELS: [
@@ -490,6 +493,53 @@ describe("drainPending", () => {
     expect(job?.status).toBe("pending");
 
     // Cleanup
+    await db.delete(schema.notificationJobs).where(eq(schema.notificationJobs.id, id));
+  });
+});
+
+// ── El chat del equipo: avisar como Slack ─────────────────────────────────────
+// Una mención del chat espera un minuto; si para entonces ya se vio, no se
+// manda nada, y varias seguidas son UN aviso (la clave junta las pendientes).
+
+describe("las menciones del chat del equipo", () => {
+  const mencion: NotificationEvent = {
+    type: "mencion",
+    donde: "chat",
+    projectId: "test-dispatch-proj",
+    recipientUserId: UID,
+    quien: "Eli",
+    preview: "@Dispatch mira",
+  };
+
+  it("🔴 con retraso, el aviso nace para dentro de un rato (no sale al momento)", async () => {
+    const key = `mencion-retraso-${Date.now()}`;
+    await scheduleNotification(mencion, key, { retrasoMs: 60_000 });
+    const [job] = await db.select().from(schema.notificationJobs).where(eq(schema.notificationJobs.dedupeKey, key));
+    expect(job!.status).toBe("pending");
+    expect(job!.runAfter.getTime()).toBeGreaterThan(Date.now() + 30_000);
+    expect(mockWebPushSend).not.toHaveBeenCalled();
+    await db.delete(schema.notificationJobs).where(eq(schema.notificationJobs.dedupeKey, key));
+  });
+
+  it("🔴 si al llegar su hora la mención ya se vio, no se manda nada", async () => {
+    mockSinVer.mockResolvedValueOnce(0);
+    const id = crypto.randomUUID();
+    await db.insert(schema.notificationJobs).values({ id, payload: mencion as unknown as Record<string, unknown>, status: "pending", attempts: 0, runAfter: new Date(), dedupeKey: null });
+    await runJob(id);
+    expect(mockSinVer).toHaveBeenCalledWith("test-dispatch-proj", UID);
+    expect(mockWebPushSend).not.toHaveBeenCalled();
+    expect(mockEmailSend).not.toHaveBeenCalled();
+    expect((await getJob(id))!.status).toBe("done");
+    await db.delete(schema.notificationJobs).where(eq(schema.notificationJobs.id, id));
+  });
+
+  it("sin ver todavía, se manda", async () => {
+    mockSinVer.mockResolvedValueOnce(2);
+    mockWebPushSend.mockResolvedValue("sent");
+    const id = crypto.randomUUID();
+    await db.insert(schema.notificationJobs).values({ id, payload: mencion as unknown as Record<string, unknown>, status: "pending", attempts: 0, runAfter: new Date(), dedupeKey: null });
+    await runJob(id);
+    expect(mockWebPushSend).toHaveBeenCalledTimes(1);
     await db.delete(schema.notificationJobs).where(eq(schema.notificationJobs.id, id));
   });
 });

@@ -112,5 +112,70 @@
     "passcodeSet": "Poner",
     "passcodeSetToast": "Contraseña puesta",
     "passcodeClearedToast": "Contraseña quitada"
+  },
+  "miembros": {
+    "boton": "Invitar",
+    "titulo": "Miembros del proyecto",
+    "subtitulo": "Trabajan en este proyecto contigo. Lo que le piden a Len se paga con tus créditos.",
+    "subtituloMiembro": "Quién trabaja en este proyecto.",
+    "correo": "Correo",
+    "rol": "Rol",
+    "invitar": "Invitar",
+    "rolEditor": "Editor",
+    "rolLector": "Solo lectura",
+    "rolEditorAyuda": "Edita el código y las páginas, habla con Len y publica.",
+    "rolLectorAyuda": "Ve el proyecto sin cambiar nada.",
+    "dueno": "Dueño",
+    "tu": "(tú)",
+    "pendiente": "Invitación enviada",
+    "cancelar": "Cancelar invitación",
+    "quitar": "Quitar",
+    "salir": "Salir del proyecto",
+    "confirmarSalir": "¿Salir de «{titulo}»? Necesitarás otra invitación para volver.",
+    "confirmarQuitar": "¿Quitar a {nombre} del proyecto?",
+    "enviada": "Invitación enviada a {correo}.",
+    "vacio": "Aún no hay nadie más. Invita por correo.",
+    "tope": "Tope de Len para los miembros",
+    "topeAyuda": "Créditos al mes que pueden gastar entre todos. Vacío = sin tope.",
+    "sinTope": "Sin tope",
+    "guardarTope": "Guardar",
+    "topeGuardado": "Tope guardado.",
+    "gastado": "Este mes: {gastado} créditos.",
+    "gastadoDe": "Este mes: {gastado} de {tope} créditos.",
+    "gastoDeMiembro": "{n} créditos este mes",
+    "cargando": "Cargando…",
+    "cerrar": "Cerrar",
+    "errores": {
+      "tuMismo": "Ese correo es el tuyo.",
+      "yaEsMiembro": "Ya es miembro.",
+      "limite": "Como mucho {max} personas por proyecto.",
+      "generico": "No se pudo. Inténtalo de nuevo."
+    },
+    "email": {
+      "asuntoEditor": "{quien} te invitó a trabajar en {titulo} en OpenLen",
+      "asuntoLector": "{quien} te invitó a ver {titulo} en OpenLen",
+      "fraseEditor": "{quien} te invitó a trabajar en «{titulo}»: editar su código y sus páginas, y pedirle cambios a Len.",
+      "fraseLector": "{quien} te invitó a ver «{titulo}».",
+      "titulo": "Te han invitado",
+      "aceptar": "Aceptar la invitación",
+      "cuenta": "Si aún no tienes cuenta de OpenLen, la creas gratis al aceptar. El enlace vale 7 días.",
+      "pegar": "O pega este enlace en tu navegador:",
+      "ignorar": "Si no esperabas esta invitación, puedes ignorar este correo.",
+      "alguien": "Alguien"
+    },
+    "mencion": {
+      "asunto": "{quien} te mencionó en {titulo}",
+      "donde": "En {ruta}, línea {linea}:",
+      "ver": "Abrir el hilo",
+      "dondeChat": "En el chat del proyecto:",
+      "verChat": "Abrir el chat"
+    },
+    "hilo": {
+      "fallo": "No pude hacerlo: {motivo}",
+      "falloSinMotivo": "No llegué a hacerlo. Pídemelo otra vez desde el hilo.",
+      "topeAgotado": "se acabó el tope mensual de Len para los miembros de este proyecto. El dueño puede subirlo en «Invitar».",
+      "sinCreditos": "no quedan créditos en la cuenta del dueño del proyecto.",
+      "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, pídemelo otra vez desde el hilo."
+    }
   }
 }

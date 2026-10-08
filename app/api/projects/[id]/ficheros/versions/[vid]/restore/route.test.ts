@@ -3,6 +3,8 @@
 // servidor y la propiedad la comprueba `restoreFileVersion` (une con el dueño).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
+vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/projects/file-versions", () => ({ restoreFileVersion: vi.fn() }));
 

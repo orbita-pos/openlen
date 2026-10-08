@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Consulta = { columnas: Record<string, unknown>; limite: number | null; join: boolean };
 const consultas: Consulta[] = [];
-const respuestas: { panel: unknown[]; estado: unknown[] | Error; fila: unknown[] } = { panel: [], estado: [], fila: [] };
+const respuestas: { panel: unknown[]; estado: unknown[] | Error; fila: unknown[]; gente: unknown[] } = { panel: [], estado: [], fila: [], gente: [] };
 
 vi.mock("@/lib/db", async () => {
   const schema = await vi.importActual<typeof import("@/lib/db/schema")>("@/lib/db/schema");
@@ -33,6 +33,8 @@ vi.mock("@/lib/db", async () => {
         // La fila del sondeo va con el proyecto (el dueño); el panel, sin él.
         return consulta.join ? respuestas.fila : respuestas.panel;
       },
+      // Quién pidió cada turno (`conAutores`): el proyecto con su gente, sin `limit`.
+      then: (ok: (v: unknown[]) => unknown) => ok(respuestas.gente),
     };
     return cadena;
   };
@@ -66,6 +68,7 @@ beforeEach(() => {
   respuestas.panel = [fila("t1", "applied"), fila("t2", "en_curso")];
   respuestas.estado = [];
   respuestas.fila = [];
+  respuestas.gente = [];
 });
 
 describe("getChatMessages y el estado de la charla", () => {
@@ -92,6 +95,16 @@ describe("getChatMessages y el estado de la charla", () => {
     expect(consultas.filter((c) => c.limite === 1)).toHaveLength(1);
     expect(turnos[0]!.goal).toEqual({ ...encargo, activation: "armed" });
     expect(turnos[1]).not.toHaveProperty("goal");
+  });
+
+  it("cada turno dice quién lo pidió: el dueño si la fila no dice otro", async () => {
+    respuestas.panel = [fila("t1", "applied"), { ...fila("t2", "applied"), autorId: "ana" }];
+    respuestas.gente = [
+      { id: "dueno", name: "Jesús", email: "j@x", duenoId: "dueno" },
+      { id: "ana", name: null, email: "ana@x", duenoId: "dueno" },
+    ];
+    const turnos = await getChatMessages("p1");
+    expect(turnos.map((t) => t.autor)).toEqual(["Jesús", "ana@x"]);
   });
 
   it("sin el encargo armado en este proceso (tras un reinicio), desarmado", async () => {

@@ -696,3 +696,11 @@ describe("buildAgentContext — la referencia por URL", () => {
     expect(buildAgentContext({ state: {}, userBrief: null })).not.toContain("<visual-direction>");
   });
 });
+
+describe("el chat del equipo en el contexto", () => {
+  it("🔴 la regla del equipo sólo con miembros; sin ella el contexto es el de siempre", () => {
+    const base = { state: {}, userBrief: null, now: new Date(Date.UTC(2026, 9, 7)) };
+    expect(buildAgentContext(base)).toBe(buildAgentContext({ ...base, equipo: false }));
+    expect(buildAgentContext({ ...base, equipo: true }).startsWith("THIS PROJECT IS SHARED.")).toBe(true);
+  });
+});

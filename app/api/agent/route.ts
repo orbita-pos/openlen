@@ -1,5 +1,12 @@
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
+import { conAutor } from "@/lib/projects/autor-del-cambio";
+import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
+import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
+import { mencionesDe } from "@/lib/workspace-v2/menciones";
+import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
+import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
@@ -36,7 +43,9 @@ import {
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
+import { plegarEquipo } from "@/lib/agent/plegar-equipo";
+import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { parseStyleDirection } from "@/lib/style-match/parse-direction";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { Message } from "@/lib/ai-gateway";
@@ -85,6 +94,9 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
+import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
+import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
+import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { observarPagina } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -235,7 +247,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   if (!userId) return errorJson(401, "unauthorized");
 
   const body = (await req.json().catch(() => null)) as CuerpoDelTurno | null;
-  return correrTurno(userId, body, { url: req.url, signal: req.signal });
+  // Lo que el turno guarde (versiones de páginas y ficheros) lleva el nombre de
+  // quien lo pidió: un miembro, si no fue el dueño (lib/projects/autor-del-cambio.ts).
+  return conAutor(userId, () => correrTurno(userId, body, { url: req.url, signal: req.signal }));
 });
 
 /** Lo que manda el cliente en el cuerpo de un turno. Todo entra de fuera y se sanea abajo. */
@@ -282,6 +296,12 @@ type CuerpoDelTurno = {
   /** Pieza 8: la puerta del dueño al encargo — `"create"` (la opción «Encargo»:
    *  el mensaje es el objetivo) o `"resume"` («Reanudar»). Otra cosa no cuenta. */
   goal?: unknown;
+  /** UNA APP NACE (H10 de la spec local 2026-10-07-apps): `"app"` en el primer
+   *  mensaje de un proyecto en blanco lo convierte en app antes del turno. Otra
+   *  cosa no cuenta, y en un proyecto con algo dentro no hace nada. */
+  naceComo?: unknown;
+  /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
+  idioma?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -298,7 +318,7 @@ async function correrTurno(
   userId: string,
   body: CuerpoDelTurno | null,
   req: { url: string; signal: AbortSignal },
-  opts: { round?: RondaDelEncargo } = {},
+  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo } = {},
 ): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
   // `let`: en una ronda del encargo (pieza 8) el mensaje del turno es el de
@@ -349,6 +369,30 @@ async function correrTurno(
   // Reanudar un encargo y una ronda no traen mensaje: lo pone el de ronda.
   const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined;
   if ((prompt.length === 0 && !sinMensajeDelDueno) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
+  // COMPARTIR EL PROYECTO (lib/projects/acceso.ts): un EDITOR también habla con
+  // Len. Desde aquí `userId` es el DUEÑO —con él se lee y se escribe el proyecto
+  // y él paga, como un canal en Claude Tag lo paga la organización— y `quien`,
+  // la persona que pidió el turno. Lo que gasta un miembro cuenta contra el
+  // tope del proyecto, y el turno no ve los datos de los visitantes. Las rondas
+  // del encargo las abre el servidor para el dueño: no pasan por aquí.
+  const quien = userId;
+  let miembro = false;
+  if (!opts.round) {
+    const acceso = await accesoAlProyecto(projectId, userId);
+    if (!acceso) return errorJson(404, "project not found");
+    if (!puede(acceso.rol, "editar")) return errorJson(403, "you can view this project but not edit it", "solo_lectura");
+    if (acceso.rol !== "dueno") {
+      miembro = true;
+      userId = acceso.duenoId;
+      // Un encargo corre rondas solo, sin nadie delante: eso lo decide el dueño.
+      if (pedidoDelEncargo) return errorJson(403, "only the project owner can start or resume a goal", "solo_dueno");
+      if (!(await cabeEnElTope(projectId, 1))) return errorJson(402, "the project's monthly limit for members is used up", "tope_de_miembros");
+    }
+  }
+  // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
+  // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
+  // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
+  const hiloDelTurno = opts.hilo && (await hiloDelProyecto(projectId, opts.hilo.hiloId).catch(() => null)) ? opts.hilo : null;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -457,7 +501,11 @@ async function correrTurno(
     ...realDeps(async (uid, centicreditos) => {
       await debitCredits(uid, centicreditos);
       chargedByTools += centicreditos;
+      if (miembro) await sumarGasto(projectId, quien, centicreditos);
     }),
+    // Un miembro no ve `/.openlen/resultados` ni `/.openlen/bandeja`, ni las
+    // herramientas de resultados: son datos de los visitantes, del dueño.
+    ...(miembro ? { resultados: undefined } : {}),
     // `view_page` mide por el mismo navegador que los ojos: es la herramienta
     // que más veces lo abre en un turno.
     observarPagina: (input: Parameters<typeof observarPagina>[0]) =>
@@ -467,6 +515,24 @@ async function correrTurno(
     // su propio preludio.
     usarPagina,
   };
+  // UNA APP NACE (H10): crear es el primer mensaje a Len en un proyecto en
+  // blanco, y si ese mensaje pide una app, el proyecto recibe aquí el esqueleto
+  // (`lib/projects/nacer-como-app.ts`) — antes de leerlo, para que el turno
+  // entero sea ya de app. Sólo toca un proyecto en blanco, en una sentencia; si
+  // no lo está, no pasa nada y el turno sigue con lo que hay. Va antes de la
+  // puerta de créditos a propósito: el dueño eligió app, y sin créditos se
+  // queda con el esqueleto, que arranca, en vez de con una página en blanco.
+  if (body?.naceComo === "app" && !opts.round) {
+    await nacerComoApp({
+      projectId,
+      userId,
+      titulo: "App",
+      ...(typeof body.idioma === "string" ? { idioma: body.idioma } : {}),
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] la app no pudo nacer; el turno sigue con el proyecto como está", err);
+    });
+  }
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =
@@ -475,8 +541,12 @@ async function correrTurno(
   // ⚰️ Aquí se armaba `vistaDelTurno` (`vistaParaMedir`), el contexto con el que
   // se horneaba lo que medían `medirParaElModelo` y los ojos al cerrar.
   // Retirados el 2026-10-06 (plans/crear-es-len).
+  // UNA APP WEB (F3 de la spec local 2026-10-07-apps): su prompt, su manual y
+  // sus herramientas son los suyos (`lib/agent/modo-app.ts`). Se decide UNA vez
+  // por turno, con la fila del principio, como todo lo demás que lee el prompt.
+  const appDelTurno = project.data?.app ?? null;
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
-  const tools = buildFunctionDeclarations(process.env, {}, mode);
+  const tools = buildFunctionDeclarations(process.env, {}, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -488,9 +558,32 @@ async function correrTurno(
   // del navegador entra. El del navegador queda sólo para las conversaciones sin
   // ninguna transcripción todavía (anteriores a H4), con su saneado de siempre.
   // Fail-soft: si la base no contesta, el turno sigue con el del navegador.
-  const filasDelHistorial: FilaDelHistorial[] = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(
-    () => [],
-  );
+  // EL CHAT DEL EQUIPO (lib/agent/plegar-equipo.ts): en un proyecto con
+  // miembros, los mensajes entre personas viajan en su sobre delante del turno
+  // siguiente, y los del final delante de la petición de ahora. Sin miembros,
+  // las filas de siempre y nada más (byte-idéntico).
+  // Primero la pregunta barata (¿hay miembros?): casi ningún proyecto los tiene.
+  const genteDelProyecto = (await proyectoCompartido(projectId).catch(() => false))
+    ? await personasDelProyecto(projectId).catch(() => [])
+    : [];
+  const compartido = genteDelProyecto.length > 1;
+  let equipoAhora = "";
+  let filasDelHistorial: FilaDelHistorial[];
+  if (compartido) {
+    const crudas = await filasParaElHistorialConEquipo(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+    // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
+    const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
+    const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
+      (id) => id && !enElProyecto.has(id),
+    );
+    const nombres = await nombresDeUsuarios(fuera).catch(() => new Map<string, string>());
+    const plegado = plegarEquipo(crudas, genteDelProyecto, userId, (id) => nombres.get(id) ?? null);
+    filasDelHistorial = plegado.filas;
+    equipoAhora = plegado.ahora;
+  } else {
+    filasDelHistorial = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+  }
+  const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
   const dichoAntes = sanearDichoAntes(body?.dichoAntes);
@@ -664,6 +757,11 @@ async function correrTurno(
         console.warn("[agent] no se pudo leer el backend del proyecto", err);
         return null;
       }),
+      // En una app, las rutas de su carpeta: su código. Si no se puede leer, el
+      // turno sigue sin la lista (Len la saca con la terminal).
+      ...(appDelTurno
+        ? { ficherosDeLaCarpeta: Object.keys((await deps.projectFiles?.(projectId).catch(() => null)) ?? {}) }
+        : {}),
     },
     // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)
     // describen el que se va a editar, no siempre la Home.
@@ -731,6 +829,7 @@ async function correrTurno(
   const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
   const argsDelTurno = {
     mode,
+    app: appDelTurno,
     zona: zonaDelTurno,
     state,
     userBrief: project.userBrief,
@@ -756,7 +855,15 @@ async function correrTurno(
       turnosTotales > 0 ? { visibles: ventanaVisible, totales: turnosTotales } : null,
     // Y lo que el dueño dijo en los turnos que ya no se ven (H08-a).
     dichoAntes,
-    prompt,
+    // Desde un hilo del código, el modelo lee también dónde y lo dicho antes;
+    // la fila (y el chat) guardan sólo lo que se escribió.
+    // En un proyecto con miembros, delante: lo que el equipo se dijo desde el
+    // último turno y quién pide éste (lib/agent/equipo.ts).
+    // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
+    // Con miembros, lo escrito va con las marcas a mano neutralizadas: el único
+    // <asked-by> que vale es el que pone el servidor (como en el binario).
+    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+    equipo: compartido,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
     // sanearse: el último mensaje del asistente sin `functionCalls` significa
@@ -864,6 +971,7 @@ async function correrTurno(
     projectId,
     userId,
     mode,
+    app: appDelTurno,
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
@@ -1065,6 +1173,13 @@ async function correrTurno(
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
           }
+          // Pedido desde un hilo del código: Len contesta EN EL HILO con lo que
+          // dijo al cerrar (y el hilo enlaza al turno del chat).
+          if (hiloDelTurno) {
+            await respuestaDeLen({ projectId, hiloId: hiloDelTurno.hiloId, texto: registro.texto, filaId }).catch((err: unknown) =>
+              console.warn("[agent] no se pudo contestar en el hilo", err),
+            );
+          }
         } else if (filaAbierta) {
           try {
             await quitarFilaDelTurno(projectId, filaId);
@@ -1091,7 +1206,8 @@ async function correrTurno(
       // cerrar su caja de texto sin quedarse esperando.
       // `abortar` es la única forma de parar el turno desde fuera: la usa
       // `POST /api/agent/cancelar` (el ■ del panel y el plazo de Len-Bench).
-      abrirTurno(turnoId, userId, Date.now(), {
+      // A nombre de QUIEN lo pidió: el ■, las respuestas y la reconexión son suyas.
+      abrirTurno(turnoId, quien, Date.now(), {
         abortar: () => {
           canceladoAProposito = true;
           upstreamAbort.abort();
@@ -1122,7 +1238,12 @@ async function correrTurno(
         // LEN 2.1 · EL TECHO DE DINERO DEL TURNO: el del plan o el saldo, lo que
         // sea menos (`techoDelTurno`). El bucle lo pregunta antes de cada
         // llamada al modelo; al pasarlo, cierra contando lo hecho.
-        const techo = techoDelTurno(creditState);
+        let techo = techoDelTurno(creditState);
+        // Un miembro, además, con lo que le queda al proyecto este mes.
+        if (miembro) {
+          const margen = await margenDeMiembros(projectId);
+          if (margen != null) techo = Math.min(techo, margen);
+        }
         // LOS CAMBIOS DEL TURNO, la foto del principio (`cambios-del-turno.ts`,
         // la forma de DeepSeek): los ficheros del proyecto ANTES de que Len
         // escriba nada. Se saca a la vez que la fila y la primera llamada al
@@ -1138,16 +1259,70 @@ async function correrTurno(
           try {
             const antes = await fotoAntes;
             if (!antes) return;
-            const ficheros = cambiosEntreFotos(antes, await cargarFicherosDeLaTerminal(agentSession, deps));
+            const despues = await cargarFicherosDeLaTerminal(agentSession, deps);
+            const ficheros = cambiosEntreFotos(antes, despues);
             if (ficheros.length > 0) emit("cambios", { ficheros });
+            // F2 DE LAS APPS WEB · DESHACER EL TURNO ENTERO (spec local
+            // 2026-10-07-apps, H7): las MISMAS dos fotos, guardadas con su
+            // contenido, para que «Deshacer» devuelva páginas y ficheros de una
+            // vez y se niegue si el dueño tocó después lo mismo
+            // (`lib/projects/deshacer-turno.ts`). Fail-soft: sin esto no hay
+            // Deshacer de servidor, y el chat usa el de siempre.
+            try {
+              // Con LA FORMA (`RUTA_FORMA`): `data.app` y los títulos de las
+              // páginas, para que deshacer una conversión en app la deshaga
+              // entera. La de antes, de la fila con la que empezó el turno.
+              const alAcabar = await deps.loadProject(projectId, userId).catch(() => null);
+              const [fotoA, fotoD] = alAcabar ? [conForma(antes, project.data), conForma(despues, alAcabar.data)] : [antes, despues];
+              if (await guardarCambiosDelTurno(projectId, filaId, cambiosDelTurnoParaDeshacer(fotoA, fotoD))) {
+                emit("deshacible", { turnId: filaId });
+              }
+            } catch (err) {
+              console.warn("[agent] no se pudieron guardar los cambios del turno para deshacerlo", err);
+            }
           } catch (err) {
             console.warn("[agent] no se pudieron calcular los cambios del turno", err);
           }
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
-          await abrirFilaDelTurno(projectId, { id: filaId, userText: prompt, page: pageSlug, attachedImage: photosForRow(attachedImages) });
+          await abrirFilaDelTurno(projectId, {
+            id: filaId,
+            userText: prompt,
+            page: pageSlug,
+            attachedImage: photosForRow(attachedImages),
+            autorId: miembro ? quien : null,
+            ...(hiloDelTurno ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } } : {}),
+          });
           filaAbierta = true;
+          // EL CHAT DEL EQUIPO: «@Len y @Eli …» es un turno que además avisa a
+          // Eli y le deja la mención sin ver. Fail-soft: el turno sigue. Desde
+          // un hilo del código no: el hilo ya avisó a los suyos (`avisarMenciones`).
+          if (compartido && !hiloDelTurno) {
+            const mencionados = mencionesValidas(mencionesDe(prompt, genteDelProyecto).personas, genteDelProyecto, quien);
+            if (mencionados.length > 0) {
+              await apuntarMencionesDelTurno({ projectId, filaId, mencionados }).catch((err) =>
+                console.warn("[agent] no se pudieron apuntar las menciones", err),
+              );
+              const nombre = genteDelProyecto.find((p) => p.userId === quien)?.nombre ?? "";
+              const idioma = typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : null;
+              void import("@/lib/notifications/dispatch")
+                .then(({ scheduleNotification }) =>
+                  Promise.all(
+                    mencionados.map((recipientUserId) =>
+                      // Como Slack: espera un minuto (si lo ve antes, nada) y las
+                      // seguidas se juntan en un aviso (`mencion-chat:`).
+                      scheduleNotification(
+                        { type: "mencion", donde: "chat", projectId, recipientUserId, quien: nombre, preview: prompt.slice(0, 200), idioma },
+                        `mencion-chat:${projectId}:${recipientUserId}`,
+                        { retrasoMs: 60_000 },
+                      ),
+                    ),
+                  ),
+                )
+                .catch((err) => console.warn("[agent] no se pudo avisar de la mención", err));
+            }
+          }
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
         }
@@ -1427,6 +1602,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
           await debitCredits(userId, credits);
+          if (miembro) await sumarGasto(projectId, quien, credits);
           cobrado = credits;
         } else if (result.topeAlcanzado === "budget_limit") {
           // 🔴 AL TECHO SE COBRA LO GASTADO, HASTA EL TECHO (Jesús, 2026-09-30).
@@ -1442,6 +1618,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
           await debitCredits(userId, alTecho);
+          if (miembro) await sumarGasto(projectId, quien, alTecho);
           cobrado = alTecho;
         } else if (canceladoAProposito && result.errorCode === "cancelled") {
           // 🔴 EL ■ COBRA LO QUE SE USÓ, HASTA EL TECHO (Jesús, 03/10: «como
@@ -1464,6 +1641,7 @@ async function correrTurno(
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=cancelled`,
           );
           if (usado > 0) await debitCredits(userId, usado);
+          if (miembro) await sumarGasto(projectId, quien, usado);
           cobrado = usado;
         } else if (!result.terminalError && result.sinCobro) {
           // 🔴 CERRADO CON ELEGANCIA, SIN COBRO (revisión pre-deploy del
@@ -1767,5 +1945,11 @@ async function correrTurno(
 function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
+
+// `@Len` desde un hilo del código: el servidor llama al turno sin la puerta
+// HTTP, como la ronda de un encargo (lib/agent/turnos-desde-el-servidor.ts).
+registrarCorredorDeTurnos((userId, body, req, opts) =>
+  conAutor(userId, () => correrTurno(userId, body as CuerpoDelTurno, req, opts)),
+);
 
 export const OPTIONS = respuestaPrevia;

@@ -8,7 +8,16 @@
 
 import "./new-chat.css";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 
@@ -18,7 +27,7 @@ import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
 import { ChatHeader } from "./chat-header";
-import { LenTurn, UserMessage } from "./chat-turn";
+import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
 import { liveStatus } from "./live-status";
@@ -28,7 +37,16 @@ import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
 import { useIsMobile } from "../use-is-mobile";
+import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
+import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTurnFeedback } from "./use-turn-feedback";
+import { useGenteDelChat } from "./use-gente-del-chat";
+import { useSondeoDelEquipo } from "./use-sondeo-del-equipo";
+import { MensajeDelEquipo } from "./mensaje-del-equipo";
+import { GenteDelChat } from "./gente-del-chat";
+import { LineaDeDestino } from "./linea-de-destino";
+import { destinoDe, permitido } from "@/lib/workspace-v2/destino-del-mensaje";
+import { colorDePersona } from "@/lib/workspace-v2/menciones";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -50,6 +68,8 @@ export interface NewChatPanelProps {
   pendingAttachments?: PendingAttachments | null;
   /** En el móvil el panel tapa la pantalla: la ✕ de la cabecera lo cierra. */
   onClose?: () => void;
+  /** Un lector del proyecto compartido: lee la conversación, no escribe. */
+  soloLectura?: boolean;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -109,12 +129,20 @@ function AgentChatView({
   onPendingDraftConsumed,
   pendingAttachments = null,
   onClose,
+  soloLectura = false,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
+  // `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya empezó el turno; aquí se
+  // pinta en marcha y se sigue (lib/workspace-v2/turnos-del-hilo.ts).
+  const turnoDelHilo = useSyncExternalStore(
+    turnosDelHilo.subscribe,
+    () => turnosDelHilo.primero(projectId),
+    () => null,
+  );
   const tSidebar = useTranslations("wsChrome");
   const chat = useAgentChat({
     page: flatProjectPage,
@@ -131,6 +159,12 @@ function AgentChatView({
     onPendingDraftConsumed,
     pendingAttachments,
   });
+  const { seguirTurnoDelHilo } = chat;
+  useEffect(() => {
+    if (!turnoDelHilo) return;
+    turnosDelHilo.recogido(projectId, turnoDelHilo);
+    seguirTurnoDelHilo(turnoDelHilo);
+  }, [turnoDelHilo, projectId, seguirTurnoDelHilo]);
   const memory = useAgentMemory();
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
@@ -148,10 +182,10 @@ function AgentChatView({
   }, [chat.busy, reloadMemory]);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
-  const initial = useMemo(() => {
-    const name = session?.user?.name?.trim() || session?.user?.email?.split("@")[0] || "";
-    return (name.charAt(0) || "?").toUpperCase();
-  }, [session?.user?.name, session?.user?.email]);
+  const initial = useMemo(
+    () => inicialDe(session?.user?.name?.trim() || session?.user?.email),
+    [session?.user?.name, session?.user?.email],
+  );
 
   const relativeTime = useCallback(
     (ms: number) => {
@@ -199,6 +233,100 @@ function AgentChatView({
     setSettledConfirms((s) => new Set(s).add(turnId));
   }, []);
 
+  // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
+  // en un proyecto con miembros, `@persona` sin `@Len` es un mensaje para ella
+  // (Len no responde); con `@Len`, un turno como siempre. Sin miembros, nada cambia.
+  const equipo = useGenteDelChat(projectId);
+  const idsDelEquipo = useMemo(() => equipo.gente.map((p) => p.userId), [equipo.gente]);
+  const colorDe = useCallback((id: string) => colorDePersona(id, idsDelEquipo), [idsDelEquipo]);
+  const destino = destinoDe(chat.draft, equipo.gente, equipo.yo);
+  // A quién sugiere el «@» de la caja: la gente menos uno mismo, y Len si puede.
+  const mencionables = useMemo(
+    () => ({ gente: equipo.gente.filter((p) => p.userId !== equipo.yo), colorDe, conLen: equipo.puedeLen }),
+    [equipo.gente, equipo.yo, equipo.puedeLen, colorDe],
+  );
+  const [errorEquipo, setErrorEquipo] = useState(false);
+  // Un mensaje al equipo en vuelo: ni un segundo Enter ni el botón lo repiten.
+  const [enviandoEquipo, setEnviandoEquipo] = useState(false);
+  const enviandoEquipoRef = useRef(false);
+  // La firma que este panel ya conoce: tras enviar se fija aquí, y el sondeo no
+  // vuelve a releer por un cambio que acabamos de hacer nosotros.
+  const firmaRef = useRef<string | null>(null);
+  // Minimizado, el chat sigue montado pero nadie lo ve: no marca nada visto.
+  const aLaVista = layout !== "minimized";
+  const aLaVistaRef = useRef(aLaVista);
+  aLaVistaRef.current = aLaVista;
+  const leerFirma = useCallback(async (): Promise<string | null> => {
+    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes?solo=firma`, { cache: "no-store" }).catch(() => null);
+    const j = r?.ok ? ((await r.json().catch(() => null)) as { firma?: unknown } | null) : null;
+    return typeof j?.firma === "string" ? j.firma : null;
+  }, [projectId]);
+  const marcarVisto = useCallback(() => {
+    void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
+  }, [projectId]);
+  // Con el proyecto compartido y el chat abierto, se relee sólo si la firma de
+  // la conversación cambió (use-sondeo-del-equipo).
+  useSondeoDelEquipo({
+    compartido: equipo.compartido,
+    soloConfirmado: equipo.yo !== null && !equipo.compartido,
+    leerFirma,
+    alCambiar: () => {
+      onChatChange?.();
+      // Lo que llega con el chat a la vista, visto queda (el punto del carril).
+      if (aLaVistaRef.current) marcarVisto();
+    },
+    ocupado: () => chat.busy,
+    firmaRef,
+  });
+  // Ver el chat ve las menciones (el punto del carril se apaga): al abrirlo, y
+  // al volver de minimizado.
+  useEffect(() => {
+    if (equipo.compartido && aLaVista) marcarVisto();
+  }, [equipo.compartido, aLaVista, marcarVisto]);
+  const enviarAlEquipo = async (): Promise<boolean> => {
+    if (destino.tipo !== "personas") return false;
+    if (enviandoEquipoRef.current) return true;
+    enviandoEquipoRef.current = true;
+    setEnviandoEquipo(true);
+    setErrorEquipo(false);
+    try {
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          texto: chat.draft,
+          menciones: destino.personas.map((p) => p.userId),
+          idioma: document.documentElement.lang || undefined,
+          // La foto adjunta viaja con el mensaje, como un adjunto en Slack.
+          ...(chat.attachedImage ? { fotos: [chat.attachedImage] } : {}),
+        }),
+      }).catch(() => null);
+      if (!r?.ok) {
+        setErrorEquipo(true);
+        return true;
+      }
+      chat.setDraft("");
+      chat.setAttachedImage(null);
+      // La firma nueva es nuestra: el sondeo no tiene que releer por ella.
+      firmaRef.current = await leerFirma();
+      onChatChange?.();
+      return true;
+    } finally {
+      enviandoEquipoRef.current = false;
+      setEnviandoEquipo(false);
+    }
+  };
+  const enviar = async () => {
+    if (equipo.compartido) {
+      if (!permitido(destino, equipo.puedeLen)) return;
+      if (await enviarAlEquipo()) return;
+    }
+    chat.submit();
+  };
+  // Los mensajes entre personas no son turnos: la pregunta de Len la contesta
+  // su turno siguiente, no lo que se digan dos personas en medio.
+  const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
+
   const body = (
     <div className="nc flex h-full min-h-0 flex-col bg-side">
       <ChatHeader
@@ -213,6 +341,20 @@ function AgentChatView({
         closeLabel={tSidebar("sidebar.collapsePanel")}
         relativeTime={relativeTime}
       />
+      {equipo.compartido && (
+        <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
+          <GenteDelChat
+            gente={equipo.gente}
+            yo={equipo.yo}
+            colorDe={colorDe}
+            onMencionar={(n) => {
+              const d = chat.draft;
+              chat.setDraft(`${d}${d && !d.endsWith(" ") ? " " : ""}@${n} `);
+              queueMicrotask(() => chat.taRef.current?.focus());
+            }}
+          />
+        </div>
+      )}
       <div className={`nc-fold shrink-0 ${memoryOpen ? "border-b bd" : ""}`} data-open={memoryOpen}>
         <div>{memoryOpen && <MemoryDrawer projectId={projectId} memory={memory} />}</div>
       </div>
@@ -220,19 +362,23 @@ function AgentChatView({
         {chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
+            sinSugerencias={soloLectura}
             onPick={(text) => {
               chat.setDraft(text);
               queueMicrotask(() => chat.taRef.current?.focus());
             }}
           />
         ) : (
-          chat.turns.map((turn, i) => (
+          chat.turns.map((turn, i) =>
+            turn.tipo === "persona" ? (
+              <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} />
+            ) : (
             <div key={turn.id} className="flex flex-col gap-4">
-              <UserMessage turn={turn} initial={initial} />
+              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} />
               <LenTurn
                 turn={turn}
-                next={chat.turns[i + 1]}
-                isLast={i === chat.turns.length - 1}
+                next={siguienteDeLen(i)}
+                isLast={siguienteDeLen(i) === undefined}
                 currentPage={flatProjectPage}
                 projectId={projectId}
                 // Un turno con error no tiene `appliedAt`: su hora es la de cuando
@@ -244,7 +390,7 @@ function AgentChatView({
                 }
                 vote={feedback.votes[turn.id]}
                 labels={replyLabels}
-                onUndo={chat.handleUndo}
+                {...(soloLectura ? {} : { onUndo: chat.handleUndo })}
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onConfirmSettled={settle}
@@ -254,7 +400,8 @@ function AgentChatView({
                 onClearRate={() => feedback.clear(turn.id)}
               />
             </div>
-          ))
+            ),
+          )
         )}
       </div>
       <div className="relative z-[2] shrink-0 px-3 pb-3 pt-1">
@@ -269,34 +416,58 @@ function AgentChatView({
             onClear={() => void chat.clearGoal()}
           />
         )}
-        <ChatComposer
-          value={chat.draft}
-          onChange={chat.setDraft}
-          onSubmit={chat.submit}
-          onStop={chat.handleCancel}
-          busy={chat.busy}
-          textareaRef={chat.taRef}
-          comments={chat.comentarios}
-          onRemoveComment={chat.removeComentario}
-          scopedSelection={scopedSelection}
-          onClearScope={onClearScope}
-          sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={onToggleSectionSelect}
-          attachedImage={chat.attachedImage}
-          onAttachImage={() => chat.setImageModalOpen(true)}
-          onClearAttachedImage={() => chat.setAttachedImage(null)}
-          effort={chat.esfuerzo}
-          effortLevels={chat.esfuerzoNiveles}
-          effortResolvesTo={chat.esfuerzoResuelveA}
-          onEffortChange={chat.changeEsfuerzo}
-          mode={chat.mode}
-          {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
-          planMode={chat.planMode}
-          {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
-          goalChip={chat.goalChip}
-          goalAvailable={chat.goalAvailable}
-          {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
-        />
+        {soloLectura && !equipo.compartido ? (
+          <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">
+            {t("composer.soloLectura")}
+          </p>
+        ) : (
+          <ChatComposer
+            value={chat.draft}
+            onChange={chat.setDraft}
+            onSubmit={() => void enviar()}
+            onStop={chat.handleCancel}
+            busy={chat.busy}
+            textareaRef={chat.taRef}
+            comments={chat.comentarios}
+            onRemoveComment={chat.removeComentario}
+            scopedSelection={scopedSelection}
+            onClearScope={onClearScope}
+            sectionSelectMode={sectionSelectMode}
+            onToggleSectionSelect={onToggleSectionSelect}
+            attachedImage={chat.attachedImage}
+            onAttachImage={() => chat.setImageModalOpen(true)}
+            onClearAttachedImage={() => chat.setAttachedImage(null)}
+            effort={chat.esfuerzo}
+            effortLevels={chat.esfuerzoNiveles}
+            effortResolvesTo={chat.esfuerzoResuelveA}
+            onEffortChange={chat.changeEsfuerzo}
+            mode={chat.mode}
+            {...(chat.modeOffered ? { onModeChange: chat.setMode } : {})}
+            planMode={chat.planMode}
+            {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
+            goalChip={chat.goalChip}
+            goalAvailable={chat.goalAvailable}
+            {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
+            {...(equipo.compartido
+              ? {
+                  placeholder: t("equipo.placeholder"),
+                  mencionables,
+                  // Lo que no se va a enviar no se ofrece: un mensaje al equipo
+                  // en vuelo, o un lector que le pide algo a Len.
+                  bloqueado: enviandoEquipo || !permitido(destino, equipo.puedeLen),
+                  debajo: (
+                    <>
+                      <LineaDeDestino destino={destino} puedeLen={equipo.puedeLen} colorDe={colorDe} />
+                      {errorEquipo && <p className="px-3 pb-1 text-[11.5px] text-accent">{t("equipo.error")}</p>}
+                    </>
+                  ),
+                  ...(destino.tipo === "personas"
+                    ? { etiquetaEnviar: t("equipo.enviarA", { nombre: destino.personas.map((p) => p.nombre).join(", ") }) }
+                    : {}),
+                }
+              : {})}
+          />
+        )}
       </div>
       <ReplaceAssetModal
         open={chat.imageModalOpen}
@@ -436,7 +607,16 @@ function ChatFrame({
   );
 }
 
-function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disabled: boolean }) {
+function EmptyState({
+  onPick,
+  disabled,
+  sinSugerencias = false,
+}: {
+  onPick: (text: string) => void;
+  disabled: boolean;
+  /** Un lector no escribe: proponerle qué pedir sería un botón que no lleva a nada. */
+  sinSugerencias?: boolean;
+}) {
   const t = useTranslations("panelsChat");
   return (
     <div className="nc-up my-auto grid justify-items-center gap-2 px-1 py-3 text-center">
@@ -445,7 +625,7 @@ function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disa
         {t("newChat.empty.title")}
       </h2>
       <p className="m-0 text-[13.5px] fg-muted">{t("newChat.empty.subtitle")}</p>
-      <div className="mt-[18px] flex flex-wrap justify-center gap-1.5">
+      <div className="mt-[18px] flex flex-wrap justify-center gap-1.5" hidden={sinSugerencias}>
         {SUGGESTIONS.map((key) => {
           const text = t(`newChat.empty.suggestions.${key}`);
           return (

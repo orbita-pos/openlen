@@ -37,7 +37,7 @@ import { AgentActionCard, type AgentAction } from "../agent-action-card";
 export type { HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
-import { mismaPagina, planDeUndo } from "./undo-turn";
+import { mismaPagina, ofreceDeshacer, planDeUndo, textoDelFallo } from "./undo-turn";
 import { MandoEsfuerzo } from "./mando-esfuerzo";
 import { ModePicker } from "./mode-picker";
 import type { AgentMode } from "@/lib/agent/dynamis";
@@ -161,7 +161,9 @@ export function ChatPanel({
         projectId={flatProjectId}
         projectHtml={flatProjectHtml ?? ""}
         onLocalUpdate={onFlatHtmlUpdate}
-        initialChat={flatProjectChat}
+        // El chat viejo no tiene chat del equipo: los mensajes entre personas
+        // no son turnos de Len y no se pintan como tales.
+        initialChat={flatProjectChat?.filter((t) => t.tipo !== "persona")}
         onChatChange={onChatChange}
         onRedesigningChange={onRedesigningChange}
         sectionSelectMode={sectionSelectMode}
@@ -739,7 +741,7 @@ function TurnFooter({
                   time: relativeTime(turn.appliedAt ?? Date.now(), t),
                 })}
           </span>
-          {plan.kind === "restaurar" && (
+          {ofreceDeshacer(plan) && (
             <button
               type="button"
               onClick={() => onUndo(turn)}
@@ -763,11 +765,7 @@ function TurnFooter({
           <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-red-500/40 bg-red-500/5 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 max-w-full">
             <X size={11} className="mt-0.5 shrink-0" />
             <span className="flex-1 break-words">
-              {turn.undoFallo.motivo === "red"
-                ? t("undo.failedNetwork")
-                : turn.undoFallo.motivo === "respuesta"
-                  ? t("undo.failedResponse")
-                  : t("undo.failedHttp", { status: turn.undoFallo.status })}
+              {t(textoDelFallo(turn.undoFallo).clave, textoDelFallo(turn.undoFallo).valores)}
             </span>
           </div>
         )}
@@ -776,10 +774,16 @@ function TurnFooter({
   }
   if (turn.status === "reverted") {
     return (
-      <div
-        className={`${marginClass} inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small`}
-      >
-        {t("reverted")}
+      <div className={marginClass}>
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
+          {t("reverted")}
+        </div>
+        {turn.noSeDeshizo && turn.noSeDeshizo.length > 0 && (
+          // F2: lo que el turno cambió y no vuelve con él (la base de datos…).
+          <div className="mt-1 text-[10.5px] fg-faint leading-snug break-words max-w-full">
+            {t("undo.notUndone", { rutas: turn.noSeDeshizo.join(", ") })}
+          </div>
+        )}
       </div>
     );
   }

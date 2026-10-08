@@ -81,7 +81,8 @@
       "pagina": "预览",
       "codigo": "代码",
       "terminal": "终端",
-      "cambios": "更改"
+      "cambios": "更改",
+      "app": "应用"
     },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
@@ -145,7 +146,8 @@
       "masCoincidencias": "{count, plural, other {还有 # 处匹配。}}",
       "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}",
       "marcaNuevo": "本次会话新建",
-      "marcaCambiado": "本次会话已更改"
+      "marcaCambiado": "本次会话已更改",
+      "titleApp": "你的应用的代码"
     },
     "terminal": {
       "title": "Len 的终端",
@@ -202,16 +204,83 @@
       "tope": "已有 10 条评论在等待：请先发送消息。"
     },
     "editar": {
-      "editar": "编辑",
       "guardar": "保存",
       "guardando": "正在保存…",
-      "descartar": "放弃",
       "cargando": "正在加载…",
       "cambio": "你编辑期间这个文件被改动了（Len、编辑器或你的终端）。没有保存任何内容。",
       "cargarAhora": "加载当前内容",
       "rechazado": "未保存：",
       "error": "无法保存。",
       "nota": "会保存为你的版本；Len 会在下一轮看到。"
+    },
+    "appSinLienzo": "这里无法运行应用：真实画布没有响应。代码在“代码”视图里，发布后可以正常使用。",
+    "verCodigo": "查看代码",
+    "direccionApp": "应用",
+    "ide": {
+      "nuevoArchivo": "新建文件",
+      "nuevaCarpeta": "新建文件夹",
+      "contraer": "折叠文件夹",
+      "actualizar": "刷新",
+      "acciones": "更多操作",
+      "renombrar": "重命名",
+      "borrar": "删除",
+      "copiarRuta": "复制路径",
+      "nombre": "名称",
+      "nombreInvalido": "请使用字母、数字、“-”、“_”和“.”，不要有空格。用“/”可创建文件夹。",
+      "existe": "{ruta} 已存在。",
+      "pagina": "页面不能在这里重命名或移动：它们的地址和链接依赖于名称。",
+      "portada": "首页（/index.html）不能删除。",
+      "confirmarBorrar": "删除 {ruta}？它会保留在版本中，Len 会在下一轮看到。",
+      "confirmarBorrarCarpeta": "删除文件夹 {ruta} 及其中的所有内容？",
+      "confirmarCerrar": "{nombre} 有未保存的更改。关闭并丢弃吗？",
+      "cerrarPestana": "关闭",
+      "sinGuardar": "未保存",
+      "vacio": "从资源管理器打开一个文件，或新建一个。",
+      "comentarAyuda": "点击行号即可把这一行评论给 Len。",
+      "carpetaVacia": "空：在里面创建文件后才会保存。",
+      "cerrarAviso": "关闭提示",
+      "noSeHizo": "未执行：",
+      "editor": {
+        "Find": "查找",
+        "Replace": "替换",
+        "next": "下一个",
+        "previous": "上一个",
+        "all": "全部",
+        "match_case": "区分大小写",
+        "regexp": "正则",
+        "by_word": "全词",
+        "replace": "替换",
+        "replace_all": "全部替换",
+        "close": "关闭",
+        "Go_to_line": "跳到行",
+        "go": "跳转",
+        "Fold_line": "折叠",
+        "Unfold_line": "展开"
+      },
+      "dividir": "向右拆分",
+      "subidos": "{count, plural, other {已上传 # 个文件。}}",
+      "noSubidos": "未上传：",
+      "motivoTipo": "只能上传文本文件（代码、CSS、JSON、SVG 等）；照片请放到“图片”",
+      "motivoGrande": "超过 1 MB",
+      "motivoNombre": "名称含有空格或不允许的字符",
+      "motivoDemasiados": "一次太多（最多 {max} 个）",
+      "reemplazar": "{count, plural, one {{lista} 已存在。要替换吗？} other {{lista} 已存在。要替换吗？}}",
+      "abrirAlLado": "拖放到这里以在旁边打开",
+      "subiendo": "上传中…",
+      "hilos": {
+        "placeholder": "要改什么…… 输入 @ 可提及 Len 或项目成员。",
+        "comentar": "评论",
+        "responder": "回复",
+        "placeholderRespuesta": "回复……（@ 提及）",
+        "resolver": "标记为已解决",
+        "reabrir": "重新打开",
+        "resuelto": "已解决",
+        "len": "Len",
+        "soloEditoresLen": "只有可编辑的人才能让 Len 修改。",
+        "error": "没有成功，请重试。",
+        "mencionado": "有人在这里提到了你",
+        "trabajando": "Len 正在处理……"
+      }
     }
   },
   "placeholder": {
@@ -235,7 +304,17 @@
     "pasteHtml": "或粘贴你自己的 HTML",
     "galleryHeading": "已验证的模板",
     "search": "搜索模板…",
-    "noResults": "没有“{query}”的结果"
+    "noResults": "没有“{query}”的结果",
+    "kind": {
+      "label": "你想做什么？",
+      "page": "页面",
+      "pageHint": "为你的生意做个网站：落地页、菜单、作品集",
+      "app": "应用",
+      "appHint": "拿来用的东西：收银、预约、带登录的后台",
+      "appPlaceholder": "描述你的应用：它做什么、谁在用……",
+      "headline": "你的下一个应用从这里开始",
+      "subtitle": "告诉 Len 它要做什么，Len 就把它做出来：页面、数据和登录。"
+    }
   },
   "empty": {
     "badge": "OpenLen 工作区",

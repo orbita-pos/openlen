@@ -15,6 +15,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import {
   AVISO_DE_VISITANTES_EN_LA_TERMINAL,
   cargarFicherosDeLaTerminal,
+  diagnosticosDeLaAppTrasEscribir,
   guardarLoDeLaTerminal,
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
@@ -107,7 +108,14 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
   const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const cambio = escrituras.length === 0 ? undefined : escrituras.some((o) => o.response.cambio === "cambio") ? "cambio" : "sin_cambio";
-  const diagnosticos = escrituras.flatMap((o) => o.diagnosticos ?? []);
+  // UNA APP (F3): lo que no compila, UNA vez con el comando entero ya guardado
+  // —un `sed -i` sobre dos ficheros pasa por un instante roto entre uno y otro—.
+  // Cuenta también si sólo tocó el cascarón.
+  const appCambiada = escrituras.some((o) => o.appCambiada);
+  const diagnosticos = [
+    ...escrituras.flatMap((o) => o.diagnosticos ?? []),
+    ...(session.app && (appCambiada || paginas.length > 0) ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+  ];
   // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
   const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);
   const [primera, ...resto] = paginas;
@@ -144,6 +152,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
         }
       : {}),
     ...(diagnosticos.length > 0 ? { diagnosticos } : {}),
+    ...(appCambiada ? { appCambiada: true as const } : {}),
     ...(ficherosTocados.length > 0 ? { ficherosTocados } : {}),
     ...(escrituras.some((o) => o.mutoDurable) ? { mutoDurable: true } : {}),
   };

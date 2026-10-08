@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { exigirAcceso } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import {
   deleteProject,
@@ -15,7 +16,8 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/projects/[id] — load one full project (404 when not yours).
+// GET /api/projects/[id] — load one full project (404 when you can't open it:
+// the owner and its members can, lib/projects/acceso.ts). `rol` says which.
 export const GET = paraLaApp(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -23,9 +25,11 @@ export const GET = paraLaApp(async (
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const project = await getProject(id, userId);
+  const acceso = await exigirAcceso(id, userId, "ver");
+  if (acceso instanceof Response) return acceso;
+  const project = await getProject(id, acceso.duenoId);
   if (!project) return json({ error: "not_found" }, 404);
-  return json({ project }, 200);
+  return json({ project: { ...project, rol: acceso.rol } }, 200);
 });
 
 // PATCH /api/projects/[id] — accepts title, status, and/or userBrief. Apply
@@ -72,6 +76,10 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  // Un editor cambia el título, el brief y el logo; archivar (el estado) es del dueño.
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   let body: unknown;
   try {
@@ -84,21 +92,24 @@ export async function PATCH(
     return json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
   }
 
+  // Antes de tocar nada: si no, el título se cambiaría y el estado no.
+  if (parsed.data.status !== undefined && acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
+
   let touched = false;
   if (parsed.data.title !== undefined) {
-    const ok = await renameProject(id, session.user.id, parsed.data.title);
+    const ok = await renameProject(id, duenoId, parsed.data.title);
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }
   if (parsed.data.status !== undefined) {
-    const ok = await setProjectStatus(id, session.user.id, parsed.data.status);
+    const ok = await setProjectStatus(id, duenoId, parsed.data.status);
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }
   if (parsed.data.userBrief !== undefined) {
     const ok = await setProjectUserBrief(
       id,
-      session.user.id,
+      duenoId,
       parsed.data.userBrief,
     );
     if (!ok) return json({ error: "not_found" }, 404);
@@ -107,14 +118,14 @@ export async function PATCH(
   if (parsed.data.logoUrl !== undefined) {
     const ok = await setProjectLogoUrl(
       id,
-      session.user.id,
+      duenoId,
       parsed.data.logoUrl,
     );
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }
   if (parsed.data.degradationsDismissed !== undefined) {
-    const ok = await dismissDegradations(id, session.user.id);
+    const ok = await dismissDegradations(id, duenoId);
     if (!ok) return json({ error: "not_found" }, 404);
     touched = true;
   }

@@ -82,6 +82,20 @@ export function recortarResultado(texto: string, tope: number): string {
   return `${dado}\n\n[Result cut: the first ${formatoDeBytes(Buffer.byteLength(dado, "utf8"))} of ${formatoDeBytes(Buffer.byteLength(texto, "utf8"))}. Page through the rest with head_limit and offset, or narrow the pattern.]`;
 }
 
+/** Los tipos de `rg --type` que tienen sentido aquí, con sus extensiones. */
+const TIPOS: Readonly<Record<string, readonly string[]>> = {
+  html: [".html", ".htm"],
+  js: [".js", ".jsx", ".mjs", ".cjs"],
+  ts: [".ts", ".tsx", ".mts", ".cts"],
+  css: [".css"],
+  json: [".json", ".webmanifest"],
+  md: [".md", ".markdown"],
+  markdown: [".md", ".markdown"],
+  sql: [".sql"],
+  svg: [".svg"],
+  txt: [".txt"],
+};
+
 export function ejecutarGrep(entrada: EntradaGrep, sitio: SitioBuscable): Resultado {
   for (const [nombre, valor] of [["head_limit", entrada.head_limit], ["offset", entrada.offset]] as const) {
     if (valor !== undefined && (!Number.isInteger(valor) || valor < 0)) {
@@ -112,9 +126,16 @@ export function ejecutarGrep(entrada: EntradaGrep, sitio: SitioBuscable): Result
   const candidatos = (esCarpeta ? alcance.ficheros : [alcance.fichero]).filter((ruta) => {
     const relativa = ruta.slice(raiz === "/" ? 1 : raiz.length + 1);
     if (!pasaLosGlobs(relativa, globs)) return false;
-    // Todo el sitio es HTML: `--type html` lo deja todo y cualquier otro nada.
-    return entrada.type === undefined || entrada.type === "" || entrada.type === "html";
+    // ⚰️ Decía «todo el sitio es HTML: `--type html` lo deja todo y cualquier
+    // otro nada». Dejó de ser verdad con la carpeta (pieza 9), y en una app el
+    // código entero es .jsx: `type: "js"` no encontraba nada. Ahora, por su
+    // extensión, como `rg --type`.
+    if (entrada.type === undefined || entrada.type === "") return true;
+    return (TIPOS[entrada.type] ?? []).some((ext) => ruta.toLowerCase().endsWith(ext));
   });
+  if (entrada.type && !Object.hasOwn(TIPOS, entrada.type)) {
+    return fallo(`unrecognized file type: ${entrada.type}. Known types: ${Object.keys(TIPOS).join(", ")}.`);
+  }
   const ordenados = [...candidatos].sort((a, b) => a.localeCompare(b));
 
   const porFichero = ordenados.map((ruta) => ({

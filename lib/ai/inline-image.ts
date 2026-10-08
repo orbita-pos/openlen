@@ -12,6 +12,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
+import { textoDelError } from "@/lib/ai/sitio-del-error";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
@@ -318,7 +319,8 @@ export async function renderHtmlToInlineImage(
       // arranque mas. Es la version barata de «apretar el boton»: no interactua
       // con la pagina, pero si el script muere al cargar, se entera.
       page.on("pageerror", (e) => {
-        errores.push(String(e instanceof Error ? e.message : e).slice(0, 300));
+        // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src.
+        errores.push(textoDelError(e, 300));
       });
       page.on("console", (m) => {
         if (m.type() !== "error") return;

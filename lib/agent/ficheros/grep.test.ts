@@ -132,3 +132,24 @@ describe("Grep", () => {
     expect(r.texto).toMatch(/\n\n\[Result cut: the first \d+(\.\d)?KB of \d+(\.\d)?KB\. Page through the rest with head_limit and offset, or narrow the pattern\.\]$/);
   });
 });
+
+// ⚰️ «type» decía que todo el sitio era HTML: `type: "js"` no encontraba nada,
+// tampoco el código de una app (F3 de las apps web). Ahora, por extensión.
+describe("Grep · type, por extensión como rg --type", () => {
+  const CON_CODIGO = {
+    "/index.html": "<div id=root></div><!-- precio -->",
+    "/src/App.jsx": "const precio = 1;",
+    "/src/util.ts": "export const precio = 2;",
+    "/css/a.css": ".precio{}",
+  };
+  it("js incluye .jsx, ts incluye .tsx/.ts, html sólo las páginas", () => {
+    expect(ejecutarGrep({ pattern: "precio", type: "js" }, sitio(CON_CODIGO)).texto).toBe("1 matching file\nsrc/App.jsx");
+    expect(ejecutarGrep({ pattern: "precio", type: "ts" }, sitio(CON_CODIGO)).texto).toBe("1 matching file\nsrc/util.ts");
+    expect(ejecutarGrep({ pattern: "precio", type: "html" }, sitio(CON_CODIGO)).texto).toBe("1 matching file\nindex.html");
+  });
+  it("un tipo que no existe se dice, con los que hay", () => {
+    const r = ejecutarGrep({ pattern: "precio", type: "cobol" }, sitio(CON_CODIGO));
+    expect(r.ok).toBe(false);
+    expect(r.texto).toMatch(/unrecognized file type: cobol\. Known types: html, js, ts/);
+  });
+});

@@ -18,6 +18,8 @@ import { persistPage } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
+import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
+import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { coercerEntradaEdit, planearEdit, type PlanDeEdit } from "@/lib/agent/ficheros/edit";
 import { coercerEntradaWrite, planearWrite } from "@/lib/agent/ficheros/write";
@@ -34,11 +36,10 @@ import {
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
-import { classifyFolderPath, folderSaveProblem, isFolderPath } from "@/lib/agent/ficheros/folder";
+import { classifyFolderPath, folderSaveProblem, isFolderPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
-import { activoDelSitio, codigoNuevo, newCodeInFolderFile } from "@/lib/agent/terminal/javascript-del-usuario";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
@@ -116,7 +117,7 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       // El manual de la plataforma —/AGENTS.md y, desde F4, /.openlen/docs—: Read lo abre
       // por su ruta, con terminal o sin ella, pero no está en `ficheros`, así que
       // Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
-      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode);
+      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode, session.app ?? null);
       const memoria = v.memoria.get(ruta);
       if (memoria !== undefined) return memoria;
       const fichero = v.folder.get(ruta);
@@ -256,7 +257,23 @@ async function aplicarPlan(
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
   if (isFolderPath(plan.ruta)) {
-    return await guardarEnLaCarpeta(session, deps, data, v.folder, plan, herramienta, detalle);
+    const guardado = await guardarEnLaCarpeta(session, deps, v.folder, plan, herramienta, detalle, sinOpIds(data.html ?? ""));
+    // Lo que no compila, una vez por herramienta: la terminal lo pide ella
+    // misma al acabar el comando entero (`terminal/herramienta.ts`).
+    if (!guardado.appCambiada || herramienta === "bash") return guardado;
+    return { ...guardado, ...conDiagnosticos(await diagnosticosDeLaAppTrasEscribir(session, deps)) };
+  }
+  // UNA APP NO TIENE PÁGINAS (F3): una pantalla nueva es un componente y una
+  // ruta de hash. Un /<slug>/index.html sería una página estática FUERA de la
+  // app, publicada en /<slug>/ y tapando cualquier ruta de ese nombre.
+  if (session.app && plan.crea && plan.ruta !== "/index.html") {
+    return {
+      response: respuesta(
+        fallo(
+          `${plan.ruta}: this project is an app, and an app has no pages: a new screen is a component in /src and a <Route> in /src/App.jsx, reached at #/its-name.`,
+        ),
+      ),
+    };
   }
   const etiqueta = `${herramienta} ${detalle}`;
   // El sitio de ANTES de la primera escritura del turno: lo que ya decía en
@@ -288,16 +305,21 @@ async function aplicarPlan(
     htmlPrevio: guardado.previo === null ? null : sinOpIds(guardado.previo),
     // Lo que esta escritura dejó mal, anclado a línea: vuelve al modelo en el
     // `<new-diagnostics>` hermano, como en Claude Code (T9).
-    ...conDiagnosticos(
-      diagnosticosDeLaEscritura({
+    ...conDiagnosticos([
+      ...diagnosticosDeLaEscritura({
         ruta: plan.ruta,
         antes: guardado.previo === null ? null : sinOpIds(guardado.previo),
         despues: sinOpIds(guardado.html),
         fuentes: [session.userPrompt, session.brief, alEmpezar.get(plan.ruta), session.sitioAlEmpezar],
         ...(edit ? { edit } : {}),
         referenciasRotas: guardado.referenciasRotas,
+        ...(session.app ? { enUnaApp: true } : {}),
       }),
-    ),
+      // En una app, el cascarón tiene que seguir arrancándola (y lo que no
+      // compila, como tras cualquier escritura de la app). La terminal lo pide
+      // al acabar el comando.
+      ...(session.app && herramienta !== "bash" ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+    ]),
     ...(guardado.versionPrevia ? { versionPrevia: guardado.versionPrevia } : {}),
   };
 }
@@ -310,37 +332,36 @@ function etiquetaDeVersion(session: AgentSession, herramienta: string, detalle: 
   return { label: `${session.desde === "editor" ? "Code editor" : "Terminal"}: ${detalle}`, source: "manual" };
 }
 
-/** Lo guardado del sitio entero —páginas y carpeta—, para la regla del dueño. */
-function sitioGuardado(data: ProjectData, folder: ReadonlyMap<string, string>): Record<string, string> {
-  const todo: Record<string, string> = Object.fromEntries(folder);
-  for (const ruta of ficherosDelSitio(data)) todo[ruta] = leerFichero(data, ruta) ?? "";
-  return todo;
-}
-
 /**
  * GUARDAR UN FICHERO DE LA CARPETA (pieza 9 de Len 2.5): `js/`, `css/`,
  * `data/`, `sw.js`, `/tests/`, `/supabase/`… No son páginas: no pasan por
  * la puerta de la página; se guardan tal cual en `projectFiles` con sus topes
- * (`folderSaveProblem`), y el «antes» queda archivado para deshacer. El dueño
- * (su terminal, el editor) no mete código a mano (`newCodeInFolderFile`).
+ * (`folderSaveProblem`), y el «antes» queda archivado para deshacer.
+ *
+ * ⚰️ Aquí el dueño (su terminal, el editor de la lente «Código») no podía
+ * escribir JavaScript a mano: sólo copiar uno guardado (`newCodeInFolderFile`,
+ * la #17 de plans/len-agente-2026). Se retiró el 2026-10-07, con las apps web
+ * (docs/superpowers/specs/2026-10-07-apps-design.md, D1): en una app casi todo
+ * es código, y con la regla la lente «Código» quedaba de sólo lectura. Lo que
+ * acota el daño es lo que ya lo acotaba para Len: el origen `.app`, aparte de
+ * openlen.com, y `report-abuse` — como en cualquier hosting de código.
  */
 async function guardarEnLaCarpeta(
   session: AgentSession,
   deps: AgentDeps,
-  data: ProjectData,
   folder: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
   herramienta: "Edit" | "Write" | "bash",
   detalle: string,
+  /** El /index.html de ahora: en una app, el cascarón que la arranca. */
+  cascaron: string,
 ): Promise<ToolOutcome> {
   if (!deps.saveProjectFile) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save files here.`)) };
   const motivo = folderSaveProblem(plan.ruta, plan.contenido, folder);
   if (motivo) return { response: respuesta(fallo(motivo.startsWith("Cannot") ? motivo : `Cannot save ${plan.ruta}: ${motivo}`)) };
-  if (session.autor === "usuario") {
-    const codigo = newCodeInFolderFile(plan.ruta, plan.contenido, sitioGuardado(data, folder));
-    if (codigo) return { response: respuesta(fallo(codigo)) };
-  }
   const previo = folder.get(plan.ruta) ?? null;
+  // UNA APP: la carpeta de antes de la primera escritura del turno.
+  if (session.app) session.carpetaAlEmpezar ??= new Map(folder);
   const { versionPrevia } = await deps.saveProjectFile(session.projectId, plan.ruta, plan.contenido, {
     before: previo,
     ...etiquetaDeVersion(session, herramienta, detalle),
@@ -355,7 +376,33 @@ async function guardarEnLaCarpeta(
     // documento nuevo: sin `mutoDurable` el turno se cerraba como «No cambió
     // nada de la página» y sin Deshacer.
     ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }], mutoDurable: true } : {}),
+    // UNA APP: lo que se ve cambió aunque el cascarón no (F3).
+    ...(cambio === "cambio" && session.app && isPublishableFolderPath(plan.ruta) ? { appCambiada: true as const } : {}),
   };
+}
+
+/**
+ * Lo que no compila de la app tras una herramienta, con la carpeta YA guardada
+ * (`lib/agent/compila-la-app.ts`). Lo llaman Edit y Write al acabar, y la
+ * terminal una vez por comando —no por fichero—. Fail-soft: si la carpeta no
+ * se puede leer, no se dice nada (el lienzo y los ojos lo verán igual).
+ */
+export async function diagnosticosDeLaAppTrasEscribir(session: AgentSession, deps: AgentDeps): Promise<Diagnostico[]> {
+  if (!session.app) return [];
+  try {
+    const row = await deps.loadProject(session.projectId, session.userId);
+    if (!row) return [];
+    const v = await virtualesDe(session, deps, row.userBrief);
+    return diagnosticosDeLaApp({
+      app: session.app,
+      ahora: v.folder,
+      alEmpezar: session.carpetaAlEmpezar ?? null,
+      escritos: session.escritos ?? [],
+      cascaron: sinOpIds(row.data.html ?? ""),
+    });
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -415,7 +462,7 @@ export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: Ag
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
-  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode);
+  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
   // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
   // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).
@@ -461,12 +508,10 @@ export async function guardarLoDeLaTerminal(
   const enLaTerminal: Record<string, string | null> = {};
   const escrituras: ToolOutcome[] = [];
   let rechazado = false;
-  // LA TERMINAL DEL USUARIO no mete código que el sitio no tenía: lo activo de
-  // cada página que escribe tiene que estar ya en alguna página guardada.
-  const delSitio =
-    session.autor === "usuario"
-      ? activoDelSitio(Object.entries(antes).filter(([r]) => paginaDeRuta(r) !== null).map(([, html]) => html))
-      : null;
+  // ⚰️ Aquí la terminal del usuario no podía meter en una página código que el
+  // sitio no tenía (`codigoNuevo`). Retirado el 2026-10-07: ver el ⚰️ de
+  // `guardarEnLaCarpeta`. Lo que escribe el dueño pasa por la misma puerta que
+  // lo de Len, sin más.
   const deshacer = (ruta: string, motivo: string) => {
     rechazado = true;
     const previo = Object.hasOwn(antes, ruta) ? antes[ruta]! : null;
@@ -480,6 +525,10 @@ export async function guardarLoDeLaTerminal(
       // página, no: la quita el dueño en el editor.
       if (isFolderPath(c.ruta) && deps.deleteProjectFile && Object.hasOwn(antes, c.ruta)) {
         const detalle = rutaRelativa(c.ruta);
+        // UNA APP: la carpeta de antes de la primera escritura del turno.
+        if (session.app) {
+          session.carpetaAlEmpezar ??= new Map(Object.entries(antes).filter(([r]) => isFolderPath(r)));
+        }
         const { versionPrevia } = await deps.deleteProjectFile(session.projectId, c.ruta, {
           before: antes[c.ruta]!,
           ...etiquetaDeVersion(session, "bash", `rm ${detalle}`),
@@ -491,6 +540,8 @@ export async function guardarLoDeLaTerminal(
           action: { tool: "bash", ok: true, summary: `rm ${detalle}`, cambio: "cambio" },
           ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
           mutoDurable: true,
+          // Borrar un fichero de la app también cambia lo que se ve.
+          ...(session.app && isPublishableFolderPath(c.ruta) ? { appCambiada: true as const } : {}),
         });
         continue;
       }
@@ -512,13 +563,6 @@ export async function guardarLoDeLaTerminal(
       enLaTerminal[c.ruta] = g.texto;
       notas.push([`${rutaRelativa(c.ruta)}: saved.`, ...g.notas.map((n) => `  ${n}`)].join("\n"));
       continue;
-    }
-    if (delSitio && paginaDeRuta(c.ruta) !== null) {
-      const motivo = codigoNuevo(c.contenido, delSitio);
-      if (motivo) {
-        deshacer(c.ruta, motivo);
-        continue;
-      }
     }
     // El proyecto de AHORA en cada fichero: el anterior del mismo comando ya cambió el sitio.
     const row = await deps.loadProject(session.projectId, session.userId);

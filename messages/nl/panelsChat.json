@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "Afbeelding verstuurd",
     "imagesSent": "{count} afbeeldingen verstuurd",
-    "homePage": "Home"
+    "homePage": "Home",
+    "desdeElHilo": "vanuit de draad · {donde}"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",
@@ -104,7 +105,19 @@
     "modeLenDesc": "Die van elke dag: snel, voor bijna alles",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Voor grote klussen: denkt voor elke stap zo grondig mogelijk na. Trager en kost meer credits",
-    "effortDynamis": "Len Odyssey denkt altijd zo grondig mogelijk na"
+    "effortDynamis": "Len Odyssey denkt altijd zo grondig mogelijk na",
+    "soloLectura": "Je kunt dit project bekijken, maar niet wijzigen. Vraag de eigenaar om bewerkrechten."
+  },
+  "equipo": {
+    "paraLen": "Aan Len",
+    "paraPersonas": "Aan {nombres} · Len antwoordt niet",
+    "paraLenYPersonas": "Aan Len en {nombres}",
+    "soloEditoresLen": "Alleen bewerkers kunnen Len iets vragen",
+    "enviarA": "Stuur naar {nombre}",
+    "deA": "{autor} → {para} · Len antwoordt niet",
+    "mencionar": "{nombre} noemen",
+    "error": "Versturen mislukt. Probeer het opnieuw.",
+    "placeholder": "Schrijf Len, of @ om met iemand van het project te praten…"
   },
   "noChange": {
     "label": "Er is niets op de pagina veranderd"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "Ongedaan maken mislukt ({status}) — de wijziging is nog actief. Probeer het opnieuw.",
     "failedNetwork": "Ongedaan maken mislukt: de server reageerde niet — de wijziging is nog actief. Probeer het opnieuw.",
-    "failedResponse": "Ongedaan maken mislukt: de server antwoordde zonder de pagina — de wijziging is nog actief. Probeer het opnieuw."
+    "failedResponse": "Ongedaan maken mislukt: de server antwoordde zonder de pagina — de wijziging is nog actief. Probeer het opnieuw.",
+    "failedOverlap": "Ongedaan maken mislukt: {rutas} is na deze beurt gewijzigd, en ongedaan maken zou dat wissen. Er is niets ongedaan gemaakt.",
+    "notUndone": "Ongedaan gemaakt, behalve {rutas}: een beurt ongedaan maken herstelt de database, het geheugen en de instellingen niet."
   },
   "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina.",
   "memoria": {

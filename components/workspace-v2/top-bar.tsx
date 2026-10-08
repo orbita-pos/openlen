@@ -36,6 +36,7 @@ import {
   Trash,
   X,
 } from "./icons";
+import { Users } from "lucide-react";
 import { IconBtn, StatusDot } from "./ui";
 import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -83,6 +84,8 @@ function toPreviewState(d: PreviewApiState): PreviewState {
 
 interface TopBarProps {
   projectName: string;
+  /** Abre los miembros del proyecto (compartir el proyecto). Ausente = sin botón. */
+  onMiembros?: () => void;
   onRename: (name: string) => void;
   /** Per-project favicon shown as a 16x16 icon next to the project name.
    *  Null = fall back to the coral initial-letter mark. */
@@ -154,6 +157,7 @@ export function TopBar({
   onDeployVercel,
   onDeployGitHub,
   inicio,
+  onMiembros,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
@@ -714,6 +718,19 @@ export function TopBar({
       </div>
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
+        {/* LOS MIEMBROS (compartir el proyecto): invitar a trabajar en él. */}
+        {onMiembros && (
+          <button
+            type="button"
+            onClick={onMiembros}
+            aria-label={t("miembros.boton")}
+            title={t("miembros.titulo")}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border bd bg-elev fg text-[12px] font-medium hover:bg-hover transition"
+          >
+            <Users size={13} />
+            <span className="hidden sm:inline">{t("miembros.boton")}</span>
+          </button>
+        )}
         {/* Deploy dropdown — same pattern as /new's Header. The actual
             publish is handled by PublishModal which the parent renders;
             we only toggle it. Hidden entirely when no project is loaded

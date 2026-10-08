@@ -238,3 +238,6 @@ designs/fotografo/**/*.png
 /INFORME-*.md
 /ENSAYO-*.md
 /ESSAY-*.md
+
+# La compilación de los crates nativos (cargo, `npm run build` en crates/*): 1,3 GB que se rehacen.
+/target/

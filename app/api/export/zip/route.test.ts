@@ -11,6 +11,12 @@ const mocks = vi.hoisted(() => ({
   propios: [] as Array<{ id: string }>,
   carpeta: {} as Record<string, string>,
 }));
+// Compartir el proyecto (lib/projects/acceso.ts): entra quien tiene el proyecto
+// en `mocks.propios`, como dueño.
+vi.mock("@/lib/projects/acceso", () => ({
+  accesoAlProyecto: async (_p: string, u: string) => (mocks.propios.length > 0 ? { rol: "dueno", duenoId: u } : null),
+  puede: () => true,
+}));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
 vi.mock("@/lib/db", () => {

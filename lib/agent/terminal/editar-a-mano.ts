@@ -10,8 +10,8 @@
  *
  * Se guarda por el MISMO camino que tu terminal (la #17): `guardarLoDeLaTerminal`
  * con `autor: "usuario"`, así que valen sus guardas —el manual es de sólo
- * lectura, no entra JavaScript que el sitio no tenía, ni `data-slot-path`, ni
- * lo que no es del sitio— y la versión queda a tu nombre («Code editor: …»,
+ * lectura, ni `data-slot-path` ni lo que no es del sitio; el JavaScript sí, desde
+ * el 2026-10-07— y la versión queda a tu nombre («Code editor: …»,
  * origen `manual`), que es como Len sabe que no fue él.
  *
  * Sólo ficheros que ya existen: crear uno es cosa de Len o de tu terminal.

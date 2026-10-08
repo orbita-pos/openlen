@@ -16,7 +16,13 @@ const FUENTE = readFileSync(path.join(__dirname, "preview-area.tsx"), "utf8");
 
 describe("el aviso de vista limitada", () => {
   it("sólo se pinta con la lente de la vista previa", () => {
-    expect(FUENTE).toContain('{vistaLimitada && lente === "pagina" && (');
+    // En una app manda su propio aviso (abajo): la vista limitada de una
+    // página no es lo que le pasa a una app sin lienzo real.
+    expect(FUENTE).toContain('{vistaLimitada && !sinLienzoDeApp && lente === "pagina" && (');
+  });
+  it("en una app sin lienzo real, su aviso —también sólo en la vista previa— y una sola vez", () => {
+    expect(FUENTE).toContain('{sinLienzoDeApp && lente === "pagina" && (');
+    expect(FUENTE.match(/t\("preview\.appSinLienzo"\)/g)).toHaveLength(1);
   });
   it("y se pinta en un solo sitio (si aparece otro, esta prueba deja de valer)", () => {
     expect(FUENTE.match(/t\("preview\.vistaLimitada"\)/g)).toHaveLength(1);

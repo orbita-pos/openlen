@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { updateVersionMeta } from "@/lib/projects/versions";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,9 @@ export async function PATCH(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
 
   const { id, vid } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id || !vid) return json({ error: "missing id" }, 400);
 
   const body = (await req.json().catch(() => null)) as PatchBody | null;
@@ -30,7 +34,7 @@ export async function PATCH(
   const result = await updateVersionMeta({
     projectId: id,
     versionId: vid,
-    userId: session.user.id,
+    userId: duenoId,
     label,
     pinned,
   });

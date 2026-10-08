@@ -94,6 +94,7 @@
 
 import { posicionDe, posicionEnIndice, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { posicionDeId } from "@/lib/agent/ficheros/posiciones";
+import { sitioDelTexto } from "@/lib/ai/sitio-del-error";
 
 /** La medición en crudo, tal y como sale del navegador. Se declara aquí el
  *  subconjunto que se usa —y no se importa `VisualQualityViewports`— para que
@@ -209,9 +210,24 @@ export function diagnosticosMedidos(
 
   // 1. EL JAVASCRIPT, con su mensaje literal: «Assignment to constant
   //    variable» señala el trozo mejor que cualquier otra cosa.
+  //    Si la traza dijo dónde nació —un módulo de la carpeta, como el
+  //    `/src/Carrito.jsx` de una app—, se ancla AHÍ y no en el documento.
   for (const grito of (m.runtimeErrors ?? []).slice(0, MAX_GRITOS)) {
     const limpio = grito.trim();
     if (!limpio) continue;
+    const { mensaje, sitio } = sitioDelTexto(limpio);
+    if (sitio) {
+      fuera.push({
+        ruta: sitio.ruta,
+        linea: sitio.linea,
+        columna: sitio.columna,
+        gravedad: "Error",
+        mensaje: `This JavaScript fails when loading or when using the controls: ${mensaje}`,
+        codigo: "js",
+        fuente: FUENTE,
+      });
+      continue;
+    }
     fuera.push(diag(enElScript, "Error", "js", `The page's JavaScript fails when loading it or when using its controls: ${limpio}`));
   }
 

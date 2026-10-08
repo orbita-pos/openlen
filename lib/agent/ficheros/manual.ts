@@ -43,7 +43,11 @@ export const RUTA_LIBRERIAS = `${CARPETA_DOCS}/librerias.md`;
 // ⚰️ Aquí iban RUTA_API_D (`api-d.md`, data-ol-stores) y RUTA_ACCOUNTS
 // (`accounts.md`, data-ol-accounts), retiradas el 2026-10-04: los datos y la
 // gente que entra en una página son su backend de Supabase.
-export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS];
+/** Cómo se construye una app (F4 de la spec local 2026-10-07-apps): en una
+ *  PÁGINA, para cuando el dueño acepta convertirla (`convert_to_app`). Es el
+ *  manual de una app; en una app ya es su /AGENTS.md y no hace falta aquí. */
+export const RUTA_APPS = `${CARPETA_DOCS}/apps.md`;
+export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS, RUTA_APPS];
 
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */

@@ -8,6 +8,7 @@ import {
   type SettingsPatchOutcome,
 } from "@/lib/projects/settings-patch";
 import type { ProjectSettings } from "@/lib/projects/types";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PATCH /api/projects/[id]/settings — update non-HTML project settings.
@@ -40,6 +41,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
+  const acceso = await exigirAcceso(id, session.user.id, "editar");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
 
   const raw = await req.json().catch(() => null);
   const v = validateSettingsPatch(raw, id);
@@ -52,7 +56,7 @@ export async function PATCH(
 
   const owns = and(
     eq(schema.projects.id, id),
-    eq(schema.projects.userId, session.user.id),
+    eq(schema.projects.userId, duenoId),
   );
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -76,7 +80,7 @@ export async function PATCH(
       // Auto-provision the owner chat_user so visitors can "message the business".
       // Idempotent; awaited so a follow-up read sees it.
       try {
-        await getOrCreateOwnerChatUser(id, session.user.id, {
+        await getOrCreateOwnerChatUser(id, duenoId, {
           email: session.user.email ?? null,
           displayName: existing.title,
         });

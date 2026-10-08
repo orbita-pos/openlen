@@ -1,4 +1,11 @@
 import { Resend } from "resend";
+import {
+  correoDeInvitacion,
+  correoDeMencion,
+  idiomaDelCorreo,
+  type DatosDeLaInvitacion,
+  type DatosDeLaMencion,
+} from "@/lib/projects/correos-del-proyecto";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Email — Resend client with console-log fallback.
@@ -547,6 +554,43 @@ function buildAgentInviteHtml(input: AgentInviteEmail, title: string): string {
   </table>
 </body>
 </html>`;
+}
+
+// ─── Compartir el proyecto — invitación de un miembro del editor ─────────────
+
+export interface ProjectInviteEmail extends DatosDeLaInvitacion {
+  to: string;
+  /** El idioma de la interfaz de quien invita (no sabemos el de quien recibe). */
+  idioma?: string | null;
+}
+
+export async function sendProjectInviteEmail(input: ProjectInviteEmail): Promise<void> {
+  const correo = correoDeInvitacion(input, idiomaDelCorreo(input.idioma));
+  const live = liveClientOrWarn("project invite email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] ${correo.subject} → ${input.to}\n     ${input.acceptUrl}\n     (set RESEND_API_KEY in .env.local to send real emails)\n`,
+      );
+    }
+    return;
+  }
+  await enviar(live, "project invite email", { from, to: input.to, ...correo });
+}
+
+/** «Te mencionaron» en un hilo del código (lib/projects/hilos.ts). */
+export async function sendMentionEmail(input: DatosDeLaMencion & { to: string; idioma?: string | null }): Promise<void> {
+  const correo = correoDeMencion(input, idiomaDelCorreo(input.idioma));
+  const live = liveClientOrWarn("mention email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] ${correo.subject} → ${input.to}\n     ${input.url}\n`);
+    }
+    return;
+  }
+  await enviar(live, "mention email", { from, to: input.to, ...correo });
 }
 
 // ─── Chat — offline-owner notification ───────────────────────────────────────

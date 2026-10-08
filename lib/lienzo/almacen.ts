@@ -15,6 +15,7 @@
 // rutas, y el empaquetador puede darles instancias de módulo distintas.
 
 import { randomBytes } from "node:crypto";
+import type { AppDeProyecto } from "@/lib/projects/types";
 import { etiquetaDeLienzo } from "./host";
 
 export const CADUCIDAD_MS = 30 * 60 * 1000;
@@ -51,6 +52,11 @@ export interface DocumentoGuardado {
   readonly projectId: string;
   readonly userId: string;
   readonly pagina: string | null;
+  /** UNA APP WEB (spec local 2026-10-07-apps): con ella, `/api/lienzo/site`
+   *  compila sus `.js` y le sirve su catálogo. Ausente = una página. */
+  readonly app?: AppDeProyecto | null;
+  /** Su `import.meta.env` público (`lib/apps/entorno.ts`). */
+  readonly entorno?: Readonly<Record<string, string>>;
   readonly creado: number;
   ultimoUso: number;
 }
@@ -107,7 +113,14 @@ function caber(): void {
 }
 
 export function guardarDocumento(
-  input: { html: string; projectId: string; userId: string; pagina: string | null },
+  input: {
+    html: string;
+    projectId: string;
+    userId: string;
+    pagina: string | null;
+    app?: AppDeProyecto | null;
+    entorno?: Readonly<Record<string, string>>;
+  },
   ahora = Date.now(),
 ): string {
   podar(ahora);
@@ -154,12 +167,23 @@ export function proyectoDeEtiqueta(
   etiqueta: string,
   ahora = Date.now(),
   env: Readonly<Record<string, string | undefined>> = process.env,
-): { projectId: string; userId: string } | null {
+): {
+  projectId: string;
+  userId: string;
+  app: AppDeProyecto | null;
+  entorno: Readonly<Record<string, string>> | undefined;
+} | null {
   podar(ahora);
+  // El MÁS RECIENTE de ese proyecto: si el dueño acaba de convertirlo en app
+  // (o su entorno cambió), lo que manda es lo que el lienzo enseña ahora.
+  let elegido: DocumentoGuardado | null = null;
   for (const d of mapa().values()) {
-    if (etiquetaDeLienzo(d.projectId, env) === etiqueta) return { projectId: d.projectId, userId: d.userId };
+    if (etiquetaDeLienzo(d.projectId, env) !== etiqueta) continue;
+    if (!elegido || d.creado > elegido.creado) elegido = d;
   }
-  return null;
+  return elegido
+    ? { projectId: elegido.projectId, userId: elegido.userId, app: elegido.app ?? null, entorno: elegido.entorno }
+    : null;
 }
 
 /** SÓLO PRUEBAS. */

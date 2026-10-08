@@ -112,5 +112,70 @@
     "passcodeSet": "設定",
     "passcodeSetToast": "パスワードを設定しました",
     "passcodeClearedToast": "パスワードを削除しました"
+  },
+  "miembros": {
+    "boton": "招待",
+    "titulo": "プロジェクトのメンバー",
+    "subtitulo": "このプロジェクトであなたと一緒に作業します。メンバーが Len に頼んだ分はあなたのクレジットから支払われます。",
+    "subtituloMiembro": "このプロジェクトで作業している人。",
+    "correo": "メールアドレス",
+    "rol": "役割",
+    "invitar": "招待する",
+    "rolEditor": "編集者",
+    "rolLector": "閲覧のみ",
+    "rolEditorAyuda": "コードとページを編集し、Len と話し、公開できます。",
+    "rolLectorAyuda": "何も変更せずにプロジェクトを閲覧できます。",
+    "dueno": "オーナー",
+    "tu": "（あなた）",
+    "pendiente": "招待済み",
+    "cancelar": "招待を取り消す",
+    "quitar": "削除",
+    "salir": "プロジェクトから抜ける",
+    "confirmarSalir": "「{titulo}」から抜けますか？戻るには新しい招待が必要です。",
+    "confirmarQuitar": "{nombre} をプロジェクトから削除しますか？",
+    "enviada": "{correo} に招待を送りました。",
+    "vacio": "まだ他のメンバーはいません。メールで招待しましょう。",
+    "tope": "メンバーの Len 上限",
+    "topeAyuda": "メンバー全員で 1 か月に使えるクレジット。空欄 = 上限なし。",
+    "sinTope": "上限なし",
+    "guardarTope": "保存",
+    "topeGuardado": "上限を保存しました。",
+    "gastado": "今月：{gastado} クレジット。",
+    "gastadoDe": "今月：{tope} クレジット中 {gastado}。",
+    "gastoDeMiembro": "今月 {n} クレジット",
+    "cargando": "読み込み中…",
+    "cerrar": "閉じる",
+    "errores": {
+      "tuMismo": "それはあなた自身のメールアドレスです。",
+      "yaEsMiembro": "すでにメンバーです。",
+      "limite": "1 プロジェクトにつき最大 {max} 人です。",
+      "generico": "うまくいきませんでした。もう一度お試しください。"
+    },
+    "email": {
+      "asuntoEditor": "{quien} さんが OpenLen の {titulo} での作業にあなたを招待しました",
+      "asuntoLector": "{quien} さんが OpenLen の {titulo} の閲覧にあなたを招待しました",
+      "fraseEditor": "{quien} さんが「{titulo}」での作業にあなたを招待しました。コードやページを編集し、Len に変更を頼めます。",
+      "fraseLector": "{quien} さんが「{titulo}」の閲覧にあなたを招待しました。",
+      "titulo": "招待が届いています",
+      "aceptar": "招待を受ける",
+      "cuenta": "OpenLen のアカウントがない場合は、受け入れるときに無料で作成できます。リンクの有効期限は 7 日間です。",
+      "pegar": "または、このリンクをブラウザに貼り付けてください：",
+      "ignorar": "この招待に心当たりがない場合は、このメールを無視してください。",
+      "alguien": "誰か"
+    },
+    "mencion": {
+      "asunto": "{quien} さんが {titulo} であなたをメンションしました",
+      "donde": "{ruta} の {linea} 行目：",
+      "ver": "スレッドを開く",
+      "dondeChat": "プロジェクトのチャットで:",
+      "verChat": "チャットを開く"
+    },
+    "hilo": {
+      "fallo": "できませんでした：{motivo}",
+      "falloSinMotivo": "対応できませんでした。スレッドからもう一度頼んでください。",
+      "topeAgotado": "このプロジェクトのメンバー用 Len 月間上限に達しました。オーナーは「招待」から上限を上げられます。",
+      "sinCreditos": "プロジェクトのオーナーのアカウントにクレジットが残っていません。",
+      "interrumpido": "作業中にサーバーが再起動したため、途中までしかできていない可能性があります。変更を確認し、必要ならスレッドからもう一度頼んでください。"
+    }
   }
 }

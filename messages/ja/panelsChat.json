@@ -18,7 +18,8 @@
   "turn": {
     "imageSent": "画像を送信しました",
     "imagesSent": "{count} 枚の画像を送信しました",
-    "homePage": "ホーム"
+    "homePage": "ホーム",
+    "desdeElHilo": "スレッドから · {donde}"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",
@@ -104,7 +105,19 @@
     "modeLenDesc": "ふだん使い：速くて、ほとんどのことに",
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "大きな依頼に：一歩ごとに限界まで考えます。時間がかかり、クレジットも多く使います",
-    "effortDynamis": "Len Odyssey は常に限界まで考えます"
+    "effortDynamis": "Len Odyssey は常に限界まで考えます",
+    "soloLectura": "このプロジェクトは閲覧のみ可能です。編集するにはオーナーに編集者権限を依頼してください。"
+  },
+  "equipo": {
+    "paraLen": "Len へ",
+    "paraPersonas": "{nombres} へ · Len は返信しません",
+    "paraLenYPersonas": "Len と {nombres} へ",
+    "soloEditoresLen": "Len に頼めるのは編集者だけです",
+    "enviarA": "{nombre} に送信",
+    "deA": "{autor} → {para} · Len は返信しません",
+    "mencionar": "{nombre} をメンション",
+    "error": "送信できませんでした。もう一度お試しください。",
+    "placeholder": "Len に書くか、@ でプロジェクトの誰かと話す…"
   },
   "noChange": {
     "label": "ページに変更はありません"
@@ -112,7 +125,9 @@
   "undo": {
     "failedHttp": "取り消せませんでした（{status}）。変更は適用されたままです。もう一度お試しください。",
     "failedNetwork": "取り消せませんでした：サーバーから応答がありません。変更は適用されたままです。もう一度お試しください。",
-    "failedResponse": "取り消せませんでした：サーバーの応答にページがありません。変更は適用されたままです。もう一度お試しください。"
+    "failedResponse": "取り消せませんでした：サーバーの応答にページがありません。変更は適用されたままです。もう一度お試しください。",
+    "failedOverlap": "取り消せませんでした：このターンの後に {rutas} が変更されています。取り消すとその変更が消えるため、何も取り消していません。",
+    "notUndone": "取り消しました（{rutas} を除く）。ターンを取り消しても、データベース・メモリ・設定は元に戻りません。"
   },
   "cutShort": "最後まで進む前に中断しました（{reason}）。ただし、そこまでの変更は保存済みです。ページを確認してください。",
   "memoria": {

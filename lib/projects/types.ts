@@ -173,9 +173,25 @@ export type VisualEngineProjectMetadata =
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 
+/**
+ * UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md):
+ * el proyecto es código —React en `/src`— y no una página. `html` es el
+ * cascarón (`<div id="root">`) y lo que se ve lo pinta la entrada.
+ */
+export interface AppDeProyecto {
+  /** El catálogo de dependencias, FIJADO al nacer (`lib/apps/dependencias.ts`):
+   *  subirlo a todas las apps a la vez rompería las que ya existen. */
+  catalogo: string;
+  /** El módulo que monta la app (`/src/main.jsx`). */
+  entrada: string;
+}
+
 export interface ProjectData {
   /** Publish-ready static HTML — the source of truth for the project. */
   html: string;
+  /** Presente = el proyecto es una APP WEB, no una página. Ausente en todo lo
+   *  anterior al 2026-10-07. */
+  app?: AppDeProyecto;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic
@@ -296,6 +312,20 @@ export type DegradationCode =
 export interface StoredChatTurn {
   id: string;
   userText: string;
+  /** Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
+   *  chat lo marca «desde el hilo · fichero:línea» y lo abre al pulsarlo. */
+  origen?: { hiloId: string; ruta: string; linea: number };
+  /** Quién lo pidió (su nombre, o su correo): el dueño o un miembro del
+   *  proyecto. El chat pinta su inicial en la burbuja, no la de quien mira. */
+  autor?: string;
+  /** EL CHAT DEL EQUIPO: un mensaje entre personas, sin respuesta de Len. */
+  tipo?: "persona";
+  /** Quién escribió la fila (el dueño si la columna es NULL), para su color. */
+  autorId?: string;
+  /** A quién menciona. */
+  menciones?: string[];
+  /** El nombre de cada mencionado, también de quien ya no es del proyecto. */
+  nombres?: Record<string, string>;
   /** Pieza 7: tras este turno la charla seguía en modo plan (lo que pliega el
    *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
    *  enciende su ficha «Plan» si el último turno lo trae. */
@@ -402,6 +432,10 @@ export interface StoredChatTurn {
    *  después de haber cambiado algo. Lo escribe el servidor
    *  (`corteDelTurno`); al recargar se avisa y el historial lo marca. */
   cortado?: boolean;
+  /** El servidor guarda lo que cambió este turno y aún se puede deshacer
+   *  entero (`turnosDeshacibles`): al recargar, el chat ofrece el Deshacer del
+   *  servidor, como Claude Code ofrece restaurar el código al reanudar. */
+  deshacible?: true;
   /** LEN 2.1 · el turno SIGUE TRABAJANDO en el servidor. La fila se crea al
    *  empezar (`status: en_curso`) y se va llenando, porque el turno ya no
    *  muere con el cliente; quien la lee puede volver a engancharse

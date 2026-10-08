@@ -3,9 +3,11 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { bakeModulesForPreview } from "@/lib/publish/preview-bake";
 import { embedSandboxHeaders, isFramedRequest } from "@/lib/publish/embed-sandbox";
+import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { guardarDocumento } from "@/lib/lienzo/almacen";
 import { documentoDeVista } from "@/lib/lienzo/documento";
 import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
+import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 
@@ -29,6 +31,9 @@ export async function GET(
   if (!session?.user?.id) return text("unauthorized", 401);
 
   const { id } = await ctx.params;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  const duenoId = acceso.duenoId;
   if (!id) return text("missing id", 400);
 
   const rows = await db
@@ -40,7 +45,7 @@ export async function GET(
     })
     .from(schema.projects)
     .where(
-      and(eq(schema.projects.id, id), eq(schema.projects.userId, session.user.id)),
+      and(eq(schema.projects.id, id), eq(schema.projects.userId, duenoId)),
     )
     .limit(1);
   const row = rows[0];
@@ -69,6 +74,8 @@ export async function GET(
     // Con la función pura antes de hornear: sin dominio de lienzo (o con un id
     // que no es un uuid) no se gasta nada y se cae a la reserva de abajo.
     if (urlDelDocumento({ projectId: id, docId: "comprobacion", pagina, hostDeLaPeticion }) !== null) {
+      const app = row.data?.app ?? null;
+      const entorno = app ? await entornoPublicoDeLaApp(id) : undefined;
       const vista = documentoDeVista(html, {
         projectId: id,
         title: row.title ?? null,
@@ -76,8 +83,16 @@ export async function GET(
         pagina,
         settings: row.data?.settings,
         logoUrl: row.logoUrl ?? null,
+        app,
       });
-      const docId = guardarDocumento({ html: vista, projectId: id, userId: session.user.id, pagina });
+      const docId = guardarDocumento({
+        html: vista,
+        projectId: id,
+        userId: duenoId,
+        pagina,
+        app,
+        ...(entorno ? { entorno } : {}),
+      });
       const destino = urlDelDocumento({ projectId: id, docId, pagina, hostDeLaPeticion });
       if (destino) {
         return new Response(null, {

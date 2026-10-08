@@ -101,7 +101,24 @@ describe("el proyecto de una etiqueta", () => {
 
   it("🔴 con un documento vivo, la etiqueta dice su proyecto y su dueño", () => {
     guardarDocumento({ ...base, projectId: P1 }, 1_000);
-    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 1_000, env)).toEqual({ projectId: P1, userId: "u1" });
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 1_000, env)).toEqual({
+      projectId: P1,
+      userId: "u1",
+      app: null,
+      entorno: undefined,
+    });
+  });
+
+  it("una APP: la etiqueta trae su app y su entorno, los del documento MÁS RECIENTE", () => {
+    const app = { catalogo: "2026-10", entrada: "/src/main.jsx" };
+    guardarDocumento({ ...base, projectId: P1 }, 1_000);
+    guardarDocumento({ ...base, projectId: P1, app, entorno: { VITE_SUPABASE_URL: "https://x.openlen.app" } }, 2_000);
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 2_000, env)).toEqual({
+      projectId: P1,
+      userId: "u1",
+      app,
+      entorno: { VITE_SUPABASE_URL: "https://x.openlen.app" },
+    });
   });
 
   it("🔴 sin documento vivo de ESE proyecto, nada — aunque haya de otro", () => {
