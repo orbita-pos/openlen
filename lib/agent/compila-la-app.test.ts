@@ -41,3 +41,19 @@ describe("el cascarón", () => {
     expect(problemasDelCascaron(APP, '<div id="app"></div><script type="module" src="/src/main.jsx"></script>', BIEN).map((x) => x.codigo)).toEqual(["raiz"]);
   });
 });
+
+describe("el tailwind.config del cascarón (apps 2026-11, tarea 6)", () => {
+  const conConfig = (config: string) =>
+    `<head><script src="https://cdn.tailwindcss.com"></script>${config}</head>${CASCARON}`;
+
+  it("con require() es un diagnóstico: en el navegador no hay require y se pierde la config entera", () => {
+    const html = conConfig('<script>tailwind.config = { theme: { extend: {} }, plugins: [require("tailwindcss-animate")] }</script>');
+    expect(problemasDelCascaron(APP, html, BIEN).map((d) => d.codigo)).toEqual(["tailwind-config"]);
+  });
+
+  it("sin require, o con require en OTRO script, no dice nada", () => {
+    expect(problemasDelCascaron(APP, conConfig("<script>tailwind.config = { theme: { extend: {} } }</script>"), BIEN)).toEqual([]);
+    const otro = conConfig('<script>tailwind.config = {}</script><script>const x = require("y")</script>');
+    expect(problemasDelCascaron(APP, otro, BIEN)).toEqual([]);
+  });
+});

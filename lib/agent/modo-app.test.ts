@@ -53,6 +53,35 @@ describe("el prompt de sistema de una app", () => {
   });
 });
 
+describe("el manual de una app con el catálogo 2026-11 (apps 2026-11, tarea 6)", () => {
+  const nuevo = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-11", entrada: "/src/main.jsx" });
+  const viejo = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-10", entrada: "/src/main.jsx" });
+
+  it("nombra radix-ui y shadcn, y no lista los @radix-ui sueltos", () => {
+    expect(nuevo).toContain("· radix-ui — ");
+    // Cómo se usa shadcn aquí, no sólo su nombre (que ya sale en la línea de radix-ui).
+    expect(nuevo).toMatch(/shadcn\/ui works as usual[^\n]*\/src\/components\/ui[^\n]*cn\(\)/);
+    expect(nuevo).not.toMatch(/· @radix-ui\/react-dialog — /);
+  });
+
+  it("dice que una hoja puede usar @layer y @apply, y que el tailwind.config es datos, sin require ni plugins", () => {
+    expect(nuevo).toMatch(/@layer and @apply/);
+    expect(nuevo).toMatch(/no require\(\) and no plugins/);
+    expect(nuevo).toMatch(/tailwindcss-animate is not available/);
+  });
+
+  it("🔴 dice que es Tailwind 3: el CSS de shadcn v4 (@import \"tailwindcss\", @theme) no funciona aquí", () => {
+    expect(nuevo).toMatch(/Tailwind CSS 3/);
+    expect(nuevo).toMatch(/@theme/);
+    expect(nuevo).toMatch(/@import "tailwindcss"/);
+  });
+
+  it("con 2026-10 no promete shadcn (no tiene sus paquetes)", () => {
+    expect(viejo).not.toMatch(/shadcn\/ui works as usual/);
+    expect(viejo).not.toContain("· radix-ui — ");
+  });
+});
+
 describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 
