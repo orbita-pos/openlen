@@ -19,12 +19,15 @@ import {
   type NuevoComentario,
 } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { ChatIcon, X } from "./icons";
-import { HiloEnLinea, hayMencion, mencionesDe, useArroba, type ContextoDeHilos, type EtiquetasDeHilos } from "./hilos-del-codigo";
+import { CajaConMenciones, HiloEnLinea, hayMencion, mencionesDe, useArroba, type ContextoDeHilos, type EtiquetasDeHilos } from "./hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 
 /** Con proyecto compartido o con Len: lo escrito con `@` abre un hilo en vez de esperar al chat. */
 export interface MencionesDeLaCaja {
   readonly personas: readonly PersonaMencionable[];
+  /** Toda la gente del proyecto y su color, para pintar las menciones mientras se escriben. */
+  readonly gente: readonly PersonaMencionable[];
+  readonly colorDe: (userId: string) => string;
   readonly conLen: boolean;
   readonly labels: EtiquetasDeHilos;
   readonly onHilo: (texto: string) => Promise<boolean>;
@@ -129,7 +132,7 @@ export function CajaDeComentario({
   const [enviando, setEnviando] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => ref.current?.focus(), []);
-  const arroba = useArroba(texto, setTexto, ref, menciones?.personas ?? [], menciones?.conLen ?? false);
+  const arroba = useArroba(texto, setTexto, ref, menciones?.personas ?? [], menciones?.conLen ?? false, menciones?.colorDe);
   const conMencion = Boolean(menciones && hayMencion(mencionesDe(texto, menciones.personas)));
   // Con `@`: un hilo (se guarda y avisa). Sin él: espera al próximo mensaje, como siempre.
   const enviar = async () => {
@@ -142,33 +145,48 @@ export function CajaDeComentario({
     setEnviando(false);
     if (!ok) setAviso(menciones.labels.error);
   };
+  const caja = {
+    value: texto,
+    rows: 2,
+    maxLength: MAX_COMENTARIO,
+    placeholder: menciones ? menciones.labels.placeholder : labels.placeholder,
+    "aria-label": labels.placeholder,
+    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setTexto(e.target.value);
+      arroba.onSeleccion(e);
+    },
+    onSelect: arroba.onSeleccion,
+    onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (arroba.tecla(e)) return;
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        void enviar();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancelar();
+      }
+    },
+  };
   return (
     <span className="my-1 ml-9 mr-3 block rounded-md border bd bg-elev p-2 font-sans whitespace-normal" data-caja-de-comentario="">
-      <textarea
-        ref={ref}
-        value={texto}
-        rows={2}
-        maxLength={MAX_COMENTARIO}
-        placeholder={menciones ? menciones.labels.placeholder : labels.placeholder}
-        aria-label={labels.placeholder}
-        onChange={(e) => {
-          setTexto(e.target.value);
-          arroba.onSeleccion(e);
-        }}
-        onSelect={arroba.onSeleccion}
-        onKeyDown={(e) => {
-          if (arroba.tecla(e)) return;
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void enviar();
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            e.stopPropagation();
-            onCancelar();
-          }
-        }}
-        className="block w-full resize-none bg-transparent text-[12px] leading-snug fg placeholder:fg-faint focus:outline-none"
-      />
+      {/* Con gente o Len a quien mencionar, las menciones se pintan mientras se escriben. */}
+      {menciones ? (
+        <CajaConMenciones
+          cajaRef={ref}
+          gente={menciones.gente}
+          colorDe={menciones.colorDe}
+          medida="text-[12px] leading-snug"
+          className="placeholder:fg-faint focus:outline-none"
+          {...caja}
+        />
+      ) : (
+        <textarea
+          ref={ref}
+          {...caja}
+          className="block w-full resize-none bg-transparent text-[12px] leading-snug fg placeholder:fg-faint focus:outline-none"
+        />
+      )}
       {arroba.menu}
       {lleno && <span className="mt-1 block text-[11px] text-accent">{labels.tope}</span>}
       {aviso && <span className="mt-1 block text-[11px] text-accent">{aviso}</span>}
@@ -245,6 +263,8 @@ export function DebajoDeLaLinea({
     hilos && datos && !deAntes && (hilos.ctx.personas.length > 0 || datos.puedeLen)
       ? {
           personas: hilos.ctx.personas,
+          gente: hilos.ctx.gente,
+          colorDe: hilos.ctx.colorDe,
           conLen: datos.puedeLen,
           labels: hilos.labels,
           onHilo: async (texto) => {

@@ -18,9 +18,20 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type RefObject,
+  type TextareaHTMLAttributes,
 } from "react";
 
-import { arrobaEnCurso, hayMencion, mencionesDe, opcionesDeMencion, ponerMencion, type PersonaMencionable } from "@/lib/workspace-v2/menciones";
+import {
+  arrobaEnCurso,
+  colorDePersona,
+  hayMencion,
+  mencionesDe,
+  opcionesDeMencion,
+  ponerMencion,
+  trozosConMenciones,
+  type PersonaMencionable,
+} from "@/lib/workspace-v2/menciones";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 
 export interface EtiquetasDeHilos {
@@ -115,6 +126,9 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
 
   const idioma = typeof document !== "undefined" ? document.documentElement.lang || undefined : undefined;
   const personas = useMemo(() => (datos ? datos.personas.filter((p) => p.userId !== datos.yo) : []), [datos]);
+  // Para PINTAR hace falta toda la gente (también quien mira: a él también lo mencionan).
+  const gente = useMemo<readonly PersonaMencionable[]>(() => datos?.personas ?? [], [datos]);
+  const colorDe = useCallback((userId: string) => colorDePersona(userId, gente.map((p) => p.userId)), [gente]);
 
   const escribir = async (url: string, cuerpo: Record<string, unknown>, texto: string, dondeDe: (hiloId: string) => { ruta: string; linea: number }) => {
     const m = mencionesDe(texto, personas);
@@ -139,6 +153,8 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
   return {
     datos,
     personas,
+    gente,
+    colorDe,
     error,
     hilosDeLaLinea: (linea: number) => (datos?.hilos ?? []).filter((h) => h.linea === linea),
     lineas: [...new Set((datos?.hilos ?? []).map((h) => h.linea))],
@@ -158,6 +174,86 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
 
 export type ContextoDeHilos = ReturnType<typeof useHilos>;
 
+/** Un texto con sus menciones de color: `@Len` en su naranja, cada persona en el suyo. */
+export function TextoConMenciones({
+  texto,
+  gente,
+  colorDe,
+}: {
+  texto: string;
+  gente: readonly PersonaMencionable[];
+  colorDe: (userId: string) => string;
+}) {
+  return (
+    <>
+      {trozosConMenciones(texto, gente).map((t, i) =>
+        t.len ? (
+          <span key={i} className="font-medium text-accent" data-mencion="len">
+            {t.texto}
+          </span>
+        ) : t.userId ? (
+          <span key={i} className="font-medium" style={{ color: colorDe(t.userId) }} data-mencion="persona">
+            {t.texto}
+          </span>
+        ) : (
+          <span key={i}>{t.texto}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+/**
+ * Una caja de texto que pinta las menciones MIENTRAS se escriben. Un `textarea`
+ * no colorea trozos de su texto: el texto va transparente (se ve el cursor y la
+ * selección) y detrás, con la misma medida, una copia con los colores.
+ * `medida` son las clases que fijan dónde cae cada letra (relleno, borde, letra,
+ * interlineado) y las llevan los dos; `fondo` pinta la copia de detrás.
+ */
+export function CajaConMenciones({
+  cajaRef,
+  gente,
+  colorDe,
+  medida,
+  fondo = "",
+  className = "",
+  value,
+  onScroll,
+  ...resto
+}: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & {
+  cajaRef: RefObject<HTMLTextAreaElement | null>;
+  gente: readonly PersonaMencionable[];
+  colorDe: (userId: string) => string;
+  medida: string;
+  fondo?: string;
+  value: string;
+}) {
+  const copia = useRef<HTMLSpanElement>(null);
+  return (
+    <span className="relative block">
+      <span
+        ref={copia}
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words border-transparent fg ${medida} ${fondo}`}
+      >
+        <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} />
+        {/* Un salto final como el del textarea: si no, la última línea vacía no ocupa sitio. */}
+        {"\n"}
+      </span>
+      <textarea
+        ref={cajaRef}
+        value={value}
+        onScroll={(e) => {
+          if (copia.current) copia.current.scrollTop = e.currentTarget.scrollTop;
+          onScroll?.(e);
+        }}
+        className={`relative block w-full resize-none bg-transparent text-transparent caret-[var(--fg)] ${medida} ${className}`}
+        {...resto}
+      />
+    </span>
+  );
+}
+
 /** El `@` de una caja: el desplegable con Len y la gente, y las teclas para elegir. */
 export function useArroba(
   texto: string,
@@ -165,6 +261,7 @@ export function useArroba(
   ref: React.RefObject<HTMLTextAreaElement | null>,
   personas: readonly PersonaMencionable[],
   conLen: boolean,
+  colorDe?: (userId: string) => string,
 ) {
   const [cursor, setCursor] = useState(0);
   const [elegida, setElegida] = useState(0);
@@ -218,7 +315,12 @@ export function useArroba(
             }}
             className={`flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11.5px] ${i === elegida ? "bg-hover fg" : "fg-muted"}`}
           >
-            <span className={o.userId ? "" : "text-accent font-medium"}>@{o.etiqueta}</span>
+            <span
+              className={o.userId ? "font-medium" : "text-accent font-medium"}
+              style={o.userId && colorDe ? { color: colorDe(o.userId) } : undefined}
+            >
+              @{o.etiqueta}
+            </span>
           </button>
         ))}
       </span>
@@ -234,7 +336,7 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
   const [aviso, setAviso] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
   const puedeLen = ctx.datos?.puedeLen ?? false;
-  const arroba = useArroba(respuesta, setRespuesta, ref, ctx.personas, puedeLen);
+  const arroba = useArroba(respuesta, setRespuesta, ref, ctx.personas, puedeLen, ctx.colorDe);
   const resuelto = hilo.estado === "resuelto";
   const enviar = async () => {
     const texto = respuesta.trim();
@@ -262,13 +364,24 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
         <>
           {hilo.mensajes.map((m) => (
             <span key={m.id} className="mb-1 block last:mb-0" data-mensaje-del-hilo={m.autorId ? "persona" : "len"}>
-              <span className={`font-medium ${m.autorId ? "fg" : "text-accent"}`}>{m.autorId ? (m.autor ?? "?") : labels.len}</span>{" "}
-              <span className="whitespace-pre-wrap break-words fg-muted">{m.texto}</span>
+              <span
+                className={`font-medium ${m.autorId ? "" : "text-accent"}`}
+                style={m.autorId ? { color: ctx.colorDe(m.autorId) } : undefined}
+              >
+                {m.autorId ? (m.autor ?? "?") : labels.len}
+              </span>{" "}
+              <span className="whitespace-pre-wrap break-words fg-muted">
+                <TextoConMenciones texto={m.texto} gente={ctx.gente} colorDe={ctx.colorDe} />
+              </span>
             </span>
           ))}
           <span className="mt-1.5 block">
-            <textarea
-              ref={ref}
+            <CajaConMenciones
+              cajaRef={ref}
+              gente={ctx.gente}
+              colorDe={ctx.colorDe}
+              medida="rounded border px-1.5 py-1 text-[11.5px] leading-snug"
+              fondo="bg-elev"
               value={respuesta}
               rows={1}
               placeholder={labels.placeholderRespuesta}
@@ -289,7 +402,7 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
                   setRespuesta("");
                 }
               }}
-              className="block w-full resize-none rounded border bd bg-elev px-1.5 py-1 text-[11.5px] leading-snug fg placeholder:fg-faint focus:outline-none"
+              className="bd placeholder:fg-faint focus:outline-none"
             />
             {arroba.menu}
           </span>

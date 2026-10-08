@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { arrobaEnCurso, hayMencion, mencionesDe, opcionesDeMencion, ponerMencion } from "./menciones";
+import { COLORES_DE_PERSONA, arrobaEnCurso, colorDePersona, hayMencion, mencionesDe, opcionesDeMencion, ponerMencion, trozosConMenciones } from "./menciones";
 
 const GENTE = [
   { userId: "u-ana", nombre: "Ana López" },
@@ -25,5 +25,39 @@ describe("las menciones de un comentario", () => {
     expect(opcionesDeMencion("", GENTE, true).map((o) => o.etiqueta)).toEqual(["Len", "Ana López", "Luis", "jose@example.com"]);
     expect(opcionesDeMencion("l", GENTE, false).map((o) => o.etiqueta)).toEqual(["Luis", "Ana López"]);
     expect(ponerMencion("hola @an que tal", 5, 8, "Ana López")).toEqual({ texto: "hola @Ana López  que tal", cursor: 16 });
+  });
+});
+
+describe("los colores de las menciones", () => {
+  it("🔴 el texto en trozos: @Len y cada @persona aparte, lo demás tal cual", () => {
+    expect(trozosConMenciones("@Len pon esto y avisa a @ana lópez, gracias", GENTE)).toEqual([
+      { texto: "@Len", len: true },
+      { texto: " pon esto y avisa a " },
+      { texto: "@ana lópez", userId: "u-ana" },
+      { texto: ", gracias" },
+    ]);
+    // Los mismos límites que `mencionesDe`: un correo o un nombre más largo no cuentan.
+    expect(trozosConMenciones("escribe a ana@lopez.com y a @Luisa o @Lento", GENTE)).toEqual([
+      { texto: "escribe a ana@lopez.com y a @Luisa o @Lento" },
+    ]);
+    // Un nombre que contiene a otro: gana el más largo.
+    expect(trozosConMenciones("@Luis Mi y @Luis", [...GENTE, { userId: "u-lm", nombre: "Luis Mi" }])).toEqual([
+      { texto: "@Luis Mi", userId: "u-lm" },
+      { texto: " y " },
+      { texto: "@Luis", userId: "u-luis" },
+    ]);
+    expect(trozosConMenciones("", GENTE)).toEqual([]);
+  });
+
+  it("🔴 cada persona del proyecto, un color distinto y el mismo en todas partes", () => {
+    const ids = GENTE.map((p) => p.userId);
+    const colores = ids.map((id) => colorDePersona(id, ids));
+    expect(new Set(colores).size).toBe(ids.length);
+    expect(colorDePersona("u-luis", ids)).toBe(colorDePersona("u-luis", ids));
+    // Quien no está en la lista (ya no es miembro) también tiene color, siempre el mismo.
+    expect(COLORES_DE_PERSONA).toContain(colorDePersona("u-se-fue", ids));
+    expect(colorDePersona("u-se-fue", ids)).toBe(colorDePersona("u-se-fue", []));
+    // Ninguno es el naranja de Len.
+    expect(COLORES_DE_PERSONA.every((c) => !c.includes("accent"))).toBe(true);
   });
 });
