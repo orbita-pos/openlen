@@ -3,7 +3,7 @@
 // modelos escriben por reflejo —código «de Vite»— sale como JavaScript que un
 // navegador ejecuta sin bundler, con las líneas en su sitio.
 import { describe, expect, it } from "vitest";
-import { compilarCarpeta, compilarFuente, esFuenteCompilable, textoDeDiagnostico, type ContextoDeCompilacion } from "./compilador";
+import { compilarCarpeta, compilarFuente, esFuenteCompilable, textoDeDiagnostico, usesTailwindDirectives, type ContextoDeCompilacion } from "./compilador";
 import { CATALOGO_ACTUAL } from "./dependencias";
 
 const app = (carpeta: Record<string, string>, entorno?: Record<string, string>): ContextoDeCompilacion => ({
@@ -147,6 +147,55 @@ describe("los imports", () => {
     expect(js.split("\n")[1]).toBe("export const a = 1;");
   });
 
+  it("una hoja con directivas de Tailwind se inyecta como <style type=\"text/tailwindcss\">, en la misma línea", () => {
+    const css = "@layer base { :root { --background: 0 100% 50%; } }\n.btn { @apply bg-primary; }";
+    const js = ok(compilarFuente("/src/main.jsx", 'import "./index.css";\nexport const a = 1;', app({ ...CARPETA, "/src/index.css": css })));
+    expect(js).toContain('s.type="text/tailwindcss"');
+    expect(js).toContain(JSON.stringify(css));
+    expect(js).not.toContain("l.href=");
+    expect(js.split("\n")).toHaveLength(2);
+    expect(js.split("\n")[1]).toBe("export const a = 1;");
+  });
+
+  it("CSS hostil dentro del módulo: el JS sigue siendo válido y el texto llega idéntico", () => {
+    const css = '.a { @apply p-2 } /* "</script>` ${x} \\u2028 */';
+    const js = ok(compilarFuente("/src/main.jsx", 'import "./index.css";', app({ ...CARPETA, "/src/index.css": css })));
+    const nodo = { type: "", textContent: "", setAttribute() {} };
+    const documento = { querySelector: () => null, createElement: () => nodo, head: { append() {} } };
+    new Function("document", js)(documento);
+    expect(nodo.type).toBe("text/tailwindcss");
+    expect(nodo.textContent).toBe(css);
+  });
+
+  it("dos módulos que importan la misma hoja: se inyecta una sola vez", () => {
+    const css = ".btn { @apply p-2; }";
+    const js = ok(compilarFuente("/src/main.jsx", 'import "./index.css";', app({ ...CARPETA, "/src/index.css": css })));
+    let puesto: unknown = null;
+    let veces = 0;
+    const documento = {
+      querySelector: () => puesto,
+      createElement: () => ({ setAttribute() {} }),
+      head: {
+        append: (n: unknown) => {
+          puesto = n;
+          veces++;
+        },
+      },
+    };
+    new Function("document", js)(documento);
+    new Function("document", js)(documento);
+    expect(veces).toBe(1);
+  });
+
+  it("usesTailwindDirectives: sólo lo que el navegador no entiende", () => {
+    for (const si of ["@apply p-2", "@layer base {}", "@tailwind base;", "a { color: theme(colors.red.500) }", "@screen md { a {} }", "@config './x.js';"]) {
+      expect(usesTailwindDirectives(si), si).toBe(true);
+    }
+    for (const no of ["body{}", "@media (min-width: 1px) { a {} }", "@import url(x.css);", "@font-face { font-family: X }", "@keyframes x { from {} }", ".applyish { color: red }"]) {
+      expect(usesTailwindDirectives(no), no).toBe(false);
+    }
+  });
+
   it("un módulo CSS (import x from \"./a.css\") es un error claro", () => {
     const r = compilarFuente("/src/main.jsx", 'import estilos from "./index.css";\nestilos;', app(CARPETA));
     expect(r.ok).toBe(false);
@@ -244,6 +293,16 @@ describe("la caché", () => {
     const f = 'import a from "./Nuevo";\na;';
     expect(compilarFuente("/src/main.jsx", f, app({})).ok).toBe(false);
     expect(compilarFuente("/src/main.jsx", f, app({ "/src/Nuevo.jsx": "" })).ok).toBe(true);
+  });
+
+  it("🔴 una hoja que pasa a usar @apply cambia el módulo que la importa: no se sirve el <link> de antes", () => {
+    const f = 'import "./index.css";';
+    const antes = ok(compilarFuente("/src/main.jsx", f, app({ "/src/index.css": "body{}" })));
+    expect(antes).toContain("l.href=");
+    const despues = ok(compilarFuente("/src/main.jsx", f, app({ "/src/index.css": "body { @apply bg-red-500; }" })));
+    expect(despues).toContain('s.type="text/tailwindcss"');
+    const otraVez = ok(compilarFuente("/src/main.jsx", f, app({ "/src/index.css": "body { @apply bg-blue-500; }" })));
+    expect(otraVez).toContain("bg-blue-500");
   });
 });
 
