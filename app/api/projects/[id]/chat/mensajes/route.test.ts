@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     { userId: "u-eli", nombre: "Eli Editor", email: "e@x", rol: "editor" },
   ]),
   scheduleNotification: vi.fn(async () => {}),
+  hayInvitacionesPendientes: vi.fn(async () => false),
 }));
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -25,6 +26,10 @@ vi.mock("@/lib/projects/chat-equipo", () => ({
 vi.mock("@/lib/projects/hilos", async (original) => ({
   ...(await original<typeof import("@/lib/projects/hilos")>()),
   personasDelProyecto: mocks.personasDelProyecto,
+}));
+vi.mock("@/lib/projects/miembros", async (original) => ({
+  ...(await original<typeof import("@/lib/projects/miembros")>()),
+  hayInvitacionesPendientes: mocks.hayInvitacionesPendientes,
 }));
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
 vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({ retomarPedidosDelHilo: vi.fn(async () => {}), lanzarTurnoDelHilo: vi.fn() }));
@@ -82,6 +87,13 @@ describe("POST /api/projects/[id]/chat/mensajes — escribir a una persona", () 
     // Y si el proyecto es compartido: sin miembros, el carril deja de preguntar.
     expect(await res.json()).toEqual({ sinVer: 2, compartido: true });
     expect(mocks.mencionesDelChatSinVer).toHaveBeenCalledWith("p1", "u-leo");
+  });
+
+  it("🔴 GET ?solo=sinVer sin miembros pero con una invitación pendiente: esperando, para que el carril siga preguntando", async () => {
+    mocks.personasDelProyecto.mockResolvedValueOnce([{ userId: "u-dana", nombre: "Dana Dueña", email: "d@x", rol: "dueno" }]);
+    mocks.hayInvitacionesPendientes.mockResolvedValueOnce(true);
+    const res = await GET(new Request("http://localhost/api/projects/p1/chat/mensajes?solo=sinVer"), { params: Promise.resolve({ id: "p1" }) });
+    expect(await res.json()).toEqual({ sinVer: 2, compartido: false, esperando: true });
   });
 
   it("GET ?solo=firma devuelve la firma de la conversación, para releerla sólo si cambió", async () => {

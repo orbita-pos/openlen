@@ -4,8 +4,9 @@
 //   personas del proyecto; Len no contesta. Cualquier rol (un lector también:
 //   escribir a alguien es comentar, no editar). Con `@Len` es un turno y va por
 //   /api/agent (400 lleva_len).
-// GET ?solo=sinVer → { sinVer, compartido }: las menciones del chat sin ver de
-//   quien pide, y si hay miembros (sin ellos, el carril deja de preguntar).
+// GET ?solo=sinVer → { sinVer, compartido, esperando? }: las menciones del chat
+//   sin ver de quien pide, y si hay miembros; sin ellos el carril deja de
+//   preguntar, salvo que haya una invitación pendiente (`esperando`).
 // GET ?solo=firma → { firma }: la firma de la conversación (`firmaDelChat`), para
 //   que un chat compartido abierto la relea sólo si cambió.
 import { z } from "zod";
@@ -14,6 +15,7 @@ import { MAX_TEXTO_DEL_HILO, mencionesValidas, personasDelProyecto } from "@/lib
 import { escribirMensajeDelEquipo, firmaDelChat, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
 import { scheduleNotification } from "@/lib/notifications/dispatch";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
+import { hayInvitacionesPendientes } from "@/lib/projects/miembros";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { json, quienEnElProyecto } from "../../hilos/_comun";
 
@@ -45,7 +47,8 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const solo = new URL(req.url).searchParams.get("solo");
   if (solo === "sinVer") {
     const [sinVer, personas] = await Promise.all([mencionesDelChatSinVer(id, q.userId), personasDelProyecto(id)]);
-    return json({ sinVer, compartido: personas.length > 1 });
+    if (personas.length > 1) return json({ sinVer, compartido: true });
+    return json({ sinVer, compartido: false, ...((await hayInvitacionesPendientes(id)) ? { esperando: true } : {}) });
   }
   if (solo === "firma") return json({ firma: await firmaDelChat(id) });
   return json({ error: "invalid_query" }, 400);

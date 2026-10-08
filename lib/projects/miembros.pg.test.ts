@@ -15,6 +15,7 @@ import {
   aceptarInvitacion,
   cambiarRol,
   gastoDeMiembrosDelMes,
+  hayInvitacionesPendientes,
   invitar,
   listarMiembros,
   margenDeMiembros,
@@ -60,8 +61,13 @@ describe("quién entra a un proyecto", () => {
     expect(r).toBeInstanceOf(Response);
     expect((r as Response).status).toBe(404);
     // Una invitación SIN aceptar no da acceso.
-    await invitar(PROYECTO, DUENO, correo(ANA), "editor");
+    expect(await hayInvitacionesPendientes(PROYECTO)).toBe(false);
+    const r2 = await invitar(PROYECTO, DUENO, correo(ANA), "editor");
     expect(await accesoAlProyecto(PROYECTO, ANA)).toBeNull();
+    // …pero el chat del dueño sabe que alguien puede llegar, y deja de saberlo al aceptarse.
+    expect(await hayInvitacionesPendientes(PROYECTO)).toBe(true);
+    if (r2.ok) await aceptarInvitacion(r2.token, ANA, correo(ANA));
+    expect(await hayInvitacionesPendientes(PROYECTO)).toBe(false);
   });
 
   it("🔴 la invitación sólo la acepta el correo invitado, una vez; luego entra con su rol", async () => {

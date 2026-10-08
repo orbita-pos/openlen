@@ -12,6 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { X } from "lucide-react";
 
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
+import { avisarMiembrosCambiaron } from "./chat/use-gente-del-chat";
 import { ModalShell } from "./modal-shell";
 import { Button } from "./ui";
 
@@ -83,6 +84,8 @@ export function MiembrosDialog({
     try {
       const r = await fetch(url + (init.query ?? ""), { ...init, headers: { "content-type": "application/json" } }).catch(() => null);
       const j = r ? ((await r.json().catch(() => ({}))) as { error?: string }) : {};
+      // El chat y el carril vuelven a leer quién hay (use-gente-del-chat).
+      if (r?.ok) avisarMiembrosCambiaron();
       return { ok: Boolean(r?.ok), error: j.error };
     } finally {
       setOcupado(false);

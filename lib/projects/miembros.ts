@@ -83,6 +83,23 @@ export async function listarMiembros(projectId: string): Promise<{ miembros: Mie
   };
 }
 
+/** ¿Alguien puede llegar todavía? Una invitación sin usar y sin caducar: el
+ *  chat del dueño sigue mirando, porque el invitado acepta con su pestaña abierta. */
+export async function hayInvitacionesPendientes(projectId: string): Promise<boolean> {
+  const [fila] = await db
+    .select({ email: schema.projectInvites.email })
+    .from(schema.projectInvites)
+    .where(
+      and(
+        eq(schema.projectInvites.projectId, projectId),
+        eq(schema.projectInvites.used, false),
+        gt(schema.projectInvites.expires, new Date()),
+      ),
+    )
+    .limit(1);
+  return Boolean(fila);
+}
+
 export type ResultadoDeInvitar =
   | { readonly ok: true; readonly token: string }
   | { readonly ok: false; readonly motivo: "tu_mismo" | "ya_es_miembro" | "limite" };

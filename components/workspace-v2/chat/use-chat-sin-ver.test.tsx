@@ -7,6 +7,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { chatALaVista, useChatSinVer } from "./use-chat-sin-ver";
+import { avisarMiembrosCambiaron } from "./use-gente-del-chat";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -78,6 +79,47 @@ describe("sin miembros", () => {
         await vi.advanceTimersByTimeAsync(95_000);
       });
       expect(f).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("🔴 sin miembros pero con una invitación pendiente, sigue preguntando (el invitado puede aceptar con la pestaña abierta)", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn(async () => new Response(JSON.stringify({ sinVer: 0, compartido: false, esperando: true }), { status: 200 }));
+      vi.stubGlobal("fetch", f);
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      root = createRoot(host);
+      await act(async () => root!.render(<Sonda abierto={false} ver={() => {}} />));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(65_000);
+      });
+      expect(f).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("🔴 parado por no ser compartido, vuelve a preguntar cuando cambian los miembros (el dueño invitó)", async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn(async () => new Response(JSON.stringify({ sinVer: 0, compartido: false }), { status: 200 }));
+      vi.stubGlobal("fetch", f);
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      root = createRoot(host);
+      await act(async () => root!.render(<Sonda abierto={false} ver={() => {}} />));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(35_000);
+      });
+      expect(f).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        avisarMiembrosCambiaron();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(f).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
