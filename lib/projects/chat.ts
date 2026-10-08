@@ -71,7 +71,11 @@ async function conAutores(
   const turns = rows.map(rowToTurn);
   if (rows.length === 0) return turns;
   try {
-    const miembros = [...new Set(rows.map((r) => r.autorId).filter((x): x is string => Boolean(x)))];
+    // Los que pidieron y los mencionados (el chat del equipo): de quien ya no es
+    // del proyecto también hace falta el nombre.
+    const miembros = [
+      ...new Set(rows.flatMap((r) => [r.autorId, ...(r.menciones ?? [])]).filter((x): x is string => Boolean(x))),
+    ];
     // UNA consulta, sin `limit`: el dueño del proyecto y los miembros que pidieron algo.
     const gente = await db
       .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, duenoId: schema.projects.userId })
@@ -86,7 +90,15 @@ async function conAutores(
     return turns.map((t, i) => {
       const autorId = rows[i]!.autorId ?? duenoId ?? undefined;
       const autor = nombre.get(autorId ?? "");
-      return { ...t, ...(autor ? { autor } : {}), ...(autorId ? { autorId } : {}) };
+      const nombres = Object.fromEntries(
+        (rows[i]!.menciones ?? []).flatMap((id) => (nombre.has(id) ? [[id, nombre.get(id)!]] : [])),
+      );
+      return {
+        ...t,
+        ...(autor ? { autor } : {}),
+        ...(autorId ? { autorId } : {}),
+        ...(Object.keys(nombres).length > 0 ? { nombres } : {}),
+      };
     });
   } catch (err) {
     console.warn("[chat] no se pudo leer quién pidió cada turno", err);

@@ -324,6 +324,8 @@ export interface StoredChatTurn {
   autorId?: string;
   /** A quién menciona. */
   menciones?: string[];
+  /** El nombre de cada mencionado, también de quien ya no es del proyecto. */
+  nombres?: Record<string, string>;
   /** Pieza 7: tras este turno la charla seguía en modo plan (lo que pliega el
    *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
    *  enciende su ficha «Plan» si el último turno lo trae. */

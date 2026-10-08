@@ -38,4 +38,20 @@ describe("un mensaje entre personas", () => {
     expect(host.querySelector('[data-mensaje-del-equipo="ajeno"]')).toBeTruthy();
     expect(host.querySelector('[data-mencion="persona"]')?.textContent).toBe("@Dana Dueña");
   });
+
+  it("🔴 quien ya no está en el proyecto sale con su nombre (el que trae la fila), no con «?»", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const fuera = { ...(turn as object), autorId: "u-ex", autor: "Eva Ex", menciones: ["u-ida"], nombres: { "u-ida": "Ida Ida" } } as never;
+    act(() =>
+      root.render(
+        <NextIntlClientProvider locale="es" messages={{ panelsChat }}>
+          <MensajeDelEquipo turn={fuera} gente={GENTE} yo="u-dana" colorDe={() => "red"} />
+        </NextIntlClientProvider>,
+      ),
+    );
+    expect([...host.querySelectorAll("p")].some((p) => p.textContent === "Eva Ex → Ida Ida · Len no responde")).toBe(true);
+  });
 });

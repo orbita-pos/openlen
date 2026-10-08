@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
-import { filasParaElHistorialConEquipo, getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, getChatMessages, quitarFilaDelTurno, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
 const ELI = "prueba-equipo-eli";
@@ -122,5 +122,20 @@ describe("el chat del equipo", () => {
     expect(personas).toEqual(Array.from({ length: 13 }, (_, i) => `persona-${i}`));
     // En orden de fecha: los turnos primero (son anteriores), luego el equipo.
     expect(filas.map((f) => f.createdAt.getTime())).toEqual([...filas.map((f) => f.createdAt.getTime())].sort((x, y) => x - y));
+  });
+
+  it("🔴 un turno que no hizo nada se quita y se lleva sus menciones: el aviso que espera ya no tiene qué avisar", async () => {
+    await db.insert(schema.projectChatMessages).values({ id: "prueba-equipo-vacio", projectId: PROYECTO, userText: "@Len y @eli", assistantReasoning: "", status: "en_curso" });
+    await apuntarMencionesDelTurno({ projectId: PROYECTO, filaId: "prueba-equipo-vacio", mencionados: [ELI] });
+    expect(await mencionesDelChatSinVer(PROYECTO, ELI)).toBe(1);
+    await quitarFilaDelTurno(PROYECTO, "prueba-equipo-vacio");
+    expect(await mencionesDelChatSinVer(PROYECTO, ELI)).toBe(0);
+  });
+
+  it("🔴 el chat trae el nombre de cada mencionado aunque ya no sea del proyecto (no «?»)", async () => {
+    await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: DUENO, texto: "@eli adiós", menciones: [ELI] });
+    await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
+    const turnos = await getChatMessages(PROYECTO);
+    expect(turnos.at(-1)!.nombres).toEqual({ [ELI]: "eli" });
   });
 });

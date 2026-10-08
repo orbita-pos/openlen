@@ -24,7 +24,9 @@ export function MensajeDelEquipo({
   const t = useTranslations("panelsChat.equipo");
   const autorId = turn.autorId ?? "";
   const propio = autorId === yo;
-  const nombre = (id: string) => gente.find((p) => p.userId === id)?.nombre ?? (id === autorId ? turn.autor : undefined) ?? "?";
+  // Quien ya no es del proyecto no está en `gente`: su nombre viene en la fila.
+  const nombre = (id: string) =>
+    gente.find((p) => p.userId === id)?.nombre ?? turn.nombres?.[id] ?? (id === autorId ? turn.autor : undefined) ?? "?";
   const para = (turn.menciones ?? []).map(nombre).join(", ");
   const inicial = (nombre(autorId).trim()[0] ?? "?").toUpperCase();
   return (

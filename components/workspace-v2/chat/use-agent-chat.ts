@@ -99,6 +99,8 @@ export interface DesignTurn {
   autorId?: string;
   /** A quién menciona. */
   menciones?: string[];
+  /** El nombre de cada mencionado (`StoredChatTurn.nombres`). */
+  nombres?: Record<string, string>;
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
@@ -2530,6 +2532,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     ...(s.tipo ? { tipo: s.tipo } : {}),
     ...(s.autorId ? { autorId: s.autorId } : {}),
     ...(s.menciones ? { menciones: s.menciones } : {}),
+    ...(s.nombres ? { nombres: s.nombres } : {}),
   };
 }
 
