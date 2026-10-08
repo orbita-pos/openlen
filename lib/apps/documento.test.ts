@@ -68,6 +68,12 @@ describe("la precarga (modulepreload)", () => {
     ]);
   });
 
+  it("no precarga los trozos compartidos: el navegador pide sólo los que su paquete importa", () => {
+    const rutas = rutasDePrecarga("2026-11", ["/src/main.jsx"], ["react-dom/client", "@radix-ui/react-dialog"]);
+    expect(rutas.some((r) => r.includes("/chunk-"))).toBe(false);
+    expect(rutas).toContain("/openlen/vendor/2026-11/radix-dialog.js");
+  });
+
   it("sin React no precarga el bundle de React", () => {
     expect(rutasDePrecarga(CATALOGO_ACTUAL, ["/src/main.js"], ["@supabase/supabase-js"])).toEqual([
       `/openlen/vendor/${CATALOGO_ACTUAL}/supabase-js.js`,

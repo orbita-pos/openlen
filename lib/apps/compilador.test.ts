@@ -366,3 +366,12 @@ describe("compilarCarpeta", () => {
     expect(r.errores).toEqual([]);
   });
 });
+
+describe("una app nacida en 2026-10 sigue con su catálogo", () => {
+  it("compila contra 2026-10 aunque el actual sea otro, y no ve los paquetes nuevos", () => {
+    const viejo = { carpeta: { "/src/main.jsx": "" }, catalogo: "2026-10" };
+    expect(compilarFuente("/src/main.jsx", 'import { useState } from "react";\nuseState;', viejo).ok).toBe(true);
+    const r = compilarFuente("/src/main.jsx", 'import { z } from "zod";\nz;', viejo);
+    expect(r.ok).toBe(false);
+  });
+});

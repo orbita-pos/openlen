@@ -21,13 +21,13 @@
 // nombres se leen del propio paquete al construir.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { build, type Plugin } from "esbuild";
 import { parse } from "es-module-lexer/js";
-import { CATALOGO_ACTUAL, catalogo, ficherosDelCatalogo, type ModoVendor } from "../lib/apps/dependencias";
+import { CATALOGO_ACTUAL, catalogo, ficherosDelCatalogo, type Dependencia, type ModoVendor } from "../lib/apps/dependencias";
 import { EXPORTS_DEL_ENRUTADOR } from "../lib/apps/enrutador";
 import { ICONOS_DE_LAS_APPS } from "../lib/apps/iconos";
 
@@ -35,8 +35,18 @@ const require = createRequire(import.meta.url);
 const RAIZ = path.resolve(import.meta.dirname, "..");
 const MODOS: readonly ModoVendor[] = ["desarrollo", "produccion"];
 
-function versionInstalada(paquete: string): string {
-  return (require(`${paquete}/package.json`) as { version: string }).version;
+/** Leído del disco y no con `require`: los paquetes de Radix no exportan su
+ *  `package.json` (ERR_PACKAGE_PATH_NOT_EXPORTED). */
+function versionInstalada(paquete: string, raiz = RAIZ): string {
+  return (JSON.parse(readFileSync(path.join(raiz, "node_modules", paquete, "package.json"), "utf8")) as { version: string }).version;
+}
+
+/** De dónde salen los paquetes de un catálogo. Uno por partes tiene los suyos
+ *  en `scripts/app-catalog/<catálogo>/`, aparte de los del producto: con ellos
+ *  en la raíz, tailwind-merge 2 (Tailwind 3) bajaba el de la app y ajv 8 rompía
+ *  eslint (medido el 2026-10-08). `2026-10` se construyó desde la raíz. */
+function raizDePaquetes(nombre: string): string {
+  return catalogo(nombre)?.split ? path.join(RAIZ, "scripts", "app-catalog", nombre) : RAIZ;
 }
 
 /** Los nombres que exporta un módulo CJS, válidos como identificador. */
@@ -136,6 +146,15 @@ function textoDeLicencia(dir: string): string | null {
     // ser la misma en cualquier máquina.
     if (existsSync(path.join(dir, f))) return readFileSync(path.join(dir, f), "utf8").replace(/\r\n?/g, "\n").trim();
   }
+  // Otros nombres, DESPUÉS de los de siempre (que no cambie lo de 2026-10):
+  // decimal.js-light, de recharts, la trae como `LICENCE.md`.
+  const otro = readdirSync(dir).find((f) => /^licen[cs]e(\.(md|txt))?$/i.test(f));
+  if (otro) return readFileSync(path.join(dir, otro), "utf8").replace(/\r\n?/g, "\n").trim();
+  // Un paquete que no trae su licencia en el tarball: copiada A MANO de su
+  // repositorio, en la versión instalada, a scripts/app-vendor-licenses/.
+  const nombre = (JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8")) as { name: string }).name;
+  const aMano = path.join(RAIZ, "scripts", "app-vendor-licenses", `${nombre.replace("/", "__")}.txt`);
+  if (existsSync(aMano)) return readFileSync(aMano, "utf8").replace(/\r\n?/g, "\n").trim();
   return null;
 }
 
@@ -161,7 +180,7 @@ async function construir(modo: ModoVendor, destino: string): Promise<Incluido[]>
 }
 
 /** Las opciones de esbuild que comparten todos los bundles de un modo. */
-function comunDe(modo: ModoVendor) {
+function comunDe(modo: ModoVendor, raiz = RAIZ) {
   return {
     bundle: true,
     format: "esm" as const,
@@ -171,7 +190,7 @@ function comunDe(modo: ModoVendor) {
     logLevel: "error" as const,
     metafile: true,
     define: { "process.env.NODE_ENV": JSON.stringify(modo === "produccion" ? "production" : "development") },
-    nodePaths: [path.join(RAIZ, "node_modules")],
+    nodePaths: [path.join(raiz, "node_modules")],
   };
 }
 
@@ -181,8 +200,8 @@ function aviso(lista: readonly Incluido[]): string {
 }
 
 /** UN bundle (`fuentes/<nombre>` → `destino/<nombre>`), con su aviso. */
-async function buildOne(nombre: string, modo: ModoVendor, destino: string, fuentes: string, conReactFuera: boolean): Promise<Incluido[]> {
-  const opciones = { ...comunDe(modo), entryPoints: [path.join(fuentes, nombre)], ...(conReactFuera ? { plugins: [reactDesdeLasFachadas] } : {}) };
+async function buildOne(nombre: string, modo: ModoVendor, destino: string, fuentes: string, conReactFuera: boolean, raiz = RAIZ): Promise<Incluido[]> {
+  const opciones = { ...comunDe(modo, raiz), entryPoints: [path.join(fuentes, nombre)], ...(conReactFuera ? { plugins: [reactDesdeLasFachadas] } : {}) };
   // Dos pasadas: la primera dice qué paquetes entran; la segunda los nombra
   // en la cabecera. esbuild es determinista, así que la segunda es la misma
   // salida más el aviso.
@@ -198,7 +217,7 @@ async function buildOne(nombre: string, modo: ModoVendor, destino: string, fuent
 
 /** React, ReactDOM y el runtime de JSX en `react-todo.js`, y sus cuatro
  *  fachadas. Igual en todos los catálogos: es lo que garantiza UNA copia. */
-async function buildReactShared(modo: ModoVendor, destino: string, fuentes: string): Promise<Incluido[]> {
+async function buildReactShared(modo: ModoVendor, destino: string, fuentes: string, raiz = RAIZ): Promise<Incluido[]> {
   writeFileSync(
     path.join(fuentes, "react-todo.js"),
     'import * as React from "react";\n' +
@@ -207,12 +226,164 @@ async function buildReactShared(modo: ModoVendor, destino: string, fuentes: stri
       'import * as JSXRuntime from "react/jsx-runtime";\n' +
       "export { React, ReactDOM, ReactDOMClient, JSXRuntime };\n",
   );
-  const lista = await buildOne("react-todo.js", modo, destino, fuentes, false);
+  const lista = await buildOne("react-todo.js", modo, destino, fuentes, false, raiz);
   writeFileSync(path.join(destino, "react.js"), fachada("React", "react", true));
   writeFileSync(path.join(destino, "react-jsx-runtime.js"), fachada("JSXRuntime", "react/jsx-runtime", false));
   writeFileSync(path.join(destino, "react-dom.js"), fachada("ReactDOM", "react-dom", false));
   writeFileSync(path.join(destino, "react-dom-client.js"), fachada("ReactDOMClient", "react-dom/client", false));
   return lista;
+}
+
+/** Los idiomas de OpenLen en date-fns: todos sus locales pesan ~1 MB. */
+const DATE_FNS_LOCALES = ["es", "enUS", "ptBR", "fr", "de", "it", "ja", "ko", "zhCN", "nl"];
+/** Lo que va en `react-todo.js` y sus fachadas, no en la construcción por partes. */
+const EN_REACT_TODO = new Set(["react.js", "react-jsx-runtime.js", "react-dom.js", "react-dom-client.js"]);
+
+const IDENTIFICADOR = /^[A-Za-z_$][\w$]*$/;
+
+/** ¿Construye esbuild este módulo de entrada? (con la resolución del de verdad) */
+async function construye(contents: string, raiz: string): Promise<{ exports: string[]; commonjs: boolean } | null> {
+  try {
+    const r = await build({
+      ...comunDe("produccion", raiz),
+      stdin: { contents, resolveDir: raiz, loader: "js" },
+      write: false,
+      plugins: [reactDesdeLasFachadas],
+      logLevel: "silent",
+    });
+    return {
+      exports: Object.values(r.metafile!.outputs)[0]!.exports,
+      commonjs: Object.values(r.metafile!.inputs).some((i) => i.format === "cjs"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Los nombres que exporta un paquete TAL COMO LO EMPAQUETA esbuild. Ni
+ *  `require` ni `import()` de Node valen: los dos pueden cargar la versión
+ *  CommonJS (la de embla cuelga `globalOptions` de su función, y recharts y
+ *  dnd-kit no declaran `exports`, así que Node ignora su campo `module`), y
+ *  esbuild empaqueta la ESM (medido el 2026-10-08). Se le pregunta a esbuild
+ *  con un `export *`; sólo si lo que empaqueta es CommonJS —ahí `export *` no
+ *  da nombres— se leen de Node. Un ESM con sólo `default` (embla) se queda sin
+ *  nombres: es lo que exporta. */
+async function nombresEmpaquetados(especificador: string, raiz: string): Promise<{ names: string[]; conDefault: boolean }> {
+  const desde = JSON.stringify(especificador);
+  const conDefault = (await construye(`export { default } from ${desde};\n`, raiz)) !== null;
+  const estrella = await construye(`export * from ${desde};\n`, raiz);
+  let names = (estrella?.exports ?? []).filter((k) => IDENTIFICADOR.test(k) && k !== "default");
+  if (names.length === 0 && estrella?.commonjs) {
+    const mod = createRequire(path.join(raiz, "package.json"))(especificador) as Record<string, unknown>;
+    names = Object.keys(mod).filter((k) => IDENTIFICADOR.test(k) && k !== "default" && k !== "__esModule");
+  }
+  return { names: [...new Set(names)].sort(), conDefault };
+}
+
+/** Lo que reexporta cada fichero de un catálogo por partes, nombre a nombre: un
+ *  `export *` sobre CommonJS no exporta nada con nombre, y `exportacionesDe` lo
+ *  rechazaría. */
+async function entrySource(dep: Dependencia, raiz: string): Promise<string> {
+  if (dep.fichero === "react-router.js") return `export { ${EXPORTS_DEL_ENRUTADOR.join(", ")} } from "react-router";\n`;
+  if (dep.fichero === "lucide-react.js") return `export { ${iconosConSusAlias().join(", ")} } from "lucide-react";\n`;
+  if (dep.especificador === "date-fns/locale") return `export { ${DATE_FNS_LOCALES.join(", ")} } from "date-fns/locale";\n`;
+  const { names, conDefault } = await nombresEmpaquetados(dep.especificador, raiz);
+  const linea = conDefault ? `export { default } from "${dep.especificador}";\n` : "";
+  return `${linea}export { ${names.join(", ")} } from "${dep.especificador}";\n`;
+}
+
+/**
+ * LO QUE NO ES REACT, EN UNA SOLA CONSTRUCCIÓN CON `splitting`: lo que comparten
+ * los paquetes (Radix entre sus primitivos) va en trozos `chunk-<huella>.js`, UNA
+ * copia. Dos copias de un contexto de Radix rompen un Select dentro de un Dialog.
+ *
+ * 🔴 SIEMPRE DE PRODUCCIÓN, en los dos modos: el nombre de cada trozo es la
+ * huella de su contenido, y otra NODE_ENV daría otros nombres en cada modo.
+ * Sólo React necesita su build de desarrollo (sus mensajes de error enteros), y
+ * React va aparte, en `react-todo.js`.
+ */
+async function buildSplitPart(nombre: string, destino: string, fuentes: string): Promise<{ incluidos: Incluido[]; chunks: string[] }> {
+  const c = catalogo(nombre)!;
+  const raiz = raizDePaquetes(nombre);
+  const deps = [...new Map(c.dependencias.filter((d) => !EN_REACT_TODO.has(d.fichero)).map((d) => [d.fichero, d])).values()];
+  const entradas: string[] = [];
+  for (const d of deps) {
+    const f = path.join(fuentes, d.fichero);
+    writeFileSync(f, await entrySource(d, raiz));
+    entradas.push(f);
+  }
+  const opciones = {
+    ...comunDe("produccion", raiz),
+    entryPoints: entradas,
+    outdir: destino,
+    splitting: true,
+    entryNames: "[name]",
+    chunkNames: "chunk-[hash]",
+    plugins: [reactDesdeLasFachadas],
+  };
+  const r = await build({ ...opciones, write: false });
+  const usados = Object.values(r.metafile!.outputs).flatMap((o) =>
+    Object.entries(o.inputs)
+      .filter(([, v]) => v.bytesInOutput > 0)
+      .map(([k]) => k),
+  );
+  const lista = incluidos(Object.fromEntries(usados.map((k) => [k, null])));
+  // Un barril que sólo reexporta (radix-ui: su índice reexporta los
+  // @radix-ui/react-*) puede quedar con 0 bytes propios en la salida; su
+  // licencia va igual, porque lo que se importa por su nombre es él.
+  for (const paquete of Object.keys(c.versiones)) {
+    if (lista.some((p) => p.nombre === paquete)) continue;
+    const dir = path.join(raiz, "node_modules", paquete);
+    const pkg = JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8")) as { name: string; version: string; license?: string };
+    lista.push({ nombre: pkg.name, version: pkg.version, licencia: pkg.license ?? "desconocida", dir });
+  }
+  lista.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // La segunda pasada pone el aviso: cambia los bytes, y con ellos la huella de
+  // cada trozo. Los nombres buenos son los de ESTA pasada.
+  const r2 = await build({ ...opciones, banner: { js: aviso(lista) } });
+  const chunks = Object.keys(r2.metafile!.outputs)
+    .map((o) => path.basename(o))
+    .filter((f) => f.startsWith("chunk-"))
+    .sort();
+  return { incluidos: lista, chunks };
+}
+
+/** Un catálogo por partes entero en `destino`: React aparte (de desarrollo o
+ *  de producción, según el modo) y lo demás por partes. */
+async function buildSplitCatalog(nombre: string, modo: ModoVendor, destino: string): Promise<Incluido[]> {
+  mkdirSync(destino, { recursive: true });
+  const fuentes = path.join(tmpdir(), `openlen-apps-vendor-${process.pid}-${modo}`);
+  mkdirSync(fuentes, { recursive: true });
+  try {
+    const deReact = await buildReactShared(modo, destino, fuentes, raizDePaquetes(nombre));
+    const { incluidos: resto, chunks } = await buildSplitPart(nombre, destino, fuentes);
+    const declarados = catalogo(nombre)!.internos.filter((f) => f.startsWith("chunk-")).sort();
+    if (JSON.stringify(declarados) !== JSON.stringify(chunks)) {
+      throw new Error(
+        `apps:vendor — los trozos compartidos de ${nombre} no son los declarados. ` +
+          `Pon en su \`internos\` (lib/apps/dependencias.ts): ${JSON.stringify(["react-todo.js", ...chunks])}`,
+      );
+    }
+    return [...deReact, ...resto];
+  } finally {
+    rmSync(fuentes, { recursive: true, force: true });
+  }
+}
+
+/** Los `@radix-ui/react-*` sueltos tienen que ser LOS MISMOS que lleva
+ *  `radix-ui`: si no, serían dos copias de cada primitivo. */
+function comprobarRadix(nombre: string): void {
+  const c = catalogo(nombre)!;
+  if (!c.dependencias.some((d) => d.especificador === "radix-ui")) return;
+  const raiz = raizDePaquetes(nombre);
+  const deRadix = (JSON.parse(readFileSync(path.join(raiz, "node_modules", "radix-ui", "package.json"), "utf8")) as { dependencies: Record<string, string> }).dependencies;
+  for (const d of c.dependencias.filter((x) => x.especificador.startsWith("@radix-ui/react-"))) {
+    const pedido = deRadix[d.especificador];
+    const instalada = versionInstalada(d.especificador, raiz);
+    if (!pedido || pedido.replace(/^[\^~]/, "") !== instalada) {
+      throw new Error(`${d.especificador}: radix-ui pide ${pedido ?? "nada"} y está instalada ${instalada}. Serían dos copias.`);
+    }
+  }
 }
 
 function licencias(lista: readonly Incluido[]): string {
@@ -270,11 +441,12 @@ async function main(): Promise<void> {
   if (!c) throw new Error(`el catálogo ${nombre} no existe en lib/apps/dependencias.ts`);
 
   for (const [paquete, version] of Object.entries(c.versiones)) {
-    const instalada = versionInstalada(paquete);
+    const instalada = versionInstalada(paquete, raizDePaquetes(nombre));
     if (instalada !== version) {
       throw new Error(`${paquete}: el catálogo ${nombre} dice ${version} y está instalada ${instalada}. No se construye con otra versión.`);
     }
   }
+  comprobarRadix(nombre);
 
   const guardado = path.join(RAIZ, "public", "app-vendor", nombre);
   const nuevo = path.join(tmpdir(), `openlen-apps-vendor-salida-${process.pid}`);
@@ -283,7 +455,7 @@ async function main(): Promise<void> {
     const manifiesto: Record<string, Record<string, string>> = {};
     const paquetes: Incluido[] = [];
     for (const modo of MODOS) {
-      paquetes.push(...(await construir(modo, path.join(nuevo, modo))));
+      paquetes.push(...(await (c.split ? buildSplitCatalog(nombre, modo, path.join(nuevo, modo)) : construir(modo, path.join(nuevo, modo)))));
       manifiesto[modo] = Object.fromEntries(ficherosDelCatalogo(nombre).map((f) => [f, huella(path.join(nuevo, modo, f))]));
     }
     const textoLicencias = licencias(paquetes);

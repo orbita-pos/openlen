@@ -22,8 +22,8 @@ import {
 const RAIZ = join(import.meta.dirname, "..", "..");
 
 describe("el catálogo", () => {
-  it("el actual existe y nombra React, su runtime de JSX, ReactDOM y supabase-js", () => {
-    const imports = importMapDe(CATALOGO_ACTUAL).imports;
+  it("2026-10 nombra React, su runtime de JSX, ReactDOM, supabase-js, el router y los iconos", () => {
+    const imports = importMapDe("2026-10").imports;
     expect(Object.keys(imports).sort()).toEqual(
       [
         "@supabase/supabase-js",
@@ -37,7 +37,23 @@ describe("el catálogo", () => {
         "lucide-react",
       ].sort(),
     );
-    for (const ruta of Object.values(imports)) expect(ruta.startsWith(`/openlen/vendor/${CATALOGO_ACTUAL}/`)).toBe(true);
+    for (const ruta of Object.values(imports)) expect(ruta.startsWith("/openlen/vendor/2026-10/")).toBe(true);
+  });
+
+  it("2026-11 es el actual, está construido por partes y trae shadcn, formularios y gráficas", () => {
+    expect(CATALOGO_ACTUAL).toBe("2026-11");
+    expect(CATALOGOS["2026-11"]!.split).toBe(true);
+    const imports = importMapDe("2026-11").imports;
+    for (const e of ["react", "react-dom/client", "react-router-dom", "lucide-react", "@supabase/supabase-js", "radix-ui", "@radix-ui/react-dialog", "@radix-ui/react-slot", "class-variance-authority", "clsx", "tailwind-merge", "react-hook-form", "zod", "@hookform/resolvers/zod", "recharts", "date-fns", "date-fns/locale"]) {
+      expect(imports[e], e).toBeDefined();
+    }
+  });
+
+  it("los trozos compartidos (chunk-*) son rutas válidas de su catálogo, y los inventados no", () => {
+    const trozos = ficherosDelCatalogo("2026-11").filter((f) => f.startsWith("chunk-"));
+    expect(trozos.length).toBeGreaterThan(0);
+    for (const t of trozos) expect(rutaDeVendorValida(rutaDeVendor("2026-11", t))?.fichero).toBe(t);
+    expect(rutaDeVendorValida("/openlen/vendor/2026-11/chunk-NOEXISTE.js")).toBeNull();
   });
 
   it("react-router y react-router-dom son el MISMO fichero: un solo módulo en el navegador", () => {
@@ -123,7 +139,12 @@ describe("lo construido (npm run apps:vendor)", () => {
           // lleva en código de su modo framework que una app no llama.
           const especificador = "specifier" in i ? i.specifier : undefined;
           if (typeof especificador !== "string") continue;
-          expect(["./react-todo.js", "./react.js", "./react-dom.js", "./react-jsx-runtime.js", "./react-dom-client.js"], `${f} importa ${especificador}`).toContain(especificador);
+          // Y en un catálogo por partes, sus propios ficheros (los trozos compartidos).
+          const permitidos = [
+            "./react-todo.js", "./react.js", "./react-dom.js", "./react-jsx-runtime.js", "./react-dom-client.js",
+            ...ficherosDelCatalogo(nombre).map((x) => `./${x}`),
+          ];
+          expect(permitidos, `${f} importa ${especificador}`).toContain(especificador);
         }
       }
     });

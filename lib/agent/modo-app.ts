@@ -125,7 +125,10 @@ const ALGUNOS_ICONOS = ["Plus", "Minus", "Trash2", "Pencil", "Search", "X", "Che
 
 function seccionDeLaApp(app: AppDeProyecto): string {
   const c = catalogo(app.catalogo);
-  const paquetes = (c?.dependencias ?? []).map((d) => `  · ${d.especificador} — ${d.para}`).join("\n");
+  const paquetes = (c?.dependencias ?? [])
+    .filter((d) => !d.hiddenFromManual)
+    .map((d) => `  · ${d.especificador} — ${d.para}`)
+    .join("\n");
   return `THIS PROJECT IS A WEB APP:
 React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as it is. There is no bundler, no npm and no build: each file is compiled on its own (JSX and TypeScript to JavaScript, at the same path and keeping its line numbers) and the browser joins them through their imports.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.

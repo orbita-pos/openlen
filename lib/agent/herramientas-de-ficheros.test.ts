@@ -7,6 +7,7 @@
 // proyecto de verdad —los ficheros viven en `data.html` y `data.pages`— y cada
 // escritura por el camino de guardado de siempre.
 import { describe, it } from "node:test";
+import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import assert from "node:assert/strict";
 import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
 import type { ProjectData } from "@/lib/projects/types";
@@ -1876,7 +1877,8 @@ describe("convertir una página en app", () => {
     s.page = "menu";
     const r = await runAgentTool(s, deps, "convert_to_app", {});
     assert.equal(r.response.ok, true, JSON.stringify(r.response));
-    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    // Una app convertida nace en el catálogo ACTUAL (las que ya existían siguen en el suyo).
+    assert.deepEqual(store.data.app, { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.jsx" });
     assert.equal(store.data.pages, undefined);
     assert.match(store.data.html, /<html lang="es">/);
     assert.match(store.data.html, /<title>Brote · Inicio<\/title>/);
@@ -1950,7 +1952,8 @@ describe("convertir una página en app", () => {
     assert.equal(r.terminalError, false);
     assert.match(vistos[3]!, /Nothing was converted[\s\S]*Menu\.jsx/, "la primera vez, lo que no compila");
     assert.ok(archivos["/src/App.jsx"]);
-    assert.deepEqual(store.data.app, { catalogo: "2026-10", entrada: "/src/main.jsx" });
+    // Una app convertida nace en el catálogo ACTUAL (las que ya existían siguen en el suyo).
+    assert.deepEqual(store.data.app, { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.jsx" });
     assert.equal(store.data.pages, undefined);
     assert.match(vistos[5]!, /Converted: this project is now a web app/);
   });
