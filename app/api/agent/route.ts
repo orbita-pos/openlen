@@ -1291,8 +1291,9 @@ async function correrTurno(
           });
           filaAbierta = true;
           // EL CHAT DEL EQUIPO: «@Len y @Eli …» es un turno que además avisa a
-          // Eli y le deja la mención sin ver. Fail-soft: el turno sigue.
-          if (compartido) {
+          // Eli y le deja la mención sin ver. Fail-soft: el turno sigue. Desde
+          // un hilo del código no: el hilo ya avisó a los suyos (`avisarMenciones`).
+          if (compartido && !hiloDelTurno) {
             const mencionados = mencionesValidas(mencionesDe(prompt, genteDelProyecto).personas, genteDelProyecto, quien);
             if (mencionados.length > 0) {
               await apuntarMencionesDelTurno({ projectId, filaId, mencionados }).catch((err) =>

@@ -2610,6 +2610,27 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(mocks.nombresDeUsuarios).toHaveBeenCalledWith(["ex-1"]);
   });
 
+  it("🔴 I3 · un turno lanzado desde un hilo NO vuelve a avisar por el chat (el hilo ya avisó)", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    mocks.personasDelProyecto.mockResolvedValueOnce([
+      { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+      { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
+      { userId: "eli", nombre: "Eli Editor", email: "e@x", rol: "editor" },
+    ]);
+    mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
+    const fila = "22222222-2222-4222-8222-222222222222";
+    const hilo = { hiloId: "h1", ruta: "/src/App.jsx", linea: 3, contexto: "[Requested from a comment thread]" };
+    await readEvents(
+      await mocks.corredor!("ana", { projectId: "p1", prompt: "@Len @Eli Editor mira esto", turnId: fila }, { url: "http://x/api/projects/p1/hilos", signal: new AbortController().signal }, { hilo }),
+    );
+    expect(mocks.apuntarMencionesDelTurno).not.toHaveBeenCalled();
+    expect(mocks.scheduleNotification).not.toHaveBeenCalledWith(expect.objectContaining({ donde: "chat" }));
+  });
+
   it("🔴 «@Len y @Eli Editor …» es un turno que además apunta la mención y avisa a Eli por el chat", async () => {
     mocks.personasDelProyecto.mockResolvedValueOnce([
       { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
