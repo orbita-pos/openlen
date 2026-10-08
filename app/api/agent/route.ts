@@ -2,7 +2,9 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
-import { hiloDelProyecto, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
+import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
+import { apuntarMencionesDelTurno } from "@/lib/projects/chat-equipo";
+import { mencionesDe } from "@/lib/workspace-v2/menciones";
 import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
@@ -1281,6 +1283,26 @@ async function correrTurno(
             ...(hiloDelTurno ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } } : {}),
           });
           filaAbierta = true;
+          // EL CHAT DEL EQUIPO: «@Len y @Eli …» es un turno que además avisa a
+          // Eli y le deja la mención sin ver. Fail-soft: el turno sigue.
+          if (compartido) {
+            const mencionados = mencionesValidas(mencionesDe(prompt, genteDelProyecto).personas, genteDelProyecto, quien);
+            if (mencionados.length > 0) {
+              await apuntarMencionesDelTurno({ projectId, filaId, mencionados }).catch((err) =>
+                console.warn("[agent] no se pudieron apuntar las menciones", err),
+              );
+              const nombre = genteDelProyecto.find((p) => p.userId === quien)?.nombre ?? "";
+              void import("@/lib/notifications/dispatch")
+                .then(({ scheduleNotification }) =>
+                  Promise.all(
+                    mencionados.map((recipientUserId) =>
+                      scheduleNotification({ type: "mencion", donde: "chat", projectId, recipientUserId, quien: nombre, preview: prompt.slice(0, 200), idioma: null }),
+                    ),
+                  ),
+                )
+                .catch((err) => console.warn("[agent] no se pudo avisar de la mención", err));
+            }
+          }
         } catch (err) {
           console.warn("[agent] no se pudo abrir la fila del turno", err);
         }

@@ -73,6 +73,7 @@ const mocks = vi.hoisted(() => ({
   // turnos de verdad en la base local (fallaban en silencio: «p1» no existe).
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
+  apuntarMencionesDelTurno: vi.fn(async () => {}),
   registrarTurnoDelServidor: vi.fn(async () => {}),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
@@ -103,7 +104,9 @@ vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
     mocks.corredor = f;
   },
 }));
-vi.mock("@/lib/projects/hilos", () => ({
+vi.mock("@/lib/projects/hilos", async (original) => ({
+  // Pura: la de verdad (quién del texto es del proyecto, sin uno mismo).
+  mencionesValidas: (await original<typeof import("@/lib/projects/hilos")>()).mencionesValidas,
   hiloDelProyecto: mocks.hiloDelProyecto,
   respuestaDeLen: mocks.respuestaDeLen,
   personasDelProyecto: mocks.personasDelProyecto,
@@ -210,6 +213,7 @@ vi.mock("@/lib/agent/tools", () => ({
 // lee el bucle: el turno real se abre y se cierra dentro del mismo `POST`, asi
 // que con el almacen de verdad no hay ventana para meter nada desde fuera.
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: mocks.scheduleNotification }));
+vi.mock("@/lib/projects/chat-equipo", () => ({ apuntarMencionesDelTurno: mocks.apuntarMencionesDelTurno }));
 vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
@@ -2556,6 +2560,26 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(mocks.respuestaDeLen).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: fila }));
     // Y sigue siendo un turno de un miembro: lo paga el dueño.
     expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 5);
+  });
+
+  it("🔴 «@Len y @Eli Editor …» es un turno que además apunta la mención y avisa a Eli por el chat", async () => {
+    mocks.personasDelProyecto.mockResolvedValueOnce([
+      { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+      { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
+      { userId: "eli", nombre: "Eli Editor", email: "e@x", rol: "editor" },
+    ]);
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    await readEvents(await pedir({ prompt: "@Len y @Eli Editor revisad el pie, @Ana Editora también" }));
+    expect(mocks.apuntarMencionesDelTurno).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", mencionados: ["eli"] }));
+    await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalled());
+    expect(mocks.scheduleNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "mencion", donde: "chat", projectId: "p1", recipientUserId: "eli", quien: "Ana Editora" }),
+    );
+    expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
   });
 
   it("el cuerpo de una petición no puede decir que viene de un hilo (sólo el servidor lo lanza)", async () => {
