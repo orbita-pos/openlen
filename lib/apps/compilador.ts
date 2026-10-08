@@ -159,6 +159,23 @@ function enlaceCss(ruta: string): string {
   return `if(!document.querySelector('link[data-ol-css=${r.replace(/'/g, "\\'")}]')){const l=document.createElement("link");l.rel="stylesheet";l.href=${r};l.setAttribute("data-ol-css",${r});document.head.append(l)}`;
 }
 
+/** ¿Usa esta hoja algo que sólo entiende Tailwind? Un `<link>` la llevaría al
+ *  navegador con el `@apply` sin traducir, y el navegador lo tira (2026-10-08). */
+export function usesTailwindDirectives(css: string): boolean {
+  return /@(?:apply|tailwind|layer|config|screen)\b|\btheme\(/.test(css);
+}
+
+/** Lo que sustituye a `import "./x.css"` cuando la hoja usa Tailwind: un
+ *  `<style type="text/tailwindcss">` con su texto DENTRO del módulo. El CDN del
+ *  lienzo y de los ojos lo procesa al vuelo (medido en Chromium el 2026-10-08:
+ *  `@layer`, `@apply` y el theme del cascarón), y la publicación lo hornea
+ *  (`bakeTailwind`, con las hojas de la carpeta). Así los tres caminos reciben
+ *  el mismo JS. Una línea, como `enlaceCss`; no se repite si dos módulos la importan. */
+function tailwindStyle(ruta: string, css: string): string {
+  const r = JSON.stringify(ruta);
+  return `if(!document.querySelector('style[data-ol-css=${r.replace(/'/g, "\\'")}]')){const s=document.createElement("style");s.type="text/tailwindcss";s.setAttribute("data-ol-css",${r});s.textContent=${JSON.stringify(css)};document.head.append(s)}`;
+}
+
 /** Tantos saltos de línea como los que tenía lo sustituido. */
 function conSusLineas(sustituto: string, original: string): string {
   return sustituto + "\n".repeat((original.match(/\n/g) ?? []).length);
@@ -247,7 +264,14 @@ const cache = new Map<string, Compilado>();
 
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
-  // entran en la clave, sus contenidos no.
+  // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
+  // viaja dentro del módulo que la importa (`tailwindStyle`), así que su texto
+  // también decide lo que sale. Son pocas y pequeñas.
+  const hojas = Object.keys(ctx.carpeta)
+    .filter((r) => extensionDe(r) === ".css")
+    .sort()
+    .map((r) => `${r}\0${ctx.carpeta[r]}`)
+    .join("\0");
   return createHash("sha256")
     .update(ruta)
     .update("\0")
@@ -258,6 +282,8 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update(JSON.stringify(ctx.entorno ?? {}))
     .update("\0")
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
+    .update("\0")
+    .update(hojas)
     .digest("hex");
 }
 
@@ -367,7 +393,9 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         error(imp.start, `${resuelto}: a CSS file can only be imported for its side effect (import "${especificador}"). CSS modules are not supported; use Tailwind classes or plain CSS.`);
         continue;
       }
-      js = js.slice(0, imp.importStart) + conSusLineas(enlaceCss(resuelto), sentencia) + js.slice(imp.importEnd);
+      const hoja = ctx.carpeta[resuelto] ?? "";
+      const sustituto = usesTailwindDirectives(hoja) ? tailwindStyle(resuelto, hoja) : enlaceCss(resuelto);
+      js = js.slice(0, imp.importStart) + conSusLineas(sustituto, sentencia) + js.slice(imp.importEnd);
       continue;
     }
     if (ext === ".json") {
