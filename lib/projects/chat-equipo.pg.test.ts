@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, firmaDelChat, marcarChatVisto, mencionesDelChatSinVer, proyectoCompartido } from "@/lib/projects/chat-equipo";
-import { filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, quitarFilaDelTurno, startNewConversation, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaBuscar, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, quitarFilaDelTurno, startNewConversation, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
 const ELI = "prueba-equipo-eli";
@@ -161,5 +161,11 @@ describe("el chat del equipo", () => {
     await startNewConversation(PROYECTO);
     const [charla] = await listArchivedConversations(PROYECTO);
     expect(charla).toMatchObject({ title: "pon el pie gris", turns: 1 });
+  });
+
+  it("🔴 session_search encuentra los mensajes del equipo, con su autor (así Len lee entero lo que el sobre recortó)", async () => {
+    const { id } = await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno un mensaje largo", menciones: [DUENO] });
+    const filas = await filasParaBuscar(PROYECTO);
+    expect(filas.find((f) => f.id === id)).toMatchObject({ userText: "@dueno un mensaje largo", equipo: { autor: "eli" } });
   });
 });

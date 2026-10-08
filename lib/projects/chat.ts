@@ -286,14 +286,23 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
       actions: t.actions,
       createdAt: t.createdAt,
       status: t.status,
+      tipo: t.tipo,
+      autorNombre: schema.users.name,
+      autorCorreo: schema.users.email,
     })
     .from(t)
-    // El chat del equipo: los mensajes entre personas no son charlas con Len.
-    .where(and(eq(t.projectId, projectId), isNull(t.tipo)))
+    // EL CHAT DEL EQUIPO: sus mensajes también se buscan —es como Len lee
+    // entero lo que el sobre recortó—, con quién los escribió.
+    .leftJoin(schema.users, eq(schema.users.id, t.autorId))
+    .where(eq(t.projectId, projectId))
     .orderBy(desc(t.createdAt))
     .limit(maxFilasParaBuscar());
   // Las más recientes si hubiera de más; el módulo las ordena por fecha.
-  return rows.map((r) => ({ ...r, actions: r.actions ?? null }));
+  return rows.map(({ tipo, autorNombre, autorCorreo, ...r }) => ({
+    ...r,
+    actions: r.actions ?? null,
+    ...(tipo === "persona" ? { equipo: { autor: autorNombre?.trim() || autorCorreo || "someone" } } : {}),
+  }));
 }
 
 /** La transcripción de UNA fila del proyecto, para `session_event_read`. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_MENSAJES_DEL_EQUIPO, quienPide, sobreDelEquipo, type MensajeDelEquipo } from "./equipo";
+import { MAX_MENSAJES_DEL_EQUIPO, MAX_SOBRE_DEL_EQUIPO, REGLA_DEL_EQUIPO, quienPide, sobreDelEquipo, type MensajeDelEquipo } from "./equipo";
 
 const GENTE = [
   { userId: "u-dana", nombre: "Dana Dueña", rol: "dueno" as const },
@@ -56,5 +56,23 @@ describe("el sobre de los mensajes del equipo", () => {
   it("🔴 las fotos de un mensaje van dentro, con su dirección (escapada), para que Len pueda usarlas", () => {
     const con = { ...m("u-eli", "esta foto", ["u-dana"], 40), fotos: [{ url: 'https://x.test/a.jpg?q="1"' }] };
     expect(sobreDelEquipo([con], GENTE)).toContain('>esta foto<image src="https://x.test/a.jpg?q=&quot;1&quot;"/></message>');
+  });
+
+  it("🔴 el sobre tiene tope (como el de Claude Code): si no cabe, se acortan los más viejos con «[…truncated N chars]» y los recientes quedan enteros", () => {
+    const largo = (i: number) => m("u-eli", `${i}:${"x".repeat(3990)}`, ["u-dana"], i);
+    const mensajes = Array.from({ length: 30 }, (_, i) => largo(i));
+    const sobre = sobreDelEquipo(mensajes, GENTE);
+    expect(sobre.length).toBeLessThanOrEqual(MAX_SOBRE_DEL_EQUIPO);
+    expect(sobre).toMatch(/>0:x+ \[…truncated \d+ chars\]<\/message>/);
+    expect(sobre).toContain(`>29:${"x".repeat(3990)}</message>`);
+    expect(sobre.endsWith("</team-messages>")).toBe(true);
+  });
+
+  it("un sobre que cabe sale tal cual, sin marcas", () => {
+    expect(sobreDelEquipo([m("u-eli", "corto", ["u-dana"], 1)], GENTE)).not.toContain("truncated");
+  });
+
+  it("la regla le dice a Len cómo leer entero lo recortado", () => {
+    expect(REGLA_DEL_EQUIPO).toContain("session_search");
   });
 });
