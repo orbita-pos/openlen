@@ -41,6 +41,7 @@ import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import { useTurnFeedback } from "./use-turn-feedback";
 import { useGenteDelChat } from "./use-gente-del-chat";
+import { useSondeoDelEquipo } from "./use-sondeo-del-equipo";
 import { MensajeDelEquipo } from "./mensaje-del-equipo";
 import { GenteDelChat } from "./gente-del-chat";
 import { LineaDeDestino } from "./linea-de-destino";
@@ -263,31 +264,20 @@ function AgentChatView({
   const marcarVisto = useCallback(() => {
     void fetch(`/api/projects/${encodeURIComponent(projectId)}/chat/mensajes/vistas`, { method: "POST" }).catch(() => {});
   }, [projectId]);
-  // Con el proyecto compartido y el chat abierto, cada 10 s se mira la firma de
-  // la conversación y sólo si cambió se relee (`onChatChange`); releer el
-  // proyecto entero cada 10 s, y avisar a las otras pestañas, sería mucho.
-  const onChatChangeRef = useRef(onChatChange);
-  onChatChangeRef.current = onChatChange;
-  const busyRef = useRef(chat.busy);
-  busyRef.current = chat.busy;
-  useEffect(() => {
-    if (!equipo.compartido) return;
-    firmaRef.current = null;
-    const mirar = async () => {
-      if (document.hidden || busyRef.current) return;
-      const firma = await leerFirma();
-      if (firma === null) return;
-      if (firmaRef.current !== null && firma !== firmaRef.current) {
-        onChatChangeRef.current?.();
-        // Lo que llega con el chat a la vista, visto queda (el punto del carril).
-        if (aLaVistaRef.current) marcarVisto();
-      }
-      firmaRef.current = firma;
-    };
-    void mirar();
-    const reloj = window.setInterval(() => void mirar(), 10_000);
-    return () => window.clearInterval(reloj);
-  }, [equipo.compartido, leerFirma, marcarVisto]);
+  // Con el proyecto compartido y el chat abierto, se relee sólo si la firma de
+  // la conversación cambió (use-sondeo-del-equipo).
+  useSondeoDelEquipo({
+    compartido: equipo.compartido,
+    soloConfirmado: equipo.yo !== null && !equipo.compartido,
+    leerFirma,
+    alCambiar: () => {
+      onChatChange?.();
+      // Lo que llega con el chat a la vista, visto queda (el punto del carril).
+      if (aLaVistaRef.current) marcarVisto();
+    },
+    ocupado: () => chat.busy,
+    firmaRef,
+  });
   // Ver el chat ve las menciones (el punto del carril se apaga): al abrirlo, y
   // al volver de minimizado.
   useEffect(() => {
