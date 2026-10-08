@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} posts listos",
-        "body": "Publicaciones listas para tus redes, a juego con tu página — misma paleta, misma tipografía, contraste garantizado. Eliges una, ajustas el texto y publicas."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "Sube el botón de WhatsApp arriba del pliegue — el 62% de los visitantes nunca pasa del hero.",

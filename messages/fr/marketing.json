@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} posts prêts",
-        "body": "Des visuels prêts à publier, assortis à votre page — même palette, même typo, contraste garanti. Choisissez, ajustez la légende, publiez."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "Remontez le bouton WhatsApp au-dessus de la ligne de flottaison — 62 % des visiteurs ne dépassent jamais le hero.",

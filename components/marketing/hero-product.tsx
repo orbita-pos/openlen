@@ -12,7 +12,6 @@ import {
   ICONO_BARRA,
   ICONO_RAIL,
   Inbox,
-  Megaphone,
   Monitor,
   Pencil,
   RefreshCw,
@@ -42,11 +41,12 @@ import { LenFace } from "@/components/workspace-v2/chat/len-face";
 // controles que YA NO EXISTEN, y uno de ellos se había borrado justamente por
 // mentir. Lo que se corrige, uno a uno:
 //
-//  1. EL RAIL TENÍA 12 ICONOS Y TIENE 5. `rail-model.ts` es la fuente: CREAR es
-//     hoy un solo icono (Chat) y OPERAR cuatro (Resultados, Bandeja, Marketing,
-//     Versiones). Se fueron Página/casita (2026-08-31), Sitio (a la barra de
-//     dirección), Imágenes (2026-08-29, al diálogo de sustituir), Library, 3D,
-//     Módulos y Mi negocio (2026-08-31, con el perfil entero).
+//  1. EL RAIL TENÍA 12 ICONOS Y TIENE 4. `rail-model.ts` es la fuente: CREAR es
+//     hoy un solo icono (Chat) y OPERAR tres (Resultados, Bandeja, Versiones).
+//     Se fueron Página/casita (2026-08-31), Sitio (a la barra de dirección),
+//     Imágenes (2026-08-29, al diálogo de sustituir), Library, 3D, Módulos y Mi
+//     negocio (2026-08-31, con el perfil entero), y Marketing (2026-10-08, para
+//     rehacerla).
 //  2. LA CUENTA BAJÓ AL PIE DEL RAIL (2026-08-31). El idioma, el claro/oscuro y
 //     el avatar ya no viven arriba a la derecha: son ajustes de la PERSONA, no
 //     del sitio, y cobraban tres huecos en la fila del proyecto.
@@ -78,7 +78,6 @@ const RAIL_CREAR_MOCK = [{ Icon: ChatIcon }]; // Chat (Len) — el activo
 const RAIL_OPERAR_MOCK = [
   { Icon: BarChart3, badge: 0 }, // Resultados
   { Icon: Inbox, badge: 3 }, // Bandeja
-  { Icon: Megaphone, badge: 0 }, // Marketing
   { Icon: HistoryIcon, badge: 0 }, // Versiones
 ];
 
