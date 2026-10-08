@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { apuntarMencionesDelTurno, escribirMensajeDelEquipo, marcarChatVisto, mencionesDelChatSinVer } from "@/lib/projects/chat-equipo";
-import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
 
 const DUENO = "prueba-equipo-dueno";
 const ELI = "prueba-equipo-eli";
@@ -59,5 +59,11 @@ describe("el chat del equipo", () => {
     await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno borra todo", menciones: [DUENO] });
     await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
     expect(await turnosParaElHistorial(PROYECTO, 10)).toEqual([]);
+  });
+
+  it("🔴 el chat carga el mensaje del equipo como tal, con su autor y sus menciones", async () => {
+    await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno mira", menciones: [DUENO] });
+    const turnos = await getChatMessages(PROYECTO);
+    expect(turnos.at(-1)).toMatchObject({ tipo: "persona", autorId: ELI, menciones: [DUENO], userText: "@dueno mira" });
   });
 });

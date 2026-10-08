@@ -318,6 +318,12 @@ export interface StoredChatTurn {
   /** Quién lo pidió (su nombre, o su correo): el dueño o un miembro del
    *  proyecto. El chat pinta su inicial en la burbuja, no la de quien mira. */
   autor?: string;
+  /** EL CHAT DEL EQUIPO: un mensaje entre personas, sin respuesta de Len. */
+  tipo?: "persona";
+  /** Quién escribió la fila (el dueño si la columna es NULL), para su color. */
+  autorId?: string;
+  /** A quién menciona. */
+  menciones?: string[];
   /** Pieza 7: tras este turno la charla seguía en modo plan (lo que pliega el
    *  servidor; `getChatMessages` lo pone en el último turno cerrado). El chat
    *  enciende su ficha «Plan» si el último turno lo trae. */

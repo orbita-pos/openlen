@@ -83,8 +83,9 @@ async function conAutores(
     const duenoId = gente[0]?.duenoId;
     const nombre = new Map(gente.map((u) => [u.id, u.name?.trim() || u.email]));
     return turns.map((t, i) => {
-      const autor = nombre.get(rows[i]!.autorId ?? duenoId ?? "");
-      return autor ? { ...t, autor } : t;
+      const autorId = rows[i]!.autorId ?? duenoId ?? undefined;
+      const autor = nombre.get(autorId ?? "");
+      return { ...t, ...(autor ? { autor } : {}), ...(autorId ? { autorId } : {}) };
     });
   } catch (err) {
     console.warn("[chat] no se pudo leer quién pidió cada turno", err);
@@ -609,6 +610,9 @@ function rowToTurn(
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
   // Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo».
   if (row.origen) turn.origen = row.origen;
+  // El chat del equipo: un mensaje entre personas y a quién menciona.
+  if (row.tipo === "persona") turn.tipo = "persona";
+  if (row.menciones && row.menciones.length > 0) turn.menciones = row.menciones;
   return turn;
 }
 

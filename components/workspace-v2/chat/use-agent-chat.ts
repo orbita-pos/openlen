@@ -93,6 +93,12 @@ export interface DesignTurn {
   /** Quién lo pidió, si viene del servidor (`StoredChatTurn.autor`). Sin él,
    *  es de quien mira: lo acaba de mandar desde aquí. */
   autor?: string;
+  /** EL CHAT DEL EQUIPO (`StoredChatTurn.tipo`): un mensaje entre personas. */
+  tipo?: "persona";
+  /** Quién escribió la fila, para su color (`StoredChatTurn.autorId`). */
+  autorId?: string;
+  /** A quién menciona. */
+  menciones?: string[];
   /** Image attached to this turn — rendered in the user bubble as proof
    *  it was actually sent with the message. */
   attachedImage?: AttachedImage;
@@ -1181,7 +1187,12 @@ export function useAgentChat({
       // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO — ver
       // `lib/chat/historial-del-agente.ts`, que es también lo que el arnés de
       // evals manda para reproducir una conversación.
-      const { history, historyTotal, dichoAntes } = historialParaElAgente(turnsRef.current, turnPage);
+      const { history, historyTotal, dichoAntes } = historialParaElAgente(
+        // Los mensajes entre personas no son turnos de Len (el servidor los
+        // pliega en su sobre, `lib/agent/plegar-equipo.ts`).
+        turnsRef.current.filter((t) => t.tipo !== "persona"),
+        turnPage,
+      );
 
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
@@ -2512,6 +2523,9 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
     ...(s.origen ? { origen: s.origen } : {}),
     ...(s.autor ? { autor: s.autor } : {}),
+    ...(s.tipo ? { tipo: s.tipo } : {}),
+    ...(s.autorId ? { autorId: s.autorId } : {}),
+    ...(s.menciones ? { menciones: s.menciones } : {}),
   };
 }
 
