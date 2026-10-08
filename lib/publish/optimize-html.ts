@@ -48,7 +48,7 @@ import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
-import { CDN_TAG_RE, extractTwConfig, readTwCarrier, stripTwCarrier } from "./tw-config";
+import { CDN_TAG_RE, extractTwConfig, readTwCarrier, readTwDarkMode, stripTwCarrier, type TwDarkMode } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
@@ -232,13 +232,17 @@ export async function bakeTailwind(
   // `tailwind` global y ese script lanzaría ReferenceError en la publicada.
   // El carrier, si lo hay, sigue mandando (es la paleta ya validada).
   const carrier = readTwCarrier(html);
+  // El `darkMode`, antes de quitar el carrier y la config (2026-10-08): sin él,
+  // `dark:` se horneaba como `prefers-color-scheme` aunque la página cambiara
+  // de modo por clase, como shadcn.
+  const darkMode = readTwDarkMode(html);
   const sinCarrier = stripTwCarrier(html);
   const conConfig = extractTwConfig(sinCarrier);
   // Y SI HAY CONFIG PERO NO SE PUEDE LEER —lógica en el mismo script, valores
   // que se calculan al cargar—, NO SE HORNEA: se queda el CDN y el script, como
   // con `?plugins=`. Hornear la quitaba entera, paleta y lógica (medido por el
   // revisor de publicación). La página se publica como se ve en el lienzo.
-  if (carrier === null && conConfig.extend === null && conConfig.html !== sinCarrier) {
+  if (carrier === null && conConfig.extend === null && darkMode === null && conConfig.html !== sinCarrier) {
     // eslint-disable-next-line no-console
     console.warn("[optimize-html] tailwind.config que no se puede leer: se publica con el CDN, sin hornear");
     return { html, baked: false, cssBytes: 0 };
@@ -256,6 +260,7 @@ export async function bakeTailwind(
       mergeThemeExtends(carrier ?? conConfig.extend ?? {}, html),
       fuentes,
       stylesheets,
+      darkMode,
     );
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -300,12 +305,14 @@ async function generateTailwindCss(
   extend: Record<string, unknown> = {},
   fuentes: readonly FuenteDeClases[] = [],
   stylesheets: readonly string[] = [],
+  darkMode: TwDarkMode | null = null,
 ): Promise<string> {
   const entrada = [TAILWIND_INPUT, ...stylesheets.map(sinDirectivasTailwind)].join("\n");
   const result = await postcss([
     tailwindcss({
       content: [{ raw: html, extension: "html" }, ...fuentes.map((f) => ({ raw: f.raw, extension: f.extension }))],
       theme: { extend },
+      ...(darkMode ? { darkMode } : {}),
       plugins: [],
       corePlugins: { preflight: true },
     } as Parameters<typeof tailwindcss>[0]),
