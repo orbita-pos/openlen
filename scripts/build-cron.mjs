@@ -18,6 +18,11 @@ const common = {
     js: "import { createRequire as ___cr } from 'module'; const require = ___cr(import.meta.url);",
   },
   logLevel: "info",
+  // `import "server-only"` lanza fuera de Next: aquí es el módulo vacío, como en
+  // vitest y en el servidor de Realtime. Sin esto, el aviso de una mención del
+  // chat (lib/projects/chat-equipo → hilos.ts) tumbaba el drenaje entero de
+  // avisos (ensayo de caja, 08/10; lib/notifications/cron-bundle.test.ts).
+  alias: { "server-only": "./node_modules/server-only/empty.js" },
 };
 
 const targets = [
@@ -45,6 +50,5 @@ await build({
   ...common,
   entryPoints: ["scripts/realtime-server.ts"],
   outfile: ".next/standalone/realtime/server.mjs",
-  alias: { "server-only": "./node_modules/server-only/empty.js" },
 });
 console.log("bundled scripts/realtime-server.ts -> .next/standalone/realtime/server.mjs");
