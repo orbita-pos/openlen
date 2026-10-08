@@ -143,7 +143,26 @@ async function construir(modo: ModoVendor, destino: string): Promise<Incluido[]>
   mkdirSync(destino, { recursive: true });
   const fuentes = path.join(tmpdir(), `openlen-apps-vendor-${process.pid}`);
   mkdirSync(fuentes, { recursive: true });
-  const comun = {
+  const todos: Incluido[] = [];
+  try {
+    todos.push(...(await buildReactShared(modo, destino, fuentes)));
+    writeFileSync(path.join(fuentes, "supabase-js.js"), 'export * from "@supabase/supabase-js";\n');
+    // D3 (2026-10-07): el router y los iconos, cada uno con SU lista cerrada.
+    writeFileSync(path.join(fuentes, "react-router.js"), `export { ${EXPORTS_DEL_ENRUTADOR.join(", ")} } from "react-router";\n`);
+    writeFileSync(path.join(fuentes, "lucide-react.js"), `export { ${iconosConSusAlias().join(", ")} } from "lucide-react";\n`);
+    const conReactFuera = new Set(["react-router.js", "lucide-react.js"]);
+    for (const nombre of ["supabase-js.js", "react-router.js", "lucide-react.js"]) {
+      todos.push(...(await buildOne(nombre, modo, destino, fuentes, conReactFuera.has(nombre))));
+    }
+  } finally {
+    rmSync(fuentes, { recursive: true, force: true });
+  }
+  return todos;
+}
+
+/** Las opciones de esbuild que comparten todos los bundles de un modo. */
+function comunDe(modo: ModoVendor) {
+  return {
     bundle: true,
     format: "esm" as const,
     minify: true,
@@ -154,46 +173,46 @@ async function construir(modo: ModoVendor, destino: string): Promise<Incluido[]>
     define: { "process.env.NODE_ENV": JSON.stringify(modo === "produccion" ? "production" : "development") },
     nodePaths: [path.join(RAIZ, "node_modules")],
   };
-  /** El aviso que abre cada bundle: qué lleva y dónde están las licencias. */
-  const aviso = (lista: Incluido[]) =>
-    `/*! ${lista.map((p) => `${p.nombre}@${p.version} (${p.licencia})`).join(", ")} — licencias completas en LICENCIAS.txt */`;
-  const todos: Incluido[] = [];
-  try {
-    writeFileSync(
-      path.join(fuentes, "react-todo.js"),
-      'import * as React from "react";\n' +
-        'import * as ReactDOM from "react-dom";\n' +
-        'import * as ReactDOMClient from "react-dom/client";\n' +
-        'import * as JSXRuntime from "react/jsx-runtime";\n' +
-        "export { React, ReactDOM, ReactDOMClient, JSXRuntime };\n",
-    );
-    writeFileSync(path.join(fuentes, "supabase-js.js"), 'export * from "@supabase/supabase-js";\n');
-    // D3 (2026-10-07): el router y los iconos, cada uno con SU lista cerrada.
-    writeFileSync(path.join(fuentes, "react-router.js"), `export { ${EXPORTS_DEL_ENRUTADOR.join(", ")} } from "react-router";\n`);
-    writeFileSync(path.join(fuentes, "lucide-react.js"), `export { ${iconosConSusAlias().join(", ")} } from "lucide-react";\n`);
-    const conReactFuera = new Set(["react-router.js", "lucide-react.js"]);
-    for (const nombre of ["react-todo.js", "supabase-js.js", "react-router.js", "lucide-react.js"]) {
-      const opciones = { ...comun, entryPoints: [path.join(fuentes, nombre)], ...(conReactFuera.has(nombre) ? { plugins: [reactDesdeLasFachadas] } : {}) };
-      // Dos pasadas: la primera dice qué paquetes entran; la segunda los nombra
-      // en la cabecera. esbuild es determinista, así que la segunda es la misma
-      // salida más el aviso.
-      const r = await build({ ...opciones, write: false, outfile: path.join(destino, nombre) });
-      // Lo que ESTÁ en la salida, no todo lo que esbuild leyó: el router lee
-      // `cookie` y `set-cookie-parser` para su modo servidor, y el tree-shaking
-      // los deja fuera. Sus licencias no van donde no va su código.
-      const salida = Object.values(r.metafile!.outputs)[0]!;
-      const lista = incluidos(Object.fromEntries(Object.entries(salida.inputs).filter(([, v]) => v.bytesInOutput > 0)));
-      todos.push(...lista);
-      await build({ ...opciones, outfile: path.join(destino, nombre), banner: { js: aviso(lista) } });
-    }
-    writeFileSync(path.join(destino, "react.js"), fachada("React", "react", true));
-    writeFileSync(path.join(destino, "react-jsx-runtime.js"), fachada("JSXRuntime", "react/jsx-runtime", false));
-    writeFileSync(path.join(destino, "react-dom.js"), fachada("ReactDOM", "react-dom", false));
-    writeFileSync(path.join(destino, "react-dom-client.js"), fachada("ReactDOMClient", "react-dom/client", false));
-  } finally {
-    rmSync(fuentes, { recursive: true, force: true });
-  }
-  return todos;
+}
+
+/** El aviso que abre cada bundle: qué lleva y dónde están las licencias. */
+function aviso(lista: readonly Incluido[]): string {
+  return `/*! ${lista.map((p) => `${p.nombre}@${p.version} (${p.licencia})`).join(", ")} — licencias completas en LICENCIAS.txt */`;
+}
+
+/** UN bundle (`fuentes/<nombre>` → `destino/<nombre>`), con su aviso. */
+async function buildOne(nombre: string, modo: ModoVendor, destino: string, fuentes: string, conReactFuera: boolean): Promise<Incluido[]> {
+  const opciones = { ...comunDe(modo), entryPoints: [path.join(fuentes, nombre)], ...(conReactFuera ? { plugins: [reactDesdeLasFachadas] } : {}) };
+  // Dos pasadas: la primera dice qué paquetes entran; la segunda los nombra
+  // en la cabecera. esbuild es determinista, así que la segunda es la misma
+  // salida más el aviso.
+  const r = await build({ ...opciones, write: false, outfile: path.join(destino, nombre) });
+  // Lo que ESTÁ en la salida, no todo lo que esbuild leyó: el router lee
+  // `cookie` y `set-cookie-parser` para su modo servidor, y el tree-shaking
+  // los deja fuera. Sus licencias no van donde no va su código.
+  const salida = Object.values(r.metafile!.outputs)[0]!;
+  const lista = incluidos(Object.fromEntries(Object.entries(salida.inputs).filter(([, v]) => v.bytesInOutput > 0)));
+  await build({ ...opciones, outfile: path.join(destino, nombre), banner: { js: aviso(lista) } });
+  return lista;
+}
+
+/** React, ReactDOM y el runtime de JSX en `react-todo.js`, y sus cuatro
+ *  fachadas. Igual en todos los catálogos: es lo que garantiza UNA copia. */
+async function buildReactShared(modo: ModoVendor, destino: string, fuentes: string): Promise<Incluido[]> {
+  writeFileSync(
+    path.join(fuentes, "react-todo.js"),
+    'import * as React from "react";\n' +
+      'import * as ReactDOM from "react-dom";\n' +
+      'import * as ReactDOMClient from "react-dom/client";\n' +
+      'import * as JSXRuntime from "react/jsx-runtime";\n' +
+      "export { React, ReactDOM, ReactDOMClient, JSXRuntime };\n",
+  );
+  const lista = await buildOne("react-todo.js", modo, destino, fuentes, false);
+  writeFileSync(path.join(destino, "react.js"), fachada("React", "react", true));
+  writeFileSync(path.join(destino, "react-jsx-runtime.js"), fachada("JSXRuntime", "react/jsx-runtime", false));
+  writeFileSync(path.join(destino, "react-dom.js"), fachada("ReactDOM", "react-dom", false));
+  writeFileSync(path.join(destino, "react-dom-client.js"), fachada("ReactDOMClient", "react-dom/client", false));
+  return lista;
 }
 
 function licencias(lista: readonly Incluido[]): string {
