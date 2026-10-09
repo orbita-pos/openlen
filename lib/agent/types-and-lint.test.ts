@@ -72,6 +72,17 @@ describe("tipos y lint como el LSP de Claude Code (plan 03)", () => {
     expect(takeTypesAndLint(session).map((d) => d.codigo)).toEqual(["TS2322"]);
   });
 
+  it("🔴 pide con la misma marca de sesión cada vez: su petición nueva sustituye a la que espera en la cola (como `geterr`)", () => {
+    const marcas: unknown[] = [];
+    const session = { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never;
+    const deps = { checkApp: (_f: unknown, _c: unknown, o?: { supersedes?: object }) => (marcas.push(o?.supersedes), new Promise(() => {})) } as never;
+    const otra = { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never;
+    for (const s of [session, session, otra]) typesAndLintAfterWrite({ session: s, deps, now: { "/src/a.tsx": "a" }, written: ["/src/a.tsx"], compileErrors: 0 });
+    expect(marcas[0]).toBeTruthy();
+    expect(marcas[1]).toBe(marcas[0]);
+    expect(marcas[2]).not.toBe(marcas[0]);
+  });
+
   it("🔴 la identidad lleva el rango, como en Claude Code: el mismo error en dos líneas son dos", async () => {
     const { session, llamadas, escribir, tick } = montar();
     escribir(["/src/a.tsx"]);

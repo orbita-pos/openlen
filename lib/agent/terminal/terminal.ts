@@ -75,6 +75,8 @@ export class TerminalDeLen {
        *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
       readonly appTools?: {
         readonly catalogSpecifiers: readonly string[];
+        /** Los `@types/*` que ya trae el paquete de tipos del catálogo. */
+        readonly typesPackages?: readonly string[];
         readonly run: (
           program: "tsc" | "eslint",
           args: readonly string[],
@@ -123,7 +125,9 @@ export class TerminalDeLen {
       ficheros,
       perezosos,
       supabase: Boolean(this.o.supabase),
-      app: this.o.appTools ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers] } : undefined,
+      app: this.o.appTools
+        ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
+        : undefined,
       limiteMs: this.limite,
     });
   }

@@ -175,9 +175,14 @@ export interface AgentDeps {
    *  midan la app hablando con su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
   entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
   /** APPS WEB (plan 03): TypeScript y ESLint sobre la app, en su hilo y con
-   *  tope (`lib/apps/checker/check-app.ts`). `null` si no llegó o falló. Sin
-   *  él, tras escribir sólo se dice lo que no compila. */
-  checkApp?(files: Readonly<Record<string, string>>, catalogo: string): Promise<CheckResult | null>;
+   *  tope (`lib/apps/checker/check-app.ts`). `null` si no llegó, falló o la
+   *  sustituyó otra con el mismo `supersedes`. Sin él, tras escribir sólo se
+   *  dice lo que no compila. */
+  checkApp?(
+    files: Readonly<Record<string, string>>,
+    catalogo: string,
+    o?: { readonly supersedes?: object },
+  ): Promise<CheckResult | null>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -465,9 +470,9 @@ export function realDeps(
       const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
       return entornoPublicoDeLaApp(projectId);
     },
-    async checkApp(files, catalogo) {
+    async checkApp(files, catalogo, o) {
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
-      return checkAppInWorker({ files, catalogo });
+      return checkAppInWorker({ files, catalogo, ...(o?.supersedes ? { supersedes: o.supersedes } : {}) });
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");

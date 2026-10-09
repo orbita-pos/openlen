@@ -36,6 +36,13 @@ describe("appToolsFor (plan 03, tarea 5)", () => {
     expect(tools.catalogSpecifiers.some((s) => s.includes("chunk-"))).toBe(false);
   });
 
+  it("🔴 los @types que ya trae el paquete de tipos del catálogo (react sí; node no, una app en el navegador no tiene Node)", () => {
+    const { tools } = montar(null);
+    expect(tools.typesPackages).toContain("@types/react");
+    expect(tools.typesPackages).toContain("@types/react-dom");
+    expect(tools.typesPackages).not.toContain("@types/node");
+  });
+
   it("al comprobador sólo van los fuentes de la web", async () => {
     const { tools, llamadas } = montar({ typescript: [], eslint: [] });
     await tools.run("tsc", [], { "/src/a.tsx": "x", "/AGENTS.md": "y", "/supabase/migrations/1.sql": "z" });
