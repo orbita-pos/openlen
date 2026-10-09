@@ -1609,6 +1609,51 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { mensajes: unknown[] } | null }])[1];
     expect(fila.transcript?.mensajes).toEqual([{ role: "assistant", content: "listo" }]);
   });
+
+  // LEN.md (plans/len-md): el /LEN.md del proyecto es un mensaje DURADERO, como
+  // DeepSeek: la primera vez va entero y se guarda con la fila; mientras no
+  // cambie, no se vuelve a mandar (así lo de delante sigue en caché).
+  describe("LEN.md: la memoria del proyecto como mensaje duradero", () => {
+    const turnoQueHizoAlgo = () =>
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "listo", turns: 1, toolCalls: 1,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        terminalError: false, mutoDurable: true,
+        transcripcion: [{ role: "assistant", content: "listo" }],
+      });
+    const conBrief = (userBrief: string) =>
+      mocks.loadProject.mockResolvedValue({
+        title: "Página", subdomain: null, publishedAt: null, userBrief, brief: null,
+        data: { html: "<html><body><h1>El Farol</h1></body></html>" },
+      });
+    const memoriaQueRecibio = () =>
+      (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage?: string | null }])[0].memoryMessage ?? null;
+    const filaGuardada = () =>
+      (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { memoria?: string; memoriaHuellas?: Record<string, string> } | null }])[1];
+
+    it("la primera vez va entera, y se guarda con la fila junto a sus huellas", async () => {
+      conBrief("Taquería en Guadalajara. Tono formal.");
+      turnoQueHizoAlgo();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(memoriaQueRecibio()).toMatch(/Contents of \/LEN\.md/);
+      expect(memoriaQueRecibio()).toMatch(/Tono formal/);
+      expect(filaGuardada().transcript?.memoria).toBe(memoriaQueRecibio());
+      expect(Object.keys(filaGuardada().transcript?.memoriaHuellas ?? {})).toEqual(["/LEN.md"]);
+    });
+
+    it("🔴 si no cambió desde lo que ya ve, no se vuelve a mandar", async () => {
+      conBrief("Taquería en Guadalajara. Tono formal.");
+      turnoQueHizoAlgo();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      const huellas = filaGuardada().transcript!.memoriaHuellas!;
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, memoria: "x", memoriaHuellas: huellas } }]);
+      await readEvents(await pedir());
+      expect(memoriaQueRecibio()).toBeNull();
+      expect(filaGuardada().transcript?.memoria).toBeUndefined();
+    });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

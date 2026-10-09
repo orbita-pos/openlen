@@ -34,6 +34,15 @@ const fila = (userText: string, mensajes: Message[] | null, assistantReasoning =
 });
 
 describe("historialDesdeLaBase", () => {
+  it("LEN.md: el mensaje de memoria de un turno vuelve en SU sitio, antes de las palabras del dueño, igual que se mandó", () => {
+    const memoria = "<system-reminder>\nContents of /LEN.md (project instructions):\n\nTono formal.\n</system-reminder>\n";
+    const h = historialDesdeLaBase([
+      { userText: "Hola", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "¡Hola!" }], leidos: [], memoria, memoriaHuellas: { "/LEN.md": "x" } } },
+    ]);
+    expect(h[0]).toEqual({ role: "user", content: memoria });
+    expect(h[1]).toMatchObject({ role: "user", content: "Hola", opensTurn: true });
+  });
+
   it("cada turno es la petición del dueño más lo que pasó, con los argumentos enteros", () => {
     const h = historialDesdeLaBase([
       fila("cambia el título", [
