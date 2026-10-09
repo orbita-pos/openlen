@@ -21,7 +21,9 @@
 //   3. Reescribe cada `import` (H4 de la spec): lo relativo, lo absoluto y el
 //      alias `@/` se resuelven contra la carpeta —con o sin extensión, o su
 //      `index`— y se reescriben a la ruta real; un `.css` se vuelve un `<link>`
-//      y un `.json` lleva `with { type: "json" }`. Un nombre que no está en el
+//      y un `.json` lleva `with { type: "json" }`; un `.svg`, `.txt`, `.md` o
+//      `.webmanifest` —o cualquiera con `?url`— es su URL, y con `?raw` su
+//      texto, como en Vite. Un nombre que no está en el
 //      catálogo, o un fichero que no existe, es un ERROR con su ruta y su
 //      línea: vuelve a Len en el acto, como un compilador.
 //   4. Comprueba los NOMBRES que se importan de cada paquete
@@ -57,6 +59,9 @@ const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
 const EN_UNA_APP = [".js", ".mjs"] as const;
 /** El orden en que se prueba un import sin extensión, como Vite. */
 const EXTENSIONES_RESOLUBLES = [".tsx", ".ts", ".jsx", ".js", ".mjs"] as const;
+/** Lo que se importa como su URL, como en Vite (la carpeta sólo guarda texto:
+ *  las fotos son subidas, con su URL). */
+const EXTENSIONES_DE_URL = [".svg", ".txt", ".md", ".webmanifest"] as const;
 
 export interface ContextoDeCompilacion {
   /** La carpeta del proyecto: ruta (`/src/App.jsx`) → contenido. */
@@ -159,6 +164,17 @@ function resolver(especificador: string, desde: string, carpeta: Readonly<Record
 function enlaceCss(ruta: string): string {
   const r = JSON.stringify(ruta);
   return `if(!document.querySelector('link[data-ol-css=${r.replace(/'/g, "\\'")}]')){const l=document.createElement("link");l.rel="stylesheet";l.href=${r};l.setAttribute("data-ol-css",${r});document.head.append(l)}`;
+}
+
+/** `./x.svg?raw` → `["./x.svg", "?raw"]`. Sólo `?raw` y `?url` se entienden. */
+function separarConsulta(especificador: string): readonly [string, string] {
+  const i = especificador.indexOf("?");
+  return i === -1 ? [especificador, ""] : [especificador.slice(0, i), especificador.slice(i)];
+}
+
+/** El nombre por defecto de `import logo from "…"`, o `null` si no lo hay. */
+function nombrePorDefecto(sentencia: string): string | null {
+  return /^import\s+([A-Za-z_$][\w$]*)\s+from\s*["'`]/.exec(sentencia)?.[1] ?? null;
 }
 
 /** Las at-rules que procesa Tailwind 3. `@layer` aparte: sólo las suyas. */
@@ -295,9 +311,11 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
   // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
   // viaja dentro del módulo que la importa (`tailwindStyle`), así que su texto
-  // también decide lo que sale. Son pocas y pequeñas.
+  // también decide lo que sale. Son pocas y pequeñas. Y si el fuente pide el
+  // TEXTO de otro fichero (`?raw`, plan 02), ése también: cualquiera, entero.
+  const conRaw = codigo.includes("?raw");
   const hojas = Object.keys(ctx.carpeta)
-    .filter((r) => extensionDe(r) === ".css")
+    .filter((r) => conRaw || extensionDe(r) === ".css")
     .sort()
     .map((r) => `${r}\0${ctx.carpeta[r]}`)
     .join("\0");
@@ -383,8 +401,17 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       js = js.slice(0, imp.start) + (conComillas ? JSON.stringify(nuevo) : nuevo) + js.slice(imp.end);
     };
 
-    const resuelto = resolver(especificador, ruta, ctx.carpeta);
+    const [sinConsulta, consulta] = separarConsulta(especificador);
+    if (consulta !== "" && consulta !== "?raw" && consulta !== "?url") {
+      error(imp.start, `"${especificador}": only ?raw (the file's text) and ?url (its URL) are supported after a path.`);
+      continue;
+    }
+    const resuelto = resolver(sinConsulta, ruta, ctx.carpeta);
     if (resuelto === null) {
+      if (consulta) {
+        error(imp.start, `"${especificador}": ?raw and ?url go after a file's path, not a package name.`);
+        continue;
+      }
       // UN NOMBRE: o es del catálogo (lo resuelve el import map) o no existe.
       const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
@@ -411,6 +438,19 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     }
 
     const ext = extensionDe(resuelto);
+    // UN FICHERO COMO MÓDULO, como en Vite: su URL (`?url`, o un .svg/.txt/.md
+    // por defecto) o su texto (`?raw`). Se queda una constante en su línea.
+    if (consulta || (EXTENSIONES_DE_URL as readonly string[]).includes(ext)) {
+      const sentencia = js.slice(imp.importStart, imp.importEnd);
+      const nombre = dinamico ? null : nombrePorDefecto(sentencia);
+      if (!nombre) {
+        error(imp.start, `${resuelto}: import it with a default name, statically: import file from "${especificador}".`);
+        continue;
+      }
+      const valor = consulta === "?raw" ? (ctx.carpeta[resuelto] ?? "") : resuelto;
+      js = js.slice(0, imp.importStart) + conSusLineas(`const ${nombre} = ${JSON.stringify(valor)};`, sentencia) + js.slice(imp.importEnd);
+      continue;
+    }
     if ((EXTENSIONES_RESOLUBLES as readonly string[]).includes(ext)) {
       locales.add(resuelto);
       sustituirEspecificador(resuelto);
