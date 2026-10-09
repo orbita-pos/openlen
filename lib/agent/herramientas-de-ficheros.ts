@@ -19,6 +19,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
+import { typesAndLintDiagnostics } from "@/lib/agent/types-and-lint";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { coercerEntradaEdit, planearEdit, type PlanDeEdit } from "@/lib/agent/ficheros/edit";
@@ -393,13 +394,16 @@ export async function diagnosticosDeLaAppTrasEscribir(session: AgentSession, dep
     const row = await deps.loadProject(session.projectId, session.userId);
     if (!row) return [];
     const v = await virtualesDe(session, deps, row.userBrief);
-    return diagnosticosDeLaApp({
+    const deCompilacion = diagnosticosDeLaApp({
       app: session.app,
       ahora: v.folder,
       alEmpezar: session.carpetaAlEmpezar ?? null,
       escritos: session.escritos ?? [],
       cascaron: sinOpIds(row.data.html ?? ""),
     });
+    // Y, si todo compila, los tipos y el lint nuevos (plan 03), como el LSP.
+    const compileErrors = deCompilacion.filter((d) => d.codigo === "compila").length;
+    return [...deCompilacion, ...(await typesAndLintDiagnostics({ session, deps, now: v.folder, compileErrors }))];
   } catch {
     return [];
   }

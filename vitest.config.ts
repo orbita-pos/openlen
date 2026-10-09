@@ -456,6 +456,8 @@ export default defineConfig({
       // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
       "lib/agent/modo-app.test.ts",
       "lib/agent/compila-la-app.test.ts",
+      // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
+      "lib/agent/types-and-lint.test.ts",
       "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
