@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
 import { HeroProduct } from "./hero-product";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LenLetra } from "./len-letra";
+import { HeroPromptInput } from "./hero-prompt-input";
+import { HeroLenProvider } from "./hero-len";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -37,48 +39,23 @@ export async function Hero() {
   const pagesLive = await countLiveProjects().catch(() => 0);
 
   return (
-  // LA MALLA PASA POR DEBAJO DE LA NAV.
-  //
-  // La nav es `sticky` y va ANTES del <main>, así que ocupa sus 56px en el
-  // flujo y la sección arrancaba justo debajo: detrás del menú quedaba el
-  // fondo del body —blanco PURO, rgb(255,255,255)— contra el hueso #FAFAF9 de
-  // la malla. Medido, no supuesto: una costura horizontal a 56px.
-  //
-  // `-mt-14 pt-14` sube la sección esos mismos 56px y los devuelve como
-  // relleno: la malla (que es inset-0 de la sección) cubre la franja de la
-  // nav, y todo lo de dentro se queda exactamente donde estaba.
-    <section className="relative overflow-hidden -mt-14 pt-14">
-      {/* LA MALLA. Cuatro manchas con los centros desalineados a propósito:
-          alineadas se leen como un degradado de plantilla.
-
-          Geometría y color viven en `app/globals.css`, NO aquí en `style=`: un
-          estilo en línea gana a cualquier clase, así que con las manchas
-          cableadas en el TSX una variante de malla sólo podía sobreescribirlas
-          a base de `!important`. Con la clase `.hero-mesh--<nombre>` en el
-          contenedor, probar otra dirección es CSS y nada más. */}
-      <div className="hero-mesh hero-mesh--amanecer" aria-hidden>
-        {/* La capa que SUBE COMO UNA SOLA COSA. Sin ella, las cuatro manchas
-            entraban cada una por su lado y el movimiento se cancelaba: una
-            mancha enorme y muy desenfocada cambia poco localmente al moverse,
-            y cuatro suaves en desfase se leen como nada. El grupo da la
-            lectura —la malla asciende— y el desfase de dentro le quita la
-            rigidez de un bloque deslizándose. */}
-        <div className="hero-mesh__grupo">
-          <div className="hero-mesh__blob hero-mesh__blob--a" />
-          <div className="hero-mesh__blob hero-mesh__blob--b" />
-          <div className="hero-mesh__blob hero-mesh__blob--c" />
-          <div className="hero-mesh__blob hero-mesh__blob--d" />
-        </div>
-      </div>
-
+  // `-mt-14 pt-14`: la sección sube bajo la nav (que es transparente arriba)
+  // y devuelve esos 56px como relleno, así que el fondo es uno solo.
+    <section className="relative -mt-14 pt-14">
       {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
           referencia): un aviso en píldora, UN titular con Len dentro haciendo
-          de «o», una línea gris debajo y dos botones. Y justo después, sin
-          pausa, la maqueta del taller.
+          de «o», una línea gris debajo y, donde Grok pone dos botones, la caja
+          de prompt (Jesús, el mismo día: la caja es la entrada, no un botón
+          que lleva a ella). Y justo después, sin pausa, la maqueta del taller.
 
-          La caja de prompt (`HeroPromptInput`) sale del héroe con este diseño
-          — Grok no pide nada en el primer pantallazo, invita — pero no se
-          borra: sigue montada en /dev/crear y vuelve aquí con una línea. */}
+          El fondo es LIMPIO: se fueron la malla coral (`hero-mesh`) y el
+          resplandor de arriba de la portada (`aurora-dawn`). El color lo pone
+          Len, en el titular, y nada más.
+
+          El proveedor envuelve el titular y la caja: la cara que hace de «o»
+          saluda al llegar y luego escucha si escribes o dictas, y piensa al
+          enviar. */}
+      <HeroLenProvider>
       <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-4 sm:pt-24">
         <div className="flex flex-col items-center text-center">
           <Link
@@ -110,31 +87,14 @@ export async function Hero() {
             })}
           </h1>
 
-          {/* zinc-600/zinc-300 y no más claro: va sobre la malla, que DERIVA
-              — ver la nota de contraste de la línea de páginas en línea. */}
           <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-zinc-600 sm:text-[20px] dark:text-zinc-300">
             {t("hero.subtitle")}
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/register"
-              className="inline-flex h-12 items-center gap-2 rounded-full bg-zinc-900 px-6 text-[16px] font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              {t("hero.ctaPrimary")} <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/templates"
-              className="inline-flex h-12 items-center rounded-full bg-zinc-900/[0.06] px-6 text-[16px] font-medium text-zinc-800 backdrop-blur-md transition-colors hover:bg-zinc-900/[0.1] dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/[0.15]"
-            >
-              {t("hero.ctaSecondary")}
-            </Link>
+          <div className="mt-10 w-full max-w-2xl text-left">
+            <HeroPromptInput />
           </div>
 
-          {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
-              — esta línea cayó en la zona más saturada de la malla. Y zinc-300
-              en OSCURO: zinc-400 medía 4.55:1 contra un mínimo de 4.5, al filo
-              sobre un fondo que se mueve. */}
           {pagesLive > 0 && (
             <p className="mt-6 text-[13px] text-zinc-700 dark:text-zinc-300">
               {t.rich("hero.pagesLive", {
@@ -149,6 +109,7 @@ export async function Hero() {
           )}
         </div>
       </div>
+      </HeroLenProvider>
 
       {/* Segundo compás: la maqueta del producto, pegada a los botones como en
           la de Grok — asoma ya en el primer pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
@@ -159,10 +120,6 @@ export async function Hero() {
         </div>
       </div>
 
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-white dark:to-[#0a0a0a]"
-        aria-hidden
-      />
     </section>
   );
 }

@@ -76,12 +76,6 @@ export async function generateMetadata({
 export default function HomePage() {
   return (
     <div className="relative min-h-screen flex flex-col overflow-x-clip">
-      {/* Dawn atmosphere from the very first pixel — sits behind the sticky
-          glass nav so there is no white band above the hero. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[900px] aurora-dawn"
-        aria-hidden
-      />
       <MarketingChrome>
         {/* 04/10: de ocho secciones a seis. Se fueron Funciones (vendía
             plantillas y HTML, lo de antes de Len; la analítica ya la cuenta
