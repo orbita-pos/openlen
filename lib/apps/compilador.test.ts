@@ -196,6 +196,28 @@ describe("los imports", () => {
     }
   });
 
+  it("usesTailwindDirectives lee el CSS con su parser, como Tailwind: comentarios, cadenas y capas nativas no cuentan", () => {
+    // Lo que una regex sobre el texto contaba de más.
+    for (const no of [
+      "/* aquí iría un @apply */ body { color: red }",
+      '.a::after { content: "@layer base" }',
+      "@layer reset { a { color: red } }",
+      "@layer reset, base;",
+      ".a { width: calc(100% - 1px) }",
+      ".a { ", // CSS roto: no se adivina, va como <link> (el navegador es tolerante)
+    ]) {
+      expect(usesTailwindDirectives(no), no).toBe(false);
+    }
+    // Y lo que sí es de Tailwind, también anidado.
+    for (const si of [
+      "@media (min-width: 1px) { .a { @apply p-2 } }",
+      "@layer components { .btn { color: red } }",
+      ".a { margin: screen(md) }",
+    ]) {
+      expect(usesTailwindDirectives(si), si).toBe(true);
+    }
+  });
+
   it("un módulo CSS (import x from \"./a.css\") es un error claro", () => {
     const r = compilarFuente("/src/main.jsx", 'import estilos from "./index.css";\nestilos;', app(CARPETA));
     expect(r.ok).toBe(false);

@@ -56,4 +56,23 @@ describe("el tailwind.config del cascarón (apps 2026-11, tarea 6)", () => {
     const otro = conConfig('<script>tailwind.config = {}</script><script>const x = require("y")</script>');
     expect(problemasDelCascaron(APP, otro, BIEN)).toEqual([]);
   });
+
+  it("lo decide el MISMO lector que la publicación: cualquier código en la config, no sólo require()", () => {
+    // Una función, una variable, un spread: la publicación no puede leerla como
+    // datos (se queda el CDN) y en el navegador una variable sin definir lanza.
+    for (const config of [
+      "tailwind.config = { theme: { extend: { colors: { marca: color } } } }",
+      "tailwind.config = { theme: { extend: { spacing: (theme) => ({}) } } }",
+      "tailwind.config = { ...base, theme: {} }",
+    ]) {
+      expect(problemasDelCascaron(APP, conConfig(`<script>${config}</script>`), BIEN).map((d) => d.codigo), config).toEqual(["tailwind-config"]);
+    }
+    // Datos que la publicación sí lee —con darkMode, claves sin comillas, comas al final—: nada.
+    for (const config of [
+      'tailwind.config = { darkMode: ["class"], theme: { extend: { colors: { primary: { DEFAULT: "hsl(var(--primary))" } } } } }',
+      "tailwind.config = { theme: { extend: { borderRadius: { lg: 'var(--radius)', }, }, }, }",
+    ]) {
+      expect(problemasDelCascaron(APP, conConfig(`<script>${config}</script>`), BIEN), config).toEqual([]);
+    }
+  });
 });

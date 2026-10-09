@@ -42,6 +42,8 @@ import { transform, type Transform } from "sucrase";
 // La versión en JavaScript del analizador: SÍNCRONA, sin `init` ni wasm. Los
 // ojos de Len contestan cada petición sin `await` (`localResponseFor`).
 import { parse } from "es-module-lexer/js";
+// El parser de CSS de Tailwind (`usesTailwindDirectives`). Síncrono y puro.
+import postcss from "postcss";
 import { catalogo as catalogoDe, dependenciaDe } from "./dependencias";
 import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
@@ -159,10 +161,37 @@ function enlaceCss(ruta: string): string {
   return `if(!document.querySelector('link[data-ol-css=${r.replace(/'/g, "\\'")}]')){const l=document.createElement("link");l.rel="stylesheet";l.href=${r};l.setAttribute("data-ol-css",${r});document.head.append(l)}`;
 }
 
+/** Las at-rules que procesa Tailwind 3. `@layer` aparte: sólo las suyas. */
+const DIRECTIVAS_DE_TAILWIND = new Set(["apply", "tailwind", "config", "screen", "variants", "responsive"]);
+const CAPAS_DE_TAILWIND = /^(?:base|components|utilities)$/;
+const FUNCIONES_DE_TAILWIND = /\b(?:theme|screen)\(/;
+
 /** ¿Usa esta hoja algo que sólo entiende Tailwind? Un `<link>` la llevaría al
- *  navegador con el `@apply` sin traducir, y el navegador lo tira (2026-10-08). */
+ *  navegador con el `@apply` sin traducir, y el navegador lo tira (2026-10-08).
+ *
+ *  SE LEE CON EL PARSER DE CSS, no con una regex sobre el texto (como hace
+ *  Claude Code: preguntarle a la herramienta, no adivinar). La regex contaba un
+ *  `@apply` dentro de un comentario o de un `content: "…"`, y cualquier `@layer`,
+ *  también el nativo de CSS (`@layer reset`), que Tailwind deja pasar intacto.
+ *  Postcss es el mismo parser que usa Tailwind. Un CSS que no se puede leer va
+ *  como `<link>`: el navegador es tolerante y no se adivina. */
 export function usesTailwindDirectives(css: string): boolean {
-  return /@(?:apply|tailwind|layer|config|screen)\b|\btheme\(/.test(css);
+  let raiz: ReturnType<typeof postcss.parse>;
+  try {
+    raiz = postcss.parse(css);
+  } catch {
+    return false;
+  }
+  let usa = false;
+  raiz.walk((nodo) => {
+    if (nodo.type === "atrule") {
+      usa = DIRECTIVAS_DE_TAILWIND.has(nodo.name) || (nodo.name === "layer" && CAPAS_DE_TAILWIND.test(nodo.params.trim()));
+    } else if (nodo.type === "decl") {
+      usa = FUNCIONES_DE_TAILWIND.test(nodo.value);
+    }
+    return usa ? false : undefined;
+  });
+  return usa;
 }
 
 /** Lo que sustituye a `import "./x.css"` cuando la hoja usa Tailwind: un

@@ -334,7 +334,7 @@ function readCarrierBody(body: string): TwExtend | null {
 
 // Por qué se descartó una config presente — va al warn de telemetría. La
 // pérdida silenciosa es lo que dejó vivir el bug de claves numéricas meses.
-type ParseFail =
+export type ParseFail =
   | "sin-objeto-literal"
   | "codigo-alrededor-de-la-asignacion"
   | "json5-imparseable"
@@ -434,6 +434,25 @@ export function extractTwConfig(html: string): ExtractResult {
   }
 
   return { html: touched ? out : html, extend, darkMode };
+}
+
+/** Por qué la publicación NO puede leer como datos el `tailwind.config` del
+ *  documento, o `null` si puede (o si no hay). Es el MISMO lector que usa el
+ *  horneado (`parseConfigScript`), así que lo que dice es lo que pasará al
+ *  publicar: con código dentro —un `require()`, una función, una variable, un
+ *  spread— la config no se lee, se publica con el CDN, y en el navegador un
+ *  `require` o una variable sin definir lanza y se pierde la config entera.
+ *  Un `extend` con valores que el validador descarta no cuenta: es datos. */
+export function readTwConfigProblem(html: string): Exclude<ParseFail, "extend-invalido"> | null {
+  let problema: Exclude<ParseFail, "extend-invalido"> | null = null;
+  rewriteInlineScripts(html, (openTag, body) => {
+    if (problema === null && !CARRIER_ATTR_RE.test(openTag) && CONFIG_ASSIGN_RE.test(body)) {
+      const fail = parseConfigScript(body).fail;
+      if (fail !== null && fail !== "extend-invalido") problema = fail;
+    }
+    return null;
+  });
+  return problema;
 }
 
 /** El `darkMode` del documento: el del carrier manda, luego el de la config.
