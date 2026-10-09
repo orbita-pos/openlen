@@ -19,6 +19,15 @@ const textosDeApp = (env: Record<string, string>, mode: AgentMode = "len") =>
     buildManualDeLaPlataforma(env, mode, APP),
   ].join("\n");
 
+describe("bash, como el de Claude Code (plan 04 de las apps, tarea 7)", () => {
+  it("🔴 tiene timeout, con su texto, y dice lo que pasa con la salida larga", () => {
+    const p = DECLARACION_BASH.parameters as { properties: Record<string, { type: string; description: string }> };
+    expect(p.properties.timeout).toEqual({ type: "NUMBER", description: "Optional timeout in milliseconds (max 600000)." });
+    expect(String(DECLARACION_BASH.description)).toContain("- `timeout` is in milliseconds: default 120000, max 600000.");
+    expect(String(DECLARACION_BASH.description)).toContain("is saved to a file in /tmp/tool-results and you get its path and a preview");
+  });
+});
+
 describe("la palanca de la terminal", () => {
   // N45 (03/10, Jesús: «como DeepSeek lo hace»): en el arnés de DeepSeek la
   // terminal siempre está. Sin ella Len no veía las versiones guardadas

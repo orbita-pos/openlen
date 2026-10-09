@@ -4,16 +4,21 @@
  * Una por turno: los ficheros duran siempre (son los del proyecto), y el
  * directorio y las variables, lo que dura el turno. El intérprete corre en
  * `trabajador.mjs`, en un `worker_thread`, con el perfil «hardened» de
- * `just-bash` y su tope de 30 s por comando. Si aun así un comando no vuelve,
+ * `just-bash`, y cada comando con su tiempo (120 s, o el `timeout` que pida
+ * hasta 600 s, como el `Bash` de Claude Code). Si aun así un comando no vuelve,
  * se corta aquí: se mata el hilo y la siguiente llamada empieza con una
  * terminal nueva, y se dice —«reset, never repair», la regla de la terminal de
  * DeepSeek—.
  */
 import path from "node:path";
 import { Worker } from "node:worker_threads";
+import { formatDuration } from "./formato";
 
-/** El tope de cada comando, el de la ficha de F1 y el de `just-bash` en «hardened». */
-export const LIMITE_MS = 30_000;
+/** El tiempo de un comando, el del `Bash` de Claude Code (leído en su binario
+ *  2.1.293: `BASH_DEFAULT_TIMEOUT_MS`, `BASH_MAX_TIMEOUT_MS`; plan 04 de las
+ *  apps, tarea 7): 120 s si no se pide otro, y hasta 600 s con `timeout`. */
+export const DEFAULT_TIMEOUT_MS = 120_000;
+export const MAX_TIMEOUT_MS = 600_000;
 /** Lo que se espera de más antes de cortar el hilo desde fuera. */
 const MARGEN_MS = 5_000;
 
@@ -81,6 +86,8 @@ export class TerminalDeLen {
           program: "tsc" | "eslint" | "build",
           args: readonly string[],
           ficheros: Readonly<Record<string, string>>,
+          /** Lo que le queda al comando que lo pidió. */
+          timeLeftMs?: number,
         ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
       };
       readonly limiteMs?: number;
@@ -88,8 +95,9 @@ export class TerminalDeLen {
     },
   ) {}
 
+  /** El tiempo de un comando que no pide otro (las pruebas lo acortan). */
   private get limite(): number {
-    return this.o.limiteMs ?? LIMITE_MS;
+    return this.o.limiteMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   private async arrancar(): Promise<void> {
@@ -104,7 +112,7 @@ export class TerminalDeLen {
         return;
       }
       if (typeof m.app === "number") {
-        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build", m.args as string[], m.ficheros as Record<string, string>);
+        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
       }
       const p = this.pendientes.get(m.id);
@@ -128,16 +136,24 @@ export class TerminalDeLen {
       app: this.o.appTools
         ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
         : undefined,
-      limiteMs: this.limite,
+      // El techo de `just-bash`; el de cada comando va en su señal (`ejecutar`).
+      limiteMs: MAX_TIMEOUT_MS,
     });
   }
 
   /** `tsc` / `eslint` / `build` en una app: como `servirSupabase`. */
-  private async servirAppTools(hilo: Worker, pid: number, program: "tsc" | "eslint" | "build", args: string[], ficheros: Record<string, string>): Promise<void> {
+  private async servirAppTools(
+    hilo: Worker,
+    pid: number,
+    program: "tsc" | "eslint" | "build",
+    args: string[],
+    ficheros: Record<string, string>,
+    tiempoQueQueda: number,
+  ): Promise<void> {
     let respuesta: Record<string, unknown>;
     try {
       if (!this.o.appTools) throw new Error("not available here");
-      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros) };
+      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros, tiempoQueQueda) };
     } catch (e) {
       respuesta = { tipo: "app", pid, error: e instanceof Error ? e.message : String(e) };
     }
@@ -199,12 +215,15 @@ export class TerminalDeLen {
     });
   }
 
-  async ejecutar(command: string): Promise<SalidaDeUnComando> {
+  /** Un comando, con su tiempo: el que pida (`timeout` de `bash`, hasta
+   *  `MAX_TIMEOUT_MS`) o el de por defecto. */
+  async ejecutar(command: string, o: { readonly timeoutMs?: number } = {}): Promise<SalidaDeUnComando> {
     if (!this.hilo) await this.arrancar();
     this.cargados = [];
     this.fallidos = [];
+    const tope = Math.min(Math.max(1, Math.round(o.timeoutMs ?? this.limite)), MAX_TIMEOUT_MS);
     try {
-      const r = await this.pedir({ tipo: "exec", command }, this.limite + (this.o.margenMs ?? MARGEN_MS));
+      const r = await this.pedir({ tipo: "exec", command, limiteMs: tope }, tope + (this.o.margenMs ?? MARGEN_MS));
       return {
         stdout: String(r.stdout ?? ""),
         stderr: String(r.stderr ?? ""),
@@ -218,7 +237,7 @@ export class TerminalDeLen {
       await this.cerrar();
       return {
         stdout: "",
-        stderr: `Command timed out after ${Math.round(this.limite / 1000)} s.\n`,
+        stderr: `Command timed out after ${formatDuration(tope)}\n`,
         exitCode: 124,
         ficheros: null,
         reiniciada: AVISO_DE_REINICIO,

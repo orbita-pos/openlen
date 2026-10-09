@@ -19,7 +19,7 @@ import {
   guardarLoDeLaTerminal,
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
-import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
+import { MAX_SALIDA, cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
@@ -64,7 +64,18 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
-  const r = await terminal.ejecutar(command);
+  const r = await terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined });
+  // La salida que no cabe, ENTERA a /tmp (no es del proyecto), como Claude Code.
+  let persistida: string | undefined;
+  if (r.stdout.length + r.stderr.length > MAX_SALIDA) {
+    const ruta = `/tmp/tool-results/${(session.salidasGuardadas = (session.salidasGuardadas ?? 0) + 1)}.txt`;
+    try {
+      await terminal.poner({ [ruta]: r.stdout + r.stderr });
+      persistida = ruta;
+    } catch {
+      // Sin fichero: el corte, con el aviso de Claude Code.
+    }
+  }
 
   let guardado: GuardadoDeLaTerminal | null = null;
   // Lo que cambió, por fichero, para la pantalla (la #10): la foto de antes
@@ -95,6 +106,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     exitCode: r.exitCode,
     ...(guardado ? { guardado: guardado.notas, rechazado: guardado.rechazado } : {}),
     ...(r.reiniciada ? { reiniciada: r.reiniciada } : {}),
+    ...(persistida ? { persistida } : {}),
   });
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca

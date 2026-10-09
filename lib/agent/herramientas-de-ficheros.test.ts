@@ -882,6 +882,22 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     }
   });
 
+  it("🔴 la salida que pasa de 30.000 caracteres va ENTERA a /tmp/tool-results, como en Claude Code, y no es del proyecto", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const seq = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "seq 1 9000; seq 9001 18000" }));
+      assert.match(texto(seq), /^<persisted-output>\nOutput too large \(\d+(\.\d)?KB\)\. Full output saved to: \/tmp\/tool-results\/1\.txt\n\nPreview \(first 2KB\):\n1\n2\n/);
+      assert.match(texto(seq), /<\/persisted-output>\n\[Command finished with exit code 0\]$/);
+      const wc = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "wc -l < /tmp/tool-results/1.txt" }));
+      assert.match(texto(wc), /^18000\n\[Command finished with exit code 0\]$/);
+      assert.equal(Object.keys(session.fotoDeLaTerminal ?? {}).some((r) => r.startsWith("/tmp")), false);
+      assert.equal(store.versions.length, 0);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
   it("un comando que sólo lee dice «sin_cambio», como Read: no cuenta como que Len actuó", async () => {
     const { deps } = makeDeps({ html: HOME });
     const session = makeSession();
