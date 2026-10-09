@@ -34,7 +34,8 @@ import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
-import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
+import { getUserMemory, rememberAboutUser, setPersonalLenMd } from "@/lib/agent/user-memory";
+import type { MemoryNote } from "@/lib/agent/memory/note";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
@@ -191,9 +192,17 @@ export interface AgentDeps {
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).
-  /** H3 — lo que Len sabe del DUEÑO (`users.agentMemory`), para leerlo como
-   *  `/memoria/dueno.md`. Opcional: sin él, el fichero sale vacío. */
+  /** H3 — lo que Len sabe de la PERSONA (`users.agentMemory`), para leerlo como
+   *  `~/.len/LEN.md` (plans/len-md). Opcional: sin él, el fichero sale vacío. */
   leerMemoriaDelDueno?(userId: string): Promise<string | null>;
+  /** plans/len-md — escribe ENTERO el `~/.len/LEN.md` de la persona. */
+  setPersonalLenMd?(userId: string, text: string | null): Promise<boolean>;
+  /** plans/len-md — las notas de `/.len/memory` (lib/agent/memory/store.ts). */
+  memoryNotes?: {
+    list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
+    upsert(projectId: string, note: MemoryNote, authorId: string | null): Promise<{ before: string | null }>;
+    remove(projectId: string, name: string): Promise<{ before: string | null }>;
+  };
   /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
    *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
   resultados?: ResultadosDeps;
@@ -497,6 +506,24 @@ export function realDeps(
     },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
+    },
+    async setPersonalLenMd(userId, text) {
+      return setPersonalLenMd(userId, text);
+    },
+    // Las notas de /.len/memory. Import perezoso: tiran de la base, server-only.
+    memoryNotes: {
+      async list(projectId) {
+        const { listNotes } = await import("@/lib/agent/memory/store");
+        return listNotes(projectId);
+      },
+      async upsert(projectId, note, authorId) {
+        const { upsertNote } = await import("@/lib/agent/memory/store");
+        return upsertNote(projectId, note, authorId);
+      },
+      async remove(projectId, name) {
+        const { deleteNote } = await import("@/lib/agent/memory/store");
+        return deleteNote(projectId, name);
+      },
     },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
     // base y del chat, server-only.

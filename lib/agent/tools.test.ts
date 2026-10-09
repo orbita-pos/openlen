@@ -1338,10 +1338,10 @@ describe("guardarPreferencia — alcance de PROYECTO (alcance:\"esta_pagina\")",
     assert.ok(store.userBrief!.includes("• Tono cercano • Nunca usar rojo"));
   });
   it("refuses when the brief is full, as data", async () => {
-    const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
+    const { deps, store } = makeDeps({ userBrief: "x".repeat(11_990) });
     const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
     assert.equal(out.response.ok, false);
-    assert.equal(store.userBrief!.length, 3990);
+    assert.equal(store.userBrief!.length, 11_990);
     assert.deepEqual(out.ownerReason, { code: "memory_full" });
   });
   it("rejects out-of-range preferencia", async () => {

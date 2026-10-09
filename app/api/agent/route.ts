@@ -1001,7 +1001,7 @@ async function correrTurno(
             },
           )
         : []),
-      ...memoriaSembrada(userMemory, project.userBrief ?? null),
+      ...memoriaSembrada({ personal: userMemory, project: project.userBrief ?? null, index: null }),
     ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
     // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.
