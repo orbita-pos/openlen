@@ -10,15 +10,15 @@ import "server-only";
 // sobre una columna que el proyecto siguiente no lee nunca. El Agente ya
 // prometía memoria de usuario; sólo no la tenía.
 //
-// TRES DECISIONES —TEXTO y no filas, ACOTADO, y LLENO NO BORRA— explicadas
-// donde ahora viven: `lib/agent/documento-de-memoria.ts`. Se fueron allí el
-// 2026-08-27, cuando apareció la segunda memoria —la del NEGOCIO— y copiarlas
-// habría dado dos implementaciones de la misma regla. Aquí queda lo que de
-// verdad es de este fichero: QUÉ columna, y de quién.
+// Desde plans/len-md (2026-10-08) es el ~/.len/LEN.md de la persona: un
+// fichero que Len y ella editan y se SUSTITUYE entero, como el CLAUDE.md de
+// Claude Code. ⚰️ Se fue «sólo se añade» (`rememberAboutUser`,
+// `forgetAboutUser` y `documento-de-memoria.ts`, con su marcador «— Lo que sé
+// de ti —»): una memoria que sólo crece no se puede corregir, y lo viejo se
+// quedaba puesto en todas sus páginas. Aquí queda QUÉ columna, y de quién.
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { anadirLinea, quitarLinea, type DocumentoDeMemoria } from "./documento-de-memoria";
 import { conPlazo } from "./con-plazo";
 
 /** El tope del ~/.len/LEN.md de la persona (plans/len-md): un tercio del
@@ -43,12 +43,6 @@ export async function setPersonalLenMd(userId: string, text: string | null): Pro
 // @/lib/db para que su prueba corra sin bindings nativos, y este módulo SÍ
 // importa la base. El formateo es puro, así que vive allá; aquí sólo la
 // lectura y la escritura.
-
-/** Encabeza el bloque para que el modelo (y el usuario, si algún día lo ve)
- *  sepan de dónde salió cada línea. */
-export const MEMORY_MARKER_LINE = "— Lo que sé de ti —";
-
-const DOC: DocumentoDeMemoria = { marcador: MEMORY_MARKER_LINE, max: AGENT_MEMORY_MAX };
 
 export async function getUserMemory(userId: string): Promise<string | null> {
   const rows = await db
@@ -85,42 +79,4 @@ export const MEMORIA_TIMEOUT_MS = 1_500;
  */
 export async function getUserMemoryBounded(userId: string): Promise<string | null> {
   return conPlazo(() => getUserMemory(userId), MEMORIA_TIMEOUT_MS, null);
-}
-
-export type MemoryWrite =
-  | { readonly ok: true; readonly yaExistia: boolean }
-  | { readonly ok: false; readonly reason: "llena" | "no_guardado" };
-
-/** Añade una preferencia a la memoria de la PERSONA. Idempotente por texto; el
- *  cómo —y el porqué de que el de-duplicado sea tonto a propósito— viven en
- *  `documento-de-memoria.ts`. */
-export async function rememberAboutUser(
-  userId: string,
-  preferencia: string,
-): Promise<MemoryWrite> {
-  const r = anadirLinea(await getUserMemory(userId), preferencia, DOC);
-  if (!r.ok) return { ok: false, reason: "llena" };
-  if (r.yaExistia) return { ok: true, yaExistia: true };
-
-  const res = await db
-    .update(schema.users)
-    .set({ agentMemory: r.texto })
-    .where(eq(schema.users.id, userId))
-    .returning({ id: schema.users.id });
-  return res.length > 0 ? { ok: true, yaExistia: false } : { ok: false, reason: "no_guardado" };
-}
-
-/** Quita una preferencia. Existe porque una memoria a la que sólo se puede
- *  AÑADIR es una trampa: el día que guarde algo mal, el usuario se queda con
- *  ello puesto en todas sus páginas para siempre. No hay herramienta del
- *  modelo que llame a esto todavía — el borrado es del dueño. */
-export async function forgetAboutUser(userId: string, preferencia: string): Promise<boolean> {
-  const r = quitarLinea(await getUserMemory(userId), preferencia, DOC);
-  if (!r.quitada) return false;
-  const res = await db
-    .update(schema.users)
-    .set({ agentMemory: r.texto })
-    .where(and(eq(schema.users.id, userId)))
-    .returning({ id: schema.users.id });
-  return res.length > 0;
 }

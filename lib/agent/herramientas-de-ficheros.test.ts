@@ -64,7 +64,6 @@ function makeDeps(data: ProjectData) {
     uploadAsset: noUsada,
     editImage: noUsada,
     setUserBrief: noUsada,
-    rememberAboutUser: noUsada,
     listVersions: noUsada,
     restoreVersion: noUsada,
   } as unknown as AgentDeps;
