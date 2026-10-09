@@ -67,6 +67,12 @@ const nextConfig = {
       "./lib/apps/checker/checker-core.mjs",
       "./lib/apps/checker/format.mjs",
       "./node_modules/typescript/lib/*.d.ts",
+      // El empaquetador de las apps (plan 02): `bundle-app.ts` arranca
+      // `bundler-worker.mjs` por ruta, y el hilo lee el wasm por ruta. Va la
+      // build de NAVEGADOR de esbuild-wasm (la de Node crea un proceso).
+      "./lib/apps/bundler/bundler-worker.mjs",
+      "./node_modules/esbuild-wasm/esbuild.wasm",
+      "./node_modules/esbuild-wasm/lib/browser.js",
     ],
   },
   // External Node packages:
@@ -105,6 +111,8 @@ const nextConfig = {
     "eslint-plugin-react-hooks",
     "@eslint/js",
     "globals",
+    // El empaquetador de las apps (plan 02): ver `outputFileTracingIncludes`.
+    "esbuild-wasm",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
