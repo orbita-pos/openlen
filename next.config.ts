@@ -57,6 +57,15 @@ const nextConfig = {
       "./node_modules/tailwindcss/stubs/*",
       "./lib/agent/terminal/trabajador.mjs",
       "./node_modules/just-bash/**/*",
+      // The apps' type and lint checker (plans/app-catalog-and-bundler/03):
+      // `lib/apps/checker/check-app.ts` starts `checker-worker.mjs` by path, and
+      // TypeScript reads its `lib.*.d.ts` by path too. The packages themselves
+      // (typescript, eslint and friends) are traced through the never-called
+      // `toolchainForTracing` + `serverExternalPackages` below, so their whole
+      // dependency trees come along (ESLint's live loose in node_modules).
+      "./lib/apps/checker/checker-worker.mjs",
+      "./lib/apps/checker/checker-core.mjs",
+      "./node_modules/typescript/lib/*.d.ts",
     ],
   },
   // External Node packages:
@@ -87,6 +96,14 @@ const nextConfig = {
     "@openlen/images",
     "puppeteer",
     "lighthouse",
+    // The apps' type and lint checker runs these in its own worker (see
+    // `outputFileTracingIncludes` above): external, so they're traced whole.
+    "typescript",
+    "eslint",
+    "typescript-eslint",
+    "eslint-plugin-react-hooks",
+    "@eslint/js",
+    "globals",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to
