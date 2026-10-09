@@ -31,12 +31,16 @@ async function main() {
   `);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "lenMemoryNotes_project_name_idx" ON "lenMemoryNotes" ("projectId", "name");`);
   // Los marcadores de cuando la memoria sólo crecía ya no significan nada:
-  // ahora es un fichero que se edita entero.
+  // ahora es un fichero que se edita entero. Se van con el blanco de alrededor
+  // (un párrafo en su lugar) y se recorta también el salto de línea: `btrim` a
+  // secas sólo quita espacios, y el ensayo dejó un salto de línea delante de
+  // cada LEN.md.
+  const blanco = sql.raw(`' ' || chr(9) || chr(10) || chr(13)`);
   await db.execute(
-    sql`UPDATE "users" SET "agentMemory" = NULLIF(btrim(replace("agentMemory", '— Lo que sé de ti —', '')), '') WHERE "agentMemory" LIKE '%— Lo que sé de ti —%';`,
+    sql`UPDATE "users" SET "agentMemory" = NULLIF(btrim(regexp_replace("agentMemory", '[[:space:]]*— Lo que sé de ti —[[:space:]]*', chr(10) || chr(10), 'g'), ${blanco}), '') WHERE "agentMemory" LIKE '%— Lo que sé de ti —%';`,
   );
   await db.execute(
-    sql`UPDATE "projects" SET "userBrief" = btrim(replace("userBrief", '— Preferencias guardadas por el agente —', '')) WHERE "userBrief" LIKE '%— Preferencias guardadas por el agente —%';`,
+    sql`UPDATE "projects" SET "userBrief" = btrim(regexp_replace("userBrief", '[[:space:]]*— Preferencias guardadas por el agente —[[:space:]]*', chr(10) || chr(10), 'g'), ${blanco}) WHERE "userBrief" LIKE '%— Preferencias guardadas por el agente —%';`,
   );
   // Un /LEN.md que alguien escribiera ANTES en la carpeta se publicaba; ahora
   // es reservado (lib/agent/ficheros/folder.ts) y esa fila ya no se ve.
