@@ -20,7 +20,8 @@ import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { conImportMap } from "@/lib/apps/documento";
-import { servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
+import { moduloDeError, servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
+import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
 
 export interface ContextoDeVista {
   projectId: string;
@@ -59,39 +60,63 @@ export function pantallaDe(valor: unknown): string | null {
  * `/api/lienzo/site` (los dos pasan por `servirRutaDeLaApp`), así que los ojos
  * de Len miden la app que el dueño ve. React va en su build de desarrollo, como
  * en el lienzo: sus mensajes de error enteros son lo que Len necesita leer.
+ *
+ * UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete de
+ * desarrollo (`bundleApp`: sus fuentes con lo que usa del catálogo), el mismo
+ * que contesta el lienzo, y su sourcemap va aparte, para traducir las trazas
+ * (`traductorDeMapas`): al navegador no se le sirve. Si no compila, la entrada
+ * es un módulo que lanza los errores del compilador, como antes cada fuente.
+ * Al empaquetador va sólo lo publicable: ni /tests ni /supabase se importan.
  */
-export function carpetaServida(
+export async function carpetaServida(
   files: Readonly<Record<string, string>>,
   app: AppDeProyecto | null,
   entorno?: Readonly<Record<string, string>>,
-): Record<string, string> {
+): Promise<{ files: Record<string, string>; sourceMaps: Record<string, string> }> {
   const out: Record<string, string> = {};
   for (const [ruta, contenido] of Object.entries(files)) {
     const servido = servirRutaDeLaApp(ruta, files, { app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
     out[ruta] = servido ? servido.cuerpo : contenido;
   }
-  if (app) Object.assign(out, vendorPorRuta(app.catalogo, "desarrollo"));
-  return out;
+  const sourceMaps: Record<string, string> = {};
+  if (app) {
+    Object.assign(out, vendorPorRuta(app.catalogo, "desarrollo"));
+    const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isPublishableFolderPath(r)));
+    const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
+    const e = app.entrada;
+    if (!paquete) out[e] = moduloDeError(e, [{ ruta: e, linea: null, columna: null, mensaje: BUNDLER_DID_NOT_ANSWER }]);
+    else if (!paquete.ok) out[e] = moduloDeError(e, paquete.errores);
+    else {
+      out[e] = paquete.js;
+      if (paquete.map) sourceMaps[e] = paquete.map;
+    }
+  }
+  return { files: out, sourceMaps };
 }
 
 /** Lo que el navegador que mide necesita de la carpeta, o `undefined` si la
  *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
  *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
-export function carpetaDeLaVista(
+export async function carpetaDeLaVista(
   vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
-): {
-  files: Readonly<Record<string, string>>;
-  /** UNA APP (plan 02): el mapa del paquete, para traducir las trazas. */
-  sourceMaps?: Readonly<Record<string, string>>;
-  pagina: string | null;
-  hash?: string;
-  esperarALaRed?: boolean;
-} | undefined {
+): Promise<
+  | {
+      files: Readonly<Record<string, string>>;
+      /** UNA APP (plan 02): el mapa del paquete, para traducir las trazas. */
+      sourceMaps?: Readonly<Record<string, string>>;
+      pagina: string | null;
+      hash?: string;
+      esperarALaRed?: boolean;
+    }
+  | undefined
+> {
   const app = vista?.app ?? null;
   const files = vista?.files ?? {};
   if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
+  const servida = await carpetaServida(files, app, vista.entorno);
   return {
-    files: carpetaServida(files, app, vista.entorno),
+    files: servida.files,
+    ...(Object.keys(servida.sourceMaps).length > 0 ? { sourceMaps: servida.sourceMaps } : {}),
     pagina: vista.pagina,
     // UNA APP: la pantalla pedida, y esperar a que pida sus datos (H12).
     ...(app && vista.pantalla ? { hash: vista.pantalla } : {}),
