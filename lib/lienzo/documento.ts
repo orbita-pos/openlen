@@ -19,7 +19,6 @@ import { sealRelease } from "@/lib/html-engine";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { conImportMap } from "@/lib/apps/documento";
 import { moduloDeError, servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
 import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
 
@@ -34,8 +33,8 @@ export interface ContextoDeVista {
    *  → contenido. No entran en el documento: viajan con él hasta el navegador
    *  que lo mide, que los contesta cuando la página los pide. */
   files?: Readonly<Record<string, string>>;
-  /** UNA APP WEB (spec local 2026-10-07-apps): su documento lleva el import map
-   *  del catálogo y sus fuentes se sirven compilados. Ausente = una página. */
+  /** UNA APP WEB (spec local 2026-10-07-apps): su entrada se sirve empaquetada
+   *  (plan 02) y sus fuentes, compilados. Ausente = una página. */
   app?: AppDeProyecto | null;
   /** Lo que vale `import.meta.env` en la app: sólo valores públicos
    *  (`lib/apps/entorno.ts`). */
@@ -141,11 +140,9 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
     // aquí para que nadie deduzca un efecto que no ocurre.
     sandboxed: false,
   });
-  const sellado = sealRelease(out).html;
-  // El import map de la app va lo ÚLTIMO, con el documento ya sellado: ningún
-  // pase posterior puede moverlo de delante de los módulos. La publicación lo
-  // pone en el mismo punto (`publishToDir`).
-  return ctx.app ? conImportMap(sellado, ctx.app.catalogo) : sellado;
+  // Una app ya no lleva import map (plan 02): su entrada es el paquete, que
+  // trae dentro lo que usa del catálogo.
+  return sealRelease(out).html;
 }
 
 /** Lo que hace falta de la fila del proyecto para armar la vista. Se escribe
@@ -231,17 +228,6 @@ export async function vistaConCarpeta(
 }
 
 /**
- * EL DOCUMENTO QUE SE FOTOGRAFÍA. Los ojos fotografían lo GUARDADO, sin hornear
- * (el horneado metería nuestros módulos en la foto: ver `verify.ts`). Pero una
- * APP sin su import map no arranca —sus fuentes compilados piden `react` por su
- * nombre—, y la foto sería una pantalla en blanco que la app no tiene, juzgada
- * como rota. Así que a una app se le pone el import map, y nada más.
- */
-export function documentoParaLaFoto(html: string, vista: Pick<ContextoDeVista, "app"> | null | undefined): string {
-  return vista?.app ? conImportMap(html, vista.app.catalogo) : html;
-}
-
-/**
  * `documentoDeVista` para las superficies que MIDEN: falla blando.
  *
  * La ruta del lienzo quiere el error —si no puede hornear, no hay página que
@@ -268,8 +254,7 @@ export function documentoMedible(
         error instanceof Error ? error.message : String(error)
       }`,
     );
-    // Crudo, pero una app CON su import map: sin él no arranca, y lo que se
-    // mediría sería una pantalla en blanco que la app no tiene.
-    return vista.app ? conImportMap(html, vista.app.catalogo) : html;
+    // Crudo. Una app arranca igual: su entrada es el paquete (plan 02).
+    return html;
   }
 }

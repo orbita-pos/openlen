@@ -6,10 +6,11 @@
 // terceros que corre en el navegador de cada visitante (spec local
 // docs/superpowers/specs/2026-10-07-apps-design.md, §5.3).
 //
-// CÓMO LLEGAN AL NAVEGADOR. Sin bundler (§2 de la spec): el navegador resuelve
-// `"react"` con el import map que inyecta la plataforma (`lib/apps/documento.ts`)
-// y lo pide a `/openlen/vendor/<catálogo>/<fichero>`, DEL MISMO ORIGEN que la
-// página. No a un CDN: un módulo de otro origen exige CORS, y `libs.openlen.com`
+// CÓMO LLEGAN AL NAVEGADOR. Desde el plan 02, DENTRO DEL PAQUETE de la app
+// (`lib/apps/bundler/`): esbuild lee estos ficheros (`/openlen/vendor/<catálogo>/
+// <fichero>`, en su modo) y mete en la entrada sólo lo que la app usa. Hasta
+// entonces (sin bundler, §2 de la spec) el navegador los resolvía con un import
+// map y los pedía a esa ruta, DEL MISMO ORIGEN que la página. No a un CDN: un módulo de otro origen exige CORS, y `libs.openlen.com`
 // no lo manda (`ORIGEN_MANDA_CORS` en lib/librerias.ts); y los ojos de Len
 // navegan detrás de un proxy de salida que cortaría a un tercero.
 //

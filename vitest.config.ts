@@ -551,6 +551,8 @@ export default defineConfig({
       "lib/publish/frame-origins.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
+      // Plan 02 de las apps: publicar sin empaquetador no publica.
+      "lib/publish/publicar-app-sin-empaquetador.test.ts",
       "lib/publish/design-stash-strip.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
