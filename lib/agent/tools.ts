@@ -693,6 +693,12 @@ export interface AgentSession {
   projectId: string;
   userId: string;
   /**
+   * QUIÉN HABLA, si no es el dueño (un miembro del proyecto, lib/projects/acceso.ts).
+   * `userId` sigue siendo el DUEÑO —con él se lee y escribe el proyecto y él paga—;
+   * lo PERSONAL (su memoria) es de quien habla. Ausente = el dueño.
+   */
+  personId?: string;
+  /**
    * QUIÉN ESCRIBE. Ausente = Len. `"usuario"` = la terminal del usuario (la #17
    * de plans/len-agente-2026/notas/fase-5-taller.md): pasa por la misma puerta
    * que Len —también con JavaScript, desde el 2026-10-07— y su versión se
