@@ -23,6 +23,45 @@ function montar(r: { typescript: ReturnType<typeof d>[]; eslint: ReturnType<type
   return { tools, llamadas };
 }
 
+describe("npm test (plan 04, tarea 8)", () => {
+  it("🔴 test: corre las pruebas con los filtros y -t, y sale con el código de vitest", async () => {
+    const pedidos: unknown[] = [];
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never,
+      {
+        checkApp: async () => null,
+        testApp: async (_f: unknown, _a: unknown, o: unknown) => (pedidos.push(o), { files: [], notRun: [], blocked: [], ms: 1 }),
+      } as never,
+    )!;
+    const r = await tools.run("test", ["run", "carrito", "-t", "suma", "--reporter=verbose"], { "/src/main.jsx": "x", "/supabase/x.sql": "y" }, 120_000);
+    // El plazo: lo que le queda al comando, menos 5 s para devolver el informe.
+    expect(pedidos).toEqual([{ filters: ["carrito"], testNamePattern: "suma", deadlineMs: 115_000 }]);
+    expect(r).toEqual({ stdout: "\nNo test files found, exiting with code 1\n\ninclude: **/*.{test,spec}.?(c|m)[jt]s?(x)\n", stderr: "", exitCode: 1 });
+  });
+
+  it("test: lleva el entorno de la app (import.meta.env) y TODOS los ficheros, también /tests", async () => {
+    const vistos: { f: Record<string, string>; o: Record<string, unknown> }[] = [];
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" }, projectId: "p1" } as never,
+      {
+        checkApp: async () => null,
+        entornoDeLaApp: async (id: string) => ({ VITE_SUPABASE_URL: `https://${id}.example` }),
+        testApp: async (f: Record<string, string>, _a: unknown, o: Record<string, unknown>) => (vistos.push({ f, o }), { files: [], notRun: [], blocked: [], ms: 1 }),
+      } as never,
+    )!;
+    await tools.run("test", [], { "/src/main.jsx": "x", "/tests/a.test.js": "t" }, 120_000);
+    expect(vistos[0]!.o.entorno).toEqual({ VITE_SUPABASE_URL: "https://p1.example" });
+    expect(Object.keys(vistos[0]!.f).sort()).toEqual(["/src/main.jsx", "/tests/a.test.js"]);
+  });
+
+  it("test: lo que no hay, lo dice (--coverage, --watch, -u)", async () => {
+    const tools = appToolsFor({ app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never, { checkApp: async () => null, testApp: async () => null } as never)!;
+    expect((await tools.run("test", ["--coverage"], {}, 120_000)).stderr).toMatch(/coverage isn't available here/);
+    expect((await tools.run("test", ["-u"], {}, 120_000)).stderr).toMatch(/snapshots aren't available here/);
+    expect((await tools.run("test", [], {}, 120_000)).stderr).toBe("vitest: didn't finish in time; try again.\n");
+  });
+});
+
 describe("appToolsFor (plan 03, tarea 5)", () => {
   it("sin app o sin comprobador no hay herramientas", () => {
     expect(appToolsFor({} as never, { checkApp: async () => null } as never)).toBeUndefined();

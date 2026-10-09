@@ -6,11 +6,14 @@
 // la salida vuelve como la imprimen `tsc --noEmit` y el `stylish` de ESLint, con
 // su código de salida: 2 si `tsc` encuentra errores, 1 si ESLint los encuentra.
 // Y `npm run build` (plan 02): el paquete de producción de verdad
-// (`deps.buildApp`), con su tamaño como lo imprime Vite.
+// (`deps.buildApp`), con su tamaño como lo imprime Vite. Y `npm test` (plan 04):
+// las pruebas de la app en el Chromium de los ojos (`deps.testApp`), con el
+// informe de vitest.
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
+import { formatVitestReport } from "@/lib/apps/tests/report";
 import { typesPackagesOf } from "@/lib/apps/checker/types-pack";
 import type { TerminalDeLen } from "./terminal";
 
@@ -25,7 +28,10 @@ function dentroDe(rutas: readonly string[], ruta: string): boolean {
   });
 }
 
-export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<AgentDeps, "checkApp" | "buildApp">): AppTools | undefined {
+export function appToolsFor(
+  session: Pick<AgentSession, "app" | "projectId">,
+  deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp">,
+): AppTools | undefined {
   const app = session.app;
   const check = deps.checkApp;
   if (!app || !check) return undefined;
@@ -35,7 +41,37 @@ export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<Agent
     catalogSpecifiers: (catalogo(app.catalogo)?.dependencias ?? []).map((d) => d.especificador),
     // Y los @types que trae su paquete de tipos: `npm install -D @types/react` ya está.
     typesPackages: typesPackagesOf(app.catalogo),
-    run: async (program, args, ficheros) => {
+    run: async (program, args, ficheros, timeLeftMs = 120_000) => {
+      if (program === "test") {
+        if (args.some((a) => a === "--coverage" || a.startsWith("--coverage."))) return { stdout: "", stderr: "vitest: coverage isn't available here.\n", exitCode: 1 };
+        if (args.some((a) => a === "-u" || a === "--update")) return { stdout: "", stderr: "vitest: snapshots aren't available here (there is no snapshot file).\n", exitCode: 1 };
+        if (!deps.testApp) return { stdout: "", stderr: "npm test: not available here.\n", exitCode: 1 };
+        // Los argumentos de vitest: `run`/`--run`/`--watch=false` sobran (aquí
+        // siempre corre una vez); `-t x`/`--testNamePattern=x` filtra por nombre;
+        // lo demás que no empieza por `-` filtra ficheros, como `vitest run carrito`.
+        let testNamePattern: string | undefined;
+        const filters: string[] = [];
+        for (let i = 0; i < args.length; i++) {
+          const a = args[i]!;
+          if (a === "-t" || a === "--testNamePattern") testNamePattern = args[++i];
+          else if (a.startsWith("--testNamePattern=")) testNamePattern = a.slice("--testNamePattern=".length);
+          else if (a === "run" && i === 0) continue;
+          else if (!a.startsWith("-")) filters.push(a);
+        }
+        // Su `import.meta.env` (la URL y la clave publicable de su backend), como en los ojos.
+        const entorno = session.projectId && deps.entornoDeLaApp ? await deps.entornoDeLaApp(session.projectId).catch(() => null) : null;
+        // A `testApp` van TODOS los ficheros, no sólo los publicables: una prueba puede vivir en /tests.
+        // Dentro del tiempo de SU comando (120 s por defecto, el de Claude Code), con 5 s para devolver el informe.
+        const r = await deps.testApp(ficheros, app, {
+          filters,
+          deadlineMs: Math.max(1_000, timeLeftMs - 5_000),
+          ...(testNamePattern ? { testNamePattern } : {}),
+          ...(entorno ? { entorno } : {}),
+        });
+        if (!r) return { stdout: "", stderr: "vitest: didn't finish in time; try again.\n", exitCode: 1 };
+        const { stdout, exitCode } = formatVitestReport(r, ficheros);
+        return { stdout, stderr: "", exitCode };
+      }
       const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
       if (program === "build") {
         if (!deps.buildApp) return { stdout: "", stderr: "npm run build: not available here.\n", exitCode: 1 };

@@ -29,6 +29,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
+import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
@@ -187,6 +188,18 @@ export interface AgentDeps {
   /** APPS WEB (plan 02): el paquete de producción, para `npm run build`
    *  (`lib/apps/bundler/bundle-app.ts`). `null` si el empaquetador no contestó. */
   buildApp?(files: Readonly<Record<string, string>>, app: AppDeProyecto): Promise<AppBundle | null>;
+  /** APPS WEB (plan 04): las pruebas de la app, corridas en el Chromium de los
+   *  ojos (`lib/apps/tests/run-tests.ts`), para `npm test`. `null` si no se pudo. */
+  testApp?(
+    files: Readonly<Record<string, string>>,
+    app: AppDeProyecto,
+    o: {
+      readonly filters: readonly string[];
+      readonly testNamePattern?: string;
+      readonly deadlineMs: number;
+      readonly entorno?: Readonly<Record<string, string>>;
+    },
+  ): Promise<TestRun | null>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -481,6 +494,17 @@ export function realDeps(
     async buildApp(files, app) {
       const { bundleApp } = await import("@/lib/apps/bundler/bundle-app");
       return bundleApp({ carpeta: files, app, modo: "produccion" });
+    },
+    async testApp(files, app, o) {
+      const { runAppTests } = await import("@/lib/apps/tests/run-tests");
+      return runAppTests({
+        carpeta: files,
+        app,
+        filters: o.filters,
+        deadlineMs: o.deadlineMs,
+        ...(o.testNamePattern ? { testNamePattern: o.testNamePattern } : {}),
+        ...(o.entorno ? { entorno: o.entorno } : {}),
+      }).catch(() => null);
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
