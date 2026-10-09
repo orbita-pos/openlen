@@ -1,78 +1,92 @@
 // lib/agent/types-and-lint.ts — TIPOS Y LINT TRAS CADA EDICIÓN DE UNA APP, como
-// los diagnósticos del LSP en Claude Code (plan 03): sólo lo NUEVO, por el mismo
-// canal `<new-diagnostics>` que los errores del compilador.
+// los diagnósticos del LSP en Claude Code (plan 03; leído en su binario 2.1.293,
+// el registro `ydt` y su `takePending`):
 //
-// «Nuevo» es como en `diagnosticosDeLaApp`: lo que no estaba al empezar el turno
-// (la línea base se calcula una vez, con `carpetaAlEmpezar`) y no se ha dicho
-// ya en este turno. Se espera `budgetMs`; si no llega, se dice con la
-// herramienta que lo enseña —en vez de un aviso tardío que podría ser de un
-// estado que ya cambió—. No bloquea nada: ni sirve ni publica distinto.
+//   · al escribir, la herramienta NO espera: olvida lo entregado y lo pendiente
+//     de los ficheros que escribió (`clearDeliveredForFile`,
+//     `clearPendingForFile`) y lanza el chequeo;
+//   · lo que vuelve de un chequeo que ya no es el último se tira («Dropping
+//     stale publishDiagnostics»); lo demás queda PENDIENTE, sólo de los ficheros
+//     «abiertos» —los que Len escribió—, como un servidor de lenguaje sólo
+//     publica los documentos abiertos;
+//   · antes de cada llamada al modelo, el bucle recoge lo pendiente
+//     (`takeTypesAndLint`): sin lo ya entregado de cada fichero —la identidad
+//     lleva el rango, como en Claude Code— y va al mismo `<new-diagnostics>`.
+//
+// Lo que no llega antes de que el turno acabe se pierde: en Claude Code iría con
+// el mensaje siguiente del usuario, y aquí la sesión es de un turno.
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { claveDeDiagnostico, type Diagnostico } from "@/lib/agent/diagnosticos";
+import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 
-const BUDGET_MS = 3_000;
-const TARDE = Symbol("tarde");
-
-/** Sólo los fuentes de la web: ni /memoria, ni las pruebas, ni lo de Supabase. */
-function publicable(c: ReadonlyMap<string, string> | Readonly<Record<string, string>>): Record<string, string> {
-  const pares = c instanceof Map ? [...c.entries()] : Object.entries(c);
-  return Object.fromEntries(pares.filter(([ruta]) => isPublishableFolderPath(ruta)));
+/** El registro de un turno: el `ydt` de Claude Code. */
+export interface TypesAndLintState {
+  /** El último chequeo lanzado: un resultado de otro anterior es viejo. */
+  version: number;
+  /** Los ficheros que Len escribió: los únicos de los que se dice algo. */
+  readonly abiertos: Set<string>;
+  /** Lo ya entregado, por fichero. */
+  readonly entregados: Map<string, Set<string>>;
+  /** Lo que llegó y aún no se entregó. */
+  pendientes: Diagnostico[];
 }
 
-/** Al empezar un turno de una app, despierta el hilo sin esperarlo, como Claude
- *  Code arranca sus LSP al abrir la sesión: en frío tarda ~2 s (TypeScript,
- *  ESLint y los tipos del catálogo), y la primera edición llega mientras el
- *  modelo piensa —con el hilo ya caliente, cabe en `BUDGET_MS`—. */
-export function warmTypesAndLint(session: Pick<AgentSession, "app">, deps: Pick<AgentDeps, "checkApp">): void {
-  if (!session.app || !deps.checkApp) return;
-  void deps.checkApp({}, session.app.catalogo).catch(() => null);
+/** La identidad de Claude Code (`hdt`): mensaje, gravedad, rango, fuente y código. */
+function clave(d: Diagnostico): string {
+  return JSON.stringify([d.mensaje, d.gravedad, d.linea, d.columna, d.fuente ?? null, d.codigo ?? null]);
 }
 
-export async function typesAndLintDiagnostics(args: {
+function estadoDe(session: AgentSession): TypesAndLintState {
+  return (session.typesAndLint ??= { version: 0, abiertos: new Set(), entregados: new Map(), pendientes: [] });
+}
+
+/** Tras una escritura de la app: no espera nada. */
+export function typesAndLintAfterWrite(args: {
   readonly session: AgentSession;
   readonly deps: AgentDeps;
   readonly now: Readonly<Record<string, string>> | ReadonlyMap<string, string>;
+  /** Lo que escribió ESTA herramienta. */
+  readonly written: readonly string[];
+  /** Lo que el compilador acaba de decir que no compila. */
   readonly compileErrors: number;
-  readonly budgetMs?: number;
-}): Promise<Diagnostico[]> {
+}): void {
   const { session, deps } = args;
   const app = session.app;
-  if (!app || !deps.checkApp || args.compileErrors > 0) return [];
-  const check = deps.checkApp;
-  session.typesBaseline ??= (session.carpetaAlEmpezar ? check(publicable(session.carpetaAlEmpezar), app.catalogo) : Promise.resolve(null)).then(
-    (r) => new Set(r ? [...r.typescript, ...r.eslint].map(claveDeDiagnostico) : []),
-  );
-  const ahora = check(publicable(args.now), app.catalogo);
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const r = await Promise.race([
-    Promise.all([session.typesBaseline, ahora]),
-    new Promise<typeof TARDE>((ok) => {
-      timer = setTimeout(() => ok(TARDE), args.budgetMs ?? BUDGET_MS);
-    }),
-  ]).finally(() => clearTimeout(timer));
-  if (r === TARDE) {
-    return [
-      {
-        ruta: app.entrada,
-        linea: 1,
-        columna: 1,
-        gravedad: "Info",
-        mensaje: "Type checking and lint didn't finish in time for this change. Run npx tsc --noEmit and npm run lint to see them.",
-        codigo: "pending",
-        fuente: "typescript",
-      },
-    ];
+  if (!app || !deps.checkApp) return;
+  const estado = estadoDe(session);
+  const escritos = new Set(args.written.filter(isPublishableFolderPath));
+  for (const ruta of escritos) {
+    estado.abiertos.add(ruta);
+    estado.entregados.delete(ruta);
   }
-  const [base, resultado] = r;
-  if (!resultado) return [];
-  const entregados = (session.typesDelivered ??= new Set());
-  const nuevos: Diagnostico[] = [];
-  for (const d of [...resultado.typescript, ...resultado.eslint]) {
-    const clave = claveDeDiagnostico(d);
-    if (base.has(clave) || entregados.has(clave)) continue;
-    entregados.add(clave);
-    nuevos.push(d);
+  estado.pendientes = estado.pendientes.filter((d) => !escritos.has(d.ruta));
+  // El compilador ya habló de lo que no compila; TypeScript diría lo mismo.
+  if (args.compileErrors > 0) return;
+  const mia = ++estado.version;
+  const pares = args.now instanceof Map ? [...args.now.entries()] : Object.entries(args.now);
+  const fuentes = Object.fromEntries(pares.filter(([ruta]) => isPublishableFolderPath(ruta)));
+  void deps
+    .checkApp(fuentes, app.catalogo)
+    .then((r) => {
+      if (!r || estado.version !== mia) return;
+      estado.pendientes = [...r.typescript, ...r.eslint].filter((d) => estado.abiertos.has(d.ruta));
+    })
+    .catch(() => undefined);
+}
+
+/** Antes de cada llamada al modelo: lo pendiente que no se ha entregado. */
+export function takeTypesAndLint(session: Pick<AgentSession, "typesAndLint">): Diagnostico[] {
+  const estado = session.typesAndLint;
+  if (!estado || estado.pendientes.length === 0) return [];
+  const fuera: Diagnostico[] = [];
+  for (const d of estado.pendientes) {
+    const ya = estado.entregados.get(d.ruta) ?? new Set<string>();
+    const k = clave(d);
+    if (ya.has(k)) continue;
+    ya.add(k);
+    estado.entregados.set(d.ruta, ya);
+    fuera.push(d);
   }
-  return nuevos;
+  estado.pendientes = [];
+  return fuera;
 }

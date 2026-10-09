@@ -209,6 +209,10 @@ export interface AgentLoopArgs {
   /** La página en la que trabaja el turno ahora (`session.page`), para pintar
    *  un `Write` que todavía no ha dicho su ruta (`write-preview.ts`). */
   activePage?: () => string | null;
+  /** Lo que llegó DESPUÉS de las herramientas que lo causaron —los tipos y el
+   *  lint de una app (`takeTypesAndLint`)—, recogido antes de cada llamada al
+   *  modelo, como los adjuntos `lsp_diagnostics` de Claude Code. */
+  lateDiagnostics?: () => readonly Diagnostico[];
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -920,7 +924,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const medirYRedactar = async (): Promise<string> => {
     // Lo de las escrituras ya es NUEVO por construcción (se mide contra el
     // fichero de antes): sólo se quita lo ya entregado.
-    const nuevos: Diagnostico[] = entregados.nuevos(diagnosticosDeLaTanda);
+    // Y lo que llegó tarde, que ya viene sin lo entregado (con su propia
+    // identidad, la de Claude Code, que lleva el rango).
+    const nuevos: Diagnostico[] = [...entregados.nuevos(diagnosticosDeLaTanda), ...(args.lateDiagnostics?.() ?? [])];
     diagnosticosDeLaTanda = [];
     return redactarDiagnosticos(nuevos) ?? "";
   };

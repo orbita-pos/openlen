@@ -1,75 +1,103 @@
 // @vitest-environment node
-// Tipos y lint tras cada edición de una app, pasivos como el LSP de Claude Code
-// (plan 03, tarea 4). Sin hilo: `checkApp` es un doble que devuelve lo que cada
-// prueba quiere y cuenta las llamadas.
+// Tipos y lint tras cada edición de una app, como el LSP de Claude Code (plan 03,
+// leído en el binario 2.1.293): la herramienta NO espera; lo que llega se
+// entrega antes de la siguiente llamada al modelo. Sin hilo: `checkApp` es un
+// doble que contesta cuando cada prueba quiere.
 import { describe, expect, it } from "vitest";
-import { typesAndLintDiagnostics, warmTypesAndLint } from "./types-and-lint";
+import { takeTypesAndLint, typesAndLintAfterWrite } from "./types-and-lint";
 
-const err = (ruta: string, codigo: string, mensaje = codigo) =>
-  ({ ruta, linea: 1, columna: 1, gravedad: "Error" as const, mensaje, codigo, fuente: "typescript" as const });
+const diag = (ruta: string, codigo: string, linea = 1) =>
+  ({ ruta, linea, columna: 1, gravedad: "Error" as const, mensaje: `msg ${codigo}`, codigo, fuente: "typescript" as const });
+type R = { typescript: ReturnType<typeof diag>[]; eslint: ReturnType<typeof diag>[] };
 
-function montar(resultados: Array<{ typescript: ReturnType<typeof err>[]; eslint: ReturnType<typeof err>[] } | "lento">) {
-  const llamadas: Record<string, string>[] = [];
-  const session = { app: { catalogo: "2026-11", entrada: "/src/main.jsx" }, carpetaAlEmpezar: new Map([["/src/a.tsx", "viejo"]]) } as never;
+/** `checkApp` que no contesta hasta que la prueba suelta cada llamada. */
+function montar() {
+  const llamadas: { files: Record<string, string>; soltar: (r: R | null) => void }[] = [];
+  const session = { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never;
   const deps = {
-    checkApp: async (files: Record<string, string>) => {
-      llamadas.push(files);
-      const r = resultados.shift();
-      if (r === "lento") return new Promise(() => {});
-      return r ?? { typescript: [], eslint: [] };
-    },
+    checkApp: (files: Record<string, string>) => new Promise<R | null>((soltar) => llamadas.push({ files, soltar })),
   } as never;
-  return { session, deps, llamadas };
+  const escribir = (written: string[], compileErrors = 0) =>
+    typesAndLintAfterWrite({ session, deps, now: { "/src/a.tsx": "a", "/src/b.tsx": "b", "/memoria/x.md": "m" }, written, compileErrors });
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  return { session, llamadas, escribir, tick };
 }
 
-describe("tipos y lint, pasivos (plan 03, tarea 4)", () => {
-  it("🔴 sólo lo NUEVO desde el inicio del turno, y una sola vez (Review Focus 4)", async () => {
-    const viejo = err("/src/a.tsx", "TS1111");
-    const nuevo = err("/src/a.tsx", "TS2322");
-    const { session, deps } = montar([
-      { typescript: [viejo], eslint: [] }, // la línea base: la carpeta al empezar el turno
-      { typescript: [viejo, nuevo], eslint: [] }, // tras la primera edición
-      { typescript: [viejo, nuevo], eslint: [] }, // tras la segunda: nada nuevo
-    ]);
-    const now = { "/src/a.tsx": "nuevo" };
-    expect((await typesAndLintDiagnostics({ session, deps, now, compileErrors: 0 })).map((d) => d.codigo)).toEqual(["TS2322"]);
-    expect(await typesAndLintDiagnostics({ session, deps, now, compileErrors: 0 })).toEqual([]);
+describe("tipos y lint como el LSP de Claude Code (plan 03)", () => {
+  it("🔴 la herramienta no espera: lo que llega se entrega en la siguiente recogida, una vez", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    escribir(["/src/a.tsx"]);
+    expect(takeTypesAndLint(session)).toEqual([]); // aún no contestó: nada, sin esperar
+    llamadas[0]!.soltar({ typescript: [diag("/src/a.tsx", "TS2322")], eslint: [] });
+    await tick();
+    expect(takeTypesAndLint(session).map((d) => d.codigo)).toEqual(["TS2322"]);
+    expect(takeTypesAndLint(session)).toEqual([]);
   });
 
-  it("🔴 con errores de compilación no se comprueba nada (Review Focus 3)", async () => {
-    const { session, deps, llamadas } = montar([]);
-    expect(await typesAndLintDiagnostics({ session, deps, now: { "/src/a.tsx": "x" }, compileErrors: 2 })).toEqual([]);
+  it("sólo los ficheros que Len tocó (los «abiertos»), y al comprobador sólo van los fuentes de la web", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    escribir(["/src/a.tsx"]);
+    expect(Object.keys(llamadas[0]!.files)).toEqual(["/src/a.tsx", "/src/b.tsx"]);
+    llamadas[0]!.soltar({ typescript: [diag("/src/a.tsx", "TS2322"), diag("/src/b.tsx", "TS2339")], eslint: [] });
+    await tick();
+    expect(takeTypesAndLint(session).map((d) => d.ruta)).toEqual(["/src/a.tsx"]);
+  });
+
+  it("🔴 tras editar un fichero, lo ya entregado de ESE fichero se olvida (clearDeliveredForFile): vuelve a salir si sigue", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    const r = { typescript: [diag("/src/a.tsx", "TS2322")], eslint: [] };
+    escribir(["/src/a.tsx"]);
+    llamadas[0]!.soltar(r);
+    await tick();
+    expect(takeTypesAndLint(session)).toHaveLength(1);
+    escribir(["/src/b.tsx"]); // otro fichero: lo de a.tsx ya se dijo
+    llamadas[1]!.soltar(r);
+    await tick();
+    expect(takeTypesAndLint(session)).toEqual([]);
+    escribir(["/src/a.tsx"]); // a.tsx otra vez: se vuelve a decir
+    llamadas[2]!.soltar(r);
+    await tick();
+    expect(takeTypesAndLint(session)).toHaveLength(1);
+  });
+
+  it("🔴 un resultado viejo se tira (Dropping stale): si otra escritura empezó otro chequeo, sólo vale el último", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    escribir(["/src/a.tsx"]);
+    escribir(["/src/a.tsx"]);
+    llamadas[0]!.soltar({ typescript: [diag("/src/a.tsx", "TS1111")], eslint: [] });
+    await tick();
+    expect(takeTypesAndLint(session)).toEqual([]);
+    llamadas[1]!.soltar({ typescript: [diag("/src/a.tsx", "TS2322")], eslint: [] });
+    await tick();
+    expect(takeTypesAndLint(session).map((d) => d.codigo)).toEqual(["TS2322"]);
+  });
+
+  it("🔴 la identidad lleva el rango, como en Claude Code: el mismo error en dos líneas son dos", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    escribir(["/src/a.tsx"]);
+    llamadas[0]!.soltar({ typescript: [diag("/src/a.tsx", "TS2322", 3), diag("/src/a.tsx", "TS2322", 9)], eslint: [] });
+    await tick();
+    expect(takeTypesAndLint(session).map((d) => d.linea)).toEqual([3, 9]);
+  });
+
+  it("🔴 con errores de compilación no se comprueba (el compilador ya habló; serían los mismos errores de sintaxis)", () => {
+    const { llamadas, escribir } = montar();
+    escribir(["/src/a.tsx"], 2);
     expect(llamadas).toHaveLength(0);
   });
 
-  it("si no llega a tiempo, lo dice con la herramienta para verlo, y no espera más", async () => {
-    const { session, deps } = montar([{ typescript: [], eslint: [] }, "lento"]);
-    const t0 = Date.now();
-    const r = await typesAndLintDiagnostics({ session, deps, now: { "/src/a.tsx": "x" }, compileErrors: 0, budgetMs: 50 });
-    expect(Date.now() - t0).toBeLessThan(2_000);
-    expect(r).toHaveLength(1);
-    expect(r[0]).toMatchObject({ gravedad: "Info", fuente: "typescript" });
-    expect(r[0]!.mensaje).toMatch(/npx tsc --noEmit[\s\S]*npm run lint/);
+  it("si el comprobador falla (null), no queda nada pendiente", async () => {
+    const { session, llamadas, escribir, tick } = montar();
+    escribir(["/src/a.tsx"]);
+    llamadas[0]!.soltar(null);
+    await tick();
+    expect(takeTypesAndLint(session)).toEqual([]);
   });
 
-  it("en una página (sin app), o sin comprobador, no hace nada", async () => {
-    const { deps } = montar([]);
-    expect(await typesAndLintDiagnostics({ session: {} as never, deps, now: {}, compileErrors: 0 })).toEqual([]);
-    expect(await typesAndLintDiagnostics({ session: { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never, deps: {} as never, now: {}, compileErrors: 0 })).toEqual([]);
-  });
-
-  it("sólo manda los fuentes de la web, no /memoria ni otros ficheros del proyecto", async () => {
-    const { session, deps, llamadas } = montar([]);
-    await typesAndLintDiagnostics({ session, deps, now: new Map([["/src/a.tsx", "x"], ["/memoria/notas.md", "y"]]), compileErrors: 0 });
-    expect(llamadas.at(-1)).toEqual({ "/src/a.tsx": "x" });
-  });
-
-  it("al empezar un turno de una app, el hilo se despierta (como Claude Code arranca sus LSP); en una página, no", async () => {
-    const { session, deps, llamadas } = montar([]);
-    warmTypesAndLint({} as never, deps);
-    expect(llamadas).toHaveLength(0);
-    warmTypesAndLint(session, deps);
-    expect(llamadas).toEqual([{}]);
-    expect(() => warmTypesAndLint(session, {} as never)).not.toThrow();
+  it("en una página (sin app), o sin comprobador, no hace nada", () => {
+    const now = { "/src/a.tsx": "a" };
+    expect(() => typesAndLintAfterWrite({ session: {} as never, deps: { checkApp: () => { throw new Error("no"); } } as never, now, written: ["/src/a.tsx"], compileErrors: 0 })).not.toThrow();
+    expect(() => typesAndLintAfterWrite({ session: { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never, deps: {} as never, now, written: ["/src/a.tsx"], compileErrors: 0 })).not.toThrow();
+    expect(takeTypesAndLint({} as never)).toEqual([]);
   });
 });

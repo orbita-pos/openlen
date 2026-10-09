@@ -10,7 +10,7 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { warmTypesAndLint } from "@/lib/agent/types-and-lint";
+import { takeTypesAndLint } from "@/lib/agent/types-and-lint";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
@@ -1008,9 +1008,6 @@ async function correrTurno(
     mensajeDelUsuario: prompt,
     zonaHoraria: zonaDelTurno,
   };
-  // UNA APP (plan 03): el comprobador de tipos y lint se despierta ya, mientras
-  // el modelo piensa, para que la primera edición no lo encuentre en frío.
-  warmTypesAndLint(agentSession, deps);
   // Se guarda para las rutinas, que corren sin navegador. Nunca tumba el turno.
   if (zonaDelCuerpo) {
     void guardarZona(userId, zonaDelCuerpo).catch((e) => console.error("[agent] zona", e));
@@ -1390,6 +1387,9 @@ async function correrTurno(
           // La página a medias de un `Write` que aún no dijo su ruta se pinta
           // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
           activePage: () => agentSession.page,
+          // UNA APP (plan 03): los tipos y el lint que llegaron tras escribir,
+          // antes de cada llamada al modelo, como el LSP de Claude Code.
+          lateDiagnostics: () => takeTypesAndLint(agentSession),
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
