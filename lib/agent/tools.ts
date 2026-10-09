@@ -845,6 +845,8 @@ export interface AgentSession {
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */
   terminal?: TerminalDeLen;
   fotoDeLaTerminal?: Record<string, string>;
+  /** Cuántas salidas largas de la terminal se guardaron en /tmp/tool-results. */
+  salidasGuardadas?: number;
   /** La zona del usuario (IANA). La manda el panel con cada turno; sin ella,
    *  la guardada; sin ninguna, `ZONA_SIN_DATO`. Las herramientas de resultados
    *  cuentan «hoy» en esta zona (plans/len-resultados/diseno.md §7). */

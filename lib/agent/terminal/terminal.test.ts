@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { AVISO_DE_REINICIO, TerminalDeLen } from "./terminal";
+import { AVISO_DE_REINICIO, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, TerminalDeLen } from "./terminal";
 import { DE_SOLO_LECTURA } from "./ficheros";
 
 const SITIO = {
@@ -75,6 +75,16 @@ describe("TerminalDeLen", () => {
     expect(Date.now() - t0).toBeLessThan(10_000);
     expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
   }, 20_000);
+
+  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y su texto al pasarse", async () => {
+    expect([DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS]).toEqual([120_000, 600_000]);
+    const { t } = terminal({});
+    const r = await t.ejecutar("sleep 3; echo tarde", { timeoutMs: 1000 });
+    expect(r.stderr).toBe("Command timed out after 1s\n");
+    expect(r.exitCode).toBe(124);
+    expect(r.stdout).not.toContain("tarde");
+    expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+  }, 30_000);
 
   it("lo que no vuelve se corta DESDE FUERA: código 124, aviso de reinicio y terminal nueva con los ficheros de ahora", async () => {
     const { t, cargas } = terminal({ limiteMs: 10_000, margenMs: -9_700 });

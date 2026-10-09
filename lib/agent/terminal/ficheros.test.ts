@@ -35,11 +35,19 @@ describe("salidaDeLaTerminal", () => {
       exitCode: 127,
     });
   });
-  it("lo que no cabe se corta guardando el PRINCIPIO, y lo dice", () => {
+  it("🔴 lo que pasa de 30.000 caracteres: el bloque de Claude Code con la ruta donde se guardó", () => {
+    const texto = "x\n".repeat(20_000);
+    const r = salidaDeLaTerminal({ stdout: texto, stderr: "", exitCode: 0, persistida: "/tmp/tool-results/1.txt" });
+    expect(r.texto.startsWith("<persisted-output>\nOutput too large (39.1KB). Full output saved to: /tmp/tool-results/1.txt\n")).toBe(true);
+    expect(r.texto).toMatch(/<\/persisted-output>\n\[Command finished with exit code 0\]$/);
+    expect(MAX_SALIDA).toBe(30_000);
+  });
+
+  it("si no se pudo guardar, lo que cabe y el aviso de Claude Code", () => {
     const largo = "a".repeat(MAX_SALIDA + 500);
     const { texto } = salidaDeLaTerminal({ stdout: largo, stderr: "", exitCode: 0 });
     expect(texto.startsWith("a".repeat(MAX_SALIDA))).toBe(true);
-    expect(texto).toContain(`showing the first ${MAX_SALIDA} of ${MAX_SALIDA + 500} characters`);
+    expect(texto).toContain("Output too large (29.8KB). It could not be saved, so only the first 29.3KB are shown; the rest was dropped. If the tool can page or filter its results, call it again for the part you need.");
     expect(texto.endsWith("[Command finished with exit code 0]")).toBe(true);
   });
   it("un guardado rechazado deja el código distinto de 0 aunque el comando terminara bien", () => {

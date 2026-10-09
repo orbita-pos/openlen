@@ -1,3 +1,4 @@
+import { formatFileSize, persistedOutput } from "./formato";
 /**
  * LOS FICHEROS DE LA TERMINAL DE LEN (F1 de plans/len-agente-2026).
  *
@@ -59,9 +60,9 @@ export function cambiosDeLaTerminal(
   return cambios;
 }
 
-/** Hasta dónde llega la salida que lee el modelo: la cifra de la terminal de
- *  DeepSeek (`maxOutputChars`, `packages/shell/tool-bash-persistent`). */
-export const MAX_SALIDA = 16_000;
+/** Hasta dónde llega la salida que lee el modelo: el de Claude Code (binario
+ *  2.1.293): lo que pasa de aquí va a un fichero (`persistedOutput`). */
+export const MAX_SALIDA = 30_000;
 
 /**
  * La salida de un comando como la devuelve la terminal de DeepSeek: lo que
@@ -80,12 +81,16 @@ export function salidaDeLaTerminal(r: {
   readonly rechazado?: boolean;
   /** La terminal se reinició (tiempo agotado): lo siguiente empieza de cero. */
   readonly reiniciada?: string;
+  /** Dónde se guardó la salida entera, si no cabía (`/tmp/tool-results/N.txt`). */
+  readonly persistida?: string;
 }): { texto: string; exitCode: number } {
   const exitCode = r.rechazado && r.exitCode === 0 ? 1 : r.exitCode;
   const partes = [r.stdout, r.stderr].filter((p) => p !== "");
   let cuerpo = partes.join(partes[0]?.endsWith("\n") ? "" : "\n");
   if (cuerpo.length > MAX_SALIDA) {
-    cuerpo = `${cuerpo.slice(0, MAX_SALIDA)}\n[Output truncated: showing the first ${MAX_SALIDA} of ${cuerpo.length} characters. Narrow the command (head, grep, sed -n) to see the rest.]`;
+    cuerpo = r.persistida
+      ? persistedOutput({ path: r.persistida, text: cuerpo })
+      : `${cuerpo.slice(0, MAX_SALIDA)}\nOutput too large (${formatFileSize(cuerpo.length)}). It could not be saved, so only the first ${formatFileSize(MAX_SALIDA)} are shown; the rest was dropped. If the tool can page or filter its results, call it again for the part you need.`;
   }
   const notas = [...(r.guardado ?? []), ...(r.reiniciada ? [r.reiniciada] : [])];
   const texto = [cuerpo.replace(/\n+$/, ""), ...notas, `[Command finished with exit code ${exitCode}]`].filter((p) => p !== "").join("\n");
