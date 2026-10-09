@@ -94,8 +94,9 @@ export interface ProjectSettings {
   // ⚰️ Aquí vivía `liveData` (con su `sheetUrl`), la hoja de datos vivos.
   // Se retiró con la función en Len 2.1 (2026-09-30); en producción no la tenía
   // ningún proyecto. Una fila vieja que la lleve no rompe nada: nadie la lee.
-  /** Marketing Kit tab state (register = user-picked giro). */
-  marketing?: { register?: string; match?: boolean };
+  // ⚰️ Aquí vivía `marketing` (`register` + `match`), el ajuste de la sección de
+  // posts para redes, quitada el 2026-10-08 para rehacerla. Una fila vieja que
+  // lo lleve no rompe nada: nadie lo lee.
 }
 
 /** One additional page of a multi-page site. The home page stays at
