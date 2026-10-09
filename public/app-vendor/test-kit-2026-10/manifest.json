@@ -15,7 +15,7 @@
   "esbuild": "0.28.0",
   "ficheros": {
     "desarrollo": {
-      "testing-library-react.js": "sha256-4mOUu/ZbnvSCPYbLpkuBrey55amoFqtbFIsiKYvDloo=",
+      "testing-library-react.js": "sha256-JkmBDdM4HIo2nUO3+9uuCv6KokqwVJWmx6c+rnYxFns=",
       "testing-library-dom.js": "sha256-lSV2leiJ9Cod6scQeV+zVaTfbmP8oqy9njZMUmagnlc=",
       "user-event.js": "sha256-zJkDfOevY5we7coPL6Y1GbqJ+mMZNVFH9nbJc4pYI4o=",
       "jest-dom-matchers.js": "sha256-LwgLhrXk1K++p+V6Ox792Nt1ODSNmqfrweqcZX5PmHM=",
