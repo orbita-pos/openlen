@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { listPostTemplates } from "@/lib/marketing/post-templates/store";
 import {
   Eye,
   Inbox,
@@ -114,12 +113,6 @@ const CELL =
 
 export async function AnalyticsLeads() {
   const t = await getTranslations("marketing");
-  // El chip decía «56 posts · 312 textos», cableado. La base tiene 60 y el
-  // catálogo crece: un número a mano de algo que crece caduca solo. Fail-soft
-  // a 0 — una landing no se cae porque la base tarde.
-  const posts = await listPostTemplates()
-    .then((p) => p.length)
-    .catch(() => 0);
 
   return (
     <section data-len-section="resultados" className="relative">
@@ -147,39 +140,11 @@ export async function AnalyticsLeads() {
 
         {/* The rest of the results loop — real shipped features, drawn as
             product artifacts instead of icon cards. */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Marketing Kit — two mini social posts in the page's palette. */}
-          <div className={CELL}>
-            <div className="flex gap-3" aria-hidden>
-              <div className="relative h-28 flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-coral-500 via-coral-600 to-rose-600 p-3 rotate-[-1.2deg] transition-transform duration-300 group-hover:rotate-0">
-                <div className="h-1.5 w-14 rounded-full bg-white/85" />
-                <div className="mt-1.5 h-1.5 w-20 rounded-full bg-white/50" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                  <span className="serif-accent text-[15px] text-white/95">Margot Rey</span>
-                  <span className="h-3 w-3 rounded-full bg-white/80" />
-                </div>
-              </div>
-              <div className="relative h-28 flex-1 overflow-hidden rounded-xl bg-white dark:bg-zinc-950/60 ring-1 ring-zinc-200/80 dark:ring-white/10 p-3 rotate-[1.2deg] transition-transform duration-300 group-hover:rotate-0">
-                <div className="flex gap-1">
-                  {["#FF5A36", "#f43f5e", "#a78bfa", "#2a2140"].map((c) => (
-                    <span key={c} className="h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-zinc-900" style={{ background: c }} />
-                  ))}
-                </div>
-                <div className="mt-2.5 h-1.5 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-                <div className="mt-1.5 h-1.5 w-12 rounded-full bg-zinc-100 dark:bg-zinc-800" />
-                <span className="absolute bottom-3 left-3 inline-flex rounded-full bg-coral-500/10 px-2 py-0.5 text-[9px] font-semibold text-coral-700 dark:text-coral-300">
-                  {t("analyticsLeads.extras.kit.chip", { posts })}
-                </span>
-              </div>
-            </div>
-            <h3 className="mt-5 text-[15px] font-semibold tracking-tight">
-              {t("analyticsLeads.extras.kit.title")}
-            </h3>
-            <p className="mt-1.5 text-[13px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {t("analyticsLeads.extras.kit.body")}
-            </p>
-          </div>
-
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* ⚰️ Aquí iba la tarjeta «Marketing Kit» (dos posts en miniatura y
+              cuántos había en el catálogo). La sección se quitó del taller el
+              2026-10-08 para rehacerla mejor, y la portada no vende lo que no
+              hay (lib/marketing/landing-veraz.test.ts). */}
           {/* Page Coach — the funnel it reads + the advice it gives. */}
           <div className={CELL}>
             <div className="space-y-1.5" aria-hidden>

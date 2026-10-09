@@ -2,7 +2,6 @@ import {
   formConfigKey,
   validatePageSlug,
 } from "@/lib/projects/site-pages";
-import { POST_REGISTER } from "@/lib/marketing/post-templates/admin-schemas";
 import type {
   FormConfig,
   ProjectData,
@@ -53,8 +52,8 @@ interface PatchBody {
     quickReplies?: { q: string; a: string }[];
     theme?: "light" | "dark";
   };
-  /** Marketing Kit tab state. Merged into settings.marketing. */
-  marketing?: { register?: string; match?: boolean };
+  // ⚰️ `marketing` (la sección de posts para redes) se quitó el 2026-10-08 para
+  // rehacerla: su parche ya no pasa, como el de los módulos retirados.
   /** El asistente de la página. Merged into settings.assistant. Antes vivía en
    *  su propia ruta (`PATCH /api/projects/[id]/assistant`); entra aquí para que
    *  TODA escritura de ajustes pase por el mismo embudo — y para que
@@ -142,19 +141,6 @@ export function validateSettingsPatch(
       }
     }
   }
-  const hasMarketing = "marketing" in body;
-  if (hasMarketing) {
-    const m = body.marketing;
-    if (!m || typeof m !== "object") {
-      return { ok: false, message: "marketing must be an object" };
-    }
-    if ("register" in m && m.register !== undefined && !POST_REGISTER.safeParse(m.register).success) {
-      return { ok: false, message: "marketing.register must be a known register" };
-    }
-    if ("match" in m && m.match !== undefined && typeof m.match !== "boolean") {
-      return { ok: false, message: "marketing.match must be a boolean" };
-    }
-  }
   const hasAssistant = "assistant" in body;
   if (hasAssistant) {
     const a = body.assistant;
@@ -175,13 +161,12 @@ export function validateSettingsPatch(
     !hasFormPatch &&
     !hasAnalyticsToggle &&
     !hasChat &&
-    !hasAssistant &&
-    !hasMarketing
+    !hasAssistant
   ) {
     return {
       ok: false,
       message:
-        "expected formIndex+patch OR analyticsDisabled OR chat OR assistant OR marketing",
+        "expected formIndex+patch OR analyticsDisabled OR chat OR assistant",
     };
   }
   if (hasFormPatch) {
@@ -215,7 +200,6 @@ export function applySettingsPatch(
     typeof body.formIndex === "number" && body.patch && typeof body.patch === "object";
   const hasAnalyticsToggle = typeof body.analyticsDisabled === "boolean";
   const hasChat = "chat" in body;
-  const hasMarketing = "marketing" in body;
 
   let formKey: string | null = null;
   if (hasFormPatch) {
@@ -297,13 +281,6 @@ export function applySettingsPatch(
           .filter((qr) => qr.q.length > 0 && qr.a.length > 0)
           .slice(0, 6),
       } : {}),
-    };
-  }
-  if (hasMarketing && body.marketing) {
-    nextSettings.marketing = {
-      ...(data.settings?.marketing ?? {}),
-      ...("register" in body.marketing ? { register: body.marketing.register } : {}),
-      ...("match" in body.marketing ? { match: body.marketing.match } : {}),
     };
   }
   if ("assistant" in body && body.assistant) {

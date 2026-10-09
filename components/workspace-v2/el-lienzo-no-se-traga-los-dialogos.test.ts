@@ -106,7 +106,6 @@ describe("🔴 allow-same-origin: la frontera de verdad", () => {
     for (const ruta of [
       "components/workspace-v2/panels/versions-panel.tsx",
       "components/workspace-v2/panels/pages-panel.tsx",
-      "components/workspace-v2/marketing-view.tsx",
       "components/workspace-v2/original-restore-modal.tsx",
     ]) {
       for (const [, valor] of fuente(ruta).matchAll(/sandbox="([^"]+)"/g)) {

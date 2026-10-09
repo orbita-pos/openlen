@@ -1250,8 +1250,8 @@ export async function toolActivarModulo(
 }
 
 // ⚰️ `preparar_marketing` se retiró en Len 2.1 (2026-09-30): 0 llamadas en toda
-// la historia de producción. Fijaba el rubro del Marketing Kit, que la pestaña
-// Marketing elige sola (`marketing-view.tsx`).
+// la historia de producción. Fijaba el rubro del Marketing Kit, que elegía sola
+// la pestaña Marketing (quitada a su vez el 2026-10-08, para rehacerla).
 
 // Runaway backstop for a read-only tool: the loop exempts find_photo from the
 // action budget AND (now) from the turn cap, so the ONLY thing bounding a

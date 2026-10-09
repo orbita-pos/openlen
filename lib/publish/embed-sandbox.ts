@@ -25,8 +25,8 @@
 
 /** `sandbox` SIN allow-same-origin → origen opaco. Los scripts siguen
  *  corriendo (el CDN de Tailwind es lo que pinta estas previsualizaciones),
- *  pero ya no son los de openlen.com. Misma política que el preview de
- *  marketing (app/api/marketing/preview/route.ts). */
+ *  pero ya no son los de openlen.com. (La compartía el preview de la sección
+ *  Marketing, quitada el 2026-10-08.) */
 export const EMBED_SANDBOX_CSP = "sandbox allow-scripts";
 
 /** La misma, en pestaña propia: origen opaco, pero con lo que una página
