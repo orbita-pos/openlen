@@ -16,8 +16,6 @@
     "title": "V<len>o</len>tre propre développeur web. <gradient>Len.</gradient>",
     "subtitle": "Dites-lui ce dont vous avez besoin. Len écrit votre page ou votre app, ajoute les textes, les photos et les formulaires, vérifie son travail et la publie sur votre domaine.",
     "announce": "<strong>Len crée maintenant des apps</strong><dot></dot>Essayer gratuitement",
-    "ctaPrimary": "Essayer gratuitement",
-    "ctaSecondary": "Voir les modèles",
     "pagesThisWeek": "<strong>{count, number}</strong> pages générées cette semaine",
     "githubAria": "OpenLen sur GitHub",
     "starOnGithub": "Mettre une étoile sur GitHub",

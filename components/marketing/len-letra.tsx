@@ -13,20 +13,18 @@
 // Tamaño en `em`, para que siga al titular en los tres cortes de letra: el
 // anillo de `cara.js` llena 54 de los 64 del lienzo, así que una caja de .84em
 // deja un anillo de ~.71em, la altura de una mayúscula — la de Grok también
-// es de mayúscula, no de minúscula. Saluda al entrar y luego sigue el cursor.
+// es de mayúscula, no de minúscula.
+//
+// El estado lo decide `HeroLenProvider` (hero-len.tsx), que también envuelve
+// la caja de prompt: saluda al llegar, escucha si escribes o dictas y piensa
+// al enviar.
 
-import { useEffect, useState, type ReactNode } from "react";
-import { CaraDeLen, type EstadoDeLaCara } from "@/components/llamada/cara-de-len";
-
-const GREETING_MS = 2400;
+import type { ReactNode } from "react";
+import { CaraDeLen } from "@/components/llamada/cara-de-len";
+import { useHeroLenState } from "./hero-len";
 
 export function LenLetra({ children }: { children?: ReactNode }) {
-  const [estado, setEstado] = useState<EstadoDeLaCara>("saludando");
-
-  useEffect(() => {
-    const id = window.setTimeout(() => setEstado("reposo"), GREETING_MS);
-    return () => window.clearTimeout(id);
-  }, []);
+  const estado = useHeroLenState();
 
   const suelta = !children || (Array.isArray(children) && children.length === 0);
 

@@ -64,6 +64,12 @@ export function useHeroLenReport() {
   return useContext(ReportContext);
 }
 
+/** El estado que toca ahora (saludo, escucha, pensando…), para la cara que
+ *  hace de «o» en el titular (`len-letra.tsx`). */
+export function useHeroLenState() {
+  return useContext(StateContext);
+}
+
 export function HeroLenFace({ className }: { className?: string }) {
   const state = useContext(StateContext);
   return <CaraDeLen estado={state} props="compact" className={className} />;
