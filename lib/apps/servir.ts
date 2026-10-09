@@ -23,7 +23,7 @@ import { dependenciaDe, ficherosDelCatalogo, rutaDeVendor, rutaDeVendorValida, t
 /** Dónde están las dependencias construidas (`npm run apps:vendor`). En
  *  producción `process.cwd()` es /opt/openlen-app, con `public/` dentro (lo
  *  copia el deploy); `OPENLEN_APP_VENDOR_DIR` lo cambia para las pruebas. */
-function directorioVendor(): string {
+export function directorioVendor(): string {
   return process.env.OPENLEN_APP_VENDOR_DIR?.trim() || path.join(process.cwd(), "public", "app-vendor");
 }
 
