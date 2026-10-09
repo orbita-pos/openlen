@@ -32,18 +32,40 @@ export type AppBundle =
   | { readonly ok: true; readonly js: string; readonly map: string | null; readonly bytes: number; readonly gzipBytes: number; readonly ms: number }
   | { readonly ok: false; readonly errores: readonly Diagnostico[] };
 
-interface WorkerResult {
-  readonly js: string;
-  readonly map: string | null;
+/** Lo que se le pide al hilo (`bundler-worker.mjs`): la app y, desde el plan
+ *  04, sus pruebas — varias entradas, módulos virtuales y simulados. */
+export type BundlerMessage = {
+  readonly entries: readonly string[];
+  readonly modules: Readonly<Record<string, string>>;
+  readonly virtual: Readonly<Record<string, string>>;
+  readonly mocked: readonly string[];
+  readonly empty: readonly string[];
+  /** Especificador → su ruta pública (`/openlen/vendor/2026-11/react.js`). */
+  readonly catalogFiles: Readonly<Record<string, string>>;
+  /** Prefijo de ruta pública → la carpeta del disco donde están sus ficheros. */
+  readonly vendorRoots: Readonly<Record<string, string>>;
+  readonly minify: boolean;
+  readonly nodeEnv: string;
+  readonly sourcemap: boolean;
+};
+
+export interface BundlerOutput {
+  /** Nombre del fichero de salida (`main.js`, `main.js.map`) → su texto. */
+  readonly outputs: Readonly<Record<string, string>>;
   readonly errors: readonly { file: string | null; line: number | null; column: number | null; text: string }[];
   readonly ms: number;
 }
 
-const cola = new WorkerQueue<WorkerResult>({ workerPath: RUTA_DEL_HILO, resourceLimits: { maxOldGenerationSizeMb: 1024 } });
+const cola = new WorkerQueue<BundlerOutput>({ workerPath: RUTA_DEL_HILO, resourceLimits: { maxOldGenerationSizeMb: 1024 } });
 const hechos = new Map<string, AppBundle>();
 const enCamino = new Map<string, Promise<AppBundle | null>>();
 
-function aBundle(r: WorkerResult, entrada: string): AppBundle {
+/** El empaquetador, tal cual: para `bundleApp` y para las pruebas (`bundle-tests.ts`). */
+export function runBundler(m: BundlerMessage, timeoutMs: number): Promise<BundlerOutput | null> {
+  return cola.run(m, { timeoutMs });
+}
+
+function aBundle(r: BundlerOutput, entrada: string): AppBundle {
   if (r.errors.length > 0) {
     return {
       ok: false,
@@ -55,7 +77,9 @@ function aBundle(r: WorkerResult, entrada: string): AppBundle {
       })),
     };
   }
-  return { ok: true, js: r.js, map: r.map, bytes: Buffer.byteLength(r.js), gzipBytes: gzipSync(r.js).length, ms: r.ms };
+  const nombre = path.posix.basename(entrada).replace(/\.[cm]?[jt]sx?$/, ".js");
+  const js = r.outputs[nombre] ?? "";
+  return { ok: true, js, map: r.outputs[`${nombre}.map`] ?? null, bytes: Buffer.byteLength(js), gzipBytes: gzipSync(js).length, ms: r.ms };
 }
 
 export function bundleApp(args: {
@@ -85,20 +109,22 @@ export function bundleApp(args: {
   if (hecho) return Promise.resolve(hecho);
   const ya = enCamino.get(clave);
   if (ya) return ya;
-  const promesa = cola
-    .run(
-      {
-        modules,
-        entry: app.entrada,
-        catalogFiles: Object.fromEntries((catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, d.fichero])),
-        vendorDir: path.join(directorioVendor(), app.catalogo, modo),
-        vendorPrefix: `${RAIZ_VENDOR}/${app.catalogo}/`,
-        minify: modo === "produccion",
-        nodeEnv: modo === "produccion" ? "production" : "development",
-        sourcemap: modo === "desarrollo",
-      },
-      { timeoutMs: args.timeoutMs ?? TOPE_MS },
-    )
+  const raiz = `${RAIZ_VENDOR}/${app.catalogo}/`;
+  const promesa = runBundler(
+    {
+      entries: [app.entrada],
+      modules,
+      virtual: {},
+      mocked: [],
+      empty: [],
+      catalogFiles: Object.fromEntries((catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, raiz + d.fichero])),
+      vendorRoots: { [raiz]: path.join(directorioVendor(), app.catalogo, modo) },
+      minify: modo === "produccion",
+      nodeEnv: modo === "produccion" ? "production" : "development",
+      sourcemap: modo === "desarrollo",
+    },
+    args.timeoutMs ?? TOPE_MS,
+  )
     .then((r) => {
       enCamino.delete(clave);
       if (!r) return null;
