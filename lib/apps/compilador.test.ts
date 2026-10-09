@@ -229,8 +229,10 @@ describe("los imports", () => {
     expect(js).toContain('import menu from "/src/datos/menu.json" with { type: "json" };');
   });
 
-  it("importar un .svg no se puede: se dice que vaya por URL", () => {
-    const r = compilarFuente("/src/App.tsx", 'import logo from "./logo.svg";\nlogo;', app(CARPETA));
+  it("lo que no es código, ni hoja, ni JSON, ni de URL (.svg, .txt, .md) no se importa: se dice que vaya por URL", () => {
+    // Un .svg SÍ se importa desde el plan 02 (es su URL, como en Vite): ver
+    // «ficheros como módulo». Aquí, una extensión que el compilador no conoce.
+    const r = compilarFuente("/src/App.tsx", 'import foto from "./foto.png";\nfoto;', app({ ...CARPETA, "/src/foto.png": "x" }));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errores[0]!.mensaje).toMatch(/Reference it by its URL/);
   });
@@ -395,5 +397,51 @@ describe("una app nacida en 2026-10 sigue con su catálogo", () => {
     expect(compilarFuente("/src/main.jsx", 'import { useState } from "react";\nuseState;', viejo).ok).toBe(true);
     const r = compilarFuente("/src/main.jsx", 'import { z } from "zod";\nz;', viejo);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("ficheros como módulo, como en Vite (plan 02, tarea 2)", () => {
+  const carpeta = {
+    "/src/App.jsx": "",
+    "/src/assets/logo.svg": "<svg/>",
+    "/src/notas.md": '# Hola\n"comillas"',
+    "/src/datos.json": '{"a":1}',
+  };
+
+  it("un .svg (y .txt, .md, .webmanifest) por defecto es SU URL, con las líneas en su sitio", () => {
+    const js = ok(compilarFuente("/src/App.jsx", 'import logo from "./assets/logo.svg";\nexport const a = logo;', app(carpeta)));
+    expect(js).toContain('const logo = "/src/assets/logo.svg";');
+    expect(js.split("\n")[1]).toContain("export const a = logo");
+  });
+
+  it("?raw es el TEXTO del fichero; ?url es su ruta (también de un .json)", () => {
+    const js = ok(compilarFuente("/src/App.jsx", 'import n from "@/notas.md?raw";\nimport u from "./datos.json?url";', app(carpeta)));
+    expect(js).toContain(`const n = ${JSON.stringify('# Hola\n"comillas"')};`);
+    expect(js).toContain('const u = "/src/datos.json";');
+  });
+
+  it("🔴 sin un nombre por defecto, dinámico, o con otra consulta: un error con su línea (Review Focus del plan 02)", () => {
+    for (const [codigo, linea] of [
+      ['\nimport { logo } from "./assets/logo.svg";', 2],
+      ['const x = 1;\nconst y = import("./assets/logo.svg");', 2],
+      ['import x from "./assets/logo.svg?inline";', 1],
+      ['import x from "./no-esta.md?raw";', 1],
+    ] as const) {
+      const r = compilarFuente("/src/App.jsx", codigo, app(carpeta));
+      expect(r.ok, codigo).toBe(false);
+      if (!r.ok) expect(r.errores[0]!.linea, codigo).toBe(linea);
+    }
+  });
+
+  it("🔴 ?raw lleva el texto de OTRO fichero: si ése cambia, lo compilado cambia (la caché no lo sirve viejo)", () => {
+    const antes = ok(compilarFuente("/src/App.jsx", 'import n from "./notas.md?raw";', app(carpeta)));
+    const despues = ok(compilarFuente("/src/App.jsx", 'import n from "./notas.md?raw";', app({ ...carpeta, "/src/notas.md": "otra cosa" })));
+    expect(antes).toContain("Hola");
+    expect(despues).toContain("otra cosa");
+  });
+
+  it('BRAZO DE CONTROL: un .json sin consulta sigue siendo su contenido (with { type: "json" })', () => {
+    const js = ok(compilarFuente("/src/App.jsx", 'import d from "./datos.json";', app(carpeta)));
+    expect(js).toContain('with { type: "json" }');
   });
 });
