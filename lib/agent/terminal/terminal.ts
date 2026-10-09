@@ -78,7 +78,7 @@ export class TerminalDeLen {
         /** Los `@types/*` que ya trae el paquete de tipos del catálogo. */
         readonly typesPackages?: readonly string[];
         readonly run: (
-          program: "tsc" | "eslint",
+          program: "tsc" | "eslint" | "build",
           args: readonly string[],
           ficheros: Readonly<Record<string, string>>,
         ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
@@ -104,7 +104,7 @@ export class TerminalDeLen {
         return;
       }
       if (typeof m.app === "number") {
-        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint", m.args as string[], m.ficheros as Record<string, string>);
+        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build", m.args as string[], m.ficheros as Record<string, string>);
         return;
       }
       const p = this.pendientes.get(m.id);
@@ -132,8 +132,8 @@ export class TerminalDeLen {
     });
   }
 
-  /** `tsc` / `eslint` en una app: como `servirSupabase`. */
-  private async servirAppTools(hilo: Worker, pid: number, program: "tsc" | "eslint", args: string[], ficheros: Record<string, string>): Promise<void> {
+  /** `tsc` / `eslint` / `build` en una app: como `servirSupabase`. */
+  private async servirAppTools(hilo: Worker, pid: number, program: "tsc" | "eslint" | "build", args: string[], ficheros: Record<string, string>): Promise<void> {
     let respuesta: Record<string, unknown>;
     try {
       if (!this.o.appTools) throw new Error("not available here");

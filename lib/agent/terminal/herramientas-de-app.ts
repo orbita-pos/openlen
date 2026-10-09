@@ -5,6 +5,8 @@
 // (`deps.checkApp`, en su propio hilo y con tope) sobre los fuentes de la web, y
 // la salida vuelve como la imprimen `tsc --noEmit` y el `stylish` de ESLint, con
 // su código de salida: 2 si `tsc` encuentra errores, 1 si ESLint los encuentra.
+// Y `npm run build` (plan 02): el paquete de producción de verdad
+// (`deps.buildApp`), con su tamaño como lo imprime Vite.
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
@@ -23,7 +25,7 @@ function dentroDe(rutas: readonly string[], ruta: string): boolean {
   });
 }
 
-export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<AgentDeps, "checkApp">): AppTools | undefined {
+export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<AgentDeps, "checkApp" | "buildApp">): AppTools | undefined {
   const app = session.app;
   const check = deps.checkApp;
   if (!app || !check) return undefined;
@@ -35,6 +37,24 @@ export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<Agent
     typesPackages: typesPackagesOf(app.catalogo),
     run: async (program, args, ficheros) => {
       const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
+      if (program === "build") {
+        if (!deps.buildApp) return { stdout: "", stderr: "npm run build: not available here.\n", exitCode: 1 };
+        const r = await deps.buildApp(fuentes, app);
+        if (!r) return { stdout: "", stderr: "build: didn't finish in time; try again.\n", exitCode: 1 };
+        if (!r.ok) {
+          const errores = r.errores
+            .map((e) => `✘ [ERROR] ${e.mensaje}\n\n    ${e.ruta.slice(1)}${e.linea === null ? "" : `:${e.linea}${e.columna === null ? "" : `:${e.columna}`}`}:\n\n`)
+            .join("");
+          return { stdout: "", stderr: `${errores}${r.errores.length} error${r.errores.length === 1 ? "" : "s"}\n`, exitCode: 1 };
+        }
+        // Como lo imprime Vite: el fichero, su tamaño y su gzip, en kB (1000).
+        const kb = (n: number) => (n / 1000).toFixed(2);
+        return {
+          stdout: `${app.entrada.slice(1)}  ${kb(r.bytes)} kB │ gzip: ${kb(r.gzipBytes)} kB\n✓ built in ${(r.ms / 1000).toFixed(2)}s\n`,
+          stderr: "",
+          exitCode: 0,
+        };
+      }
       const r = await check(fuentes, app.catalogo);
       if (!r) return { stdout: "", stderr: `${program}: didn't finish in time; try again.\n`, exitCode: 1 };
       if (program === "tsc") return { stdout: formatTsc(r.typescript), stderr: "", exitCode: r.typescript.length > 0 ? 2 : 0 };

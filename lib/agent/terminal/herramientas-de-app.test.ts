@@ -68,6 +68,25 @@ describe("appToolsFor (plan 03, tarea 5)", () => {
     expect((await montar(r).tools.run("eslint", ["src/a.tsx", "--fix"], {})).stdout).toContain("/src/a.tsx");
   });
 
+  it("🔴 build: el paquete de producción, con su tamaño como lo dice Vite; con errores, rc 1 y su sitio", async () => {
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never,
+      {
+        checkApp: async () => null,
+        buildApp: async (files: Record<string, string>) =>
+          files["/src/roto.ts"]
+            ? { ok: false as const, errores: [{ ruta: "/src/roto.ts", linea: 3, columna: 5, mensaje: "Unexpected <" }] }
+            : { ok: true as const, js: "x", map: null, bytes: 952_726, gzipBytes: 260_169, ms: 1210 },
+      } as never,
+    )!;
+    const bien = await tools.run("build", [], { "/src/main.jsx": "x" });
+    expect(bien.exitCode).toBe(0);
+    expect(bien.stdout).toBe("src/main.jsx  952.73 kB │ gzip: 260.17 kB\n✓ built in 1.21s\n");
+    const mal = await tools.run("build", [], { "/src/main.jsx": "x", "/src/roto.ts": "<" });
+    expect(mal.exitCode).toBe(1);
+    expect(mal.stderr).toBe("✘ [ERROR] Unexpected <\n\n    src/roto.ts:3:5:\n\n1 error\n");
+  });
+
   it("si el comprobador no llega, lo dice y falla", async () => {
     expect(await montar(null).tools.run("tsc", [], {})).toEqual({ stdout: "", stderr: "tsc: didn't finish in time; try again.\n", exitCode: 1 });
   });

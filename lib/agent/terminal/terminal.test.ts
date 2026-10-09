@@ -412,8 +412,10 @@ describe("TerminalDeLen", () => {
     it("npm test y npm run build dicen lo que hay, y un npx de otra cosa no existe", async () => {
       const { t } = conApp();
       expect((await t.ejecutar("npm test; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
-      expect((await t.ejecutar("npm run build; echo rc=$?")).stdout).toMatch(/no build[\s\S]*rc=0\n$/i);
       expect((await t.ejecutar("npx prettier .; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+      const { t: t2, llamadas } = conApp();
+      await t2.ejecutar("npm run build");
+      expect(llamadas.map((l) => l.program)).toEqual(["build"]);
     }, 20_000);
 
     it("en una página (sin appTools) no hay tsc ni npm", async () => {

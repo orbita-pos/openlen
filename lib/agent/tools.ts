@@ -28,6 +28,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
+import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
@@ -183,6 +184,9 @@ export interface AgentDeps {
     catalogo: string,
     o?: { readonly supersedes?: object },
   ): Promise<CheckResult | null>;
+  /** APPS WEB (plan 02): el paquete de producción, para `npm run build`
+   *  (`lib/apps/bundler/bundle-app.ts`). `null` si el empaquetador no contestó. */
+  buildApp?(files: Readonly<Record<string, string>>, app: AppDeProyecto): Promise<AppBundle | null>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -473,6 +477,10 @@ export function realDeps(
     async checkApp(files, catalogo, o) {
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
       return checkAppInWorker({ files, catalogo, ...(o?.supersedes ? { supersedes: o.supersedes } : {}) });
+    },
+    async buildApp(files, app) {
+      const { bundleApp } = await import("@/lib/apps/bundler/bundle-app");
+      return bundleApp({ carpeta: files, app, modo: "produccion" });
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
