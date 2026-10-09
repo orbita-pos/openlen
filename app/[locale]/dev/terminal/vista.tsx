@@ -57,7 +57,7 @@ const HISTORIAL = {
         {
           command: "grep -rn 'Calle Marea 12' /",
           salida:
-            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/index.html:131:      <a href=\"https://maps.google.com/?q=Calle+Marea+12\">Cómo llegar</a>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n/contacto/index.html:58:  <iframe title=\"Mapa: Calle Marea 12\" src=\"https://maps.google.com/maps?q=Calle+Marea+12&output=embed\"></iframe>\n/memoria/proyecto.md:3:- La escuela está en Calle Marea 12.\n[Command finished with exit code 0]",
+            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/index.html:131:      <a href=\"https://maps.google.com/?q=Calle+Marea+12\">Cómo llegar</a>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n/contacto/index.html:58:  <iframe title=\"Mapa: Calle Marea 12\" src=\"https://maps.google.com/maps?q=Calle+Marea+12&output=embed\"></iframe>\n/LEN.md:3:- La escuela está en Calle Marea 12.\n[Command finished with exit code 0]",
           exitCode: 0,
         },
         {
@@ -112,7 +112,7 @@ const TARJETAS_T2: AgentAction[] = [{ tool: "Read", status: "done", summary: "cl
 // Lo que Len escribió. `index.html` es la ruta de la portada (casa exacta), no
 // un nombre suelto; `notas.txt` no lo leyó ni lo cambió nadie: se queda en texto.
 const TEXTO_T1 =
-  "Listo: cambié la dirección en `contacto/index.html`, en `menu/index.html` y en `index.html`, y creé `clases/index.html`. También lo apunté en `memoria/proyecto.md`; `notas.txt` no hacía falta.";
+  "Listo: cambié la dirección en `contacto/index.html`, en `menu/index.html` y en `index.html`, y creé `clases/index.html`. También lo apunté en `LEN.md`; `notas.txt` no hacía falta.";
 const TEXTO_T2 = "La clase de avanzados cuesta **$800** (está en `clases/index.html`).";
 
 const rutasDe = (turnId: string, tarjetas: readonly AgentAction[]) =>
@@ -196,7 +196,7 @@ function preparar() {
       { ruta: "/contacto/index.html", tipo: "texto", antes: CONTACTO("Calle Marea 12"), despues: CONTACTO("Calle Gaviotas 7") },
       { ruta: "/ajustes/proyecto.json", tipo: "texto", antes: AJUSTES(false), despues: AJUSTES(true) },
       { ruta: "/index.html", tipo: "texto", antes: INDEX_ANTES, despues: INDEX_DESPUES },
-      { ruta: "/memoria/proyecto.md", tipo: "texto", antes: "- Escuela de surf en Sayulita.\n", despues: "- Escuela de surf en Sayulita.\n- Se mudó a Calle Gaviotas 7 (oct. 2026).\n" },
+      { ruta: "/LEN.md", tipo: "texto", antes: "- Escuela de surf en Sayulita.\n", despues: "- Escuela de surf en Sayulita.\n- Se mudó a Calle Gaviotas 7 (oct. 2026).\n" },
       { ruta: "/menu/index.html", tipo: "grande", nuevo: false, borrado: false },
     ],
   });

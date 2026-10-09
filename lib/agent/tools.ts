@@ -76,6 +76,7 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isLegacyMemoryPath, memoryLayerOf } from "@/lib/agent/ficheros/len-md";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
@@ -1129,13 +1130,15 @@ export function summarizeProjectState(
     // que un sitio de dos páginas tenía una.
     //
     // En una APP, también su carpeta: ahí vive el código (F3 de la spec local
-    // 2026-10-07-apps). Sin /memoria ni /ajustes, que no son de la app y la
-    // memoria ya va en el contexto.
+    // 2026-10-07-apps). Sin la memoria (LEN.md y sus notas, plans/len-md) ni
+    // /ajustes, que no son de la app y la memoria ya va en el contexto.
     ficheros: app
       ? [
           ...new Set([
             ...ficherosDelSitio(row.data),
-            ...(row.ficherosDeLaCarpeta ?? []).filter((r) => !r.startsWith("/memoria/") && !r.startsWith("/ajustes/")),
+            ...(row.ficherosDeLaCarpeta ?? []).filter(
+              (r) => memoryLayerOf(r) === null && !isLegacyMemoryPath(r) && !r.startsWith("/ajustes/"),
+            ),
           ]),
         ].sort()
       : ficherosDelSitio(row.data),
@@ -1956,8 +1959,8 @@ async function toolPublicar(
 }
 
 // ⚰️ `recordar_preferencia` se retiró en H3 (2026-09-25): la memoria son
-// ficheros (/memoria/dueno.md y /memoria/proyecto.md) y su mecánica vive en
-// `lib/agent/preferencias.ts`.
+// ficheros (~/.len/LEN.md, /LEN.md y las notas de /.len/memory, plans/len-md) y
+// se guardan como cualquier otro, en `lib/agent/herramientas-de-ficheros.ts`.
 
 // ⚰️ `guardar_dato`, `editar_dato` y `quitar_dato` se retiraron en H3
 // (2026-09-25), y los almacenes enteros (`data-ol-stores`, sus ficheros de

@@ -531,7 +531,7 @@ export interface GuardadoDeLaTerminal {
  * LO QUE ESCRIBIÓ LA TERMINAL (F1 de plans/len-agente-2026), por el camino de
  * Write: cada fichero cambiado se guarda ENTERO con `aplicarPlan` —la puerta
  * de la página, `data-slot-path` rechazado, una versión por fichero, los
- * diagnósticos—, y los de `/memoria` y la carpeta con sus reglas. Sin el «léelo
+ * diagnósticos—, y los de la memoria (LEN.md) y la carpeta con sus reglas. Sin el «léelo
  * antes» de Write: en una terminal el fichero se lee y se escribe en el mismo
  * comando (`sed -i`), como en la de DeepSeek. Lo que no se guarda —el manual,
  * borrar un fichero del sitio, lo que su puerta rechaza— vuelve a la terminal

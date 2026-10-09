@@ -17,7 +17,7 @@ describe("qué vuelve al deshacer un turno", () => {
     for (const r of ["/index.html", "/menu/index.html", "/src/App.jsx", "/js/app.js", "/tests/a.spec.ts", "/data/x.json"]) {
       expect(esDeshacible(r), r).toBe(true);
     }
-    for (const r of ["/supabase/migrations/20261007000000_x.sql", "/memoria/proyecto.md", "/ajustes/proyecto.json"]) {
+    for (const r of ["/supabase/migrations/20261007000000_x.sql", "/LEN.md", "/home/user/.len/LEN.md", "/.len/memory/hero-oscuro.md", "/ajustes/proyecto.json"]) {
       expect(esDeshacible(r), r).toBe(false);
     }
   });

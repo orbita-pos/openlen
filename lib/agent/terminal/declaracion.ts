@@ -36,7 +36,7 @@ export const SUSTITUIDAS_POR_LA_TERMINAL: readonly string[] = ["Grep", "Glob"];
 const DESCRIPCION = `Runs a command in a persistent bash shell whose files are this website's files; the working directory and variables persist between calls, shell functions do not. It interprets commands without running real programs: no network, no node, npm, pip or git, but grep, sed, awk, jq, find, diff, the usual text tools and python3 with only its standard library. Every file a command changes is saved like a Write, through the same checks and as a version the user can undo; output over ${MAX_SALIDA.toLocaleString("en-US")} characters is cut, keeping the beginning, and the last line gives the exit code.
 
 Files:
-- /index.html and /<slug>/index.html: the pages. /supabase/migrations/<timestamp>_<name>.sql: the backend's migrations. /memoria/dueno.md and /memoria/proyecto.md: the memory (lines can only be added).
+- /index.html and /<slug>/index.html: the pages. /supabase/migrations/<timestamp>_<name>.sql: the backend's migrations. ~/.len/LEN.md (the person's instructions), /LEN.md (the project's) and /.len/memory/ (your notes; MEMORY.md is generated): the memory.
 - The project's folder, as in any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), published next to the pages exactly as they are (.jsx, .tsx and .ts compiled to JavaScript at the same path); /tests holds Playwright tests, never published. rm deletes a folder file (pages are removed by the user, in the editor).
 - /ajustes/proyecto.json: title, languages and modules; writing it changes the title or turns a module on or off, like toggle_module; the languages cannot be changed here.
 - /tmp: scratch space for this turn, never saved. /AGENTS.md and /.openlen/docs: the platform manual, read-only.
@@ -120,7 +120,7 @@ export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
   ["A new page is a Write to /<slug>/index.html", "A new page is a new file, /<slug>/index.html"],
   ["(Edit, with replace_all if it repeats identically)", "(with sed -i, which changes them all at once)"],
   ["fixes it with Edit in every file where it appears", "fixes it with bash in every file where it appears"],
-  ["ADD a line with Edit:", "ADD a line with bash (echo … >>):"],
+  ["open a note with Read when", "open a note with cat when"],
   // La descripción de `bash`.
   ["is saved like a Write, through the same checks and", "is saved through the same checks as any edit of the site, and"],
   // /AGENTS.md. ⚰️ Los tres de la receta de STORES (`data-ol-stores`) se fueron
