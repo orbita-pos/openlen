@@ -38,6 +38,7 @@ export function userMemoryBlock(memoria: string | null | undefined, ruta?: strin
   return `WHAT YOU KNOW ABOUT THIS PERSON ${ruta ? `— ${ruta} ` : ""}(their private instructions, on ANY of their pages — it isn't about this project, it's about them${ruta ? "; edit this file to change them" : ""}):
 ${v}
 Respect it without them having to repeat it. If something here clashes with what they ask TODAY, today wins and you don't argue: the memory is a starting point, not a rule over them.
+It belongs to the person speaking now: in a shared project each person has their own, so never quote it to anyone else on the project.
 
 `;
 }

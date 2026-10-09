@@ -34,6 +34,7 @@ import { currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
 import { MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
+import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 
 /** La misma marca que usa Claude Code. */
@@ -214,14 +215,16 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
 /** La transcripción del turno lista para la fila: limpia, con la huella de lo
  *  leído y dentro de su tope. */
 export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: Leidos): TranscripcionGuardada {
-  const lecturas: LecturaGuardada[] = [...leidos].map(([ruta, l]) => ({
+  // ~/.len/LEN.md es de quien habló: ni su texto ni su huella se quedan en la
+  // conversación, que es compartida (lib/agent/memory/private-memory.ts).
+  const lecturas: LecturaGuardada[] = [...leidos].filter(([ruta]) => !touchesPersonalMemory(ruta)).map(([ruta, l]) => ({
     ruta,
     huella: huella(l.instantanea),
     ...(l.offset !== undefined ? { offset: l.offset } : {}),
     ...(l.limit !== undefined ? { limit: l.limit } : {}),
     ...(l.vistaParcial ? { vistaParcial: true as const } : {}),
   }));
-  let limpios = mensajes.map(limpio);
+  let limpios = withoutPersonalMemory(mensajes.map(limpio));
   // Lo que sólo es para la pantalla se va ANTES que nada de lo que lee el
   // modelo: que la lente pierda un diff, no que Len pierda un resultado.
   if (JSON.stringify(limpios).length > TOPE_TRANSCRIPCION) limpios = sinLoDeLaPantalla(limpios);
@@ -313,7 +316,9 @@ export function historialDesdeLaBase(
     if (f.transcript?.mensajes.length) {
       // Del bucle sólo salen mensajes de usuario y de asistente; uno de sistema
       // no tiene sitio en un historial y no se reenvía.
-      for (const m of f.transcript.mensajes) if (m.role !== "system") mensajes.push(limpio({ ...m, role: m.role }));
+      // Sin la memoria personal, también en las filas de antes de que se
+      // dejara de guardar (y en las de /memoria/dueno.md).
+      for (const m of withoutPersonalMemory(f.transcript.mensajes)) if (m.role !== "system") mensajes.push(limpio({ ...m, role: m.role }));
     } else if (f.assistantReasoning.trim()) {
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }
