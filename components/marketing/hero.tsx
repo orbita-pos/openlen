@@ -1,8 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
 import { HeroProduct } from "./hero-product";
-import { HeroPromptInput } from "./hero-prompt-input";
-import { HeroLenFace, HeroLenProvider } from "./hero-len";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { LenLetra } from "./len-letra";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -70,48 +71,72 @@ export async function Hero() {
         </div>
       </div>
 
-      {/* LEN ES EL HÉROE (04/10, Jesús: «poner a Len en /»), y la caja le
-          habla: el proveedor envuelve a la cara y a la caja para que Len sepa
-          si escribes, dictas o envías. */}
-      <HeroLenProvider>
-        <div className="relative mx-auto max-w-5xl px-6 pt-14 pb-12 sm:pt-20 sm:pb-16">
-          <div className="flex flex-col items-center text-center">
-            {/* `data-len-hide`: mientras se ve esta cara, la que acompaña al
-                bajar (len-companion.tsx) espera escondida. */}
-            <div data-len-hide>
-              <HeroLenFace className="mb-5 size-24 sm:mb-6 sm:size-28" />
-            </div>
-            <h1 className="max-w-[56rem] text-balance text-[38px] sm:text-[56px] md:text-[64px] font-semibold tracking-tightest leading-[1.06]">
-              {t.rich("hero.title", {
-                br: () => <br />,
-                muted: (chunks) => (
-                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">{chunks}</span>
-                ),
-                gradient: (chunks) => (
-                  <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
-                    {chunks}
-                  </span>
-                ),
-              })}
-            </h1>
-          </div>
+      {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
+          referencia): un aviso en píldora, UN titular con Len dentro haciendo
+          de «o», una línea gris debajo y dos botones. Y justo después, sin
+          pausa, la maqueta del taller.
 
-          {/* La caja de prompt: el centro del héroe, no un extra al final. */}
-          <div className="mx-auto mt-12 max-w-2xl sm:mt-14">
-            <HeroPromptInput />
+          La caja de prompt (`HeroPromptInput`) sale del héroe con este diseño
+          — Grok no pide nada en el primer pantallazo, invita — pero no se
+          borra: sigue montada en /dev/crear y vuelve aquí con una línea. */}
+      <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-4 sm:pt-24">
+        <div className="flex flex-col items-center text-center">
+          <Link
+            href="/register"
+            className="group inline-flex items-center gap-2 rounded-full border border-zinc-900/10 bg-white/60 py-1 pl-3.5 pr-1 text-[13px] text-zinc-700 backdrop-blur-md transition-colors hover:bg-white/90 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-300 dark:hover:bg-white/[0.1]"
+          >
+            {t.rich("hero.announce", {
+              strong: (chunks) => <span className="font-semibold text-zinc-900 dark:text-white">{chunks}</span>,
+              dot: () => <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>·</span>,
+            })}
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900/[0.06] text-zinc-700 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 dark:bg-white/10 dark:text-zinc-200" aria-hidden>
+              <ArrowUpRight size={13} />
+            </span>
+          </Link>
+
+          {/* `data-len-hide`: mientras se ve el titular (con la cara dentro),
+              la cara que acompaña al bajar (len-companion.tsx) espera. */}
+          <h1
+            data-len-hide
+            className="mt-7 max-w-[60rem] text-balance text-[40px] sm:text-[60px] md:text-[76px] font-semibold tracking-tightest leading-[1.04]"
+          >
+            {t.rich("hero.title", {
+              len: (chunks) => <LenLetra>{chunks}</LenLetra>,
+              gradient: (chunks) => (
+                <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
+                  {chunks}
+                </span>
+              ),
+            })}
+          </h1>
+
+          {/* zinc-600/zinc-300 y no más claro: va sobre la malla, que DERIVA
+              — ver la nota de contraste de la línea de páginas en línea. */}
+          <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-zinc-600 sm:text-[20px] dark:text-zinc-300">
+            {t("hero.subtitle")}
+          </p>
+
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/register"
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-zinc-900 px-6 text-[16px] font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              {t("hero.ctaPrimary")} <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/templates"
+              className="inline-flex h-12 items-center rounded-full bg-zinc-900/[0.06] px-6 text-[16px] font-medium text-zinc-800 backdrop-blur-md transition-colors hover:bg-zinc-900/[0.1] dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/[0.15]"
+            >
+              {t("hero.ctaSecondary")}
+            </Link>
           </div>
 
           {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
-              — esta línea cayó en la zona más saturada de la malla al bajarla
-              del héroe. Se oscurece el texto, que es UNA línea, en vez de
-              apagar la malla, que es el héroe entero.
-
-              Y zinc-300 en OSCURO, no zinc-400: ahí medía 4.55:1 contra un
-              mínimo de 4.5 — pasa, pero sin margen, y las manchas DERIVAN, así
-              que el fondo bajo esta línea cambia con el tiempo. Un contraste al
-              filo sobre un fondo que se mueve es un fallo con retardo. */}
+              — esta línea cayó en la zona más saturada de la malla. Y zinc-300
+              en OSCURO: zinc-400 medía 4.55:1 contra un mínimo de 4.5, al filo
+              sobre un fondo que se mueve. */}
           {pagesLive > 0 && (
-            <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-300">
+            <p className="mt-6 text-[13px] text-zinc-700 dark:text-zinc-300">
               {t.rich("hero.pagesLive", {
                 count: pagesLive,
                 strong: (chunks) => (
@@ -123,12 +148,12 @@ export async function Hero() {
             </p>
           )}
         </div>
-      </HeroLenProvider>
+      </div>
 
-      {/* Segundo compás: la maqueta del producto, ya fuera del primer
-          pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
+      {/* Segundo compás: la maqueta del producto, pegada a los botones como en
+          la de Grok — asoma ya en el primer pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
           como «sigue leyendo», no como el final de la sección. */}
-      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-20 pb-20 sm:mt-28 sm:pb-24">
+      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-14 pb-20 sm:mt-16 sm:pb-24">
         <div className="relative">
           <HeroProduct />
         </div>

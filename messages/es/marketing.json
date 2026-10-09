@@ -13,7 +13,11 @@
     "menu": "Menú"
   },
   "hero": {
-    "title": "Tu propio desarrollador web.<br></br><gradient>Len.</gradient>",
+    "title": "Tu pr<len>o</len>pio desarrollador web. <gradient>Len.</gradient>",
+    "subtitle": "Cuéntale qué necesitas. Len escribe tu página o tu app, pone los textos, las fotos y los formularios, revisa su trabajo y la publica en tu dominio.",
+    "announce": "<strong>Len ya hace apps</strong><dot></dot>Pruébalo gratis",
+    "ctaPrimary": "Pruébalo gratis",
+    "ctaSecondary": "Ver plantillas",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas generadas esta semana",
     "githubAria": "OpenLen en GitHub",
     "starOnGithub": "Dale una estrella en GitHub",

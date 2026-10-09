@@ -13,7 +13,11 @@
     "menu": "メニュー"
   },
   "hero": {
-    "title": "あなた専属のWeb開発者。<br></br><gradient>Len。</gradient>",
+    "title": "あなた専属のWeb開発者。<len></len><gradient>Len。</gradient>",
+    "subtitle": "必要なことを伝えるだけ。Len がページやアプリを書き、文章・写真・フォームを入れ、自分の仕事を確認して、あなたのドメインで公開します。",
+    "announce": "<strong>Len がアプリも作れるように</strong><dot></dot>無料で試す",
+    "ctaPrimary": "無料で試す",
+    "ctaSecondary": "テンプレートを見る",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
     "starOnGithub": "GitHub でスターを付ける",

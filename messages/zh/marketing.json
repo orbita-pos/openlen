@@ -13,7 +13,11 @@
     "menu": "菜单"
   },
   "hero": {
-    "title": "你的专属网页开发者。<br></br><gradient>Len。</gradient>",
+    "title": "你的专属网页开发者。<len></len><gradient>Len。</gradient>",
+    "subtitle": "告诉它你需要什么。Len 会编写你的页面或应用，放好文字、照片和表单，检查自己的成果，并发布到你的域名上。",
+    "announce": "<strong>Len 现在也能做应用了</strong><dot></dot>免费试用",
+    "ctaPrimary": "免费试用",
+    "ctaSecondary": "查看模板",
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "在 GitHub 上 Star",
