@@ -21,10 +21,22 @@ import { db, schema } from "@/lib/db";
 import { anadirLinea, quitarLinea, type DocumentoDeMemoria } from "./documento-de-memoria";
 import { conPlazo } from "./con-plazo";
 
-/** Un décimo del brief de proyecto (4000): esto son REGLAS de trato y de
- *  estilo, no contenido. Si no caben, es que se está guardando lo que no se
- *  debe. */
-export const AGENT_MEMORY_MAX = 400;
+/** El tope del ~/.len/LEN.md de la persona (plans/len-md): un tercio del
+ *  /LEN.md del proyecto (12 000). Son instrucciones suyas, no contenido; va en
+ *  el contexto de cada turno, así que cada carácter se paga siempre. */
+export const AGENT_MEMORY_MAX = 4_000;
+
+/** Sustituye ENTERO el ~/.len/LEN.md de la persona (plans/len-md): es un
+ *  fichero que Len y la persona editan, ya no una lista que sólo crece.
+ *  Vacío = `null`, como lo trata `getUserMemory`. */
+export async function setPersonalLenMd(userId: string, text: string | null): Promise<boolean> {
+  const res = await db
+    .update(schema.users)
+    .set({ agentMemory: text?.trim() ? text : null })
+    .where(eq(schema.users.id, userId))
+    .returning({ id: schema.users.id });
+  return res.length > 0;
+}
 
 // EL FORMATEADOR (`userMemoryBlock`) NO VIVE AQUÍ, y no es casualidad:
 // lib/agent/context.ts declara en su encabezado que se mantiene libre de
