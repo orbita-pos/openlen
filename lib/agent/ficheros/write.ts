@@ -11,6 +11,7 @@
  * se escribe (decisión B7). Como `planearEdit`, esto no guarda nada.
  */
 import { classifyFolderPath } from "./folder";
+import { memoryLayerOf } from "./len-md";
 import { paginaDeRuta, resolverRuta } from "./sitio";
 import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { CAMBIADO_DESDE_LA_LECTURA, NO_LEIDO, NOTA_ESTADO_AL_DIA, type PlanDeEdit } from "./edit";
@@ -69,7 +70,9 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
     // Claude Code crearía cualquier fichero. Aquí, las páginas y la CARPETA del
     // proyecto (pieza 9 de Len 2.5: los ficheros de texto de `folder.ts`); lo
     // demás se dice con su motivo, y se sugiere la página que se quiso crear.
-    const carpeta = paginaDeRuta(ruta) ? null : classifyFolderPath(ruta);
+    // La memoria (plans/len-md) tampoco es de la carpeta: una nota nueva de
+    // /.len/memory se crea; quien la guarda decide si vale (`guardarMemoria`).
+    const carpeta = paginaDeRuta(ruta) || memoryLayerOf(ruta) ? null : classifyFolderPath(ruta);
     if (carpeta && !carpeta.ok) {
       const parecida = paginaQueQuisoCrear(ruta);
       return {

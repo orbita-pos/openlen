@@ -36,13 +36,16 @@ import {
   sinOpIds,
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
-import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO, alcanceDeRuta, lineasNuevas } from "@/lib/agent/ficheros/memoria";
+import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
+import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
+import { findSecret } from "@/lib/agent/memory/secrets";
+import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
+import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isFolderPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
-import { PREFERENCIA_MAX, PREFERENCIA_MIN, guardarPreferencia } from "@/lib/agent/preferencias";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
@@ -61,6 +64,10 @@ function respuesta(r: Resultado, extra: Record<string, unknown> = {}): Record<st
     : { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto, ...extra };
 }
 
+/** `/memoria/*` hasta el 2026-10-08: las transcripciones viejas lo nombran. */
+const MEMORIA_MUDADA =
+  "/memoria was moved: what you know about the person is ~/.len/LEN.md, the project's instructions are /LEN.md, and your notes on this project live in /.len/memory/ (MEMORY.md is their index).";
+
 function leidosDe(session: AgentSession): Leidos {
   session.leidos ??= new Map();
   return session.leidos;
@@ -74,7 +81,8 @@ function leidosDe(session: AgentSession): Leidos {
 /** Los ficheros que no son páginas: la memoria y la CARPETA del proyecto
  *  (pieza 9 de Len 2.5: `/supabase/`, `/tests/`, `js/`, `css/`, `data/`…). */
 interface Virtuales {
-  /** `/memoria/dueno.md` y `/memoria/proyecto.md`, con su texto. */
+  /** La memoria (plans/len-md): `~/.len/LEN.md` (de quien habla), `/LEN.md`
+   *  y, si hay notas, `/.len/memory/MEMORY.md` (generado) y cada nota. */
   readonly memoria: ReadonlyMap<string, string>;
   /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
   readonly folder: ReadonlyMap<string, string>;
@@ -95,10 +103,20 @@ async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: st
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudieron leer los ficheros de la carpeta", err);
   }
+  let notas: Awaited<ReturnType<NonNullable<AgentDeps["memoryNotes"]>["list"]>> = [];
+  try {
+    notas = (await deps.memoryNotes?.list(session.projectId)) ?? [];
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[agente] no se pudieron leer las notas de memoria", err);
+  }
+  const indice = buildMemoryIndex(notas, MEMORY_INDEX_MAX);
   return {
     memoria: new Map([
-      [RUTA_MEMORIA_DUENO, dueno],
-      [RUTA_MEMORIA_PROYECTO, userBrief ?? ""],
+      [PERSONAL_LEN_MD, dueno],
+      [PROJECT_LEN_MD, userBrief ?? ""],
+      ...(indice ? [[MEMORY_INDEX, indice] as const] : []),
+      ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
     ]),
     folder: new Map(Object.entries(folder).filter(([ruta]) => isFolderPath(ruta))),
   };
@@ -126,7 +144,10 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       const html = leerFichero(data, ruta);
       return html === null ? null : sinOpIds(html);
     },
-    ficheros: [...ficherosDelSitio(data), ...v.memoria.keys(), ...v.folder.keys()],
+    // De la memoria, Grep y Glob ven sólo el /LEN.md del proyecto, que está en
+    // su raíz como un CLAUDE.md; lo personal y las notas, como /.openlen, se
+    // abren por su ruta (plans/len-md).
+    ficheros: [...ficherosDelSitio(data), ...(v.memoria.has(PROJECT_LEN_MD) ? [PROJECT_LEN_MD] : []), ...v.folder.keys()],
     recientes: session.escritos ?? [],
   };
 }
@@ -159,6 +180,7 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
   const file_path = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
+  if (isLegacyMemoryPath(resolverRuta(file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const r = ejecutarRead(
     {
       file_path,
@@ -213,6 +235,7 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const entrada = coercerEntradaEdit(args);
+  if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
@@ -226,6 +249,7 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const { entrada, nota } = coercerEntradaWrite(args);
+  if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
@@ -254,7 +278,8 @@ async function aplicarPlan(
   edit?: { old_string: string; new_string: string },
 ): Promise<ToolOutcome> {
   if (!plan.ok) return { response: respuesta(plan.resultado) };
-  if (alcanceDeRuta(plan.ruta) !== null) {
+  if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
+  if (memoryLayerOf(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
   if (isFolderPath(plan.ruta)) {
@@ -407,9 +432,11 @@ export async function diagnosticosDeLaAppTrasEscribir(session: AgentSession, dep
 }
 
 /**
- * GUARDAR UN FICHERO DE /memoria (H3): SÓLO SE AÑADE (`lineasNuevas`). Cada
- * línea nueva pasa por la mecánica de siempre (`guardarPreferencia`); los
- * largos se comprueban TODOS antes de guardar la primera.
+ * GUARDAR UN FICHERO DE MEMORIA (plans/len-md), como Claude Code su CLAUDE.md:
+ * se SUSTITUYE entero —Len corrige y borra lo viejo, ya no sólo añade—. Lo que
+ * se queda de antes: el tope, sin credenciales, y el índice no se escribe (lo
+ * genera el servidor de las notas). Lo personal es de quien habla (`personOf`).
+ * Sin historial propio: la tarjeta del chat dice qué se tocó (`summary`).
  */
 async function guardarMemoria(
   session: AgentSession,
@@ -419,33 +446,44 @@ async function guardarMemoria(
   herramienta: "Edit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
-  const alcance = alcanceDeRuta(plan.ruta)!;
-  const r = lineasNuevas(memoria.get(plan.ruta) ?? "", plan.contenido, plan.ruta);
-  if (!r.ok) return { response: respuesta(fallo(r.error)) };
-  const larga = r.nuevas.find((l) => l.length < PREFERENCIA_MIN || l.length > PREFERENCIA_MAX);
-  if (larga !== undefined) {
-    return { response: respuesta(fallo(`Each line of ${plan.ruta} must be between ${PREFERENCIA_MIN} and ${PREFERENCIA_MAX} characters: «${larga}».`)) };
+  const layer = memoryLayerOf(plan.ruta)!;
+  const before = memoria.get(plan.ruta) ?? null;
+  if (layer === "index") {
+    return { response: respuesta(fallo(`${MEMORY_INDEX} is generated from the notes. Write or edit /.len/memory/<name>.md instead.`)) };
   }
-  for (const preferencia of r.nuevas) {
-    const g = await guardarPreferencia(session, deps, { preferencia, alcance });
-    if (g.response.ok === false) {
+  if (layer === "note") {
+    const parsed = parseNote(plan.contenido, noteNameOf(plan.ruta)!);
+    if (!parsed.ok) return { response: respuesta(fallo(parsed.error)) };
+    const vivas = [...memoria.keys()].filter((r) => memoryLayerOf(r) === "note").length;
+    if (before === null && vivas >= MAX_NOTES_PER_PROJECT) {
       return {
-        response: respuesta(fallo(`${plan.ruta}: «${preferencia}» was not saved: ${String(g.response.error ?? "")}`)),
-        // La memoria llena (N41) se le dice al dueño igual que por `guardar_preferencia`.
-        ...(g.ownerReason ? { ownerReason: g.ownerReason } : {}),
+        response: respuesta(fallo(`This project already has ${MAX_NOTES_PER_PROJECT} notes. Update or remove one that is stale before adding another.`)),
       };
     }
+    if (!deps.memoryNotes) return { response: respuesta(fallo("Memory notes are not available right now.")) };
+    await deps.memoryNotes.upsert(session.projectId, parsed.note, personOf(session));
+  } else {
+    const max = layer === "personal" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
+    if (plan.contenido.length > max) {
+      return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is longer than ${max} characters. Keep it to what must apply every time.`)) };
+    }
+    const secret = findSecret(plan.contenido);
+    if (secret) {
+      return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} seems to contain a ${secret}. Never save credentials in memory.`)) };
+    }
+    const ok =
+      layer === "personal"
+        ? await deps.setPersonalLenMd?.(personOf(session), plan.contenido)
+        : await deps.setUserBrief(session.projectId, session.userId, plan.contenido);
+    if (!ok) return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} could not be saved.`)) };
   }
-  // Lo que quedó de VERDAD (el servidor pone el marcador y la viñeta).
-  const row = await deps.loadProject(session.projectId, session.userId);
-  const ahora = (await virtualesDe(session, deps, row?.userBrief ?? null)).memoria.get(plan.ruta) ?? plan.contenido;
-  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(ahora), offset: undefined, limit: undefined });
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
-  const cambio = r.nuevas.length > 0 ? "cambio" : "sin_cambio";
+  const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
   return {
-    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: ahora === plan.contenido }) }, { cambio }),
+    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
-    ...(r.nuevas.length > 0 ? { mutoDurable: true } : {}),
+    ...(cambio === "cambio" ? { mutoDurable: true } : {}),
   };
 }
 
@@ -521,6 +559,24 @@ export async function guardarLoDeLaTerminal(
   };
   for (const c of cambios) {
     if (c.tipo === "borrado") {
+      // LA MEMORIA (plans/len-md): `rm` de una nota la borra, como en Claude
+      // Code; ~/.len/LEN.md, /LEN.md y el índice no se borran (se vacían).
+      const capa = memoryLayerOf(c.ruta);
+      if (capa === "note" && deps.memoryNotes) {
+        await deps.memoryNotes.remove(session.projectId, noteNameOf(c.ruta)!);
+        enLaTerminal[c.ruta] = null;
+        notas.push(`${rutaRelativa(c.ruta)}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${rutaRelativa(c.ruta)}`, cambio: "cambio" },
+          mutoDurable: true,
+        });
+        continue;
+      }
+      if (capa !== null) {
+        deshacer(c.ruta, capa === "index" ? `${MEMORY_INDEX} is generated from the notes.` : "write it empty to clear it.");
+        continue;
+      }
       // LA CARPETA (pieza 9): un fichero de la carpeta se borra, como `rm` en
       // cualquier proyecto, con su contenido archivado para deshacer. Una
       // página, no: la quita el dueño en el editor.
