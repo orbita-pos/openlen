@@ -645,42 +645,70 @@ async function syncTestKit(): Promise<void> {
   rmSync(fuentes, { recursive: true, force: true });
   mkdirSync(fuentes, { recursive: true });
   try {
-    const entradas: string[] = [];
-    for (const d of TEST_KIT.dependencias) {
-      const f = path.join(fuentes, d.fichero);
-      if (d.especificador === "react-dom/test-utils") {
-        // React 19 ya no trae `act` en test-utils: Testing Library lo toma de aquí.
-        writeFileSync(f, 'export { act } from "react";\n');
-      } else {
-        const { names, conDefault } = await nombresEmpaquetados(d.especificador, raiz);
-        const desde = JSON.stringify(d.especificador);
-        writeFileSync(f, `${conDefault ? `export { default } from ${desde};\n` : ""}export { ${names.join(", ")} } from ${desde};\n`);
-      }
-      entradas.push(f);
-    }
     // @sinonjs/fake-timers hace `_global.process && require("util").promisify`:
     // en un navegador no hay `process` y no se llama nunca, pero esbuild tiene
     // que resolverlo. Su campo `browser` ya vacía `vm` y `timers`; `util`, igual.
     const utilVacio = path.join(fuentes, "util-vacio.cjs");
     writeFileSync(utilVacio, "module.exports = {};\n");
+    const opciones = {
+      bundle: true,
+      format: "esm" as const,
+      platform: "browser" as const,
+      target: "es2022",
+      logLevel: "silent" as const,
+      metafile: true,
+      define: { "process.env.NODE_ENV": '"development"' },
+      nodePaths: [path.join(raiz, "node_modules")],
+      external: REACT_FUERA,
+      alias: { "react-dom/test-utils": path.join(fuentes, "react-dom-test-utils.js"), util: utilVacio },
+    };
+    // Los nombres de cada paquete, con LAS MISMAS opciones que el kit (React
+    // fuera, `util` vacío): el sondeo de los catálogos no las tiene, fallaba en
+    // silencio con Testing Library y fake-timers, y su fachada salía VACÍA.
+    const nombresDelKit = async (especificador: string): Promise<{ names: string[]; conDefault: boolean }> => {
+      const sondeo = async (contents: string) => {
+        try {
+          const r = await build({ ...opciones, stdin: { contents, resolveDir: fuentes, loader: "js" }, write: false });
+          return { exports: Object.values(r.metafile!.outputs)[0]!.exports, commonjs: Object.values(r.metafile!.inputs).some((i) => i.format === "cjs") };
+        } catch {
+          return null;
+        }
+      };
+      const desde = JSON.stringify(especificador);
+      const conDefault = (await sondeo(`export { default } from ${desde};\n`)) !== null;
+      const estrella = await sondeo(`export * from ${desde};\n`);
+      if (!estrella) throw new Error(`apps:vendor — el kit no puede empaquetar ${especificador}`);
+      let names = estrella.exports.filter((k) => IDENTIFICADOR.test(k) && k !== "default");
+      if (names.length === 0 && estrella.commonjs) {
+        const mod = createRequire(path.join(raiz, "package.json"))(especificador) as Record<string, unknown>;
+        names = Object.keys(mod).filter((k) => IDENTIFICADOR.test(k) && k !== "default" && k !== "__esModule");
+      }
+      if (names.length === 0 && !conDefault) throw new Error(`apps:vendor — ${especificador} no exporta nada en el kit: su fachada saldría vacía`);
+      return { names: [...new Set(names)].sort(), conDefault };
+    };
+    writeFileSync(path.join(fuentes, "react-dom-test-utils.js"), 'export { act } from "react";\n');
+    const entradas: string[] = [];
+    for (const d of TEST_KIT.dependencias) {
+      const f = path.join(fuentes, d.fichero);
+      if (d.especificador !== "react-dom/test-utils") {
+        // React 19 ya no trae `act` en test-utils: Testing Library lo toma de
+        // `react-dom-test-utils.js` (arriba), que es también su entrada.
+        const { names, conDefault } = await nombresDelKit(d.especificador);
+        const desde = JSON.stringify(d.especificador);
+        writeFileSync(f, `${conDefault ? `export { default } from ${desde};\n` : ""}export { ${names.join(", ")} } from ${desde};\n`);
+      }
+      entradas.push(f);
+    }
     const r = await build({
+      ...opciones,
       entryPoints: entradas,
       outdir: path.join(nuevo, "desarrollo"),
-      bundle: true,
-      format: "esm",
-      platform: "browser",
-      target: "es2022",
       minify: true,
       legalComments: "inline",
       splitting: true,
       entryNames: "[name]",
       chunkNames: "chunk-[hash]",
-      metafile: true,
       logLevel: "error",
-      define: { "process.env.NODE_ENV": '"development"' },
-      nodePaths: [path.join(raiz, "node_modules")],
-      external: REACT_FUERA,
-      alias: { "react-dom/test-utils": path.join(fuentes, "react-dom-test-utils.js"), util: utilVacio },
     });
     const chunks = Object.keys(r.metafile!.outputs)
       .map((o) => path.basename(o))
