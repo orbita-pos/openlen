@@ -1642,7 +1642,8 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(memoriaQueRecibio()).toMatch(/Contents of \/LEN\.md/);
       expect(memoriaQueRecibio()).toMatch(/Tono formal/);
       expect(filaGuardada().transcript?.memoria).toBe(memoriaQueRecibio());
-      expect(Object.keys(filaGuardada().transcript?.memoriaHuellas ?? {})).toEqual(["/LEN.md", "/.len/memory/MEMORY.md"]);
+      // Sólo la huella de lo que ESTA fila mostró: sin notas, no hay índice.
+      expect(Object.keys(filaGuardada().transcript?.memoriaHuellas ?? {})).toEqual(["/LEN.md"]);
     });
 
     it("con notas, el índice MEMORY.md va en el mensaje duradero", async () => {

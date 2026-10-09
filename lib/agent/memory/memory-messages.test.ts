@@ -53,10 +53,35 @@ describe("la memoria del proyecto como mensaje duradero (dsh-agent-instructions)
     expect(m.text).toMatch(/\[truncated: Read \/LEN\.md for the rest\]/);
   });
 
-  it("se pliega de la última fila que lleve huellas", () => {
-    const h1 = { "/LEN.md": "a" };
+  it("se pliega juntando las huellas de TODAS las filas a la vista, la más nueva gana", () => {
+    const h1 = { "/LEN.md": "a", "/.len/memory/MEMORY.md": "x" };
     const h2 = { "/LEN.md": "b" };
-    expect(foldMemoryDigests([{ transcript: { memoriaHuellas: h1 } }, { transcript: null }, { transcript: { memoriaHuellas: h2 } }, { transcript: {} }])).toEqual(h2);
+    expect(foldMemoryDigests([{ transcript: { memoriaHuellas: h1 } }, { transcript: null }, { transcript: { memoriaHuellas: h2 } }, { transcript: {} }])).toEqual({
+      "/LEN.md": "b",
+      "/.len/memory/MEMORY.md": "x",
+    });
     expect(foldMemoryDigests([{ transcript: null }])).toBeNull();
+  });
+
+  it("cada fila guarda la huella de lo que ELLA mostró, no del estado entero", () => {
+    const files = [lenMd("Tono formal."), index("- [a](a.md) (project) — b")];
+    const antes = digestMemory(files);
+    const despues = [lenMd("Tono formal."), index("- [a](a.md) (project) — b\n- [c](c.md) (feedback) — d")];
+    expect(Object.keys(memoryMessageForTurn(despues, antes, 16_000)!.digests)).toEqual(["/.len/memory/MEMORY.md"]);
+  });
+
+  // 🔴 El historial reenvía los últimos 12 turnos (TURNOS_DEL_HISTORIAL). Si la
+  // línea base sale de la ventana y una fila posterior sólo refrescó el índice,
+  // /LEN.md ya no está a la vista: tiene que volver, entero.
+  it("🔴 lo que salió de la ventana del historial vuelve a entrar", () => {
+    const files = [lenMd("Tono formal."), index("- [a](a.md) (project) — b\n- [c](c.md) (feedback) — d")];
+    const base = memoryMessageForTurn([lenMd("Tono formal."), index("- [a](a.md) (project) — b")], null, 16_000)!;
+    const refresco = memoryMessageForTurn(files, base.digests, 16_000)!;
+    // La fila de la base ya no está; sólo la del refresco.
+    const aLaVista = foldMemoryDigests([{ transcript: { memoriaHuellas: refresco.digests } }]);
+    const m = memoryMessageForTurn(files, aLaVista, 16_000)!;
+    expect(m.text).toMatch(/Contents of \/LEN\.md/);
+    expect(m.text).toMatch(/Tono formal/);
+    expect(m.text).not.toMatch(/MEMORY\.md/);
   });
 });

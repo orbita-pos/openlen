@@ -38,15 +38,21 @@ export function digestMemory(files: readonly MemoryFile[]): MemoryDigests {
   return Object.fromEntries(files.map((f) => [f.path, sha1(clean(f.text))]));
 }
 
-/** Lo que el modelo ya conoce: las huellas de la ÚLTIMA fila que las lleve. */
+/**
+ * Lo que el modelo ya conoce: las huellas de TODAS las filas que el historial
+ * reenvía, de la más vieja a la más nueva (la más nueva gana). Cada fila guarda
+ * sólo lo que ELLA mostró, así que lo que salió de la ventana de turnos
+ * (`TURNOS_DEL_HISTORIAL`) deja de contar como visto y vuelve a entrar.
+ */
 export function foldMemoryDigests(
   rows: readonly { readonly transcript: { readonly memoriaHuellas?: MemoryDigests } | null }[],
 ): MemoryDigests | null {
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const h = rows[i]!.transcript?.memoriaHuellas;
-    if (h) return h;
+  let known: Record<string, string> | null = null;
+  for (const row of rows) {
+    const h = row.transcript?.memoriaHuellas;
+    if (h) known = { ...(known ?? {}), ...h };
   }
-  return null;
+  return known;
 }
 
 const block = (f: MemoryFile, text: string) => `Contents of ${f.path} (${f.label}):\n\n${escape(text)}\n\n`;
@@ -83,25 +89,23 @@ function withinBudget(parts: readonly Part[], maxChars: number): string {
 /**
  * El mensaje de memoria de ESTE turno, o `null` si no hay nada que decir.
  * `known` = lo que el modelo ya ve en el historial (`foldMemoryDigests`);
- * `null` ⇒ línea base. `digests` es SIEMPRE el estado completo de ahora.
+ * `null` ⇒ no ve nada. Un fichero que no conoce entra entero; uno que conoce y
+ * cambió, como refresco. `digests` son sólo los de lo que ESTE mensaje muestra
+ * (lo omitido por el presupuesto cuenta: ya se le dijo que lo lea).
  */
 export function memoryMessageForTurn(
   files: readonly MemoryFile[],
   known: MemoryDigests | null,
   maxChars: number,
 ): { readonly text: string; readonly digests: MemoryDigests } | null {
-  const digests = digestMemory(files);
-  if (known === null) {
-    const present = files.flatMap((f): Part[] => {
-      const text = clean(f.text);
-      return text ? [{ path: f.path, render: (t) => block(f, t), text }] : [];
-    });
-    return present.length === 0 ? null : { text: withinBudget(present, maxChars), digests };
-  }
+  const now = digestMemory(files);
   const parts = files.flatMap((f): Part[] => {
-    if ((known[f.path] ?? "") === digests[f.path]) return [];
+    const seen = known?.[f.path];
     const text = clean(f.text);
+    if (seen === undefined) return text ? [{ path: f.path, render: (t) => block(f, t), text }] : [];
+    if (seen === now[f.path]) return [];
     return [{ path: f.path, render: (t) => (text ? changed(f, t) : emptied(f)), text }];
   });
-  return parts.length === 0 ? null : { text: withinBudget(parts, maxChars), digests };
+  if (parts.length === 0) return null;
+  return { text: withinBudget(parts, maxChars), digests: Object.fromEntries(parts.map((p) => [p.path, now[p.path]!])) };
 }

@@ -108,8 +108,9 @@ export interface TranscripcionGuardada {
    *  turno —línea base o refresco—, tal y como se mandó. Vuelve en su sitio,
    *  antes de las palabras del dueño, para que el prefijo siga en caché. */
   readonly memoria?: string;
-  /** Las huellas de la memoria del proyecto tal y como la conoce el modelo
-   *  DESPUÉS de este turno (`memoryMessageForTurn`). Se pliega de la última. */
+  /** Las huellas de lo que el mensaje de memoria de ESTE turno mostró
+   *  (`memoryMessageForTurn`). Se pliegan juntando las de todas las filas que
+   *  el historial reenvía: lo que salió de la ventana vuelve a entrar. */
   readonly memoriaHuellas?: MemoryDigests;
 }
 
