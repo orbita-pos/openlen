@@ -1,9 +1,9 @@
 // lib/agent/compila-la-app.ts — LO QUE NO COMPILA, DE VUELTA A LEN EN EL ACTO
 // (F3 de la spec local docs/superpowers/specs/2026-10-07-apps-design.md, §5.2.5).
 //
-// En una app, un fichero que no compila deja la app EN BLANCO: el lienzo no lo
-// sirve (`servirRutaDeLaApp` contesta con un módulo que lanza) y la publicación
-// se niega. Len tiene que enterarse en la escritura, como en cualquier editor
+// En una app, un fichero que no compila deja la app EN BLANCO: no se empaqueta
+// (la entrada del lienzo y de los ojos es un módulo que lanza sus errores) y la
+// publicación se niega. Len tiene que enterarse en la escritura, como en cualquier editor
 // con un compilador detrás: en el `<new-diagnostics>` de la tanda, con fichero,
 // línea y por qué (T9).
 //
@@ -39,7 +39,7 @@ function publicable(carpeta: Carpeta): Record<string, string> {
 
 /** Lo que no compila de la app con esta carpeta. */
 export function erroresDeLaApp(app: AppDeProyecto, carpeta: Carpeta): readonly DeCompilacion[] {
-  return compilarCarpeta({ carpeta: publicable(carpeta), catalogo: app.catalogo, entrada: app.entrada }).errores;
+  return compilarCarpeta({ carpeta: publicable(carpeta), catalogo: app.catalogo }).errores;
 }
 
 /** Lo que le falta al cascarón para arrancar la app, o `[]`. */

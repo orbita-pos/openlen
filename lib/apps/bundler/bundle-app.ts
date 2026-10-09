@@ -68,7 +68,6 @@ export function bundleApp(args: {
   const compilada = compilarCarpeta({
     carpeta: args.carpeta,
     catalogo: app.catalogo,
-    entrada: app.entrada,
     ...(args.entorno ? { entorno: args.entorno } : {}),
   });
   if (compilada.errores.length > 0) return Promise.resolve({ ok: false, errores: compilada.errores });

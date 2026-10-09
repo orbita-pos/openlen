@@ -7,9 +7,11 @@
 // por aquí, y los tres reciben lo mismo — la doctrina de «un solo camino de
 // renderizado».
 //
-// SIN BUNDLER (§2). Cada fichero se traduce por separado y el navegador junta
-// las piezas con sus `import` nativos; los nombres del catálogo los resuelve el
-// import map (`lib/apps/dependencias.ts`). Es lo que hace Vite en desarrollo.
+// Y SU SALIDA VA AL EMPAQUETADOR (plan 02, `lib/apps/bundler/`). Cada fichero
+// se traduce por separado, aquí; esbuild junta lo traducido con lo que usa del
+// catálogo en UN paquete, el mismo en los tres caminos (de desarrollo en el
+// lienzo y los ojos, de producción al publicar). Los diagnósticos son de aquí,
+// no de esbuild: con la línea del fuente.
 //
 // LO QUE HACE, en orden:
 //   1. Traduce JSX y TypeScript con sucrase, que CONSERVA LOS NÚMEROS DE LÍNEA:
@@ -88,8 +90,6 @@ export type Compilado =
       readonly js: string;
       /** Los módulos LOCALES que importa, ya resueltos: el grafo de la app. */
       readonly locales: readonly string[];
-      /** Los nombres del catálogo que importa (`react`, `react-dom/client`). */
-      readonly paquetes: readonly string[];
     }
   | { readonly ok: false; readonly errores: readonly Diagnostico[] };
 
@@ -383,7 +383,6 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
   }
   const errores: Diagnostico[] = [];
   const locales = new Set<string>();
-  const paquetes = new Set<string>();
   const nombres = catalogoDe(ctx.catalogo ?? "")?.dependencias.map((d) => d.especificador) ?? [];
   const error = (posicion: number, mensaje: string) =>
     errores.push({ ruta, linea: lineaDe(js, posicion), columna: null, mensaje });
@@ -412,10 +411,9 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         error(imp.start, `"${especificador}": ?raw and ?url go after a file's path, not a package name.`);
         continue;
       }
-      // UN NOMBRE: o es del catálogo (lo resuelve el import map) o no existe.
+      // UN NOMBRE: o es del catálogo (lo resuelve el empaquetador) o no existe.
       const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
-        paquetes.add(especificador);
         const hay = exportacionesDe(ctx.catalogo, dependencia.fichero);
         const tomados = dinamico || !hay ? null : nombresImportados(js.slice(imp.importStart, imp.importEnd));
         for (const nombre of tomados ?? []) {
@@ -485,28 +483,22 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
   }
 
   if (errores.length > 0) return { ok: false, errores: errores.sort((a, b) => (a.linea ?? 0) - (b.linea ?? 0)) };
-  return { ok: true, js, locales: [...locales].sort(), paquetes: [...paquetes].sort() };
+  return { ok: true, js, locales: [...locales].sort() };
 }
 
 export interface CarpetaCompilada {
-  /** Lo que se sirve: cada fuente compilada, y el resto tal cual. Un fuente
-   *  que no compila NO está: se sirve como 404, no a medias. */
+  /** Cada fuente compilada, y el resto tal cual: lo que entra al empaquetador.
+   *  Un fuente que no compila NO está, no a medias: su error, en `errores`. */
   readonly ficheros: Readonly<Record<string, string>>;
   readonly errores: readonly Diagnostico[];
-  /** Los módulos alcanzables desde la entrada, en orden estable: lo que la
-   *  publicada precarga (`modulepreload`, H13). Vacío sin entrada. */
-  readonly grafo: readonly string[];
-  /** Los nombres del catálogo que importa ese grafo. */
-  readonly paquetes: readonly string[];
 }
 
 /** Toda la carpeta de una vez: lo que publica una app y lo que ven los ojos. */
-export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?: string | null }): CarpetaCompilada {
+export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
   const esApp = ctx.catalogo !== null;
   const ficheros: Record<string, string> = {};
   const errores: Diagnostico[] = [];
   const localesDe = new Map<string, readonly string[]>();
-  const paquetesDe = new Map<string, readonly string[]>();
   for (const [ruta, codigo] of Object.entries(ctx.carpeta)) {
     if (!esFuenteCompilable(ruta, esApp)) {
       ficheros[ruta] = codigo;
@@ -516,25 +508,10 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?
     if (r.ok) {
       ficheros[ruta] = r.js;
       localesDe.set(ruta, r.locales);
-      paquetesDe.set(ruta, r.paquetes);
     } else errores.push(...r.errores);
   }
   errores.push(...nombresLocalesQueNoExisten(ficheros, localesDe));
-  const grafo: string[] = [];
-  const paquetes = new Set<string>();
-  if (ctx.entrada && Object.hasOwn(ctx.carpeta, ctx.entrada)) {
-    const vistos = new Set<string>();
-    const pila = [ctx.entrada];
-    while (pila.length > 0) {
-      const m = pila.pop()!;
-      if (vistos.has(m)) continue;
-      vistos.add(m);
-      for (const dep of localesDe.get(m) ?? []) pila.push(dep);
-    }
-    grafo.push(...[...vistos].sort());
-    for (const m of grafo) for (const p of paquetesDe.get(m) ?? []) paquetes.add(p);
-  }
-  return { ficheros, errores, grafo, paquetes: [...paquetes].sort() };
+  return { ficheros, errores };
 }
 
 /**

@@ -831,7 +831,7 @@ async function runVerify(
   };
   sinCorrerPor([]);
   const conGuion = codigo && entradas.length > 0;
-  // UNA APP se fotografía con su import map: sin él no arranca (F3).
+  // UNA APP se fotografía con su carpeta servida: su entrada es el paquete (plan 02).
   const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
