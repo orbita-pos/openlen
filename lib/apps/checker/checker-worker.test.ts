@@ -15,7 +15,7 @@ function correr(workerData?: unknown) {
   const mensajes: unknown[] = [];
   const salida = new Promise<number>((ok) => w.on("exit", ok));
   w.on("message", (m) => mensajes.push(m));
-  w.postMessage({ id: 1, files: { "/src/A.tsx": "export const n: string = 3;" }, typesPackPath: TIPOS });
+  w.postMessage({ id: 1, files: { "/src/A.tsx": "export const n: string = 3;" }, typesPackPaths: [TIPOS] });
   return { w, mensajes, salida };
 }
 

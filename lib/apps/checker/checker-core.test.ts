@@ -75,6 +75,57 @@ describe("🔴 una app correcta da CERO diagnósticos (Review Focus 1)", () => {
   });
 });
 
+describe("las pruebas de una app (plan 04, tarea 9)", () => {
+  const RUTA_DEL_KIT = join(RAIZ, "public", "app-vendor", "test-kit-2026-10", "types.json");
+  const kit = () => JSON.parse(readFileSync(RUTA_DEL_KIT, "utf8")) as Record<string, string>;
+
+  it("🔴 una prueba con vitest y Testing Library no da errores de tipos ni de lint", () => {
+    const r = checkApp({
+      files: {
+        "/src/App.tsx": "export default function App() { return <p>Hola</p>; }",
+        "/src/App.test.tsx": [
+          'import { describe, it, expect, vi } from "vitest";',
+          'import { render, screen } from "@testing-library/react";',
+          'import userEvent from "@testing-library/user-event";',
+          'import App from "./App";',
+          'describe("App", () => {',
+          '  it("saluda", async () => {',
+          "    const f = vi.fn<(n: number) => void>();",
+          "    render(<App />);",
+          '    await userEvent.setup().click(screen.getByText("Hola"));',
+          '    expect(screen.getByText("Hola")).toBeInTheDocument();',
+          "    expect(f).not.toHaveBeenCalled();",
+          "  });",
+          "});",
+        ].join("\n"),
+        "/src/globales.test.ts": 'describe("g", () => { it("x", () => { expect(1).toBe(1); }); });',
+      },
+      typesPack: { ...TIPOS, ...kit() },
+    });
+    expect(r.typescript).toEqual([]);
+    expect(r.eslint.filter((d) => d.gravedad === "Error")).toEqual([]);
+  });
+
+  it("🔴 y un matcher mal escrito SÍ es un error de tipos", () => {
+    const r = checkApp({
+      files: { "/src/a.test.ts": 'import { it, expect } from "vitest";\nit("x", () => { expect(document.body).toBeInTheDocumen(); });' },
+      typesPack: { ...TIPOS, ...kit() },
+    });
+    expect(r.typescript.map((d) => d.codigo)).toContain("TS2551");
+  });
+
+  it("los tipos de React los pone el catálogo: el kit no los trae (no pisa los suyos)", () => {
+    expect(Object.keys(kit()).filter((f) => /^\/node_modules\/(@types\/react|react|react-dom|csstype)\//.test(f))).toEqual([]);
+  });
+
+  it("los globales de vitest, sólo en las pruebas: en un fuente de la app `describe` sigue sin existir", () => {
+    const r = checkApp({ files: { "/src/a.ts": "export const x = typeof describe;" }, typesPack: { ...TIPOS, ...kit() } });
+    expect(r.eslint.map((d) => d.codigo)).toEqual([]);
+    const l = checkApp({ files: { "/src/b.jsx": "export const y = () => expect(1);" }, typesPack: { ...TIPOS, ...kit() } });
+    expect(l.eslint.map((d) => d.codigo)).toEqual(["no-undef"]);
+  });
+});
+
 describe("las salidas, como las herramientas de verdad", () => {
   const d = (x: Partial<CheckDiagnostic>): CheckDiagnostic => ({
     ruta: "/src/App.tsx",
