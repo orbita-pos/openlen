@@ -261,13 +261,14 @@ describe("una app en la vista", () => {
     expect(carpeta?.files["/src/main.jsx"]).toContain("Hola");
     expect(carpeta?.files["/src/main.jsx"]).not.toMatch(/\bfrom\s*["']react/);
     expect(carpeta?.sourceMaps?.["/src/main.jsx"]).toBeTruthy();
-    expect(carpeta?.files["/src/App.jsx"]).not.toContain("<h1>");
+    // Como la publicada: App va DENTRO del paquete, y el catálogo también.
+    expect(carpeta?.files["/src/App.jsx"]).toBeUndefined();
     expect(carpeta?.files["/data/menu.json"]).toBe("[]");
-    expect(Object.keys(carpeta?.files ?? {})).toContain("/openlen/vendor/2026-10/react-todo.js");
+    expect(Object.keys(carpeta?.files ?? {}).some((r) => r.startsWith("/openlen/vendor/"))).toBe(false);
   }, 60_000);
 
-  it("carpetaDeLaVista: una app sin ficheros trae igualmente su catálogo; una página sin ficheros, nada", async () => {
-    expect(Object.keys((await carpetaDeLaVista(ctx({ app: APP })))?.files ?? {})).toContain("/openlen/vendor/2026-10/react.js");
+  it("carpetaDeLaVista: una app sin ficheros trae igualmente su entrada (que dice qué falta); una página sin ficheros, nada", async () => {
+    expect((await carpetaDeLaVista(ctx({ app: APP })))?.files["/src/main.jsx"]).toMatch(/^throw new SyntaxError\(/);
     expect(await carpetaDeLaVista(ctx())).toBeUndefined();
   });
 

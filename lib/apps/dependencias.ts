@@ -231,13 +231,3 @@ export function importMapDe(nombreCatalogo: string): { imports: Record<string, s
   return { imports };
 }
 
-/** `/openlen/vendor/2026-10/react.js` → `{ catalogo, fichero }`, sólo si es
- *  un fichero REAL de un catálogo que existe. Lo demás, `null`. */
-export function rutaDeVendorValida(ruta: string): { catalogo: string; fichero: string } | null {
-  // MAYÚSCULAS también: esbuild nombra los trozos compartidos con su huella
-  // (`chunk-5XKFJ2QK.js`). Igual sólo valen los ficheros REALES del catálogo.
-  const m = /^\/openlen\/vendor\/([0-9]{4}-[0-9]{2}[a-z]?)\/([A-Za-z0-9-]+\.js)$/.exec(ruta);
-  if (!m) return null;
-  const [, nombre, fichero] = m;
-  return ficherosDelCatalogo(nombre!).includes(fichero!) ? { catalogo: nombre!, fichero: fichero! } : null;
-}

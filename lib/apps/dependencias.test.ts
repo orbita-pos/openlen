@@ -15,8 +15,6 @@ import {
   dependenciaDe,
   ficherosDelCatalogo,
   importMapDe,
-  rutaDeVendor,
-  rutaDeVendorValida,
 } from "./dependencias";
 
 const RAIZ = join(import.meta.dirname, "..", "..");
@@ -49,13 +47,6 @@ describe("el catálogo", () => {
     }
   });
 
-  it("los trozos compartidos (chunk-*) son rutas válidas de su catálogo, y los inventados no", () => {
-    const trozos = ficherosDelCatalogo("2026-11").filter((f) => f.startsWith("chunk-"));
-    expect(trozos.length).toBeGreaterThan(0);
-    for (const t of trozos) expect(rutaDeVendorValida(rutaDeVendor("2026-11", t))?.fichero).toBe(t);
-    expect(rutaDeVendorValida("/openlen/vendor/2026-11/chunk-NOEXISTE.js")).toBeNull();
-  });
-
   it("react-router y react-router-dom son el MISMO fichero: un solo módulo en el navegador", () => {
     const imports = importMapDe(CATALOGO_ACTUAL).imports;
     expect(imports["react-router-dom"]).toBe(imports["react-router"]);
@@ -69,20 +60,6 @@ describe("el catálogo", () => {
     expect(importMapDe("1999-01")).toEqual({ imports: {} });
   });
 
-  it("rutaDeVendorValida sólo acepta ficheros REALES de un catálogo que existe", () => {
-    expect(rutaDeVendorValida(rutaDeVendor(CATALOGO_ACTUAL, "react.js"))).toEqual({ catalogo: CATALOGO_ACTUAL, fichero: "react.js" });
-    expect(rutaDeVendorValida(rutaDeVendor(CATALOGO_ACTUAL, "react-todo.js"))?.fichero).toBe("react-todo.js");
-    for (const mala of [
-      `/openlen/vendor/${CATALOGO_ACTUAL}/axios.js`,
-      "/openlen/vendor/1999-01/react.js",
-      `/openlen/vendor/${CATALOGO_ACTUAL}/../../etc/passwd`,
-      `/openlen/vendor/${CATALOGO_ACTUAL}/react.js?x=1`,
-      `/openlen/vendor/${CATALOGO_ACTUAL}/`,
-      "/js/react.js",
-    ]) {
-      expect(rutaDeVendorValida(mala), mala).toBeNull();
-    }
-  });
 });
 
 describe("lo construido (npm run apps:vendor)", () => {

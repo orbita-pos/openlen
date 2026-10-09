@@ -10,13 +10,12 @@ import { sitioDelTexto, sitioEnLaTraza, textoDelError, traductorDeMapas } from "
 const TRAZA = [
   "TypeError: Cannot read properties of undefined (reading 'precio')",
   "    at reduce (<anonymous>)",
-  "    at Ti (http://127.0.0.1:40123/openlen/vendor/2026-10/react-todo.js:1:3456)",
   "    at Carrito (http://127.0.0.1:40123/src/Carrito.jsx:6:13)",
   "    at App (http://127.0.0.1:40123/src/App.jsx:20:5)",
 ].join("\n");
 
 describe("dónde nació un error", () => {
-  it("el primer marco que es del proyecto, saltando React por dentro", () => {
+  it("el primer marco con fichero (el de React se salta por el mapa del paquete: abajo)", () => {
     expect(sitioEnLaTraza(TRAZA)).toEqual({ ruta: "/src/Carrito.jsx", linea: 6, columna: 13 });
   });
 

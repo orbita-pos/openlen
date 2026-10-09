@@ -17,7 +17,7 @@ import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { compilarCarpeta, esFuenteCompilable, type Diagnostico } from "@/lib/apps/compilador";
 import { catalogo, RAIZ_VENDOR, type ModoVendor } from "@/lib/apps/dependencias";
-import { directorioVendor } from "@/lib/apps/servir";
+import { BUNDLER_DID_NOT_ANSWER, directorioVendor } from "@/lib/apps/servir";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
@@ -25,7 +25,8 @@ const RUTA_DEL_HILO = path.join(process.cwd(), "lib", "apps", "bundler", "bundle
 const TOPE_MS = 30_000;
 const CACHE_MAX = 20;
 
-export const BUNDLER_DID_NOT_ANSWER = "The bundler didn't answer in time: nothing was built. Try again.";
+// Vive en servir.ts (la entrada servida lo usa); se reexporta para quien empaqueta.
+export { BUNDLER_DID_NOT_ANSWER };
 
 export type AppBundle =
   | { readonly ok: true; readonly js: string; readonly map: string | null; readonly bytes: number; readonly gzipBytes: number; readonly ms: number }

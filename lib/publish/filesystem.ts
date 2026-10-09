@@ -46,9 +46,10 @@ import type {
   AppDeProyecto,
   FormConfig,
 } from "@/lib/projects/types";
-import { AppNoCompilaError, compilarCarpeta, esFuenteCompilable, usesTailwindDirectives } from "@/lib/apps/compilador";
+import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
 import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { catalogo as catalogoDeApps } from "@/lib/apps/dependencias";
+import { ficherosDeLaApp } from "@/lib/apps/servir";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -894,11 +895,12 @@ export async function publishToDir(
   }
   const publishHtml = sanitized.html;
 
-  // LOS FUENTES (.jsx .tsx .ts, y en una app también .js) SE COMPILAN AQUÍ,
-  // antes de hornear nada y de tocar el disco: si algo no compila NO SE
-  // PUBLICA — media app en el subdominio del dueño sería peor que la release
-  // de antes, que sigue sirviéndose. La publicada recibe lo MISMO que vieron el
-  // lienzo y los ojos de Len: el mismo compilador (`lib/apps/compilador.ts`).
+  // LOS FUENTES (.jsx .tsx .ts, y en una app también .js) SE COMPILAN antes
+  // de hornear nada y de tocar el disco: si algo no compila NO SE PUBLICA —
+  // media app en el subdominio del dueño sería peor que la release de antes,
+  // que sigue sirviéndose. El mismo compilador que el lienzo y los ojos de Len
+  // (`lib/apps/compilador.ts`): el de una página, aquí; el de una app, dentro
+  // de `bundleApp` (abajo), UNA vez.
   const app = params.app ?? null;
   const carpetaPublicable: Record<string, string> = Object.fromEntries(
     (params.files ?? []).filter((f) => isPublishableFolderPath(f.path)).map((f) => [f.path, f.content]),
@@ -911,12 +913,10 @@ export async function publishToDir(
       { ruta: app.entrada, linea: null, columna: null, mensaje: "the app's entry module does not exist" },
     ]);
   }
-  const compilada = compilarCarpeta({
-    carpeta: carpetaPublicable,
-    catalogo: app?.catalogo ?? null,
-    ...(params.entorno ? { entorno: params.entorno } : {}),
-  });
-  if (compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
+  const compilada = app
+    ? null
+    : compilarCarpeta({ carpeta: carpetaPublicable, catalogo: null, ...(params.entorno ? { entorno: params.entorno } : {}) });
+  if (compilada && compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
   // UNA APP SE PUBLICA EMPAQUETADA (plan 02): UN fichero en su entrada con sus
   // fuentes y SÓLO lo que usa del catálogo, de producción y minificado — el
   // MISMO paquete que el lienzo y los ojos (`bundleApp`), en su modo. Sin
@@ -1111,13 +1111,9 @@ export async function publishToDir(
   // haga (como `data-slot-path`): ni una prueba, ni una migración, ni una ruta
   // reservada o rara llegan al disco. Si el dueño trae su robots.txt o su
   // llms.txt, gana el suyo, como en Vercel con `public/`.
-  const folder =
-    app && paquete?.ok
-      ? [
-          ...publishableFolderFiles(Object.fromEntries(Object.entries(compilada.ficheros).filter(([r]) => !esFuenteCompilable(r, true)))),
-          { path: app.entrada.slice(1), content: paquete.js },
-        ]
-      : publishableFolderFiles(compilada.ficheros);
+  const folder = publishableFolderFiles(
+    app && paquete?.ok ? ficherosDeLaApp(carpetaPublicable, app, paquete.js) : (compilada?.ficheros ?? {}),
+  );
   const own = new Set(folder.map((f) => f.path));
   const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
