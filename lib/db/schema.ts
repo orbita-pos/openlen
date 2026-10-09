@@ -2017,3 +2017,38 @@ export const movilLlaves = pgTable("movilLlaves", {
   creadoEn: timestamp("creadoEn", { mode: "date" }).notNull().defaultNow(),
   ultimoUso: timestamp("ultimoUso", { mode: "date" }),
 }, (t) => [index("movilLlaves_userId_idx").on(t.userId)]);
+
+/**
+ * LEN POR CORREO (lib/len-email): cada correo a Len, GUARDADO antes de correr su
+ * turno. Como hacen los grandes con el correo que reciben: primero se apunta,
+ * luego se trabaja. `dedupeKey` (el Message-ID, o una huella si no lo trae) es
+ * único: el mismo correo entregado dos veces no lanza dos turnos ni cobra dos
+ * veces. Si el servidor se reinicia, `resumeEmailRequests` retoma lo pendiente.
+ * `id` es también el id de la fila del turno en el chat (`projectChatMessages`).
+ */
+export const lenEmailRequests = pgTable(
+  "lenEmailRequests",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    dedupeKey: text("dedupeKey").notNull(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** Quien escribió (dueño o editor): el turno corre como él. */
+    userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** Su dirección: a ella va la respuesta. */
+    sender: text("sender").notNull(),
+    subject: text("subject").notNull(),
+    texto: text("texto").notNull(),
+    idioma: text("idioma").notNull(),
+    /** El Message-ID que contesta la respuesta (para el hilo del correo). */
+    inReplyTo: text("inReplyTo"),
+    /** Lo que Len dijo al cerrar, guardado ANTES de mandarlo: si el envío se
+     *  corta, se reenvía sin repetir el turno. */
+    respuesta: text("respuesta"),
+    contestadoAt: timestamp("contestadoAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("lenEmailRequests_dedupeKey_uq").on(t.dedupeKey),
+    index("lenEmailRequests_project_createdAt_idx").on(t.projectId, t.createdAt),
+  ],
+);

@@ -184,7 +184,8 @@
       "copiada": "Copiée",
       "pie": "Répondez à cet e-mail pour continuer avec Len sur {titulo}.",
       "abrir": "Ouvrir le projet",
-      "falloSinMotivo": "Je n'ai pas pu le faire. Répondez à cet e-mail pour me le redemander."
+      "falloSinMotivo": "Je n'ai pas pu le faire. Répondez à cet e-mail pour me le redemander.",
+      "interrumpido": "Le serveur a redémarré pendant que je le faisais, ce n'est peut-être fait qu'à moitié. Regardez les changements et, si besoin, répondez à cet e-mail pour me le redemander."
     }
   }
 }

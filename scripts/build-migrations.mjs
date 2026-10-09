@@ -148,6 +148,8 @@ const targets = [
   // projectChatMentions. 🔴 OBLIGATORIA antes que el código: el panel del chat
   // SELECCIONA todas las columnas de la fila.
   "chat-equipo-migrate",
+  // Len por correo: los correos a Len, guardados antes de su turno (lenEmailRequests).
+  "len-email-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

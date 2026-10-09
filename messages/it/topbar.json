@@ -184,7 +184,8 @@
       "copiada": "Copiato",
       "pie": "Rispondi a questa e-mail per continuare con Len su {titulo}.",
       "abrir": "Apri il progetto",
-      "falloSinMotivo": "Non sono riuscito a farlo. Rispondi a questa e-mail per chiedermelo di nuovo."
+      "falloSinMotivo": "Non sono riuscito a farlo. Rispondi a questa e-mail per chiedermelo di nuovo.",
+      "interrumpido": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere rimasto a metà. Controlla le modifiche e, se serve, rispondi a questa e-mail per chiedermelo di nuovo."
     }
   }
 }

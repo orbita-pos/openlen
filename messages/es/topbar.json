@@ -184,7 +184,8 @@
       "copiada": "Copiada",
       "pie": "Contesta a este correo para seguir con Len en {titulo}.",
       "abrir": "Abrir el proyecto",
-      "falloSinMotivo": "No llegué a hacerlo. Contesta a este correo para pedírmelo otra vez."
+      "falloSinMotivo": "No llegué a hacerlo. Contesta a este correo para pedírmelo otra vez.",
+      "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, contesta a este correo para pedírmelo otra vez."
     }
   }
 }

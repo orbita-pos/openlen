@@ -184,3 +184,9 @@ export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: 
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
   return t("falloSinMotivo");
 }
+
+/** La frase de Len por correo cuando un reinicio le cortó el turno a medias. */
+export function fraseDeInterrupcionPorCorreo(idioma: IdiomaDelCorreo): string {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
+  return t("interrumpido");
+}

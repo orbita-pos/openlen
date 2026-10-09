@@ -1,13 +1,14 @@
 // @vitest-environment node
 // LEN POR CORREO: la puerta del correo que llega. Lo que no la pasa se tira
-// en silencio; lo que la pasa es un turno de Len que contesta por correo.
+// en silencio; lo que la pasa se apunta (una sola vez) y es un turno de Len.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   user: { id: "u-ana" } as { id: string } | undefined,
   rol: "dueno" as "dueno" | "editor" | "lector" | null,
   launched: [] as Record<string, unknown>[],
-  sent: [] as Record<string, unknown>[],
+  stored: new Map<string, Record<string, unknown>>(),
+  recent: 0,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -30,14 +31,22 @@ vi.mock("@/lib/projects/acceso", () => ({
   accesoAlProyecto: async () => (mocks.rol ? { rol: mocks.rol, duenoId: "u-ana" } : null),
   puede: (rol: string, permiso: string) => permiso === "ver" || rol !== "lector",
 }));
-vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
-  launchEmailTurn: async (p: Record<string, unknown>) => {
-    mocks.launched.push(p);
-    return { filaId: "fila-1" };
-  },
-}));
-vi.mock("@/lib/email", () => ({
-  sendLenReplyEmail: async (p: Record<string, unknown>) => void mocks.sent.push(p),
+vi.mock("@/lib/len-email/requests", async () => {
+  const real = await vi.importActual<typeof import("@/lib/len-email/requests")>("@/lib/len-email/requests");
+  return {
+    dedupeKeyOf: real.dedupeKeyOf,
+    recentEmailRequests: async () => mocks.recent,
+    recordEmailRequest: async (r: Record<string, unknown> & { dedupeKey: string }) => {
+      if (mocks.stored.has(r.dedupeKey)) return null;
+      const row = { ...r, id: `req-${mocks.stored.size + 1}`, respuesta: null, createdAt: new Date() };
+      mocks.stored.set(r.dedupeKey, row);
+      return row;
+    },
+  };
+});
+vi.mock("@/lib/len-email/run", () => ({
+  startEmailRequest: async (req: Record<string, unknown>) => void mocks.launched.push(req),
+  resumeEmailRequests: async () => 0,
 }));
 
 import { lenEmailAddress } from "@/lib/len-email/address";
@@ -70,25 +79,41 @@ beforeEach(() => {
   mocks.user = { id: "u-ana" };
   mocks.rol = "dueno";
   mocks.launched = [];
-  mocks.sent = [];
+  mocks.stored = new Map();
+  mocks.recent = 0;
 });
 
 describe("POST /api/len-email/inbound", () => {
-  it("🔴 un correo del dueño, firmado, arranca el turno con lo que escribió (sin lo citado)", async () => {
+  it("🔴 un correo del dueño, firmado, se APUNTA y arranca el turno con lo que escribió (sin lo citado)", async () => {
     const res = await POST(correo());
     expect(res.status).toBe(202);
+    expect(((await res.json()) as { turnId?: string }).turnId).toBe("req-1");
     expect(mocks.launched).toHaveLength(1);
-    expect(mocks.launched[0]).toMatchObject({ userId: "u-ana", projectId: PROJECT, texto: "Cambia el precio a 499" });
-    // Lo que Len diga se manda a quien escribió, con Reply-To a la dirección y en su hilo.
-    await (mocks.launched[0]!.reply as (t: string) => Promise<void>)("Listo.");
-    expect(mocks.sent[0]).toMatchObject({
-      to: "ana@gmail.com",
-      replyTo: lenEmailAddress(PROJECT),
-      inReplyTo: "<abc@mail.gmail.com>",
+    expect(mocks.launched[0]).toMatchObject({
+      id: "req-1",
+      userId: "u-ana",
+      projectId: PROJECT,
+      sender: "ana@gmail.com",
+      subject: "Re: Café Luna",
+      texto: "Cambia el precio a 499",
       idioma: "es",
-      projectTitle: "Café Luna",
-      texto: "Listo.",
+      inReplyTo: "<abc@mail.gmail.com>",
+      dedupeKey: "mid:<abc@mail.gmail.com>",
     });
+  });
+
+  it("🔴 el MISMO correo entregado dos veces no lanza dos turnos (ni cobra dos veces)", async () => {
+    expect((await POST(correo())).status).toBe(202);
+    const otra = await POST(correo());
+    expect(otra.status).toBe(200);
+    expect(((await otra.json()) as { ignored?: string }).ignored).toBe("duplicado");
+    expect(mocks.launched).toHaveLength(1);
+  });
+
+  it("pasado el tope por hora del proyecto, no se apunta ni corre", async () => {
+    mocks.recent = 20;
+    expect(((await (await POST(correo())).json()) as { ignored?: string }).ignored).toBe("tope por hora");
+    expect(mocks.launched).toHaveLength(0);
   });
 
   it("🔴 sin el secreto del Worker, 401; sin configurar, 503", async () => {
@@ -108,7 +133,7 @@ describe("POST /api/len-email/inbound", () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { ignored?: string }).ignored).toBeTruthy();
     expect(mocks.launched).toHaveLength(0);
-    expect(mocks.sent).toHaveLength(0);
+    expect(mocks.stored.size).toBe(0);
   });
 
   it("🔴 quien no tiene cuenta, o sólo puede mirar el proyecto, no le habla a Len", async () => {

@@ -194,8 +194,9 @@ export async function lanzarTurnoDelHilo(p: {
  * LEN POR CORREO (lib/len-email): el mismo camino que un `@Len` de un hilo,
  * pero Len contesta POR CORREO. `reply` manda lo que Len dijo al cerrar; si el
  * turno no llegó a contestar, se manda `fraseDeFallo` con el motivo, para que
- * quien escribió nunca se quede sin respuesta. ⚠️ La cola vive en memoria y el
- * pedido no se apunta: un reinicio a mitad lo pierde (los hilos sí lo retoman).
+ * quien escribió nunca se quede sin respuesta. La cola vive en memoria, pero el
+ * pedido no: lo apunta quien llama (`lenEmailRequests`, con su `filaId`) y
+ * `resumeEmailRequests` (lib/len-email/run.ts) lo retoma tras un reinicio.
  */
 export async function launchEmailTurn(p: {
   readonly userId: string;
@@ -205,9 +206,11 @@ export async function launchEmailTurn(p: {
   readonly origen: string;
   readonly reply: (text: string) => Promise<void>;
   readonly fraseDeFallo: (fallo: FalloDelTurno | null) => string;
+  /** La fila del turno: el id del correo apuntado. */
+  readonly filaId?: string;
 }): Promise<{ readonly filaId: string }> {
   const correr = await corredorCargado();
-  const filaId = crypto.randomUUID();
+  const filaId = p.filaId ?? crypto.randomUUID();
   enqueue(
     p.projectId,
     async () => {
