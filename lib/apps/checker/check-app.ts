@@ -36,7 +36,9 @@ function soltarTodo(): void {
 
 function elHilo(): Worker {
   if (hilo) return hilo;
-  const nuevo = new Worker(RUTA_DEL_HILO);
+  // El tope duro: si un chequeo se dispara, muere el hilo y no el servidor (el
+  // umbral suave, con el que el hilo se recicla solo, vive en checker-worker.mjs).
+  const nuevo = new Worker(RUTA_DEL_HILO, { resourceLimits: { maxOldGenerationSizeMb: 1024 } });
   nuevo.on("message", (m: { id: number; ok: boolean; result?: CheckResult }) => {
     const p = pendientes.get(m.id);
     if (!p) return;
