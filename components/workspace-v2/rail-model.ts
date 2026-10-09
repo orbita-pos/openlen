@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import {
   BarChart3, ChatIcon, DatabaseIcon, HistoryIcon, Inbox,
-  ListTree, Megaphone,
+  ListTree,
 } from "./icons";
 
 // The account-wide sections, addressable independently of any loaded project,
@@ -13,7 +13,9 @@ export type SectionView =
   // ⚰️ `business` —la sección «Mi negocio»— salió de aquí el 2026-08-31 con el
   // perfil entero. Era la única vista del rail que pedía RELLENAR una ficha en
   // vez de mirar la página.
-  | "marketing" | "explore" | "resultados"
+  // ⚰️ `marketing` —los posts para redes— salió el 2026-10-08: estaba mal
+  // hecha y se rehará de nuevo, mejor (Jesús).
+  | "explore" | "resultados"
   // La base de datos de la página (fase 6 de plans/pages-backend/design.md).
   | "database";
 
@@ -85,7 +87,6 @@ export const RAIL_OPERAR: ReadonlyArray<RailItemDef> = [
   { kind: "view", view: "messages", icon: Inbox, badge: ["chat", "leads"] },
   // Sólo cuando la página tiene base: ver `visibleOperar`.
   { kind: "view", view: "database", icon: DatabaseIcon },
-  { kind: "view", view: "marketing", icon: Megaphone },
   { kind: "panel", id: "versions", icon: HistoryIcon },
 ];
 

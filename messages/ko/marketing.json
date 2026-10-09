@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "완성된 게시물 {posts}개",
-        "body": "페이지에 맞춘 SNS 게시물 — 같은 팔레트, 같은 폰트, 대비까지 보장. 고르고, 캡션만 다듬어 바로 올리세요."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "WhatsApp 버튼을 첫 화면으로 올리세요 — 방문자의 62%는 히어로 아래로 스크롤하지 않습니다.",

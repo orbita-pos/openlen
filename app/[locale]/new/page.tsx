@@ -36,7 +36,6 @@ import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { MiembrosDialog } from "@/components/workspace-v2/miembros-dialog";
 import { AnalyticsSection } from "../analytics/analytics-section";
-import { MarketingView } from "@/components/workspace-v2/marketing-view";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -402,13 +401,13 @@ function NewV2Inner() {
   // ⚰️ `business` era una de estas vistas —la sección «Mi negocio»— y se fue con
   // el perfil el 2026-08-31. Un `?view=business` guardado en un marcador ya no
   // casa con ninguna rama y cae al lienzo, que es la degradación correcta: la
-  // página que el usuario tenía abierta.
+  // página que el usuario tenía abierta. Lo mismo `?view=marketing`: la sección
+  // de los posts para redes se quitó el 2026-10-08 para rehacerla mejor.
   const viewParam = searchParams.get("view");
   const centerView: SectionView =
     viewParam === "projects" ||
     viewParam === "analytics" ||
     viewParam === "resultados" ||
-    viewParam === "marketing" ||
     viewParam === "templates" ||
     viewParam === "messages" ||
     viewParam === "explore" ||
@@ -3178,38 +3177,8 @@ function NewV2Inner() {
   // ⚰️ Aquí vivían `createModulePage` —creaba una página dedicada para un
   // módulo— y `updateCollectionsSettings`. Las dos se van el 2026-08-29: el
   // último módulo que las usaba era `collections`, y quien las llamaba (el hub)
-  // se fue con él.
-  const updateMarketingSettings = useCallback(
-    (patch: { register?: string; match?: boolean }) => {
-      const projectId = loadedProject?.id;
-      if (!projectId) return;
-      // Optimistic apply, revert on failure: the prop transition (old → new →
-      // old) is what lets MarketingView's resync effects roll a control back.
-      const previous = loadedProject?.settings?.marketing;
-      const apply = (value: typeof previous) =>
-        setLoadedProject((p) =>
-          p ? { ...p, settings: { ...p.settings, marketing: value } } : p,
-        );
-      apply({ ...previous, ...patch });
-      void (async () => {
-        try {
-          const r = await fetch(`/api/projects/${projectId}/settings`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ marketing: patch }),
-          });
-          if (!r.ok) {
-            toast.error(t("toast.moduleError"));
-            apply(previous);
-          }
-        } catch {
-          toast.error(t("toast.moduleError"));
-          apply(previous);
-        }
-      })();
-    },
-    [loadedProject?.id, loadedProject?.settings?.marketing, toast, t],
-  );
+  // se fue con él. Y `updateMarketingSettings`, con la sección Marketing
+  // (2026-10-08).
   // La franja de la Bandeja ya guardó el ajuste (PATCH .../settings) antes de
   // llamar aquí — este manejador sólo funde el resultado en `loadedProject`
   // para que la franja, que lee sus props de aquí, diga lo que acaba de
@@ -3353,7 +3322,7 @@ function NewV2Inner() {
         // SIN PROYECTO ABIERTO LA BARRA ES OTRA, Y EL RAIL NO EXISTE.
         //
         // El rail entero actúa SOBRE una página —Chat, Resultados, Mensajes,
-        // Marketing, Versiones—, así que sin página abierta son cinco iconos
+        // Versiones—, así que sin página abierta son cuatro iconos
         // que no llevan a ningún sitio. Y la cuenta vive a su pie, o sea que se
         // iría con él: por eso vuelve a la barra en esta pantalla.
         inicio={
@@ -3507,14 +3476,6 @@ function NewV2Inner() {
           />
         ) : normalizedCenterView === "database" ? (
           <DatabaseView projectId={loadedProject?.id ?? null} />
-        ) : normalizedCenterView === "marketing" ? (
-          <MarketingView
-            projectId={loadedProject?.id ?? null}
-            initialRegister={loadedProject?.settings?.marketing?.register}
-            initialMatch={loadedProject?.settings?.marketing?.match ?? true}
-            onSaveRegister={(r) => updateMarketingSettings({ register: r })}
-            onSaveMatch={(m) => updateMarketingSettings({ match: m })}
-          />
         ) : (
           <>
         {entryMode === "template" &&

@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} posts prontos",
-        "body": "Posts prontos para as redes, combinando com a sua página — mesma paleta, mesma fonte, contraste garantido. Escolha um, ajuste a legenda e publique."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "Suba o botão do WhatsApp para antes da dobra — 62% dos visitantes nunca passam do hero.",
