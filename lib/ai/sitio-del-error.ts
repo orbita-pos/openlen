@@ -32,8 +32,8 @@ export type Traductor = (sitio: SitioDelError) => SitioDelError | "vendor" | nul
  * UNA APP SE SIRVE EMPAQUETADA (plan 02): la traza dice `/src/main.jsx:4123:9`,
  * que es el paquete. Su sourcemap lo devuelve al fichero y la línea del
  * proyecto (`app:/src/App.jsx` → `/src/App.jsx`); lo que cae en el catálogo
- * (`vendor:…`, React por dentro) se salta como antes se saltaba
- * `/openlen/vendor/`. `mapas`: ruta servida → su mapa (el JSON de esbuild).
+ * (`vendor:…`, React por dentro) se salta. `mapas`: ruta servida → su mapa
+ * (el JSON de esbuild).
  */
 export function traductorDeMapas(mapas: Readonly<Record<string, string>> | undefined): Traductor | undefined {
   if (!mapas || Object.keys(mapas).length === 0) return undefined;
@@ -61,8 +61,8 @@ export function traductorDeMapas(mapas: Readonly<Record<string, string>> | undef
 const MARCO = /https?:\/\/[^\s/()]+(\/[^\s:()?#]+\.(?:jsx|tsx|ts|mjs|js)):(\d+):(\d+)/;
 
 /**
- * El primer marco de la traza que es código DEL PROYECTO: ni las dependencias
- * del catálogo (`/openlen/vendor/`, React por dentro) ni el documento mismo.
+ * El primer marco de la traza que es código DEL PROYECTO: ni el catálogo (React
+ * por dentro, que dentro del paquete dice su mapa) ni el documento mismo.
  * Lo relativo al documento medido llega con su identificador delante
  * (`/<uuid>/src/x.jsx`): se le quita, y queda la ruta del sitio.
  */
@@ -77,7 +77,6 @@ export function sitioEnLaTraza(traza: string | undefined | null, traducir?: Trad
       if (t === "vendor") continue;
       if (t) sitio = t;
     }
-    if (sitio.ruta.startsWith("/openlen/vendor/")) continue;
     return sitio;
   }
   return null;

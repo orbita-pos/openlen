@@ -4,6 +4,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { FICHEROS } from "@/lib/apps/shadcn-fixture";
 import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
+import { esFuenteCompilable } from "@/lib/apps/compilador";
 import { carpetaDeLaVista, carpetaServida } from "./documento";
 
 afterAll(() => stopBundlerWorker());
@@ -22,6 +23,12 @@ describe("carpetaServida con el paquete (plan 02, tarea 5)", () => {
     const r = await carpetaServida({ ...FICHEROS, "/src/lib/utils.ts": "export const x = <;" }, APP);
     expect(r.files["/src/main.jsx"]).toMatch(/^throw new SyntaxError\(/);
     expect(r.files["/src/main.jsx"]).toContain("/src/lib/utils.ts:1");
+  }, 60_000);
+
+  it("🔴 la carpeta de una app es la que se publica: la entrada y lo que no es fuente; ni catálogo ni fuentes sueltos", async () => {
+    const r = await carpetaServida({ ...FICHEROS, "/tests/a.spec.ts": "x" }, APP);
+    const esperadas = Object.keys(FICHEROS).filter((k) => k === APP.entrada || !esFuenteCompilable(k, true));
+    expect(Object.keys(r.files).sort()).toEqual(esperadas.sort());
   }, 60_000);
 
   it("una página (sin app) no cambia: sus ficheros, sin mapas", async () => {

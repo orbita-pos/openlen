@@ -1,8 +1,7 @@
 import { isPublishableFolderPath, contentTypeFor } from "@/lib/agent/ficheros/folder";
 import { esFuenteCompilable } from "@/lib/apps/compilador";
-import { rutaDeVendorValida } from "@/lib/apps/dependencias";
-import { moduloDeError, servirRutaDeLaApp } from "@/lib/apps/servir";
-import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
+import { entradaServida, servirFuenteDePagina } from "@/lib/apps/servir";
+import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { leerDocumento, proyectoDeEtiqueta } from "@/lib/lienzo/almacen";
 import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
 
@@ -53,63 +52,36 @@ export async function GET(
   // nada que decodificar, y lo que traiga otra cosa no casa con nada.
   const ruta = `/${path.join("/")}`;
 
-  // UNA APP WEB (spec local 2026-10-07-apps): las dependencias de su catálogo
-  // y sus fuentes, COMPILADOS. Antes que la carpeta: un `.jsx` es un fichero de
-  // la carpeta, pero lo que el navegador recibe es lo compilado, nunca el
-  // fuente. Por la MISMA función que usan los ojos de Len (`carpetaServida`),
-  // así que miden lo que el dueño ve.
-  const vendor = rutaDeVendorValida(ruta);
-  if (vendor || esFuenteCompilable(ruta, true)) {
+  // LOS FUENTES (.jsx .tsx .ts, y en una app también .js), antes que la
+  // carpeta: un `.jsx` es un fichero de la carpeta, pero el navegador nunca
+  // recibe el fuente. Por las MISMAS funciones que usan los ojos de Len
+  // (`carpetaServida`) y la publicación, así que todos ven lo mismo:
+  //   · UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete de
+  //     desarrollo, o un módulo que lanza sus errores; cualquier otro fuente es
+  //     un 404, como en la publicada, que no lo lleva (va DENTRO del paquete).
+  //   · UNA PÁGINA: cada fuente, compilado en su ruta.
+  if (esFuenteCompilable(ruta, true)) {
     const dueno = proyectoDeEtiqueta(etiqueta);
     if (!dueno) return noEncontrado();
-    if (vendor || esFuenteCompilable(ruta, dueno.app !== null)) {
-      let carpeta: Record<string, string> = {};
-      if (!vendor) {
-        // La carpeta ENTERA: resolver `./App` necesita saber qué ficheros hay.
-        // Sólo lo publicable: ni /tests ni /supabase se importan desde el navegador.
-        const { listProjectFiles } = await import("@/lib/backend/files");
-        const todos = await listProjectFiles(dueno.projectId).catch(() => null);
-        if (!todos) return noEncontrado();
-        carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isPublishableFolderPath(r)));
-      }
-      // UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete, el
-      // MISMO que miden los ojos (`carpetaServida`) y, en producción, el que se
-      // publica. Lo que no compila llega como un módulo que lanza sus errores.
-      if (!vendor && dueno.app && ruta === dueno.app.entrada) {
-        const paquete = await bundleApp({
-          carpeta,
-          app: dueno.app,
-          ...(dueno.entorno ? { entorno: dueno.entorno } : {}),
-          modo: "desarrollo",
-        });
-        const cuerpo = !paquete
-          ? moduloDeError(ruta, [{ ruta, linea: null, columna: null, mensaje: BUNDLER_DID_NOT_ANSWER }])
-          : paquete.ok
-            ? paquete.js
-            : moduloDeError(ruta, paquete.errores);
-        return new Response(cuerpo, {
-          status: 200,
-          headers: {
-            "content-type": "text/javascript; charset=utf-8",
-            // Un borrador: ni el navegador ni el borde lo guardan.
-            "cache-control": "no-store",
-            "referrer-policy": "no-referrer",
-            "x-content-type-options": "nosniff",
-          },
-        });
-      }
-      const servido = servirRutaDeLaApp(ruta, carpeta, {
-        app: dueno.app,
-        ...(dueno.entorno ? { entorno: dueno.entorno } : {}),
-        modo: "desarrollo",
-      });
-      if (!servido) return noEncontrado();
-      return new Response(servido.cuerpo, {
+    if (dueno.app && ruta !== dueno.app.entrada) return noEncontrado();
+    if (dueno.app || esFuenteCompilable(ruta, false)) {
+      // La carpeta ENTERA: resolver `./App` necesita saber qué ficheros hay.
+      // Sólo lo publicable: ni /tests ni /supabase se importan desde el navegador.
+      const { listProjectFiles } = await import("@/lib/backend/files");
+      const todos = await listProjectFiles(dueno.projectId).catch(() => null);
+      if (!todos) return noEncontrado();
+      const carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isPublishableFolderPath(r)));
+      const entorno = dueno.entorno ? { entorno: dueno.entorno } : {};
+      const cuerpo = dueno.app
+        ? entradaServida(ruta, await bundleApp({ carpeta, app: dueno.app, ...entorno, modo: "desarrollo" }))
+        : servirFuenteDePagina(ruta, carpeta, dueno.entorno);
+      if (cuerpo === null) return noEncontrado();
+      return new Response(cuerpo, {
         status: 200,
         headers: {
-          "content-type": servido.tipo,
-          // Una dependencia del catálogo no cambia nunca; un fuente es un borrador.
-          "cache-control": servido.inmutable ? "public, max-age=31536000, immutable" : "no-store",
+          "content-type": "text/javascript; charset=utf-8",
+          // Un borrador: ni el navegador ni el borde lo guardan.
+          "cache-control": "no-store",
           "referrer-policy": "no-referrer",
           "x-content-type-options": "nosniff",
         },

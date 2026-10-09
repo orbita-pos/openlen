@@ -147,8 +147,6 @@ describe("GET /api/lienzo/site — una app web", () => {
     // `<App />` como ejemplo: se mira el de main.jsx, no la cadena suelta).
     expect(js).not.toContain("document.body).render(<App");
     expect(js).toContain("https://abc.openlen.app");
-    // Los demás fuentes siguen contestándose compilados, uno a uno.
-    expect(await (await pide(host(P1), "/src/App.tsx")).text()).toContain("https://abc.openlen.app");
   }, 60_000);
 
   it("🔴 un fuente roto, aunque nadie lo importe: la entrada es el módulo que lanza su error (como al publicar, que se niega)", async () => {
@@ -157,21 +155,11 @@ describe("GET /api/lienzo/site — una app web", () => {
     expect(js).toMatch(/^throw new SyntaxError\(.*\/src\/Roto\.jsx:1/);
   }, 60_000);
 
-  it("las dependencias del catálogo, inmutables; una que no existe, 404", async () => {
+  it("🔴 como la publicada: ni el catálogo suelto ni los fuentes sueltos (van DENTRO del paquete)", async () => {
     vivo();
-    const r = await pide(host(P1), "/openlen/vendor/2026-10/react.js");
-    expect(r.status).toBe(200);
-    expect(r.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
-    expect(r.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
-    expect(await r.text()).toContain('from "./react-todo.js"');
-    expect((await pide(host(P1), "/openlen/vendor/2026-10/axios.js")).status).toBe(404);
-  });
-
-  it("un fuente que no compila llega como un módulo que lanza su error con fichero y línea", async () => {
-    vivo();
-    const r = await pide(host(P1), "/src/Roto.jsx");
-    expect(r.status).toBe(200);
-    expect(await r.text()).toMatch(/^throw new SyntaxError\(.*\/src\/Roto\.jsx:1:/);
+    expect((await pide(host(P1), "/openlen/vendor/2026-10/react.js")).status).toBe(404);
+    expect((await pide(host(P1), "/src/App.tsx")).status).toBe(404);
+    expect((await pide(host(P1), "/src/Roto.jsx")).status).toBe(404);
   });
 
   it("en una PÁGINA, /js/app.js sigue como está y un .tsx se compila", async () => {
@@ -185,8 +173,7 @@ describe("GET /api/lienzo/site — una app web", () => {
     expect((await pide(host(P1), "/tests/a.spec.ts")).status).toBe(404);
   });
 
-  it("🔴 sin un documento vivo del proyecto, ni dependencias ni fuentes", async () => {
-    expect((await pide(host(P1), "/openlen/vendor/2026-10/react.js")).status).toBe(404);
+  it("🔴 sin un documento vivo del proyecto, ni el paquete", async () => {
     expect((await pide(host(P1), "/src/main.jsx")).status).toBe(404);
   });
 });

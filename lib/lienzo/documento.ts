@@ -19,8 +19,8 @@ import { sealRelease } from "@/lib/html-engine";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { moduloDeError, servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
-import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
+import { entradaServida, ficherosDeLaApp, servirFuenteDePagina } from "@/lib/apps/servir";
+import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 
 export interface ContextoDeVista {
   projectId: string;
@@ -53,49 +53,42 @@ export function pantallaDe(valor: unknown): string | null {
 }
 
 /**
- * LA CARPETA COMO LA SIRVE EL LIENZO: cada fuente compilado (`.jsx`, `.tsx`,
- * `.ts`, y en una app también `.js`), lo demás tal cual, y en una app las
- * dependencias de su catálogo en `/openlen/vendor/`. Es lo MISMO que contesta
- * `/api/lienzo/site` (los dos pasan por `servirRutaDeLaApp`), así que los ojos
- * de Len miden la app que el dueño ve. React va en su build de desarrollo, como
- * en el lienzo: sus mensajes de error enteros son lo que Len necesita leer.
+ * LA CARPETA COMO LA SIRVE EL LIENZO, con las MISMAS funciones que
+ * `/api/lienzo/site` (`lib/apps/servir.ts`), así que los ojos de Len miden la
+ * app que el dueño ve.
  *
  * UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete de
- * desarrollo (`bundleApp`: sus fuentes con lo que usa del catálogo), el mismo
- * que contesta el lienzo, y su sourcemap va aparte, para traducir las trazas
- * (`traductorDeMapas`): al navegador no se le sirve. Si no compila, la entrada
- * es un módulo que lanza los errores del compilador, como antes cada fuente.
- * Al empaquetador va sólo lo publicable: ni /tests ni /supabase se importan.
+ * desarrollo (`bundleApp`: sus fuentes con lo que usa del catálogo), y de la
+ * carpeta sólo lo que no es un fuente — la misma forma que la release
+ * (`ficherosDeLaApp`). React va en su build de desarrollo, como en el lienzo:
+ * sus mensajes de error enteros son lo que Len necesita leer. El sourcemap va
+ * aparte, para traducir las trazas (`traductorDeMapas`): al navegador no se le
+ * sirve. Si no compila, la entrada es un módulo que lanza los errores del
+ * compilador. Al empaquetador va sólo lo publicable: ni /tests ni /supabase.
+ *
+ * UNA PÁGINA: cada fuente (`.jsx`, `.tsx`, `.ts`) compilado, lo demás tal cual.
  */
 export async function carpetaServida(
   files: Readonly<Record<string, string>>,
   app: AppDeProyecto | null,
   entorno?: Readonly<Record<string, string>>,
 ): Promise<{ files: Record<string, string>; sourceMaps: Record<string, string> }> {
-  const out: Record<string, string> = {};
-  for (const [ruta, contenido] of Object.entries(files)) {
-    const servido = servirRutaDeLaApp(ruta, files, { app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
-    out[ruta] = servido ? servido.cuerpo : contenido;
+  if (!app) {
+    const out: Record<string, string> = {};
+    for (const [ruta, contenido] of Object.entries(files)) out[ruta] = servirFuenteDePagina(ruta, files, entorno) ?? contenido;
+    return { files: out, sourceMaps: {} };
   }
-  const sourceMaps: Record<string, string> = {};
-  if (app) {
-    Object.assign(out, vendorPorRuta(app.catalogo, "desarrollo"));
-    const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isPublishableFolderPath(r)));
-    const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
-    const e = app.entrada;
-    if (!paquete) out[e] = moduloDeError(e, [{ ruta: e, linea: null, columna: null, mensaje: BUNDLER_DID_NOT_ANSWER }]);
-    else if (!paquete.ok) out[e] = moduloDeError(e, paquete.errores);
-    else {
-      out[e] = paquete.js;
-      if (paquete.map) sourceMaps[e] = paquete.map;
-    }
-  }
-  return { files: out, sourceMaps };
+  const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isPublishableFolderPath(r)));
+  const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
+  return {
+    files: ficherosDeLaApp(publicable, app, entradaServida(app.entrada, paquete)),
+    sourceMaps: paquete?.ok && paquete.map ? { [app.entrada]: paquete.map } : {},
+  };
 }
 
 /** Lo que el navegador que mide necesita de la carpeta, o `undefined` si la
  *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
- *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
+ *  que siempre. Una app trae siempre algo: su entrada, el paquete. */
 export async function carpetaDeLaVista(
   vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
 ): Promise<
