@@ -1,14 +1,16 @@
 "use client";
 
-// LA CABECERA DEL CHAT NUEVO (plans/new-chat/): «Chat con Len», la memoria de
-// Len y las charlas. «Empezar de cero» ARCHIVA la charla en curso —Len deja de
+// LA CABECERA DEL CHAT NUEVO (plans/new-chat/): «Chat con Len» y las charlas.
+// ⚰️ El icono de la memoria se fue con su cajón (plans/len-md): la memoria son
+// ficheros (~/.len/LEN.md, /LEN.md, /.len/memory) y se abren en la lente Código,
+// como el /memory de Claude Code, que sólo abre los ficheros. «Empezar de cero» ARCHIVA la charla en curso —Len deja de
 // recordarla; tu memoria y las notas de la página se quedan— y desde la misma
 // lista se vuelve a una anterior (decisión de Jesús del 03/10). Con un turno
 // trabajando no se cambia de charla: el servidor lo rechaza y aquí se dice.
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Brain, History, MessageSquarePlus, Minimize2, PanelLeft, PictureInPicture2, X } from "lucide-react";
+import { History, MessageSquarePlus, Minimize2, PanelLeft, PictureInPicture2, X } from "lucide-react";
 
 import { useMandoDesplegable } from "../use-mando-desplegable";
 import type { ConversationActionResult, useConversations } from "./use-conversations";
@@ -17,9 +19,6 @@ import type { ChatLayout } from "./use-chat-version";
 export function ChatHeader({
   layout,
   onLayout,
-  memoryOpen,
-  memoryCount,
-  onToggleMemory,
   conversations,
   busy,
   onClose,
@@ -29,9 +28,6 @@ export function ChatHeader({
   /** Anclado, flotante o minimizado (del mock). */
   layout: ChatLayout;
   onLayout: (l: ChatLayout) => void;
-  memoryOpen: boolean;
-  memoryCount: number;
-  onToggleMemory: () => void;
   conversations: ReturnType<typeof useConversations>;
   busy: boolean;
   /** En el móvil el chat tapa la pantalla: la ✕ es la única salida. */
@@ -58,23 +54,6 @@ export function ChatHeader({
         {t.rich("newChat.header.line", { b: (chunks) => <b className="font-semibold fg">{chunks}</b> })}
       </span>
       <span className="ml-auto" />
-      <button
-        type="button"
-        onClick={onToggleMemory}
-        // Abre y cierra un panel: `aria-expanded`, como la cabecera del chat de
-        // hoy. Y el número va en el nombre, que si no el globito no se oye.
-        aria-expanded={memoryOpen}
-        aria-label={memoryCount > 0 ? `${t("memoria.title")} (${memoryCount})` : t("memoria.title")}
-        title={t("memoria.title")}
-        className="relative grid h-7 w-7 place-items-center rounded-lg fg-muted hover:bg-elev hover:fg aria-expanded:bg-elev aria-expanded:fg"
-      >
-        <Brain size={15} />
-        {memoryCount > 0 && (
-          <span className="absolute right-0.5 top-0.5 min-w-[13px] rounded-full bg-[var(--accent-strong)] px-[3px] text-[9px] font-semibold leading-[13px] text-white tabular-nums">
-            {memoryCount}
-          </span>
-        )}
-      </button>
       <div className="relative" ref={menu.refContenedor} onKeyDown={menu.alPulsarTecla}>
         <button
           type="button"

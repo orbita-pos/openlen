@@ -130,16 +130,6 @@
     "notUndone": "Annullato, tranne {rutas}: annullare un turno non ripristina il database, la memoria né le impostazioni."
   },
   "cutShort": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla la pagina.",
-  "memoria": {
-    "description": "Preferenze che Len ha salvato per TUTTE le tue pagine, non solo questa.",
-    "remove": "Rimuovi",
-    "title": "Memoria di Len",
-    "briefHint": "Note che Len legge a ogni messaggio di QUESTA pagina.",
-    "briefPlaceholder": "es.\n\n- Questa è una landing per Counter, una caffetteria a Polanco.\n- Tono di voce: caldo, amichevole, senza gergo tecnico.\n- Accent: arancione caldo (#C66B3D).\n- Da fare: chiedere al designer il logo definitivo.",
-    "saving": "Salvataggio…",
-    "saved": "Salvato · iniettato in ogni chat",
-    "saveFailed": "Salvataggio non riuscito"
-  },
   "diff": {
     "anadida": "Aggiunto {que}",
     "quitada": "Rimosso {que}",
@@ -170,9 +160,6 @@
       "archivedEmpty": "Ancora nessuna conversazione salvata.",
       "reopen": "Torna a questa conversazione",
       "messages": "{count, plural, one {# messaggio} other {# messaggi}}"
-    },
-    "memory": {
-      "empty": "Len non ricorda ancora niente di te. Quando gli dirai qualcosa che vale per tutte le tue pagine, lo vedrai qui."
     },
     "empty": {
       "title": "Cosa facciamo oggi alla tua pagina?",

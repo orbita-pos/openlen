@@ -31,7 +31,6 @@ import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
 import { liveStatus } from "./live-status";
-import { MemoryDrawer, useAgentMemory } from "./len-memory";
 import { useAgentChat, type PendingAttachments, type ScopedSelection } from "./use-agent-chat";
 import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
@@ -165,21 +164,8 @@ function AgentChatView({
     turnosDelHilo.recogido(projectId, turnoDelHilo);
     seguirTurnoDelHilo(turnoDelHilo);
   }, [turnoDelHilo, projectId, seguirTurnoDelHilo]);
-  const memory = useAgentMemory();
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
-  const [memoryOpen, setMemoryOpen] = useState(false);
-  // La memoria se relee al abrir el cajón y al cerrarse cada turno (N30): Len
-  // pudo guardar una preferencia en él, y el «(N)» de la cabecera se ve sin abrir.
-  const { reload: reloadMemory } = memory;
-  useEffect(() => {
-    if (memoryOpen) void reloadMemory();
-  }, [memoryOpen, reloadMemory]);
-  const wasBusy = useRef(chat.busy);
-  useEffect(() => {
-    if (wasBusy.current && !chat.busy) void reloadMemory();
-    wasBusy.current = chat.busy;
-  }, [chat.busy, reloadMemory]);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
   const initial = useMemo(
@@ -332,9 +318,6 @@ function AgentChatView({
       <ChatHeader
         layout={layout}
         onLayout={setChatLayout}
-        memoryOpen={memoryOpen}
-        memoryCount={memory.lines?.length ?? 0}
-        onToggleMemory={() => setMemoryOpen((x) => !x)}
         conversations={conversations}
         busy={chat.busy}
         onClose={onClose}
@@ -355,9 +338,6 @@ function AgentChatView({
           />
         </div>
       )}
-      <div className={`nc-fold shrink-0 ${memoryOpen ? "border-b bd" : ""}`} data-open={memoryOpen}>
-        <div>{memoryOpen && <MemoryDrawer projectId={projectId} memory={memory} />}</div>
-      </div>
       <div ref={chat.scrollRef} className="nice-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3 pt-5">
         {chat.turns.length === 0 ? (
           <EmptyState

@@ -46,6 +46,27 @@ describe("arbolDeFicheros", () => {
     expect(elegido.has("/.openlen") && elegido.has("/.openlen/bandeja")).toBe(true);
     expect(elegido.has("/.openlen/versiones")).toBe(false);
   });
+
+  // plans/len-md: la memoria se ve y se edita aquí, como el /memory de Claude
+  // Code, que sólo abre los ficheros. /.len no es de la plataforma: no se pliega
+  // ni se marca de sólo lectura como /.openlen.
+  it("la memoria aparece en el árbol: ~/.len/LEN.md, /LEN.md y /.len/memory/", () => {
+    const arbol = arbolDeFicheros(
+      ["/index.html", "/LEN.md", "/home/user/.len/LEN.md", "/.len/memory/hero-oscuro.md", "/.len/memory/MEMORY.md"].map((ruta) => ({ ruta })),
+    );
+    expect(plano(arbol)).toEqual([
+      ".len/",
+      "  memory/",
+      "    hero-oscuro.md",
+      "    MEMORY.md",
+      "home/",
+      "  user/",
+      "    .len/",
+      "      LEN.md",
+      "index.html",
+      "LEN.md",
+    ]);
+  });
 });
 
 describe("marcasDeCambios — lo que cambió en la SESIÓN, para el árbol (la #19)", () => {

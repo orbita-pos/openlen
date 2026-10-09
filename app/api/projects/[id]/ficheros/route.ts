@@ -121,11 +121,6 @@ async function accesoDe(id: string, permiso: Permiso): Promise<(AccesoAlProyecto
   return acceso instanceof Response ? acceso : { ...acceso, quien: userId };
 }
 
-/** Para escribir: el id del DUEÑO (con él se guarda) si quien pide puede editar. */
-async function duenoDe(id: string): Promise<string | Response> {
-  const acceso = await accesoDe(id, "editar");
-  return acceso instanceof Response ? acceso : acceso.duenoId;
-}
 
 const esRuta = (x: unknown): x is string => typeof x === "string" && x.startsWith("/") && x.length <= 300 && !x.includes("\0");
 
@@ -154,12 +149,12 @@ async function cuerpoDe(req: Request): Promise<Record<string, unknown> | null> {
  */
 export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const c = await cuerpoDe(req);
   if (!c || !esRuta(c.ruta) || (c.contenido !== undefined && typeof c.contenido !== "string")) return json({ error: "sin_cuerpo" }, 400);
   if (typeof c.contenido === "string" && c.contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }, undefined, acceso.quien));
 });
 
 /**
@@ -169,11 +164,11 @@ export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(re
  */
 export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const c = await cuerpoDe(req);
   if (!c || !esRuta(c.de) || !esRuta(c.a)) return json({ error: "sin_cuerpo" }, 400);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "renombrar", de: c.de, a: c.a }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "renombrar", de: c.de, a: c.a }, undefined, acceso.quien));
 });
 
 /**
@@ -183,9 +178,9 @@ export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(
  */
 export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (!esRuta(ruta) || ruta === "/") return json({ error: "sin_cuerpo" }, 400);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "borrar", ruta }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "borrar", ruta }, undefined, acceso.quien));
 });

@@ -65,10 +65,12 @@ export function paginaVacia(ruta: string, portada: string | undefined): string {
 `;
 }
 
-function sesionDelEditor(projectId: string, userId: string): AgentSession {
+function sesionDelEditor(projectId: string, userId: string, personId?: string): AgentSession {
   return {
     projectId,
     userId,
+    // ~/.len/LEN.md es de quien opera, no del dueño (plans/len-md).
+    ...(personId && personId !== userId ? { personId } : {}),
     autor: "usuario",
     desde: "editor",
     page: null,
@@ -84,8 +86,10 @@ export async function operarAMano(
   userId: string,
   op: OperacionAMano,
   deps: AgentDeps = realDeps(),
+  /** Quien opera, si no es el dueño: su memoria personal es la suya. */
+  personId?: string,
 ): Promise<ResultadoAMano> {
-  const sesion = sesionDelEditor(projectId, userId);
+  const sesion = sesionDelEditor(projectId, userId, personId);
   const ahora = await cargarFicherosDeLaTerminal(sesion, deps);
   const todas = Object.keys(ahora);
   const guardar = (cambios: CambioDeLaTerminal[]) => guardarLoDeLaTerminal(sesion, deps, cambios, ahora);
