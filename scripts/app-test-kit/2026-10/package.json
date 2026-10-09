@@ -1,0 +1,19 @@
+{
+  "name": "openlen-app-test-kit-2026-10",
+  "private": true,
+  "description": "El kit de pruebas de las apps (plan 04): lo construye y congela npm run apps:vendor. React va sólo para los nombres y los tipos: el kit NO lo lleva.",
+  "dependencies": {
+    "@sinonjs/fake-timers": "15.4.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitest/expect": "4.1.11",
+    "@vitest/spy": "4.1.11",
+    "@vitest/utils": "4.1.11",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  }
+}

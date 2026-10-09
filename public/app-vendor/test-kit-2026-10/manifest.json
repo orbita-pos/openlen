@@ -1,0 +1,35 @@
+{
+  "kit": "test-kit-2026-10",
+  "versiones": {
+    "@sinonjs/fake-timers": "15.4.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@vitest/expect": "4.1.11",
+    "@vitest/spy": "4.1.11",
+    "@vitest/utils": "4.1.11",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "esbuild": "0.28.0",
+  "ficheros": {
+    "desarrollo": {
+      "testing-library-react.js": "sha256-MKgGBfqOhjgXVPbKqFeJAXJysN8o02M+g0tnGxk7Vl0=",
+      "testing-library-dom.js": "sha256-lSV2leiJ9Cod6scQeV+zVaTfbmP8oqy9njZMUmagnlc=",
+      "user-event.js": "sha256-zJkDfOevY5we7coPL6Y1GbqJ+mMZNVFH9nbJc4pYI4o=",
+      "jest-dom-matchers.js": "sha256-LwgLhrXk1K++p+V6Ox792Nt1ODSNmqfrweqcZX5PmHM=",
+      "vitest-expect.js": "sha256-9xzhnUX/StOAU+Zl3mHmate/hYxZxppwJUVgqobPWM8=",
+      "vitest-spy.js": "sha256-Q6PYI7SwuKFjqkLLgrGm/CHvd6ugJbtXcE+kmlbvARM=",
+      "vitest-diff.js": "sha256-LdO91PaN/uTAz7XiG01C0C6ItxlH5JeSk/zq12CVtys=",
+      "fake-timers.js": "sha256-hEf+mHCRqBwuWdZcSEn+Ox35Isd0j9UEk4BdmMDkx5o=",
+      "react-dom-test-utils.js": "sha256-cqybupzdYZeGPjWO12CNYFvQ4mC/tx6dGZhhvuGjt5w=",
+      "chunk-B2SEWPIF.js": "sha256-3BVtRrC//gA2k2qCzfCrGQS/1HhBnBjBcnNOZeukFCg=",
+      "chunk-FSRPMVAS.js": "sha256-PcVYZPfHVmfNoducbaS9tXHfnsCWUjFJk3dyV5oB4rQ=",
+      "chunk-IM6IBPRF.js": "sha256-VUTBK7V1HXQKqeddW0wPwHaKq57fY16vyZX594Iamis=",
+      "chunk-QW36OOGN.js": "sha256-hneQiMClkr1tPXtM7X8RgHmO5a04/HHE7E0BSgIj+wA=",
+      "chunk-WOHGBMTX.js": "sha256-h8K2EPSDxMSw7iL15SAi0upBsYRMKd0CKw0SRr6L7kY=",
+      "chunk-ZESWSGTP.js": "sha256-VizEak5XAfd2ElEvIAonGvfqmym5F17lV+DyUqUe/GQ="
+    }
+  }
+}

@@ -31,6 +31,7 @@ import ts from "typescript";
 import { CATALOGO_ACTUAL, CATALOGOS, catalogo, ficherosDelCatalogo, type Dependencia, type ModoVendor } from "../lib/apps/dependencias";
 import { EXPORTS_DEL_ENRUTADOR } from "../lib/apps/enrutador";
 import { ICONOS_DE_LAS_APPS } from "../lib/apps/iconos";
+import { TEST_KIT, TEST_KIT_NAME, testKitDir } from "../lib/apps/tests/test-kit";
 
 const require = createRequire(import.meta.url);
 const RAIZ = path.resolve(import.meta.dirname, "..");
@@ -148,8 +149,9 @@ function textoDeLicencia(dir: string): string | null {
     if (existsSync(path.join(dir, f))) return readFileSync(path.join(dir, f), "utf8").replace(/\r\n?/g, "\n").trim();
   }
   // Otros nombres, DESPUÉS de los de siempre (que no cambie lo de 2026-10):
-  // decimal.js-light, de recharts, la trae como `LICENCE.md`.
-  const otro = readdirSync(dir).find((f) => /^licen[cs]e(\.(md|txt))?$/i.test(f));
+  // decimal.js-light, de recharts, la trae como `LICENCE.md`; css.escape, de
+  // jest-dom (el kit de pruebas, plan 04), como `LICENSE-MIT.txt`.
+  const otro = readdirSync(dir).find((f) => /^licen[cs]e(-[a-z0-9]+)?(\.(md|txt))?$/i.test(f));
   if (otro) return readFileSync(path.join(dir, otro), "utf8").replace(/\r\n?/g, "\n").trim();
   // Un paquete que no trae su licencia en el tarball: copiada A MANO de su
   // repositorio, en la versión instalada, a scripts/app-vendor-licenses/.
@@ -613,8 +615,120 @@ function syncTypesPacks(): void {
   }
 }
 
+/** Lo que se congela del kit: cada fichero de su lista y sus trozos. */
+function ficherosDelKit(): string[] {
+  return [...new Set([...TEST_KIT.dependencias.map((d) => d.fichero), ...TEST_KIT.internos])];
+}
+
+/** React lo pone el catálogo de la app: fuera del kit, por su nombre. */
+const REACT_FUERA = ["react", "react-dom", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"];
+
+/**
+ * EL KIT DE PRUEBAS (plan 04, lib/apps/tests/test-kit.ts), congelado como un
+ * catálogo: sólo de desarrollo (las pruebas corren con el React de desarrollo,
+ * el de los ojos), por partes (una copia de @testing-library/dom para react y
+ * user-event), MINIFICADO (sin los comentarios de ruta de esbuild: la huella
+ * tiene que ser la misma en cualquier máquina) y con React FUERA.
+ */
+async function syncTestKit(): Promise<void> {
+  const soloComprobar = process.argv.includes("--comprobar");
+  const raiz = testKitDir(RAIZ);
+  for (const [paquete, version] of Object.entries(TEST_KIT.versiones)) {
+    const instalada = versionInstalada(paquete, raiz);
+    if (instalada !== version) throw new Error(`${paquete}: el kit ${TEST_KIT_NAME} dice ${version} y está instalada ${instalada}.`);
+  }
+  const guardado = path.join(RAIZ, "public", "app-vendor", TEST_KIT_NAME);
+  const nuevo = path.join(tmpdir(), `openlen-test-kit-${process.pid}`);
+  // Nombre fijo: la ruta de las fachadas no puede cambiar los bytes.
+  const fuentes = path.join(tmpdir(), "openlen-test-kit-fachadas");
+  rmSync(nuevo, { recursive: true, force: true });
+  rmSync(fuentes, { recursive: true, force: true });
+  mkdirSync(fuentes, { recursive: true });
+  try {
+    const entradas: string[] = [];
+    for (const d of TEST_KIT.dependencias) {
+      const f = path.join(fuentes, d.fichero);
+      if (d.especificador === "react-dom/test-utils") {
+        // React 19 ya no trae `act` en test-utils: Testing Library lo toma de aquí.
+        writeFileSync(f, 'export { act } from "react";\n');
+      } else {
+        const { names, conDefault } = await nombresEmpaquetados(d.especificador, raiz);
+        const desde = JSON.stringify(d.especificador);
+        writeFileSync(f, `${conDefault ? `export { default } from ${desde};\n` : ""}export { ${names.join(", ")} } from ${desde};\n`);
+      }
+      entradas.push(f);
+    }
+    // @sinonjs/fake-timers hace `_global.process && require("util").promisify`:
+    // en un navegador no hay `process` y no se llama nunca, pero esbuild tiene
+    // que resolverlo. Su campo `browser` ya vacía `vm` y `timers`; `util`, igual.
+    const utilVacio = path.join(fuentes, "util-vacio.cjs");
+    writeFileSync(utilVacio, "module.exports = {};\n");
+    const r = await build({
+      entryPoints: entradas,
+      outdir: path.join(nuevo, "desarrollo"),
+      bundle: true,
+      format: "esm",
+      platform: "browser",
+      target: "es2022",
+      minify: true,
+      legalComments: "inline",
+      splitting: true,
+      entryNames: "[name]",
+      chunkNames: "chunk-[hash]",
+      metafile: true,
+      logLevel: "error",
+      define: { "process.env.NODE_ENV": '"development"' },
+      nodePaths: [path.join(raiz, "node_modules")],
+      external: REACT_FUERA,
+      alias: { "react-dom/test-utils": path.join(fuentes, "react-dom-test-utils.js"), util: utilVacio },
+    });
+    const chunks = Object.keys(r.metafile!.outputs)
+      .map((o) => path.basename(o))
+      .filter((f) => f.startsWith("chunk-") && f.endsWith(".js"))
+      .sort();
+    if (JSON.stringify(chunks) !== JSON.stringify([...TEST_KIT.internos].sort())) {
+      throw new Error(`apps:vendor — los trozos del kit no son los declarados. Pon en TEST_KIT.internos (lib/apps/tests/test-kit.ts): ${JSON.stringify(chunks)}`);
+    }
+    const manifiesto = Object.fromEntries(ficherosDelKit().map((f) => [f, huella(path.join(nuevo, "desarrollo", f))]));
+    const textoLicencias = licencias(incluidos(r.metafile!.inputs));
+    const rutaManifiesto = path.join(guardado, "manifest.json");
+    if (existsSync(rutaManifiesto)) {
+      const antes = JSON.parse(readFileSync(rutaManifiesto, "utf8")) as { ficheros: { desarrollo: Record<string, string> } };
+      const distintos = Object.entries(antes.ficheros.desarrollo)
+        .filter(([f, h]) => manifiesto[f] !== h)
+        .map(([f]) => f);
+      if (distintos.length > 0) {
+        throw new Error(`🔴 el kit ${TEST_KIT_NAME} ya está construido y estos ficheros saldrían DISTINTOS: ${distintos.join(", ")}. Un kit no cambia de bytes: crea uno nuevo.`);
+      }
+      const faltan = ficherosDelKit().filter((f) => !existsSync(path.join(guardado, "desarrollo", f)));
+      if (faltan.length === 0) {
+        console.log(`apps:vendor — ${TEST_KIT_NAME} ya está construido y coincide byte a byte.`);
+        return;
+      }
+      if (soloComprobar) throw new Error(`faltan ficheros del kit ${TEST_KIT_NAME}: ${faltan.join(", ")}`);
+    } else if (soloComprobar) {
+      throw new Error(`el kit ${TEST_KIT_NAME} no está construido (npm run apps:vendor)`);
+    }
+    mkdirSync(path.join(guardado, "desarrollo"), { recursive: true });
+    for (const f of ficherosDelKit()) {
+      const destino = path.join(guardado, "desarrollo", f);
+      if (!existsSync(destino)) writeFileSync(destino, readFileSync(path.join(nuevo, "desarrollo", f)));
+    }
+    writeFileSync(path.join(guardado, "LICENCIAS.txt"), textoLicencias);
+    writeFileSync(
+      rutaManifiesto,
+      JSON.stringify({ kit: TEST_KIT_NAME, versiones: TEST_KIT.versiones, esbuild: versionInstalada("esbuild"), ficheros: { desarrollo: manifiesto } }, null, 2) + "\n",
+    );
+    console.log(`apps:vendor — ${TEST_KIT_NAME} construido en public/app-vendor/${TEST_KIT_NAME}/.`);
+  } finally {
+    rmSync(nuevo, { recursive: true, force: true });
+    rmSync(fuentes, { recursive: true, force: true });
+  }
+}
+
 async function main(): Promise<void> {
   await syncCatalog();
+  await syncTestKit();
   syncTypesPacks();
 }
 
