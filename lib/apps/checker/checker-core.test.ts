@@ -114,6 +114,17 @@ describe("las pruebas de una app (plan 04, tarea 9)", () => {
     expect(r.typescript.map((d) => d.codigo)).toContain("TS2551");
   });
 
+  it("🔴 el vite.config / vitest.config no es de la app (como el tsconfig.node.json de Lovable): sin falsos «Cannot find module»", () => {
+    const r = checkApp({
+      files: {
+        "/vitest.config.ts": 'import { defineConfig } from "vitest/config";\nexport default defineConfig({ test: { setupFiles: ["./src/setup.ts"] } });',
+        "/vite.config.ts": 'import react from "@vitejs/plugin-react";\nexport default { plugins: [react()] };',
+      },
+      typesPack: { ...TIPOS, ...kit() },
+    });
+    expect(r.typescript).toEqual([]);
+  });
+
   it("los tipos de React los pone el catálogo: el kit no los trae (no pisa los suyos)", () => {
     expect(Object.keys(kit()).filter((f) => /^\/node_modules\/(@types\/react|react|react-dom|csstype)\//.test(f))).toEqual([]);
   });

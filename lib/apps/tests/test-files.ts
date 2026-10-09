@@ -36,6 +36,9 @@ export function setupFilesOf(carpeta: Readonly<Record<string, string>>): string[
   return DE_COSTUMBRE.filter((r) => Object.hasOwn(carpeta, r));
 }
 
+/** Lo que no es de la app: las pruebas, sus `setupFiles` y el vite.config /
+ *  vitest.config (herramienta, como en Vite: nunca entra en el paquete, y su
+ *  `import "vitest/config"` no está en el catálogo). */
 export function isTestSupportFile(ruta: string, carpeta: Readonly<Record<string, string>>): boolean {
-  return isTestFile(ruta) || setupFilesOf(carpeta).includes(ruta);
+  return isTestFile(ruta) || CONFIGS.includes(ruta) || setupFilesOf(carpeta).includes(ruta);
 }
