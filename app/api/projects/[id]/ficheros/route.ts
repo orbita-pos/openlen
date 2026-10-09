@@ -45,6 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const sesion: AgentSession = {
     projectId: id,
     userId: acceso.duenoId,
+    // La memoria PERSONAL que ve la lente es la de quien mira, no la del dueño.
+    ...(acceso.quien !== acceso.duenoId ? { personId: acceso.quien } : {}),
     page: null,
     ownerEmail: null,
     imageEditsThisTurn: 0,
@@ -88,8 +90,8 @@ const MAX_FICHERO = 2_000_000;
  */
 export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
 
   let cuerpo: { ruta?: unknown; contenido?: unknown; base?: unknown };
   try {
@@ -103,7 +105,7 @@ export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req:
   }
   if (contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
 
-  const r = await guardarAMano(id, userId, ruta, contenido, base);
+  const r = await guardarAMano(id, acceso.duenoId, ruta, contenido, base, undefined, acceso.quien);
   if (r.ok) return json({ contenido: r.contenido });
   if (r.motivo === "cambio") return json({ error: "cambio", actual: r.actual }, 409);
   if (r.motivo === "rechazado") return json({ error: "rechazado", detalle: r.detalle }, 422);
@@ -111,11 +113,12 @@ export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req:
 });
 
 /** Quién pide y con qué rol (lib/projects/acceso.ts); si no entra, la respuesta de error. */
-async function accesoDe(id: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
+async function accesoDe(id: string, permiso: Permiso): Promise<(AccesoAlProyecto & { readonly quien: string }) | Response> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
-  return exigirAcceso(id, userId, permiso);
+  const acceso = await exigirAcceso(id, userId, permiso);
+  return acceso instanceof Response ? acceso : { ...acceso, quien: userId };
 }
 
 /** Para escribir: el id del DUEÑO (con él se guarda) si quien pide puede editar. */

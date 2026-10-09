@@ -21,7 +21,9 @@ vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ cargarFicherosDeLaTermi
 vi.mock("@/lib/agent/terminal/solo-lectura", () => ({ soloLecturaDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 
-import { DELETE, PATCH, POST, PUT } from "./route";
+import { DELETE, GET, PATCH, POST, PUT } from "./route";
+import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { operarAMano } from "@/lib/agent/terminal/operar-a-mano";
 import { auth } from "@/auth";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
@@ -64,7 +66,7 @@ describe("PUT /api/projects/[id]/ficheros — editar a mano (la #18)", () => {
     const bien = await pedir({ ...BIEN, userId: "otro" });
     expect(bien.status).toBe(200);
     expect(await bien.json()).toEqual({ contenido: "<h1>b</h1>" });
-    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", "/index.html", "<h1>b</h1>", "<h1>a</h1>");
+    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", "/index.html", "<h1>b</h1>", "<h1>a</h1>", undefined, "u1");
 
     vi.mocked(guardarAMano).mockResolvedValueOnce({ ok: false, motivo: "cambio", actual: "<h1>c</h1>" });
     const cambio = await pedir(BIEN);
@@ -142,7 +144,8 @@ describe("los miembros del proyecto (compartir el proyecto)", () => {
     comoUsuario("ana");
     propios.splice(0, propios.length, { duenoId: "u1", rol: "editor" });
     expect((await pedir(BIEN)).status).toBe(200);
-    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", BIEN.ruta, BIEN.contenido, BIEN.base);
+    // …y su memoria PERSONAL es la suya: va como persona (plans/len-md).
+    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", BIEN.ruta, BIEN.contenido, BIEN.base, undefined, "ana");
 
     vi.mocked(guardarAMano).mockClear();
     propios.splice(0, propios.length, { duenoId: "u1", rol: "lector" });
@@ -154,5 +157,26 @@ describe("los miembros del proyecto (compartir el proyecto)", () => {
     expect((await pedir(BIEN)).status).toBe(404);
     expect(guardarAMano).not.toHaveBeenCalled();
     expect(operarAMano).not.toHaveBeenCalled();
+  });
+});
+
+// 🔴 MIEMBROS (plans/len-md, Task 1): la lente arma su sesión con el DUEÑO —con
+// él se leen y guardan los ficheros—, pero la memoria PERSONAL que enseña y
+// guarda es la de quien mira (`personId`), nunca la del dueño.
+describe("la lente Código y la memoria personal de un miembro", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockReset();
+    vi.mocked(guardarAMano).mockReset();
+    vi.mocked(cargarFicherosDeLaTerminal).mockReset().mockResolvedValue({});
+    vi.mocked(soloLecturaDeLaTerminal).mockReset().mockResolvedValue({ rutas: [], leer: async () => "" } as never);
+  });
+
+  it("un LECTOR abre la lente: la sesión lleva su id como persona", async () => {
+    propios.splice(0, propios.length, { duenoId: "dueno", rol: "lector" });
+    comoUsuario("lector");
+    const r = await GET(new Request("http://x/api/projects/p1/ficheros"), { params: Promise.resolve({ id: "p1" }) });
+    expect(r.status).toBe(200);
+    const sesion = vi.mocked(cargarFicherosDeLaTerminal).mock.calls[0]![0];
+    expect(sesion).toMatchObject({ userId: "dueno", personId: "lector" });
   });
 });

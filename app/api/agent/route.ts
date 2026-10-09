@@ -802,7 +802,8 @@ async function correrTurno(
   // y lo que el dueño cambió a mano desde el último turno de Len (H07).
   const versionesDelProyecto = listVersions({ projectId, userId: userId }).catch(() => []);
   const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno] = await Promise.all([
-    getUserMemoryBounded(userId),
+    // La memoria PERSONAL es de quien habla, no del dueño (lib/agent/person.ts).
+    getUserMemoryBounded(quien),
     getEsfuerzoGuardado(userId),
     versionesDelProyecto.then(cambiosParaElAgente),
     // 🔴 H07 · ENTRE TURNOS, LEN SE ENTERA DE LO QUE EL DUEÑO TOCÓ. Una lectura
@@ -970,6 +971,7 @@ async function correrTurno(
   const agentSession: AgentSession = {
     projectId,
     userId,
+    ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md

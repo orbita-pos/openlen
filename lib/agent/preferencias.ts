@@ -7,6 +7,7 @@
  * bloque al final del brief.
  */
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
+import { personOf } from "@/lib/agent/person";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 
@@ -37,7 +38,7 @@ function normalizePreferencia(s: string): string {
 // model is trusted to make that call; this only owns storage mechanics:
 // marker placement, dedup, and the USER_BRIEF_MAX cap.
 export async function guardarPreferencia(
-  session: Pick<AgentSession, "projectId" | "userId">,
+  session: Pick<AgentSession, "projectId" | "userId" | "personId">,
   deps: Pick<AgentDeps, "rememberAboutUser" | "loadProject" | "setUserBrief">,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
@@ -69,7 +70,7 @@ export async function guardarPreferencia(
   // que esto cierra — la repite en cada proyecto nuevo y nunca se entera.
   const alcance = args.alcance === "esta_pagina" ? "esta_pagina" : "siempre";
   if (alcance === "siempre") {
-    const res = await deps.rememberAboutUser(session.userId, preferencia);
+    const res = await deps.rememberAboutUser(personOf(session), preferencia);
     if (!res.ok) {
       return {
         response: {

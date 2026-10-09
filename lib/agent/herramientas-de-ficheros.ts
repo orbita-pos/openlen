@@ -12,6 +12,7 @@
 import "server-only";
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
+import { personOf } from "@/lib/agent/person";
 import { detectSlotPath } from "@/lib/html-engine";
 import { diagnosticosDeLaEscritura } from "@/lib/agent/diagnosticos-de-la-escritura";
 import { persistPage } from "@/lib/page-engine/persist";
@@ -82,7 +83,7 @@ interface Virtuales {
 async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
   let dueno = "";
   try {
-    dueno = (await deps.leerMemoriaDelDueno?.(session.userId)) ?? "";
+    dueno = (await deps.leerMemoriaDelDueno?.(personOf(session))) ?? "";
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudo leer la memoria del dueño", err);

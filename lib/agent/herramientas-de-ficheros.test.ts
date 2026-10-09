@@ -680,6 +680,25 @@ describe("H3 · la memoria como ficheros: sólo se AÑADE", () => {
     assert.equal(out.response.ok, true, texto(out));
     assert.equal(estado.brief, "Taquería en Guadalajara\n\n— Preferencias guardadas por el agente —\n• El tono es formal");
   });
+
+  it("🔴 MIEMBROS: un editor lee y escribe SU memoria, no la del dueño", async () => {
+    const memorias: Record<string, string | null> = { dueno: "— Lo que sé de ti —\n• Háblale de tú", editor: null };
+    const quienEscribe: string[] = [];
+    const { deps } = depsConMemoria(null, null);
+    deps.leerMemoriaDelDueno = async (u: string) => memorias[u] ?? null;
+    deps.rememberAboutUser = async (u: string, p: string) => {
+      quienEscribe.push(u);
+      memorias[u] = `${memorias[u] ?? "— Lo que sé de ti —"}\n• ${p}`;
+      return { ok: true as const, yaExistia: false };
+    };
+    const session = { ...makeSession(), userId: "dueno", personId: "editor" } as AgentSession;
+    const read = await runAgentTool(session, deps, "Read", { file_path: "/memoria/dueno.md" });
+    assert.doesNotMatch(texto(read), /Háblale de tú/);
+    const out = await runAgentTool(session, deps, "Write", { file_path: "/memoria/dueno.md", content: "• Háblame de usted" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.deepEqual(quienEscribe, ["editor"]);
+    assert.match(String(memorias.dueno), /Háblale de tú$/);
+  });
 });
 
 // LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el

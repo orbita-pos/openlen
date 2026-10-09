@@ -36,10 +36,13 @@ export async function guardarAMano(
   contenido: string,
   base: string,
   deps: AgentDeps = realDeps(),
+  /** Quien edita, si no es el dueño: su memoria personal es la suya (lib/agent/person.ts). */
+  personId?: string,
 ): Promise<GuardadoAMano> {
   const sesion: AgentSession = {
     projectId,
     userId,
+    ...(personId && personId !== userId ? { personId } : {}),
     autor: "usuario",
     desde: "editor",
     page: null,
