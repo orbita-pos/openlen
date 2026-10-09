@@ -58,6 +58,10 @@ export interface OpcionesDelDocumento {
    *  los que se publican (`isPublishableFolderPath`), y desde memoria: ver
    *  `localResponseFor`. */
   readonly files?: Readonly<Record<string, string>>;
+  /** UNA APP (plan 02): el sourcemap de cada fichero servido que lo tiene (el
+   *  paquete de la entrada). No se le sirve al navegador: con él se traducen
+   *  las trazas de sus errores (`traductorDeMapas`). */
+  readonly sourceMaps?: Readonly<Record<string, string>>;
   /** La página que es (`null` o ausente = la home). El documento se sirve en
    *  `/<id>/<pagina>/` para que lo relativo se resuelva desde su carpeta, como
    *  en la publicada (`/<pagina>/`). */

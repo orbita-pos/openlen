@@ -79,7 +79,14 @@ export function carpetaServida(
  *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
 export function carpetaDeLaVista(
   vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
-): { files: Readonly<Record<string, string>>; pagina: string | null; hash?: string; esperarALaRed?: boolean } | undefined {
+): {
+  files: Readonly<Record<string, string>>;
+  /** UNA APP (plan 02): el mapa del paquete, para traducir las trazas. */
+  sourceMaps?: Readonly<Record<string, string>>;
+  pagina: string | null;
+  hash?: string;
+  esperarALaRed?: boolean;
+} | undefined {
   const app = vista?.app ?? null;
   const files = vista?.files ?? {};
   if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
