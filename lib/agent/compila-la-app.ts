@@ -26,6 +26,7 @@ import { compilarCarpeta, textoDeDiagnostico, type Diagnostico as DeCompilacion 
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { AppDeProyecto } from "@/lib/projects/types";
+import { readTwConfigProblem } from "@/lib/publish/tw-config";
 
 type Carpeta = ReadonlyMap<string, string> | Readonly<Record<string, string>>;
 
@@ -72,14 +73,17 @@ export function problemasDelCascaron(app: AppDeProyecto, cascaron: string, carpe
       fuera.push(diag(`${app.entrada} mounts the app in #${id}, and the shell has no element with id="${id}".`, "raiz"));
     }
   }
-  // El tailwind.config de shadcn trae `plugins: [require("tailwindcss-animate")]`
-  // por reflejo. En el navegador `require` no existe: el script lanza y el CDN se
-  // queda sin la config ENTERA (colores, radios, modo oscuro). Sólo cuenta un
-  // `require(` en el MISMO script que asigna la config.
-  if (/<script\b[^>]*>(?:(?!<\/script)[\s\S])*?tailwind\.config\s*=(?:(?!<\/script)[\s\S])*?\brequire\s*\(/i.test(cascaron)) {
+  // EL TAILWIND.CONFIG, leído por el MISMO lector que la publicación
+  // (`readTwConfigProblem`, lib/publish/tw-config.ts), no adivinado con una regex:
+  // lo que dice aquí es lo que pasará al publicar. El de shadcn trae `plugins:
+  // [require("tailwindcss-animate")]` por reflejo; con eso, o con una función o
+  // una variable, la publicación no lo puede leer (se queda el CDN) y en el
+  // navegador un `require` o una variable sin definir lanza: la config ENTERA
+  // —colores, radios, modo oscuro— se pierde.
+  if (readTwConfigProblem(cascaron) !== null) {
     fuera.push(
       diag(
-        "The shell's tailwind.config calls require(). There is no require in a browser: the script throws and the whole config is lost (colors, radius, dark mode). Keep the config as plain data, with no plugins; write keyframes and animations in theme.extend.",
+        "The shell's tailwind.config isn't plain data: it has code (require(), a plugin, a function, a variable or a spread). In the browser require() or an undefined variable throws and the whole config is lost (colors, radius, dark mode), and publishing can't read it. Keep the config as plain data, with no plugins; write keyframes and animations in theme.extend.",
         "tailwind-config",
       ),
     );

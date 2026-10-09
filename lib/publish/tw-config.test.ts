@@ -3,6 +3,7 @@ import {
   extractTwConfig,
   injectTwCarrier,
   readTwCarrier,
+  readTwConfigProblem,
   readTwDarkMode,
   stripTwCarrier,
 } from "./tw-config";
@@ -291,6 +292,16 @@ describe("darkMode (apps 2026-11, tarea 3)", () => {
     const extend = { colors: { a: "#000" } };
     expect(injectTwCarrier("<head></head>", extend)).toBe(injectTwCarrier("<head></head>", extend, null));
     expect(injectTwCarrier("<head></head>", extend)).toContain('tailwind.config={"theme":{"extend":{"colors":{"a":"#000"}}}}');
+  });
+
+  test("readTwConfigProblem: el mismo lector que la publicación dice si la config es datos", () => {
+    expect(readTwConfigProblem(`<script>tailwind.config = { theme: { extend: {} }, plugins: [require("x")] }</script>`)).toBe("json5-imparseable");
+    expect(readTwConfigProblem("<script>tailwind.config = { a: 1 }; hacerAlgo()</script>")).toBe("codigo-alrededor-de-la-asignacion");
+    // Datos, aunque el validador descarte sus valores: no es un problema de código.
+    expect(readTwConfigProblem(`<script>tailwind.config = { theme: { extend: { colors: { x: "javascript:y" } } } }</script>`)).toBeNull();
+    // Nuestro carrier no es «la config del documento».
+    expect(readTwConfigProblem(injectTwCarrier("<head></head>", { colors: { a: "#000" } }))).toBeNull();
+    expect(readTwConfigProblem("<p>sin config</p>")).toBeNull();
   });
 
   test("una config con SÓLO darkMode no cuenta como descartada: su darkMode se lee", () => {
