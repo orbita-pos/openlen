@@ -32,7 +32,6 @@ interface FakeProject {
 }
 
 const db: Record<string, FakeProject> = {};
-const memory = { lines: ["Tono cercano, sin tecnicismos", "Fotos cálidas y reales, nada de stock frío"] };
 let scenarioOverride: ScenarioId | null = null;
 const live = new Map<string, { steer: (texto: string) => void; abort: () => void; dismiss: () => boolean }>();
 const onServer = new Map<string, { polls: number; turn: StoredChatTurn; final?: Partial<StoredChatTurn> }>();
@@ -280,13 +279,6 @@ function install() {
       return method === "GET"
         ? json({ esfuerzo: "auto", niveles: ["low", "medium", "high", "xhigh", "max"], resuelveA: "medium", dynamis: true })
         : json({ ok: true });
-    }
-    if (path === "/api/agent/memoria") {
-      if (method === "DELETE") {
-        const { preferencia } = body() as { preferencia: string };
-        memory.lines = memory.lines.filter((l) => l !== preferencia);
-      }
-      return json({ lineas: memory.lines });
     }
     if (path === "/api/agent/responder" && method === "POST") {
       // Lote 7-8: sólo el descarte; contestar sigue yendo al servidor de verdad

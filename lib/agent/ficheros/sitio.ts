@@ -10,8 +10,10 @@
  * `data.pages`). Esto sólo sabe nombrarlos. Escribirlos pasa por el camino de
  * guardado de siempre (`lib/page-engine`), nunca por aquí.
  *
- * Sin imports: lo prueba vitest sin binding nativo ni base.
+ * Sin más import que `len-md.ts`, puro también: lo prueba vitest sin binding
+ * nativo ni base.
  */
+import { HOME_DIR } from "./len-md";
 
 /** La carpeta de trabajo: la raíz del sitio. Es la que Claude Code le
  *  recuerda al modelo cuando busca un fichero que no está. */
@@ -45,8 +47,10 @@ export function rutaDePagina(page: string | null): string {
  * resuelve contra la raíz, se aceptan barras invertidas, y `.`/`..` se pliegan.
  */
 export function resolverRuta(filePath: string): string {
+  // `~` es el HOME de la terminal (`len-md.ts`), como en bash.
+  const expandida = filePath === "~" || filePath.startsWith("~/") ? HOME_DIR + filePath.slice(1) : filePath;
   const partes: string[] = [];
-  for (const trozo of filePath.replace(/\\/g, "/").split("/")) {
+  for (const trozo of expandida.replace(/\\/g, "/").split("/")) {
     if (trozo === "" || trozo === ".") continue;
     if (trozo === "..") {
       partes.pop();

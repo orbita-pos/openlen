@@ -125,7 +125,7 @@ describe("lenguajeDe", () => {
     expect(lenguajeDe("/menu/index.html")).toBe("html");
     expect(lenguajeDe("/datos/reservas.json")).toBe("json");
     expect(lenguajeDe("/bandeja/mensajes.jsonl")).toBe("json");
-    expect(lenguajeDe("/memoria/proyecto.md")).toBe("markdown");
+    expect(lenguajeDe("/LEN.md")).toBe("markdown");
     expect(lenguajeDe("/robots.txt")).toBeNull();
     // La carpeta (pieza 9 de Len 2.5): el manifiesto de la app instalable es JSON.
     expect(lenguajeDe("/app.webmanifest")).toBe("json");

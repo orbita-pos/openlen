@@ -3,7 +3,7 @@
  *
  * La terminal ve los MISMOS ficheros que Read, Edit y Write —un solo mundo, la
  * regla de DeepSeek (`implemented/feature/2026-07-06-sandbox.md`): las páginas,
- * las migraciones en `/supabase`, la memoria en `/memoria` y el manual en
+ * las migraciones en `/supabase`, la memoria (`~/.len/LEN.md`, `/LEN.md`, `/.len/memory`) y el manual en
  * `/AGENTS.md`—, más un `/tmp` que vive lo que dura el turno. Corre sobre
  * `just-bash`, un bash escrito en TypeScript sobre ficheros en memoria: no crea
  * procesos, no toca el disco del servidor ni la red.

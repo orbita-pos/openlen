@@ -18,7 +18,7 @@ import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
-import { RUTA_MEMORIA_DUENO, RUTA_MEMORIA_PROYECTO } from "@/lib/agent/ficheros/memoria";
+import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { directionToBriefBlock } from "@/lib/style-match/direction";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import { REGLA_DEL_EQUIPO } from "./equipo";
@@ -35,9 +35,10 @@ export function userMemoryBlock(memoria: string | null | undefined, ruta?: strin
   if (!v) return "";
   // En inglés desde la traducción de lo que lee Len (2026-10-02), también para
   // Crear y el Chat, que lo comparten: decisión de Jesús.
-  return `WHAT YOU KNOW ABOUT THIS PERSON ${ruta ? `— ${ruta} ` : ""}(from earlier conversations, on ANY of their pages — it isn't about this project, it's about them):
+  return `WHAT YOU KNOW ABOUT THIS PERSON ${ruta ? `— ${ruta} ` : ""}(their private instructions, on ANY of their pages — it isn't about this project, it's about them${ruta ? "; edit this file to change them" : ""}):
 ${v}
 Respect it without them having to repeat it. If something here clashes with what they ask TODAY, today wins and you don't argue: the memory is a starting point, not a rule over them.
+It belongs to the person speaking now: in a shared project each person has their own, so never quote it to anyone else on the project.
 
 `;
 }
@@ -278,7 +279,9 @@ export function buildAgentContext(args: {
   /** Cuántos turnos de la conversación ve, de cuántos hay. Ausente o iguales ⇒
    *  no se dice nada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
-  userBrief: string | null;
+  // ⚰️ Aquí iba `userBrief` (el PROJECT BRIEF de /memoria/proyecto.md). Desde
+  // plans/len-md el /LEN.md del proyecto es un MENSAJE DURADERO de la
+  // conversación, como en DeepSeek (`memoryMessage` de buildAgentMessages).
   /** F2 Task 8 — the user attached an image this turn (same shape the route
    *  validates in ai-design: real http(s) URL, optional alt). Present ⇒ the
    *  model is told to place it with Edit using the URL verbatim, replacing a
@@ -297,11 +300,6 @@ export function buildAgentContext(args: {
    *  salida byte-idéntica. */
   styleDirection?: StyleDirection | null;
 }): string {
-  const brief = (args.userBrief ?? "").trim();
-  const briefBlock = brief
-    ? `PROJECT BRIEF — ${RUTA_MEMORIA_PROYECTO} (persistent — applies to every request):\n${brief}\n\n`
-    : "";
-
   let imageBlock = "";
   const imagenes = args.attachedImages ?? [];
   if (imagenes.length > 1) {
@@ -351,9 +349,11 @@ ${dicho.map((d) => `- «${d}»`).join("\n")}
 
 ${dichoBlock}`
       : dichoBlock;
-  // H3 — con su ruta, como Claude Code mete cada CLAUDE.md con la suya: son los
-  // ficheros /memoria, y ya cuentan como leídos (`memoriaSembrada`).
-  const memoriaBlock = userMemoryBlock(args.userMemory, RUTA_MEMORIA_DUENO);
+  // H3 — con su ruta, como Claude Code mete cada CLAUDE.md con la suya; ya
+  // cuenta como leído (`memoriaSembrada`). Sólo lo PERSONAL va aquí: es de
+  // quien habla y la conversación es compartida (plans/len-md). El /LEN.md del
+  // proyecto es el mensaje duradero (`memoryMessage`).
+  const memoriaBlock = userMemoryBlock(args.userMemory, PERSONAL_LEN_MD);
   // ⚰️ AQUÍ IBA EL DOCUMENTO: la página activa con un `data-op-id` en cada
   // elemento, delante de todo; o, con un pin, sólo su sección más un índice del
   // resto; o, si no cabía, sólo el índice (el «plano B»), con `leer_estado
@@ -362,7 +362,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -410,7 +410,14 @@ export interface BuildAgentMessagesArgs {
   degradaciones?: readonly DegradacionConocida[];
   /** Ver buildAgentContext.conversacionRecortada. */
   conversacionRecortada?: { visibles: number; totales: number } | null;
-  userBrief: string | null;
+  /**
+   * LEN.md (plans/len-md): el mensaje de memoria del PROYECTO de este turno
+   * —línea base o refresco, `lib/agent/memory/memory-messages.ts`—, o nada si
+   * no cambió. Va como su propio mensaje justo antes del contexto, y la ruta
+   * lo guarda en la transcripción para reponerlo en su sitio: así lo de
+   * delante sigue en caché, como en DeepSeek.
+   */
+  memoryMessage?: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
@@ -472,7 +479,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     equipo: args.equipo,
     zona: args.zona,
     state: args.state,
-    userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,
     cambios: args.cambios,
@@ -501,7 +507,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
   // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
   const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImages ?? []).filter((f) => f.visible).length;
-  const fijo = manual + contextBlock + args.prompt + avisos;
+  const fijo = manual + (args.memoryMessage ?? "") + contextBlock + args.prompt + avisos;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
     args.maxPromptTokens;
@@ -533,6 +539,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     { role: "system", content: systemPrompt },
     { role: "user", content: manual },
     ...history,
+    ...(args.memoryMessage ? [{ role: "user" as const, content: args.memoryMessage }] : []),
     { role: "user", content: contextBlock },
     { role: "user", content: `${args.prompt}${avisos}` },
   ];

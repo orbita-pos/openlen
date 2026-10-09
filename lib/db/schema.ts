@@ -1366,6 +1366,28 @@ export const codeMentions = pgTable(
   (t) => [index("codeMentions_user_idx").on(t.userId, t.projectId)],
 );
 
+// LEN.md Y SU MEMORIA (plans/len-md): las notas que Len escribe en
+// /.len/memory/. Sin historial, como Claude Code: el cambio se ve en la tarjeta
+// del chat. Mantener en sintonía con scripts/len-memory-migrate.ts.
+export const lenMemoryNotes = pgTable(
+  "lenMemoryNotes",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    type: text("type").$type<"feedback" | "project" | "reference">().notNull(),
+    description: text("description").notNull(),
+    body: text("body").notNull(),
+    /** Quien habló cuando Len la escribió; NULL = una ronda sin nadie delante. */
+    authorId: text("authorId"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    /** Borrada (`rm`): una nota con el mismo nombre la revive. */
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
+  },
+  (t) => [uniqueIndex("lenMemoryNotes_project_name_idx").on(t.projectId, t.name)],
+);
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",

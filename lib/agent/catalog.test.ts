@@ -222,9 +222,9 @@ describe("buildFunctionDeclarations", () => {
     expect(nombres).not.toContain("guardar_dato_del_negocio");
     expect(nombres).not.toContain("recordar_del_negocio");
     // BRAZO DE CONTROL: la memoria de la PERSONA NO es su hermana y se queda —
-    // users.agentMemory no está escrita en ninguna página—; desde H3 es el
-    // fichero /memoria/dueno.md.
-    expect(buildAgentSystemPrompt()).toContain("/memoria/dueno.md");
+    // users.agentMemory no está escrita en ninguna página—; desde plans/len-md
+    // es el fichero ~/.len/LEN.md.
+    expect(buildAgentSystemPrompt()).toContain("~/.len/LEN.md");
   });
 
   it("pieza 5: la línea de session-query de DeepSeek, sin las herramientas de trace que Len no tiene", () => {
@@ -241,14 +241,20 @@ describe("buildFunctionDeclarations", () => {
     expect(buildAgentSystemPrompt({ OPENLEN_TERMINAL: "0" })).not.toContain("investigate failures before moving on");
   });
 
-  it("H3 · la memoria son dos ficheros: sólo lo DURABLE, nunca el pedido puntual, y sólo se añade", () => {
+  // LEN.md (plans/len-md): la memoria como la de Claude Code — las capas, los
+  // tipos de nota, qué NO se guarda y que una memoria vieja se corrige o se borra.
+  it("LEN.md: el prompt explica las capas, los tipos y que la memoria se corrige", () => {
     const p = buildAgentSystemPrompt();
-    const seccion = p.slice(p.indexOf("MEMORY IS TWO FILES")).split(SALTO + SALTO)[0];
-    expect(seccion).toContain("/memoria/dueno.md");
-    expect(seccion).toContain("/memoria/proyecto.md");
-    expect(seccion).toContain("DURABLE");
-    expect(seccion.toLowerCase()).toContain("one-off");
-    expect(seccion).toContain("Lines are only added");
+    const seccion = p.slice(p.indexOf("MEMORY — ")).split(SALTO + SALTO)[0];
+    expect(seccion).toContain("~/.len/LEN.md");
+    expect(seccion).toContain("/LEN.md");
+    expect(seccion).toContain("/.len/memory/");
+    expect(seccion).toMatch(/feedback[\s\S]*project[\s\S]*reference/);
+    expect(seccion).toMatch(/Record success too/);
+    expect(seccion).toMatch(/Do NOT save/);
+    expect(seccion).toMatch(/update or remove it/);
+    expect(p).not.toContain("/memoria/");
+    expect(p).not.toContain("Lines are only added");
   });
   it("publish exposes optional subdomain + languages(ARRAY of STRING), nothing required, enumerates PUBLISH_LOCALES", () => {
     const d = buildFunctionDeclarations().find((x) => x.name === "publish") as any;

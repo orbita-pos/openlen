@@ -396,6 +396,8 @@ export default defineConfig({
       // Len 2.0: el sitio como ficheros, con el contrato de Read/Edit/Write/
       // Grep/Glob de Claude Code (plans/len-2/ficheros-plan.md). Piezas puras.
       "lib/agent/ficheros/**/*.test.ts",
+      // LEN.md y su memoria (plans/len-md): la nota, el índice, el mensaje duradero.
+      "lib/agent/memory/**/*.test.ts",
       // …y lo que vuelve tras editar: `<new-diagnostics>` anclados a línea.
       "lib/agent/diagnosticos.test.ts",
       "lib/agent/diagnosticos-de-la-escritura.test.ts",

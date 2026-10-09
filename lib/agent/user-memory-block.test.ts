@@ -7,7 +7,6 @@ import { buildAgentContext } from "./context";
 const base = {
   now: new Date("2026-08-22T12:00:00Z"),
   state: { titulo: "x", publicado: false },
-  userBrief: null,
 };
 
 describe("la memoria de la persona en el contexto", () => {
@@ -26,6 +25,14 @@ describe("la memoria de la persona en el contexto", () => {
     expect(out.indexOf("nunca uses amarillo")).toBeLessThan(out.indexOf("PROJECT STATE"));
   });
 
+  // plans/len-md: en un proyecto compartido cada miembro tiene su ~/.len/LEN.md
+  // y la conversación la ven todos (lib/agent/memory/private-memory.ts).
+  it("🔴 dice que es de quien habla AHORA y que no se le cita a nadie más del proyecto", () => {
+    const out = buildAgentContext({ ...base, userMemory: "• sin emojis" });
+    expect(out).toMatch(/person speaking now/);
+    expect(out).toMatch(/never quote (it|them) to anyone else/);
+  });
+
   it("dice que es de la PERSONA, no del proyecto", () => {
     // Si el modelo cree que es del proyecto, la aplicará sólo aquí — que es
     // exactamente el bug que esto cierra.
@@ -40,14 +47,13 @@ describe("la memoria de la persona en el contexto", () => {
     expect(out).toMatch(/today wins/);
   });
 
-  it("la memoria va ANTES que el brief del proyecto", () => {
-    // Lo general antes de lo particular: así un brief que contradiga la
-    // memoria gana por cercanía al prompt.
-    const out = buildAgentContext({
-      ...base,
-      userMemory: "• háblame de tú",
-      userBrief: "Esta página es para un despacho de abogados",
-    });
-    expect(out.indexOf("háblame de tú")).toBeLessThan(out.indexOf("despacho de abogados"));
+  // LEN.md (plans/len-md): lo general antes que lo particular sigue siendo
+  // verdad, pero ahora por construcción: el /LEN.md del proyecto es el mensaje
+  // duradero que va ANTES del contexto, y esta memoria va DENTRO del contexto,
+  // con su ruta, porque es privada de quien habla.
+  it("la memoria personal va con su ruta y dice que se edita ahí", () => {
+    const out = buildAgentContext({ ...base, userMemory: "• háblame de tú" });
+    expect(out).toContain("/home/user/.len/LEN.md");
+    expect(out).toMatch(/edit this file to change them/);
   });
 });

@@ -12,6 +12,7 @@ import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession 
 import type { ProjectData } from "@/lib/projects/types";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
+import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
 import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
@@ -63,7 +64,6 @@ function makeDeps(data: ProjectData) {
     uploadAsset: noUsada,
     editImage: noUsada,
     setUserBrief: noUsada,
-    rememberAboutUser: noUsada,
     listVersions: noUsada,
     restoreVersion: noUsada,
   } as unknown as AgentDeps;
@@ -413,7 +413,7 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     for (const out of [edit, write]) {
       assert.equal(out.response.ok, false);
       assert.match(JSON.stringify(out.response), /read-only/);
-      assert.match(JSON.stringify(out.response), /\/memoria\/dueno\.md/);
+      assert.match(JSON.stringify(out.response), /LEN\.md/);
     }
     assert.equal(store.saved, 0, "no se guardó nada");
   });
@@ -575,110 +575,163 @@ describe("H2 retirada · ToolSearch ya no existe y nada está diferido", () => {
 // declarado y el almacén no declarado). `/datos` se retiró con `data-ol-stores`
 // el 2026-10-04. El aviso de visitante lo sigue vigilando la bandeja (F5).
 
-describe("H3 · la memoria como ficheros: sólo se AÑADE", () => {
-  function depsConMemoria(memoria: string | null, brief: string | null) {
+describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y borra", () => {
+  const NOTA: MemoryNote = {
+    name: "hero-oscuro",
+    description: "El dueño rechazó el hero oscuro (2026-10-08)",
+    type: "feedback",
+    body: "No uses fondo oscuro en el hero.\n\n**Why:** su marca es clara.\n**How to apply:** heros claros.",
+  };
+
+  function depsConLenMd(o: { personal?: Record<string, string | null>; brief?: string | null; notas?: MemoryNote[] } = {}) {
     const base = makeDeps({ html: HOME });
-    const estado = { memoria, brief, recordadas: [] as string[] };
+    const estado = {
+      personal: { u1: null, ...(o.personal ?? {}) } as Record<string, string | null>,
+      brief: o.brief ?? null,
+      notas: new Map((o.notas ?? []).map((n) => [n.name, n] as const)),
+      borradas: [] as string[],
+    };
     const deps = {
       ...base.deps,
       async loadProject() {
         return { data: { html: HOME }, title: "Brote", subdomain: null, publishedAt: null, userBrief: estado.brief };
       },
-      async leerMemoriaDelDueno() {
-        return estado.memoria;
+      async leerMemoriaDelDueno(u: string) {
+        return estado.personal[u] ?? null;
       },
-      async rememberAboutUser(_u: string, p: string) {
-        estado.recordadas.push(p);
-        estado.memoria = `${estado.memoria ?? "— Lo que sé de ti —"}\n• ${p}`;
-        return { ok: true as const, yaExistia: false };
+      async setPersonalLenMd(u: string, t: string | null) {
+        estado.personal[u] = t;
+        return true;
       },
       async setUserBrief(_p: string, _u: string, v: string) {
         estado.brief = v;
         return true;
       },
+      memoryNotes: {
+        async list() {
+          return [...estado.notas.values()].reverse().map((n) => ({ ...n, updatedAt: new Date(0) }));
+        },
+        async upsert(_p: string, n: MemoryNote) {
+          const before = estado.notas.get(n.name);
+          estado.notas.set(n.name, n);
+          return { before: before ? serializeNote(before) : null };
+        },
+        async remove(_p: string, name: string) {
+          const before = estado.notas.get(name);
+          estado.notas.delete(name);
+          estado.borradas.push(name);
+          return { before: before ? serializeNote(before) : null };
+        },
+      },
     } as unknown as AgentDeps;
     return { deps, estado };
   }
 
-  it("Read enseña lo que sabe del dueño; añadir una línea la guarda con la mecánica de siempre", async () => {
-    const { deps, estado } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
-    const session = makeSession();
-    const read = await runAgentTool(session, deps, "Read", { file_path: "/memoria/dueno.md" });
-    assert.match(texto(read), /Háblale de tú/);
-    const out = await runAgentTool(session, deps, "Edit", {
-      file_path: "/memoria/dueno.md",
-      old_string: "• Háblale de tú",
-      new_string: "• Háblale de tú\n• Nunca uses amarillo",
-    });
+  it("Read de ~/.len/LEN.md y de /LEN.md", async () => {
+    const { deps } = depsConLenMd({ personal: { u1: "Háblame de tú." }, brief: "Taquería en Guadalajara." });
+    const s = makeSession();
+    assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "~/.len/LEN.md" })), /Háblame de tú/);
+    assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "/LEN.md" })), /Taquería en Guadalajara/);
+  });
+
+  it("🔴 Edit sustituye: Len puede CORREGIR una línea vieja (adiós a «sólo se añade»)", async () => {
+    const { deps, estado } = depsConLenMd({ personal: { u1: "Háblame de tú." } });
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "~/.len/LEN.md" });
+    const out = await runAgentTool(s, deps, "Edit", { file_path: "~/.len/LEN.md", old_string: "de tú", new_string: "de usted" });
     assert.equal(out.response.ok, true, texto(out));
-    assert.deepEqual(estado.recordadas, ["Nunca uses amarillo"]);
+    assert.equal(estado.personal.u1, "Háblame de usted.");
     assert.equal(out.mutoDurable, true);
+    assert.match(String(out.action?.summary), /LEN\.md/, "la tarjeta del chat dice qué memoria se tocó");
   });
 
-  // N41: con la memoria llena, el dueño lo lee en su idioma (no «your preference
-  // memory is full…»): es suyo decidir qué se borra.
-  it("con la memoria llena, la línea no se guarda y al dueño se le dice que está llena", async () => {
-    const { deps } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
-    deps.rememberAboutUser = async () => ({ ok: false as const, reason: "llena" as const });
-    const session = makeSession();
-    await runAgentTool(session, deps, "Read", { file_path: "/memoria/dueno.md" });
-    const out = await runAgentTool(session, deps, "Edit", {
-      file_path: "/memoria/dueno.md",
-      old_string: "• Háblale de tú",
-      new_string: "• Háblale de tú\n• Nunca uses amarillo",
-    });
+  it("🔴 credenciales: rechazado y nada guardado", async () => {
+    const { deps, estado } = depsConLenMd({ brief: "Taquería." });
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/LEN.md" });
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "Taquería.\nLa clave de la API es sk-proj-abcdefghijklmnopqrstuv123" });
     assert.equal(out.response.ok, false);
-    assert.deepEqual(out.ownerReason, { code: "memory_full" });
+    assert.match(texto(out), /credentials/);
+    assert.equal(estado.brief, "Taquería.");
   });
 
-  it("🔴 la memoria que va en el contexto cuenta como LEÍDA (el `seedMemoryFile` de Claude Code): se añade sin Read", async () => {
-    const { deps, estado } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
-    const session = { ...makeSession(), leidos: memoriaSembrada("— Lo que sé de ti —\n• Háblale de tú", null) } as AgentSession;
-    const out = await runAgentTool(session, deps, "Edit", {
-      file_path: "/memoria/dueno.md",
-      old_string: "• Háblale de tú",
-      new_string: "• Háblale de tú\n• Nunca uses amarillo",
-    });
+  it("topes: un /LEN.md de 12 001 caracteres no se guarda", async () => {
+    const { deps, estado } = depsConLenMd({ brief: "Taquería." });
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/LEN.md" });
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "x".repeat(12_001) });
+    assert.equal(out.response.ok, false);
+    assert.equal(estado.brief, "Taquería.");
+  });
+
+  it("una nota nueva con Write, y aparece en MEMORY.md", async () => {
+    const { deps, estado } = depsConLenMd();
+    const s = makeSession();
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: serializeNote(NOTA) });
     assert.equal(out.response.ok, true, texto(out));
-    assert.deepEqual(estado.recordadas, ["Nunca uses amarillo"]);
-    // Y el proyecto sin brief: su fichero vacío se escribe con old_string "".
-    const brief = await runAgentTool(session, deps, "Edit", { file_path: "/memoria/proyecto.md", old_string: "", new_string: "• El tono es formal" });
-    assert.equal(brief.response.ok, true, texto(brief));
-    assert.match(String(estado.brief), /• El tono es formal/);
+    assert.deepEqual(estado.notas.get("hero-oscuro"), NOTA);
+    const indice = await runAgentTool(s, deps, "Read", { file_path: "/.len/memory/MEMORY.md" });
+    assert.match(texto(indice), /\[hero-oscuro\]\(hero-oscuro\.md\) \(feedback\)/);
   });
 
-  it("CONTRA-PRUEBA: sin sembrar, el Edit de la memoria pide leerla antes", async () => {
-    const { deps, estado } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
-    const out = await runAgentTool(makeSession(), deps, "Edit", {
-      file_path: "/memoria/dueno.md",
-      old_string: "• Háblale de tú",
-      new_string: "• Háblale de tú\n• Nunca uses amarillo",
-    });
+  it("una nota mal formada: el error trae la plantilla", async () => {
+    const { deps, estado } = depsConLenMd();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: "sólo texto" });
     assert.equal(out.response.ok, false);
-    assert.deepEqual(estado.recordadas, []);
+    assert.match(texto(out), /name: hero-oscuro/);
+    assert.equal(estado.notas.size, 0);
   });
 
-  it("🔴 quitar lo guardado es del DUEÑO: error, y no se guarda nada", async () => {
-    const { deps, estado } = depsConMemoria("— Lo que sé de ti —\n• Háblale de tú", null);
-    const session = makeSession();
-    await runAgentTool(session, deps, "Read", { file_path: "/memoria/dueno.md" });
-    const out = await runAgentTool(session, deps, "Edit", { file_path: "/memoria/dueno.md", old_string: "• Háblale de tú", new_string: "• Háblale de usted" });
+  it("MEMORY.md es de sólo lectura", async () => {
+    const { deps } = depsConLenMd({ notas: [NOTA] });
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/.len/memory/MEMORY.md" });
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/memory/MEMORY.md", content: "nada" });
     assert.equal(out.response.ok, false);
-    assert.match(texto(out), /only grows/);
-    assert.deepEqual(estado.recordadas, []);
+    assert.match(texto(out), /generated from the notes/);
   });
 
-  it("la del proyecto va al brief, en su bloque del final", async () => {
-    const { deps, estado } = depsConMemoria(null, "Taquería en Guadalajara");
-    const session = makeSession();
-    await runAgentTool(session, deps, "Read", { file_path: "/memoria/proyecto.md" });
-    const out = await runAgentTool(session, deps, "Edit", {
-      file_path: "/memoria/proyecto.md",
-      old_string: "Taquería en Guadalajara",
-      new_string: "Taquería en Guadalajara\n• El tono es formal",
-    });
+  it("rm de una nota en la terminal la borra (suave)", async () => {
+    const { deps, estado } = depsConLenMd({ notas: [NOTA] });
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    assert.ok(Object.hasOwn(antes, "/.len/memory/hero-oscuro.md"));
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/.len/memory/hero-oscuro.md" }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual(estado.borradas, ["hero-oscuro"]);
+  });
+
+  it("🔴 MIEMBROS: un editor lee y escribe SU ~/.len/LEN.md, no el del dueño", async () => {
+    const { deps, estado } = depsConLenMd({ personal: { dueno: "Háblale de tú.", editor: null } });
+    const s = { ...makeSession(), userId: "dueno", personId: "editor" } as AgentSession;
+    const read = await runAgentTool(s, deps, "Read", { file_path: "~/.len/LEN.md" });
+    assert.doesNotMatch(texto(read), /Háblale de tú/);
+    const out = await runAgentTool(s, deps, "Write", { file_path: "~/.len/LEN.md", content: "Háblame de usted." });
     assert.equal(out.response.ok, true, texto(out));
-    assert.equal(estado.brief, "Taquería en Guadalajara\n\n— Preferencias guardadas por el agente —\n• El tono es formal");
+    assert.equal(estado.personal.editor, "Háblame de usted.");
+    assert.equal(estado.personal.dueno, "Háblale de tú.");
+  });
+
+  it("/memoria/dueno.md dice adónde se mudó", async () => {
+    const { deps } = depsConLenMd();
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/memoria/dueno.md" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /~\/\.len\/LEN\.md/);
+  });
+
+  it("Grep no encuentra lo de /.len/memory ni ~/.len/LEN.md; /LEN.md sí", async () => {
+    const { deps } = depsConLenMd({ personal: { u1: "zanahoria personal" }, brief: "zanahoria del proyecto", notas: [{ ...NOTA, body: "zanahoria en una nota" }] });
+    const out = await runAgentTool(makeSession(), deps, "Grep", { pattern: "zanahoria", output_mode: "files_with_matches" });
+    assert.match(texto(out), /LEN\.md/);
+    assert.doesNotMatch(texto(out), /\.len\/memory|home\/user/);
+  });
+
+  it("lo sembrado cuenta como leído: Edit de /LEN.md sin Read", async () => {
+    const { deps, estado } = depsConLenMd({ brief: "Taquería." });
+    const s = { ...makeSession(), leidos: memoriaSembrada({ personal: null, project: "Taquería.", index: null }) } as AgentSession;
+    const out = await runAgentTool(s, deps, "Edit", { file_path: "/LEN.md", old_string: "Taquería.", new_string: "Taquería. Tono formal." });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.brief, "Taquería. Tono formal.");
   });
 });
 

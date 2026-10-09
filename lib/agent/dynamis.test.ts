@@ -41,7 +41,6 @@ describe("el mensaje que se manda, según el modo", () => {
   const armar = (mode?: "len" | "dynamis") => {
     const r = buildAgentMessages({
       state: {},
-      userBrief: null,
       history: [],
       prompt: "hola",
       maxPromptTokens: 60_000,

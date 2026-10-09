@@ -112,7 +112,7 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   const i = encontrar(p, LO_QUE_PUEDE_LA_PAGINA_INICIO);
   const fin = encontrar(p, "\n", i);
   p = p.slice(0, i) + LO_QUE_PUEDE_LA_APP + p.slice(fin);
-  p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY IS TWO FILES", SUS_DATOS_EN_LA_APP);
+  p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY — ", SUS_DATOS_EN_LA_APP);
   // Convertir en app es de una página: en una app, la viñeta sobra.
   p = cambiar(p, `\n${LA_PAGINA_QUE_CRECE}`, "");
   return p;

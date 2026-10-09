@@ -130,16 +130,6 @@
     "notUndone": "Annulé, sauf {rutas} : annuler un tour ne rétablit ni la base de données, ni la mémoire, ni les réglages."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
-  "memoria": {
-    "description": "Préférences que Len a enregistrées pour TOUTES vos pages, pas seulement celle-ci.",
-    "remove": "Supprimer",
-    "title": "Mémoire de Len",
-    "briefHint": "Notes que Len lit à chaque message de CETTE page.",
-    "briefPlaceholder": "ex.\n\n- Page de destination pour Counter, un café à Polanco.\n- Ton : chaleureux, amical, sans jargon technique.\n- Couleur d'accent : orange chaud (#C66B3D).\n- À faire : demander le logo final au designer.",
-    "saving": "Enregistrement…",
-    "saved": "Enregistré · injecté à chaque conversation",
-    "saveFailed": "Échec de l'enregistrement"
-  },
   "diff": {
     "anadida": "Ajouté {que}",
     "quitada": "Supprimé {que}",
@@ -170,9 +160,6 @@
       "archivedEmpty": "Aucune conversation enregistrée pour l'instant.",
       "reopen": "Revenir à cette conversation",
       "messages": "{count, plural, one {# message} other {# messages}}"
-    },
-    "memory": {
-      "empty": "Len ne se souvient encore de rien à votre sujet. Quand vous lui direz quelque chose qui vaut pour toutes vos pages, vous le verrez ici."
     },
     "empty": {
       "title": "Qu'est-ce qu'on fait aujourd'hui sur votre page ?",

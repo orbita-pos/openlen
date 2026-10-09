@@ -56,7 +56,7 @@ export function esDeLaPlataforma(ruta: string): boolean {
 }
 
 /** El rechazo de Edit, Write y la terminal, en el idioma de los errores de las herramientas. */
-export const MANUAL_SOLO_LECTURA = `${RUTA_MANUAL} and ${CARPETA_DOCS} are OpenLen's platform manual: read-only and never published. To keep something the user wants remembered, add it to /memoria/dueno.md or /memoria/proyecto.md.`;
+export const MANUAL_SOLO_LECTURA = `${RUTA_MANUAL} and ${CARPETA_DOCS} are OpenLen's platform manual: read-only and never published. To keep something the user wants remembered, write it in ~/.len/LEN.md (the person) or /LEN.md (this project).`;
 
 // El envoltorio del adjunto. Hasta F4 era el de Claude Code palabra por
 // palabra; el repo es público, así que se dice con palabras propias y el mismo

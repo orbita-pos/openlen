@@ -130,16 +130,6 @@
     "notUndone": "已撤销，但 {rutas} 除外：撤销一轮不会还原数据库、记忆或设置。"
   },
   "cutShort": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查页面。",
-  "memoria": {
-    "description": "这些偏好适用于你的“所有”页面，不只是当前这一个。",
-    "remove": "移除",
-    "title": "Len 的记忆",
-    "briefHint": "Len 在这个页面的每条消息中都会读到的备注。",
-    "briefPlaceholder": "例如\n\n- 这是 Counter 的落地页，一家位于 Polanco 的咖啡馆。\n- 语气：温暖、亲切，不用技术术语。\n- 主色：暖橙色（#C66B3D）。\n- 待办：向设计师索取最终版 logo。",
-    "saving": "保存中…",
-    "saved": "已保存 · 每次对话都会注入",
-    "saveFailed": "保存失败"
-  },
   "diff": {
     "anadida": "新增 {que}",
     "quitada": "移除 {que}",
@@ -170,9 +160,6 @@
       "archivedEmpty": "还没有保存的对话。",
       "reopen": "回到这段对话",
       "messages": "{count, plural, other {# 条消息}}"
-    },
-    "memory": {
-      "empty": "Len 还没有记住关于你的任何事。当你告诉它适用于你所有页面的内容时，会显示在这里。"
     },
     "empty": {
       "title": "今天想给你的页面做点什么？",

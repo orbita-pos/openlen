@@ -3,7 +3,7 @@
 // renombran y borran, como el explorador de VS Code (`operar-a-mano.ts`).
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
-// sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, `/memoria`,
+// sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, la memoria —LEN.md—,
 // `/ajustes`) y de `soloLecturaDeLaTerminal` (`/.openlen`: resultados, bandeja,
 // catálogo y versiones), así que el dueño y Len ven lo mismo, sin una
 // segunda lista que se desfase. Fuera `/AGENTS.md` y `/.openlen/docs`: son el
@@ -45,6 +45,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const sesion: AgentSession = {
     projectId: id,
     userId: acceso.duenoId,
+    // La memoria PERSONAL que ve la lente es la de quien mira, no la del dueño.
+    ...(acceso.quien !== acceso.duenoId ? { personId: acceso.quien } : {}),
     page: null,
     ownerEmail: null,
     imageEditsThisTurn: 0,
@@ -88,8 +90,8 @@ const MAX_FICHERO = 2_000_000;
  */
 export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
 
   let cuerpo: { ruta?: unknown; contenido?: unknown; base?: unknown };
   try {
@@ -103,7 +105,7 @@ export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req:
   }
   if (contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
 
-  const r = await guardarAMano(id, userId, ruta, contenido, base);
+  const r = await guardarAMano(id, acceso.duenoId, ruta, contenido, base, undefined, acceso.quien);
   if (r.ok) return json({ contenido: r.contenido });
   if (r.motivo === "cambio") return json({ error: "cambio", actual: r.actual }, 409);
   if (r.motivo === "rechazado") return json({ error: "rechazado", detalle: r.detalle }, 422);
@@ -111,18 +113,14 @@ export const PUT = conAutorDeLaPeticion(quienDeLaSesion, async function PUT(req:
 });
 
 /** Quién pide y con qué rol (lib/projects/acceso.ts); si no entra, la respuesta de error. */
-async function accesoDe(id: string, permiso: Permiso): Promise<AccesoAlProyecto | Response> {
+async function accesoDe(id: string, permiso: Permiso): Promise<(AccesoAlProyecto & { readonly quien: string }) | Response> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
-  return exigirAcceso(id, userId, permiso);
+  const acceso = await exigirAcceso(id, userId, permiso);
+  return acceso instanceof Response ? acceso : { ...acceso, quien: userId };
 }
 
-/** Para escribir: el id del DUEÑO (con él se guarda) si quien pide puede editar. */
-async function duenoDe(id: string): Promise<string | Response> {
-  const acceso = await accesoDe(id, "editar");
-  return acceso instanceof Response ? acceso : acceso.duenoId;
-}
 
 const esRuta = (x: unknown): x is string => typeof x === "string" && x.startsWith("/") && x.length <= 300 && !x.includes("\0");
 
@@ -151,12 +149,12 @@ async function cuerpoDe(req: Request): Promise<Record<string, unknown> | null> {
  */
 export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const c = await cuerpoDe(req);
   if (!c || !esRuta(c.ruta) || (c.contenido !== undefined && typeof c.contenido !== "string")) return json({ error: "sin_cuerpo" }, 400);
   if (typeof c.contenido === "string" && c.contenido.length > MAX_FICHERO) return json({ error: "demasiado_grande" }, 413);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "crear", ruta: c.ruta, ...(typeof c.contenido === "string" ? { contenido: c.contenido } : {}) }, undefined, acceso.quien));
 });
 
 /**
@@ -166,11 +164,11 @@ export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(re
  */
 export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const c = await cuerpoDe(req);
   if (!c || !esRuta(c.de) || !esRuta(c.a)) return json({ error: "sin_cuerpo" }, 400);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "renombrar", de: c.de, a: c.a }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "renombrar", de: c.de, a: c.a }, undefined, acceso.quien));
 });
 
 /**
@@ -180,9 +178,9 @@ export const PATCH = conAutorDeLaPeticion(quienDeLaSesion, async function PATCH(
  */
 export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const { id } = await params;
-  const userId = await duenoDe(id);
-  if (typeof userId !== "string") return userId;
+  const acceso = await accesoDe(id, "editar");
+  if (acceso instanceof Response) return acceso;
   const ruta = new URL(req.url).searchParams.get("ruta");
   if (!esRuta(ruta) || ruta === "/") return json({ error: "sin_cuerpo" }, 400);
-  return respuestaDe(await operarAMano(id, userId, { tipo: "borrar", ruta }));
+  return respuestaDe(await operarAMano(id, acceso.duenoId, { tipo: "borrar", ruta }, undefined, acceso.quien));
 });

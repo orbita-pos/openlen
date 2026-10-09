@@ -34,7 +34,8 @@ import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
-import { getUserMemory, rememberAboutUser } from "@/lib/agent/user-memory";
+import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
+import type { MemoryNote } from "@/lib/agent/memory/note";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
@@ -75,6 +76,7 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isLegacyMemoryPath, memoryLayerOf } from "@/lib/agent/ficheros/len-md";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
@@ -191,9 +193,17 @@ export interface AgentDeps {
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).
-  /** H3 — lo que Len sabe del DUEÑO (`users.agentMemory`), para leerlo como
-   *  `/memoria/dueno.md`. Opcional: sin él, el fichero sale vacío. */
+  /** H3 — lo que Len sabe de la PERSONA (`users.agentMemory`), para leerlo como
+   *  `~/.len/LEN.md` (plans/len-md). Opcional: sin él, el fichero sale vacío. */
   leerMemoriaDelDueno?(userId: string): Promise<string | null>;
+  /** plans/len-md — escribe ENTERO el `~/.len/LEN.md` de la persona. */
+  setPersonalLenMd?(userId: string, text: string | null): Promise<boolean>;
+  /** plans/len-md — las notas de `/.len/memory` (lib/agent/memory/store.ts). */
+  memoryNotes?: {
+    list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
+    upsert(projectId: string, note: MemoryNote, authorId: string | null): Promise<{ before: string | null }>;
+    remove(projectId: string, name: string): Promise<{ before: string | null }>;
+  };
   /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
    *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
   resultados?: ResultadosDeps;
@@ -302,12 +312,6 @@ export interface AgentDeps {
   renombrarProyecto?(projectId: string, userId: string, title: string): Promise<boolean>;
   // ⚰️ Aquí vivía `fetchSheetRows`, la lectura del Google Sheet de
   // `conectar_datos_vivos`. Se fue con «datos vivos» en Len 2.1 (2026-09-30).
-  /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
-   *  de proyecto. Ver lib/agent/user-memory.ts. */
-  rememberAboutUser(
-    userId: string,
-    preferencia: string,
-  ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
   /** Los puntos de guardado de ESTA página, del más nuevo al más viejo — el
    *  mismo `listVersions` que lee el panel de Versiones. `undo_last_change`
    *  es su único llamador aquí: los snapshots ya existían, lo que faltaba era
@@ -498,6 +502,24 @@ export function realDeps(
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
     },
+    async setPersonalLenMd(userId, text) {
+      return setPersonalLenMd(userId, text);
+    },
+    // Las notas de /.len/memory. Import perezoso: tiran de la base, server-only.
+    memoryNotes: {
+      async list(projectId) {
+        const { listNotes } = await import("@/lib/agent/memory/store");
+        return listNotes(projectId);
+      },
+      async upsert(projectId, note, authorId) {
+        const { upsertNote } = await import("@/lib/agent/memory/store");
+        return upsertNote(projectId, note, authorId);
+      },
+      async remove(projectId, name) {
+        const { deleteNote } = await import("@/lib/agent/memory/store");
+        return deleteNote(projectId, name);
+      },
+    },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
     // base y del chat, server-only.
     resultados: {
@@ -654,9 +676,6 @@ export function realDeps(
     async renombrarProyecto(projectId, userId, title) {
       return renameProject(projectId, userId, title);
     },
-    async rememberAboutUser(userId, preferencia) {
-      return rememberAboutUser(userId, preferencia);
-    },
     // Los mismos dos que usa el panel de Versiones. `listVersions` ya devuelve
     // del más nuevo al más viejo y comprueba la propiedad; `restoreVersion`
     // también, y devuelve null cuando la versión no es de este dueño.
@@ -692,6 +711,12 @@ export function realDeps(
 export interface AgentSession {
   projectId: string;
   userId: string;
+  /**
+   * QUIÉN HABLA, si no es el dueño (un miembro del proyecto, lib/projects/acceso.ts).
+   * `userId` sigue siendo el DUEÑO —con él se lee y escribe el proyecto y él paga—;
+   * lo PERSONAL (su memoria) es de quien habla. Ausente = el dueño.
+   */
+  personId?: string;
   /**
    * QUIÉN ESCRIBE. Ausente = Len. `"usuario"` = la terminal del usuario (la #17
    * de plans/len-agente-2026/notas/fase-5-taller.md): pasa por la misma puerta
@@ -1096,13 +1121,15 @@ export function summarizeProjectState(
     // que un sitio de dos páginas tenía una.
     //
     // En una APP, también su carpeta: ahí vive el código (F3 de la spec local
-    // 2026-10-07-apps). Sin /memoria ni /ajustes, que no son de la app y la
-    // memoria ya va en el contexto.
+    // 2026-10-07-apps). Sin la memoria (LEN.md y sus notas, plans/len-md) ni
+    // /ajustes, que no son de la app y la memoria ya va en el contexto.
     ficheros: app
       ? [
           ...new Set([
             ...ficherosDelSitio(row.data),
-            ...(row.ficherosDeLaCarpeta ?? []).filter((r) => !r.startsWith("/memoria/") && !r.startsWith("/ajustes/")),
+            ...(row.ficherosDeLaCarpeta ?? []).filter(
+              (r) => memoryLayerOf(r) === null && !isLegacyMemoryPath(r) && !r.startsWith("/ajustes/"),
+            ),
           ]),
         ].sort()
       : ficherosDelSitio(row.data),
@@ -1923,8 +1950,8 @@ async function toolPublicar(
 }
 
 // ⚰️ `recordar_preferencia` se retiró en H3 (2026-09-25): la memoria son
-// ficheros (/memoria/dueno.md y /memoria/proyecto.md) y su mecánica vive en
-// `lib/agent/preferencias.ts`.
+// ficheros (~/.len/LEN.md, /LEN.md y las notas de /.len/memory, plans/len-md) y
+// se guardan como cualquier otro, en `lib/agent/herramientas-de-ficheros.ts`.
 
 // ⚰️ `guardar_dato`, `editar_dato` y `quitar_dato` se retiraron en H3
 // (2026-09-25), y los almacenes enteros (`data-ol-stores`, sus ficheros de

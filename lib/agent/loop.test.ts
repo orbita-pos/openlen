@@ -2312,7 +2312,7 @@ describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar",
   it("BRAZO DE CONTROL: una herramienta que actúa sin tocar la página no recibe insistencia", async () => {
     const vistos: Message[][] = [];
     const stream = scripted(
-      [{ type: "function_call", name: "Edit", args: { file_path: "/memoria/dueno.md", old_string: "", new_string: "• Tutéame" } }, done],
+      [{ type: "function_call", name: "Edit", args: { file_path: "/home/user/.len/LEN.md", old_string: "", new_string: "• Tutéame" } }, done],
       [{ type: "text_delta", text: "Anotado." }, done],
     );
     const r = await runAgentLoop({

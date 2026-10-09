@@ -25,7 +25,7 @@
 // cuando esto devuelve `undefined`.
 //
 // 🔴 TRES CLAVES Y NO UNA, a propósito. Las herramientas no se pusieron de
-// acuerdo: la mayoría devuelve `error`, `documento-de-memoria.ts` devuelve
+// acuerdo: la mayoría devuelve `error`, el viejo guardado de la memoria devolvía
 // `motivo` y el guardado de notas devuelve `reason`. Exigir una sola clave
 // ahora sería tocar 27 ficheros para que la tarjeta hable, y el fichero que se
 // olvidara se quedaría mudo EN SILENCIO — que es el defecto que esto viene a

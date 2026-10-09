@@ -138,7 +138,7 @@ describe("el estado del proyecto en una app", () => {
     subdomain: null,
     publishedAt: null,
     data: { html: "<div id=root></div>", app: APP },
-    ficherosDeLaCarpeta: ["/src/main.jsx", "/src/App.jsx", "/memoria/proyecto.md", "/supabase/migrations/1_a.sql"],
+    ficherosDeLaCarpeta: ["/src/main.jsx", "/src/App.jsx", "/LEN.md", "/.len/memory/tono.md", "/supabase/migrations/1_a.sql"],
   };
 
   it("lista el código de la app y dice que es una app; sin «página abierta»", () => {
