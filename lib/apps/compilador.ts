@@ -53,6 +53,7 @@ import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
 // `npm run apps:vendor` (que lo comprueba con `--comprobar`).
 import EXPORTACIONES from "./exportaciones.json";
+import { isTestSupportFile } from "./tests/test-files";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
 const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
@@ -74,6 +75,10 @@ export interface ContextoDeCompilacion {
   /** Lo que vale `import.meta.env` además de MODE/DEV/PROD. SÓLO valores que
    *  pueden ir en una página: la URL del backend y su clave publicable. */
   readonly entorno?: Readonly<Record<string, string>>;
+  /** Nombres que se dejan como están aunque no sean del catálogo: los de las
+   *  pruebas (`vitest`, Testing Library: `lib/apps/tests/test-kit.ts`). Los
+   *  resuelve el empaquetador de pruebas. */
+  readonly extraSpecifiers?: readonly string[];
 }
 
 export interface Diagnostico {
@@ -143,7 +148,7 @@ function normalizar(ruta: string): string | null {
 
 /** Lo relativo, lo absoluto y `@/` → la ruta del fichero que existe. `null` =
  *  no es una ruta (es un nombre); `undefined` = es una ruta y no existe. */
-function resolver(especificador: string, desde: string, carpeta: Readonly<Record<string, string>>): string | null | undefined {
+export function resolveLocalImport(especificador: string, desde: string, carpeta: Readonly<Record<string, string>>): string | null | undefined {
   let base: string | null;
   if (especificador.startsWith("@/")) base = normalizar(`/src/${especificador.slice(2)}`);
   else if (especificador.startsWith("/")) base = normalizar(especificador);
@@ -231,7 +236,7 @@ const PISTAS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   "react-router.js": PISTAS_DEL_ENRUTADOR,
 };
 
-function exportacionesDe(nombreCatalogo: string, fichero: string): readonly string[] | null {
+export function catalogExportsOf(nombreCatalogo: string, fichero: string): readonly string[] | null {
   const delCatalogo = (EXPORTACIONES as Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>)[nombreCatalogo];
   return delCatalogo && Object.hasOwn(delCatalogo, fichero) ? delCatalogo[fichero]! : null;
 }
@@ -328,6 +333,8 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update("\0")
     .update(JSON.stringify(ctx.entorno ?? {}))
     .update("\0")
+    .update((ctx.extraSpecifiers ?? []).join("\n"))
+    .update("\0")
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
     .update("\0")
     .update(hojas)
@@ -405,16 +412,18 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       error(imp.start, `"${especificador}": only ?raw (the file's text) and ?url (its URL) are supported after a path.`);
       continue;
     }
-    const resuelto = resolver(sinConsulta, ruta, ctx.carpeta);
+    const resuelto = resolveLocalImport(sinConsulta, ruta, ctx.carpeta);
     if (resuelto === null) {
       if (consulta) {
         error(imp.start, `"${especificador}": ?raw and ?url go after a file's path, not a package name.`);
         continue;
       }
+      // Lo de las pruebas (vitest, Testing Library) pasa por su nombre: lo pone el kit.
+      if (ctx.extraSpecifiers?.includes(especificador)) continue;
       // UN NOMBRE: o es del catálogo (lo resuelve el empaquetador) o no existe.
       const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
-        const hay = exportacionesDe(ctx.catalogo, dependencia.fichero);
+        const hay = catalogExportsOf(ctx.catalogo, dependencia.fichero);
         const tomados = dinamico || !hay ? null : nombresImportados(js.slice(imp.importStart, imp.importEnd));
         for (const nombre of tomados ?? []) {
           if (!hay!.includes(nombre)) error(imp.start, mensajeDeNombre(especificador, dependencia.fichero, nombre, hay!));
@@ -500,6 +509,10 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
   const errores: Diagnostico[] = [];
   const localesDe = new Map<string, readonly string[]>();
   for (const [ruta, codigo] of Object.entries(ctx.carpeta)) {
+    // LAS PRUEBAS NO SON DE LA APP (plan 04): ni se compilan con ella —importan
+    // `vitest`, que no es del catálogo— ni se empaquetan ni se publican. Las
+    // compila `compileTestFile` cuando Len corre `npm test`.
+    if (esApp && isTestSupportFile(ruta, ctx.carpeta)) continue;
     if (!esFuenteCompilable(ruta, esApp)) {
       ficheros[ruta] = codigo;
       continue;
