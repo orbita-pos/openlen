@@ -25,28 +25,23 @@ describe("buildAgentContext", () => {
   // en el contexto: Len lo lee con Read, como Claude Code, que no recibe los
   // ficheros del proyecto pegados al mensaje. Lo que sí recibe es qué hay
   // (`ficheros` en el ESTADO) y qué tiene abierto el dueño.
-  it("lleva el ESTADO y el brief, y NINGÚN documento ni id inyectado", () => {
+  // LEN.md (plans/len-md): el brief del proyecto (/LEN.md) ya no va aquí: es el
+  // mensaje duradero de la conversación (`memoryMessage`, más abajo).
+  it("lleva el ESTADO, y NINGÚN documento, id ni brief inyectado", () => {
     const s = buildAgentContext({
       state: { publicado: false, ficheros: ["/index.html"], modulos: { members: false } },
-      userBrief: "Negocio de tacos",
     });
     expect(s).toContain("PROJECT STATE");
     expect(s).toContain('"members": false');
     expect(s).toContain('"/index.html"');
-    expect(s).toContain("PROJECT BRIEF");
-    expect(s).toContain("Negocio de tacos");
+    expect(s).not.toContain("PROJECT BRIEF");
     expect(s).not.toContain("DOCUMENTO");
     expect(s).not.toContain("data-op-id");
-  });
-  it("omits the brief block when empty", () => {
-    const s = buildAgentContext({ state: {}, userBrief: null });
-    expect(s).not.toContain("PROJECT BRIEF");
   });
 
   it("adds an attached-image block with the URL verbatim when attachedImage is set", () => {
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       attachedImages: [{ url: "https://images.openlen.com/foo.webp", alt: "Foto de taco" }],
     });
     expect(s).toContain("IMAGE ATTACHED BY THE USER");
@@ -76,7 +71,6 @@ describe("buildAgentContext", () => {
   it("le dice que NO juzgue la URL de la imagen adjunta", () => {
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       attachedImages: [{ url: "http://localhost:3000/api/projects/p1/assets/casa.png" }],
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
@@ -92,7 +86,7 @@ describe("buildAgentContext", () => {
   });
 
   it("omits the attached-image block when attachedImage is absent", () => {
-    const s = buildAgentContext({ state: {}, userBrief: null });
+    const s = buildAgentContext({ state: {} });
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER");
   });
 
@@ -101,7 +95,6 @@ describe("buildAgentContext", () => {
   it("con varias fotos las nombra una a una, por su etiqueta, y no las promedia", () => {
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       attachedImages: [
         { url: "https://images.openlen.com/logo.png", alt: "Logo", visible: true },
         { url: "https://images.openlen.com/local.jpg", visible: true },
@@ -117,7 +110,7 @@ describe("buildAgentContext", () => {
 
   // F5 — los píxeles viajan adjuntos: el bloque lo dice SOLO con visible=true.
   it("visible=true adds the PUEDES VERLA line; without it the text is the F2 shape", () => {
-    const base = { state: {}, userBrief: null };
+    const base = { state: {} };
     const seen = buildAgentContext({
       ...base,
       attachedImages: [{ url: "https://images.openlen.com/foo.webp", visible: true }],
@@ -138,7 +131,6 @@ describe("buildAgentContext", () => {
   it("la selección anclada llega como las líneas de un fichero, dentro de un <system-reminder> como en Claude Code", () => {
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       seleccion: { ruta: "/menu/index.html", desde: 8, hasta: 10, contenido: "<h1>\n  Tacos\n</h1>" },
     });
     expect(s).toContain(
@@ -151,7 +143,6 @@ describe("buildAgentContext", () => {
     const largo = "x".repeat(2500);
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       seleccion: { ruta: "/index.html", desde: 1, hasta: 1, contenido: largo },
     });
     expect(s).toContain(`${"x".repeat(2000)}\n[cut here]\n\nIt may or may not`);
@@ -165,7 +156,6 @@ describe("buildAgentContext", () => {
   it("sin líneas, dice el fichero y la pista, y no inventa números de línea", () => {
     const s = buildAgentContext({
       state: {},
-      userBrief: null,
       seleccion: { ruta: "/index.html", pista: "h1 — 'Bienvenidos'" },
     });
     expect(s).toContain(
@@ -175,18 +165,18 @@ describe("buildAgentContext", () => {
   });
 
   it("sin selección no se gasta un byte", () => {
-    const base = { state: {}, userBrief: null, now: new Date("2026-09-24T12:00:00Z") };
+    const base = { state: {}, now: new Date("2026-09-24T12:00:00Z") };
     expect(buildAgentContext({ ...base, seleccion: null })).toBe(buildAgentContext(base));
     expect(buildAgentContext(base)).not.toContain("system-reminder");
   });
 
   // El contexto, pinchado carácter a carácter: el bloque HOY primero —el
-  // modelo no sabe qué día es— y después el ESTADO y el brief.
-  it("pinchado: HOY, ESTADO y brief, en ese orden y nada más", () => {
+  // modelo no sabe qué día es— y después el ESTADO. (El brief se fue al mensaje
+  // duradero de la memoria del proyecto: plans/len-md.)
+  it("pinchado: HOY y ESTADO, en ese orden y nada más", () => {
     const state = { publicado: true };
-    const userBrief = "Panadería artesanal";
-    const esperado = `${HOY(new Date("2026-08-18T12:00:00Z"))}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(state, null, 2)}\n\nPROJECT BRIEF — /memoria/proyecto.md (persistent — applies to every request):\n${userBrief}\n\n`;
-    expect(buildAgentContext({ state, userBrief, now: new Date("2026-08-18T12:00:00Z") })).toBe(esperado);
+    const esperado = `${HOY(new Date("2026-08-18T12:00:00Z"))}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(state, null, 2)}\n\n`;
+    expect(buildAgentContext({ state, now: new Date("2026-08-18T12:00:00Z") })).toBe(esperado);
   });
 
   // MEDIDO el 30/09 (corridas/2026-10-01-resultados-humo): a las 19:25 de
@@ -194,7 +184,7 @@ describe("buildAgentContext", () => {
   // de ese día. La zona del turno manda.
   it("HOY es el día del usuario, con su zona", () => {
     const now = new Date("2026-10-01T01:25:00Z");
-    expect(buildAgentContext({ state: {}, userBrief: null, now, zona: "America/Mexico_City" })).toContain("TODAY IS 2026-09-30");
+    expect(buildAgentContext({ state: {}, now, zona: "America/Mexico_City" })).toContain("TODAY IS 2026-09-30");
   });
   it("buildAgentMessages hace llegar la zona hasta el HOY", () => {
     // Una zona cuya fecha NO sea la de UTC ahora mismo, o la prueba no prueba
@@ -203,7 +193,7 @@ describe("buildAgentContext", () => {
     const utc = new Date().toISOString().slice(0, 10);
     const zona = fechaLocal(new Date(), "Pacific/Kiritimati") !== utc ? "Pacific/Kiritimati" : "Pacific/Pago_Pago";
     expect(fechaLocal(new Date(), zona)).not.toBe(utc);
-    const r = buildAgentMessages({ state: {}, userBrief: null, history: [], prompt: "hola", maxPromptTokens: 60_000, zona });
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, zona });
     expect(JSON.stringify(r)).toContain(`TODAY IS ${fechaLocal(new Date(), zona)}`);
   });
 });
@@ -211,7 +201,6 @@ describe("buildAgentContext", () => {
 describe("lo que ya se sabe roto", () => {
   const args = {
     state: {},
-    userBrief: null,
     now: new Date("2026-08-22T12:00:00Z"),
   };
 
@@ -259,7 +248,6 @@ describe("lo que ya se sabe roto", () => {
 describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
   const args = {
     state: {},
-    userBrief: null,
     now: new Date("2026-09-22T12:00:00Z"),
   };
 
@@ -290,7 +278,6 @@ describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
 describe("H08-a · lo que el dueño dijo antes de la ventana llega al modelo", () => {
   const args = {
     state: {},
-    userBrief: null,
     now: new Date("2026-09-22T12:00:00Z"),
   };
 
@@ -332,7 +319,7 @@ describe("buildAgentMessages", () => {
   // tiene que contarlos. Contaba sólo el `content`, y una respuesta de Read va
   // en `functionResponses`: el techo no la veía.
   it("🔴 el techo cuenta los resultados de herramientas del historial, no sólo el texto", () => {
-    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const conResultado = (n: number) => [
       { role: "user" as const, content: "lee la portada" },
       { role: "assistant" as const, content: "", functionCalls: [{ name: "Read", args: { file_path: "/index.html" } }] },
@@ -346,7 +333,7 @@ describe("buildAgentMessages", () => {
   // y ocupan contexto como en Claude Code; el techo las cuenta (~945 tokens una
   // foto de 1672×941, medido en Fireworks).
   it("cada foto de la conversación cuenta para el techo", () => {
-    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const foto = { mimeType: "image/jpeg", dataBase64: "A" };
     expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: [foto] }] }).ok).toBe(true); // brazo de control
     const muchas = Array.from({ length: Math.ceil(60_000 / TOKENS_POR_FOTO) + 1 }, () => foto);
@@ -358,7 +345,7 @@ describe("buildAgentMessages", () => {
   // la compactación de DeepSeek, cuyo resumen deja fuera el razonamiento— en vez
   // de rechazar un turno que sin ello cabe.
   it("🔴 con presión, se va primero lo pensado más viejo y el turno sigue", () => {
-    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const history: MensajeDelHistorial[] = [
       { role: "user", content: "primero" },
       { role: "assistant", content: "hecho 1", reasoning: "v".repeat(220_000) },
@@ -374,13 +361,13 @@ describe("buildAgentMessages", () => {
   });
 
   it("sin presión, lo pensado viaja entero", () => {
-    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const r = buildAgentMessages({ ...base, history: [{ role: "user", content: "x" }, { role: "assistant", content: "y", reasoning: "VIEJO-PENSADO" }] });
     expect(r.ok && r.messages.find((m) => m.role === "assistant")?.reasoning).toBe("VIEJO-PENSADO");
   });
 
   it("y si ni sin lo pensado cabe, too_large como siempre", () => {
-    const base = { state: {}, userBrief: null, prompt: "sigue", maxPromptTokens: 60_000 };
+    const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const history: MensajeDelHistorial[] = [
       { role: "user", content: "x".repeat(400_000) },
       { role: "assistant", content: "y", reasoning: "z".repeat(10_000) },
@@ -398,7 +385,6 @@ describe("buildAgentMessages", () => {
     try {
       const result = buildAgentMessages({
         state: { publicado: false },
-        userBrief: null,
         prompt: "Añade un filtro interactivo",
         history: [],
         maxPromptTokens: 100_000,
@@ -466,7 +452,6 @@ describe("buildAgentMessages", () => {
   it("no fabrica ningún turno de assistant cuando no hay historial", () => {
     const result = buildAgentMessages({
       state: { publicado: false },
-      userBrief: null,
       prompt: "Añade un filtro interactivo",
       history: [],
       maxPromptTokens: 100_000,
@@ -487,7 +472,6 @@ describe("buildAgentMessages", () => {
   it("la petición del dueño es el último mensaje, sola; el contexto, el de antes", () => {
     const result = buildAgentMessages({
       state: { publicado: false },
-      userBrief: null,
       prompt: "Añade un filtro interactivo",
       history: [],
       maxPromptTokens: 100_000,
@@ -513,7 +497,7 @@ describe("buildAgentMessages", () => {
   // contexto, que sí cambia, sigue en el último mensaje.
   it("adjunta el manual detrás del system, igual en cada petición", () => {
     const pedir = (prompt: string, history: MensajeDelHistorial[]) =>
-      buildAgentMessages({ state: { publicado: false }, userBrief: null, prompt, history, maxPromptTokens: 100_000 });
+      buildAgentMessages({ state: { publicado: false }, prompt, history, maxPromptTokens: 100_000 });
     const a = pedir("Añade un filtro", []);
     const b = pedir("Ahora ponlo en dos columnas", [
       { role: "user", content: "Añade un filtro" },
@@ -530,7 +514,6 @@ describe("buildAgentMessages", () => {
   it("mantiene el historial entre el system y el mensaje del turno", () => {
     const result = buildAgentMessages({
       state: { publicado: false },
-      userBrief: null,
       prompt: "Ahora ponlo en dos columnas",
       history: [
         { role: "user", content: "Añade un filtro" },
@@ -601,7 +584,6 @@ describe("la ruta del Agente no le manda el documento al modelo", () => {
 describe("los avisos del turno van al final, no enterrados", () => {
   const base = {
     state: { publicado: false },
-    userBrief: null,
     prompt: "Ponme el titular en azul",
     history: [] as { role: "user" | "assistant"; content: string }[],
     maxPromptTokens: 100_000,
@@ -667,7 +649,6 @@ describe("los avisos del turno van al final, no enterrados", () => {
   it("el contexto ya no los lleva dentro", () => {
     const ctx = buildAgentContext({
       state: {},
-      userBrief: null,
       turnoAnteriorMudo: true,
       degradaciones: [{ code: "broken_controls", detail: ["algo"] }],
       now: new Date("2026-09-03T12:00:00Z"),
@@ -687,20 +668,49 @@ describe("buildAgentContext — la referencia por URL", () => {
     radius: "soft" as const,
   };
   it("con referencia, el bloque de Crear cierra el contexto", () => {
-    const s = buildAgentContext({ state: {}, userBrief: null, styleDirection: direccion });
+    const s = buildAgentContext({ state: {}, styleDirection: direccion });
     expect(s).toContain("<visual-direction>");
     expect(s).toContain("#112233 (bg)");
     expect(s.trimEnd().endsWith("</visual-direction>")).toBe(true);
   });
   it("sin ella, ni rastro", () => {
-    expect(buildAgentContext({ state: {}, userBrief: null })).not.toContain("<visual-direction>");
+    expect(buildAgentContext({ state: {} })).not.toContain("<visual-direction>");
   });
 });
 
 describe("el chat del equipo en el contexto", () => {
   it("🔴 la regla del equipo sólo con miembros; sin ella el contexto es el de siempre", () => {
-    const base = { state: {}, userBrief: null, now: new Date(Date.UTC(2026, 9, 7)) };
+    const base = { state: {}, now: new Date(Date.UTC(2026, 9, 7)) };
     expect(buildAgentContext(base)).toBe(buildAgentContext({ ...base, equipo: false }));
     expect(buildAgentContext({ ...base, equipo: true }).startsWith("THIS PROJECT IS SHARED.")).toBe(true);
+  });
+});
+
+// LEN.md (plans/len-md): lo del PROYECTO es un mensaje duradero, como DeepSeek
+// (lib/agent/memory/memory-messages.ts), justo antes del contexto del turno; lo
+// PERSONAL va dentro del contexto, con su ruta, porque la conversación es compartida.
+describe("LEN.md en los mensajes del turno", () => {
+  it("el mensaje de memoria va antes del contexto; lo personal, dentro del contexto con su ruta", () => {
+    const r = buildAgentMessages({
+      state: {},
+      prompt: "hola",
+      history: [],
+      maxPromptTokens: 60_000,
+      userMemory: "Háblame de tú",
+      memoryMessage: "<system-reminder>\nM\n</system-reminder>\n",
+    });
+    if (!r.ok) throw new Error("no cupo");
+    const contenidos = r.messages.map((m) => String(m.content));
+    const iMem = contenidos.indexOf("<system-reminder>\nM\n</system-reminder>\n");
+    expect(iMem).toBeGreaterThan(1);
+    expect(contenidos[iMem + 1]).toBe(r.contextBlock);
+    expect(r.contextBlock).toMatch(/\/home\/user\/\.len\/LEN\.md/);
+    expect(r.contextBlock).not.toMatch(/PROJECT BRIEF/);
+  });
+
+  it("sin mensaje de memoria, el array es el de siempre", () => {
+    const r = buildAgentMessages({ state: {}, prompt: "hola", history: [], maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.messages.map((m) => m.role)).toEqual(["system", "user", "user", "user"]);
   });
 });

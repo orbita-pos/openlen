@@ -33,6 +33,7 @@ import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-coma
 import { currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
 import { MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
 import type { GoalSnapshot } from "@/lib/agent/goal";
+import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 
 /** La misma marca que usa Claude Code. */
@@ -103,6 +104,13 @@ export interface TranscripcionGuardada {
    *  el que el modelo razonó: el razonamiento de este turno vuelve en el
    *  historial (H15), y sin su aviso al lado se leía como de AHORA. */
   readonly avisos?: string;
+  /** LEN.md (plans/len-md): el mensaje de memoria del proyecto que llevó ESTE
+   *  turno —línea base o refresco—, tal y como se mandó. Vuelve en su sitio,
+   *  antes de las palabras del dueño, para que el prefijo siga en caché. */
+  readonly memoria?: string;
+  /** Las huellas de la memoria del proyecto tal y como la conoce el modelo
+   *  DESPUÉS de este turno (`memoryMessageForTurn`). Se pliega de la última. */
+  readonly memoriaHuellas?: MemoryDigests;
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
@@ -298,6 +306,8 @@ export function historialDesdeLaBase(
 ): MensajeDelHistorial[] {
   const mensajes: MensajeDelHistorial[] = [];
   for (const f of filas) {
+    // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
+    if (f.transcript?.memoria) mensajes.push({ role: "user", content: f.transcript.memoria });
     mensajes.push(mensajeDelDueno(f, fotos));
     if (f.transcript?.mensajes.length) {
       // Del bucle sólo salen mensajes de usuario y de asistente; uno de sistema

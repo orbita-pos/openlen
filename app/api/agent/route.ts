@@ -32,6 +32,8 @@ import {
 } from "@/lib/agent/grabacion";
 import { getUserMemoryBounded } from "@/lib/agent/user-memory";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
+import { PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
+import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
@@ -737,6 +739,15 @@ async function correrTurno(
   const history: MensajeDelHistorial[] =
     historialDeLaBase ?? sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
   const ventanaVisible = ventanaVisibleDe(history);
+  // LEN.md (plans/len-md): la memoria del PROYECTO como mensaje duradero, como
+  // DeepSeek — línea base la primera vez, y después sólo lo que cambió desde lo
+  // que el modelo ya ve en el historial. Así lo de delante sigue en caché.
+  const memoriaDelTurno = memoryMessageForTurn(
+    [{ path: PROJECT_LEN_MD, label: "project instructions, shared with everyone who edits this project", text: project.userBrief }],
+    // Sólo lo que entra en el historial: si el recorte dejó fuera la línea base, vuelve.
+    historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
+    PROJECT_MEMORY_MAX,
+  );
 
   const state = summarizeProjectState(
     {
@@ -833,7 +844,7 @@ async function correrTurno(
     app: appDelTurno,
     zona: zonaDelTurno,
     state,
-    userBrief: project.userBrief,
+    memoryMessage: memoriaDelTurno?.text ?? null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
@@ -1162,6 +1173,9 @@ async function correrTurno(
                     // razonamiento (que vuelve en el historial) tenga su aviso al
                     // lado y no se lea como de AHORA. Como DeepSeek.
                     ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
+                    // LEN.md: la memoria del proyecto que llevó este turno y lo que
+                    // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
+                    ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la
