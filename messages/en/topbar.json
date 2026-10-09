@@ -176,6 +176,15 @@
       "topeAgotado": "this project’s monthly Len limit for members is used up. The owner can raise it under Invite.",
       "sinCreditos": "there are no credits left on the project owner’s account.",
       "interrumpido": "The server restarted while I was working on this, so it may be half done. Check the changes and, if needed, ask me again from the thread."
+    },
+    "len": {
+      "titulo": "Email Len",
+      "texto": "Anything you send to this address from your account's email, Len does in this project and replies by email.",
+      "copiar": "Copy",
+      "copiada": "Copied",
+      "pie": "Reply to this email to keep working with Len on {titulo}.",
+      "abrir": "Open the project",
+      "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again."
     }
   }
 }

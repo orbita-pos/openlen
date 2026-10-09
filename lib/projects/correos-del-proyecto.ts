@@ -59,7 +59,7 @@ export function correoDeInvitacion(
 /** El marco de los correos del proyecto: la marca, un título, párrafos, un botón y su enlace. */
 function marco(
   idioma: IdiomaDelCorreo,
-  c: { titulo: string; parrafos: readonly string[]; cita?: string; boton: string; url: string; pegar: string; pie?: string },
+  c: { titulo: string; parrafos: readonly string[]; cita?: string; cuerpo?: string; boton: string; url: string; pegar: string; pie?: string },
 ): string {
   const url = escapar(c.url);
   const parrafos = c.parrafos
@@ -67,6 +67,9 @@ function marco(
     .join("\n      ");
   const cita = c.cita
     ? `<pre style="font-family:ui-monospace,Menlo,monospace; font-size:12px; background:#f5f5f5; border-radius:8px; padding:10px 12px; margin:0 0 20px; white-space:pre-wrap; word-break:break-word;">${escapar(c.cita)}</pre>`
+    : "";
+  const cuerpo = c.cuerpo
+    ? `<div style="font-size:14px; line-height:1.55; color:#262626; white-space:pre-wrap; word-break:break-word; margin:0 0 20px;">${escapar(c.cuerpo)}</div>`
     : "";
   return `<!doctype html>
 <html lang="${idioma}">
@@ -80,6 +83,7 @@ function marco(
       <h1 style="font-size:20px; margin:0 0 12px; letter-spacing:-0.02em;">${escapar(c.titulo)}</h1>
       ${parrafos}
       ${cita}
+      ${cuerpo}
       <p style="margin:12px 0 24px;">
         <a href="${url}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">${escapar(c.boton)}</a>
       </p>
@@ -140,4 +144,43 @@ export function fraseDeFalloDelHilo(idioma: IdiomaDelCorreo, fallo: { motivo: st
 export function fraseDeInterrupcionDelHilo(idioma: IdiomaDelCorreo): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.hilo" });
   return t("interrumpido");
+}
+
+/** LEN POR CORREO (lib/len-email): lo que Len contesta a quien le escribió. */
+export interface DatosDeLaRespuestaDeLen {
+  readonly projectTitle: string;
+  /** El asunto del correo que contesta (para seguir el hilo). */
+  readonly asunto: string;
+  /** Lo que Len dijo al cerrar el turno, o la frase de fallo. */
+  readonly texto: string;
+  readonly url: string;
+}
+
+export function correoDeLen(
+  datos: DatosDeLaRespuestaDeLen,
+  idioma: IdiomaDelCorreo,
+): { readonly subject: string; readonly html: string; readonly text: string } {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros" });
+  const titulo = datos.projectTitle.trim() || "OpenLen";
+  const base = datos.asunto.trim() || titulo;
+  const subject = /^re:/i.test(base) ? base : `Re: ${base}`;
+  const pie = t("len.pie", { titulo });
+  const html = marco(idioma, {
+    titulo: "Len",
+    parrafos: [],
+    cuerpo: datos.texto,
+    boton: t("len.abrir"),
+    url: datos.url,
+    pegar: t("email.pegar"),
+    pie,
+  });
+  const text = [datos.texto, "", "—", pie, datos.url].join("\n");
+  return { subject, html, text };
+}
+
+/** La frase de Len por correo cuando el turno no llegó a contestar. */
+export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null): string {
+  if (fallo) return fraseDeFalloDelHilo(idioma, fallo);
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
+  return t("falloSinMotivo");
 }

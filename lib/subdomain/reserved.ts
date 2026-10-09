@@ -18,6 +18,8 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   // System / mail / DNS
   "www",
   "mail",
+  // LEN POR CORREO: recibe los correos a Len (infra/len-email-worker).
+  "reply",
   "ftp",
   "smtp",
   "pop",

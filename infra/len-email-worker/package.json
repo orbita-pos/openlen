@@ -1,0 +1,14 @@
+{
+  "name": "openlen-len-email-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "postal-mime": "^2.4.3"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

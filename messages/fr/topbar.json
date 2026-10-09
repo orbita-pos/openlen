@@ -176,6 +176,15 @@
       "topeAgotado": "la limite mensuelle de Len pour les membres de ce projet est atteinte. Le propriétaire peut l’augmenter dans « Inviter ».",
       "sinCreditos": "il n’y a plus de crédits sur le compte du propriétaire du projet.",
       "interrumpido": "Le serveur a redémarré pendant que je m’en occupais, ce n’est peut-être fait qu’à moitié. Vérifiez les changements et, si besoin, redemandez-le-moi depuis le fil."
+    },
+    "len": {
+      "titulo": "Écrire à Len par e-mail",
+      "texto": "Ce que vous envoyez à cette adresse depuis l'e-mail de votre compte, Len le fait dans ce projet et vous répond par e-mail.",
+      "copiar": "Copier",
+      "copiada": "Copiée",
+      "pie": "Répondez à cet e-mail pour continuer avec Len sur {titulo}.",
+      "abrir": "Ouvrir le projet",
+      "falloSinMotivo": "Je n'ai pas pu le faire. Répondez à cet e-mail pour me le redemander."
     }
   }
 }
