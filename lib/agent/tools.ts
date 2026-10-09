@@ -34,7 +34,7 @@ import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
-import { getUserMemory, rememberAboutUser, setPersonalLenMd } from "@/lib/agent/user-memory";
+import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
 import type { MemoryNote } from "@/lib/agent/memory/note";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
@@ -312,12 +312,6 @@ export interface AgentDeps {
   renombrarProyecto?(projectId: string, userId: string, title: string): Promise<boolean>;
   // ⚰️ Aquí vivía `fetchSheetRows`, la lectura del Google Sheet de
   // `conectar_datos_vivos`. Se fue con «datos vivos» en Len 2.1 (2026-09-30).
-  /** Memoria de la PERSONA, no del proyecto: sobrevive a cambiar de página y
-   *  de proyecto. Ver lib/agent/user-memory.ts. */
-  rememberAboutUser(
-    userId: string,
-    preferencia: string,
-  ): Promise<{ ok: true; yaExistia: boolean } | { ok: false; reason: "llena" | "no_guardado" }>;
   /** Los puntos de guardado de ESTA página, del más nuevo al más viejo — el
    *  mismo `listVersions` que lee el panel de Versiones. `undo_last_change`
    *  es su único llamador aquí: los snapshots ya existían, lo que faltaba era
@@ -681,9 +675,6 @@ export function realDeps(
     },
     async renombrarProyecto(projectId, userId, title) {
       return renameProject(projectId, userId, title);
-    },
-    async rememberAboutUser(userId, preferencia) {
-      return rememberAboutUser(userId, preferencia);
     },
     // Los mismos dos que usa el panel de Versiones. `listVersions` ya devuelve
     // del más nuevo al más viejo y comprueba la propiedad; `restoreVersion`
