@@ -148,6 +148,10 @@ const targets = [
   // projectChatMentions. 🔴 OBLIGATORIA antes que el código: el panel del chat
   // SELECCIONA todas las columnas de la fila.
   "chat-equipo-migrate",
+  // LEN.md y su memoria: la tabla `lenMemoryNotes` y la limpieza de los
+  // marcadores viejos de `users.agentMemory` / `projects.userBrief`. Aditiva e
+  // idempotente (los UPDATE sólo tocan lo que aún lleva el marcador).
+  "len-memory-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
