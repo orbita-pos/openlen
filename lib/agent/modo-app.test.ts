@@ -85,6 +85,13 @@ describe("el manual de una app con el catálogo 2026-11 (apps 2026-11, tarea 6)"
 describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 
+  it("dice que tipos y lint llegan solos, y cómo correrlos (plan 03)", () => {
+    expect(manual).toMatch(/TYPES AND LINT/);
+    expect(manual).toMatch(/npx tsc --noEmit/);
+    expect(manual).toMatch(/npm run lint/);
+    expect(manual).toMatch(/don't stop the app or the publish/);
+  });
+
   it("nombra cada paquete de SU catálogo, y nada de las librerías de las páginas", () => {
     for (const d of catalogo(APP.catalogo)!.dependencias) {
       // Los `@radix-ui/react-*` sueltos no: el manual nombra `radix-ui`.
