@@ -352,4 +352,63 @@ describe("TerminalDeLen", () => {
       expect(r.exitCode).toBe(127);
     }, 20_000);
   });
+
+  // Plan 03 de las apps: `tsc`, `eslint`, `npx` y `npm` en una app los contesta
+  // el comprobador de verdad (en el hilo de la app); `npm install`, el catálogo.
+  describe("tsc, eslint, npx y npm en una app (plan 03, tarea 5)", () => {
+    function conApp() {
+      const llamadas: { program: string; args: readonly string[]; ficheros: Readonly<Record<string, string>> }[] = [];
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react", "zod", "@radix-ui/react-dialog"],
+          run: async (program, args, ficheros) => {
+            llamadas.push({ program, args, ficheros });
+            return program === "tsc"
+              ? { stdout: "src/App.tsx(5,17): error TS2322: Type 'number' is not assignable to type 'string'.\n", stderr: "", exitCode: 2 }
+              : { stdout: "", stderr: "", exitCode: 0 };
+          },
+        },
+      });
+      return { t, llamadas };
+    }
+
+    it("🔴 npx tsc --noEmit corre el comprobador con los ficheros como están AHORA, y su código de salida manda", async () => {
+      const { t, llamadas } = conApp();
+      const r = await t.ejecutar("mkdir -p /src && echo 'export const n: string = 3;' > /src/App.tsx && npx tsc --noEmit; echo rc=$?");
+      expect(llamadas[0]!.program).toBe("tsc");
+      expect(llamadas[0]!.args).toEqual(["--noEmit"]);
+      expect(llamadas[0]!.ficheros["/src/App.tsx"]).toBe("export const n: string = 3;\n");
+      expect(r.stdout).toBe("src/App.tsx(5,17): error TS2322: Type 'number' is not assignable to type 'string'.\nrc=2\n");
+    }, 20_000);
+
+    it("npm run lint y npx eslint . son ESLint; npm run typecheck y tsc son TypeScript", async () => {
+      const { t, llamadas } = conApp();
+      await t.ejecutar("npm run lint; npx eslint .; npm run typecheck; tsc");
+      expect(llamadas.map((l) => l.program)).toEqual(["eslint", "eslint", "tsc", "tsc"]);
+      expect(llamadas[0]!.args).toEqual(["."]);
+    }, 20_000);
+
+    it("🔴 npm install: lo del catálogo ya está; lo demás no se puede (Review Focus 5)", async () => {
+      const { t } = conApp();
+      const si = await t.ejecutar("npm install zod @radix-ui/react-dialog@1.1.0; echo rc=$?");
+      expect(si.stdout).toMatch(/zod.*already available/);
+      expect(si.stdout).toMatch(/@radix-ui\/react-dialog: already available/);
+      expect(si.stdout).toMatch(/rc=0\n$/);
+      const no = await t.ejecutar("npm i axios; echo rc=$?");
+      expect(no.stdout + no.stderr).toMatch(/axios.*isn't available/);
+      expect(no.stdout).toMatch(/rc=1\n$/);
+    }, 20_000);
+
+    it("npm test y npm run build dicen lo que hay, y un npx de otra cosa no existe", async () => {
+      const { t } = conApp();
+      expect((await t.ejecutar("npm test; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+      expect((await t.ejecutar("npm run build; echo rc=$?")).stdout).toMatch(/no build[\s\S]*rc=0\n$/i);
+      expect((await t.ejecutar("npx prettier .; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+    }, 20_000);
+
+    it("en una página (sin appTools) no hay tsc ni npm", async () => {
+      const { t } = terminal({});
+      expect((await t.ejecutar("tsc; echo rc=$?")).stdout).toMatch(/rc=127\n$/);
+    }, 20_000);
+  });
 });

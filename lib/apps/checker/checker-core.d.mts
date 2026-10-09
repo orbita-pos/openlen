@@ -21,8 +21,4 @@ export function checkApp(input: {
   readonly typesPack: Readonly<Record<string, string>>;
 }): CheckResult;
 
-/** Como `tsc --noEmit` sin TTY: `src/App.tsx(5,17): error TS2322: …`, una línea por error. */
-export function formatTsc(diagnostics: readonly CheckDiagnostic[]): string;
-
-/** Como el formateador `stylish` de ESLint. */
-export function formatStylish(diagnostics: readonly CheckDiagnostic[]): string;
+export { formatStylish, formatTsc } from "./format.mjs";
