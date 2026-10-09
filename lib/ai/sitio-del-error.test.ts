@@ -88,3 +88,13 @@ describe("a través del paquete (plan 02, tarea 4)", () => {
     expect(traductorDeMapas({})).toBeUndefined();
   });
 });
+
+describe("las pruebas de una app (plan 04, tarea 4)", () => {
+  it("🔴 la parte izada de una prueba ES la prueba (sus mismas líneas); el runtime y los simulados se saltan, como el catálogo", () => {
+    const mapa = JSON.stringify({ version: 3, sources: ["virtual:hoist:/src/a.test.js", "virtual:vitest", "mock:/src/lib/x.js"], names: [], mappings: "AAAA;ACAA;ACAA" });
+    const t = traductorDeMapas({ "/openlen/tests/0.js": mapa })!;
+    expect(t({ ruta: "/openlen/tests/0.js", linea: 1, columna: 1 })).toEqual({ ruta: "/src/a.test.js", linea: 1, columna: 1 });
+    expect(t({ ruta: "/openlen/tests/0.js", linea: 2, columna: 1 })).toBe("vendor");
+    expect(t({ ruta: "/openlen/tests/0.js", linea: 3, columna: 1 })).toBe("vendor");
+  });
+});

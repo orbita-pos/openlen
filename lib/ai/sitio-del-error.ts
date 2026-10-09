@@ -52,7 +52,13 @@ export function traductorDeMapas(mapas: Readonly<Record<string, string>> | undef
     if (!mapa) return null;
     const o = originalPositionFor(mapa, { line: sitio.linea, column: Math.max(0, sitio.columna - 1) });
     if (!o.source || o.line === null) return null;
-    if (o.source.startsWith("vendor:")) return "vendor";
+    if (o.source.startsWith("vendor:") || o.source.startsWith("mock:") || o.source.startsWith("empty:")) return "vendor";
+    // LAS PRUEBAS (plan 04): la parte izada de una prueba tiene SUS líneas, así
+    // que es ella; lo demás virtual (el runtime `vitest`, las entradas) no es de la app.
+    if (o.source.startsWith("virtual:")) {
+      if (!o.source.startsWith("virtual:hoist:")) return "vendor";
+      return { ruta: o.source.slice("virtual:hoist:".length), linea: o.line, columna: (o.column ?? 0) + 1 };
+    }
     return { ruta: o.source.replace(/^app:/, ""), linea: o.line, columna: (o.column ?? 0) + 1 };
   };
 }
