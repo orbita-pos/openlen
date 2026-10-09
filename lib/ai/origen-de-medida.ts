@@ -72,6 +72,10 @@ export interface OpcionesDelDocumento {
    *  la red se calme. Una app pide sus datos DESPUÉS del `load`, y medirla en
    *  ese instante es medir su «Cargando…». */
   readonly esperarALaRed?: boolean;
+  /** Lo que sirve LA PLATAFORMA a este documento bajo `/openlen/` (las pruebas
+   *  empaquetadas de una app, plan 04): no son de la carpeta del proyecto, así
+   *  que no pasan su filtro de lo publicable — se aceptan sólo bajo `/openlen/`. */
+  readonly platformFiles?: Readonly<Record<string, string>>;
 }
 
 /** Cuánto sin peticiones abiertas es «la red se calmó», y el tope de la
@@ -201,10 +205,13 @@ function crear(): Promise<OrigenDeMedida> {
         publicar(html: string, opciones: OpcionesDelDocumento = {}): DocumentoServido {
           const id = randomUUID();
           documentos.set(id, html);
-          if (opciones.files) {
+          if (opciones.files || opciones.platformFiles) {
             ficherosPorDocumento.set(
               id,
-              new Map(Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta))),
+              new Map([
+                ...Object.entries(opciones.files ?? {}).filter(([ruta]) => isPublishableFolderPath(ruta)),
+                ...Object.entries(opciones.platformFiles ?? {}).filter(([ruta]) => ruta.startsWith("/openlen/")),
+              ]),
             );
           }
           const pagina = opciones.pagina ? `${encodeURIComponent(opciones.pagina)}/` : "";
