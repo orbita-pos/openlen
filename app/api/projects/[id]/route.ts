@@ -11,6 +11,7 @@ import {
   setProjectStatus,
   setProjectUserBrief,
   dismissDegradations,
+  USER_BRIEF_MAX,
 } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -39,7 +40,7 @@ const PatchSchema = z.object({
   status: z.enum(["draft", "published", "archived"]).optional(),
   // userBrief is the persistent AI context the user writes in the Brief
   // sidebar tab. Empty string clears it (stored as NULL).
-  userBrief: z.string().max(4000).optional(),
+  userBrief: z.string().max(USER_BRIEF_MAX).optional(),
   // logoUrl is the project's favicon / brand mark. Null clears it; a string
   // sets it. Validated as http(s) URL or data: URI so the inspector can't
   // smuggle in javascript: or file: schemes that the published HTML would

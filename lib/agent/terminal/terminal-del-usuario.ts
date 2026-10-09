@@ -74,6 +74,8 @@ export function ejecutarEnLaTerminalDelUsuario(
       sesion: {
         projectId,
         userId,
+        // Su memoria personal es la suya, no la del dueño (lib/agent/person.ts).
+        ...(quien !== userId ? { personId: quien } : {}),
         autor: "usuario",
         page: null,
         ownerEmail: null,

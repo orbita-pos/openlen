@@ -7,7 +7,7 @@ const RUTAS = [
   { ruta: "/index.html" },
   { ruta: "/menu/index.html" },
   { ruta: "/datos/reservas.json" },
-  { ruta: "/memoria/dueno.md" },
+  { ruta: "/home/user/.len/LEN.md" },
   { ruta: "/ajustes/proyecto.json" },
   { ruta: "/.openlen/bandeja/formularios.jsonl", perezoso: true },
   { ruta: "/.openlen/versiones/v1/index.html", perezoso: true },
@@ -29,8 +29,10 @@ describe("arbolDeFicheros", () => {
       "  proyecto.json",
       "datos/",
       "  reservas.json",
-      "memoria/",
-      "  dueno.md",
+      "home/",
+      "  user/",
+      "    .len/",
+      "      LEN.md",
       "menu/",
       "  index.html",
       "index.html",
@@ -39,10 +41,31 @@ describe("arbolDeFicheros", () => {
 
   it("las carpetas de sólo lectura empiezan plegadas, salvo la que lleva al fichero elegido", () => {
     const arbol = arbolDeFicheros(RUTAS);
-    expect([...abiertasAlEntrar(arbol, "/index.html")].sort()).toEqual(["/ajustes", "/datos", "/memoria", "/menu"]);
+    expect([...abiertasAlEntrar(arbol, "/index.html")].sort()).toEqual(["/ajustes", "/datos", "/home", "/home/user", "/home/user/.len", "/menu"]);
     const elegido = abiertasAlEntrar(arbol, "/.openlen/bandeja/formularios.jsonl");
     expect(elegido.has("/.openlen") && elegido.has("/.openlen/bandeja")).toBe(true);
     expect(elegido.has("/.openlen/versiones")).toBe(false);
+  });
+
+  // plans/len-md: la memoria se ve y se edita aquí, como el /memory de Claude
+  // Code, que sólo abre los ficheros. /.len no es de la plataforma: no se pliega
+  // ni se marca de sólo lectura como /.openlen.
+  it("la memoria aparece en el árbol: ~/.len/LEN.md, /LEN.md y /.len/memory/", () => {
+    const arbol = arbolDeFicheros(
+      ["/index.html", "/LEN.md", "/home/user/.len/LEN.md", "/.len/memory/hero-oscuro.md", "/.len/memory/MEMORY.md"].map((ruta) => ({ ruta })),
+    );
+    expect(plano(arbol)).toEqual([
+      ".len/",
+      "  memory/",
+      "    hero-oscuro.md",
+      "    MEMORY.md",
+      "home/",
+      "  user/",
+      "    .len/",
+      "      LEN.md",
+      "index.html",
+      "LEN.md",
+    ]);
   });
 });
 

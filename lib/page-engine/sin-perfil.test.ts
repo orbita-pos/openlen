@@ -128,8 +128,8 @@ describe("el Agente ya no lee ni escribe el perfil", () => {
     // BRAZO DE CONTROL: la memoria de USUARIO sobrevive, y con ella la única
     // continuidad que el dueño del repo sí quiso. Sin esta línea, un barrido
     // que se llevara las tres pasaría igual. Desde H3 (2026-09-25) no es una
-    // herramienta sino un fichero, /memoria/dueno.md.
-    expect(catalogo).toMatch(/\/memoria\/dueno\.md/);
+    // herramienta sino un fichero, ~/.len/LEN.md (plans/len-md).
+    expect(catalogo).toMatch(/~\/\.len\/LEN\.md/);
   });
 
   it("el ESTADO ya no lleva un bloque `negocio`", () => {

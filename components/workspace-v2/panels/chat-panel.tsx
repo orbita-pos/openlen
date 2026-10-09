@@ -58,7 +58,6 @@ import { abrirEnElCodigo, abrirFicheroDelTurno, rutasDelTurno } from "@/lib/work
 import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
 import { agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import { editsOfTurn, turnChanges } from "../chat/turn-changes";
-import { MemoriaDeLen } from "../chat/len-memory";
 import { isPublishNote } from "../chat/publish-note";
 import {
   useAgentChat,
@@ -342,7 +341,6 @@ function AIDesignChat({
 
   return (
     <div className="flex flex-col h-full">
-      <MemoriaDeLen projectId={projectId} />
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto nice-scroll px-3 py-3 space-y-3"

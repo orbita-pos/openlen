@@ -20,7 +20,7 @@ describe("rutaDeLaTarjeta — la ruta con la que empieza el resumen de Read, Edi
 });
 
 describe("rutaMencionada — la regla de DeepSeek: ruta exacta o nombre de UNO solo", () => {
-  const turno = ["/index.html", "/menu/index.html", "/datos/reservas.json", "/memoria/proyecto.md"];
+  const turno = ["/index.html", "/menu/index.html", "/datos/reservas.json", "/LEN.md"];
 
   it("la ruta exacta, con o sin la barra del principio y con :línea detrás", () => {
     expect(rutaMencionada("menu/index.html", turno)).toBe("/menu/index.html");

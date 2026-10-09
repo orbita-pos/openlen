@@ -43,10 +43,11 @@ const MAX_DEPTH = 8;
  *  las de la segunda, las carpetas de Len y de su terminal. */
 export const RESERVED_ROOTS: readonly string[] = [
   "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "openlen",
-  "memoria", "ajustes", "tmp", "bin", "usr", "dev", "proc",
+  "memoria", "ajustes", "tmp", "bin", "usr", "dev", "proc", "home",
 ];
-/** Ficheros sueltos de la plataforma: el manual de Len. */
-const RESERVED_FILES: readonly string[] = ["/AGENTS.md"];
+/** Ficheros sueltos que no son de la carpeta: el manual de Len y el LEN.md
+ *  del proyecto (su memoria, `len-md.ts`), que con `.md` se PUBLICARÍA. */
+const RESERVED_FILES: readonly string[] = ["/AGENTS.md", "/LEN.md"];
 const PLAYWRIGHT_CONFIG = /^\/playwright\.config\.(?:ts|js|mjs)$/;
 /** Un trozo de ruta: letras, dígitos, `-`, `_` y `.`, sin empezar por punto
  *  (ni ficheros ocultos ni `..`). */

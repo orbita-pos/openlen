@@ -14,6 +14,8 @@ import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-
 // (plans/crear-es-len).
 
 const mocks = vi.hoisted(() => ({
+  // LEN.md (plans/len-md): las notas de /.len/memory que lee la ruta para el índice.
+  memoryNotes: { list: vi.fn(async (): Promise<unknown[]> => []), upsert: vi.fn(), remove: vi.fn() },
   // Compartir el proyecto: lo que un miembro gasta y le queda (lib/projects/miembros.ts).
   cabeEnElTope: vi.fn(async () => true),
   margenDeMiembros: vi.fn(async (): Promise<number | null> => null),
@@ -165,7 +167,7 @@ vi.mock("@/lib/agent/catalog", () => ({
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
 }));
-vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded }));
+vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded, MEMORIA_TIMEOUT_MS: 1_500, AGENT_MEMORY_MAX: 4_000 }));
 // Task 5 (R11): sin este doble, la ruta bajo prueba llega a la base real por
 // la preferencia de esfuerzo guardada — el mismo agujero que ya cubre el
 // mock de arriba para la memoria de usuario, un módulo después.
@@ -204,6 +206,7 @@ vi.mock("@/lib/agent/tools", () => ({
       cambiosSinPublicar: mocks.cambiosSinPublicar,
       loadBusinessProfile: mocks.loadBusinessProfile,
       projectFiles: mocks.projectFiles,
+      memoryNotes: mocks.memoryNotes,
     };
   },
   runAgentTool: mocks.runAgentTool,
@@ -600,11 +603,11 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
           // Lenta a propósito: si la herramienta no la esperara, escribiría antes.
           await new Promise((r) => setTimeout(r, 30));
           orden.push("foto-antes");
-          return { "/index.html": "<h1>Hola</h1>\n", "/memoria/dueno.md": "- vende surf\n", "/AGENTS.md": "manual" };
+          return { "/index.html": "<h1>Hola</h1>\n", "/home/user/.len/LEN.md": "- vende surf\n", "/AGENTS.md": "manual" };
         })
         .mockImplementationOnce(async () => {
           orden.push("foto-despues");
-          return { "/index.html": "<h1>Oleaje</h1>\n", "/memoria/dueno.md": "- vende surf\n", "/AGENTS.md": "manual" };
+          return { "/index.html": "<h1>Oleaje</h1>\n", "/home/user/.len/LEN.md": "- vende surf\n", "/AGENTS.md": "manual" };
         });
       const eventos = await turno();
       expect(orden).toEqual(["foto-antes", "herramienta", "foto-despues"]);
@@ -619,15 +622,15 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
     it("F2: las mismas fotos se guardan para deshacer el turno entero, y `deshacible` lo anuncia antes del `done`", async () => {
       mocks.guardarCambiosDelTurno.mockResolvedValueOnce(true);
       mocks.cargarFicherosDeLaTerminal
-        .mockResolvedValueOnce({ "/index.html": "<h1>Hola</h1>", "/src/App.jsx": "v1", "/memoria/dueno.md": "- a" })
-        .mockResolvedValueOnce({ "/index.html": "<h1>Oleaje</h1>", "/src/App.jsx": "v2", "/memoria/dueno.md": "- a\n- b" });
+        .mockResolvedValueOnce({ "/index.html": "<h1>Hola</h1>", "/src/App.jsx": "v1", "/home/user/.len/LEN.md": "- a" })
+        .mockResolvedValueOnce({ "/index.html": "<h1>Oleaje</h1>", "/src/App.jsx": "v2", "/home/user/.len/LEN.md": "- a\n- b" });
       const eventos = await turno();
       expect(mocks.guardarCambiosDelTurno).toHaveBeenCalledTimes(1);
       const [proyecto, turnId, cambios] = mocks.guardarCambiosDelTurno.mock.calls[0] as unknown as [string, string, unknown];
       expect(proyecto).toBe("p1");
       expect(cambios).toEqual([
+        { ruta: "/home/user/.len/LEN.md", antes: null, despues: null, deshacible: false },
         { ruta: "/index.html", antes: "<h1>Hola</h1>", despues: "<h1>Oleaje</h1>", deshacible: true },
-        { ruta: "/memoria/dueno.md", antes: null, despues: null, deshacible: false },
         { ruta: "/src/App.jsx", antes: "v1", despues: "v2", deshacible: true },
       ]);
       const nombres = eventos.map((e) => e.event);
@@ -1608,6 +1611,64 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     await readEvents(await pedir());
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { mensajes: unknown[] } | null }])[1];
     expect(fila.transcript?.mensajes).toEqual([{ role: "assistant", content: "listo" }]);
+  });
+
+  // LEN.md (plans/len-md): el /LEN.md del proyecto es un mensaje DURADERO, como
+  // DeepSeek: la primera vez va entero y se guarda con la fila; mientras no
+  // cambie, no se vuelve a mandar (así lo de delante sigue en caché).
+  describe("LEN.md: la memoria del proyecto como mensaje duradero", () => {
+    const turnoQueHizoAlgo = () =>
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "listo", turns: 1, toolCalls: 1,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        terminalError: false, mutoDurable: true,
+        transcripcion: [{ role: "assistant", content: "listo" }],
+      });
+    const conBrief = (userBrief: string) =>
+      mocks.loadProject.mockResolvedValue({
+        title: "Página", subdomain: null, publishedAt: null, userBrief, brief: null,
+        data: { html: "<html><body><h1>El Farol</h1></body></html>" },
+      });
+    const memoriaQueRecibio = () =>
+      (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage?: string | null }])[0].memoryMessage ?? null;
+    const filaGuardada = () =>
+      (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { memoria?: string; memoriaHuellas?: Record<string, string> } | null }])[1];
+
+    it("la primera vez va entera, y se guarda con la fila junto a sus huellas", async () => {
+      conBrief("Taquería en Guadalajara. Tono formal.");
+      turnoQueHizoAlgo();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(memoriaQueRecibio()).toMatch(/Contents of \/LEN\.md/);
+      expect(memoriaQueRecibio()).toMatch(/Tono formal/);
+      expect(filaGuardada().transcript?.memoria).toBe(memoriaQueRecibio());
+      // Sólo la huella de lo que ESTA fila mostró: sin notas, no hay índice.
+      expect(Object.keys(filaGuardada().transcript?.memoriaHuellas ?? {})).toEqual(["/LEN.md"]);
+    });
+
+    it("con notas, el índice MEMORY.md va en el mensaje duradero", async () => {
+      conBrief("");
+      turnoQueHizoAlgo();
+      mocks.memoryNotes.list.mockResolvedValueOnce([
+        { name: "hero-oscuro", type: "feedback", description: "El dueño rechazó el hero oscuro", body: "x", updatedAt: new Date(0) },
+      ]);
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(memoriaQueRecibio()).toMatch(/Contents of \/\.len\/memory\/MEMORY\.md/);
+      expect(memoriaQueRecibio()).toMatch(/\[hero-oscuro\]\(hero-oscuro\.md\) \(feedback\)/);
+    });
+
+    it("🔴 si no cambió desde lo que ya ve, no se vuelve a mandar", async () => {
+      conBrief("Taquería en Guadalajara. Tono formal.");
+      turnoQueHizoAlgo();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      const huellas = filaGuardada().transcript!.memoriaHuellas!;
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, memoria: "x", memoriaHuellas: huellas } }]);
+      await readEvents(await pedir());
+      expect(memoriaQueRecibio()).toBeNull();
+      expect(filaGuardada().transcript?.memoria).toBeUndefined();
+    });
   });
 });
 

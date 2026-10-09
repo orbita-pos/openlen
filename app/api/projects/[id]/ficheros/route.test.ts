@@ -21,7 +21,9 @@ vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ cargarFicherosDeLaTermi
 vi.mock("@/lib/agent/terminal/solo-lectura", () => ({ soloLecturaDeLaTerminal: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 
-import { DELETE, PATCH, POST, PUT } from "./route";
+import { DELETE, GET, PATCH, POST, PUT } from "./route";
+import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { operarAMano } from "@/lib/agent/terminal/operar-a-mano";
 import { auth } from "@/auth";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
@@ -64,7 +66,7 @@ describe("PUT /api/projects/[id]/ficheros — editar a mano (la #18)", () => {
     const bien = await pedir({ ...BIEN, userId: "otro" });
     expect(bien.status).toBe(200);
     expect(await bien.json()).toEqual({ contenido: "<h1>b</h1>" });
-    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", "/index.html", "<h1>b</h1>", "<h1>a</h1>");
+    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", "/index.html", "<h1>b</h1>", "<h1>a</h1>", undefined, "u1");
 
     vi.mocked(guardarAMano).mockResolvedValueOnce({ ok: false, motivo: "cambio", actual: "<h1>c</h1>" });
     const cambio = await pedir(BIEN);
@@ -106,7 +108,7 @@ describe("POST, PATCH y DELETE — crear, renombrar y borrar desde el explorador
     const r = await POST(req("POST", { ruta: "/js/a.js" }), params);
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({ rutas: ["/js/a.js"] });
-    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "crear", ruta: "/js/a.js" });
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "crear", ruta: "/js/a.js" }, undefined, "u1");
     expect((await POST(req("POST", { ruta: "js/a.js" }), params)).status).toBe(400);
   });
 
@@ -119,13 +121,13 @@ describe("POST, PATCH y DELETE — crear, renombrar y borrar desde el explorador
     expect(await p.json()).toEqual({ error: "pagina", rutas: ["/menu/index.html"] });
     vi.mocked(operarAMano).mockResolvedValueOnce({ ok: false, motivo: "rechazado", detalle: "no" });
     expect((await PATCH(req("PATCH", { de: "/a.js", a: "/x/y.js" }), params)).status).toBe(422);
-    expect(operarAMano).toHaveBeenLastCalledWith("p1", "u1", { tipo: "renombrar", de: "/a.js", a: "/x/y.js" });
+    expect(operarAMano).toHaveBeenLastCalledWith("p1", "u1", { tipo: "renombrar", de: "/a.js", a: "/x/y.js" }, undefined, "u1");
   });
 
   it("borrar: ?ruta=; la raíz no se borra", async () => {
     vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/js/a.js"] });
     expect((await DELETE(req("DELETE", undefined, "?ruta=/js"), params)).status).toBe(200);
-    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "borrar", ruta: "/js" });
+    expect(operarAMano).toHaveBeenCalledWith("p1", "u1", { tipo: "borrar", ruta: "/js" }, undefined, "u1");
     expect((await DELETE(req("DELETE", undefined, "?ruta=/"), params)).status).toBe(400);
   });
 });
@@ -142,7 +144,8 @@ describe("los miembros del proyecto (compartir el proyecto)", () => {
     comoUsuario("ana");
     propios.splice(0, propios.length, { duenoId: "u1", rol: "editor" });
     expect((await pedir(BIEN)).status).toBe(200);
-    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", BIEN.ruta, BIEN.contenido, BIEN.base);
+    // …y su memoria PERSONAL es la suya: va como persona (plans/len-md).
+    expect(guardarAMano).toHaveBeenCalledWith("p1", "u1", BIEN.ruta, BIEN.contenido, BIEN.base, undefined, "ana");
 
     vi.mocked(guardarAMano).mockClear();
     propios.splice(0, propios.length, { duenoId: "u1", rol: "lector" });
@@ -154,5 +157,44 @@ describe("los miembros del proyecto (compartir el proyecto)", () => {
     expect((await pedir(BIEN)).status).toBe(404);
     expect(guardarAMano).not.toHaveBeenCalled();
     expect(operarAMano).not.toHaveBeenCalled();
+  });
+
+  // plans/len-md: crear, renombrar y borrar desde el explorador también tocan
+  // ~/.len/LEN.md, así que van con quien pide como persona, igual que el PUT.
+  it("🔴 crear, renombrar y borrar de un editor van con el id del DUEÑO y él como persona", async () => {
+    vi.mocked(operarAMano).mockResolvedValue({ ok: true, rutas: ["/home/user/.len/LEN.md"] });
+    comoUsuario("ana");
+    propios.splice(0, propios.length, { duenoId: "u1", rol: "editor" });
+    const ctx = { params: Promise.resolve({ id: "p1" }) };
+    const ruta = "/home/user/.len/LEN.md";
+    await POST(new Request("http://x/api/projects/p1/ficheros", { method: "POST", body: JSON.stringify({ ruta }) }), ctx);
+    await PATCH(new Request("http://x/api/projects/p1/ficheros", { method: "PATCH", body: JSON.stringify({ de: ruta, a: "/LEN.md" }) }), ctx);
+    await DELETE(new Request(`http://x/api/projects/p1/ficheros?ruta=${ruta}`, { method: "DELETE" }), ctx);
+    expect(vi.mocked(operarAMano).mock.calls.map((c) => [c[0], c[1], c[3], c[4]])).toEqual([
+      ["p1", "u1", undefined, "ana"],
+      ["p1", "u1", undefined, "ana"],
+      ["p1", "u1", undefined, "ana"],
+    ]);
+  });
+});
+
+// 🔴 MIEMBROS (plans/len-md, Task 1): la lente arma su sesión con el DUEÑO —con
+// él se leen y guardan los ficheros—, pero la memoria PERSONAL que enseña y
+// guarda es la de quien mira (`personId`), nunca la del dueño.
+describe("la lente Código y la memoria personal de un miembro", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockReset();
+    vi.mocked(guardarAMano).mockReset();
+    vi.mocked(cargarFicherosDeLaTerminal).mockReset().mockResolvedValue({});
+    vi.mocked(soloLecturaDeLaTerminal).mockReset().mockResolvedValue({ rutas: [], leer: async () => "" } as never);
+  });
+
+  it("un LECTOR abre la lente: la sesión lleva su id como persona", async () => {
+    propios.splice(0, propios.length, { duenoId: "dueno", rol: "lector" });
+    comoUsuario("lector");
+    const r = await GET(new Request("http://x/api/projects/p1/ficheros"), { params: Promise.resolve({ id: "p1" }) });
+    expect(r.status).toBe(200);
+    const sesion = vi.mocked(cargarFicherosDeLaTerminal).mock.calls[0]![0];
+    expect(sesion).toMatchObject({ userId: "dueno", personId: "lector" });
   });
 });

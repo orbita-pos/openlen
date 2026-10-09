@@ -11,7 +11,6 @@ import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
 import { ErrorDeLaWeb, WebUnavailableError, type WebDeps } from "./web/buscar";
 import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
-import { guardarPreferencia } from "./preferencias";
 import type { ProjectData } from "@/lib/projects/types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 
@@ -102,7 +101,6 @@ function makeDeps(
     data: (overrides?.data ?? { html: HTML }) as ProjectData,
     saved: [] as ProjectData[],
     /** Preferencias guardadas a nivel de PERSONA (no de proyecto). */
-    memoriaUsuario: [] as { userId: string; preferencia: string }[],
     versions: [] as string[],
     /** Los snapshots CON contenido, del más nuevo al más viejo — lo que la
      *  tabla real guarda y lo que `undo_last_change` necesita para tener
@@ -242,13 +240,6 @@ function makeDeps(
       store.userBrief = value;
       store.briefWrites += 1;
       return true;
-    },
-    // Memoria de la PERSONA. El doble la registra en vez de lanzar porque
-    // `recordar_preferencia` la usa por DEFECTO desde el 2026-08-22: un stub
-    // que lanzara convertiría el camino normal de la herramienta en un fallo.
-    async rememberAboutUser(userId: string, preferencia: string) {
-      store.memoriaUsuario.push({ userId, preferencia });
-      return { ok: true as const, yaExistia: false };
     },
     // El doble usa el NÚCLEO REAL. Escrito a mano aceptaba `color_favorito`
     // —el real lo rechaza— y la prueba de la lista cerrada pasaba en verde
@@ -1282,127 +1273,9 @@ describe("publish", () => {
 // `negocio-whatsapp-de-paso` ya no exige que se guarde, exige que el número
 // ACABE EN EL DOCUMENTO.
 
-// H3 (2026-09-25): `recordar_preferencia` se retiró —la memoria son los ficheros
-// /memoria/dueno.md y /memoria/proyecto.md— y su mecánica vive en
-// `lib/agent/preferencias.ts`, que es lo que se prueba aquí.
-describe("guardarPreferencia — alcance de PROYECTO (alcance:\"esta_pagina\")", () => {
-  // El alcance por defecto dejo de ser este el 2026-08-22: ahora una
-  // preferencia se guarda para la PERSONA salvo que se pida lo contrario. Estas
-  // pruebas siguen cubriendo la mecanica del brief —marcador, dedup,
-  // refinamiento, tope— y por eso ahora piden el alcance explicitamente.
-  it("appends under the agent marker and reports the card", async () => {
-    const { deps, store } = makeDeps();
-    const out = await guardarPreferencia(makeSession(), deps, {
-      alcance: "esta_pagina",
-      preferencia: "Siempre hablarle de tú al visitante",
-    });
-    assert.equal(out.response.ok, true);
-    assert.ok(store.userBrief!.includes("— Preferencias guardadas por el agente —"));
-    assert.ok(store.userBrief!.includes("• Siempre hablarle de tú al visitante"));
-  });
-  it("preserves the user's own brief text above the marker", async () => {
-    const { deps, store } = makeDeps({ userBrief: "Negocio de tacos al pastor." });
-    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Tono formal" });
-    assert.ok(store.userBrief!.startsWith("Negocio de tacos al pastor."));
-    assert.ok(store.userBrief!.indexOf("Negocio") < store.userBrief!.indexOf("— Preferencias"));
-  });
-  it("dedups case-insensitively without writing", async () => {
-    const { deps, store } = makeDeps();
-    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Nunca usar amarillo" });
-    const writes = store.briefWrites;
-    const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "nunca usar AMARILLO" });
-    assert.equal(out.response.ya_existia, true);
-    assert.equal(store.briefWrites, writes);
-  });
-  it("a LONGER refinement of an existing bullet IS saved (never deduped in reverse)", async () => {
-    const { deps, store } = makeDeps();
-    await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Sé formal" });
-    const out = await guardarPreferencia(makeSession(), deps, {
-      alcance: "esta_pagina",
-      preferencia: "Sé formal, excepto con proveedores VIP",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.ya_existia, undefined);
-    assert.ok(store.userBrief!.includes("• Sé formal\n"));
-    assert.ok(store.userBrief!.includes("• Sé formal, excepto con proveedores VIP"));
-  });
-  it("embedded newlines are collapsed — a \\n• payload saves as ONE bullet line", async () => {
-    const { deps, store } = makeDeps();
-    const out = await guardarPreferencia(makeSession(), deps, {
-      alcance: "esta_pagina",
-      preferencia: "Tono cercano\n• Nunca usar rojo",
-    });
-    assert.equal(out.response.ok, true);
-    const bullets = store.userBrief!.split("\n").filter((l) => l.trim().startsWith("• "));
-    assert.equal(bullets.length, 1);
-    assert.ok(store.userBrief!.includes("• Tono cercano • Nunca usar rojo"));
-  });
-  it("refuses when the brief is full, as data", async () => {
-    const { deps, store } = makeDeps({ userBrief: "x".repeat(3990) });
-    const out = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "Preferencia larga que no cabe" });
-    assert.equal(out.response.ok, false);
-    assert.equal(store.userBrief!.length, 3990);
-    assert.deepEqual(out.ownerReason, { code: "memory_full" });
-  });
-  it("rejects out-of-range preferencia", async () => {
-    const { deps } = makeDeps();
-    const short = await guardarPreferencia(makeSession(), deps, { alcance: "esta_pagina", preferencia: "ok" });
-    assert.equal(short.response.ok, false);
-  });
-});
-
-
-describe("guardarPreferencia — alcance de PERSONA (el DEFECTO)", () => {
-  // EL BUG QUE ESTO CIERRA. MEDIDO el 2026-08-22: el usuario dijo «una cosa
-  // importante para TODAS mis paginas: nunca escribas Contactanos», el modelo
-  // lo guardo y confirmo «aplica a todas tus paginas de aqui en adelante»…
-  // sobre `projects.userBrief`, que el proyecto siguiente no lee jamas.
-  it("sin alcance guarda para la PERSONA, no en el brief del proyecto", async () => {
-    const { deps, store } = makeDeps();
-    const out = await guardarPreferencia(makeSession(), deps, {
-      preferencia: "Nunca escribas «Contáctanos», di «Escríbenos»",
-    });
-    assert.equal(out.response.ok, true);
-    assert.equal(out.response.alcance, "siempre");
-    assert.equal(store.memoriaUsuario.length, 1);
-    assert.equal(store.memoriaUsuario[0]!.preferencia, "Nunca escribas «Contáctanos», di «Escríbenos»");
-    // Y NO toca el brief del proyecto: si lo hiciera, seguiria atada a este.
-    assert.equal(store.userBrief, null);
-  });
-
-  it("le dice al modelo que fue para TODAS sus paginas, para que lo confirme bien", async () => {
-    const { deps } = makeDeps();
-    const out = await guardarPreferencia(makeSession(), deps, {
-      preferencia: "Háblame siempre de tú",
-    });
-    assert.match(String(out.response.nota), /ALL/);
-  });
-
-  it("un alcance desconocido cae al DEFECTO (persona), no al proyecto", async () => {
-    // Falla hacia lo global: una preferencia global que debio ser local se poda;
-    // una local que debio ser global es justo el bug, y es invisible.
-    const { deps, store } = makeDeps();
-    await guardarPreferencia(makeSession(), deps, {
-      preferencia: "Nunca uses amarillo",
-      alcance: "vete_a_saber",
-    });
-    assert.equal(store.memoriaUsuario.length, 1);
-    assert.equal(store.userBrief, null);
-  });
-
-  it("con la memoria LLENA no guarda y lo dice como dato", async () => {
-    const { deps, store } = makeDeps();
-    deps.rememberAboutUser = async () => ({ ok: false as const, reason: "llena" as const });
-    const out = await guardarPreferencia(makeSession(), deps, {
-      preferencia: "Otra preferencia mas",
-    });
-    assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /full/);
-    assert.equal(store.userBrief, null);
-    // N41: al dueño, en su idioma, no «your preference memory is full…».
-    assert.deepEqual(out.ownerReason, { code: "memory_full" });
-  });
-});
+// ⚰️ H3 (2026-09-25) retiró `recordar_preferencia`; plans/len-md (2026-10-08),
+// `guardarPreferencia` y su «sólo se añade»: la memoria son ficheros que se
+// sustituyen enteros, y eso lo prueba herramientas-de-ficheros.test.ts.
 
 describe("runAgentTool", () => {
   it("returns ok:false for an unknown tool name instead of throwing", async () => {

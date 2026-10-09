@@ -130,16 +130,6 @@
     "notUndone": "Rückgängig gemacht, außer {rutas}: Das Rückgängigmachen eines Schritts stellt Datenbank, Gedächtnis und Einstellungen nicht wieder her."
   },
   "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
-  "memoria": {
-    "description": "Präferenzen, die Len für ALLE deine Seiten gespeichert hat, nicht nur für diese.",
-    "remove": "Entfernen",
-    "title": "Lens Gedächtnis",
-    "briefHint": "Notizen, die Len bei jeder Nachricht zu DIESER Seite liest.",
-    "briefPlaceholder": "z. B.\n\n- Das ist eine Landingpage für Counter, ein Café in Polanco.\n- Tonalität: warm, freundlich, kein Tech-Jargon.\n- Akzent: warmes Orange (#C66B3D).\n- To-do: die Designerin nach dem finalen Logo fragen.",
-    "saving": "Wird gespeichert …",
-    "saved": "Gespeichert · bei jedem Chat eingefügt",
-    "saveFailed": "Speichern fehlgeschlagen"
-  },
   "diff": {
     "anadida": "{que} hinzugefügt",
     "quitada": "{que} entfernt",
@@ -170,9 +160,6 @@
       "archivedEmpty": "Noch keine gespeicherten Unterhaltungen.",
       "reopen": "Zu dieser Unterhaltung zurückkehren",
       "messages": "{count, plural, one {# Nachricht} other {# Nachrichten}}"
-    },
-    "memory": {
-      "empty": "Len erinnert sich noch an nichts über dich. Wenn du etwas sagst, das für alle deine Seiten gilt, siehst du es hier."
     },
     "empty": {
       "title": "Was machen wir heute mit deiner Seite?",

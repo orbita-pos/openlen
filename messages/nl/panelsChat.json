@@ -130,16 +130,6 @@
     "notUndone": "Ongedaan gemaakt, behalve {rutas}: een beurt ongedaan maken herstelt de database, het geheugen en de instellingen niet."
   },
   "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina.",
-  "memoria": {
-    "description": "Voorkeuren die Len heeft opgeslagen voor AL je pagina's, niet alleen deze.",
-    "remove": "Verwijderen",
-    "title": "Lens geheugen",
-    "briefHint": "Notities die Len bij elk bericht over DEZE pagina leest.",
-    "briefPlaceholder": "bijv.\n\n- Dit is een landingspagina voor Counter, een koffiebar in Polanco.\n- Tone of voice: warm, vriendelijk, geen technisch jargon.\n- Accent: warm oranje (#C66B3D).\n- Nog doen: vraag de ontwerper om het definitieve logo.",
-    "saving": "Opslaan…",
-    "saved": "Opgeslagen · bij elke chat meegegeven",
-    "saveFailed": "Opslaan mislukt"
-  },
   "diff": {
     "anadida": "{que} toegevoegd",
     "quitada": "{que} verwijderd",
@@ -170,9 +160,6 @@
       "archivedEmpty": "Nog geen bewaarde gesprekken.",
       "reopen": "Terug naar dit gesprek",
       "messages": "{count, plural, one {# bericht} other {# berichten}}"
-    },
-    "memory": {
-      "empty": "Len onthoudt nog niets over jou. Als je iets zegt dat voor al je pagina's geldt, zie je het hier."
     },
     "empty": {
       "title": "Wat doen we vandaag met je pagina?",

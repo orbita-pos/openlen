@@ -30,8 +30,12 @@ import {
   directorioDeGrabacion,
   nombreDeFichero,
 } from "@/lib/agent/grabacion";
-import { getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
+import { MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
+import { MEMORY_INDEX_MAX, buildMemoryIndex } from "@/lib/agent/memory/note";
+import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
@@ -801,8 +805,9 @@ async function correrTurno(
   // Las versiones se leen UNA vez y alimentan dos cosas: el registro de cambios
   // y lo que el dueño cambió a mano desde el último turno de Len (H07).
   const versionesDelProyecto = listVersions({ projectId, userId: userId }).catch(() => []);
-  const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno] = await Promise.all([
-    getUserMemoryBounded(userId),
+  const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno, notasDeMemoria] = await Promise.all([
+    // La memoria PERSONAL es de quien habla, no del dueño (lib/agent/person.ts).
+    getUserMemoryBounded(quien),
     getEsfuerzoGuardado(userId),
     versionesDelProyecto.then(cambiosParaElAgente),
     // 🔴 H07 · ENTRE TURNOS, LEN SE ENTERA DE LO QUE EL DUEÑO TOCÓ. Una lectura
@@ -819,7 +824,24 @@ async function correrTurno(
         },
       }),
     ),
+    // LEN.md: las notas de /.len/memory, para su índice. Fail-soft y con
+    // plazo, como la memoria: sin ellas el turno sigue, sin índice.
+    conPlazo(async () => (await deps.memoryNotes?.list(projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
   ]);
+  // LEN.md (plans/len-md): la memoria del PROYECTO —/LEN.md y el índice de las
+  // notas— como mensaje duradero, como DeepSeek: línea base la primera vez, y
+  // después sólo lo que cambió desde lo que el modelo ya ve en el historial.
+  // Así lo de delante sigue en caché.
+  const memoryIndex = buildMemoryIndex(notasDeMemoria, MEMORY_INDEX_MAX) || null;
+  const memoriaDelTurno = memoryMessageForTurn(
+    [
+      { path: PROJECT_LEN_MD, label: "project instructions, shared with everyone who edits this project", text: project.userBrief },
+      { path: MEMORY_INDEX, label: "your notes on this project — Read a note when it is relevant", text: memoryIndex },
+    ],
+    // Sólo lo que entra en el historial: si el recorte dejó fuera la línea base, vuelve.
+    historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
+    PROJECT_MEMORY_MAX,
+  );
 
   // LA ZONA DEL TURNO, resuelta UNA vez y antes del contexto: el HOY que lee
   // Len y el «hoy» que cuentan sus herramientas tienen que ser el mismo día.
@@ -832,7 +854,7 @@ async function correrTurno(
     app: appDelTurno,
     zona: zonaDelTurno,
     state,
-    userBrief: project.userBrief,
+    memoryMessage: memoriaDelTurno?.text ?? null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
@@ -970,6 +992,7 @@ async function correrTurno(
   const agentSession: AgentSession = {
     projectId,
     userId,
+    ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
@@ -977,7 +1000,7 @@ async function correrTurno(
     leidos: new Map([
       // H4 · y lo que el turno anterior dejó leído, si no cambió y sigue a la
       // vista (lo leído, como lo apunta Claude Code). Las páginas, con el mismo
-      // texto que les daría Read; /memoria va aparte.
+      // texto que les daría Read; la memoria (LEN.md) va aparte.
       ...(historialDeLaBase
         ? leidosSembrados(
             filasDelHistorial.at(-1)?.transcript?.leidos ?? [],
@@ -988,7 +1011,7 @@ async function correrTurno(
             },
           )
         : []),
-      ...memoriaSembrada(userMemory, project.userBrief ?? null),
+      ...memoriaSembrada({ personal: userMemory, project: project.userBrief ?? null, index: memoryIndex }),
     ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
     // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.
@@ -1160,6 +1183,9 @@ async function correrTurno(
                     // razonamiento (que vuelve en el historial) tenga su aviso al
                     // lado y no se lea como de AHORA. Como DeepSeek.
                     ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
+                    // LEN.md: la memoria del proyecto que llevó este turno y lo que
+                    // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
+                    ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la

@@ -192,3 +192,11 @@ describe("🔴 las reservadas cubren cada handle del bloque de las páginas", ()
   it("hay handles que mirar", () => expect(raices.length).toBeGreaterThan(5));
   for (const r of new Set(raices)) it(`/${r}/`, () => expect(RESERVED_ROOTS).toContain(r));
 });
+
+describe("LEN.md (plans/len-md): no es de la carpeta", () => {
+  it("🔴 /LEN.md y /home no son de la carpeta: LEN.md nunca se publica", () => {
+    expect(classifyFolderPath("/LEN.md").ok).toBe(false);
+    expect(isPublishableFolderPath("/LEN.md")).toBe(false);
+    expect(classifyFolderPath("/home/user/notas.md").ok).toBe(false);
+  });
+});
