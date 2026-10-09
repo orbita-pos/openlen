@@ -60,6 +60,17 @@ describe("TerminalDeLen", () => {
     expect(r.stdout).toBe("/surf\nCasa Oleaje en Sayulita\n");
   }, 20_000);
 
+  // plans/len-md: el prompt dice ~/.len/LEN.md. El HOME por defecto de
+  // just-bash es «/», y `cat ~/.len/LEN.md` buscaba //.len/LEN.md (visto en el
+  // ensayo de caja del 08/10).
+  it("~ es /home/user: `cat ~/.len/LEN.md` abre la memoria de la persona", async () => {
+    const { t } = terminal({ cargarFicheros: async () => ({ ...SITIO, "/home/user/.len/LEN.md": "- Tutéame\n" }) });
+    const r = await t.ejecutar("echo $HOME; cat ~/.len/LEN.md");
+    expect(r.stdout).toBe("/home/user\n- Tutéame\n");
+    // Y no se arrastra como variable del modelo de un comando a otro.
+    expect((await t.ejecutar("cd ~ && pwd")).stdout).toBe("/home/user\n");
+  }, 20_000);
+
   it("sin red: curl no existe", async () => {
     const { t } = terminal();
     const r = await t.ejecutar("curl https://example.com");

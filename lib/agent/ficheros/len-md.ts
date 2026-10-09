@@ -6,9 +6,9 @@
  * lleva el nombre del agente, como `CLAUDE.md` o `GEMINI.md`. `/AGENTS.md` no:
  * ya es el manual de la plataforma (`manual.ts`).
  *
- * `~` es `/home/user`, el HOME por defecto de la terminal (just-bash, que no
- * lo cambia `trabajador.mjs`): `cat ~/.len/LEN.md` y `Read("~/.len/LEN.md")`
- * abren lo mismo. La carpeta empieza por punto, como `/.openlen`: ningún
+ * `~` es `/home/user`, el HOME que `trabajador.mjs` le pone a la terminal (el
+ * de just-bash por defecto es «/»): `cat ~/.len/LEN.md` y
+ * `Read("~/.len/LEN.md")` abren lo mismo. La carpeta empieza por punto, como `/.openlen`: ningún
  * fichero de la carpeta del proyecto puede llamarse así (`folder.ts`,
  * SEGMENT), y el grep de la terminal no entra.
  *
