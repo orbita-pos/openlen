@@ -3,7 +3,7 @@
 // renombran y borran, como el explorador de VS Code (`operar-a-mano.ts`).
 //
 // Es el MISMO árbol que ve Len en su terminal (F1 y F5 de plans/len-agente-2026):
-// sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, `/memoria`,
+// sale de `cargarFicherosDeLaTerminal` (páginas, `/supabase`, la memoria —LEN.md—,
 // `/ajustes`) y de `soloLecturaDeLaTerminal` (`/.openlen`: resultados, bandeja,
 // catálogo y versiones), así que el dueño y Len ven lo mismo, sin una
 // segunda lista que se desfase. Fuera `/AGENTS.md` y `/.openlen/docs`: son el

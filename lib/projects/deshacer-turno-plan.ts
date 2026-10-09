@@ -97,7 +97,8 @@ export interface CambioDelTurno {
  *   · `/supabase/` — un fichero de migración se podría restaurar, pero lo que
  *     `supabase db push` ya aplicó a la BASE no vuelve con él, y dejaría el
  *     fichero diciendo una cosa y la base otra;
- *   · `/memoria/` — sólo crece, y es de Len, no del sitio;
+ *   · la memoria (`~/.len/LEN.md`, `/LEN.md`, `/.len/memory/`, plans/len-md) —
+ *     no es del sitio; se corrige editándola, como el CLAUDE.md de Claude Code;
  *   · `/ajustes/proyecto.json` — título y módulos, con sus propios caminos.
  * Lo que no vuelve se DICE (`noSeDeshacen`), no se calla.
  */
