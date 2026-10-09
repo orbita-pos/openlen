@@ -83,7 +83,7 @@ export class TerminalDeLen {
         /** Los `@types/*` que ya trae el paquete de tipos del catálogo. */
         readonly typesPackages?: readonly string[];
         readonly run: (
-          program: "tsc" | "eslint" | "build",
+          program: "tsc" | "eslint" | "build" | "test",
           args: readonly string[],
           ficheros: Readonly<Record<string, string>>,
           /** Lo que le queda al comando que lo pidió. */
@@ -112,7 +112,7 @@ export class TerminalDeLen {
         return;
       }
       if (typeof m.app === "number") {
-        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
+        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build" | "test", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
       }
       const p = this.pendientes.get(m.id);
@@ -141,11 +141,11 @@ export class TerminalDeLen {
     });
   }
 
-  /** `tsc` / `eslint` / `build` en una app: como `servirSupabase`. */
+  /** `tsc` / `eslint` / `build` / `test` en una app: como `servirSupabase`. */
   private async servirAppTools(
     hilo: Worker,
     pid: number,
-    program: "tsc" | "eslint" | "build",
+    program: "tsc" | "eslint" | "build" | "test",
     args: string[],
     ficheros: Record<string, string>,
     tiempoQueQueda: number,

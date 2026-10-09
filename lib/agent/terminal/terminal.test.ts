@@ -419,13 +419,29 @@ describe("TerminalDeLen", () => {
       expect(no.stdout).toMatch(/rc=1\n$/);
     }, 20_000);
 
-    it("npm test y npm run build dicen lo que hay, y un npx de otra cosa no existe", async () => {
-      const { t } = conApp();
-      expect((await t.ejecutar("npm test; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+    it("🔴 los comandos de pruebas de Claude Code corren vitest; npm run build, el paquete; un npx de otra cosa no existe", async () => {
+      const { t, llamadas } = conApp();
+      const comandos = ["npm test", "npm run test", "npm run test:unit", "pnpm test", "yarn test", "bun test", "npx vitest run src/a", "vitest", "npm test -- -t suma"];
+      for (const c of comandos) expect((await t.ejecutar(`${c}; echo rc=$?`)).stdout, c).toMatch(/rc=0\n$/);
+      expect(llamadas.map((l) => l.program)).toEqual(comandos.map(() => "test"));
+      expect(llamadas.map((l) => l.args)).toEqual([[], [], [], [], [], [], ["run", "src/a"], [], ["-t", "suma"]]);
+      const jest = await t.ejecutar("jest; echo rc=$?");
+      expect(jest.stderr).toBe("jest isn't available here: tests run with vitest, which has the same API (vi.fn instead of jest.fn). Run npm test.\n");
+      expect(jest.stdout).toMatch(/rc=1\n$/);
+      expect((await t.ejecutar("pnpm add zod; echo rc=$?")).stderr).toBe("pnpm add: not available here — there is no package manager; the app's packages are its catalog.\n");
       expect((await t.ejecutar("npx prettier .; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
-      const { t: t2, llamadas } = conApp();
+      expect((await t.ejecutar("npm run x")).stderr).toMatch(/The scripts are: lint, typecheck, build, test\.\n$/);
+      const { t: t2, llamadas: l2 } = conApp();
       await t2.ejecutar("npm run build");
-      expect(llamadas.map((l) => l.program)).toEqual(["build"]);
+      expect(l2.map((l) => l.program)).toEqual(["build"]);
+    }, 30_000);
+
+    it("npm install -D vitest y lo del kit: ya están; jsdom no hace falta", async () => {
+      const { t } = conApp();
+      const r = await t.ejecutar("npm install -D vitest @testing-library/react jsdom; echo rc=$?");
+      expect(r.stdout).toBe(
+        "vitest: already available (tests run with OpenLen's test kit)\n@testing-library/react: already available (test kit)\njsdom: not needed: tests run in a real browser (Chromium), like Vitest's browser mode\nrc=0\n",
+      );
     }, 20_000);
 
     it("en una página (sin appTools) no hay tsc ni npm", async () => {

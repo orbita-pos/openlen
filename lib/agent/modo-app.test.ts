@@ -85,6 +85,13 @@ describe("el manual de una app con el catálogo 2026-11 (apps 2026-11, tarea 6)"
 describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 
+  it("dice cómo se escriben y se corren las pruebas (plan 04)", () => {
+    expect(manual).toMatch(/TESTS: vitest and Testing Library/);
+    expect(manual).toMatch(/npm test/);
+    expect(manual).toMatch(/vi\.mock/);
+    expect(manual).not.toMatch(/there is no npm test yet/);
+  });
+
   it("dice que tipos y lint llegan solos, y cómo correrlos (plan 03)", () => {
     expect(manual).toMatch(/TYPES AND LINT/);
     expect(manual).toMatch(/npx tsc --noEmit/);
