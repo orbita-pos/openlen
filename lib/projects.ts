@@ -611,7 +611,7 @@ export async function setProjectStatus(
   return result.length > 0;
 }
 
-export const USER_BRIEF_MAX = 4000;
+export const USER_BRIEF_MAX = 12_000;
 const LOGO_URL_MAX = 2000;
 
 /** Persist the per-project logo URL. Pass null to clear it.
