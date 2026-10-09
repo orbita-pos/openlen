@@ -27,6 +27,14 @@ describe("el kit de pruebas", () => {
     expect(rtl).not.toMatch(/from\s*"react-dom\/test-utils"/);
   });
 
+  it("🔴 cada fichero de su lista exporta algo (una fachada vacía no avisa: la prueba que lo use se encuentra undefined)", () => {
+    for (const d of TEST_KIT.dependencias) {
+      const js = readFileSync(path.join(DIR, "desarrollo", d.fichero), "utf8");
+      expect(/export\s*\{[^}]+\}|export\s+default/.test(js), d.fichero).toBe(true);
+    }
+    expect(readFileSync(path.join(DIR, "desarrollo", "fake-timers.js"), "utf8")).toMatch(/as withGlobal\b/);
+  });
+
   it("sirve a cada catálogo que tiene SU React (una copia, o los hooks se rompen)", () => {
     for (const nombre of Object.keys(CATALOGOS)) {
       expect(testKitFor(nombre)).toBe(TEST_KIT_NAME);
