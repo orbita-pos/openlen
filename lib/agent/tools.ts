@@ -28,6 +28,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
+import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -823,10 +824,9 @@ export interface AgentSession {
    *  turno. Contra ella se decide qué NO compila por culpa de este turno
    *  (`lib/agent/compila-la-app.ts`), y con ella se mide la línea base. */
   carpetaAlEmpezar?: Map<string, string>;
-  /** UNA APP (plan 03): los tipos y el lint de `carpetaAlEmpezar`, calculados una vez. */
-  typesBaseline?: Promise<ReadonlySet<string>>;
-  /** UNA APP (plan 03): los de tipos y lint ya dichos en este turno, para no repetirlos. */
-  typesDelivered?: Set<string>;
+  /** UNA APP (plan 03): tipos y lint pendientes y entregados, como el registro
+   *  del LSP de Claude Code (`lib/agent/types-and-lint.ts`). */
+  typesAndLint?: TypesAndLintState;
   /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
    *  cómo estaban sus ficheros tras el último comando: contra eso se decide
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */

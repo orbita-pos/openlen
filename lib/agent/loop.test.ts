@@ -1958,6 +1958,34 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
     // La segunda tanda lo trae otra vez y ya no se repite: se le entregó.
     expect(sobres[1]).toBe("");
   });
+
+  // Plan 03 de las apps: los tipos y el lint llegan DESPUÉS de la herramienta
+  // que los causó, y se recogen antes de cada llamada al modelo, como los
+  // adjuntos `lsp_diagnostics` de Claude Code.
+  it("🔴 lo que llega tarde (lateDiagnostics) va en el `<new-diagnostics>` de la tanda siguiente", async () => {
+    const vistos: Message[][] = [];
+    const tardios = [
+      [],
+      [{ ruta: "/src/App.tsx", linea: 5, columna: 17, gravedad: "Error" as const, mensaje: "Type 'number' is not assignable to type 'string'.", codigo: "TS2322", fuente: "typescript" }],
+    ];
+    let n = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: async () => {
+        n += 1;
+        return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`) };
+      },
+      lateDiagnostics: () => tardios.shift() ?? [],
+      emit: () => {},
+    });
+    const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
+    expect(sobres[0]).toBe("");
+    expect(sobres[1]).toBe(
+      "<new-diagnostics>Problems that appeared with this change:\n\n/src/App.tsx:\n  ✘ [Line 5:17] Type 'number' is not assignable to type 'string'. [TS2322] (typescript)</new-diagnostics>",
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

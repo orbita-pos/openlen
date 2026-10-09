@@ -117,7 +117,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const appCambiada = escrituras.some((o) => o.appCambiada);
   const diagnosticos = [
     ...escrituras.flatMap((o) => o.diagnosticos ?? []),
-    ...(session.app && (appCambiada || paginas.length > 0) ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+    ...(session.app && (appCambiada || paginas.length > 0)
+      ? await diagnosticosDeLaAppTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))
+      : []),
   ];
   // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
   const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);
