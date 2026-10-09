@@ -12,9 +12,8 @@ describe("el esqueleto de una app", () => {
   const e = esqueletoDeApp({ titulo: "Caja del Café", idioma: "es" });
 
   it("🔴 compila entero y el cascarón la arranca", () => {
-    const r = compilarCarpeta({ carpeta: e.ficheros, catalogo: e.app.catalogo, entrada: e.app.entrada });
+    const r = compilarCarpeta({ carpeta: e.ficheros, catalogo: e.app.catalogo });
     expect(r.errores.map(textoDeDiagnostico)).toEqual([]);
-    expect(r.grafo).toEqual(["/src/App.jsx", "/src/main.jsx", "/src/screens/Inicio.jsx"]);
     expect(problemasDelCascaron(e.app, e.html, e.ficheros)).toEqual([]);
   });
 
@@ -33,7 +32,7 @@ describe("el esqueleto de una app", () => {
   it("un título con comillas o etiquetas no rompe ni el cascarón ni el JSX", () => {
     const raro = esqueletoDeApp({ titulo: '<script>alert("x")</script> & "Cía"' });
     expect(raro.html).toContain("<title>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &quot;Cía&quot;</title>");
-    const r = compilarCarpeta({ carpeta: raro.ficheros, catalogo: raro.app.catalogo, entrada: raro.app.entrada });
+    const r = compilarCarpeta({ carpeta: raro.ficheros, catalogo: raro.app.catalogo });
     expect(r.errores).toEqual([]);
     expect(raro.html).toContain('<html lang="en">');
   });

@@ -178,8 +178,8 @@ export interface PublishParams {
   files?: ReadonlyArray<{ path: string; content: string }>;
   /** UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md):
    *  su carpeta se COMPILA antes de tocar el disco —si algo no compila, no se
-   *  publica (`AppNoCompilaError`)—, sus documentos llevan el import map y la
-   *  precarga, y su catálogo va, de producción, en `/openlen/vendor/`. */
+   *  publica (`AppNoCompilaError`)— y su entrada se publica EMPAQUETADA, de
+   *  producción (`bundleApp`): sin import map, sin precarga y sin catálogo. */
   app?: AppDeProyecto | null;
   /** Su `import.meta.env` público (`lib/apps/entorno.ts`). */
   entorno?: Readonly<Record<string, string>>;
@@ -915,7 +915,6 @@ export async function publishToDir(
     carpeta: carpetaPublicable,
     catalogo: app?.catalogo ?? null,
     ...(params.entorno ? { entorno: params.entorno } : {}),
-    entrada: app?.entrada ?? null,
   });
   if (compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
   // UNA APP SE PUBLICA EMPAQUETADA (plan 02): UN fichero en su entrada con sus

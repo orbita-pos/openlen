@@ -341,19 +341,16 @@ describe("compilarCarpeta", () => {
     "/data/menu.json": "[]",
   };
 
-  it("compila los fuentes, deja el resto tal cual y precarga lo alcanzable desde la entrada", () => {
-    const r = compilarCarpeta({ ...app(CARPETA), entrada: "/src/main.jsx" });
+  it("compila los fuentes y deja el resto tal cual", () => {
+    const r = compilarCarpeta(app(CARPETA));
     expect(r.errores).toEqual([]);
     expect(r.ficheros["/src/App.tsx"]).toContain('from "/src/components/Boton.jsx"');
     expect(r.ficheros["/src/index.css"]).toBe("body{}");
     expect(r.ficheros["/data/menu.json"]).toBe("[]");
-    expect(r.grafo).toEqual(["/src/App.tsx", "/src/components/Boton.jsx", "/src/main.jsx"]);
-    // El runtime de JSX lo pide el propio compilador en cada fichero con JSX.
-    expect(r.paquetes).toEqual(["react/jsx-runtime"]);
   });
 
   it("un fuente que no compila NO se sirve a medias: falta, y su error está", () => {
-    const r = compilarCarpeta({ ...app({ ...CARPETA, "/src/App.tsx": "export default () => <div" }), entrada: "/src/main.jsx" });
+    const r = compilarCarpeta(app({ ...CARPETA, "/src/App.tsx": "export default () => <div" }));
     expect(r.ficheros["/src/App.tsx"]).toBeUndefined();
     expect(r.errores.map((e) => e.ruta)).toEqual(["/src/App.tsx"]);
   });
@@ -365,7 +362,6 @@ describe("compilarCarpeta", () => {
         "/src/App.jsx": "export default () => null;",
         "/src/carrito.js": "export const Carrito = 1;\nexport function Total() {}",
       }),
-      entrada: "/src/main.jsx",
     });
     expect(r.errores).toEqual([
       { ruta: "/src/main.jsx", linea: 2, columna: null, mensaje: '/src/carrito.js has no export named "Cesta": it exports Carrito, Total.' },
@@ -379,7 +375,6 @@ describe("compilarCarpeta", () => {
         "/src/a.js": "export const y = 1;",
         "/src/b.js": 'export * from "./a";',
       }),
-      entrada: "/src/main.jsx",
     });
     expect(r.errores.map((e) => e.mensaje)).toEqual(["/src/a.js has no default export: it exports y, by name."]);
   });
