@@ -40,11 +40,19 @@ export interface PedidoDelHilo extends OrigenDelHilo {
   readonly contexto: string;
 }
 
+/** Un pedido que llegó POR CORREO (lib/len-email): Len contesta por correo al cerrar. */
+export interface EmailRequest {
+  /** Lo que lee el MODELO delante del pedido; la fila guarda sólo lo escrito. */
+  readonly context: string;
+  /** Lo que Len dijo al cerrar el turno: se le manda a quien escribió. */
+  readonly onReply: (text: string) => Promise<void>;
+}
+
 type Corredor = (
   userId: string,
   body: Record<string, unknown>,
   req: { url: string; signal: AbortSignal },
-  opts: { hilo: PedidoDelHilo },
+  opts: { hilo?: PedidoDelHilo; email?: EmailRequest },
 ) => Promise<Response>;
 
 let corredor: Corredor | null = null;
@@ -104,6 +112,53 @@ async function erroresDelStream(res: Response): Promise<FalloDelTurno[]> {
  * solo. `fraseDeFallo` arma lo que dice Len cuando el turno no contesta: la
  * pone quien llama, en el idioma de quien escribió (con el código, traduce).
  */
+/** Corre el turno y devuelve sus fallos (el HTTP que no fue 200, o los `error` del SSE). */
+async function runTurn(
+  correr: Corredor,
+  p: { userId: string; projectId: string; texto: string; filaId: string; origen: string },
+  opts: { hilo?: PedidoDelHilo; email?: EmailRequest },
+): Promise<FalloDelTurno[]> {
+  try {
+    const res = await correr(
+      p.userId,
+      { projectId: p.projectId, prompt: p.texto, turnId: p.filaId, answersQuestions: false },
+      { url: p.origen, signal: new AbortController().signal },
+      opts,
+    );
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: unknown; code?: unknown };
+      return [{ motivo: typeof j.error === "string" ? j.error : `HTTP ${res.status}`, ...(typeof j.code === "string" ? { code: j.code } : {}) }];
+    }
+    return await erroresDelStream(res);
+  } catch (err) {
+    return [{ motivo: err instanceof Error ? err.message : String(err) }];
+  }
+}
+
+/** Un turno a la vez por proyecto: `work` corre cuando acabó lo anterior de la cola. */
+function enqueue(projectId: string, work: () => Promise<void>, label: string): void {
+  const anterior = colas.get(projectId) ?? Promise.resolve();
+  const trabajo = anterior
+    .catch(() => undefined)
+    .then(work)
+    .catch((err) => console.error(`[${label}] el turno falló`, err));
+  colas.set(projectId, trabajo);
+  void trabajo.finally(() => {
+    if (colas.get(projectId) === trabajo) colas.delete(projectId);
+  });
+}
+
+async function corredorCargado(): Promise<Corredor | null> {
+  if (!corredor) await import("@/app/api/agent/route");
+  return corredor;
+}
+
+/**
+ * Lanza el turno del hilo y vuelve en el acto con su fila (para que el chat lo
+ * siga si está abierto). El trabajo —esperar turno, correr, contestar— sigue
+ * solo. `fraseDeFallo` arma lo que dice Len cuando el turno no contesta: la
+ * pone quien llama, en el idioma de quien escribió (con el código, traduce).
+ */
 export async function lanzarTurnoDelHilo(p: {
   readonly userId: string;
   readonly projectId: string;
@@ -114,45 +169,66 @@ export async function lanzarTurnoDelHilo(p: {
   /** La fila del turno, si ya se apuntó con el pedido (`apuntarPedidoALen`). */
   readonly filaId?: string;
 }): Promise<{ readonly filaId: string }> {
-  if (!corredor) await import("@/app/api/agent/route");
-  const correr = corredor;
+  const correr = await corredorCargado();
   const filaId = p.filaId ?? crypto.randomUUID();
-  const anterior = colas.get(p.projectId) ?? Promise.resolve();
-  const trabajo = anterior
-    .catch(() => undefined)
-    .then(async () => {
+  enqueue(
+    p.projectId,
+    async () => {
       if (!correr) throw new Error("la ruta de Len no se registró");
       if (!(await esperarALen(p.projectId))) {
         await respuestaDeLen({ projectId: p.projectId, hiloId: p.hilo.hiloId, texto: p.fraseDeFallo(null), filaId });
         return;
       }
-      let errores: FalloDelTurno[] = [];
-      try {
-        const res = await correr(
-          p.userId,
-          { projectId: p.projectId, prompt: p.texto, turnId: filaId, answersQuestions: false },
-          { url: p.origen, signal: new AbortController().signal },
-          { hilo: p.hilo },
-        );
-        if (!res.ok) {
-          const j = (await res.json().catch(() => ({}))) as { error?: unknown; code?: unknown };
-          errores = [{ motivo: typeof j.error === "string" ? j.error : `HTTP ${res.status}`, ...(typeof j.code === "string" ? { code: j.code } : {}) }];
-        } else {
-          errores = await erroresDelStream(res);
-        }
-      } catch (err) {
-        errores = [{ motivo: err instanceof Error ? err.message : String(err) }];
-      }
+      const errores = await runTurn(correr, { ...p, filaId }, { hilo: p.hilo });
       // Si Len no contestó en el hilo, lo dice con el motivo: nunca se queda «trabajando».
       if (!(await hiloTieneRespuestaDe(p.hilo.hiloId, filaId))) {
         await respuestaDeLen({ projectId: p.projectId, hiloId: p.hilo.hiloId, texto: p.fraseDeFallo(errores.at(-1) ?? null), filaId });
       }
-    })
-    .catch((err) => console.error("[hilos] el turno del hilo falló", err));
-  colas.set(p.projectId, trabajo);
-  void trabajo.finally(() => {
-    if (colas.get(p.projectId) === trabajo) colas.delete(p.projectId);
-  });
+    },
+    "hilos",
+  );
+  return { filaId };
+}
+
+/**
+ * LEN POR CORREO (lib/len-email): el mismo camino que un `@Len` de un hilo,
+ * pero Len contesta POR CORREO. `reply` manda lo que Len dijo al cerrar; si el
+ * turno no llegó a contestar, se manda `fraseDeFallo` con el motivo, para que
+ * quien escribió nunca se quede sin respuesta. ⚠️ La cola vive en memoria y el
+ * pedido no se apunta: un reinicio a mitad lo pierde (los hilos sí lo retoman).
+ */
+export async function launchEmailTurn(p: {
+  readonly userId: string;
+  readonly projectId: string;
+  readonly texto: string;
+  readonly context: string;
+  readonly origen: string;
+  readonly reply: (text: string) => Promise<void>;
+  readonly fraseDeFallo: (fallo: FalloDelTurno | null) => string;
+}): Promise<{ readonly filaId: string }> {
+  const correr = await corredorCargado();
+  const filaId = crypto.randomUUID();
+  enqueue(
+    p.projectId,
+    async () => {
+      if (!correr) throw new Error("la ruta de Len no se registró");
+      if (!(await esperarALen(p.projectId))) {
+        await p.reply(p.fraseDeFallo(null));
+        return;
+      }
+      let replied = false;
+      const email: EmailRequest = {
+        context: p.context,
+        onReply: async (text) => {
+          replied = true;
+          await p.reply(text);
+        },
+      };
+      const errores = await runTurn(correr, { ...p, filaId }, { email });
+      if (!replied) await p.reply(p.fraseDeFallo(errores.at(-1) ?? null));
+    },
+    "len-email",
+  );
   return { filaId };
 }
 

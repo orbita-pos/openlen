@@ -13,7 +13,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { accesoAlProyecto, ROLES_DE_MIEMBRO, type AccesoAlProyecto } from "@/lib/projects/acceso";
+import { accesoAlProyecto, puede, ROLES_DE_MIEMBRO, type AccesoAlProyecto } from "@/lib/projects/acceso";
 import {
   cambiarRol,
   cancelarInvitacion,
@@ -25,6 +25,7 @@ import {
   topeDelProyecto,
 } from "@/lib/projects/miembros";
 import { sendProjectInviteEmail } from "@/lib/email";
+import { lenEmailAddress } from "@/lib/len-email/address";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,8 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
     dueno: dueno ? { userId: dueno.id, email: dueno.email, name: dueno.name } : null,
     // A un miembro no se le enseña lo que gasta cada uno: eso es del dueño.
     miembros: miembros.map((m) => (esDueno ? m : { userId: m.userId, email: m.email, name: m.name, rol: m.rol, desde: m.desde })),
+    // LEN POR CORREO: la dirección del proyecto, sólo a quien puede pedirle a Len.
+    lenEmail: puede(q.acceso.rol, "editar") ? lenEmailAddress(q.id) : null,
     ...(esDueno
       ? { invitaciones, tope: await topeDelProyecto(q.id), gastoDelMes: await gastoDeMiembrosDelMes(q.id) }
       : {}),

@@ -176,6 +176,15 @@
       "topeAgotado": "de maandelijkse Len-limiet voor leden van dit project is op. De eigenaar kan die verhogen onder ‘Uitnodigen’.",
       "sinCreditos": "er zijn geen credits meer op het account van de eigenaar van het project.",
       "interrumpido": "De server is opnieuw opgestart terwijl ik hiermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en vraag het me zo nodig opnieuw vanuit de draad."
+    },
+    "len": {
+      "titulo": "Mail Len",
+      "texto": "Wat je vanaf het e-mailadres van je account naar dit adres stuurt, doet Len in dit project en antwoordt per e-mail.",
+      "copiar": "Kopiëren",
+      "copiada": "Gekopieerd",
+      "pie": "Beantwoord deze e-mail om met Len verder te werken aan {titulo}.",
+      "abrir": "Project openen",
+      "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen."
     }
   }
 }
