@@ -13,6 +13,7 @@
 // Code cada sesión tiene su propio servidor).
 import path from "node:path";
 import { directorioVendor } from "@/lib/apps/servir";
+import { testKitFor } from "@/lib/apps/tests/test-kit";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
 import type { CheckResult } from "./checker-core.mjs";
 
@@ -38,7 +39,11 @@ export function checkAppInWorker(
   timeoutMs = TOPE_MS,
 ): Promise<CheckResult | null> {
   return cola.run(
-    { files: input.files, typesPackPath: path.join(directorioVendor(), input.catalogo, "types.json") },
+    {
+      files: input.files,
+      // Los tipos del catálogo y los del kit de pruebas (plan 04): vitest y Testing Library.
+      typesPackPaths: [path.join(directorioVendor(), input.catalogo, "types.json"), path.join(directorioVendor(), testKitFor(input.catalogo), "types.json")],
+    },
     { timeoutMs, ...(input.supersedes ? { supersedes: input.supersedes } : {}) },
   );
 }

@@ -23,6 +23,14 @@ describe("el comprobador en su hilo (plan 03, tarea 3)", () => {
     expect(despues).toEqual({ typescript: [], eslint: [] });
   }, 30_000);
 
+  it("🔴 desde el hilo, una prueba ve vitest y los matchers de jest-dom: los tipos del catálogo y los del kit, juntos (plan 04)", async () => {
+    const r = await checkAppInWorker({
+      files: { "/src/a.test.tsx": 'import { render, screen } from "@testing-library/react";\nit("x", () => { render(<p>h</p>); expect(screen.getByText("h")).toBeInTheDocumen(); });' },
+      catalogo: "2026-11",
+    });
+    expect(r!.typescript.map((d) => d.codigo)).toEqual(["TS2551"]);
+  }, 60_000);
+
   it("un catálogo sin types.json no rompe: los imports del catálogo serían any, el resto se comprueba", async () => {
     const r = await checkAppInWorker({ files: { "/src/A.tsx": "export const n: string = 3;" }, catalogo: "1999-01" });
     expect(r?.typescript.map((d) => d.codigo)).toEqual(["TS2322"]);

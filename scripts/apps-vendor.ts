@@ -538,8 +538,7 @@ async function syncCatalog(): Promise<void> {
  * referencia y `/// <reference types>` de cada `.d.ts`. No son bytes servidos:
  * van en `types.json`, fuera del manifiesto, y un catálogo congelado puede ganarlo.
  */
-function buildTypesPack(nombre: string): Record<string, string> {
-  const raiz = raizDePaquetes(nombre);
+function buildTypesPack(especificadores: readonly string[], raiz: string): Record<string, string> {
   const nm = path.join(raiz, "node_modules");
   const opciones: ts.CompilerOptions = { moduleResolution: ts.ModuleResolutionKind.Bundler, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX };
   const desde = path.join(raiz, "__tipos__.ts");
@@ -548,7 +547,7 @@ function buildTypesPack(nombre: string): Record<string, string> {
     const r = ts.resolveModuleName(especificador, fichero, opciones, ts.sys).resolvedModule;
     if (r && /\.d\.[cm]?ts$/.test(r.resolvedFileName) && path.normalize(r.resolvedFileName).startsWith(nm)) pendientes.push(r.resolvedFileName);
   };
-  for (const d of catalogo(nombre)!.dependencias) resolver(d.especificador, desde);
+  for (const e of especificadores) resolver(e, desde);
   const vistos = new Set<string>();
   while (pendientes.length > 0) {
     const f = path.normalize(pendientes.pop()!);
@@ -605,14 +604,46 @@ function syncTypesPacks(): void {
       console.log(`apps:vendor — ${nombre}: sus paquetes no están a sus versiones; su types.json se deja como está.`);
       continue;
     }
-    const ruta = path.join(RAIZ, "public", "app-vendor", nombre, "types.json");
-    const texto = JSON.stringify(buildTypesPack(nombre)) + "\n";
-    const alDia = existsSync(ruta) && readFileSync(ruta, "utf8") === texto;
-    if (alDia) continue;
-    if (soloComprobar) throw new Error(`types.json de ${nombre} no está al día (npm run apps:vendor)`);
-    writeFileSync(ruta, texto);
-    console.log(`apps:vendor — ${nombre}: types.json escrito (${(texto.length / 1024 / 1024).toFixed(2)} MB).`);
+    const pack = buildTypesPack(
+      catalogo(nombre)!.dependencias.map((d) => d.especificador),
+      raizDePaquetes(nombre),
+    );
+    escribirTypesPack(nombre, pack, soloComprobar);
   }
+  syncTestKitTypes(soloComprobar);
+}
+
+/** Un `types.json` al día; con `--comprobar`, sólo que lo esté. */
+function escribirTypesPack(nombre: string, pack: Record<string, string>, soloComprobar: boolean): void {
+  const ruta = path.join(RAIZ, "public", "app-vendor", nombre, "types.json");
+  const texto = JSON.stringify(pack) + "\n";
+  if (existsSync(ruta) && readFileSync(ruta, "utf8") === texto) return;
+  if (soloComprobar) throw new Error(`types.json de ${nombre} no está al día (npm run apps:vendor)`);
+  writeFileSync(ruta, texto);
+  console.log(`apps:vendor — ${nombre}: types.json escrito (${(texto.length / 1024 / 1024).toFixed(2)} MB).`);
+}
+
+/** React y sus tipos los pone el catálogo de la app: el kit no los trae, o
+ *  pisaría los suyos al fusionar los dos paquetes en el comprobador. */
+const TIPOS_QUE_PONE_EL_CATALOGO = /^\/node_modules\/(?:@types\/(?:react|react-dom)|react|react-dom|csstype)\//;
+
+/**
+ * LOS TIPOS DEL KIT DE PRUEBAS (plan 04, tarea 9): los de Testing Library,
+ * @vitest/expect y @vitest/spy, más NUESTRO `vitest` (`lib/apps/tests/vitest.d.ts`,
+ * lo que da `vitest-runtime.js`), en `public/app-vendor/<kit>/types.json`. El
+ * comprobador lo fusiona con el del catálogo de la app.
+ */
+function syncTestKitTypes(soloComprobar: boolean): void {
+  const raiz = testKitDir(RAIZ);
+  if (!existsSync(path.join(raiz, "node_modules"))) {
+    console.log(`apps:vendor — ${TEST_KIT_NAME}: sus paquetes no están instalados; su types.json se deja como está.`);
+    return;
+  }
+  const especificadores = [...TEST_KIT.dependencias.map((d) => d.especificador), "@testing-library/jest-dom/matchers"];
+  const pack = Object.fromEntries(Object.entries(buildTypesPack(especificadores, raiz)).filter(([f]) => !TIPOS_QUE_PONE_EL_CATALOGO.test(f)));
+  pack["/node_modules/vitest/index.d.ts"] = readFileSync(path.join(RAIZ, "lib", "apps", "tests", "vitest.d.ts"), "utf8").replace(/\r\n?/g, "\n");
+  pack["/node_modules/vitest/package.json"] = JSON.stringify({ name: "vitest", types: "index.d.ts" });
+  escribirTypesPack(TEST_KIT_NAME, Object.fromEntries(Object.entries(pack).sort(([a], [b]) => a.localeCompare(b))), soloComprobar);
 }
 
 /** Lo que se congela del kit: cada fichero de su lista y sus trozos. */
