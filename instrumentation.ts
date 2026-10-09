@@ -25,6 +25,10 @@ export async function register() {
       void import("@/lib/agent/turnos-desde-el-servidor")
         .then((m) => m.retomarPedidosDelHilo())
         .catch((err) => console.error("[hilos] no se pudieron retomar los pedidos a Len", err));
+      // Y los correos a Len (lib/len-email/run.ts), igual.
+      void import("@/lib/len-email/run")
+        .then((m) => m.resumeEmailRequests())
+        .catch((err) => console.error("[len-email] no se pudieron retomar los correos a Len", err));
     }, 10_000).unref?.();
   }
 }

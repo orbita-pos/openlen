@@ -184,7 +184,8 @@
       "copiada": "Gekopieerd",
       "pie": "Beantwoord deze e-mail om met Len verder te werken aan {titulo}.",
       "abrir": "Project openen",
-      "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen."
+      "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen.",
+      "interrumpido": "De server is herstart terwijl ik ermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en beantwoord zo nodig deze e-mail om het opnieuw te vragen."
     }
   }
 }

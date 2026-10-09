@@ -7,21 +7,21 @@
 //
 // Lo que no pasa la puerta se TIRA en silencio (200 `ignored`): contestar a un
 // remitente falso o a una respuesta automática sería mandar correo a quien no
-// lo pidió. Lo que la pasa arranca un turno en el servidor, como un `@Len` de
-// un hilo (lib/agent/turnos-desde-el-servidor.ts), y Len contesta por correo.
+// lo pidió. Lo que la pasa se APUNTA primero (`lenEmailRequests`, único por
+// Message-ID: el mismo correo dos veces no lanza dos turnos) y luego arranca un
+// turno en el servidor, como un `@Len` de un hilo; Len contesta por correo. Si
+// el servidor se reinicia, `resumeEmailRequests` retoma lo apuntado.
 import { timingSafeEqual } from "node:crypto";
 
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { launchEmailTurn } from "@/lib/agent/turnos-desde-el-servidor";
 import { db, schema } from "@/lib/db";
-import { sendLenReplyEmail } from "@/lib/email";
-import { lenEmailAddress, projectIdFromAddress } from "@/lib/len-email/address";
-import { contextForModel, detectLanguage, isAuthentic, isAutomatic, mailboxAddress, newReplyText } from "@/lib/len-email/inbound";
-import { urlDelChat } from "@/lib/notifications/channels/webpush";
+import { lenEmailDomain, projectIdFromAddress } from "@/lib/len-email/address";
+import { detectLanguage, isAuthentic, isAutomatic, mailboxAddress, newReplyText } from "@/lib/len-email/inbound";
+import { dedupeKeyOf, recentEmailRequests, recordEmailRequest } from "@/lib/len-email/requests";
+import { resumeEmailRequests, startEmailRequest } from "@/lib/len-email/run";
 import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
-import { fraseDeFalloPorCorreo } from "@/lib/projects/correos-del-proyecto";
 import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 
 export const runtime = "nodejs";
@@ -62,18 +62,9 @@ function authorized(req: Request, token: string): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-const recent = new Map<string, number[]>();
-function underLimit(projectId: string, now = Date.now()): boolean {
-  const hits = (recent.get(projectId) ?? []).filter((t) => now - t < 3_600_000);
-  if (hits.length >= MAX_PER_HOUR) return false;
-  hits.push(now);
-  recent.set(projectId, hits);
-  return true;
-}
-
 export async function POST(req: Request): Promise<Response> {
   const token = process.env.LEN_EMAIL_INBOUND_TOKEN?.trim();
-  if (!token) return json({ error: "len email is not configured" }, 503);
+  if (!token || !lenEmailDomain()) return json({ error: "len email is not configured" }, 503);
   if (!authorized(req, token)) return json({ error: "unauthorized" }, 401);
 
   const parsed = Inbound.safeParse(await req.json().catch(() => null));
@@ -101,35 +92,23 @@ export async function POST(req: Request): Promise<Response> {
 
   const texto = newReplyText(mail.text).slice(0, MAX_PROMPT);
   if (!texto) return ignored("correo vacío");
-  if (!underLimit(projectId)) return ignored("tope por hora");
+  if ((await recentEmailRequests(projectId)) >= MAX_PER_HOUR) return ignored("tope por hora");
 
-  const [project] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
-  const idioma = detectLanguage(texto);
-  const replyTo = lenEmailAddress(projectId);
-  if (!replyTo) return json({ error: "len email is not configured" }, 503);
-  const reply = (text: string) =>
-    sendLenReplyEmail({
-      to: sender,
-      replyTo,
-      idioma,
-      inReplyTo: mail.messageId ?? null,
-      projectTitle: project?.title ?? "",
-      asunto: mail.subject,
-      texto: text,
-      url: siteUrl + urlDelChat(projectId),
-    });
-
-  // `userId` es quien escribió: el turno resuelve si es el dueño o un editor
-  // (y entonces cobra al dueño, con el tope de los miembros), como en el chat.
-  const { filaId } = await launchEmailTurn({
-    userId: user.id,
+  // Primero se apunta; luego se trabaja. `userId` es quien escribió: el turno
+  // resuelve si es el dueño o un editor (y cobra al dueño), como en el chat.
+  const request = await recordEmailRequest({
+    dedupeKey: dedupeKeyOf({ messageId: mail.messageId, sender, to: mail.to, subject: mail.subject, text: mail.text }),
     projectId,
+    userId: user.id,
+    sender,
+    subject: mail.subject,
     texto,
-    context: contextForModel(mail.subject),
-    origen: `${siteUrl}/api/agent`,
-    reply,
-    fraseDeFallo: (fallo) => fraseDeFalloPorCorreo(idioma, fallo),
+    idioma: detectLanguage(texto),
+    inReplyTo: mail.messageId ?? null,
   });
-  return json({ ok: true, turnId: filaId }, 202);
+  if (!request) return ignored("duplicado");
+  // Lo que un reinicio dejó a medias, por si este proceso aún no lo retomó.
+  void resumeEmailRequests();
+  await startEmailRequest(request);
+  return json({ ok: true, turnId: request.id }, 202);
 }

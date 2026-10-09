@@ -184,7 +184,8 @@
       "copiada": "Copied",
       "pie": "Reply to this email to keep working with Len on {titulo}.",
       "abrir": "Open the project",
-      "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again."
+      "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again.",
+      "interrumpido": "The server restarted while I was working on it, so it may be half done. Check the changes and, if needed, reply to this email to ask me again."
     }
   }
 }

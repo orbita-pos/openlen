@@ -184,7 +184,8 @@
       "copiada": "Kopiert",
       "pie": "Antworte auf diese E-Mail, um mit Len an {titulo} weiterzuarbeiten.",
       "abrir": "Projekt öffnen",
-      "falloSinMotivo": "Ich bin nicht dazu gekommen. Antworte auf diese E-Mail, um mich noch einmal zu fragen."
+      "falloSinMotivo": "Ich bin nicht dazu gekommen. Antworte auf diese E-Mail, um mich noch einmal zu fragen.",
+      "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe, es könnte also nur halb fertig sein. Sieh dir die Änderungen an und antworte bei Bedarf auf diese E-Mail, um mich noch einmal zu fragen."
     }
   }
 }

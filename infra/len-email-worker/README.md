@@ -11,6 +11,7 @@ remitente ──► Cloudflare Email Routing (reply.openlen.com, MX)
                       └─► POST https://openlen.com/api/len-email/inbound  (Bearer)
                             ├─ ¿automático? ¿firma de la dirección? ¿DKIM/DMARC?
                             ├─ ¿el remitente es el dueño o un editor?
+                            ├─ se APUNTA en lenEmailRequests (único por Message-ID)
                             └─► turno de Len en el servidor ──► respuesta por Resend
 ```
 
@@ -18,6 +19,9 @@ Sin `LEN_EMAIL_DOMAIN` la función está apagada: no hay dirección en «Compart
 Sin `LEN_EMAIL_INBOUND_TOKEN`, la ruta contesta 503.
 
 ## 1 · El servidor (Hetzner, el `.env` de la app)
+
+La tabla `lenEmailRequests` la crea `len-email-migrate`, que el deploy corre en
+la caja (está en `scripts/build-migrations.mjs`). En local: `npm run len-email:migrate`.
 
 ```
 LEN_EMAIL_DOMAIN=reply.openlen.com
@@ -59,7 +63,14 @@ LEN_EMAIL_INBOUND_TOKEN=<openssl rand -hex 32>
 ## Límites de esta primera versión
 
 - Sólo texto: las fotos adjuntas no llegan a Len todavía.
-- La cola de turnos vive en memoria: si el servidor se reinicia a mitad de un
-  turno pedido por correo, ese pedido se pierde sin respuesta (los hilos sí se
-  retoman).
 - 20 correos por proyecto y hora; lo que pase de ahí se ignora.
+
+## Lo que aguanta
+
+- **El mismo correo dos veces** (Cloudflare reintenta, el remitente reenvía):
+  `dedupeKey` es único (el Message-ID, o una huella si no lo trae). Un turno.
+- **Un reinicio del servidor** (`resumeEmailRequests`, al arrancar): lo que no
+  empezó se corre; lo que ya tenía respuesta se reenvía sin repetir el turno;
+  lo cortado a medias, Len lo dice por correo; lo de hace más de un día, igual.
+- **Resend caído al contestar**: la respuesta queda guardada sin marcar y se
+  reenvía en el próximo arranque.
