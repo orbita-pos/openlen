@@ -171,3 +171,26 @@ describe("el router y los iconos del catálogo 2026-10 (D3)", () => {
     for (const icono of ICONOS_DE_LAS_APPS) expect(exportan["lucide-react.js"], icono).toContain(icono);
   });
 });
+
+describe("el paquete de tipos de cada catálogo (plan 03, tarea 1)", () => {
+  const paquete = (nombre: string) =>
+    JSON.parse(readFileSync(join(RAIZ, "public", "app-vendor", nombre, "types.json"), "utf8")) as Record<string, string>;
+
+  for (const nombre of ["2026-10", "2026-11"]) {
+    it(`${nombre}: types.json trae los .d.ts de lo que el catálogo exporta, con rutas de node_modules`, () => {
+      const rutas = Object.keys(paquete(nombre));
+      for (const r of rutas) expect(r, r).toMatch(/^\/node_modules\/.+\.(d\.ts|d\.mts|d\.cts|json)$/);
+      expect(rutas).toContain("/node_modules/@types/react/index.d.ts");
+      expect(rutas).toContain("/node_modules/@types/react/jsx-runtime.d.ts");
+      expect(rutas.some((r) => r.startsWith("/node_modules/@supabase/supabase-js/"))).toBe(true);
+      expect(rutas).toEqual([...rutas].sort((a, b) => a.localeCompare(b)));
+    });
+  }
+
+  it("2026-11: también shadcn, formularios y gráficas", () => {
+    const rutas = Object.keys(paquete("2026-11"));
+    for (const p of ["@radix-ui/react-dialog", "class-variance-authority", "react-hook-form", "zod", "recharts", "date-fns"]) {
+      expect(rutas.some((r) => r.startsWith(`/node_modules/${p}/`)), p).toBe(true);
+    }
+  });
+});
