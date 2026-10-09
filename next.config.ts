@@ -73,6 +73,9 @@ const nextConfig = {
       "./lib/apps/bundler/bundler-worker.mjs",
       "./node_modules/esbuild-wasm/esbuild.wasm",
       "./node_modules/esbuild-wasm/lib/browser.js",
+      // Las pruebas de una app (plan 04): `bundle-tests.ts` lee nuestro vitest
+      // por ruta y lo empaqueta con cada prueba. El kit vive en public/.
+      "./lib/apps/tests/vitest-runtime.js",
     ],
   },
   // External Node packages:

@@ -99,4 +99,18 @@ describe("las pruebas no son de la app", () => {
     expect(Object.keys(r.ficheros)).not.toContain("/src/App.test.jsx");
     expect(Object.keys(r.ficheros)).not.toContain("/src/test/setup.ts");
   });
+
+  it("🔴 el vite.config / vitest.config tampoco es de la app: es herramienta, y su import de vitest/config no bloquea nada (revisión de la tarea 10)", () => {
+    const r = compilarCarpeta({
+      carpeta: {
+        ...CARPETA,
+        "/vitest.config.ts": 'import { defineConfig } from "vitest/config";\nexport default defineConfig({ test: { setupFiles: ["./src/setup.ts"] } });',
+        "/vite.config.js": 'import react from "@vitejs/plugin-react";\nexport default { plugins: [react()] };',
+        "/src/setup.ts": 'import "@testing-library/jest-dom/vitest";',
+      },
+      catalogo: CATALOGO,
+    });
+    expect(r.errores).toEqual([]);
+    expect(Object.keys(r.ficheros).filter((f) => /config|setup/.test(f))).toEqual([]);
+  });
 });
