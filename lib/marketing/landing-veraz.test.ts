@@ -123,6 +123,25 @@ describe("los módulos que anuncia la landing existen", () => {
   });
 });
 
+describe("la landing no vende la sección Marketing, que se quitó", () => {
+  // Quitada del espacio de trabajo el 2026-10-08 (estaba mal hecha y se rehará,
+  // mejor). La tarjeta «Marketing Kit» de la portada contaba sus posts: dejarla
+  // es exactamente la promesa sin producto que esta suite existe para pillar.
+  it("el componente ya no pinta la tarjeta del Kit", () => {
+    const comp = readFileSync(
+      resolve(process.cwd(), "components/marketing/analytics-leads.tsx"),
+      "utf8",
+    );
+    expect(comp).not.toContain("extras.kit");
+    expect(comp).not.toContain("listPostTemplates");
+  });
+
+  it.each(LOCALES)("%s — no quedan las cadenas del Kit", (locale) => {
+    const m = marketing(locale) as { analyticsLeads?: { extras?: Record<string, unknown> } };
+    expect(m.analyticsLeads?.extras?.kit).toBeUndefined();
+  });
+});
+
 describe("las cifras de los planes no se contradicen con el cobro", () => {
   // HASTA EL 04/10 aquí se pedía que el plan Pro dijera «25» (los sitios que
   // daban 150 créditos). La portada nueva vende Pro 200 y Max 500, y su texto ya

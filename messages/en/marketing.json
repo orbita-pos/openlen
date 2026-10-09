@@ -112,11 +112,6 @@
       }
     },
     "extras": {
-      "kit": {
-        "title": "Marketing Kit",
-        "chip": "{posts} ready-made posts",
-        "body": "Ready-to-post social graphics matched to your page — same palette, same font, contrast-safe. Pick one, tweak the caption, post."
-      },
       "coach": {
         "title": "Page Coach",
         "tip": "Move the WhatsApp button above the fold — 62% of visitors never scroll past the hero.",

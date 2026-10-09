@@ -43,6 +43,12 @@ describe("validateSettingsPatch", () => {
     expect(validateSettingsPatch({ collections: { enabled: true } }, "p1").ok).toBe(false);
     expect(validateSettingsPatch({ collections: { theme: "dark" } }, "p1").ok).toBe(false);
   });
+  // La sección Marketing se quitó el 2026-10-08 (se rehará): su ajuste
+  // (`register` + `match`) ya no lo lee nadie, así que tampoco se escribe.
+  it("ya NO acepta un parche de marketing", () => {
+    expect(validateSettingsPatch({ marketing: { register: "general" } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ marketing: { match: false } }, "p1").ok).toBe(false);
+  });
 });
 
 describe("applySettingsPatch", () => {

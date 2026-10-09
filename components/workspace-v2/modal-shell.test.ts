@@ -31,7 +31,6 @@ const PENDIENTES: readonly string[] = [
   // Vive DENTRO del diálogo de imágenes (pestaña «Editar»), así que su caso es
   // distinto: puede que no necesite caparazón propio, sino ninguno.
   "image-editor.tsx",
-  "marketing-view.tsx",
   "original-restore-modal.tsx",
   "site-pages-panel.tsx",
   "versions-panel.tsx",
