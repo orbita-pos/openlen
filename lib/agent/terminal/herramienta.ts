@@ -25,6 +25,7 @@ import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
+import { appToolsFor } from "./herramientas-de-app";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -55,6 +56,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(deps.supabaseCli
       ? { supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => deps.supabaseCli!(session.projectId, args, ficheros) }
       : {}),
+    // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
+    appTools: appToolsFor(session, deps),
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,

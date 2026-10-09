@@ -70,6 +70,17 @@ export class TerminalDeLen {
         args: readonly string[],
         ficheros: Readonly<Record<string, string>>,
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
+      /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
+       *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
+       *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
+      readonly appTools?: {
+        readonly catalogSpecifiers: readonly string[];
+        readonly run: (
+          program: "tsc" | "eslint",
+          args: readonly string[],
+          ficheros: Readonly<Record<string, string>>,
+        ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+      };
       readonly limiteMs?: number;
       readonly margenMs?: number;
     },
@@ -90,6 +101,10 @@ export class TerminalDeLen {
         void this.servirSupabase(hilo, m.supabase, m.args as string[], m.ficheros as Record<string, string>);
         return;
       }
+      if (typeof m.app === "number") {
+        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint", m.args as string[], m.ficheros as Record<string, string>);
+        return;
+      }
       const p = this.pendientes.get(m.id);
       if (!p) return;
       this.pendientes.delete(m.id);
@@ -103,7 +118,26 @@ export class TerminalDeLen {
     });
     this.hilo = hilo;
     const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
-    await this.pedir({ tipo: "iniciar", ficheros, perezosos, supabase: Boolean(this.o.supabase), limiteMs: this.limite });
+    await this.pedir({
+      tipo: "iniciar",
+      ficheros,
+      perezosos,
+      supabase: Boolean(this.o.supabase),
+      app: this.o.appTools ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers] } : undefined,
+      limiteMs: this.limite,
+    });
+  }
+
+  /** `tsc` / `eslint` en una app: como `servirSupabase`. */
+  private async servirAppTools(hilo: Worker, pid: number, program: "tsc" | "eslint", args: string[], ficheros: Record<string, string>): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    try {
+      if (!this.o.appTools) throw new Error("not available here");
+      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros) };
+    } catch (e) {
+      respuesta = { tipo: "app", pid, error: e instanceof Error ? e.message : String(e) };
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
 
   /** `supabase …`: se corre aquí y se le devuelve la salida al hilo. Si el hilo

@@ -65,6 +65,7 @@ const nextConfig = {
       // dependency trees come along (ESLint's live loose in node_modules).
       "./lib/apps/checker/checker-worker.mjs",
       "./lib/apps/checker/checker-core.mjs",
+      "./lib/apps/checker/format.mjs",
       "./node_modules/typescript/lib/*.d.ts",
     ],
   },
