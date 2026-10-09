@@ -27,7 +27,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { build, type Plugin } from "esbuild";
 import { parse } from "es-module-lexer/js";
-import { CATALOGO_ACTUAL, catalogo, ficherosDelCatalogo, type Dependencia, type ModoVendor } from "../lib/apps/dependencias";
+import ts from "typescript";
+import { CATALOGO_ACTUAL, CATALOGOS, catalogo, ficherosDelCatalogo, type Dependencia, type ModoVendor } from "../lib/apps/dependencias";
 import { EXPORTS_DEL_ENRUTADOR } from "../lib/apps/enrutador";
 import { ICONOS_DE_LAS_APPS } from "../lib/apps/iconos";
 
@@ -434,7 +435,7 @@ function huella(fichero: string): string {
   return `sha256-${createHash("sha256").update(readFileSync(fichero)).digest("base64")}`;
 }
 
-async function main(): Promise<void> {
+async function syncCatalog(): Promise<void> {
   const soloComprobar = process.argv.includes("--comprobar");
   const nombre = CATALOGO_ACTUAL;
   const c = catalogo(nombre);
@@ -525,6 +526,96 @@ async function main(): Promise<void> {
   } finally {
     rmSync(nuevo, { recursive: true, force: true });
   }
+}
+
+/**
+ * EL PAQUETE DE TIPOS DE UN CATÁLOGO (plan 03): los `.d.ts` que necesita el
+ * comprobador de tipos (`lib/apps/checker/`) para que un import del catálogo no
+ * sea `any`. Se resuelve con la resolución de TypeScript —`bundler`, la del
+ * tsconfig de las apps—, partiendo de cada especificador, y se sigue cada import,
+ * referencia y `/// <reference types>` de cada `.d.ts`. No son bytes servidos:
+ * van en `types.json`, fuera del manifiesto, y un catálogo congelado puede ganarlo.
+ */
+function buildTypesPack(nombre: string): Record<string, string> {
+  const raiz = raizDePaquetes(nombre);
+  const nm = path.join(raiz, "node_modules");
+  const opciones: ts.CompilerOptions = { moduleResolution: ts.ModuleResolutionKind.Bundler, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX };
+  const desde = path.join(raiz, "__tipos__.ts");
+  const pendientes: string[] = [];
+  const resolver = (especificador: string, fichero: string) => {
+    const r = ts.resolveModuleName(especificador, fichero, opciones, ts.sys).resolvedModule;
+    if (r && /\.d\.[cm]?ts$/.test(r.resolvedFileName) && path.normalize(r.resolvedFileName).startsWith(nm)) pendientes.push(r.resolvedFileName);
+  };
+  for (const d of catalogo(nombre)!.dependencias) resolver(d.especificador, desde);
+  const vistos = new Set<string>();
+  while (pendientes.length > 0) {
+    const f = path.normalize(pendientes.pop()!);
+    if (vistos.has(f) || !existsSync(f)) continue;
+    vistos.add(f);
+    const pre = ts.preProcessFile(readFileSync(f, "utf8"), true, true);
+    for (const i of pre.importedFiles) resolver(i.fileName, f);
+    for (const r of pre.referencedFiles) pendientes.push(path.resolve(path.dirname(f), r.fileName));
+    for (const t of pre.typeReferenceDirectives) {
+      const r = ts.resolveTypeReferenceDirective(t.fileName, f, opciones, ts.sys).resolvedTypeReferenceDirective;
+      if (r?.resolvedFileName && path.normalize(r.resolvedFileName).startsWith(nm)) pendientes.push(r.resolvedFileName);
+    }
+  }
+  const virtual = (real: string) => "/node_modules/" + path.relative(nm, real).replaceAll("\\", "/");
+  const pack: Record<string, string> = {};
+  const paquetes = new Set<string>();
+  for (const f of vistos) {
+    pack[virtual(f)] = readFileSync(f, "utf8").replace(/\r\n?/g, "\n");
+    // El package.json del paquete de cada fichero (el más cercano hacia arriba):
+    // la resolución del host virtual lo necesita para `exports` y `types`.
+    let dir = path.dirname(f);
+    while (dir.startsWith(nm) && dir !== nm && !existsSync(path.join(dir, "package.json"))) dir = path.dirname(dir);
+    if (dir.startsWith(nm) && dir !== nm) paquetes.add(path.join(dir, "package.json"));
+  }
+  for (const p of paquetes) {
+    const j = JSON.parse(readFileSync(p, "utf8")) as Record<string, unknown>;
+    const recortado = Object.fromEntries(
+      ["name", "version", "types", "typings", "main", "module", "exports", "typesVersions"].filter((k) => k in j).map((k) => [k, j[k]]),
+    );
+    pack[virtual(p)] = JSON.stringify(recortado);
+  }
+  return Object.fromEntries(Object.entries(pack).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/** ¿Están instalados los paquetes de este catálogo a SUS versiones? Si no (un
+ *  catálogo viejo cuya carpeta ya no tiene sus versiones), sus tipos no se
+ *  rehacen: se deja el `types.json` que haya. */
+function catalogoInstalado(nombre: string): boolean {
+  const raiz = raizDePaquetes(nombre);
+  return Object.entries(catalogo(nombre)!.versiones).every(([p, v]) => {
+    try {
+      return versionInstalada(p, raiz) === v;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/** Los `types.json` de cada catálogo instalado: al día, o con `--comprobar`, que lo estén. */
+function syncTypesPacks(): void {
+  const soloComprobar = process.argv.includes("--comprobar");
+  for (const nombre of Object.keys(CATALOGOS)) {
+    if (!catalogoInstalado(nombre)) {
+      console.log(`apps:vendor — ${nombre}: sus paquetes no están a sus versiones; su types.json se deja como está.`);
+      continue;
+    }
+    const ruta = path.join(RAIZ, "public", "app-vendor", nombre, "types.json");
+    const texto = JSON.stringify(buildTypesPack(nombre)) + "\n";
+    const alDia = existsSync(ruta) && readFileSync(ruta, "utf8") === texto;
+    if (alDia) continue;
+    if (soloComprobar) throw new Error(`types.json de ${nombre} no está al día (npm run apps:vendor)`);
+    writeFileSync(ruta, texto);
+    console.log(`apps:vendor — ${nombre}: types.json escrito (${(texto.length / 1024 / 1024).toFixed(2)} MB).`);
+  }
+}
+
+async function main(): Promise<void> {
+  await syncCatalog();
+  syncTypesPacks();
 }
 
 main().catch((err: unknown) => {
