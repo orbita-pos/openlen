@@ -249,8 +249,11 @@ describe("🔴 una app shadcn hace lo mismo en el lienzo, en los ojos de Len y p
     });
     const main = path.join(releaseViva("panel-sin-tailwind"), "src", "main.jsx");
     const compilado = readFileSync(main, "utf8");
-    expect(compilado).toContain('s.type="text/tailwindcss"');
-    writeFileSync(main, compilado.replace('s.type="text/tailwindcss"', 's.type="text/css"'));
+    // La entrada es el paquete de producción (plan 02): minificado, así que la
+    // variable del <style> ya no se llama `s`.
+    const tipo = /([\w$]+)\.type="text\/tailwindcss"/;
+    expect(compilado).toMatch(tipo);
+    writeFileSync(main, compilado.replace(tipo, '$1.type="text/css"'));
     const { resultado } = await abrir(`http://panel-sin-tailwind.localhost:${puertoPublicada}/`);
     expect((resultado as { fondo?: string }).fondo).not.toBe("rgb(255, 0, 0)");
   }, 90_000);

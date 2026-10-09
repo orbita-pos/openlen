@@ -46,10 +46,9 @@ import type {
   AppDeProyecto,
   FormConfig,
 } from "@/lib/projects/types";
-import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
-import { catalogo as catalogoDeApps, rutaDeVendor } from "@/lib/apps/dependencias";
-import { conImportMap, conPrecarga, rutasDePrecarga } from "@/lib/apps/documento";
-import { leerVendor, vendorFilesFor } from "@/lib/apps/servir";
+import { AppNoCompilaError, compilarCarpeta, esFuenteCompilable, usesTailwindDirectives } from "@/lib/apps/compilador";
+import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
+import { catalogo as catalogoDeApps } from "@/lib/apps/dependencias";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-disk primitives — versioned releases + `current` symlink.
@@ -919,21 +918,16 @@ export async function publishToDir(
     entrada: app?.entrada ?? null,
   });
   if (compilada.errores.length > 0) throw new AppNoCompilaError(compilada.errores);
-  // El catálogo, de PRODUCCIÓN, del mismo origen. Sin él la app no arranca, así
-  // que una dependencia que falta en el disco del servidor también para todo.
-  // Sólo lo que la app alcanza (`vendorFilesFor`): el 2026-11 entero son 3,2 MB
-  // por release.
-  const vendorDeLaApp = app
-    ? vendorFilesFor(app.catalogo, compilada.ficheros).map((f) => {
-        const content = leerVendor(app.catalogo, f, "produccion");
-        if (content === null) throw new Error(`publishToDir: falta ${f} del catálogo ${app.catalogo} (npm run apps:vendor)`);
-        return { path: rutaDeVendor(app.catalogo, f).slice(1), content };
-      })
-    : [];
-  /** El documento de una app: el import map y la precarga, sobre lo ya
-   *  sellado, en el mismo punto que la vista (`documentoDeVista`). */
-  const paraLaApp = (html: string): string =>
-    app ? conPrecarga(conImportMap(html, app.catalogo), rutasDePrecarga(app.catalogo, compilada.grafo, compilada.paquetes)) : html;
+  // UNA APP SE PUBLICA EMPAQUETADA (plan 02): UN fichero en su entrada con sus
+  // fuentes y SÓLO lo que usa del catálogo, de producción y minificado — el
+  // MISMO paquete que el lienzo y los ojos (`bundleApp`), en su modo. Sin
+  // catálogo suelto, sin fuentes sueltos, sin import map ni precarga. Si el
+  // empaquetador no contesta, no se publica: la release anterior sigue.
+  const paquete = app
+    ? await bundleApp({ carpeta: carpetaPublicable, app, ...(params.entorno ? { entorno: params.entorno } : {}), modo: "produccion" })
+    : null;
+  if (app && !paquete) throw new Error(`publishToDir: ${BUNDLER_DID_NOT_ANSWER}`);
+  if (paquete && !paquete.ok) throw new AppNoCompilaError(paquete.errores);
 
   const sub = v.value;
   const root = getRoot();
@@ -1087,17 +1081,17 @@ export async function publishToDir(
   // que nuestra propia CSP bloquea, así que el visitante lee el marcador de
   // Cloudflare en vez del correo del negocio. Va aquí —después de optimizar,
   // hornear y sellar— para que ningún parser posterior pueda moverlo.
-  migratedHtml = optOutOfEmailObfuscation(paraLaApp(migratedHtml));
+  migratedHtml = optOutOfEmailObfuscation(migratedHtml);
 
   const releaseFiles: Array<{ path: string; content: string }> = [
     { path: "index.html", content: migratedHtml },
     ...localeDocs.map((d) => ({
       path: `${d.locale}/index.html`,
-      content: optOutOfEmailObfuscation(paraLaApp(d.html)),
+      content: optOutOfEmailObfuscation(d.html),
     })),
     ...pageDocs.map((p) => ({
       path: `${p.slug}/index.html`,
-      content: optOutOfEmailObfuscation(paraLaApp(p.html)),
+      content: optOutOfEmailObfuscation(p.html),
     })),
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
@@ -1113,13 +1107,20 @@ export async function publishToDir(
 
   // LA CARPETA (pieza 9 de Len 2.5): los ficheros web del proyecto, tal cual,
   // junto a las páginas — salvo los fuentes, que van COMPILADOS en su misma
-  // ruta (arriba). Se filtran OTRA VEZ aquí aunque el llamador ya lo
+  // ruta (arriba); en una app, ni eso: van DENTRO del paquete de su entrada
+  // (plan 02), y de la carpeta sale sólo lo que no es fuente (hojas, .svg, .json…). Se filtran OTRA VEZ aquí aunque el llamador ya lo
   // haga (como `data-slot-path`): ni una prueba, ni una migración, ni una ruta
   // reservada o rara llegan al disco. Si el dueño trae su robots.txt o su
   // llms.txt, gana el suyo, como en Vercel con `public/`.
-  const folder = publishableFolderFiles(compilada.ficheros);
+  const folder =
+    app && paquete?.ok
+      ? [
+          ...publishableFolderFiles(Object.fromEntries(Object.entries(compilada.ficheros).filter(([r]) => !esFuenteCompilable(r, true)))),
+          { path: app.entrada.slice(1), content: paquete.js },
+        ]
+      : publishableFolderFiles(compilada.ficheros);
   const own = new Set(folder.map((f) => f.path));
-  const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder, ...vendorDeLaApp];
+  const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
   // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
   // de baja. Las rutas se recuerdan fuera de la release, para las siguientes.

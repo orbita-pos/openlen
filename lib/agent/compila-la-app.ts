@@ -65,6 +65,21 @@ export function problemasDelCascaron(app: AppDeProyecto, cascaron: string, carpe
       ),
     );
   }
+  // UNA APP ES UN PAQUETE (plan 02): el cascarón sólo arranca la entrada. Otro
+  // <script type="module"> —en línea, o a otro fichero— ya no tiene import map
+  // ni catálogo suelto con que importar: no funcionaría en ningún camino.
+  for (const m of cascaron.matchAll(/<script\b([^>]*)>/gi)) {
+    const atributos = m[1] ?? "";
+    if (!/\btype\s*=\s*["']module["']/i.test(atributos)) continue;
+    if (new RegExp(`\\bsrc\\s*=\\s*["']${escapada}["']`, "i").test(atributos)) continue;
+    fuera.push(
+      diag(
+        `In an app the shell only starts ${app.entrada}: the app is bundled from there. Move this <script type="module"> into /src and import it from ${app.entrada}.`,
+        "cascaron-modulo",
+      ),
+    );
+    break;
+  }
   if (!Object.hasOwn(enLaCarpeta, app.entrada)) {
     fuera.push(diag(`The app starts at ${app.entrada}, and that file doesn't exist: the app doesn't start.`, "entrada"));
   } else {

@@ -40,6 +40,15 @@ describe("el cascarón", () => {
     expect(problemasDelCascaron(APP, CASCARON, { "/src/App.jsx": "" }).map((x) => x.codigo)).toEqual(["entrada"]);
     expect(problemasDelCascaron(APP, '<div id="app"></div><script type="module" src="/src/main.jsx"></script>', BIEN).map((x) => x.codigo)).toEqual(["raiz"]);
   });
+
+  it("🔴 otro <script type=\"module\"> en el cascarón (en línea o a otro fichero): un error que dice moverlo a /src (plan 02)", () => {
+    const enLinea = CASCARON.replace("</body>", '<script type="module">import { z } from "zod";</script></body>');
+    const aOtro = CASCARON.replace("</body>", '<script type="module" src="/src/otro.jsx"></script></body>');
+    for (const c of [enLinea, aOtro]) expect(problemasDelCascaron(APP, c, BIEN).map((x) => x.codigo), c).toContain("cascaron-modulo");
+    // BRAZO DE CONTROL: el de la entrada y un <script> clásico, no.
+    const clasico = CASCARON.replace("</body>", '<script src="https://cdn.tailwindcss.com"></script></body>');
+    expect(problemasDelCascaron(APP, clasico, BIEN).map((x) => x.codigo)).not.toContain("cascaron-modulo");
+  });
 });
 
 describe("el tailwind.config del cascarón (apps 2026-11, tarea 6)", () => {

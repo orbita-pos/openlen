@@ -6,7 +6,6 @@ import {
   carpetaDeLaVista,
   documentoDeVista,
   documentoMedible,
-  documentoParaLaFoto,
   pantallaDe,
   vistaConCarpeta,
   vistaParaMedir,
@@ -234,22 +233,17 @@ describe("una app en la vista", () => {
     '<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body><div id="root"></div>' +
     '<script type="module" src="/src/main.jsx"></script></body></html>';
 
-  it("🔴 documentoDeVista le pone el import map del catálogo, delante de todo, ya sellado", () => {
+  it("🔴 documentoDeVista: una app ya NO lleva import map (plan 02): su entrada es el paquete, y la carga tal cual", () => {
     const html = documentoDeVista(CASCARON, ctx({ app: APP }));
-    expect(html).toMatch(/<script type="importmap" data-openlen-importmap>/);
-    expect(html.indexOf('type="importmap"')).toBeLessThan(html.indexOf('src="/src/main.jsx"'));
-    expect(html).toContain('"react":"/openlen/vendor/2026-10/react.js"');
+    expect(html).not.toContain("importmap");
+    expect(html).toContain('src="/src/main.jsx"');
   });
 
-  it("CONTRA-PRUEBA: una página no lleva import map", () => {
-    expect(documentoDeVista(CASCARON, ctx())).not.toContain("importmap");
-  });
-
-  it("documentoMedible: aunque el horneado falle, una app se mide CON su import map", () => {
+  it("documentoMedible: aunque el horneado falle, una app se mide cruda (su entrada es el paquete)", () => {
     const html = documentoMedible(CASCARON, ctx({ app: APP }), () => {
       throw new Error("binding caído");
     });
-    expect(html).toContain("data-openlen-importmap");
+    expect(html).toBe(CASCARON);
   });
 
   it("carpetaDeLaVista: la entrada es el PAQUETE (plan 02), los demás fuentes compilados y el catálogo, en el modo de desarrollo", async () => {
@@ -275,12 +269,6 @@ describe("una app en la vista", () => {
   it("carpetaDeLaVista: una app sin ficheros trae igualmente su catálogo; una página sin ficheros, nada", async () => {
     expect(Object.keys((await carpetaDeLaVista(ctx({ app: APP })))?.files ?? {})).toContain("/openlen/vendor/2026-10/react.js");
     expect(await carpetaDeLaVista(ctx())).toBeUndefined();
-  });
-
-  it("🔴 documentoParaLaFoto: una app se fotografía CON su import map (sin él no arranca y la foto sale en blanco); una página, tal cual", () => {
-    expect(documentoParaLaFoto(CASCARON, { app: APP })).toContain("data-openlen-importmap");
-    expect(documentoParaLaFoto(CASCARON, { app: null })).toBe(CASCARON);
-    expect(documentoParaLaFoto(CASCARON, null)).toBe(CASCARON);
   });
 
   it("carpetaDeLaVista: una app pide esperar a la red y lleva la pantalla; una página, nada de eso", async () => {
