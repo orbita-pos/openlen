@@ -650,7 +650,24 @@ async function syncTestKit(): Promise<void> {
     // que resolverlo. Su campo `browser` ya vacía `vm` y `timers`; `util`, igual.
     const utilVacio = path.join(fuentes, "util-vacio.cjs");
     writeFileSync(utilVacio, "module.exports = {};\n");
+    // Testing Library hace `import ReactDOM from "react-dom"` (por defecto), y
+    // la fachada `react-dom` del catálogo —congelado— sólo exporta por nombre.
+    // Ese `ReactDOM` sólo lo usa su `legacyRoot` (render, hydrate), que React 19
+    // ya no trae y que él mismo comprueba (`typeof ReactDOM.render`): como
+    // espacio de nombres hace lo mismo y lo resuelve la fachada.
+    const reactDomComoEspacio: Plugin = {
+      name: "react-dom-como-espacio",
+      setup(b) {
+        b.onLoad({ filter: /@testing-library[\\/]react[\\/]dist[\\/].*\.esm\.js$/ }, (a) => {
+          const codigo = readFileSync(a.path, "utf8");
+          const linea = "import ReactDOM from 'react-dom';";
+          if (!codigo.includes(linea)) return undefined;
+          return { contents: codigo.replace(linea, "import * as ReactDOM from 'react-dom';"), loader: "js" };
+        });
+      },
+    };
     const opciones = {
+      plugins: [reactDomComoEspacio],
       bundle: true,
       format: "esm" as const,
       platform: "browser" as const,
