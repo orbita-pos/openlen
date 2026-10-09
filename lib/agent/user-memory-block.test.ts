@@ -25,6 +25,14 @@ describe("la memoria de la persona en el contexto", () => {
     expect(out.indexOf("nunca uses amarillo")).toBeLessThan(out.indexOf("PROJECT STATE"));
   });
 
+  // plans/len-md: en un proyecto compartido cada miembro tiene su ~/.len/LEN.md
+  // y la conversación la ven todos (lib/agent/memory/private-memory.ts).
+  it("🔴 dice que es de quien habla AHORA y que no se le cita a nadie más del proyecto", () => {
+    const out = buildAgentContext({ ...base, userMemory: "• sin emojis" });
+    expect(out).toMatch(/person speaking now/);
+    expect(out).toMatch(/never quote (it|them) to anyone else/);
+  });
+
   it("dice que es de la PERSONA, no del proyecto", () => {
     // Si el modelo cree que es del proyecto, la aplicará sólo aquí — que es
     // exactamente el bug que esto cierra.

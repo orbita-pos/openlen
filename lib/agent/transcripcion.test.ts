@@ -43,6 +43,19 @@ describe("historialDesdeLaBase", () => {
     expect(h[1]).toMatchObject({ role: "user", content: "Hola", opensTurn: true });
   });
 
+  // plans/len-md: la conversación es compartida entre miembros; el ~/.len/LEN.md
+  // de cada uno es privado (lib/agent/memory/private-memory.ts).
+  it("🔴 lo de ~/.len/LEN.md no vuelve en el historial, ni de filas viejas con /memoria/dueno.md", () => {
+    const h = historialDesdeLaBase([
+      fila("recuérdame lo de los emojis", leer("/home/user/.len/LEN.md", "1\t- (Eli) Prefiero frases cortas.")),
+      fila("tutéame", [
+        { role: "assistant", content: "", reasoning: "el dueno.md dice «usted»", functionCalls: [{ name: "Edit", args: { file_path: "/memoria/dueno.md", old_string: "usted", new_string: "tú" } }] },
+        { role: "user", content: "", functionResponses: [{ name: "Edit", response: { ok: true, tool_result: "Edited." } }] },
+      ]),
+    ]);
+    expect(JSON.stringify(h)).not.toMatch(/frases cortas|usted/);
+  });
+
   it("cada turno es la petición del dueño más lo que pasó, con los argumentos enteros", () => {
     const h = historialDesdeLaBase([
       fila("cambia el título", [
@@ -146,6 +159,16 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     expect(t.leidos).toHaveLength(1);
     expect(t.leidos[0]!.ruta).toBe("/index.html");
     expect(JSON.stringify(t)).not.toContain("Taquería");
+  });
+
+  it("🔴 la fila compartida no guarda el texto de ~/.len/LEN.md ni lo cuenta como leído (es de quien habló)", () => {
+    const personal = "- (Eli) Prefiero frases cortas.";
+    const t = transcripcionParaGuardar(
+      leer("/home/user/.len/LEN.md", `1\t${personal}`),
+      new Map([["/home/user/.len/LEN.md", { instantanea: personal, offset: undefined, limit: undefined }]]),
+    );
+    expect(JSON.stringify(t)).not.toContain("frases cortas");
+    expect(t.leidos).toEqual([]);
   });
 
   it("🔴 un fichero que NO cambió y cuyo resultado sigue a la vista cuenta como leído en el turno siguiente", () => {
