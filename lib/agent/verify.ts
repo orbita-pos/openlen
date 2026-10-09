@@ -790,7 +790,7 @@ async function runVerify(
   // medida— contestan los ficheros que la página pide (`<script
   // src="/js/app.js">`), o la verían rota cuando publicada funciona. Sin
   // ficheros no viaja nada: la llamada es la de siempre.
-  const carpeta = carpetaDeLaVista(params.vista);
+  const carpeta = await carpetaDeLaVista(params.vista);
   const medir = (html: string, laCarpeta = carpeta) =>
     laCarpeta ? medirSin(html, {}, { carpeta: laCarpeta }) : medirSin(html);
   const medicion = medir(paraMedir).catch(() => null);
@@ -1565,7 +1565,7 @@ export async function observarPagina(
     const medir = internals.medir ?? renderVisualQualityViewports;
     const doc = documentoMedible(params.html, params.vista ?? null);
     // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-    const carpeta = carpetaDeLaVista(params.vista);
+    const carpeta = await carpetaDeLaVista(params.vista);
     const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
     if (!m) return null;
 
@@ -1661,7 +1661,7 @@ export async function observarPagina(
   // calcula su color en vez de asumir blanco (`lib/publish/assistant-widget.ts`).
   // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
   const render = internals.render ?? renderHtmlToInlineImage;
-  const carpeta = carpetaDeLaVista(params.vista);
+  const carpeta = await carpetaDeLaVista(params.vista);
   const foto = documentoParaLaFoto(params.html, params.vista);
   const image = await (carpeta ? render(foto, { carpeta }) : render(foto)).catch(() => null);
   if (!image) return null;

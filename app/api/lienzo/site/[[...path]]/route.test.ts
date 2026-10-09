@@ -134,17 +134,28 @@ describe("GET /api/lienzo/site — una app web", () => {
   const vivo = (extra: { app?: typeof APP | null; entorno?: Record<string, string> } = { app: APP }) =>
     guardarDocumento({ html: "<div id=root></div>", projectId: P1, userId: "u1", pagina: null, ...extra });
 
-  it("🔴 un fuente se sirve COMPILADO, como JavaScript, con los imports resueltos y su entorno", async () => {
+  it("🔴 la ENTRADA es el paquete (plan 02): JavaScript, sin un import del catálogo por su nombre, con App y su entorno dentro", async () => {
+    delete mocks.carpetas[P1]!["/src/Roto.jsx"];
     vivo({ app: APP, entorno: { VITE_SUPABASE_URL: "https://abc.openlen.app" } });
     const main = await pide(host(P1), "/src/main.jsx");
     expect(main.status).toBe(200);
     expect(main.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(main.headers.get("cache-control")).toBe("no-store");
     const js = await main.text();
-    expect(js).toContain('from "/src/App.tsx"');
-    expect(js).not.toContain("<App />");
+    expect(js).not.toMatch(/\bfrom\s*["']react/);
+    // El JSX de la app, traducido (los mensajes de React de desarrollo sí citan
+    // `<App />` como ejemplo: se mira el de main.jsx, no la cadena suelta).
+    expect(js).not.toContain("document.body).render(<App");
+    expect(js).toContain("https://abc.openlen.app");
+    // Los demás fuentes siguen contestándose compilados, uno a uno.
     expect(await (await pide(host(P1), "/src/App.tsx")).text()).toContain("https://abc.openlen.app");
-  });
+  }, 60_000);
+
+  it("🔴 un fuente roto, aunque nadie lo importe: la entrada es el módulo que lanza su error (como al publicar, que se niega)", async () => {
+    vivo();
+    const js = await (await pide(host(P1), "/src/main.jsx")).text();
+    expect(js).toMatch(/^throw new SyntaxError\(.*\/src\/Roto\.jsx:1/);
+  }, 60_000);
 
   it("las dependencias del catálogo, inmutables; una que no existe, 404", async () => {
     vivo();

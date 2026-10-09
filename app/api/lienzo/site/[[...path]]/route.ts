@@ -1,7 +1,8 @@
 import { isPublishableFolderPath, contentTypeFor } from "@/lib/agent/ficheros/folder";
 import { esFuenteCompilable } from "@/lib/apps/compilador";
 import { rutaDeVendorValida } from "@/lib/apps/dependencias";
-import { servirRutaDeLaApp } from "@/lib/apps/servir";
+import { moduloDeError, servirRutaDeLaApp } from "@/lib/apps/servir";
+import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { leerDocumento, proyectoDeEtiqueta } from "@/lib/lienzo/almacen";
 import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
 
@@ -70,6 +71,32 @@ export async function GET(
         const todos = await listProjectFiles(dueno.projectId).catch(() => null);
         if (!todos) return noEncontrado();
         carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isPublishableFolderPath(r)));
+      }
+      // UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete, el
+      // MISMO que miden los ojos (`carpetaServida`) y, en producción, el que se
+      // publica. Lo que no compila llega como un módulo que lanza sus errores.
+      if (!vendor && dueno.app && ruta === dueno.app.entrada) {
+        const paquete = await bundleApp({
+          carpeta,
+          app: dueno.app,
+          ...(dueno.entorno ? { entorno: dueno.entorno } : {}),
+          modo: "desarrollo",
+        });
+        const cuerpo = !paquete
+          ? moduloDeError(ruta, [{ ruta, linea: null, columna: null, mensaje: BUNDLER_DID_NOT_ANSWER }])
+          : paquete.ok
+            ? paquete.js
+            : moduloDeError(ruta, paquete.errores);
+        return new Response(cuerpo, {
+          status: 200,
+          headers: {
+            "content-type": "text/javascript; charset=utf-8",
+            // Un borrador: ni el navegador ni el borde lo guardan.
+            "cache-control": "no-store",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
+          },
+        });
       }
       const servido = servirRutaDeLaApp(ruta, carpeta, {
         app: dueno.app,

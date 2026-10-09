@@ -269,7 +269,7 @@ describe("🔴 una app web hace lo mismo en el lienzo, en los ojos de Len y publ
     const v = vista();
     const medida = await renderVisualQualityViewports(documentoMedible(CASCARON, v), {}, {
       behaviorProgram: PROGRAMA,
-      carpeta: carpetaDeLaVista(v)!,
+      carpeta: (await carpetaDeLaVista(v))!,
     });
     expect(medida, "el render no devolvió nada").not.toBeNull();
     expect(medida!.runtimeErrors ?? []).toEqual([]);

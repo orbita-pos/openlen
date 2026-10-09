@@ -854,7 +854,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
 
     // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
     // desde memoria (el guardia), y el documento vive en la ruta de su página.
-    const opciones = carpetaDeLaVista(p.vista);
+    const opciones = await carpetaDeLaVista(p.vista);
     traducir = traductorDeMapas(opciones?.sourceMaps);
     const doc = origen.publicar(html, opciones);
     // UNA APP: la visita empieza en la pantalla pedida (`#/ventas`) y espera a
