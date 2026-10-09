@@ -361,6 +361,7 @@ describe("TerminalDeLen", () => {
       const { t } = terminal({
         appTools: {
           catalogSpecifiers: ["react", "zod", "@radix-ui/react-dialog"],
+          typesPackages: ["@types/react"],
           run: async (program, args, ficheros) => {
             llamadas.push({ program, args, ficheros });
             return program === "tsc"
@@ -396,6 +397,15 @@ describe("TerminalDeLen", () => {
       expect(si.stdout).toMatch(/rc=0\n$/);
       const no = await t.ejecutar("npm i axios; echo rc=$?");
       expect(no.stdout + no.stderr).toMatch(/axios.*isn't available/);
+      expect(no.stdout).toMatch(/rc=1\n$/);
+    }, 20_000);
+
+    it("🔴 npm install -D @types/react: ya está (los tipos vienen con el catálogo); @types/node, no", async () => {
+      const { t } = conApp();
+      const si = await t.ejecutar("npm install -D @types/react; echo rc=$?");
+      expect(si.stdout).toMatch(/@types\/react: already available \(its types come with the catalog\)\nrc=0\n$/);
+      const no = await t.ejecutar("npm i --save-dev @types/node; echo rc=$?");
+      expect(no.stderr).toMatch(/@types\/node: isn't available here/);
       expect(no.stdout).toMatch(/rc=1\n$/);
     }, 20_000);
 

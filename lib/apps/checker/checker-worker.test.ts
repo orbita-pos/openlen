@@ -27,6 +27,12 @@ describe("el hilo del comprobador (plan 03, tarea 7)", () => {
     expect(mensajes[0]).toMatchObject({ id: 1, ok: true });
   }, 30_000);
 
+  it("🔴 avisa de que se va EN la respuesta: así la petición siguiente no entra en un hilo que se cierra", async () => {
+    const { mensajes, salida } = correr({ maxHeapMb: 1 });
+    await salida;
+    expect(mensajes[0]).toMatchObject({ id: 1, ok: true, recycling: true });
+  }, 30_000);
+
   it("por debajo del umbral, sigue vivo", async () => {
     const { w, mensajes } = correr();
     await expect.poll(() => mensajes.length, { timeout: 25_000 }).toBe(1);

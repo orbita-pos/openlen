@@ -66,7 +66,8 @@ export function typesAndLintAfterWrite(args: {
   const pares = args.now instanceof Map ? [...args.now.entries()] : Object.entries(args.now);
   const fuentes = Object.fromEntries(pares.filter(([ruta]) => isPublishableFolderPath(ruta)));
   void deps
-    .checkApp(fuentes, app.catalogo)
+    // La marca de la sesión: su petición nueva sustituye a la que aún espera.
+    .checkApp(fuentes, app.catalogo, { supersedes: estado })
     .then((r) => {
       if (!r || estado.version !== mia) return;
       estado.pendientes = [...r.typescript, ...r.eslint].filter((d) => estado.abiertos.has(d.ruta));

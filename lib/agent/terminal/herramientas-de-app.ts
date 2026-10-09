@@ -9,6 +9,7 @@ import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
+import { typesPackagesOf } from "@/lib/apps/checker/types-pack";
 import type { TerminalDeLen } from "./terminal";
 
 type AppTools = NonNullable<ConstructorParameters<typeof TerminalDeLen>[0]["appTools"]>;
@@ -30,6 +31,8 @@ export function appToolsFor(session: Pick<AgentSession, "app">, deps: Pick<Agent
     // Todo lo que se puede importar, también los `@radix-ui/react-*` que el
     // manual no lista (son los que instala shadcn).
     catalogSpecifiers: (catalogo(app.catalogo)?.dependencias ?? []).map((d) => d.especificador),
+    // Y los @types que trae su paquete de tipos: `npm install -D @types/react` ya está.
+    typesPackages: typesPackagesOf(app.catalogo),
     run: async (program, args, ficheros) => {
       const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
       const r = await check(fuentes, app.catalogo);
