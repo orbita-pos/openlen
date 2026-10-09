@@ -43,6 +43,7 @@ import { resolveRewrites } from "@/lib/lienzo/resolve-rewrites";
 import { LIENZO_REWRITES } from "@/lib/lienzo/site-rewrite";
 import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 import { publishToDir } from "@/lib/publish/filesystem";
+import { FICHEROS } from "./shadcn-fixture";
 
 const ID = "8d2b6c1e-3f4a-4b7c-9e2d-5a6b7c8d9e0f";
 const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" };
@@ -54,77 +55,6 @@ const CASCARON =
   '<script>tailwind.config = { darkMode: ["class"], theme: { extend: { colors: { background: "hsl(var(--background))", primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" } }, borderRadius: { lg: "var(--radius)" } } } }</script>' +
   '</head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
 
-const FICHEROS: Record<string, string> = {
-  "/src/main.jsx": [
-    'import { createRoot } from "react-dom/client";',
-    'import App from "./App";',
-    'import "./index.css";',
-    'createRoot(document.getElementById("root")).render(<App />);',
-  ].join("\n"),
-  "/src/index.css": [
-    "@tailwind base;",
-    "@tailwind components;",
-    "@tailwind utilities;",
-    "@layer base {",
-    "  :root { --background: 0 100% 50%; --primary: 240 100% 50%; --primary-foreground: 0 0% 100%; --radius: 12px; }",
-    "  body { @apply bg-background; }",
-    "}",
-  ].join("\n"),
-  "/src/lib/utils.ts": [
-    'import { clsx, type ClassValue } from "clsx";',
-    'import { twMerge } from "tailwind-merge";',
-    "export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }",
-  ].join("\n"),
-  "/src/components/ui/button.tsx": [
-    'import * as React from "react";',
-    'import { Slot } from "@radix-ui/react-slot";',
-    'import { cva, type VariantProps } from "class-variance-authority";',
-    'import { cn } from "@/lib/utils";',
-    'const buttonVariants = cva("inline-flex rounded-lg px-2", { variants: { variant: { default: "bg-primary text-primary-foreground" } }, defaultVariants: { variant: "default" } });',
-    "type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { asChild?: boolean };",
-    "export const Button = React.forwardRef<HTMLButtonElement, Props>(({ className, variant, asChild = false, ...props }, ref) => {",
-    '  const Comp = asChild ? Slot : "button";',
-    "  return <Comp ref={ref} className={cn(buttonVariants({ variant }), className)} {...props} />;",
-    "});",
-  ].join("\n"),
-  "/src/App.tsx": [
-    'import * as DialogPrimitive from "@radix-ui/react-dialog";',
-    'import { useForm } from "react-hook-form";',
-    'import { zodResolver } from "@hookform/resolvers/zod";',
-    'import { z } from "zod";',
-    'import { BarChart, Bar } from "recharts";',
-    'import { format } from "date-fns";',
-    'import { es } from "date-fns/locale";',
-    'import { useState } from "react";',
-    'import { Button } from "@/components/ui/button";',
-    'const esquema = z.object({ nombre: z.string().min(2, "Mínimo 2 letras") });',
-    "export default function App() {",
-    '  const [hola, setHola] = useState("");',
-    "  const { register, handleSubmit, formState: { errors } } = useForm<{ nombre: string }>({ resolver: zodResolver(esquema) });",
-    "  return (",
-    "    <main>",
-    '      <Button data-prueba="boton" className="px-4">Guardar</Button>',
-    "      <DialogPrimitive.Root>",
-    '        <DialogPrimitive.Trigger data-prueba="abrir">Abrir</DialogPrimitive.Trigger>',
-    "        <DialogPrimitive.Portal><DialogPrimitive.Content>",
-    "          <DialogPrimitive.Title>Detalle</DialogPrimitive.Title>",
-    "          <DialogPrimitive.Description>Del pedido</DialogPrimitive.Description>",
-    '          <DialogPrimitive.Close data-prueba="cerrar">Cerrar</DialogPrimitive.Close>',
-    "        </DialogPrimitive.Content></DialogPrimitive.Portal>",
-    "      </DialogPrimitive.Root>",
-    '      <form onSubmit={handleSubmit((v) => setHola("Hola, " + v.nombre))}>',
-    '        <input data-prueba="nombre" {...register("nombre")} />',
-    '        <p data-prueba="error">{errors.nombre?.message ?? ""}</p>',
-    '        <button data-prueba="enviar" type="submit">Enviar</button>',
-    "      </form>",
-    '      <p data-prueba="hola">{hola}</p>',
-    '      <BarChart width={300} height={150} data={[{ v: 1 }, { v: 2 }, { v: 3 }]}><Bar dataKey="v" isAnimationActive={false} /></BarChart>',
-    '      <p data-prueba="fecha">{format(new Date(2026, 0, 5), "EEEE d \'de\' MMMM", { locale: es })}</p>',
-    "    </main>",
-    "  );",
-    "}",
-  ].join("\n"),
-};
 
 /** Lo que se pulsa y lo que se lee, igual en los tres caminos. */
 const PROGRAMA = `(async () => {
