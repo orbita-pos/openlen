@@ -1,4 +1,4 @@
-import { isPublishableFolderPath, contentTypeFor } from "@/lib/agent/ficheros/folder";
+import { contentTypeFor, isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { esFuenteCompilable } from "@/lib/apps/compilador";
 import { entradaServida, servirFuenteDePagina } from "@/lib/apps/servir";
 import { bundleApp } from "@/lib/apps/bundler/bundle-app";
@@ -66,11 +66,12 @@ export async function GET(
     if (dueno.app && ruta !== dueno.app.entrada) return noEncontrado();
     if (dueno.app || esFuenteCompilable(ruta, false)) {
       // La carpeta ENTERA: resolver `./App` necesita saber qué ficheros hay.
-      // Sólo lo publicable: ni /tests ni /supabase se importan desde el navegador.
+      // Sólo lo publicable, y `/.env` para `import.meta.env` (no se sirve: la rama
+      // de la carpeta, abajo, sólo sirve lo publicable): ni /tests ni /supabase.
       const { listProjectFiles } = await import("@/lib/backend/files");
       const todos = await listProjectFiles(dueno.projectId).catch(() => null);
       if (!todos) return noEncontrado();
-      const carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isPublishableFolderPath(r)));
+      const carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isCompileInputPath(r)));
       const entorno = dueno.entorno ? { entorno: dueno.entorno } : {};
       const cuerpo = dueno.app
         ? entradaServida(ruta, await bundleApp({ carpeta, app: dueno.app, ...entorno, modo: "desarrollo" }))
