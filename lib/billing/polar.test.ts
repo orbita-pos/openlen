@@ -216,4 +216,22 @@ describe("createCheckout por plan", () => {
     await expect(createCheckout({ userId: "u1", plan: "max" })).rejects.toThrow("not_configured");
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  const vuelta = () => new URL(JSON.parse(fetchMock.mock.calls[0][1].body as string).success_url);
+
+  it("🔴 la vuelta dice qué plan se compró: quien paga Max no lee «Pro»", async () => {
+    await createCheckout({ userId: "u1", plan: "max", locale: "es" });
+    expect(vuelta().searchParams.get("upgraded")).toBe("max");
+    fetchMock.mockClear();
+    await createCheckout({ userId: "u1" });
+    expect(vuelta().searchParams.get("upgraded")).toBe("pro");
+  });
+
+  it("🔴 la vuelta conserva el idioma (son diez, no en/es)", async () => {
+    await createCheckout({ userId: "u1", locale: "ja" });
+    expect(vuelta().pathname).toBe("/ja/projects");
+    fetchMock.mockClear();
+    await createCheckout({ userId: "u1", locale: "xx" });
+    expect(vuelta().pathname).toBe("/en/projects");
+  });
 });

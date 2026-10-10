@@ -146,9 +146,9 @@
   },
   "billing": {
     "upgradeCta": "Pro にアップグレード",
-    "upgradeHint": "月 150 AI クレジット",
+    "upgradeHint": "月 {credits} AI クレジット",
     "dismissBanner": "閉じる",
-    "success": "Pro へのアップグレードが完了しました — 毎月 150 AI クレジットをご利用いただけます。ありがとうございます！",
+    "success": "{plan} へのアップグレードが完了しました — 毎月 {credits} AI クレジットをご利用いただけます。ありがとうございます！",
     "errors": {
       "not_configured": "お支払いの設定がまだ完了していません。しばらくしてからもう一度お試しいただくか、サポートにお問い合わせください。",
       "checkout_failed": "チェックアウトを開始できませんでした。もう一度お試しください。",

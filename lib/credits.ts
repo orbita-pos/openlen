@@ -20,18 +20,20 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // Every AI call (page generation, chat edit, autofill) debits credits. One
 // credit ≈ $0.01 of raw model cost — the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
-// PRICE embeds the markup: Pro is $3.99/mo for 150 credits (≈$1.50 of raw cost
-// if fully spent, ~75 pages at the rates below); a free user is capped at 20
+// PRICE embeds the markup: Pro is $9.99/mo for 200 credits (≈$2 of raw cost if
+// fully spent, ~100 pages at the rates below) and Max $19.99 for 500 (≈$5) —
+// the figures live in lib/marketing/plan-price.ts; a free user is capped at 20
 // credits (~$0.20) — about 10 pages, the "try-it" funnel before the upgrade.
 //
-// 🔴 EL MARGEN YA NO ES «ANCHO», y esta línea lo decía. Bajado a $3.99 el
-// 2026-08-29, con la comisión REAL de Polar (Starter: 5% + 50¢, y +1.5% si la
-// tarjeta no es de EE.UU., que es el caso normal aquí) el neto es $3.23. Un
-// usuario que queme sus 150 créditos deja $1.73: el 46% se lo lleva el modelo,
-// no el 21% de antes. Sigue siendo positivo en el PEOR caso —que es la prueba
-// que importa— pero subir el allotment sin rehacer esta cuenta es lo que lo
-// rompe. Los 50¢ fijos son el 12.5% del precio: por eso el plan ANUAL, cuando
-// exista, no es sólo un descuento, es la misma venta pagando el fijo una vez.
+// 🔴 EL MARGEN, CON LA COMISIÓN REAL DE POLAR (Starter: 5% + 50¢, y +1.5% si
+// la tarjeta no es de EE.UU., que es el caso normal aquí). Rehecho el
+// 2026-10-09 con los precios del 04/10: Pro $9.99 deja $8.84 neto, y quien
+// queme sus 200 créditos deja $6.84 (el modelo se lleva el 23%); Max $19.99
+// deja $18.19, y con sus 500 quemados $13.19 (el 27%). Con $3.99 por 150 el
+// modelo se llevaba el 46%. Es el PEOR caso —la prueba que importa—: subir un
+// allotment sin rehacer esta cuenta es lo que lo rompe. Los 50¢ fijos son el 5%
+// de Pro: por eso el plan ANUAL, cuando exista, no es sólo un descuento, es la
+// misma venta pagando el fijo una vez.
 //
 // Las cifras de páginas salen de las tarifas corregidas el 2026-08-28: crear
 // una página son ~2 créditos. Las viejas («10 generaciones Pro», «~1 Pro» en

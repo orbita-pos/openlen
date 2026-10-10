@@ -5,6 +5,7 @@ import { CREDITS_BY_PLAN } from "@/lib/credits";
 import { PLAN_RANK, planFromDb } from "@/lib/plan";
 import type { PolarSubscription } from "./renewal-reminder";
 import { publicOrigin } from "@/lib/integrations/oauth";
+import { routing } from "@/i18n/routing";
 import { verifyWebhookSignature } from "./webhook-signature";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -103,10 +104,15 @@ export async function createCheckout(opts: {
   locale?: string;
   plan?: PaidPlan;
 }): Promise<string> {
-  const productId = env(opts.plan === "max" ? "POLAR_PRODUCT_MAX_ID" : "POLAR_PRODUCT_PRO_ID");
+  const plan: PaidPlan = opts.plan === "max" ? "max" : "pro";
+  const productId = env(plan === "max" ? "POLAR_PRODUCT_MAX_ID" : "POLAR_PRODUCT_PRO_ID");
   if (!productId) throw new BillingError("not_configured");
-  const locale = opts.locale === "es" ? "es" : "en";
-  const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=1`;
+  const locale = (routing.locales as readonly string[]).includes(opts.locale ?? "")
+    ? (opts.locale as string)
+    : routing.defaultLocale;
+  // La vuelta lleva el plan: el aviso de /projects dice «Max, 500 créditos» o
+  // «Pro, 200». Con `?upgraded=1` quien pagaba Max leía «Pro, 150».
+  const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=${plan}`;
   const data = (await polarPost("/v1/checkouts/", {
     products: [productId],
     success_url: successUrl,
