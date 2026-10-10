@@ -106,7 +106,7 @@
     "subdomainLabel": "子域名",
     "subdomainPlaceholder": "your-name",
     "preview": "预览",
-    "limitsHint": "已发布项目（页面或应用）：免费版 {free} 个，Pro {pro} 个，Max {max} 个。仅限小写字母、数字和连字符（1–63 个字符）。",
+    "limitsHint": "已发布项目（页面或应用）：免费版 {free} 个，Pro {pro} 个，Max {max} 个，Ultra {ultra} 个。仅限小写字母、数字和连字符（1–63 个字符）。",
     "unpublish": {
       "sure": "确定吗？",
       "confirm": "是的，取消发布",

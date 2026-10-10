@@ -555,7 +555,7 @@ export function PublishModal({
 
           <div className="text-[11px] text-zinc-500 leading-relaxed">
             {/* Los números, del código: cuenta proyectos con subdominio (páginas y apps). */}
-            {t("publish.limitsHint", { free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max })}
+            {t("publish.limitsHint", { free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max, ultra: MAX_SUBDOMAINS_PER_PLAN.ultra })}
           </div>
         </div>
 

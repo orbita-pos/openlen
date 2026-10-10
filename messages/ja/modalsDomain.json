@@ -106,7 +106,7 @@
     "subdomainLabel": "サブドメイン",
     "subdomainPlaceholder": "your-name",
     "preview": "プレビュー",
-    "limitsHint": "公開できるプロジェクト（ページまたはアプリ）: 無料プランは {free} つ、Pro は {pro} つ、Max は {max} つ。小文字、数字、ハイフンが使えます（1〜63 文字）。",
+    "limitsHint": "公開できるプロジェクト（ページまたはアプリ）: 無料プランは {free} つ、Pro は {pro} つ、Max は {max} つ、Ultra は {ultra} つ。小文字、数字、ハイフンが使えます（1〜63 文字）。",
     "unpublish": {
       "sure": "よろしいですか？",
       "confirm": "はい、非公開にします",

@@ -106,7 +106,7 @@
     "subdomainLabel": "Subdomain",
     "subdomainPlaceholder": "dein-name",
     "preview": "Vorschau",
-    "limitsHint": "Veröffentlichte Projekte (Seiten oder Apps): {free} im kostenlosen Tarif, {pro} mit Pro und {max} mit Max. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
+    "limitsHint": "Veröffentlichte Projekte (Seiten oder Apps): {free} im kostenlosen Tarif, {pro} mit Pro, {max} mit Max und {ultra} mit Ultra. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
     "unpublish": {
       "sure": "Sicher?",
       "confirm": "Ja, Veröffentlichung aufheben",

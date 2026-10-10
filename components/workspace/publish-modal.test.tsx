@@ -61,9 +61,9 @@ async function publicar(esApp: boolean) {
 describe("el diálogo de publicar", () => {
   // El límite cuenta PROYECTOS con subdominio —páginas y apps— y decía «1 página
   // publicada. Pro: 10» con los números a mano en 10 idiomas (sin Max) (10/10).
-  it("🔴 el límite del plan se dice con los números del código (gratis, Pro y Max)", async () => {
+  it("🔴 el límite del plan se dice con los números del código, con todos los planes (gratis, Pro, Max y Ultra)", async () => {
     const { texto } = await publicar(false);
-    expect(texto).toContain(`publish.limitsHint${JSON.stringify({ free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max })}`);
+    expect(texto).toContain(`publish.limitsHint${JSON.stringify({ free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max, ultra: MAX_SUBDOMAINS_PER_PLAN.ultra })}`);
   });
 
   it("🔴 en una app no ofrece idiomas ni los manda", async () => {

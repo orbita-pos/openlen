@@ -106,7 +106,7 @@
     "subdomainLabel": "서브도메인",
     "subdomainPlaceholder": "your-name",
     "preview": "미리보기",
-    "limitsHint": "게시 프로젝트(페이지 또는 앱): 무료 요금제 {free}개, Pro {pro}개, Max {max}개. 소문자, 숫자, 하이픈만 사용 (1~63자).",
+    "limitsHint": "게시 프로젝트(페이지 또는 앱): 무료 요금제 {free}개, Pro {pro}개, Max {max}개, Ultra {ultra}개. 소문자, 숫자, 하이픈만 사용 (1~63자).",
     "unpublish": {
       "sure": "확실한가요?",
       "confirm": "네, 게시 해제합니다",
