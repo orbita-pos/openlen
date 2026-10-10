@@ -2,16 +2,18 @@
 // la necesita (como Lovable Cloud: «provisioned automatically when your project
 // needs it»). Idempotente: se puede llamar cada vez.
 //
-//   1. En `postgres`: los roles del clúster, la contraseña de `authenticator`,
-//      el rol de desarrollador del proyecto y su base; CONNECT sólo para él y
-//      para `authenticator`.
+//   1. En `postgres`: los roles del clúster, la contraseña de `authenticator`
+//      y el rol de desarrollador del proyecto (en fila con cualquier otra alta:
+//      cluster-roles-lock.ts), y la base; CONNECT sólo para él y para
+//      `authenticator`.
 //   2. En la base nueva, en UNA transacción: `initProjectDatabase` (el DDL de
 //      Postgres es transaccional: si algo falla no queda una base a medias).
 
 import "server-only";
 
 import { dbNameOf, readOnlyRoleOf } from "./environments";
-import { CLUSTER_ROLES_SQL, initProjectDatabase } from "./schema";
+import { withClusterRolesLock } from "./cluster-roles-lock";
+import { CLUSTER_ROLES_SQL, devRoleSettingsSql, initProjectDatabase } from "./schema";
 import { closePools, withAdmin } from "./pg";
 import { literal } from "./rest/sql";
 
@@ -34,12 +36,18 @@ export async function provisionDatabase(opts: { scope: string; ref: string; dbPa
     // Dos peticiones a la vez no pueden crear la misma base.
     await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${opts.scope}`]);
     try {
-      await r.exec(CLUSTER_ROLES_SQL);
-      await r.exec(`alter role authenticator with login password ${literal(authenticatorPassword)};`);
-      const role = await r.query(`select 1 from pg_roles where rolname = $1`, [dev]);
-      if (role.rows.length === 0) {
-        await r.exec(`create role ${dev} login noinherit nosuperuser nocreatedb nocreaterole nobypassrls password ${literal(opts.dbPassword)};`);
-      }
+      // Los roles son del clúster, no de esta base: el candado de arriba es del
+      // entorno y no los protege (el de desarrollador lo comparten el borrador
+      // y la producción del proyecto).
+      await withClusterRolesLock(r, async () => {
+        await r.exec(CLUSTER_ROLES_SQL);
+        await r.exec(`alter role authenticator with login password ${literal(authenticatorPassword)};`);
+        const role = await r.query(`select 1 from pg_roles where rolname = $1`, [dev]);
+        if (role.rows.length === 0) {
+          await r.exec(`create role ${dev} login noinherit nosuperuser nocreatedb nocreaterole nobypassrls password ${literal(opts.dbPassword)};`);
+        }
+        await r.exec(devRoleSettingsSql(dev));
+      });
       const db = await r.query(`select 1 from pg_database where datname = $1`, [dbName]);
       if (db.rows.length === 0) await r.exec(`create database ${dbName};`);
       // CREATE para el de desarrollador, como `postgres` en Supabase: una
@@ -58,7 +66,7 @@ export async function provisionDatabase(opts: { scope: string; ref: string; dbPa
     if (ready.rows[0]?.ok === true) return;
     await r.exec("BEGIN");
     try {
-      await initProjectDatabase(r, { devRole: dev });
+      await initProjectDatabase(r, { devRole: dev, roleSettings: false });
       await r.exec("COMMIT");
     } catch (err) {
       await r.exec("ROLLBACK").catch(() => {});

@@ -11,6 +11,7 @@
 // transacción: si algo falla, no queda un esquema a medias.
 
 import type { SqlRunner } from "../db";
+import { withClusterRolesLock } from "../cluster-roles-lock";
 import { initStorageSchema, STORAGE_CLUSTER_ROLES_SQL } from "./schema";
 
 /** `withAdmin` de lib/backend/pg.ts (o un doble en las pruebas). */
@@ -36,7 +37,8 @@ export async function ensureStorageProvisioned(o: { scope: string; ref: string }
   const run: AdminRunner = admin ?? (await import("../pg")).withAdmin;
   const dbName = `ol_${o.scope}`;
   const dev = `ol_${o.ref}`;
-  await run("postgres", (r) => r.exec(STORAGE_CLUSTER_ROLES_SQL));
+  // Roles del clúster: en fila con cualquier otra alta (cluster-roles-lock.ts).
+  await run("postgres", (r) => withClusterRolesLock(r, () => r.exec(STORAGE_CLUSTER_ROLES_SQL)));
   await run(dbName, async (r) => {
     await r.exec("BEGIN");
     try {
