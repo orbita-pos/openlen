@@ -1722,6 +1722,57 @@ describe("en una app", () => {
 // mira: que lo que no compila le VUELVE al modelo en el `<new-diagnostics>` de
 // la tanda siguiente, que lo arreglado deja de decirse, y que publicar sale en
 // su tarjeta sólo cuando la app compila. Sin modelo ni red: $0.
+// ENSAYO DE CAJA DEL 09/10: en una app, la terminal del USUARIO no tenía npm,
+// npx tsc ni las pruebas que sí tiene la de Len en el mismo panel («npm: command
+// not found»), y trataba la app como una página: su sesión no llevaba `app`.
+describe("la terminal DEL USUARIO en una app", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" };
+  const CASCARON =
+    '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  const conComprobador = (data: ProjectData) => {
+    const c = conCarpeta(data);
+    c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}";
+    const comprobados: string[][] = [];
+    const deps = {
+      ...c.deps,
+      async checkApp(ficheros: Record<string, string>) {
+        comprobados.push(Object.keys(ficheros).sort());
+        return null;
+      },
+    } as unknown as AgentDeps;
+    return { ...c, deps, comprobados };
+  };
+  const correr = (deps: AgentDeps, command: string, proyecto: string) =>
+    conTerminal(() => ejecutarEnLaTerminalDelUsuario(proyecto, "u1", command, deps));
+
+  it("🔴 tiene los comandos de la app, como la de Len: npm install contesta con el catálogo y npx tsc corre el comprobador", async () => {
+    const { deps, comprobados } = conComprobador({ html: CASCARON, app: APP });
+    try {
+      const npm = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-app");
+      assert.match(npm.salida, /zod: already available \(catalog\)/);
+      assert.match(npm.salida, /rc=0/);
+      await correr(deps, "npx tsc --noEmit", "p-usuario-app");
+      assert.deepEqual(comprobados, [["/src/App.jsx"]]);
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
+  });
+
+  it("🔴 una página que se convierte en app con la terminal abierta tiene los comandos de la app en el comando siguiente", async () => {
+    const { deps, store, archivos } = conComprobador({ html: HOME });
+    try {
+      const antes = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
+      assert.match(antes.salida, /rc=127/, "en una página no hay npm");
+      store.data = { html: CASCARON, app: APP };
+      archivos["/src/main.jsx"] = 'import App from "./App";';
+      const despues = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
+      assert.match(despues.salida, /zod: already available \(catalog\)/);
+    } finally {
+      await cerrarLasTerminalesDelUsuario();
+    }
+  });
+});
+
 describe("un turno de app, guionizado (tarea #15)", () => {
   it("🔴 POS de una cafetería: escribe, ve lo que no compila, lo arregla y deja la tarjeta de publicar", async () => {
     const { runAgentLoop } = await import("./loop");
