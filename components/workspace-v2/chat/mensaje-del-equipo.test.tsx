@@ -70,4 +70,20 @@ describe("un mensaje entre personas", () => {
     );
     expect([...host.querySelectorAll("img")].map((i) => i.getAttribute("src"))).toEqual(["https://x.test/a.jpg", "https://x.test/b.jpg"]);
   });
+
+  it("🔴 con foto, la burbuja lleva la foto; sin foto, la inicial", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const gente = [{ userId: "u-dana", nombre: "Dana Dueña" }, { userId: "u-eli", nombre: "Eli Editor", avatar: "https://u/avatars/u-eli-0123456789abcdef.webp" }];
+    act(() =>
+      root.render(
+        <NextIntlClientProvider locale="es" messages={{ panelsChat }}>
+          <MensajeDelEquipo turn={turn} gente={gente} yo="u-dana" colorDe={() => "red"} />
+        </NextIntlClientProvider>,
+      ),
+    );
+    expect(host.querySelector("img")?.getAttribute("src")).toBe("https://u/avatars/u-eli-0123456789abcdef.webp");
+  });
 });
