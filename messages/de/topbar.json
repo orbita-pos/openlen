@@ -188,5 +188,62 @@
       "falloSinMotivo": "Ich bin nicht dazu gekommen. Antworte auf diese E-Mail, um mich noch einmal zu fragen.",
       "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe, es könnte also nur halb fertig sein. Sieh dir die Änderungen an und antworte bei Bedarf auf diese E-Mail, um mich noch einmal zu fragen."
     }
+  },
+  "envVars": {
+    "menu": "Umgebungsvariablen",
+    "title": "Umgebungsvariablen",
+    "subtitle": "Was deine App mit import.meta.env liest. Alles hier ist öffentlich: Es landet im JavaScript, das jeder lesen kann, der deine App öffnet.",
+    "loading": "Wird geladen…",
+    "close": "Schließen",
+    "empty": "Noch keine Variablen. Trag hier deine öffentlichen Schlüssel ein — den Publishable Key von Stripe, einen Google-Maps- oder Mapbox-Schlüssel — und deine App liest sie als import.meta.env.VITE_…",
+    "yours": "Deine Variablen",
+    "add": "Variable hinzufügen",
+    "addAnother": "Weitere hinzufügen",
+    "pasteHint": "Tipp: Füge den Inhalt einer .env-Datei in Name ein, um mehrere auf einmal hinzuzufügen.",
+    "name": "Name",
+    "value": "Wert",
+    "removeLine": "Diese Zeile entfernen",
+    "draft": "Entwurf",
+    "production": "Produktion",
+    "draftHint": "Die Leinwand, Len und das Terminal",
+    "productionHint": "Deine veröffentlichte App",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "{name} bearbeiten",
+    "delete": "{name} löschen",
+    "confirmDelete": "{name} löschen?",
+    "show": "Wert anzeigen",
+    "hide": "Wert ausblenden",
+    "didYouMean": "Meintest du {name}?",
+    "useIt": "Übernehmen",
+    "fromCode": "Aus dem Code (/.env)",
+    "fromCodeHint": "Len kann sie auch schreiben. Deine haben Vorrang.",
+    "open": "Öffnen",
+    "overridden": "In {targets} durch deine ersetzt",
+    "fromOpenLen": "Von OpenLen",
+    "fromOpenLenHint": "Das Backend deiner App. Von OpenLen gesetzt; kann nicht geändert werden.",
+    "readOnly": "Du kannst sie sehen; ändern können sie der Eigentümer und die Bearbeiter.",
+    "secret": {
+      "byValue": "Das sieht nach einem geheimen Schlüssel von {provider} aus.",
+      "privateKey": "Das sieht nach einem privaten Schlüssel aus.",
+      "byName": "Der Name sagt, dass es ein Geheimnis ist.",
+      "explanation": "Jeder, der deine App öffnet, kann lesen, was du hier einträgst. Ein geheimer Schlüssel braucht einen Server, und den gibt es hier noch nicht.",
+      "understood": "Ich verstehe, dass es öffentlich sein wird"
+    },
+    "publish": {
+      "notice": "Deine veröffentlichte App nutzt noch die alten Werte. Veröffentliche erneut, damit sie diese verwendet.",
+      "button": "Veröffentlichen"
+    },
+    "errors": {
+      "name": "Namen beginnen mit VITE_ und enthalten nur Buchstaben, Ziffern und _.",
+      "nameTooLong": "Namen haben höchstens 100 Zeichen.",
+      "reserved": "{name} wird von OpenLen gesetzt.",
+      "duplicate": "{name} hat in {target} schon einen Wert.",
+      "tooLong": "Werte haben höchstens 4 KB.",
+      "tooMany": "Höchstens {max} Variablen pro Projekt.",
+      "noTarget": "Wähle Entwurf, Produktion oder beides.",
+      "conflict": "Jemand hat die Variablen inzwischen geändert. Das ist die aktuelle Liste; was du geschrieben hast, ist noch da.",
+      "generic": "Das hat nicht geklappt. Versuch es noch einmal."
+    }
   }
 }

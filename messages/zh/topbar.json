@@ -188,5 +188,62 @@
       "falloSinMotivo": "我没能完成。回复这封邮件再让我做一次。",
       "interrumpido": "我做到一半时服务器重启了，所以可能只完成了一部分。看看改动，如有需要，回复这封邮件再让我做一次。"
     }
+  },
+  "envVars": {
+    "menu": "环境变量",
+    "title": "环境变量",
+    "subtitle": "你的应用通过 import.meta.env 读取的值。这里的一切都是公开的：它会进入任何打开你应用的人都能读到的 JavaScript。",
+    "loading": "加载中…",
+    "close": "关闭",
+    "empty": "还没有变量。在这里放入你的公开密钥——Stripe 的可发布密钥、Google Maps 或 Mapbox 的密钥——你的应用会以 import.meta.env.VITE_… 读取它们。",
+    "yours": "你的变量",
+    "add": "添加变量",
+    "addAnother": "再添加一个",
+    "pasteHint": "提示：把 .env 文件的内容粘贴到“名称”中，可一次添加多个。",
+    "name": "名称",
+    "value": "值",
+    "removeLine": "删除这一行",
+    "draft": "草稿",
+    "production": "生产",
+    "draftHint": "画布、Len 和终端",
+    "productionHint": "你已发布的应用",
+    "save": "保存",
+    "cancel": "取消",
+    "edit": "编辑 {name}",
+    "delete": "删除 {name}",
+    "confirmDelete": "删除 {name}？",
+    "show": "显示值",
+    "hide": "隐藏值",
+    "didYouMean": "你是指 {name} 吗？",
+    "useIt": "使用它",
+    "fromCode": "来自代码 (/.env)",
+    "fromCodeHint": "Len 也可以写入这些。你的设置优先。",
+    "open": "打开",
+    "overridden": "在{targets}中被你的值替换",
+    "fromOpenLen": "来自 OpenLen",
+    "fromOpenLenHint": "你应用的后端。由 OpenLen 设置，无法更改。",
+    "readOnly": "你可以查看；所有者和编辑者可以修改。",
+    "secret": {
+      "byValue": "这看起来像是 {provider} 的秘密密钥。",
+      "privateKey": "这看起来像是私钥。",
+      "byName": "名称表明这是一个机密。",
+      "explanation": "任何打开你应用的人都能读到你放在这里的内容。秘密密钥需要服务器，而这里还没有。",
+      "understood": "我明白它将是公开的"
+    },
+    "publish": {
+      "notice": "你已发布的应用仍在使用之前的值。请重新发布以使用这些值。",
+      "button": "发布"
+    },
+    "errors": {
+      "name": "名称以 VITE_ 开头，只能包含字母、数字和 _。",
+      "nameTooLong": "名称最多 100 个字符。",
+      "reserved": "{name} 由 OpenLen 设置。",
+      "duplicate": "{name} 在{target}中已有值。",
+      "tooLong": "值最多 4 KB。",
+      "tooMany": "每个项目最多 {max} 个变量。",
+      "noTarget": "请选择草稿、生产或两者。",
+      "conflict": "在此期间有人更改了变量。这是当前列表；你正在输入的内容仍然保留。",
+      "generic": "没有成功，请重试。"
+    }
   }
 }

@@ -188,5 +188,62 @@
       "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen.",
       "interrumpido": "De server is herstart terwijl ik ermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en beantwoord zo nodig deze e-mail om het opnieuw te vragen."
     }
+  },
+  "envVars": {
+    "menu": "Omgevingsvariabelen",
+    "title": "Omgevingsvariabelen",
+    "subtitle": "Wat je app leest met import.meta.env. Alles hier is openbaar: het komt in de JavaScript die iedereen die je app opent kan lezen.",
+    "loading": "Laden…",
+    "close": "Sluiten",
+    "empty": "Nog geen variabelen. Zet hier je openbare sleutels — de publishable key van Stripe, een Google Maps- of Mapbox-sleutel — en je app leest ze als import.meta.env.VITE_…",
+    "yours": "Jouw variabelen",
+    "add": "Variabele toevoegen",
+    "addAnother": "Nog een toevoegen",
+    "pasteHint": "Tip: plak de inhoud van een .env-bestand in Naam om er meerdere tegelijk toe te voegen.",
+    "name": "Naam",
+    "value": "Waarde",
+    "removeLine": "Deze regel verwijderen",
+    "draft": "Concept",
+    "production": "Productie",
+    "draftHint": "Het canvas, Len en de terminal",
+    "productionHint": "Je gepubliceerde app",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "edit": "{name} bewerken",
+    "delete": "{name} verwijderen",
+    "confirmDelete": "{name} verwijderen?",
+    "show": "Waarde tonen",
+    "hide": "Waarde verbergen",
+    "didYouMean": "Bedoelde je {name}?",
+    "useIt": "Gebruiken",
+    "fromCode": "Uit de code (/.env)",
+    "fromCodeHint": "Len kan ze ook schrijven. Die van jou gaan voor.",
+    "open": "Openen",
+    "overridden": "Vervangen door die van jou in {targets}",
+    "fromOpenLen": "Van OpenLen",
+    "fromOpenLenHint": "De backend van je app. Ingesteld door OpenLen; kan niet worden gewijzigd.",
+    "readOnly": "Je kunt ze zien; de eigenaar en de bewerkers wijzigen ze.",
+    "secret": {
+      "byValue": "Dit lijkt op een geheime sleutel van {provider}.",
+      "privateKey": "Dit lijkt op een privésleutel.",
+      "byName": "De naam zegt dat het een geheim is.",
+      "explanation": "Iedereen die je app opent, kan lezen wat je hier zet. Een geheime sleutel heeft een server nodig, en die is er hier nog niet.",
+      "understood": "Ik begrijp dat het openbaar wordt"
+    },
+    "publish": {
+      "notice": "Je gepubliceerde app gebruikt nog de vorige waarden. Publiceer opnieuw om deze te gebruiken.",
+      "button": "Publiceren"
+    },
+    "errors": {
+      "name": "Namen beginnen met VITE_ en bevatten alleen letters, cijfers en _.",
+      "nameTooLong": "Namen hebben maximaal 100 tekens.",
+      "reserved": "{name} wordt ingesteld door OpenLen.",
+      "duplicate": "{name} heeft al een waarde in {target}.",
+      "tooLong": "Waarden zijn maximaal 4 KB.",
+      "tooMany": "Maximaal {max} variabelen per project.",
+      "noTarget": "Kies Concept, Productie of allebei.",
+      "conflict": "Iemand heeft de variabelen intussen gewijzigd. Dit is de huidige lijst; wat je aan het schrijven was, staat er nog.",
+      "generic": "Dat lukte niet. Probeer het opnieuw."
+    }
   }
 }

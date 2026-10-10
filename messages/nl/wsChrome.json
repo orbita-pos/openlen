@@ -155,7 +155,8 @@
       "sinContenido": "{count, plural, one {# bestand dat bij het openen wordt berekend, wordt alleen op naam gezocht.} other {# bestanden die bij het openen worden berekend, worden alleen op naam gezocht.}}",
       "marcaNuevo": "Nieuw in deze sessie",
       "marcaCambiado": "Gewijzigd in deze sessie",
-      "titleApp": "De code van je app"
+      "titleApp": "De code van je app",
+      "envVars": "Omgevingsvariabelen"
     },
     "terminal": {
       "title": "Lens terminal",
