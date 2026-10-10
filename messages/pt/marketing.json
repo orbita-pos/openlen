@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Seu própri<len>o</len> desenvolvedor web. <gradient>Len.</gradient>",
-    "subtitle": "Conte do que você precisa. O Len escreve sua página ou seu app, coloca os textos, as fotos e os formulários, revisa o próprio trabalho e publica no seu domínio.",
     "announce": "<strong>O Len agora faz apps</strong><dot></dot>Teste grátis",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas geradas esta semana",
     "githubAria": "OpenLen no GitHub",

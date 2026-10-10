@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Your <len>o</len>wn web developer. <gradient>Len.</gradient>",
-    "subtitle": "Tell it what you need. Len writes your page or your app, puts in the copy, photos and forms, checks its own work and publishes it on your domain.",
     "announce": "<strong>Len now builds apps</strong><dot></dot>Try it free",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
