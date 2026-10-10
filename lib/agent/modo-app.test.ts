@@ -259,12 +259,37 @@ describe("los nombres que usa el modo app", () => {
       ...app.map((d) => String(d.description ?? "")),
     ].join("\n");
     // Lo que tiene forma de nombre y NO es una herramienta: un parámetro, un
-    // valor o un identificador de Postgres. Si una herramienta se renombra, su
+    // valor, un identificador de Postgres o un campo del estado del proyecto
+    // (`env_vars`). Si una herramienta se renombra, su
     // nombre viejo cae aquí y la prueba lo dice.
-    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode"]);
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars"]);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
       (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
     );
     expect(sueltos).toEqual([]);
+  });
+});
+
+describe("las variables de entorno en una app (spec local 2026-10-10)", () => {
+  const manual = buildManualDeLaPlataforma(ENV, "len", APP);
+
+  it("el manual dice de dónde salen, cuál manda y que nada es secreto", () => {
+    expect(manual).toMatch(/import\.meta\.env works as in Vite, public values only/);
+    expect(manual).toMatch(/env_vars in PROJECT STATE/);
+    expect(manual).toMatch(/only \/\.env, only VITE_ names/);
+    expect(manual).toMatch(/ask the owner to add it in Environment variables/);
+  });
+
+  it("el estado nombra las del dueño con sus entornos, sin valores; sin ninguna o en una página, nada", () => {
+    const fila = {
+      title: "Caja",
+      subdomain: null,
+      publishedAt: null,
+      data: { html: "", app: APP },
+      envVars: { VITE_STRIPE: ["draft", "production"] as const },
+    };
+    expect(summarizeProjectState(fila).env_vars).toEqual({ VITE_STRIPE: ["draft", "production"] });
+    expect(summarizeProjectState({ ...fila, envVars: {} })).not.toHaveProperty("env_vars");
+    expect(summarizeProjectState({ ...fila, data: { html: "" } })).not.toHaveProperty("env_vars");
   });
 });
