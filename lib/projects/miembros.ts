@@ -13,6 +13,7 @@ import { and, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { RolDeMiembro } from "@/lib/projects/acceso";
+import { avatarOf } from "@/lib/profile/avatar";
 
 export const MAX_MIEMBROS = 10;
 export const INVITACION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -24,6 +25,10 @@ export interface Miembro {
   readonly userId: string;
   readonly email: string;
   readonly name: string | null;
+  /** Su foto (`avatarOf`): la subida, la de Google o null. */
+  readonly avatar: string | null;
+  /** Su @, para enlazar a su perfil; null si aún no eligió. */
+  readonly handle: string | null;
   readonly rol: RolDeMiembro;
   readonly desde: Date;
   /** Créditos que gastó con Len este mes. */
@@ -50,6 +55,9 @@ export async function listarMiembros(projectId: string): Promise<{ miembros: Mie
       desde: schema.projectMembers.createdAt,
       email: schema.users.email,
       name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
+      handle: schema.users.handle,
       gasto: schema.projectMemberSpend.creditos,
     })
     .from(schema.projectMembers)
@@ -78,7 +86,7 @@ export async function listarMiembros(projectId: string): Promise<{ miembros: Mie
   // Una invitación repetida al mismo correo: vale la última.
   const vistas = new Set<string>();
   return {
-    miembros: filas.map((f) => ({ userId: f.userId, email: f.email, name: f.name, rol: f.rol, desde: f.desde, gastoDelMes: f.gasto ?? 0 })),
+    miembros: filas.map((f) => ({ userId: f.userId, email: f.email, name: f.name, avatar: avatarOf(f), handle: f.handle, rol: f.rol, desde: f.desde, gastoDelMes: f.gasto ?? 0 })),
     invitaciones: invitaciones.filter((i) => !vistas.has(i.email) && vistas.add(i.email)),
   };
 }

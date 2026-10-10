@@ -15,6 +15,7 @@ import { containsBlockedTerm } from "./blocklist";
 // navegador resolvía contra `/es/explore` → 404. El porqué medido está en
 // `lib/publish/deploy-url.ts`.
 import { deployUrlFor } from "@/lib/publish/deploy-url";
+import { avatarOf } from "@/lib/profile/avatar";
 
 export type ExploreCard = {
   id: string;
@@ -92,6 +93,7 @@ export async function listExplore(opts: {
       listedAt: schema.projects.listedAt,
       handle: schema.users.handle,
       avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
     })
     .from(schema.projects)
     .innerJoin(schema.users, eq(schema.users.id, schema.projects.userId))
@@ -102,7 +104,8 @@ export async function listExplore(opts: {
   const hasMore = rows.length > limit;
   const items = rows
     .slice(0, limit)
-    .map(({ subdomain, ...r }) => ({ ...r, deployUrl: deployUrlFor(subdomain) ?? r.deployUrl }));
+    // Sin foto subida, la de Google (`avatarOf`); la columna `image` no sale.
+    .map(({ subdomain, image, ...r }) => ({ ...r, avatarUrl: avatarOf({ avatarUrl: r.avatarUrl, image }), deployUrl: deployUrlFor(subdomain) ?? r.deployUrl }));
   const last = items[items.length - 1];
   let nextCursor: string | null = null;
   if (hasMore && last) {

@@ -29,4 +29,17 @@ describe("la gente del chat", () => {
     // A un miembro no le llegan las invitaciones: no espera a nadie.
     expect(genteDesdeMiembros({ rol: "editor", yo: "u-eli", dueno, miembros: [] }).esperando).toBe(false);
   });
+
+  it("🔴 la foto de cada uno viaja con la gente (y sin foto, no hay campo)", () => {
+    const r = genteDesdeMiembros({
+      rol: "dueno",
+      yo: "u-dana",
+      dueno: { userId: "u-dana", name: "Dana", email: "d@x", avatar: "https://u/avatars/u-dana-0123456789abcdef.webp" },
+      miembros: [{ userId: "u-eli", name: "Eli", email: "e@x", avatar: null }],
+    });
+    expect(r.gente).toEqual([
+      { userId: "u-dana", nombre: "Dana", avatar: "https://u/avatars/u-dana-0123456789abcdef.webp" },
+      { userId: "u-eli", nombre: "Eli" },
+    ]);
+  });
 });
