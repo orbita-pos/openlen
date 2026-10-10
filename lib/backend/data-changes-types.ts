@@ -15,3 +15,34 @@ export type DataChangesPreview =
   | { readonly kind: "pending"; readonly migrations: string[]; readonly destructive: DestructiveChange[] | null }
   | { readonly kind: "failed"; readonly migration: string; readonly statement: string; readonly message: string }
   | { readonly kind: "diverged"; readonly versions: string[] };
+
+const isStrings = (x: unknown): x is string[] => Array.isArray(x) && x.every((s) => typeof s === "string");
+
+function isDestructiveChange(x: unknown): x is DestructiveChange {
+  const c = x as Record<string, unknown> | null;
+  if (!c || typeof c !== "object" || typeof c.count !== "number") return false;
+  switch (c.kind) {
+    case "drop_table":
+      return typeof c.table === "string";
+    case "drop_column":
+      return typeof c.table === "string" && typeof c.column === "string";
+    case "alter_type":
+      return typeof c.table === "string" && typeof c.column === "string" && typeof c.from === "string" && typeof c.to === "string";
+    case "delete_rows":
+      return typeof c.migration === "string" && typeof c.statement === "string";
+    default:
+      return false;
+  }
+}
+
+/** Lo que la tarjeta de Len pinta de un `confirm` que llega por el stream: sólo
+ *  lo que tiene la forma (la primera publicación o lo pendiente); lo demás, nada. */
+export function dataChangesForCard(x: unknown): DataChangesPreview | undefined {
+  const p = x as Record<string, unknown> | null;
+  if (!p || typeof p !== "object" || !isStrings(p.migrations)) return undefined;
+  if (p.kind === "first_publish") return { kind: "first_publish", migrations: p.migrations };
+  if (p.kind !== "pending") return undefined;
+  if (p.destructive === null) return { kind: "pending", migrations: p.migrations, destructive: null };
+  if (!Array.isArray(p.destructive) || !p.destructive.every(isDestructiveChange)) return undefined;
+  return { kind: "pending", migrations: p.migrations, destructive: p.destructive };
+}
