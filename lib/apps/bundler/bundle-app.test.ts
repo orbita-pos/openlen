@@ -46,6 +46,20 @@ describe("bundleApp (plan 02, tarea 3)", () => {
     }
   }, 60_000);
 
+  it("🔴 un error de esbuild (tras un `export *`) dice las rutas como Len las escribe, sin el espacio de nombres del empaquetador", async () => {
+    const carpeta = {
+      ...esqueletoDeApp({ titulo: "Caja" }).ficheros,
+      "/src/lib/datos.js": 'export const NOMBRE = "real";',
+      "/src/lib/todo.js": 'export * from "./datos";',
+      "/src/App.jsx": 'import { APELLIDO } from "./lib/todo";\nexport default function App() { return <p>{APELLIDO}</p>; }',
+    };
+    const r = await bundleApp({ carpeta, app: APP, modo: "desarrollo" });
+    if (!r || r.ok) throw new Error(JSON.stringify(r));
+    expect(r.errores[0]).toMatchObject({ ruta: "/src/App.jsx", linea: 1 });
+    expect(r.errores[0]!.mensaje).toContain('"/src/lib/todo.js"');
+    expect(r.errores[0]!.mensaje).not.toContain("app:");
+  }, 60_000);
+
   it("🔴 dos carpetas a la vez: cada una recibe SU paquete; y dos peticiones iguales comparten uno (Review Focus 2)", async () => {
     const a = { ...FICHEROS, "/src/App.tsx": FICHEROS["/src/App.tsx"]!.replace("Guardar", "Uno") };
     const b = { ...FICHEROS, "/src/App.tsx": FICHEROS["/src/App.tsx"]!.replace("Guardar", "Dos") };

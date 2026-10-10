@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { parse } from "es-module-lexer/js";
-import { runBundler, type BundlerMessage } from "@/lib/apps/bundler/bundle-app";
+import { esbuildDiagnostic, runBundler, type BundlerMessage } from "@/lib/apps/bundler/bundle-app";
 import { compilarCarpeta, type Diagnostico } from "@/lib/apps/compilador";
 import { catalogo, RAIZ_VENDOR } from "@/lib/apps/dependencias";
 import { directorioVendor } from "@/lib/apps/servir";
@@ -150,26 +150,36 @@ export async function bundleAppTests(args: {
     nodeEnv: "development",
     sourcemap: true,
   };
-  const r = await runBundler(mensaje, args.timeoutMs ?? TOPE_MS);
-  if (!r) return null;
-  if (r.errors.length > 0) {
-    // Un error de esbuild es de UN fichero de prueba (un nombre que el kit no
-    // exporta, p. ej.): se atribuye por su ruta y ese fichero sale; si no se
-    // sabe de cuál, fallan todos con él.
-    const errores: Diagnostico[] = r.errors.map((e) => ({
-      ruta: e.file ? e.file.replace(/^(?:app|virtual:hoist):/, "") : "/",
-      linea: e.line,
-      columna: e.column === null ? null : e.column + 1,
-      mensaje: e.text,
-    }));
-    for (const file of Object.keys(entries)) failed.push({ file, errores: errores.filter((x) => x.ruta === file).length ? errores.filter((x) => x.ruta === file) : errores });
-    return { files: {}, maps: {}, entries: {}, failed, ms: Date.now() - t0 };
+  // Un error de esbuild (un nombre que un módulo no exporta, p. ej.) es de UN
+  // fichero: fallan con él las pruebas que lo alcanzan, y las demás se
+  // empaquetan otra vez — de una construcción con errores esbuild no saca nada,
+  // y en vitest cada fichero va por su cuenta. Uno que no se sabe de qué
+  // fichero es (sin ruta, o del catálogo) las hace fallar a todas.
+  const tope = args.timeoutMs ?? TOPE_MS;
+  let pending = Object.keys(entries);
+  for (;;) {
+    const timeLeft = tope - (Date.now() - t0);
+    const r = timeLeft > 0 ? await runBundler({ ...mensaje, entries: pending.map((f) => entries[f]!) }, timeLeft) : null;
+    if (!r) return null;
+    if (r.errors.length === 0) {
+      const files: Record<string, string> = {};
+      const maps: Record<string, string> = {};
+      for (const [nombre, texto] of Object.entries(r.outputs)) {
+        if (nombre.endsWith(".map")) maps[TESTS_PREFIX + nombre.slice(0, -4)] = texto;
+        else files[TESTS_PREFIX + nombre] = texto;
+      }
+      return { files, maps, entries: Object.fromEntries(pending.map((f) => [f, entries[f]!])), failed, ms: Date.now() - t0 };
+    }
+    const errores = r.errors.map((e) => esbuildDiagnostic(e, "/"));
+    const reaches = (file: string, ruta: string) =>
+      ruta === entries[file] || [...setup, file].some((f) => alcanza(f, modules, new Set([ruta])) !== null);
+    const unknown = errores.filter((d) => !pending.some((file) => reaches(file, d.ruta)));
+    const hit = pending
+      .map((file) => ({ file, errores: [...errores.filter((d) => reaches(file, d.ruta)), ...unknown] }))
+      .filter((x) => x.errores.length > 0);
+    failed.push(...hit);
+    if (unknown.length > 0) return { files: {}, maps: {}, entries: {}, failed, ms: Date.now() - t0 };
+    pending = pending.filter((file) => !hit.some((x) => x.file === file));
+    if (pending.length === 0) return { files: {}, maps: {}, entries: {}, failed, ms: Date.now() - t0 };
   }
-  const files: Record<string, string> = {};
-  const maps: Record<string, string> = {};
-  for (const [nombre, texto] of Object.entries(r.outputs)) {
-    if (nombre.endsWith(".map")) maps[TESTS_PREFIX + nombre.slice(0, -4)] = texto;
-    else files[TESTS_PREFIX + nombre] = texto;
-  }
-  return { files, maps, entries, failed, ms: Date.now() - t0 };
 }

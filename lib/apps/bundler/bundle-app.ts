@@ -65,18 +65,27 @@ export function runBundler(m: BundlerMessage, timeoutMs: number): Promise<Bundle
   return cola.run(m, { timeoutMs });
 }
 
+// Los espacios de nombres del hilo (`bundler-worker.mjs`) salen en las rutas
+// de esbuild —`app:/src/x.js`, `virtual:hoist:/src/x.test.js`—, también dentro
+// del texto del error; Len escribió rutas, y es lo que lee.
+const NAMESPACE = /\b(?:app|virtual|mock|empty|vendor):(?:(?:hoist|suite):)?(?=\/)/g;
+
+export function stripNamespaces(texto: string): string {
+  return texto.replace(NAMESPACE, "");
+}
+
+/** Un error de esbuild como diagnóstico: su ruta (o `ruta`, si no trae) y su texto, sin espacios de nombres. */
+export function esbuildDiagnostic(e: BundlerOutput["errors"][number], ruta: string): Diagnostico {
+  return {
+    ruta: e.file ? stripNamespaces(e.file) : ruta,
+    linea: e.line,
+    columna: e.column === null ? null : e.column + 1,
+    mensaje: stripNamespaces(e.text),
+  };
+}
+
 function aBundle(r: BundlerOutput, entrada: string): AppBundle {
-  if (r.errors.length > 0) {
-    return {
-      ok: false,
-      errores: r.errors.map((e) => ({
-        ruta: e.file ? e.file.replace(/^app:/, "") : entrada,
-        linea: e.line,
-        columna: e.column === null ? null : e.column + 1,
-        mensaje: e.text,
-      })),
-    };
-  }
+  if (r.errors.length > 0) return { ok: false, errores: r.errors.map((e) => esbuildDiagnostic(e, entrada)) };
   const nombre = path.posix.basename(entrada).replace(/\.[cm]?[jt]sx?$/, ".js");
   const js = r.outputs[nombre] ?? "";
   return { ok: true, js, map: r.outputs[`${nombre}.map`] ?? null, bytes: Buffer.byteLength(js), gzipBytes: gzipSync(js).length, ms: r.ms };
