@@ -106,7 +106,7 @@
     "subdomainLabel": "Sottodominio",
     "subdomainPlaceholder": "il-tuo-nome",
     "preview": "Anteprima",
-    "limitsHint": "Progetti pubblicati (pagine o app): {free} con il piano gratuito, {pro} con Pro e {max} con Max. Lettere minuscole, numeri e trattini (1–63 caratteri).",
+    "limitsHint": "Progetti pubblicati (pagine o app): {free} con il piano gratuito, {pro} con Pro, {max} con Max e {ultra} con Ultra. Lettere minuscole, numeri e trattini (1–63 caratteri).",
     "unpublish": {
       "sure": "Sei sicuro?",
       "confirm": "Sì, rimuovi la pubblicazione",

@@ -106,7 +106,7 @@
     "subdomainLabel": "Subdomein",
     "subdomainPlaceholder": "jouw-naam",
     "preview": "Voorbeeld",
-    "limitsHint": "Gepubliceerde projecten (pagina's of apps): {free} met het gratis abonnement, {pro} met Pro en {max} met Max. Kleine letters, cijfers en koppeltekens (1–63 tekens).",
+    "limitsHint": "Gepubliceerde projecten (pagina's of apps): {free} met het gratis abonnement, {pro} met Pro, {max} met Max en {ultra} met Ultra. Kleine letters, cijfers en koppeltekens (1–63 tekens).",
     "unpublish": {
       "sure": "Zeker weten?",
       "confirm": "Ja, ongepubliceerd maken",

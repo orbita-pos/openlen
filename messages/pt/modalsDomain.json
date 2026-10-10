@@ -106,7 +106,7 @@
     "subdomainLabel": "Subdomínio",
     "subdomainPlaceholder": "seu-nome",
     "preview": "Pré-visualizar",
-    "limitsHint": "Projetos publicados (páginas ou apps): {free} no plano gratuito, {pro} no Pro e {max} no Max. Letras minúsculas, números e hifens (1 a 63 caracteres).",
+    "limitsHint": "Projetos publicados (páginas ou apps): {free} no plano gratuito, {pro} no Pro, {max} no Max e {ultra} no Ultra. Letras minúsculas, números e hifens (1 a 63 caracteres).",
     "unpublish": {
       "sure": "Tem certeza?",
       "confirm": "Sim, despublicar",

@@ -106,7 +106,7 @@
     "subdomainLabel": "Subdomain",
     "subdomainPlaceholder": "your-name",
     "preview": "Preview",
-    "limitsHint": "Published projects (pages or apps): {free} on the free plan, {pro} on Pro and {max} on Max. Lowercase letters, numbers, and hyphens (1–63 chars).",
+    "limitsHint": "Published projects (pages or apps): {free} on the free plan, {pro} on Pro, {max} on Max and {ultra} on Ultra. Lowercase letters, numbers, and hyphens (1–63 chars).",
     "unpublish": {
       "sure": "Sure?",
       "confirm": "Yes, unpublish",
