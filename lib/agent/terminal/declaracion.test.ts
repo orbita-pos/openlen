@@ -152,7 +152,7 @@ describe("la lista de ficheros de bash nombra la carpeta", () => {
     expect(d).toContain(".js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md");
   });
   it("/tests, que no se publica, y que rm borra un fichero de la carpeta", () => {
-    expect(d).toContain("/tests holds Playwright tests, never published");
+    expect(d).toContain("/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published");
     expect(d).toContain("rm deletes a folder file");
   });
 });
