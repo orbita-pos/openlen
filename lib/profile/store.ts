@@ -11,7 +11,7 @@
  */
 import "server-only";
 
-import { and, desc, eq, isNotNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { getUserByHandle } from "@/lib/community/handle";
@@ -21,10 +21,8 @@ import { avatarOf } from "./avatar";
 import type { ProfileData, ProfileProject } from "./types";
 import { MAX_PINNED, type ProfilePatch } from "./validate";
 
-export async function listProfileProjects(
-  profileUserId: string,
-  viewerId: string | null,
-): Promise<{ projects: ProfileProject[]; sharedCount: number }> {
+/** La consulta de `listProfileProjects`, sin ejecutar (la prueba mira su plan). */
+export function profileProjectsQuery(profileUserId: string, viewerId: string | null) {
   const p = schema.projects;
   const pm = schema.projectMembers;
   // ⚠️ `${p}."userId"` y no `${p.userId}`: dentro de un campo del `select`
@@ -33,7 +31,7 @@ export async function listProfileProjects(
   const viewerIn = viewerId
     ? sql<boolean>`(${p}."userId" = ${viewerId} or exists (select 1 from ${pm} v where v."projectId" = ${p}."id" and v."userId" = ${viewerId}))`
     : sql<boolean>`false`;
-  const rows = await db
+  return db
     .select({
       id: p.id,
       title: p.title,
@@ -51,7 +49,10 @@ export async function listProfileProjects(
     .leftJoin(pm, and(eq(pm.projectId, p.id), eq(pm.userId, profileUserId)))
     .where(
       and(
-        or(eq(p.userId, profileUserId), isNotNull(pm.userId)),
+        // Sus proyectos (dueño o miembro) por los dos índices —projects_userId_idx y
+        // projectMembers_userId_idx—. Con un `or` entre el dueño y el miembro del
+        // join, Postgres recorría la tabla entera en cada visita a un perfil.
+        sql`${p}."id" in (select "id" from ${p} where "userId" = ${profileUserId} union all select "projectId" from ${pm} where "userId" = ${profileUserId})`,
         ne(p.status, "archived"),
         // NO en blanco: con portada, con páginas o con conversación (lo mismo
         // que `isBlankProject`, en SQL para no traer el HTML de 200 proyectos).
@@ -60,7 +61,13 @@ export async function listProfileProjects(
     )
     .orderBy(desc(p.updatedAt))
     .limit(200);
+}
 
+export async function listProfileProjects(
+  profileUserId: string,
+  viewerId: string | null,
+): Promise<{ projects: ProfileProject[]; sharedCount: number }> {
+  const rows = await profileProjectsQuery(profileUserId, viewerId);
   const isSelf = viewerId === profileUserId;
   const projects = rows
     .filter((r) => Boolean(r.viewerIn) || (r.visibility === "public" && r.status === "published"))

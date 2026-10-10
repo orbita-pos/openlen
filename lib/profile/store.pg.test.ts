@@ -4,10 +4,10 @@
 // cada persona ve los proyectos que podría abrir de todos modos. Corre contra
 // DATABASE_URL — en este plan, la base de usar y tirar.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, like, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
-import { getProfile, listProfileProjects, updateProfile } from "@/lib/profile/store";
+import { getProfile, listProfileProjects, profileProjectsQuery, updateProfile } from "@/lib/profile/store";
 
 const ANA = "prueba-perfil-ana";
 const BEA = "prueba-perfil-bea";
@@ -53,6 +53,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   vi.unstubAllEnvs();
+  await db.delete(schema.projects).where(like(schema.projects.id, "prueba-perfil-relleno-%"));
   await db.delete(schema.projects).where(inArray(schema.projects.id, Object.values(P)));
   await db.delete(schema.users).where(inArray(schema.users.id, USUARIOS));
 });
@@ -130,5 +131,28 @@ describe("guardar el perfil", () => {
     await updateProfile(ANA, { name: "", bio: "", links: ["https://ana.dev"] });
     const [u] = await db.select({ name: schema.users.name, bio: schema.users.bio, links: schema.users.links }).from(schema.users).where(eq(schema.users.id, ANA));
     expect(u).toEqual({ name: null, bio: null, links: [{ url: "https://ana.dev" }] });
+  });
+});
+
+describe("🔴 un perfil público no recorre la tabla entera de proyectos", () => {
+  it("la consulta entra por los índices (dueño y miembros), no con un Seq Scan de projects", async () => {
+    // 3.000 proyectos de otra persona: con ellos al planificador le sale a cuenta el índice.
+    const relleno = Array.from({ length: 3000 }, (_, i) => ({ id: `prueba-perfil-relleno-${i}`, userId: OTRO, title: "r", brief: "", data: { html: "<p>r</p>" } }));
+    for (let i = 0; i < relleno.length; i += 500) await db.insert(schema.projects).values(relleno.slice(i, i + 500));
+    try {
+      await db.execute(sql`analyze "projects"`);
+      await db.execute(sql`analyze "projectMembers"`);
+      const q = profileProjectsQuery(ANA, BEA).toSQL();
+      const r = await db.$client.query(`EXPLAIN (FORMAT JSON) ${q.sql}`, q.params as unknown[]);
+      const nodos: { "Node Type"?: string; "Relation Name"?: string }[] = [];
+      const recorrer = (n: Record<string, unknown>) => {
+        nodos.push(n as { "Node Type"?: string; "Relation Name"?: string });
+        for (const h of (n.Plans as Record<string, unknown>[] | undefined) ?? []) recorrer(h);
+      };
+      recorrer((r.rows[0]["QUERY PLAN"] as { Plan: Record<string, unknown> }[])[0]!.Plan);
+      expect(nodos.filter((n) => n["Node Type"] === "Seq Scan" && n["Relation Name"] === "projects")).toEqual([]);
+    } finally {
+      await db.delete(schema.projects).where(like(schema.projects.id, "prueba-perfil-relleno-%"));
+    }
   });
 });
