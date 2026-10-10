@@ -42,7 +42,7 @@ import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, s
 import { findSecret } from "@/lib/agent/memory/secrets";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
-import { classifyFolderPath, folderSaveProblem, isFolderPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
@@ -405,7 +405,7 @@ async function guardarEnLaCarpeta(
     // nada de la página» y sin Deshacer.
     ...(cambio === "cambio" ? { ficherosTocados: [{ ruta: plan.ruta, versionPrevia }], mutoDurable: true } : {}),
     // UNA APP: lo que se ve cambió aunque el cascarón no (F3).
-    ...(cambio === "cambio" && session.app && isPublishableFolderPath(plan.ruta) ? { appCambiada: true as const } : {}),
+    ...(cambio === "cambio" && session.app && isCompileInputPath(plan.ruta) ? { appCambiada: true as const } : {}),
   };
 }
 
@@ -612,7 +612,7 @@ export async function guardarLoDeLaTerminal(
           ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
           mutoDurable: true,
           // Borrar un fichero de la app también cambia lo que se ve.
-          ...(session.app && isPublishableFolderPath(c.ruta) ? { appCambiada: true as const } : {}),
+          ...(session.app && isCompileInputPath(c.ruta) ? { appCambiada: true as const } : {}),
         });
         continue;
       }

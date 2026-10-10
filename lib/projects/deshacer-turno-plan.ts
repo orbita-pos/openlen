@@ -106,7 +106,7 @@ export function esDeshacible(ruta: string): boolean {
   if (ruta === RUTA_FORMA) return true;
   if (paginaDeRuta(ruta)) return true;
   const c = classifyFolderPath(ruta);
-  return c.ok && (c.kind === "web" || c.kind === "tests");
+  return c.ok && (c.kind === "web" || c.kind === "tests" || c.kind === "env");
 }
 
 /** De las dos fotos del turno, lo que se guarda para poder deshacerlo. */

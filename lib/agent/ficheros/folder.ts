@@ -8,7 +8,10 @@
  *   · `web`      se publica tal cual junto a las páginas y la sirve el lienzo;
  *   · `tests`    las pruebas de Playwright (pieza 10): se guardan y viajan al exportar, no se publican ni se corren aquí;
  *   · `supabase` las migraciones y funciones del backend, con sus reglas de
- *                siempre (`supabase.ts`): se guardan, no se publican.
+ *                siempre (`supabase.ts`): se guardan, no se publican;
+ *   · `env`      `/.env`, sólo en la raíz (spec local 2026-10-10): lo lee el
+ *                compilador para `import.meta.env`; se guarda y viaja al
+ *                exportar, pero nunca se publica ni se sirve (como en Vite).
  *
  * Cualquier carpeta vale, también la raíz, como en Vercel: el modelo escribe
  * `/app.js` y `/style.css` por costumbre, y OpenLen se adapta a Len. Se prohíbe
@@ -19,8 +22,10 @@
  * Sin imports pesados: lo prueba vitest y lo puede importar el cliente.
  */
 import { esFicheroDeSupabase, motivoParaNoGuardar as supabaseSaveProblem } from "./supabase";
+import { DOTENV_PATH } from "@/lib/apps/env/rules";
+import { dotEnvSaveProblem } from "@/lib/apps/env/dotenv";
 
-export type FolderFileKind = "web" | "tests" | "supabase";
+export type FolderFileKind = "web" | "tests" | "supabase" | "env";
 
 /** `.jsx`, `.tsx` y `.ts` son FUENTES (apps web, spec local 2026-10-07-apps):
  *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
@@ -68,6 +73,15 @@ export function classifyFolderPath(path: string): FolderPathClass {
   if (RESERVED_FILES.includes(path) || segments[0] === ".openlen") {
     return { ok: false, reason: `${path} belongs to the platform and is read-only.` };
   }
+  // EL `.env` DE VITE (spec local 2026-10-10): sólo `/.env`, en la raíz. Los
+  // demás `.env*` se rechazan con el porqué: aquí no hay modos que los elijan.
+  if (path === DOTENV_PATH) return { ok: true, kind: "env" };
+  if (/^\.env(?:\..+)?$/.test(segments[segments.length - 1] ?? "")) {
+    return {
+      ok: false,
+      reason: `${path} is not read: only ${DOTENV_PATH} is, and the canvas and the published app run the same build. For a value that differs between draft and production, the owner sets it in the project's Environment variables.`,
+    };
+  }
   if (
     !path.startsWith("/") ||
     path.length > MAX_PATH_LENGTH ||
@@ -108,6 +122,13 @@ export function isPublishableFolderPath(path: string): boolean {
   return c.ok && c.kind === "web";
 }
 
+/** Lo que entra a CONSTRUIR el sitio: lo que se publica y `/.env`, que el
+ *  compilador lee para `import.meta.env` (lib/apps/compilador.ts) y que nunca se
+ *  escribe en la release (`publishableFolderFiles` sólo deja la web). */
+export function isCompileInputPath(path: string): boolean {
+  return path === DOTENV_PATH || isPublishableFolderPath(path);
+}
+
 function bytes(s: string): number {
   return Buffer.byteLength(s, "utf8");
 }
@@ -122,6 +143,9 @@ export function folderSaveProblem(path: string, content: string, existing: Reado
     const supabaseCount = [...existing.keys()].filter(esFicheroDeSupabase).length;
     const problem = supabaseSaveProblem(path, content, supabaseCount, creates);
     if (problem) return `Cannot save ${problem}`;
+  } else if (c.kind === "env") {
+    const problem = dotEnvSaveProblem(content);
+    if (problem) return problem;
   } else {
     const max = c.kind === "tests" ? MAX_TEST_FILE_BYTES : MAX_FOLDER_FILE_BYTES;
     if (bytes(content) > max) return `${path} is larger than ${max / 1024} KB.`;

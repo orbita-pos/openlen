@@ -11,6 +11,7 @@ import {
   classifyFolderPath,
   contentTypeFor,
   folderSaveProblem,
+  isCompileInputPath,
   isPublishableFolderPath,
   publishableFolderFiles,
 } from "./folder";
@@ -84,7 +85,7 @@ describe("qué rutas son de la carpeta", () => {
   it("🔴 rechaza `..`, dotfiles, extensiones de fuera y rutas raras", () => {
     for (const p of [
       "/js/../index.html",
-      "/.env",
+      "/.envrc",
       "/js/.secreto.js",
       "/logo.png",
       "/js/app.py",
@@ -201,5 +202,29 @@ describe("LEN.md (plans/len-md): no es de la carpeta", () => {
     expect(classifyFolderPath("/LEN.md").ok).toBe(false);
     expect(isPublishableFolderPath("/LEN.md")).toBe(false);
     expect(classifyFolderPath("/home/user/notas.md").ok).toBe(false);
+  });
+});
+
+describe("/.env (spec local 2026-10-10-variables-de-entorno)", () => {
+  it("sólo /.env es de la carpeta: se guarda, entra a compilar y NO se publica", () => {
+    expect(kind("/.env")).toBe("env");
+    expect(isPublishableFolderPath("/.env")).toBe(false);
+    expect(isCompileInputPath("/.env")).toBe(true);
+    expect(isCompileInputPath("/js/app.js")).toBe(true);
+    expect(isCompileInputPath("/tests/a.test.ts")).toBe(false);
+    expect(publishableFolderFiles({ "/.env": "VITE_A=1", "/js/a.js": "x" })).toEqual([{ path: "js/a.js", content: "x" }]);
+  });
+
+  it("🔴 los demás .env* se rechazan diciendo qué hacer", () => {
+    for (const p of ["/.env.local", "/.env.production", "/.env.development", "/src/.env"]) {
+      const c = classifyFolderPath(p);
+      expect(c.ok, p).toBe(false);
+      if (!c.ok) expect(c.reason, p).toMatch(/only \/\.env is/);
+    }
+  });
+
+  it("lo que no vale de /.env se dice al guardar", () => {
+    expect(folderSaveProblem("/.env", "VITE_A=1\n", new Map())).toBeNull();
+    expect(folderSaveProblem("/.env", "SECRET=1\n", new Map())).toMatch(/would never reach the app/);
   });
 });
