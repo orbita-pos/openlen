@@ -39,6 +39,7 @@
     "freePlan": "Forfait gratuit",
     "proPlan": "Forfait Pro",
     "maxPlan": "Forfait Max",
+    "ultraPlan": "Forfait Ultra",
     "creditsLeft": "{count, plural, one {# crédit restant} other {# crédits restants}}",
     "dismiss": "Ignorer"
   },

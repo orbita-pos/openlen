@@ -39,6 +39,7 @@
     "freePlan": "Free-Tarif",
     "proPlan": "Pro-Tarif",
     "maxPlan": "Max-Tarif",
+    "ultraPlan": "Ultra-Tarif",
     "creditsLeft": "{count, plural, one {# Credit übrig} other {# Credits übrig}}",
     "dismiss": "Ausblenden"
   },

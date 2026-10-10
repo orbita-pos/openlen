@@ -197,7 +197,7 @@
       "cta": "Ga voor Pro",
       "features": {
         "0": "Alles uit Gratis",
-        "1": "{credits} credits per maand",
+        "1": "{credits, number} credits per maand",
         "2": "Je eigen domein (jouwbedrijf.com)",
         "3": "Statistieken langer dan 90 dagen",
         "4": "Prioriteit-e-mailondersteuning"
@@ -210,7 +210,18 @@
       "cta": "Ga voor Max",
       "features": {
         "0": "Alles uit Pro",
-        "1": "{credits} credits per maand — {times, number}× Pro",
+        "1": "{credits, number} credits per maand — {times, number}× Pro",
+        "2": "Een goedkopere credit: {cents, number}¢ in plaats van {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/maand",
+      "blurb": "Voor bureaus en teams die Len de hele dag laten werken.",
+      "cta": "Ga voor Ultra",
+      "features": {
+        "0": "Alles uit Max",
+        "1": "{credits, number} credits per maand — {times, number}× Pro",
         "2": "De goedkoopste credit: {cents, number}¢ in plaats van {proCents, number}¢"
       }
     },

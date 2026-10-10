@@ -39,6 +39,7 @@
     "freePlan": "Piano Free",
     "proPlan": "Piano Pro",
     "maxPlan": "Piano Max",
+    "ultraPlan": "Piano Ultra",
     "creditsLeft": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
     "dismiss": "Ignora"
   },

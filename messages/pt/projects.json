@@ -39,6 +39,7 @@
     "freePlan": "Plano gratuito",
     "proPlan": "Plano Pro",
     "maxPlan": "Plano Max",
+    "ultraPlan": "Plano Ultra",
     "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
     "dismiss": "Dispensar"
   },

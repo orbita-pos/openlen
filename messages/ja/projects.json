@@ -39,6 +39,7 @@
     "freePlan": "無料プラン",
     "proPlan": "Pro プラン",
     "maxPlan": "Max プラン",
+    "ultraPlan": "Ultra プラン",
     "creditsLeft": "{count, plural, one {残り # クレジット} other {残り # クレジット}}",
     "dismiss": "閉じる"
   },

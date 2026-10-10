@@ -197,7 +197,7 @@
       "cta": "升级到 Pro",
       "features": {
         "0": "包含免费版全部功能",
-        "1": "每月 {credits} 个额度",
+        "1": "每月 {credits, number} 个额度",
         "2": "自定义域名（yourbusiness.com）",
         "3": "超过 90 天的数据分析",
         "4": "优先邮件支持"
@@ -210,7 +210,18 @@
       "cta": "升级到 Max",
       "features": {
         "0": "包含 Pro 全部功能",
-        "1": "每月 {credits} 个额度 — Pro 的 {times, number} 倍",
+        "1": "每月 {credits, number} 个额度 — Pro 的 {times, number} 倍",
+        "2": "更便宜的额度：每个 {cents, number}¢，而不是 {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/月",
+      "blurb": "适合让 Len 整天忙碌的代理机构和团队。",
+      "cta": "升级到 Ultra",
+      "features": {
+        "0": "包含 Max 全部功能",
+        "1": "每月 {credits, number} 个额度 — Pro 的 {times, number} 倍",
         "2": "最便宜的额度：每个 {cents, number}¢，而不是 {proCents, number}¢"
       }
     },

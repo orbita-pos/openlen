@@ -89,6 +89,18 @@ describe("buildRenewalReminderEmail", () => {
     manageUrl: "https://openlen.com/api/billing/portal",
   });
 
+  it("🔴 a un Ultra le dice Ultra, no Pro", () => {
+    const ultra = buildRenewalReminderEmail({
+      plan: "ultra",
+      amount: 9999,
+      currency: "usd",
+      renewsAt: d("2026-10-13T10:00:00Z"),
+      manageUrl: "https://openlen.com/api/billing/portal",
+    });
+    expect(ultra.text).toContain("Ultra");
+    expect(ultra.text).not.toContain("Pro ");
+  });
+
   it("dice el plan, el importe, la fecha y cómo cancelar, en español y en inglés", () => {
     for (const texto of [mail.text, mail.html]) {
       expect(texto).toContain("Max");

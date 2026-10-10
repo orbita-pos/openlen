@@ -197,7 +197,7 @@
       "cta": "Pásate a Pro",
       "features": {
         "0": "Todo lo del plan Gratis",
-        "1": "{credits} créditos al mes",
+        "1": "{credits, number} créditos al mes",
         "2": "Tu propio dominio (tunegocio.com)",
         "3": "Analítica más allá de 90 días",
         "4": "Soporte prioritario por email"
@@ -210,7 +210,18 @@
       "cta": "Pásate a Max",
       "features": {
         "0": "Todo lo de Pro",
-        "1": "{credits} créditos al mes — {times, number} veces Pro",
+        "1": "{credits, number} créditos al mes — {times, number} veces Pro",
+        "2": "Un crédito más barato: {cents, number}¢ en vez de {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/mes",
+      "blurb": "Para agencias y equipos que tienen a Len trabajando todo el día.",
+      "cta": "Pásate a Ultra",
+      "features": {
+        "0": "Todo lo de Max",
+        "1": "{credits, number} créditos al mes — {times, number} veces Pro",
         "2": "El crédito más barato: {cents, number}¢ en vez de {proCents, number}¢"
       }
     },

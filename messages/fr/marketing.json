@@ -197,7 +197,7 @@
       "cta": "Passer à Pro",
       "features": {
         "0": "Tout ce qui est inclus dans Gratuit",
-        "1": "{credits} crédits par mois",
+        "1": "{credits, number} crédits par mois",
         "2": "Votre propre domaine (votreentreprise.com)",
         "3": "Statistiques au-delà de 90 jours",
         "4": "Support prioritaire par e-mail"
@@ -210,7 +210,18 @@
       "cta": "Passer à Max",
       "features": {
         "0": "Tout ce qui est inclus dans Pro",
-        "1": "{credits} crédits par mois — {times, number}× Pro",
+        "1": "{credits, number} crédits par mois — {times, number}× Pro",
+        "2": "Un crédit moins cher : {cents, number} ¢ au lieu de {proCents, number} ¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/mois",
+      "blurb": "Pour les agences et les équipes qui font travailler Len toute la journée.",
+      "cta": "Passer à Ultra",
+      "features": {
+        "0": "Tout ce qui est inclus dans Max",
+        "1": "{credits, number} crédits par mois — {times, number}× Pro",
         "2": "Le crédit le moins cher : {cents, number} ¢ au lieu de {proCents, number} ¢"
       }
     },

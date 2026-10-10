@@ -197,7 +197,7 @@
       "cta": "Go Pro",
       "features": {
         "0": "Everything in Free",
-        "1": "{credits} credits a month",
+        "1": "{credits, number} credits a month",
         "2": "Your own domain (yourbusiness.com)",
         "3": "Analytics beyond 90 days",
         "4": "Priority email support"
@@ -210,7 +210,18 @@
       "cta": "Go Max",
       "features": {
         "0": "Everything in Pro",
-        "1": "{credits} credits a month — {times, number}× Pro",
+        "1": "{credits, number} credits a month — {times, number}× Pro",
+        "2": "A cheaper credit: {cents, number}¢ instead of {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/mo",
+      "blurb": "For agencies and teams that keep Len busy all day.",
+      "cta": "Go Ultra",
+      "features": {
+        "0": "Everything in Max",
+        "1": "{credits, number} credits a month — {times, number}× Pro",
         "2": "The cheapest credit: {cents, number}¢ instead of {proCents, number}¢"
       }
     },

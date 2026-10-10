@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { billingConfigured, createCheckout, createCustomerPortalUrl } from "@/lib/billing/polar";
+import { paidPlanFrom } from "@/lib/plan";
 import { getUserPlan } from "@/lib/limits";
 import { publicOrigin } from "@/lib/integrations/oauth";
 import { routing } from "@/i18n/routing";
@@ -8,9 +9,9 @@ import { routing } from "@/i18n/routing";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/billing/checkout?plan=<pro|max>&locale=<en|es>
+// GET /api/billing/checkout?plan=<pro|max|ultra>&locale=<en|es|…>
 // Full-page navigation (not fetch) from the in-app "Upgrade" affordance. Auths
-// the user, opens a hosted Polar checkout for the plan (Pro unless plan=max),
+// the user, opens a hosted Polar checkout for the plan (Pro unless plan=max|ultra),
 // and 302s there. Failures bounce back into /projects with a ?billing_error=
 // the UI can show.
 //
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     : routing.defaultLocale;
   const projects = new URL(`/${locale}/projects`, publicOrigin());
 
-  const plan = req.nextUrl.searchParams.get("plan") === "max" ? "max" : "pro";
+  const plan = paidPlanFrom(req.nextUrl.searchParams.get("plan"));
 
   const session = await auth();
   if (!session?.user?.id) {
