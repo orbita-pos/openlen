@@ -364,7 +364,7 @@ export function InboxDesk() {
   const hasAny = !!inbox && inbox.some((g) => g.conversations.length > 0);
 
   return (
-    <div className="flex min-h-0 flex-1 bg-white text-zinc-900 dark:bg-[#0a0a0a] dark:text-zinc-100">
+    <div className="flex min-h-0 flex-1 text-zinc-900 dark:text-zinc-100">
         {/* Conversation list */}
         <aside
           className={`w-full shrink-0 overflow-y-auto border-r border-zinc-200 dark:border-zinc-800 md:w-80 lg:w-96 ${
