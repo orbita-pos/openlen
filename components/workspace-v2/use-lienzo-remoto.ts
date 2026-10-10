@@ -8,6 +8,7 @@ import {
   type EstadoLienzo,
   type EventoLienzo,
 } from "./lienzo-remoto";
+import { useEnvVarsVersion } from "@/lib/workspace-v2/env-vars-signal";
 
 // Sube cada documento del lienzo a /api/lienzo, cronometra el «listo» del
 // iframe, reintenta una vez y cae a la reserva. La lógica está en
@@ -35,6 +36,9 @@ export function useLienzoRemoto(opts: {
   const [interno, despachar] = useReducer(reducir, { estado: INICIAL, reintentos: 0 });
   const estado = interno.estado;
   const local = estado.modo === "local";
+  // Cambiar las variables de entorno cambia el `import.meta.env` del documento
+  // aunque el html sea el mismo: se vuelve a subir (`env-vars-signal.ts`).
+  const envVersion = useEnvVarsVersion(projectId);
 
   const subir = useCallback(
     async (reintento: boolean, senal: AbortSignal) => {
@@ -64,7 +68,7 @@ export function useLienzoRemoto(opts: {
     const c = new AbortController();
     void subir(false, c.signal);
     return () => c.abort();
-  }, [activo, projectId, html, local, subir]);
+  }, [activo, projectId, html, local, subir, envVersion]);
 
   // El reintento, una vez por documento.
   const subirRef = useRef(subir);
