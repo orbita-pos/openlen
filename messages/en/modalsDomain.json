@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "Published",
     "publishedBody": "Your page is live at {subdomain}.{host}",
+    "publishedBodyApp": "Your app is live at {subdomain}.{host}",
     "domainClaimedTitle": "{domain} claimed",
     "domainClaimedBody": "Add the DNS records below, then verify.",
     "domainVerifiedTitle": "{domain} verified",
@@ -105,7 +106,7 @@
     "subdomainLabel": "Subdomain",
     "subdomainPlaceholder": "your-name",
     "preview": "Preview",
-    "limitsHint": "Free tier: 1 published page. Pro: 10. Lowercase letters, numbers, and hyphens (1–63 chars).",
+    "limitsHint": "Published projects (pages or apps): {free} on the free plan, {pro} on Pro and {max} on Max. Lowercase letters, numbers, and hyphens (1–63 chars).",
     "unpublish": {
       "sure": "Sure?",
       "confirm": "Yes, unpublish",
@@ -118,16 +119,19 @@
       "choose": "Choose a name above.",
       "checking": "Checking availability…",
       "currentPage": "This is your current page —",
+      "currentPageApp": "This is your app's current address —",
       "visit": "visit",
       "available": "Available",
       "invalid": "Use lowercase letters, numbers, and hyphens (not leading/trailing).",
       "reserved": "This name is reserved. Try another.",
       "taken": "Already taken. Try another.",
-      "limit": "Plan cap reached — unpublish another page or upgrade."
+      "limit": "Plan cap reached — unpublish another project or upgrade."
     },
     "speedCard": {
       "title": "Page speed",
+      "titleApp": "App speed",
       "measuring": "Measuring your page speed…",
+      "measuringApp": "Measuring your app's speed…",
       "loadsIn": "Loads in {seconds}s",
       "weight": "{kb} KB",
       "requests": "{count} requests",

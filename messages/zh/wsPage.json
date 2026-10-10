@@ -58,6 +58,14 @@
       "create_goal": "创建目标",
       "update_goal": "更新目标"
     },
+    "toolApp": {
+      "Read": "正在读取代码",
+      "Edit": "正在编辑代码",
+      "Write": "正在写入代码",
+      "Glob": "正在列出文件",
+      "view_page": "正在查看应用",
+      "use_page": "正在试用应用"
+    },
     "action": {
       "home": "首页",
       "visualOk": "测量范围内无问题",
@@ -90,7 +98,7 @@
       "published": "✓ 已发布到 {url}",
       "taken": "该子域名已被占用。请换一个。",
       "reserved": "该子域名为保留名称。请换一个。",
-      "limit": "你已达到套餐的已发布页面上限。",
+      "limit": "你已达到套餐的已发布项目上限。",
       "invalid": "发布失败。请检查子域名后重试。",
       "checking": "检查中…",
       "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, other {有 # 张照片上传失败}}，消息将不带照片发送。",
     "publishedTitle": "已发布",
     "publishedBody": "你的页面已上线：{subdomain}.{host}",
+    "publishedBodyApp": "你的应用已上线：{subdomain}.{host}",
     "openSite": "打开站点",
     "unpublishedTitle": "页面已取消发布",
+    "unpublishedTitleApp": "应用已取消发布",
     "unpublishedBody": "该地址已无法访问。",
     "moduleEnabled": "已启用{module}",
     "moduleDisabled": "已停用{module}",

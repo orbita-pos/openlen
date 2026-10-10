@@ -6,7 +6,7 @@
  *
  * Esto decide, en un solo sitio, qué ruta vale, de qué CLASE es y cuánto cabe:
  *   · `web`      se publica tal cual junto a las páginas y la sirve el lienzo;
- *   · `tests`    las pruebas de Playwright (pieza 10): se guardan, no se publican;
+ *   · `tests`    las pruebas de Playwright (pieza 10): se guardan y viajan al exportar, no se publican ni se corren aquí;
  *   · `supabase` las migraciones y funciones del backend, con sus reglas de
  *                siempre (`supabase.ts`): se guardan, no se publican.
  *
@@ -26,7 +26,8 @@ export type FolderFileKind = "web" | "tests" | "supabase";
  *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
  *  en su misma ruta (`lib/apps/compilador.ts`). */
 export const WEB_EXTENSIONS = [".js", ".mjs", ".jsx", ".tsx", ".ts", ".css", ".json", ".webmanifest", ".txt", ".svg", ".md"] as const;
-const TEST_EXTENSIONS = [".ts", ".js", ".mjs", ".json", ".md", ".txt"] as const;
+// `.tsx` y `.jsx`: las pruebas de vitest de una app (plan 04) también pueden vivir aquí.
+const TEST_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json", ".md", ".txt"] as const;
 
 export const MAX_FOLDER_FILE_BYTES = 1024 * 1024;
 export const MAX_TEST_FILE_BYTES = 256 * 1024;

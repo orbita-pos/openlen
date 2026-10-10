@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "Gepubliceerd",
     "publishedBody": "Je pagina is live op {subdomain}.{host}",
+    "publishedBodyApp": "Je app is live op {subdomain}.{host}",
     "domainClaimedTitle": "{domain} geclaimd",
     "domainClaimedBody": "Voeg de onderstaande DNS-records toe en verifieer daarna.",
     "domainVerifiedTitle": "{domain} geverifieerd",
@@ -105,7 +106,7 @@
     "subdomainLabel": "Subdomein",
     "subdomainPlaceholder": "jouw-naam",
     "preview": "Voorbeeld",
-    "limitsHint": "Gratis tier: 1 gepubliceerde pagina. Pro: 10. Kleine letters, cijfers en koppeltekens (1–63 tekens).",
+    "limitsHint": "Gepubliceerde projecten (pagina's of apps): {free} met het gratis abonnement, {pro} met Pro en {max} met Max. Kleine letters, cijfers en koppeltekens (1–63 tekens).",
     "unpublish": {
       "sure": "Zeker weten?",
       "confirm": "Ja, ongepubliceerd maken",
@@ -118,16 +119,19 @@
       "choose": "Kies hierboven een naam.",
       "checking": "Beschikbaarheid controleren…",
       "currentPage": "Dit is je huidige pagina —",
+      "currentPageApp": "Dit is het huidige adres van je app —",
       "visit": "bezoeken",
       "available": "Beschikbaar",
       "invalid": "Gebruik kleine letters, cijfers en koppeltekens (niet aan het begin of einde).",
       "reserved": "Deze naam is gereserveerd. Probeer een andere.",
       "taken": "Al in gebruik. Probeer een andere.",
-      "limit": "Abonnementslimiet bereikt — maak een andere pagina ongepubliceerd of upgrade."
+      "limit": "Abonnementslimiet bereikt — maak een ander project ongepubliceerd of upgrade."
     },
     "speedCard": {
       "title": "Paginasnelheid",
+      "titleApp": "App-snelheid",
       "measuring": "Paginasnelheid wordt gemeten…",
+      "measuringApp": "App-snelheid wordt gemeten…",
       "loadsIn": "Laadt in {seconds}s",
       "weight": "{kb} KB",
       "requests": "{count} verzoeken",

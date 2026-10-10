@@ -81,8 +81,9 @@ function Comando({
   error?: string;
   labels: TerminalViewProps["labels"];
 }) {
-  // La última línea ya dice el código de salida («[Command finished with exit
-  // code N]»): se quita del cuerpo y se pinta aparte, con el acento si no es 0.
+  // Lo que dice el código de salida («Exit code N» arriba, como Claude Code; en
+  // lo de antes, «[Command finished…]» abajo) se quita del cuerpo y se pinta
+  // aparte, con el acento si no es 0.
   const lineas = useMemo(() => (salida === null ? [] : plegarSalida(salida).lineas), [salida]);
   // PLEGADA SI ES LARGA (la #14 de plans/len-agente-2026/notas/fase-5-taller.md),
   // como el bloque de terminal de DeepSeek: las 8 primeras, cuántas faltan, y

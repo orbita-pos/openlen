@@ -4,16 +4,21 @@
  * Una por turno: los ficheros duran siempre (son los del proyecto), y el
  * directorio y las variables, lo que dura el turno. El intérprete corre en
  * `trabajador.mjs`, en un `worker_thread`, con el perfil «hardened» de
- * `just-bash` y su tope de 30 s por comando. Si aun así un comando no vuelve,
+ * `just-bash`, y cada comando con su tiempo (120 s, o el `timeout` que pida
+ * hasta 600 s, como el `Bash` de Claude Code). Si aun así un comando no vuelve,
  * se corta aquí: se mata el hilo y la siguiente llamada empieza con una
  * terminal nueva, y se dice —«reset, never repair», la regla de la terminal de
  * DeepSeek—.
  */
 import path from "node:path";
 import { Worker } from "node:worker_threads";
+import { formatDuration } from "./formato";
 
-/** El tope de cada comando, el de la ficha de F1 y el de `just-bash` en «hardened». */
-export const LIMITE_MS = 30_000;
+/** El tiempo de un comando, el del `Bash` de Claude Code (leído en su binario
+ *  2.1.293: `BASH_DEFAULT_TIMEOUT_MS`, `BASH_MAX_TIMEOUT_MS`; plan 04 de las
+ *  apps, tarea 7): 120 s si no se pide otro, y hasta 600 s con `timeout`. */
+export const DEFAULT_TIMEOUT_MS = 120_000;
+export const MAX_TIMEOUT_MS = 600_000;
 /** Lo que se espera de más antes de cortar el hilo desde fuera. */
 const MARGEN_MS = 5_000;
 
@@ -52,6 +57,8 @@ export class TerminalDeLen {
   private cargados: string[] = [];
   private fallidos: { ruta: string; error: string }[] = [];
   private readonly pendientes = new Map<number, { resolve: (r: Respuesta) => void; reject: (e: Error) => void }>();
+  /** Lo que el hilo le pidió a la app y sigue corriendo: un `timeout` dentro del guion lo cancela. */
+  private readonly appEnCurso = new Map<number, AbortController>();
 
   constructor(
     private readonly o: {
@@ -70,13 +77,37 @@ export class TerminalDeLen {
         args: readonly string[],
         ficheros: Readonly<Record<string, string>>,
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
+      /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
+       *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
+       *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
+      readonly appTools?: {
+        readonly catalogSpecifiers: readonly string[];
+        /** Los `@types/*` que ya trae el paquete de tipos del catálogo. */
+        readonly typesPackages?: readonly string[];
+        readonly run: (
+          program: "tsc" | "eslint" | "build" | "test",
+          args: readonly string[],
+          ficheros: Readonly<Record<string, string>>,
+          /** Lo que le queda al comando que lo pidió. */
+          timeLeftMs?: number,
+          /** Se abortó el comando (`timeout N npm test`): lo que arrancó, que pare. */
+          signal?: AbortSignal,
+        ) => Promise<{
+          stdout: string;
+          stderr: string;
+          exitCode: number;
+          /** Se acabó el tiempo del comando: se corta ENTERO, como en Claude Code. */
+          timedOut?: true;
+        }>;
+      };
       readonly limiteMs?: number;
       readonly margenMs?: number;
     },
   ) {}
 
+  /** El tiempo de un comando que no pide otro (las pruebas lo acortan). */
   private get limite(): number {
-    return this.o.limiteMs ?? LIMITE_MS;
+    return this.o.limiteMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   private async arrancar(): Promise<void> {
@@ -88,6 +119,14 @@ export class TerminalDeLen {
       }
       if (typeof m.supabase === "number") {
         void this.servirSupabase(hilo, m.supabase, m.args as string[], m.ficheros as Record<string, string>);
+        return;
+      }
+      if (typeof m.app === "number") {
+        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build" | "test", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
+        return;
+      }
+      if (typeof m.cancelarApp === "number") {
+        this.appEnCurso.get(m.cancelarApp)?.abort();
         return;
       }
       const p = this.pendientes.get(m.id);
@@ -103,7 +142,40 @@ export class TerminalDeLen {
     });
     this.hilo = hilo;
     const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
-    await this.pedir({ tipo: "iniciar", ficheros, perezosos, supabase: Boolean(this.o.supabase), limiteMs: this.limite });
+    await this.pedir({
+      tipo: "iniciar",
+      ficheros,
+      perezosos,
+      supabase: Boolean(this.o.supabase),
+      app: this.o.appTools
+        ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
+        : undefined,
+      // El techo de `just-bash`; el de cada comando va en su señal (`ejecutar`).
+      limiteMs: MAX_TIMEOUT_MS,
+    });
+  }
+
+  /** `tsc` / `eslint` / `build` / `test` en una app: como `servirSupabase`. */
+  private async servirAppTools(
+    hilo: Worker,
+    pid: number,
+    program: "tsc" | "eslint" | "build" | "test",
+    args: string[],
+    ficheros: Record<string, string>,
+    tiempoQueQueda: number,
+  ): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    const cancelar = new AbortController();
+    this.appEnCurso.set(pid, cancelar);
+    try {
+      if (!this.o.appTools) throw new Error("not available here");
+      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros, tiempoQueQueda, cancelar.signal) };
+    } catch (e) {
+      respuesta = { tipo: "app", pid, error: e instanceof Error ? e.message : String(e) };
+    } finally {
+      this.appEnCurso.delete(pid);
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
 
   /** `supabase …`: se corre aquí y se le devuelve la salida al hilo. Si el hilo
@@ -161,12 +233,15 @@ export class TerminalDeLen {
     });
   }
 
-  async ejecutar(command: string): Promise<SalidaDeUnComando> {
+  /** Un comando, con su tiempo: el que pida (`timeout` de `bash`, hasta
+   *  `MAX_TIMEOUT_MS`) o el de por defecto. */
+  async ejecutar(command: string, o: { readonly timeoutMs?: number } = {}): Promise<SalidaDeUnComando> {
     if (!this.hilo) await this.arrancar();
     this.cargados = [];
     this.fallidos = [];
+    const tope = Math.min(Math.max(1, Math.round(o.timeoutMs ?? this.limite)), MAX_TIMEOUT_MS);
     try {
-      const r = await this.pedir({ tipo: "exec", command }, this.limite + (this.o.margenMs ?? MARGEN_MS));
+      const r = await this.pedir({ tipo: "exec", command, limiteMs: tope }, tope + (this.o.margenMs ?? MARGEN_MS));
       return {
         stdout: String(r.stdout ?? ""),
         stderr: String(r.stderr ?? ""),
@@ -179,9 +254,10 @@ export class TerminalDeLen {
       if (!(e instanceof CorteDuro)) throw e;
       await this.cerrar();
       return {
-        stdout: "",
-        stderr: `Command timed out after ${Math.round(this.limite / 1000)} s.\n`,
-        exitCode: 124,
+        // Como Claude Code (uRe, binario 2.1.293): el aviso y el 143 de SIGTERM.
+        stdout: `Command timed out after ${formatDuration(tope)}`,
+        stderr: "",
+        exitCode: 143,
         ficheros: null,
         reiniciada: AVISO_DE_REINICIO,
       };

@@ -44,6 +44,9 @@ describe("qué rutas son de la carpeta", () => {
     expect(kind("/tests/carrito.spec.ts")).toBe("tests");
     expect(kind("/tests/helpers/login.ts")).toBe("tests");
     expect(kind("/playwright.config.ts")).toBe("tests");
+    // Plan 04: una prueba de vitest de una app (con JSX) también puede vivir en /tests.
+    expect(kind("/tests/Carrito.test.tsx")).toBe("tests");
+    expect(kind("/tests/Lista.test.jsx")).toBe("tests");
     expect(isPublishableFolderPath("/tests/carrito.spec.ts")).toBe(false);
   });
 

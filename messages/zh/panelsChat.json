@@ -73,6 +73,7 @@
     "image": "图片：",
     "removeImage": "移除已附加的图片",
     "placeholder": "描述你的页面应该长什么样、读起来如何…",
+    "placeholderApp": "描述你的应用应该做什么、长什么样…",
     "placeholderScoped": "修改选中的{target}…",
     "attachImage": "附加图片",
     "attachImageTitle": "附加一张图片，插入到页面中",
@@ -120,7 +121,8 @@
     "placeholder": "写给 Len，或用 @ 与项目中的人交谈…"
   },
   "noChange": {
-    "label": "页面没有任何变化"
+    "label": "页面没有任何变化",
+    "labelApp": "应用没有任何变化"
   },
   "undo": {
     "failedHttp": "撤销失败（{status}）——改动仍然生效。请重试。",
@@ -130,6 +132,7 @@
     "notUndone": "已撤销，但 {rutas} 除外：撤销一轮不会还原数据库、记忆或设置。"
   },
   "cutShort": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查页面。",
+  "cutShortApp": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查应用。",
   "diff": {
     "anadida": "新增 {que}",
     "quitada": "移除 {que}",
@@ -154,6 +157,7 @@
       "conversations": "对话",
       "newChat": "重新开始",
       "newChatHint": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和页面备注会保留。",
+      "newChatHintApp": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和应用备注会保留。",
       "busy": "请等 Len 完成后再切换对话。",
       "failed": "无法切换对话，请重试。",
       "archived": "之前的对话",
@@ -171,13 +175,24 @@
         "publish": "发布我的页面"
       }
     },
+    "emptyApp": {
+      "title": "今天想给你的应用做点什么？",
+      "suggestions": {
+        "data": "把数据存到数据库里",
+        "login": "添加登录功能",
+        "mobile": "看看在手机上的效果",
+        "publish": "发布我的应用"
+      }
+    },
     "steps": {
       "running": "Len 正在工作",
       "done": "{count, plural, other {Len 完成了 # 个步骤}}"
     },
     "activity": {
       "reading": "正在阅读你的页面",
+      "readingApp": "正在阅读你的应用",
       "editing": "正在修改页面",
+      "editingApp": "正在修改应用",
       "terminal": "正在使用终端",
       "photos": "正在找照片",
       "image": "正在编辑图片",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "图片等",
       "on": "已开启",
-      "disclaimer": "Len 可能会出错。发布前请检查你的页面。"
+      "disclaimer": "Len 可能会出错。发布前请检查你的页面。",
+      "disclaimerApp": "Len 可能会出错。发布前请先试用你的应用。"
     },
     "layout": {
       "float": "弹出聊天",

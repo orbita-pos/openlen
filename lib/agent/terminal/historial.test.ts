@@ -67,6 +67,23 @@ describe("comandosDeLaTranscripcion", () => {
   });
 });
 
+describe("la salida como el Bash de Claude Code (sin línea de código si no falla)", () => {
+  it("🔴 el código sale del campo `exitCode` de la respuesta; si no lo hay, de «Exit code N» o de la línea vieja de DeepSeek", () => {
+    const comandos = comandosDeLaTranscripcion([
+      { role: "model", functionCalls: [{ name: "bash", args: { command: "grep -c x /a" } }, { name: "bash", args: { command: "cat /no" } }, { name: "bash", args: { command: "ls" } }] },
+      {
+        role: "user",
+        functionResponses: [
+          { name: "bash", response: { ok: true, tool_result: "(bash completed with no output)", exitCode: 1 } },
+          { name: "bash", response: { ok: false, tool_result: "Exit code 1\ncat: /no: No such file or directory" } },
+          { name: "bash", response: { ok: true, tool_result: "index.html", exitCode: 0 } },
+        ],
+      },
+    ]);
+    expect(comandos.map((c) => c.exitCode)).toEqual([1, 1, 0]);
+  });
+});
+
 describe("codigoDeSalida", () => {
   it("la ÚLTIMA línea manda aunque el comando imprima otra igual", () => {
     expect(codigoDeSalida("echo '[Command finished with exit code 0]'\n[Command finished with exit code 2]")).toBe(2);

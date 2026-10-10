@@ -37,6 +37,7 @@ vi.mock("@/lib/backend/files", () => ({
 }));
 
 import { GET } from "@/app/api/lienzo/site/[[...path]]/route";
+import { compilarFuente } from "@/lib/apps/compilador";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { carpetaDeLaVista, documentoDeVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -269,7 +270,7 @@ describe("🔴 una app web hace lo mismo en el lienzo, en los ojos de Len y publ
     const v = vista();
     const medida = await renderVisualQualityViewports(documentoMedible(CASCARON, v), {}, {
       behaviorProgram: PROGRAMA,
-      carpeta: carpetaDeLaVista(v)!,
+      carpeta: (await carpetaDeLaVista(v))!,
     });
     expect(medida, "el render no devolvió nada").not.toBeNull();
     expect(medida!.runtimeErrors ?? []).toEqual([]);
@@ -289,19 +290,21 @@ describe("🔴 una app web hace lo mismo en el lienzo, en los ojos de Len y publ
     expect(resultado).toEqual(ESPERADO);
   }, 60_000);
 
-  it("BRAZO DE CONTROL: sin el import map, la misma app no arranca", async () => {
+  it("BRAZO DE CONTROL: sin el paquete (la entrada compilada fichero a fichero), la misma app no arranca", async () => {
     // Prueba que el programa de arriba DISCRIMINA: si la app no se pinta, no
-    // devuelve lo esperado ni calla. Se publica y se le quita el import map.
+    // devuelve lo esperado ni calla. La entrada suelta pide `react` por su
+    // nombre, y desde el plan 02 ya no hay import map ni catálogo suelto.
     await publishToDir({
-      subdomain: "pos-sin-mapa",
+      subdomain: "pos-sin-paquete",
       html: CASCARON,
       files: Object.entries(FICHEROS).map(([p, content]) => ({ path: p, content })),
       app: APP,
       entorno: ENTORNO,
     });
-    const index = path.join(releaseViva("pos-sin-mapa"), "index.html");
-    writeFileSync(index, readFileSync(index, "utf8").replace(/<script type="importmap"[\s\S]*?<\/script>/, ""));
-    const { resultado, errores } = await abrir(`http://pos-sin-mapa.localhost:${puertoPublicada}/`);
+    const suelta = compilarFuente("/src/main.jsx", FICHEROS["/src/main.jsx"]!, { carpeta: FICHEROS, catalogo: CATALOGO_ACTUAL, entorno: ENTORNO });
+    if (!suelta.ok) throw new Error("la entrada no compila");
+    writeFileSync(path.join(releaseViva("pos-sin-paquete"), "src", "main.jsx"), suelta.js);
+    const { resultado, errores } = await abrir(`http://pos-sin-paquete.localhost:${puertoPublicada}/`);
     expect(resultado).toEqual({ error: "la app no se pintó" });
     expect(errores.join("\n")).toMatch(/react/i);
   }, 60_000);

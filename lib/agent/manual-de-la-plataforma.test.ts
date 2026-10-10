@@ -29,6 +29,14 @@ import { clauseMarker } from "@/lib/ai/js-clause";
 
 describe("el manual de la plataforma", () => {
   const manual = buildManualDeLaPlataforma();
+
+  // Las pruebas de /tests en una página se guardan y viajan al exportar, pero
+  // aquí no hay Playwright (la terminal de una página no tiene npx): decir sólo
+  // «Playwright tests» invitaba a escribirlas como si se corrieran (10/10).
+  it("🔴 /tests guarda pruebas de Playwright que aquí no se corren: van con el proyecto al exportarlo", () => {
+    expect(manual).toMatch(/\/tests holds Playwright tests, which are not run here/);
+    expect(manual).toMatch(/they go with the project when it is exported/);
+  });
   const docs = documentosDeLaPlataforma();
   const prompt = buildAgentSystemPrompt();
 

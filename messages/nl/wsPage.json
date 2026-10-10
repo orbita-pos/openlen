@@ -58,6 +58,14 @@
       "create_goal": "Doel aanmaken",
       "update_goal": "Doel bijwerken"
     },
+    "toolApp": {
+      "Read": "De code lezen",
+      "Edit": "De code bewerken",
+      "Write": "Code schrijven",
+      "Glob": "De bestanden opsommen",
+      "view_page": "De app controleren",
+      "use_page": "De app uitproberen"
+    },
     "action": {
       "home": "Home",
       "visualOk": "geen gemeten fouten",
@@ -90,7 +98,7 @@
       "published": "✓ Gepubliceerd op {url}",
       "taken": "Dat subdomein is al in gebruik. Probeer een ander.",
       "reserved": "Dat subdomein is gereserveerd. Kies een ander.",
-      "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
+      "limit": "Je hebt de limiet voor gepubliceerde projecten van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…",
       "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Een foto kon niet worden geüpload} other {# foto's konden niet worden geüpload}} — het bericht gaat zonder.",
     "publishedTitle": "Gepubliceerd",
     "publishedBody": "Je pagina is live op {subdomain}.{host}",
+    "publishedBodyApp": "Je app is live op {subdomain}.{host}",
     "openSite": "Site openen",
     "unpublishedTitle": "Publicatie ongedaan gemaakt",
+    "unpublishedTitleApp": "Publicatie van de app ongedaan gemaakt",
     "unpublishedBody": "De pagina is niet meer bereikbaar op dat adres.",
     "moduleEnabled": "{module} ingeschakeld",
     "moduleDisabled": "{module} uitgeschakeld",

@@ -82,7 +82,7 @@ LINKS (<a href>):
 
 THE PROJECT'S FOLDER:
 Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (${WEB_EXTENSIONS.join(" ")}), anywhere except the reserved roots (${RAICES_DEL_SITIO}). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
-- /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
+- /tests holds Playwright tests, which are not run here (there is no Playwright in the terminal): they are kept, never published, and they go with the project when it is exported. Checking the page here is view_page and use_page. /supabase holds the backend's migrations.
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).

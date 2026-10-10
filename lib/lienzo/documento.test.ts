@@ -6,7 +6,6 @@ import {
   carpetaDeLaVista,
   documentoDeVista,
   documentoMedible,
-  documentoParaLaFoto,
   pantallaDe,
   vistaConCarpeta,
   vistaParaMedir,
@@ -234,26 +233,21 @@ describe("una app en la vista", () => {
     '<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body><div id="root"></div>' +
     '<script type="module" src="/src/main.jsx"></script></body></html>';
 
-  it("🔴 documentoDeVista le pone el import map del catálogo, delante de todo, ya sellado", () => {
+  it("🔴 documentoDeVista: una app ya NO lleva import map (plan 02): su entrada es el paquete, y la carga tal cual", () => {
     const html = documentoDeVista(CASCARON, ctx({ app: APP }));
-    expect(html).toMatch(/<script type="importmap" data-openlen-importmap>/);
-    expect(html.indexOf('type="importmap"')).toBeLessThan(html.indexOf('src="/src/main.jsx"'));
-    expect(html).toContain('"react":"/openlen/vendor/2026-10/react.js"');
+    expect(html).not.toContain("importmap");
+    expect(html).toContain('src="/src/main.jsx"');
   });
 
-  it("CONTRA-PRUEBA: una página no lleva import map", () => {
-    expect(documentoDeVista(CASCARON, ctx())).not.toContain("importmap");
-  });
-
-  it("documentoMedible: aunque el horneado falle, una app se mide CON su import map", () => {
+  it("documentoMedible: aunque el horneado falle, una app se mide cruda (su entrada es el paquete)", () => {
     const html = documentoMedible(CASCARON, ctx({ app: APP }), () => {
       throw new Error("binding caído");
     });
-    expect(html).toContain("data-openlen-importmap");
+    expect(html).toBe(CASCARON);
   });
 
-  it("carpetaDeLaVista: los fuentes compilados y el catálogo, en el modo de desarrollo", () => {
-    const carpeta = carpetaDeLaVista(
+  it("carpetaDeLaVista: la entrada es el PAQUETE (plan 02), los demás fuentes compilados y el catálogo, en el modo de desarrollo", async () => {
+    const carpeta = await carpetaDeLaVista(
       ctx({
         app: APP,
         files: {
@@ -263,27 +257,25 @@ describe("una app en la vista", () => {
         },
       }),
     );
-    expect(carpeta?.files["/src/main.jsx"]).toContain('from "/src/App.jsx"');
-    expect(carpeta?.files["/src/App.jsx"]).not.toContain("<h1>");
+    // La entrada lleva App dentro y React también: ni un import por su nombre.
+    expect(carpeta?.files["/src/main.jsx"]).toContain("Hola");
+    expect(carpeta?.files["/src/main.jsx"]).not.toMatch(/\bfrom\s*["']react/);
+    expect(carpeta?.sourceMaps?.["/src/main.jsx"]).toBeTruthy();
+    // Como la publicada: App va DENTRO del paquete, y el catálogo también.
+    expect(carpeta?.files["/src/App.jsx"]).toBeUndefined();
     expect(carpeta?.files["/data/menu.json"]).toBe("[]");
-    expect(Object.keys(carpeta?.files ?? {})).toContain("/openlen/vendor/2026-10/react-todo.js");
+    expect(Object.keys(carpeta?.files ?? {}).some((r) => r.startsWith("/openlen/vendor/"))).toBe(false);
+  }, 60_000);
+
+  it("carpetaDeLaVista: una app sin ficheros trae igualmente su entrada (que dice qué falta); una página sin ficheros, nada", async () => {
+    expect((await carpetaDeLaVista(ctx({ app: APP })))?.files["/src/main.jsx"]).toMatch(/^throw new SyntaxError\(/);
+    expect(await carpetaDeLaVista(ctx())).toBeUndefined();
   });
 
-  it("carpetaDeLaVista: una app sin ficheros trae igualmente su catálogo; una página sin ficheros, nada", () => {
-    expect(Object.keys(carpetaDeLaVista(ctx({ app: APP }))?.files ?? {})).toContain("/openlen/vendor/2026-10/react.js");
-    expect(carpetaDeLaVista(ctx())).toBeUndefined();
-  });
-
-  it("🔴 documentoParaLaFoto: una app se fotografía CON su import map (sin él no arranca y la foto sale en blanco); una página, tal cual", () => {
-    expect(documentoParaLaFoto(CASCARON, { app: APP })).toContain("data-openlen-importmap");
-    expect(documentoParaLaFoto(CASCARON, { app: null })).toBe(CASCARON);
-    expect(documentoParaLaFoto(CASCARON, null)).toBe(CASCARON);
-  });
-
-  it("carpetaDeLaVista: una app pide esperar a la red y lleva la pantalla; una página, nada de eso", () => {
-    expect(carpetaDeLaVista(ctx({ app: APP, pantalla: "#/ventas" }))).toMatchObject({ hash: "#/ventas", esperarALaRed: true });
-    expect(carpetaDeLaVista(ctx({ app: APP }))).not.toHaveProperty("hash");
-    const pagina = carpetaDeLaVista(ctx({ files: { "/js/a.js": "1" }, pantalla: "#/ventas" }));
+  it("carpetaDeLaVista: una app pide esperar a la red y lleva la pantalla; una página, nada de eso", async () => {
+    expect(await carpetaDeLaVista(ctx({ app: APP, pantalla: "#/ventas" }))).toMatchObject({ hash: "#/ventas", esperarALaRed: true });
+    expect(await carpetaDeLaVista(ctx({ app: APP }))).not.toHaveProperty("hash");
+    const pagina = await carpetaDeLaVista(ctx({ files: { "/js/a.js": "1" }, pantalla: "#/ventas" }));
     expect(pagina).not.toHaveProperty("hash");
     expect(pagina).not.toHaveProperty("esperarALaRed");
   });

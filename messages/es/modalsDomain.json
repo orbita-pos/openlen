@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "Publicada",
     "publishedBody": "Tu página está en vivo en {subdomain}.{host}",
+    "publishedBodyApp": "Tu app está en vivo en {subdomain}.{host}",
     "domainClaimedTitle": "{domain} reclamado",
     "domainClaimedBody": "Agrega los registros DNS de abajo y luego verifica.",
     "domainVerifiedTitle": "{domain} verificado",
@@ -105,7 +106,7 @@
     "subdomainLabel": "Subdominio",
     "subdomainPlaceholder": "tu-nombre",
     "preview": "Vista previa",
-    "limitsHint": "Plan gratuito: 1 página publicada. Pro: 10. Letras minúsculas, números y guiones (1–63 caracteres).",
+    "limitsHint": "Proyectos publicados (páginas o apps): {free} en el plan gratuito, {pro} en Pro y {max} en Max. Letras minúsculas, números y guiones (1–63 caracteres).",
     "unpublish": {
       "sure": "¿Seguro?",
       "confirm": "Sí, despublicar",
@@ -118,16 +119,19 @@
       "choose": "Elige un nombre arriba.",
       "checking": "Comprobando disponibilidad…",
       "currentPage": "Esta es tu página actual —",
+      "currentPageApp": "Esta es la dirección actual de tu app —",
       "visit": "visitar",
       "available": "Disponible",
       "invalid": "Usa letras minúsculas, números y guiones (no al principio ni al final).",
       "reserved": "Este nombre está reservado. Prueba con otro.",
       "taken": "Ya está en uso. Prueba con otro.",
-      "limit": "Has alcanzado el límite de tu plan: despublica otra página o mejóralo."
+      "limit": "Has alcanzado el límite de tu plan: despublica otro proyecto o mejóralo."
     },
     "speedCard": {
       "title": "Velocidad de la página",
+      "titleApp": "Velocidad de la app",
       "measuring": "Midiendo la velocidad de tu página…",
+      "measuringApp": "Midiendo la velocidad de tu app…",
       "loadsIn": "Carga en {seconds}s",
       "weight": "{kb} KB",
       "requests": "{count} solicitudes",

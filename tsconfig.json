@@ -19,5 +19,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "infra/status-worker", "sites", "movil", "plans"]
+  "exclude": ["node_modules", "infra/status-worker", "sites", "movil", "plans", "lib/apps/tests/vitest.d.ts"]
 }

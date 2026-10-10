@@ -2,7 +2,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
-import { textoDelError } from "@/lib/ai/sitio-del-error";
+import { textoDelError, traductorDeMapas } from "@/lib/ai/sitio-del-error";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
@@ -1022,9 +1022,11 @@ async function captureWithPage(
   buzonBloqueadas = bloqueadas;
   const dialogos: string[] = [];
   buzonDialogos = dialogos;
+  // Una app empaquetada (plan 02): la traza vuelve a su fichero por el mapa.
+  const traducir = traductorDeMapas(opts.carpeta?.sourceMaps);
   page.on?.("pageerror", (e) => {
     // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src.
-    gritos.push(textoDelError(e, 300));
+    gritos.push(textoDelError(e, 300, traducir));
   });
   page.on?.("console", (m) => {
     const mensaje = m as { type?: () => string; text?: () => string };

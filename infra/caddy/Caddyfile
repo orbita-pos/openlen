@@ -193,23 +193,15 @@ openlen.com, www.openlen.com {
 	# sirviendo la versión de antes.
 	@carpeta {
 		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md
-		not path /assets/* /uploads/* /openlen/vendor/*
+		not path /assets/* /uploads/*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*
 	}
 	header @carpeta Cache-Control "public, max-age=0, must-revalidate"
-	# LAS DEPENDENCIAS DE LAS APPS WEB (lib/apps/dependencias.ts): la versión
-	# del catálogo va en la ruta y un catálogo publicado NUNCA cambia de bytes,
-	# así que son inmutables. Fuera de /assets/ a propósito: ahí, en un host
-	# lienzo-*, el orden de los `handle` decide entre el disco y Next.
-	@vendor {
-		path /openlen/vendor/*
-		not header_regexp Host ^lienzo-
-	}
-	header @vendor Cache-Control "public, immutable, max-age=31536000"
-	# LOS FUENTES DE UNA APP (.jsx .tsx .ts) se publican COMPILADOS en su misma
-	# ruta, y un <script type="module"> exige un tipo de JavaScript. La tabla
-	# del sistema no los trae o se equivoca (.ts es `video/mp2t`).
+	# LOS FUENTES (.jsx .tsx .ts) se publican COMPILADOS en su misma ruta —los
+	# de una página, y la entrada de una app, que es su paquete (plan 02)—, y un
+	# <script type="module"> exige un tipo de JavaScript. La tabla del sistema
+	# no los trae o se equivoca (.ts es `video/mp2t`).
 	@fuentes {
 		path *.jsx *.tsx *.ts
 		not header_regexp Host ^lienzo-

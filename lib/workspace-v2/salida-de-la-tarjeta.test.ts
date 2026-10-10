@@ -56,6 +56,12 @@ describe("plegarSalida — las tres líneas de Claude Code y lo que queda", () =
 
   it("sin nada impreso, ninguna línea", () => {
     expect(plegarSalida("[Command finished with exit code 0]").lineas).toEqual([]);
+  });
+
+  it("🔴 la salida como el Bash de Claude Code: fuera el «Exit code N» de arriba y el «sin salida» (la tarjeta pinta el código aparte)", () => {
+    expect(plegarSalida("Exit code 2\nbash: x: command not found").lineas).toEqual(["bash: x: command not found"]);
+    expect(plegarSalida("(bash completed with no output)").lineas).toEqual([]);
+    expect(plegarSalida("Exit code 1").lineas).toEqual([]);
     expect(plegarSalida("").lineas).toEqual([]);
   });
 });

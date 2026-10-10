@@ -83,6 +83,8 @@ function toPreviewState(d: PreviewApiState): PreviewState {
 }
 
 interface TopBarProps {
+  /** El proyecto es una app: el menú de publicar habla de la app, no de «esta página». */
+  esApp?: boolean;
   projectName: string;
   /** Abre los miembros del proyecto (compartir el proyecto). Ausente = sin botón. */
   onMiembros?: () => void;
@@ -143,6 +145,7 @@ interface TopBarProps {
 }
 
 export function TopBar({
+  esApp = false,
   projectName,
   onRename,
   projectLogoUrl,
@@ -1043,7 +1046,7 @@ export function TopBar({
                         {t("deploy.customDomain.title")}
                       </span>
                       <span className="block text-[11px] fg-faint">
-                        {t("deploy.customDomain.subtitle")}
+                        {t(esApp ? "deploy.customDomain.subtitleApp" : "deploy.customDomain.subtitle")}
                       </span>
                     </span>
                     <ChevronRight size={12} className="fg-faint group-hover:text-[var(--accent)] transition" />

@@ -58,6 +58,14 @@
       "create_goal": "목표 만들기",
       "update_goal": "목표 업데이트"
     },
+    "toolApp": {
+      "Read": "코드를 읽는 중",
+      "Edit": "코드를 편집하는 중",
+      "Write": "코드를 작성하는 중",
+      "Glob": "파일 목록을 확인하는 중",
+      "view_page": "앱을 확인하는 중",
+      "use_page": "앱을 사용해 보는 중"
+    },
     "action": {
       "home": "홈",
       "visualOk": "측정 범위 내 문제 없음",
@@ -90,7 +98,7 @@
       "published": "✓ {url}에 게시되었습니다",
       "taken": "이미 사용 중인 서브도메인입니다. 다른 이름을 사용해 보세요.",
       "reserved": "예약된 서브도메인입니다. 다른 이름을 선택해 보세요.",
-      "limit": "요금제의 게시 페이지 한도에 도달했습니다.",
+      "limit": "요금제의 게시 프로젝트 한도에 도달했습니다.",
       "invalid": "게시하지 못했습니다. 서브도메인을 확인하고 다시 시도하세요.",
       "checking": "확인 중…",
       "langsFailed": "{langs}를 번역하지 못했습니다. 다시 게시하면 재시도합니다."
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, other {사진 #장을 업로드하지 못했습니다}}. 사진 없이 보냅니다.",
     "publishedTitle": "게시됨",
     "publishedBody": "{subdomain}.{host} 에서 페이지가 공개되었습니다",
+    "publishedBodyApp": "{subdomain}.{host} 에서 앱이 공개되었습니다",
     "openSite": "사이트 열기",
     "unpublishedTitle": "게시 해제됨",
+    "unpublishedTitleApp": "앱 게시 해제됨",
     "unpublishedBody": "해당 주소에서 더 이상 접속할 수 없습니다.",
     "moduleEnabled": "{module}을(를) 켰습니다",
     "moduleDisabled": "{module}을(를) 껐습니다",

@@ -108,8 +108,8 @@ describe("/served/<host>/ — los ficheros de la carpeta", () => {
 });
 
 // LAS APPS WEB EN UN DOMINIO PROPIO (spec local 2026-10-07-apps): un fuente se
-// publica COMPILADO en su ruta y tiene que salir como JavaScript (un módulo con
-// otro tipo no se ejecuta); el catálogo, con su versión en la ruta, inmutable.
+// publica COMPILADO en su ruta (la entrada de una app es su paquete, plan 02) y
+// tiene que salir como JavaScript (un módulo con otro tipo no se ejecuta).
 describe("/served/<host>/ — una app web", () => {
   const pideRuta = (ruta: string) =>
     GET(new Request(`https://${DOMINIO}/served/${DOMINIO}${ruta}`, { headers: { host: DOMINIO } }), {
@@ -118,9 +118,7 @@ describe("/served/<host>/ — una app web", () => {
 
   beforeEach(() => {
     mkdirSync(path.join(raiz, "demo", "current", "src"), { recursive: true });
-    mkdirSync(path.join(raiz, "demo", "current", "openlen", "vendor", "2026-10"), { recursive: true });
     writeFileSync(path.join(raiz, "demo", "current", "src", "App.tsx"), "export default 1;");
-    writeFileSync(path.join(raiz, "demo", "current", "openlen", "vendor", "2026-10", "react.js"), "export default 1;");
   });
 
   it("un .tsx compilado sale como JavaScript y se revalida siempre", async () => {
@@ -128,12 +126,5 @@ describe("/served/<host>/ — una app web", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(res.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
-  });
-
-  it("el catálogo sale como JavaScript e inmutable", async () => {
-    const res = await pideRuta("/openlen/vendor/2026-10/react.js");
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toMatch(/javascript/);
-    expect(res.headers.get("cache-control")).toContain("immutable");
   });
 });

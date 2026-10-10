@@ -73,6 +73,7 @@
     "image": "Imagem:",
     "removeImage": "Remover imagem anexada",
     "placeholder": "Descreva como sua página deve ficar ou o que deve dizer…",
+    "placeholderApp": "Descreva o que seu app deve fazer ou como deve ficar…",
     "placeholderScoped": "Altere o {target} selecionado…",
     "attachImage": "Anexar uma imagem",
     "attachImageTitle": "Anexe uma imagem para inserir na página",
@@ -120,7 +121,8 @@
     "placeholder": "Escreva ao Len, ou @ para falar com alguém do projeto…"
   },
   "noChange": {
-    "label": "Nada mudou na página"
+    "label": "Nada mudou na página",
+    "labelApp": "Nada mudou no app"
   },
   "undo": {
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
@@ -130,6 +132,7 @@
     "notUndone": "Desfeito, exceto {rutas}: desfazer um turno não traz de volta a base de dados, a memória nem as configurações."
   },
   "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
+  "cutShortApp": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê o app.",
   "diff": {
     "anadida": "Adicionou {que}",
     "quitada": "Removeu {que}",
@@ -154,6 +157,7 @@
       "conversations": "Conversas",
       "newChat": "Começar do zero",
       "newChatHint": "Guarda esta conversa e começa outra. O Len não vai lembrar dela; sua memória e as notas da página ficam.",
+      "newChatHintApp": "Guarda esta conversa e começa outra. O Len não vai lembrar dela; sua memória e as notas do app ficam.",
       "busy": "Espere o Len terminar para trocar de conversa.",
       "failed": "Não foi possível trocar de conversa. Tente de novo.",
       "archived": "Conversas anteriores",
@@ -171,13 +175,24 @@
         "publish": "Publique minha página"
       }
     },
+    "emptyApp": {
+      "title": "O que vamos fazer hoje no seu app?",
+      "suggestions": {
+        "data": "Salve os dados num banco de dados",
+        "login": "Adicione um login",
+        "mobile": "Veja como fica no celular",
+        "publish": "Publique meu app"
+      }
+    },
     "steps": {
       "running": "O Len está trabalhando",
       "done": "{count, plural, one {O Len fez # passo} other {O Len fez # passos}}"
     },
     "activity": {
       "reading": "Lendo sua página",
+      "readingApp": "Lendo seu app",
       "editing": "Mudando a página",
+      "editingApp": "Mudando o app",
       "terminal": "Usando o terminal",
       "photos": "Procurando fotos",
       "image": "Editando uma imagem",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Imagem e mais",
       "on": "Ativo",
-      "disclaimer": "O Len pode errar. Revise sua página antes de publicá-la."
+      "disclaimer": "O Len pode errar. Revise sua página antes de publicá-la.",
+      "disclaimerApp": "O Len pode errar. Teste seu app antes de publicá-lo."
     },
     "layout": {
       "float": "Destacar o chat",

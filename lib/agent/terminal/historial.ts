@@ -30,19 +30,25 @@ export interface ComandoDeLaTerminal {
   readonly command: string;
   /** Lo que imprimió, tal cual lo leyó el modelo. Null si la respuesta no se guardó. */
   readonly salida: string | null;
-  /** Sacado de la última línea de la salida; null si no se puede leer. */
+  /** El de la respuesta (`exitCode`), o leído de la salida; null si no se sabe. */
   readonly exitCode: number | null;
   /** Lo que cambió, por fichero (la #10). Ausente si no cambió nada o no se guardó. */
   readonly cambios?: CambiosDelComando;
 }
 
-/** La última línea de la salida de DeepSeek: «[Command finished with exit code N]». */
+/** La última línea de la salida de antes (la de DeepSeek): «[Command finished with exit code N]».
+ *  Desde 2026-10-09 la salida es la del `Bash` de Claude Code y el código va en
+ *  `exitCode` de la respuesta; esto lee las transcripciones de antes. */
 const LINEA_DE_SALIDA = /\[Command finished with exit code (-?\d+)\]/g;
+/** La primera línea de un fallo en la salida de Claude Code. */
+const FALLO_DE_CLAUDE_CODE = /^Exit code (-?\d+)(?:\n|$)/;
 
 export function codigoDeSalida(salida: string): number | null {
   let ultimo: number | null = null;
   for (const m of salida.matchAll(LINEA_DE_SALIDA)) ultimo = Number(m[1]);
-  return ultimo;
+  if (ultimo !== null) return ultimo;
+  const fallo = FALLO_DE_CLAUDE_CODE.exec(salida);
+  return fallo ? Number(fallo[1]) : null;
 }
 
 function textoDeLaRespuesta(response: Record<string, unknown> | undefined): string | null {
@@ -66,7 +72,9 @@ export function comandosDeLaTranscripcion(mensajes: readonly MensajeConLlamadas[
       const respuesta = respuestas[j];
       const salida = respuesta?.name === NOMBRE_BASH ? textoDeLaRespuesta(respuesta.response) : null;
       const cambios = respuesta?.name === NOMBRE_BASH ? leerCambiosDelComando(respuesta.response?.[CLAVE_CAMBIOS_DEL_COMANDO]) : null;
-      comandos.push({ command, salida, exitCode: salida === null ? null : codigoDeSalida(salida), ...(cambios ? { cambios } : {}) });
+      const guardado = respuesta?.name === NOMBRE_BASH ? respuesta.response?.exitCode : undefined;
+      const exitCode = typeof guardado === "number" ? guardado : salida === null ? null : codigoDeSalida(salida);
+      comandos.push({ command, salida, exitCode, ...(cambios ? { cambios } : {}) });
     });
   }
   return comandos;

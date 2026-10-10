@@ -8,7 +8,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { bakeTailwind } from "./optimize-html";
-import { readTwCarrier } from "./tw-config";
+import { readTwCarrier, readTwDarkMode } from "./tw-config";
 
 const LUME_LIKE = `<!doctype html><html><head>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -145,5 +145,22 @@ describe("seguridad end-to-end (security review)", () => {
     const t0 = Date.now();
     sanitizeForPublish(payload);
     assert.ok(Date.now() - t0 < 2000, "sanitize lineal, no cuadrático");
+  });
+});
+
+describe("el darkMode viaja por el carrier (apps 2026-11, tarea 3)", () => {
+  const DOC =
+    '<!doctype html><html><head><script src="https://cdn.tailwindcss.com"></script>' +
+    '<script>tailwind.config = { darkMode: ["class"], theme: { extend: { colors: { ink: "#111111" } } } }</script>' +
+    '</head><body><div class="bg-ink dark:bg-black">x</div></body></html>';
+
+  it("sanitize → carrier con darkMode → el horneado lo usa como clase", async () => {
+    const out = sanitizeForPublish(DOC);
+    assert.ok(out.html, "sanitize devolvió html");
+    assert.deepEqual(readTwDarkMode(out.html!), ["class"]);
+    const r = await bakeTailwind(out.html!);
+    assert.equal(r.baked, true);
+    assert.match(r.html, /:is\(\.dark \*\)/);
+    assert.doesNotMatch(r.html, /prefers-color-scheme: dark/);
   });
 });

@@ -126,6 +126,8 @@ export default defineConfig({
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",
+      // En una app, el diálogo de publicar no ofrece traducción automática (invariante 6).
+      "components/workspace/publish-modal.test.tsx",
       // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con
       // `/api/generate` el 2026-10-06 (plans/crear-es-len, tarea 12).
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
@@ -463,6 +465,8 @@ export default defineConfig({
       // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
       "lib/agent/modo-app.test.ts",
       "lib/agent/compila-la-app.test.ts",
+      // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
+      "lib/agent/types-and-lint.test.ts",
       "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
@@ -556,6 +560,8 @@ export default defineConfig({
       "lib/publish/frame-origins.test.ts",
       "lib/publish/kill-switches.test.ts",
       "lib/publish/tw-config.test.ts",
+      // Plan 02 de las apps: publicar sin empaquetador no publica.
+      "lib/publish/publicar-app-sin-empaquetador.test.ts",
       "lib/publish/design-stash-strip.test.ts",
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",

@@ -15,15 +15,13 @@ import {
   dependenciaDe,
   ficherosDelCatalogo,
   importMapDe,
-  rutaDeVendor,
-  rutaDeVendorValida,
 } from "./dependencias";
 
 const RAIZ = join(import.meta.dirname, "..", "..");
 
 describe("el catálogo", () => {
-  it("el actual existe y nombra React, su runtime de JSX, ReactDOM y supabase-js", () => {
-    const imports = importMapDe(CATALOGO_ACTUAL).imports;
+  it("2026-10 nombra React, su runtime de JSX, ReactDOM, supabase-js, el router y los iconos", () => {
+    const imports = importMapDe("2026-10").imports;
     expect(Object.keys(imports).sort()).toEqual(
       [
         "@supabase/supabase-js",
@@ -37,7 +35,16 @@ describe("el catálogo", () => {
         "lucide-react",
       ].sort(),
     );
-    for (const ruta of Object.values(imports)) expect(ruta.startsWith(`/openlen/vendor/${CATALOGO_ACTUAL}/`)).toBe(true);
+    for (const ruta of Object.values(imports)) expect(ruta.startsWith("/openlen/vendor/2026-10/")).toBe(true);
+  });
+
+  it("2026-11 es el actual, está construido por partes y trae shadcn, formularios y gráficas", () => {
+    expect(CATALOGO_ACTUAL).toBe("2026-11");
+    expect(CATALOGOS["2026-11"]!.split).toBe(true);
+    const imports = importMapDe("2026-11").imports;
+    for (const e of ["react", "react-dom/client", "react-router-dom", "lucide-react", "@supabase/supabase-js", "radix-ui", "@radix-ui/react-dialog", "@radix-ui/react-slot", "class-variance-authority", "clsx", "tailwind-merge", "react-hook-form", "zod", "@hookform/resolvers/zod", "recharts", "date-fns", "date-fns/locale"]) {
+      expect(imports[e], e).toBeDefined();
+    }
   });
 
   it("react-router y react-router-dom son el MISMO fichero: un solo módulo en el navegador", () => {
@@ -53,20 +60,6 @@ describe("el catálogo", () => {
     expect(importMapDe("1999-01")).toEqual({ imports: {} });
   });
 
-  it("rutaDeVendorValida sólo acepta ficheros REALES de un catálogo que existe", () => {
-    expect(rutaDeVendorValida(rutaDeVendor(CATALOGO_ACTUAL, "react.js"))).toEqual({ catalogo: CATALOGO_ACTUAL, fichero: "react.js" });
-    expect(rutaDeVendorValida(rutaDeVendor(CATALOGO_ACTUAL, "react-todo.js"))?.fichero).toBe("react-todo.js");
-    for (const mala of [
-      `/openlen/vendor/${CATALOGO_ACTUAL}/axios.js`,
-      "/openlen/vendor/1999-01/react.js",
-      `/openlen/vendor/${CATALOGO_ACTUAL}/../../etc/passwd`,
-      `/openlen/vendor/${CATALOGO_ACTUAL}/react.js?x=1`,
-      `/openlen/vendor/${CATALOGO_ACTUAL}/`,
-      "/js/react.js",
-    ]) {
-      expect(rutaDeVendorValida(mala), mala).toBeNull();
-    }
-  });
 });
 
 describe("lo construido (npm run apps:vendor)", () => {
@@ -123,7 +116,12 @@ describe("lo construido (npm run apps:vendor)", () => {
           // lleva en código de su modo framework que una app no llama.
           const especificador = "specifier" in i ? i.specifier : undefined;
           if (typeof especificador !== "string") continue;
-          expect(["./react-todo.js", "./react.js", "./react-dom.js", "./react-jsx-runtime.js", "./react-dom-client.js"], `${f} importa ${especificador}`).toContain(especificador);
+          // Y en un catálogo por partes, sus propios ficheros (los trozos compartidos).
+          const permitidos = [
+            "./react-todo.js", "./react.js", "./react-dom.js", "./react-jsx-runtime.js", "./react-dom-client.js",
+            ...ficherosDelCatalogo(nombre).map((x) => `./${x}`),
+          ];
+          expect(permitidos, `${f} importa ${especificador}`).toContain(especificador);
         }
       }
     });
@@ -148,5 +146,28 @@ describe("el router y los iconos del catálogo 2026-10 (D3)", () => {
       .filter((x) => x && x !== "type");
     expect([...ICONOS_DEL_EDITOR].sort()).toEqual(delEditor.sort());
     for (const icono of ICONOS_DE_LAS_APPS) expect(exportan["lucide-react.js"], icono).toContain(icono);
+  });
+});
+
+describe("el paquete de tipos de cada catálogo (plan 03, tarea 1)", () => {
+  const paquete = (nombre: string) =>
+    JSON.parse(readFileSync(join(RAIZ, "public", "app-vendor", nombre, "types.json"), "utf8")) as Record<string, string>;
+
+  for (const nombre of ["2026-10", "2026-11"]) {
+    it(`${nombre}: types.json trae los .d.ts de lo que el catálogo exporta, con rutas de node_modules`, () => {
+      const rutas = Object.keys(paquete(nombre));
+      for (const r of rutas) expect(r, r).toMatch(/^\/node_modules\/.+\.(d\.ts|d\.mts|d\.cts|json)$/);
+      expect(rutas).toContain("/node_modules/@types/react/index.d.ts");
+      expect(rutas).toContain("/node_modules/@types/react/jsx-runtime.d.ts");
+      expect(rutas.some((r) => r.startsWith("/node_modules/@supabase/supabase-js/"))).toBe(true);
+      expect(rutas).toEqual([...rutas].sort((a, b) => a.localeCompare(b)));
+    });
+  }
+
+  it("2026-11: también shadcn, formularios y gráficas", () => {
+    const rutas = Object.keys(paquete("2026-11"));
+    for (const p of ["@radix-ui/react-dialog", "class-variance-authority", "react-hook-form", "zod", "recharts", "date-fns"]) {
+      expect(rutas.some((r) => r.startsWith(`/node_modules/${p}/`)), p).toBe(true);
+    }
   });
 });

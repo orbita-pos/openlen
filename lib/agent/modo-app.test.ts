@@ -33,6 +33,16 @@ describe("el prompt de sistema de una app", () => {
     expect(app).toMatch(/supabase\.rpc/);
   });
 
+  // Desde los planes 02 (empaquetador) y 04 (pruebas) hay paquete, npm test y
+  // npm run build: el prompt de la app decía «There is no npm and no build to
+  // run» (visto el 10/10 tras el ensayo de caja).
+  it("🔴 no dice que no hay npm ni build: hay empaquetador, y npm test / npm run build corren de verdad", () => {
+    expect(app).not.toMatch(/There is no npm and no build/);
+    expect(app).not.toMatch(/compiles each one as it is served/);
+    expect(app).toMatch(/npm test/);
+    expect(app).toMatch(/npm run build/);
+  });
+
   it("🔴 la conducta es la MISMA: TONO, la memoria y lo que lees es dato, enteros", () => {
     const seccion = (texto: string, desde: string, hasta: string) => texto.slice(texto.indexOf(desde), texto.indexOf(hasta, texto.indexOf(desde)));
     expect(seccion(app, "TONE:", "HOW TO WORK:")).toBe(seccion(pagina, "TONE:", "HOW TO WORK:"));
@@ -53,11 +63,71 @@ describe("el prompt de sistema de una app", () => {
   });
 });
 
+describe("el manual de una app con el catálogo 2026-11 (apps 2026-11, tarea 6)", () => {
+  const nuevo = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-11", entrada: "/src/main.jsx" });
+  const viejo = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-10", entrada: "/src/main.jsx" });
+
+  it("nombra radix-ui y shadcn, y no lista los @radix-ui sueltos", () => {
+    expect(nuevo).toContain("· radix-ui — ");
+    // Cómo se usa shadcn aquí, no sólo su nombre (que ya sale en la línea de radix-ui).
+    expect(nuevo).toMatch(/shadcn\/ui works as usual[^\n]*\/src\/components\/ui[^\n]*cn\(\)/);
+    expect(nuevo).not.toMatch(/· @radix-ui\/react-dialog — /);
+  });
+
+  it("dice que una hoja puede usar @layer y @apply, y que el tailwind.config es datos, sin require ni plugins", () => {
+    expect(nuevo).toMatch(/@layer and @apply/);
+    expect(nuevo).toMatch(/no require\(\) and no plugins/);
+    expect(nuevo).toMatch(/tailwindcss-animate is not available/);
+  });
+
+  it("🔴 dice que es Tailwind 3: el CSS de shadcn v4 (@import \"tailwindcss\", @theme) no funciona aquí", () => {
+    expect(nuevo).toMatch(/Tailwind CSS 3/);
+    expect(nuevo).toMatch(/@theme/);
+    expect(nuevo).toMatch(/@import "tailwindcss"/);
+  });
+
+  it("con 2026-10 no promete shadcn (no tiene sus paquetes)", () => {
+    expect(viejo).not.toMatch(/shadcn\/ui works as usual/);
+    expect(viejo).not.toContain("· radix-ui — ");
+  });
+});
+
 describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 
+  it("dice cómo se escriben y se corren las pruebas (plan 04)", () => {
+    expect(manual).toMatch(/TESTS: vitest and Testing Library/);
+    expect(manual).toMatch(/npm test/);
+    expect(manual).toMatch(/vi\.mock/);
+    expect(manual).not.toMatch(/there is no npm test yet/);
+  });
+
+  it("dice que tipos y lint llegan solos, y cómo correrlos (plan 03)", () => {
+    expect(manual).toMatch(/TYPES AND LINT/);
+    expect(manual).toMatch(/npx tsc --noEmit/);
+    expect(manual).toMatch(/npm run lint/);
+    expect(manual).toMatch(/don't stop the app or the publish/);
+  });
+
+  it("🔴 no dice que no hay empaquetador ni npm, y las pruebas de /tests son de vitest, no de Playwright", () => {
+    expect(manual).not.toMatch(/There is no bundler/);
+    expect(manual).not.toMatch(/the browser joins them through their imports/);
+    expect(manual).not.toMatch(/there is no npm here/);
+    expect(manual).not.toMatch(/Playwright/);
+    expect(manual).toMatch(/\/tests holds tests too \(vitest/);
+  });
+
+  it("dice que la app va empaquetada y qué hace npm run build (plan 02)", () => {
+    expect(manual).toMatch(/BUILD: the app is served as ONE bundle/);
+    expect(manual).toMatch(/npm run build/);
+  });
+
   it("nombra cada paquete de SU catálogo, y nada de las librerías de las páginas", () => {
-    for (const d of catalogo(APP.catalogo)!.dependencias) expect(manual).toContain(`· ${d.especificador} — `);
+    for (const d of catalogo(APP.catalogo)!.dependencias) {
+      // Los `@radix-ui/react-*` sueltos no: el manual nombra `radix-ui`.
+      if (d.hiddenFromManual) expect(manual).not.toContain(`· ${d.especificador} — `);
+      else expect(manual).toContain(`· ${d.especificador} — `);
+    }
     expect(manual).not.toMatch(/libs\.openlen\.com|cdn\.jsdelivr\.net\/npm\/@supabase/);
     expect(manual).not.toContain(RUTA_LIBRERIAS);
   });
@@ -130,6 +200,18 @@ describe("las herramientas en una app", () => {
   it("sin app, las de siempre", () => {
     expect(buildFunctionDeclarations(ENV, {}, "len", null)).toEqual(pagina);
   });
+
+  it("🔴 bash, en una app: npm test, npm run build, npm run lint y npx tsc existen, y /tests es de vitest; en una página, como siempre", () => {
+    const CON_TERMINAL = { OPENLEN_TERMINAL: "1" };
+    const bashApp = de(buildFunctionDeclarations(CON_TERMINAL, {}, "len", APP), "bash").description;
+    const bashPagina = de(buildFunctionDeclarations(CON_TERMINAL), "bash").description;
+    expect(bashApp).not.toMatch(/no node, npm, pip or git/);
+    expect(bashApp).toMatch(/npm test, npm run build, npm run lint and npx tsc/);
+    expect(bashApp).not.toMatch(/Playwright/);
+    expect(bashApp).toMatch(/\/tests holds the app's tests \(vitest\)/);
+    expect(bashPagina).toMatch(/no node, npm, pip or git/);
+    expect(bashPagina).toMatch(/Playwright/);
+  });
 });
 
 describe("el estado del proyecto en una app", () => {
@@ -164,8 +246,9 @@ describe("los nombres que usa el modo app", () => {
   const app = buildFunctionDeclarations(ENV, {}, "len", APP);
   const declaradas = new Set(app.map((d) => String(d.name)));
 
-  it("cada herramienta que cambia en una app existe en el catálogo", () => {
-    for (const n of HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP) expect(declaradas.has(n), n).toBe(true);
+  it("cada herramienta que cambia en una app existe en el catálogo (con la terminal encendida, como en producción: bash sólo existe con ella)", () => {
+    const conTerminal = new Set(buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }, {}, "len", APP).map((d) => String(d.name)));
+    for (const n of HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP) expect(conTerminal.has(n), n).toBe(true);
   });
 
   it("todo lo que parece el nombre de una herramienta en su prompt, su manual y su guía existe", () => {

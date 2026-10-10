@@ -58,6 +58,14 @@
       "create_goal": "Creo l'obiettivo",
       "update_goal": "Aggiorno l'obiettivo"
     },
+    "toolApp": {
+      "Read": "Lettura del codice",
+      "Edit": "Modifica del codice",
+      "Write": "Scrittura del codice",
+      "Glob": "Elenco dei file",
+      "view_page": "Verifica dell'app",
+      "use_page": "Prova dell'app"
+    },
     "action": {
       "home": "Home",
       "visualOk": "nessun difetto misurato",
@@ -90,7 +98,7 @@
       "published": "✓ Pubblicata su {url}",
       "taken": "Questo sottodominio è già in uso. Provane un altro.",
       "reserved": "Questo sottodominio è riservato. Scegline un altro.",
-      "limit": "Hai raggiunto il limite di pagine pubblicate del tuo piano.",
+      "limit": "Hai raggiunto il limite di progetti pubblicati del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
       "checking": "Verifica…",
       "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare."
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Una foto non è stata caricata} other {# foto non sono state caricate}}: il messaggio parte senza.",
     "publishedTitle": "Pubblicata",
     "publishedBody": "La tua pagina è online su {subdomain}.{host}",
+    "publishedBodyApp": "La tua app è online su {subdomain}.{host}",
     "openSite": "Apri il sito",
     "unpublishedTitle": "Pubblicazione annullata",
+    "unpublishedTitleApp": "Pubblicazione dell'app annullata",
     "unpublishedBody": "Non è più raggiungibile a quell'indirizzo.",
     "moduleEnabled": "{module} attivato",
     "moduleDisabled": "{module} disattivato",
