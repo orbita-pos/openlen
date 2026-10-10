@@ -106,7 +106,7 @@
     "subdomainLabel": "Sous-domaine",
     "subdomainPlaceholder": "votre-nom",
     "preview": "Aperçu",
-    "limitsHint": "Offre gratuite : 1 page publiée. Pro : 10. Lettres minuscules, chiffres et traits d'union (1 à 63 caractères).",
+    "limitsHint": "Projets publiés (pages ou apps) : {free} avec l'offre gratuite, {pro} avec Pro et {max} avec Max. Lettres minuscules, chiffres et traits d'union (1 à 63 caractères).",
     "unpublish": {
       "sure": "Confirmer ?",
       "confirm": "Oui, dépublier",
@@ -125,7 +125,7 @@
       "invalid": "Utilisez des lettres minuscules, des chiffres et des traits d'union (pas au début ni à la fin).",
       "reserved": "Ce nom est réservé. Essayez-en un autre.",
       "taken": "Déjà pris. Essayez-en un autre.",
-      "limit": "Plafond du forfait atteint — dépubliez une autre page ou passez à un forfait supérieur."
+      "limit": "Plafond du forfait atteint — dépubliez un autre projet ou passez à un forfait supérieur."
     },
     "speedCard": {
       "title": "Vitesse de la page",

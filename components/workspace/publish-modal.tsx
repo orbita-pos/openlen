@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 import { SpeedCard } from "@/components/workspace/speed-card";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
+import { MAX_SUBDOMAINS_PER_PLAN } from "@/lib/subdomain/limits";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-openlen.com modal.
@@ -510,7 +511,8 @@ export function PublishModal({
           )}
 
           <div className="text-[11px] text-zinc-500 leading-relaxed">
-            {t("publish.limitsHint")}
+            {/* Los números, del código: cuenta proyectos con subdominio (páginas y apps). */}
+            {t("publish.limitsHint", { free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max })}
           </div>
         </div>
 

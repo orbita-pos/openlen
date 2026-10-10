@@ -8,9 +8,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (clave: string) => clave }));
+// La clave y, si los lleva, sus parámetros: así se ve con qué números se pinta el límite.
+vi.mock("next-intl", () => ({
+  useTranslations: () => (clave: string, valores?: Record<string, unknown>) => (valores ? `${clave}${JSON.stringify(valores)}` : clave),
+}));
 
 import { PublishModal } from "./publish-modal";
+import { MAX_SUBDOMAINS_PER_PLAN } from "@/lib/subdomain/limits";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -55,6 +59,13 @@ async function publicar(esApp: boolean) {
 }
 
 describe("el diálogo de publicar", () => {
+  // El límite cuenta PROYECTOS con subdominio —páginas y apps— y decía «1 página
+  // publicada. Pro: 10» con los números a mano en 10 idiomas (sin Max) (10/10).
+  it("🔴 el límite del plan se dice con los números del código (gratis, Pro y Max)", async () => {
+    const { texto } = await publicar(false);
+    expect(texto).toContain(`publish.limitsHint${JSON.stringify({ free: MAX_SUBDOMAINS_PER_PLAN.free, pro: MAX_SUBDOMAINS_PER_PLAN.pro, max: MAX_SUBDOMAINS_PER_PLAN.max })}`);
+  });
+
   it("🔴 en una app no ofrece idiomas ni los manda", async () => {
     const { texto, cuerpos } = await publicar(true);
     expect(texto).not.toContain("publish.languages.title");

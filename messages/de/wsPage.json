@@ -98,7 +98,7 @@
       "published": "✓ Veröffentlicht unter {url}",
       "taken": "Diese Subdomain ist bereits vergeben. Versuch eine andere.",
       "reserved": "Diese Subdomain ist reserviert. Wähl eine andere.",
-      "limit": "Du hast das Limit veröffentlichter Seiten deines Tarifs erreicht.",
+      "limit": "Du hast das Limit veröffentlichter Projekte deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…",
       "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
