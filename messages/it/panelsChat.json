@@ -185,6 +185,15 @@
         "publish": "Pubblica la mia pagina"
       }
     },
+    "emptyApp": {
+      "title": "Cosa facciamo oggi alla tua app?",
+      "suggestions": {
+        "data": "Salva i dati in un database",
+        "login": "Aggiungi un accesso",
+        "mobile": "Controlla come si vede sul telefono",
+        "publish": "Pubblica la mia app"
+      }
+    },
     "steps": {
       "running": "Len sta lavorando",
       "done": "{count, plural, one {Len ha fatto # passo} other {Len ha fatto # passi}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Immagine e altro",
       "on": "Attivo",
-      "disclaimer": "Len può sbagliare. Controlla la pagina prima di pubblicarla."
+      "disclaimer": "Len può sbagliare. Controlla la pagina prima di pubblicarla.",
+      "disclaimerApp": "Len può sbagliare. Prova l'app prima di pubblicarla."
     },
     "layout": {
       "float": "Stacca la chat",

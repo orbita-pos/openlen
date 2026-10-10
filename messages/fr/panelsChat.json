@@ -185,6 +185,15 @@
         "publish": "Publie ma page"
       }
     },
+    "emptyApp": {
+      "title": "Qu'est-ce qu'on fait aujourd'hui sur votre app ?",
+      "suggestions": {
+        "data": "Enregistre les données dans une base de données",
+        "login": "Ajoute une connexion",
+        "mobile": "Vérifie l'affichage sur mobile",
+        "publish": "Publie mon app"
+      }
+    },
     "steps": {
       "running": "Len travaille",
       "done": "{count, plural, one {Len a fait # étape} other {Len a fait # étapes}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Image et plus",
       "on": "Actif",
-      "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier."
+      "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier.",
+      "disclaimerApp": "Len peut se tromper. Testez votre app avant de la publier."
     },
     "layout": {
       "float": "Détacher le chat",

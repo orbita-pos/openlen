@@ -185,6 +185,15 @@
         "publish": "Veröffentliche meine Seite"
       }
     },
+    "emptyApp": {
+      "title": "Was machen wir heute mit deiner App?",
+      "suggestions": {
+        "data": "Speichere die Daten in einer Datenbank",
+        "login": "Füge eine Anmeldung hinzu",
+        "mobile": "Prüf die Ansicht auf dem Handy",
+        "publish": "Veröffentliche meine App"
+      }
+    },
     "steps": {
       "running": "Len arbeitet",
       "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Bild und mehr",
       "on": "Aktiv",
-      "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst."
+      "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst.",
+      "disclaimerApp": "Len kann sich irren. Probier deine App aus, bevor du sie veröffentlichst."
     },
     "layout": {
       "float": "Chat lösen",

@@ -185,6 +185,15 @@
         "publish": "Publique minha página"
       }
     },
+    "emptyApp": {
+      "title": "O que vamos fazer hoje no seu app?",
+      "suggestions": {
+        "data": "Salve os dados num banco de dados",
+        "login": "Adicione um login",
+        "mobile": "Veja como fica no celular",
+        "publish": "Publique meu app"
+      }
+    },
     "steps": {
       "running": "O Len está trabalhando",
       "done": "{count, plural, one {O Len fez # passo} other {O Len fez # passos}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Imagem e mais",
       "on": "Ativo",
-      "disclaimer": "O Len pode errar. Revise sua página antes de publicá-la."
+      "disclaimer": "O Len pode errar. Revise sua página antes de publicá-la.",
+      "disclaimerApp": "O Len pode errar. Teste seu app antes de publicá-lo."
     },
     "layout": {
       "float": "Destacar o chat",

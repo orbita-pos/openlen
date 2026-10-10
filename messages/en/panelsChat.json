@@ -185,6 +185,15 @@
         "publish": "Publish my page"
       }
     },
+    "emptyApp": {
+      "title": "What shall we do to your app today?",
+      "suggestions": {
+        "data": "Save the data in a database",
+        "login": "Add a sign-in",
+        "mobile": "Check how it looks on mobile",
+        "publish": "Publish my app"
+      }
+    },
     "steps": {
       "running": "Len is working",
       "done": "{count, plural, one {Len took # step} other {Len took # steps}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Image and more",
       "on": "On",
-      "disclaimer": "Len can make mistakes. Check your page before publishing it."
+      "disclaimer": "Len can make mistakes. Check your page before publishing it.",
+      "disclaimerApp": "Len can make mistakes. Try your app before publishing it."
     },
     "layout": {
       "float": "Pop out the chat",
