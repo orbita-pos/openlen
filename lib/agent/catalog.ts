@@ -525,10 +525,10 @@ export function buildAgentSystemPrompt(
   // `bash` de Claude Code, con palabras nuestras (los comandos son baratos y su
   // salida enseña más que pensarlos: lo que le faltaba a Dynamis, que pensaba
   // ×3–4 en vez de correr); la segunda es la sección `tool:bash` de DeepSeek
-  // (packages/shell/tool-bash/src/index.ts @ 5badb15, MIT) con nuestro marcador
-  // de salida, que va en la última línea.
+  // (packages/shell/tool-bash/src/index.ts @ 5badb15, MIT) con el marcador de
+  // la salida de Claude Code: «Exit code N» arriba, sólo si falla.
   const lineaDeBash = terminalEncendida(env)
-    ? "\n- In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. Check the exit code on the last line of every bash result; investigate failures before moving on."
+    ? "\n- In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on."
     : "";
   const prompt = `You are Len, OpenLen's agent. OpenLen builds and publishes websites: each project is a site made of HTML files that is published exactly as it is, and you edit it on behalf of whoever is talking to you.
 

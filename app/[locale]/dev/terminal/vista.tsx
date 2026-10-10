@@ -57,18 +57,18 @@ const HISTORIAL = {
         {
           command: "grep -rn 'Calle Marea 12' /",
           salida:
-            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/index.html:131:      <a href=\"https://maps.google.com/?q=Calle+Marea+12\">Cómo llegar</a>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n/contacto/index.html:58:  <iframe title=\"Mapa: Calle Marea 12\" src=\"https://maps.google.com/maps?q=Calle+Marea+12&output=embed\"></iframe>\n/memoria/proyecto.md:3:- La escuela está en Calle Marea 12.\n[Command finished with exit code 0]",
+            "/index.html:88:      <p class=\"text-sm\">Calle Marea 12, Sayulita</p>\n/index.html:131:      <a href=\"https://maps.google.com/?q=Calle+Marea+12\">Cómo llegar</a>\n/menu/index.html:41:  <footer>Calle Marea 12</footer>\n/contacto/index.html:23:        <address>Calle Marea 12, Sayulita, Nay.</address>\n/contacto/index.html:58:  <iframe title=\"Mapa: Calle Marea 12\" src=\"https://maps.google.com/maps?q=Calle+Marea+12&output=embed\"></iframe>\n/memoria/proyecto.md:3:- La escuela está en Calle Marea 12.",
           exitCode: 0,
         },
         {
           command: "sed -i 's/Calle Marea 12/Calle Gaviotas 7/g' /index.html /menu/index.html /contacto/index.html",
-          salida: "contacto/index.html: saved.\nindex.html: saved.\nmenu/index.html: saved.\n[Command finished with exit code 0]",
+          salida: "contacto/index.html: saved.\nindex.html: saved.\nmenu/index.html: saved.",
           exitCode: 0,
           cambios: cambiosDelComando(SITIO, conGaviotas(SITIO)),
         },
         {
           command: "echo nota >> /AGENTS.md",
-          salida: "AGENTS.md: not saved — the platform manual is read-only.\n[Command finished with exit code 1]",
+          salida: "Exit code 1\nAGENTS.md: not saved — the platform manual is read-only.",
           exitCode: 1,
         },
       ],
@@ -80,13 +80,13 @@ const HISTORIAL = {
       comandos: [
         {
           command: "grep -n Avanzados /clases/index.html",
-          salida: "18:      <li>Avanzados · 2 h · $800</li>\n[Command finished with exit code 0]",
+          salida: "18:      <li>Avanzados · 2 h · $800</li>",
           exitCode: 0,
         },
         // Una salida LARGA (la #14): plegada, las 8 primeras y las 8 últimas.
         {
           command: "cat -n /clases/index.html",
-          salida: `${Array.from({ length: 30 }, (_, i) => `${String(i + 1).padStart(6)}\t${i === 0 ? "<!doctype html>" : i === 29 ? "</html>" : `  <p>Línea ${i + 1} de la página de clases</p>`}`).join("\n")}\n[Command finished with exit code 0]`,
+          salida: `${Array.from({ length: 30 }, (_, i) => `${String(i + 1).padStart(6)}\t${i === 0 ? "<!doctype html>" : i === 29 ? "</html>" : `  <p>Línea ${i + 1} de la página de clases</p>`}`).join("\n")}`,
           exitCode: 0,
         },
       ],
@@ -145,13 +145,13 @@ function preparar() {
       const { command } = JSON.parse(String(init.body)) as { command: string };
       const sed = command.includes("sed -i");
       const salida = command.trim().startsWith("ls")
-        ? "AGENTS.md\najustes\nclases\ncontacto\nindex.html\nresultados\n[Command finished with exit code 0]"
+        ? "AGENTS.md\najustes\nclases\ncontacto\nindex.html\nresultados"
         : sed
           ? `${Object.keys(SITIO_GRANDE)
               .sort()
               .map((r) => `${r.slice(1)}: saved.`)
-              .join("\n")}\n[Command finished with exit code 0]`
-          : `(ejemplo: aquí no corre «${command}»)\n[Command finished with exit code 0]`;
+              .join("\n")}`
+          : `(ejemplo: aquí no corre «${command}»)`;
       // Con un `sed -i`, lo que habría cambiado (la #10).
       const cambios = sed ? cambiosDelComando(SITIO_GRANDE, conGaviotas(SITIO_GRANDE)) : null;
       const cuerpo = JSON.stringify({ command, salida, exitCode: 0, cambio: sed, ...(cambios ? { cambios } : {}) });
@@ -179,7 +179,7 @@ function preparar() {
   };
   terminalEnVivo.empujar(PROYECTO, {
     command: "find / -name 'index.html' -path '*/clases/*'",
-    salida: "/clases/index.html\n[Command finished with exit code 0]",
+    salida: "/clases/index.html",
     exitCode: 0,
   });
   // La lente «Cambios»: dos turnos de ejemplo, como los dejaría el evento `cambios`.

@@ -356,14 +356,14 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         wait(200, "action", { tool: "bash", status: "running", summary: "grep -rn 'Calle de la Luna' /" }),
         wait(900, "terminal", {
           command: "grep -rn 'Calle de la Luna' /",
-          salida: "/index.html:21:<section id=\"visitanos\">…Calle de la Luna 12, Centro…</section>\n[Command finished with exit code 0]",
+          salida: "/index.html:21:<section id=\"visitanos\">…Calle de la Luna 12, Centro…</section>",
           exitCode: 0,
         }),
         wait(50, "action", { tool: "bash", status: "done", summary: "grep -rn 'Calle de la Luna' /" }),
         wait(200, "action", { tool: "bash", status: "running", summary: "echo nota >> /AGENTS.md" }),
         wait(700, "terminal", {
           command: "echo nota >> /AGENTS.md",
-          salida: "AGENTS.md: not saved — the platform manual is read-only.\n[Command finished with exit code 1]",
+          salida: "Exit code 1\nAGENTS.md: not saved — the platform manual is read-only.",
           exitCode: 1,
         }),
         wait(50, "action", { tool: "bash", status: "error", summary: "echo nota >> /AGENTS.md", motivo: "AGENTS.md es de sólo lectura." }),
@@ -488,7 +488,7 @@ export function scriptFor(id: ScenarioId, turnoId: string): ScriptStep[] {
         wait(200, "action", { tool: "bash", status: "running", summary: "diff /.openlen/versiones/v-41/index.html /index.html" }),
         wait(800, "terminal", {
           command: "diff /.openlen/versiones/v-41/index.html /index.html",
-          salida: "14c14\n< <h1>Pan de pueblo</h1>\n---\n> <h1>Pan hecho a mano, cada mañana</h1>\n[Command finished with exit code 1]",
+          salida: "14c14\n< <h1>Pan de pueblo</h1>\n---\n> <h1>Pan hecho a mano, cada mañana</h1>",
           exitCode: 1,
         }),
         wait(50, "action", { tool: "bash", status: "done", summary: "diff /.openlen/versiones/v-41/index.html /index.html" }),

@@ -54,7 +54,9 @@ export const LINEAS_PLEGADAS = 3;
 const CARACTERES_POR_FILA = 40;
 
 export interface SalidaPlegada {
-  /** Todas las líneas, sin la última de DeepSeek («[Command finished…]»). */
+  /** Todas las líneas, sin lo que dice el código: la última de antes
+   *  («[Command finished…]»), el «Exit code N» de arriba de Claude Code, ni su
+   *  «(bash completed with no output)». */
   readonly lineas: readonly string[];
   /** Las que se ven plegada. */
   readonly cabeza: readonly string[];
@@ -89,8 +91,12 @@ export function cabezaYCola(lineas: readonly string[], max: number = LINEAS_EN_L
 }
 
 export function plegarSalida(salida: string): SalidaPlegada {
-  // La última línea ya dice el código, y la tarjeta lo pinta aparte (como la lente).
-  const cuerpo = salida.replace(/\n?\[Command finished with exit code -?\d+\]\s*$/, "").replace(/\s+$/, "");
+  // El código lo pinta la tarjeta aparte (como la lente): fuera la línea que lo dice.
+  const cuerpo = salida
+    .replace(/\n?\[Command finished with exit code -?\d+\]\s*$/, "")
+    .replace(/^Exit code -?\d+(?:\n|$)/, "")
+    .replace(/^\(bash completed with no output\)$/, "")
+    .replace(/\s+$/, "");
   const lineas = cuerpo === "" ? [] : cuerpo.split("\n");
   const cabeza = lineas.slice(0, LINEAS_PLEGADAS);
   const resto = lineas.length - cabeza.length;
