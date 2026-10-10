@@ -7,6 +7,8 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import authConfig from "@/auth.config";
+import { sessionIdentity } from "@/lib/profile/identity";
+import { refreshTokenIdentity } from "@/lib/profile/session";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth.js v5 — full (Node-runtime) configuration.
@@ -94,6 +96,21 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 export const config: NextAuthConfig = {
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    // EL NOMBRE Y LA FOTO del token salen de la base al entrar y con
+    // `update({ refresh: true })` (lib/profile/session.ts). Aquí y no en
+    // auth.config.ts: aquél es el del middleware, sin base.
+    async jwt(params) {
+      const token = await authConfig.callbacks.jwt(params);
+      return refreshTokenIdentity(token, {
+        signingIn: Boolean(params.user),
+        trigger: params.trigger,
+        read: sessionIdentity,
+        warn: (err) => console.warn("[auth] no se pudo leer la foto del perfil", err),
+      });
+    },
+  },
   adapter: DrizzleAdapter(db, {
     usersTable: schema.users,
     accountsTable: schema.accounts,
