@@ -108,7 +108,10 @@ describe("POST /api/lienzo", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("LIENZO_BASE_HOST", "");
     vi.stubEnv("PUBLISH_BASE_HOST", "");
-    const res = await POST(pide({ projectId: ID, html: "x" }));
+    // Con el Host público, como en la caja: con uno local (un build de
+    // producción en esta máquina, el ensayo) el lienzo va a *.localhost a
+    // propósito (bb9dc660) y no necesita dominio.
+    const res = await POST(pide({ projectId: ID, html: "x" }, "openlen.com"));
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "sin_host" });
     expect(mocks.guardar).not.toHaveBeenCalled();
