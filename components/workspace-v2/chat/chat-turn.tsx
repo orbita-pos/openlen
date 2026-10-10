@@ -323,6 +323,7 @@ export function LenTurn({
         onRetry={onRetry}
         onRate={onRate}
         onClearRate={onClearRate}
+        esApp={esApp}
       />
     </div>
   );

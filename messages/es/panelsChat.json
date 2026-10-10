@@ -121,7 +121,8 @@
     "placeholder": "Escribe a Len, o @ para hablar con alguien del proyecto…"
   },
   "noChange": {
-    "label": "No cambió nada de la página"
+    "label": "No cambió nada de la página",
+    "labelApp": "No cambió nada de la app"
   },
   "undo": {
     "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
@@ -131,12 +132,15 @@
     "notUndone": "Deshecho, salvo {rutas}: deshacer un turno no devuelve la base de datos, la memoria ni los ajustes."
   },
   "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
+  "cutShortApp": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la app.",
   "memoria": {
-    "description": "Preferencias que Len guardó para TODAS tus páginas, no sólo ésta.",
+    "description": "Preferencias que Len guardó para TODOS tus proyectos, no sólo éste.",
     "remove": "Quitar",
     "title": "Memoria de Len",
     "briefHint": "Notas que Len lee en cada mensaje de ESTA página.",
+    "briefHintApp": "Notas que Len lee en cada mensaje de ESTA app.",
     "briefPlaceholder": "p. ej.\n\n- Esta es una landing para Counter, una cafetería en Polanco.\n- Tono: cercano, amable, sin tecnicismos.\n- Color de acento: naranja cálido (#C66B3D).\n- Pendiente: pedir el logo final al diseñador.",
+    "briefPlaceholderApp": "p. ej.\n\n- Esta es la caja de Counter, una cafetería en Polanco: cobrar y ver las ventas del día.\n- La usan los meseros desde el móvil.\n- Moneda: pesos mexicanos (MXN).\n- Pendiente: un inicio de sesión para cada mesero.",
     "saving": "Guardando…",
     "saved": "Guardado · se inyecta en cada chat",
     "saveFailed": "Error al guardar"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, one {# mensaje} other {# mensajes}}"
     },
     "memory": {
-      "empty": "Len todavía no recuerda nada tuyo. Cuando le digas algo que valga para todas tus páginas, lo verás aquí."
+      "empty": "Len todavía no recuerda nada tuyo. Cuando le digas algo que valga para todos tus proyectos, lo verás aquí."
     },
     "empty": {
       "title": "¿Qué le hacemos hoy a tu página?",

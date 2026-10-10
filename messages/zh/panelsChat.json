@@ -121,7 +121,8 @@
     "placeholder": "写给 Len，或用 @ 与项目中的人交谈…"
   },
   "noChange": {
-    "label": "页面没有任何变化"
+    "label": "页面没有任何变化",
+    "labelApp": "应用没有任何变化"
   },
   "undo": {
     "failedHttp": "撤销失败（{status}）——改动仍然生效。请重试。",
@@ -131,12 +132,15 @@
     "notUndone": "已撤销，但 {rutas} 除外：撤销一轮不会还原数据库、记忆或设置。"
   },
   "cutShort": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查页面。",
+  "cutShortApp": "还没做完就中断了（{reason}），但已经做的部分已经保存。请检查应用。",
   "memoria": {
-    "description": "这些偏好适用于你的“所有”页面，不只是当前这一个。",
+    "description": "这些偏好适用于你的“所有”项目，不只是当前这一个。",
     "remove": "移除",
     "title": "Len 的记忆",
     "briefHint": "Len 在这个页面的每条消息中都会读到的备注。",
+    "briefHintApp": "Len 在这个应用的每条消息中都会读到的备注。",
     "briefPlaceholder": "例如\n\n- 这是 Counter 的落地页，一家位于 Polanco 的咖啡馆。\n- 语气：温暖、亲切，不用技术术语。\n- 主色：暖橙色（#C66B3D）。\n- 待办：向设计师索取最终版 logo。",
+    "briefPlaceholderApp": "例如\n\n- 这是 Counter 的收银应用，一家位于 Polanco 的咖啡馆：收款、查看当天的销售额。\n- 服务员用手机操作。\n- 货币：墨西哥比索（MXN）。\n- 待办：给每位服务员加登录。",
     "saving": "保存中…",
     "saved": "已保存 · 每次对话都会注入",
     "saveFailed": "保存失败"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, other {# 条消息}}"
     },
     "memory": {
-      "empty": "Len 还没有记住关于你的任何事。当你告诉它适用于你所有页面的内容时，会显示在这里。"
+      "empty": "Len 还没有记住关于你的任何事。当你告诉它适用于你所有项目的内容时，会显示在这里。"
     },
     "empty": {
       "title": "今天想给你的页面做点什么？",

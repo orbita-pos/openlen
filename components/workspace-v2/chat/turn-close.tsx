@@ -41,6 +41,7 @@ export function TurnClose({
   onRetry,
   onRate,
   onClearRate,
+  esApp = false,
 }: {
   turn: DesignTurn;
   currentPage: string | null;
@@ -51,6 +52,8 @@ export function TurnClose({
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
   onClearRate: () => Promise<boolean>;
+  /** El proyecto es una app: «No cambió nada de la app», «Revisa la app». */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
@@ -117,7 +120,7 @@ export function TurnClose({
   // aviso SIN corte —el tope o la conversación que no cabe— no se cortó: se
   // dice tal cual, sin la plantilla (el turno sí terminó su cierre).
   const notice = turn.cortado
-    ? t("cutShort", { reason: turn.avisoTurno || tAgent("errors.cancelled") })
+    ? t(esApp ? "cutShortApp" : "cutShort", { reason: turn.avisoTurno || tAgent("errors.cancelled") })
     : turn.avisoTurno || null;
   // La nota «✓ Publicada…» no es un turno de Len: sin la etiqueta de «No cambió
   // nada» (ver `publish-note.ts`).
@@ -133,7 +136,7 @@ export function TurnClose({
               {t("reverted")}
             </>
           ) : turn.noDocChange ? (
-            t("noChange.label")
+            t(esApp ? "noChange.labelApp" : "noChange.label")
           ) : (
             <>
               <Sparkles size={12} className="text-[var(--accent)]" />

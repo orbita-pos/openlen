@@ -362,7 +362,7 @@ function AgentChatView({
         </div>
       )}
       <div className={`nc-fold shrink-0 ${memoryOpen ? "border-b bd" : ""}`} data-open={memoryOpen}>
-        <div>{memoryOpen && <MemoryDrawer projectId={projectId} memory={memory} />}</div>
+        <div>{memoryOpen && <MemoryDrawer projectId={projectId} memory={memory} esApp={esApp} />}</div>
       </div>
       <div ref={chat.scrollRef} className="nice-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3 pt-5">
         {chat.turns.length === 0 ? (
