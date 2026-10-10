@@ -35,6 +35,7 @@ import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/fran
 import { ExploreView } from "@/components/community/explore-view";
 import { ProjectsSection } from "../projects/projects-section";
 import { MiembrosDialog } from "@/components/workspace-v2/miembros-dialog";
+import { EnvVarsDialog } from "@/components/workspace-v2/env-vars-dialog";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
@@ -542,6 +543,7 @@ function NewV2Inner() {
   const [customDomainOpen, setCustomDomainOpen] = useState(false);
   // Los miembros del proyecto (compartir el proyecto).
   const [miembrosOpen, setMiembrosOpen] = useState(false);
+  const [envVarsOpen, setEnvVarsOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
   const [githubOpen, setGithubOpen] = useState(false);
   const [deployErrorKey, setDeployErrorKey] = useState<string | null>(null);
@@ -1361,6 +1363,8 @@ function NewV2Inner() {
   const esApp = !!loadedProject?.app;
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
+  // LAS VARIABLES DE ENTORNO (spec local 2026-10-10): sólo en una app.
+  const abrirVariables = esApp && loadedProject ? () => setEnvVarsOpen(true) : undefined;
   // El chat del equipo: las menciones del chat sin ver, un punto en su icono del
   // carril; con el chat a la vista, 0 (abrirlo las ve).
   const chatSinVer = useChatSinVer(
@@ -3290,6 +3294,7 @@ function NewV2Inner() {
         published={published}
         projectId={loadedProject?.id}
         onMiembros={loadedProject ? () => setMiembrosOpen(true) : undefined}
+        onEnvVars={abrirVariables}
         onRolledBack={() => {
           if (loadedProject?.id) {
             void refetchProject(loadedProject.id);
@@ -3483,6 +3488,7 @@ function NewV2Inner() {
                 </div>
               )}
               <PreviewArea
+                onEnvVars={abrirVariables}
                 doc=""
                 lente={lente}
                 onLente={setLente}
@@ -3553,6 +3559,7 @@ function NewV2Inner() {
                 </div>
               )}
               <PreviewArea
+                onEnvVars={abrirVariables}
                 doc=""
                 lente={lente}
                 onLente={setLente}
@@ -3596,6 +3603,7 @@ function NewV2Inner() {
           (loadedProject && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
             <>
               <PreviewArea
+                onEnvVars={abrirVariables}
                 doc={activeDoc}
                 lente={lente}
                 onLente={setLente}
@@ -3985,6 +3993,23 @@ function NewV2Inner() {
           open={miembrosOpen}
           onClose={() => setMiembrosOpen(false)}
           onSalir={() => router.push("/new?view=projects")}
+        />
+      )}
+      {loadedProject && esApp && (
+        <EnvVarsDialog
+          key={`env-${loadedProject.id}`}
+          projectId={loadedProject.id}
+          open={envVarsOpen}
+          onClose={() => setEnvVarsOpen(false)}
+          readOnly={soloLector}
+          onPublish={
+            soloLector || !onPublish
+              ? undefined
+              : () => {
+                  setEnvVarsOpen(false);
+                  onPublish();
+                }
+          }
         />
       )}
       {loadedProject && (

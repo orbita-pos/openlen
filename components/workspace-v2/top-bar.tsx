@@ -36,7 +36,7 @@ import {
   Trash,
   X,
 } from "./icons";
-import { Users } from "lucide-react";
+import { KeyRound, Users } from "lucide-react";
 import { IconBtn, StatusDot } from "./ui";
 import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -88,6 +88,8 @@ interface TopBarProps {
   projectName: string;
   /** Abre los miembros del proyecto (compartir el proyecto). Ausente = sin botón. */
   onMiembros?: () => void;
+  /** Abre las variables de entorno de la app (spec local 2026-10-10). Ausente = sin entrada en el menú. */
+  onEnvVars?: () => void;
   onRename: (name: string) => void;
   /** Per-project favicon shown as a 16x16 icon next to the project name.
    *  Null = fall back to the coral initial-letter mark. */
@@ -161,6 +163,7 @@ export function TopBar({
   onDeployGitHub,
   inicio,
   onMiembros,
+  onEnvVars,
 }: TopBarProps) {
   const t = useTranslations("topbar");
   const toast = useToast();
@@ -697,6 +700,20 @@ export function TopBar({
               >
                 <Pencil size={12} className="shrink-0 fg-muted" />
                 {t("projectName.rename")}
+              </button>
+            )}
+            {onEnvVars && !projectUnavailable && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setProyectosOpen(false);
+                  onEnvVars();
+                }}
+                className="flex items-center gap-2.5 w-full text-left px-2.5 py-1.5 rounded-md text-[12.5px] fg hover:bg-hover transition"
+              >
+                <KeyRound size={12} className="shrink-0 fg-muted" />
+                {t("envVars.menu")}
               </button>
             )}
           </div>
