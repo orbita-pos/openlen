@@ -1,6 +1,7 @@
 import { and, isNotNull } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin-only";
 import { db, schema } from "@/lib/db";
+import { DataChangesNeedOwnerError } from "@/lib/backend/data-changes";
 import { publishProject } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -32,6 +33,9 @@ interface SweepRun {
   ok: number;
   failed: number;
   failures: Array<{ subdomain: string; error: string }>;
+  /** Con cambios de tablas sin publicar en el borrador: los publica el dueño
+   *  (spec local 2026-10-09), así que se saltan sin tocar nada. */
+  skippedPendingTableChanges: string[];
 }
 
 let sweepRunning = false;
@@ -53,6 +57,12 @@ async function runSweep(
       // eslint-disable-next-line no-console
       console.log(`[republish-all] ✓ ${row.subdomain}`);
     } catch (err) {
+      if (err instanceof DataChangesNeedOwnerError) {
+        run.skippedPendingTableChanges.push(row.subdomain);
+        // eslint-disable-next-line no-console
+        console.log(`[republish-all] − ${row.subdomain}: cambios de tablas pendientes, los publica el dueño`);
+        continue;
+      }
       run.failed += 1;
       const msg = err instanceof Error ? err.message : String(err);
       run.failures.push({ subdomain: row.subdomain, error: msg });
@@ -106,6 +116,7 @@ export async function POST(): Promise<Response> {
     done: 0,
     ok: 0,
     failed: 0,
+    skippedPendingTableChanges: [],
     failures: [],
   };
   sweepRunning = true;

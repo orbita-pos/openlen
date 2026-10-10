@@ -764,6 +764,10 @@ interface PublishParams {
    *  account, which legitimately owns more subdomains than any real tier
    *  allows. Never wired into the public publish route body. */
   bypassSubdomainLimit?: boolean;
+  /** Qué hacer con los cambios de tablas del borrador (spec local 2026-10-09).
+   *  Sin esto, `system`: nunca se aplica nada sin el dueño. Sólo la ruta de
+   *  publicar del dueño pasa `owner`. */
+  dataChanges?: { mode: "owner" | "system"; confirmFingerprint?: string; copyDraftData?: boolean };
 }
 interface PublishResult {
   subdomain: string;
@@ -1009,6 +1013,15 @@ export async function publishProject(
       files: Object.entries(projectFiles).map(([path, content]) => ({ path, content })),
       app,
       ...(entornoDeLaApp ? { entorno: entornoDeLaApp } : {}),
+      // LOS DATOS (spec local 2026-10-09): con la release ya escrita y antes de
+      // activarla, las migraciones del borrador a producción. Si fallan o piden
+      // confirmación, la release no se activa y el catch de abajo deshace la fila.
+      beforeSwap: async () => {
+        const { backendConfigured } = await import("@/lib/backend/pg");
+        if (!backendConfigured()) return;
+        const { publishDataChanges } = await import("@/lib/backend/data-changes");
+        await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
+      },
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
