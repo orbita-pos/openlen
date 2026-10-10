@@ -142,9 +142,12 @@ proyecto (`ol_<ref>`).
    `/etc/openlen/openlen.env` que la app (`EnvironmentFile=` de `openlen-realtime.service`), así que no hace falta nada.
 3. La copia nocturna (`backup-system-to-r2.sh`, filtro `ol\_%`) ya incluye las bases nuevas. Los roles de sólo lectura
    de producción se llaman `ol_<scope>_ro` y los crea la app la primera vez que Len lee producción.
-4. `openlen_backups` (dentro de cada base de producción): copia de las tablas antes de un cambio destructivo que el
+4. `infra/db/pages-orphans.sh` lista y borra por SCOPE (`<ref>`, `<ref>_d`, `<ref>_l`): huérfana es la base cuyo `ref`
+   ya no está en `projectBackends`, o la de un entorno sin su fila en `projectBackendEnvironments`. El rol del proyecto
+   (`ol_<ref>`) se borra sólo cuando no le queda ninguna base. Su prueba: `bash infra/db/pages-orphans.test.sh`.
+5. `openlen_backups` (dentro de cada base de producción): copia de las tablas antes de un cambio destructivo que el
    dueño confirmó al publicar. No se borra sola: limpiarla a mano cuando ya no haga falta.
-5. Comprobar en la caja, con un proyecto de prueba: el lienzo escribe en `ol_<ref>_d`, la publicada en la de
+6. Comprobar en la caja, con un proyecto de prueba: el lienzo escribe en `ol_<ref>_d`, la publicada en la de
    producción, y publicar con una columna borrada pide confirmación (428) antes de tocar nada.
 
 ## 5. Comprobar
