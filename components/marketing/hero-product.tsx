@@ -93,10 +93,6 @@ const SEG_OFF = "text-[var(--fg-muted)]";
 export function HeroProduct() {
   return (
     <div className="relative w-full">
-      <div
-        className="absolute -inset-x-8 -top-8 bottom-0 -z-10 rounded-[40px] blur-3xl opacity-50 bg-[radial-gradient(55%_45%_at_50%_25%,rgba(255,90,54,0.18),transparent_70%)]"
-        aria-hidden
-      />
 
       <div className="hero-product overflow-hidden rounded-2xl ring-1 ring-zinc-200 dark:ring-zinc-800 bg-[var(--bg)] text-[var(--fg)] shadow-[0_40px_120px_-50px_rgba(0,0,0,0.28)] dark:shadow-[0_50px_140px_-50px_rgba(0,0,0,0.6)] [font-family:Inter,system-ui,sans-serif]">
         {/* ── BARRA SUPERIOR (h-[60px], top-bar.tsx:494) ── */}

@@ -1,8 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
 import { HeroProduct } from "./hero-product";
+import { ArrowUpRight } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { LenLetra } from "./len-letra";
 import { HeroPromptInput } from "./hero-prompt-input";
-import { HeroLenFace, HeroLenProvider } from "./hero-len";
+import { HeroLenProvider } from "./hero-len";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -36,82 +39,62 @@ export async function Hero() {
   const pagesLive = await countLiveProjects().catch(() => 0);
 
   return (
-  // LA MALLA PASA POR DEBAJO DE LA NAV.
-  //
-  // La nav es `sticky` y va ANTES del <main>, así que ocupa sus 56px en el
-  // flujo y la sección arrancaba justo debajo: detrás del menú quedaba el
-  // fondo del body —blanco PURO, rgb(255,255,255)— contra el hueso #FAFAF9 de
-  // la malla. Medido, no supuesto: una costura horizontal a 56px.
-  //
-  // `-mt-14 pt-14` sube la sección esos mismos 56px y los devuelve como
-  // relleno: la malla (que es inset-0 de la sección) cubre la franja de la
-  // nav, y todo lo de dentro se queda exactamente donde estaba.
-    <section className="relative overflow-hidden -mt-14 pt-14">
-      {/* LA MALLA. Cuatro manchas con los centros desalineados a propósito:
-          alineadas se leen como un degradado de plantilla.
+  // `-mt-14 pt-14`: la sección sube bajo la nav (que es transparente arriba)
+  // y devuelve esos 56px como relleno, así que el fondo es uno solo.
+    <section className="relative -mt-14 pt-14">
+      {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
+          referencia): un aviso en píldora, UN titular con Len dentro haciendo
+          de «o» y, donde Grok pone dos botones, la caja
+          de prompt (Jesús, el mismo día: la caja es la entrada, no un botón
+          que lleva a ella). Y justo después, sin pausa, la maqueta del taller.
 
-          Geometría y color viven en `app/globals.css`, NO aquí en `style=`: un
-          estilo en línea gana a cualquier clase, así que con las manchas
-          cableadas en el TSX una variante de malla sólo podía sobreescribirlas
-          a base de `!important`. Con la clase `.hero-mesh--<nombre>` en el
-          contenedor, probar otra dirección es CSS y nada más. */}
-      <div className="hero-mesh hero-mesh--amanecer" aria-hidden>
-        {/* La capa que SUBE COMO UNA SOLA COSA. Sin ella, las cuatro manchas
-            entraban cada una por su lado y el movimiento se cancelaba: una
-            mancha enorme y muy desenfocada cambia poco localmente al moverse,
-            y cuatro suaves en desfase se leen como nada. El grupo da la
-            lectura —la malla asciende— y el desfase de dentro le quita la
-            rigidez de un bloque deslizándose. */}
-        <div className="hero-mesh__grupo">
-          <div className="hero-mesh__blob hero-mesh__blob--a" />
-          <div className="hero-mesh__blob hero-mesh__blob--b" />
-          <div className="hero-mesh__blob hero-mesh__blob--c" />
-          <div className="hero-mesh__blob hero-mesh__blob--d" />
-        </div>
-      </div>
+          El fondo es LIMPIO: se fueron la malla coral (`hero-mesh`) y el
+          resplandor de arriba de la portada (`aurora-dawn`). El color lo pone
+          Len, en el titular, y nada más.
 
-      {/* LEN ES EL HÉROE (04/10, Jesús: «poner a Len en /»), y la caja le
-          habla: el proveedor envuelve a la cara y a la caja para que Len sepa
-          si escribes, dictas o envías. */}
+          El proveedor envuelve el titular y la caja: la cara que hace de «o»
+          saluda al llegar y luego escucha si escribes o dictas, y piensa al
+          enviar. */}
       <HeroLenProvider>
-        <div className="relative mx-auto max-w-5xl px-6 pt-14 pb-12 sm:pt-20 sm:pb-16">
-          <div className="flex flex-col items-center text-center">
-            {/* `data-len-hide`: mientras se ve esta cara, la que acompaña al
-                bajar (len-companion.tsx) espera escondida. */}
-            <div data-len-hide>
-              <HeroLenFace className="mb-5 size-24 sm:mb-6 sm:size-28" />
-            </div>
-            <h1 className="max-w-[56rem] text-balance text-[38px] sm:text-[56px] md:text-[64px] font-semibold tracking-tightest leading-[1.06]">
-              {t.rich("hero.title", {
-                br: () => <br />,
-                muted: (chunks) => (
-                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">{chunks}</span>
-                ),
-                gradient: (chunks) => (
-                  <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
-                    {chunks}
-                  </span>
-                ),
-              })}
-            </h1>
-          </div>
+      <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-4 sm:pt-24">
+        <div className="flex flex-col items-center text-center">
+          <Link
+            href="/register"
+            className="group inline-flex items-center gap-2 rounded-full bg-coral-700 py-1 pl-3.5 pr-1 text-[13px] text-white/90 transition-colors hover:bg-coral-800"
+          >
+            {t.rich("hero.announce", {
+              strong: (chunks) => <span className="font-semibold text-white">{chunks}</span>,
+              dot: () => <span className="text-white/60" aria-hidden>·</span>,
+            })}
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden>
+              <ArrowUpRight size={13} />
+            </span>
+          </Link>
 
-          {/* La caja de prompt: el centro del héroe, no un extra al final. */}
-          <div className="mx-auto mt-12 max-w-2xl sm:mt-14">
+          {/* `data-len-hide`: mientras se ve el titular (con la cara dentro),
+              la cara que acompaña al bajar (len-companion.tsx) espera. */}
+          <h1
+            data-len-hide
+            className="mt-7 max-w-[60rem] text-balance text-[40px] sm:text-[60px] md:text-[76px] font-semibold tracking-tightest leading-[1.04]"
+          >
+            {t.rich("hero.title", {
+              len: (chunks) => <LenLetra>{chunks}</LenLetra>,
+              gradient: (chunks) => (
+                <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
+                  {chunks}
+                </span>
+              ),
+            })}
+          </h1>
+
+          {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
+              titular y la caja bastan; lo que hace Len lo enseña la maqueta. */}
+          <div className="mt-12 w-full max-w-2xl text-left">
             <HeroPromptInput />
           </div>
 
-          {/* zinc-700, no zinc-500: MEDIDO sobre el píxel pintado daba 2.67:1
-              — esta línea cayó en la zona más saturada de la malla al bajarla
-              del héroe. Se oscurece el texto, que es UNA línea, en vez de
-              apagar la malla, que es el héroe entero.
-
-              Y zinc-300 en OSCURO, no zinc-400: ahí medía 4.55:1 contra un
-              mínimo de 4.5 — pasa, pero sin margen, y las manchas DERIVAN, así
-              que el fondo bajo esta línea cambia con el tiempo. Un contraste al
-              filo sobre un fondo que se mueve es un fallo con retardo. */}
           {pagesLive > 0 && (
-            <p className="mx-auto mt-8 max-w-2xl text-center text-[13px] text-zinc-700 dark:text-zinc-300">
+            <p className="mt-6 text-[13px] text-zinc-700 dark:text-zinc-300">
               {t.rich("hero.pagesLive", {
                 count: pagesLive,
                 strong: (chunks) => (
@@ -123,21 +106,18 @@ export async function Hero() {
             </p>
           )}
         </div>
+      </div>
       </HeroLenProvider>
 
-      {/* Segundo compás: la maqueta del producto, ya fuera del primer
-          pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
+      {/* Segundo compás: la maqueta del producto, pegada a los botones como en
+          la de Grok — asoma ya en el primer pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
           como «sigue leyendo», no como el final de la sección. */}
-      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-20 pb-20 sm:mt-28 sm:pb-24">
+      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-14 pb-20 sm:mt-16 sm:pb-24">
         <div className="relative">
           <HeroProduct />
         </div>
       </div>
 
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-white dark:to-[#0a0a0a]"
-        aria-hidden
-      />
     </section>
   );
 }

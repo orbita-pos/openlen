@@ -13,7 +13,8 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Je eigen webontwikkelaar.<br></br><gradient>Len.</gradient>",
+    "title": "Je eigen web<len>o</len>ntwikkelaar. <gradient>Len.</gradient>",
+    "announce": "<strong>Len bouwt nu ook apps</strong><dot></dot>Probeer gratis",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",
