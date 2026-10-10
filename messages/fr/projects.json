@@ -39,6 +39,7 @@
     "freePlan": "Forfait gratuit",
     "proPlan": "Forfait Pro",
     "maxPlan": "Forfait Max",
+    "ultraPlan": "Forfait Ultra",
     "creditsLeft": "{count, plural, one {# crédit restant} other {# crédits restants}}",
     "dismiss": "Ignorer"
   },
@@ -146,9 +147,9 @@
   },
   "billing": {
     "upgradeCta": "Passer à Pro",
-    "upgradeHint": "150 crédits IA / mois",
+    "upgradeHint": "{credits} crédits IA / mois",
     "dismissBanner": "Ignorer",
-    "success": "Vous êtes désormais sur le forfait Pro — 150 crédits IA par mois. Merci pour votre passage à Pro !",
+    "success": "Vous êtes désormais sur le forfait {plan} — {credits} crédits IA par mois. Merci pour votre passage à {plan} !",
     "errors": {
       "not_configured": "La facturation n'est pas encore configurée. Veuillez réessayer plus tard ou contacter le support.",
       "checkout_failed": "Nous n'avons pas pu démarrer votre paiement. Veuillez réessayer.",

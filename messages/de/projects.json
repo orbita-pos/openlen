@@ -39,6 +39,7 @@
     "freePlan": "Free-Tarif",
     "proPlan": "Pro-Tarif",
     "maxPlan": "Max-Tarif",
+    "ultraPlan": "Ultra-Tarif",
     "creditsLeft": "{count, plural, one {# Credit übrig} other {# Credits übrig}}",
     "dismiss": "Ausblenden"
   },
@@ -146,9 +147,9 @@
   },
   "billing": {
     "upgradeCta": "Auf Pro upgraden",
-    "upgradeHint": "150 KI-Credits / Monat",
+    "upgradeHint": "{credits} KI-Credits / Monat",
     "dismissBanner": "Ausblenden",
-    "success": "Du bist jetzt auf Pro — 150 KI-Credits pro Monat. Danke fürs Upgrade!",
+    "success": "Du bist jetzt auf {plan} — {credits} KI-Credits pro Monat. Danke fürs Upgrade!",
     "errors": {
       "not_configured": "Die Abrechnung ist noch nicht eingerichtet. Bitte versuche es später erneut oder wende dich an den Support.",
       "checkout_failed": "Dein Checkout konnte nicht gestartet werden. Bitte versuche es erneut.",

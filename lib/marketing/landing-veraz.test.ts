@@ -150,14 +150,15 @@ describe("las cifras de los planes no se contradicen con el cobro", () => {
   // ahí mismo (CREDITS_BY_PLAN, comprobado en lib/credits.test.ts). Lo que
   // queda por vigilar es que ninguna traducción escriba la cifra A MANO: una
   // cifra escrita en la cadena no se entera cuando cambia el precio.
-  it.each(LOCALES)("%s — los créditos de Pro y de Max salen del precio, no del texto", (locale) => {
+  it.each(LOCALES)("%s — los créditos de Pro, Max y Ultra salen del precio, no del texto", (locale) => {
     const pricing = (marketing(locale) as unknown as {
       pricing: Record<string, { blurb?: string; features?: Record<string, string> }>;
     }).pricing;
     expect(pricing.pro.features?.["1"], `${locale}: Pro`).toContain("{credits");
     expect(pricing.max.features?.["1"], `${locale}: Max`).toContain("{credits");
+    expect(pricing.ultra?.features?.["1"], `${locale}: Ultra`).toContain("{credits");
     const todo = JSON.stringify(pricing);
-    for (const viejo of ["150", "3.99", "3,99"]) {
+    for (const viejo of ["150", "3.99", "3,99", "200 ", "500 "]) {
       expect(todo, `${locale}: los precios dicen «${viejo}»`).not.toContain(viejo);
     }
   });

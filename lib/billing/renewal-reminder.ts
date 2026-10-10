@@ -86,7 +86,7 @@ export function buildRenewalReminderEmail(opts: {
   renewsAt: Date;
   manageUrl: string;
 }): { subject: string; text: string; html: string } {
-  const plan = opts.plan === "max" ? "Max" : "Pro";
+  const plan = opts.plan === "ultra" ? "Ultra" : opts.plan === "max" ? "Max" : "Pro";
   const amount = money(opts.amount, opts.currency);
   const fmt = (locale: string) =>
     new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(opts.renewsAt);

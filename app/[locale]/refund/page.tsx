@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
-import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE, ULTRA_CREDITS, ULTRA_PRICE } from "@/lib/marketing/plan-price";
 import { Link } from "@/i18n/navigation";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -73,6 +73,10 @@ export default async function RefundPage({
               <strong>Plan Max:</strong> US${MAX_PRICE} al mes por {MAX_CREDITS}{" "}
               créditos al mes.
             </li>
+            <li>
+              <strong>Plan Ultra:</strong> US${ULTRA_PRICE} al mes por {ULTRA_CREDITS}{" "}
+              créditos al mes.
+            </li>
           </ul>
           <p>
             Si contrataste Pro cuando costaba US$3.99 al mes, conservas ese precio
@@ -105,7 +109,8 @@ export default async function RefundPage({
             Los planes de pago se renuevan <strong>automáticamente cada
             mes</strong> al precio de tu plan hasta que los canceles. El cargo se
             realiza en la fecha de renovación, con una frecuencia mensual y por el
-            importe de tu plan: US${PRO_PRICE} el Pro, US${MAX_PRICE} el Max, o el
+            importe de tu plan: US${PRO_PRICE} el Pro, US${MAX_PRICE} el Max,
+            US${ULTRA_PRICE} el Ultra, o el
             precio con el que te suscribiste si era otro. De
             conformidad con la Ley Federal de Protección al Consumidor (LFPC, en
             vigor desde diciembre de 2025), te enviaremos un{" "}
@@ -230,6 +235,10 @@ export default async function RefundPage({
               <strong>Max plan:</strong> US${MAX_PRICE} per month for {MAX_CREDITS}{" "}
               credits per month.
             </li>
+            <li>
+              <strong>Ultra plan:</strong> US${ULTRA_PRICE} per month for {ULTRA_CREDITS.toLocaleString("en-US")}{" "}
+              credits per month.
+            </li>
           </ul>
           <p>
             If you subscribed to Pro when it cost US$3.99 per month, you keep that
@@ -262,7 +271,8 @@ export default async function RefundPage({
             Paid plans <strong>renew automatically each month</strong> at your
             plan&apos;s price until you cancel. The charge is made on the renewal
             date, on a monthly frequency, for your plan&apos;s amount: US${PRO_PRICE}{" "}
-            for Pro, US${MAX_PRICE} for Max, or the price you subscribed at if it
+            for Pro, US${MAX_PRICE} for Max, US${ULTRA_PRICE} for Ultra, or the
+            price you subscribed at if it
             was different. In line with Mexico&apos;s Federal
             Consumer Protection Law (LFPC, in force since December 2025), we send a{" "}
             <strong>reminder at least 5 business days before each renewal</strong>,

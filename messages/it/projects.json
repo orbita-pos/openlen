@@ -39,6 +39,7 @@
     "freePlan": "Piano Free",
     "proPlan": "Piano Pro",
     "maxPlan": "Piano Max",
+    "ultraPlan": "Piano Ultra",
     "creditsLeft": "{count, plural, one {# credito rimasto} other {# crediti rimasti}}",
     "dismiss": "Ignora"
   },
@@ -146,9 +147,9 @@
   },
   "billing": {
     "upgradeCta": "Passa a Pro",
-    "upgradeHint": "150 crediti AI / mese",
+    "upgradeHint": "{credits} crediti AI / mese",
     "dismissBanner": "Ignora",
-    "success": "Ora sei su Pro — 150 crediti AI al mese. Grazie per l'upgrade!",
+    "success": "Ora sei su {plan} — {credits} crediti AI al mese. Grazie per l'upgrade!",
     "errors": {
       "not_configured": "La fatturazione non è ancora configurata. Riprova più tardi o contatta l'assistenza.",
       "checkout_failed": "Non siamo riusciti ad avviare il pagamento. Riprova.",

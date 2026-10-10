@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
-import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE, ULTRA_CREDITS, ULTRA_PRICE } from "@/lib/marketing/plan-price";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
@@ -201,6 +201,10 @@ export default async function DocsPage({
               <strong>Plan Max</strong> — US${MAX_PRICE} al mes con {MAX_CREDITS}{" "}
               créditos al mes.
             </li>
+            <li>
+              <strong>Plan Ultra</strong> — US${ULTRA_PRICE} al mes con {ULTRA_CREDITS}{" "}
+              créditos al mes.
+            </li>
           </ul>
           <p>
             Los créditos se reinician cada mes y no se acumulan. Puedes cambiar
@@ -397,6 +401,10 @@ export default async function DocsPage({
             <li>
               <strong>Max plan</strong> — US${MAX_PRICE} per month with{" "}
               {MAX_CREDITS} credits per month.
+            </li>
+            <li>
+              <strong>Ultra plan</strong> — US${ULTRA_PRICE} per month with{" "}
+              {ULTRA_CREDITS.toLocaleString("en-US")} credits per month.
             </li>
           </ul>
           <p>

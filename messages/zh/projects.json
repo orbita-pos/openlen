@@ -39,6 +39,7 @@
     "freePlan": "免费版",
     "proPlan": "Pro 版",
     "maxPlan": "Max 版",
+    "ultraPlan": "Ultra 版",
     "creditsLeft": "{count, plural, one {剩余 # 积分} other {剩余 # 积分}}",
     "dismiss": "关闭"
   },
@@ -146,9 +147,9 @@
   },
   "billing": {
     "upgradeCta": "升级到 Pro",
-    "upgradeHint": "每月 150 AI 积分",
+    "upgradeHint": "每月 {credits} AI 积分",
     "dismissBanner": "关闭",
-    "success": "你已升级到 Pro —— 每月 150 AI 积分。感谢升级！",
+    "success": "你已升级到 {plan} —— 每月 {credits} AI 积分。感谢升级！",
     "errors": {
       "not_configured": "账单功能尚未配置。请稍后重试或联系支持团队。",
       "checkout_failed": "无法启动结账流程，请重试。",

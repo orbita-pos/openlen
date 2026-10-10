@@ -197,7 +197,7 @@
       "cta": "Pro로 업그레이드",
       "features": {
         "0": "무료 플랜의 모든 기능",
-        "1": "월 {credits}크레딧",
+        "1": "월 {credits, number}크레딧",
         "2": "나만의 도메인 (yourbusiness.com)",
         "3": "90일 이상의 분석 데이터",
         "4": "우선 이메일 지원"
@@ -210,7 +210,18 @@
       "cta": "Max로 업그레이드",
       "features": {
         "0": "Pro 플랜의 모든 기능",
-        "1": "월 {credits}크레딧 — Pro의 {times, number}배",
+        "1": "월 {credits, number}크레딧 — Pro의 {times, number}배",
+        "2": "더 저렴한 크레딧: {proCents, number}¢ 대신 {cents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/월",
+      "blurb": "하루 종일 Len에게 일을 맡기는 에이전시와 팀에게.",
+      "cta": "Ultra로 업그레이드",
+      "features": {
+        "0": "Max 플랜의 모든 기능",
+        "1": "월 {credits, number}크레딧 — Pro의 {times, number}배",
         "2": "가장 저렴한 크레딧: {proCents, number}¢ 대신 {cents, number}¢"
       }
     },

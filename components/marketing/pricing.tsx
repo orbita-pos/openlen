@@ -19,7 +19,10 @@ import {
   PRO_PRICE,
   PRO_SAVE_PERCENT,
   PRO_WAS,
+  ULTRA_CREDITS,
+  ULTRA_PRICE,
   centsPerCredit,
+  timesPro,
 } from "@/lib/marketing/plan-price";
 import { LenSays } from "./len-says";
 
@@ -48,8 +51,9 @@ export async function Pricing() {
   const locale = await getLocale();
   const templateCount = await countTemplates().catch(() => 0);
 
-  // TRES PLANES Y EL SELF-HOST APARTE (04/10). Gratis, Pro $9.99 y Max $19.99 son
-  // la misma cosa —Len trabajando para ti— con más o menos créditos; el
+  // CUATRO PLANES Y EL SELF-HOST APARTE (04/10; Ultra $99.99 desde el 09/10).
+  // Gratis, Pro, Max y Ultra son la misma cosa —Len trabajando para ti— con más
+  // o menos créditos, y el crédito sale más barato en cada uno; el
   // self-host es otra decisión (correrlo tú) y baja a una tira bajo las
   // tarjetas, al lado del trabajo a medida.
   const tiers: Tier[] = [
@@ -92,9 +96,24 @@ export async function Pricing() {
       cta: { label: t("pricing.max.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?plan=max&locale=${locale}` },
       features: [
         t("pricing.max.features.0"),
-        t("pricing.max.features.1", { credits: MAX_CREDITS, times: MAX_CREDITS / PRO_CREDITS }),
+        t("pricing.max.features.1", { credits: MAX_CREDITS, times: timesPro(MAX_CREDITS) }),
         t("pricing.max.features.2", {
           cents: centsPerCredit(MAX_PRICE, MAX_CREDITS),
+          proCents: centsPerCredit(PRO_PRICE, PRO_CREDITS),
+        }),
+      ],
+    },
+    {
+      name: t("pricing.ultra.name"),
+      price: ULTRA_PRICE,
+      suffix: t("pricing.ultra.suffix"),
+      blurb: t("pricing.ultra.blurb"),
+      cta: { label: t("pricing.ultra.cta"), variant: "outline", icon: ArrowRight, href: `/api/billing/checkout?plan=ultra&locale=${locale}` },
+      features: [
+        t("pricing.ultra.features.0"),
+        t("pricing.ultra.features.1", { credits: ULTRA_CREDITS, times: timesPro(ULTRA_CREDITS) }),
+        t("pricing.ultra.features.2", {
+          cents: centsPerCredit(ULTRA_PRICE, ULTRA_CREDITS),
           proCents: centsPerCredit(PRO_PRICE, PRO_CREDITS),
         }),
       ],
@@ -103,7 +122,7 @@ export async function Pricing() {
 
   return (
     <section id="pricing" data-len-section="precios" className="relative scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-6 py-24 sm:py-28">
+      <div className="mx-auto max-w-7xl px-6 py-24 sm:py-28">
         <div className="text-center max-w-2xl mx-auto">
           <LenSays className="justify-center">{t("pricing.lenSays")}</LenSays>
           <h2 className="mt-6 text-3xl sm:text-5xl font-semibold tracking-tightest leading-[1.08]">
@@ -121,7 +140,9 @@ export async function Pricing() {
           </p>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5">
+        {/* Cuatro tarjetas: de dos en dos hasta que caben las cuatro en fila
+            ($99.99 en text-5xl no cabe en un cuarto de max-w-6xl). */}
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-5">
           {tiers.map((tier) => {
             const CtaIcon = tier.cta.icon;
             const ctaButton = (
@@ -140,7 +161,7 @@ export async function Pricing() {
                 className={cn(
                   "relative rounded-3xl bg-white/80 dark:bg-white/[0.04] backdrop-blur-sm p-7 sm:p-8 flex flex-col transition-shadow duration-300 hover:shadow-xl hover:shadow-coral-950/[0.06] dark:hover:shadow-black/30",
                   tier.featured
-                    ? "ring-coral lg:scale-[1.02] lg:-my-2 shadow-lg shadow-coral-500/10"
+                    ? "ring-coral xl:scale-[1.02] xl:-my-2 shadow-lg shadow-coral-500/10"
                     : "ring-1 ring-zinc-200/70 dark:ring-white/10",
                 )}
               >

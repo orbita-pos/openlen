@@ -16,11 +16,21 @@
 // y POLAR_PRODUCT_MAX_ID); la portada, los Términos, el reembolso y la
 // documentación lo leen de aquí. Cambiar un precio es cambiar Polar Y este
 // fichero: si sólo cambia uno, se vende una cifra y se cobra otra.
+//
+// 09/10: más créditos por el mismo precio (Pro 200 → 300, Max 500 → 800) y un
+// cuarto plan, Ultra $99.99 con 5.000 (Jesús: «dar más crédito y vender a
+// mayoría»). Un turno de Len cuesta ~3-4 créditos (medido en producción el
+// 09/10, con sólo 12 turnos): Pro son ~75-100 turnos al mes. El crédito sale
+// más barato en cada plan (3,3¢ → 2,5¢ → 2¢), y aun quemado entero ninguno
+// pierde dinero: la cuenta, con la comisión de Polar, en lib/credits.ts.
 export const PRO_PRICE = 9.99;
-export const PRO_CREDITS = 200;
+export const PRO_CREDITS = 300;
 
 export const MAX_PRICE = 19.99;
-export const MAX_CREDITS = 500;
+export const MAX_CREDITS = 800;
+
+export const ULTRA_PRICE = 99.99;
+export const ULTRA_CREDITS = 5000;
 
 /** El precio anterior, para tacharlo.
  *
@@ -40,3 +50,7 @@ export const PRO_SAVE_PERCENT =
  *  escribir el número a mano. */
 export const centsPerCredit = (price: number, credits: number) =>
   Math.round((price / credits) * 1000) / 10;
+
+/** Cuántas veces los créditos de Pro, con un decimal: 800/300 es «2,7», no
+ *  «2,667». */
+export const timesPro = (credits: number) => Math.round((credits / PRO_CREDITS) * 10) / 10;
