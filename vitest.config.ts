@@ -566,6 +566,10 @@ export default defineConfig({
       "lib/publish/chat-widget.test.ts",
       "lib/chat/**/*.test.ts",
       "lib/community/**/*.test.ts",
+      // El perfil de cada persona (docs/superpowers/specs/2026-10-10-profile-design.md).
+      "lib/profile/**/*.test.ts",
+      "components/profile/**/*.test.tsx",
+      "app/api/me/**/*.test.ts",
       "lib/marketing/**/*.test.ts",
       // Inbox badge (Results loop P2) — prevents silent skip on new test files
       "lib/inbox/**/*.test.ts",
