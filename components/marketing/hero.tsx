@@ -60,13 +60,13 @@ export async function Hero() {
         <div className="flex flex-col items-center text-center">
           <Link
             href="/register"
-            className="group inline-flex items-center gap-2 rounded-full border border-zinc-900/10 bg-white/60 py-1 pl-3.5 pr-1 text-[13px] text-zinc-700 backdrop-blur-md transition-colors hover:bg-white/90 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-300 dark:hover:bg-white/[0.1]"
+            className="group inline-flex items-center gap-2 rounded-full bg-coral-700 py-1 pl-3.5 pr-1 text-[13px] text-white/90 transition-colors hover:bg-coral-800"
           >
             {t.rich("hero.announce", {
-              strong: (chunks) => <span className="font-semibold text-zinc-900 dark:text-white">{chunks}</span>,
-              dot: () => <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>·</span>,
+              strong: (chunks) => <span className="font-semibold text-white">{chunks}</span>,
+              dot: () => <span className="text-white/60" aria-hidden>·</span>,
             })}
-            <span className="inline-flex size-6 items-center justify-center rounded-full bg-zinc-900/[0.06] text-zinc-700 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 dark:bg-white/10 dark:text-zinc-200" aria-hidden>
+            <span className="inline-flex size-6 items-center justify-center rounded-full bg-white/20 text-white transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden>
               <ArrowUpRight size={13} />
             </span>
           </Link>
