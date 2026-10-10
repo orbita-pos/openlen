@@ -12,6 +12,7 @@
 // invariant.
 
 import { todayLine } from "@/lib/ai/today-line";
+import { LOCALE_ENGLISH_NAMES } from "@/lib/publish/publish-locales";
 import type { Message } from "@/lib/ai-gateway";
 import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
@@ -255,6 +256,8 @@ export function buildAgentContext(args: {
   now?: Date;
   /** La zona del usuario (IANA): el HOY es SU día, no el de UTC. */
   zona?: string;
+  /** El idioma de la interfaz del usuario (`es`, `pt`…), el que manda el panel. */
+  idioma?: string;
   state: Record<string, unknown>;
   /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
    *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
@@ -327,6 +330,17 @@ export function buildAgentContext(args: {
   // porque lo que él escribe son plazos que nacen vencidos.
   const hoy = `${todayLine(args.now, args.zona).trimEnd()} Also: any date you write (countdowns, events, deadlines) has to be AFTER today, unless the user explicitly asks for a past one.\n\n`;
 
+  // EL IDIOMA, POR SU NOMBRE (ensayo de caja del 09/10). Con «el idioma de su
+  // petición» sólo en el prompt, en un turno largo —el manual, el estado y las
+  // salidas de los comandos delante, todo en inglés— Len narró sus pasos en
+  // inglés a un dueño que escribía en español; sólo el cierre salió bien. Como
+  // el `language` de Claude Code: el idioma nombrado, para todo lo que lee el
+  // usuario; el código, como está. Y su mensaje sigue mandando si escribe en otro.
+  const nombreDelIdioma = args.idioma ? LOCALE_ENGLISH_NAMES[args.idioma] : undefined;
+  const idiomaBlock = nombreDelIdioma
+    ? `LANGUAGE: the user's interface is in ${nombreDelIdioma}. Everything they read goes in the language of their message —${nombreDelIdioma} unless they write in another—: the notes between your steps as much as your final answer. Code, file names and identifiers stay as they are.\n\n`
+    : "";
+
   // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
   // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
   // VIEJO que aún tenía en su ventana, presentándolo como el primero — con
@@ -362,7 +376,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${briefBlock}${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -396,6 +410,8 @@ export interface BuildAgentMessagesArgs {
   /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
    *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
   zona?: string;
+  /** El idioma de la interfaz (ver buildAgentContext.idioma). */
+  idioma?: string;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
   /** Ver buildAgentContext.userMemory. */
@@ -471,6 +487,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const contextBlock = buildAgentContext({
     equipo: args.equipo,
     zona: args.zona,
+    idioma: args.idioma,
     state: args.state,
     userBrief: args.userBrief,
     turnoAnteriorMudo: args.turnoAnteriorMudo,

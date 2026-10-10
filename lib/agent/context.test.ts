@@ -206,6 +206,26 @@ describe("buildAgentContext", () => {
     const r = buildAgentMessages({ state: {}, userBrief: null, history: [], prompt: "hola", maxPromptTokens: 60_000, zona });
     expect(JSON.stringify(r)).toContain(`TODAY IS ${fechaLocal(new Date(), zona)}`);
   });
+
+  // ENSAYO DE CAJA DEL 09/10: en el primer turno de una app (largo, con el
+  // manual, el estado y las salidas de los comandos en inglés delante) Len narró
+  // sus nueve pasos en inglés a un dueño que escribía en español; sólo el cierre
+  // salió en español. Como el `language` de Claude Code: el idioma, por su nombre.
+  it("🔴 el idioma de la interfaz va nombrado, para las notas entre pasos y para el cierre", () => {
+    const c = buildAgentContext({ state: {}, userBrief: null, idioma: "es" });
+    expect(c).toContain("LANGUAGE: the user's interface is in Spanish.");
+    expect(c).toMatch(/Spanish unless they write in another/);
+    expect(c).toMatch(/notes between your steps/);
+  });
+  it("sin idioma (un turno que no sale del panel), el contexto es el de siempre; y uno que no conocemos no se nombra", () => {
+    const sin = buildAgentContext({ state: {}, userBrief: null, now: new Date("2026-10-01T12:00:00Z") });
+    expect(sin).not.toContain("LANGUAGE:");
+    expect(buildAgentContext({ state: {}, userBrief: null, now: new Date("2026-10-01T12:00:00Z"), idioma: "xx" })).toBe(sin);
+  });
+  it("buildAgentMessages hace llegar el idioma hasta el contexto", () => {
+    const r = buildAgentMessages({ state: {}, userBrief: null, history: [], prompt: "hola", maxPromptTokens: 60_000, idioma: "pt" });
+    expect(JSON.stringify(r)).toContain("the user's interface is in Portuguese");
+  });
 });
 
 describe("lo que ya se sabe roto", () => {

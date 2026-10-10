@@ -832,6 +832,9 @@ async function correrTurno(
     mode,
     app: appDelTurno,
     zona: zonaDelTurno,
+    // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
+    // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
+    ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
     state,
     userBrief: project.userBrief,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
