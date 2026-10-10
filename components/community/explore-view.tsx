@@ -266,6 +266,7 @@ function ExploreItemCard({ item }: { item: ExploreItem }) {
           <img
             src={item.avatarUrl}
             alt=""
+            referrerPolicy="no-referrer"
             className="mt-0.5 h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-[color:var(--border)]"
           />
         ) : (
