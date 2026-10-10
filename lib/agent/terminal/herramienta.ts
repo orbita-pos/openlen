@@ -100,7 +100,11 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
   // Lo que no se pudo calcular, con su porqué: `just-bash` sólo diría «No such file».
   const noCalculados = (r.fallidos ?? []).map((f) => `${f.ruta}: could not be computed — ${f.error}\n`).join("");
+  // Un guardado rechazado es fallo siempre; el código del comando, según quién
+  // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
+  const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const salida = salidaDeLaTerminal({
+    fallo: !ok,
     stdout: r.stdout,
     stderr: r.stderr + noCalculados,
     exitCode: r.exitCode,
@@ -119,9 +123,6 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);
-  // Un guardado rechazado es fallo siempre; el código del comando, según quién
-  // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
-  const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const cambio = escrituras.length === 0 ? undefined : escrituras.some((o) => o.response.cambio === "cambio") ? "cambio" : "sin_cambio";
   // UNA APP (F3): lo que no compila, UNA vez con el comando entero ya guardado
   // —un `sed -i` sobre dos ficheros pasa por un instante roto entre uno y otro—.
@@ -141,6 +142,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       ok,
       ...(ok ? {} : { error: `exit code ${salida.exitCode}` }),
       [CLAVE_TOOL_RESULT]: texto,
+      // El código, para la lente al releer la transcripción: el modelo sólo lo
+      // lee en el texto, y sólo si es un fallo (como en Claude Code).
+      exitCode: salida.exitCode,
       // Sin escrituras, el comando sólo leyó: lo dice, como Read, para que un
       // `cat` no cuente como «Len actuó» y deje pasar un «listo» sin cambio
       // (la guarda de `actuo` en loop.ts). A la tarjeta no va: no es un aviso.

@@ -33,7 +33,7 @@ export const SUSTITUIDAS_POR_LA_TERMINAL: readonly string[] = ["Grep", "Glob"];
 // F4: la forma de la terminal del modo mínimo de DeepSeek —tres frases— más la
 // lista de ficheros, que es lo de OpenLen (F5). Regla por regla en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (B1–B18).
-const DESCRIPCION = `Runs a command in a persistent bash shell whose files are this website's files; the working directory and variables persist between calls, shell functions do not. It interprets commands without running real programs: no network, no node, npm, pip or git, but grep, sed, awk, jq, find, diff, the usual text tools and python3 with only its standard library. Every file a command changes is saved like a Write, through the same checks and as a version the user can undo; output over ${MAX_SALIDA.toLocaleString("en-US")} characters is saved to a file in /tmp/tool-results and you get its path and a preview, and the last line gives the exit code.
+const DESCRIPCION = `Runs a command in a persistent bash shell whose files are this website's files; the working directory and variables persist between calls, shell functions do not. It interprets commands without running real programs: no network, no node, npm, pip or git, but grep, sed, awk, jq, find, diff, the usual text tools and python3 with only its standard library. Every file a command changes is saved like a Write, through the same checks and as a version the user can undo; output over ${MAX_SALIDA.toLocaleString("en-US")} characters is saved to a file in /tmp/tool-results and you get its path and a preview; a command that fails starts with its exit code.
 - \`timeout\` is in milliseconds: default 120000, max 600000.
 
 Files:

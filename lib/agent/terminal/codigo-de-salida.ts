@@ -15,9 +15,9 @@
  * leer (comillas sin cerrar, un `case`) también es fallo: equivocarse hacia el
  * rojo sólo pinta una tarjeta de más; hacia el verde taparía un fallo de verdad.
  *
- * Decide el color de la tarjeta y el contador de fallos repetidos del bucle.
- * Lo que lee el modelo no cambia: la línea de DeepSeek
- * `[Command finished with exit code N]` va siempre. Puro, sin imports.
+ * Decide el color de la tarjeta, el contador de fallos repetidos del bucle y,
+ * como en Claude Code, lo que lee el modelo: sólo un fallo lleva «Exit code N»
+ * en su primera línea (`salidaDeLaTerminal`). Puro, sin imports.
  */
 
 const RESPONDEN_CON_1 = new Set(["grep", "egrep", "fgrep", "rg", "find", "diff", "test", "["]);
