@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, one {# archivo que se calcula al abrirlo sólo se busca por nombre.} other {# archivos que se calculan al abrirlos sólo se buscan por nombre.}}",
       "marcaNuevo": "Nuevo en esta sesión",
       "marcaCambiado": "Cambió en esta sesión",
-      "titleApp": "El código de tu app"
+      "titleApp": "El código de tu app",
+      "envVars": "Variables de entorno"
     },
     "terminal": {
       "title": "La terminal de Len",

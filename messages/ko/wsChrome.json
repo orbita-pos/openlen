@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, other {열 때 계산되는 파일 #개는 이름으로만 검색합니다.}}",
       "marcaNuevo": "이번 세션에서 새로 생김",
       "marcaCambiado": "이번 세션에서 변경됨",
-      "titleApp": "앱의 코드"
+      "titleApp": "앱의 코드",
+      "envVars": "환경 변수"
     },
     "terminal": {
       "title": "Len의 터미널",

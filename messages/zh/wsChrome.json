@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, other {# 个打开时才计算的文件只按名称搜索。}}",
       "marcaNuevo": "本次会话新建",
       "marcaCambiado": "本次会话已更改",
-      "titleApp": "你的应用的代码"
+      "titleApp": "你的应用的代码",
+      "envVars": "环境变量"
     },
     "terminal": {
       "title": "Len 的终端",

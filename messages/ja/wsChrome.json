@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, other {開いたときに計算される # 個のファイルは名前でのみ検索します。}}",
       "marcaNuevo": "このセッションで新規",
       "marcaCambiado": "このセッションで変更",
-      "titleApp": "アプリのコード"
+      "titleApp": "アプリのコード",
+      "envVars": "環境変数"
     },
     "terminal": {
       "title": "Len のターミナル",

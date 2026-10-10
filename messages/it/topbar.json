@@ -188,5 +188,62 @@
       "falloSinMotivo": "Non sono riuscito a farlo. Rispondi a questa e-mail per chiedermelo di nuovo.",
       "interrumpido": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere rimasto a metà. Controlla le modifiche e, se serve, rispondi a questa e-mail per chiedermelo di nuovo."
     }
+  },
+  "envVars": {
+    "menu": "Variabili d’ambiente",
+    "title": "Variabili d’ambiente",
+    "subtitle": "Quello che la tua app legge con import.meta.env. Tutto ciò che è qui è pubblico: finisce nel JavaScript che chiunque apra la tua app può leggere.",
+    "loading": "Caricamento…",
+    "close": "Chiudi",
+    "empty": "Ancora nessuna variabile. Metti qui le tue chiavi pubbliche — la chiave pubblicabile di Stripe, una di Google Maps o Mapbox — e la tua app le legge come import.meta.env.VITE_…",
+    "yours": "Le tue variabili",
+    "add": "Aggiungi variabile",
+    "addAnother": "Aggiungine un’altra",
+    "pasteHint": "Suggerimento: incolla il contenuto di un file .env in Nome per aggiungerne diverse in una volta.",
+    "name": "Nome",
+    "value": "Valore",
+    "removeLine": "Rimuovi questa riga",
+    "draft": "Bozza",
+    "production": "Produzione",
+    "draftHint": "La tela, Len e il terminale",
+    "productionHint": "La tua app pubblicata",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "edit": "Modifica {name}",
+    "delete": "Elimina {name}",
+    "confirmDelete": "Eliminare {name}?",
+    "show": "Mostra il valore",
+    "hide": "Nascondi il valore",
+    "didYouMean": "Intendevi {name}?",
+    "useIt": "Usa questo",
+    "fromCode": "Dal codice (/.env)",
+    "fromCodeHint": "Anche Len può scriverle. Le tue hanno la precedenza.",
+    "open": "Apri",
+    "overridden": "Sostituita dalla tua in {targets}",
+    "fromOpenLen": "Da OpenLen",
+    "fromOpenLenHint": "Il backend della tua app. Lo imposta OpenLen; non si può cambiare.",
+    "readOnly": "Puoi vederle; le modificano il proprietario e gli editor.",
+    "secret": {
+      "byValue": "Sembra una chiave segreta di {provider}.",
+      "privateKey": "Sembra una chiave privata.",
+      "byName": "Il nome dice che è un segreto.",
+      "explanation": "Chiunque apra la tua app può leggere quello che metti qui. Una chiave segreta ha bisogno di un server, e qui non esiste ancora.",
+      "understood": "Capisco che sarà pubblico"
+    },
+    "publish": {
+      "notice": "La tua app pubblicata usa ancora i valori precedenti. Pubblica di nuovo perché usi questi.",
+      "button": "Pubblica"
+    },
+    "errors": {
+      "name": "I nomi iniziano con VITE_ e contengono solo lettere, numeri e _.",
+      "nameTooLong": "I nomi hanno al massimo 100 caratteri.",
+      "reserved": "{name} la imposta OpenLen.",
+      "duplicate": "{name} ha già un valore in {target}.",
+      "tooLong": "I valori hanno al massimo 4 KB.",
+      "tooMany": "Al massimo {max} variabili per progetto.",
+      "noTarget": "Scegli Bozza, Produzione o entrambe.",
+      "conflict": "Qualcuno ha cambiato le variabili nel frattempo. Questa è la lista attuale; quello che stavi scrivendo è ancora qui.",
+      "generic": "Non è andata. Riprova."
+    }
   }
 }

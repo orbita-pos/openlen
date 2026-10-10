@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, one {# Datei, die beim Öffnen berechnet wird, wird nur nach Namen durchsucht.} other {# Dateien, die beim Öffnen berechnet werden, werden nur nach Namen durchsucht.}}",
       "marcaNuevo": "Neu in dieser Sitzung",
       "marcaCambiado": "In dieser Sitzung geändert",
-      "titleApp": "Der Code deiner App"
+      "titleApp": "Der Code deiner App",
+      "envVars": "Umgebungsvariablen"
     },
     "terminal": {
       "title": "Lens Terminal",

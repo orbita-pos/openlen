@@ -188,5 +188,62 @@
       "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again.",
       "interrumpido": "The server restarted while I was working on it, so it may be half done. Check the changes and, if needed, reply to this email to ask me again."
     }
+  },
+  "envVars": {
+    "menu": "Environment variables",
+    "title": "Environment variables",
+    "subtitle": "What your app reads with import.meta.env. Everything here is public: it ends up in the JavaScript anyone who opens your app can read.",
+    "loading": "Loading…",
+    "close": "Close",
+    "empty": "No variables yet. Put your public keys here — Stripe’s publishable key, a Google Maps or Mapbox key — and your app reads them as import.meta.env.VITE_…",
+    "yours": "Your variables",
+    "add": "Add variable",
+    "addAnother": "Add another",
+    "pasteHint": "Tip: paste the contents of a .env file into Name to add several at once.",
+    "name": "Name",
+    "value": "Value",
+    "removeLine": "Remove this line",
+    "draft": "Draft",
+    "production": "Production",
+    "draftHint": "The canvas, Len and the terminal",
+    "productionHint": "Your published app",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit {name}",
+    "delete": "Delete {name}",
+    "confirmDelete": "Delete {name}?",
+    "show": "Show value",
+    "hide": "Hide value",
+    "didYouMean": "Did you mean {name}?",
+    "useIt": "Use it",
+    "fromCode": "From the code (/.env)",
+    "fromCodeHint": "Len can write these too. Yours win over them.",
+    "open": "Open",
+    "overridden": "Replaced by yours in {targets}",
+    "fromOpenLen": "From OpenLen",
+    "fromOpenLenHint": "Your app’s backend. Set by OpenLen; it can’t be changed.",
+    "readOnly": "You can see them; the owner and editors change them.",
+    "secret": {
+      "byValue": "This looks like a secret key from {provider}.",
+      "privateKey": "This looks like a private key.",
+      "byName": "The name says this is a secret.",
+      "explanation": "Anyone who opens your app can read what you put here. A secret key needs a server, and that doesn’t exist here yet.",
+      "understood": "I understand it will be public"
+    },
+    "publish": {
+      "notice": "Your published app still uses the previous values. Publish again for it to use these.",
+      "button": "Publish"
+    },
+    "errors": {
+      "name": "Names start with VITE_ and use only letters, digits and _.",
+      "nameTooLong": "Names have at most 100 characters.",
+      "reserved": "{name} is set by OpenLen.",
+      "duplicate": "{name} already has a value in {target}.",
+      "tooLong": "Values have at most 4 KB.",
+      "tooMany": "At most {max} variables per project.",
+      "noTarget": "Choose Draft, Production or both.",
+      "conflict": "Someone changed the variables meanwhile. This is the current list; what you were writing is still here.",
+      "generic": "That didn’t work. Try again."
+    }
   }
 }

@@ -188,5 +188,62 @@
       "falloSinMotivo": "Je n'ai pas pu le faire. Répondez à cet e-mail pour me le redemander.",
       "interrumpido": "Le serveur a redémarré pendant que je le faisais, ce n'est peut-être fait qu'à moitié. Regardez les changements et, si besoin, répondez à cet e-mail pour me le redemander."
     }
+  },
+  "envVars": {
+    "menu": "Variables d’environnement",
+    "title": "Variables d’environnement",
+    "subtitle": "Ce que votre app lit avec import.meta.env. Tout ce qui est ici est public : cela finit dans le JavaScript que peut lire quiconque ouvre votre app.",
+    "loading": "Chargement…",
+    "close": "Fermer",
+    "empty": "Aucune variable pour l’instant. Mettez ici vos clés publiques — la clé publiable de Stripe, une clé Google Maps ou Mapbox — et votre app les lit comme import.meta.env.VITE_…",
+    "yours": "Vos variables",
+    "add": "Ajouter une variable",
+    "addAnother": "En ajouter une autre",
+    "pasteHint": "Astuce : collez le contenu d’un fichier .env dans Nom pour en ajouter plusieurs d’un coup.",
+    "name": "Nom",
+    "value": "Valeur",
+    "removeLine": "Retirer cette ligne",
+    "draft": "Brouillon",
+    "production": "Production",
+    "draftHint": "Le canevas, Len et le terminal",
+    "productionHint": "Votre app publiée",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier {name}",
+    "delete": "Supprimer {name}",
+    "confirmDelete": "Supprimer {name} ?",
+    "show": "Afficher la valeur",
+    "hide": "Masquer la valeur",
+    "didYouMean": "Vouliez-vous dire {name} ?",
+    "useIt": "Utiliser celui-ci",
+    "fromCode": "Du code (/.env)",
+    "fromCodeHint": "Len peut aussi les écrire. Les vôtres ont la priorité.",
+    "open": "Ouvrir",
+    "overridden": "Remplacée par la vôtre en {targets}",
+    "fromOpenLen": "D’OpenLen",
+    "fromOpenLenHint": "Le backend de votre app. Défini par OpenLen ; il ne peut pas être modifié.",
+    "readOnly": "Vous pouvez les voir ; le propriétaire et les éditeurs les modifient.",
+    "secret": {
+      "byValue": "Cela ressemble à une clé secrète {provider}.",
+      "privateKey": "Cela ressemble à une clé privée.",
+      "byName": "Le nom indique qu’il s’agit d’un secret.",
+      "explanation": "Quiconque ouvre votre app peut lire ce que vous mettez ici. Une clé secrète a besoin d’un serveur, et cela n’existe pas encore ici.",
+      "understood": "Je comprends que ce sera public"
+    },
+    "publish": {
+      "notice": "Votre app publiée utilise encore les anciennes valeurs. Publiez à nouveau pour qu’elle utilise celles-ci.",
+      "button": "Publier"
+    },
+    "errors": {
+      "name": "Les noms commencent par VITE_ et ne contiennent que des lettres, des chiffres et _.",
+      "nameTooLong": "Les noms font au plus 100 caractères.",
+      "reserved": "{name} est défini par OpenLen.",
+      "duplicate": "{name} a déjà une valeur en {target}.",
+      "tooLong": "Les valeurs font au plus 4 KB.",
+      "tooMany": "Au plus {max} variables par projet.",
+      "noTarget": "Choisissez Brouillon, Production ou les deux.",
+      "conflict": "Quelqu’un a modifié les variables entre-temps. Voici la liste actuelle ; ce que vous écriviez est toujours là.",
+      "generic": "Ça n’a pas fonctionné. Réessayez."
+    }
   }
 }

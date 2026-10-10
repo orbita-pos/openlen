@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, one {# file computed when opened is only searched by name.} other {# files computed when opened are only searched by name.}}",
       "marcaNuevo": "New in this session",
       "marcaCambiado": "Changed in this session",
-      "titleApp": "Your app's code"
+      "titleApp": "Your app's code",
+      "envVars": "Environment variables"
     },
     "terminal": {
       "title": "Len's terminal",

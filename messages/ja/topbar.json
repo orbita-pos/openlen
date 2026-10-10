@@ -188,5 +188,62 @@
       "falloSinMotivo": "完了できませんでした。もう一度頼むには、このメールに返信してください。",
       "interrumpido": "作業中にサーバーが再起動したため、途中までしか終わっていない可能性があります。変更を確認し、必要ならこのメールに返信してもう一度頼んでください。"
     }
+  },
+  "envVars": {
+    "menu": "環境変数",
+    "title": "環境変数",
+    "subtitle": "アプリが import.meta.env で読み込む値です。ここにあるものはすべて公開されます。アプリを開いた誰もが読める JavaScript に含まれます。",
+    "loading": "読み込み中…",
+    "close": "閉じる",
+    "empty": "まだ変数はありません。公開用のキー（Stripe の公開可能キー、Google Maps や Mapbox のキーなど）をここに入れると、アプリは import.meta.env.VITE_… として読み込みます。",
+    "yours": "あなたの変数",
+    "add": "変数を追加",
+    "addAnother": "もう1つ追加",
+    "pasteHint": "ヒント：.env ファイルの内容を「名前」に貼り付けると、まとめて追加できます。",
+    "name": "名前",
+    "value": "値",
+    "removeLine": "この行を削除",
+    "draft": "下書き",
+    "production": "本番",
+    "draftHint": "キャンバス、Len、ターミナル",
+    "productionHint": "公開中のアプリ",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "edit": "{name} を編集",
+    "delete": "{name} を削除",
+    "confirmDelete": "{name} を削除しますか？",
+    "show": "値を表示",
+    "hide": "値を隠す",
+    "didYouMean": "{name} のことですか？",
+    "useIt": "これを使う",
+    "fromCode": "コードから（/.env）",
+    "fromCodeHint": "Len も書き込めます。あなたの設定が優先されます。",
+    "open": "開く",
+    "overridden": "{targets} ではあなたの値で置き換え",
+    "fromOpenLen": "OpenLen から",
+    "fromOpenLenHint": "アプリのバックエンドです。OpenLen が設定するため、変更できません。",
+    "readOnly": "閲覧できます。変更できるのはオーナーと編集者です。",
+    "secret": {
+      "byValue": "{provider} のシークレットキーのようです。",
+      "privateKey": "秘密鍵のようです。",
+      "byName": "名前からするとシークレットです。",
+      "explanation": "ここに入れたものは、アプリを開いた誰もが読めます。シークレットキーにはサーバーが必要ですが、ここにはまだありません。",
+      "understood": "公開されることを理解しました"
+    },
+    "publish": {
+      "notice": "公開中のアプリはまだ以前の値を使っています。これらを使うには、もう一度公開してください。",
+      "button": "公開"
+    },
+    "errors": {
+      "name": "名前は VITE_ で始まり、英字・数字・_ のみ使えます。",
+      "nameTooLong": "名前は100文字までです。",
+      "reserved": "{name} は OpenLen が設定します。",
+      "duplicate": "{name} には {target} の値がすでにあります。",
+      "tooLong": "値は4 KBまでです。",
+      "tooMany": "1プロジェクトあたり最大 {max} 個までです。",
+      "noTarget": "下書き、本番、または両方を選んでください。",
+      "conflict": "その間に誰かが変数を変更しました。これが現在のリストです。入力中の内容はそのまま残っています。",
+      "generic": "うまくいきませんでした。もう一度お試しください。"
+    }
   }
 }

@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, one {# fichier calculé à l'ouverture n'est cherché que par son nom.} other {# fichiers calculés à l'ouverture ne sont cherchés que par leur nom.}}",
       "marcaNuevo": "Nouveau dans cette session",
       "marcaCambiado": "Modifié dans cette session",
-      "titleApp": "Le code de votre app"
+      "titleApp": "Le code de votre app",
+      "envVars": "Variables d’environnement"
     },
     "terminal": {
       "title": "Le terminal de Len",

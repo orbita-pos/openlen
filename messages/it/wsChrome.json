@@ -147,7 +147,8 @@
       "sinContenido": "{count, plural, one {# file calcolato all'apertura si cerca solo per nome.} other {# file calcolati all'apertura si cercano solo per nome.}}",
       "marcaNuevo": "Nuovo in questa sessione",
       "marcaCambiado": "Modificato in questa sessione",
-      "titleApp": "Il codice della tua app"
+      "titleApp": "Il codice della tua app",
+      "envVars": "Variabili d’ambiente"
     },
     "terminal": {
       "title": "Il terminale di Len",
