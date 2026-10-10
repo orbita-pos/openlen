@@ -45,7 +45,7 @@ export async function realtimeProjectForHost(host: string, bases?: readonly stri
     jwtSecret: decryptToken(rec.jwtSecretEncrypted),
   };
   if (!rec.provisionedAt) return project;
-  await ensureRealtimeProvisioned(ref).catch((err: unknown) => {
+  await ensureRealtimeProvisioned({ scope: ref, ref }).catch((err: unknown) => {
     console.error("[realtime] no se pudo montar el esquema realtime", ref, err);
   });
   return { ...project, db: projectDatabase(`ol_${ref}`) };

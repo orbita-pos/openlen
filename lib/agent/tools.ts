@@ -489,15 +489,15 @@ export function realDeps(
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
       if (!backendConfigured()) return null;
-      const { backendProjectFor, getBackendByProject, projectUrl } = await import("@/lib/backend/registry");
+      const { backendProjectFor, ensureEnvironmentReady, getBackendByProject, projectUrl } = await import("@/lib/backend/registry");
       const rec = await getBackendByProject(projectId);
       if (!rec) return null;
       const { signInForVisit, supabaseStorageKey } = await import("@/lib/backend/auth/visit-session");
       const storageKey = supabaseStorageKey(projectUrl(rec.ref));
-      // Sin la base creada todavía no hay nadie: se crea con la primera
-      // petición o la primera migración, no por entrar.
-      if (!rec.provisionedAt) return { storageKey, result: { ok: false, reason: "no_users" } };
-      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }), who) };
+      // La visita de Len usa el BORRADOR (su Chromium mide en loopback, y eso
+      // va al borrador; spec local 2026-10-09).
+      const draft = await ensureEnvironmentReady(rec, "draft");
+      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }, draft), who) };
     },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);

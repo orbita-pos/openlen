@@ -129,15 +129,15 @@ beforeAll(async () => {
     alter database postgres owner to ${ADMIN};
   `);
   process.env.PAGES_AUTHENTICATOR_PASSWORD = "clave-de-prueba";
-  await provisionDatabase({ ref: REF, dbPassword: "clave-del-desarrollador" });
+  await provisionDatabase({ scope: REF, ref: REF, dbPassword: "clave-del-desarrollador" });
   // Lo que `provisionDatabase` le concedió al desarrollador en la suya.
   await as(ADMIN);
   await db.pg.exec(`grant connect, create on database postgres to ${DEV}`);
   // Dos veces, como dos procesos: la segunda no rompe.
   forgetStorageProvisioned();
-  await ensureStorageProvisioned(REF);
+  await ensureStorageProvisioned({ scope: REF, ref: REF });
   forgetStorageProvisioned();
-  await ensureStorageProvisioned(REF);
+  await ensureStorageProvisioned({ scope: REF, ref: REF });
   // La migración de Len, con el rol del desarrollador.
   await as(DEV);
   await db.pg.exec(MIGRACION);

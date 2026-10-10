@@ -20,7 +20,7 @@ import { defaultAuthConfig, type AuthMail } from "./auth/config";
 import { ONLY_USER, signInForVisit, supabaseStorageKey } from "./auth/visit-session";
 import { hashSecretKey, newDatabasePassword, newJwtSecret, newProjectRef, newPublishableKey, newSecretKey } from "./keys";
 import { projectDatabase, withAdmin, withDeveloper } from "./pg";
-import { devRoleOf, dropProjectDatabase, provisionDatabase } from "./provision";
+import { devRoleOf, dropDeveloperRole, dropProjectDatabase, provisionDatabase } from "./provision";
 import { handleBackendRequest, type BackendProject } from "./router";
 
 const E2E_URL = process.env.PAGES_E2E_DATABASE_URL;
@@ -48,7 +48,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
   beforeAll(async () => {
     process.env.PAGES_DATABASE_URL = E2E_URL;
     process.env.PAGES_AUTHENTICATOR_PASSWORD = randomBytes(18).toString("base64url");
-    await provisionDatabase({ ref, dbPassword });
+    await provisionDatabase({ scope: ref, ref, dbPassword });
     project = {
       ref,
       publishableKey: newPublishableKey(),
@@ -67,6 +67,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
   afterAll(async () => {
     if (!E2E_URL) return;
     await dropProjectDatabase(ref);
+    await dropDeveloperRole(ref);
   }, 60_000);
 
   const client = (key: string, stored = new Map<string, string>()): SupabaseClient =>
@@ -85,7 +86,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     });
 
   it("dar de alta la base dos veces no rompe nada, y deja el esquema de GoTrue", async () => {
-    await provisionDatabase({ ref, dbPassword });
+    await provisionDatabase({ scope: ref, ref, dbPassword });
     const ok = await withAdmin(dev, (r) => r.query(`select to_regclass('auth.users') is not null as ok`));
     expect(ok.rows[0]?.ok).toBe(true);
   }, 60_000);
@@ -153,7 +154,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
   it("🔴 borrar la base de un proyecto se lleva la base y su rol, sin dejar conexiones rotas", async () => {
     const otro = newProjectRef();
     const otroDev = devRoleOf(otro);
-    await provisionDatabase({ ref: otro, dbPassword: newDatabasePassword() });
+    await provisionDatabase({ scope: otro, ref: otro, dbPassword: newDatabasePassword() });
     await projectDatabase(otroDev).transaction((q) => q("select 1"));
     await withAdmin(otroDev, (r) => r.query("select 1"));
 
@@ -161,6 +162,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     const spy = vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errores.push(a));
     try {
       await dropProjectDatabase(otro);
+      await dropDeveloperRole(otro);
       await new Promise((r) => setTimeout(r, 300));
     } finally {
       spy.mockRestore();
@@ -177,6 +179,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     expect(errores).toEqual([]);
     // Otra vez: ya no hay nada que borrar, y no falla.
     await dropProjectDatabase(otro);
+    await dropDeveloperRole(otro);
   }, 60_000);
 
   /* ── carril D: storage (lib/backend/storage) ── Los roles sin superusuario
@@ -186,9 +189,9 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
   it("🔴 Storage: el esquema se monta con este admin, el desarrollador crea su bucket y su política, y no puede hacerse supabase_storage_admin", async () => {
     const { ensureStorageProvisioned, forgetStorageProvisioned } = await import("./storage/provision");
     forgetStorageProvisioned();
-    await ensureStorageProvisioned(ref);
+    await ensureStorageProvisioned({ scope: ref, ref });
     forgetStorageProvisioned();
-    await ensureStorageProvisioned(ref); // otra vez, en otro «proceso»: no rompe
+    await ensureStorageProvisioned({ scope: ref, ref }); // otra vez, en otro «proceso»: no rompe
     const n = await withAdmin(dev, (r) => r.query(`select count(*)::int as n from storage.migrations`));
     expect(n.rows[0]?.n).toBe(73);
 
@@ -236,7 +239,7 @@ describe.skipIf(!E2E_URL)("el backend de las páginas contra un Postgres de verd
     const { createSubscriptions, deleteSubscriptions, parseSubscriptionParams } = await import("./realtime/subscriptions");
     const { changeSource } = await import("./realtime/poller");
     forgetRealtimeProvisioned();
-    await ensureRealtimeProvisioned(ref);
+    await ensureRealtimeProvisioned({ scope: ref, ref });
     const m = await withAdmin(dev, (r) => r.query(`select count(*)::int as n from realtime.schema_migrations`));
     expect(m.rows[0]?.n).toBe(88);
 

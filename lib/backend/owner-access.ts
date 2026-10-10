@@ -8,7 +8,8 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { backendConfigured } from "./pg";
-import { backendProjectFor, getBackendByProject, projectUrl } from "./registry";
+import { getEnvironment, type Environment } from "./environments";
+import { adoptLegacyEnvironment, backendProjectFor, getBackendByProject, hasLiveEnvironment, projectUrl } from "./registry";
 import type { BackendProject } from "./router";
 
 export type OwnedBackend =
@@ -19,10 +20,12 @@ export type OwnedBackend =
   /** El proyecto todavía no tiene backend: se crea cuando Len lo usa. */
   | { readonly kind: "none" }
   /** Tiene registro pero aún no su base: nadie le ha pedido nada. */
-  | { readonly kind: "empty"; readonly url: string }
-  | { readonly kind: "ready"; readonly url: string; readonly project: BackendProject };
+  | { readonly kind: "empty"; readonly url: string; readonly environment: Environment }
+  | { readonly kind: "ready"; readonly url: string; readonly environment: Environment; readonly project: BackendProject };
 
-export async function ownedBackend(projectId: string): Promise<OwnedBackend> {
+/** El backend del proyecto en un entorno (spec local 2026-10-09). Sin pedir
+ *  ninguno: producción si ya existe, si no el borrador. */
+export async function ownedBackend(projectId: string, wanted?: Environment): Promise<OwnedBackend> {
   const session = await auth();
   if (!session?.user?.id) return { kind: "unauthorized" };
   const [owned] = await db
@@ -35,8 +38,11 @@ export async function ownedBackend(projectId: string): Promise<OwnedBackend> {
   const record = await getBackendByProject(projectId);
   if (!record) return { kind: "none" };
   const url = projectUrl(record.ref);
-  if (!record.provisionedAt) return { kind: "empty", url };
-  return { kind: "ready", url, project: backendProjectFor({ record, pageSub: owned.subdomain ?? null }) };
+  await adoptLegacyEnvironment(record);
+  const environment = wanted ?? ((await hasLiveEnvironment(record)) ? "live" : "draft");
+  const e = await getEnvironment(projectId, environment);
+  if (!e?.provisionedAt) return { kind: "empty", url, environment };
+  return { kind: "ready", url, environment, project: backendProjectFor({ record, pageSub: owned.subdomain ?? null }, e) };
 }
 
 export function json(body: unknown, status = 200): Response {

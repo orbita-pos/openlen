@@ -31,6 +31,11 @@ export function blobKey(ref: string, bucketId: string, name: string, version: st
   return `${ref}/${bucketId}/${name}/${version}`;
 }
 
+/** Bajo qué prefijo guarda Storage los ficheros de este entorno. */
+export function storageScopeOf(p: { readonly ref: string; readonly scope?: string }): string {
+  return p.scope ?? p.ref;
+}
+
 /** Lee un cuerpo entero sin pasar de `maxBytes`. Si se pasa, corta la lectura
  *  (no sigue bajando lo que quede) y lanza `EntityTooLarge`. */
 export async function readLimited(body: ReadableStream<Uint8Array>, maxBytes: number): Promise<Uint8Array> {

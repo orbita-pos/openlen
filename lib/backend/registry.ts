@@ -15,11 +15,22 @@ import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
 import { getSubdomainOwner } from "@/lib/projects";
 import { publishBaseHost } from "@/lib/publish/deploy-url";
 import { publishedBaseHosts, resolveCustomDomainSub, subDeLaPagina } from "@/lib/publish/request-origin";
-import { defaultAuthConfig, type AuthConfig } from "./auth/config";
+import type { AuthConfig } from "./auth/config";
+import { authConfigFor } from "./auth-config-for";
 import { sendAuthEmail } from "./auth/mail";
 import { hashSecretKey, newDatabasePassword, newJwtSecret, newProjectRef, newPublishableKey, newSecretKey } from "./keys";
 import { projectDatabase } from "./pg";
-import { devRoleOf, provisionDatabase } from "./provision";
+import {
+  classifyExistingBackend,
+  createEnvironment,
+  dbNameOf,
+  getEnvironment,
+  listEnvironments,
+  markEnvironmentProvisioned,
+  type Environment,
+  type EnvironmentRecord,
+} from "./environments";
+import { provisionDatabase } from "./provision";
 /* ── carril D ── */
 import { ensureStorageProvisioned } from "./storage/provision";
 import { ensureRealtimeProvisioned } from "./realtime/provision";
@@ -83,25 +94,62 @@ export async function ensureBackend(projectId: string): Promise<BackendRecord> {
   throw new Error("no se pudo crear el backend del proyecto");
 }
 
-export async function ensureProvisioned(rec: BackendRecord): Promise<void> {
-  if (!rec.provisionedAt) {
-    await provisionDatabase({ ref: rec.ref, dbPassword: decryptToken(rec.dbPasswordEncrypted) });
-    await db.update(schema.projectBackends).set({ provisionedAt: new Date() }).where(eq(schema.projectBackends.projectId, rec.projectId));
+/** Los proyectos con base de ANTES de los dos entornos: su base de siempre
+ *  (`ol_<ref>`) pasa a ser el entorno que le toca, con `scope` = ref. Lo hace
+ *  también `npm run backend-environments:migrate`; esto cubre lo que quede. */
+export async function adoptLegacyEnvironment(rec: BackendRecord): Promise<void> {
+  if (!rec.provisionedAt) return;
+  if ((await listEnvironments(rec.projectId)).length > 0) return;
+  const [p] = await db.select({ status: schema.projects.status }).from(schema.projects).where(eq(schema.projects.id, rec.projectId)).limit(1);
+  await db
+    .insert(schema.projectBackendEnvironments)
+    .values({
+      projectId: rec.projectId,
+      environment: classifyExistingBackend({ status: p?.status ?? null }),
+      scope: rec.ref,
+      jwtSecretEncrypted: rec.jwtSecretEncrypted,
+      provisionedAt: rec.provisionedAt,
+    })
+    .onConflictDoNothing();
+}
+
+export async function hasLiveEnvironment(rec: BackendRecord): Promise<boolean> {
+  await adoptLegacyEnvironment(rec);
+  const live = await getEnvironment(rec.projectId, "live");
+  return Boolean(live?.provisionedAt);
+}
+
+/** El entorno con su base creada. El borrador nace la primera vez que se pide;
+ *  producción, SÓLO al publicar (lib/backend/data-changes.ts). */
+export async function ensureEnvironmentReady(rec: BackendRecord, env: Environment): Promise<EnvironmentRecord> {
+  await adoptLegacyEnvironment(rec);
+  let e = await getEnvironment(rec.projectId, env);
+  if (!e) {
+    if (env === "live") throw new Error("producción todavía no existe: nace al publicar");
+    e = await createEnvironment(rec.projectId, rec.ref, "draft");
   }
-  /* ── carril D: storage ── El esquema `storage` también en las bases creadas
-   * antes de que hubiera Storage (ésas no vuelven a provisionDatabase). Una vez
-   * por proceso: lib/backend/storage/provision.ts. Si falla NO tumba /rest/v1
-   * ni /auth/v1, que ya funcionaban: queda en el registro y lo vuelve a
-   * intentar la siguiente petición; la ruta de Storage lo exige ella misma. */
-  await ensureStorageProvisioned(rec.ref).catch((err: unknown) => {
-    console.error("[storage] no se pudo montar el esquema storage", rec.ref, err);
+  const scoped = { scope: e.scope, ref: rec.ref };
+  if (!e.provisionedAt) {
+    await provisionDatabase({ ...scoped, dbPassword: decryptToken(rec.dbPasswordEncrypted) });
+  }
+  /* ── carril D ── El esquema `storage` y el `realtime` también en las bases
+   * creadas antes que ellos (ésas no vuelven a provisionDatabase). Una vez por
+   * proceso. Si fallan NO tumban /rest/v1 ni /auth/v1, que ya funcionaban: queda
+   * en el registro y lo reintenta la siguiente petición; la ruta de Storage lo
+   * exige ella misma. */
+  const scope = e.scope;
+  await ensureStorageProvisioned(scoped).catch((err: unknown) => {
+    console.error("[storage] no se pudo montar el esquema storage", scope, err);
   });
-  /* El esquema `realtime` (pieza 15), igual: antes de la primera migración de
-   * Len que publique una tabla, y sin tumbar lo que ya funcionaba. */
-  await ensureRealtimeProvisioned(rec.ref).catch((err: unknown) => {
-    console.error("[realtime] no se pudo montar el esquema realtime", rec.ref, err);
+  await ensureRealtimeProvisioned(scoped).catch((err: unknown) => {
+    console.error("[realtime] no se pudo montar el esquema realtime", scope, err);
   });
   /* ── fin carril D ── */
+  if (!e.provisionedAt) {
+    await markEnvironmentProvisioned(rec.projectId, env);
+    e = { ...e, provisionedAt: new Date() };
+  }
+  return e;
 }
 
 export function projectUrl(ref: string): string {
@@ -145,30 +193,30 @@ export async function backendForHost(hostHeader: string | null): Promise<HostBac
   return rec ? { record: rec, pageSub: sub } : null;
 }
 
-/** Lo que necesita el enrutador para atender a este proyecto. */
-export function backendProjectFor(hb: HostBackend): BackendProject {
+export { authConfigFor } from "./auth-config-for";
+
+/** Lo que necesita el enrutador para atender a este proyecto EN ESTE ENTORNO. */
+export function backendProjectFor(hb: HostBackend, e: EnvironmentRecord): BackendProject {
   const rec = hb.record;
   const base = publishBaseHost();
-  const refHost = `${rec.ref}.${base}`;
   const pageHost = hb.pageSub ? `${hb.pageSub}.${base}` : null;
-  const siteUrl = pageHost ? `https://${pageHost}` : `https://${refHost}`;
-  const overrides = rec.authConfig as Partial<AuthConfig>;
-  const config: AuthConfig = {
-    ...defaultAuthConfig(`https://${refHost}/auth/v1`),
-    siteUrl,
-    ...overrides,
-    uriAllowList: [
-      ...(pageHost ? [`https://${pageHost}/**`] : []),
-      `https://${refHost}/**`,
-      ...((overrides.uriAllowList as string[] | undefined) ?? []),
-    ],
-  };
+  const config = authConfigFor({ ref: rec.ref, pageSub: hb.pageSub, overrides: rec.authConfig as Partial<AuthConfig>, environment: e.environment });
   return {
     ref: rec.ref,
+    scope: e.scope,
+    environment: e.environment,
     publishableKey: rec.publishableKey,
     secretKeyHash: rec.secretKeyHash,
-    jwtSecret: decryptToken(rec.jwtSecretEncrypted),
-    db: projectDatabase(devRoleOf(rec.ref)),
-    auth: { config, sendMail: (m) => sendAuthEmail(m, pageHost ?? refHost) },
+    jwtSecret: decryptToken(e.jwtSecretEncrypted),
+    db: projectDatabase(dbNameOf(e.scope)),
+    auth: {
+      config,
+      sendMail:
+        e.environment === "draft"
+          ? async (m) => {
+              console.info("[backend] correo del borrador, no se envía:", m.kind, m.to);
+            }
+          : (m) => sendAuthEmail(m, pageHost ?? `${rec.ref}.${base}`),
+    },
   };
 }

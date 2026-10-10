@@ -8,49 +8,24 @@
 
 import "server-only";
 
-import { decryptToken } from "@/lib/integrations/crypto";
 import { runCli, type CliBackend, type CliResult } from "./cli-core";
-import { backendConfigured, withDeveloper } from "./pg";
-import { devRoleOf } from "./provision";
-import { ensureBackend, ensureProvisioned, projectUrl, type BackendRecord } from "./registry";
+import { credsOf, type EnvironmentRecord, type ScopeCreds } from "./environments";
+import { backendConfigured } from "./pg";
+import { applyMigrationAs, readRecordedMigrations } from "./recorded-migrations";
+import { ensureBackend, ensureEnvironmentReady, projectUrl, type BackendRecord } from "./registry";
 
-function pgCli(rec: BackendRecord): CliBackend {
-  const dev = devRoleOf(rec.ref);
-  const password = decryptToken(rec.dbPasswordEncrypted);
+/** La CLI contra la base de PRUEBAS del proyecto (spec local 2026-10-09): lo
+ *  que Len empuja va al borrador; a producción llega al publicar. `e` es null
+ *  en los comandos que no tocan la base (status, migration new). */
+function pgCli(rec: BackendRecord, e: EnvironmentRecord | null): CliBackend {
+  const draft = (): ScopeCreds => {
+    if (!e) throw new Error("sin base de pruebas");
+    return credsOf(rec.ref, rec.dbPasswordEncrypted, e);
+  };
   return {
     status: async () => ({ apiUrl: projectUrl(rec.ref), publishableKey: rec.publishableKey }),
-    remoteMigrations: () =>
-      withDeveloper(dev, dev, password, async (r) => {
-        const { rows } = await r.query(`select version, name from supabase_migrations.schema_migrations order by version`);
-        return rows.map((row) => ({ version: String(row.version), name: row.name == null ? null : String(row.name) }));
-      }),
-    applyMigration: (m) =>
-      withDeveloper(dev, dev, password, async (r) => {
-        let failedAt = -1;
-        try {
-          await r.exec("BEGIN");
-          for (let i = 0; i < m.statements.length; i++) {
-            failedAt = i;
-            await r.exec(m.statements[i]!);
-          }
-          failedAt = -1;
-          await r.query(`insert into supabase_migrations.schema_migrations (version, name, statements) values ($1, $2, $3)`, [
-            m.version,
-            m.name,
-            m.statements,
-          ]);
-          await r.exec("COMMIT");
-          return { ok: true } as const;
-        } catch (e) {
-          await r.exec("ROLLBACK").catch(() => {});
-          const er = e as { message?: string; code?: string };
-          return {
-            ok: false,
-            failedAt: Math.max(0, failedAt),
-            error: { message: er.message ?? String(e), ...(er.code ? { code: er.code } : {}) },
-          } as const;
-        }
-      }),
+    remoteMigrations: async () => (await readRecordedMigrations(draft().scope)).map((m) => ({ version: m.version, name: m.name })),
+    applyMigration: (m) => applyMigrationAs(draft(), { version: m.version, name: m.name, statements: m.statements }),
   };
 }
 
@@ -66,6 +41,7 @@ export async function runSupabaseCli(
   // Sólo `db push` y `migration list` tocan la base; `status` o `migration new`
   // no tienen por qué crearla.
   const [cmd, sub] = args.filter((a) => !a.startsWith("-"));
-  if ((cmd === "db" && sub === "push") || (cmd === "migration" && sub === "list")) await ensureProvisioned(rec);
-  return runCli(args, ficheros, pgCli(rec));
+  const touchesDatabase = (cmd === "db" && sub === "push") || (cmd === "migration" && sub === "list");
+  const draft = touchesDatabase ? await ensureEnvironmentReady(rec, "draft") : null;
+  return runCli(args, ficheros, pgCli(rec, draft));
 }
