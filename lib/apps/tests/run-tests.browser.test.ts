@@ -4,6 +4,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
 import { FICHEROS } from "@/lib/apps/shadcn-fixture";
+import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { findTestFiles, runAppTests } from "./run-tests";
 
 afterAll(() => stopBundlerWorker());
@@ -114,6 +115,33 @@ describe("runAppTests", () => {
     });
     expect(r!.files.map((f) => f.file)).toEqual(["/src/a.test.jsx"]);
     expect(r!.notRun).toEqual(["/src/b.test.jsx"]);
+  }, 60_000);
+
+  it("🔴 cancelado (`timeout N npm test` en el guion): para en el acto — la página que corría se cierra y lo que quedaba no se lanza", async () => {
+    const cancelar = new AbortController();
+    const t0 = Date.now();
+    let cancelado = 0;
+    const r = await runAppTests({
+      carpeta: {
+        ...FICHEROS,
+        "/src/a.test.jsx": 'it("lenta", async () => { await new Promise((r) => setTimeout(r, 60_000)); }, 120_000);',
+        "/src/b.test.jsx": 'it("x", () => expect(1).toBe(1));',
+      },
+      app: APP,
+      perFileMs: 30_000,
+      signal: cancelar.signal,
+      lanzar: async () => {
+        const browser = await lanzarChromium();
+        setTimeout(() => {
+          cancelado = Date.now();
+          cancelar.abort();
+        }, 1_500);
+        return browser;
+      },
+    });
+    expect(r).toMatchObject({ files: [], notRun: ["/src/a.test.jsx", "/src/b.test.jsx"] });
+    expect(Date.now() - cancelado).toBeLessThan(3_000);
+    expect(Date.now() - t0).toBeLessThan(25_000);
   }, 60_000);
 
   it("sin pruebas: ningún fichero", async () => {

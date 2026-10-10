@@ -198,6 +198,8 @@ export interface AgentDeps {
       readonly testNamePattern?: string;
       readonly deadlineMs: number;
       readonly entorno?: Readonly<Record<string, string>>;
+      /** El comando se abortó (`timeout N npm test`): que paren. */
+      readonly signal?: AbortSignal;
     },
   ): Promise<TestRun | null>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
@@ -504,6 +506,7 @@ export function realDeps(
         deadlineMs: o.deadlineMs,
         ...(o.testNamePattern ? { testNamePattern: o.testNamePattern } : {}),
         ...(o.entorno ? { entorno: o.entorno } : {}),
+        ...(o.signal ? { signal: o.signal } : {}),
       }).catch(() => null);
     },
     async saveProjectFile(projectId, path, content, version) {

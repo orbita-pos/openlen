@@ -448,6 +448,30 @@ describe("TerminalDeLen", () => {
       expect(r.exitCode).toBe(143);
     }, 20_000);
 
+    it("🔴 `timeout N npm test` corta sólo npm test, como en bash: el guion sigue, $? es 124, lo de antes se queda, y las pruebas paran", async () => {
+      // Turnos reales del 09/10: `timeout 2 npm test` abortaba el guion ENTERO
+      // («bash: execution aborted», sin nada de lo impreso): just-bash da 25 ms
+      // a un comando abortado para acabar, y npm test seguía esperando.
+      let señal: AbortSignal | undefined;
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: (_program, _args, _ficheros, _timeLeftMs, signal) => {
+            señal = signal;
+            return new Promise((resolve) => setTimeout(() => resolve({ stdout: "tarde\n", stderr: "", exitCode: 0 }), 8_000));
+          },
+        },
+      });
+      const t0 = Date.now();
+      const r = await t.ejecutar('echo antes; timeout 1 npm test; echo "rc=$?"; echo despues');
+      expect(r.stdout).toBe("antes\nrc=124\ndespues\n");
+      expect(r.exitCode).toBe(0);
+      expect(Date.now() - t0).toBeLessThan(5_000);
+      // Lo que arrancó el comando acaba con él: al hilo de la app le llega la orden de parar.
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(señal?.aborted).toBe(true);
+    }, 20_000);
+
     it("npm install -D vitest y lo del kit: ya están; jsdom no hace falta", async () => {
       const { t } = conApp();
       const r = await t.ejecutar("npm install -D vitest @testing-library/react jsdom; echo rc=$?");
