@@ -786,7 +786,7 @@ describe("use_page", () => {
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "not_found", emails: ["ana@tiendaluna.mx"], total: 1 });
       const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "nadie@tiendaluna.mx" });
       assert.equal(out.response.ok, false);
-      assert.match(String(out.response.error), /no user of the page has the email «nadie@tiendaluna\.mx»/);
+      assert.match(String(out.response.error), /no user of the test database has the email «nadie@tiendaluna\.mx»/);
       assert.match(String(out.response.error), /ana@tiendaluna\.mx/);
       assert.equal(visits.length, 0);
     });

@@ -497,7 +497,8 @@ export function realDeps(
       // La visita de Len usa el BORRADOR (su Chromium mide en loopback, y eso
       // va al borrador; spec local 2026-10-09).
       const draft = await ensureEnvironmentReady(rec, "draft");
-      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }, draft), who) };
+      // Ahí puede crear el usuario de prueba que nombre.
+      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }, draft), who, { createIfMissing: true }) };
     },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
@@ -1529,15 +1530,15 @@ async function toolUsarPagina(
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
 function whySignInFailed(r: Exclude<VisitSignIn, { ok: true }>, who: string): string {
-  if (r.reason === "no_users") return "the page has no users yet: there's no one to sign in as.";
+  if (r.reason === "no_users") return "the test database has no users yet: pass an email in sign_in_as and a test user with that email is created.";
   if (r.reason === "banned") return `«${who}» is banned in the page's backend: a visit can't sign in as them.`;
   const listed = `${r.emails.join(", ")}${r.total > r.emails.length ? ` (and ${r.total - r.emails.length} more)` : ""}`;
   if (r.reason === "pick_one") {
     return `the page has ${r.total} users and nobody said which one to sign in as: ask the user in chat which one to use, then call use_page again with sign_in_as set to that email. Users: ${listed}.`;
   }
   return r.total === 0
-    ? `no user of the page has the email «${who}»; the page has no users yet.`
-    : `no user of the page has the email «${who}». Users: ${listed}.`;
+    ? `no user of the test database has the email «${who}»; the test database has no users yet.`
+    : `no user of the test database has the email «${who}». Users: ${listed}.`;
 }
 
 async function toolElegirFoto(
