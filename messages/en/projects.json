@@ -39,6 +39,7 @@
     "freePlan": "Free plan",
     "proPlan": "Pro plan",
     "maxPlan": "Max plan",
+    "ultraPlan": "Ultra plan",
     "creditsLeft": "{count, plural, one {# credit left} other {# credits left}}",
     "dismiss": "Dismiss"
   },
@@ -164,9 +165,9 @@
   },
   "billing": {
     "upgradeCta": "Upgrade to Pro",
-    "upgradeHint": "150 AI credits / month",
+    "upgradeHint": "{credits} AI credits / month",
     "dismissBanner": "Dismiss",
-    "success": "You're on Pro now — 150 AI credits a month. Thanks for upgrading!",
+    "success": "You're on {plan} now — {credits} AI credits a month. Thanks for upgrading!",
     "errors": {
       "not_configured": "Billing isn't set up yet. Please try again later or contact support.",
       "checkout_failed": "We couldn't start your checkout. Please try again.",

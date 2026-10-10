@@ -39,6 +39,7 @@
     "freePlan": "Plano gratuito",
     "proPlan": "Plano Pro",
     "maxPlan": "Plano Max",
+    "ultraPlan": "Plano Ultra",
     "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
     "dismiss": "Dispensar"
   },
@@ -146,9 +147,9 @@
   },
   "billing": {
     "upgradeCta": "Fazer upgrade para o Pro",
-    "upgradeHint": "150 créditos de IA / mês",
+    "upgradeHint": "{credits} créditos de IA / mês",
     "dismissBanner": "Dispensar",
-    "success": "Você está no Pro agora — 150 créditos de IA por mês. Obrigado por fazer o upgrade!",
+    "success": "Você está no {plan} agora — {credits} créditos de IA por mês. Obrigado por fazer o upgrade!",
     "errors": {
       "not_configured": "O faturamento ainda não está configurado. Tente novamente mais tarde ou entre em contato com o suporte.",
       "checkout_failed": "Não foi possível iniciar o seu checkout. Tente novamente.",

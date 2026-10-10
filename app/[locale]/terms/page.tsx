@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { LegalPage } from "@/components/legal-page";
-import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE } from "@/lib/marketing/plan-price";
+import { MAX_CREDITS, MAX_PRICE, PRO_CREDITS, PRO_PRICE, ULTRA_CREDITS, ULTRA_PRICE } from "@/lib/marketing/plan-price";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { Link } from "@/i18n/navigation";
 
@@ -257,7 +257,8 @@ export default async function TermsPage({
           <p>
             El plan Pro cuesta US${PRO_PRICE} al mes e incluye {PRO_CREDITS} créditos
             de IA al mes; el plan Max cuesta US${MAX_PRICE} al mes e incluye{" "}
-            {MAX_CREDITS}; el plan gratuito incluye 20 créditos al mes. Si
+            {MAX_CREDITS}; el plan Ultra cuesta US${ULTRA_PRICE} al mes e incluye{" "}
+            {ULTRA_CREDITS}; el plan gratuito incluye 20 créditos al mes. Si
             contrataste Pro cuando costaba US$3.99, conservas ese precio mientras
             sigas suscrito, con los créditos de Pro. Los créditos se reinician
             cada mes y no se acumulan. Los pagos son procesados por{" "}
@@ -575,7 +576,8 @@ export default async function TermsPage({
           <p>
             The Pro plan costs US${PRO_PRICE} per month and includes {PRO_CREDITS}{" "}
             AI credits per month; the Max plan costs US${MAX_PRICE} per month and
-            includes {MAX_CREDITS}; the free tier includes 20 credits per month. If
+            includes {MAX_CREDITS}; the Ultra plan costs US${ULTRA_PRICE} per month
+            and includes {ULTRA_CREDITS.toLocaleString("en-US")}; the free tier includes 20 credits per month. If
             you subscribed to Pro when it cost US$3.99, you keep that price while
             you stay subscribed, with Pro&apos;s credits. Credits reset each
             month and do not roll over. Payments are processed by{" "}

@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { CREDITS_BY_PLAN } from "@/lib/credits";
-import { PLAN_RANK, planFromDb } from "@/lib/plan";
+import { PLAN_RANK, paidPlanFrom, planFromDb, type PaidPlan } from "@/lib/plan";
 import type { PolarSubscription } from "./renewal-reminder";
 import { publicOrigin } from "@/lib/integrations/oauth";
+import { routing } from "@/i18n/routing";
 import { verifyWebhookSignature } from "./webhook-signature";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -48,16 +49,27 @@ export function billingConfigured(): boolean {
   return !!(env("POLAR_ACCESS_TOKEN") && env("POLAR_PRODUCT_PRO_ID"));
 }
 
-/** Los dos planes de pago que vende Polar (04/10: Pro $9.99 y Max $19.99). */
-export type PaidPlan = "pro" | "max";
+export type { PaidPlan };
+
+/** El producto de Polar de cada plan de pago. */
+const PRODUCT_ENV: Record<PaidPlan, string> = {
+  pro: "POLAR_PRODUCT_PRO_ID",
+  max: "POLAR_PRODUCT_MAX_ID",
+  ultra: "POLAR_PRODUCT_ULTRA_ID",
+};
+
+
 
 /** El plan de una suscripción, por su producto. Max sólo si es el producto de
- *  Max (POLAR_PRODUCT_MAX_ID); cualquier otro es Pro. Así el Pro de antes, a
+ *  Max (POLAR_PRODUCT_MAX_ID), Ultra sólo si es el de Ultra; cualquier otro es Pro. Así el Pro de antes, a
  *  $3.99 —Polar le guarda el precio y Jesús decidió que reciba lo mismo que un
  *  Pro nuevo—, sigue siendo Pro sin que el código tenga que distinguirlo. */
 export function planForProduct(productId: string | null | undefined): PaidPlan {
-  const max = env("POLAR_PRODUCT_MAX_ID");
-  return max && productId === max ? "max" : "pro";
+  for (const plan of ["max", "ultra"] as const) {
+    const id = env(PRODUCT_ENV[plan]);
+    if (id && productId === id) return plan;
+  }
+  return "pro";
 }
 
 async function polarPost(path: string, body: unknown): Promise<unknown> {
@@ -96,17 +108,23 @@ export async function getSubscription(id: string): Promise<PolarSubscription> {
 }
 
 /** Create a hosted checkout for a paid plan (Pro by default) and return its
- *  URL. Max sin su producto configurado falla: nunca vende Pro en su lugar. */
+ *  URL. Max o Ultra sin su producto configurado falla: nunca vende Pro en su
+ *  lugar. */
 export async function createCheckout(opts: {
   userId: string;
   email?: string | null;
   locale?: string;
   plan?: PaidPlan;
 }): Promise<string> {
-  const productId = env(opts.plan === "max" ? "POLAR_PRODUCT_MAX_ID" : "POLAR_PRODUCT_PRO_ID");
+  const plan = paidPlanFrom(opts.plan);
+  const productId = env(PRODUCT_ENV[plan]);
   if (!productId) throw new BillingError("not_configured");
-  const locale = opts.locale === "es" ? "es" : "en";
-  const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=1`;
+  const locale = (routing.locales as readonly string[]).includes(opts.locale ?? "")
+    ? (opts.locale as string)
+    : routing.defaultLocale;
+  // La vuelta lleva el plan: el aviso de /projects dice «Max, 800 créditos» o
+  // «Pro, 300». Con `?upgraded=1` quien pagaba Max leía «Pro, 150».
+  const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=${plan}`;
   const data = (await polarPost("/v1/checkouts/", {
     products: [productId],
     success_url: successUrl,

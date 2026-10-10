@@ -51,6 +51,7 @@ import VisibilityToggle from "@/components/community/visibility-toggle";
 import HandleDialog from "@/components/community/handle-dialog";
 import { publishedHost, publishedUrl, subdomainFromTitle } from "@/lib/publish/base-host";
 import { visibleProjects } from "@/lib/projects/blank";
+import { MAX_CREDITS, PRO_CREDITS, ULTRA_CREDITS } from "@/lib/marketing/plan-price";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -92,8 +93,15 @@ const STATUS_TONE: Record<
 
 type BillingErrorCode = "not_configured" | "checkout_failed" | "portal_failed";
 type BillingNotice =
-  | { kind: "success" }
+  | { kind: "success"; plan: keyof typeof AVISO_DEL_PLAN }
   | { kind: "error"; code: BillingErrorCode };
+
+/** Lo que dice el aviso de después de pagar, por plan. */
+const AVISO_DEL_PLAN = {
+  pro: { plan: "Pro", credits: PRO_CREDITS },
+  max: { plan: "Max", credits: MAX_CREDITS },
+  ultra: { plan: "Ultra", credits: ULTRA_CREDITS },
+} as const;
 
 const BILLING_ERROR_CODES: BillingErrorCode[] = [
   "not_configured",
@@ -156,7 +164,9 @@ export function ProjectsView({
     const upgraded = searchParams.get("upgraded");
     const errorParam = searchParams.get("billing_error");
     let notice: BillingNotice | null = null;
-    if (upgraded === "1") notice = { kind: "success" };
+    // `1` es la vuelta de antes del plan Max (no decía cuál): era Pro.
+    if (upgraded === "max" || upgraded === "ultra" || upgraded === "pro") notice = { kind: "success", plan: upgraded };
+    else if (upgraded === "1") notice = { kind: "success", plan: "pro" };
     else if (errorParam && BILLING_ERROR_CODES.includes(errorParam as BillingErrorCode))
       notice = { kind: "error", code: errorParam as BillingErrorCode };
     if (!notice) return;
@@ -786,7 +796,7 @@ function BillingBanner({
   const t = useTranslations("projects");
   const isSuccess = notice.kind === "success";
   const message = isSuccess
-    ? t("billing.success")
+    ? t("billing.success", { ...AVISO_DEL_PLAN[notice.plan] })
     : t(`billing.errors.${notice.code}`);
   return (
     <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 pt-4">
@@ -878,7 +888,13 @@ function UsageStrip({
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-[10.5px] uppercase tracking-wider text-zinc-500 dark:text-zinc-400 font-semibold">
-              {usage.plan === "max" ? t("usage.maxPlan") : usage.plan === "pro" ? t("usage.proPlan") : t("usage.freePlan")}
+              {usage.plan === "ultra"
+                ? t("usage.ultraPlan")
+                : usage.plan === "max"
+                  ? t("usage.maxPlan")
+                  : usage.plan === "pro"
+                    ? t("usage.proPlan")
+                    : t("usage.freePlan")}
             </div>
             <div className="text-[13.5px] font-medium leading-tight tabular-nums">
               {t("usage.creditsLeft", { count: formatCredits(balance) })}
@@ -895,7 +911,7 @@ function UsageStrip({
             {usage.plan === "free" && (
               <a
                 href={`/api/billing/checkout?locale=${locale}`}
-                title={t("billing.upgradeHint")}
+                title={t("billing.upgradeHint", { credits: PRO_CREDITS })}
                 className="mt-2 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
               >
                 <Sparkles size={12} /> {t("billing.upgradeCta")}

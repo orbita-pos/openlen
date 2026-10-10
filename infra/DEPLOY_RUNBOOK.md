@@ -35,8 +35,8 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
 **Phase 2 (enable later):**
 - `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_ID/SECRET` — OAuth login
 - `POLAR_SERVER=sandbox` + `POLAR_ACCESS_TOKEN` + `POLAR_PRODUCT_PRO_ID` +
-  `POLAR_PRODUCT_MAX_ID` + `POLAR_WEBHOOK_SECRET` — billing (ver «Pro $9.99 y Max
-  $19.99» abajo). Keep `sandbox` until Phase 2 passes; flip to
+  `POLAR_PRODUCT_MAX_ID` + `POLAR_PRODUCT_ULTRA_ID` + `POLAR_WEBHOOK_SECRET` —
+  billing (ver «Pro $9.99 y Max $19.99» y «Ultra $99.99» abajo). Keep `sandbox` until Phase 2 passes; flip to
   `production` only to take real money. Webhook URL in Polar:
   `${NEXTAUTH_URL}/api/billing/webhook` (format: Raw).
 - `GITHUB_DEPLOY_*`, `VERCEL_*` — Deploy-dropdown export targets
@@ -222,6 +222,21 @@ ssh openlen "sudo systemctl enable --now openlen-renewal-reminders.timer"
 ```
 
 La primera corrida a mano tiene que decir `[renewal-reminders] N suscripciones, …`.
+
+## Ultra $99.99, y más créditos en Pro y Max (09/10)
+
+Pro pasa de 200 a **300** créditos y Max de 500 a **800**, al mismo precio; Ultra
+entra con **5.000** a $99.99 (`lib/marketing/plan-price.ts`). Los créditos nuevos
+de Pro y Max no tocan Polar: cada suscriptor los recibe en su siguiente recarga
+mensual. El plan sale del producto: Ultra si es `POLAR_PRODUCT_ULTRA_ID`.
+
+**En Polar, ANTES del deploy:**
+
+1. Un producto nuevo, Ultra, $99.99/mes, misma moneda. Su id va a
+   `/etc/openlen/openlen.env` como `POLAR_PRODUCT_ULTRA_ID`. Sin él, «Pásate a
+   Ultra» vuelve con `billing_error=not_configured`: nunca vende otro plan.
+2. Portal del cliente: que **Ultra esté entre los planes a los que se puede
+   cambiar** (el mismo ajuste de cambios de plan de Max).
 Avisa cuando faltan 6 días hábiles o menos, una vez por renovación
 (`renewalReminders`), y se salta a quien canceló y a los planes de 6 meses o más
 (ésos los avisa Polar).

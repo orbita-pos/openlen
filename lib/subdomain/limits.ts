@@ -13,6 +13,7 @@ export const MAX_SUBDOMAINS_PER_PLAN = {
   free: 1,
   pro: 10,
   max: 10,
+  ultra: 10,
 } as const satisfies Record<Plan, number>;
 
 export function subdomainLimitForPlan(plan: Plan): number {

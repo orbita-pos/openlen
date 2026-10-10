@@ -39,6 +39,7 @@
     "freePlan": "Plan gratis",
     "proPlan": "Plan Pro",
     "maxPlan": "Plan Max",
+    "ultraPlan": "Plan Ultra",
     "creditsLeft": "{count, plural, one {# crédito restante} other {# créditos restantes}}",
     "dismiss": "Descartar"
   },
@@ -164,9 +165,9 @@
   },
   "billing": {
     "upgradeCta": "Pásate a Pro",
-    "upgradeHint": "150 créditos de IA al mes",
+    "upgradeHint": "{credits} créditos de IA al mes",
     "dismissBanner": "Descartar",
-    "success": "Ya estás en Pro — 150 créditos de IA al mes. ¡Gracias por mejorar tu plan!",
+    "success": "Ya estás en {plan} — {credits} créditos de IA al mes. ¡Gracias por mejorar tu plan!",
     "errors": {
       "not_configured": "La facturación aún no está configurada. Inténtalo más tarde o contacta con soporte.",
       "checkout_failed": "No pudimos iniciar tu pago. Inténtalo de nuevo.",

@@ -2,7 +2,7 @@ import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
 import { TARIFAS_POR_MILLON, tarifaDe, type CreditRate } from "@/lib/ai/tarifas";
 import { db, schema } from "@/lib/db";
 import { planFromDb, type Plan } from "@/lib/plan";
-import { MAX_CREDITS, PRO_CREDITS } from "@/lib/marketing/plan-price";
+import { MAX_CREDITS, PRO_CREDITS, ULTRA_CREDITS } from "@/lib/marketing/plan-price";
 // La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
 // componentes de cliente (la píldora de créditos), y este fichero importa la
 // base de datos. Mismo criterio que `lib/templates/families.ts`.
@@ -20,18 +20,23 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // Every AI call (page generation, chat edit, autofill) debits credits. One
 // credit ≈ $0.01 of raw model cost — the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
-// PRICE embeds the markup: Pro is $3.99/mo for 150 credits (≈$1.50 of raw cost
-// if fully spent, ~75 pages at the rates below); a free user is capped at 20
+// PRICE embeds the markup: Pro is $9.99/mo for 300 credits (≈$3 of raw cost if
+// fully spent, ~150 pages at the rates below), Max $19.99 for 800 (≈$8) and
+// Ultra $99.99 for 5,000 (≈$50) — the figures live in
+// lib/marketing/plan-price.ts; a free user is capped at 20
 // credits (~$0.20) — about 10 pages, the "try-it" funnel before the upgrade.
 //
-// 🔴 EL MARGEN YA NO ES «ANCHO», y esta línea lo decía. Bajado a $3.99 el
-// 2026-08-29, con la comisión REAL de Polar (Starter: 5% + 50¢, y +1.5% si la
-// tarjeta no es de EE.UU., que es el caso normal aquí) el neto es $3.23. Un
-// usuario que queme sus 150 créditos deja $1.73: el 46% se lo lleva el modelo,
-// no el 21% de antes. Sigue siendo positivo en el PEOR caso —que es la prueba
-// que importa— pero subir el allotment sin rehacer esta cuenta es lo que lo
-// rompe. Los 50¢ fijos son el 12.5% del precio: por eso el plan ANUAL, cuando
-// exista, no es sólo un descuento, es la misma venta pagando el fijo una vez.
+// 🔴 EL MARGEN, CON LA COMISIÓN REAL DE POLAR (Starter: 5% + 50¢, y +1.5% si
+// la tarjeta no es de EE.UU., que es el caso normal aquí). Rehecho el
+// 2026-10-09 con los créditos de ese día (más créditos al mismo precio, y
+// Ultra): Pro $9.99 deja $8.84 neto, y quien queme sus 300 créditos deja $5.84
+// (el modelo se lleva el 34%); Max $19.99 deja $18.19, y con sus 800 quemados
+// $10.19 (el 44%); Ultra $99.99 deja $92.99, y con sus 5.000 quemados $42.99
+// (el 54%). Con $3.99 por 150 el modelo se llevaba el 46%. Es el PEOR caso —la
+// prueba que importa; casi nadie quema el plan entero—: subir un
+// allotment sin rehacer esta cuenta es lo que lo rompe. Los 50¢ fijos son el 5%
+// de Pro: por eso el plan ANUAL, cuando exista, no es sólo un descuento, es la
+// misma venta pagando el fijo una vez.
 //
 // Las cifras de páginas salen de las tarifas corregidas el 2026-08-28: crear
 // una página son ~2 créditos. Las viejas («10 generaciones Pro», «~1 Pro» en
@@ -51,6 +56,7 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
   free: 20 * CENTICREDITOS_POR_CREDITO,
   pro: PRO_CREDITS * CENTICREDITOS_POR_CREDITO,
   max: MAX_CREDITS * CENTICREDITOS_POR_CREDITO,
+  ultra: ULTRA_CREDITS * CENTICREDITOS_POR_CREDITO,
 };
 
 /**
@@ -67,9 +73,10 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
 export const TECHO_POR_TURNO: Record<Plan, number> = {
   free: 10 * CENTICREDITOS_POR_CREDITO,
   pro: 30 * CENTICREDITOS_POR_CREDITO,
-  // Max = Pro (lib/plan.ts): el techo corta el turno que se desboca, no es
-  // lo que se vende.
+  // Max y Ultra = Pro (lib/plan.ts): el techo corta el turno que se desboca,
+  // no es lo que se vende.
   max: 30 * CENTICREDITOS_POR_CREDITO,
+  ultra: 30 * CENTICREDITOS_POR_CREDITO,
 };
 
 /** Lo que puede gastar ESTE turno: el techo de su plan o el saldo con el que

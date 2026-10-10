@@ -57,6 +57,7 @@
     "freePlan": "Gratis abonnement",
     "proPlan": "Pro-abonnement",
     "maxPlan": "Max-abonnement",
+    "ultraPlan": "Ultra-abonnement",
     "creditsLeft": "{count, plural, one {# credit over} other {# credits over}}",
     "dismiss": "Sluiten"
   },
@@ -164,9 +165,9 @@
   },
   "billing": {
     "upgradeCta": "Upgraden naar Pro",
-    "upgradeHint": "150 AI-credits / maand",
+    "upgradeHint": "{credits} AI-credits / maand",
     "dismissBanner": "Sluiten",
-    "success": "Je zit nu op Pro — 150 AI-credits per maand. Bedankt voor je upgrade!",
+    "success": "Je zit nu op {plan} — {credits} AI-credits per maand. Bedankt voor je upgrade!",
     "errors": {
       "not_configured": "Facturatie is nog niet ingesteld. Probeer het later opnieuw of neem contact op met support.",
       "checkout_failed": "We konden je afrekenen niet starten. Probeer het opnieuw.",
