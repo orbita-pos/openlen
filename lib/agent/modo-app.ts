@@ -89,7 +89,7 @@ const PROBAR_LA_APP =
 
 const LA_APP_SON_FICHEROS = (entrada: string) => `THE APP IS FILES:
 /index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
-- There is no npm and no build to run: you write the files and OpenLen compiles each one as it is served. Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and packages are only the ones listed in /AGENTS.md; anything else is written in the project.
+- You write the files and OpenLen compiles and bundles them after every change, like Vite: there is no dev server to start and nothing to install. In bash, npm test, npm run build, npm run lint and npx tsc run for real (/AGENTS.md says how). Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and packages are only the ones listed in /AGENTS.md; anything else is written in the project.
 - After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and the app stays blank until you fix it: fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
 - Screens are hash routes (/#/sales): a new screen is a component and a <Route> in /src/App.jsx, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
 - 🔴 A CHANGE GOES THROUGH EVERY FILE THAT DEPENDS ON IT, and only those: a renamed prop or component, a removed field, a column that changes in a table — search for every use with Grep before changing it and change them all in the same turn, migration included when the data changes. A file left behind breaks the app at runtime, in a screen you didn't look at. <example>user: "call it 'stock' instead of 'quantity'" — agent: searches for quantity with Grep across /src and /supabase, writes a migration that renames the column, and changes every component that reads or writes it.</example>
@@ -135,13 +135,13 @@ function seccionDeLaApp(app: AppDeProyecto): string {
     ? `\n  shadcn/ui works as usual: you write its components in /src/components/ui (one per file, as its CLI would), cn() in /src/lib/utils.ts with clsx and tailwind-merge, and each Radix primitive imports from "radix-ui" or as @radix-ui/react-<name>.`
     : "";
   return `THIS PROJECT IS A WEB APP:
-React in /src —.jsx, .tsx, .ts or .js— that OpenLen serves and publishes as it is. There is no bundler, no npm and no build: each file is compiled on its own (JSX and TypeScript to JavaScript, at the same path and keeping its line numbers) and the browser joins them through their imports.
+React in /src —.jsx, .tsx, .ts or .js— that OpenLen compiles and publishes like a Vite project: each file is compiled (JSX and TypeScript to JavaScript, keeping its line numbers) and they are joined into one bundle with only what they use from the catalog's packages (see BUILD). Nothing gets installed: the packages are the catalog's, already there.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.
 - ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json"; import logo from "./logo.svg" gives its URL (also .txt and .md, or any file with ?url), and ?raw gives its text. import.meta.env has VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), MODE, DEV and PROD: public values only — a secret never goes in the code.
 - PACKAGES, the only ones (catalog ${app.catalogo}):
 ${paquetes}${shadcn}
-  Nothing else can be installed, because there is no npm here: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
+  Nothing else can be installed —npm install only answers with this list—: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
 - ICONS: lucide-react has a selection of ${ICONOS_DE_LAS_APPS.length} icons, the usual ones for an app (${ALGUNOS_ICONOS.join(", ")}…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in ${app.entrada}) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
 - STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>. A .css file may use Tailwind's @layer and @apply, with the theme of the shell's tailwind.config, as in a Vite project. It is Tailwind CSS 3: the theme lives in that tailwind.config and the colors as CSS variables in @layer base — not Tailwind 4's @import "tailwindcss", @theme or @custom-variant, which do nothing here. That tailwind.config is plain data: no require() and no plugins (tailwindcss-animate is not available: write the keyframes and animations in theme.extend).
@@ -171,7 +171,7 @@ const LOS_ENLACES = `LINKS:
 - Between screens, <Link to="/route"> or href="#/route"; never a path without # ("/route"), which on the published app falls back to the start.`;
 
 const LA_CARPETA = (app: AppDeProyecto) => `THE PROJECT'S FOLDER:
-Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (${RAICES_DEL_SITIO}), and publishing ships them next to the app. /tests holds Playwright tests (never published); /supabase holds the backend's migrations.
+Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (${RAICES_DEL_SITIO}), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at ${app.entrada}. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).
 Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.`;
@@ -259,7 +259,19 @@ const PUBLICAR_EN_LA_APP =
 /** Las herramientas que `declaracionesDeLaApp` cambia, por su nombre. Si una se
  *  renombra en el catálogo y aquí no, la app la recibiría como la de una página
  *  SIN QUE NADA FALLE: lo vigila `modo-app.test.ts` («los nombres que usa»). */
-export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish"] as const;
+export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish", "bash"] as const;
+
+/** `bash` en una app: lo que la de una página no tiene, la app sí —npm test,
+ *  npm run build, npm run lint, npx tsc (planes 02–04)— y /tests es de vitest.
+ *  La descripción decía «no node, npm…» mientras el manual pedía npm test. */
+function bashDeLaApp(descripcion: string): string {
+  const conNpm = cambiar(
+    descripcion,
+    "no node, npm, pip or git",
+    "no node, pip or git (in this app, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
+  );
+  return cambiar(conNpm, "/tests holds Playwright tests, never published", "/tests holds the app's tests (vitest), never published");
+}
 
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
   // `convert_to_app` es de una página: una app ya lo es.
@@ -279,6 +291,8 @@ export function declaracionesDeLaApp(declaraciones: readonly Record<string, unkn
         const { languages: _fuera, ...resto } = parametros?.properties ?? {};
         return { ...d, description: `${String(d.description)}${PUBLICAR_EN_LA_APP}`, parameters: { ...parametros, properties: resto } };
       }
+      case "bash":
+        return { ...d, description: bashDeLaApp(String(d.description)) };
       default:
         return { ...d };
     }

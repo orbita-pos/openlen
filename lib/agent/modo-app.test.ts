@@ -33,6 +33,16 @@ describe("el prompt de sistema de una app", () => {
     expect(app).toMatch(/supabase\.rpc/);
   });
 
+  // Desde los planes 02 (empaquetador) y 04 (pruebas) hay paquete, npm test y
+  // npm run build: el prompt de la app decía «There is no npm and no build to
+  // run» (visto el 10/10 tras el ensayo de caja).
+  it("🔴 no dice que no hay npm ni build: hay empaquetador, y npm test / npm run build corren de verdad", () => {
+    expect(app).not.toMatch(/There is no npm and no build/);
+    expect(app).not.toMatch(/compiles each one as it is served/);
+    expect(app).toMatch(/npm test/);
+    expect(app).toMatch(/npm run build/);
+  });
+
   it("🔴 la conducta es la MISMA: TONO, la memoria y lo que lees es dato, enteros", () => {
     const seccion = (texto: string, desde: string, hasta: string) => texto.slice(texto.indexOf(desde), texto.indexOf(hasta, texto.indexOf(desde)));
     expect(seccion(app, "TONE:", "HOW TO WORK:")).toBe(seccion(pagina, "TONE:", "HOW TO WORK:"));
@@ -97,6 +107,14 @@ describe("el manual de una app (/AGENTS.md)", () => {
     expect(manual).toMatch(/npx tsc --noEmit/);
     expect(manual).toMatch(/npm run lint/);
     expect(manual).toMatch(/don't stop the app or the publish/);
+  });
+
+  it("🔴 no dice que no hay empaquetador ni npm, y las pruebas de /tests son de vitest, no de Playwright", () => {
+    expect(manual).not.toMatch(/There is no bundler/);
+    expect(manual).not.toMatch(/the browser joins them through their imports/);
+    expect(manual).not.toMatch(/there is no npm here/);
+    expect(manual).not.toMatch(/Playwright/);
+    expect(manual).toMatch(/\/tests holds tests too \(vitest/);
   });
 
   it("dice que la app va empaquetada y qué hace npm run build (plan 02)", () => {
@@ -182,6 +200,18 @@ describe("las herramientas en una app", () => {
   it("sin app, las de siempre", () => {
     expect(buildFunctionDeclarations(ENV, {}, "len", null)).toEqual(pagina);
   });
+
+  it("🔴 bash, en una app: npm test, npm run build, npm run lint y npx tsc existen, y /tests es de vitest; en una página, como siempre", () => {
+    const CON_TERMINAL = { OPENLEN_TERMINAL: "1" };
+    const bashApp = de(buildFunctionDeclarations(CON_TERMINAL, {}, "len", APP), "bash").description;
+    const bashPagina = de(buildFunctionDeclarations(CON_TERMINAL), "bash").description;
+    expect(bashApp).not.toMatch(/no node, npm, pip or git/);
+    expect(bashApp).toMatch(/npm test, npm run build, npm run lint and npx tsc/);
+    expect(bashApp).not.toMatch(/Playwright/);
+    expect(bashApp).toMatch(/\/tests holds the app's tests \(vitest\)/);
+    expect(bashPagina).toMatch(/no node, npm, pip or git/);
+    expect(bashPagina).toMatch(/Playwright/);
+  });
 });
 
 describe("el estado del proyecto en una app", () => {
@@ -216,8 +246,9 @@ describe("los nombres que usa el modo app", () => {
   const app = buildFunctionDeclarations(ENV, {}, "len", APP);
   const declaradas = new Set(app.map((d) => String(d.name)));
 
-  it("cada herramienta que cambia en una app existe en el catálogo", () => {
-    for (const n of HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP) expect(declaradas.has(n), n).toBe(true);
+  it("cada herramienta que cambia en una app existe en el catálogo (con la terminal encendida, como en producción: bash sólo existe con ella)", () => {
+    const conTerminal = new Set(buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }, {}, "len", APP).map((d) => String(d.name)));
+    for (const n of HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP) expect(conTerminal.has(n), n).toBe(true);
   });
 
   it("todo lo que parece el nombre de una herramienta en su prompt, su manual y su guía existe", () => {
