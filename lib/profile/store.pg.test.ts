@@ -143,7 +143,9 @@ describe("🔴 un perfil público no recorre la tabla entera de proyectos", () =
       await db.execute(sql`analyze "projects"`);
       await db.execute(sql`analyze "projectMembers"`);
       const q = profileProjectsQuery(ANA, BEA).toSQL();
-      const r = await db.$client.query(`EXPLAIN (FORMAT JSON) ${q.sql}`, q.params as unknown[]);
+      // `db` se declara como NodePgDatabase sin su `$client`; en esta base es el Pool de pg.
+      const cliente = (db as unknown as { $client: { query: (texto: string, params: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> } }).$client;
+      const r = await cliente.query(`EXPLAIN (FORMAT JSON) ${q.sql}`, q.params as unknown[]);
       const nodos: { "Node Type"?: string; "Relation Name"?: string }[] = [];
       const recorrer = (n: Record<string, unknown>) => {
         nodos.push(n as { "Node Type"?: string; "Relation Name"?: string });
