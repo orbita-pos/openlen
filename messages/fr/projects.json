@@ -149,7 +149,7 @@
     "upgradeCta": "Passer à Pro",
     "upgradeHint": "{credits} crédits IA / mois",
     "dismissBanner": "Ignorer",
-    "success": "Vous êtes désormais sur le forfait {plan} — {credits} crédits IA par mois. Merci pour votre passage à {plan} !",
+    "success": "Vous êtes désormais sur le forfait {plan} — {credits} crédits IA par mois. Merci d'avoir changé de forfait !",
     "errors": {
       "not_configured": "La facturation n'est pas encore configurée. Veuillez réessayer plus tard ou contacter le support.",
       "checkout_failed": "Nous n'avons pas pu démarrer votre paiement. Veuillez réessayer.",
