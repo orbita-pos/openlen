@@ -35,7 +35,7 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
     personasDelProyecto(id),
     mencionesSinVer(id, q.userId),
   ]);
-  return json({ hilos, personas: personas.map(({ userId, nombre, rol }) => ({ userId, nombre, rol })), puedeLen: puede(q.acceso.rol, "editar"), sinVer, yo: q.userId });
+  return json({ hilos, personas: personas.map(({ userId, nombre, rol, avatar }) => ({ userId, nombre, rol, avatar })), puedeLen: puede(q.acceso.rol, "editar"), sinVer, yo: q.userId });
 }
 
 const Crear = CuerpoDelMensaje.extend({

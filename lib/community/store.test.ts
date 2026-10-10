@@ -112,6 +112,13 @@ describe("el store de comunidad deriva el host, no se cree la columna", () => {
     expect(reports[0].deployUrl).toBe("https://kira.openlen.app");
   });
 
+  it("🔴 Explorar: sin foto subida, la de Google; la columna `image` no sale", async () => {
+    filas.value = [filaLegado({ avatarUrl: null, image: "https://lh3.googleusercontent.com/a/kira" })];
+    const { items } = await listExplore({ sort: "recent" });
+    expect(items[0].avatarUrl).toBe("https://lh3.googleusercontent.com/a/kira");
+    expect(items[0]).not.toHaveProperty("image");
+  });
+
   // El único caso en que la columna manda: sin subdominio no hay nada que
   // derivar. Misma regla que `lib/projects.ts` (`derivado ?? row.deployUrl`),
   // y no un atajo — un dominio propio vive ahí y no se toca.
