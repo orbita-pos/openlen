@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const builds: unknown[] = [];
+let listCalls = 0;
 const state: { draft: Record<string, unknown> | null; live: Record<string, unknown> | null } = { draft: null, live: null };
 
 vi.mock("@/lib/db", () => ({ db: {}, schema: { projectBackends: {}, projectBackendEnvironments: {}, projects: {} } }));
@@ -21,7 +22,10 @@ vi.mock("./draft", () => ({
   },
 }));
 vi.mock("./environments", () => ({
-  listEnvironments: async () => [state.draft, state.live].filter(Boolean),
+  listEnvironments: async () => {
+    listCalls += 1;
+    return [state.draft, state.live].filter(Boolean);
+  },
   getEnvironment: async (_p: string, env: string) => (env === "draft" ? state.draft : state.live),
   createEnvironment: async () => {
     state.draft = { projectId: "p1", environment: "draft", scope: "abcdefghijklmnopqrst_d", jwtSecretEncrypted: "", readOnlyPasswordEncrypted: null, provisionedAt: null };
@@ -32,7 +36,7 @@ vi.mock("./environments", () => ({
   dbNameOf: (s: string) => `ol_${s}`,
 }));
 
-const { ensureEnvironmentReady } = await import("./registry");
+const { ensureEnvironmentReady, hasLiveEnvironment } = await import("./registry");
 
 const REC = {
   projectId: "p1",
@@ -74,5 +78,16 @@ describe("el borrador nace construido", () => {
   it("producción nunca nace desde aquí", async () => {
     state.live = null;
     await expect(ensureEnvironmentReady(REC, "live")).rejects.toThrow(/nace al publicar/);
+  });
+});
+
+describe("adoptar la base de antes, una vez por proceso", () => {
+  it("dos peticiones del mismo proyecto no vuelven a preguntar si hay que adoptarla", async () => {
+    const rec = { ...REC, projectId: "p-adoptado", provisionedAt: new Date() };
+    listCalls = 0;
+    await hasLiveEnvironment(rec);
+    await hasLiveEnvironment(rec);
+    await ensureEnvironmentReady(rec, "live");
+    expect(listCalls).toBe(1);
   });
 });

@@ -96,12 +96,21 @@ export async function ensureBackend(projectId: string): Promise<BackendRecord> {
   throw new Error("no se pudo crear el backend del proyecto");
 }
 
+/** Los proyectos ya mirados por `adoptLegacyEnvironment` en este proceso. */
+const adopted = new Set<string>();
+
 /** Los proyectos con base de ANTES de los dos entornos: su base de siempre
  *  (`ol_<ref>`) pasa a ser el entorno que le toca, con `scope` = ref. Lo hace
  *  también `npm run backend-environments:migrate`; esto cubre lo que quede. */
 export async function adoptLegacyEnvironment(rec: BackendRecord): Promise<void> {
   if (!rec.provisionedAt) return;
-  if ((await listEnvironments(rec.projectId)).length > 0) return;
+  // Una vez por proceso y proyecto: esto corre en CADA petición al backend, y
+  // una vez adoptado (o visto que no hacía falta) ya no cambia.
+  if (adopted.has(rec.projectId)) return;
+  if ((await listEnvironments(rec.projectId)).length > 0) {
+    adopted.add(rec.projectId);
+    return;
+  }
   const [p] = await db.select({ status: schema.projects.status }).from(schema.projects).where(eq(schema.projects.id, rec.projectId)).limit(1);
   await db
     .insert(schema.projectBackendEnvironments)
@@ -113,6 +122,7 @@ export async function adoptLegacyEnvironment(rec: BackendRecord): Promise<void> 
       provisionedAt: rec.provisionedAt,
     })
     .onConflictDoNothing();
+  adopted.add(rec.projectId);
 }
 
 export async function hasLiveEnvironment(rec: BackendRecord): Promise<boolean> {
