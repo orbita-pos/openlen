@@ -160,6 +160,10 @@ const targets = [
   // OBLIGATORIA antes que el código: lib/backend/registry.ts y environments.ts
   // la leen para dar con la base de cada página.
   "backend-environments-migrate",
+  // El perfil de cada persona: `users.links` y `users.pinnedProjectIds`.
+  // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: el
+  // DrizzleAdapter de Auth.js lee todas las columnas de `users`.
+  "profile-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
