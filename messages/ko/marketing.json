@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "당신만의 웹 개발자. <len></len> <gradient>Len.</gradient>",
-    "subtitle": "필요한 것을 말하세요. Len이 페이지나 앱을 만들고, 글·사진·폼을 넣고, 스스로 결과를 확인한 뒤 당신의 도메인에 게시합니다.",
     "announce": "<strong>이제 Len이 앱도 만듭니다</strong><dot></dot>무료로 시작하기",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",

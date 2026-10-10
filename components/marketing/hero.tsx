@@ -44,7 +44,7 @@ export async function Hero() {
     <section className="relative -mt-14 pt-14">
       {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
           referencia): un aviso en píldora, UN titular con Len dentro haciendo
-          de «o», una línea gris debajo y, donde Grok pone dos botones, la caja
+          de «o» y, donde Grok pone dos botones, la caja
           de prompt (Jesús, el mismo día: la caja es la entrada, no un botón
           que lleva a ella). Y justo después, sin pausa, la maqueta del taller.
 
@@ -87,11 +87,9 @@ export async function Hero() {
             })}
           </h1>
 
-          <p className="mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-zinc-600 sm:text-[20px] dark:text-zinc-300">
-            {t("hero.subtitle")}
-          </p>
-
-          <div className="mt-10 w-full max-w-2xl text-left">
+          {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
+              titular y la caja bastan; lo que hace Len lo enseña la maqueta. */}
+          <div className="mt-12 w-full max-w-2xl text-left">
             <HeroPromptInput />
           </div>
 
