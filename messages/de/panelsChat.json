@@ -73,6 +73,7 @@
     "image": "Bild:",
     "removeImage": "Angehängtes Bild entfernen",
     "placeholder": "Beschreibe, wie deine Seite aussehen oder klingen soll…",
+    "placeholderApp": "Beschreibe, was deine App tun oder wie sie aussehen soll…",
     "placeholderScoped": "{target} ändern…",
     "attachImage": "Bild anhängen",
     "attachImageTitle": "Ein Bild anhängen, um es in die Seite einzufügen",

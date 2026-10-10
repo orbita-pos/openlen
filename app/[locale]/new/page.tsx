@@ -3425,6 +3425,7 @@ function NewV2Inner() {
           onPrepareSnapshot={flushPendingSave}
           sectionSelectMode={sectionSelectMode}
           onToggleSectionSelect={esApp ? undefined : (active) => setSectionSelectMode(active)}
+          esApp={esApp}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
           pendingDraft={pendingChatDraft}

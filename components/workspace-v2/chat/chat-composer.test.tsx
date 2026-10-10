@@ -17,7 +17,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Compositor({ busy = false, conPlan = true }: { busy?: boolean; conPlan?: boolean }) {
+function Compositor({ busy = false, conPlan = true, esApp = false }: { busy?: boolean; conPlan?: boolean; esApp?: boolean }) {
   const [plan, setPlan] = useState(false);
   const ta = useRef<HTMLTextAreaElement | null>(null);
   return (
@@ -42,6 +42,7 @@ function Compositor({ busy = false, conPlan = true }: { busy?: boolean; conPlan?
       mode="len"
       planMode={plan || (busy && conPlan)}
       {...(conPlan ? { onTogglePlan: () => setPlan((p) => !p) } : {})}
+      esApp={esApp}
     />
   );
 }
@@ -156,5 +157,15 @@ describe("el encargo en el compositor", () => {
     const host = montarEncargo({ conEncargo: false });
     pulsar(host.querySelector('[aria-label="newChat.composer.plus"]'));
     expect(opcionEncargo(host)).toBeUndefined();
+  });
+});
+
+describe("la caja vacía en una app", () => {
+  it("🔴 en una app habla de la app, no de «tu página» (turnos reales del 09/10)", () => {
+    expect(montar({ esApp: true }).querySelector("textarea")?.getAttribute("placeholder")).toBe("composer.placeholderApp");
+  });
+
+  it("en una página, la de siempre", () => {
+    expect(montar().querySelector("textarea")?.getAttribute("placeholder")).toBe("composer.placeholder");
   });
 });

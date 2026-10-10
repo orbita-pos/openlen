@@ -73,6 +73,7 @@
     "image": "이미지:",
     "removeImage": "첨부된 이미지 제거",
     "placeholder": "페이지의 모습이나 문구를 어떻게 만들지 설명해 주세요…",
+    "placeholderApp": "앱이 무엇을 해야 하는지, 어떻게 보여야 하는지 설명해 주세요…",
     "placeholderScoped": "선택한 {target} 변경…",
     "attachImage": "이미지 첨부",
     "attachImageTitle": "페이지에 삽입할 이미지를 첨부하세요",

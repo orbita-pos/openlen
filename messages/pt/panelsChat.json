@@ -73,6 +73,7 @@
     "image": "Imagem:",
     "removeImage": "Remover imagem anexada",
     "placeholder": "Descreva como sua página deve ficar ou o que deve dizer…",
+    "placeholderApp": "Descreva o que seu app deve fazer ou como deve ficar…",
     "placeholderScoped": "Altere o {target} selecionado…",
     "attachImage": "Anexar uma imagem",
     "attachImageTitle": "Anexe uma imagem para inserir na página",

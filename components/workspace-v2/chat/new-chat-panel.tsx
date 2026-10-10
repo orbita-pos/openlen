@@ -66,6 +66,8 @@ export interface NewChatPanelProps {
   onPendingDraftConsumed?: () => void;
   /** Ver `AgentChatOptions.pendingAttachments`. */
   pendingAttachments?: PendingAttachments | null;
+  /** El proyecto es una app: la caja vacía habla de la app. */
+  esApp?: boolean;
   /** En el móvil el panel tapa la pantalla: la ✕ de la cabecera lo cierra. */
   onClose?: () => void;
   /** Un lector del proyecto compartido: lee la conversación, no escribe. */
@@ -128,6 +130,7 @@ function AgentChatView({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   pendingAttachments = null,
+  esApp = false,
   onClose,
   soloLectura = false,
 }: NewChatPanelProps & {
@@ -447,6 +450,7 @@ function AgentChatView({
             {...(chat.planOffered ? { onTogglePlan: chat.togglePlan } : {})}
             goalChip={chat.goalChip}
             goalAvailable={chat.goalAvailable}
+            esApp={esApp}
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(equipo.compartido
               ? {
