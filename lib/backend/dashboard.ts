@@ -9,6 +9,8 @@
 // van por nuestro GoTrue (invitar, borrar) y por su almacén (cerrar sesiones,
 // que GoTrue no ofrece a un administrador).
 
+import { randomBytes } from "node:crypto";
+
 import type { AuthContext } from "./auth/handler";
 import { handleAuth } from "./auth/handler";
 import { deleteSessions, listUsers } from "./auth/store";
@@ -251,6 +253,12 @@ async function auth(project: BackendProject, method: string, path: string, body?
 /** Lo que hace «Invite user» en Supabase: el usuario y su correo de invitación. */
 export function inviteUser(project: BackendProject, email: string): Promise<{ ok: true } | Failure> {
   return auth(project, "POST", "invite", { email });
+}
+
+/** Un usuario confirmado con una contraseña que nadie conoce: los usuarios de
+ *  prueba de la visita de Len en el borrador (spec local 2026-10-09). */
+export function createAuthUser(project: BackendProject, email: string): Promise<{ ok: true } | Failure> {
+  return auth(project, "POST", "admin/users", { email, email_confirm: true, password: randomBytes(24).toString("base64url") });
 }
 
 export function deleteAuthUser(project: BackendProject, userId: string): Promise<{ ok: true } | Failure> {
