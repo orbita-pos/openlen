@@ -241,6 +241,12 @@ export const projects = pgTable(
     // Distintas ⇒ «cambios sin publicar». Sin carpeta, las dos NULL.
     filesHash: text("filesHash"),
     publishedFilesHash: text("publishedFilesHash"),
+    // LAS VARIABLES DE ENTORNO (spec local 2026-10-10): la huella de las de
+    // PRODUCCIÓN del ajuste (`envHashOf`, lib/apps/env/hash.ts), al día con cada
+    // guardado, y la de la última publicación. Distintas ⇒ «cambios sin
+    // publicar». Sin variables, NULL. `npm run env-vars:migrate`.
+    envHash: text("envHash"),
+    publishedEnvHash: text("publishedEnvHash"),
     // First 12 chars of sha256(optimized published HTML). Points at the
     // on-disk release dir under /var/www/openlen/<sub>/releases/<sha>/.
     // The TopBar "Previous deploys" UI joins this against listReleases()
@@ -1333,6 +1339,25 @@ export const projectMemberSpend = pgTable(
     creditos: integer("creditos").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.userId, t.mes] })],
+);
+
+// ─── Variables de entorno de una app ─────────────────────────────────────────
+// Lo que el dueño pone en «Variables de entorno» y su app lee con
+// `import.meta.env.VITE_X` (lib/apps/env/). Una fila por nombre y entorno:
+// `draft` (el lienzo, los ojos de Len, la terminal) o `production` (la
+// publicada). PÚBLICAS por diseño —van dentro del JavaScript que se sirve—, así
+// que sin cifrar. No se copian al remezclar ni al duplicar. `npm run env-vars:migrate`.
+export const projectEnvVars = pgTable(
+  "projectEnvVars",
+  {
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    target: text("target").$type<"draft" | "production">().notNull(),
+    value: text("value").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    updatedBy: text("updatedBy"),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.name, t.target] })],
 );
 
 // ─── Hilos en el código — @Len y @persona sobre una línea ─────────────────────
