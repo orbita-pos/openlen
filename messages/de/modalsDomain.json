@@ -106,7 +106,7 @@
     "subdomainLabel": "Subdomain",
     "subdomainPlaceholder": "dein-name",
     "preview": "Vorschau",
-    "limitsHint": "Kostenloser Tarif: 1 veröffentlichte Seite. Pro: 10. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
+    "limitsHint": "Veröffentlichte Projekte (Seiten oder Apps): {free} im kostenlosen Tarif, {pro} mit Pro und {max} mit Max. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
     "unpublish": {
       "sure": "Sicher?",
       "confirm": "Ja, Veröffentlichung aufheben",
@@ -125,7 +125,7 @@
       "invalid": "Verwende Kleinbuchstaben, Zahlen und Bindestriche (nicht am Anfang/Ende).",
       "reserved": "Dieser Name ist reserviert. Versuche einen anderen.",
       "taken": "Bereits vergeben. Versuche einen anderen.",
-      "limit": "Tariflimit erreicht — hebe die Veröffentlichung einer anderen Seite auf oder führe ein Upgrade durch."
+      "limit": "Tariflimit erreicht — hebe die Veröffentlichung eines anderen Projekts auf oder führe ein Upgrade durch."
     },
     "speedCard": {
       "title": "Seitengeschwindigkeit",

@@ -106,7 +106,7 @@
     "subdomainLabel": "子域名",
     "subdomainPlaceholder": "your-name",
     "preview": "预览",
-    "limitsHint": "免费版：1 个已发布页面。Pro：10 个。仅限小写字母、数字和连字符（1–63 个字符）。",
+    "limitsHint": "已发布项目（页面或应用）：免费版 {free} 个，Pro {pro} 个，Max {max} 个。仅限小写字母、数字和连字符（1–63 个字符）。",
     "unpublish": {
       "sure": "确定吗？",
       "confirm": "是的，取消发布",
@@ -125,7 +125,7 @@
       "invalid": "请使用小写字母、数字和连字符（不可置于开头或结尾）。",
       "reserved": "此名称已被保留。请换一个。",
       "taken": "已被占用。请换一个。",
-      "limit": "已达套餐上限——请取消发布其他页面或升级。"
+      "limit": "已达套餐上限——请取消发布其他项目或升级。"
     },
     "speedCard": {
       "title": "页面速度",

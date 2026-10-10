@@ -98,7 +98,7 @@
       "published": "✓ Gepubliceerd op {url}",
       "taken": "Dat subdomein is al in gebruik. Probeer een ander.",
       "reserved": "Dat subdomein is gereserveerd. Kies een ander.",
-      "limit": "Je hebt de limiet voor gepubliceerde pagina's van je abonnement bereikt.",
+      "limit": "Je hebt de limiet voor gepubliceerde projecten van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…",
       "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
