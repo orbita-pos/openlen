@@ -520,6 +520,14 @@
       "delete": "Bestand verwijderen",
       "confirm": "Zeker?",
       "deleted": "{name} verwijderd"
+    },
+    "env": {
+      "test": "Testgegevens",
+      "real": "Echte gegevens",
+      "reset": "Testgegevens resetten",
+      "resetConfirm": "Testgegevens wissen en opnieuw opbouwen vanuit de migraties?",
+      "noLive": "Nog geen echte gegevens: die beginnen als je publiceert.",
+      "testMails": "Testgegevens versturen geen e-mails: nieuwe accounts worden automatisch bevestigd."
     }
   }
 }

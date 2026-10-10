@@ -45,6 +45,13 @@ export async function ownedBackend(projectId: string, wanted?: Environment): Pro
   return { kind: "ready", url, environment, project: backendProjectFor({ record, pageSub: owned.subdomain ?? null }, e) };
 }
 
+/** `?env=draft|live` del panel (spec local 2026-10-09); sin él, el de por
+ *  defecto (reales si hay). */
+export function environmentFromRequest(req: Request): Environment | undefined {
+  const v = new URL(req.url).searchParams.get("env");
+  return v === "draft" || v === "live" ? v : undefined;
+}
+
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }

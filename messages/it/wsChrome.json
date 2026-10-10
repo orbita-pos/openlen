@@ -520,6 +520,14 @@
       "delete": "Elimina file",
       "confirm": "Sicuro?",
       "deleted": "{name} eliminato"
+    },
+    "env": {
+      "test": "Dati di prova",
+      "real": "Dati reali",
+      "reset": "Reimposta i dati di prova",
+      "resetConfirm": "Cancellare i dati di prova e ricostruirli dalle migrazioni?",
+      "noLive": "Ancora nessun dato reale: iniziano quando pubblichi.",
+      "testMails": "I dati di prova non inviano email: i nuovi account vengono confermati automaticamente."
     }
   }
 }
