@@ -14,6 +14,7 @@ import { injectSoloPublicada } from "./solo-publicada";
 const PAGINA = injectSoloPublicada(`<!doctype html><html><head><title>p</title></head><body>
 <button id="datos" onclick="fetch('/rest/v1/pedidos').catch(function(){})">datos</button>
 <button id="otra" onclick="fetch('/otra.json').catch(function(){})">otra</button>
+<button id="absoluta" onclick="fetch(location.protocol + '//localhost:' + location.port + '/rest/v1/pedidos').catch(function(){})">absoluta</button>
 <form id="nativo"><input name="x" value="1"><button id="enviar" type="submit">enviar</button></form>
 <form id="conjs"><button id="enviarjs" type="submit">enviar js</button></form>
 <button id="menu" onclick="location.href='/menu'">menu</button>
@@ -87,6 +88,16 @@ describe("lo que sólo funciona publicado se dice", () => {
       await h.pulsar("#otra");
       const avisos = deTipo(await h.msgs(), "openlen:solo-publicada");
       expect(avisos).toEqual([{ type: "openlen:solo-publicada", tipo: "llamada", ruta: "/rest/v1/pedidos" }]);
+    });
+  }, 60_000);
+
+  it("🔴 la misma ruta en OTRO host no avisa: es el backend del proyecto, que en el lienzo SÍ contesta", async () => {
+    // supabase-js llama a la URL ABSOLUTA del proyecto (`https://<ref>.openlen.app`),
+    // que desde el lienzo contesta con los datos de prueba. Decirle al usuario
+    // que «sólo funciona publicada» cada vez que su app carga datos era falso.
+    await conLienzo(async (h) => {
+      await h.pulsar("#absoluta");
+      expect(deTipo(await h.msgs(), "openlen:solo-publicada")).toEqual([]);
     });
   }, 60_000);
 
