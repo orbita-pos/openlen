@@ -64,6 +64,7 @@
     "inbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/inbox-migrate.ts",
     "formularios-visto:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/formularios-visto-migrate.ts",
     "pages-backend:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/pages-backend-migrate.ts",
+    "backend-environments:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/backend-environments-migrate.ts",
     "folder:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/folder-migrate.ts",
     "turn-changes:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/turn-changes-migrate.ts",
     "miembros:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/miembros-migrate.ts",
