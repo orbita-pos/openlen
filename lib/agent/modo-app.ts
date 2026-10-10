@@ -270,7 +270,11 @@ function bashDeLaApp(descripcion: string): string {
     "no node, npm, pip or git",
     "no node, pip or git (in this app, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
   );
-  return cambiar(conNpm, "/tests holds Playwright tests, never published", "/tests holds the app's tests (vitest), never published");
+  return cambiar(
+    conNpm,
+    "/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published",
+    "/tests holds the app's tests (vitest), never published",
+  );
 }
 
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
