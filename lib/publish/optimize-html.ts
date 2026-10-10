@@ -48,7 +48,7 @@ import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
-import { CDN_TAG_RE, extractTwConfig, readTwCarrier, stripTwCarrier } from "./tw-config";
+import { CDN_TAG_RE, extractTwConfig, readTwCarrier, readTwDarkMode, stripTwCarrier, type TwDarkMode } from "./tw-config";
 
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
@@ -162,11 +162,12 @@ export interface FuenteDeClases {
 export async function optimizeHtmlForProduction(
   html: string,
   fuentes: readonly FuenteDeClases[] = [],
+  stylesheets: readonly string[] = [],
 ): Promise<OptimizeResult> {
   if (process.env.NODE_ENV !== "production") {
     return { html, baked: false, cssBytes: 0 };
   }
-  const baked = await bakeTailwind(html, fuentes);
+  const baked = await bakeTailwind(html, fuentes, stylesheets);
   const r = rustOptimizeForPublish(baked.html);
   if (r.html === null) {
     throw new Error(
@@ -190,10 +191,19 @@ export async function optimizeHtmlForProduction(
  * corre en producción. Con las apps web (spec 2026-10-07-apps, H1) casi todas
  * las clases viven en el código, así que sin esto saldrían sin estilos. Leer de
  * más sólo puede añadir CSS, nunca quitarlo.
+ *
+ * 🔴 `stylesheets`: LAS HOJAS DE UNA APP QUE USAN TAILWIND (2026-10-08). El
+ * compilador mete una hoja con `@layer`/`@apply` DENTRO del módulo que la
+ * importa, como `<style type="text/tailwindcss">` (lib/apps/compilador.ts): el
+ * CDN la procesa en el lienzo, pero en la publicada no hay CDN y ese `<style>`
+ * es inerte. Sin hornearlas aquí, sus `@apply` no existirían publicada. Si una
+ * no compila (`@apply bg-nope`), el `catch` de abajo deja el CDN: la publicada
+ * se ve como el lienzo.
  */
 export async function bakeTailwind(
   html: string,
   fuentes: readonly FuenteDeClases[] = [],
+  stylesheets: readonly string[] = [],
 ): Promise<OptimizeResult> {
   const m = CDN_TAG_RE.exec(html);
   if (!m) {
@@ -222,13 +232,17 @@ export async function bakeTailwind(
   // `tailwind` global y ese script lanzaría ReferenceError en la publicada.
   // El carrier, si lo hay, sigue mandando (es la paleta ya validada).
   const carrier = readTwCarrier(html);
+  // El `darkMode`, antes de quitar el carrier y la config (2026-10-08): sin él,
+  // `dark:` se horneaba como `prefers-color-scheme` aunque la página cambiara
+  // de modo por clase, como shadcn.
+  const darkMode = readTwDarkMode(html);
   const sinCarrier = stripTwCarrier(html);
   const conConfig = extractTwConfig(sinCarrier);
   // Y SI HAY CONFIG PERO NO SE PUEDE LEER —lógica en el mismo script, valores
   // que se calculan al cargar—, NO SE HORNEA: se queda el CDN y el script, como
   // con `?plugins=`. Hornear la quitaba entera, paleta y lógica (medido por el
   // revisor de publicación). La página se publica como se ve en el lienzo.
-  if (carrier === null && conConfig.extend === null && conConfig.html !== sinCarrier) {
+  if (carrier === null && conConfig.extend === null && darkMode === null && conConfig.html !== sinCarrier) {
     // eslint-disable-next-line no-console
     console.warn("[optimize-html] tailwind.config que no se puede leer: se publica con el CDN, sin hornear");
     return { html, baked: false, cssBytes: 0 };
@@ -245,6 +259,8 @@ export async function bakeTailwind(
       html,
       mergeThemeExtends(carrier ?? conConfig.extend ?? {}, html),
       fuentes,
+      stylesheets,
+      darkMode,
     );
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -278,19 +294,33 @@ export async function bakeTailwind(
   return { html: out, baked: true, cssBytes: css.length };
 }
 
+/** Las hojas de la app traen su `@tailwind base` (lo copian de Vite); el horneado
+ *  ya lo pone una vez en `TAILWIND_INPUT`, y dos veces duplicaría el preflight. */
+function sinDirectivasTailwind(css: string): string {
+  return css.replace(/@tailwind\s+[\w-]+\s*;?/g, "");
+}
+
 async function generateTailwindCss(
   html: string,
   extend: Record<string, unknown> = {},
   fuentes: readonly FuenteDeClases[] = [],
+  stylesheets: readonly string[] = [],
+  darkMode: TwDarkMode | null = null,
 ): Promise<string> {
+  const entrada = [TAILWIND_INPUT, ...stylesheets.map(sinDirectivasTailwind)].join("\n");
   const result = await postcss([
     tailwindcss({
       content: [{ raw: html, extension: "html" }, ...fuentes.map((f) => ({ raw: f.raw, extension: f.extension }))],
       theme: { extend },
+      ...(darkMode ? { darkMode } : {}),
       plugins: [],
       corePlugins: { preflight: true },
     } as Parameters<typeof tailwindcss>[0]),
-  ]).process(TAILWIND_INPUT, { from: undefined });
+  ]).process(entrada, { from: undefined });
 
-  return result.css;
+  // El CSS va dentro de un `<style>` del documento: un `</style>` de la hoja
+  // (en un comentario, en un `content:`) lo cerraría y el resto saldría como
+  // HTML. En el lienzo no pasa (va por `textContent`). `<\/style` es el mismo
+  // texto para CSS —en un comentario o en una cadena, `\/` es `/`—.
+  return result.css.replace(/<\/(style)/gi, "<\\/$1");
 }

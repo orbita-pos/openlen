@@ -91,7 +91,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
   });
 
   it("🔴 nota 4: ni las cabeceras de caché ni los tipos se estampan en un host lienzo (Next pone los suyos; Caddy los duplicaría)", () => {
-    for (const nombre of ["assets", "carpeta", "vendor", "fuentes", "doc", "webmanifest", "markdown"]) {
+    for (const nombre of ["assets", "carpeta", "fuentes", "doc", "webmanifest", "markdown"]) {
       expect(matcher(nombre), `@${nombre}`).toMatch(/\n\s*not header_regexp Host \^lienzo-\n/);
     }
   });
@@ -110,8 +110,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     const c = matcher("carpeta");
     const rutas = rutasDe(c, "path ");
     // /storage/v1/* (carril D): Next pone la caché de cada objeto, los privados `private`.
-    // /openlen/vendor/* (apps web): inmutable, con su propia regla (@vendor).
-    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/openlen/vendor/*", "/storage/v1/*"]);
+    expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/storage/v1/*"]);
     expect(PAGINAS).toContain('header @carpeta Cache-Control "public, max-age=0, must-revalidate"');
     const doc = matcher("doc");
     // Nota 8: la línea de extensiones, NO la de `/api/f/*` (la vigila caddy-contract).
@@ -129,9 +128,8 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     expect(PAGINAS).toContain('header @fuentes Content-Type "text/javascript; charset=utf-8"');
   });
 
-  it("🔴 apps web: las dependencias del catálogo son inmutables (su versión va en la ruta)", () => {
-    expect(rutasDe(matcher("vendor"), "path ")).toEqual(["/openlen/vendor/*"]);
-    expect(PAGINAS).toContain('header @vendor Cache-Control "public, immutable, max-age=31536000"');
+  it("apps web (plan 02): el catálogo va DENTRO del paquete; la release no lo lleva y no hay regla para él", () => {
+    expect(PAGINAS).not.toContain("/openlen/vendor/");
   });
 
   it("nota 6: .webmanifest y .md con su tipo explícito (la tabla de Go no los trae)", () => {

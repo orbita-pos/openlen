@@ -57,6 +57,25 @@ const nextConfig = {
       "./node_modules/tailwindcss/stubs/*",
       "./lib/agent/terminal/trabajador.mjs",
       "./node_modules/just-bash/**/*",
+      // The apps' type and lint checker (plans/app-catalog-and-bundler/03):
+      // `lib/apps/checker/check-app.ts` starts `checker-worker.mjs` by path, and
+      // TypeScript reads its `lib.*.d.ts` by path too. The packages themselves
+      // (typescript, eslint and friends) are traced through the never-called
+      // `toolchainForTracing` + `serverExternalPackages` below, so their whole
+      // dependency trees come along (ESLint's live loose in node_modules).
+      "./lib/apps/checker/checker-worker.mjs",
+      "./lib/apps/checker/checker-core.mjs",
+      "./lib/apps/checker/format.mjs",
+      "./node_modules/typescript/lib/*.d.ts",
+      // El empaquetador de las apps (plan 02): `bundle-app.ts` arranca
+      // `bundler-worker.mjs` por ruta, y el hilo lee el wasm por ruta. Va la
+      // build de NAVEGADOR de esbuild-wasm (la de Node crea un proceso).
+      "./lib/apps/bundler/bundler-worker.mjs",
+      "./node_modules/esbuild-wasm/esbuild.wasm",
+      "./node_modules/esbuild-wasm/lib/browser.js",
+      // Las pruebas de una app (plan 04): `bundle-tests.ts` lee nuestro vitest
+      // por ruta y lo empaqueta con cada prueba. El kit vive en public/.
+      "./lib/apps/tests/vitest-runtime.js",
     ],
   },
   // External Node packages:
@@ -87,6 +106,16 @@ const nextConfig = {
     "@openlen/images",
     "puppeteer",
     "lighthouse",
+    // The apps' type and lint checker runs these in its own worker (see
+    // `outputFileTracingIncludes` above): external, so they're traced whole.
+    "typescript",
+    "eslint",
+    "typescript-eslint",
+    "eslint-plugin-react-hooks",
+    "@eslint/js",
+    "globals",
+    // El empaquetador de las apps (plan 02): ver `outputFileTracingIncludes`.
+    "esbuild-wasm",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to

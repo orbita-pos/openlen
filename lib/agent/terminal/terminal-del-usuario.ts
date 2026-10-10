@@ -99,6 +99,17 @@ async function correr(a: Abierta, deps: AgentDeps, command: string): Promise<Com
   if (a.reloj) clearTimeout(a.reloj);
   a.usada = Date.now();
   try {
+    // UNA APP: lo que es el proyecto AHORA. Sin `app` la sesión trataba una app
+    // como una página —sin npm, npx tsc ni las pruebas que sí tiene la terminal
+    // de Len en el mismo panel, y con las guardas y los diagnósticos de una
+    // página— (ensayo de caja del 09/10). Se lee en cada comando: una página
+    // puede convertirse en app con la terminal abierta, y entonces la terminal
+    // renace con los comandos de la app.
+    const app = (await deps.loadProject(a.sesion.projectId, a.sesion.userId))?.data.app ?? null;
+    if (JSON.stringify(app) !== JSON.stringify(a.sesion.app ?? null)) {
+      await cerrarTerminalDeLaSesion(a.sesion);
+      a.sesion.app = app;
+    }
     const out = await toolBash(a.sesion, deps, { command });
     const cambio =
       out.updatedHtml !== undefined ||

@@ -73,6 +73,7 @@
     "image": "Imagen:",
     "removeImage": "Quitar la imagen adjunta",
     "placeholder": "Describe cómo debería verse o leerse tu página…",
+    "placeholderApp": "Describe qué debería hacer tu app o cómo debería verse…",
     "placeholderScoped": "Cambia el {target} seleccionado…",
     "attachImage": "Adjuntar una imagen",
     "attachImageTitle": "Adjunta una imagen para insertarla en la página",
@@ -120,7 +121,8 @@
     "placeholder": "Escribe a Len, o @ para hablar con alguien del proyecto…"
   },
   "noChange": {
-    "label": "No cambió nada de la página"
+    "label": "No cambió nada de la página",
+    "labelApp": "No cambió nada de la app"
   },
   "undo": {
     "failedHttp": "No se pudo deshacer ({status}) — el cambio sigue aplicado. Inténtalo otra vez.",
@@ -130,6 +132,7 @@
     "notUndone": "Deshecho, salvo {rutas}: deshacer un turno no devuelve la base de datos, la memoria ni los ajustes."
   },
   "cutShort": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la página.",
+  "cutShortApp": "Se cortó antes de terminar ({reason}), pero lo que hice ya quedó guardado. Revisa la app.",
   "diff": {
     "anadida": "Añadió {que}",
     "quitada": "Quitó {que}",
@@ -154,6 +157,7 @@
       "conversations": "Charlas",
       "newChat": "Empezar de cero",
       "newChatHint": "Guarda esta charla y empieza otra. Len no la recordará; tu memoria y las notas de la página se quedan.",
+      "newChatHintApp": "Guarda esta charla y empieza otra. Len no la recordará; tu memoria y las notas de la app se quedan.",
       "busy": "Espera a que Len termine para cambiar de charla.",
       "failed": "No se pudo cambiar de charla. Inténtalo otra vez.",
       "archived": "Charlas anteriores",
@@ -171,13 +175,24 @@
         "publish": "Publica mi página"
       }
     },
+    "emptyApp": {
+      "title": "¿Qué le hacemos hoy a tu app?",
+      "suggestions": {
+        "data": "Guarda los datos en una base de datos",
+        "login": "Añade un inicio de sesión",
+        "mobile": "Revisa cómo se ve en el móvil",
+        "publish": "Publica mi app"
+      }
+    },
     "steps": {
       "running": "Len está trabajando",
       "done": "{count, plural, one {Len hizo # paso} other {Len hizo # pasos}}"
     },
     "activity": {
       "reading": "Leyendo tu página",
+      "readingApp": "Leyendo tu app",
       "editing": "Cambiando la página",
+      "editingApp": "Cambiando la app",
       "terminal": "Usando la terminal",
       "photos": "Buscando fotos",
       "image": "Editando una imagen",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Imagen y más",
       "on": "Activo",
-      "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla."
+      "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla.",
+      "disclaimerApp": "Len puede equivocarse. Prueba tu app antes de publicarla."
     },
     "layout": {
       "float": "Sacar el chat",

@@ -10,6 +10,7 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { takeTypesAndLint } from "@/lib/agent/types-and-lint";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
@@ -856,6 +857,9 @@ async function correrTurno(
     mode,
     app: appDelTurno,
     zona: zonaDelTurno,
+    // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
+    // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
+    ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
     state,
     memoryMessage: memoriaDelTurno?.text ?? null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
@@ -1421,6 +1425,9 @@ async function correrTurno(
           // La página a medias de un `Write` que aún no dijo su ruta se pinta
           // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
           activePage: () => agentSession.page,
+          // UNA APP (plan 03): los tipos y el lint que llegaron tras escribir,
+          // antes de cada llamada al modelo, como el LSP de Claude Code.
+          lateDiagnostics: () => takeTypesAndLint(agentSession),
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,

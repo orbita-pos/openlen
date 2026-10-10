@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "Dominio propio",
-      "subtitle": "Sirve esta página desde tu propio dominio"
+      "subtitle": "Sirve esta página desde tu propio dominio",
+      "subtitleApp": "Sirve esta app desde tu propio dominio"
     },
     "providers": {
       "vercel": "Desplegar en Vercel",

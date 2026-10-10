@@ -196,7 +196,7 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   // (y las generaciones donde el modelo emite config) pierden sus colores al
   // clonar — fondos desaparecidos, blanco-sobre-blanco, hovers rotos
   // (cazado 2026-07-17). Ver lib/publish/tw-config.ts.
-  const { html: pre, extend } = extractTwConfig(html);
+  const { html: pre, extend, darkMode } = extractTwConfig(html);
   const r = rustSanitizeForPublish(pre) as RustSanitizeResult;
   const clean = r.html ?? null;
   // Reparación de tema (bug 2026-07-29): el strip de Rust mata los
@@ -208,7 +208,9 @@ export function sanitizeForPublish(html: string): SanitizeResult {
   // atributo ya murió en el strip de arriba — el sanitizer no se relajó.
   const healed = clean !== null ? rustEnsureThemeScripts(clean) : null;
   const out =
-    healed !== null && extend !== null ? injectTwCarrier(healed, extend) : healed;
+    healed !== null && (extend !== null || darkMode !== null)
+      ? injectTwCarrier(healed, extend ?? {}, darkMode)
+      : healed;
   // `removed` es lo que el llamador PERDIÓ, no lo que la capa de Rust tocó a
   // media tubería: el conteo crudo cobraba los tres carriers que la reparación
   // de arriba acaba de devolver, y el gate creativo se lo decía al modelo como

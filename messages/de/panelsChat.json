@@ -73,6 +73,7 @@
     "image": "Bild:",
     "removeImage": "Angehängtes Bild entfernen",
     "placeholder": "Beschreibe, wie deine Seite aussehen oder klingen soll…",
+    "placeholderApp": "Beschreibe, was deine App tun oder wie sie aussehen soll…",
     "placeholderScoped": "{target} ändern…",
     "attachImage": "Bild anhängen",
     "attachImageTitle": "Ein Bild anhängen, um es in die Seite einzufügen",
@@ -120,7 +121,8 @@
     "placeholder": "Schreib Len, oder @, um mit jemandem im Projekt zu sprechen…"
   },
   "noChange": {
-    "label": "Auf der Seite hat sich nichts geändert"
+    "label": "Auf der Seite hat sich nichts geändert",
+    "labelApp": "In der App hat sich nichts geändert"
   },
   "undo": {
     "failedHttp": "Rückgängig machen fehlgeschlagen ({status}) — die Änderung ist weiterhin aktiv. Versuch es erneut.",
@@ -130,6 +132,7 @@
     "notUndone": "Rückgängig gemacht, außer {rutas}: Das Rückgängigmachen eines Schritts stellt Datenbank, Gedächtnis und Einstellungen nicht wieder her."
   },
   "cutShort": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die Seite an.",
+  "cutShortApp": "Der Vorgang brach vorzeitig ab ({reason}), aber das bereits Erledigte ist gespeichert. Sieh dir die App an.",
   "diff": {
     "anadida": "{que} hinzugefügt",
     "quitada": "{que} entfernt",
@@ -154,6 +157,7 @@
       "conversations": "Unterhaltungen",
       "newChat": "Neu anfangen",
       "newChatHint": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der Seite bleiben.",
+      "newChatHintApp": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der App bleiben.",
       "busy": "Warte, bis Len fertig ist, um die Unterhaltung zu wechseln.",
       "failed": "Die Unterhaltung konnte nicht gewechselt werden. Versuch es noch einmal.",
       "archived": "Frühere Unterhaltungen",
@@ -171,13 +175,24 @@
         "publish": "Veröffentliche meine Seite"
       }
     },
+    "emptyApp": {
+      "title": "Was machen wir heute mit deiner App?",
+      "suggestions": {
+        "data": "Speichere die Daten in einer Datenbank",
+        "login": "Füge eine Anmeldung hinzu",
+        "mobile": "Prüf die Ansicht auf dem Handy",
+        "publish": "Veröffentliche meine App"
+      }
+    },
     "steps": {
       "running": "Len arbeitet",
       "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}"
     },
     "activity": {
       "reading": "Liest deine Seite",
+      "readingApp": "Liest deine App",
       "editing": "Ändert die Seite",
+      "editingApp": "Ändert die App",
       "terminal": "Nutzt das Terminal",
       "photos": "Sucht Fotos",
       "image": "Bearbeitet ein Bild",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Bild und mehr",
       "on": "Aktiv",
-      "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst."
+      "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst.",
+      "disclaimerApp": "Len kann sich irren. Probier deine App aus, bevor du sie veröffentlichst."
     },
     "layout": {
       "float": "Chat lösen",

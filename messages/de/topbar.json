@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "Eigene Domain",
-      "subtitle": "Diese Seite über deinen eigenen Hostnamen ausliefern"
+      "subtitle": "Diese Seite über deinen eigenen Hostnamen ausliefern",
+      "subtitleApp": "Diese App über deinen eigenen Hostnamen ausliefern"
     },
     "providers": {
       "vercel": "Auf Vercel veröffentlichen",

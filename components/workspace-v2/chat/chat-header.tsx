@@ -24,6 +24,7 @@ export function ChatHeader({
   onClose,
   closeLabel,
   relativeTime,
+  esApp = false,
 }: {
   /** Anclado, flotante o minimizado (del mock). */
   layout: ChatLayout;
@@ -34,6 +35,8 @@ export function ChatHeader({
   onClose?: () => void;
   closeLabel?: string;
   relativeTime: (ms: number) => string;
+  /** El proyecto es una app: «Nueva charla» deja las notas de la app. */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
@@ -90,7 +93,7 @@ export function ChatHeader({
               </span>
               <span className="min-w-0 flex-1">
                 <b className="block text-[13px] font-semibold">{t("newChat.header.newChat")}</b>
-                <small className="block text-[11.5px] leading-snug fg-muted">{t("newChat.header.newChatHint")}</small>
+                <small className="block text-[11.5px] leading-snug fg-muted">{t(esApp ? "newChat.header.newChatHintApp" : "newChat.header.newChatHint")}</small>
               </span>
             </button>
             {(busy || notice === "busy") && (

@@ -1,70 +1,58 @@
 // @vitest-environment node
-// Lo que contesta el origen de una app (lienzo y ojos de Len): las dependencias
-// del catálogo y los fuentes compilados; un fuente roto, como un error legible.
+// Lo que se sirve de una app (lienzo, ojos de Len y publicación) y de los
+// fuentes de una página; un fuente roto, como un error legible.
 import { describe, expect, it } from "vitest";
-import { CATALOGO_ACTUAL, rutaDeVendor } from "./dependencias";
-import { leerVendor, moduloDeError, servirRutaDeLaApp, vendorPorRuta } from "./servir";
+import { CATALOGO_ACTUAL } from "./dependencias";
+import { BUNDLER_DID_NOT_ANSWER, entradaServida, ficherosDeLaApp, moduloDeError, servirFuenteDePagina } from "./servir";
 
 const APP = { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.jsx" };
 const CARPETA = {
   "/src/main.jsx": 'import App from "./App";\nimport { createRoot } from "react-dom/client";\ncreateRoot(document.body).render(<App />);',
   "/src/App.tsx": "export default function App() { return <h1>Hola</h1>; }",
   "/src/Roto.jsx": "export default () => <div",
+  "/src/index.css": "body{}",
   "/js/app.js": 'import "./x";',
   "/data/menu.json": "[]",
+  "/tests/a.spec.ts": "x",
 };
 
-describe("las dependencias del catálogo", () => {
-  it("se sirven del disco, inmutables, en el modo pedido", () => {
-    const dev = servirRutaDeLaApp(rutaDeVendor(CATALOGO_ACTUAL, "react-todo.js"), {}, { app: APP, modo: "desarrollo" });
-    const prod = servirRutaDeLaApp(rutaDeVendor(CATALOGO_ACTUAL, "react-todo.js"), {}, { app: APP, modo: "produccion" });
-    expect(dev?.inmutable).toBe(true);
-    expect(dev?.tipo).toBe("text/javascript; charset=utf-8");
-    // React de desarrollo trae sus mensajes enteros; el de producción, no.
-    expect(dev!.cuerpo.length).toBeGreaterThan(prod!.cuerpo.length);
+describe("una app: la entrada y lo que no es un fuente", () => {
+  it("🔴 ficherosDeLaApp: la entrada con su cuerpo, y lo publicable que no es fuente tal cual; ni fuentes sueltos ni /tests", () => {
+    expect(ficherosDeLaApp(CARPETA, APP, "PAQUETE")).toEqual({
+      "/src/main.jsx": "PAQUETE",
+      "/src/index.css": "body{}",
+      "/data/menu.json": "[]",
+    });
   });
 
-  it("una ruta que no es de un catálogo real no se contesta", () => {
-    expect(servirRutaDeLaApp(`/openlen/vendor/${CATALOGO_ACTUAL}/axios.js`, {}, { app: APP, modo: "desarrollo" })).toBeNull();
-    expect(leerVendor(CATALOGO_ACTUAL, "../../package.json", "desarrollo")).toBeNull();
-  });
-
-  it("vendorPorRuta: el catálogo entero, para el navegador que mide", () => {
-    const todo = vendorPorRuta(CATALOGO_ACTUAL, "desarrollo");
-    expect(Object.keys(todo)).toContain(rutaDeVendor(CATALOGO_ACTUAL, "react.js"));
-    expect(Object.keys(todo)).toContain(rutaDeVendor(CATALOGO_ACTUAL, "react-todo.js"));
+  it("entradaServida: el paquete; si no compila, un módulo que lanza sus errores; si no contestó, el aviso", () => {
+    expect(entradaServida("/src/main.jsx", { ok: true, js: "JS", map: null, bytes: 2, gzipBytes: 1, ms: 1 })).toBe("JS");
+    const roto = entradaServida("/src/main.jsx", { ok: false, errores: [{ ruta: "/src/A.jsx", linea: 3, columna: 1, mensaje: "x" }] });
+    expect(roto).toMatch(/^throw new SyntaxError\(/);
+    expect(roto).toContain("/src/A.jsx:3:1");
+    expect(entradaServida("/src/main.jsx", null)).toContain(BUNDLER_DID_NOT_ANSWER.slice(0, 30));
   });
 });
 
-describe("los fuentes", () => {
-  it("se sirven compilados, con los imports resueltos", () => {
-    const r = servirRutaDeLaApp("/src/main.jsx", CARPETA, { app: APP, modo: "desarrollo" });
-    expect(r?.inmutable).toBe(false);
-    expect(r?.cuerpo).toContain('from "/src/App.tsx"');
-    expect(r?.cuerpo).toContain('from "react-dom/client"');
+describe("los fuentes de una página", () => {
+  it("un .jsx/.tsx se compila (el navegador no ejecuta JSX)", () => {
+    expect(servirFuenteDePagina("/src/App.tsx", CARPETA)).not.toContain("<h1>");
   });
 
   it("🔴 uno que no compila se sirve como un módulo que LANZA su error con fichero y línea", () => {
-    const r = servirRutaDeLaApp("/src/Roto.jsx", CARPETA, { app: APP, modo: "desarrollo" });
-    expect(r?.cuerpo).toMatch(/^throw new SyntaxError\(/);
-    expect(r?.cuerpo).toContain("/src/Roto.jsx:1:");
+    const r = servirFuenteDePagina("/src/Roto.jsx", CARPETA);
+    expect(r).toMatch(/^throw new SyntaxError\(/);
+    expect(r).toContain("/src/Roto.jsx:1:");
+  });
+
+  it("el /js/app.js de siempre, lo que no es un fuente o lo que no existe: no se contesta aquí", () => {
+    expect(servirFuenteDePagina("/js/app.js", CARPETA)).toBeNull();
+    expect(servirFuenteDePagina("/data/menu.json", CARPETA)).toBeNull();
+    expect(servirFuenteDePagina("/src/NoExiste.jsx", CARPETA)).toBeNull();
   });
 
   it("moduloDeError es JavaScript válido que lanza", () => {
     const m = moduloDeError("/src/A.jsx", [{ ruta: "/src/A.jsx", linea: 3, columna: 1, mensaje: 'Cannot find "./B"' }]);
     expect(() => new Function(m)()).toThrow(/\/src\/A\.jsx:3:1 — Cannot find "\.\/B"/);
-  });
-
-  it("en una PÁGINA, el /js/app.js de siempre no es cosa de la app (se sirve tal cual)", () => {
-    expect(servirRutaDeLaApp("/js/app.js", CARPETA, { app: null, modo: "desarrollo" })).toBeNull();
-  });
-
-  it("un .jsx en una página sí se compila (el navegador no ejecuta JSX)", () => {
-    expect(servirRutaDeLaApp("/src/App.tsx", CARPETA, { app: null, modo: "desarrollo" })?.cuerpo).not.toContain("<h1>");
-  });
-
-  it("lo que no es un fuente, o no existe, no se contesta aquí", () => {
-    expect(servirRutaDeLaApp("/data/menu.json", CARPETA, { app: APP, modo: "desarrollo" })).toBeNull();
-    expect(servirRutaDeLaApp("/src/NoExiste.jsx", CARPETA, { app: APP, modo: "desarrollo" })).toBeNull();
   });
 });

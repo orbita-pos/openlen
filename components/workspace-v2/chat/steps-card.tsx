@@ -82,10 +82,13 @@ export function StepsCard({
   turn,
   projectId,
   onOpenFile,
+  esApp = false,
 }: {
   turn: DesignTurn;
   projectId: string;
   onOpenFile: (path: string) => void;
+  /** El proyecto es una app: los pasos que nombran «la página» hablan del código y de la app. */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -159,6 +162,7 @@ export function StepsCard({
                 key={`${a.tool}-${i}`}
                 action={a}
                 onOpenFile={onOpenFile}
+                esApp={esApp}
                 {...(a.tool === "bash"
                   ? { terminal: { projectId, turnId: turn.id, indice: terminalIndex(all, all.indexOf(a)) } }
                   : {})}
@@ -171,21 +175,31 @@ export function StepsCard({
   );
 }
 
+// Los que en una página dicen «la página» (ensayo de caja del 09/10).
+const APP_TOOL_LABELS = new Set(["Read", "Edit", "Write", "Glob", "view_page", "use_page"] as const);
+type AppToolLabel = typeof APP_TOOL_LABELS extends Set<infer T> ? T : never;
+
 function StepRow({
   action,
   terminal,
   onOpenFile,
+  esApp = false,
 }: {
   action: AgentAction;
   terminal?: { projectId: string; turnId: string; indice: number };
   onOpenFile: (path: string) => void;
+  esApp?: boolean;
 }) {
   const t = useTranslations("wsPage");
   const [open, setOpen] = useState(false);
   // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes
   // (como `agent-action-card.tsx`).
   const tool = currentToolName(action.tool);
-  const label = KNOWN_TOOLS.has(tool) ? t(`agent.tool.${tool}`) : action.tool;
+  const label = !KNOWN_TOOLS.has(tool)
+    ? action.tool
+    : esApp && APP_TOOL_LABELS.has(tool as AppToolLabel)
+      ? t(`agent.toolApp.${tool as AppToolLabel}`)
+      : t(`agent.tool.${tool}`);
   const detail = summaryLabel(action, t);
   const coverage = coberturaTitle(action, t);
   // Qué porqué y en qué color: `reasonLine` (N41) — en rojo, nunca lo que leyó el modelo.

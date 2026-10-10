@@ -27,6 +27,10 @@ import {
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
+import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
+import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
+import type { TestRun } from "@/lib/apps/tests/run-tests";
+import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -175,6 +179,32 @@ export interface AgentDeps {
    *  app —la URL de su backend y su clave PUBLICABLE—, para que los ojos de Len
    *  midan la app hablando con su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
   entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
+  /** APPS WEB (plan 03): TypeScript y ESLint sobre la app, en su hilo y con
+   *  tope (`lib/apps/checker/check-app.ts`). `null` si no llegó, falló o la
+   *  sustituyó otra con el mismo `supersedes`. Sin él, tras escribir sólo se
+   *  dice lo que no compila. */
+  checkApp?(
+    files: Readonly<Record<string, string>>,
+    catalogo: string,
+    o?: { readonly supersedes?: object },
+  ): Promise<CheckResult | null>;
+  /** APPS WEB (plan 02): el paquete de producción, para `npm run build`
+   *  (`lib/apps/bundler/bundle-app.ts`). `null` si el empaquetador no contestó. */
+  buildApp?(files: Readonly<Record<string, string>>, app: AppDeProyecto): Promise<AppBundle | null>;
+  /** APPS WEB (plan 04): las pruebas de la app, corridas en el Chromium de los
+   *  ojos (`lib/apps/tests/run-tests.ts`), para `npm test`. `null` si no se pudo. */
+  testApp?(
+    files: Readonly<Record<string, string>>,
+    app: AppDeProyecto,
+    o: {
+      readonly filters: readonly string[];
+      readonly testNamePattern?: string;
+      readonly deadlineMs: number;
+      readonly entorno?: Readonly<Record<string, string>>;
+      /** El comando se abortó (`timeout N npm test`): que paren. */
+      readonly signal?: AbortSignal;
+    },
+  ): Promise<TestRun | null>;
   /** Guardar uno, archivando antes su «antes» (`projectFileVersions`). */
   saveProjectFile?(projectId: string, path: string, content: string, version: FileVersionNote): Promise<{ versionPrevia: string | null }>;
   /** Borrar uno, archivando lo que tenía. */
@@ -466,6 +496,26 @@ export function realDeps(
     async entornoDeLaApp(projectId) {
       const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
       return entornoPublicoDeLaApp(projectId);
+    },
+    async checkApp(files, catalogo, o) {
+      const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
+      return checkAppInWorker({ files, catalogo, ...(o?.supersedes ? { supersedes: o.supersedes } : {}) });
+    },
+    async buildApp(files, app) {
+      const { bundleApp } = await import("@/lib/apps/bundler/bundle-app");
+      return bundleApp({ carpeta: files, app, modo: "produccion" });
+    },
+    async testApp(files, app, o) {
+      const { runAppTests } = await import("@/lib/apps/tests/run-tests");
+      return runAppTests({
+        carpeta: files,
+        app,
+        filters: o.filters,
+        deadlineMs: o.deadlineMs,
+        ...(o.testNamePattern ? { testNamePattern: o.testNamePattern } : {}),
+        ...(o.entorno ? { entorno: o.entorno } : {}),
+        ...(o.signal ? { signal: o.signal } : {}),
+      }).catch(() => null);
     },
     async saveProjectFile(projectId, path, content, version) {
       const { saveProjectFile } = await import("@/lib/backend/files");
@@ -850,11 +900,16 @@ export interface AgentSession {
    *  turno. Contra ella se decide qué NO compila por culpa de este turno
    *  (`lib/agent/compila-la-app.ts`), y con ella se mide la línea base. */
   carpetaAlEmpezar?: Map<string, string>;
+  /** UNA APP (plan 03): tipos y lint pendientes y entregados, como el registro
+   *  del LSP de Claude Code (`lib/agent/types-and-lint.ts`). */
+  typesAndLint?: TypesAndLintState;
   /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
    *  cómo estaban sus ficheros tras el último comando: contra eso se decide
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */
   terminal?: TerminalDeLen;
   fotoDeLaTerminal?: Record<string, string>;
+  /** Cuántas salidas largas de la terminal se guardaron en /tmp/tool-results. */
+  salidasGuardadas?: number;
   /** La zona del usuario (IANA). La manda el panel con cada turno; sin ella,
    *  la guardada; sin ninguna, `ZONA_SIN_DATO`. Las herramientas de resultados
    *  cuentan «hoy» en esta zona (plans/len-resultados/diseno.md §7). */

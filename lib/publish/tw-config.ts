@@ -28,9 +28,20 @@ export type TwExtendValue =
 
 export type TwExtend = Record<string, Record<string, TwExtendValue>>;
 
+/** `["class"]` —una sola entrada— es lo que escribe shadcn, y Tailwind lo acepta. */
+export type TwDarkMode =
+  | "media"
+  | "class"
+  | "selector"
+  | readonly ["class" | "selector"]
+  | readonly ["class" | "selector", string];
+
 export interface ExtractResult {
   html: string;
   extend: TwExtend | null;
+  /** El `darkMode` de la config (2026-10-08). Sin él, el horneado salía con
+   *  `prefers-color-scheme` aunque la página cambiara de modo por clase. */
+  darkMode: TwDarkMode | null;
 }
 
 // Secciones de theme.extend que viajan. Fuera del set = se ignora (screens
@@ -281,6 +292,31 @@ function rewriteInlineScripts(
   return { out, touched };
 }
 
+const DARK_SELECTOR_RE = /^[\w\s.#[\]="':()&*>~+-]{1,80}$/;
+
+/** `darkMode` validado, o `null`. Un selector es CSS que acaba en la hoja
+ *  horneada: corto, sin `<` y sin nada de HOSTILE_VALUE_RE. */
+function validDarkMode(v: unknown): TwDarkMode | null {
+  if (v === "media" || v === "class" || v === "selector") return v;
+  if (!Array.isArray(v) || (v[0] !== "class" && v[0] !== "selector")) return null;
+  const modo: "class" | "selector" = v[0];
+  if (v.length === 1) return [modo];
+  if (v.length === 2 && typeof v[1] === "string") {
+    return DARK_SELECTOR_RE.test(v[1]) && !HOSTILE_VALUE_RE.test(v[1]) ? [modo, v[1]] : null;
+  }
+  return null;
+}
+
+function readCarrierDarkMode(body: string): TwDarkMode | null {
+  const eq = body.indexOf("=");
+  if (eq === -1) return null;
+  try {
+    return validDarkMode((JSON.parse(body.slice(eq + 1).trim()) as { darkMode?: unknown })?.darkMode);
+  } catch {
+    return null;
+  }
+}
+
 function readCarrierBody(body: string): TwExtend | null {
   const eq = body.indexOf("=");
   if (eq === -1) return null;
@@ -298,7 +334,7 @@ function readCarrierBody(body: string): TwExtend | null {
 
 // Por qué se descartó una config presente — va al warn de telemetría. La
 // pérdida silenciosa es lo que dejó vivir el bug de claves numéricas meses.
-type ParseFail =
+export type ParseFail =
   | "sin-objeto-literal"
   | "codigo-alrededor-de-la-asignacion"
   | "json5-imparseable"
@@ -306,20 +342,22 @@ type ParseFail =
 
 function parseConfigScript(body: string): {
   extend: TwExtend | null;
+  darkMode: TwDarkMode | null;
   fail: ParseFail | null;
 } {
+  const nada = (fail: ParseFail | null) => ({ extend: null, darkMode: null, fail });
   const assign = CONFIG_ASSIGN_RE.exec(body);
-  if (!assign) return { extend: null, fail: null };
+  if (!assign) return nada(null);
   const braceStart = body.indexOf("{", assign.index + assign[0].length);
-  if (braceStart === -1) return { extend: null, fail: "sin-objeto-literal" };
+  if (braceStart === -1) return nada("sin-objeto-literal");
   const literal = scanObjectLiteral(body, braceStart);
-  if (literal === null) return { extend: null, fail: "sin-objeto-literal" };
+  if (literal === null) return nada("sin-objeto-literal");
   // Si tras el objeto hay más código que un cierre trivial, la config hace
   // algo más que declarar datos → inválida (p.ej. `tailwind.config={…}; hack()`).
   const tail = body.slice(braceStart + literal.length).replace(/[\s;]/g, "");
-  if (tail.length > 0) return { extend: null, fail: "codigo-alrededor-de-la-asignacion" };
+  if (tail.length > 0) return nada("codigo-alrededor-de-la-asignacion");
   const head = body.slice(0, assign.index).replace(/[\s;]/g, "");
-  if (head.length > 0) return { extend: null, fail: "codigo-alrededor-de-la-asignacion" };
+  if (head.length > 0) return nada("codigo-alrededor-de-la-asignacion");
   let parsed: unknown;
   try {
     parsed = JSON5.parse(literal);
@@ -330,14 +368,22 @@ function parseConfigScript(body: string): {
     try {
       parsed = JSON5.parse(quoteNumericKeys(literal));
     } catch {
-      return { extend: null, fail: "json5-imparseable" };
+      return nada("json5-imparseable");
     }
   }
-  const theme = (parsed as { theme?: { extend?: unknown } })?.theme;
-  const extend = validateExtend(theme?.extend);
-  return extend === null
-    ? { extend: null, fail: "extend-invalido" }
-    : { extend, fail: null };
+  const config = parsed as { theme?: { extend?: unknown }; darkMode?: unknown } | null;
+  const extendCrudo = config?.theme?.extend;
+  const extend = validateExtend(extendCrudo);
+  const darkMode = validDarkMode(config?.darkMode);
+  if (extend !== null) return { extend, darkMode, fail: null };
+  // Sin `extend` (o vacío) pero con un `darkMode` válido: la config dice algo
+  // y se lee. Un `extend` que TRAE algo y no pasa el validador sigue siendo una
+  // config descartada —y el horneado deja el CDN—, con o sin `darkMode`: hornear
+  // sin su paleta sería peor que no hornear.
+  const sinExtend =
+    extendCrudo === undefined ||
+    (extendCrudo !== null && typeof extendCrudo === "object" && !Array.isArray(extendCrudo) && Object.keys(extendCrudo).length === 0);
+  return sinExtend && darkMode !== null ? { extend: null, darkMode, fail: null } : nada("extend-invalido");
 }
 
 /**
@@ -349,6 +395,7 @@ function parseConfigScript(body: string): {
  */
 export function extractTwConfig(html: string): ExtractResult {
   let extend: TwExtend | null = null;
+  let darkMode: TwDarkMode | null = null;
   // Telemetría: una config PRESENTE que se descarta es una paleta perdida sin
   // rastro (así duró meses el bug de claves numéricas). Un solo warn por
   // documento — un doc hostil con miles de scripts no debe spamear el log.
@@ -360,15 +407,19 @@ export function extractTwConfig(html: string): ExtractResult {
     // de Rust lo maneje y lo CUENTE (la lógica de avisos depende de ese conteo).
     if (CARRIER_ATTR_RE.test(openTag)) {
       if (extend === null) extend = readCarrierBody(body);
+      darkMode ??= readCarrierDarkMode(body);
       return "";
     }
     if (CONFIG_ASSIGN_RE.test(body)) {
-      if (extend === null) {
+      if (extend === null || darkMode === null) {
         const r = parseConfigScript(body);
-        extend = r.extend;
-        if (r.extend === null && r.fail !== null && discarded === null) {
-          discarded = r.fail;
+        if (extend === null) {
+          extend = r.extend;
+          if (r.extend === null && r.darkMode === null && r.fail !== null && discarded === null) {
+            discarded = r.fail;
+          }
         }
+        darkMode ??= r.darkMode;
       }
       return "";
     }
@@ -382,7 +433,40 @@ export function extractTwConfig(html: string): ExtractResult {
     );
   }
 
-  return { html: touched ? out : html, extend };
+  return { html: touched ? out : html, extend, darkMode };
+}
+
+/** Por qué la publicación NO puede leer como datos el `tailwind.config` del
+ *  documento, o `null` si puede (o si no hay). Es el MISMO lector que usa el
+ *  horneado (`parseConfigScript`), así que lo que dice es lo que pasará al
+ *  publicar: con código dentro —un `require()`, una función, una variable, un
+ *  spread— la config no se lee, se publica con el CDN, y en el navegador un
+ *  `require` o una variable sin definir lanza y se pierde la config entera.
+ *  Un `extend` con valores que el validador descarta no cuenta: es datos. */
+export function readTwConfigProblem(html: string): Exclude<ParseFail, "extend-invalido"> | null {
+  let problema: Exclude<ParseFail, "extend-invalido"> | null = null;
+  rewriteInlineScripts(html, (openTag, body) => {
+    if (problema === null && !CARRIER_ATTR_RE.test(openTag) && CONFIG_ASSIGN_RE.test(body)) {
+      const fail = parseConfigScript(body).fail;
+      if (fail !== null && fail !== "extend-invalido") problema = fail;
+    }
+    return null;
+  });
+  return problema;
+}
+
+/** El `darkMode` del documento: el del carrier manda, luego el de la config.
+ *  Sólo lectura (no avisa ni toca nada): el horneado lo lee ANTES de quitar los
+ *  dos. Escaneo lineal. */
+export function readTwDarkMode(html: string): TwDarkMode | null {
+  let deCarrier: TwDarkMode | null = null;
+  let deConfig: TwDarkMode | null = null;
+  rewriteInlineScripts(html, (openTag, body) => {
+    if (CARRIER_ATTR_RE.test(openTag)) deCarrier ??= readCarrierDarkMode(body);
+    else if (CONFIG_ASSIGN_RE.test(body)) deConfig ??= parseConfigScript(body).darkMode;
+    return null;
+  });
+  return deCarrier ?? deConfig;
 }
 
 /** La etiqueta del CDN de Tailwind — **una sola definicion para las dos
@@ -416,8 +500,9 @@ export const CDN_TAG_RE =
  *  lea tal cual; el bake la vuelve a extraer con readTwCarrier. Sin el wrapper
  *  theme.extend el CDN ignora los colores (preview blanco-sobre-blanco aunque
  *  el bake funcione — cazado por Jesús 2026-07-18). */
-export function injectTwCarrier(html: string, extend: TwExtend): string {
-  const json = JSON.stringify({ theme: { extend } }).replace(/</g, "\\u003C");
+export function injectTwCarrier(html: string, extend: TwExtend, darkMode: TwDarkMode | null = null): string {
+  // Sin `darkMode`, los bytes de siempre.
+  const json = JSON.stringify(darkMode ? { darkMode, theme: { extend } } : { theme: { extend } }).replace(/</g, "\\u003C");
   const tag = `<script data-ol-tw="1">tailwind.config=${json}</script>`;
   const cdn = CDN_TAG_RE.exec(html);
   if (cdn) {

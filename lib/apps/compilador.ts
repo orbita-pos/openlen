@@ -7,9 +7,11 @@
 // por aquí, y los tres reciben lo mismo — la doctrina de «un solo camino de
 // renderizado».
 //
-// SIN BUNDLER (§2). Cada fichero se traduce por separado y el navegador junta
-// las piezas con sus `import` nativos; los nombres del catálogo los resuelve el
-// import map (`lib/apps/dependencias.ts`). Es lo que hace Vite en desarrollo.
+// Y SU SALIDA VA AL EMPAQUETADOR (plan 02, `lib/apps/bundler/`). Cada fichero
+// se traduce por separado, aquí; esbuild junta lo traducido con lo que usa del
+// catálogo en UN paquete, el mismo en los tres caminos (de desarrollo en el
+// lienzo y los ojos, de producción al publicar). Los diagnósticos son de aquí,
+// no de esbuild: con la línea del fuente.
 //
 // LO QUE HACE, en orden:
 //   1. Traduce JSX y TypeScript con sucrase, que CONSERVA LOS NÚMEROS DE LÍNEA:
@@ -21,7 +23,9 @@
 //   3. Reescribe cada `import` (H4 de la spec): lo relativo, lo absoluto y el
 //      alias `@/` se resuelven contra la carpeta —con o sin extensión, o su
 //      `index`— y se reescriben a la ruta real; un `.css` se vuelve un `<link>`
-//      y un `.json` lleva `with { type: "json" }`. Un nombre que no está en el
+//      y un `.json` lleva `with { type: "json" }`; un `.svg`, `.txt`, `.md` o
+//      `.webmanifest` —o cualquiera con `?url`— es su URL, y con `?raw` su
+//      texto, como en Vite. Un nombre que no está en el
 //      catálogo, o un fichero que no existe, es un ERROR con su ruta y su
 //      línea: vuelve a Len en el acto, como un compilador.
 //   4. Comprueba los NOMBRES que se importan de cada paquete
@@ -42,11 +46,14 @@ import { transform, type Transform } from "sucrase";
 // La versión en JavaScript del analizador: SÍNCRONA, sin `init` ni wasm. Los
 // ojos de Len contestan cada petición sin `await` (`localResponseFor`).
 import { parse } from "es-module-lexer/js";
+// El parser de CSS de Tailwind (`usesTailwindDirectives`). Síncrono y puro.
+import postcss from "postcss";
 import { catalogo as catalogoDe, dependenciaDe } from "./dependencias";
 import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
 // `npm run apps:vendor` (que lo comprueba con `--comprobar`).
 import EXPORTACIONES from "./exportaciones.json";
+import { isTestSupportFile } from "./tests/test-files";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
 const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
@@ -55,6 +62,9 @@ const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
 const EN_UNA_APP = [".js", ".mjs"] as const;
 /** El orden en que se prueba un import sin extensión, como Vite. */
 const EXTENSIONES_RESOLUBLES = [".tsx", ".ts", ".jsx", ".js", ".mjs"] as const;
+/** Lo que se importa como su URL, como en Vite (la carpeta sólo guarda texto:
+ *  las fotos son subidas, con su URL). */
+const EXTENSIONES_DE_URL = [".svg", ".txt", ".md", ".webmanifest"] as const;
 
 export interface ContextoDeCompilacion {
   /** La carpeta del proyecto: ruta (`/src/App.jsx`) → contenido. */
@@ -65,6 +75,10 @@ export interface ContextoDeCompilacion {
   /** Lo que vale `import.meta.env` además de MODE/DEV/PROD. SÓLO valores que
    *  pueden ir en una página: la URL del backend y su clave publicable. */
   readonly entorno?: Readonly<Record<string, string>>;
+  /** Nombres que se dejan como están aunque no sean del catálogo: los de las
+   *  pruebas (`vitest`, Testing Library: `lib/apps/tests/test-kit.ts`). Los
+   *  resuelve el empaquetador de pruebas. */
+  readonly extraSpecifiers?: readonly string[];
 }
 
 export interface Diagnostico {
@@ -81,8 +95,6 @@ export type Compilado =
       readonly js: string;
       /** Los módulos LOCALES que importa, ya resueltos: el grafo de la app. */
       readonly locales: readonly string[];
-      /** Los nombres del catálogo que importa (`react`, `react-dom/client`). */
-      readonly paquetes: readonly string[];
     }
   | { readonly ok: false; readonly errores: readonly Diagnostico[] };
 
@@ -136,7 +148,7 @@ function normalizar(ruta: string): string | null {
 
 /** Lo relativo, lo absoluto y `@/` → la ruta del fichero que existe. `null` =
  *  no es una ruta (es un nombre); `undefined` = es una ruta y no existe. */
-function resolver(especificador: string, desde: string, carpeta: Readonly<Record<string, string>>): string | null | undefined {
+export function resolveLocalImport(especificador: string, desde: string, carpeta: Readonly<Record<string, string>>): string | null | undefined {
   let base: string | null;
   if (especificador.startsWith("@/")) base = normalizar(`/src/${especificador.slice(2)}`);
   else if (especificador.startsWith("/")) base = normalizar(especificador);
@@ -159,6 +171,61 @@ function enlaceCss(ruta: string): string {
   return `if(!document.querySelector('link[data-ol-css=${r.replace(/'/g, "\\'")}]')){const l=document.createElement("link");l.rel="stylesheet";l.href=${r};l.setAttribute("data-ol-css",${r});document.head.append(l)}`;
 }
 
+/** `./x.svg?raw` → `["./x.svg", "?raw"]`. Sólo `?raw` y `?url` se entienden. */
+function separarConsulta(especificador: string): readonly [string, string] {
+  const i = especificador.indexOf("?");
+  return i === -1 ? [especificador, ""] : [especificador.slice(0, i), especificador.slice(i)];
+}
+
+/** El nombre por defecto de `import logo from "…"`, o `null` si no lo hay. */
+function nombrePorDefecto(sentencia: string): string | null {
+  return /^import\s+([A-Za-z_$][\w$]*)\s+from\s*["'`]/.exec(sentencia)?.[1] ?? null;
+}
+
+/** Las at-rules que procesa Tailwind 3. `@layer` aparte: sólo las suyas. */
+const DIRECTIVAS_DE_TAILWIND = new Set(["apply", "tailwind", "config", "screen", "variants", "responsive"]);
+const CAPAS_DE_TAILWIND = /^(?:base|components|utilities)$/;
+const FUNCIONES_DE_TAILWIND = /\b(?:theme|screen)\(/;
+
+/** ¿Usa esta hoja algo que sólo entiende Tailwind? Un `<link>` la llevaría al
+ *  navegador con el `@apply` sin traducir, y el navegador lo tira (2026-10-08).
+ *
+ *  SE LEE CON EL PARSER DE CSS, no con una regex sobre el texto (como hace
+ *  Claude Code: preguntarle a la herramienta, no adivinar). La regex contaba un
+ *  `@apply` dentro de un comentario o de un `content: "…"`, y cualquier `@layer`,
+ *  también el nativo de CSS (`@layer reset`), que Tailwind deja pasar intacto.
+ *  Postcss es el mismo parser que usa Tailwind. Un CSS que no se puede leer va
+ *  como `<link>`: el navegador es tolerante y no se adivina. */
+export function usesTailwindDirectives(css: string): boolean {
+  let raiz: ReturnType<typeof postcss.parse>;
+  try {
+    raiz = postcss.parse(css);
+  } catch {
+    return false;
+  }
+  let usa = false;
+  raiz.walk((nodo) => {
+    if (nodo.type === "atrule") {
+      usa = DIRECTIVAS_DE_TAILWIND.has(nodo.name) || (nodo.name === "layer" && CAPAS_DE_TAILWIND.test(nodo.params.trim()));
+    } else if (nodo.type === "decl") {
+      usa = FUNCIONES_DE_TAILWIND.test(nodo.value);
+    }
+    return usa ? false : undefined;
+  });
+  return usa;
+}
+
+/** Lo que sustituye a `import "./x.css"` cuando la hoja usa Tailwind: un
+ *  `<style type="text/tailwindcss">` con su texto DENTRO del módulo. El CDN del
+ *  lienzo y de los ojos lo procesa al vuelo (medido en Chromium el 2026-10-08:
+ *  `@layer`, `@apply` y el theme del cascarón), y la publicación lo hornea
+ *  (`bakeTailwind`, con las hojas de la carpeta). Así los tres caminos reciben
+ *  el mismo JS. Una línea, como `enlaceCss`; no se repite si dos módulos la importan. */
+function tailwindStyle(ruta: string, css: string): string {
+  const r = JSON.stringify(ruta);
+  return `if(!document.querySelector('style[data-ol-css=${r.replace(/'/g, "\\'")}]')){const s=document.createElement("style");s.type="text/tailwindcss";s.setAttribute("data-ol-css",${r});s.textContent=${JSON.stringify(css)};document.head.append(s)}`;
+}
+
 /** Tantos saltos de línea como los que tenía lo sustituido. */
 function conSusLineas(sustituto: string, original: string): string {
   return sustituto + "\n".repeat((original.match(/\n/g) ?? []).length);
@@ -169,7 +236,7 @@ const PISTAS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   "react-router.js": PISTAS_DEL_ENRUTADOR,
 };
 
-function exportacionesDe(nombreCatalogo: string, fichero: string): readonly string[] | null {
+export function catalogExportsOf(nombreCatalogo: string, fichero: string): readonly string[] | null {
   const delCatalogo = (EXPORTACIONES as Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>)[nombreCatalogo];
   return delCatalogo && Object.hasOwn(delCatalogo, fichero) ? delCatalogo[fichero]! : null;
 }
@@ -209,7 +276,7 @@ export function parecidos(nombre: string, lista: readonly string[], cuantos = 6)
 /** Los nombres que una sentencia toma de su módulo: `import X, { a, b as c }`
  *  → `["default", "a", "b"]`; `export { a } from` → `["a"]`. `null` si no se
  *  pueden saber (`import * as`, `export *`, o una forma que no se reconoce). */
-function nombresImportados(sentencia: string): string[] | null {
+export function nombresImportados(sentencia: string): string[] | null {
   const m = /^(import|export)\s*([\s\S]*?)\s*from\s*["'`]/.exec(sentencia);
   if (!m) return [];
   const clausula = m[2]!.trim();
@@ -247,7 +314,16 @@ const cache = new Map<string, Compilado>();
 
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
-  // entran en la clave, sus contenidos no.
+  // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
+  // viaja dentro del módulo que la importa (`tailwindStyle`), así que su texto
+  // también decide lo que sale. Son pocas y pequeñas. Y si el fuente pide el
+  // TEXTO de otro fichero (`?raw`, plan 02), ése también: cualquiera, entero.
+  const conRaw = codigo.includes("?raw");
+  const hojas = Object.keys(ctx.carpeta)
+    .filter((r) => conRaw || extensionDe(r) === ".css")
+    .sort()
+    .map((r) => `${r}\0${ctx.carpeta[r]}`)
+    .join("\0");
   return createHash("sha256")
     .update(ruta)
     .update("\0")
@@ -257,7 +333,11 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update("\0")
     .update(JSON.stringify(ctx.entorno ?? {}))
     .update("\0")
+    .update((ctx.extraSpecifiers ?? []).join("\n"))
+    .update("\0")
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
+    .update("\0")
+    .update(hojas)
     .digest("hex");
 }
 
@@ -310,14 +390,15 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
   }
   const errores: Diagnostico[] = [];
   const locales = new Set<string>();
-  const paquetes = new Set<string>();
   const nombres = catalogoDe(ctx.catalogo ?? "")?.dependencias.map((d) => d.especificador) ?? [];
   const error = (posicion: number, mensaje: string) =>
     errores.push({ ruta, linea: lineaDe(js, posicion), columna: null, mensaje });
 
   // De atrás hacia delante: reescribir uno no mueve las posiciones de los anteriores.
   for (const imp of [...imports].reverse()) {
-    if (imp.type !== "static" && imp.type !== "dynamic") continue;
+    // `export * from "./x"` es su propio tipo en el lexer ("reexport-star"):
+    // sin él, el fichero barril llegaba al empaquetador sin resolver.
+    if (imp.type !== "static" && imp.type !== "dynamic" && imp.type !== "reexport-star") continue;
     const especificador = imp.specifier;
     // `import(variable)`: no se puede resolver aquí; el navegador dirá.
     if (typeof especificador !== "string") continue;
@@ -328,13 +409,23 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       js = js.slice(0, imp.start) + (conComillas ? JSON.stringify(nuevo) : nuevo) + js.slice(imp.end);
     };
 
-    const resuelto = resolver(especificador, ruta, ctx.carpeta);
+    const [sinConsulta, consulta] = separarConsulta(especificador);
+    if (consulta !== "" && consulta !== "?raw" && consulta !== "?url") {
+      error(imp.start, `"${especificador}": only ?raw (the file's text) and ?url (its URL) are supported after a path.`);
+      continue;
+    }
+    const resuelto = resolveLocalImport(sinConsulta, ruta, ctx.carpeta);
     if (resuelto === null) {
-      // UN NOMBRE: o es del catálogo (lo resuelve el import map) o no existe.
+      if (consulta) {
+        error(imp.start, `"${especificador}": ?raw and ?url go after a file's path, not a package name.`);
+        continue;
+      }
+      // Lo de las pruebas (vitest, Testing Library) pasa por su nombre: lo pone el kit.
+      if (ctx.extraSpecifiers?.includes(especificador)) continue;
+      // UN NOMBRE: o es del catálogo (lo resuelve el empaquetador) o no existe.
       const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
-        paquetes.add(especificador);
-        const hay = exportacionesDe(ctx.catalogo, dependencia.fichero);
+        const hay = catalogExportsOf(ctx.catalogo, dependencia.fichero);
         const tomados = dinamico || !hay ? null : nombresImportados(js.slice(imp.importStart, imp.importEnd));
         for (const nombre of tomados ?? []) {
           if (!hay!.includes(nombre)) error(imp.start, mensajeDeNombre(especificador, dependencia.fichero, nombre, hay!));
@@ -356,6 +447,19 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     }
 
     const ext = extensionDe(resuelto);
+    // UN FICHERO COMO MÓDULO, como en Vite: su URL (`?url`, o un .svg/.txt/.md
+    // por defecto) o su texto (`?raw`). Se queda una constante en su línea.
+    if (consulta || (EXTENSIONES_DE_URL as readonly string[]).includes(ext)) {
+      const sentencia = js.slice(imp.importStart, imp.importEnd);
+      const nombre = dinamico ? null : nombrePorDefecto(sentencia);
+      if (!nombre) {
+        error(imp.start, `${resuelto}: import it with a default name, statically: import file from "${especificador}".`);
+        continue;
+      }
+      const valor = consulta === "?raw" ? (ctx.carpeta[resuelto] ?? "") : resuelto;
+      js = js.slice(0, imp.importStart) + conSusLineas(`const ${nombre} = ${JSON.stringify(valor)};`, sentencia) + js.slice(imp.importEnd);
+      continue;
+    }
     if ((EXTENSIONES_RESOLUBLES as readonly string[]).includes(ext)) {
       locales.add(resuelto);
       sustituirEspecificador(resuelto);
@@ -367,7 +471,9 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         error(imp.start, `${resuelto}: a CSS file can only be imported for its side effect (import "${especificador}"). CSS modules are not supported; use Tailwind classes or plain CSS.`);
         continue;
       }
-      js = js.slice(0, imp.importStart) + conSusLineas(enlaceCss(resuelto), sentencia) + js.slice(imp.importEnd);
+      const hoja = ctx.carpeta[resuelto] ?? "";
+      const sustituto = usesTailwindDirectives(hoja) ? tailwindStyle(resuelto, hoja) : enlaceCss(resuelto);
+      js = js.slice(0, imp.importStart) + conSusLineas(sustituto, sentencia) + js.slice(imp.importEnd);
       continue;
     }
     if (ext === ".json") {
@@ -388,29 +494,27 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
   }
 
   if (errores.length > 0) return { ok: false, errores: errores.sort((a, b) => (a.linea ?? 0) - (b.linea ?? 0)) };
-  return { ok: true, js, locales: [...locales].sort(), paquetes: [...paquetes].sort() };
+  return { ok: true, js, locales: [...locales].sort() };
 }
 
 export interface CarpetaCompilada {
-  /** Lo que se sirve: cada fuente compilada, y el resto tal cual. Un fuente
-   *  que no compila NO está: se sirve como 404, no a medias. */
+  /** Cada fuente compilada, y el resto tal cual: lo que entra al empaquetador.
+   *  Un fuente que no compila NO está, no a medias: su error, en `errores`. */
   readonly ficheros: Readonly<Record<string, string>>;
   readonly errores: readonly Diagnostico[];
-  /** Los módulos alcanzables desde la entrada, en orden estable: lo que la
-   *  publicada precarga (`modulepreload`, H13). Vacío sin entrada. */
-  readonly grafo: readonly string[];
-  /** Los nombres del catálogo que importa ese grafo. */
-  readonly paquetes: readonly string[];
 }
 
 /** Toda la carpeta de una vez: lo que publica una app y lo que ven los ojos. */
-export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?: string | null }): CarpetaCompilada {
+export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
   const esApp = ctx.catalogo !== null;
   const ficheros: Record<string, string> = {};
   const errores: Diagnostico[] = [];
   const localesDe = new Map<string, readonly string[]>();
-  const paquetesDe = new Map<string, readonly string[]>();
   for (const [ruta, codigo] of Object.entries(ctx.carpeta)) {
+    // LAS PRUEBAS NO SON DE LA APP (plan 04): ni se compilan con ella —importan
+    // `vitest`, que no es del catálogo— ni se empaquetan ni se publican. Las
+    // compila `compileTestFile` cuando Len corre `npm test`.
+    if (esApp && isTestSupportFile(ruta, ctx.carpeta)) continue;
     if (!esFuenteCompilable(ruta, esApp)) {
       ficheros[ruta] = codigo;
       continue;
@@ -419,25 +523,10 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion & { readonly entrada?
     if (r.ok) {
       ficheros[ruta] = r.js;
       localesDe.set(ruta, r.locales);
-      paquetesDe.set(ruta, r.paquetes);
     } else errores.push(...r.errores);
   }
   errores.push(...nombresLocalesQueNoExisten(ficheros, localesDe));
-  const grafo: string[] = [];
-  const paquetes = new Set<string>();
-  if (ctx.entrada && Object.hasOwn(ctx.carpeta, ctx.entrada)) {
-    const vistos = new Set<string>();
-    const pila = [ctx.entrada];
-    while (pila.length > 0) {
-      const m = pila.pop()!;
-      if (vistos.has(m)) continue;
-      vistos.add(m);
-      for (const dep of localesDe.get(m) ?? []) pila.push(dep);
-    }
-    grafo.push(...[...vistos].sort());
-    for (const m of grafo) for (const p of paquetesDe.get(m) ?? []) paquetes.add(p);
-  }
-  return { ficheros, errores, grafo, paquetes: [...paquetes].sort() };
+  return { ficheros, errores };
 }
 
 /**

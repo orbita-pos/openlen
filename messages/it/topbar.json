@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "Dominio personalizzato",
-      "subtitle": "Pubblica questa pagina sul tuo dominio"
+      "subtitle": "Pubblica questa pagina sul tuo dominio",
+      "subtitleApp": "Pubblica questa app sul tuo dominio"
     },
     "providers": {
       "vercel": "Pubblica su Vercel",

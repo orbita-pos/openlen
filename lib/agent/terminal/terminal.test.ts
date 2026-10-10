@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { AVISO_DE_REINICIO, TerminalDeLen } from "./terminal";
+import { AVISO_DE_REINICIO, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, TerminalDeLen } from "./terminal";
 import { DE_SOLO_LECTURA } from "./ficheros";
 
 const SITIO = {
@@ -87,10 +87,20 @@ describe("TerminalDeLen", () => {
     expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
   }, 20_000);
 
-  it("lo que no vuelve se corta DESDE FUERA: código 124, aviso de reinicio y terminal nueva con los ficheros de ahora", async () => {
+  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y al pasarse lo de su binario (143, el aviso DELANTE de lo que alcanzó a escribir)", async () => {
+    expect([DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS]).toEqual([120_000, 600_000]);
+    const { t } = terminal({});
+    // uRe de Claude Code 2.1.293: `s.stdout = r ? `${w} ${r}` : w` con w = «Command timed out after ${Zt(ms)}», y el código 143 (wot).
+    // Lo que el guion escribió antes no llega: `just-bash` 3.6.0 lo tira al abortar (medido: «bash: execution aborted», stdout vacío).
+    const r = await t.ejecutar("echo antes; sleep 3; echo tarde", { timeoutMs: 1000 });
+    expect([r.stdout, r.stderr, r.exitCode]).toEqual(["Command timed out after 1s", "", 143]);
+    expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+  }, 30_000);
+
+  it("lo que no vuelve se corta DESDE FUERA: código 143, el aviso, el de reinicio y terminal nueva con los ficheros de ahora", async () => {
     const { t, cargas } = terminal({ limiteMs: 10_000, margenMs: -9_700 });
     const r = await t.ejecutar("sleep 5");
-    expect(r.exitCode).toBe(124);
+    expect([r.stdout, r.stderr, r.exitCode]).toEqual(["Command timed out after 10s", "", 143]);
     expect(r.reiniciada).toBe(AVISO_DE_REINICIO);
     expect(r.ficheros).toBeNull();
     const despues = await t.ejecutar("cat /AGENTS.md");
@@ -361,6 +371,129 @@ describe("TerminalDeLen", () => {
       const { t } = terminal();
       const r = await t.ejecutar("supabase status");
       expect(r.exitCode).toBe(127);
+    }, 20_000);
+  });
+
+  // Plan 03 de las apps: `tsc`, `eslint`, `npx` y `npm` en una app los contesta
+  // el comprobador de verdad (en el hilo de la app); `npm install`, el catálogo.
+  describe("tsc, eslint, npx y npm en una app (plan 03, tarea 5)", () => {
+    function conApp() {
+      const llamadas: { program: string; args: readonly string[]; ficheros: Readonly<Record<string, string>> }[] = [];
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react", "zod", "@radix-ui/react-dialog"],
+          typesPackages: ["@types/react"],
+          run: async (program, args, ficheros) => {
+            llamadas.push({ program, args, ficheros });
+            return program === "tsc"
+              ? { stdout: "src/App.tsx(5,17): error TS2322: Type 'number' is not assignable to type 'string'.\n", stderr: "", exitCode: 2 }
+              : { stdout: "", stderr: "", exitCode: 0 };
+          },
+        },
+      });
+      return { t, llamadas };
+    }
+
+    it("🔴 npx tsc --noEmit corre el comprobador con los ficheros como están AHORA, y su código de salida manda", async () => {
+      const { t, llamadas } = conApp();
+      const r = await t.ejecutar("mkdir -p /src && echo 'export const n: string = 3;' > /src/App.tsx && npx tsc --noEmit; echo rc=$?");
+      expect(llamadas[0]!.program).toBe("tsc");
+      expect(llamadas[0]!.args).toEqual(["--noEmit"]);
+      expect(llamadas[0]!.ficheros["/src/App.tsx"]).toBe("export const n: string = 3;\n");
+      expect(r.stdout).toBe("src/App.tsx(5,17): error TS2322: Type 'number' is not assignable to type 'string'.\nrc=2\n");
+    }, 20_000);
+
+    it("npm run lint y npx eslint . son ESLint; npm run typecheck y tsc son TypeScript", async () => {
+      const { t, llamadas } = conApp();
+      await t.ejecutar("npm run lint; npx eslint .; npm run typecheck; tsc");
+      expect(llamadas.map((l) => l.program)).toEqual(["eslint", "eslint", "tsc", "tsc"]);
+      expect(llamadas[0]!.args).toEqual(["."]);
+    }, 20_000);
+
+    it("🔴 npm install: lo del catálogo ya está; lo demás no se puede (Review Focus 5)", async () => {
+      const { t } = conApp();
+      const si = await t.ejecutar("npm install zod @radix-ui/react-dialog@1.1.0; echo rc=$?");
+      expect(si.stdout).toMatch(/zod.*already available/);
+      expect(si.stdout).toMatch(/@radix-ui\/react-dialog: already available/);
+      expect(si.stdout).toMatch(/rc=0\n$/);
+      const no = await t.ejecutar("npm i axios; echo rc=$?");
+      expect(no.stdout + no.stderr).toMatch(/axios.*isn't available/);
+      expect(no.stdout).toMatch(/rc=1\n$/);
+    }, 20_000);
+
+    it("🔴 npm install -D @types/react: ya está (los tipos vienen con el catálogo); @types/node, no", async () => {
+      const { t } = conApp();
+      const si = await t.ejecutar("npm install -D @types/react; echo rc=$?");
+      expect(si.stdout).toMatch(/@types\/react: already available \(its types come with the catalog\)\nrc=0\n$/);
+      const no = await t.ejecutar("npm i --save-dev @types/node; echo rc=$?");
+      expect(no.stderr).toMatch(/@types\/node: isn't available here/);
+      expect(no.stdout).toMatch(/rc=1\n$/);
+    }, 20_000);
+
+    it("🔴 los comandos de pruebas de Claude Code corren vitest; npm run build, el paquete; un npx de otra cosa no existe", async () => {
+      const { t, llamadas } = conApp();
+      const comandos = ["npm test", "npm run test", "npm run test:unit", "pnpm test", "yarn test", "bun test", "npx vitest run src/a", "vitest", "npm test -- -t suma"];
+      for (const c of comandos) expect((await t.ejecutar(`${c}; echo rc=$?`)).stdout, c).toMatch(/rc=0\n$/);
+      expect(llamadas.map((l) => l.program)).toEqual(comandos.map(() => "test"));
+      expect(llamadas.map((l) => l.args)).toEqual([[], [], [], [], [], [], ["run", "src/a"], [], ["-t", "suma"]]);
+      const jest = await t.ejecutar("jest; echo rc=$?");
+      expect(jest.stderr).toBe("jest isn't available here: tests run with vitest, which has the same API (vi.fn instead of jest.fn). Run npm test.\n");
+      expect(jest.stdout).toMatch(/rc=1\n$/);
+      expect((await t.ejecutar("pnpm add zod; echo rc=$?")).stderr).toBe("pnpm add: not available here — there is no package manager; the app's packages are its catalog.\n");
+      expect((await t.ejecutar("npx prettier .; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+      expect((await t.ejecutar("npm run x")).stderr).toMatch(/The scripts are: lint, typecheck, build, test\.\n$/);
+      const { t: t2, llamadas: l2 } = conApp();
+      await t2.ejecutar("npm run build");
+      expect(l2.map((l) => l.program)).toEqual(["build"]);
+    }, 30_000);
+
+    it("🔴 npm test que se queda sin tiempo corta el COMANDO entero, como Claude Code mata a vitest: lo que imprimió, el aviso delante y 143; lo de detrás no corre", async () => {
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: async () => ({ stdout: "\n RUN  v4.1.11 /\n\n ✓ src/a.test.js (1 test) 2ms\n", stderr: "", exitCode: 143, timedOut: true }),
+        },
+      });
+      const r = await t.ejecutar("npm test; echo despues", { timeoutMs: 5_000 });
+      expect(r.stdout).toBe("Command timed out after 5s \n RUN  v4.1.11 /\n\n ✓ src/a.test.js (1 test) 2ms\n");
+      expect(r.exitCode).toBe(143);
+    }, 20_000);
+
+    it("🔴 `timeout N npm test` corta sólo npm test, como en bash: el guion sigue, $? es 124, lo de antes se queda, y las pruebas paran", async () => {
+      // Turnos reales del 09/10: `timeout 2 npm test` abortaba el guion ENTERO
+      // («bash: execution aborted», sin nada de lo impreso): just-bash da 25 ms
+      // a un comando abortado para acabar, y npm test seguía esperando.
+      let señal: AbortSignal | undefined;
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: (_program, _args, _ficheros, _timeLeftMs, signal) => {
+            señal = signal;
+            return new Promise((resolve) => setTimeout(() => resolve({ stdout: "tarde\n", stderr: "", exitCode: 0 }), 8_000));
+          },
+        },
+      });
+      const t0 = Date.now();
+      const r = await t.ejecutar('echo antes; timeout 1 npm test; echo "rc=$?"; echo despues');
+      expect(r.stdout).toBe("antes\nrc=124\ndespues\n");
+      expect(r.exitCode).toBe(0);
+      expect(Date.now() - t0).toBeLessThan(5_000);
+      // Lo que arrancó el comando acaba con él: al hilo de la app le llega la orden de parar.
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(señal?.aborted).toBe(true);
+    }, 20_000);
+
+    it("npm install -D vitest y lo del kit: ya están; jsdom no hace falta", async () => {
+      const { t } = conApp();
+      const r = await t.ejecutar("npm install -D vitest @testing-library/react jsdom; echo rc=$?");
+      expect(r.stdout).toBe(
+        "vitest: already available (tests run with OpenLen's test kit)\n@testing-library/react: already available (test kit)\njsdom: not needed: tests run in a real browser (Chromium), like Vitest's browser mode\nrc=0\n",
+      );
+    }, 20_000);
+
+    it("en una página (sin appTools) no hay tsc ni npm", async () => {
+      const { t } = terminal({});
+      expect((await t.ejecutar("tsc; echo rc=$?")).stdout).toMatch(/rc=127\n$/);
     }, 20_000);
   });
 });

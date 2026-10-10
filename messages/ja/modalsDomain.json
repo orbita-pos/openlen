@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "公開しました",
     "publishedBody": "ページは {subdomain}.{host} で公開中です",
+    "publishedBodyApp": "アプリは {subdomain}.{host} で公開中です",
     "domainClaimedTitle": "{domain} を取得しました",
     "domainClaimedBody": "下記の DNS レコードを追加してから、検証してください。",
     "domainVerifiedTitle": "{domain} を検証しました",
@@ -105,7 +106,7 @@
     "subdomainLabel": "サブドメイン",
     "subdomainPlaceholder": "your-name",
     "preview": "プレビュー",
-    "limitsHint": "無料プラン: 公開ページ 1 つ。Pro: 10 つ。小文字、数字、ハイフンが使えます（1〜63 文字）。",
+    "limitsHint": "公開できるプロジェクト（ページまたはアプリ）: 無料プランは {free} つ、Pro は {pro} つ、Max は {max} つ。小文字、数字、ハイフンが使えます（1〜63 文字）。",
     "unpublish": {
       "sure": "よろしいですか？",
       "confirm": "はい、非公開にします",
@@ -118,16 +119,19 @@
       "choose": "上で名前を選んでください。",
       "checking": "利用可能か確認しています…",
       "currentPage": "これは現在のページです —",
+      "currentPageApp": "これはアプリの現在のアドレスです —",
       "visit": "表示",
       "available": "利用可能",
       "invalid": "小文字、数字、ハイフンを使ってください（先頭・末尾は不可）。",
       "reserved": "この名前は予約されています。別の名前をお試しください。",
       "taken": "すでに使用されています。別の名前をお試しください。",
-      "limit": "プランの上限に達しました — 別のページを非公開にするか、アップグレードしてください。"
+      "limit": "プランの上限に達しました — 別のプロジェクトを非公開にするか、アップグレードしてください。"
     },
     "speedCard": {
       "title": "ページ速度",
+      "titleApp": "アプリの速度",
       "measuring": "ページ速度を測定中…",
+      "measuringApp": "アプリの速度を測定中…",
       "loadsIn": "{seconds}秒で読み込み",
       "weight": "{kb} KB",
       "requests": "リクエスト {count} 件",

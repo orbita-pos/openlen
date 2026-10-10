@@ -257,6 +257,8 @@ interface LeftSidebarProps {
   onPendingDraftConsumed?: () => void;
   /** Las fotos y la referencia del primer mensaje (plans/crear-es-len). */
   pendingAttachments?: PendingAttachments | null;
+  /** El proyecto es una app: el chat habla de la app, no de «tu página». */
+  esApp?: boolean;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -318,6 +320,7 @@ export function LeftSidebar({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   pendingAttachments = null,
+  esApp = false,
   sitePages = [],
   activeSitePage = null,
 }: LeftSidebarProps) {
@@ -544,6 +547,7 @@ export function LeftSidebar({
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 pendingAttachments={pendingAttachments}
+                esApp={esApp}
                 onClose={onToggleCollapse}
               />
             )}

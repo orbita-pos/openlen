@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "已发布",
     "publishedBody": "你的页面已上线：{subdomain}.{host}",
+    "publishedBodyApp": "你的应用已上线：{subdomain}.{host}",
     "domainClaimedTitle": "已申请 {domain}",
     "domainClaimedBody": "请添加下方的 DNS 记录，然后进行验证。",
     "domainVerifiedTitle": "已验证 {domain}",
@@ -105,7 +106,7 @@
     "subdomainLabel": "子域名",
     "subdomainPlaceholder": "your-name",
     "preview": "预览",
-    "limitsHint": "免费版：1 个已发布页面。Pro：10 个。仅限小写字母、数字和连字符（1–63 个字符）。",
+    "limitsHint": "已发布项目（页面或应用）：免费版 {free} 个，Pro {pro} 个，Max {max} 个。仅限小写字母、数字和连字符（1–63 个字符）。",
     "unpublish": {
       "sure": "确定吗？",
       "confirm": "是的，取消发布",
@@ -118,16 +119,19 @@
       "choose": "请在上方选择一个名称。",
       "checking": "正在检查可用性…",
       "currentPage": "这是你当前的页面 —",
+      "currentPageApp": "这是你应用的当前地址 —",
       "visit": "访问",
       "available": "可用",
       "invalid": "请使用小写字母、数字和连字符（不可置于开头或结尾）。",
       "reserved": "此名称已被保留。请换一个。",
       "taken": "已被占用。请换一个。",
-      "limit": "已达套餐上限——请取消发布其他页面或升级。"
+      "limit": "已达套餐上限——请取消发布其他项目或升级。"
     },
     "speedCard": {
       "title": "页面速度",
+      "titleApp": "应用速度",
       "measuring": "正在测量页面速度…",
+      "measuringApp": "正在测量应用速度…",
       "loadsIn": "{seconds} 秒内加载",
       "weight": "{kb} KB",
       "requests": "{count} 个请求",

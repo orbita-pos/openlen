@@ -1,3 +1,4 @@
+import { formatFileSize, persistedOutput } from "./formato";
 /**
  * LOS FICHEROS DE LA TERMINAL DE LEN (F1 de plans/len-agente-2026).
  *
@@ -59,35 +60,65 @@ export function cambiosDeLaTerminal(
   return cambios;
 }
 
-/** Hasta dónde llega la salida que lee el modelo: la cifra de la terminal de
- *  DeepSeek (`maxOutputChars`, `packages/shell/tool-bash-persistent`). */
-export const MAX_SALIDA = 16_000;
+/** Hasta dónde llega la salida que lee el modelo: el de Claude Code (binario
+ *  2.1.293): lo que pasa de aquí va a un fichero (`persistedOutput`). */
+export const MAX_SALIDA = 30_000;
+
+/** Lo que lee el modelo de un comando sin salida: el texto de Claude Code
+ *  para un resultado vacío, `(${tool} completed with no output)`. */
+const SIN_SALIDA = "(bash completed with no output)";
+/** El recorte de la salida de un fallo, su `cu`: 10.000 caracteres (5.000 del
+ *  principio y 5.000 del final), y sólo si pasa de 10.000 + 1.024. */
+const MAX_FALLO = 10_000;
+const HOLGURA_DEL_FALLO = 1_024;
+
+function recortarFallo(texto: string): string {
+  if (texto.length <= MAX_FALLO + HOLGURA_DEL_FALLO) return texto;
+  const mitad = Math.floor(MAX_FALLO / 2);
+  return `${texto.slice(0, mitad)}\n\n... [${texto.length - MAX_FALLO} characters truncated] ...\n\n${texto.slice(texto.length - (MAX_FALLO - mitad))}`;
+}
 
 /**
- * La salida de un comando como la devuelve la terminal de DeepSeek: lo que
- * escribió (la salida y los errores), lo que pasó al guardar, el PRINCIPIO si
- * no cabe —con el aviso de que se cortó— y la línea del código de salida.
- * Un guardado rechazado deja el código distinto de 0 aunque el comando
- * terminara bien: el comando no hizo lo que se le pidió.
+ * LA SALIDA DE UN COMANDO COMO LA DEVUELVE EL `Bash` DE CLAUDE CODE (leído en
+ * su binario 2.1.293: `mapToolResultToToolResultBlockParam` y, si falla, el
+ * error `YW` que formatea `MKr`): si no falla, lo que escribió —sin líneas en
+ * blanco delante ni espacio detrás— y, si pasa de 30.000 caracteres, el bloque
+ * `<persisted-output>`; si falla, «Exit code N» en la primera línea y lo que
+ * escribió, recortado por el medio a 10.000. Detrás, lo que pasó al guardar.
+ * Un guardado rechazado es un fallo con código 1 aunque el comando terminara
+ * bien: el comando no hizo lo que se le pidió.
  */
 export function salidaDeLaTerminal(r: {
   readonly stdout: string;
   readonly stderr: string;
   readonly exitCode: number;
+  /** Si el código es un fallo (`esFalloDeLaTerminal`: un `grep` sin nada da 1 y
+   *  no lo es). Sin él, todo código distinto de 0. */
+  readonly fallo?: boolean;
   /** Lo que dijeron las guardas de cada fichero tocado. */
   readonly guardado?: readonly string[];
   /** Algún fichero no se pudo guardar. */
   readonly rechazado?: boolean;
   /** La terminal se reinició (tiempo agotado): lo siguiente empieza de cero. */
   readonly reiniciada?: string;
+  /** Dónde se guardó la salida entera, si no cabía (`/tmp/tool-results/N.txt`). */
+  readonly persistida?: string;
 }): { texto: string; exitCode: number } {
   const exitCode = r.rechazado && r.exitCode === 0 ? 1 : r.exitCode;
+  const fallo = r.rechazado === true || (r.fallo ?? exitCode !== 0);
   const partes = [r.stdout, r.stderr].filter((p) => p !== "");
-  let cuerpo = partes.join(partes[0]?.endsWith("\n") ? "" : "\n");
-  if (cuerpo.length > MAX_SALIDA) {
-    cuerpo = `${cuerpo.slice(0, MAX_SALIDA)}\n[Output truncated: showing the first ${MAX_SALIDA} of ${cuerpo.length} characters. Narrow the command (head, grep, sed -n) to see the rest.]`;
-  }
+  const cuerpo = partes.join(partes[0]?.endsWith("\n") ? "" : "\n");
   const notas = [...(r.guardado ?? []), ...(r.reiniciada ? [r.reiniciada] : [])];
-  const texto = [cuerpo.replace(/\n+$/, ""), ...notas, `[Command finished with exit code ${exitCode}]`].filter((p) => p !== "").join("\n");
-  return { texto, exitCode };
+  if (fallo) {
+    const texto = [`Exit code ${exitCode}`, cuerpo.trim(), ...notas].filter((p) => p !== "").join("\n").trim();
+    return { texto: recortarFallo(texto), exitCode };
+  }
+  let salida = cuerpo.replace(/^(\s*\n)+/, "").trimEnd();
+  if (cuerpo.length > MAX_SALIDA) {
+    salida = r.persistida
+      ? persistedOutput({ path: r.persistida, text: cuerpo })
+      : `${cuerpo.slice(0, MAX_SALIDA)}\nOutput too large (${formatFileSize(cuerpo.length)}). It could not be saved, so only the first ${formatFileSize(MAX_SALIDA)} are shown; the rest was dropped. If the tool can page or filter its results, call it again for the part you need.`;
+  }
+  const texto = [salida, ...notas].filter((p) => p !== "").join("\n");
+  return { texto: texto === "" ? SIN_SALIDA : texto, exitCode };
 }

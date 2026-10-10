@@ -73,6 +73,7 @@
     "image": "Immagine:",
     "removeImage": "Rimuovi immagine allegata",
     "placeholder": "Descrivi come deve apparire o leggersi la tua pagina…",
+    "placeholderApp": "Descrivi cosa deve fare la tua app o come deve apparire…",
     "placeholderScoped": "Modifica {target} selezionato…",
     "attachImage": "Allega un'immagine",
     "attachImageTitle": "Allega un'immagine da inserire nella pagina",
@@ -120,7 +121,8 @@
     "placeholder": "Scrivi a Len, o @ per parlare con qualcuno del progetto…"
   },
   "noChange": {
-    "label": "Non è cambiato nulla nella pagina"
+    "label": "Non è cambiato nulla nella pagina",
+    "labelApp": "Non è cambiato nulla nell'app"
   },
   "undo": {
     "failedHttp": "Impossibile annullare ({status}) — la modifica è ancora applicata. Riprova.",
@@ -130,6 +132,7 @@
     "notUndone": "Annullato, tranne {rutas}: annullare un turno non ripristina il database, la memoria né le impostazioni."
   },
   "cutShort": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla la pagina.",
+  "cutShortApp": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla l'app.",
   "diff": {
     "anadida": "Aggiunto {que}",
     "quitada": "Rimosso {que}",
@@ -154,6 +157,7 @@
       "conversations": "Conversazioni",
       "newChat": "Ricomincia da capo",
       "newChatHint": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note della pagina restano.",
+      "newChatHintApp": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note dell'app restano.",
       "busy": "Aspetta che Len finisca per cambiare conversazione.",
       "failed": "Impossibile cambiare conversazione. Riprova.",
       "archived": "Conversazioni precedenti",
@@ -171,13 +175,24 @@
         "publish": "Pubblica la mia pagina"
       }
     },
+    "emptyApp": {
+      "title": "Cosa facciamo oggi alla tua app?",
+      "suggestions": {
+        "data": "Salva i dati in un database",
+        "login": "Aggiungi un accesso",
+        "mobile": "Controlla come si vede sul telefono",
+        "publish": "Pubblica la mia app"
+      }
+    },
     "steps": {
       "running": "Len sta lavorando",
       "done": "{count, plural, one {Len ha fatto # passo} other {Len ha fatto # passi}}"
     },
     "activity": {
       "reading": "Legge la tua pagina",
+      "readingApp": "Legge la tua app",
       "editing": "Modifica la pagina",
+      "editingApp": "Modifica l'app",
       "terminal": "Usa il terminale",
       "photos": "Cerca foto",
       "image": "Modifica un'immagine",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Immagine e altro",
       "on": "Attivo",
-      "disclaimer": "Len può sbagliare. Controlla la pagina prima di pubblicarla."
+      "disclaimer": "Len può sbagliare. Controlla la pagina prima di pubblicarla.",
+      "disclaimerApp": "Len può sbagliare. Prova l'app prima di pubblicarla."
     },
     "layout": {
       "float": "Stacca la chat",

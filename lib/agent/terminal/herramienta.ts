@@ -19,12 +19,13 @@ import {
   guardarLoDeLaTerminal,
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
-import { cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
+import { MAX_SALIDA, cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
+import { appToolsFor } from "./herramientas-de-app";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -55,13 +56,26 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(deps.supabaseCli
       ? { supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => deps.supabaseCli!(session.projectId, args, ficheros) }
       : {}),
+    // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
+    appTools: appToolsFor(session, deps),
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
-  const r = await terminal.ejecutar(command);
+  const r = await terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined });
+  // La salida que no cabe, ENTERA a /tmp (no es del proyecto), como Claude Code.
+  let persistida: string | undefined;
+  if (r.stdout.length + r.stderr.length > MAX_SALIDA) {
+    const ruta = `/tmp/tool-results/${(session.salidasGuardadas = (session.salidasGuardadas ?? 0) + 1)}.txt`;
+    try {
+      await terminal.poner({ [ruta]: r.stdout + r.stderr });
+      persistida = ruta;
+    } catch {
+      // Sin fichero: el corte, con el aviso de Claude Code.
+    }
+  }
 
   let guardado: GuardadoDeLaTerminal | null = null;
   // Lo que cambió, por fichero, para la pantalla (la #10): la foto de antes
@@ -86,12 +100,17 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
   // Lo que no se pudo calcular, con su porqué: `just-bash` sólo diría «No such file».
   const noCalculados = (r.fallidos ?? []).map((f) => `${f.ruta}: could not be computed — ${f.error}\n`).join("");
+  // Un guardado rechazado es fallo siempre; el código del comando, según quién
+  // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
+  const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const salida = salidaDeLaTerminal({
+    fallo: !ok,
     stdout: r.stdout,
     stderr: r.stderr + noCalculados,
     exitCode: r.exitCode,
     ...(guardado ? { guardado: guardado.notas, rechazado: guardado.rechazado } : {}),
     ...(r.reiniciada ? { reiniciada: r.reiniciada } : {}),
+    ...(persistida ? { persistida } : {}),
   });
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
@@ -104,9 +123,6 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);
-  // Un guardado rechazado es fallo siempre; el código del comando, según quién
-  // lo puso: un `grep` que no encuentra nada contesta, no falla (`codigo-de-salida.ts`).
-  const ok = !guardado?.rechazado && !esFalloDeLaTerminal(command, r.exitCode);
   const cambio = escrituras.length === 0 ? undefined : escrituras.some((o) => o.response.cambio === "cambio") ? "cambio" : "sin_cambio";
   // UNA APP (F3): lo que no compila, UNA vez con el comando entero ya guardado
   // —un `sed -i` sobre dos ficheros pasa por un instante roto entre uno y otro—.
@@ -114,7 +130,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const appCambiada = escrituras.some((o) => o.appCambiada);
   const diagnosticos = [
     ...escrituras.flatMap((o) => o.diagnosticos ?? []),
-    ...(session.app && (appCambiada || paginas.length > 0) ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+    ...(session.app && (appCambiada || paginas.length > 0)
+      ? await diagnosticosDeLaAppTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))
+      : []),
   ];
   // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
   const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);
@@ -124,6 +142,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       ok,
       ...(ok ? {} : { error: `exit code ${salida.exitCode}` }),
       [CLAVE_TOOL_RESULT]: texto,
+      // El código, para la lente al releer la transcripción: el modelo sólo lo
+      // lee en el texto, y sólo si es un fallo (como en Claude Code).
+      exitCode: salida.exitCode,
       // Sin escrituras, el comando sólo leyó: lo dice, como Read, para que un
       // `cat` no cuente como «Len actuó» y deje pasar un «listo» sin cambio
       // (la guarda de `actuo` en loop.ts). A la tarjeta no va: no es un aviso.

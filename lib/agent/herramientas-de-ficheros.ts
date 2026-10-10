@@ -20,6 +20,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
+import { typesAndLintAfterWrite } from "@/lib/agent/types-and-lint";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { coercerEntradaEdit, planearEdit, type PlanDeEdit } from "@/lib/agent/ficheros/edit";
@@ -287,7 +288,7 @@ async function aplicarPlan(
     // Lo que no compila, una vez por herramienta: la terminal lo pide ella
     // misma al acabar el comando entero (`terminal/herramienta.ts`).
     if (!guardado.appCambiada || herramienta === "bash") return guardado;
-    return { ...guardado, ...conDiagnosticos(await diagnosticosDeLaAppTrasEscribir(session, deps)) };
+    return { ...guardado, ...conDiagnosticos(await diagnosticosDeLaAppTrasEscribir(session, deps, [plan.ruta])) };
   }
   // UNA APP NO TIENE PÁGINAS (F3): una pantalla nueva es un componente y una
   // ruta de hash. Un /<slug>/index.html sería una página estática FUERA de la
@@ -344,7 +345,7 @@ async function aplicarPlan(
       // En una app, el cascarón tiene que seguir arrancándola (y lo que no
       // compila, como tras cualquier escritura de la app). La terminal lo pide
       // al acabar el comando.
-      ...(session.app && herramienta !== "bash" ? await diagnosticosDeLaAppTrasEscribir(session, deps) : []),
+      ...(session.app && herramienta !== "bash" ? await diagnosticosDeLaAppTrasEscribir(session, deps, [plan.ruta]) : []),
     ]),
     ...(guardado.versionPrevia ? { versionPrevia: guardado.versionPrevia } : {}),
   };
@@ -412,20 +413,32 @@ async function guardarEnLaCarpeta(
  * (`lib/agent/compila-la-app.ts`). Lo llaman Edit y Write al acabar, y la
  * terminal una vez por comando —no por fichero—. Fail-soft: si la carpeta no
  * se puede leer, no se dice nada (el lienzo y los ojos lo verán igual).
+ *
+ * Y lanza los tipos y el lint SIN esperarlos (`lib/agent/types-and-lint.ts`,
+ * como el LSP de Claude Code): llegan antes de alguna llamada siguiente.
+ *
+ * @param written lo que escribió ESTA herramienta.
  */
-export async function diagnosticosDeLaAppTrasEscribir(session: AgentSession, deps: AgentDeps): Promise<Diagnostico[]> {
+export async function diagnosticosDeLaAppTrasEscribir(
+  session: AgentSession,
+  deps: AgentDeps,
+  written: readonly string[] = [],
+): Promise<Diagnostico[]> {
   if (!session.app) return [];
   try {
     const row = await deps.loadProject(session.projectId, session.userId);
     if (!row) return [];
     const v = await virtualesDe(session, deps, row.userBrief);
-    return diagnosticosDeLaApp({
+    const deCompilacion = diagnosticosDeLaApp({
       app: session.app,
       ahora: v.folder,
       alEmpezar: session.carpetaAlEmpezar ?? null,
       escritos: session.escritos ?? [],
       cascaron: sinOpIds(row.data.html ?? ""),
     });
+    const compileErrors = deCompilacion.filter((d) => d.codigo === "compila").length;
+    typesAndLintAfterWrite({ session, deps, now: v.folder, written, compileErrors });
+    return deCompilacion;
   } catch {
     return [];
   }

@@ -39,7 +39,6 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { randomUUID } from "node:crypto";
 import { contentTypeFor, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { rutaDeVendorValida } from "@/lib/apps/dependencias";
 
 export interface DocumentoServido {
   /** El URL que hay que abrir en el navegador. */
@@ -58,6 +57,10 @@ export interface OpcionesDelDocumento {
    *  los que se publican (`isPublishableFolderPath`), y desde memoria: ver
    *  `localResponseFor`. */
   readonly files?: Readonly<Record<string, string>>;
+  /** UNA APP (plan 02): el sourcemap de cada fichero servido que lo tiene (el
+   *  paquete de la entrada). No se le sirve al navegador: con él se traducen
+   *  las trazas de sus errores (`traductorDeMapas`). */
+  readonly sourceMaps?: Readonly<Record<string, string>>;
   /** La página que es (`null` o ausente = la home). El documento se sirve en
    *  `/<id>/<pagina>/` para que lo relativo se resuelva desde su carpeta, como
    *  en la publicada (`/<pagina>/`). */
@@ -69,6 +72,10 @@ export interface OpcionesDelDocumento {
    *  la red se calme. Una app pide sus datos DESPUÉS del `load`, y medirla en
    *  ese instante es medir su «Cargando…». */
   readonly esperarALaRed?: boolean;
+  /** Lo que sirve LA PLATAFORMA a este documento bajo `/openlen/` (las pruebas
+   *  empaquetadas de una app, plan 04): no son de la carpeta del proyecto, así
+   *  que no pasan su filtro de lo publicable — se aceptan sólo bajo `/openlen/`. */
+  readonly platformFiles?: Readonly<Record<string, string>>;
 }
 
 /** Cuánto sin peticiones abiertas es «la red se calmó», y el tope de la
@@ -198,15 +205,13 @@ function crear(): Promise<OrigenDeMedida> {
         publicar(html: string, opciones: OpcionesDelDocumento = {}): DocumentoServido {
           const id = randomUUID();
           documentos.set(id, html);
-          if (opciones.files) {
+          if (opciones.files || opciones.platformFiles) {
             ficherosPorDocumento.set(
               id,
-              // Las dependencias de una app (`/openlen/vendor/…`) viven en una
-              // raíz RESERVADA de la carpeta, así que el filtro de lo
-              // publicable las dejaría fuera: se aceptan por su nombre exacto.
-              new Map(
-                Object.entries(opciones.files).filter(([ruta]) => isPublishableFolderPath(ruta) || rutaDeVendorValida(ruta) !== null),
-              ),
+              new Map([
+                ...Object.entries(opciones.files ?? {}).filter(([ruta]) => isPublishableFolderPath(ruta)),
+                ...Object.entries(opciones.platformFiles ?? {}).filter(([ruta]) => ruta.startsWith("/openlen/")),
+              ]),
             );
           }
           const pagina = opciones.pagina ? `${encodeURIComponent(opciones.pagina)}/` : "";

@@ -73,6 +73,7 @@
     "image": "Afbeelding:",
     "removeImage": "Bijgevoegde afbeelding verwijderen",
     "placeholder": "Beschrijf hoe je pagina eruit moet zien of moet lezen…",
+    "placeholderApp": "Beschrijf wat je app moet doen of hoe hij eruit moet zien…",
     "placeholderScoped": "Wijzig de geselecteerde {target}…",
     "attachImage": "Een afbeelding bijvoegen",
     "attachImageTitle": "Voeg een afbeelding toe om in de pagina in te voegen",
@@ -120,7 +121,8 @@
     "placeholder": "Schrijf Len, of @ om met iemand van het project te praten…"
   },
   "noChange": {
-    "label": "Er is niets op de pagina veranderd"
+    "label": "Er is niets op de pagina veranderd",
+    "labelApp": "Er is niets in de app veranderd"
   },
   "undo": {
     "failedHttp": "Ongedaan maken mislukt ({status}) — de wijziging is nog actief. Probeer het opnieuw.",
@@ -130,6 +132,7 @@
     "notUndone": "Ongedaan gemaakt, behalve {rutas}: een beurt ongedaan maken herstelt de database, het geheugen en de instellingen niet."
   },
   "cutShort": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de pagina.",
+  "cutShortApp": "Het werd afgebroken voordat het klaar was ({reason}), maar wat ik deed is al opgeslagen. Bekijk de app.",
   "diff": {
     "anadida": "{que} toegevoegd",
     "quitada": "{que} verwijderd",
@@ -154,6 +157,7 @@
       "conversations": "Gesprekken",
       "newChat": "Opnieuw beginnen",
       "newChatHint": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de pagina blijven.",
+      "newChatHintApp": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de app blijven.",
       "busy": "Wacht tot Len klaar is om van gesprek te wisselen.",
       "failed": "Kon niet van gesprek wisselen. Probeer het opnieuw.",
       "archived": "Eerdere gesprekken",
@@ -171,13 +175,24 @@
         "publish": "Publiceer mijn pagina"
       }
     },
+    "emptyApp": {
+      "title": "Wat doen we vandaag met je app?",
+      "suggestions": {
+        "data": "Sla de gegevens op in een database",
+        "login": "Voeg een inlog toe",
+        "mobile": "Bekijk hoe het er op mobiel uitziet",
+        "publish": "Publiceer mijn app"
+      }
+    },
     "steps": {
       "running": "Len is bezig",
       "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}"
     },
     "activity": {
       "reading": "Leest je pagina",
+      "readingApp": "Leest je app",
       "editing": "Past de pagina aan",
+      "editingApp": "Past de app aan",
       "terminal": "Gebruikt de terminal",
       "photos": "Zoekt foto's",
       "image": "Bewerkt een afbeelding",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Afbeelding en meer",
       "on": "Aan",
-      "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert."
+      "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert.",
+      "disclaimerApp": "Len kan zich vergissen. Probeer je app uit voordat je hem publiceert."
     },
     "layout": {
       "float": "Chat losmaken",

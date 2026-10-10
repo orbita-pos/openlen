@@ -28,7 +28,7 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
-import { carpetaDeLaVista, documentoMedible, documentoParaLaFoto, type ContextoDeVista } from "@/lib/lienzo/documento";
+import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import type { OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
 // de valor y sin coste: `aviso-medido` no importa nada — ni la pasarela, ni las
@@ -790,7 +790,7 @@ async function runVerify(
   // medida— contestan los ficheros que la página pide (`<script
   // src="/js/app.js">`), o la verían rota cuando publicada funciona. Sin
   // ficheros no viaja nada: la llamada es la de siempre.
-  const carpeta = carpetaDeLaVista(params.vista);
+  const carpeta = await carpetaDeLaVista(params.vista);
   const medir = (html: string, laCarpeta = carpeta) =>
     laCarpeta ? medirSin(html, {}, { carpeta: laCarpeta }) : medirSin(html);
   const medicion = medir(paraMedir).catch(() => null);
@@ -831,8 +831,8 @@ async function runVerify(
   };
   sinCorrerPor([]);
   const conGuion = codigo && entradas.length > 0;
-  // UNA APP se fotografía con su import map: sin él no arranca (F3).
-  const image = await render(documentoParaLaFoto(paraRenderizar, params.vista), {
+  // UNA APP se fotografía con su carpeta servida: su entrada es el paquete (plan 02).
+  const image = await render(paraRenderizar, {
     onErrors: (e) => hechos.gritos.push(...e),
     onBlocked: (u) => hechos.bloqueadas.push(...u),
     ...(carpeta ? { carpeta } : {}),
@@ -1565,7 +1565,7 @@ export async function observarPagina(
     const medir = internals.medir ?? renderVisualQualityViewports;
     const doc = documentoMedible(params.html, params.vista ?? null);
     // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-    const carpeta = carpetaDeLaVista(params.vista);
+    const carpeta = await carpetaDeLaVista(params.vista);
     const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
     if (!m) return null;
 
@@ -1661,8 +1661,8 @@ export async function observarPagina(
   // calcula su color en vez de asumir blanco (`lib/publish/assistant-widget.ts`).
   // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
   const render = internals.render ?? renderHtmlToInlineImage;
-  const carpeta = carpetaDeLaVista(params.vista);
-  const foto = documentoParaLaFoto(params.html, params.vista);
+  const carpeta = await carpetaDeLaVista(params.vista);
+  const foto = params.html;
   const image = await (carpeta ? render(foto, { carpeta }) : render(foto)).catch(() => null);
   if (!image) return null;
 

@@ -66,7 +66,7 @@ const LEER = `(async () => {
 
 async function medir(pantalla?: string) {
   const v = vista(pantalla);
-  const medida = await renderVisualQualityViewports(documentoMedible(CASCARON, v), {}, { behaviorProgram: LEER, carpeta: carpetaDeLaVista(v)! });
+  const medida = await renderVisualQualityViewports(documentoMedible(CASCARON, v), {}, { behaviorProgram: LEER, carpeta: (await carpetaDeLaVista(v))! });
   expect(medida, "el render no devolvió nada").not.toBeNull();
   return medida!;
 }
@@ -104,7 +104,7 @@ describe("el esqueleto con el que nace una app (H10)", () => {
       for (let i = 0; i < 100; i++) { if (document.querySelector("h1")) break; await new Promise((r) => setTimeout(r, 20)); }
       return document.querySelector("h1")?.textContent ?? null;
     })()`;
-    const m = await renderVisualQualityViewports(documentoMedible(e.html, v), {}, { behaviorProgram: leer, carpeta: carpetaDeLaVista(v)! });
+    const m = await renderVisualQualityViewports(documentoMedible(e.html, v), {}, { behaviorProgram: leer, carpeta: (await carpetaDeLaVista(v))! });
     expect(m).not.toBeNull();
     expect(m!.runtimeErrors ?? []).toEqual([]);
     expect(m!.behaviorResult).toBe("Caja del Café");
@@ -131,14 +131,14 @@ describe("esperar a la red (H12)", () => {
 
   it("una app espera a que la red se calme, con su tope, y abre su pantalla", async () => {
     const { page, pedidos } = pagina();
-    await cargarEnOrigenReal(page, CASCARON, carpetaDeLaVista(vista("/ajustes"))!);
+    await cargarEnOrigenReal(page, CASCARON, (await carpetaDeLaVista(vista("/ajustes")))!);
     expect(pedidos.goto[0]).toMatch(/\/#\/ajustes$/);
     expect(pedidos.espera).toEqual([{ idleTime: RED_CALMADA_MS, timeout: ESPERA_A_LA_RED_MS }]);
   });
 
   it("CONTRA-PRUEBA: una página no espera (se mide como siempre)", async () => {
     const { page, pedidos } = pagina();
-    await cargarEnOrigenReal(page, "<p>hola</p>", carpetaDeLaVista({ ...vista(), app: null, files: { "/js/a.js": "1" } })!);
+    await cargarEnOrigenReal(page, "<p>hola</p>", (await carpetaDeLaVista({ ...vista(), app: null, files: { "/js/a.js": "1" } }))!);
     expect(pedidos.goto[0]).toMatch(/\/$/);
     expect(pedidos.espera).toEqual([]);
   });
@@ -148,6 +148,6 @@ describe("esperar a la red (H12)", () => {
     page.waitForNetworkIdle = async () => {
       throw new Error("Timed out after waiting 5000ms");
     };
-    await expect(cargarEnOrigenReal(page, CASCARON, carpetaDeLaVista(vista())!)).resolves.toBeUndefined();
+    await expect(cargarEnOrigenReal(page, CASCARON, (await carpetaDeLaVista(vista()))!)).resolves.toBeUndefined();
   });
 });

@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "Veröffentlicht",
     "publishedBody": "Deine Seite ist live unter {subdomain}.{host}",
+    "publishedBodyApp": "Deine App ist live unter {subdomain}.{host}",
     "domainClaimedTitle": "{domain} reserviert",
     "domainClaimedBody": "Füge die DNS-Einträge unten hinzu und verifiziere dann.",
     "domainVerifiedTitle": "{domain} verifiziert",
@@ -105,7 +106,7 @@
     "subdomainLabel": "Subdomain",
     "subdomainPlaceholder": "dein-name",
     "preview": "Vorschau",
-    "limitsHint": "Kostenloser Tarif: 1 veröffentlichte Seite. Pro: 10. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
+    "limitsHint": "Veröffentlichte Projekte (Seiten oder Apps): {free} im kostenlosen Tarif, {pro} mit Pro und {max} mit Max. Kleinbuchstaben, Zahlen und Bindestriche (1–63 Zeichen).",
     "unpublish": {
       "sure": "Sicher?",
       "confirm": "Ja, Veröffentlichung aufheben",
@@ -118,16 +119,19 @@
       "choose": "Wähle oben einen Namen.",
       "checking": "Verfügbarkeit wird geprüft…",
       "currentPage": "Das ist deine aktuelle Seite —",
+      "currentPageApp": "Das ist die aktuelle Adresse deiner App —",
       "visit": "besuchen",
       "available": "Verfügbar",
       "invalid": "Verwende Kleinbuchstaben, Zahlen und Bindestriche (nicht am Anfang/Ende).",
       "reserved": "Dieser Name ist reserviert. Versuche einen anderen.",
       "taken": "Bereits vergeben. Versuche einen anderen.",
-      "limit": "Tariflimit erreicht — hebe die Veröffentlichung einer anderen Seite auf oder führe ein Upgrade durch."
+      "limit": "Tariflimit erreicht — hebe die Veröffentlichung eines anderen Projekts auf oder führe ein Upgrade durch."
     },
     "speedCard": {
       "title": "Seitengeschwindigkeit",
+      "titleApp": "App-Geschwindigkeit",
       "measuring": "Geschwindigkeit deiner Seite wird gemessen…",
+      "measuringApp": "Geschwindigkeit deiner App wird gemessen…",
       "loadsIn": "Lädt in {seconds}s",
       "weight": "{kb} KB",
       "requests": "{count} Anfragen",

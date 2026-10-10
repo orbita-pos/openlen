@@ -19,8 +19,8 @@ import { sealRelease } from "@/lib/html-engine";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { conImportMap } from "@/lib/apps/documento";
-import { servirRutaDeLaApp, vendorPorRuta } from "@/lib/apps/servir";
+import { entradaServida, ficherosDeLaApp, servirFuenteDePagina } from "@/lib/apps/servir";
+import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 
 export interface ContextoDeVista {
   projectId: string;
@@ -33,8 +33,8 @@ export interface ContextoDeVista {
    *  → contenido. No entran en el documento: viajan con él hasta el navegador
    *  que lo mide, que los contesta cuando la página los pide. */
   files?: Readonly<Record<string, string>>;
-  /** UNA APP WEB (spec local 2026-10-07-apps): su documento lleva el import map
-   *  del catálogo y sus fuentes se sirven compilados. Ausente = una página. */
+  /** UNA APP WEB (spec local 2026-10-07-apps): su entrada se sirve empaquetada
+   *  (plan 02) y sus fuentes, compilados. Ausente = una página. */
   app?: AppDeProyecto | null;
   /** Lo que vale `import.meta.env` en la app: sólo valores públicos
    *  (`lib/apps/entorno.ts`). */
@@ -53,38 +53,62 @@ export function pantallaDe(valor: unknown): string | null {
 }
 
 /**
- * LA CARPETA COMO LA SIRVE EL LIENZO: cada fuente compilado (`.jsx`, `.tsx`,
- * `.ts`, y en una app también `.js`), lo demás tal cual, y en una app las
- * dependencias de su catálogo en `/openlen/vendor/`. Es lo MISMO que contesta
- * `/api/lienzo/site` (los dos pasan por `servirRutaDeLaApp`), así que los ojos
- * de Len miden la app que el dueño ve. React va en su build de desarrollo, como
- * en el lienzo: sus mensajes de error enteros son lo que Len necesita leer.
+ * LA CARPETA COMO LA SIRVE EL LIENZO, con las MISMAS funciones que
+ * `/api/lienzo/site` (`lib/apps/servir.ts`), así que los ojos de Len miden la
+ * app que el dueño ve.
+ *
+ * UNA APP SE SIRVE EMPAQUETADA (plan 02): su entrada ES el paquete de
+ * desarrollo (`bundleApp`: sus fuentes con lo que usa del catálogo), y de la
+ * carpeta sólo lo que no es un fuente — la misma forma que la release
+ * (`ficherosDeLaApp`). React va en su build de desarrollo, como en el lienzo:
+ * sus mensajes de error enteros son lo que Len necesita leer. El sourcemap va
+ * aparte, para traducir las trazas (`traductorDeMapas`): al navegador no se le
+ * sirve. Si no compila, la entrada es un módulo que lanza los errores del
+ * compilador. Al empaquetador va sólo lo publicable: ni /tests ni /supabase.
+ *
+ * UNA PÁGINA: cada fuente (`.jsx`, `.tsx`, `.ts`) compilado, lo demás tal cual.
  */
-export function carpetaServida(
+export async function carpetaServida(
   files: Readonly<Record<string, string>>,
   app: AppDeProyecto | null,
   entorno?: Readonly<Record<string, string>>,
-): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [ruta, contenido] of Object.entries(files)) {
-    const servido = servirRutaDeLaApp(ruta, files, { app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
-    out[ruta] = servido ? servido.cuerpo : contenido;
+): Promise<{ files: Record<string, string>; sourceMaps: Record<string, string> }> {
+  if (!app) {
+    const out: Record<string, string> = {};
+    for (const [ruta, contenido] of Object.entries(files)) out[ruta] = servirFuenteDePagina(ruta, files, entorno) ?? contenido;
+    return { files: out, sourceMaps: {} };
   }
-  if (app) Object.assign(out, vendorPorRuta(app.catalogo, "desarrollo"));
-  return out;
+  const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isPublishableFolderPath(r)));
+  const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
+  return {
+    files: ficherosDeLaApp(publicable, app, entradaServida(app.entrada, paquete)),
+    sourceMaps: paquete?.ok && paquete.map ? { [app.entrada]: paquete.map } : {},
+  };
 }
 
 /** Lo que el navegador que mide necesita de la carpeta, o `undefined` si la
  *  vista no trae ficheros: así quien mide una página sin carpeta llama igual
- *  que siempre. Una app trae siempre algo: las dependencias de su catálogo. */
-export function carpetaDeLaVista(
+ *  que siempre. Una app trae siempre algo: su entrada, el paquete. */
+export async function carpetaDeLaVista(
   vista: Pick<ContextoDeVista, "files" | "pagina" | "app" | "entorno" | "pantalla"> | null | undefined,
-): { files: Readonly<Record<string, string>>; pagina: string | null; hash?: string; esperarALaRed?: boolean } | undefined {
+): Promise<
+  | {
+      files: Readonly<Record<string, string>>;
+      /** UNA APP (plan 02): el mapa del paquete, para traducir las trazas. */
+      sourceMaps?: Readonly<Record<string, string>>;
+      pagina: string | null;
+      hash?: string;
+      esperarALaRed?: boolean;
+    }
+  | undefined
+> {
   const app = vista?.app ?? null;
   const files = vista?.files ?? {};
   if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
+  const servida = await carpetaServida(files, app, vista.entorno);
   return {
-    files: carpetaServida(files, app, vista.entorno),
+    files: servida.files,
+    ...(Object.keys(servida.sourceMaps).length > 0 ? { sourceMaps: servida.sourceMaps } : {}),
     pagina: vista.pagina,
     // UNA APP: la pantalla pedida, y esperar a que pida sus datos (H12).
     ...(app && vista.pantalla ? { hash: vista.pantalla } : {}),
@@ -109,11 +133,9 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
     // aquí para que nadie deduzca un efecto que no ocurre.
     sandboxed: false,
   });
-  const sellado = sealRelease(out).html;
-  // El import map de la app va lo ÚLTIMO, con el documento ya sellado: ningún
-  // pase posterior puede moverlo de delante de los módulos. La publicación lo
-  // pone en el mismo punto (`publishToDir`).
-  return ctx.app ? conImportMap(sellado, ctx.app.catalogo) : sellado;
+  // Una app ya no lleva import map (plan 02): su entrada es el paquete, que
+  // trae dentro lo que usa del catálogo.
+  return sealRelease(out).html;
 }
 
 /** Lo que hace falta de la fila del proyecto para armar la vista. Se escribe
@@ -199,17 +221,6 @@ export async function vistaConCarpeta(
 }
 
 /**
- * EL DOCUMENTO QUE SE FOTOGRAFÍA. Los ojos fotografían lo GUARDADO, sin hornear
- * (el horneado metería nuestros módulos en la foto: ver `verify.ts`). Pero una
- * APP sin su import map no arranca —sus fuentes compilados piden `react` por su
- * nombre—, y la foto sería una pantalla en blanco que la app no tiene, juzgada
- * como rota. Así que a una app se le pone el import map, y nada más.
- */
-export function documentoParaLaFoto(html: string, vista: Pick<ContextoDeVista, "app"> | null | undefined): string {
-  return vista?.app ? conImportMap(html, vista.app.catalogo) : html;
-}
-
-/**
  * `documentoDeVista` para las superficies que MIDEN: falla blando.
  *
  * La ruta del lienzo quiere el error —si no puede hornear, no hay página que
@@ -236,8 +247,7 @@ export function documentoMedible(
         error instanceof Error ? error.message : String(error)
       }`,
     );
-    // Crudo, pero una app CON su import map: sin él no arranca, y lo que se
-    // mediría sería una pantalla en blanco que la app no tiene.
-    return vista.app ? conImportMap(html, vista.app.catalogo) : html;
+    // Crudo. Una app arranca igual: su entrada es el paquete (plan 02).
+    return html;
   }
 }

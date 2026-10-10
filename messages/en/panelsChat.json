@@ -73,6 +73,7 @@
     "image": "Image:",
     "removeImage": "Remove attached image",
     "placeholder": "Describe how your page should look or read…",
+    "placeholderApp": "Describe what your app should do or how it should look…",
     "placeholderScoped": "Change the selected {target}…",
     "attachImage": "Attach an image",
     "attachImageTitle": "Attach an image to insert into the page",
@@ -120,7 +121,8 @@
     "placeholder": "Write to Len, or @ to talk to someone on the project…"
   },
   "noChange": {
-    "label": "Nothing on the page changed"
+    "label": "Nothing on the page changed",
+    "labelApp": "Nothing in the app changed"
   },
   "undo": {
     "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
@@ -130,6 +132,7 @@
     "notUndone": "Undone, except {rutas}: undoing a turn doesn’t bring back the database, the memory or the settings."
   },
   "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page.",
+  "cutShortApp": "It was cut short before finishing ({reason}), but what I did is already saved. Check the app.",
   "diff": {
     "anadida": "Added {que}",
     "quitada": "Removed {que}",
@@ -154,6 +157,7 @@
       "conversations": "Conversations",
       "newChat": "Start over",
       "newChatHint": "Saves this conversation and starts a new one. Len won't remember it; your memory and the page notes stay.",
+      "newChatHintApp": "Saves this conversation and starts a new one. Len won't remember it; your memory and the app notes stay.",
       "busy": "Wait for Len to finish before switching conversations.",
       "failed": "Couldn't switch conversations. Try again.",
       "archived": "Earlier conversations",
@@ -171,13 +175,24 @@
         "publish": "Publish my page"
       }
     },
+    "emptyApp": {
+      "title": "What shall we do to your app today?",
+      "suggestions": {
+        "data": "Save the data in a database",
+        "login": "Add a sign-in",
+        "mobile": "Check how it looks on mobile",
+        "publish": "Publish my app"
+      }
+    },
     "steps": {
       "running": "Len is working",
       "done": "{count, plural, one {Len took # step} other {Len took # steps}}"
     },
     "activity": {
       "reading": "Reading your page",
+      "readingApp": "Reading your app",
       "editing": "Changing the page",
+      "editingApp": "Changing the app",
       "terminal": "Using the terminal",
       "photos": "Looking for photos",
       "image": "Editing an image",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Image and more",
       "on": "On",
-      "disclaimer": "Len can make mistakes. Check your page before publishing it."
+      "disclaimer": "Len can make mistakes. Check your page before publishing it.",
+      "disclaimerApp": "Len can make mistakes. Try your app before publishing it."
     },
     "layout": {
       "float": "Pop out the chat",

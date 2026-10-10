@@ -28,11 +28,15 @@ export function ChangesCard({
   turn,
   projectId,
   samePage,
+  esApp = false,
 }: {
   turn: DesignTurn;
   projectId: string;
   /** El turno fue de la página que se está mirando. */
   samePage: boolean;
+  /** En una app no se compara: su HTML es el cascarón, y en marcos sin scripts
+   *  (`CompareDialog`) el antes y el después son dos marcos en blanco. */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const [all, setAll] = useState(false);
@@ -44,7 +48,7 @@ export function ChangesCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [turn.actions, turn.preEditHtml, turn.postEditHtml, turn.page, turn.paginasTocadas, t],
   );
-  const canCompare = samePage && Boolean(turn.preEditHtml) && Boolean(turn.postEditHtml);
+  const canCompare = !esApp && samePage && Boolean(turn.preEditHtml) && Boolean(turn.postEditHtml);
   if (changes.length === 0 && !canCompare) {
     return <FicherosDelTurnoEnVivo projectId={projectId} turnId={turn.id} />;
   }

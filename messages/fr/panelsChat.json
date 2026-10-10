@@ -73,6 +73,7 @@
     "image": "Image :",
     "removeImage": "Retirer l'image jointe",
     "placeholder": "Décrivez l'apparence ou le contenu souhaité de votre page…",
+    "placeholderApp": "Décrivez ce que votre app doit faire ou à quoi elle doit ressembler…",
     "placeholderScoped": "Modifier le {target} sélectionné…",
     "attachImage": "Joindre une image",
     "attachImageTitle": "Joindre une image à insérer dans la page",
@@ -120,7 +121,8 @@
     "placeholder": "Écrivez à Len, ou @ pour parler à quelqu’un du projet…"
   },
   "noChange": {
-    "label": "Rien n'a changé sur la page"
+    "label": "Rien n'a changé sur la page",
+    "labelApp": "Rien n'a changé dans l'app"
   },
   "undo": {
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
@@ -130,6 +132,7 @@
     "notUndone": "Annulé, sauf {rutas} : annuler un tour ne rétablit ni la base de données, ni la mémoire, ni les réglages."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
+  "cutShortApp": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez l’app.",
   "diff": {
     "anadida": "Ajouté {que}",
     "quitada": "Supprimé {que}",
@@ -154,6 +157,7 @@
       "conversations": "Conversations",
       "newChat": "Repartir de zéro",
       "newChatHint": "Garde cette conversation et en commence une autre. Len ne s'en souviendra pas ; votre mémoire et les notes de la page restent.",
+      "newChatHintApp": "Garde cette conversation et en commence une autre. Len ne s'en souviendra pas ; votre mémoire et les notes de l'app restent.",
       "busy": "Attendez que Len ait fini pour changer de conversation.",
       "failed": "Impossible de changer de conversation. Réessayez.",
       "archived": "Conversations précédentes",
@@ -171,13 +175,24 @@
         "publish": "Publie ma page"
       }
     },
+    "emptyApp": {
+      "title": "Qu'est-ce qu'on fait aujourd'hui sur votre app ?",
+      "suggestions": {
+        "data": "Enregistre les données dans une base de données",
+        "login": "Ajoute une connexion",
+        "mobile": "Vérifie l'affichage sur mobile",
+        "publish": "Publie mon app"
+      }
+    },
     "steps": {
       "running": "Len travaille",
       "done": "{count, plural, one {Len a fait # étape} other {Len a fait # étapes}}"
     },
     "activity": {
       "reading": "Lecture de votre page",
+      "readingApp": "Lecture de votre app",
       "editing": "Modification de la page",
+      "editingApp": "Modification de l'app",
       "terminal": "Utilisation du terminal",
       "photos": "Recherche de photos",
       "image": "Retouche d'une image",
@@ -262,7 +277,8 @@
     "composer": {
       "plus": "Image et plus",
       "on": "Actif",
-      "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier."
+      "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier.",
+      "disclaimerApp": "Len peut se tromper. Testez votre app avant de la publier."
     },
     "layout": {
       "float": "Détacher le chat",

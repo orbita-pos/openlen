@@ -40,4 +40,48 @@ describe("el cascarón", () => {
     expect(problemasDelCascaron(APP, CASCARON, { "/src/App.jsx": "" }).map((x) => x.codigo)).toEqual(["entrada"]);
     expect(problemasDelCascaron(APP, '<div id="app"></div><script type="module" src="/src/main.jsx"></script>', BIEN).map((x) => x.codigo)).toEqual(["raiz"]);
   });
+
+  it("🔴 otro <script type=\"module\"> en el cascarón (en línea o a otro fichero): un error que dice moverlo a /src (plan 02)", () => {
+    const enLinea = CASCARON.replace("</body>", '<script type="module">import { z } from "zod";</script></body>');
+    const aOtro = CASCARON.replace("</body>", '<script type="module" src="/src/otro.jsx"></script></body>');
+    for (const c of [enLinea, aOtro]) expect(problemasDelCascaron(APP, c, BIEN).map((x) => x.codigo), c).toContain("cascaron-modulo");
+    // BRAZO DE CONTROL: el de la entrada y un <script> clásico, no.
+    const clasico = CASCARON.replace("</body>", '<script src="https://cdn.tailwindcss.com"></script></body>');
+    expect(problemasDelCascaron(APP, clasico, BIEN).map((x) => x.codigo)).not.toContain("cascaron-modulo");
+  });
+});
+
+describe("el tailwind.config del cascarón (apps 2026-11, tarea 6)", () => {
+  const conConfig = (config: string) =>
+    `<head><script src="https://cdn.tailwindcss.com"></script>${config}</head>${CASCARON}`;
+
+  it("con require() es un diagnóstico: en el navegador no hay require y se pierde la config entera", () => {
+    const html = conConfig('<script>tailwind.config = { theme: { extend: {} }, plugins: [require("tailwindcss-animate")] }</script>');
+    expect(problemasDelCascaron(APP, html, BIEN).map((d) => d.codigo)).toEqual(["tailwind-config"]);
+  });
+
+  it("sin require, o con require en OTRO script, no dice nada", () => {
+    expect(problemasDelCascaron(APP, conConfig("<script>tailwind.config = { theme: { extend: {} } }</script>"), BIEN)).toEqual([]);
+    const otro = conConfig('<script>tailwind.config = {}</script><script>const x = require("y")</script>');
+    expect(problemasDelCascaron(APP, otro, BIEN)).toEqual([]);
+  });
+
+  it("lo decide el MISMO lector que la publicación: cualquier código en la config, no sólo require()", () => {
+    // Una función, una variable, un spread: la publicación no puede leerla como
+    // datos (se queda el CDN) y en el navegador una variable sin definir lanza.
+    for (const config of [
+      "tailwind.config = { theme: { extend: { colors: { marca: color } } } }",
+      "tailwind.config = { theme: { extend: { spacing: (theme) => ({}) } } }",
+      "tailwind.config = { ...base, theme: {} }",
+    ]) {
+      expect(problemasDelCascaron(APP, conConfig(`<script>${config}</script>`), BIEN).map((d) => d.codigo), config).toEqual(["tailwind-config"]);
+    }
+    // Datos que la publicación sí lee —con darkMode, claves sin comillas, comas al final—: nada.
+    for (const config of [
+      'tailwind.config = { darkMode: ["class"], theme: { extend: { colors: { primary: { DEFAULT: "hsl(var(--primary))" } } } } }',
+      "tailwind.config = { theme: { extend: { borderRadius: { lg: 'var(--radius)', }, }, }, }",
+    ]) {
+      expect(problemasDelCascaron(APP, conConfig(`<script>${config}</script>`), BIEN), config).toEqual([]);
+    }
+  });
 });

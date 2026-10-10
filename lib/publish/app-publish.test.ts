@@ -1,11 +1,12 @@
 // PUBLICAR UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md,
 // §5.6): la carpeta se compila antes de tocar el disco, una app que no compila
-// no se publica, el documento lleva el import map y la precarga, y el catálogo
-// va de producción en /openlen/vendor/.
+// no se publica, y desde el plan 02 la app es UN paquete de producción en su
+// entrada (sus fuentes y sólo lo que usa del catálogo): sin fuentes sueltos,
+// sin catálogo suelto, sin import map ni precarga.
 // Run: npx tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/publish/app-publish.test.ts
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -16,11 +17,15 @@ process.env.OPENLEN_LOCALIZE = "0";
 const root = mkdtempSync(path.join(tmpdir(), "olapp-"));
 process.env.PUBLISH_ROOT = root;
 
-import { publishToDir } from "./filesystem";
+import { publishToDir, tailwindStylesheetsOf } from "./filesystem";
+import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
 import { AppNoCompilaError } from "@/lib/apps/compilador";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 
-after(() => rmSync(root, { recursive: true, force: true }));
+after(() => {
+  stopBundlerWorker();
+  rmSync(root, { recursive: true, force: true });
+});
 
 function releaseViva(sub: string): string {
   const current = path.join(root, sub, "current");
@@ -56,38 +61,26 @@ const CARPETA = [
 ];
 
 describe("publicar una app web", () => {
-  it("🔴 los fuentes salen COMPILADOS en su ruta, con los imports resueltos", async () => {
+  it("🔴 la entrada es el PAQUETE de producción: sin JSX, sin tipos, con su entorno y sin un import del catálogo por su nombre", async () => {
     await publishToDir({ subdomain: "appcompilada", html: CASCARON, files: CARPETA, app: APP, entorno: { VITE_SUPABASE_URL: "https://abc.openlen.app" } });
     const main = leer("appcompilada", "src/main.jsx");
-    assert.ok(!main.includes("<App />"), "sin JSX");
-    assert.match(main, /from "\/src\/App\.tsx"/);
-    const appTsx = leer("appcompilada", "src/App.tsx");
-    assert.ok(!appTsx.includes("useState<number>"), "sin tipos");
-    assert.ok(appTsx.includes("https://abc.openlen.app"), "import.meta.env sustituido");
+    assert.ok(!main.includes("useState<number>"), "sin tipos");
+    assert.ok(main.includes("https://abc.openlen.app"), "import.meta.env sustituido");
+    assert.ok(!/\bfrom\s*["']react/.test(main), "React va dentro");
+    assert.ok(!/\bimport\s*["']\/src\//.test(main) && !main.includes('"/src/App.tsx"'), "App va dentro");
     assert.equal(leer("appcompilada", "src/index.css"), "body { margin: 0 }");
     assert.ok(!existe("appcompilada", "tests/app.spec.ts"), "las pruebas no se publican");
   });
 
-  it("el documento lleva el import map y la precarga del grafo y del catálogo", async () => {
+  it("🔴 los demás fuentes NO salen sueltos, ni el catálogo, y el documento no lleva import map ni precarga", async () => {
     await publishToDir({ subdomain: "appdocumento", html: CASCARON, files: CARPETA, app: APP });
+    assert.ok(!existe("appdocumento", "src/App.tsx"), "App.tsx va dentro del paquete");
+    assert.ok(!existe("appdocumento", "src/components/Boton.jsx"), "Boton.jsx también");
+    assert.ok(!existe("appdocumento", "openlen/vendor"), "sin catálogo suelto");
     const html = leer("appdocumento", "index.html");
-    const mapa = /<script type="importmap" data-openlen-importmap>([\s\S]*?)<\/script>/.exec(html);
-    assert.ok(mapa, "import map");
-    assert.equal(JSON.parse(mapa![1]!).imports.react, `/openlen/vendor/${CATALOGO_ACTUAL}/react.js`);
-    for (const r of ["/src/main.jsx", "/src/App.tsx", "/src/components/Boton.jsx", `/openlen/vendor/${CATALOGO_ACTUAL}/react-todo.js`]) {
-      assert.ok(html.includes(`<link rel="modulepreload" href="${r}"`), `precarga ${r}`);
-    }
-    assert.ok(html.indexOf('type="importmap"') < html.indexOf('rel="modulepreload"'));
-    assert.ok(html.indexOf('rel="modulepreload"') < html.indexOf('src="/src/main.jsx"'));
-  });
-
-  it("🔴 el catálogo va de PRODUCCIÓN, byte a byte, en /openlen/vendor/", async () => {
-    await publishToDir({ subdomain: "appvendor", html: CASCARON, files: CARPETA, app: APP });
-    for (const f of ["react.js", "react-todo.js", "react-dom-client.js", "react-jsx-runtime.js", "supabase-js.js"]) {
-      const publicado = leer("appvendor", `openlen/vendor/${CATALOGO_ACTUAL}/${f}`);
-      const fuente = readFileSync(path.join(process.cwd(), "public", "app-vendor", CATALOGO_ACTUAL, "produccion", f), "utf8");
-      assert.equal(publicado, fuente, f);
-    }
+    assert.ok(!html.includes("importmap"), "sin import map");
+    assert.ok(!html.includes("modulepreload"), "sin precarga");
+    assert.ok(html.includes('src="/src/main.jsx"'), "carga la entrada, que es el paquete");
   });
 
   it("🔴 una app que NO compila no se publica, y no toca el disco", async () => {
@@ -131,7 +124,7 @@ describe("publicar una app web", () => {
 });
 
 describe("publicar una app en PRODUCCIÓN (horneado y minificado de verdad)", () => {
-  it("🔴 el import map sobrevive al minificado y las clases del JSX se hornean", async () => {
+  it("🔴 las clases del JSX se hornean, y el documento minificado no lleva import map", async () => {
     const env = process.env as Record<string, string | undefined>;
     const antes = env.NODE_ENV;
     env.NODE_ENV = "production";
@@ -141,11 +134,61 @@ describe("publicar una app en PRODUCCIÓN (horneado y minificado de verdad)", ()
       assert.ok(!html.includes("cdn.tailwindcss.com"), "se horneó");
       assert.ok(html.includes(".ring-4"), "ring-4, sólo en el JSX");
       assert.ok(html.includes("bg-\\[\\#123456\\]"), "valor arbitrario, sólo en el JSX");
-      const mapa = /<script type=importmap data-openlen-importmap>([\s\S]*?)<\/script>|<script type="importmap" data-openlen-importmap>([\s\S]*?)<\/script>/.exec(html);
-      assert.ok(mapa, "import map tras el minificado");
-      assert.equal(JSON.parse((mapa![1] ?? mapa![2])!).imports["react-dom/client"], `/openlen/vendor/${CATALOGO_ACTUAL}/react-dom-client.js`);
+      assert.ok(!html.includes("importmap"), "sin import map");
     } finally {
       env.NODE_ENV = antes;
     }
+  });
+});
+
+describe("las hojas de Tailwind de una app (apps 2026-11, tarea 2)", () => {
+  it("tailwindStylesheetsOf: sólo las hojas publicables que usan Tailwind", () => {
+    const hojas = tailwindStylesheetsOf([
+      { path: "/src/index.css", content: "@layer base { a {} }" },
+      { path: "/src/plano.css", content: "body { color: red }" },
+      { path: "/src/App.jsx", content: "@apply en un comentario de JS" },
+      { path: "/tests/x.css", content: "@apply p-2" },
+    ]);
+    assert.deepEqual(hojas, ["@layer base { a {} }"]);
+  });
+
+  it("🔴 en PRODUCCIÓN, el @apply de la hoja de la app está en el CSS horneado de la publicada", async () => {
+    const env = process.env as Record<string, string | undefined>;
+    const antes = env.NODE_ENV;
+    env.NODE_ENV = "production";
+    try {
+      const conHoja = [
+        ...CARPETA.filter((f) => f.path !== "/src/index.css"),
+        { path: "/src/index.css", content: "@tailwind base;\n@layer components { .tarjeta-de-prueba { @apply ring-8; } }" },
+        // Como el CDN con el DOM, el horneado sólo emite las clases de un `@layer
+        // components` que aparecen en el código: aquí, en el JSX.
+        { path: "/src/Tarjeta.jsx", content: 'export default () => <div className="tarjeta-de-prueba" />;' },
+      ];
+      await publishToDir({ subdomain: "apphoja", html: CASCARON, files: conHoja, app: APP });
+      const html = leer("apphoja", "index.html");
+      assert.ok(!html.includes("cdn.tailwindcss.com"), "se horneó");
+      assert.ok(html.includes(".tarjeta-de-prueba"), "la regla de la hoja está en el CSS horneado");
+    } finally {
+      env.NODE_ENV = antes;
+    }
+  });
+});
+
+describe("del catálogo, sólo lo que la app USA, dentro del paquete (plan 02)", () => {
+  it("🔴 una app que no importa recharts no lleva su código; una que lo importa, sí", async () => {
+    await publishToDir({ subdomain: "appmagra", html: CASCARON, files: CARPETA, app: APP });
+    const conGrafica = [
+      ...CARPETA.filter((f) => f.path !== "/src/components/Boton.jsx"),
+      {
+        path: "/src/components/Boton.jsx",
+        content: 'import { BarChart, Bar } from "recharts";\nexport default function Boton() { return <BarChart width={10} height={10} data={[]}><Bar dataKey="v" /></BarChart>; }',
+      },
+    ];
+    await publishToDir({ subdomain: "appgrafica", html: CASCARON, files: conGrafica, app: APP });
+    const magra = leer("appmagra", "src/main.jsx");
+    const grafica = leer("appgrafica", "src/main.jsx");
+    assert.ok(!magra.includes("recharts-wrapper"), "la magra no lleva recharts");
+    assert.ok(grafica.includes("recharts-wrapper"), "la de la gráfica, sí");
+    assert.ok(magra.length * 2 < grafica.length, `magra ${magra.length} vs gráfica ${grafica.length}`);
   });
 });

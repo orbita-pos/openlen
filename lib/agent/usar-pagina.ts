@@ -34,7 +34,7 @@ import type { Browser, ElementHandle, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import { esperarALaRed, origenDeMedida } from "@/lib/ai/origen-de-medida";
-import { textoDelError } from "@/lib/ai/sitio-del-error";
+import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-del-error";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
@@ -830,8 +830,10 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
       ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
       void d.accept().catch(() => undefined);
     });
-    // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src.
-    page.on("pageerror", (e) => errores.push(textoDelError(e, 200)));
+    // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src; y si
+    // va empaquetada (plan 02), por su mapa, que llega con la carpeta (abajo).
+    let traducir: Traductor | undefined;
+    page.on("pageerror", (e) => errores.push(textoDelError(e, 200, traducir)));
     page.on("console", (m) => {
       if (m.type() !== "error") return;
       const t = m.text();
@@ -852,7 +854,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
 
     // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
     // desde memoria (el guardia), y el documento vive en la ruta de su página.
-    const opciones = carpetaDeLaVista(p.vista);
+    const opciones = await carpetaDeLaVista(p.vista);
+    traducir = traductorDeMapas(opciones?.sourceMaps);
     const doc = origen.publicar(html, opciones);
     // UNA APP: la visita empieza en la pantalla pedida (`#/ventas`) y espera a
     // que la app pida sus datos —tras cargar y tras cada paso— (H12).
