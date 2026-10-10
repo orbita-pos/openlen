@@ -593,6 +593,8 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Las variables de entorno de las apps (spec local 2026-10-10). LISTA BLANCA.
+      "app/api/projects/[id]/env/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
       "app/api/projects/[id]/hilos/route.test.ts",
       // El chat del equipo: escribir a una persona del proyecto.
