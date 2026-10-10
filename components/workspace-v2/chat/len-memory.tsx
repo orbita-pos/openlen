@@ -178,7 +178,7 @@ const BRIEF_MAX = 4000;
  * una prop quedaría rancia. Se ESCRIBE por el `PATCH` que ya existía: dos
  * escritores del mismo campo es como se separan.
  */
-export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
+export function BriefDeLaPagina({ projectId, esApp = false }: { projectId: string | null; esApp?: boolean }) {
   const t = useTranslations("panelsChat");
   // La línea de encima ES la etiqueta de la caja; sin esto, su nombre para un
   // lector de pantalla era el ejemplo largo del placeholder.
@@ -245,7 +245,7 @@ export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
   return (
     <div>
       <div id={hintId} className="text-[10.5px] fg-faint mb-1 leading-relaxed">
-        {t("memoria.briefHint")}
+        {t(esApp ? "memoria.briefHintApp" : "memoria.briefHint")}
       </div>
       <textarea
         aria-labelledby={hintId}
@@ -257,7 +257,7 @@ export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
         }}
         rows={4}
         spellCheck={false}
-        placeholder={t("memoria.briefPlaceholder")}
+        placeholder={t(esApp ? "memoria.briefPlaceholderApp" : "memoria.briefPlaceholder")}
         className="w-full resize-y rounded-md ring-1 ring-[color:var(--border)] bg-[color:var(--bg)] fg placeholder:fg-faint text-[11.5px] leading-relaxed px-2 py-1.5 focus:outline-none focus:ring-[color:var(--border-strong)] nice-scroll"
       />
       <div className="flex items-center justify-between text-[10px] fg-faint ui-small mt-0.5">
@@ -287,9 +287,12 @@ export function BriefDeLaPagina({ projectId }: { projectId: string | null }) {
 export function MemoryDrawer({
   projectId,
   memory,
+  esApp = false,
 }: {
   projectId: string;
   memory: ReturnType<typeof useAgentMemory>;
+  /** El proyecto es una app: sus notas son de ESTA app. */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const lines = memory.lines ?? [];
@@ -329,7 +332,7 @@ export function MemoryDrawer({
       ) : (
         <p className="mb-2.5 mt-0.5 text-[11.5px] fg-muted">{t("newChat.memory.empty")}</p>
       )}
-      <BriefDeLaPagina projectId={projectId} />
+      <BriefDeLaPagina projectId={projectId} esApp={esApp} />
     </div>
   );
 }

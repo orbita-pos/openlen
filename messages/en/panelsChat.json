@@ -121,7 +121,8 @@
     "placeholder": "Write to Len, or @ to talk to someone on the project…"
   },
   "noChange": {
-    "label": "Nothing on the page changed"
+    "label": "Nothing on the page changed",
+    "labelApp": "Nothing in the app changed"
   },
   "undo": {
     "failedHttp": "Couldn’t undo ({status}) — the change is still applied. Try again.",
@@ -131,12 +132,15 @@
     "notUndone": "Undone, except {rutas}: undoing a turn doesn’t bring back the database, the memory or the settings."
   },
   "cutShort": "It was cut short before finishing ({reason}), but what I did is already saved. Check the page.",
+  "cutShortApp": "It was cut short before finishing ({reason}), but what I did is already saved. Check the app.",
   "memoria": {
-    "description": "Preferences Len saved for ALL your pages, not just this one.",
+    "description": "Preferences Len saved for ALL your projects, not just this one.",
     "remove": "Remove",
     "title": "Len's memory",
     "briefHint": "Notes Len reads on every message about THIS page.",
+    "briefHintApp": "Notes Len reads on every message about THIS app.",
     "briefPlaceholder": "e.g.\n\n- This is a landing for Counter, a coffee shop in Polanco.\n- Voice: warm, friendly, no tech jargon.\n- Accent: warm orange (#C66B3D).\n- To do: ask the designer for the final logo.",
+    "briefPlaceholderApp": "e.g.\n\n- This is the till for Counter, a coffee shop in Polanco: take payments and see the day's sales.\n- The waiters use it on their phones.\n- Currency: Mexican pesos (MXN).\n- To do: a sign-in for each waiter.",
     "saving": "Saving…",
     "saved": "Saved · injected on every chat",
     "saveFailed": "Save failed"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, one {# message} other {# messages}}"
     },
     "memory": {
-      "empty": "Len doesn't remember anything about you yet. When you tell it something that applies to all your pages, you'll see it here."
+      "empty": "Len doesn't remember anything about you yet. When you tell it something that applies to all your projects, you'll see it here."
     },
     "empty": {
       "title": "What shall we do to your page today?",

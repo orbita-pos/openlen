@@ -16,7 +16,9 @@ vi.mock("next-intl", () => {
 
 import { ChangesCard } from "./changes-card";
 import { ChatHeader } from "./chat-header";
+import { MemoryDrawer, type useAgentMemory } from "./len-memory";
 import { LiveBar } from "./live-bar";
+import { TurnClose } from "./turn-close";
 import type { useConversations } from "./use-conversations";
 import type { DesignTurn } from "./use-agent-chat";
 
@@ -117,5 +119,58 @@ describe("«Comparar antes y después»", () => {
 
   it("en una página, sí", () => {
     expect(comparar(montar(<ChangesCard turn={turno} projectId="p1" samePage />))).toBeDefined();
+  });
+});
+
+describe("el cierre del turno", () => {
+  const cierre = (turno: Partial<DesignTurn>, esApp: boolean) =>
+    montar(
+      <TurnClose
+        turn={{ id: "t1", userText: "x", assistantReasoning: "", status: "applied", appliedAt: 0, preEditHtml: "", ...turno } as DesignTurn}
+        currentPage={null}
+        vote={undefined}
+        onRetry={() => {}}
+        onRate={async () => true}
+        onClearRate={async () => true}
+        esApp={esApp}
+      />,
+    ).textContent;
+
+  it("🔴 en una app: «no cambió nada de la app» y, si se corta, «revisa la app»", () => {
+    expect(cierre({ noDocChange: true }, true)).toContain("noChange.labelApp");
+    expect(cierre({ cortado: true, avisoTurno: "tope" }, true)).toContain("cutShortApp");
+  });
+
+  it("en una página, como siempre", () => {
+    expect(cierre({ noDocChange: true }, false)).not.toContain("labelApp");
+    expect(cierre({ noDocChange: true }, false)).toContain("noChange.label");
+    expect(cierre({ cortado: true, avisoTurno: "tope" }, false)).not.toContain("cutShortApp");
+  });
+});
+
+describe("el cajón de la memoria", () => {
+  const memoria = { lines: [], removing: null, remove: async () => {}, reload: async () => {} } as unknown as ReturnType<typeof useAgentMemory>;
+  const notas = async (esApp: boolean) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ brief: "" }), { status: 200 })));
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => root.render(<MemoryDrawer projectId="p1" memory={memoria} esApp={esApp} />));
+    vi.unstubAllGlobals();
+    return { texto: host.textContent, ejemplo: host.querySelector("textarea")?.getAttribute("placeholder") };
+  };
+
+  it("🔴 en una app, las notas son de ESTA app, con un ejemplo de app", async () => {
+    const { texto, ejemplo } = await notas(true);
+    expect(texto).toContain("memoria.briefHintApp");
+    expect(ejemplo).toBe("memoria.briefPlaceholderApp");
+  });
+
+  it("en una página, de ESTA página", async () => {
+    const { texto, ejemplo } = await notas(false);
+    expect(texto).toContain("memoria.briefHint");
+    expect(texto).not.toContain("briefHintApp");
+    expect(ejemplo).toBe("memoria.briefPlaceholder");
   });
 });

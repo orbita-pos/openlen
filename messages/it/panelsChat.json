@@ -121,7 +121,8 @@
     "placeholder": "Scrivi a Len, o @ per parlare con qualcuno del progetto…"
   },
   "noChange": {
-    "label": "Non è cambiato nulla nella pagina"
+    "label": "Non è cambiato nulla nella pagina",
+    "labelApp": "Non è cambiato nulla nell'app"
   },
   "undo": {
     "failedHttp": "Impossibile annullare ({status}) — la modifica è ancora applicata. Riprova.",
@@ -131,12 +132,15 @@
     "notUndone": "Annullato, tranne {rutas}: annullare un turno non ripristina il database, la memoria né le impostazioni."
   },
   "cutShort": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla la pagina.",
+  "cutShortApp": "Si è interrotto prima di finire ({reason}), ma quello che ho fatto è già salvato. Controlla l'app.",
   "memoria": {
-    "description": "Preferenze che Len ha salvato per TUTTE le tue pagine, non solo questa.",
+    "description": "Preferenze che Len ha salvato per TUTTI i tuoi progetti, non solo questo.",
     "remove": "Rimuovi",
     "title": "Memoria di Len",
     "briefHint": "Note che Len legge a ogni messaggio di QUESTA pagina.",
+    "briefHintApp": "Note che Len legge a ogni messaggio di QUESTA app.",
     "briefPlaceholder": "es.\n\n- Questa è una landing per Counter, una caffetteria a Polanco.\n- Tono di voce: caldo, amichevole, senza gergo tecnico.\n- Accent: arancione caldo (#C66B3D).\n- Da fare: chiedere al designer il logo definitivo.",
+    "briefPlaceholderApp": "es.\n\n- Questa è la cassa di Counter, una caffetteria a Polanco: incassare e vedere le vendite del giorno.\n- La usano i camerieri dal telefono.\n- Valuta: pesos messicani (MXN).\n- Da fare: un accesso per ogni cameriere.",
     "saving": "Salvataggio…",
     "saved": "Salvato · iniettato in ogni chat",
     "saveFailed": "Salvataggio non riuscito"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, one {# messaggio} other {# messaggi}}"
     },
     "memory": {
-      "empty": "Len non ricorda ancora niente di te. Quando gli dirai qualcosa che vale per tutte le tue pagine, lo vedrai qui."
+      "empty": "Len non ricorda ancora niente di te. Quando gli dirai qualcosa che vale per tutti i tuoi progetti, lo vedrai qui."
     },
     "empty": {
       "title": "Cosa facciamo oggi alla tua pagina?",

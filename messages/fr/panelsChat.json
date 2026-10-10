@@ -121,7 +121,8 @@
     "placeholder": "Écrivez à Len, ou @ pour parler à quelqu’un du projet…"
   },
   "noChange": {
-    "label": "Rien n'a changé sur la page"
+    "label": "Rien n'a changé sur la page",
+    "labelApp": "Rien n'a changé dans l'app"
   },
   "undo": {
     "failedHttp": "Impossible d’annuler ({status}) — la modification est toujours appliquée. Réessayez.",
@@ -131,12 +132,15 @@
     "notUndone": "Annulé, sauf {rutas} : annuler un tour ne rétablit ni la base de données, ni la mémoire, ni les réglages."
   },
   "cutShort": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez la page.",
+  "cutShortApp": "Le tour s’est interrompu avant la fin ({reason}), mais ce que j’ai fait est déjà enregistré. Vérifiez l’app.",
   "memoria": {
-    "description": "Préférences que Len a enregistrées pour TOUTES vos pages, pas seulement celle-ci.",
+    "description": "Préférences que Len a enregistrées pour TOUS vos projets, pas seulement celui-ci.",
     "remove": "Supprimer",
     "title": "Mémoire de Len",
     "briefHint": "Notes que Len lit à chaque message de CETTE page.",
+    "briefHintApp": "Notes que Len lit à chaque message de CETTE app.",
     "briefPlaceholder": "ex.\n\n- Page de destination pour Counter, un café à Polanco.\n- Ton : chaleureux, amical, sans jargon technique.\n- Couleur d'accent : orange chaud (#C66B3D).\n- À faire : demander le logo final au designer.",
+    "briefPlaceholderApp": "ex.\n\n- Caisse de Counter, un café à Polanco : encaisser et voir les ventes du jour.\n- Les serveurs l'utilisent sur leur téléphone.\n- Devise : pesos mexicains (MXN).\n- À faire : une connexion pour chaque serveur.",
     "saving": "Enregistrement…",
     "saved": "Enregistré · injecté à chaque conversation",
     "saveFailed": "Échec de l'enregistrement"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, one {# message} other {# messages}}"
     },
     "memory": {
-      "empty": "Len ne se souvient encore de rien à votre sujet. Quand vous lui direz quelque chose qui vaut pour toutes vos pages, vous le verrez ici."
+      "empty": "Len ne se souvient encore de rien à votre sujet. Quand vous lui direz quelque chose qui vaut pour tous vos projets, vous le verrez ici."
     },
     "empty": {
       "title": "Qu'est-ce qu'on fait aujourd'hui sur votre page ?",

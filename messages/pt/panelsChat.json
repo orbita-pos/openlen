@@ -121,7 +121,8 @@
     "placeholder": "Escreva ao Len, ou @ para falar com alguém do projeto…"
   },
   "noChange": {
-    "label": "Nada mudou na página"
+    "label": "Nada mudou na página",
+    "labelApp": "Nada mudou no app"
   },
   "undo": {
     "failedHttp": "Não foi possível desfazer ({status}) — a alteração continua aplicada. Tenta de novo.",
@@ -131,12 +132,15 @@
     "notUndone": "Desfeito, exceto {rutas}: desfazer um turno não traz de volta a base de dados, a memória nem as configurações."
   },
   "cutShort": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê a página.",
+  "cutShortApp": "Foi interrompido antes de terminar ({reason}), mas o que fiz já ficou guardado. Vê o app.",
   "memoria": {
-    "description": "Preferências que a Len guardou para TODAS as suas páginas, não só esta.",
+    "description": "Preferências que a Len guardou para TODOS os seus projetos, não só este.",
     "remove": "Remover",
     "title": "Memória da Len",
     "briefHint": "Notas que a Len lê em cada mensagem desta página.",
+    "briefHintApp": "Notas que a Len lê em cada mensagem deste app.",
     "briefPlaceholder": "ex.\n\n- Esta é uma landing para a Counter, uma cafeteria em Polanco.\n- Tom de voz: acolhedor, amigável, sem jargão técnico.\n- Cor de destaque: laranja quente (#C66B3D).\n- A fazer: pedir o logo final para o designer.",
+    "briefPlaceholderApp": "ex.\n\n- Este é o caixa da Counter, uma cafeteria em Polanco: cobrar e ver as vendas do dia.\n- Os garçons usam no celular.\n- Moeda: pesos mexicanos (MXN).\n- A fazer: um login para cada garçom.",
     "saving": "Salvando…",
     "saved": "Salvo · injetado em cada conversa",
     "saveFailed": "Falha ao salvar"
@@ -174,7 +178,7 @@
       "messages": "{count, plural, one {# mensagem} other {# mensagens}}"
     },
     "memory": {
-      "empty": "O Len ainda não lembra nada sobre você. Quando você disser algo que vale para todas as suas páginas, vai aparecer aqui."
+      "empty": "O Len ainda não lembra nada sobre você. Quando você disser algo que vale para todos os seus projetos, vai aparecer aqui."
     },
     "empty": {
       "title": "O que vamos fazer hoje na sua página?",
