@@ -54,6 +54,38 @@ describe("publicar la carpeta (pieza 9)", () => {
     assert.match(actual("carpeta", "index.html"), /<h1>home<\/h1>/);
   });
 
+  // Borrador y producción de datos (spec local 2026-10-09): las migraciones
+  // van a producción en `beforeSwap`, con la release YA escrita. Si fallan o
+  // piden confirmación, la publicada sigue siendo la de antes.
+  it("🔴 si beforeSwap lanza, la release nueva NO se activa", async () => {
+    await publishToDir({ subdomain: "antes", html: DOC("vieja") });
+    assert.match(actual("antes", "index.html"), /<h1>vieja<\/h1>/);
+    await assert.rejects(
+      publishToDir({
+        subdomain: "antes",
+        html: DOC("nueva"),
+        beforeSwap: async () => {
+          throw new Error("la migración falló");
+        },
+      }),
+      /la migración falló/,
+    );
+    assert.match(actual("antes", "index.html"), /<h1>vieja<\/h1>/);
+  });
+
+  it("beforeSwap corre con la release ya escrita, y sin error se activa", async () => {
+    let llamado = false;
+    await publishToDir({
+      subdomain: "despues",
+      html: DOC("nueva"),
+      beforeSwap: async () => {
+        llamado = true;
+      },
+    });
+    assert.equal(llamado, true);
+    assert.match(actual("despues", "index.html"), /<h1>nueva<\/h1>/);
+  });
+
   it("🔴 lo que no se publica (pruebas, migraciones, reservadas, rutas raras) no llega al disco", async () => {
     await publishToDir({
       subdomain: "privado",

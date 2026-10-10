@@ -57,7 +57,7 @@ async function cluster(rootGrants: string): Promise<void> {
     ${rootGrants}
   `);
   process.env.PAGES_AUTHENTICATOR_PASSWORD = "clave-de-prueba";
-  await provisionDatabase({ ref: REF, dbPassword: "clave-del-desarrollador" });
+  await provisionDatabase({ scope: REF, ref: REF, dbPassword: "clave-del-desarrollador" });
   await as(ADMIN);
   await db.pg.exec(`grant connect, create on database postgres to ${DEV}`);
   forgetRealtimeProvisioned();
@@ -66,9 +66,9 @@ async function cluster(rootGrants: string): Promise<void> {
 describe("Realtime con los roles de producción (sin superusuario)", () => {
   it("el administrador limitado monta el esquema, y el desarrollador publica su tabla con SU sesión", async () => {
     await cluster(`grant set on parameter log_min_messages to ${ADMIN};`);
-    await ensureRealtimeProvisioned(REF);
+    await ensureRealtimeProvisioned({ scope: REF, ref: REF });
     forgetRealtimeProvisioned();
-    await ensureRealtimeProvisioned(REF); // otro «proceso»: no rompe
+    await ensureRealtimeProvisioned({ scope: REF, ref: REF }); // otro «proceso»: no rompe
     await as("postgres");
     const m = await db.pg.query<{ n: number }>(`select count(*)::int as n from realtime.schema_migrations`);
     expect(m.rows[0]!.n).toBe(88);
@@ -92,7 +92,7 @@ describe("Realtime con los roles de producción (sin superusuario)", () => {
   // decide quién ve cada fila.
   it("las suscripciones y apply_rls por authenticator: cada uno ve lo suyo", async () => {
     await cluster(`grant set on parameter log_min_messages to ${ADMIN};`);
-    await ensureRealtimeProvisioned(REF);
+    await ensureRealtimeProvisioned({ scope: REF, ref: REF });
     await as(DEV);
     await db.pg.exec(`
       create table public.mensajes (id bigint generated always as identity primary key, user_id uuid not null, texto text);
@@ -142,7 +142,7 @@ describe("Realtime con los roles de producción (sin superusuario)", () => {
   // sólo root puede dárselo al administrador (setup-pages-cluster.sh).
   it("BRAZO DE CONTROL: sin el SET ON PARAMETER log_min_messages de root, el administrador no puede crear list_changes", async () => {
     await cluster("");
-    await expect(ensureRealtimeProvisioned(REF)).rejects.toThrow(/permission denied to set parameter "log_min_messages"/);
+    await expect(ensureRealtimeProvisioned({ scope: REF, ref: REF })).rejects.toThrow(/permission denied to set parameter "log_min_messages"/);
     await as("postgres");
     const r = await db.pg.query<{ ok: boolean }>(`select to_regclass('realtime.subscription') is not null as ok`);
     expect(r.rows[0]!.ok).toBe(false);

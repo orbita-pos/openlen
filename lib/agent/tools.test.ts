@@ -25,6 +25,7 @@ function pub(o: { confirm?: { action: string } }) {
         subdominio: string;
         idiomas: string[];
         republicar: boolean;
+        cambiosDeDatos?: unknown;
       })
     : undefined;
 }
@@ -786,7 +787,7 @@ describe("use_page", () => {
       const withSignIn = withBackend(deps, visits, { ok: false, reason: "not_found", emails: ["ana@tiendaluna.mx"], total: 1 });
       const out = await runAgentTool(makeSession(), withSignIn, "use_page", { steps: [{ click: "Agregar" }], sign_in_as: "nadie@tiendaluna.mx" });
       assert.equal(out.response.ok, false);
-      assert.match(String(out.response.error), /no user of the page has the email «nadie@tiendaluna\.mx»/);
+      assert.match(String(out.response.error), /no user of the test database has the email «nadie@tiendaluna\.mx»/);
       assert.match(String(out.response.error), /ana@tiendaluna\.mx/);
       assert.equal(visits.length, 0);
     });
@@ -1077,6 +1078,34 @@ describe("edit_image", () => {
 });
 
 describe("publish", () => {
+  // Borrador y producción de datos (spec local 2026-10-09): lo que publicar
+  // haría con las tablas, ensayado ANTES de la tarjeta.
+  it("🔴 publish le dice a Len qué migración fallaría en producción, y no enseña la tarjeta", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const withData = {
+      ...deps,
+      previewDataChanges: async () => ({ kind: "failed" as const, migration: "2_x", statement: "alter table ventas …", message: "boom" }),
+    };
+    const out = await runAgentTool(makeSession(), withData, "publish", {});
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /2_x/);
+    assert.match(String(out.response.error), /boom/);
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("🔴 publish avisa a Len de lo destructivo y lo pasa a la tarjeta", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const preview = {
+      kind: "pending" as const,
+      migrations: ["2_sin_descuento"],
+      destructive: [{ kind: "drop_column" as const, table: "ventas", column: "descuento", count: 1240 }],
+    };
+    const out = await runAgentTool(makeSession(), { ...deps, previewDataChanges: async () => preview }, "publish", {});
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.data_changes, preview);
+    assert.deepEqual(pub(out)!.cambiosDeDatos, preview);
+  });
+
   it("NEVER publishes — an existing claim + no new subdominio → confirm with the current name, republicar true", async () => {
     const { deps, store } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
     const out = await runAgentTool(makeSession(), deps, "publish", {});

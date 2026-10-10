@@ -232,7 +232,7 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened, and the conclusion is yours. "
         + "Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. "
         + "It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. "
-        + "What the page sends to its backend (Supabase) goes to the real database, the same one the published page uses.",
+        + "What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -255,12 +255,12 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
               },
             },
           },
-          // Como Lovable: entra como un usuario que ya existe, nunca crea uno
-          // (lib/backend/auth/visit-session.ts).
+          // En la base de PRUEBAS (spec local 2026-10-09): entra como el usuario
+          // que se nombra y, si no existe, lo crea (lib/backend/auth/visit-session.ts).
           sign_in_as: {
             type: "STRING",
             description:
-              'Optional: to visit signed in to the page\'s backend (Supabase Auth) as one of its users, their email; "only_user" if the page has a single user. It never creates an account. If there are several and nobody said which one, it doesn\'t visit and tells you who they are.',
+              'Optional: to visit signed in to the test database (Supabase Auth) as one of its users, their email; if there is no user with that email, a test user is created. "only_user" if there is a single user. If there are several and nobody said which one, it doesn\'t visit and tells you who they are.',
           },
           file_path: FILE_PATH_OPCIONAL,
         },

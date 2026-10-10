@@ -281,7 +281,9 @@
         "mencionado": "Te mencionaron aquí",
         "trabajando": "Len está en ello…"
       }
-    }
+    },
+    "testData": "Datos de prueba",
+    "testDataHint": "El lienzo usa los datos de prueba; los reales sólo los usa la publicada."
   },
   "placeholder": {
     "ai": {
@@ -520,6 +522,14 @@
       "delete": "Borrar fichero",
       "confirm": "¿Seguro?",
       "deleted": "{name} borrado"
+    },
+    "env": {
+      "test": "Datos de prueba",
+      "real": "Datos reales",
+      "reset": "Reiniciar datos de prueba",
+      "resetConfirm": "¿Borrar los datos de prueba y rehacerlos desde las migraciones?",
+      "noLive": "Aún no hay datos reales: empiezan al publicar.",
+      "testMails": "Los datos de prueba no mandan correos: las cuentas nuevas se confirman solas."
     }
   }
 }

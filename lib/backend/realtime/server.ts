@@ -25,8 +25,9 @@ import { PresenceRegistry } from "./presence";
 export type { RealtimeProject } from "./channel";
 
 export interface RealtimeServerOptions {
-  /** El proyecto del Host de la petición, o null. */
-  resolveProject(host: string): Promise<RealtimeProject | null>;
+  /** El proyecto del Host de la petición, en el entorno que dice su Origin
+   *  (spec local 2026-10-09), o null. */
+  resolveProject(host: string, origin: string | null): Promise<RealtimeProject | null>;
   readonly limits?: Partial<RealtimeLimits>;
   /** Su CHANNEL_ERROR_BACKOFF_MS (5 s). */
   readonly channelErrorBackoffMs?: number;
@@ -108,7 +109,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
       await sleep(connectErrorBackoffMs);
       return { ok: false, status, error };
     };
-    const project = await o.resolveProject(req.headers.host ?? "");
+    const project = await o.resolveProject(req.headers.host ?? "", typeof req.headers.origin === "string" ? req.headers.origin : null);
     if (!project) return fail(404, "Tenant not found");
     const header = req.headers["x-api-key"];
     const token = (typeof header === "string" ? header : null) ?? url.searchParams.get("apikey");
@@ -139,7 +140,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
           res.end();
           return;
         }
-        const project = await o.resolveProject(req.headers.host ?? "");
+        const project = await o.resolveProject(req.headers.host ?? "", typeof req.headers.origin === "string" ? req.headers.origin : null);
         if (!project) {
           res.writeHead(404, { "content-type": "application/json" }).end(JSON.stringify({ message: "Tenant not found" }));
           return;

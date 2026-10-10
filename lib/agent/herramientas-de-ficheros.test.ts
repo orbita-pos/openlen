@@ -1457,10 +1457,13 @@ describe("el backend: los ficheros de /supabase/", () => {
           {
             status: async () => ({ apiUrl: "https://abcdefghijklmnopqrst.openlen.app", publishableKey: "sb_publishable_x" }),
             remoteMigrations: async () => aplicadas.map((m) => ({ version: m.version, name: m.name })),
+            liveMigrations: async () => null,
             applyMigration: async (m) => {
               aplicadas.push(m);
               return { ok: true };
             },
+            reset: async () => ({ ok: false, message: "not in this test" }),
+            query: async () => ({ kind: "no_live" }),
           },
           new Date(Date.UTC(2026, 9, 4, 12, 0, 0)),
         ),

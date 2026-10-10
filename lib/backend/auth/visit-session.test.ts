@@ -148,3 +148,26 @@ describe("entrar como un usuario de la página en la visita de Len", () => {
     expect(await countRows("auth.sessions")).toBe(0);
   }, 30_000);
 });
+
+describe("en el borrador, Len puede entrar como un usuario de prueba nuevo", () => {
+  it("con createIfMissing, un correo que no existe se crea confirmado y entra", async () => {
+    const r = await signInForVisit(t.project, "cajera@prueba.com", { createIfMissing: true });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.email).toBe("cajera@prueba.com");
+      await r.end();
+    }
+  }, 30_000);
+
+  it("sin createIfMissing, sigue sin crear cuentas", async () => {
+    const r = await signInForVisit(t.project, "nadie@prueba.com");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("not_found");
+    expect(await countRows("auth.users")).toBe(0);
+  }, 30_000);
+
+  it("only_user sin usuarios sigue diciendo no_users: hace falta un correo", async () => {
+    const r = await signInForVisit(t.project, ONLY_USER, { createIfMissing: true });
+    expect(r).toEqual({ ok: false, reason: "no_users" });
+  }, 30_000);
+});

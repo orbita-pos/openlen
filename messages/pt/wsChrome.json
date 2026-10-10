@@ -289,7 +289,9 @@
         "mencionado": "Mencionaram você aqui",
         "trabajando": "O Len está nisso…"
       }
-    }
+    },
+    "testData": "Dados de teste",
+    "testDataHint": "A tela usa os dados de teste; os reais só são usados pelo site publicado."
   },
   "placeholder": {
     "ai": {
@@ -520,6 +522,14 @@
       "delete": "Apagar arquivo",
       "confirm": "Certeza?",
       "deleted": "{name} apagado"
+    },
+    "env": {
+      "test": "Dados de teste",
+      "real": "Dados reais",
+      "reset": "Reiniciar dados de teste",
+      "resetConfirm": "Apagar os dados de teste e refazê-los a partir das migrações?",
+      "noLive": "Ainda não há dados reais: eles começam quando você publica.",
+      "testMails": "Os dados de teste não enviam e-mails: as contas novas são confirmadas automaticamente."
     }
   }
 }

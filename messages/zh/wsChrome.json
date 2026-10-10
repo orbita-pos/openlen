@@ -281,7 +281,9 @@
         "mencionado": "有人在这里提到了你",
         "trabajando": "Len 正在处理……"
       }
-    }
+    },
+    "testData": "测试数据",
+    "testDataHint": "画布使用测试数据；真实数据只有已发布的网站使用。"
   },
   "placeholder": {
     "ai": {
@@ -520,6 +522,14 @@
       "delete": "删除文件",
       "confirm": "确定吗？",
       "deleted": "已删除 {name}"
+    },
+    "env": {
+      "test": "测试数据",
+      "real": "真实数据",
+      "reset": "重置测试数据",
+      "resetConfirm": "清除测试数据并根据迁移重新生成？",
+      "noLive": "还没有真实数据：发布后才会开始。",
+      "testMails": "测试数据不会发送邮件：新账号会自动确认。"
     }
   }
 }

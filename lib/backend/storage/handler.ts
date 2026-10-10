@@ -15,7 +15,7 @@ import { errors as joseErrors, jwtVerify } from "jose";
 import { hashSecretKey } from "../keys";
 import type { ApiRole } from "../rest/handler";
 import type { BackendProject } from "../router";
-import type { BlobStore } from "./blob-store";
+import { storageScopeOf, type BlobStore } from "./blob-store";
 import { BUCKET_ROUTES } from "./buckets";
 import { ERRORS, StorageError, storageErrorResponse } from "./errors";
 import { OBJECT_ROUTES } from "./objects";
@@ -140,7 +140,7 @@ export async function handleStorage(req: Request, sub: string, project: BackendP
   // /auth/v1. Aquí sí hace falta. Una vez por proceso (un Set).
   if (!project.storage) {
     try {
-      await ensureStorageProvisioned(project.ref);
+      await ensureStorageProvisioned({ scope: storageScopeOf(project), ref: project.ref });
     } catch (err) {
       console.error("[storage] no se pudo montar el esquema storage", project.ref, err);
       return json({ message: "The project storage is not ready yet. Try again in a moment." }, 503);

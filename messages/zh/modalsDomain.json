@@ -149,5 +149,21 @@
     "radius": "圆角",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "数据库",
+    "firstPublish": "真实数据从空开始，使用你测试数据中的表。",
+    "copyDraftData": "同时复制测试数据",
+    "copyDraftDataHint": "测试账号和记录也会一起复制。",
+    "pending": "发布时应用的表变更：{names}",
+    "destructiveTitle": "此次发布会删除真实数据",
+    "dropTable": "删除表 {table}（{count} 行）",
+    "dropColumn": "删除 {table} 的列 {column}（{count} 个值）",
+    "alterType": "将 {table} 的 {column} 从 {from} 改为 {to}（{count} 个值）",
+    "deleteRows": "删除 {count} 行：{statement}",
+    "publishAnyway": "仍然发布",
+    "cancel": "取消",
+    "migrationFailed": "未发布：迁移 {migration} 失败：{message}",
+    "diverged": "未发布：生产环境有测试数据中没有的迁移（{versions}）。"
   }
 }

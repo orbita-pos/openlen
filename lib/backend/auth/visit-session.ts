@@ -2,8 +2,9 @@
 //
 // Es lo que hace Lovable (su changelog, 08/08/2026): si la app tiene un solo
 // usuario, entra como ése; si tiene varios y no se le dijo cuál, pregunta en el
-// chat antes de entrar; nunca crea una cuenta para probar. Y como en Lovable, la
-// visita usa la base REAL: la de la página publicada.
+// chat antes de entrar. Desde el 2026-10-09 (spec local de borrador y
+// producción) la visita usa la base de PRUEBAS, y ahí, con `createIfMissing`,
+// crea la cuenta de prueba que se le nombra; en producción nunca crea cuentas.
 //
 // La sesión es una de verdad de GoTrue (`auth.sessions` + su refresh token),
 // abierta como la abriría `admin.generateLink` + `verifyOtp` —por eso su método
@@ -11,7 +12,7 @@
 // usuario: así no pisa un enlace de recuperación que tenga pendiente. Se cierra
 // al acabar la visita (`end`).
 
-import { serviceAuthContext } from "../dashboard";
+import { createAuthUser, serviceAuthContext } from "../dashboard";
 import type { BackendProject } from "../router";
 import { issueSession } from "./handler";
 import { deleteSessions, findRefreshToken, findUserByEmail, listEmailUsers } from "./store";
@@ -50,7 +51,7 @@ type Opened =
   | Exclude<VisitSignIn, { ok: true }>
   | { readonly ok: true; readonly email: string; readonly session: Record<string, unknown> };
 
-export async function signInForVisit(project: BackendProject, who: string): Promise<VisitSignIn> {
+async function openVisitSession(project: BackendProject, who: string): Promise<VisitSignIn> {
   const ctx = serviceAuthContext(project);
   const req = new Request(`${project.auth.config.externalUrl}/token`, { headers: { "user-agent": VISIT_USER_AGENT } });
   const wanted = who.trim();
@@ -87,4 +88,17 @@ export async function signInForVisit(project: BackendProject, who: string): Prom
         if (rt?.session_id) await deleteSessions(q, rt.user_id, rt.session_id, "local");
       }),
   };
+}
+
+export async function signInForVisit(
+  project: BackendProject,
+  who: string,
+  opts: { createIfMissing?: boolean } = {},
+): Promise<VisitSignIn> {
+  const first = await openVisitSession(project, who);
+  const email = who.trim();
+  if (first.ok || first.reason !== "not_found" || !opts.createIfMissing || !email.includes("@")) return first;
+  const created = await createAuthUser(project, email);
+  if (!("ok" in created)) return first;
+  return openVisitSession(project, email);
 }

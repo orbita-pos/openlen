@@ -19,7 +19,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { blobKey } from "./blob-store";
+import { blobKey, storageScopeOf } from "./blob-store";
 import { asStorageAdmin, findBucket, findObject, insertObject, projectUsageBytes, testPermission, upsertObject, type ObjectMetadata } from "./db";
 import { ERRORS, StorageError } from "./errors";
 import type { StorageContext } from "./handler";
@@ -178,7 +178,7 @@ export async function uploadFromRequest(
   }
 
   const version = randomUUID();
-  const key = blobKey(ctx.project.ref, bucketId, objectName, version);
+  const key = blobKey(storageScopeOf(ctx.project), bucketId, objectName, version);
   try {
     const put = await ctx.store.put(key, file.body, { contentType: file.mimeType, cacheControl: file.cacheControl, maxBytes: maxFileSize });
     if (used + put.size > ctx.limits.projectLimit) throw quota();
@@ -200,7 +200,7 @@ export async function uploadFromRequest(
       return { row, previous: current?.version ?? null };
     });
     if (previous && previous !== version) {
-      await ctx.store.delete([blobKey(ctx.project.ref, bucketId, objectName, previous)]).catch((err: unknown) => {
+      await ctx.store.delete([blobKey(storageScopeOf(ctx.project), bucketId, objectName, previous)]).catch((err: unknown) => {
         console.error("[storage] no se pudo borrar la versión vieja", key, err);
       });
     }

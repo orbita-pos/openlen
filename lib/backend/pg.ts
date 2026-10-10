@@ -114,21 +114,47 @@ export async function withAdmin<T>(dbName: string, fn: (runner: SqlRunner, clien
   }
 }
 
-/** Como el rol de desarrollador del proyecto: las migraciones de Len. Una
- *  conexión propia (no del pool): su `session_user` ES ese rol, así que un
- *  `RESET ROLE` en una migración no sube a nada. */
-export async function withDeveloper<T>(dbName: string, role: string, password: string, fn: (runner: SqlRunner) => Promise<T>): Promise<T> {
+/** Una conexión PROPIA (no del pool) como `user`: su `session_user` ES ese rol,
+ *  así que un `RESET ROLE` en lo que corra no sube a nada. Para las migraciones
+ *  de Len, el ensayo de publicar y las lecturas de `db query`. */
+export async function withLogin<T>(
+  dbName: string,
+  user: string,
+  password: string,
+  fn: (client: import("pg").Client) => Promise<T>,
+): Promise<T> {
   const { Client } = await import("pg");
-  const client = new Client({ connectionString: urlFor(dbName, { user: role, password }), connectionTimeoutMillis: 5_000 });
+  const client = new Client({ connectionString: urlFor(dbName, { user, password }), connectionTimeoutMillis: 5_000 });
   await client.connect();
   try {
-    return await fn({
+    return await fn(client);
+  } finally {
+    await client.end();
+  }
+}
+
+/** Como administrador, con una conexión PROPIA: para lo que retiene la
+ *  conexión un buen rato (el cerrojo de una publicación) sin quitarle sitio
+ *  al pool de dos. */
+export async function withDedicatedAdmin<T>(dbName: string, fn: (client: import("pg").Client) => Promise<T>): Promise<T> {
+  const { Client } = await import("pg");
+  const client = new Client({ connectionString: urlFor(dbName), connectionTimeoutMillis: 5_000 });
+  await client.connect();
+  try {
+    return await fn(client);
+  } finally {
+    await client.end();
+  }
+}
+
+/** Como el rol de desarrollador del proyecto. */
+export function withDeveloper<T>(dbName: string, role: string, password: string, fn: (runner: SqlRunner) => Promise<T>): Promise<T> {
+  return withLogin(dbName, role, password, (client) =>
+    fn({
       exec: async (sql) => {
         await client.query(sql);
       },
       query: async (sql, params) => ({ rows: (await client.query(sql, params as unknown[] | undefined)).rows }),
-    });
-  } finally {
-    await client.end();
-  }
+    }),
+  );
 }

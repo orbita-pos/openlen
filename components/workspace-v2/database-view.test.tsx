@@ -232,3 +232,44 @@ describe("la base de datos de la página", () => {
     expect(text()).toContain("Todavía no hay buckets");
   });
 });
+
+// Borrador y producción de datos (spec local 2026-10-09): el panel mira los
+// datos de prueba o los reales, y reinicia los de prueba.
+describe("datos de prueba y datos reales", () => {
+  const overviewFor = (env: string | null, hasLive: boolean) =>
+    env === "live" && !hasLive
+      ? { status: "empty", url: READY.url, environment: "live", hasLive }
+      : { ...READY, environment: env ?? (hasLive ? "live" : "draft"), hasLive };
+  const routes = (hasLive: boolean) => (c: Call) => {
+    const u = new URL(c.url, "http://x");
+    if (u.pathname.endsWith("/backend")) return overviewFor(u.searchParams.get("env"), hasLive);
+    if (u.pathname.endsWith("/backend/reset")) return { ok: true };
+    return ROWS;
+  };
+
+  it("un proyecto publicado abre en los datos reales, y el selector cambia a los de prueba", async () => {
+    stubFetch(routes(true));
+    await render();
+    const tab = (label: string) => [...host.querySelectorAll('[role="tab"]')].find((b) => b.textContent?.includes(label));
+    expect(tab("Datos reales")?.getAttribute("aria-selected")).toBe("true");
+    await click(tab("Datos de prueba"));
+    expect(calls.map((c) => c.url)).toContain("/api/projects/p1/backend?env=draft");
+    expect(calls.map((c) => c.url)).toContain("/api/projects/p1/backend/tables/notas?env=draft&offset=0&limit=50");
+  });
+
+  it("sin producción, el lado de datos reales lo explica", async () => {
+    stubFetch(routes(false));
+    await render();
+    const real = [...host.querySelectorAll('[role="tab"]')].find((b) => b.textContent?.includes("Datos reales"));
+    await click(real);
+    expect(text()).toContain("Aún no hay datos reales: empiezan al publicar.");
+  });
+
+  it("en los datos de prueba, reiniciarlos llama a reset", async () => {
+    stubFetch(routes(false));
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await render();
+    await click(button("Reiniciar datos de prueba"));
+    expect(calls.find((c) => c.url.endsWith("/backend/reset"))?.method).toBe("POST");
+  });
+});

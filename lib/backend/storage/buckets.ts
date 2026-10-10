@@ -3,7 +3,7 @@
 // src/storage/storage.ts. Cada una corre como el rol de la petición (RLS de
 // `storage.buckets` manda), salvo lo que su código hace con `asSuperUser`.
 
-import { blobKey } from "./blob-store";
+import { blobKey, storageScopeOf } from "./blob-store";
 import {
   asRole,
   asStorageAdmin,
@@ -153,7 +153,7 @@ const emptyBucket: StorageRoute = {
       const r = await q(`delete from storage.objects where bucket_id = $1 returning name, version`, [id]);
       return r.rows as { name: string; version: string | null }[];
     });
-    await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(ctx.project.ref, id, o.name, o.version!)));
+    await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(storageScopeOf(ctx.project), id, o.name, o.version!)));
     return json({ message: "Empty bucket has been queued. Completion may take up to an hour." });
   },
 };

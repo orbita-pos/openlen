@@ -15,12 +15,15 @@ import { initRealtimeSchema, REALTIME_CLUSTER_ROLES_SQL } from "./schema";
 /** `withAdmin` de lib/backend/pg.ts (o un doble en las pruebas). */
 export type AdminRunner = <T>(dbName: string, fn: (runner: SqlRunner) => Promise<T>) => Promise<T>;
 
+// El scope de un entorno (lib/backend/environments.ts): su base es `ol_<scope>`.
+const SCOPE_RE = /^[a-z]{20}(_[dl])?$/;
 const REF_RE = /^[a-z]{20}$/;
 const done = new Set<string>();
 
-/** Para las pruebas. */
-export function forgetRealtimeProvisioned(): void {
-  done.clear();
+/** Para las pruebas, y para `db reset`: la base se rehace, el esquema también. */
+export function forgetRealtimeProvisioned(scope?: string): void {
+  if (scope === undefined) done.clear();
+  else done.delete(scope);
 }
 
 // El rol con el que el sondeo lee el slot (lo crea root; ver la decisión de
@@ -34,16 +37,20 @@ do $$ begin
 end $$;
 `;
 
-export async function ensureRealtimeProvisioned(ref: string, admin?: AdminRunner): Promise<void> {
-  if (done.has(ref)) return;
-  if (!REF_RE.test(ref)) throw new Error(`ref no válido: ${ref}`);
+/** El esquema en la base de UN entorno (`ol_<scope>`), con el rol de
+ *  desarrollador del proyecto (`ol_<ref>`). */
+export async function ensureRealtimeProvisioned(o: { scope: string; ref: string }, admin?: AdminRunner): Promise<void> {
+  if (done.has(o.scope)) return;
+  if (!SCOPE_RE.test(o.scope)) throw new Error(`scope no válido: ${o.scope}`);
+  if (!REF_RE.test(o.ref)) throw new Error(`ref no válido: ${o.ref}`);
   const run: AdminRunner = admin ?? (await import("../pg")).withAdmin;
-  const dev = `ol_${ref}`;
+  const dbName = `ol_${o.scope}`;
+  const dev = `ol_${o.ref}`;
   await run("postgres", (r) => r.exec(REALTIME_CLUSTER_ROLES_SQL));
-  await run(dev, async (r) => {
+  await run(dbName, async (r) => {
     await r.exec("BEGIN");
     try {
-      await r.query(`select pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext($1))`, [`pages-realtime:${ref}`]);
+      await r.query(`select pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext($1))`, [`pages-realtime:${o.scope}`]);
       await initRealtimeSchema(r, { devRole: dev });
       await r.exec(CONNECT_REPLICATION_ROLE);
       await r.exec("COMMIT");
@@ -52,5 +59,5 @@ export async function ensureRealtimeProvisioned(ref: string, admin?: AdminRunner
       throw err;
     }
   });
-  done.add(ref);
+  done.add(o.scope);
 }

@@ -149,5 +149,21 @@
     "radius": "Radius",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Datenbank",
+    "firstPublish": "Die echten Daten starten leer, mit den Tabellen aus deinen Testdaten.",
+    "copyDraftData": "Testdaten ebenfalls kopieren",
+    "copyDraftDataHint": "Testkonten und -einträge werden ebenfalls kopiert.",
+    "pending": "Tabellenänderungen, die beim Veröffentlichen angewendet werden: {names}",
+    "destructiveTitle": "Diese Veröffentlichung löscht echte Daten",
+    "dropTable": "Löscht die Tabelle {table} ({count, plural, one {# Zeile} other {# Zeilen}})",
+    "dropColumn": "Löscht die Spalte {column} aus {table} ({count, plural, one {# Wert} other {# Werte}})",
+    "alterType": "Ändert {column} in {table} von {from} zu {to} ({count, plural, one {# Wert} other {# Werte}})",
+    "deleteRows": "Löscht {count, plural, one {# Zeile} other {# Zeilen}}: {statement}",
+    "publishAnyway": "Trotzdem veröffentlichen",
+    "cancel": "Abbrechen",
+    "migrationFailed": "Nicht veröffentlicht: Migration {migration} ist fehlgeschlagen: {message}",
+    "diverged": "Nicht veröffentlicht: Die Produktion hat Migrationen, die deine Testdaten nicht haben ({versions})."
   }
 }
