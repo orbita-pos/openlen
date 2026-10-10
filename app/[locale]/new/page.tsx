@@ -3278,6 +3278,7 @@ function NewV2Inner() {
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
+        esApp={esApp}
         // Mientras el título sea el de relleno, el proyecto se llama «Proyecto
         // nuevo» en el idioma del dueño: lo deja en cuanto Len guarda una
         // portada con `<title>` (`adoptPlaceholderTitle`). No sólo el blanco:
@@ -3999,6 +4000,7 @@ function NewV2Inner() {
           projectId={loadedProject.id}
           projectSubdomain={loadedProject.subdomain}
           projectTitle={loadedProject.title}
+          esApp={esApp}
           onAutoPublished={(sub) => {
             // Reflect the silent first-publish in the workspace state so
             // the TopBar Live pill + Deploy dropdown stop saying "not
@@ -4046,6 +4048,7 @@ function NewV2Inner() {
             publishedAt: loadedProject.publishedAt,
             hasUnpublishedChanges: loadedProject.hasUnpublishedChanges,
             languages: loadedProject.settings?.languages,
+            esApp,
             // ⚰️ Aquí se avisaba de bandas presentes con su módulo APAGADO,
             // porque publicar las recortaba en silencio. Ya no hay módulos que
             // apagar: lo que queda de esas secciones lo conserva
@@ -4055,7 +4058,7 @@ function NewV2Inner() {
             if (newSubdomain) {
               playReward(); // celebrate a real publish (not unpublish)
               toast.success(t("toast.publishedTitle"), {
-                description: t("toast.publishedBody", { subdomain: newSubdomain, host: PUBLISHED_BASE_HOST }),
+                description: t(esApp ? "toast.publishedBodyApp" : "toast.publishedBody", { subdomain: newSubdomain, host: PUBLISHED_BASE_HOST }),
                 action: {
                   label: t("toast.openSite"),
                   // De `base-host`, como el texto de al lado. Estaba cableado
@@ -4066,7 +4069,7 @@ function NewV2Inner() {
                 },
               });
             } else {
-              toast.info(t("toast.unpublishedTitle"), {
+              toast.info(t(esApp ? "toast.unpublishedTitleApp" : "toast.unpublishedTitle"), {
                 description: t("toast.unpublishedBody"),
               });
             }

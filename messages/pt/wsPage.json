@@ -58,6 +58,14 @@
       "create_goal": "Criando o objetivo",
       "update_goal": "Atualizando o objetivo"
     },
+    "toolApp": {
+      "Read": "Lendo o código",
+      "Edit": "Editando o código",
+      "Write": "Escrevendo código",
+      "Glob": "Listando os arquivos",
+      "view_page": "Verificando o app",
+      "use_page": "Testando o app"
+    },
     "action": {
       "home": "Início",
       "visualOk": "sem falhas medidas",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Uma foto não pôde ser enviada} other {# fotos não puderam ser enviadas}}: a mensagem vai sem elas.",
     "publishedTitle": "Publicada",
     "publishedBody": "Sua página está no ar em {subdomain}.{host}",
+    "publishedBodyApp": "Seu app está no ar em {subdomain}.{host}",
     "openSite": "Abrir site",
     "unpublishedTitle": "Página despublicada",
+    "unpublishedTitleApp": "App despublicado",
     "unpublishedBody": "Ela não está mais acessível nesse endereço.",
     "moduleEnabled": "{module} ativado",
     "moduleDisabled": "{module} desativado",

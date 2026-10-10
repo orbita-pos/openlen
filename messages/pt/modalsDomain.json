@@ -2,6 +2,7 @@
   "toast": {
     "publishedTitle": "Publicada",
     "publishedBody": "Sua página está no ar em {subdomain}.{host}",
+    "publishedBodyApp": "Seu app está no ar em {subdomain}.{host}",
     "domainClaimedTitle": "{domain} reivindicado",
     "domainClaimedBody": "Adicione os registros de DNS abaixo e depois verifique.",
     "domainVerifiedTitle": "{domain} verificado",
@@ -118,6 +119,7 @@
       "choose": "Escolha um nome acima.",
       "checking": "Verificando disponibilidade…",
       "currentPage": "Esta é a sua página atual —",
+      "currentPageApp": "Este é o endereço atual do seu app —",
       "visit": "visitar",
       "available": "Disponível",
       "invalid": "Use letras minúsculas, números e hifens (não no início nem no fim).",
@@ -127,7 +129,9 @@
     },
     "speedCard": {
       "title": "Velocidade da página",
+      "titleApp": "Velocidade do app",
       "measuring": "Medindo a velocidade da sua página…",
+      "measuringApp": "Medindo a velocidade do seu app…",
       "loadsIn": "Carrega em {seconds}s",
       "weight": "{kb} KB",
       "requests": "{count} solicitações",

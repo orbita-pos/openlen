@@ -58,6 +58,14 @@
       "create_goal": "Creating the goal",
       "update_goal": "Updating the goal"
     },
+    "toolApp": {
+      "Read": "Reading the code",
+      "Edit": "Editing the code",
+      "Write": "Writing code",
+      "Glob": "Listing the files",
+      "view_page": "Checking the app",
+      "use_page": "Trying out the app"
+    },
     "action": {
       "home": "Home",
       "visualOk": "no measured faults",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {A photo couldn't be uploaded} other {# photos couldn't be uploaded}} — the message goes without them.",
     "publishedTitle": "Published",
     "publishedBody": "Your page is live at {subdomain}.{host}",
+    "publishedBodyApp": "Your app is live at {subdomain}.{host}",
     "openSite": "Open site",
     "unpublishedTitle": "Page unpublished",
+    "unpublishedTitleApp": "App unpublished",
     "unpublishedBody": "It's no longer reachable at that address.",
     "moduleEnabled": "{module} enabled",
     "moduleDisabled": "{module} disabled",

@@ -121,6 +121,8 @@ export default defineConfig({
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",
+      // En una app, el diálogo de publicar no ofrece traducción automática (invariante 6).
+      "components/workspace/publish-modal.test.tsx",
       // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con
       // `/api/generate` el 2026-10-06 (plans/crear-es-len, tarea 12).
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the

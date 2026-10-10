@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "맞춤 도메인",
-      "subtitle": "내 호스트네임으로 이 페이지 제공"
+      "subtitle": "내 호스트네임으로 이 페이지 제공",
+      "subtitleApp": "내 호스트네임으로 이 앱 제공"
     },
     "providers": {
       "vercel": "Vercel에 배포",

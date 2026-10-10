@@ -40,6 +40,9 @@ export interface PublishModalProject {
   hasUnpublishedChanges: boolean;
   /** Speak Every Language: stored target locales (data.settings.languages). */
   languages?: string[];
+  /** Es una app: sin traducción automática (invariante 6) — ni se ofrecen
+   *  idiomas ni se mandan; su texto vive en el código. */
+  esApp?: boolean;
   /** Members module: pages flagged members-only while the module is OFF —
    *  they'd publish wide open. >0 renders the amber warning. */
   gatedFlagsWithModuleOff?: number;
@@ -225,7 +228,7 @@ export function PublishModal({
       const res = await fetch(`/api/projects/${project.id}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subdomain: normalized, languages: langs }),
+        body: JSON.stringify(project.esApp ? { subdomain: normalized } : { subdomain: normalized, languages: langs }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}) as { error?: string });
@@ -269,6 +272,7 @@ export function PublishModal({
     check,
     isCurrent,
     project.id,
+    project.esApp,
     normalized,
     langs,
     onSuccess,
@@ -417,7 +421,7 @@ export function PublishModal({
               </span>
             </div>
             <div className="mt-2 min-h-[18px]">
-              <Status check={check} isCurrent={isCurrent} url={fullUrl} />
+              <Status check={check} isCurrent={isCurrent} url={fullUrl} esApp={project.esApp === true} />
             </div>
           </div>
 
@@ -430,7 +434,7 @@ export function PublishModal({
             </div>
           </div>
 
-          <div>
+          {!project.esApp && <div>
             <div className="text-[11px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-semibold mb-1.5">
               {t("publish.languages.title")}
             </div>
@@ -463,7 +467,7 @@ export function PublishModal({
             <div className="mt-1.5 text-[10.5px] text-zinc-400">
               {t("publish.languages.hint")}
             </div>
-          </div>
+          </div>}
 
           {(project.gatedFlagsWithModuleOff ?? 0) > 0 && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300">
@@ -483,7 +487,7 @@ export function PublishModal({
             </div>
           )}
 
-          {isPublished && <SpeedCard projectId={project.id} active={open} />}
+          {isPublished && <SpeedCard projectId={project.id} active={open} esApp={project.esApp === true} />}
 
           {langsFallidos.length > 0 && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-200">
@@ -608,10 +612,12 @@ function Status({
   check,
   isCurrent,
   url,
+  esApp,
 }: {
   check: CheckState;
   isCurrent: boolean;
   url: string;
+  esApp: boolean;
 }) {
   const t = useTranslations("modalsDomain");
   if (check.kind === "idle") {
@@ -633,7 +639,7 @@ function Status({
     if (isCurrent) {
       return (
         <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 size={11} /> {t("publish.status.currentPage")}{" "}
+          <CheckCircle2 size={11} /> {t(esApp ? "publish.status.currentPageApp" : "publish.status.currentPage")}{" "}
           <a
             href={url}
             target="_blank"

@@ -58,6 +58,14 @@
       "create_goal": "Creando el encargo",
       "update_goal": "Actualizando el encargo"
     },
+    "toolApp": {
+      "Read": "Leyendo el código",
+      "Edit": "Editando el código",
+      "Write": "Escribiendo código",
+      "Glob": "Viendo qué ficheros hay",
+      "view_page": "Comprobando la app",
+      "use_page": "Probando la app"
+    },
     "action": {
       "home": "Inicio",
       "visualOk": "sin fallos medidos",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Una foto no se pudo subir} other {# fotos no se pudieron subir}}: el mensaje va sin ellas.",
     "publishedTitle": "Publicada",
     "publishedBody": "Tu página está en vivo en {subdomain}.{host}",
+    "publishedBodyApp": "Tu app está en vivo en {subdomain}.{host}",
     "openSite": "Abrir sitio",
     "unpublishedTitle": "Página despublicada",
+    "unpublishedTitleApp": "App despublicada",
     "unpublishedBody": "Ya no está disponible en esa dirección.",
     "moduleEnabled": "{module} activado",
     "moduleDisabled": "{module} desactivado",

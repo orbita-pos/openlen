@@ -58,6 +58,14 @@
       "create_goal": "ゴールを作成",
       "update_goal": "ゴールを更新"
     },
+    "toolApp": {
+      "Read": "コードを読み込み中",
+      "Edit": "コードを編集中",
+      "Write": "コードを書き込み中",
+      "Glob": "ファイル一覧を確認中",
+      "view_page": "アプリを確認中",
+      "use_page": "アプリを試しています"
+    },
     "action": {
       "home": "ホーム",
       "visualOk": "測定範囲に問題なし",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, other {# 枚の写真をアップロードできませんでした}}。写真なしで送信します。",
     "publishedTitle": "公開しました",
     "publishedBody": "ページは {subdomain}.{host} で公開中です",
+    "publishedBodyApp": "アプリは {subdomain}.{host} で公開中です",
     "openSite": "サイトを開く",
     "unpublishedTitle": "ページを非公開にしました",
+    "unpublishedTitleApp": "アプリを非公開にしました",
     "unpublishedBody": "そのアドレスではアクセスできなくなりました。",
     "moduleEnabled": "{module} を有効にしました",
     "moduleDisabled": "{module} を無効にしました",

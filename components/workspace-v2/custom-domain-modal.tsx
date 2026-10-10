@@ -75,6 +75,8 @@ export interface CustomDomainModalProps {
   projectSubdomain: string | null;
   /** Project title — seeds the default subdomain in the publish-first step. */
   projectTitle?: string;
+  /** El proyecto es una app: el aviso dice «tu app está en vivo». */
+  esApp?: boolean;
   /** Notify the parent that the project was just published from this modal.
    *  The parent re-fetches so the TopBar Live pill + publish state stay in
    *  sync without a hard refresh. */
@@ -120,6 +122,7 @@ export function CustomDomainModal({
   projectId,
   projectSubdomain,
   projectTitle,
+  esApp = false,
   onAutoPublished,
 }: CustomDomainModalProps) {
   const t = useTranslations("modalsDomain");
@@ -280,7 +283,7 @@ export function CustomDomainModal({
       setAutoPublishedSub(sub);
       onAutoPublished?.(sub);
       toast.success(t("toast.publishedTitle"), {
-        description: t("toast.publishedBody", { subdomain: sub, host: PUBLISHED_BASE_HOST }),
+        description: t(esApp ? "toast.publishedBodyApp" : "toast.publishedBody", { subdomain: sub, host: PUBLISHED_BASE_HOST }),
       });
       await refresh();
     } catch {

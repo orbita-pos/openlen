@@ -22,17 +22,36 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function pintar(actions: AgentAction[]) {
+function pintar(actions: AgentAction[], esApp = false) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
   const turn = { id: "t", userText: "x", assistantReasoning: "", status: "applied", actions } as DesignTurn;
-  act(() => root.render(<StepsCard turn={turn} projectId="p" onOpenFile={() => {}} />));
+  act(() => root.render(<StepsCard turn={turn} projectId="p" onOpenFile={() => {}} esApp={esApp} />));
   return host;
 }
 
 describe("la tarjeta de los pasos", () => {
+  // Ensayo de caja del 09/10: en una app los pasos decían «Leyendo la página
+  // src/App.jsx», «Probando la página»…
+  it("🔴 en una app, los pasos hablan del código y de la app, no de «la página»", () => {
+    const pasos = [
+      { tool: "Read", status: "done", summary: "/src/App.jsx" },
+      { tool: "Edit", status: "done", summary: "/src/App.jsx" },
+      { tool: "use_page", status: "done", summary: "" },
+    ] as AgentAction[];
+    const app = pintar(pasos, true).textContent ?? "";
+    expect(app).toContain("agent.toolApp.Read");
+    expect(app).toContain("agent.toolApp.Edit");
+    expect(app).toContain("agent.toolApp.use_page");
+    expect(app).not.toMatch(/agent\.tool\.(Read|Edit|use_page)/);
+    // Lo que no nombra la página, igual; y en una página, como siempre.
+    expect(pintar([{ tool: "bash", status: "done", summary: "ls" } as AgentAction], true).textContent).toContain("agent.tool.bash");
+    expect(pintar(pasos).textContent).toContain("agent.tool.Read");
+  });
+
+
   it("🔴 un comando de la terminal que falla enseña el comando y «falló»", () => {
     const host = pintar([{ tool: "bash", status: "error", summary: "ls /supabase" } as AgentAction]);
     expect(host.textContent).toContain("ls /supabase");
