@@ -10,7 +10,9 @@ import { newScope, type ScopeCreds } from "./environments";
 import { newDatabasePassword, newProjectRef } from "./keys";
 import { withAdmin } from "./pg";
 import { dropDeveloperRole, dropProjectDatabase, provisionDatabase } from "./provision";
+import { ensureRealtimeProvisioned } from "./realtime/provision";
 import { applyMigrationAs, readRecordedMigrations } from "./recorded-migrations";
+import { ensureStorageProvisioned } from "./storage/provision";
 
 const E2E_URL = process.env.PAGES_E2E_DATABASE_URL;
 
@@ -64,4 +66,42 @@ describe.skipIf(!E2E_URL)("dos entornos de un mismo proyecto", () => {
     expect(await tableExists(draft.scope, "public.a")).toBe(false);
     expect((await readRecordedMigrations(draft.scope)).map((m) => m.version)).toEqual(["20261009000000"]);
   });
+});
+
+// Las altas de varias bases A LA VEZ: los roles (`authenticator`, `anon`,
+// `authenticated` y el de desarrollador, que comparten el borrador y la
+// producción de un proyecto) son del CLÚSTER, no de una base. Con el candado
+// sólo por entorno, dos altas a la vez chocaban en esas filas («tuple
+// concurrently updated», o crear dos veces el mismo rol) y una se caía.
+describe.skipIf(!E2E_URL)("altas a la vez", () => {
+  const projects = [0, 1, 2, 3, 4, 5].map(() => ({ ref: newProjectRef(), password: newDatabasePassword() }));
+  const scopes = projects.flatMap((p) => [
+    { ...p, scope: newScope(p.ref, "draft") },
+    { ...p, scope: newScope(p.ref, "live") },
+  ]);
+
+  beforeAll(() => {
+    process.env.PAGES_DATABASE_URL = E2E_URL;
+    process.env.PAGES_AUTHENTICATOR_PASSWORD = randomBytes(18).toString("base64url");
+  });
+
+  afterAll(async () => {
+    if (!E2E_URL) return;
+    for (const s of scopes) await dropProjectDatabase(s.scope).catch(() => {});
+    for (const p of projects) await dropDeveloperRole(p.ref).catch(() => {});
+  }, 120_000);
+
+  it("🔴 doce altas a la vez (seis proyectos, cada uno con sus dos entornos) salen todas", async () => {
+    const results = await Promise.allSettled(
+      scopes.map((s) => provisionDatabase({ scope: s.scope, ref: s.ref, dbPassword: s.password })),
+    );
+    expect(results.flatMap((r) => (r.status === "rejected" ? [String(r.reason)] : []))).toEqual([]);
+  }, 180_000);
+
+  it("🔴 y sus esquemas de storage y realtime, también a la vez", async () => {
+    const results = await Promise.allSettled(
+      scopes.flatMap((s) => [ensureStorageProvisioned({ scope: s.scope, ref: s.ref }), ensureRealtimeProvisioned({ scope: s.scope, ref: s.ref })]),
+    );
+    expect(results.flatMap((r) => (r.status === "rejected" ? [String(r.reason)] : []))).toEqual([]);
+  }, 180_000);
 });

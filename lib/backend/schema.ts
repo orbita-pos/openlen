@@ -62,7 +62,16 @@ export function gotrueMigrationSql(sql: string, devRole: string): string {
 
 /** Monta la base de UN proyecto, recién creada y conectados como su dueño
  *  (el administrador del clúster). El rol de desarrollador ya existe. */
-export async function initProjectDatabase(db: SqlRunner, opts: { devRole: string }): Promise<void> {
+/** 00000000000003-post-setup.sql: ALTER ROLE postgres SET search_path … Es un
+ *  ajuste del ROL (de las dos bases del proyecto), no de una base. */
+export function devRoleSettingsSql(devRole: string): string {
+  if (!DEV_ROLE_RE.test(devRole)) throw new Error(`rol de desarrollador no válido: ${devRole}`);
+  return `alter role ${devRole} set search_path to "$user", public, extensions;`;
+}
+
+/** `roleSettings: false` cuando quien llama ya ajustó el rol (provisionDatabase,
+ *  bajo el candado de los roles del clúster: cluster-roles-lock.ts). */
+export async function initProjectDatabase(db: SqlRunner, opts: { devRole: string; roleSettings?: boolean }): Promise<void> {
   const dev = opts.devRole;
   if (!DEV_ROLE_RE.test(dev)) throw new Error(`rol de desarrollador no válido: ${dev}`);
 
@@ -88,8 +97,7 @@ export async function initProjectDatabase(db: SqlRunner, opts: { devRole: string
     set timezone to 'UTC';
   `);
 
-  // 00000000000003-post-setup.sql: ALTER ROLE postgres SET search_path …
-  await db.exec(`alter role ${dev} set search_path to "$user", public, extensions;`);
+  if (opts.roleSettings !== false) await db.exec(devRoleSettingsSql(dev));
 
   // 00000000000001-auth-schema.sql (el esquema) + las migraciones de GoTrue,
   // aplicadas CON el rol de GoTrue, como en Supabase: así `supabase_auth_admin`
