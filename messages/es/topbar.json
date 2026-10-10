@@ -176,6 +176,16 @@
       "topeAgotado": "se acabó el tope mensual de Len para los miembros de este proyecto. El dueño puede subirlo en «Invitar».",
       "sinCreditos": "no quedan créditos en la cuenta del dueño del proyecto.",
       "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, pídemelo otra vez desde el hilo."
+    },
+    "len": {
+      "titulo": "Escríbele a Len por correo",
+      "texto": "Lo que mandes a esta dirección desde el correo de tu cuenta, Len lo hace en este proyecto y te contesta por correo.",
+      "copiar": "Copiar",
+      "copiada": "Copiada",
+      "pie": "Contesta a este correo para seguir con Len en {titulo}.",
+      "abrir": "Abrir el proyecto",
+      "falloSinMotivo": "No llegué a hacerlo. Contesta a este correo para pedírmelo otra vez.",
+      "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, contesta a este correo para pedírmelo otra vez."
     }
   }
 }

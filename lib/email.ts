@@ -1,10 +1,13 @@
 import { Resend } from "resend";
 import {
   correoDeInvitacion,
+  correoDeLen,
   correoDeMencion,
   idiomaDelCorreo,
   type DatosDeLaInvitacion,
   type DatosDeLaMencion,
+  type DatosDeLaRespuestaDeLen,
+  type IdiomaDelCorreo,
 } from "@/lib/projects/correos-del-proyecto";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -591,6 +594,35 @@ export async function sendMentionEmail(input: DatosDeLaMencion & { to: string; i
     return;
   }
   await enviar(live, "mention email", { from, to: input.to, ...correo });
+}
+
+/**
+ * LEN POR CORREO (lib/len-email): la respuesta de Len a quien le escribió.
+ * Sale firmada por «Len» desde nuestra dirección de siempre, y con `replyTo` a
+ * la dirección del proyecto: contestar es volver a hablarle. `inReplyTo` deja
+ * la respuesta en el mismo hilo del cliente de correo.
+ */
+export async function sendLenReplyEmail(
+  input: DatosDeLaRespuestaDeLen & { to: string; replyTo: string; idioma: IdiomaDelCorreo; inReplyTo?: string | null },
+): Promise<void> {
+  const correo = correoDeLen(input, input.idioma);
+  const live = liveClientOrWarn("Len reply email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] ${correo.subject} → ${input.to} (reply-to: ${input.replyTo})\n     ${correo.text.split("\n").join("\n     ")}\n`);
+    }
+    return;
+  }
+  const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
+  const inReplyTo = input.inReplyTo?.trim();
+  await enviar(live, "Len reply email", {
+    from: `Len <${address}>`,
+    to: input.to,
+    replyTo: input.replyTo,
+    ...correo,
+    ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
+  });
 }
 
 // ─── Chat — offline-owner notification ───────────────────────────────────────

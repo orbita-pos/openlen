@@ -23,7 +23,7 @@ vi.mock("@/lib/projects/hilos", () => ({
   },
 }));
 
-import { lanzarTurnoDelHilo, registrarCorredorDeTurnos, retomarPedidosDelHilo } from "./turnos-desde-el-servidor";
+import { launchEmailTurn, lanzarTurnoDelHilo, registrarCorredorDeTurnos, retomarPedidosDelHilo, type EmailRequest } from "./turnos-desde-el-servidor";
 
 const sse = (eventos: [string, unknown][]) =>
   new Response(eventos.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), {
@@ -132,5 +132,45 @@ describe("tras un reinicio del servidor", () => {
     // Una vez por proceso: la segunda llamada no vuelve a lanzar nada.
     await retomarPedidosDelHilo();
     expect(corredor).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("un pedido por correo (Len por correo)", () => {
+  const lanzarCorreo = (reply: (t: string) => Promise<void>) =>
+    launchEmailTurn({
+      userId: "ana",
+      projectId: "p-correo",
+      texto: "cambia el precio a 499",
+      context: "[Sent by email]",
+      origen: "http://x/api/agent",
+      reply,
+      fraseDeFallo: (f) => (f ? `No pude: ${f.code ?? f.motivo}` : "No llegué"),
+    });
+
+  it("🔴 el turno lleva el contexto del correo, y lo que Len dijo al cerrar se manda por correo UNA vez", async () => {
+    const enviados: string[] = [];
+    const corredor = vi.fn(async (_u: string, _b: Record<string, unknown>, _r: unknown, opts: { email?: EmailRequest }) => {
+      await opts.email!.onReply("Listo: el precio ya dice $499.");
+      return sse([["done", {}]]);
+    });
+    registrarCorredorDeTurnos(corredor);
+    const { filaId } = await lanzarCorreo(async (t) => void enviados.push(t));
+    await hasta(() => corredor.mock.calls.length > 0);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      { projectId: "p-correo", prompt: "cambia el precio a 499", turnId: filaId, answersQuestions: false },
+      expect.objectContaining({ url: "http://x/api/agent" }),
+      { email: expect.objectContaining({ context: "[Sent by email]" }) },
+    );
+    expect(enviados).toEqual(["Listo: el precio ya dice $499."]);
+  });
+
+  it("🔴 si el turno no contesta (sin créditos), quien escribió recibe el motivo por correo", async () => {
+    const enviados: string[] = [];
+    registrarCorredorDeTurnos(async () => sse([["error", { message: "sin créditos", code: "no_credits" }]]));
+    await lanzarCorreo(async (t) => void enviados.push(t));
+    await hasta(() => enviados.length > 0);
+    expect(enviados).toEqual(["No pude: no_credits"]);
   });
 });

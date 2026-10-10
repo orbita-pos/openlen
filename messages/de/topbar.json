@@ -176,6 +176,16 @@
       "topeAgotado": "das monatliche Len-Limit für die Mitglieder dieses Projekts ist aufgebraucht. Der Eigentümer kann es unter „Einladen“ erhöhen.",
       "sinCreditos": "auf dem Konto des Projekteigentümers sind keine Credits mehr.",
       "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe – es kann halb fertig sein. Prüf die Änderungen und frag mich bei Bedarf noch einmal in der Unterhaltung."
+    },
+    "len": {
+      "titulo": "Len per E-Mail schreiben",
+      "texto": "Was du von der E-Mail-Adresse deines Kontos an diese Adresse schickst, erledigt Len in diesem Projekt und antwortet per E-Mail.",
+      "copiar": "Kopieren",
+      "copiada": "Kopiert",
+      "pie": "Antworte auf diese E-Mail, um mit Len an {titulo} weiterzuarbeiten.",
+      "abrir": "Projekt öffnen",
+      "falloSinMotivo": "Ich bin nicht dazu gekommen. Antworte auf diese E-Mail, um mich noch einmal zu fragen.",
+      "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe, es könnte also nur halb fertig sein. Sieh dir die Änderungen an und antworte bei Bedarf auf diese E-Mail, um mich noch einmal zu fragen."
     }
   }
 }
