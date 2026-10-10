@@ -30,6 +30,8 @@ import {
   type Environment,
   type EnvironmentRecord,
 } from "./environments";
+import { buildDraftDatabase } from "./draft";
+import { listProjectFiles } from "./files";
 import { provisionDatabase } from "./provision";
 /* ── carril D ── */
 import { ensureStorageProvisioned } from "./storage/provision";
@@ -145,6 +147,20 @@ export async function ensureEnvironmentReady(rec: BackendRecord, env: Environmen
     console.error("[realtime] no se pudo montar el esquema realtime", scope, err);
   });
   /* ── fin carril D ── */
+  if (!e.provisionedAt && env === "draft") {
+    // Nace con las tablas de producción (si la hay) y el seed. Si algo falla
+    // la base se queda creada igual —sin marcarla no se crearía nunca— y lo
+    // dice el registro; `supabase db reset` la rehace.
+    const live = await getEnvironment(rec.projectId, "live");
+    const password = decryptToken(rec.dbPasswordEncrypted);
+    const r = await buildDraftDatabase({
+      draft: { scope: e.scope, ref: rec.ref, password },
+      live: live?.provisionedAt ? { scope: live.scope, ref: rec.ref, password } : null,
+      files: await listProjectFiles(rec.projectId, "/supabase/"),
+      includeLocal: false,
+    });
+    if (!r.ok) console.error("[backend] el borrador nació a medias", rec.ref, r);
+  }
   if (!e.provisionedAt) {
     await markEnvironmentProvisioned(rec.projectId, env);
     e = { ...e, provisionedAt: new Date() };

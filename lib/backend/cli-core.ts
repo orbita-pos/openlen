@@ -41,14 +41,14 @@ function timestamp(now: Date): string {
   return `${now.getUTCFullYear()}${p(now.getUTCMonth() + 1)}${p(now.getUTCDate())}${p(now.getUTCHours())}${p(now.getUTCMinutes())}${p(now.getUTCSeconds())}`;
 }
 
-interface LocalMigration {
+export interface LocalMigration {
   version: string;
   name: string;
   file: string;
   path: string;
 }
 
-function localMigrations(ficheros: Readonly<Record<string, string>>): { migrations: LocalMigration[]; skipped: string[] } {
+export function localMigrations(ficheros: Readonly<Record<string, string>>): { migrations: LocalMigration[]; skipped: string[] } {
   const migrations: LocalMigration[] = [];
   const skipped: string[] = [];
   for (const path of Object.keys(ficheros).sort()) {
