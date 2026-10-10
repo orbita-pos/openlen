@@ -17,4 +17,10 @@ describe("la huella de la carpeta publicable", () => {
     expect(folderFingerprint({ "/js/a.js": "1!", "/css/b.css": "2" })).not.toBe(a);
     expect(folderFingerprint({ "/js/c.js": "1", "/css/b.css": "2" })).not.toBe(a);
   });
+
+  it("🔴 /.env cuenta: cambia lo que lleva la app publicada aunque no se publique", () => {
+    const a = folderFingerprint({ "/js/a.js": "1" });
+    expect(folderFingerprint({ "/js/a.js": "1", "/.env": "VITE_A=1" })).not.toBe(a);
+    expect(folderFingerprint({ "/.env": "VITE_A=1" })).toMatch(/^[0-9a-f]{16}$/);
+  });
 });
