@@ -90,6 +90,25 @@ const reactDesdeLasFachadas: Plugin = {
 };
 
 /**
+ * `import ReactDOM from "react-dom"` (POR DEFECTO) → como espacio de nombres.
+ * La fachada `react-dom.js` sólo exporta por nombre (React es CommonJS: no hay
+ * un `default` que reexportar sin cambiar los bytes de las fachadas), y lo que
+ * esos paquetes usan de ese ReactDOM —`flushSync`, `createPortal`— está en ella
+ * por su nombre. sonner lo hacía y no empaquetaba: lo vio Len en el ensayo de
+ * caja del 09/10. Lo vigila `lib/apps/catalog-facades.test.ts`.
+ */
+const reactDomDefaultAsNamespace: Plugin = {
+  name: "react-dom-default-as-namespace",
+  setup(b) {
+    b.onLoad({ filter: /[\\/]node_modules[\\/].*\.m?js$/ }, (a) => {
+      const codigo = readFileSync(a.path, "utf8");
+      const nuevo = codigo.replace(/import\s+([A-Za-z_$][\w$]*)\s+from\s+(['"])react-dom\2/g, "import * as $1 from $2react-dom$2");
+      return nuevo === codigo ? undefined : { contents: nuevo, loader: "js" };
+    });
+  },
+};
+
+/**
  * LOS ICONOS CON SUS ALIAS. `lucide-react` exporta cada icono con varios
  * nombres (`CircleCheck`, `CheckCircle2`, `CircleCheckIcon`, `LucideCircleCheck`).
  * Se exportan todos menos los `Lucide*`, que nadie escribe: los modelos usan el
@@ -322,7 +341,7 @@ async function buildSplitPart(nombre: string, destino: string, fuentes: string):
     splitting: true,
     entryNames: "[name]",
     chunkNames: "chunk-[hash]",
-    plugins: [reactDesdeLasFachadas],
+    plugins: [reactDesdeLasFachadas, reactDomDefaultAsNamespace],
   };
   const r = await build({ ...opciones, write: false });
   const usados = Object.values(r.metafile!.outputs).flatMap((o) =>

@@ -60,6 +60,18 @@ describe("bundleApp (plan 02, tarea 3)", () => {
     expect(r.errores[0]!.mensaje).not.toContain("app:");
   }, 60_000);
 
+  it("🔴 sonner (los avisos de shadcn) empaqueta, en desarrollo y en producción (ensayo de caja del 09/10)", async () => {
+    const carpeta = {
+      ...esqueletoDeApp({ titulo: "Caja" }).ficheros,
+      "/src/App.jsx": 'import { Toaster, toast } from "sonner";\nexport default function App() { return <><Toaster /><button onClick={() => toast("Guardado")}>x</button></>; }',
+    };
+    for (const modo of ["desarrollo", "produccion"] as const) {
+      const r = await bundleApp({ carpeta, app: APP, modo });
+      if (!r?.ok) throw new Error(`${modo}: ${JSON.stringify(r)}`);
+      expect(r.js).toContain("Guardado");
+    }
+  }, 60_000);
+
   it("🔴 dos carpetas a la vez: cada una recibe SU paquete; y dos peticiones iguales comparten uno (Review Focus 2)", async () => {
     const a = { ...FICHEROS, "/src/App.tsx": FICHEROS["/src/App.tsx"]!.replace("Guardar", "Uno") };
     const b = { ...FICHEROS, "/src/App.tsx": FICHEROS["/src/App.tsx"]!.replace("Guardar", "Dos") };

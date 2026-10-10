@@ -276,7 +276,7 @@ export function parecidos(nombre: string, lista: readonly string[], cuantos = 6)
 /** Los nombres que una sentencia toma de su módulo: `import X, { a, b as c }`
  *  → `["default", "a", "b"]`; `export { a } from` → `["a"]`. `null` si no se
  *  pueden saber (`import * as`, `export *`, o una forma que no se reconoce). */
-function nombresImportados(sentencia: string): string[] | null {
+export function nombresImportados(sentencia: string): string[] | null {
   const m = /^(import|export)\s*([\s\S]*?)\s*from\s*["'`]/.exec(sentencia);
   if (!m) return [];
   const clausula = m[2]!.trim();
