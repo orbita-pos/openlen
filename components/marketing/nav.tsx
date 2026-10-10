@@ -37,9 +37,9 @@ export function Nav({ dark, onToggleDark }: NavProps) {
     // BARRA A TODO LO ANCHO, A LO GROK BOT (09/10). Antes era una pastilla de
     // cristal flotando en el centro; ahora es la fila de la referencia: marca
     // y enlaces a la izquierda, y a la derecha dos píldoras — la secundaria
-    // («Iniciar sesión», como su «Contact Sales») y la principal en contraste
-    // máximo («Pruébalo gratis», como su «Download»). Transparente arriba del
-    // todo para que la malla del héroe pase por debajo; al bajar, cristal.
+    // («Iniciar sesión», como su «Contact Sales») y la principal
+    // («Pruébalo gratis», como su «Download») en el coral de la marca, no en
+    // negro (Jesús, 10/10). Transparente arriba del todo; al bajar, cristal.
     //
     // Sigue midiendo 56px (h-14) y sigue en el flujo: el héroe sube esos 56
     // con `-mt-14 pt-14`, y el resto de páginas con MarketingChrome cuentan
@@ -105,7 +105,7 @@ export function Nav({ dark, onToggleDark }: NavProps) {
           </Link>
           <Link
             href="/register"
-            className="hidden sm:inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[14.5px] font-medium bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-[14.5px] font-medium bg-coral-700 text-white hover:bg-coral-800 active:bg-coral-900 transition-colors"
           >
             {t("nav.tryFree")} <ArrowRight size={14} />
           </Link>
