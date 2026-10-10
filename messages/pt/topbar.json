@@ -176,6 +176,16 @@
       "topeAgotado": "o limite mensal do Len para os membros deste projeto acabou. O dono pode aumentá-lo em «Convidar».",
       "sinCreditos": "não há mais créditos na conta do dono do projeto.",
       "interrumpido": "O servidor reiniciou enquanto eu fazia isto, então pode ter ficado pela metade. Confira as alterações e, se precisar, peça de novo pela conversa."
+    },
+    "len": {
+      "titulo": "Escreva para o Len por e-mail",
+      "texto": "O que você enviar para este endereço a partir do e-mail da sua conta, o Len faz neste projeto e responde por e-mail.",
+      "copiar": "Copiar",
+      "copiada": "Copiado",
+      "pie": "Responda a este e-mail para continuar com o Len em {titulo}.",
+      "abrir": "Abrir o projeto",
+      "falloSinMotivo": "Não consegui fazer. Responda a este e-mail para me pedir de novo.",
+      "interrumpido": "O servidor reiniciou enquanto eu fazia isso, então pode ter ficado pela metade. Veja as mudanças e, se precisar, responda a este e-mail para me pedir de novo."
     }
   }
 }

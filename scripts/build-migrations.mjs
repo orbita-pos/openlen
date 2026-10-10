@@ -152,6 +152,8 @@ const targets = [
   // marcadores viejos de `users.agentMemory` / `projects.userBrief`. Aditiva e
   // idempotente (los UPDATE sólo tocan lo que aún lleva el marcador).
   "len-memory-migrate",
+  // Len por correo: los correos a Len, guardados antes de su turno (lenEmailRequests).
+  "len-email-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

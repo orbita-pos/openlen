@@ -13,6 +13,7 @@ import { X } from "lucide-react";
 
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { avisarMiembrosCambiaron } from "./chat/use-gente-del-chat";
+import { copiar } from "./copiar";
 import { ModalShell } from "./modal-shell";
 import { Button } from "./ui";
 
@@ -37,6 +38,8 @@ interface Estado {
   readonly invitaciones?: readonly { email: string; rol: Rol }[];
   readonly tope?: number | null;
   readonly gastoDelMes?: number;
+  /** LEN POR CORREO (lib/len-email): la dirección del proyecto, a quien puede editar. */
+  readonly lenEmail?: string | null;
 }
 
 const MAX_MIEMBROS = 10;
@@ -64,6 +67,7 @@ export function MiembrosDialog({
   const [aviso, setAviso] = useState<{ texto: string; mal: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [tope, setTope] = useState("");
+  const [copiada, setCopiada] = useState(false);
 
   const url = `/api/projects/${encodeURIComponent(projectId)}/miembros`;
   const cargar = useCallback(async () => {
@@ -298,6 +302,34 @@ export function MiembrosDialog({
                   : t("miembros.gastado", { gastado: creditos(estado.gastoDelMes ?? 0) })}
               </p>
             </form>
+          )}
+
+          {estado.lenEmail && (
+            <div className="flex flex-col gap-1.5" data-len-email="">
+              <p className="text-[12.5px] font-medium fg">{t("miembros.len.titulo")}</p>
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={estado.lenEmail}
+                  aria-label={t("miembros.len.titulo")}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="h-8 min-w-0 flex-1 rounded-lg border bd bg-app px-2.5 font-mono text-[12px] fg outline-none"
+                />
+                <Button
+                  variant="outline"
+                  size="md"
+                  onClick={() => {
+                    void copiar(estado.lenEmail!).then((ok) => {
+                      setCopiada(ok);
+                      if (ok) setTimeout(() => setCopiada(false), 1500);
+                    });
+                  }}
+                >
+                  {copiada ? t("miembros.len.copiada") : t("miembros.len.copiar")}
+                </Button>
+              </div>
+              <p className="text-[11.5px] fg-faint">{t("miembros.len.texto")}</p>
+            </div>
           )}
 
           {!esDueno && (

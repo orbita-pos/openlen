@@ -1,0 +1,9 @@
+name = "openlen-len-email"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+OPENLEN_INBOUND_URL = "https://openlen.com/api/len-email/inbound"
+
+# El secreto compartido con el servidor (el mismo LEN_EMAIL_INBOUND_TOKEN):
+#   npx wrangler secret put LEN_EMAIL_INBOUND_TOKEN

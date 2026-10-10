@@ -85,6 +85,9 @@ export default defineConfig({
       "lib/agent/terminal/**/*.test.ts",
       // Buscar y leer en internet (plans/len-agente-2026, F2).
       "lib/agent/web/**/*.test.ts",
+      // Len por correo (infra/len-email-worker/README.md).
+      "lib/len-email/**/*.test.ts",
+      "app/api/len-email/**/*.test.ts",
       // Lo que cambió en el turno, fichero a fichero (la lente «Cambios»).
       "lib/agent/cambios-del-turno.test.ts",
       // `include` es una LISTA BLANCA: un .test.ts fuera de ella NO corre, y

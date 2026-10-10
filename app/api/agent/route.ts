@@ -5,7 +5,7 @@ import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
 import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
-import { registrarCorredorDeTurnos, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
+import { registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -322,7 +322,7 @@ async function correrTurno(
   userId: string,
   body: CuerpoDelTurno | null,
   req: { url: string; signal: AbortSignal },
-  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo } = {},
+  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo; email?: EmailRequest } = {},
 ): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
   // `let`: en una ronda del encargo (pieza 8) el mensaje del turno es el de
@@ -397,6 +397,9 @@ async function correrTurno(
   // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
   // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
   const hiloDelTurno = opts.hilo && (await hiloDelProyecto(projectId, opts.hilo.hiloId).catch(() => null)) ? opts.hilo : null;
+  // LEN POR CORREO (lib/len-email): lo lanza el servidor, igual que un hilo;
+  // al cerrar, lo que Len dijo se le manda por correo a quien escribió.
+  const correoDelTurno = opts.email ?? null;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -884,7 +887,7 @@ async function correrTurno(
     // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
     // Con miembros, lo escrito va con las marcas a mano neutralizadas: el único
     // <asked-by> que vale es el que pone el servidor (como en el binario).
-    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     equipo: compartido,
     history,
     // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
@@ -1204,6 +1207,12 @@ async function correrTurno(
           if (hiloDelTurno) {
             await respuestaDeLen({ projectId, hiloId: hiloDelTurno.hiloId, texto: registro.texto, filaId }).catch((err: unknown) =>
               console.warn("[agent] no se pudo contestar en el hilo", err),
+            );
+          }
+          // Pedido por correo: Len contesta POR CORREO con lo que dijo al cerrar.
+          if (correoDelTurno) {
+            await correoDelTurno.onReply(registro.texto).catch((err: unknown) =>
+              console.warn("[agent] no se pudo contestar por correo", err),
             );
           }
         } else if (filaAbierta) {
@@ -1972,8 +1981,8 @@ function errorJson(status: number, message: string, code?: string): Response {
   return jsonResponse(code ? { error: message, code } : { error: message }, status);
 }
 
-// `@Len` desde un hilo del código: el servidor llama al turno sin la puerta
-// HTTP, como la ronda de un encargo (lib/agent/turnos-desde-el-servidor.ts).
+// `@Len` desde un hilo del código (y un pedido por correo): el servidor llama
+// al turno sin la puerta HTTP, como la ronda de un encargo (lib/agent/turnos-desde-el-servidor.ts).
 registrarCorredorDeTurnos((userId, body, req, opts) =>
   conAutor(userId, () => correrTurno(userId, body as CuerpoDelTurno, req, opts)),
 );
