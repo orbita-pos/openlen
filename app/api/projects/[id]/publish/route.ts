@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
+import { dataChangesErrorBody } from "@/lib/backend/data-changes";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
@@ -33,6 +34,12 @@ export const dynamic = "force-dynamic";
 //   409 taken         — another row already claims this subdomain
 //   422 app_does_not_compile — an app web whose code does not compile; `errors`
 //                      lists file:line — message (spec local 2026-10-07-apps)
+//   422 migration_failed — a migration from the test database fails on production;
+//                      nothing was applied and the release wasn't switched
+//                      (spec local 2026-10-09-borrador-y-produccion-de-datos)
+//   422 migrations_diverged — production has migrations the test database lacks
+//   428 confirmation_required — the publish would delete real data; `destructive`
+//                      lists it and the client resends with `confirmFingerprint`
 //   500 error         — disk write or DB error after validation passed
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -41,6 +48,10 @@ const PublishBodySchema = z.object({
   /** Speak Every Language targets — persisted to the project's settings.
    *  Omitted = keep the stored setting; [] = turn translations off. */
   languages: z.array(z.string().min(2).max(5)).max(9).optional(),
+  /** La huella de los cambios destructivos que el dueño confirmó (428). */
+  confirmFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  /** Primera publicación: producción nace como copia del borrador. */
+  copyDraftData: z.boolean().optional(),
 });
 
 export const POST = paraLaApp(async (
@@ -81,6 +92,7 @@ export const POST = paraLaApp(async (
       userId: acceso.duenoId,
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
+      dataChanges: { mode: "owner", confirmFingerprint: parsed.data.confirmFingerprint, copyDraftData: parsed.data.copyDraftData },
     }));
     return json(result, 200);
   } catch (err) {
@@ -101,6 +113,10 @@ export const POST = paraLaApp(async (
     if (err instanceof AppNoCompilaError) {
       return json({ error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) }, 422);
     }
+    // Los datos (spec local 2026-10-09): una migración que falla en producción,
+    // o lo destructivo sin confirmar.
+    const dataError = dataChangesErrorBody(err);
+    if (dataError) return json(dataError.body, dataError.status);
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);
     return json({ error: "publish_failed" }, 500);

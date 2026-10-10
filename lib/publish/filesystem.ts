@@ -184,6 +184,10 @@ export interface PublishParams {
   app?: AppDeProyecto | null;
   /** Su `import.meta.env` público (`lib/apps/entorno.ts`). */
   entorno?: Readonly<Record<string, string>>;
+  /** Lo último antes de activar la release, con ella YA escrita (spec local
+   *  2026-10-09): las migraciones del borrador a producción. Si lanza, la
+   *  release no se activa y el error sube tal cual. */
+  beforeSwap?: () => Promise<void>;
   /** Site assistant (settings.assistant). When enabled, the visitor-facing
    *  chat widget IIFE is injected before </body> on the root doc AND every
    *  page/locale variant. The owner's business brain never ships — the widget
@@ -1149,6 +1153,8 @@ export async function publishToDir(
       await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     }
   }
+
+  await params.beforeSwap?.();
 
   // Atomically flip the current symlink. symlink(target, current.new) then
   // rename(current.new, current) is atomic across POSIX. We use a relative
