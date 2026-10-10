@@ -103,6 +103,7 @@ import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-edit
 import { useDarkMode } from "@/lib/use-dark-mode";
 import { useEditorSound } from "@/lib/use-editor-sound";
 import { useIsMobile } from "@/components/workspace-v2/use-is-mobile";
+import { useCollapseWhileBlank } from "@/components/workspace-v2/use-collapse-while-blank";
 import { formConfigKey, listSitePages } from "@/lib/projects/site-pages";
 import { esperarAQueSeCalme } from "@/lib/workspace-v2/esperar-a-que-se-calme";
 import {
@@ -936,16 +937,9 @@ function NewV2Inner() {
       pages: loadedProject.pages,
       chatTurns: loadedProject.chatHistory.length,
     });
-  // Con el estado vacío en el centro, la barra lateral va plegada, como iba la
-  // entrada de Crear: el chat todavía no tiene nada que enseñar. Una vez por
-  // proyecto, para que abrirla a mano no se deshaga sola.
-  const blankCollapsedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!proyectoEnBlanco || !loadedProjectId) return;
-    if (blankCollapsedFor.current === loadedProjectId) return;
-    blankCollapsedFor.current = loadedProjectId;
-    setLeftCollapsed(true);
-  }, [proyectoEnBlanco, loadedProjectId]);
+  // Con el estado vacío en el centro, la barra lateral va plegada (una vez por
+  // visita: ver use-collapse-while-blank.ts).
+  useCollapseWhileBlank({ isBlank: proyectoEnBlanco, projectId: loadedProjectId, collapse: () => setLeftCollapsed(true) });
   // ENVIAR DESDE LA ENTRADA. El usuario ya pulsó enviar: el borrador que se
   // manda solo aquí es SU envío, no uno automático. Las fotos se suben antes
   // (Len las recibe por su dirección) y la referencia viaja con el mensaje.
