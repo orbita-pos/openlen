@@ -2103,9 +2103,17 @@ export function useAgentChat({
    *
    * Se consume ANTES de mandar: si `send` tardara o fallara, un borrador sin
    * consumir volvería a dispararse en el siguiente render.
+   *
+   * Y se recuerda el que ya salió hasta que el padre lo consume: en desarrollo
+   * (reactStrictMode) React monta el efecto dos veces con el MISMO borrador, y
+   * el primer mensaje de una app salía dos veces —dos turnos pisándose—.
    */
+  const autoSentDraftRef = useRef<string | null>(null);
   useEffect(() => {
+    if (!pendingDraft) autoSentDraftRef.current = null;
     if (!pendingDraftAutoSend || !pendingDraft) return;
+    if (autoSentDraftRef.current === pendingDraft) return;
+    autoSentDraftRef.current = pendingDraft;
     const texto = pendingDraft;
     const adjuntos = pendingAttachments;
     onPendingDraftConsumed?.();
