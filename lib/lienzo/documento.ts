@@ -18,7 +18,7 @@ import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { sealRelease } from "@/lib/html-engine";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { entradaServida, ficherosDeLaApp, servirFuenteDePagina } from "@/lib/apps/servir";
 import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 
@@ -64,7 +64,8 @@ export function pantallaDe(valor: unknown): string | null {
  * sus mensajes de error enteros son lo que Len necesita leer. El sourcemap va
  * aparte, para traducir las trazas (`traductorDeMapas`): al navegador no se le
  * sirve. Si no compila, la entrada es un módulo que lanza los errores del
- * compilador. Al empaquetador va sólo lo publicable: ni /tests ni /supabase.
+ * compilador. Al empaquetador va sólo lo publicable y `/.env` (lo lee el
+ * compilador para `import.meta.env`): ni /tests ni /supabase.
  *
  * UNA PÁGINA: cada fuente (`.jsx`, `.tsx`, `.ts`) compilado, lo demás tal cual.
  */
@@ -75,10 +76,13 @@ export async function carpetaServida(
 ): Promise<{ files: Record<string, string>; sourceMaps: Record<string, string> }> {
   if (!app) {
     const out: Record<string, string> = {};
-    for (const [ruta, contenido] of Object.entries(files)) out[ruta] = servirFuenteDePagina(ruta, files, entorno) ?? contenido;
+    // `/.env` entra a compilar (`import.meta.env`) pero no se sirve, como en Vite.
+    for (const [ruta, contenido] of Object.entries(files)) {
+      if (isPublishableFolderPath(ruta)) out[ruta] = servirFuenteDePagina(ruta, files, entorno) ?? contenido;
+    }
     return { files: out, sourceMaps: {} };
   }
-  const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isPublishableFolderPath(r)));
+  const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isCompileInputPath(r)));
   const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
   return {
     files: ficherosDeLaApp(publicable, app, entradaServida(app.entrada, paquete)),
@@ -216,7 +220,9 @@ export async function vistaConCarpeta(
     if (entorno) conEntorno = { ...vista, entorno };
   }
   if (!todos) return conEntorno;
-  const files = Object.fromEntries(Object.entries(todos).filter(([ruta]) => isPublishableFolderPath(ruta)));
+  // Lo publicable y `/.env`, que el compilador lee para `import.meta.env`
+  // (spec local 2026-10-10); `carpetaServida` no lo sirve.
+  const files = Object.fromEntries(Object.entries(todos).filter(([ruta]) => isCompileInputPath(ruta)));
   return Object.keys(files).length > 0 ? { ...conEntorno, files } : conEntorno;
 }
 

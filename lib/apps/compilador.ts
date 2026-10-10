@@ -54,6 +54,8 @@ import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // `npm run apps:vendor` (que lo comprueba con `--comprobar`).
 import EXPORTACIONES from "./exportaciones.json";
 import { isTestSupportFile } from "./tests/test-files";
+import { DOTENV_PATH } from "./env/rules";
+import { dotEnvPublicVars } from "./env/dotenv";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
 const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
@@ -72,8 +74,10 @@ export interface ContextoDeCompilacion {
   /** El catálogo de la app (`ProjectData.app.catalogo`), o `null` en una
    *  página: ahí ningún nombre se resuelve. */
   readonly catalogo: string | null;
-  /** Lo que vale `import.meta.env` además de MODE/DEV/PROD. SÓLO valores que
-   *  pueden ir en una página: la URL del backend y su clave publicable. */
+  /** Lo que vale `import.meta.env` además de MODE/DEV/PROD y de lo de `/.env`
+   *  (que se lee de `carpeta`, por DEBAJO de esto): las variables del dueño y
+   *  las de OpenLen (`lib/apps/entorno.ts`). SÓLO valores que pueden ir en una
+   *  página. */
   readonly entorno?: Readonly<Record<string, string>>;
   /** Nombres que se dejan como están aunque no sean del catálogo: los de las
    *  pruebas (`vitest`, Testing Library: `lib/apps/tests/test-kit.ts`). Los
@@ -312,6 +316,14 @@ function mensajeDeNombre(especificador: string, fichero: string, nombre: string,
 const CACHE_MAX = 500;
 const cache = new Map<string, Compilado>();
 
+/** `import.meta.env` sin MODE/DEV/PROD, en el orden de Vite: lo de `/.env`
+ *  debajo, `ctx.entorno` —el entorno del proceso en Vite: el ajuste del dueño y
+ *  lo de OpenLen— encima (spec local 2026-10-10). */
+function effectiveEnv(ctx: ContextoDeCompilacion): Record<string, string> {
+  const dotEnv = ctx.carpeta[DOTENV_PATH];
+  return { ...(dotEnv === undefined ? {} : dotEnvPublicVars(dotEnv)), ...(ctx.entorno ?? {}) };
+}
+
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
   // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
@@ -331,7 +343,7 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update("\0")
     .update(ctx.catalogo ?? "")
     .update("\0")
-    .update(JSON.stringify(ctx.entorno ?? {}))
+    .update(JSON.stringify(effectiveEnv(ctx)))
     .update("\0")
     .update((ctx.extraSpecifiers ?? []).join("\n"))
     .update("\0")
@@ -344,7 +356,7 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
 /** El objeto que sustituye a `import.meta.env`. Siempre el de producción: la
  *  vista y la publicada ejecutan el MISMO código. */
 function objetoEntorno(ctx: ContextoDeCompilacion): string {
-  return JSON.stringify({ ...(ctx.entorno ?? {}), MODE: "production", DEV: false, PROD: true, SSR: false, BASE_URL: "/" });
+  return JSON.stringify({ ...effectiveEnv(ctx), MODE: "production", DEV: false, PROD: true, SSR: false, BASE_URL: "/" });
 }
 
 export function compilarFuente(ruta: string, codigo: string, ctx: ContextoDeCompilacion): Compilado {

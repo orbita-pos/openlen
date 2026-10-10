@@ -19,10 +19,12 @@ import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/op
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
 import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
-import { widgetApiBase } from "@/lib/publish/base-host";
+import { widgetApiBase } from "@/lib/publish/base-host";
+
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
-import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
+import { optOutOfEmailObfuscation } from "@/lib/publish/cloudflare-email";
+
 import {
   annotateLanguageCluster,
   buildRobots,
@@ -40,13 +42,14 @@ import { absolutizeSocialMeta } from "@/lib/branding/social-image";
 import { buildLlmsTxt, pageTitle } from "@/lib/publish/llms-txt";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
-import { isPublishableFolderPath, publishableFolderFiles } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath, isPublishableFolderPath, publishableFolderFiles } from "@/lib/agent/ficheros/folder";
 import { SELF_UNREGISTERING_SW, serviceWorkerPaths } from "@/lib/publish/service-worker";
 import type {
   AppDeProyecto,
   FormConfig,
 } from "@/lib/projects/types";
-import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
+import { AppNoCompilaError, compilarCarpeta, usesTailwindDirectives } from "@/lib/apps/compilador";
+
 import { BUNDLER_DID_NOT_ANSWER, bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { catalogo as catalogoDeApps } from "@/lib/apps/dependencias";
 import { ficherosDeLaApp } from "@/lib/apps/servir";
@@ -440,7 +443,8 @@ interface BakeDocumentCtx {
   /** Site assistant widget config. Absent/disabled = no widget injected. */
   assistant?: AssistantBake;
   /** Collections module. When enabled, the owner's item list is baked as STATIC
-   *  HTML (grid/list of cards) at the placeholder, or appended. */
+   *  HTML (grid/list of cards) at the placeholder, or appended. */
+
   /** WhatsApp button. When enabled with a usable number, a floating FAB is baked
    *  (suppressed if the profile contact widget is already present). */
   /** Pedidos por WhatsApp — cart over the collections buttons. */
@@ -906,8 +910,11 @@ export async function publishToDir(
   // (`lib/apps/compilador.ts`): el de una página, aquí; el de una app, dentro
   // de `bundleApp` (abajo), UNA vez.
   const app = params.app ?? null;
+  // Lo publicable y `/.env` (spec local 2026-10-10): el compilador lo lee para
+  // `import.meta.env`. NO se escribe: lo que llega al disco pasa otra vez por
+  // `publishableFolderFiles` (abajo), que sólo deja la web.
   const carpetaPublicable: Record<string, string> = Object.fromEntries(
-    (params.files ?? []).filter((f) => isPublishableFolderPath(f.path)).map((f) => [f.path, f.content]),
+    (params.files ?? []).filter((f) => isCompileInputPath(f.path)).map((f) => [f.path, f.content]),
   );
   if (app && !catalogoDeApps(app.catalogo)) {
     throw new Error(`publishToDir: la app pide el catálogo ${app.catalogo}, que no existe`);
@@ -958,7 +965,8 @@ export async function publishToDir(
     formConfigs: params.formConfigs,
     analyticsEnabled: params.analyticsEnabled ?? true,
     logoUrl: params.logoUrl,
-    assistant: params.assistant,
+    assistant: params.assistant,
+
     orders: params.orders,
     chat: params.chat,
     fuentesDeClases: fuentesDeClasesDeLaCarpeta(params.files ?? []),

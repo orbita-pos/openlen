@@ -61,6 +61,22 @@ const CARPETA = [
 ];
 
 describe("publicar una app web", () => {
+  it("🔴 /.env: lo suyo va DENTRO del paquete, el entorno (el ajuste) le gana, y el fichero NO se publica", async () => {
+    const carpeta = [
+      ...CARPETA.map((f) =>
+        f.path === "/src/App.tsx"
+          ? { ...f, content: "export default function App() { return <p>{import.meta.env.VITE_A}|{import.meta.env.VITE_B}</p>; }" }
+          : f,
+      ),
+      { path: "/.env", content: "VITE_A=__del_fichero__\nVITE_B=__pisado__\n" },
+    ];
+    await publishToDir({ subdomain: "appconenv", html: CASCARON, files: carpeta, app: APP, entorno: { VITE_B: "__del_ajuste__" } });
+    const main = leer("appconenv", "src/main.jsx");
+    assert.ok(main.includes("__del_fichero__"), "lo de /.env llega");
+    assert.ok(main.includes("__del_ajuste__") && !main.includes("__pisado__"), "el ajuste manda");
+    assert.ok(!existe("appconenv", ".env"), "/.env no se publica");
+  });
+
   it("🔴 la entrada es el PAQUETE de producción: sin JSX, sin tipos, con su entorno y sin un import del catálogo por su nombre", async () => {
     await publishToDir({ subdomain: "appcompilada", html: CASCARON, files: CARPETA, app: APP, entorno: { VITE_SUPABASE_URL: "https://abc.openlen.app" } });
     const main = leer("appcompilada", "src/main.jsx");

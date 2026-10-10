@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { ProjectData } from "@/lib/projects/types";
 import {
   carpetaDeLaVista,
+  carpetaServida,
   documentoDeVista,
   documentoMedible,
   pantallaDe,
@@ -299,5 +300,13 @@ describe("una app en la vista", () => {
     expect(conApp.entorno).toEqual({ VITE_SUPABASE_URL: "https://x.openlen.app" });
     await vistaConCarpeta(ctx(), deps, "p1");
     expect(pedido).toBe(1);
+  });
+  it("🔴 /.env (spec local 2026-10-10): llega a los ojos para compilar, pero no se sirve", async () => {
+    const deps = { projectFiles: async () => ({ "/js/x.ts": "export const a = import.meta.env.VITE_A;", "/.env": "VITE_A=uno", "/tests/a.test.ts": "" }) };
+    const vista = await vistaConCarpeta(ctx(), deps, "p1");
+    expect(Object.keys(vista.files ?? {}).sort()).toEqual(["/.env", "/js/x.ts"]);
+    const servida = await carpetaServida(vista.files!, null);
+    expect(Object.keys(servida.files)).toEqual(["/js/x.ts"]);
+    expect(servida.files["/js/x.ts"]).toContain('"uno"');
   });
 });

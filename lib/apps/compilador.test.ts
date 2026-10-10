@@ -312,6 +312,27 @@ describe("import.meta.env", () => {
     expect(env).toMatchObject({ VITE_SUPABASE_URL: "https://abc.openlen.app", MODE: "production", DEV: false, PROD: true });
   });
 
+  it("🔴 /.env de la carpeta llega, DEBAJO del entorno (el ajuste y OpenLen mandan), y sólo lo VITE_", () => {
+    const f = "export const e = import.meta.env;";
+    const env = (ctx: ContextoDeCompilacion) =>
+      new Function(`return ${ok(compilarFuente("/src/e.ts", f, ctx)).split("\n")[0]!.replace("export const e = ", "").replace(/;$/, "")}`)() as Record<string, unknown>;
+    const carpeta = { "/.env": "VITE_A=del-fichero\nVITE_B=del-fichero\nOTRA=no" };
+    expect(env(app(carpeta))).toMatchObject({ VITE_A: "del-fichero", VITE_B: "del-fichero", MODE: "production" });
+    expect(env(app(carpeta))).not.toHaveProperty("OTRA");
+    expect(env(app(carpeta, { VITE_B: "del-ajuste" }))).toMatchObject({ VITE_A: "del-fichero", VITE_B: "del-ajuste" });
+  });
+
+  it("🔴 cambiar /.env no sirve lo de antes desde la caché", () => {
+    const f = "export const a = import.meta.env.VITE_A;";
+    expect(ok(compilarFuente("/src/a.ts", f, app({ "/.env": "VITE_A=uno" })))).toContain('"uno"');
+    expect(ok(compilarFuente("/src/a.ts", f, app({ "/.env": "VITE_A=dos" })))).toContain('"dos"');
+  });
+
+  it("un módulo de una página también lo lee (mismo compilador)", () => {
+    const js = ok(compilarFuente("/js/x.ts", "export const a = import.meta.env.VITE_A;", { carpeta: { "/.env": "VITE_A=uno" }, catalogo: null }));
+    expect(js).toContain('"uno"');
+  });
+
   it("import.meta.url y el resto de import.meta siguen como están", () => {
     expect(ok(compilarFuente("/src/a.ts", "export const u = import.meta.url;", app({})))).toContain("import.meta.url");
   });
