@@ -51,6 +51,10 @@ describe("una lectura pública de Storage", () => {
     expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/object/public/fotos/a.png"))).toBe(true);
     expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/render/image/public/fotos/a.png", { method: "HEAD" }))).toBe(true);
   });
+  it("una URL firmada (un <img> de un bucket privado) también: el token decide si vale", () => {
+    expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/object/sign/fotos/a.png?token=abc"))).toBe(true);
+    expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/render/image/sign/fotos/a.png?token=abc"))).toBe(true);
+  });
   it("lo demás no", () => {
     expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/object/fotos/a.png"))).toBe(false);
     expect(isPublicObjectRead(new Request("https://x.openlen.app/storage/v1/object/public/fotos/a.png", { method: "POST" }))).toBe(false);

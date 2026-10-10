@@ -49,10 +49,14 @@ export function decideEnvironment(i: {
   return { kind: "env", environment: fallback, attributed: true };
 }
 
-/** Una lectura de un objeto PÚBLICO de Storage: lo único que un `<img>` pide
- *  sin `Origin` (y, desde el lienzo, sin `Referer`). */
+/** Una lectura de Storage que un `<img>` pide sin `Origin` (y, desde el lienzo,
+ *  sin `Referer`): la de un objeto PÚBLICO o la de una URL FIRMADA. La firmada
+ *  sólo vale en el entorno cuyo secreto firmó su token, así que probar el otro
+ *  no abre nada. */
 export function isPublicObjectRead(req: Request): boolean {
   if (req.method !== "GET" && req.method !== "HEAD") return false;
   const p = new URL(req.url).pathname;
-  return p.startsWith("/storage/v1/object/public/") || p.startsWith("/storage/v1/render/image/public/");
+  return ["/storage/v1/object/public/", "/storage/v1/render/image/public/", "/storage/v1/object/sign/", "/storage/v1/render/image/sign/"].some((pre) =>
+    p.startsWith(pre),
+  );
 }
