@@ -240,3 +240,21 @@ describe("crear desde cero vive en la guía de diseño (plans/crear-es-len)", ()
     expect(agents).toContain("an empty /index.html is one");
   });
 });
+
+// Borrador y producción de datos (spec local 2026-10-09): Len trabaja en la
+// base de PRUEBAS y lee producción con `db query --linked`.
+describe("el manual cuenta las dos bases", () => {
+  it("la base de pruebas, db reset y db query --linked", () => {
+    const text = manualSinPartir();
+    expect(text).toContain("supabase db query --linked");
+    expect(text).toContain("TEST database");
+    expect(text).toContain("`supabase db reset` recreates the test database");
+  });
+
+  it("ya no dice que trabaja en la base en vivo", () => {
+    const text = manualSinPartir();
+    expect(text).not.toContain("this is the live database");
+    expect(text).not.toContain("use_page uses this same live database");
+    expect(text).not.toContain("it doesn't create accounts");
+  });
+});
