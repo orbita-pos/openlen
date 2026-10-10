@@ -66,7 +66,8 @@
     "manageProfiles": "Meu negócio",
     "editorSound": "Som do editor",
     "manageSubscription": "Gerenciar assinatura",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "profile": "Seu perfil"
   },
   "relativeTime": {
     "seconds": "há {count}s",
