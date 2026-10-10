@@ -165,6 +165,7 @@
       "conversations": "Unterhaltungen",
       "newChat": "Neu anfangen",
       "newChatHint": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der Seite bleiben.",
+      "newChatHintApp": "Speichert diese Unterhaltung und beginnt eine neue. Len erinnert sich nicht daran; dein Gedächtnis und die Notizen der App bleiben.",
       "busy": "Warte, bis Len fertig ist, um die Unterhaltung zu wechseln.",
       "failed": "Die Unterhaltung konnte nicht gewechselt werden. Versuch es noch einmal.",
       "archived": "Frühere Unterhaltungen",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "Liest deine Seite",
+      "readingApp": "Liest deine App",
       "editing": "Ändert die Seite",
+      "editingApp": "Ändert die App",
       "terminal": "Nutzt das Terminal",
       "photos": "Sucht Fotos",
       "image": "Bearbeitet ein Bild",

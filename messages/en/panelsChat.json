@@ -165,6 +165,7 @@
       "conversations": "Conversations",
       "newChat": "Start over",
       "newChatHint": "Saves this conversation and starts a new one. Len won't remember it; your memory and the page notes stay.",
+      "newChatHintApp": "Saves this conversation and starts a new one. Len won't remember it; your memory and the app notes stay.",
       "busy": "Wait for Len to finish before switching conversations.",
       "failed": "Couldn't switch conversations. Try again.",
       "archived": "Earlier conversations",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "Reading your page",
+      "readingApp": "Reading your app",
       "editing": "Changing the page",
+      "editingApp": "Changing the app",
       "terminal": "Using the terminal",
       "photos": "Looking for photos",
       "image": "Editing an image",
