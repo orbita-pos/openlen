@@ -367,7 +367,7 @@ export function ChatComposer({
         </div>
       </div>
       {debajo}
-      <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t("newChat.composer.disclaimer")}</p>
+      <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>
     </div>
   );
 }

@@ -168,4 +168,10 @@ describe("la caja vacía en una app", () => {
   it("en una página, la de siempre", () => {
     expect(montar().querySelector("textarea")?.getAttribute("placeholder")).toBe("composer.placeholder");
   });
+
+  it("🔴 el aviso de debajo: en una app, «prueba tu app»; en una página, «revisa tu página»", () => {
+    const aviso = (host: HTMLElement) => [...host.querySelectorAll("p")].map((p) => p.textContent).find((x) => x?.startsWith("newChat.composer.disclaimer"));
+    expect(aviso(montar({ esApp: true }))).toBe("newChat.composer.disclaimerApp");
+    expect(aviso(montar())).toBe("newChat.composer.disclaimer");
+  });
 });

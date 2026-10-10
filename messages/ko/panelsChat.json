@@ -185,6 +185,15 @@
         "publish": "내 페이지를 게시해 줘"
       }
     },
+    "emptyApp": {
+      "title": "오늘은 앱에 무엇을 해 볼까요?",
+      "suggestions": {
+        "data": "데이터를 데이터베이스에 저장해 줘",
+        "login": "로그인을 추가해 줘",
+        "mobile": "모바일에서 어떻게 보이는지 확인해 줘",
+        "publish": "내 앱을 게시해 줘"
+      }
+    },
     "steps": {
       "running": "Len이 작업 중",
       "done": "{count, plural, other {Len이 #단계를 진행함}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "이미지 등",
       "on": "켜짐",
-      "disclaimer": "Len도 실수할 수 있습니다. 게시하기 전에 페이지를 확인하세요."
+      "disclaimer": "Len도 실수할 수 있습니다. 게시하기 전에 페이지를 확인하세요.",
+      "disclaimerApp": "Len도 실수할 수 있습니다. 게시하기 전에 앱을 직접 써 보세요."
     },
     "layout": {
       "float": "채팅 분리",

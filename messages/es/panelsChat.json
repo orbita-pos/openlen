@@ -185,6 +185,15 @@
         "publish": "Publica mi página"
       }
     },
+    "emptyApp": {
+      "title": "¿Qué le hacemos hoy a tu app?",
+      "suggestions": {
+        "data": "Guarda los datos en una base de datos",
+        "login": "Añade un inicio de sesión",
+        "mobile": "Revisa cómo se ve en el móvil",
+        "publish": "Publica mi app"
+      }
+    },
     "steps": {
       "running": "Len está trabajando",
       "done": "{count, plural, one {Len hizo # paso} other {Len hizo # pasos}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Imagen y más",
       "on": "Activo",
-      "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla."
+      "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla.",
+      "disclaimerApp": "Len puede equivocarse. Prueba tu app antes de publicarla."
     },
     "layout": {
       "float": "Sacar el chat",

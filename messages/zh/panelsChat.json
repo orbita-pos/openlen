@@ -185,6 +185,15 @@
         "publish": "发布我的页面"
       }
     },
+    "emptyApp": {
+      "title": "今天想给你的应用做点什么？",
+      "suggestions": {
+        "data": "把数据存到数据库里",
+        "login": "添加登录功能",
+        "mobile": "看看在手机上的效果",
+        "publish": "发布我的应用"
+      }
+    },
     "steps": {
       "running": "Len 正在工作",
       "done": "{count, plural, other {Len 完成了 # 个步骤}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "图片等",
       "on": "已开启",
-      "disclaimer": "Len 可能会出错。发布前请检查你的页面。"
+      "disclaimer": "Len 可能会出错。发布前请检查你的页面。",
+      "disclaimerApp": "Len 可能会出错。发布前请先试用你的应用。"
     },
     "layout": {
       "float": "弹出聊天",

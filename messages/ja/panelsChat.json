@@ -185,6 +185,15 @@
         "publish": "ページを公開して"
       }
     },
+    "emptyApp": {
+      "title": "今日はアプリに何をしましょう？",
+      "suggestions": {
+        "data": "データをデータベースに保存して",
+        "login": "ログインを追加して",
+        "mobile": "スマホでの見え方を確認して",
+        "publish": "アプリを公開して"
+      }
+    },
     "steps": {
       "running": "Len が作業中",
       "done": "{count, plural, other {Len が # ステップ実行}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "画像など",
       "on": "オン",
-      "disclaimer": "Len は間違えることがあります。公開する前にページを確認してください。"
+      "disclaimer": "Len は間違えることがあります。公開する前にページを確認してください。",
+      "disclaimerApp": "Len は間違えることがあります。公開する前にアプリを試してください。"
     },
     "layout": {
       "float": "チャットを切り離す",

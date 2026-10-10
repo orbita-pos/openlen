@@ -75,6 +75,8 @@ export interface NewChatPanelProps {
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
+// En una app no hay portada ni formulario de contacto: sus datos y su login.
+const APP_SUGGESTIONS = ["data", "login", "mobile", "publish"] as const;
 
 export function NewChatPanel(props: NewChatPanelProps) {
   const { flatProjectId, onFlatHtmlUpdate, flatProjectPage = null, projectLoading = false } = props;
@@ -366,6 +368,7 @@ function AgentChatView({
           <EmptyState
             disabled={chat.busy}
             sinSugerencias={soloLectura}
+            esApp={esApp}
             onPick={(text) => {
               chat.setDraft(text);
               queueMicrotask(() => chat.taRef.current?.focus());
@@ -611,39 +614,43 @@ function ChatFrame({
   );
 }
 
-function EmptyState({
+export function EmptyState({
   onPick,
   disabled,
   sinSugerencias = false,
+  esApp = false,
 }: {
   onPick: (text: string) => void;
   disabled: boolean;
   /** Un lector no escribe: proponerle qué pedir sería un botón que no lleva a nada. */
   sinSugerencias?: boolean;
+  /** El proyecto es una app: su título y sus sugerencias (el subtítulo es el mismo). */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
+  const title = esApp ? t("newChat.emptyApp.title") : t("newChat.empty.title");
+  const suggestions = esApp
+    ? APP_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyApp.suggestions.${key}`) }))
+    : SUGGESTIONS.map((key) => ({ key, text: t(`newChat.empty.suggestions.${key}`) }));
   return (
     <div className="nc-up my-auto grid justify-items-center gap-2 px-1 py-3 text-center">
       <CaraDeLen estado="reposo" props="compact" className="mb-2.5 h-[84px] w-[84px]" />
       <h2 className="m-0 font-[family-name:var(--font-instrument)] text-[31px] font-normal leading-[1.08] tracking-[-0.01em]">
-        {t("newChat.empty.title")}
+        {title}
       </h2>
       <p className="m-0 text-[13.5px] fg-muted">{t("newChat.empty.subtitle")}</p>
       <div className="mt-[18px] flex flex-wrap justify-center gap-1.5" hidden={sinSugerencias}>
-        {SUGGESTIONS.map((key) => {
-          const text = t(`newChat.empty.suggestions.${key}`);
-          return (
-            <button
-              key={key}
-              type="button"
-              disabled={disabled}
-              onClick={() => onPick(text)}
-              className="rounded-full border bd px-3 py-[5px] text-[12.5px] fg-muted transition hover:border-[color:var(--border-strong)] hover:bg-elev hover:fg disabled:opacity-50"
-            >
-              {text}
-            </button>
-          );
-        })}
+        {suggestions.map(({ key, text }) => (
+          <button
+            key={key}
+            type="button"
+            disabled={disabled}
+            onClick={() => onPick(text)}
+            className="rounded-full border bd px-3 py-[5px] text-[12.5px] fg-muted transition hover:border-[color:var(--border-strong)] hover:bg-elev hover:fg disabled:opacity-50"
+          >
+            {text}
+          </button>
+        ))}
       </div>
     </div>
   );

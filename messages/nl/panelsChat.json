@@ -185,6 +185,15 @@
         "publish": "Publiceer mijn pagina"
       }
     },
+    "emptyApp": {
+      "title": "Wat doen we vandaag met je app?",
+      "suggestions": {
+        "data": "Sla de gegevens op in een database",
+        "login": "Voeg een inlog toe",
+        "mobile": "Bekijk hoe het er op mobiel uitziet",
+        "publish": "Publiceer mijn app"
+      }
+    },
     "steps": {
       "running": "Len is bezig",
       "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}"
@@ -276,7 +285,8 @@
     "composer": {
       "plus": "Afbeelding en meer",
       "on": "Aan",
-      "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert."
+      "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert.",
+      "disclaimerApp": "Len kan zich vergissen. Probeer je app uit voordat je hem publiceert."
     },
     "layout": {
       "float": "Chat losmaken",
