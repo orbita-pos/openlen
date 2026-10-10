@@ -91,4 +91,17 @@ describe.skipIf(!E2E_URL)("db query contra Postgres de verdad", () => {
     const exists = await withAdmin(`ol_${draft.scope}`, (q) => q.query(`select to_regclass('public.atajo') is not null as ok`));
     expect(exists.rows[0]?.ok).toBe(false);
   });
+
+  it("--local NO crea tablas con SELECT … INTO (su etiqueta es SELECT)", async () => {
+    const r = await runDraftQuery(draft, "select total into public.copia from public.ventas");
+    expect(r.kind).toBe("error");
+    if (r.kind === "error") expect(r.message).toMatch(/supabase migration new/);
+    const exists = await withAdmin(`ol_${draft.scope}`, (q) => q.query(`select to_regclass('public.copia') is not null as ok`));
+    expect(exists.rows[0]?.ok).toBe(false);
+  });
+
+  it("--local sigue dejando escribir y leer datos de prueba", async () => {
+    expect((await runDraftQuery(draft, "update public.ventas set total = total + 1")).kind).toBe("command");
+    expect((await runDraftQuery(draft, "select count(*)::int as n from public.ventas")).kind).toBe("rows");
+  });
 });
