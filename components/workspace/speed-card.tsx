@@ -34,9 +34,12 @@ function scoreTone(score: number): string {
 export function SpeedCard({
   projectId,
   active,
+  esApp = false,
 }: {
   projectId: string;
   active: boolean;
+  /** Es una app: «la velocidad de tu app», no «de tu página». */
+  esApp?: boolean;
 }) {
   const t = useTranslations("modalsDomain");
   const [report, setReport] = useState<FlightReport | null>(null);
@@ -89,7 +92,7 @@ export function SpeedCard({
         ) : (
           <>
             <Loader2 size={13} className="shrink-0 animate-spin text-zinc-400" />
-            {t("publish.speedCard.measuring")}
+            {t(esApp ? "publish.speedCard.measuringApp" : "publish.speedCard.measuring")}
           </>
         )}
       </div>
@@ -137,7 +140,7 @@ export function SpeedCard({
         )}
         <div className="min-w-0">
           <div className="text-[12.5px] font-semibold text-zinc-800 dark:text-zinc-200">
-            {t("publish.speedCard.title")}
+            {t(esApp ? "publish.speedCard.titleApp" : "publish.speedCard.title")}
           </div>
           {facts.length > 0 && (
             <div className="text-[11.5px] text-zinc-500 truncate">

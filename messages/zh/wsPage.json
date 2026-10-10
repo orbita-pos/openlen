@@ -58,6 +58,14 @@
       "create_goal": "创建目标",
       "update_goal": "更新目标"
     },
+    "toolApp": {
+      "Read": "正在读取代码",
+      "Edit": "正在编辑代码",
+      "Write": "正在写入代码",
+      "Glob": "正在列出文件",
+      "view_page": "正在查看应用",
+      "use_page": "正在试用应用"
+    },
     "action": {
       "home": "首页",
       "visualOk": "测量范围内无问题",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, other {有 # 张照片上传失败}}，消息将不带照片发送。",
     "publishedTitle": "已发布",
     "publishedBody": "你的页面已上线：{subdomain}.{host}",
+    "publishedBodyApp": "你的应用已上线：{subdomain}.{host}",
     "openSite": "打开站点",
     "unpublishedTitle": "页面已取消发布",
+    "unpublishedTitleApp": "应用已取消发布",
     "unpublishedBody": "该地址已无法访问。",
     "moduleEnabled": "已启用{module}",
     "moduleDisabled": "已停用{module}",

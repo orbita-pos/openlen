@@ -58,6 +58,14 @@
       "create_goal": "Doel aanmaken",
       "update_goal": "Doel bijwerken"
     },
+    "toolApp": {
+      "Read": "De code lezen",
+      "Edit": "De code bewerken",
+      "Write": "Code schrijven",
+      "Glob": "De bestanden opsommen",
+      "view_page": "De app controleren",
+      "use_page": "De app uitproberen"
+    },
     "action": {
       "home": "Home",
       "visualOk": "geen gemeten fouten",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Een foto kon niet worden geüpload} other {# foto's konden niet worden geüpload}} — het bericht gaat zonder.",
     "publishedTitle": "Gepubliceerd",
     "publishedBody": "Je pagina is live op {subdomain}.{host}",
+    "publishedBodyApp": "Je app is live op {subdomain}.{host}",
     "openSite": "Site openen",
     "unpublishedTitle": "Publicatie ongedaan gemaakt",
+    "unpublishedTitleApp": "Publicatie van de app ongedaan gemaakt",
     "unpublishedBody": "De pagina is niet meer bereikbaar op dat adres.",
     "moduleEnabled": "{module} ingeschakeld",
     "moduleDisabled": "{module} uitgeschakeld",

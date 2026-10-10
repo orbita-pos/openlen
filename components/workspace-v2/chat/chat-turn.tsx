@@ -268,7 +268,7 @@ export function LenTurn({
           </span>
         )}
       </div>
-      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} />}
+      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} />}
       {text.length > 0 && (
         <p className="m-0 whitespace-pre-wrap break-words text-[14px] leading-[1.62] fg [text-wrap:pretty]">
           <TextoDeLen texto={text} rutas={paths} onAbrir={openFile} />

@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "Eigen domein",
-      "subtitle": "Serveer deze pagina vanaf je eigen hostnaam"
+      "subtitle": "Serveer deze pagina vanaf je eigen hostnaam",
+      "subtitleApp": "Serveer deze app vanaf je eigen hostnaam"
     },
     "providers": {
       "vercel": "Implementeren naar Vercel",

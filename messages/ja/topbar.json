@@ -29,7 +29,8 @@
     },
     "customDomain": {
       "title": "カスタムドメイン",
-      "subtitle": "このページを独自のホスト名で配信"
+      "subtitle": "このページを独自のホスト名で配信",
+      "subtitleApp": "このアプリを独自のホスト名で配信"
     },
     "providers": {
       "vercel": "Vercel にデプロイ",

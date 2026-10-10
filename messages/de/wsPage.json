@@ -58,6 +58,14 @@
       "create_goal": "Ziel anlegen",
       "update_goal": "Ziel aktualisieren"
     },
+    "toolApp": {
+      "Read": "Code wird gelesen",
+      "Edit": "Code wird bearbeitet",
+      "Write": "Code wird geschrieben",
+      "Glob": "Dateien werden aufgelistet",
+      "view_page": "App wird geprüft",
+      "use_page": "App wird ausprobiert"
+    },
     "action": {
       "home": "Startseite",
       "visualOk": "keine gemessenen Fehler",
@@ -225,8 +233,10 @@
     "photosNotUploaded": "{count, plural, one {Ein Foto konnte nicht hochgeladen werden} other {# Fotos konnten nicht hochgeladen werden}} — die Nachricht geht ohne sie raus.",
     "publishedTitle": "Veröffentlicht",
     "publishedBody": "Deine Seite ist live unter {subdomain}.{host}",
+    "publishedBodyApp": "Deine App ist live unter {subdomain}.{host}",
     "openSite": "Seite öffnen",
     "unpublishedTitle": "Veröffentlichung aufgehoben",
+    "unpublishedTitleApp": "Veröffentlichung der App aufgehoben",
     "unpublishedBody": "Sie ist unter dieser Adresse nicht mehr erreichbar.",
     "moduleEnabled": "{module} aktiviert",
     "moduleDisabled": "{module} deaktiviert",
