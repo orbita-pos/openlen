@@ -51,6 +51,8 @@ export interface TestRun {
 const PLAZO_MS = 115_000;
 /** Lo nuestro: una página bloqueada no puede comerse el comando entero. */
 const POR_FICHERO_MS = 30_000;
+/** El tope del empaquetado de las pruebas (el de `bundle-tests.ts`), o lo que quede del plazo. */
+const TOPE_DEL_PAQUETE_MS = 20_000;
 
 export function findTestFiles(carpeta: Readonly<Record<string, string>>, filters: readonly string[]): string[] {
   const todos = Object.keys(carpeta).filter(isTestFile).sort();
@@ -79,7 +81,16 @@ export async function runAppTests(args: {
   const porFichero = args.perFileMs ?? POR_FICHERO_MS;
   const testFiles = findTestFiles(args.carpeta, args.filters ?? []);
   if (testFiles.length === 0) return { files: [], notRun: [], blocked: [], ms: Date.now() - t0 };
-  const paquete = await bundleAppTests({ carpeta: args.carpeta, app: args.app, ...(args.entorno ? { entorno: args.entorno } : {}), testFiles });
+  // Empaquetar también va dentro del plazo del comando: lo que arrancó el
+  // comando muere con él, como en Claude Code.
+  const paquete = await bundleAppTests({
+    carpeta: args.carpeta,
+    app: args.app,
+    ...(args.entorno ? { entorno: args.entorno } : {}),
+    testFiles,
+    timeoutMs: Math.max(1, Math.min(TOPE_DEL_PAQUETE_MS, plazo - Date.now())),
+  });
+  if (Date.now() >= plazo) return { files: [], notRun: testFiles, blocked: [], ms: Date.now() - t0 };
   if (!paquete) return null;
   const files: TestFileResult[] = paquete.failed.map(({ file, errores }) => ({
     file,
@@ -123,6 +134,12 @@ export async function runAppTests(args: {
           const crudo = (await page.evaluate(() => (globalThis as unknown as { __openlenTestResult: unknown }).__openlenTestResult)) as CrudoFichero;
           files.push(aResultado(crudo, traducir));
         } catch {
+          // Lo cortó el plazo del COMANDO, no el suyo: queda sin correr (vitest,
+          // al morir, no imprime el fichero que estaba corriendo).
+          if (tope < porFichero && Date.now() >= plazo - 50) {
+            notRun.push(file);
+            continue;
+          }
           files.push({
             file,
             tests: [],

@@ -91,6 +91,31 @@ describe("runAppTests", () => {
     expect(r!.blocked).toContain("http://169.254.169.254/latest/meta-data/");
   }, 60_000);
 
+  it("🔴 el empaquetado también va dentro del plazo del comando: si se lo come, nada corre y todo es «sin correr» (el comando se corta), sin lanzar Chromium", async () => {
+    let lanzado = false;
+    const r = await runAppTests({
+      carpeta: { ...FICHEROS, "/src/a.test.jsx": 'it("x", () => expect(1).toBe(1));' },
+      app: APP,
+      deadlineMs: 1,
+      lanzar: async () => {
+        lanzado = true;
+        throw new Error("no debía lanzarse");
+      },
+    });
+    expect(r).toMatchObject({ files: [], notRun: ["/src/a.test.jsx"] });
+    expect(lanzado).toBe(false);
+  });
+
+  it("🔴 el fichero que corría cuando se acabó el plazo del COMANDO no es un fichero roto: queda sin correr (vitest, al morir, no lo imprime)", async () => {
+    const r = await runAppTests({
+      carpeta: { ...FICHEROS, "/src/a.test.jsx": 'it("x", () => expect(1).toBe(1));', "/src/b.test.jsx": 'it("lenta", async () => { await new Promise((r) => setTimeout(r, 60_000)); }, 120_000);' },
+      app: APP,
+      deadlineMs: 15_000,
+    });
+    expect(r!.files.map((f) => f.file)).toEqual(["/src/a.test.jsx"]);
+    expect(r!.notRun).toEqual(["/src/b.test.jsx"]);
+  }, 60_000);
+
   it("sin pruebas: ningún fichero", async () => {
     expect((await runAppTests({ carpeta: { "/src/main.jsx": "" }, app: APP }))!.files).toEqual([]);
   });

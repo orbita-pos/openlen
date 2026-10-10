@@ -76,20 +76,20 @@ describe("TerminalDeLen", () => {
     expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
   }, 20_000);
 
-  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y su texto al pasarse", async () => {
+  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y al pasarse lo de su binario (143, el aviso DELANTE de lo que alcanzó a escribir)", async () => {
     expect([DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS]).toEqual([120_000, 600_000]);
     const { t } = terminal({});
-    const r = await t.ejecutar("sleep 3; echo tarde", { timeoutMs: 1000 });
-    expect(r.stderr).toBe("Command timed out after 1s\n");
-    expect(r.exitCode).toBe(124);
-    expect(r.stdout).not.toContain("tarde");
+    // uRe de Claude Code 2.1.293: `s.stdout = r ? `${w} ${r}` : w` con w = «Command timed out after ${Zt(ms)}», y el código 143 (wot).
+    // Lo que el guion escribió antes no llega: `just-bash` 3.6.0 lo tira al abortar (medido: «bash: execution aborted», stdout vacío).
+    const r = await t.ejecutar("echo antes; sleep 3; echo tarde", { timeoutMs: 1000 });
+    expect([r.stdout, r.stderr, r.exitCode]).toEqual(["Command timed out after 1s", "", 143]);
     expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
   }, 30_000);
 
-  it("lo que no vuelve se corta DESDE FUERA: código 124, aviso de reinicio y terminal nueva con los ficheros de ahora", async () => {
+  it("lo que no vuelve se corta DESDE FUERA: código 143, el aviso, el de reinicio y terminal nueva con los ficheros de ahora", async () => {
     const { t, cargas } = terminal({ limiteMs: 10_000, margenMs: -9_700 });
     const r = await t.ejecutar("sleep 5");
-    expect(r.exitCode).toBe(124);
+    expect([r.stdout, r.stderr, r.exitCode]).toEqual(["Command timed out after 10s", "", 143]);
     expect(r.reiniciada).toBe(AVISO_DE_REINICIO);
     expect(r.ficheros).toBeNull();
     const despues = await t.ejecutar("cat /AGENTS.md");
@@ -435,6 +435,18 @@ describe("TerminalDeLen", () => {
       await t2.ejecutar("npm run build");
       expect(l2.map((l) => l.program)).toEqual(["build"]);
     }, 30_000);
+
+    it("🔴 npm test que se queda sin tiempo corta el COMANDO entero, como Claude Code mata a vitest: lo que imprimió, el aviso delante y 143; lo de detrás no corre", async () => {
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: async () => ({ stdout: "\n RUN  v4.1.11 /\n\n ✓ src/a.test.js (1 test) 2ms\n", stderr: "", exitCode: 143, timedOut: true }),
+        },
+      });
+      const r = await t.ejecutar("npm test; echo despues", { timeoutMs: 5_000 });
+      expect(r.stdout).toBe("Command timed out after 5s \n RUN  v4.1.11 /\n\n ✓ src/a.test.js (1 test) 2ms\n");
+      expect(r.exitCode).toBe(143);
+    }, 20_000);
 
     it("npm install -D vitest y lo del kit: ya están; jsdom no hace falta", async () => {
       const { t } = conApp();

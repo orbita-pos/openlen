@@ -88,7 +88,13 @@ export class TerminalDeLen {
           ficheros: Readonly<Record<string, string>>,
           /** Lo que le queda al comando que lo pidió. */
           timeLeftMs?: number,
-        ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+        ) => Promise<{
+          stdout: string;
+          stderr: string;
+          exitCode: number;
+          /** Se acabó el tiempo del comando: se corta ENTERO, como en Claude Code. */
+          timedOut?: true;
+        }>;
       };
       readonly limiteMs?: number;
       readonly margenMs?: number;
@@ -236,9 +242,10 @@ export class TerminalDeLen {
       if (!(e instanceof CorteDuro)) throw e;
       await this.cerrar();
       return {
-        stdout: "",
-        stderr: `Command timed out after ${formatDuration(tope)}\n`,
-        exitCode: 124,
+        // Como Claude Code (uRe, binario 2.1.293): el aviso y el 143 de SIGTERM.
+        stdout: `Command timed out after ${formatDuration(tope)}`,
+        stderr: "",
+        exitCode: 143,
         ficheros: null,
         reiniciada: AVISO_DE_REINICIO,
       };
