@@ -20,6 +20,7 @@ import {
   X,
 } from "./icons";
 import { CodeView } from "./code-view";
+import { TestDataBadge } from "./test-data-badge";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
 import { FileDiff, Maximize, Terminal as TerminalIcon } from "lucide-react";
 import { TerminalView } from "./terminal-view";
@@ -112,6 +113,9 @@ interface PreviewAreaProps {
    *  corriendo, sin edición visual; la lente Código va la primera, y si el
    *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
   esApp?: boolean;
+  /** El proyecto tiene base de datos: el lienzo usa la de PRUEBA (spec local
+   *  2026-10-09), y se dice para que nadie confunda lo que ve con lo real. */
+  usesTestData?: boolean;
   /** Toggles inspect mode from the preview toolbar. Omitted (e.g. in
    *  template-preview) hides the toolbar button. */
   onToggleInspect?: () => void;
@@ -256,6 +260,7 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   esApp = false,
+  usesTestData = false,
   onToggleInspect,
   insertRequest = null,
   removeRequest = null,
@@ -889,7 +894,10 @@ export function PreviewArea({
             controles de abajo ya dicen: el ancho lo elige el dispositivo y el
             zoom lo elige el zoom. Un dato que repite al control que tiene al
             lado no informa, sólo llena. */}
-        <div className="min-w-0 px-2">{addressBar}</div>
+        <div className="flex min-w-0 items-center gap-2 px-2">
+          {addressBar}
+          <TestDataBadge show={usesTestData && lente === "pagina"} />
+        </div>
 
         {/* LAS ACCIONES. Editar y Refrescar actúan sobre el LIENZO —el lápiz
             enciende la edición dentro del iframe, Refrescar lo remonta— así que

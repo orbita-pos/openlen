@@ -3633,6 +3633,7 @@ function NewV2Inner() {
                 inspectMode={inspectMode}
                 onToggleInspect={esApp ? undefined : toggleInspect}
                 esApp={esApp}
+                usesTestData={hasDatabase}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}
                 dropEnabled={dropEnabled}

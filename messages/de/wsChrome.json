@@ -281,7 +281,9 @@
         "mencionado": "Du wurdest hier erwähnt",
         "trabajando": "Len ist dran …"
       }
-    }
+    },
+    "testData": "Testdaten",
+    "testDataHint": "Die Leinwand nutzt Testdaten; echte Daten nutzt nur die veröffentlichte Seite."
   },
   "placeholder": {
     "ai": {

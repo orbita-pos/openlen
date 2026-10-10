@@ -281,7 +281,9 @@
         "mencionado": "有人在这里提到了你",
         "trabajando": "Len 正在处理……"
       }
-    }
+    },
+    "testData": "测试数据",
+    "testDataHint": "画布使用测试数据；真实数据只有已发布的网站使用。"
   },
   "placeholder": {
     "ai": {

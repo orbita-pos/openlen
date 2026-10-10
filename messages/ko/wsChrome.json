@@ -281,7 +281,9 @@
         "mencionado": "여기서 언급되었습니다",
         "trabajando": "Len이 작업 중…"
       }
-    }
+    },
+    "testData": "테스트 데이터",
+    "testDataHint": "캔버스는 테스트 데이터를 사용합니다. 실제 데이터는 게시된 사이트만 사용합니다."
   },
   "placeholder": {
     "ai": {
