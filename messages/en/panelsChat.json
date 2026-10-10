@@ -73,6 +73,7 @@
     "image": "Image:",
     "removeImage": "Remove attached image",
     "placeholder": "Describe how your page should look or read…",
+    "placeholderApp": "Describe what your app should do or how it should look…",
     "placeholderScoped": "Change the selected {target}…",
     "attachImage": "Attach an image",
     "attachImageTitle": "Attach an image to insert into the page",

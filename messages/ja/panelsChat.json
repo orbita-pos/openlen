@@ -73,6 +73,7 @@
     "image": "画像：",
     "removeImage": "添付した画像を削除",
     "placeholder": "ページの見た目や文章をどうしたいか説明してください…",
+    "placeholderApp": "アプリに何をさせたいか、どんな見た目にしたいか説明してください…",
     "placeholderScoped": "選択した{target}を変更…",
     "attachImage": "画像を添付",
     "attachImageTitle": "ページに挿入する画像を添付します",

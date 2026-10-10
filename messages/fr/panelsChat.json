@@ -73,6 +73,7 @@
     "image": "Image :",
     "removeImage": "Retirer l'image jointe",
     "placeholder": "Décrivez l'apparence ou le contenu souhaité de votre page…",
+    "placeholderApp": "Décrivez ce que votre app doit faire ou à quoi elle doit ressembler…",
     "placeholderScoped": "Modifier le {target} sélectionné…",
     "attachImage": "Joindre une image",
     "attachImageTitle": "Joindre une image à insérer dans la page",

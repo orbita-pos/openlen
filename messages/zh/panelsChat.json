@@ -73,6 +73,7 @@
     "image": "图片：",
     "removeImage": "移除已附加的图片",
     "placeholder": "描述你的页面应该长什么样、读起来如何…",
+    "placeholderApp": "描述你的应用应该做什么、长什么样…",
     "placeholderScoped": "修改选中的{target}…",
     "attachImage": "附加图片",
     "attachImageTitle": "附加一张图片，插入到页面中",

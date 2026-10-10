@@ -57,6 +57,7 @@ export function ChatComposer({
   debajo,
   etiquetaEnviar,
   placeholder,
+  esApp = false,
   mencionables,
   bloqueado = false,
 }: {
@@ -99,6 +100,8 @@ export function ChatComposer({
   etiquetaEnviar?: string;
   /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
   placeholder?: string;
+  /** El proyecto es una app: la caja vacía habla de la app, no de «tu página». */
+  esApp?: boolean;
   /** EL CHAT DEL EQUIPO: con gente, «@» sugiere a Len (si puede) y a cada
    *  persona, y las menciones se ven en su color dentro de la caja, como en los
    *  hilos del código. Sin esto, la caja de siempre. */
@@ -191,7 +194,7 @@ export function ChatComposer({
                 ? t("newChat.goal.placeholder")
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
-                : (placeholder ?? t("composer.placeholder")),
+                : (placeholder ?? t(esApp ? "composer.placeholderApp" : "composer.placeholder")),
             style: { minHeight: 44 },
           };
           // UNA sola caja, con o sin gente: si la gente llega mientras se

@@ -73,6 +73,7 @@
     "image": "Afbeelding:",
     "removeImage": "Bijgevoegde afbeelding verwijderen",
     "placeholder": "Beschrijf hoe je pagina eruit moet zien of moet lezen…",
+    "placeholderApp": "Beschrijf wat je app moet doen of hoe hij eruit moet zien…",
     "placeholderScoped": "Wijzig de geselecteerde {target}…",
     "attachImage": "Een afbeelding bijvoegen",
     "attachImageTitle": "Voeg een afbeelding toe om in de pagina in te voegen",
