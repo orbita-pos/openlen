@@ -88,6 +88,22 @@ describe("la tarjeta de publicar con datos", () => {
     expect(text()).toContain("Borra la columna descuento de ventas (1240 valores)");
   });
 
+  it("con UNO, en singular: «1 valor», no «1 valores»", async () => {
+    await render({
+      ...BASE,
+      cambiosDeDatos: {
+        kind: "pending",
+        migrations: ["3_quitar"],
+        destructive: [
+          { kind: "drop_column", table: "productos", column: "categoria", count: 1 },
+          { kind: "drop_table", table: "viejos", count: 1 },
+        ],
+      },
+    });
+    expect(text()).toContain("Borra la columna categoria de productos (1 valor)");
+    expect(text()).toContain("Borra la tabla viejos (1 fila)");
+  });
+
   it("428: la confirmación roja, y «Publicar igual» manda la huella", async () => {
     stubFetch((_c, n) =>
       n === 1
