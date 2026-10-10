@@ -396,7 +396,9 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
 
   // De atrás hacia delante: reescribir uno no mueve las posiciones de los anteriores.
   for (const imp of [...imports].reverse()) {
-    if (imp.type !== "static" && imp.type !== "dynamic") continue;
+    // `export * from "./x"` es su propio tipo en el lexer ("reexport-star"):
+    // sin él, el fichero barril llegaba al empaquetador sin resolver.
+    if (imp.type !== "static" && imp.type !== "dynamic" && imp.type !== "reexport-star") continue;
     const especificador = imp.specifier;
     // `import(variable)`: no se puede resolver aquí; el navegador dirá.
     if (typeof especificador !== "string") continue;
