@@ -25,8 +25,8 @@ import {
 import { planFromDb, type Plan } from "@/lib/plan";
 export type { Plan };
 
-// Tunable agent-seat caps per plan. Max = Pro (lib/plan.ts).
-export const AGENT_LIMITS: Record<Plan, number> = { free: 0, pro: 3, max: 3 };
+// Tunable agent-seat caps per plan. Max and Ultra = Pro (lib/plan.ts).
+export const AGENT_LIMITS: Record<Plan, number> = { free: 0, pro: 3, max: 3, ultra: 3 };
 
 export interface LimitWindow {
   /** Sliding window in milliseconds (e.g. 60 * 60 * 1000 for 1 hour). */
@@ -75,6 +75,10 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],
   },
   max: {
+    generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
+    regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
+    ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],
+  },  ultra: {
     generate: [{ windowMs: HOUR, max: 30, label: "hourly" }],
     regen: [{ windowMs: HOUR, max: 60, label: "hourly" }],
     ingest: [{ windowMs: HOUR, max: 60, label: "hourly" }],

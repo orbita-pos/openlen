@@ -197,7 +197,7 @@
       "cta": "Zu Pro wechseln",
       "features": {
         "0": "Alles aus Kostenlos",
-        "1": "{credits} Credits im Monat",
+        "1": "{credits, number} Credits im Monat",
         "2": "Deine eigene Domain (deinbusiness.com)",
         "3": "Analytics über 90 Tage hinaus",
         "4": "Bevorzugter E-Mail-Support"
@@ -210,7 +210,18 @@
       "cta": "Zu Max wechseln",
       "features": {
         "0": "Alles aus Pro",
-        "1": "{credits} Credits im Monat – {times, number}× Pro",
+        "1": "{credits, number} Credits im Monat – {times, number}× Pro",
+        "2": "Ein günstigerer Credit: {cents, number} ¢ statt {proCents, number} ¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/Monat",
+      "blurb": "Für Agenturen und Teams, bei denen Len den ganzen Tag arbeitet.",
+      "cta": "Zu Ultra wechseln",
+      "features": {
+        "0": "Alles aus Max",
+        "1": "{credits, number} Credits im Monat – {times, number}× Pro",
         "2": "Der günstigste Credit: {cents, number} ¢ statt {proCents, number} ¢"
       }
     },

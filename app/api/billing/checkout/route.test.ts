@@ -1,4 +1,4 @@
-// El checkout, con dos planes de pago (04/10: Pro $9.99 y Max $19.99).
+// El checkout, con tres planes de pago (04/10: Pro $9.99 y Max $19.99; 09/10: Ultra $99.99).
 //
 // - Lee `plan=max` (la portada ya lo mandaba y nadie lo leía: «Pásate a Max»
 //   vendía Pro).
@@ -10,7 +10,7 @@ import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(async () => ({ user: { id: "u1", email: "ana@tiendaluna.mx" } })),
-  plan: { value: "free" as "free" | "pro" | "max" },
+  plan: { value: "free" as "free" | "pro" | "max" | "ultra" },
   createCheckout: vi.fn(async (_o: { plan?: string }) => "https://polar.sh/checkout/x"),
   createCustomerPortalUrl: vi.fn(async (_id: string) => "https://polar.sh/portal/x"),
 }));
@@ -37,6 +37,11 @@ describe("GET /api/billing/checkout", () => {
     const res = await get("plan=max&locale=es");
     expect(mocks.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", plan: "max" }));
     expect(res.headers.get("location")).toBe("https://polar.sh/checkout/x");
+  });
+
+  it("🔴 plan=ultra abre el checkout de Ultra", async () => {
+    await get("plan=ultra&locale=es");
+    expect(mocks.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", plan: "ultra" }));
   });
 
   it("sin plan, o con uno que no existe, es Pro", async () => {

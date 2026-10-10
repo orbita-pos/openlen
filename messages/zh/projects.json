@@ -39,6 +39,7 @@
     "freePlan": "免费版",
     "proPlan": "Pro 版",
     "maxPlan": "Max 版",
+    "ultraPlan": "Ultra 版",
     "creditsLeft": "{count, plural, one {剩余 # 积分} other {剩余 # 积分}}",
     "dismiss": "关闭"
   },

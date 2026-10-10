@@ -110,16 +110,29 @@ describe("applySubscriptionState", () => {
 // mismo que un Pro nuevo) sigue siendo Pro sin que el código lo distinga.
 describe("planForProduct", () => {
   const prev = process.env.POLAR_PRODUCT_MAX_ID;
+  const prevUltra = process.env.POLAR_PRODUCT_ULTRA_ID;
   beforeEach(() => {
     process.env.POLAR_PRODUCT_MAX_ID = "prod_max";
+    process.env.POLAR_PRODUCT_ULTRA_ID = "prod_ultra";
   });
   afterEach(() => {
     if (prev === undefined) delete process.env.POLAR_PRODUCT_MAX_ID;
     else process.env.POLAR_PRODUCT_MAX_ID = prev;
+    if (prevUltra === undefined) delete process.env.POLAR_PRODUCT_ULTRA_ID;
+    else process.env.POLAR_PRODUCT_ULTRA_ID = prevUltra;
   });
 
   it("🔴 el producto de Max es Max", () => {
     expect(planForProduct("prod_max")).toBe("max");
+  });
+
+  it("🔴 el producto de Ultra es Ultra", () => {
+    expect(planForProduct("prod_ultra")).toBe("ultra");
+  });
+
+  it("sin el producto de Ultra configurado, nada se lee como Ultra", () => {
+    delete process.env.POLAR_PRODUCT_ULTRA_ID;
+    expect(planForProduct("prod_ultra")).toBe("pro");
   });
 
   it("cualquier otro producto es Pro (el de $10 y el de $3.99)", () => {
@@ -188,6 +201,7 @@ describe("createCheckout por plan", () => {
     process.env.POLAR_ACCESS_TOKEN = "polar_tok";
     process.env.POLAR_PRODUCT_PRO_ID = "prod_pro";
     process.env.POLAR_PRODUCT_MAX_ID = "prod_max";
+    process.env.POLAR_PRODUCT_ULTRA_ID = "prod_ultra";
     fetchMock.mockReset();
     fetchMock.mockImplementation(async () => new Response(JSON.stringify({ url: "https://polar.sh/checkout/x" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -209,6 +223,18 @@ describe("createCheckout por plan", () => {
     fetchMock.mockClear();
     await createCheckout({ userId: "u1", plan: "pro" });
     expect(productos()).toEqual(["prod_pro"]);
+  });
+
+  it("🔴 plan ultra abre el producto de Ultra, y la vuelta lo dice", async () => {
+    await createCheckout({ userId: "u1", plan: "ultra" });
+    expect(productos()).toEqual(["prod_ultra"]);
+    expect(new URL(JSON.parse(fetchMock.mock.calls[0][1].body as string).success_url).searchParams.get("upgraded")).toBe("ultra");
+  });
+
+  it("Ultra sin su producto configurado falla, no vende Pro en su lugar", async () => {
+    delete process.env.POLAR_PRODUCT_ULTRA_ID;
+    await expect(createCheckout({ userId: "u1", plan: "ultra" })).rejects.toThrow("not_configured");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("Max sin su producto configurado falla, no vende Pro en su lugar", async () => {

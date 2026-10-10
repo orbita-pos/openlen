@@ -197,7 +197,7 @@
       "cta": "Passa a Pro",
       "features": {
         "0": "Tutto ciò che c'è in Free",
-        "1": "{credits} crediti al mese",
+        "1": "{credits, number} crediti al mese",
         "2": "Il tuo dominio (latuaattivita.com)",
         "3": "Statistiche oltre i 90 giorni",
         "4": "Supporto email prioritario"
@@ -210,7 +210,18 @@
       "cta": "Passa a Max",
       "features": {
         "0": "Tutto ciò che c’è in Pro",
-        "1": "{credits} crediti al mese — {times, number}× Pro",
+        "1": "{credits, number} crediti al mese — {times, number}× Pro",
+        "2": "Un credito più economico: {cents, number}¢ invece di {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/mese",
+      "blurb": "Per agenzie e team che fanno lavorare Len tutto il giorno.",
+      "cta": "Passa a Ultra",
+      "features": {
+        "0": "Tutto ciò che c’è in Max",
+        "1": "{credits, number} crediti al mese — {times, number}× Pro",
         "2": "Il credito più economico: {cents, number}¢ invece di {proCents, number}¢"
       }
     },

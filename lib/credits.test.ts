@@ -500,6 +500,24 @@ describe("los créditos de los planes de pago, contra la portada", () => {
     expect((CREDITS_BY_PLAN as Record<string, number>).max).toBe(MAX_CREDITS * CENTICREDITOS_POR_CREDITO);
   });
 
+  it("🔴 Ultra también", async () => {
+    const { ULTRA_CREDITS } = await import("@/lib/marketing/plan-price");
+    expect((CREDITS_BY_PLAN as Record<string, number>).ultra).toBe(ULTRA_CREDITS * CENTICREDITOS_POR_CREDITO);
+  });
+
+  it("🔴 cada plan da más créditos que el de abajo, y cada crédito sale más barato", async () => {
+    const pp = await import("@/lib/marketing/plan-price");
+    const planes = [
+      [pp.PRO_PRICE, pp.PRO_CREDITS],
+      [pp.MAX_PRICE, pp.MAX_CREDITS],
+      [pp.ULTRA_PRICE, pp.ULTRA_CREDITS],
+    ] as const;
+    for (let i = 1; i < planes.length; i++) {
+      expect(planes[i][1]).toBeGreaterThan(planes[i - 1][1]);
+      expect(planes[i][0] / planes[i][1]).toBeLessThan(planes[i - 1][0] / planes[i - 1][1]);
+    }
+  });
+
   it("🔴 un Max que recarga recibe los créditos de Max, no los de Gratis", async () => {
     const now = new Date("2026-10-10T12:00:00.000Z");
     vi.setSystemTime(now);

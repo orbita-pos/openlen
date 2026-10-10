@@ -18,7 +18,7 @@ export async function listPaidUsers(): Promise<PaidUser[]> {
       subscriptionId: schema.users.polarSubscriptionId,
     })
     .from(schema.users)
-    .where(and(inArray(schema.users.plan, ["pro", "max"]), isNotNull(schema.users.polarSubscriptionId)));
+    .where(and(inArray(schema.users.plan, ["pro", "max", "ultra"]), isNotNull(schema.users.polarSubscriptionId)));
   if (rows.length === 0) return [];
 
   const avisos = await db

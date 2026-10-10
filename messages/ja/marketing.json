@@ -197,7 +197,7 @@
       "cta": "Proにする",
       "features": {
         "0": "Free のすべて",
-        "1": "毎月{credits}クレジット",
+        "1": "毎月{credits, number}クレジット",
         "2": "独自ドメイン（yourbusiness.com）",
         "3": "90日を超えるアナリティクス",
         "4": "優先メールサポート"
@@ -210,7 +210,18 @@
       "cta": "Maxにする",
       "features": {
         "0": "Pro のすべて",
-        "1": "毎月{credits}クレジット — Proの{times, number}倍",
+        "1": "毎月{credits, number}クレジット — Proの{times, number}倍",
+        "2": "より安いクレジット：{proCents, number}¢ではなく{cents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/月",
+      "blurb": "一日中Lenに仕事を任せるエージェンシーやチームに。",
+      "cta": "Ultraにする",
+      "features": {
+        "0": "Max のすべて",
+        "1": "毎月{credits, number}クレジット — Proの{times, number}倍",
         "2": "最安のクレジット：{proCents, number}¢ではなく{cents, number}¢"
       }
     },

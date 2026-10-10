@@ -39,6 +39,7 @@
     "freePlan": "Free plan",
     "proPlan": "Pro plan",
     "maxPlan": "Max plan",
+    "ultraPlan": "Ultra plan",
     "creditsLeft": "{count, plural, one {# credit left} other {# credits left}}",
     "dismiss": "Dismiss"
   },

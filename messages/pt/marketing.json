@@ -197,7 +197,7 @@
       "cta": "Assinar o Pro",
       "features": {
         "0": "Tudo do Grátis",
-        "1": "{credits} créditos por mês",
+        "1": "{credits, number} créditos por mês",
         "2": "Seu próprio domínio (seunegocio.com)",
         "3": "Análises além de 90 dias",
         "4": "Suporte prioritário por e-mail"
@@ -210,7 +210,18 @@
       "cta": "Assinar o Max",
       "features": {
         "0": "Tudo do Pro",
-        "1": "{credits} créditos por mês — {times, number}× o Pro",
+        "1": "{credits, number} créditos por mês — {times, number}× o Pro",
+        "2": "Um crédito mais barato: {cents, number}¢ em vez de {proCents, number}¢"
+      }
+    },
+    "ultra": {
+      "name": "Ultra",
+      "suffix": "/mês",
+      "blurb": "Para agências e equipes que deixam o Len trabalhando o dia todo.",
+      "cta": "Assinar o Ultra",
+      "features": {
+        "0": "Tudo do Max",
+        "1": "{credits, number} créditos por mês — {times, number}× o Pro",
         "2": "O crédito mais barato: {cents, number}¢ em vez de {proCents, number}¢"
       }
     },
