@@ -9,7 +9,7 @@
 //
 // Las rutas: app/api/projects/[id]/backend/** (lib/backend/dashboard.ts).
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -35,8 +35,20 @@ type Overview =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "unavailable" | "none" }
-  | { readonly status: "empty"; readonly url: string }
-  | { readonly status: "ready"; readonly url: string; readonly tables: readonly TableInfo[] };
+  | { readonly status: "empty"; readonly url: string; readonly environment?: PanelEnv; readonly hasLive?: boolean }
+  | { readonly status: "ready"; readonly url: string; readonly tables: readonly TableInfo[]; readonly environment?: PanelEnv; readonly hasLive?: boolean };
+
+/** Qué datos mira el panel (spec local 2026-10-09): los de prueba o los reales.
+ *  null = lo que elija el servidor (reales si los hay). */
+type PanelEnv = "draft" | "live";
+const PanelEnvContext = createContext<PanelEnv | null>(null);
+
+/** La URL con `env=` delante de lo que ya llevara; sin entorno, tal cual. */
+function withEnv(url: string, env: PanelEnv | null): string {
+  if (!env) return url;
+  const i = url.indexOf("?");
+  return i < 0 ? `${url}?env=${env}` : `${url.slice(0, i)}?env=${env}&${url.slice(i + 1)}`;
+}
 
 const PAGE_SIZE = 50;
 
@@ -57,6 +69,13 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
   const [tab, setTab] = useState<"tables" | "users" | "storage">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
+  // El entorno que pide el selector; el que se ve es el que contestó el servidor.
+  const [wanted, setWanted] = useState<PanelEnv | null>(null);
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    setWanted(null);
+  }, [projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) {
@@ -65,15 +84,32 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     }
     setOverview({ status: "loading" });
     try {
-      setOverview(await call<Overview>(`/api/projects/${projectId}/backend`));
+      setOverview(await call<Overview>(withEnv(`/api/projects/${projectId}/backend`, wanted)));
     } catch (e) {
       setOverview({ status: "error", message: errorText(e) });
     }
-  }, [projectId]);
+  }, [projectId, wanted]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
+  const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
+
+  const resetDraft = useCallback(async () => {
+    if (!projectId || !window.confirm(t("env.resetConfirm"))) return;
+    setResetting(true);
+    try {
+      await call(`/api/projects/${projectId}/backend/reset`, { method: "POST" });
+    } catch (e) {
+      setOverview({ status: "error", message: errorText(e) });
+      return;
+    } finally {
+      setResetting(false);
+    }
+    await load();
+  }, [projectId, load, t]);
 
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-app text-zinc-900 dark:text-zinc-100">
@@ -94,6 +130,38 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             <RefreshCw size={15} />
           </button>
         </div>
+        {shown && (
+          <div className="flex flex-wrap items-center gap-2 px-3 pt-2 sm:px-5">
+            <div role="tablist" aria-label={t("env.test")} className="inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-900">
+              {(["draft", "live"] as const).map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  role="tab"
+                  aria-selected={shown === e}
+                  onClick={() => setWanted(e)}
+                  className={`rounded-md px-2.5 py-1 text-[12px] font-medium transition ${
+                    shown === e
+                      ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
+                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  {e === "draft" ? t("env.test") : t("env.real")}
+                </button>
+              ))}
+            </div>
+            {shown === "draft" && overview.status === "ready" && (
+              <button
+                type="button"
+                onClick={() => void resetDraft()}
+                disabled={resetting}
+                className="ml-auto text-[12px] font-medium text-zinc-500 hover:text-zinc-800 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                {t("env.reset")}
+              </button>
+            )}
+          </div>
+        )}
         {overview.status === "ready" ? (
           <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
             <TabButton active={tab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
@@ -122,7 +190,15 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("unavailable.body")}</p>
           </Centered>
         )}
-        {(overview.status === "none" || overview.status === "empty") && (
+        {overview.status === "empty" && shown === "live" && hasLive === false && (
+          <Centered>
+            <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
+              <Database size={20} />
+            </span>
+            <p className="max-w-sm text-[13px] text-zinc-500">{t("env.noLive")}</p>
+          </Centered>
+        )}
+        {(overview.status === "none" || (overview.status === "empty" && !(shown === "live" && hasLive === false))) && (
           <Centered>
             <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
               <Database size={20} />
@@ -132,13 +208,16 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
           </Centered>
         )}
         {overview.status === "ready" && projectId && (
-          tab === "tables" ? (
-            <TablesTab projectId={projectId} tables={overview.tables} />
-          ) : tab === "users" ? (
-            <UsersTab projectId={projectId} />
-          ) : (
-            <StorageTab projectId={projectId} />
-          )
+          // Un entorno nuevo vuelve a montar las pestañas: piden sus datos otra vez.
+          <PanelEnvContext.Provider key={shown ?? "default"} value={shown}>
+            {tab === "tables" ? (
+              <TablesTab projectId={projectId} tables={overview.tables} />
+            ) : tab === "users" ? (
+              <UsersTab projectId={projectId} />
+            ) : (
+              <StorageTab projectId={projectId} />
+            )}
+          </PanelEnvContext.Provider>
         )}
       </div>
     </section>
@@ -289,6 +368,7 @@ const writable = (c: ColumnInfo) => c.identity !== "always" && !c.generated;
 function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo }) {
   const t = useTranslations("wsChrome.database.tables");
   const base = `/api/projects/${projectId}/backend/tables/${encodeURIComponent(table.name)}`;
+  const env = useContext(PanelEnvContext);
   const editable = table.primaryKey.length > 0;
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<{ rows: Row[]; total: number } | null>(null);
@@ -300,11 +380,11 @@ function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo })
   const load = useCallback(async () => {
     setError(null);
     try {
-      setData(await call<{ rows: Row[]; total: number }>(`${base}?offset=${offset}&limit=${PAGE_SIZE}`));
+      setData(await call<{ rows: Row[]; total: number }>(withEnv(`${base}?offset=${offset}&limit=${PAGE_SIZE}`, env)));
     } catch (e) {
       setError(errorText(e));
     }
-  }, [base, offset]);
+  }, [base, offset, env]);
 
   useEffect(() => {
     void load();
@@ -328,7 +408,7 @@ function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo })
     run(async () => {
       if (!editing || !data) return;
       const column = table.columns.find((c) => c.name === editing.column)!;
-      const { row } = await call<{ row: Row }>(base, {
+      const { row } = await call<{ row: Row }>(withEnv(base, env), {
         method: "PATCH",
         body: JSON.stringify({ key: keyOf(data.rows[editing.row]!), values: { [column.name]: parseInput(column, editing.value) } }),
       });
@@ -345,14 +425,14 @@ function RowsGrid({ projectId, table }: { projectId: string; table: TableInfo })
         // Vacío = que Postgres ponga su valor por defecto (o NULL).
         if (text !== "") values[c.name] = parseInput(c, text);
       }
-      await call(base, { method: "POST", body: JSON.stringify({ values }) });
+      await call(withEnv(base, env), { method: "POST", body: JSON.stringify({ values }) });
       setDraft(null);
       await load();
     });
 
   const removeRow = (row: Row) =>
     run(async () => {
-      await call(base, { method: "DELETE", body: JSON.stringify({ key: keyOf(row) }) });
+      await call(withEnv(base, env), { method: "DELETE", body: JSON.stringify({ key: keyOf(row) }) });
       await load();
     });
 
@@ -509,6 +589,7 @@ function UsersTab({ projectId }: { projectId: string }) {
   const tDb = useTranslations("wsChrome.database");
   const locale = useLocale();
   const base = `/api/projects/${projectId}/backend/users`;
+  const env = useContext(PanelEnvContext);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ users: PanelUser[]; total: number } | null>(null);
   const [email, setEmail] = useState("");
@@ -520,11 +601,11 @@ function UsersTab({ projectId }: { projectId: string }) {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setData(await call<{ users: PanelUser[]; total: number }>(`${base}?page=${page}`));
+      setData(await call<{ users: PanelUser[]; total: number }>(withEnv(`${base}?page=${page}`, env)));
     } catch (e) {
       setError(errorText(e));
     }
-  }, [base, page]);
+  }, [base, page, env]);
 
   useEffect(() => {
     void load();
@@ -547,7 +628,7 @@ function UsersTab({ projectId }: { projectId: string }) {
   const invite = () =>
     run(async () => {
       const to = email.trim();
-      await call(base, { method: "POST", body: JSON.stringify({ email: to }) });
+      await call(withEnv(base, env), { method: "POST", body: JSON.stringify({ email: to }) });
       setEmail("");
       return t("inviteSent", { email: to });
     });
@@ -559,6 +640,7 @@ function UsersTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex-1 min-w-0 flex flex-col">
+      {env === "draft" && <p className="border-b border-zinc-200 px-4 py-2 text-[12px] text-zinc-500 dark:border-zinc-800">{tDb("env.testMails")}</p>}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -625,7 +707,7 @@ function UsersTab({ projectId }: { projectId: string }) {
                         disabled={busy}
                         onConfirm={() =>
                           void run(async () => {
-                            await call(`${base}/${u.id}?only=sessions`, { method: "DELETE" });
+                            await call(withEnv(`${base}/${u.id}?only=sessions`, env), { method: "DELETE" });
                             return t("signedOut", { email: u.email ?? "" });
                           })
                         }
@@ -637,7 +719,7 @@ function UsersTab({ projectId }: { projectId: string }) {
                         disabled={busy}
                         onConfirm={() =>
                           void run(async () => {
-                            await call(`${base}/${u.id}`, { method: "DELETE" });
+                            await call(withEnv(`${base}/${u.id}`, env), { method: "DELETE" });
                             return t("deleted", { email: u.email ?? "" });
                           })
                         }
@@ -691,6 +773,7 @@ function StorageTab({ projectId }: { projectId: string }) {
   const bytes = useBytes();
   const when = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }), [locale]);
   const base = `/api/projects/${projectId}/backend/storage`;
+  const env = useContext(PanelEnvContext);
   const [buckets, setBuckets] = useState<readonly PanelBucket[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [files, setFiles] = useState<readonly PanelFile[] | null>(null);
@@ -701,23 +784,23 @@ function StorageTab({ projectId }: { projectId: string }) {
   const loadBuckets = useCallback(async () => {
     setError(null);
     try {
-      const r = await call<{ buckets: PanelBucket[] }>(base);
+      const r = await call<{ buckets: PanelBucket[] }>(withEnv(base, env));
       setBuckets(r.buckets);
       setSelected((s) => (s && r.buckets.some((b) => b.id === s) ? s : (r.buckets[0]?.id ?? null)));
     } catch (e) {
       setError(errorText(e));
     }
-  }, [base]);
+  }, [base, env]);
 
   const loadFiles = useCallback(async () => {
     if (!selected) return;
     setFiles(null);
     try {
-      setFiles((await call<{ files: PanelFile[] }>(`${base}?bucket=${encodeURIComponent(selected)}`)).files);
+      setFiles((await call<{ files: PanelFile[] }>(withEnv(`${base}?bucket=${encodeURIComponent(selected)}`, env))).files);
     } catch (e) {
       setError(errorText(e));
     }
-  }, [base, selected]);
+  }, [base, selected, env]);
 
   useEffect(() => {
     void loadBuckets();
@@ -732,7 +815,7 @@ function StorageTab({ projectId }: { projectId: string }) {
     setError(null);
     setNotice(null);
     try {
-      await call(base, { method: "DELETE", body: JSON.stringify({ bucket: selected, name }) });
+      await call(withEnv(base, env), { method: "DELETE", body: JSON.stringify({ bucket: selected, name }) });
       setNotice(t("deleted", { name }));
       await Promise.all([loadBuckets(), loadFiles()]);
     } catch (e) {

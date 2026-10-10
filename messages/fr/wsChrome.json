@@ -520,6 +520,14 @@
       "delete": "Supprimer le fichier",
       "confirm": "Sûr ?",
       "deleted": "{name} supprimé"
+    },
+    "env": {
+      "test": "Données de test",
+      "real": "Données réelles",
+      "reset": "Réinitialiser les données de test",
+      "resetConfirm": "Effacer les données de test et les reconstruire à partir des migrations ?",
+      "noLive": "Pas encore de données réelles : elles commencent à la publication.",
+      "testMails": "Les données de test n'envoient pas d'e-mails : les nouveaux comptes sont confirmés automatiquement."
     }
   }
 }

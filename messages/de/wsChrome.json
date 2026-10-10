@@ -520,6 +520,14 @@
       "delete": "Datei löschen",
       "confirm": "Sicher?",
       "deleted": "{name} gelöscht"
+    },
+    "env": {
+      "test": "Testdaten",
+      "real": "Echte Daten",
+      "reset": "Testdaten zurücksetzen",
+      "resetConfirm": "Testdaten löschen und aus den Migrationen neu aufbauen?",
+      "noLive": "Noch keine echten Daten: Sie beginnen beim Veröffentlichen.",
+      "testMails": "Testdaten senden keine E-Mails: Neue Konten werden automatisch bestätigt."
     }
   }
 }

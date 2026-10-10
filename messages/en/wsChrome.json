@@ -520,6 +520,14 @@
       "delete": "Delete file",
       "confirm": "Sure?",
       "deleted": "{name} deleted"
+    },
+    "env": {
+      "test": "Test data",
+      "real": "Real data",
+      "reset": "Reset test data",
+      "resetConfirm": "Erase the test data and rebuild it from the migrations?",
+      "noLive": "No real data yet: it starts when you publish.",
+      "testMails": "Test data doesn't send emails: new accounts are confirmed automatically."
     }
   }
 }

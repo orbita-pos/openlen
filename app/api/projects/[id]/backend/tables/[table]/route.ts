@@ -9,7 +9,7 @@
 // Un error de Postgres vuelve como 400 { error } con su mensaje.
 
 import { deleteRow, insertRow, readRows, updateRow } from "@/lib/backend/dashboard";
-import { json, notReady, objectBody, ownedBackend, tableParam } from "@/lib/backend/owner-access";
+import { environmentFromRequest, json, notReady, objectBody, ownedBackend, tableParam } from "@/lib/backend/owner-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typ
 
 export async function GET(req: Request, ctx: Ctx): Promise<Response> {
   const { id, table } = await ctx.params;
-  const ob = await ownedBackend(id);
+  const ob = await ownedBackend(id, environmentFromRequest(req));
   if (ob.kind !== "ready") return notReady(ob);
   const u = new URL(req.url);
   return answer(
@@ -34,7 +34,7 @@ export async function GET(req: Request, ctx: Ctx): Promise<Response> {
 
 export async function POST(req: Request, ctx: Ctx): Promise<Response> {
   const { id, table } = await ctx.params;
-  const ob = await ownedBackend(id);
+  const ob = await ownedBackend(id, environmentFromRequest(req));
   if (ob.kind !== "ready") return notReady(ob);
   const body = await objectBody(req);
   if (!body || !isObject(body.values)) return json({ error: "values must be an object" }, 400);
@@ -43,7 +43,7 @@ export async function POST(req: Request, ctx: Ctx): Promise<Response> {
 
 export async function PATCH(req: Request, ctx: Ctx): Promise<Response> {
   const { id, table } = await ctx.params;
-  const ob = await ownedBackend(id);
+  const ob = await ownedBackend(id, environmentFromRequest(req));
   if (ob.kind !== "ready") return notReady(ob);
   const body = await objectBody(req);
   if (!body || !isObject(body.key) || !isObject(body.values)) return json({ error: "key and values must be objects" }, 400);
@@ -52,7 +52,7 @@ export async function PATCH(req: Request, ctx: Ctx): Promise<Response> {
 
 export async function DELETE(req: Request, ctx: Ctx): Promise<Response> {
   const { id, table } = await ctx.params;
-  const ob = await ownedBackend(id);
+  const ob = await ownedBackend(id, environmentFromRequest(req));
   if (ob.kind !== "ready") return notReady(ob);
   const body = await objectBody(req);
   if (!body || !isObject(body.key)) return json({ error: "key must be an object" }, 400);
