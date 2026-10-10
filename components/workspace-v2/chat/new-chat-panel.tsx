@@ -345,6 +345,7 @@ function AgentChatView({
         onClose={onClose}
         closeLabel={tSidebar("sidebar.collapsePanel")}
         relativeTime={relativeTime}
+        esApp={esApp}
       />
       {equipo.compartido && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
@@ -404,6 +405,7 @@ function AgentChatView({
                 onDismissQuestion={(id) => void chat.dismissQuestion(id)}
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
+                esApp={esApp}
               />
             </div>
             ),
@@ -411,7 +413,7 @@ function AgentChatView({
         )}
       </div>
       <div className="relative z-[2] shrink-0 px-3 pb-3 pt-1">
-        <LiveBar status={status} onStop={chat.handleCancel} />
+        <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} />
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
         {chat.goalOffered && (
           <GoalCardView

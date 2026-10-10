@@ -12,10 +12,25 @@ import { useLocale, useTranslations } from "next-intl";
 import { Square } from "lucide-react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
-import { isRunning, retryPhase, type LiveStatus } from "./live-status";
+import { isRunning, retryPhase, type Activity, type LiveStatus } from "./live-status";
 
-export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => void }) {
+export function LiveBar({
+  status,
+  onStop,
+  esApp = false,
+}: {
+  status: LiveStatus;
+  onStop: () => void;
+  /** El proyecto es una app: lo que nombra la página («Leyendo tu página») nombra la app. */
+  esApp?: boolean;
+}) {
   const t = useTranslations("panelsChat");
+  const activityLabel = (a: Activity) =>
+    esApp && a === "reading"
+      ? t("newChat.activity.readingApp")
+      : esApp && a === "editing"
+        ? t("newChat.activity.editingApp")
+        : t(`newChat.activity.${a}`);
   const locale = useLocale();
   // «1,7k caracteres» en español, «1.7k chars» en inglés: el número en el
   // idioma de quien lee (el chat de hoy lo escribía siempre con punto).
@@ -66,7 +81,7 @@ export function LiveBar({ status, onStop }: { status: LiveStatus; onStop: () => 
       // número cambia con cada trozo; para él sigue siendo «Escribiendo».
       verb =
         status.activity
-          ? t(`newChat.activity.${status.activity}`)
+          ? activityLabel(status.activity)
           : status.streamedChars
             ? t("streaming.writingPage", { chars: charsLabel(status.streamedChars) })
             : t("newChat.live.writing");

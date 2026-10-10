@@ -14,6 +14,16 @@ import { EmptyState } from "./new-chat-panel";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// jsdom no tiene matchMedia; la cara de Len pregunta por el movimiento reducido.
+window.matchMedia = ((query: string) => ({
+  matches: false,
+  media: query,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+})) as unknown as typeof window.matchMedia;
+
 const roots: Root[] = [];
 afterEach(() => {
   for (const r of roots.splice(0)) act(() => r.unmount());

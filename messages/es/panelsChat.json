@@ -165,6 +165,7 @@
       "conversations": "Charlas",
       "newChat": "Empezar de cero",
       "newChatHint": "Guarda esta charla y empieza otra. Len no la recordará; tu memoria y las notas de la página se quedan.",
+      "newChatHintApp": "Guarda esta charla y empieza otra. Len no la recordará; tu memoria y las notas de la app se quedan.",
       "busy": "Espera a que Len termine para cambiar de charla.",
       "failed": "No se pudo cambiar de charla. Inténtalo otra vez.",
       "archived": "Charlas anteriores",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "Leyendo tu página",
+      "readingApp": "Leyendo tu app",
       "editing": "Cambiando la página",
+      "editingApp": "Cambiando la app",
       "terminal": "Usando la terminal",
       "photos": "Buscando fotos",
       "image": "Editando una imagen",

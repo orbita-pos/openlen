@@ -165,6 +165,7 @@
       "conversations": "Conversazioni",
       "newChat": "Ricomincia da capo",
       "newChatHint": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note della pagina restano.",
+      "newChatHintApp": "Salva questa conversazione e ne inizia un'altra. Len non la ricorderà; la tua memoria e le note dell'app restano.",
       "busy": "Aspetta che Len finisca per cambiare conversazione.",
       "failed": "Impossibile cambiare conversazione. Riprova.",
       "archived": "Conversazioni precedenti",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "Legge la tua pagina",
+      "readingApp": "Legge la tua app",
       "editing": "Modifica la pagina",
+      "editingApp": "Modifica l'app",
       "terminal": "Usa il terminale",
       "photos": "Cerca foto",
       "image": "Modifica un'immagine",

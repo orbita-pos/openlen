@@ -165,6 +165,7 @@
       "conversations": "Gesprekken",
       "newChat": "Opnieuw beginnen",
       "newChatHint": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de pagina blijven.",
+      "newChatHintApp": "Bewaart dit gesprek en begint een nieuw. Len onthoudt het niet; je geheugen en de notities van de app blijven.",
       "busy": "Wacht tot Len klaar is om van gesprek te wisselen.",
       "failed": "Kon niet van gesprek wisselen. Probeer het opnieuw.",
       "archived": "Eerdere gesprekken",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "Leest je pagina",
+      "readingApp": "Leest je app",
       "editing": "Past de pagina aan",
+      "editingApp": "Past de app aan",
       "terminal": "Gebruikt de terminal",
       "photos": "Zoekt foto's",
       "image": "Bewerkt een afbeelding",

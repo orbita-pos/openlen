@@ -189,6 +189,7 @@ export function LenTurn({
   onDismissQuestion,
   onRate,
   onClearRate,
+  esApp = false,
 }: {
   turn: DesignTurn;
   /** El turno siguiente, si lo hay: su mensaje es la respuesta a una pregunta. */
@@ -211,6 +212,8 @@ export function LenTurn({
   /** Devuelve si el servidor guardó el voto: «Gracias» sólo entonces. */
   onRate: (rating: "up" | "down", reasons?: readonly FeedbackReason[], note?: string | null) => Promise<boolean>;
   onClearRate: () => Promise<boolean>;
+  /** El proyecto es una app (ver `ChangesCard`). */
+  esApp?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   // LAS RUTAS DE ESTE TURNO ABREN SU FICHERO (la #9): las de sus pasos y las que
@@ -298,7 +301,7 @@ export function LenTurn({
           mira, no sólo que empezara en ella (N33). La pastilla de arriba sí va
           por dónde empezó. */}
       {showChanges && !turn.noDocChange && (
-        <ChangesCard turn={turn} projectId={projectId} samePage={samePage && wroteOnlyItsOwnPage(turn)} />
+        <ChangesCard turn={turn} projectId={projectId} samePage={samePage && wroteOnlyItsOwnPage(turn)} esApp={esApp} />
       )}
       {turn.confirm && (
         <AgentConfirmCard

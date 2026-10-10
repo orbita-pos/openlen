@@ -165,6 +165,7 @@
       "conversations": "对话",
       "newChat": "重新开始",
       "newChatHint": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和页面备注会保留。",
+      "newChatHintApp": "保存这段对话并开始新的对话。Len 不会记得它；你的记忆和应用备注会保留。",
       "busy": "请等 Len 完成后再切换对话。",
       "failed": "无法切换对话，请重试。",
       "archived": "之前的对话",
@@ -200,7 +201,9 @@
     },
     "activity": {
       "reading": "正在阅读你的页面",
+      "readingApp": "正在阅读你的应用",
       "editing": "正在修改页面",
+      "editingApp": "正在修改应用",
       "terminal": "正在使用终端",
       "photos": "正在找照片",
       "image": "正在编辑图片",
