@@ -61,16 +61,17 @@ export function appToolsFor(
         // Su `import.meta.env` (la URL y la clave publicable de su backend), como en los ojos.
         const entorno = session.projectId && deps.entornoDeLaApp ? await deps.entornoDeLaApp(session.projectId).catch(() => null) : null;
         // A `testApp` van TODOS los ficheros, no sólo los publicables: una prueba puede vivir en /tests.
-        // Dentro del tiempo de SU comando (120 s por defecto, el de Claude Code), con 5 s para devolver el informe.
+        // Dentro del tiempo de SU comando (120 s por defecto, el de Claude Code), con 1 s para devolver
+        // lo impreso: si no acaba, el comando se corta como cuando Claude Code mata a vitest.
         const r = await deps.testApp(ficheros, app, {
           filters,
-          deadlineMs: Math.max(1_000, timeLeftMs - 5_000),
+          deadlineMs: Math.max(1, timeLeftMs - 1_000),
           ...(testNamePattern ? { testNamePattern } : {}),
           ...(entorno ? { entorno } : {}),
         });
         if (!r) return { stdout: "", stderr: "vitest: didn't finish in time; try again.\n", exitCode: 1 };
-        const { stdout, exitCode } = formatVitestReport(r, ficheros);
-        return { stdout, stderr: "", exitCode };
+        const { stdout, exitCode, timedOut } = formatVitestReport(r, ficheros);
+        return { stdout, stderr: "", exitCode, ...(timedOut ? { timedOut } : {}) };
       }
       const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
       if (program === "build") {

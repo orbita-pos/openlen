@@ -125,6 +125,26 @@ describe("las pruebas de una app (plan 04, tarea 9)", () => {
     expect(r.typescript).toEqual([]);
   });
 
+  it("y ESLint lo revisa como el `eslint .` de Lovable (sólo ignoran dist): su vite.config.ts de siempre no da nada", () => {
+    const r = checkApp({
+      files: {
+        "/vite.config.ts": [
+          'import { defineConfig } from "vite";',
+          'import react from "@vitejs/plugin-react-swc";',
+          'import path from "path";',
+          'import { componentTagger } from "lovable-tagger";',
+          "export default defineConfig(({ mode }) => ({",
+          '  server: { host: "::", port: 8080 },',
+          '  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),',
+          '  resolve: { alias: { "@": path.resolve(__dirname, "./src") } },',
+          "}));",
+        ].join("\n"),
+      },
+      typesPack: { ...TIPOS, ...kit() },
+    });
+    expect([...r.typescript, ...r.eslint]).toEqual([]);
+  });
+
   it("los tipos de React los pone el catálogo: el kit no los trae (no pisa los suyos)", () => {
     expect(Object.keys(kit()).filter((f) => /^\/node_modules\/(@types\/react|react|react-dom|csstype)\//.test(f))).toEqual([]);
   });

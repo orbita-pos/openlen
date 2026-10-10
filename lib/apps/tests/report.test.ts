@@ -92,10 +92,24 @@ describe("formatVitestReport", () => {
     expect(r.exitCode).toBe(1);
   });
 
-  it("lo que no corrió por el plazo y lo que cortó el guardia se dicen al final", () => {
-    const r = formatVitestReport({ ...RUN, files: [RUN.files[0]!], notRun: ["/src/lento.test.js"], blocked: ["https://example.com/x"] }, {});
-    expect(r.stdout).toContain("\nNot run (the command's time ran out; run them on their own, like npx vitest run <file>, or give bash a longer timeout): src/lento.test.js\n");
+  it("lo que cortó el guardia se dice al final", () => {
+    const r = formatVitestReport({ ...RUN, files: [RUN.files[0]!], blocked: ["https://example.com/x"] }, {});
     expect(r.stdout).toContain("\nBlocked network requests (tests run in a sandboxed browser): https://example.com/x\n");
-    expect(r.exitCode).toBe(1);
+    expect(r.exitCode).toBe(0);
+  });
+
+  it("🔴 sin tiempo para todo: lo que vitest imprime hasta que lo matan (la cabecera y los ficheros acabados), sin resumen; timedOut", () => {
+    const r = formatVitestReport({ ...RUN, files: [RUN.files[0]!], notRun: ["/src/lento.test.js"] }, {});
+    expect(r).toEqual({ stdout: "\n RUN  v4.1.11 /\n\n ✓ src/ok.test.js (1 test) 2ms\n", exitCode: 143, timedOut: true });
+  });
+
+  it("🔴 un fichero con todo saltado (-t que no casa) va con ↓ y sin ms, y cuenta como skipped; sale con 0 (medido en vitest 2.1.9)", () => {
+    const saltado = (file: string, n: number) => ({ file, ms: 1, fileError: null, unhandled: [], tests: Array.from({ length: n }, (_, i) => ({ name: [`t${i}`], state: "skip" as const, ms: 0, error: null })) });
+    const nada = formatVitestReport({ ms: 5, notRun: [], blocked: [], files: [saltado("/src/b.test.js", 1), saltado("/src/a.test.js", 2)] }, {}, new Date(2026, 9, 9, 17, 4, 24));
+    expect(nada.stdout).toContain(" ↓ src/b.test.js (1 test | 1 skipped)\n ↓ src/a.test.js (2 tests | 2 skipped)\n\n Test Files  2 skipped (2)\n      Tests  3 skipped (3)\n");
+    expect(nada.exitCode).toBe(0);
+    const parte = formatVitestReport({ ms: 5, notRun: [], blocked: [], files: [saltado("/src/b.test.js", 1), { ...RUN.files[0]!, tests: [...RUN.files[0]!.tests, { name: ["y"], state: "skip", ms: 0, error: null }] }] }, {});
+    expect(parte.stdout).toContain(" ↓ src/b.test.js (1 test | 1 skipped)\n ✓ src/ok.test.js (2 tests | 1 skipped) 2ms\n");
+    expect(parte.stdout).toContain(" Test Files  1 passed | 1 skipped (2)\n      Tests  1 passed | 2 skipped (3)\n");
   });
 });

@@ -35,7 +35,7 @@ describe("npm test (plan 04, tarea 8)", () => {
     )!;
     const r = await tools.run("test", ["run", "carrito", "-t", "suma", "--reporter=verbose"], { "/src/main.jsx": "x", "/supabase/x.sql": "y" }, 120_000);
     // El plazo: lo que le queda al comando, menos 5 s para devolver el informe.
-    expect(pedidos).toEqual([{ filters: ["carrito"], testNamePattern: "suma", deadlineMs: 115_000 }]);
+    expect(pedidos).toEqual([{ filters: ["carrito"], testNamePattern: "suma", deadlineMs: 119_000 }]);
     expect(r).toEqual({ stdout: "\nNo test files found, exiting with code 1\n\ninclude: **/*.{test,spec}.?(c|m)[jt]s?(x)\n", stderr: "", exitCode: 1 });
   });
 
@@ -52,6 +52,23 @@ describe("npm test (plan 04, tarea 8)", () => {
     await tools.run("test", [], { "/src/main.jsx": "x", "/tests/a.test.js": "t" }, 120_000);
     expect(vistos[0]!.o.entorno).toEqual({ VITE_SUPABASE_URL: "https://p1.example" });
     expect(Object.keys(vistos[0]!.f).sort()).toEqual(["/src/main.jsx", "/tests/a.test.js"]);
+  });
+
+  it("🔴 test que se queda sin tiempo: lo que vitest habría impreso hasta ahí, y el comando se corta (timedOut, 143)", async () => {
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never,
+      {
+        checkApp: async () => null,
+        testApp: async () => ({
+          files: [{ file: "/src/a.test.js", ms: 2, fileError: null, unhandled: [], tests: [{ name: ["x"], state: "pass", ms: 1, error: null }] }],
+          notRun: ["/src/b.test.js"],
+          blocked: [],
+          ms: 3,
+        }),
+      } as never,
+    )!;
+    const r = await tools.run("test", [], { "/src/a.test.js": "", "/src/b.test.js": "" }, 10_000);
+    expect(r).toEqual({ stdout: "\n RUN  v4.1.11 /\n\n ✓ src/a.test.js (1 test) 2ms\n", stderr: "", exitCode: 143, timedOut: true });
   });
 
   it("test: lo que no hay, lo dice (--coverage, --watch, -u)", async () => {
