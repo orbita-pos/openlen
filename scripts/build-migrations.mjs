@@ -154,6 +154,12 @@ const targets = [
   "len-memory-migrate",
   // Len por correo: los correos a Len, guardados antes de su turno (lenEmailRequests).
   "len-email-migrate",
+  // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
+  // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
+  // después de `pages-backend-migrate` porque lee projectBackends. 🔴
+  // OBLIGATORIA antes que el código: lib/backend/registry.ts y environments.ts
+  // la leen para dar con la base de cada página.
+  "backend-environments-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
