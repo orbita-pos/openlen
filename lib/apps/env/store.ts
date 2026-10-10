@@ -22,15 +22,18 @@ export type ReplaceEnvVarsResult =
   | { readonly ok: false; readonly reason: "conflict"; readonly vars: EnvVarRow[] }
   | { readonly ok: false; readonly reason: "invalid"; readonly problems: EnvVarProblem[] };
 
-const t = schema.projectEnvVars;
-const COLUMNS = { name: t.name, target: t.target, value: t.value, updatedAt: t.updatedAt, updatedBy: t.updatedBy };
+// El esquema se lee al llamar, no al importar: este módulo llega por
+// `lib/apps/entorno.ts` a rutas cuyas pruebas simulan `@/lib/db` sin esta tabla.
+const columns = (t: typeof schema.projectEnvVars) => ({ name: t.name, target: t.target, value: t.value, updatedAt: t.updatedAt, updatedBy: t.updatedBy });
 const rowKey = (v: StoredEnvVar) => `${v.target}\u0000${v.name}\u0000${v.value}`;
 
 export async function listEnvVars(projectId: string): Promise<EnvVarRow[]> {
-  return db.select(COLUMNS).from(t).where(eq(t.projectId, projectId)).orderBy(asc(t.name), asc(t.target));
+  const t = schema.projectEnvVars;
+  return db.select(columns(t)).from(t).where(eq(t.projectId, projectId)).orderBy(asc(t.name), asc(t.target));
 }
 
 export async function envVarsFor(projectId: string, target: EnvTarget): Promise<Record<string, string>> {
+  const t = schema.projectEnvVars;
   const rows = await db
     .select({ name: t.name, value: t.value })
     .from(t)
@@ -56,6 +59,7 @@ export async function replaceEnvVars(args: {
   readonly version: string;
   readonly vars: readonly EnvVarInput[];
 }): Promise<ReplaceEnvVarsResult> {
+  const t = schema.projectEnvVars;
   return db.transaction(async (tx): Promise<ReplaceEnvVarsResult> => {
     const [project] = await tx
       .select({ id: schema.projects.id })
@@ -64,7 +68,7 @@ export async function replaceEnvVars(args: {
       .limit(1)
       .for("update");
     if (!project) return { ok: false, reason: "not_found" };
-    const read = () => tx.select(COLUMNS).from(t).where(eq(t.projectId, args.projectId)).orderBy(asc(t.name), asc(t.target));
+    const read = () => tx.select(columns(t)).from(t).where(eq(t.projectId, args.projectId)).orderBy(asc(t.name), asc(t.target));
     const current = await read();
     if (envVersionOf(current) !== args.version) return { ok: false, reason: "conflict", vars: current };
     const problems = validateEnvVars(args.vars, current);

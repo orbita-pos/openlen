@@ -20,6 +20,8 @@ import {
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
+import { envVarsFor } from "@/lib/apps/env/store";
+import { envHashOf } from "@/lib/apps/env/hash";
 import { dropPageDatabases, pageDatabaseScopes } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
@@ -142,6 +144,10 @@ export function computeUnpublishedChanges(row: {
    *  ahora y en la última publicación (`folderFingerprint`). Ausentes = nulas. */
   filesHash?: string | null;
   publishedFilesHash?: string | null;
+  /** LAS VARIABLES DE ENTORNO (spec local 2026-10-10): la huella de las de
+   *  producción ahora y en la última publicación. Ausentes = nulas. */
+  envHash?: string | null;
+  publishedEnvHash?: string | null;
   data: ProjectData | null;
   currentHtml: string;
 }): boolean {
@@ -150,6 +156,9 @@ export function computeUnpublishedChanges(row: {
   // ninguna página se mueva. Sin carpeta, las dos son nulas y nada cambia.
   // Va antes que la fecha: con huellas distintas hay deriva demostrada.
   if ((row.filesHash ?? null) !== (row.publishedFilesHash ?? null) && row.publishedAt !== null) return true;
+  // LAS VARIABLES: una de producción cambiada (o borrada) tras publicar va
+  // dentro del paquete de la release de antes. Las de borrador no cuentan.
+  if ((row.envHash ?? null) !== (row.publishedEnvHash ?? null) && row.publishedAt !== null) return true;
   // 🔴 SIN HUELLA, LO QUE MANDA ES LA FECHA. `publishedHtml` nulo significa una
   // de dos cosas, y no dan la misma respuesta:
   //
@@ -191,6 +200,8 @@ export async function leerCambiosSinPublicar(projectId: string, userId: string):
       publishedPagesHash: schema.projects.publishedPagesHash,
       filesHash: schema.projects.filesHash,
       publishedFilesHash: schema.projects.publishedFilesHash,
+      envHash: schema.projects.envHash,
+      publishedEnvHash: schema.projects.publishedEnvHash,
       data: schema.projects.data,
     })
     .from(schema.projects)
@@ -401,6 +412,8 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
       publishedPagesHash: schema.projects.publishedPagesHash,
       filesHash: schema.projects.filesHash,
       publishedFilesHash: schema.projects.publishedFilesHash,
+      envHash: schema.projects.envHash,
+      publishedEnvHash: schema.projects.publishedEnvHash,
       data: schema.projects.data,
       // ¿Tiene conversación? Basta con saber si hay una fila: para estar en
       // blanco (`isBlankProject`) no puede haber ninguna.
@@ -889,6 +902,11 @@ export async function publishProject(
   // LA CARPETA (pieza 9 de Len 2.5): se publica lo que hay AHORA, y su huella
   // queda como la publicada para que «cambios sin publicar» se apague. Leída
   // una vez: lo que se escribe al disco y lo que se apunta son lo mismo.
+  // UNA APP WEB: sus variables de PRODUCCIÓN (spec local 2026-10-10), leídas
+  // UNA vez: las que van dentro del paquete y la huella que apaga «cambios sin
+  // publicar» son las mismas.
+  const app = project.data?.app ?? null;
+  const ownProductionEnv = app ? await envVarsFor(params.projectId, "production") : {};
   const projectFiles = await listProjectFiles(params.projectId);
 
   const previousSubdomain = project.subdomain;
@@ -899,6 +917,7 @@ export async function publishProject(
       publishedHomeHash: schema.projects.publishedHomeHash,
       publishedPagesHash: schema.projects.publishedPagesHash,
       publishedFilesHash: schema.projects.publishedFilesHash,
+      publishedEnvHash: schema.projects.publishedEnvHash,
       publishedReleaseSha: schema.projects.publishedReleaseSha,
       status: schema.projects.status,
     })
@@ -917,6 +936,7 @@ export async function publishProject(
         publishedHomeHash: hashHomeDoc(project.data?.html ?? "", ajustesPublicados),
         publishedPagesHash: hashSitePages(project.data),
         publishedFilesHash: folderFingerprint(projectFiles),
+        publishedEnvHash: envHashOf(ownProductionEnv),
         status: "published",
         deployUrl: `${v.value}.${publishBaseHost()}`,
         updatedAt: now,
@@ -978,8 +998,7 @@ export async function publishProject(
   // UNA APP WEB (spec local 2026-10-07-apps): su carpeta se compila al
   // publicar (`publishToDir`) con su `import.meta.env` público. Sin traducción
   // automática: su texto vive en el código, no en el documento (H15).
-  const app = project.data?.app ?? null;
-  const entornoDeLaApp = app ? await entornoPublicoDeLaApp(params.projectId) : undefined;
+  const entornoDeLaApp = app ? await entornoPublicoDeLaApp(params.projectId, "production", ownProductionEnv) : undefined;
   let publishResult: {
     sha: string;
     html: string;
@@ -1075,6 +1094,7 @@ export async function publishProject(
           publishedHomeHash: prev?.publishedHomeHash ?? null,
           publishedPagesHash: prev?.publishedPagesHash ?? null,
           publishedFilesHash: prev?.publishedFilesHash ?? null,
+          publishedEnvHash: prev?.publishedEnvHash ?? null,
           publishedReleaseSha: prev?.publishedReleaseSha ?? null,
           status: prev?.status ?? "draft",
           deployUrl: previousSubdomain
@@ -1255,6 +1275,7 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       publishedHtml: null,
       publishedPagesHash: null,
       publishedFilesHash: null,
+      publishedEnvHash: null,
       publishedReleaseSha: null,
       // Flip published → draft. Archived stays archived (deliberate
       // un-publish of an archived project is rare but should preserve
@@ -1355,6 +1376,9 @@ export async function rollbackProject(
       // La carpeta de una release vieja no se conoce: nula, y si hoy hay
       // carpeta la píldora se enciende (sobre-reportar es el fallo seguro).
       publishedFilesHash: null,
+      // Las variables con que se publicó aquella release no se conocen: nula,
+      // y si hoy hay variables de producción la píldora se enciende.
+      publishedEnvHash: null,
       publishedReleaseSha: params.sha,
       updatedAt: now,
     })
