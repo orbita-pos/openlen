@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "Home",
+      "newPage": "nieuwe pagina",
       "visualOk": "geen gemeten fouten",
       "visualIssues": "problemen gevonden",
       "visualNoLook": "niet gecontroleerd",

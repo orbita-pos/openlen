@@ -61,6 +61,22 @@ describe("summaryLabel (F4-T8 i18n mapping)", () => {
     // through so it stays distinguishable from a home switch.
     expect(summaryLabel(action("trabajar_en_pagina", "principal"), t)).toBe("principal");
   });
+
+  // La marca de una página recién creada viaja en español desde Len 2.0
+  // (lib/agent/new-page-mark.ts): la tarjeta la dice en el idioma de quien mira.
+  it("🔴 «(página nueva)» de un Write o de bash se dice en el idioma de quien mira", () => {
+    expect(summaryLabel(action("Write", "clases/index.html (página nueva)"), t)).toBe("clases/index.html (agent.action.newPage)");
+    expect(summaryLabel(action("Write", "index.html (página nueva)"), t)).toBe("index.html (agent.action.newPage)");
+    expect(summaryLabel(action("bash", "menu/index.html (página nueva)"), t)).toBe("menu/index.html (agent.action.newPage)");
+  });
+
+  it("una fila de antes con la marca en un fichero que no es página enseña sólo la ruta", () => {
+    expect(summaryLabel(action("Write", "src/lib/dinero.js (página nueva)"), t)).toBe("src/lib/dinero.js");
+  });
+
+  it("sin la marca, la ruta pasa tal cual", () => {
+    expect(summaryLabel(action("Write", "src/lib/dinero.js"), t)).toBe("src/lib/dinero.js");
+  });
 });
 
 // ─── que la tarjeta SEPA cómo se llama lo que está pasando ───────────────────

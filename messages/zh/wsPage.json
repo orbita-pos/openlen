@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "首页",
+      "newPage": "新页面",
       "visualOk": "测量范围内无问题",
       "visualIssues": "发现问题",
       "visualNoLook": "无法检查",

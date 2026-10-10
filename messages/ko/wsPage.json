@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "홈",
+      "newPage": "새 페이지",
       "visualOk": "측정 범위 내 문제 없음",
       "visualIssues": "문제 있음",
       "visualNoLook": "확인 불가",

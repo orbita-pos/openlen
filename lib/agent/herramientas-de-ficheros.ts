@@ -48,6 +48,7 @@ import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
+import { NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -255,7 +256,7 @@ export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Re
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
   const plan = planearWrite(entrada, sitioDe(row.data, session, v), leidosDe(session));
-  const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea ? " (página nueva)" : ""}`;
+  const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea && paginaDeRuta(plan.ruta) ? NEW_PAGE_MARK : ""}`;
   return await aplicarPlan(session, deps, row.data, v, plan, "Write", detalle, nota);
 }
 
@@ -648,7 +649,7 @@ export async function guardarLoDeLaTerminal(
       crea: c.crea,
       respuesta: () => `Saved ${rutaRelativa(c.ruta)}.`,
     };
-    const detalle = `${rutaRelativa(c.ruta)}${c.crea && paginaDeRuta(c.ruta) ? " (página nueva)" : ""}`;
+    const detalle = `${rutaRelativa(c.ruta)}${c.crea && paginaDeRuta(c.ruta) ? NEW_PAGE_MARK : ""}`;
     const o = await aplicarPlan(session, deps, row.data, v, plan, "bash", detalle);
     if (o.response.ok === false) {
       deshacer(c.ruta, `${String(o.response.error ?? "it was rejected").replace(/\.?$/, ".")}`);

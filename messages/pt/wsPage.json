@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "Início",
+      "newPage": "página nova",
       "visualOk": "sem falhas medidas",
       "visualIssues": "com problemas",
       "visualNoLook": "não verificado",

@@ -10,6 +10,7 @@ import { asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
+import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 
 export interface AgentAction {
   tool: string;
@@ -230,6 +231,14 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   if (asksTheOwner(action.tool) && action.respuesta) return action.respuesta;
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
+  }
+  // Una página recién creada: el servidor escribe la marca en español desde
+  // Len 2.0 (lib/agent/new-page-mark.ts) y aquí se dice en el idioma de quien
+  // mira. Una fila de antes podía llevarla en un fichero que no es página (en
+  // una app, `src/lib/dinero.js (página nueva)`): ésa enseña sólo la ruta.
+  if ((action.tool === "Write" || action.tool === "bash") && action.summary.endsWith(NEW_PAGE_MARK)) {
+    const ruta = action.summary.slice(0, -NEW_PAGE_MARK.length);
+    return isPagePath(ruta) ? `${ruta} (${t("agent.action.newPage")})` : ruta;
   }
   // F5 — verificación visual: el loop manda códigos estables ("" mientras
   // corre, "ok"/"issues" al cerrar) para que la card se localice, nunca texto.
