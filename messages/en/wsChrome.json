@@ -281,7 +281,9 @@
         "mencionado": "You were mentioned here",
         "trabajando": "Len is working on it…"
       }
-    }
+    },
+    "testData": "Test data",
+    "testDataHint": "The canvas uses test data; real data is only used by the published site."
   },
   "placeholder": {
     "ai": {

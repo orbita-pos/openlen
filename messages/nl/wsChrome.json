@@ -289,7 +289,9 @@
         "mencionado": "Je bent hier genoemd",
         "trabajando": "Len is ermee bezig…"
       }
-    }
+    },
+    "testData": "Testgegevens",
+    "testDataHint": "Het canvas gebruikt testgegevens; echte gegevens gebruikt alleen de gepubliceerde site."
   },
   "placeholder": {
     "ai": {

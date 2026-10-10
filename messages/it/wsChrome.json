@@ -281,7 +281,9 @@
         "mencionado": "Ti hanno menzionato qui",
         "trabajando": "Len ci sta lavorando…"
       }
-    }
+    },
+    "testData": "Dati di prova",
+    "testDataHint": "L'area di lavoro usa i dati di prova; quelli reali li usa solo il sito pubblicato."
   },
   "placeholder": {
     "ai": {

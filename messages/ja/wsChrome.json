@@ -281,7 +281,9 @@
         "mencionado": "ここでメンションされました",
         "trabajando": "Len が作業中…"
       }
-    }
+    },
+    "testData": "テストデータ",
+    "testDataHint": "キャンバスはテストデータを使います。本番データは公開サイトだけが使います。"
   },
   "placeholder": {
     "ai": {

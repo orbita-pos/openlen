@@ -281,7 +281,9 @@
         "mencionado": "Te mencionaron aquí",
         "trabajando": "Len está en ello…"
       }
-    }
+    },
+    "testData": "Datos de prueba",
+    "testDataHint": "El lienzo usa los datos de prueba; los reales sólo los usa la publicada."
   },
   "placeholder": {
     "ai": {
