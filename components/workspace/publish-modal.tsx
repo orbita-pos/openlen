@@ -347,6 +347,9 @@ export function PublishModal({
   // dependency settles, which would otherwise force the user to edit the
   // input just to wake up the Re-publish button. The server re-validates.
   const canPublish = !submitting && (check.kind === "available" || isCurrent);
+  // Mientras se pide confirmar lo destructivo, publicar va por «Publicar igual»:
+  // el botón de siempre está apagado y se VE apagado.
+  const publishEnabled = canPublish && destructive === null;
   const wouldChangeName =
     isPublished && !isCurrent && check.kind === "available";
 
@@ -428,7 +431,7 @@ export function PublishModal({
                   setValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && canPublish) {
+                  if (e.key === "Enter" && publishEnabled) {
                     e.preventDefault();
                     void doPublish();
                   }
@@ -621,10 +624,10 @@ export function PublishModal({
             <button
               type="button"
               onClick={() => void doPublish()}
-              disabled={!canPublish || destructive !== null}
+              disabled={!publishEnabled}
               className={cn(
                 "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition",
-                canPublish
+                publishEnabled
                   ? "bg-coral-500 text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow"
                   : "bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed",
               )}
