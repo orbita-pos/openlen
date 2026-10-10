@@ -165,7 +165,9 @@ export async function rehearse(live: ScopeCreds, pending: readonly RecordedMigra
     }
   });
   if (failure) return failure;
-  const d = diff ?? { droppedTables: [], droppedColumns: [], retyped: [] };
+  // `diff` se asigna dentro de la función de arriba: TypeScript no lo ve y lo
+  // estrecharía a `null`.
+  const d: ReturnType<typeof diffCatalog> = (diff as ReturnType<typeof diffCatalog> | null) ?? { droppedTables: [], droppedColumns: [], retyped: [] };
   // Los datos REALES afectados, contados fuera de la transacción: SELECT
   // normales, que no bloquean a la publicada.
   const counted = await withAdmin(dbNameOf(live.scope), async (r) => {
