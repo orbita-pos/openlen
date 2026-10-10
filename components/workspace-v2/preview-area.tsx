@@ -113,6 +113,8 @@ interface PreviewAreaProps {
    *  corriendo, sin edición visual; la lente Código va la primera, y si el
    *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
   esApp?: boolean;
+  /** Abre las variables de entorno de la app (spec local 2026-10-10), desde la lente Código. */
+  onEnvVars?: () => void;
   /** El proyecto tiene base de datos: el lienzo usa la de PRUEBA (spec local
    *  2026-10-09), y se dice para que nadie confunda lo que ve con lo real. */
   usesTestData?: boolean;
@@ -260,6 +262,7 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   esApp = false,
+  onEnvVars,
   usesTestData = false,
   onToggleInspect,
   insertRequest = null,
@@ -1194,6 +1197,7 @@ export function PreviewArea({
             peticion={peticionDeCodigoVigente}
             soloLectura={soloLectura}
             onClose={() => setLente("pagina")}
+            onEnvVars={previewUrl ? undefined : onEnvVars}
             labels={{
               comentar: {
                 comentarLinea: (n: number) => t("preview.comentar.linea", { n }),
@@ -1279,6 +1283,7 @@ export function PreviewArea({
               marcaNuevo: t("preview.code.marcaNuevo"),
               marcaCambiado: t("preview.code.marcaCambiado"),
               title: esApp ? t("preview.code.titleApp") : t("preview.code.title"),
+              envVars: t("preview.code.envVars"),
               close: t("preview.code.close"),
               copy: t("preview.code.copy"),
               copied: t("preview.code.copied"),

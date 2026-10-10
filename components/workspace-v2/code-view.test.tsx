@@ -511,6 +511,25 @@ describe("CodeView sin proyecto (la vista previa de una plantilla)", () => {
     expect(el.querySelector("nav")).toBeNull();
     expect([...el.querySelectorAll(".sx-etq")].map((s) => s.textContent)).toEqual(["h1", "h1"]);
   });
+
+  it("con onEnvVars, la cabecera abre las variables de entorno; sin él, no hay botón", async () => {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    const onEnvVars = vi.fn();
+    await act(async () => {
+      root.render(<CodeView html="<h1>x</h1>" projectId={null} onClose={() => {}} onEnvVars={onEnvVars} labels={{ ...labels, envVars: "Variables de entorno" }} />);
+    });
+    const boton = [...el.querySelectorAll("button")].find((b) => b.textContent?.includes("Variables de entorno"));
+    expect(boton).toBeDefined();
+    await act(async () => boton!.click());
+    expect(onEnvVars).toHaveBeenCalled();
+    await act(async () => {
+      root.render(<CodeView html="<h1>x</h1>" projectId={null} onClose={() => {}} labels={labels} />);
+    });
+    expect([...el.querySelectorAll("button")].some((b) => b.textContent?.includes("Variables de entorno"))).toBe(false);
+  });
 });
 
 describe("CodeView — dos editores lado a lado", () => {

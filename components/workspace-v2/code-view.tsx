@@ -48,7 +48,7 @@ import {
   type ReactNode,
 } from "react";
 import dynamic from "next/dynamic";
-import { ChevronsDownUp, Columns2, FilePlus, FolderPlus, MoreHorizontal, RefreshCw } from "lucide-react";
+import { ChevronsDownUp, Columns2, FilePlus, FolderPlus, KeyRound, MoreHorizontal, RefreshCw } from "lucide-react";
 import { esDeSoloLectura } from "@/lib/agent/terminal/ficheros";
 import type { PeticionDeCodigo } from "@/lib/workspace-v2/abrir-fichero";
 import {
@@ -170,6 +170,8 @@ interface CodeViewProps {
   /** Una ruta pulsada en el Chat (la #9): la lente se abre con ese fichero elegido. */
   readonly peticion?: PeticionDeCodigo | null;
   readonly onClose: () => void;
+  /** Abre las variables de entorno (spec local 2026-10-10). Sólo en una app con proyecto. */
+  readonly onEnvVars?: () => void;
   readonly labels: {
     /** Comentar una línea para el siguiente mensaje (la #8). */
     readonly comentar: EtiquetasDeComentar;
@@ -177,6 +179,7 @@ interface CodeViewProps {
     readonly editar: EtiquetasDelEditor;
     readonly ide: EtiquetasDelIde;
     readonly title: string;
+    readonly envVars?: string;
     readonly close: string;
     readonly copy: string;
     readonly copied: string;
@@ -1825,7 +1828,7 @@ function Bloque({ etiqueta, codigo, lenguaje, labels }: { etiqueta: string; codi
   );
 }
 
-export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, labels, soloLectura = false }: CodeViewProps) {
+export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, onEnvVars, labels, soloLectura = false }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -1846,7 +1849,17 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", peticion
     <div ref={cierreRef} className="absolute inset-0 z-30 flex flex-col bg-app">
       <div className="flex items-center gap-2 border-b bd px-3 py-2">
         <span className="text-[12px] font-medium fg ui-small">{labels.title}</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {onEnvVars && labels.envVars && (
+            <button
+              type="button"
+              onClick={onEnvVars}
+              className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] fg-muted hover:bg-hover hover:fg transition"
+            >
+              <KeyRound size={12} />
+              <span className="hidden sm:inline">{labels.envVars}</span>
+            </button>
+          )}
           <IconBtn label={labels.close} size="sm" onClick={onClose}>
             <X size={12} />
           </IconBtn>
