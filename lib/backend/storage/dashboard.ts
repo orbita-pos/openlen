@@ -6,7 +6,7 @@
 
 import { signJwt } from "../keys";
 import type { BackendProject } from "../router";
-import { blobKey } from "./blob-store";
+import { blobKey, storageScopeOf } from "./blob-store";
 import { asRole, deleteObjects } from "./db";
 import { storeFor, type StorageContext } from "./handler";
 import { storageLimits } from "./limits";
@@ -104,6 +104,6 @@ export async function deleteStorageFile(project: BackendProject, bucketId: strin
   if (!ctx.store) return { error: "Storage is not available on this server" };
   const gone = await asRole(ctx, (q) => deleteObjects(q, bucketId, [name]));
   if (gone.length === 0) return { error: "Object not found" };
-  await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(project.ref, bucketId, o.name, o.version!)));
+  await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(storageScopeOf(project), bucketId, o.name, o.version!)));
   return { ok: true };
 }

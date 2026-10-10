@@ -4,7 +4,7 @@
 import "server-only";
 
 import { backendConfigured } from "./pg";
-import { backendForHost, backendProjectFor, ensureProvisioned } from "./registry";
+import { backendForHost, backendProjectFor, ensureEnvironmentReady, hasLiveEnvironment } from "./registry";
 import { handleBackendRequest } from "./router";
 
 function json(body: unknown, status: number): Response {
@@ -22,11 +22,12 @@ export async function serveBackend(req: Request): Promise<Response> {
   const hb = await backendForHost(req.headers.get("host"));
   // Lo que contesta la pasarela de Supabase a una ruta que no existe.
   if (!hb) return json({ message: "no Route matched with those values" }, 404);
+  let env;
   try {
-    await ensureProvisioned(hb.record);
+    env = await ensureEnvironmentReady(hb.record, (await hasLiveEnvironment(hb.record)) ? "live" : "draft");
   } catch (err) {
     console.error("[backend] no se pudo crear la base del proyecto", hb.record.ref, err);
     return json({ message: "The project database is not ready yet. Try again in a moment." }, 503);
   }
-  return handleBackendRequest(req, backendProjectFor(hb));
+  return handleBackendRequest(req, backendProjectFor(hb, env));
 }

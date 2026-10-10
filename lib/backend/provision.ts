@@ -10,6 +10,7 @@
 
 import "server-only";
 
+import { dbNameOf, readOnlyRoleOf } from "./environments";
 import { CLUSTER_ROLES_SQL, initProjectDatabase } from "./schema";
 import { closePools, withAdmin } from "./pg";
 import { literal } from "./rest/sql";
@@ -21,15 +22,17 @@ export function devRoleOf(ref: string): string {
   return `ol_${ref}`;
 }
 
-export async function provisionDatabase(opts: { ref: string; dbPassword: string }): Promise<void> {
+/** La base de UN entorno (`ol_<scope>`, spec local 2026-10-09) con el rol de
+ *  desarrollador del PROYECTO (`ol_<ref>`, uno para las dos bases). */
+export async function provisionDatabase(opts: { scope: string; ref: string; dbPassword: string }): Promise<void> {
   const dev = devRoleOf(opts.ref);
-  const dbName = dev;
+  const dbName = dbNameOf(opts.scope);
   if (!/^[A-Za-z0-9_-]+$/.test(opts.dbPassword)) throw new Error("contraseña de base con caracteres inesperados");
   const authenticatorPassword = process.env.PAGES_AUTHENTICATOR_PASSWORD ?? "";
 
   await withAdmin("postgres", async (r) => {
     // Dos peticiones a la vez no pueden crear la misma base.
-    await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${opts.ref}`]);
+    await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${opts.scope}`]);
     try {
       await r.exec(CLUSTER_ROLES_SQL);
       await r.exec(`alter role authenticator with login password ${literal(authenticatorPassword)};`);
@@ -46,7 +49,7 @@ export async function provisionDatabase(opts: { ref: string; dbPassword: string 
         `revoke connect on database ${dbName} from public; grant connect on database ${dbName} to ${dev}, authenticator; grant create on database ${dbName} to ${dev};`,
       );
     } finally {
-      await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${opts.ref}`]);
+      await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${opts.scope}`]);
     }
   });
 
@@ -64,23 +67,29 @@ export async function provisionDatabase(opts: { ref: string; dbPassword: string 
   });
 }
 
-/** Lo contrario de `provisionDatabase`: la base del proyecto y su rol de
- *  desarrollador fuera del clúster, con todo lo que la página guardaba —las
- *  cuentas de sus visitantes incluidas—. Idempotente.
+/** Lo contrario de `provisionDatabase`: la base de UN entorno fuera del
+ *  clúster, con todo lo que guardaba —las cuentas de sus visitantes incluidas—,
+ *  y su rol de sólo lectura si lo tenía. El rol de desarrollador del proyecto
+ *  se queda (lo usa el otro entorno): `dropDeveloperRole`. Idempotente.
  *
  *  `with (force)` echa las conexiones de otros procesos; las de éste se
  *  cierran antes, en orden. El mismo cerrojo que el alta: un borrado y un alta
- *  del mismo `ref` no se cruzan. */
-export async function dropProjectDatabase(ref: string): Promise<void> {
-  const dev = devRoleOf(ref);
-  await closePools(dev);
+ *  de la misma base no se cruzan. */
+export async function dropProjectDatabase(scope: string): Promise<void> {
+  const dbName = dbNameOf(scope);
+  await closePools(dbName);
   await withAdmin("postgres", async (r) => {
-    await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${ref}`]);
+    await r.query(`select pg_advisory_lock(hashtext($1))`, [`pages-backend:${scope}`]);
     try {
-      await r.exec(`drop database if exists ${dev} with (force);`);
-      await r.exec(`drop role if exists ${dev};`);
+      await r.exec(`drop database if exists ${dbName} with (force);`);
+      await r.exec(`drop role if exists ${readOnlyRoleOf(scope)};`);
     } finally {
-      await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${ref}`]);
+      await r.query(`select pg_advisory_unlock(hashtext($1))`, [`pages-backend:${scope}`]);
     }
   });
+}
+
+/** El rol de desarrollador del proyecto, cuando ya no le queda ninguna base. */
+export async function dropDeveloperRole(ref: string): Promise<void> {
+  await withAdmin("postgres", (r) => r.exec(`drop role if exists ${devRoleOf(ref)};`));
 }

@@ -34,7 +34,7 @@ describe("ensureStorageProvisioned", () => {
     forgetStorageProvisioned();
     const b = await base();
     expect(await b.tiene()).toBe(false);
-    await ensureStorageProvisioned(TEST_REF, b.admin);
+    await ensureStorageProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
     expect(await b.tiene()).toBe(true);
     expect(b.calls).toEqual(["postgres", `ol_${TEST_REF}`]);
     const roles = await b.t.pg.query(`select 1 from pg_roles where rolname = 'supabase_storage_admin'`);
@@ -44,8 +44,8 @@ describe("ensureStorageProvisioned", () => {
   it("la segunda vez en el mismo proceso no toca la base", async () => {
     forgetStorageProvisioned();
     const b = await base();
-    await ensureStorageProvisioned(TEST_REF, b.admin);
-    await ensureStorageProvisioned(TEST_REF, b.admin);
+    await ensureStorageProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
+    await ensureStorageProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
     expect(b.calls).toHaveLength(2);
   });
 
@@ -66,19 +66,19 @@ describe("ensureStorageProvisioned", () => {
           query: r.query,
         }),
       );
-    await expect(ensureStorageProvisioned(TEST_REF, admin)).rejects.toThrow("se cayó la conexión");
+    await expect(ensureStorageProvisioned({ scope: TEST_REF, ref: TEST_REF }, admin)).rejects.toThrow("se cayó la conexión");
     expect(await b.tiene()).toBe(false);
     const esquema = await b.t.pg.query(`select 1 from pg_namespace where nspname = 'storage'`);
     expect(esquema.rows).toHaveLength(0);
     rota = false;
-    await ensureStorageProvisioned(TEST_REF, admin);
+    await ensureStorageProvisioned({ scope: TEST_REF, ref: TEST_REF }, admin);
     expect(await b.tiene()).toBe(true);
   });
 
   it("un ref que no es un ref: no se pega en SQL", async () => {
     forgetStorageProvisioned();
     const b = await base();
-    await expect(ensureStorageProvisioned("x; drop table y", b.admin)).rejects.toThrow();
+    await expect(ensureStorageProvisioned({ scope: "x; drop table y", ref: TEST_REF }, b.admin)).rejects.toThrow();
     expect(b.calls).toEqual([]);
   });
 });

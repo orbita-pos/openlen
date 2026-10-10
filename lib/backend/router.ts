@@ -25,6 +25,10 @@ import type { StorageLimits } from "./storage/limits";
 
 export interface BackendProject {
   readonly ref: string;
+  /** El entorno (spec local 2026-10-09): de su `scope` salen la base y el
+   *  prefijo de Storage. Sin él (las pruebas de siempre), los del `ref`. */
+  readonly scope?: string;
+  readonly environment?: import("./environments").Environment;
   readonly publishableKey: string;
   readonly secretKeyHash: string;
   readonly jwtSecret: string;
