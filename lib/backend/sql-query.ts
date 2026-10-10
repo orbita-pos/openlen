@@ -15,6 +15,21 @@ const MAX_ROWS = 500;
  *  migración, o no llegaría a producción al publicar. */
 const SCHEMA_COMMANDS = new Set(["CREATE", "ALTER", "DROP", "GRANT", "REVOKE", "COMMENT", "DO", "SECURITY", "REINDEX", "CLUSTER"]);
 
+/** La huella de las tablas, vistas y secuencias del usuario con sus columnas.
+ *  Si cambia, la consulta cambió el esquema aunque su etiqueta no lo diga: un
+ *  `SELECT … INTO tabla` sale como «SELECT», y una función puede crear tablas. */
+const SCHEMA_FINGERPRINT_SQL = `
+select coalesce(md5(string_agg(x, ',' order by x)), '') as h from (
+  select n.nspname || '.' || c.relname || ':' || c.relkind::text || ':' ||
+         coalesce(a.attname || ' ' || pg_catalog.format_type(a.atttypid, a.atttypmod), '') as x
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    left join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
+   where c.relkind in ('r', 'p', 'v', 'm', 'S', 'f')
+     and n.nspname not in ('information_schema', 'auth', 'storage', 'realtime', 'supabase_migrations', 'openlen_backups')
+     and n.nspname not like 'pg\\_%'
+) s`;
+
 type PgResult = { command: string; rowCount: number | null; fields: { name: string }[]; rows: unknown[][] };
 
 function outcome(res: PgResult): QueryOutcome {
@@ -39,8 +54,10 @@ export async function runDraftQuery(creds: ScopeCreds, sql: string): Promise<Que
     try {
       await c.query("BEGIN");
       await c.query("set local statement_timeout = '10s'");
+      const before = String((await c.query(SCHEMA_FINGERPRINT_SQL)).rows[0]?.h ?? "");
       const res = (await c.query(single(sql))) as unknown as PgResult;
-      if (SCHEMA_COMMANDS.has(res.command)) {
+      const after = String((await c.query(SCHEMA_FINGERPRINT_SQL)).rows[0]?.h ?? "");
+      if (SCHEMA_COMMANDS.has(res.command) || before !== after) {
         await c.query("ROLLBACK");
         return {
           kind: "error",
