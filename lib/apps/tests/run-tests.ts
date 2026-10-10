@@ -75,8 +75,12 @@ export async function runAppTests(args: {
   readonly deadlineMs?: number;
   readonly perFileMs?: number;
   readonly lanzar?: () => Promise<Browser>;
+  /** El comando se abortó (`timeout N npm test` dentro del guion): no se lanza
+   *  nada más y la página que corre se cierra. Lo que quedó, «sin correr». */
+  readonly signal?: AbortSignal;
 }): Promise<TestRun | null> {
   const t0 = Date.now();
+  const cancelado = () => args.signal?.aborted === true;
   const plazo = t0 + (args.deadlineMs ?? PLAZO_MS);
   const porFichero = args.perFileMs ?? POR_FICHERO_MS;
   const testFiles = findTestFiles(args.carpeta, args.filters ?? []);
@@ -90,7 +94,7 @@ export async function runAppTests(args: {
     testFiles,
     timeoutMs: Math.max(1, Math.min(TOPE_DEL_PAQUETE_MS, plazo - Date.now())),
   });
-  if (Date.now() >= plazo) return { files: [], notRun: testFiles, blocked: [], ms: Date.now() - t0 };
+  if (Date.now() >= plazo || cancelado()) return { files: [], notRun: testFiles, blocked: [], ms: Date.now() - t0 };
   if (!paquete) return null;
   const files: TestFileResult[] = paquete.failed.map(({ file, errores }) => ({
     file,
@@ -111,12 +115,15 @@ export async function runAppTests(args: {
       const origen = await origenDeMedida();
       for (const [file, entrada] of porCorrer) {
         const queda = plazo - Date.now();
-        if (queda < 1_000) {
+        if (queda < 1_000 || cancelado()) {
           notRun.push(file);
           continue;
         }
         const tope = Math.min(porFichero, queda);
         const page = await browser.newPage();
+        // Cerrar la página hace fallar en el acto lo que espera dentro.
+        const alCancelar = () => void page.close().catch(() => undefined);
+        args.signal?.addEventListener("abort", alCancelar, { once: true });
         const doc = origen.publicar(HTML(entrada), { files: estaticos, platformFiles: paquete.files });
         const t1 = Date.now();
         try {
@@ -134,9 +141,9 @@ export async function runAppTests(args: {
           const crudo = (await page.evaluate(() => (globalThis as unknown as { __openlenTestResult: unknown }).__openlenTestResult)) as CrudoFichero;
           files.push(aResultado(crudo, traducir));
         } catch {
-          // Lo cortó el plazo del COMANDO, no el suyo: queda sin correr (vitest,
-          // al morir, no imprime el fichero que estaba corriendo).
-          if (tope < porFichero && Date.now() >= plazo - 50) {
+          // Lo cortó el plazo del COMANDO, no el suyo, o se canceló: queda sin
+          // correr (vitest, al morir, no imprime el fichero que estaba corriendo).
+          if (cancelado() || (tope < porFichero && Date.now() >= plazo - 50)) {
             notRun.push(file);
             continue;
           }
@@ -148,6 +155,7 @@ export async function runAppTests(args: {
             ms: Date.now() - t1,
           });
         } finally {
+          args.signal?.removeEventListener("abort", alCancelar);
           doc.soltar();
           await page.close().catch(() => undefined);
         }

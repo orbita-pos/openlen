@@ -41,7 +41,7 @@ export function appToolsFor(
     catalogSpecifiers: (catalogo(app.catalogo)?.dependencias ?? []).map((d) => d.especificador),
     // Y los @types que trae su paquete de tipos: `npm install -D @types/react` ya está.
     typesPackages: typesPackagesOf(app.catalogo),
-    run: async (program, args, ficheros, timeLeftMs = 120_000) => {
+    run: async (program, args, ficheros, timeLeftMs = 120_000, signal) => {
       if (program === "test") {
         if (args.some((a) => a === "--coverage" || a.startsWith("--coverage."))) return { stdout: "", stderr: "vitest: coverage isn't available here.\n", exitCode: 1 };
         if (args.some((a) => a === "-u" || a === "--update")) return { stdout: "", stderr: "vitest: snapshots aren't available here (there is no snapshot file).\n", exitCode: 1 };
@@ -68,6 +68,8 @@ export function appToolsFor(
           deadlineMs: Math.max(1, timeLeftMs - 1_000),
           ...(testNamePattern ? { testNamePattern } : {}),
           ...(entorno ? { entorno } : {}),
+          // `timeout N npm test` dentro del guion: si corta, Chromium para.
+          ...(signal ? { signal } : {}),
         });
         if (!r) return { stdout: "", stderr: "vitest: didn't finish in time; try again.\n", exitCode: 1 };
         const { stdout, exitCode, timedOut } = formatVitestReport(r, ficheros);

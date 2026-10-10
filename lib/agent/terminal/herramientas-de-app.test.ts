@@ -39,6 +39,20 @@ describe("npm test (plan 04, tarea 8)", () => {
     expect(r).toEqual({ stdout: "\nNo test files found, exiting with code 1\n\ninclude: **/*.{test,spec}.?(c|m)[jt]s?(x)\n", stderr: "", exitCode: 1 });
   });
 
+  it("🔴 test: la señal de cancelar del comando (`timeout N npm test`) llega a las pruebas", async () => {
+    const señales: unknown[] = [];
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never,
+      {
+        checkApp: async () => null,
+        testApp: async (_f: unknown, _a: unknown, o: { signal?: AbortSignal }) => (señales.push(o.signal), { files: [], notRun: [], blocked: [], ms: 1 }),
+      } as never,
+    )!;
+    const cancelar = new AbortController();
+    await tools.run("test", [], { "/src/main.jsx": "x" }, 120_000, cancelar.signal);
+    expect(señales).toEqual([cancelar.signal]);
+  });
+
   it("test: lleva el entorno de la app (import.meta.env) y TODOS los ficheros, también /tests", async () => {
     const vistos: { f: Record<string, string>; o: Record<string, unknown> }[] = [];
     const tools = appToolsFor(

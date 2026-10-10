@@ -57,6 +57,8 @@ export class TerminalDeLen {
   private cargados: string[] = [];
   private fallidos: { ruta: string; error: string }[] = [];
   private readonly pendientes = new Map<number, { resolve: (r: Respuesta) => void; reject: (e: Error) => void }>();
+  /** Lo que el hilo le pidió a la app y sigue corriendo: un `timeout` dentro del guion lo cancela. */
+  private readonly appEnCurso = new Map<number, AbortController>();
 
   constructor(
     private readonly o: {
@@ -88,6 +90,8 @@ export class TerminalDeLen {
           ficheros: Readonly<Record<string, string>>,
           /** Lo que le queda al comando que lo pidió. */
           timeLeftMs?: number,
+          /** Se abortó el comando (`timeout N npm test`): lo que arrancó, que pare. */
+          signal?: AbortSignal,
         ) => Promise<{
           stdout: string;
           stderr: string;
@@ -119,6 +123,10 @@ export class TerminalDeLen {
       }
       if (typeof m.app === "number") {
         void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build" | "test", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
+        return;
+      }
+      if (typeof m.cancelarApp === "number") {
+        this.appEnCurso.get(m.cancelarApp)?.abort();
         return;
       }
       const p = this.pendientes.get(m.id);
@@ -157,11 +165,15 @@ export class TerminalDeLen {
     tiempoQueQueda: number,
   ): Promise<void> {
     let respuesta: Record<string, unknown>;
+    const cancelar = new AbortController();
+    this.appEnCurso.set(pid, cancelar);
     try {
       if (!this.o.appTools) throw new Error("not available here");
-      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros, tiempoQueQueda) };
+      respuesta = { tipo: "app", pid, resultado: await this.o.appTools.run(program, args, ficheros, tiempoQueQueda, cancelar.signal) };
     } catch (e) {
       respuesta = { tipo: "app", pid, error: e instanceof Error ? e.message : String(e) };
+    } finally {
+      this.appEnCurso.delete(pid);
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
