@@ -129,6 +129,24 @@ to the project database» o el de crear el slot): no se finge.
 Postgres de la máquina de desarrollo no trae wal2json). Lo demás —la publicación, las suscripciones, `apply_rls`, el
 reparto— está probado con el código de producción. El formato de wal2json se compara en el paso 5.
 
+## 4d. Borrador y producción de datos (2026-10-09, spec local `2026-10-09-borrador-y-produccion-de-datos-design.md`)
+
+Cada proyecto con backend tiene hasta dos bases: la de PRUEBAS (`ol_<ref>_d`, o la de siempre si nunca se publicó)
+y PRODUCCIÓN (`ol_<ref>_l`, o la de siempre si ya estaba publicado). El rol de desarrollador sigue siendo uno por
+proyecto (`ol_<ref>`).
+
+1. En el deploy, DESPUÉS de las migraciones de la app: `npm run backend-environments:migrate`. Crea la tabla
+   `projectBackendEnvironments` y adopta cada base de antes (proyecto publicado → producción, el resto → borrador).
+   Si no se corre, la app lo hace sola la primera vez que toca cada proyecto (`adoptLegacyEnvironment`).
+2. El servicio de Realtime calcula la etiqueta del lienzo con `AUTH_SECRET`/`NEXTAUTH_SECRET`: lee el mismo
+   `/etc/openlen/openlen.env` que la app (`EnvironmentFile=` de `openlen-realtime.service`), así que no hace falta nada.
+3. La copia nocturna (`backup-system-to-r2.sh`, filtro `ol\_%`) ya incluye las bases nuevas. Los roles de sólo lectura
+   de producción se llaman `ol_<scope>_ro` y los crea la app la primera vez que Len lee producción.
+4. `openlen_backups` (dentro de cada base de producción): copia de las tablas antes de un cambio destructivo que el
+   dueño confirmó al publicar. No se borra sola: limpiarla a mano cuando ya no haga falta.
+5. Comprobar en la caja, con un proyecto de prueba: el lienzo escribe en `ol_<ref>_d`, la publicada en la de
+   producción, y publicar con una columna borrada pide confirmación (428) antes de tocar nada.
+
 ## 5. Comprobar
 
 ```bash
