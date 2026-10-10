@@ -58,7 +58,7 @@ export function appToolsFor(
           else if (a === "run" && i === 0) continue;
           else if (!a.startsWith("-")) filters.push(a);
         }
-        // Su `import.meta.env` (la URL y la clave publicable de su backend), como en los ojos.
+        // Su `import.meta.env` de borrador (las variables del dueño, y la URL y la clave publicable de su backend), como en los ojos.
         const entorno = session.projectId && deps.entornoDeLaApp ? await deps.entornoDeLaApp(session.projectId).catch(() => null) : null;
         // A `testApp` van TODOS los ficheros, no sólo los publicables: una prueba puede vivir en /tests.
         // Dentro del tiempo de SU comando (120 s por defecto, el de Claude Code), con 1 s para devolver

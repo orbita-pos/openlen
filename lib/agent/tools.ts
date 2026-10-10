@@ -176,8 +176,9 @@ export interface AgentDeps {
    *  Opcional: sin él no hay carpeta. */
   projectFiles?(projectId: string): Promise<Record<string, string>>;
   /** APPS WEB (spec local 2026-10-07-apps): lo que vale `import.meta.env` en la
-   *  app —la URL de su backend y su clave PUBLICABLE—, para que los ojos de Len
-   *  midan la app hablando con su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
+   *  app en BORRADOR —las variables de borrador del dueño, la URL de su backend
+   *  y su clave PUBLICABLE—, para que los ojos de Len midan la app hablando con
+   *  su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
   entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
   /** APPS WEB (plan 03): TypeScript y ESLint sobre la app, en su hilo y con
    *  tope (`lib/apps/checker/check-app.ts`). `null` si no llegó, falló o la
@@ -495,7 +496,7 @@ export function realDeps(
     },
     async entornoDeLaApp(projectId) {
       const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
-      return entornoPublicoDeLaApp(projectId);
+      return entornoPublicoDeLaApp(projectId, "draft");
     },
     async checkApp(files, catalogo, o) {
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");

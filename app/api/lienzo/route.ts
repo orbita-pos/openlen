@@ -84,7 +84,7 @@ export async function POST(req: Request): Promise<Response> {
   // y el almacén recuerda la app y su `import.meta.env`, que es lo que
   // `/api/lienzo/site` necesita para compilar sus módulos.
   const app = fila.data?.app ?? null;
-  const entorno = app ? await entornoPublicoDeLaApp(body.projectId) : undefined;
+  const entorno = app ? await entornoPublicoDeLaApp(body.projectId, "draft") : undefined;
   const html = documentoDeVista(body.html, {
     projectId: body.projectId,
     title: fila.title ?? null,

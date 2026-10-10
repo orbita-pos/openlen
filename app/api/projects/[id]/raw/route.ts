@@ -75,7 +75,7 @@ export async function GET(
     // que no es un uuid) no se gasta nada y se cae a la reserva de abajo.
     if (urlDelDocumento({ projectId: id, docId: "comprobacion", pagina, hostDeLaPeticion }) !== null) {
       const app = row.data?.app ?? null;
-      const entorno = app ? await entornoPublicoDeLaApp(id) : undefined;
+      const entorno = app ? await entornoPublicoDeLaApp(id, "draft") : undefined;
       const vista = documentoDeVista(html, {
         projectId: id,
         title: row.title ?? null,

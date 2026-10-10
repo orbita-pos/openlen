@@ -157,6 +157,17 @@ describe("computeUnpublishedChanges", () => {
       );
     });
   });
+
+  it("🔴 las variables de PRODUCCIÓN cambiadas tras publicar son cambios sin publicar", () => {
+    expect(computeUnpublishedChanges(row({ envHash: "a", publishedEnvHash: "a" }))).toBe(false);
+    expect(computeUnpublishedChanges(row({ envHash: "b", publishedEnvHash: "a" }))).toBe(true);
+    // Borrar la última también.
+    expect(computeUnpublishedChanges(row({ envHash: null, publishedEnvHash: "a" }))).toBe(true);
+    // Nunca publicado: no hay deriva que enseñar.
+    expect(computeUnpublishedChanges(row({ subdomain: null, publishedAt: null, envHash: "b" }))).toBe(false);
+    // Publicado antes de las variables: las dos nulas.
+    expect(computeUnpublishedChanges(row({}))).toBe(false);
+  });
 });
 
 // LA CARPETA (pieza 9 de Len 2.5): un `js/app.js` cambiado es un cambio sin
