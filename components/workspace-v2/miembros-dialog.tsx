@@ -7,11 +7,13 @@
  * puede irse. Quién entra a qué lo decide el servidor (lib/projects/acceso.ts):
  * esto sólo pinta lo que `/api/projects/[id]/miembros` devuelve.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { X } from "lucide-react";
 
+import { Link } from "@/i18n/navigation";
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
+import { AvatarContent } from "./avatar-content";
 import { avisarMiembrosCambiaron } from "./chat/use-gente-del-chat";
 import { copiar } from "./copiar";
 import { ModalShell } from "./modal-shell";
@@ -23,6 +25,8 @@ interface Persona {
   readonly userId: string;
   readonly email: string;
   readonly name: string | null;
+  readonly avatar?: string | null;
+  readonly handle?: string | null;
 }
 
 interface Miembro extends Persona {
@@ -44,6 +48,31 @@ interface Estado {
 
 const MAX_MIEMBROS = 10;
 const creditos = (centi: number) => Math.round((centi / CENTICREDITOS_POR_CREDITO) * 100) / 100;
+
+/** Una persona en la lista: su foto (o su inicial) y su nombre, que lleva a su
+ *  perfil si tiene @. Lo que va detrás del nombre («tú», el gasto) va dentro. */
+function PersonRow({ persona, label, children }: { persona: Persona; label: string; children?: ReactNode }) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2 fg">
+      <span
+        aria-hidden
+        className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-[10.5px] font-bold text-white"
+      >
+        <AvatarContent avatar={persona.avatar} initial={(label.trim()[0] ?? "?").toUpperCase()} />
+      </span>
+      <span className="min-w-0 flex-1 truncate">
+        {persona.handle ? (
+          <Link href={`/@${persona.handle}`} target="_blank" className="hover:underline">
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
+        {children}
+      </span>
+    </span>
+  );
+}
 
 export function MiembrosDialog({
   projectId,
@@ -208,20 +237,22 @@ export function MiembrosDialog({
           <ul className="flex flex-col divide-y divide-[color:var(--border)] rounded-lg border bd" data-miembros="">
             {estado.dueno && (
               <li className="flex items-center gap-2 px-3 py-2 text-[13px]">
-                <span className="min-w-0 flex-1 truncate fg">
-                  {nombre(estado.dueno)} {estado.dueno.userId === estado.yo && <span className="fg-faint">{t("miembros.tu")}</span>}
-                </span>
+                <PersonRow persona={estado.dueno} label={nombre(estado.dueno)}>
+                  {" "}
+                  {estado.dueno.userId === estado.yo && <span className="fg-faint">{t("miembros.tu")}</span>}
+                </PersonRow>
                 <span className="text-[12px] fg-muted">{t("miembros.dueno")}</span>
               </li>
             )}
             {estado.miembros.map((m) => (
               <li key={m.userId} className="flex flex-wrap items-center gap-2 px-3 py-2 text-[13px]" data-miembro={m.email}>
-                <span className="min-w-0 flex-1 truncate fg">
-                  {nombre(m)} {m.userId === estado.yo && <span className="fg-faint">{t("miembros.tu")}</span>}
+                <PersonRow persona={m} label={nombre(m)}>
+                  {" "}
+                  {m.userId === estado.yo && <span className="fg-faint">{t("miembros.tu")}</span>}
                   {esDueno && (m.gastoDelMes ?? 0) > 0 && (
                     <span className="block text-[11px] fg-faint">{t("miembros.gastoDeMiembro", { n: creditos(m.gastoDelMes ?? 0) })}</span>
                   )}
-                </span>
+                </PersonRow>
                 {esDueno ? (
                   <>
                     <select

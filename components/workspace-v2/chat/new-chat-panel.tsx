@@ -361,7 +361,7 @@ function AgentChatView({
               <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} />
             ) : (
             <div key={turn.id} className="flex flex-col gap-4">
-              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} />
+              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} yo={equipo.yo} />
               <LenTurn
                 turn={turn}
                 next={siguienteDeLen(i)}

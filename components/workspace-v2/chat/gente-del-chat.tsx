@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 
+import { AvatarContent } from "../avatar-content";
+
 export function GenteDelChat({
   gente,
   yo,
@@ -30,10 +32,10 @@ export function GenteDelChat({
             title={t("mencionar", { nombre: p.nombre })}
             aria-label={t("mencionar", { nombre: p.nombre })}
             onClick={() => onMencionar(p.nombre)}
-            className="grid h-6 w-6 place-items-center rounded-full text-[10.5px] font-bold text-white"
+            className="grid h-6 w-6 place-items-center overflow-hidden rounded-full text-[10.5px] font-bold text-white"
             style={{ background: colorDe(p.userId) }}
           >
-            {(p.nombre.trim()[0] ?? "?").toUpperCase()}
+            <AvatarContent avatar={p.avatar} initial={(p.nombre.trim()[0] ?? "?").toUpperCase()} />
           </button>
         ))}
     </div>
