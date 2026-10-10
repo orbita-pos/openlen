@@ -27,9 +27,17 @@ const SCRIPT = `(function () {
   window.__olSoloPublicada = 1;
   var RUTAS = ${JSON.stringify(RUTAS_SOLO_PUBLICADA)};
   function avisar(m) { try { window.parent.postMessage(m, '*'); } catch (_) {} }
-  function rutaDe(u) { try { return new URL(String(u), document.baseURI).pathname; } catch (_) { return ''; } }
+  function rutaDe(u) {
+    try {
+      var d = new URL(String(u), document.baseURI);
+      // Sólo las relativas: la URL absoluta del backend del proyecto contesta
+      // desde el lienzo (con los datos de prueba). Ver rutaSoloPublicada.
+      return d.origin === location.origin ? d.pathname : '';
+    } catch (_) { return ''; }
+  }
   function soloPublicada(u) {
     var p = rutaDe(u);
+    if (!p) return null;
     for (var i = 0; i < RUTAS.length; i++) if (p.indexOf(RUTAS[i]) === 0) return p;
     return null;
   }
