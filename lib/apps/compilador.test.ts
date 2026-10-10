@@ -102,6 +102,16 @@ describe("los imports", () => {
     expect(r.ok && r.locales).toEqual(["/src/App.tsx", "/src/components/Contador.jsx", "/src/lib/index.ts"]);
   });
 
+  it("🔴 export * from (el fichero barril de shadcn) también se reescribe; y si no existe, lo dice", () => {
+    const r = compilarFuente("/src/lib/todo.ts", 'export * from "./index";\nexport * from "react-router-dom";', app(CARPETA));
+    const js = ok(r);
+    expect(js).toContain('export * from "/src/lib/index.ts"');
+    expect(js).toContain('export * from "react-router-dom"');
+    expect(r.ok && r.locales).toEqual(["/src/lib/index.ts"]);
+    const roto = compilarFuente("/src/lib/todo.ts", 'export * from "./no-esta";', app(CARPETA));
+    expect(roto.ok ? [] : roto.errores.map((e) => e.mensaje)).toEqual([expect.stringContaining('Cannot find "./no-esta"')]);
+  });
+
   it("un nombre del catálogo se deja: lo resuelve el import map", () => {
     const f = 'import { createRoot } from "react-dom/client";\nimport { createClient } from "@supabase/supabase-js";\ncreateRoot; createClient;';
     const js = ok(compilarFuente("/src/main.jsx", f, app(CARPETA)));
