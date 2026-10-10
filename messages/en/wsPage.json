@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "Home",
+      "newPage": "new page",
       "visualOk": "no measured faults",
       "visualIssues": "issues found",
       "visualNoLook": "couldn't check",

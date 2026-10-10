@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "Startseite",
+      "newPage": "neue Seite",
       "visualOk": "keine gemessenen Fehler",
       "visualIssues": "Probleme gefunden",
       "visualNoLook": "nicht prüfbar",

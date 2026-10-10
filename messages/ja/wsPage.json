@@ -68,6 +68,7 @@
     },
     "action": {
       "home": "ホーム",
+      "newPage": "新しいページ",
       "visualOk": "測定範囲に問題なし",
       "visualIssues": "問題あり",
       "visualNoLook": "確認できず",

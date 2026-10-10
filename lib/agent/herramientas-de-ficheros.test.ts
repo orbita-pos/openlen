@@ -1511,6 +1511,16 @@ describe("el backend: los ficheros de /supabase/", () => {
 // —`js/`, `css/`, `data/*.json`, `sw.js`…— por las mismas herramientas y las
 // mismas guardas que una página, y cada cambio con su «antes» para deshacer.
 describe("la carpeta del proyecto (pieza 9)", () => {
+  // La tarjeta de pasos decía «(página nueva)» de CUALQUIER fichero nuevo
+  // (visto en el ensayo de caja: `src/lib/dinero.js (página nueva)`). Sólo una
+  // página lo es: `/index.html` o `/<slug>/index.html`, como ya hacía bash.
+  it("🔴 un fichero nuevo que no es una página no se anuncia como «página nueva»", async () => {
+    const { deps } = conCarpeta({ html: HOME });
+    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/js/app.js", content: "console.log('hola');\n" });
+    assert.equal(w.response.ok, true, texto(w));
+    assert.equal(w.action?.summary, "js/app.js");
+  });
+
   it("🔴 Write crea /js/app.js sin tocar el sitio, archiva su «antes» (no existía) y Read lo abre", async () => {
     const { deps, archivos, versiones, store } = conCarpeta({ html: HOME });
     const s = makeSession();
@@ -1631,6 +1641,13 @@ describe("en una app", () => {
     assert.equal(w.appCambiada, true);
     assert.equal(w.updatedHtml, undefined, "el cascarón no cambió: el lienzo no se repinta con él");
     assert.deepEqual(diags(w), []);
+  });
+
+  it("🔴 un fichero nuevo de la app no se anuncia como «página nueva»", async () => {
+    const { deps } = conApp();
+    const w = await runAgentTool(sesion(), deps, "Write", { file_path: "/src/lib/dinero.js", content: "export const euros = (n) => n.toFixed(2);\n" });
+    assert.equal(w.response.ok, true, JSON.stringify(w.response));
+    assert.equal(w.action?.summary, "src/lib/dinero.js");
   });
 
   it("🔴 lo que no compila vuelve en el acto, con su fichero y su línea", async () => {
