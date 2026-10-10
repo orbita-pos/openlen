@@ -23,7 +23,8 @@ beforeEach(async () => {
   // El borrador confirma solas las cuentas nuevas (authConfigFor, environment "draft").
   draft = { ...d.project, environment: "draft", auth: { ...d.project.auth, config: { ...d.project.auth.config, mailerAutoconfirm: true } } };
   live = await newTestProject(MIGRATION);
-});
+  // Dos bases PGlite: con muchos ficheros a la vez pasan de los 10 s por defecto.
+}, 60_000);
 
 const client = (p: BackendProject) =>
   createClient(TEST_URL, p.publishableKey, {
