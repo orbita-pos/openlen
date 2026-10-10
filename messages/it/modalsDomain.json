@@ -149,5 +149,21 @@
     "radius": "Raggio",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Database",
+    "firstPublish": "I dati reali partono vuoti, con le tabelle dei tuoi dati di prova.",
+    "copyDraftData": "Copia anche i dati di prova",
+    "copyDraftDataHint": "Vengono copiati anche gli account e i record di prova.",
+    "pending": "Modifiche alle tabelle applicate alla pubblicazione: {names}",
+    "destructiveTitle": "Questa pubblicazione elimina dati reali",
+    "dropTable": "Elimina la tabella {table} ({count} righe)",
+    "dropColumn": "Elimina la colonna {column} da {table} ({count} valori)",
+    "alterType": "Cambia {column} in {table} da {from} a {to} ({count} valori)",
+    "deleteRows": "Elimina {count} righe: {statement}",
+    "publishAnyway": "Pubblica comunque",
+    "cancel": "Annulla",
+    "migrationFailed": "Non pubblicato: la migrazione {migration} non è riuscita: {message}",
+    "diverged": "Non pubblicato: la produzione ha migrazioni che i tuoi dati di prova non hanno ({versions})."
   }
 }
