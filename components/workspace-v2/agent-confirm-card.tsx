@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
+import type { DataChangesPreview, DestructiveChange } from "@/lib/backend/data-changes-types";
+import { postPublish } from "@/lib/workspace-v2/publish-request";
+import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -12,7 +15,14 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 // (for a new claim) then the publish POST. The card is one-shot: after a
 // successful publish or a cancel it goes inert.
 
-export type AgentConfirm = { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean };
+export type AgentConfirm = {
+  action: "publish";
+  subdominio: string;
+  idiomas: string[];
+  republicar: boolean;
+  /** Lo que publicar hará con los datos (lib/backend/data-changes.ts). */
+  cambiosDeDatos?: DataChangesPreview;
+};
 
 type CardState =
   | { kind: "idle" }
@@ -24,6 +34,8 @@ type CardState =
   // supiera.
   | { kind: "published"; url: string; langsFallidos: string[] }
   | { kind: "cancelled" }
+  // Lo destructivo que pide confirmar la ruta (428, spec local 2026-10-09).
+  | { kind: "confirm_destructive"; list: DestructiveChange[]; fingerprint: string }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -46,13 +58,16 @@ export function AgentConfirmCard({
   onCancelled?: () => void;
 }) {
   const t = useTranslations("wsPage");
+  const tDatos = useTranslations("modalsDomain.dataChanges");
   const [state, setState] = useState<CardState>({ kind: "idle" });
+  // Primera publicación con base de datos: la casilla de copiar los de prueba.
+  const [copyDraftData, setCopyDraftData] = useState(false);
 
   const busy = state.kind === "checking" || state.kind === "publishing";
 
   const inert = state.kind === "published" || state.kind === "cancelled";
 
-  const handlePublish = useCallback(async () => {
+  const handlePublish = useCallback(async (confirmFingerprint?: string) => {
     if (busy || inert) return;
     const { subdominio, idiomas, republicar } = confirm;
 
@@ -99,28 +114,38 @@ export function AgentConfirmCard({
       // OMITTED key keeps the stored setting. Consequence: the agent can
       // add/set languages but never clear them — clearing is the publish
       // modal's job.
-      const res = await fetch(`/api/projects/${projectId}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subdomain: subdominio,
-          ...(idiomas.length > 0 ? { languages: idiomas } : {}),
-        }),
+      const outcome = await postPublish(projectId, {
+        subdomain: subdominio,
+        ...(idiomas.length > 0 ? { languages: idiomas } : {}),
+        copyDraftData,
+        ...(confirmFingerprint ? { confirmFingerprint } : {}),
       });
-      if (!res.ok) {
+      if (outcome.kind === "needs_confirmation") {
+        setState({ kind: "confirm_destructive", list: outcome.destructive, fingerprint: outcome.fingerprint });
+        return;
+      }
+      if (outcome.kind === "migration_failed") {
+        setState({ kind: "error", text: tDatos("migrationFailed", { migration: outcome.migration, message: outcome.message }) });
+        return;
+      }
+      if (outcome.kind === "diverged") {
+        setState({ kind: "error", text: tDatos("diverged", { versions: outcome.versions.join(", ") }) });
+        return;
+      }
+      if (outcome.kind === "error") {
         // The endpoint is the final authority — map its status codes to text.
         setState({
           kind: "error",
           text:
-            res.status === 402
+            outcome.status === 402
               ? t("agent.confirm.limit")
-              : res.status === 409
+              : outcome.status === 409
                 ? t("agent.confirm.taken")
                 : t("agent.confirm.invalid"),
         });
         return;
       }
-      const data = (await res.json().catch(() => ({}))) as {
+      const data = outcome.data as {
         url?: string;
         localesFallidos?: string[];
       };
@@ -130,7 +155,7 @@ export function AgentConfirmCard({
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
     }
-  }, [busy, inert, confirm, projectId, t, onPublished]);
+  }, [busy, inert, confirm, projectId, t, tDatos, copyDraftData, onPublished]);
 
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
@@ -203,13 +228,34 @@ export function AgentConfirmCard({
         </div>
       )}
 
+      {/* Los datos: lo que Len ensayó antes de enseñar la tarjeta. */}
+      {state.kind !== "confirm_destructive" && confirm.cambiosDeDatos && (
+        <div className="mt-2">
+          {confirm.cambiosDeDatos.kind === "pending" && confirm.cambiosDeDatos.destructive && confirm.cambiosDeDatos.destructive.length > 0 ? (
+            <DestructiveConfirm destructive={confirm.cambiosDeDatos.destructive} />
+          ) : (
+            <DataChangesNotice preview={confirm.cambiosDeDatos} copyDraftData={copyDraftData} onCopyDraftData={setCopyDraftData} />
+          )}
+        </div>
+      )}
+
+      {state.kind === "confirm_destructive" && (
+        <div className="mt-2">
+          <DestructiveConfirm
+            destructive={state.list}
+            onConfirm={() => void handlePublish(state.fingerprint)}
+            onCancel={() => setState({ kind: "idle" })}
+          />
+        </div>
+      )}
+
       {state.kind === "error" && (
         <div className="mt-2 text-[11px] text-red-600 dark:text-red-400">
           {state.text}
         </div>
       )}
 
-      {state.kind !== "cancelled" && (
+      {state.kind !== "cancelled" && state.kind !== "confirm_destructive" && (
         <div className="mt-2.5 flex items-center gap-2">
           <button
             type="button"

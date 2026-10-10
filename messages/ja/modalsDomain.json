@@ -149,5 +149,21 @@
     "radius": "角丸",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "データベース",
+    "firstPublish": "本番データは空の状態で始まり、テストデータのテーブルが使われます。",
+    "copyDraftData": "テストデータもコピーする",
+    "copyDraftDataHint": "テスト用のアカウントとレコードもコピーされます。",
+    "pending": "公開時に適用されるテーブルの変更：{names}",
+    "destructiveTitle": "この公開で本番データが削除されます",
+    "dropTable": "テーブル {table} を削除します（{count} 行）",
+    "dropColumn": "{table} の列 {column} を削除します（{count} 件の値）",
+    "alterType": "{table} の {column} を {from} から {to} に変更します（{count} 件の値）",
+    "deleteRows": "{count} 行を削除します：{statement}",
+    "publishAnyway": "それでも公開する",
+    "cancel": "キャンセル",
+    "migrationFailed": "公開されませんでした：マイグレーション {migration} が失敗しました：{message}",
+    "diverged": "公開されませんでした：本番にはテストデータにないマイグレーションがあります（{versions}）。"
   }
 }

@@ -281,7 +281,9 @@
         "mencionado": "Ti hanno menzionato qui",
         "trabajando": "Len ci sta lavorando…"
       }
-    }
+    },
+    "testData": "Dati di prova",
+    "testDataHint": "L'area di lavoro usa i dati di prova; quelli reali li usa solo il sito pubblicato."
   },
   "placeholder": {
     "ai": {
@@ -520,6 +522,14 @@
       "delete": "Elimina file",
       "confirm": "Sicuro?",
       "deleted": "{name} eliminato"
+    },
+    "env": {
+      "test": "Dati di prova",
+      "real": "Dati reali",
+      "reset": "Reimposta i dati di prova",
+      "resetConfirm": "Cancellare i dati di prova e ricostruirli dalle migrazioni?",
+      "noLive": "Ancora nessun dato reale: iniziano quando pubblichi.",
+      "testMails": "I dati di prova non inviano email: i nuovi account vengono confermati automaticamente."
     }
   }
 }

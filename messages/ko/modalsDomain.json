@@ -149,5 +149,21 @@
     "radius": "반경",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "데이터베이스",
+    "firstPublish": "실제 데이터는 비어 있는 상태로 시작하며, 테스트 데이터의 테이블을 사용합니다.",
+    "copyDraftData": "테스트 데이터도 복사",
+    "copyDraftDataHint": "테스트 계정과 기록도 함께 복사됩니다.",
+    "pending": "게시할 때 적용되는 테이블 변경: {names}",
+    "destructiveTitle": "이 게시는 실제 데이터를 삭제합니다",
+    "dropTable": "테이블 {table} 삭제 ({count}행)",
+    "dropColumn": "{table}의 열 {column} 삭제 ({count}개 값)",
+    "alterType": "{table}의 {column}을(를) {from}에서 {to}(으)로 변경 ({count}개 값)",
+    "deleteRows": "{count}행 삭제: {statement}",
+    "publishAnyway": "그래도 게시",
+    "cancel": "취소",
+    "migrationFailed": "게시되지 않음: 마이그레이션 {migration} 실패: {message}",
+    "diverged": "게시되지 않음: 운영 환경에 테스트 데이터에 없는 마이그레이션이 있습니다 ({versions})."
   }
 }

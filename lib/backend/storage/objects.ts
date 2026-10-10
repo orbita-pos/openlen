@@ -8,7 +8,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { blobKey } from "./blob-store";
+import { blobKey, storageScopeOf } from "./blob-store";
 import {
   asRole,
   asStorageAdmin,
@@ -72,7 +72,7 @@ export async function serveObject(
     if (typeof meta.size === "number") headers.set("Content-Length", String(meta.size));
     return new Response(null, { status: 200, headers });
   }
-  const key = blobKey(ctx.project.ref, bucketId, obj.name, obj.version);
+  const key = blobKey(storageScopeOf(ctx.project), bucketId, obj.name, obj.version);
   const rangeHeader = req.headers.get("range");
   if (rangeHeader && typeof meta.size === "number") {
     const range = parseRangeHeader(rangeHeader, meta.size);
@@ -236,7 +236,7 @@ const deleteObjectsRoute: StorageRoute = {
     for (let i = 0; i < prefixes.length; i += MAX_OBJECTS_PER_DELETE_BATCH) {
       const batch = prefixes.slice(i, i + MAX_OBJECTS_PER_DELETE_BATCH) as string[];
       const gone = await asRole(ctx, (q) => deleteObjects(q, bucketId, batch));
-      await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(ctx.project.ref, bucketId, o.name, o.version!)));
+      await ctx.store.delete(gone.filter((o) => o.version).map((o) => blobKey(storageScopeOf(ctx.project), bucketId, o.name, o.version!)));
       results.push(...gone);
     }
     return json(results);
@@ -262,8 +262,8 @@ const moveObject: StorageRoute = {
       await updateObject(q, bucketId, sourceKey, { name: destinationKey, bucket_id: destinationBucket, version: newVersion, owner });
     });
     const source = await asStorageAdmin(ctx, (q) => findObject(q, bucketId, sourceKey));
-    const from = blobKey(ctx.project.ref, bucketId, sourceKey, source.version ?? "");
-    const to = blobKey(ctx.project.ref, destinationBucket, destinationKey, newVersion);
+    const from = blobKey(storageScopeOf(ctx.project), bucketId, sourceKey, source.version ?? "");
+    const to = blobKey(storageScopeOf(ctx.project), destinationBucket, destinationKey, newVersion);
     if (bucketId === destinationBucket && sourceKey === destinationKey) {
       return json({ message: "Successfully moved", Id: source.id, Key: source.name });
     }
@@ -282,7 +282,7 @@ const moveObject: StorageRoute = {
         });
         return { row, oldVersion: current.version };
       });
-      if (moved.oldVersion) await ctx.store.delete([blobKey(ctx.project.ref, bucketId, sourceKey, moved.oldVersion)]).catch(() => {});
+      if (moved.oldVersion) await ctx.store.delete([blobKey(storageScopeOf(ctx.project), bucketId, sourceKey, moved.oldVersion)]).catch(() => {});
       return json({ message: "Successfully moved", Id: moved.row.id, Key: moved.row.name });
     } catch (err) {
       await ctx.store.delete([to]).catch(() => {});
@@ -308,8 +308,8 @@ const copyObject: StorageRoute = {
     const probe = { bucket_id: destinationBucket, name: destinationKey, version: "1", owner, metadata: origin.metadata, user_metadata: origin.user_metadata };
     await testPermission(ctx, (q) => (upsert ? upsertObject(q, probe).then(() => undefined) : insertObject(q, probe)));
     const newVersion = randomUUID();
-    const to = blobKey(ctx.project.ref, destinationBucket, destinationKey, newVersion);
-    await ctx.store.copy(blobKey(ctx.project.ref, bucketId, sourceKey, origin.version ?? ""), to);
+    const to = blobKey(storageScopeOf(ctx.project), destinationBucket, destinationKey, newVersion);
+    await ctx.store.copy(blobKey(storageScopeOf(ctx.project), bucketId, sourceKey, origin.version ?? ""), to);
     try {
       const { row, previous } = await asStorageAdmin(ctx, async (q) => {
         await q(`select pg_advisory_xact_lock(hashtext($1))`, [`storage:${destinationBucket}/${destinationKey}`]);
@@ -325,7 +325,7 @@ const copyObject: StorageRoute = {
         });
         return { row, previous: existing?.version ?? null };
       });
-      if (previous) await ctx.store.delete([blobKey(ctx.project.ref, destinationBucket, destinationKey, previous)]).catch(() => {});
+      if (previous) await ctx.store.delete([blobKey(storageScopeOf(ctx.project), destinationBucket, destinationKey, previous)]).catch(() => {});
       return json({ Id: row.id, Key: `${destinationBucket}/${destinationKey}`, ...row });
     } catch (err) {
       await ctx.store.delete([to]).catch(() => {});

@@ -20,7 +20,7 @@ import {
 } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
-import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
+import { dropPageDatabases, pageDatabaseScopes } from "@/lib/backend/teardown";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { copyFolderForDuplicate, listProjectFiles } from "@/lib/backend/files";
@@ -548,7 +548,7 @@ export async function deleteProject(
   // La base de la página, si tiene: el `ref` ANTES de borrar (la fila se va en
   // cascada). Sin esto la base y su rol se quedaban en el clúster con las
   // cuentas de los visitantes dentro y sin dueño. Ver lib/backend/teardown.ts.
-  const ref = existing[0] ? await pageDatabaseRef(projectId) : null;
+  const pageDbs = existing[0] ? await pageDatabaseScopes(projectId) : null;
 
   const result = await db
     .delete(schema.projects)
@@ -566,7 +566,7 @@ export async function deleteProject(
       // operator can rm it. Surface the delete success either way.
     });
   }
-  if (ref && result.length > 0) await dropPageDatabase(ref);
+  if (pageDbs && result.length > 0) await dropPageDatabases(pageDbs);
   return result.length > 0;
 }
 
@@ -764,6 +764,10 @@ interface PublishParams {
    *  account, which legitimately owns more subdomains than any real tier
    *  allows. Never wired into the public publish route body. */
   bypassSubdomainLimit?: boolean;
+  /** Qué hacer con los cambios de tablas del borrador (spec local 2026-10-09).
+   *  Sin esto, `system`: nunca se aplica nada sin el dueño. Sólo la ruta de
+   *  publicar del dueño pasa `owner`. */
+  dataChanges?: { mode: "owner" | "system"; confirmFingerprint?: string; copyDraftData?: boolean };
 }
 interface PublishResult {
   subdomain: string;
@@ -1009,6 +1013,15 @@ export async function publishProject(
       files: Object.entries(projectFiles).map(([path, content]) => ({ path, content })),
       app,
       ...(entornoDeLaApp ? { entorno: entornoDeLaApp } : {}),
+      // LOS DATOS (spec local 2026-10-09): con la release ya escrita y antes de
+      // activarla, las migraciones del borrador a producción. Si fallan o piden
+      // confirmación, la release no se activa y el catch de abajo deshace la fila.
+      beforeSwap: async () => {
+        const { backendConfigured } = await import("@/lib/backend/pg");
+        if (!backendConfigured()) return;
+        const { publishDataChanges } = await import("@/lib/backend/data-changes");
+        await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
+      },
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es

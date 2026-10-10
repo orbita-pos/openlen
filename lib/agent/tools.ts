@@ -32,6 +32,7 @@ import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshace
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
+import type { DataChangesPreview } from "@/lib/backend/data-changes-types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
@@ -288,6 +289,9 @@ export interface AgentDeps {
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
    *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
   signInForVisit?(projectId: string, who: string): Promise<{ storageKey: string; result: VisitSignIn } | null>;
+  /** Lo que publicar haría con los datos (spec local 2026-10-09), ensayado en
+   *  producción. null = sin backend. */
+  previewDataChanges?(projectId: string): Promise<DataChangesPreview | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -486,18 +490,25 @@ export function realDeps(
       const rec = await ensureBackend(projectId);
       return { url: projectUrl(rec.ref), publishableKey: rec.publishableKey };
     },
+    async previewDataChanges(projectId) {
+      const { backendConfigured } = await import("@/lib/backend/pg");
+      if (!backendConfigured()) return null;
+      const { previewDataChanges } = await import("@/lib/backend/data-changes");
+      return previewDataChanges(projectId, { rehearse: true });
+    },
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
       if (!backendConfigured()) return null;
-      const { backendProjectFor, getBackendByProject, projectUrl } = await import("@/lib/backend/registry");
+      const { backendProjectFor, ensureEnvironmentReady, getBackendByProject, projectUrl } = await import("@/lib/backend/registry");
       const rec = await getBackendByProject(projectId);
       if (!rec) return null;
       const { signInForVisit, supabaseStorageKey } = await import("@/lib/backend/auth/visit-session");
       const storageKey = supabaseStorageKey(projectUrl(rec.ref));
-      // Sin la base creada todavía no hay nadie: se crea con la primera
-      // petición o la primera migración, no por entrar.
-      if (!rec.provisionedAt) return { storageKey, result: { ok: false, reason: "no_users" } };
-      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }), who) };
+      // La visita de Len usa el BORRADOR (su Chromium mide en loopback, y eso
+      // va al borrador; spec local 2026-10-09).
+      const draft = await ensureEnvironmentReady(rec, "draft");
+      // Ahí puede crear el usuario de prueba que nombre.
+      return { storageKey, result: await signInForVisit(backendProjectFor({ record: rec, pageSub: null }, draft), who, { createIfMissing: true }) };
     },
     async leerMemoriaDelDueno(userId) {
       return getUserMemory(userId);
@@ -977,7 +988,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
+    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1529,15 +1540,15 @@ async function toolUsarPagina(
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
 function whySignInFailed(r: Exclude<VisitSignIn, { ok: true }>, who: string): string {
-  if (r.reason === "no_users") return "the page has no users yet: there's no one to sign in as.";
+  if (r.reason === "no_users") return "the test database has no users yet: pass an email in sign_in_as and a test user with that email is created.";
   if (r.reason === "banned") return `«${who}» is banned in the page's backend: a visit can't sign in as them.`;
   const listed = `${r.emails.join(", ")}${r.total > r.emails.length ? ` (and ${r.total - r.emails.length} more)` : ""}`;
   if (r.reason === "pick_one") {
     return `the page has ${r.total} users and nobody said which one to sign in as: ask the user in chat which one to use, then call use_page again with sign_in_as set to that email. Users: ${listed}.`;
   }
   return r.total === 0
-    ? `no user of the page has the email «${who}»; the page has no users yet.`
-    : `no user of the page has the email «${who}». Users: ${listed}.`;
+    ? `no user of the test database has the email «${who}»; the test database has no users yet.`
+    : `no user of the test database has the email «${who}». Users: ${listed}.`;
 }
 
 async function toolElegirFoto(
@@ -1933,6 +1944,28 @@ async function toolPublicar(
     ...validos.slice(MAX_PUBLISH_LOCALES),
   ];
 
+  // LOS DATOS (spec local 2026-10-09): una migración que fallaría en producción
+  // se dice ANTES, a Len, como una app que no compila; lo destructivo va a la
+  // tarjeta, que lo confirma el dueño (Len no puede).
+  const cambiosDeDatos = deps.previewDataChanges ? await deps.previewDataChanges(session.projectId).catch(() => null) : null;
+  if (cambiosDeDatos?.kind === "failed") {
+    return {
+      response: {
+        ok: false,
+        error: `The project can't be published yet: migration ${cambiosDeDatos.migration} fails on the production database (nothing was published or applied).\n${cambiosDeDatos.message}\nStatement: ${cambiosDeDatos.statement}\nFix it with a NEW migration (supabase migration new), push it to the test database, and publish again.`,
+      },
+    };
+  }
+  if (cambiosDeDatos?.kind === "diverged") {
+    return {
+      response: {
+        ok: false,
+        error: `The project can't be published: the production database has migrations the test database doesn't (${cambiosDeDatos.versions.join(", ")}). Tell the user; don't try to fix it yourself.`,
+      },
+    };
+  }
+  const conDatos = cambiosDeDatos && cambiosDeDatos.kind !== "none" ? cambiosDeDatos : null;
+
   return {
     response: {
       ok: true,
@@ -1941,11 +1974,12 @@ async function toolPublicar(
       languages: idiomas,
       republish: republicar,
       ...(ignorados.length ? { ignored_languages: ignorados } : {}),
+      ...(conDatos ? { data_changes: conDatos } : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
     // siempre; sólo la acción tiene el nombre de la herramienta.
-    confirm: { action: "publish", subdominio, idiomas, republicar },
+    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}) },
   };
 }
 

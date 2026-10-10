@@ -966,6 +966,30 @@ export const projectBackends = pgTable("projectBackends", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+/** Los dos entornos del backend de un proyecto (spec local
+ *  2026-10-09-borrador-y-produccion-de-datos): `draft`, lo que usan el lienzo
+ *  y Len; `live`, lo que usa la publicada. Su `scope` da la base
+ *  (`ol_<scope>`), el prefijo de Storage y el slot de Realtime. El entorno que
+ *  ya existía antes de esto conserva `scope` = ref. Mantener en sintonía con
+ *  scripts/backend-environments-migrate.ts. */
+export const projectBackendEnvironments = pgTable(
+  "projectBackendEnvironments",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    scope: text("scope").notNull().unique(),
+    jwtSecretEncrypted: text("jwtSecretEncrypted").notNull(),
+    /** La contraseña del rol de sólo lectura (sólo `live`); null hasta que Len
+     *  lee producción por primera vez. */
+    readOnlyPasswordEncrypted: text("readOnlyPasswordEncrypted"),
+    provisionedAt: timestamp("provisionedAt", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.environment] })],
+);
+
 // LA CARPETA DEL PROYECTO: los ficheros que no son páginas, como en un proyecto
 // de Vercel + Supabase (pieza 9 de Len 2.5) — `/supabase/` (las migraciones del
 // backend, que Len aplica con `supabase db push`), `/tests/` y los de la web

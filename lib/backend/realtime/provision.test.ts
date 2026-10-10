@@ -33,7 +33,7 @@ describe("ensureRealtimeProvisioned", () => {
     forgetRealtimeProvisioned();
     const b = await base();
     expect(await b.tiene()).toBe(false);
-    await ensureRealtimeProvisioned(TEST_REF, b.admin);
+    await ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
     expect(await b.tiene()).toBe(true);
     expect(b.calls).toEqual(["postgres", `ol_${TEST_REF}`]);
     const roles = await b.t.pg.query(`select 1 from pg_roles where rolname = 'supabase_realtime_admin'`);
@@ -43,8 +43,8 @@ describe("ensureRealtimeProvisioned", () => {
   it("la segunda vez en el mismo proceso no toca la base", async () => {
     forgetRealtimeProvisioned();
     const b = await base();
-    await ensureRealtimeProvisioned(TEST_REF, b.admin);
-    await ensureRealtimeProvisioned(TEST_REF, b.admin);
+    await ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
+    await ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
     expect(b.calls).toHaveLength(2);
   });
 
@@ -62,10 +62,10 @@ describe("ensureRealtimeProvisioned", () => {
           query: r.query,
         }),
       );
-    await expect(ensureRealtimeProvisioned(TEST_REF, admin)).rejects.toThrow("se cayó la conexión");
+    await expect(ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, admin)).rejects.toThrow("se cayó la conexión");
     expect(await b.tiene()).toBe(false);
     rota = false;
-    await ensureRealtimeProvisioned(TEST_REF, admin);
+    await ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, admin);
     expect(await b.tiene()).toBe(true);
   });
 
@@ -76,7 +76,7 @@ describe("ensureRealtimeProvisioned", () => {
     forgetRealtimeProvisioned();
     const b = await base();
     await b.t.pg.exec(`create role openlen_realtime login replication; revoke connect on database postgres from public;`);
-    await ensureRealtimeProvisioned(TEST_REF, b.admin);
+    await ensureRealtimeProvisioned({ scope: TEST_REF, ref: TEST_REF }, b.admin);
     const r = await b.t.pg.query<{ ok: boolean }>(`select has_database_privilege('openlen_realtime', current_database(), 'CONNECT') as ok`);
     expect(r.rows[0]!.ok).toBe(true);
   });

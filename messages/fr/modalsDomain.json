@@ -149,5 +149,21 @@
     "radius": "Rayon",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Base de données",
+    "firstPublish": "Les données réelles démarrent vides, avec les tables de vos données de test.",
+    "copyDraftData": "Copier aussi les données de test",
+    "copyDraftDataHint": "Les comptes et les enregistrements de test sont copiés aussi.",
+    "pending": "Modifications de tables appliquées à la publication : {names}",
+    "destructiveTitle": "Cette publication supprime des données réelles",
+    "dropTable": "Supprime la table {table} ({count, plural, one {# ligne} other {# lignes}})",
+    "dropColumn": "Supprime la colonne {column} de {table} ({count, plural, one {# valeur} other {# valeurs}})",
+    "alterType": "Change {column} de {table} de {from} en {to} ({count, plural, one {# valeur} other {# valeurs}})",
+    "deleteRows": "Supprime {count, plural, one {# ligne} other {# lignes}} : {statement}",
+    "publishAnyway": "Publier quand même",
+    "cancel": "Annuler",
+    "migrationFailed": "Non publié : la migration {migration} a échoué : {message}",
+    "diverged": "Non publié : la production a des migrations que vos données de test n'ont pas ({versions})."
   }
 }

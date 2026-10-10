@@ -33,6 +33,7 @@ import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfRes
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
+import { tarjetaDeConfirmacion } from "@/components/llamada/puente-a-len";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { ejecutarUndo, ficherosDelEvento, ofreceDeshacer, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
@@ -1729,20 +1730,11 @@ export function useAgentChat({
                   condicion?: unknown;
                   turnosMaximos?: unknown;
                 };
-                const subdominio =
-                  typeof c.subdominio === "string" ? c.subdominio : "";
-                if (c.action === "publish" && subdominio) {
-                  const idiomas = Array.isArray(c.idiomas)
-                    ? c.idiomas.filter((x): x is string => typeof x === "string")
-                    : [];
-                  updateTurn(turnId, {
-                    confirm: {
-                      action: "publish",
-                      subdominio,
-                      idiomas,
-                      republicar: c.republicar === true,
-                    },
-                  });
+                // La misma lectura que la llamada: con ella llega también lo
+                // que publicar hará con los datos (`cambiosDeDatos`).
+                const tarjeta = tarjetaDeConfirmacion(payload as Record<string, unknown>);
+                if (tarjeta?.tipo === "publicar" && tarjeta.confirm.subdominio) {
+                  updateTurn(turnId, { confirm: tarjeta.confirm });
                 }
                 // El borrador de respuesta (plans/len-resultados/). Se sanea
                 // campo a campo: viene del stream, y un botón desconocido no

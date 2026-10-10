@@ -149,5 +149,21 @@
     "radius": "Straal",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Database",
+    "firstPublish": "Echte gegevens beginnen leeg, met de tabellen uit je testgegevens.",
+    "copyDraftData": "Ook de testgegevens kopiëren",
+    "copyDraftDataHint": "Testaccounts en -records worden ook gekopieerd.",
+    "pending": "Tabelwijzigingen die bij publiceren worden toegepast: {names}",
+    "destructiveTitle": "Deze publicatie verwijdert echte gegevens",
+    "dropTable": "Verwijdert de tabel {table} ({count, plural, one {# rij} other {# rijen}})",
+    "dropColumn": "Verwijdert de kolom {column} uit {table} ({count, plural, one {# waarde} other {# waarden}})",
+    "alterType": "Wijzigt {column} in {table} van {from} naar {to} ({count, plural, one {# waarde} other {# waarden}})",
+    "deleteRows": "Verwijdert {count, plural, one {# rij} other {# rijen}}: {statement}",
+    "publishAnyway": "Toch publiceren",
+    "cancel": "Annuleren",
+    "migrationFailed": "Niet gepubliceerd: migratie {migration} is mislukt: {message}",
+    "diverged": "Niet gepubliceerd: productie heeft migraties die je testgegevens niet hebben ({versions})."
   }
 }

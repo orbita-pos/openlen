@@ -8,7 +8,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { dropPageDatabase, pageDatabaseRef } from "@/lib/backend/teardown";
+import { dropPageDatabases, pageDatabaseScopes } from "@/lib/backend/teardown";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import { identidadDeEval } from "./eval-identity";
 import type { DatosDelCaso } from "./tipos";
@@ -82,7 +82,7 @@ export async function deleteThrowawayProject(projectId: string): Promise<void> {
   // chatUsers…), el mismo borrado de una fila que usa `deleteProject`. La base
   // de la página, si Len le creó una, vive en otro clúster y no cuelga de
   // ninguna FK: se lee su `ref` antes y se borra después, como allí.
-  const ref = await pageDatabaseRef(projectId);
+  const pageDbs = await pageDatabaseScopes(projectId);
   await db.delete(schema.projects).where(eq(schema.projects.id, projectId));
-  if (ref) await dropPageDatabase(ref);
+  if (pageDbs) await dropPageDatabases(pageDbs);
 }

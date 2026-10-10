@@ -6,7 +6,7 @@ import { textoDelError } from "@/lib/ai/sitio-del-error";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { PRELUDIO_CENSO_CLIC } from "@/lib/agent/prueba-js";
-import { RUTAS_SOLO_PUBLICADA } from "@/lib/lienzo/rutas-solo-publicada";
+import { rutaSoloPublicada } from "@/lib/lienzo/rutas-solo-publicada";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
@@ -1052,10 +1052,14 @@ async function captureWithPage(
   // Escuchador por render: el pool lo suelta con los de `pageerror` y `console`.
   const soloPublicada: string[] = [];
   page.on?.("response", (r) => {
-    const respuesta = r as { url?: () => string; status?: () => number };
+    const respuesta = r as { url?: () => string; status?: () => number; frame?: () => { url?: () => string } | null };
     if (typeof respuesta.url !== "function") return;
-    const ruta = rutaDe(respuesta.url());
-    if (ruta === null || !RUTAS_SOLO_PUBLICADA.some((p) => ruta.startsWith(p))) return;
+    // Sólo lo que va al origen del documento que llama (relativo): la URL
+    // absoluta del backend del proyecto contesta aquí también, con los datos
+    // de prueba.
+    const origen = origenDe(respuesta.frame?.()?.url?.());
+    const ruta = origen === null ? null : rutaSoloPublicada(respuesta.url(), origen);
+    if (ruta === null) return;
     const linea = `${ruta} → ${respuesta.status?.() ?? "?"}`;
     if (soloPublicada.length < 20 && !soloPublicada.includes(linea)) soloPublicada.push(linea);
   });
@@ -1613,9 +1617,10 @@ let buzonDialogos: string[] | null = null;
 
 /** La ruta de un URL, o `null` si no se puede leer. Sin `new URL` a pelo: una
  *  petición con un URL raro no puede tumbar un render. */
-function rutaDe(url: string): string | null {
+function origenDe(url: string | undefined): string | null {
   try {
-    return new URL(url).pathname;
+    const { origin } = new URL(url ?? "");
+    return origin === "null" ? null : origin;
   } catch {
     return null;
   }
