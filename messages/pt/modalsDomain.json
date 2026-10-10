@@ -149,5 +149,21 @@
     "radius": "Raio",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Banco de dados",
+    "firstPublish": "Os dados reais começam vazios, com as tabelas dos seus dados de teste.",
+    "copyDraftData": "Copiar também os dados de teste",
+    "copyDraftDataHint": "As contas e os registros de teste também são copiados.",
+    "pending": "Mudanças de tabelas aplicadas ao publicar: {names}",
+    "destructiveTitle": "Esta publicação apaga dados reais",
+    "dropTable": "Apaga a tabela {table} ({count} linhas)",
+    "dropColumn": "Apaga a coluna {column} de {table} ({count} valores)",
+    "alterType": "Muda {column} de {table} de {from} para {to} ({count} valores)",
+    "deleteRows": "Apaga {count} linhas: {statement}",
+    "publishAnyway": "Publicar mesmo assim",
+    "cancel": "Cancelar",
+    "migrationFailed": "Não publicado: a migração {migration} falhou: {message}",
+    "diverged": "Não publicado: a produção tem migrações que seus dados de teste não têm ({versions})."
   }
 }

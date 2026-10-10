@@ -149,5 +149,21 @@
     "radius": "Radius",
     "radiusPlaceholder": "8px",
     "hexPlaceholder": "#rrggbb"
+  },
+  "dataChanges": {
+    "title": "Database",
+    "firstPublish": "Real data starts empty, with the tables from your test data.",
+    "copyDraftData": "Also copy the test data",
+    "copyDraftDataHint": "Test accounts and records are copied too.",
+    "pending": "Table changes applied on publish: {names}",
+    "destructiveTitle": "This publish deletes real data",
+    "dropTable": "Deletes the table {table} ({count} rows)",
+    "dropColumn": "Deletes the column {column} from {table} ({count} values)",
+    "alterType": "Changes {column} in {table} from {from} to {to} ({count} values)",
+    "deleteRows": "Deletes {count} rows: {statement}",
+    "publishAnyway": "Publish anyway",
+    "cancel": "Cancel",
+    "migrationFailed": "Not published: migration {migration} failed: {message}",
+    "diverged": "Not published: production has migrations your test data doesn't ({versions})."
   }
 }

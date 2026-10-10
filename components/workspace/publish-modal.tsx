@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { DestructiveChange } from "@/lib/backend/data-changes-types";
+import { postPublish } from "@/lib/workspace-v2/publish-request";
+import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import {
   AlertCircle,
   CheckCircle2,
@@ -115,6 +118,11 @@ export function PublishModal({
   // porque el usuario acaba de encender esas banderas a mano.
   const [langsFallidos, setLangsFallidos] = useState<string[]>([]);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
+  // Los datos (spec local 2026-10-09): la casilla de copiar los datos de prueba
+  // en la primera publicación, y lo destructivo que pide confirmar (428).
+  const [copyDraftData, setCopyDraftData] = useState(false);
+  const [destructive, setDestructive] = useState<{ list: DestructiveChange[]; fingerprint: string } | null>(null);
+  const dataPreview = useDataChangesPreview(project.id, open);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -129,6 +137,8 @@ export function PublishModal({
     setError(null);
     setSubmitting(null);
     setConfirmUnpublish(false);
+    setCopyDraftData(false);
+    setDestructive(null);
     // Focus input after the modal mount animation settles.
     const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => clearTimeout(t);
@@ -211,7 +221,7 @@ export function PublishModal({
     };
   }, [normalized, isCurrent]);
 
-  const doPublish = useCallback(async () => {
+  const doPublish = useCallback(async (confirmFingerprint?: string) => {
     if (submitting) return;
     // Allow the existing subdomain through even when the availability check
     // hasn't settled yet — same precedence as `canPublish` below.
@@ -222,14 +232,30 @@ export function PublishModal({
       // Lo que el usuario tenga sin aplicar, aplicado — y esperado. Es lo que
       // hace que «Publicar» publique lo que se ve.
       await onAntesDePublicar?.();
-      const res = await fetch(`/api/projects/${project.id}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subdomain: normalized, languages: langs }),
+      const outcome = await postPublish(project.id, {
+        subdomain: normalized,
+        languages: langs,
+        copyDraftData,
+        ...(confirmFingerprint ? { confirmFingerprint } : {}),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}) as { error?: string });
-        const reason = data?.error ?? `HTTP ${res.status}`;
+      // Lo destructivo (428): la confirmación roja sustituye al botón.
+      if (outcome.kind === "needs_confirmation") {
+        setDestructive({ list: outcome.destructive, fingerprint: outcome.fingerprint });
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "migration_failed") {
+        setError(t("dataChanges.migrationFailed", { migration: outcome.migration, message: outcome.message }));
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "diverged") {
+        setError(t("dataChanges.diverged", { versions: outcome.versions.join(", ") }));
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "error") {
+        const reason = outcome.error;
         if (reason === "taken") setCheck({ kind: "taken" });
         else if (reason === "reserved") setCheck({ kind: "reserved" });
         else if (reason === "invalid") setCheck({ kind: "invalid" });
@@ -238,12 +264,13 @@ export function PublishModal({
         setSubmitting(null);
         return;
       }
+      setDestructive(null);
       // LO QUE SE PIDIÓ CONTRA LO QUE SALIÓ. El endpoint devuelve el
       // PublishResult entero y esto lo tiraba sin leerlo: llamaba a onSuccess
       // y cerraba. Medido el 2026-08-28, la traducción llevaba desde su
       // estreno sin producir un solo idioma y nadie se enteró — la raíz
       // publica igual y el único rastro era un console.warn.
-      const datos = (await res.json().catch(() => ({}))) as {
+      const datos = outcome.data as {
         localesFallidos?: string[];
       };
       const fallidos = datos.localesFallidos ?? [];
@@ -271,6 +298,7 @@ export function PublishModal({
     project.id,
     normalized,
     langs,
+    copyDraftData,
     onSuccess,
     onClose,
     onAntesDePublicar,
@@ -498,6 +526,17 @@ export function PublishModal({
             </div>
           )}
 
+          <DataChangesNotice preview={dataPreview} copyDraftData={copyDraftData} onCopyDraftData={setCopyDraftData} />
+
+          {destructive && (
+            <DestructiveConfirm
+              destructive={destructive.list}
+              busy={submitting !== null}
+              onConfirm={() => void doPublish(destructive.fingerprint)}
+              onCancel={() => setDestructive(null)}
+            />
+          )}
+
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
@@ -582,7 +621,7 @@ export function PublishModal({
             <button
               type="button"
               onClick={() => void doPublish()}
-              disabled={!canPublish}
+              disabled={!canPublish || destructive !== null}
               className={cn(
                 "inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[12px] font-medium transition",
                 canPublish
