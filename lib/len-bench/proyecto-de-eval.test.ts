@@ -6,10 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   projects: { id: "id" },
-  projectBackends: { projectId: "projectId", ref: "ref" },
-  backend: [] as Array<{ ref: string }>,
+  projectBackends: { projectId: "projectId", ref: "ref", provisionedAt: "provisionedAt" },
+  backend: [] as Array<{ ref: string; provisionedAt: Date | null }>,
+  envs: [] as Array<{ scope: string }>,
   borrados: [] as unknown[],
-  dropProjectDatabase: vi.fn(async (_ref: string) => {}),
+  dropProjectDatabase: vi.fn(async (_scope: string) => {}),
+  dropDeveloperRole: vi.fn(async (_ref: string) => {}),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -19,7 +21,9 @@ vi.mock("@/lib/db", () => ({
   },
   schema: { projects: mocks.projects, projectBackends: mocks.projectBackends },
 }));
-vi.mock("@/lib/backend/provision", () => ({ dropProjectDatabase: mocks.dropProjectDatabase }));
+vi.mock("@/lib/backend/provision", () => ({ dropProjectDatabase: mocks.dropProjectDatabase, dropDeveloperRole: mocks.dropDeveloperRole }));
+vi.mock("@/lib/backend/environments", () => ({ listEnvironments: async () => mocks.envs }));
+vi.mock("@/lib/backend/storage/purge", () => ({ purgeProjectStorage: async () => {} }));
 vi.mock("@/lib/backend/pg", () => ({ backendConfigured: () => true }));
 
 import { deleteThrowawayProject } from "./proyecto-de-eval";
@@ -30,11 +34,13 @@ describe("deleteThrowawayProject", () => {
     mocks.borrados = [];
   });
 
-  it("🔴 se lleva la base del proyecto de eval que la tenía", async () => {
-    mocks.backend = [{ ref: "abcdefghijklmnopqrst" }];
+  it("🔴 se lleva las bases de los entornos del proyecto de eval y su rol", async () => {
+    mocks.backend = [{ ref: "abcdefghijklmnopqrst", provisionedAt: new Date() }];
+    mocks.envs = [{ scope: "abcdefghijklmnopqrst_d" }];
     await deleteThrowawayProject("p1");
     expect(mocks.borrados).toEqual([mocks.projects]);
-    expect(mocks.dropProjectDatabase).toHaveBeenCalledWith("abcdefghijklmnopqrst");
+    expect(mocks.dropProjectDatabase.mock.calls.map((c) => c[0])).toEqual(["abcdefghijklmnopqrst_d"]);
+    expect(mocks.dropDeveloperRole).toHaveBeenCalledWith("abcdefghijklmnopqrst");
   });
 
   it("sin base, sólo borra el proyecto", async () => {
@@ -42,5 +48,6 @@ describe("deleteThrowawayProject", () => {
     await deleteThrowawayProject("p1");
     expect(mocks.borrados).toEqual([mocks.projects]);
     expect(mocks.dropProjectDatabase).not.toHaveBeenCalled();
+    expect(mocks.dropDeveloperRole).not.toHaveBeenCalled();
   });
 });
