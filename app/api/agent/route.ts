@@ -765,10 +765,14 @@ async function correrTurno(
         console.warn("[agent] no se pudo leer el backend del proyecto", err);
         return null;
       }),
-      // En una app, las rutas de su carpeta: su código. Si no se puede leer, el
-      // turno sigue sin la lista (Len la saca con la terminal).
+      // En una app, las rutas de su carpeta (su código) y los nombres de las
+      // variables del dueño. Si no se pueden leer, el turno sigue sin ellos
+      // (Len saca la carpeta con la terminal; las variables, del manual).
       ...(appDelTurno
-        ? { ficherosDeLaCarpeta: Object.keys((await deps.projectFiles?.(projectId).catch(() => null)) ?? {}) }
+        ? {
+            ficherosDeLaCarpeta: Object.keys((await deps.projectFiles?.(projectId).catch(() => null)) ?? {}),
+            envVars: await (deps.envVarNames?.(projectId) ?? Promise.resolve(null)).catch(() => null),
+          }
         : {}),
     },
     // La pagina ACTIVA: los rasgos del documento (tokens, modo, fuentes)

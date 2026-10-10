@@ -31,6 +31,7 @@ import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
+import type { EnvTarget } from "@/lib/apps/env/rules";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -180,6 +181,10 @@ export interface AgentDeps {
    *  y su clave PUBLICABLE—, para que los ojos de Len midan la app hablando con
    *  su backend. Opcional: sin él, sólo MODE/DEV/PROD. */
   entornoDeLaApp?(projectId: string): Promise<Record<string, string>>;
+  /** LAS VARIABLES DE ENTORNO (spec local 2026-10-10): los nombres del ajuste
+   *  del dueño y en qué entornos está cada uno, para el estado del proyecto.
+   *  Sin valores. Opcional: sin él, el estado no las nombra. */
+  envVarNames?(projectId: string): Promise<Record<string, readonly EnvTarget[]>>;
   /** APPS WEB (plan 03): TypeScript y ESLint sobre la app, en su hilo y con
    *  tope (`lib/apps/checker/check-app.ts`). `null` si no llegó, falló o la
    *  sustituyó otra con el mismo `supersedes`. Sin él, tras escribir sólo se
@@ -497,6 +502,10 @@ export function realDeps(
     async entornoDeLaApp(projectId) {
       const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
       return entornoPublicoDeLaApp(projectId, "draft");
+    },
+    async envVarNames(projectId) {
+      const { envVarNames } = await import("@/lib/apps/env/store");
+      return envVarNames(projectId);
     },
     async checkApp(files, catalogo, o) {
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
@@ -1145,6 +1154,9 @@ export function summarizeProjectState(
      *  app no son páginas, y sin la lista Len empezaría cada turno a ciegas,
      *  listando /src. En una página no se pasa: su estado no cambia. */
     ficherosDeLaCarpeta?: readonly string[];
+    /** En una APP, las variables del dueño (spec local 2026-10-10): nombre →
+     *  entornos. Sin valores: para escribir el código basta el nombre. */
+    envVars?: Readonly<Record<string, readonly EnvTarget[]>> | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1208,6 +1220,8 @@ export function summarizeProjectState(
     // Lo que la página pone en `createClient(url, key)` (THE BACKEND, en el
     // manual). Con los nombres que tienen en Supabase.
     ...(row.supabase ? { supabase: { project_url: row.supabase.url, publishable_key: row.supabase.publishableKey } } : {}),
+    // Las del dueño, por su NOMBRE (`import.meta.env.VITE_X`), y dónde valen.
+    ...(app && row.envVars && Object.keys(row.envVars).length > 0 ? { env_vars: row.envVars } : {}),
   };
 }
 
