@@ -63,6 +63,44 @@ describe("bundleAppTests", () => {
     expect(Object.keys(r!.entries)).toEqual(["/src/suma.test.js"]);
   }, 60_000);
 
+  it("🔴 un error de esbuild en un fichero (un nombre que el módulo no exporta) lo hace fallar SOLO; los demás se empaquetan", async () => {
+    const r = await bundleAppTests({
+      carpeta: {
+        ...CARPETA,
+        "/src/iva.test.js": 'import { it } from "vitest";\nimport { conIva } from "./suma";\nit("i", () => conIva);',
+        "/src/suma.test.js": 'import { it } from "vitest";\nimport { suma } from "./suma";\nit("s", () => suma);',
+      },
+      app: APP,
+      testFiles: ["/src/iva.test.js", "/src/suma.test.js"],
+    });
+    expect(r!.failed.map((f) => f.file)).toEqual(["/src/iva.test.js"]);
+    expect(r!.failed[0]!.errores[0]).toMatchObject({ ruta: "/src/iva.test.js", linea: 2 });
+    // Sin el espacio de nombres del empaquetador: la ruta, como la escribió.
+    expect(r!.failed[0]!.errores[0]!.mensaje).toContain('"/src/suma.js"');
+    expect(r!.failed[0]!.errores[0]!.mensaje).not.toContain("app:");
+    expect(Object.keys(r!.entries)).toEqual(["/src/suma.test.js"]);
+    expect(r!.files[r!.entries["/src/suma.test.js"]!]).toBeTruthy();
+  }, 60_000);
+
+  it("🔴 un error de esbuild en un módulo de la app: fallan las pruebas que lo alcanzan, no las demás", async () => {
+    // Tras un `export *` el compilador no sabe la lista entera: lo ve esbuild.
+    const r = await bundleAppTests({
+      carpeta: {
+        ...CARPETA,
+        "/src/lib/todo.js": 'export * from "./datos";',
+        "/src/App.jsx": 'import { APELLIDO } from "./lib/todo";\nexport default function App() { return <p>{APELLIDO}</p>; }',
+        "/src/App.test.jsx": 'import { it } from "vitest";\nimport App from "./App";\nit("x", () => App);',
+        "/src/suma.test.js": 'import { it } from "vitest";\nimport { suma } from "./suma";\nit("s", () => suma);',
+      },
+      app: APP,
+      testFiles: ["/src/App.test.jsx", "/src/suma.test.js"],
+    });
+    expect(r!.failed.map((f) => f.file)).toEqual(["/src/App.test.jsx"]);
+    expect(r!.failed[0]!.errores[0]!.ruta).toBe("/src/App.jsx");
+    expect(Object.keys(r!.entries)).toEqual(["/src/suma.test.js"]);
+    expect(r!.files[r!.entries["/src/suma.test.js"]!]).toBeTruthy();
+  }, 60_000);
+
   it("🔴 vi.mock: el módulo simulado pide su fábrica, y el real sigue dentro para importOriginal", async () => {
     const r = await bundleAppTests({
       carpeta: { ...CARPETA, "/src/App.test.jsx": 'import { it, vi } from "vitest";\nimport App from "./App";\nvi.mock("./lib/datos", () => ({ NOMBRE: "falso" }));\nit("x", () => App);' },
