@@ -13,7 +13,8 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Your own web developer.<br></br><gradient>Len.</gradient>",
+    "title": "Your <len>o</len>wn web developer. <gradient>Len.</gradient>",
+    "announce": "<strong>Len now builds apps</strong><dot></dot>Try it free",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "Star on GitHub",

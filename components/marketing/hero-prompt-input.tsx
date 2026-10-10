@@ -205,12 +205,6 @@ export function HeroPromptInput() {
 
   return (
     <div className="relative">
-      {/* soft coral glow under the input */}
-      <div
-        className="absolute -inset-x-8 -inset-y-4 -z-10 rounded-[28px] blur-2xl opacity-60 dark:opacity-80 bg-[radial-gradient(60%_50%_at_50%_50%,rgba(255,90,54,0.18)_0%,rgba(255,90,54,0)_70%)]"
-        aria-hidden
-      />
-
       {/* LA PIEL DEL CHAT NUEVO (Jesús, 03/10: «que sean como el chat nuevo»):
           la caja de radio 16 con su borde, las fichas encima del texto, el `+`
           con su menú, y el botón cuadrado al final. En los colores de la

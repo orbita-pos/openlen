@@ -13,7 +13,8 @@
     "menu": "메뉴"
   },
   "hero": {
-    "title": "당신만의 웹 개발자.<br></br><gradient>Len.</gradient>",
+    "title": "당신만의 웹 개발자. <len></len> <gradient>Len.</gradient>",
+    "announce": "<strong>이제 Len이 앱도 만듭니다</strong><dot></dot>무료로 시작하기",
     "pagesThisWeek": "이번 주 생성된 페이지 <strong>{count, number}</strong>개",
     "githubAria": "GitHub의 OpenLen",
     "starOnGithub": "GitHub에서 Star 누르기",
