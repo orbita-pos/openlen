@@ -36,7 +36,7 @@ export function InboxForms() {
   }, []);
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-[#0a0a0a]">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       {leads ? (
         <MessagesView leads={leads} />
       ) : (
