@@ -32,6 +32,7 @@ import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshace
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
+import type { DataChangesPreview } from "@/lib/backend/data-changes-types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
@@ -288,6 +289,9 @@ export interface AgentDeps {
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
    *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
   signInForVisit?(projectId: string, who: string): Promise<{ storageKey: string; result: VisitSignIn } | null>;
+  /** Lo que publicar haría con los datos (spec local 2026-10-09), ensayado en
+   *  producción. null = sin backend. */
+  previewDataChanges?(projectId: string): Promise<DataChangesPreview | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -485,6 +489,12 @@ export function realDeps(
       const { ensureBackend, projectUrl } = await import("@/lib/backend/registry");
       const rec = await ensureBackend(projectId);
       return { url: projectUrl(rec.ref), publishableKey: rec.publishableKey };
+    },
+    async previewDataChanges(projectId) {
+      const { backendConfigured } = await import("@/lib/backend/pg");
+      if (!backendConfigured()) return null;
+      const { previewDataChanges } = await import("@/lib/backend/data-changes");
+      return previewDataChanges(projectId, { rehearse: true });
     },
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
@@ -978,7 +988,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
+    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1934,6 +1944,28 @@ async function toolPublicar(
     ...validos.slice(MAX_PUBLISH_LOCALES),
   ];
 
+  // LOS DATOS (spec local 2026-10-09): una migración que fallaría en producción
+  // se dice ANTES, a Len, como una app que no compila; lo destructivo va a la
+  // tarjeta, que lo confirma el dueño (Len no puede).
+  const cambiosDeDatos = deps.previewDataChanges ? await deps.previewDataChanges(session.projectId).catch(() => null) : null;
+  if (cambiosDeDatos?.kind === "failed") {
+    return {
+      response: {
+        ok: false,
+        error: `The project can't be published yet: migration ${cambiosDeDatos.migration} fails on the production database (nothing was published or applied).\n${cambiosDeDatos.message}\nStatement: ${cambiosDeDatos.statement}\nFix it with a NEW migration (supabase migration new), push it to the test database, and publish again.`,
+      },
+    };
+  }
+  if (cambiosDeDatos?.kind === "diverged") {
+    return {
+      response: {
+        ok: false,
+        error: `The project can't be published: the production database has migrations the test database doesn't (${cambiosDeDatos.versions.join(", ")}). Tell the user; don't try to fix it yourself.`,
+      },
+    };
+  }
+  const conDatos = cambiosDeDatos && cambiosDeDatos.kind !== "none" ? cambiosDeDatos : null;
+
   return {
     response: {
       ok: true,
@@ -1942,11 +1974,12 @@ async function toolPublicar(
       languages: idiomas,
       republish: republicar,
       ...(ignorados.length ? { ignored_languages: ignorados } : {}),
+      ...(conDatos ? { data_changes: conDatos } : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
     // siempre; sólo la acción tiene el nombre de la herramienta.
-    confirm: { action: "publish", subdominio, idiomas, republicar },
+    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}) },
   };
 }
 

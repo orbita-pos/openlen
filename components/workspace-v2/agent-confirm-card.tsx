@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
+import type { DataChangesPreview } from "@/lib/backend/data-changes-types";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -12,7 +13,14 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 // (for a new claim) then the publish POST. The card is one-shot: after a
 // successful publish or a cancel it goes inert.
 
-export type AgentConfirm = { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean };
+export type AgentConfirm = {
+  action: "publish";
+  subdominio: string;
+  idiomas: string[];
+  republicar: boolean;
+  /** Lo que publicar hará con los datos (lib/backend/data-changes.ts). */
+  cambiosDeDatos?: DataChangesPreview;
+};
 
 type CardState =
   | { kind: "idle" }
