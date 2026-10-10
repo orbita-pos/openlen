@@ -71,7 +71,7 @@ describe("el manual de una app (/AGENTS.md)", () => {
 
   it("el backend es la sección de la página entera, con supabase-js importado de /src/lib/supabase.js", () => {
     const deLaPagina = buildManualDeLaPlataforma(ENV);
-    const backend = (t: string) => t.slice(t.indexOf("THE BACKEND (Supabase):"), t.indexOf("\n\n", t.indexOf("- To change what was already pushed")));
+    const backend = (t: string) => t.slice(t.indexOf("THE BACKEND (Supabase):"), t.indexOf("\n\n", t.indexOf("- You work on the TEST database")));
     expect(backend(manual)).toContain('import { supabase } from "@/lib/supabase"');
     expect(backend(manual)).not.toContain("<script src=");
     // El resto de la sección, igual palabra por palabra.
