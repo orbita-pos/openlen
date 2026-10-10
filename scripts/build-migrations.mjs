@@ -160,6 +160,10 @@ const targets = [
   // OBLIGATORIA antes que el código: lib/backend/registry.ts y environments.ts
   // la leen para dar con la base de cada página.
   "backend-environments-migrate",
+  // Las variables de entorno de las apps: projectEnvVars y projects.envHash /
+  // publishedEnvHash. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código:
+  // getProject selecciona todas las columnas de projects.
+  "env-vars-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

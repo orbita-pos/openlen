@@ -68,6 +68,7 @@
     "folder:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/folder-migrate.ts",
     "turn-changes:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/turn-changes-migrate.ts",
     "miembros:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/miembros-migrate.ts",
+    "env-vars:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/env-vars-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
