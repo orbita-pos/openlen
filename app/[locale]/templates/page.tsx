@@ -57,17 +57,13 @@ export default async function TemplatesPage() {
 
   return (
     <div className="relative min-h-screen flex flex-col bg-white dark:bg-zinc-950">
-      {/* Dawn atmosphere behind the glass pill nav + hero — same language as
-          the home, so the gallery stops feeling like a plain admin list. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] aurora-dawn"
-        aria-hidden
-      />
+      {/* Fondo LIMPIO, como la portada desde el 09/10: se fue el resplandor
+          coral de arriba (`aurora-dawn`). */}
       <MarketingChrome>
         {/* Hero */}
         <section className="relative">
           <div className="mx-auto max-w-6xl px-6 pt-10 pb-8 sm:pt-14 sm:pb-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/70 dark:bg-white/[0.06] backdrop-blur ring-1 ring-white/80 dark:ring-white/10 px-3 py-1 text-[11.5px] font-medium text-coral-700 dark:text-coral-300 shadow-sm mb-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white dark:bg-white/[0.06] ring-1 ring-zinc-900/10 dark:ring-white/10 px-3 py-1 text-[11.5px] font-medium text-coral-700 dark:text-coral-300 mb-4">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-coral-500 opacity-75 animate-ping" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-coral-500" />
