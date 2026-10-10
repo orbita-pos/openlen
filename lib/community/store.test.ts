@@ -30,9 +30,9 @@ vi.mock("@/lib/html-engine", () => ({
 type Fila = Record<string, unknown>;
 const { filas } = vi.hoisted(() => ({ filas: { value: [] as Fila[] } }));
 
-// Constructor encadenable. `orderBy` tiene que ser a la vez esperable (lo hacen
-// `getPublicProfile` y `listOpenReports`) y portador de `.limit` (lo hace
-// `listExplore`), así que devuelve una promesa con el método colgado.
+// Constructor encadenable. `orderBy` tiene que ser a la vez esperable (lo hace
+// `listOpenReports`) y portador de `.limit` (lo hace `listExplore`), así que
+// devuelve una promesa con el método colgado.
 function terminal() {
   const p = Promise.resolve(filas.value) as Promise<Fila[]> & {
     limit?: () => Promise<Fila[]>;
@@ -74,17 +74,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("./handle", () => ({
-  getUserByHandle: async (handle: string) => ({
-    id: "u1",
-    handle,
-    name: "Kira",
-    bio: null,
-    avatarUrl: null,
-  }),
-}));
-
-import { listExplore, getPublicProfile, listOpenReports } from "./store";
+import { listExplore, listOpenReports } from "./store";
 
 // La fila tal y como está HOY en la base: publicada antes del corte de host, y
 // con la columna guardada BARE — `publishProject` escribe `${sub}.${host}`, sin
@@ -112,12 +102,6 @@ describe("el store de comunidad deriva el host, no se cree la columna", () => {
     filas.value = [filaLegado()];
     const { items } = await listExplore({ sort: "recent" });
     expect(items[0].deployUrl).toBe("https://kira.openlen.app");
-  });
-
-  it("getPublicProfile: el perfil público deriva igual que Explore", async () => {
-    filas.value = [filaLegado({ id: "p2", title: "Solstice", subdomain: "solstice-demo", deployUrl: "solstice-demo.openlen.com" })];
-    const perfil = await getPublicProfile("kira");
-    expect(perfil?.pages[0].deployUrl).toBe("https://solstice-demo.openlen.app");
   });
 
   it("listOpenReports: el enlace del panel de admin también", async () => {
