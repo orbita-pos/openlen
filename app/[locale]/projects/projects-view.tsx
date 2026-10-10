@@ -51,6 +51,7 @@ import VisibilityToggle from "@/components/community/visibility-toggle";
 import HandleDialog from "@/components/community/handle-dialog";
 import { publishedHost, publishedUrl, subdomainFromTitle } from "@/lib/publish/base-host";
 import { visibleProjects } from "@/lib/projects/blank";
+import { MAX_CREDITS, PRO_CREDITS } from "@/lib/marketing/plan-price";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Projects page — toolbar + filters + grid/list + bulk actions.
@@ -92,7 +93,7 @@ const STATUS_TONE: Record<
 
 type BillingErrorCode = "not_configured" | "checkout_failed" | "portal_failed";
 type BillingNotice =
-  | { kind: "success" }
+  | { kind: "success"; plan: "pro" | "max" }
   | { kind: "error"; code: BillingErrorCode };
 
 const BILLING_ERROR_CODES: BillingErrorCode[] = [
@@ -156,7 +157,9 @@ export function ProjectsView({
     const upgraded = searchParams.get("upgraded");
     const errorParam = searchParams.get("billing_error");
     let notice: BillingNotice | null = null;
-    if (upgraded === "1") notice = { kind: "success" };
+    // `1` es la vuelta de antes del plan Max (no decía cuál): era Pro.
+    if (upgraded === "max") notice = { kind: "success", plan: "max" };
+    else if (upgraded === "pro" || upgraded === "1") notice = { kind: "success", plan: "pro" };
     else if (errorParam && BILLING_ERROR_CODES.includes(errorParam as BillingErrorCode))
       notice = { kind: "error", code: errorParam as BillingErrorCode };
     if (!notice) return;
@@ -786,7 +789,9 @@ function BillingBanner({
   const t = useTranslations("projects");
   const isSuccess = notice.kind === "success";
   const message = isSuccess
-    ? t("billing.success")
+    ? notice.plan === "max"
+      ? t("billing.success", { plan: "Max", credits: MAX_CREDITS })
+      : t("billing.success", { plan: "Pro", credits: PRO_CREDITS })
     : t(`billing.errors.${notice.code}`);
   return (
     <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 pt-4">
@@ -895,7 +900,7 @@ function UsageStrip({
             {usage.plan === "free" && (
               <a
                 href={`/api/billing/checkout?locale=${locale}`}
-                title={t("billing.upgradeHint")}
+                title={t("billing.upgradeHint", { credits: PRO_CREDITS })}
                 className="mt-2 inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-coral-500 text-white text-[12px] font-medium hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow transition"
               >
                 <Sparkles size={12} /> {t("billing.upgradeCta")}

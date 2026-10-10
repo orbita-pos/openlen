@@ -67,7 +67,7 @@ async function apiChecks(): Promise<void> {
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       products: [PRODUCT],
-      success_url: `${APP}/en/projects?upgraded=1`,
+      success_url: `${APP}/en/projects?upgraded=pro`,
       customer_external_id: "smoke_test_user",
       metadata: { userId: "smoke_test_user" },
     }),
