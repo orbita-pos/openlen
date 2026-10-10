@@ -33,7 +33,7 @@ function replicationUrl(database: string): string | null {
 
 const rt = createRealtimeServer({
   // Sin clúster configurado no hay proyectos: «Tenant not found», no se finge.
-  resolveProject: async (host) => (backendConfigured() ? realtimeProjectForHost(host) : null),
+  resolveProject: async (host, origin) => (backendConfigured() ? realtimeProjectForHost(host, origin) : null),
   changeSource: (project) => {
     const url = replicationUrl(`ol_${project.ref}`);
     if (!url || !project.db) return null;

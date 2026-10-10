@@ -15,6 +15,10 @@ import { db, schema } from "@/lib/db";
 import { decryptToken } from "@/lib/integrations/crypto";
 import { publishedBaseHosts } from "@/lib/publish/request-origin";
 
+import { etiquetaDeLienzo } from "@/lib/lienzo/host";
+
+import { decideEnvironment } from "../environment-routing";
+import { dbNameOf, listEnvironments, newScope } from "../environments";
 import { projectDatabase } from "../pg";
 import type { RealtimeProject } from "./channel";
 import { ensureRealtimeProvisioned } from "./provision";
@@ -32,21 +36,33 @@ export function refFromHost(hostHeader: string, bases: readonly string[] = publi
   return null;
 }
 
-export async function realtimeProjectForHost(host: string, bases?: readonly string[]): Promise<RealtimeProject | null> {
+export async function realtimeProjectForHost(host: string, origin: string | null = null, bases?: readonly string[]): Promise<RealtimeProject | null> {
   const ref = refFromHost(host, bases);
   if (!ref) return null;
   const [rec] = await db.select().from(schema.projectBackends).where(eq(schema.projectBackends.ref, ref)).limit(1);
   if (!rec) return null;
-  // Como `backendProjectFor` (registry.ts).
+  // El entorno, como `serveBackend` (lib/backend/serve.ts): el lienzo propio y
+  // los ojos de Len al borrador, un lienzo ajeno fuera, lo demás a producción.
+  const envs = await listEnvironments(rec.projectId);
+  const hasLive = envs.some((e) => e.environment === "live" && e.provisionedAt);
+  const decision = decideEnvironment({ origin, referer: null, lienzoLabel: etiquetaDeLienzo(rec.projectId), hasLive });
+  // Un lienzo ajeno: como un tenant que no existe.
+  if (decision.kind === "forbidden") return null;
+  const env = envs.find((e) => e.environment === decision.environment) ?? null;
+  // Un proyecto de antes sin adoptar todavía: su base de siempre.
+  const legacy = envs.length === 0 && rec.provisionedAt ? rec.ref : null;
+  const scope = env?.scope ?? legacy;
+  // `ref` es la llave de Realtime para TODO (temas, sesiones, slot, base): la
+  // del ENTORNO, para que un broadcast del borrador no llegue a producción.
   const project: RealtimeProject = {
-    ref,
+    ref: scope ?? newScope(rec.ref, decision.environment),
     publishableKey: rec.publishableKey,
     secretKeyHash: rec.secretKeyHash,
-    jwtSecret: decryptToken(rec.jwtSecretEncrypted),
+    jwtSecret: decryptToken(env?.jwtSecretEncrypted ?? rec.jwtSecretEncrypted),
   };
-  if (!rec.provisionedAt) return project;
-  await ensureRealtimeProvisioned({ scope: ref, ref }).catch((err: unknown) => {
-    console.error("[realtime] no se pudo montar el esquema realtime", ref, err);
+  if (!scope || !(env ? env.provisionedAt : rec.provisionedAt)) return project;
+  await ensureRealtimeProvisioned({ scope, ref: rec.ref }).catch((err: unknown) => {
+    console.error("[realtime] no se pudo montar el esquema realtime", scope, err);
   });
-  return { ...project, db: projectDatabase(`ol_${ref}`) };
+  return { ...project, db: projectDatabase(dbNameOf(scope)) };
 }
