@@ -102,7 +102,7 @@ const SCRIPT = `(function () {
   function restoreEl(el) {
     var o = originals.get(el);
     if (!o) return;
-    for (var k in o.style) { if (o.style[k]) el.style.setProperty(k, o.style[k]); else el.style.removeProperty(k); }
+    for (var k in o.style) { if (o.style[k].v) el.style.setProperty(k, o.style[k].v, o.style[k].p); else el.style.removeProperty(k); }
     if (o.text !== null) {
       var tn = textNodesOf(el);
       for (var r = 0; r < tn.length && r < o.text.length; r++) if (o.text[r] !== undefined) tn[r].nodeValue = o.text[r];
@@ -118,7 +118,7 @@ const SCRIPT = `(function () {
       var el = ts[i], o = remember(el);
       if (list.indexOf(el) === -1) list.push(el);
       for (var k in p.styles) {
-        if (!(k in o.style)) o.style[k] = el.style.getPropertyValue(k);
+        if (!(k in o.style)) o.style[k] = { v: el.style.getPropertyValue(k), p: el.style.getPropertyPriority(k) };
         if (el.style.getPropertyValue(k) !== p.styles[k] || el.style.getPropertyPriority(k) !== 'important') el.style.setProperty(k, p.styles[k], 'important');
       }
       // EL TEXTO, en los nodos de React y sin cambiarlos por otros: si se

@@ -150,6 +150,25 @@ describe("el modo Diseño en el lienzo de una app", () => {
     }
   }, 90_000);
 
+  it("🔴 restaurar devuelve el estilo en línea de antes con su !important", async () => {
+    const v = await abrir();
+    try {
+      await v.page.evaluate(() => document.getElementById("titulo")!.style.setProperty("color", "rgb(1, 2, 3)", "important"));
+      await v.enviar({ type: "openlen:design-preview", key: "imp", screen: "#/", target: { path: "/src/App.tsx", line: 7, tag: "h1" }, styles: { color: "rgb(255, 0, 0)" } });
+      await new Promise((r) => setTimeout(r, 100));
+      expect(await v.page.evaluate(() => getComputedStyle(document.getElementById("titulo")!).color)).toBe("rgb(255, 0, 0)");
+      await v.enviar({ type: "openlen:design-clear", key: "imp" });
+      await new Promise((r) => setTimeout(r, 100));
+      const r = await v.page.evaluate(() => {
+        const st = document.getElementById("titulo")!.style;
+        return { valor: st.getPropertyValue("color"), prioridad: st.getPropertyPriority("color") };
+      });
+      expect(r).toEqual({ valor: "rgb(1, 2, 3)", prioridad: "important" });
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+
   it("la vista previa es de su pantalla: en otra no se pinta", async () => {
     const v = await abrir();
     try {
