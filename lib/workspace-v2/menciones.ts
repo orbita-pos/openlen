@@ -5,6 +5,8 @@
 export interface PersonaMencionable {
   readonly userId: string;
   readonly nombre: string;
+  /** Su foto (lib/profile/avatar.ts → `avatarOf`), si tiene. Sin ella, la inicial. */
+  readonly avatar?: string | null;
 }
 
 export interface Menciones {

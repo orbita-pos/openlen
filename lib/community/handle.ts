@@ -59,6 +59,9 @@ export async function getUserByHandle(handle: string) {
       handle: schema.users.handle,
       bio: schema.users.bio,
       avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
+      links: schema.users.links,
+      pinnedProjectIds: schema.users.pinnedProjectIds,
     })
     .from(schema.users)
     .where(eq(schema.users.handle, normalizeHandle(handle)))

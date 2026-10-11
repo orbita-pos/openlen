@@ -63,4 +63,19 @@ describe("un turno desde un hilo del código, en la charla", () => {
     // Sin autor (lo acaba de mandar quien mira), la suya.
     expect(pintar({ ...turn, autor: undefined }).querySelector("[data-autor-del-turno]")!.textContent).toBe("A");
   });
+
+  it("🔴 el turno lleva la foto de quien lo pidió; recién mandado (sin autor), la de quien mira", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const gente = [{ userId: "u-yo", nombre: "Yo", avatar: "https://u/avatars/u-yo-0123456789abcdef.webp" }, { userId: "u-zoe", nombre: "Zoe" }];
+    const mio = { id: "t1", userText: "hola", assistantReasoning: "", status: "applied" } as DesignTurn;
+    act(() => root.render(<UserMessage turn={mio} initial="Y" gente={gente} yo="u-yo" />));
+    expect(host.querySelector("[data-autor-del-turno] img")?.getAttribute("src")).toBe("https://u/avatars/u-yo-0123456789abcdef.webp");
+    const deZoe = restoreTurn({ id: "t2", userText: "hazlo", assistantReasoning: "", status: "applied", appliedAt: 0, autor: "Zoe", autorId: "u-zoe" });
+    act(() => root.render(<UserMessage turn={deZoe} initial="Y" gente={gente} yo="u-yo" />));
+    expect(host.querySelector("[data-autor-del-turno] img")).toBeNull();
+    expect(host.querySelector("[data-autor-del-turno]")?.textContent).toBe("Z");
+  });
 });

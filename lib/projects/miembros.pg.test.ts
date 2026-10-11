@@ -126,4 +126,13 @@ describe("quién entra a un proyecto", () => {
     // De la más nueva a la más vieja: sin autor, el dueño (sin firma), Ana.
     expect(lista.map((v) => v.autor)).toEqual([null, null, "ana"]);
   });
+
+  it("🔴 cada miembro lleva su foto (la subida o la de Google) y su @", async () => {
+    await db.update(schema.users).set({ image: "https://lh3.googleusercontent.com/a/ana", handle: "pruebamiembros_ana" }).where(eq(schema.users.id, ANA));
+    const r = await invitar(PROYECTO, DUENO, correo(ANA), "editor");
+    if (r.ok) await aceptarInvitacion(r.token, ANA, correo(ANA));
+    const { miembros } = await listarMiembros(PROYECTO);
+    expect(miembros.find((x) => x.userId === ANA)).toMatchObject({ avatar: "https://lh3.googleusercontent.com/a/ana", handle: "pruebamiembros_ana" });
+    await db.update(schema.users).set({ handle: null }).where(eq(schema.users.id, ANA));
+  });
 });

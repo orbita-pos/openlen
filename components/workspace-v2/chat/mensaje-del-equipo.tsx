@@ -7,6 +7,7 @@
 import { useTranslations } from "next-intl";
 
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+import { AvatarContent } from "../avatar-content";
 import { TextoConMenciones } from "../hilos-del-codigo";
 import type { DesignTurn } from "./use-agent-chat";
 
@@ -31,10 +32,11 @@ export function MensajeDelEquipo({
   // Las fotos que lleva el mensaje (una, o todas si son varias).
   const fotos = turn.attachedImages ?? (turn.attachedImage ? [turn.attachedImage] : []);
   const inicial =(nombre(autorId).trim()[0] ?? "?").toUpperCase();
+  const avatar = gente.find((p) => p.userId === autorId)?.avatar ?? null;
   return (
     <div className={`nc-up flex items-start gap-2 ${propio ? "flex-row-reverse" : ""}`} data-mensaje-del-equipo={propio ? "propio" : "ajeno"}>
-      <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10.5px] font-bold text-white" style={{ background: colorDe(autorId) }}>
-        {inicial}
+      <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full text-[10.5px] font-bold text-white" style={{ background: colorDe(autorId) }}>
+        <AvatarContent avatar={avatar} initial={inicial} />
       </span>
       <div className={`min-w-0 max-w-[84%] ${propio ? "text-right" : ""}`}>
         <p className="text-[11px] fg-faint">{t("deA", { autor: nombre(autorId), para })}</p>

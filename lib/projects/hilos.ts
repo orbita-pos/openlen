@@ -22,6 +22,7 @@ import "server-only";
 import { and, asc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { avatarOf } from "@/lib/profile/avatar";
 
 export const MAX_TEXTO_DEL_HILO = 4000;
 export const MAX_CODIGO_DEL_HILO = 400;
@@ -31,6 +32,8 @@ export interface Persona {
   readonly nombre: string;
   readonly email: string;
   readonly rol: "dueno" | "editor" | "lector";
+  /** Su foto (`avatarOf`), o null: la inicial. */
+  readonly avatar: string | null;
 }
 
 export interface MensajeDelHilo {
@@ -61,21 +64,28 @@ const nombreDe = (u: { name: string | null; email: string }) => u.name?.trim() |
 /** El dueño y los miembros: a quién se puede mencionar. */
 export async function personasDelProyecto(projectId: string): Promise<Persona[]> {
   const [dueno] = await db
-    .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email })
+    .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, avatarUrl: schema.users.avatarUrl, image: schema.users.image })
     .from(schema.projects)
     .innerJoin(schema.users, eq(schema.users.id, schema.projects.userId))
     .where(eq(schema.projects.id, projectId))
     .limit(1);
   if (!dueno) return [];
   const miembros = await db
-    .select({ id: schema.users.id, name: schema.users.name, email: schema.users.email, rol: schema.projectMembers.rol })
+    .select({
+      id: schema.users.id,
+      name: schema.users.name,
+      email: schema.users.email,
+      avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
+      rol: schema.projectMembers.rol,
+    })
     .from(schema.projectMembers)
     .innerJoin(schema.users, eq(schema.users.id, schema.projectMembers.userId))
     .where(eq(schema.projectMembers.projectId, projectId))
     .orderBy(asc(schema.projectMembers.createdAt));
   return [
-    { userId: dueno.id, nombre: nombreDe(dueno), email: dueno.email, rol: "dueno" },
-    ...miembros.map((m) => ({ userId: m.id, nombre: nombreDe(m), email: m.email, rol: m.rol })),
+    { userId: dueno.id, nombre: nombreDe(dueno), email: dueno.email, rol: "dueno", avatar: avatarOf(dueno) },
+    ...miembros.map((m) => ({ userId: m.id, nombre: nombreDe(m), email: m.email, rol: m.rol, avatar: avatarOf(m) })),
   ];
 }
 

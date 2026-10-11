@@ -66,7 +66,8 @@
     "manageProfiles": "私のお店",
     "editorSound": "エディタの音",
     "manageSubscription": "サブスクリプションを管理",
-    "signOut": "サインアウト"
+    "signOut": "サインアウト",
+    "profile": "プロフィール"
   },
   "relativeTime": {
     "seconds": "{count}秒前",

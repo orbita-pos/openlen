@@ -66,7 +66,8 @@
     "manageProfiles": "我的店铺",
     "editorSound": "编辑器音效",
     "manageSubscription": "管理订阅",
-    "signOut": "退出登录"
+    "signOut": "退出登录",
+    "profile": "我的个人资料"
   },
   "relativeTime": {
     "seconds": "{count} 秒前",

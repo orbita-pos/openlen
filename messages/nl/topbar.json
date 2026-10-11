@@ -66,7 +66,8 @@
     "manageProfiles": "Mijn bedrijf",
     "editorSound": "Editorgeluid",
     "manageSubscription": "Abonnement beheren",
-    "signOut": "Afmelden"
+    "signOut": "Afmelden",
+    "profile": "Je profiel"
   },
   "relativeTime": {
     "seconds": "{count}s geleden",

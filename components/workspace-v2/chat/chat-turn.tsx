@@ -12,6 +12,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { AtSign, Crosshair, CornerDownRight, Flag } from "lucide-react";
 
+import { AvatarContent } from "../avatar-content";
 import { TextoDeLen } from "../texto-de-len";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
@@ -70,6 +71,7 @@ export function UserMessage({
   onAbrirOrigen,
   gente = SIN_GENTE,
   colorDe = SIN_COLOR,
+  yo = null,
 }: {
   turn: DesignTurn;
   initial: string;
@@ -79,6 +81,8 @@ export function UserMessage({
    *  su color. Sin ella, sólo `@Len` (en naranja). */
   gente?: readonly PersonaMencionable[];
   colorDe?: (userId: string) => string;
+  /** Quien mira: un turno recién mandado (sin `autorId`) es suyo, con su foto. */
+  yo?: string | null;
 }) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
@@ -89,6 +93,10 @@ export function UserMessage({
   // su mensaje —su objetivo—; las siguientes, una línea.
   const ronda = roundOfTurn(escrito);
   const text = ronda ? ronda.objective : escrito;
+  // Del servidor, `autorId` es quien lo pidió (el dueño, si NULL: lib/projects/chat.ts);
+  // recién mandado desde aquí no lo lleva, y es de quien mira.
+  const quien = turn.autorId ?? yo;
+  const avatar = quien ? (gente.find((p) => p.userId === quien)?.avatar ?? null) : null;
   if (ronda && ronda.round > 1) {
     return (
       <div className="flex flex-col items-end gap-1.5">
@@ -153,10 +161,10 @@ export function UserMessage({
         <span
           aria-hidden
           title={turn.autor}
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-[10.5px] font-bold text-white"
+          className="grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#FF7E55] to-[#C72E10] text-[10.5px] font-bold text-white"
           data-autor-del-turno={turn.autor ?? ""}
         >
-          {turn.autor ? inicialDe(turn.autor) : initial}
+          <AvatarContent avatar={avatar} initial={turn.autor ? inicialDe(turn.autor) : initial} />
         </span>
       </div>
       {corrections.map((c, i) => (

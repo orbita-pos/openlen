@@ -66,7 +66,8 @@
     "manageProfiles": "My business",
     "editorSound": "Editor sound",
     "manageSubscription": "Manage subscription",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "profile": "Your profile"
   },
   "relativeTime": {
     "seconds": "{count}s ago",
