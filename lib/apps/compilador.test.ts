@@ -3,7 +3,7 @@
 // modelos escriben por reflejo —código «de Vite»— sale como JavaScript que un
 // navegador ejecuta sin bundler, con las líneas en su sitio.
 import { describe, expect, it } from "vitest";
-import { compilarCarpeta, compilarFuente, esFuenteCompilable, textoDeDiagnostico, usesTailwindDirectives, type ContextoDeCompilacion } from "./compilador";
+import { compilarCarpeta, compilarFuente, JSX_DEV_RUNTIME, esFuenteCompilable, textoDeDiagnostico, usesTailwindDirectives, type ContextoDeCompilacion } from "./compilador";
 import { CATALOGO_ACTUAL } from "./dependencias";
 
 const app = (carpeta: Record<string, string>, entorno?: Record<string, string>): ContextoDeCompilacion => ({
@@ -469,5 +469,44 @@ describe("ficheros como módulo, como en Vite (plan 02, tarea 2)", () => {
   it('BRAZO DE CONTROL: un .json sin consulta sigue siendo su contenido (with { type: "json" })', () => {
     const js = ok(compilarFuente("/src/App.jsx", 'import d from "./datos.json";', app(carpeta)));
     expect(js).toContain('with { type: "json" }');
+  });
+});
+
+describe("modo desarrollo (modo Diseño de las apps)", () => {
+  const RUTA = "/src/screens/Inicio.tsx";
+  const CODIGO = 'export default function Inicio() {\n  return <main className="p-4"><h1>Hola</h1></main>;\n}\n';
+  const carpeta = { [RUTA]: CODIGO };
+
+  it("en desarrollo, cada etiqueta lleva su fichero y su línea (tsx y jsx)", () => {
+    for (const ruta of [RUTA, "/src/screens/Inicio.jsx"]) {
+      const r = compilarFuente(ruta, CODIGO, { carpeta: { [ruta]: CODIGO }, catalogo: "2026-11", development: true });
+      expect(r.ok).toBe(true);
+      if (!r.ok) continue;
+      expect(r.js).toContain(`from "${JSX_DEV_RUNTIME}"`);
+      expect(r.js).toContain(`const _jsxFileName = "${ruta}"`);
+      expect(r.js).toContain("fileName: _jsxFileName, lineNumber: 2");
+    }
+  });
+
+  it("sin desarrollo (lo que se publica), nada de eso", () => {
+    const r = compilarFuente(RUTA, CODIGO, { carpeta, catalogo: "2026-11" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.js).not.toContain("jsxDEV");
+    expect(r.js).not.toContain("_jsxFileName");
+  });
+
+  it("la caché no mezcla los dos modos", () => {
+    const dev = compilarFuente(RUTA, CODIGO, { carpeta, catalogo: "2026-11", development: true });
+    const prod = compilarFuente(RUTA, CODIGO, { carpeta, catalogo: "2026-11" });
+    expect(dev.ok && dev.js).toContain("jsxDEV");
+    expect(prod.ok && prod.js).not.toContain("jsxDEV");
+  });
+
+  it("react/jsx-dev-runtime sólo existe en desarrollo: escrito por el dueño, al publicar no vale", () => {
+    const src = `import { jsxDEV } from "${JSX_DEV_RUNTIME}";\nexport default jsxDEV;\n`;
+    const c = { "/src/x.ts": src };
+    expect(compilarFuente("/src/x.ts", src, { carpeta: c, catalogo: "2026-11" }).ok).toBe(false);
+    expect(compilarFuente("/src/x.ts", src, { carpeta: c, catalogo: "2026-11", development: true }).ok).toBe(true);
   });
 });
