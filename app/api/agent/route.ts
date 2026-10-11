@@ -760,6 +760,8 @@ async function correrTurno(
       vista: vistaDelDiseno,
       elements: disenoDelTurno.elements,
       limit: MAX_PHOTOS_PER_MESSAGE - attachedInlines.length,
+      // Si el dueño cancela el turno (■) mientras se capturan, se cortan.
+      signal: req.signal,
     }).catch(() => []);
     attachedInlines.push(...capturas);
     if (capturas.length > 0) console.log(`[agent] modo Diseño — ${capturas.length} captura(s) de ${disenoDelTurno.elements.length} elemento(s)`);

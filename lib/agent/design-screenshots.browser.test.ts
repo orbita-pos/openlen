@@ -28,6 +28,24 @@ describe("las capturas del modo Diseño", () => {
     expect(png.subarray(1, 4).toString()).toBe("PNG");
     expect(png.readUInt32BE(16)).toBeGreaterThan(10); // ancho
   }, 120_000);
+  it("🔴 con el turno ya cancelado no lanza Chromium; cancelado a mitad, vuelve enseguida sin capturas", async () => {
+    let lanzados = 0;
+    const lanzar = async () => {
+      lanzados++;
+      return (await import("@/lib/ai/visual-quality-renderer")).lanzarChromium();
+    };
+    const ya = new AbortController();
+    ya.abort();
+    expect(await captureDesignElements({ html: CASCARON, vista, elements: [elemento("#/ajustes", 6, "h1")], limit: 4, signal: ya.signal }, { lanzar })).toEqual([]);
+    expect(lanzados, "lanzó Chromium para un turno ya cancelado").toBe(0);
+    const c = new AbortController();
+    const t0 = Date.now();
+    const p = captureDesignElements({ html: CASCARON, vista, elements: [elemento("#/ajustes", 6, "h1")], limit: 4, signal: c.signal }, { lanzar });
+    setTimeout(() => c.abort(), 300);
+    expect(await p).toEqual([]);
+    expect(Date.now() - t0, "siguió capturando después de cancelar").toBeLessThan(2500);
+  }, 120_000);
+
   it("un elemento que no está, sin cadena, o sin hueco: no hay captura y no falla", async () => {
     const r = await captureDesignElements({
       html: CASCARON, vista,
