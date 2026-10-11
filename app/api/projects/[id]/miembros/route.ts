@@ -26,6 +26,7 @@ import {
 } from "@/lib/projects/miembros";
 import { sendProjectInviteEmail } from "@/lib/email";
 import { lenEmailAddress } from "@/lib/len-email/address";
+import { avatarOf } from "@/lib/profile/avatar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,7 +57,14 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
   const q = await quien(ctx);
   if (!q.ok) return q.respuesta;
   const [dueno] = await db
-    .select({ id: schema.users.id, email: schema.users.email, name: schema.users.name })
+    .select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
+      handle: schema.users.handle,
+    })
     .from(schema.users)
     .where(eq(schema.users.id, q.acceso.duenoId))
     .limit(1);
@@ -65,9 +73,11 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
   return json({
     rol: q.acceso.rol,
     yo: q.userId,
-    dueno: dueno ? { userId: dueno.id, email: dueno.email, name: dueno.name } : null,
+    dueno: dueno ? { userId: dueno.id, email: dueno.email, name: dueno.name, avatar: avatarOf(dueno), handle: dueno.handle } : null,
     // A un miembro no se le enseña lo que gasta cada uno: eso es del dueño.
-    miembros: miembros.map((m) => (esDueno ? m : { userId: m.userId, email: m.email, name: m.name, rol: m.rol, desde: m.desde })),
+    miembros: miembros.map((m) =>
+      esDueno ? m : { userId: m.userId, email: m.email, name: m.name, avatar: m.avatar, handle: m.handle, rol: m.rol, desde: m.desde },
+    ),
     // LEN POR CORREO: la dirección del proyecto, sólo a quien puede pedirle a Len.
     lenEmail: puede(q.acceso.rol, "editar") ? lenEmailAddress(q.id) : null,
     ...(esDueno

@@ -1,6 +1,5 @@
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { getUserByHandle } from "./handle";
 import type { ProjectData } from "@/lib/projects/types";
 import { detectSlotPath, gateReservedMarker } from "@/lib/html-engine";
 import { normalizeBornCanonical } from "@/lib/normalize";
@@ -16,6 +15,7 @@ import { containsBlockedTerm } from "./blocklist";
 // navegador resolvía contra `/es/explore` → 404. El porqué medido está en
 // `lib/publish/deploy-url.ts`.
 import { deployUrlFor } from "@/lib/publish/deploy-url";
+import { avatarOf } from "@/lib/profile/avatar";
 
 export type ExploreCard = {
   id: string;
@@ -93,6 +93,7 @@ export async function listExplore(opts: {
       listedAt: schema.projects.listedAt,
       handle: schema.users.handle,
       avatarUrl: schema.users.avatarUrl,
+      image: schema.users.image,
     })
     .from(schema.projects)
     .innerJoin(schema.users, eq(schema.users.id, schema.projects.userId))
@@ -103,7 +104,8 @@ export async function listExplore(opts: {
   const hasMore = rows.length > limit;
   const items = rows
     .slice(0, limit)
-    .map(({ subdomain, ...r }) => ({ ...r, deployUrl: deployUrlFor(subdomain) ?? r.deployUrl }));
+    // Sin foto subida, la de Google (`avatarOf`); la columna `image` no sale.
+    .map(({ subdomain, image, ...r }) => ({ ...r, avatarUrl: avatarOf({ avatarUrl: r.avatarUrl, image }), deployUrl: deployUrlFor(subdomain) ?? r.deployUrl }));
   const last = items[items.length - 1];
   let nextCursor: string | null = null;
   if (hasMore && last) {
@@ -115,38 +117,9 @@ export async function listExplore(opts: {
   return { items, nextCursor };
 }
 
-export async function getPublicProfile(handle: string) {
-  const user = await getUserByHandle(handle);
-  if (!user || !user.handle) return null;
-  const pages = await db
-    .select({
-      id: schema.projects.id,
-      title: schema.projects.title,
-      thumbnailUrl: schema.projects.thumbnailUrl,
-      deployUrl: schema.projects.deployUrl,
-      subdomain: schema.projects.subdomain,
-      remixCount: schema.projects.remixCount,
-      listedAt: schema.projects.listedAt,
-    })
-    .from(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.userId, user.id),
-        eq(schema.projects.visibility, "public"),
-        eq(schema.projects.status, "published"),
-      ),
-    )
-    .orderBy(desc(schema.projects.listedAt));
-  return {
-    user: { name: user.name, handle: user.handle, bio: user.bio, avatarUrl: user.avatarUrl },
-    pages: pages.map(({ subdomain, ...p }) => ({
-      ...p,
-      deployUrl: deployUrlFor(subdomain) ?? p.deployUrl,
-      handle: user.handle,
-      avatarUrl: user.avatarUrl,
-    })),
-  };
-}
+// ⚰️ Aquí vivía `getPublicProfile` (el perfil público de antes, con su mapa de
+// actividad). El perfil es ahora lib/profile/store.ts → `getProfile`, que
+// decide qué ve cada quien (docs/superpowers/specs/2026-10-10-profile-design.md).
 
 export async function getPublicProjectForRemix(
   id: string,

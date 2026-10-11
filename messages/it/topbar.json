@@ -66,7 +66,8 @@
     "manageProfiles": "La mia attività",
     "editorSound": "Suono dell'editor",
     "manageSubscription": "Gestisci abbonamento",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "profile": "Il tuo profilo"
   },
   "relativeTime": {
     "seconds": "{count} s fa",

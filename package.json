@@ -73,6 +73,7 @@
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
     "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",
+    "profile:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/profile-migrate.ts",
     "movil:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/movil-migrate.ts",
     "renewal-reminders:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/renewal-reminders-migrate.ts",
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",

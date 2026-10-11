@@ -33,6 +33,7 @@ import {
   type PersonaMencionable,
 } from "@/lib/workspace-v2/menciones";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
+import { AvatarContent } from "./avatar-content";
 
 export interface EtiquetasDeHilos {
   /** En la caja de comentar una línea, cuando hay gente o Len a quien mencionar. */
@@ -370,6 +371,19 @@ export function HiloEnLinea({ hilo, ctx, labels }: { hilo: Hilo; ctx: ContextoDe
         <>
           {hilo.mensajes.map((m) => (
             <span key={m.id} className="mb-1 block last:mb-0" data-mensaje-del-hilo={m.autorId ? "persona" : "len"}>
+              {m.autorId && (
+                <span
+                  aria-hidden
+                  className="mr-1 inline-grid h-4 w-4 place-items-center overflow-hidden rounded-full align-[-3px] text-[8px] font-bold text-white"
+                  style={{ background: ctx.colorDe(m.autorId) }}
+                  data-foto-del-autor=""
+                >
+                  <AvatarContent
+                    avatar={ctx.gente.find((p) => p.userId === m.autorId)?.avatar}
+                    initial={((m.autor ?? "?").trim().charAt(0) || "?").toUpperCase()}
+                  />
+                </span>
+              )}
               <span
                 className={`font-medium ${m.autorId ? "" : "text-accent"}`}
                 style={m.autorId ? { color: ctx.colorDe(m.autorId) } : undefined}

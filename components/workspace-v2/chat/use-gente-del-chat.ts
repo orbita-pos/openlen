@@ -32,7 +32,7 @@ export function avisarMiembrosCambiaron(): void {
 
 const ESPERA_MS = 30_000;
 
-type Persona = { userId: string; name: string | null; email: string };
+type Persona = { userId: string; name: string | null; email: string; avatar?: string | null };
 
 export function genteDesdeMiembros(r: {
   rol: string;
@@ -43,7 +43,7 @@ export function genteDesdeMiembros(r: {
 }): GenteDelChat {
   const todas = [...(r.dueno ? [r.dueno] : []), ...r.miembros];
   return {
-    gente: todas.map((p) => ({ userId: p.userId, nombre: p.name?.trim() || p.email })),
+    gente: todas.map((p) => ({ userId: p.userId, nombre: p.name?.trim() || p.email, ...(p.avatar ? { avatar: p.avatar } : {}) })),
     yo: r.yo,
     puedeLen: r.rol === "dueno" || r.rol === "editor",
     compartido: r.miembros.length > 0,

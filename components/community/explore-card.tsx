@@ -94,7 +94,7 @@ export default function ExploreCard({ data }: { data: ExploreCardData }) {
       {/* Meta */}
       <div className="mt-3 flex items-start gap-2.5">
         {data.avatarUrl ? (
-          <img src={data.avatarUrl} alt="" className="mt-0.5 h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/10" />
+          <img src={data.avatarUrl} alt="" referrerPolicy="no-referrer" className="mt-0.5 h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white/10" />
         ) : (
           <div className="mt-0.5 h-6 w-6 shrink-0 rounded-full bg-gradient-to-br from-[#ff7e55] to-[#ff5a36]" />
         )}

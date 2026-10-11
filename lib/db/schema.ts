@@ -99,6 +99,10 @@ export const users = pgTable("users", {
   handle: text("handle").unique(),
   bio: text("bio"),
   avatarUrl: text("avatarUrl"),
+  // EL PERFIL (docs/superpowers/specs/2026-10-10-profile-design.md): hasta 4
+  // enlaces y hasta 6 proyectos fijados. `npm run profile:migrate`.
+  links: jsonb("links").$type<{ url: string }[]>(),
+  pinnedProjectIds: jsonb("pinnedProjectIds").$type<string[]>(),
 });
 
 export const accounts = pgTable(

@@ -19,7 +19,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
+import { UserRound } from "lucide-react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { Link } from "@/i18n/navigation";
 import { ICONO_BARRA, Moon, Sun, Volume2, VolumeX } from "./icons";
 import { Tooltip } from "./ui";
 
@@ -153,6 +155,16 @@ export function AccountMenu({
               {userEmail || "—"}
             </div>
           </div>
+
+          {/* TU PERFIL (/me → /@handle, o elegir el @ primero). */}
+          <Link
+            href="/me"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 border-b bd text-[12.5px] fg hover:bg-hover transition"
+          >
+            <UserRound size={ICONO_BARRA} className="shrink-0 fg-muted" />
+            <span className="flex-1 min-w-0 truncate">{t("account.profile")}</span>
+          </Link>
 
           {/* EL IDIOMA, sin `compact`: aquí no compite por el ancho de una
               barra, así que dice su nombre entero en vez de quedarse en un
