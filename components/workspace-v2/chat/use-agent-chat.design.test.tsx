@@ -47,9 +47,9 @@ function stubAgent(eventos: string[]) {
   return cuerpos;
 }
 
-async function render(onDesignSettled: (ok: boolean) => void) {
+async function render(onDesignSettled: (ok: boolean) => void, capturar?: (c: ReturnType<typeof useAgentChat>) => void) {
   function Chat() {
-    useAgentChat({
+    const c = useAgentChat({
       projectId: "p1",
       projectHtml: "",
       onLocalUpdate: () => {},
@@ -59,6 +59,7 @@ async function render(onDesignSettled: (ok: boolean) => void) {
       onPendingDraftConsumed: () => {},
       onDesignSettled,
     } as Parameters<typeof useAgentChat>[0]);
+    capturar?.(c);
     return null;
   }
   const host = document.createElement("div");
@@ -87,6 +88,21 @@ describe("«Aplicar» del modo Diseño en el chat", () => {
     const settled = vi.fn();
     await render(settled);
     expect(settled).toHaveBeenCalledWith(true);
+  });
+
+  it("🔴 reintentar un turno de «Aplicar» que falló vuelve a mandar design", async () => {
+    const cuerpos = stubAgent([TURNO, ERROR]);
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render(() => {}, (c) => {
+      chat = c;
+    });
+    const turno = chat!.turns[chat!.turns.length - 1]!;
+    await act(async () => {
+      chat!.handleRetry(turno);
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    expect(cuerpos).toHaveLength(2);
+    expect((cuerpos[1]!.design as { elements: unknown[] } | undefined)?.elements, "el reintento salió sin design").toHaveLength(1);
   });
 
   it("🔴 con error, onDesignSettled(false): los pendientes se quedan", async () => {

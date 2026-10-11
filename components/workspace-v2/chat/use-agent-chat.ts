@@ -109,6 +109,8 @@ export interface DesignTurn {
   /** Crear es Len: todas las fotos del turno, sólo cuando son dos o más
    *  (`attachedImage` es entonces la primera). */
   attachedImages?: readonly AttachedImage[];
+  /** «Aplicar» del modo Diseño: los cambios que llevó, para reintentar el mismo turno. */
+  design?: DesignRequest;
   /**
    * El elemento al que se acotó ESTE turno — misma prueba que la imagen.
    *
@@ -1166,6 +1168,7 @@ export function useAgentChat({
         userText: textoDelTurno,
         attachedImage: imgs[0],
         ...(imgs.length > 1 ? { attachedImages: imgs } : {}),
+        ...(opciones?.design ? { design: opciones.design } : {}),
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
         // del compositor unas líneas más abajo.
@@ -2160,7 +2163,11 @@ export function useAgentChat({
       }
       // Re-send with the turn's ORIGINAL image (the live composer was cleared
       // after the first send), so a vision/image edit retries as the same request.
-      void send(turn.userText, turn.attachedImage ?? null, turn.attachedImages ? { images: turn.attachedImages } : undefined);
+      // Y los cambios de un «Aplicar», que si no se pierden: el reintento sería sólo su resumen.
+      void send(turn.userText, turn.attachedImage ?? null, {
+        ...(turn.attachedImages ? { images: turn.attachedImages } : {}),
+        ...(turn.design ? { design: turn.design } : {}),
+      });
     },
     [send],
   );
