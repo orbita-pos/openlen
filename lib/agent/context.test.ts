@@ -216,6 +216,18 @@ describe("buildAgentContext", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, idioma: "pt" });
     expect(JSON.stringify(r)).toContain("the user's interface is in Portuguese");
   });
+  // HOLI, 10/10: interfaz en inglés, escribe en español. Con «the user's
+  // interface is in English» delante, Len contestó en inglés a un mensaje en
+  // español. Lo que se nombra es el idioma en que ESCRIBE; el de la interfaz
+  // queda para cuando no se sabe (`userWritingLanguage` → null).
+  it("🔴 con el idioma en que escribe, se nombra ése, y el de la interfaz no", () => {
+    const c = buildAgentContext({ state: {}, idioma: "en", writingLanguage: "es" });
+    expect(c).toContain("LANGUAGE: the user writes in Spanish.");
+    expect(c).toMatch(/notes between your steps/);
+    expect(c).not.toContain("English");
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, idioma: "en", writingLanguage: "es" });
+    expect(JSON.stringify(r)).toContain("the user writes in Spanish");
+  });
 });
 
 describe("lo que ya se sabe roto", () => {
