@@ -15,8 +15,8 @@ export const DOC_PATHS = {
 } as const;
 
 const PREFACE =
-  "This manual was written for Len, OpenLen's built-in agent. Through MCP its tools map like this: " +
-  "Read → read_file, Grep → search_files, view_page → view_page. Bash, npm and Len's other tools are not available here.\n\n";
+  "This manual was written for Len, OpenLen's built-in agent. Through MCP its tools map like this: Read → read_file, Edit → edit_file, " +
+  "Write → write_file, Grep → search_files, view_page → view_page, publish → publish. Bash, npm and Len's other tools are not available here.\n\n";
 
 export const getDocsTool = defineTool({
   name: "get_docs",
