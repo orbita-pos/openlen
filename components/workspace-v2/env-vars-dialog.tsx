@@ -70,6 +70,7 @@ export function EnvVarsDialog({
   onClose,
   readOnly = false,
   onPublish,
+  onChanged,
 }: {
   projectId: string;
   open: boolean;
@@ -78,6 +79,9 @@ export function EnvVarsDialog({
   readOnly?: boolean;
   /** Abre publicar, para la franja de «la publicada sigue con los valores de antes». */
   onPublish?: () => void;
+  /** Se guardó: el taller vuelve a leer el proyecto, y el botón Publicar dice
+   *  «cambios sin publicar» si cambió una de producción. */
+  onChanged?: () => void;
 }) {
   const t = useTranslations("topbar");
   const [state, setState] = useState<EnvState | "loading" | "error">("loading");
@@ -158,6 +162,7 @@ export function EnvVarsDialog({
       }
       setState(body);
       notifyEnvVarsChanged(projectId);
+      onChanged?.();
       return true;
     } finally {
       setBusy(false);

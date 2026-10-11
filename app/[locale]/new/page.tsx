@@ -4002,6 +4002,7 @@ function NewV2Inner() {
           open={envVarsOpen}
           onClose={() => setEnvVarsOpen(false)}
           readOnly={soloLector}
+          onChanged={() => void refetchProject(loadedProject.id)}
           onPublish={
             soloLector || !onPublish
               ? undefined

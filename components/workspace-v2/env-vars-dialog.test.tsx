@@ -79,7 +79,7 @@ async function type(el: Element | undefined | null, value: string) {
   });
 }
 
-async function render(props: { readOnly?: boolean; onPublish?: () => void } = {}) {
+async function render(props: { readOnly?: boolean; onPublish?: () => void; onChanged?: () => void } = {}) {
   await act(async () => {
     root.render(
       <NextIntlClientProvider locale="es" messages={{ topbar: messages }}>
@@ -160,6 +160,23 @@ describe("EnvVarsDialog", () => {
     await click(button("Guardar"));
     expect(text()).toContain("Alguien cambió las variables mientras tanto");
     expect(inputs("Nombre")[0]!.value).toBe("VITE_NUEVA");
+  });
+
+  it("🔴 guardar bien avisa al taller (que vuelve a leer «cambios sin publicar»); un 409, no", async () => {
+    const onChanged = vi.fn();
+    await render({ onChanged });
+    await click(button("Añadir variable"));
+    await type(inputs("Nombre")[0], "VITE_NUEVA");
+    await type(inputs("Valor")[0], "1");
+    await click(button("Guardar"));
+    expect(onChanged).toHaveBeenCalledTimes(1);
+
+    respuestaPut = { status: 409, body: { error: "conflict", ...ESTADO, version: "v9" } };
+    await click(button("Añadir variable"));
+    await type(inputs("Nombre")[0], "VITE_OTRA");
+    await type(inputs("Valor")[0], "2");
+    await click(button("Guardar"));
+    expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
   it("un lector ve la lista sin botones de cambiar", async () => {
