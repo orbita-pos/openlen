@@ -265,7 +265,7 @@
     "resetAll": "Restaurar tudo",
     "busy": "O Len está trabalhando: aplique quando terminar.",
     "apply": "Aplicar ({n})",
-    "applyMessage": "Mudanças de design · {n} elementos",
+    "applyMessage": "Mudanças de design · {n, plural, one {# elemento} other {# elementos}}",
     "tooBig": "Mudanças demais para um só «Aplicar»: aplique uma parte primeiro.",
     "group": {
       "content": "Conteúdo",

@@ -181,3 +181,17 @@ export function previewMessagesOf(prev: DesignEditsState, next: DesignEditsState
   }
   return out;
 }
+
+/** El mensaje que «Aplicar» deja en el chat (y que es el `prompt` del turno): el
+ *  título con su plural y una línea por elemento con sus cambios. */
+export function designSummary(
+  request: DesignRequest,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  const lineas = request.elements.map((el) => {
+    const cambios = el.changes.map((c) => `${t(`designMode.prop.${c.property}`)} ${c.before || "—"} → ${c.after}`);
+    if (el.photo) cambios.push(t("designMode.photo"));
+    return `- <${el.tag}>${el.text ? ` «${el.text}»` : ""}: ${cambios.join("; ")}`;
+  });
+  return [t("designMode.applyMessage", { n: request.elements.length }), ...lineas, ...(request.note ? [request.note] : [])].join("\n");
+}

@@ -265,7 +265,7 @@
     "resetAll": "Reset all",
     "busy": "Len is working: apply when it's done.",
     "apply": "Apply ({n})",
-    "applyMessage": "Design changes · {n} elements",
+    "applyMessage": "Design changes · {n, plural, one {# element} other {# elements}}",
     "tooBig": "Too many changes for one Apply: apply part of them first.",
     "group": {
       "content": "Content",

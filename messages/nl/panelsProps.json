@@ -265,7 +265,7 @@
     "resetAll": "Alles herstellen",
     "busy": "Len is bezig: pas toe als hij klaar is.",
     "apply": "Toepassen ({n})",
-    "applyMessage": "Ontwerpwijzigingen · {n} elementen",
+    "applyMessage": "Ontwerpwijzigingen · {n, plural, one {# element} other {# elementen}}",
     "tooBig": "Te veel wijzigingen voor één keer «Toepassen»: pas eerst een deel toe.",
     "group": {
       "content": "Inhoud",

@@ -265,7 +265,7 @@
     "resetAll": "Alles zurücksetzen",
     "busy": "Len arbeitet gerade: Wende es an, wenn er fertig ist.",
     "apply": "Anwenden ({n})",
-    "applyMessage": "Design-Änderungen · {n} Elemente",
+    "applyMessage": "Design-Änderungen · {n, plural, one {# Element} other {# Elemente}}",
     "tooBig": "Zu viele Änderungen für ein einziges „Anwenden“: Wende zuerst einen Teil an.",
     "group": {
       "content": "Inhalt",
