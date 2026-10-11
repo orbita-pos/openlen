@@ -9,7 +9,7 @@
 // (`deps.buildApp`), con su tamaño como lo imprime Vite. Y `npm test` (plan 04):
 // las pruebas de la app en el Chromium de los ojos (`deps.testApp`), con el
 // informe de vitest.
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
@@ -78,7 +78,11 @@ export function appToolsFor(
       const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
       if (program === "build") {
         if (!deps.buildApp) return { stdout: "", stderr: "npm run build: not available here.\n", exitCode: 1 };
-        const r = await deps.buildApp(fuentes, app);
+        // Con `/.env` y el `import.meta.env` de borrador, como el lienzo y los
+        // ojos (spec local 2026-10-10): el paquete mide lo que de verdad lleva.
+        const aCompilar = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isCompileInputPath(ruta)));
+        const entorno = session.projectId && deps.entornoDeLaApp ? await deps.entornoDeLaApp(session.projectId).catch(() => null) : null;
+        const r = await deps.buildApp(aCompilar, app, entorno ? { entorno } : undefined);
         if (!r) return { stdout: "", stderr: "build: didn't finish in time; try again.\n", exitCode: 1 };
         if (!r.ok) {
           const errores = r.errores
