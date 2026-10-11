@@ -81,6 +81,9 @@ export default defineConfig({
       "lib/login/**/*.test.ts",
       "app/api/movil/**/*.test.ts",
       "movil/src/**/*.test.ts",
+      // El servidor MCP (plans/mcp-de-openlen).
+      "lib/mcp/**/*.test.ts",
+      "app/api/mcp/**/*.test.ts",
       "movil/src/**/*.test.tsx",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
