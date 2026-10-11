@@ -5,10 +5,13 @@
 //                             │ vencido (tras reintento) → local(no_respondio)
 //   cualquier ──fallo──▶ local(motivo)        local se queda: no parpadea
 //
-// «listo» lo manda el propio lienzo: `openlen:iframe-ready`, que emiten los
-// scripts del editor. Un 404 (documento caducado, host mal servido) carga una
-// página sin esos scripts, así que no llega nunca, y el plazo lo resuelve: una
-// subida nueva y, si tampoco, la reserva con banda. Spec 2026-09-15, D7.
+// «listo» lo manda el propio lienzo: `openlen:lienzo-vivo`, que emiten los
+// scripts del editor en cuanto corren. Un 404 (documento caducado, host mal
+// servido) carga una página sin esos scripts, así que no llega nunca, y el
+// plazo lo resuelve: una subida nueva y, si tampoco, la reserva con banda.
+// Spec 2026-09-15, D7. (Era `iframe-ready`, que sale en DOMContentLoaded y
+// espera a los módulos: en una app, al paquete entero. Un paquete lento se
+// tomaba por un host muerto. Ver canvas-alive-before-the-app.browser.test.ts.)
 
 /** Medido en la Task 7 del plan (M3), el 2026-09-15 — los números están en
  *  `docs/superpowers/plans/2026-09-15-un-solo-camino-mediciones.md`. La
