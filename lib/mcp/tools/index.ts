@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { runGuarded, type ToolDefinition } from "./define";
 import { getDiagnosticsTool } from "./diagnostics";
 import { getDocsTool } from "./docs";
+import { editFileTool } from "./edit";
 import { readFileTool, searchFilesTool } from "./files";
 import { getProjectTool, listProjectsTool } from "./projects";
 import { viewPageTool } from "./view";
@@ -17,6 +18,7 @@ export const ALL_TOOLS: ToolDefinition<any>[] = [
   getDocsTool,
   getDiagnosticsTool,
   viewPageTool,
+  editFileTool,
   writeFileTool,
   deleteFileTool,
 ];
