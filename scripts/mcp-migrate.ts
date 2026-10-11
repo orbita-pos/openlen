@@ -22,7 +22,19 @@ async function main() {
   );`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "mcpTokens_hash_uq" ON "mcpTokens" ("hash");`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "mcpTokens_userId_idx" ON "mcpTokens" ("userId");`);
-  console.log("tabla mcpTokens lista.");
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "mcpAudit" (
+    "id" text PRIMARY KEY,
+    "userId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "tokenId" text NOT NULL,
+    "tool" text NOT NULL,
+    "projectId" text,
+    "ok" boolean NOT NULL,
+    "errorCode" text,
+    "durationMs" integer NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now()
+  );`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "mcpAudit_userId_createdAt_idx" ON "mcpAudit" ("userId", "createdAt");`);
+  console.log("tablas del MCP listas.");
   process.exit(0);
 }
 

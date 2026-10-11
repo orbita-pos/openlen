@@ -1,10 +1,11 @@
 // CÓMO SE DEFINE Y SE CORRE UNA HERRAMIENTA. `run` recibe los argumentos ya
 // validados y quién llama; todo lo común (token, ráfaga, permisos, plan,
-// errores) pasa aquí, una vez.
+// errores, registro) pasa aquí, una vez.
 import { captureException } from "@inariwatch/capture";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import type * as z from "zod4";
 import { consumeToken } from "@/lib/rate-limit";
+import { errorCodeOf, recordAudit } from "../audit";
 import { callerFrom, type McpCaller } from "../auth";
 import { checkToolAllowed, type ToolName } from "../plan-policy";
 import { toolError, type ToolResult } from "../results";
@@ -41,6 +42,23 @@ export async function runGuarded<S extends z.ZodObject>(
 ): Promise<ToolResult> {
   const caller = callerFrom(authInfo);
   if (!caller) return toolError("unauthorized", "The OpenLen connection is not signed in. Ask the user to reconnect it.");
+  const started = Date.now();
+  const result = await runForCaller(tool, args, caller);
+  const raw = (args as { project_id?: unknown } | undefined)?.project_id;
+  // Sin esperar: el registro no retrasa la respuesta, y nunca lleva los argumentos.
+  void recordAudit({
+    userId: caller.userId,
+    tokenId: caller.tokenId,
+    tool: tool.name,
+    projectId: typeof raw === "string" ? raw : null,
+    ok: !result.isError,
+    errorCode: errorCodeOf(result),
+    durationMs: Date.now() - started,
+  });
+  return result;
+}
+
+async function runForCaller<S extends z.ZodObject>(tool: ToolDefinition<S>, args: z.infer<S>, caller: McpCaller): Promise<ToolResult> {
   const burst = consumeToken(`mcp:burst:${caller.tokenId}`, BURST);
   if (!burst.allowed) {
     return toolError("rate_limited", `Too many calls. Wait ${Math.ceil(burst.retryAfterMs / 1000)} s and continue.`);
