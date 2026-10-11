@@ -84,7 +84,16 @@ export interface ContextoDeCompilacion {
    *  pruebas (`vitest`, Testing Library: `lib/apps/tests/test-kit.ts`). Los
    *  resuelve el empaquetador de pruebas. */
   readonly extraSpecifiers?: readonly string[];
+  /** EL MODO DISEÑO (spec 2026-10-11-modo-diseno-de-apps): sólo el lienzo y
+   *  los ojos. Cada etiqueta sale como `jsxDEV(…, { fileName, lineNumber })` y
+   *  el empaquetador da `react/jsx-dev-runtime` (`lib/apps/design/jsx-dev-runtime.ts`),
+   *  que apunta de dónde sale cada elemento. Publicar no lo pone NUNCA. */
+  readonly development?: boolean;
 }
+
+/** El runtime de JSX de desarrollo: no está en ningún catálogo; en modo
+ *  desarrollo lo da el empaquetador (`lib/apps/design/jsx-dev-runtime.ts`). */
+export const JSX_DEV_RUNTIME = "react/jsx-dev-runtime";
 
 export interface Diagnostico {
   readonly ruta: string;
@@ -351,6 +360,8 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
     .update("\0")
     .update(hojas)
+    .update("\0")
+    .update(ctx.development ? "development" : "production")
     .digest("hex");
 }
 
@@ -382,7 +393,7 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     js = transform(codigo, {
       transforms: transformsDe(ruta),
       jsxRuntime: "automatic",
-      production: true,
+      production: !ctx.development,
       disableESTransforms: true,
       filePath: ruta,
     }).code;
@@ -435,6 +446,8 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       }
       // Lo de las pruebas (vitest, Testing Library) pasa por su nombre: lo pone el kit.
       if (ctx.extraSpecifiers?.includes(especificador)) continue;
+      // EL MODO DISEÑO: el runtime de desarrollo lo da el empaquetador.
+      if (ctx.development && especificador === JSX_DEV_RUNTIME) continue;
       // UN NOMBRE: o es del catálogo (lo resuelve el empaquetador) o no existe.
       const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
