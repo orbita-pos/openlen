@@ -34,9 +34,15 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.redirect(login);
   }
 
+  // Quien ya paga, al portal (ver arriba). Pero quién paga lo dice Polar, no
+  // `users.plan`: un plan puesto a mano
+  // (`users:set-plan`) no tiene cliente en Polar, y mandarlo al portal acababa
+  // en `portal_failed` con «Go Pro» y con «Go Max» (11/10, producción). Sin
+  // cliente no hay suscripción que duplicar: abre el checkout como cualquiera.
   if ((await getUserPlan(session.user.id)) !== "free") {
     try {
-      return NextResponse.redirect(await createCustomerPortalUrl(session.user.id));
+      const portal = await createCustomerPortalUrl(session.user.id);
+      if (portal) return NextResponse.redirect(portal);
     } catch (err) {
       console.error("[billing] el portal de Polar falló:", err instanceof Error ? err.message : err);
       projects.searchParams.set("billing_error", "portal_failed");

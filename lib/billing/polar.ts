@@ -29,7 +29,17 @@ import { verifyWebhookSignature } from "./webhook-signature";
 
 export { verifyWebhookSignature };
 
-export class BillingError extends Error {}
+export class BillingError extends Error {
+  constructor(
+    message: string,
+    /** El estado HTTP de Polar, cuando el error es una respuesta suya. */
+    readonly status?: number,
+    /** Su cuerpo, entero (el mensaje lleva sólo 300 caracteres). */
+    readonly body?: string,
+  ) {
+    super(message);
+  }
+}
 
 function env(name: string): string {
   const v = process.env[name];
@@ -85,7 +95,7 @@ async function polarPost(path: string, body: unknown): Promise<unknown> {
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new BillingError(`polar ${path} ${res.status}: ${detail.slice(0, 300)}`);
+    throw new BillingError(`polar ${path} ${res.status}: ${detail.slice(0, 300)}`, res.status, detail);
   }
   return res.json();
 }
@@ -137,15 +147,43 @@ export async function createCheckout(opts: {
 }
 
 /** Create a hosted customer-portal session (manage/cancel subscription). The
- *  customer must already exist in Polar (created at first checkout). */
-export async function createCustomerPortalUrl(userId: string): Promise<string> {
-  const data = (await polarPost("/v1/customer-sessions/", {
-    customer_external_id: userId,
-  })) as { customer_portal_url?: unknown };
+ *  customer must already exist in Polar (created at first checkout): si Polar
+ *  no tiene a nadie con ese id, `null` — nunca compró por Polar (un plan puesto
+ *  a mano con `users:set-plan`), así que no hay suscripción que gestionar. */
+export async function createCustomerPortalUrl(userId: string): Promise<string | null> {
+  let data: { customer_portal_url?: unknown };
+  try {
+    data = (await polarPost("/v1/customer-sessions/", {
+      customer_external_id: userId,
+    })) as { customer_portal_url?: unknown };
+  } catch (err) {
+    if (err instanceof BillingError && isUnknownCustomer(err)) return null;
+    throw err;
+  }
   if (typeof data.customer_portal_url !== "string") {
     throw new BillingError("portal_no_url");
   }
   return data.customer_portal_url;
+}
+
+/** El 422 con que Polar dice que no tiene un cliente con ese id externo
+ *  (producción, 11/10): `detail[].loc` = `["body", "external_customer_id"]`,
+ *  «Customer does not exist.». Por el campo, no por el texto del mensaje. */
+function isUnknownCustomer(err: BillingError): boolean {
+  if (err.status !== 422 || !err.body) return false;
+  try {
+    const { detail } = JSON.parse(err.body) as { detail?: Array<{ loc?: unknown }> };
+    return (
+      Array.isArray(detail) &&
+      detail.some(
+        (d) =>
+          Array.isArray(d.loc) &&
+          (d.loc.includes("external_customer_id") || d.loc.includes("customer_external_id")),
+      )
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ── Plan state transitions ──────────────────────────────────────────────────
