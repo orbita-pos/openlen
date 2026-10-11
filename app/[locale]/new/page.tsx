@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -14,6 +15,15 @@ import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { DesignPanel } from "@/components/workspace-v2/design-mode/design-panel";
+import {
+  designEditsReducer,
+  EMPTY_DESIGN_EDITS,
+  pendingCount,
+  previewMessagesOf,
+  toDesignRequest,
+} from "@/components/workspace-v2/design-mode/design-edits";
+import { isDesignSelection } from "@/lib/apps/design/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import {
   isGenerationBriefLengthValid,
@@ -577,6 +587,15 @@ function NewV2Inner() {
   // gates the iframe's element-inspect script; selection + pageMeta mirror
   // what that script reports back over postMessage.
   const [inspectMode, setInspectMode] = useState(false);
+  // EL MODO DISEÑO de una app (spec local 2026-10-11): elegir en el lienzo,
+  // ajustar en el panel y «Aplicar» a Len. Los pendientes viven aquí.
+  const [designMode, setDesignMode] = useState(false);
+  const [designSelectedKey, setDesignSelectedKey] = useState<string | null>(null);
+  const [designEdits, dispatchDesign] = useReducer(designEditsReducer, EMPTY_DESIGN_EDITS);
+  const [designNote, setDesignNote] = useState("");
+  const tDesign = useTranslations("panelsProps");
+  /** Lo último que se mandó al lienzo como vista previa (y lo que se reenvía si recarga). */
+  const designPrevRef = useRef(EMPTY_DESIGN_EDITS);
   const [inspectSelection, setInspectSelection] =
     useState<InspectSelection | null>(null);
   const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
@@ -1070,6 +1089,17 @@ function NewV2Inner() {
               : [],
           });
         }
+      } else if (data.type === "openlen:design-selected") {
+        if (isDesignSelection(data.selection)) {
+          dispatchDesign({ type: "select", selection: data.selection });
+          setDesignSelectedKey(data.selection.key);
+        }
+      } else if (data.type === "openlen:design-exit") {
+        setDesignMode(false);
+      } else if (data.type === "openlen:iframe-ready") {
+        // El lienzo se recargó: su vista previa se perdió con el documento.
+        const win = iframeElRef.current?.contentWindow;
+        for (const m of previewMessagesOf(EMPTY_DESIGN_EDITS, designPrevRef.current)) win?.postMessage(m, "*");
       } else if (data.type === "openlen:element-deselected") {
         setInspectSelection(null);
       } else if (data.type === "openlen:page-meta") {
@@ -1363,6 +1393,73 @@ function NewV2Inner() {
   const esApp = !!loadedProject?.app;
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
+  // Sólo en una app, para quien edita, y no con el taller en su vista de móvil (como v0).
+  const designAvailable = esApp && !soloLector && !isMobile && entryMode === "editing" && !!loadedProject;
+  useEffect(() => {
+    if (!designAvailable) setDesignMode(false);
+  }, [designAvailable]);
+  // OTRO PROYECTO: los pendientes eran del anterior. Sin esto, «Aplicar» mandaría
+  // sus elementos a esta app (una línea como /src/App.tsx:7 existe en casi todas).
+  useEffect(() => {
+    dispatchDesign({ type: "clear" });
+    designPrevRef.current = EMPTY_DESIGN_EDITS;
+    setDesignMode(false);
+    setDesignSelectedKey(null);
+    setDesignNote("");
+  }, [loadedProject?.id]);
+  // La vista previa del lienzo sigue a los pendientes.
+  useEffect(() => {
+    const win = iframeElRef.current?.contentWindow;
+    for (const m of previewMessagesOf(designPrevRef.current, designEdits)) win?.postMessage(m, "*");
+    designPrevRef.current = designEdits;
+  }, [designEdits]);
+  // Con pendientes, el navegador avisa antes de salir o recargar (como v0).
+  const designPending = pendingCount(designEdits);
+  useEffect(() => {
+    if (designPending === 0) return;
+    const aviso = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", aviso);
+    return () => window.removeEventListener("beforeunload", aviso);
+  }, [designPending]);
+  // «APLICAR»: un turno de Len con los cambios del panel en `design`.
+  const applyDesign = useCallback(() => {
+    const { request, tooBig } = toDesignRequest(designEdits, designNote);
+    if (tooBig) {
+      toast.error(tDesign("designMode.tooBig"));
+      return;
+    }
+    if (!request) return;
+    const lineas = request.elements.map((el) => {
+      const cambios = el.changes.map((c) => `${tDesign(`designMode.prop.${c.property}`)} ${c.before || "—"} → ${c.after}`);
+      if (el.photo) cambios.push(tDesign("designMode.photo"));
+      return `- <${el.tag}>${el.text ? ` «${el.text}»` : ""}: ${cambios.join("; ")}`;
+    });
+    const texto = [
+      tDesign("designMode.applyMessage", { n: String(request.elements.length) }),
+      ...lineas,
+      ...(request.note ? [request.note] : []),
+    ].join("\n");
+    setPendingChatAttachments({ images: [], styleDirection: null, design: request });
+    setPendingChatDraft(texto);
+    setPendingChatAutoSend(true);
+  }, [designEdits, designNote, tDesign, toast]);
+  // La foto nueva, con el mismo subidor que el inspector y las fotos del chat.
+  const onDesignPhoto = useCallback(
+    async (key: string, file: File) => {
+      if (!loadedProject) return;
+      const form = new FormData();
+      form.append("file", file);
+      form.append("generationId", loadedProject.id);
+      const res = await fetch("/api/upload", { method: "POST", body: form }).catch(() => null);
+      const j = res ? ((await res.json().catch(() => null)) as { url?: unknown } | null) : null;
+      if (res?.ok && typeof j?.url === "string" && j.url) dispatchDesign({ type: "photo", key, photo: { url: j.url } });
+      else toast.error(t("toast.photosNotUploaded", { count: 1 }));
+    },
+    [loadedProject, t, toast],
+  );
   // LAS VARIABLES DE ENTORNO (spec local 2026-10-10): sólo en una app.
   const abrirVariables = esApp && loadedProject ? () => setEnvVarsOpen(true) : undefined;
   // El chat del equipo: las menciones del chat sin ver, un punto en su icono del
@@ -3418,6 +3515,12 @@ function NewV2Inner() {
             }
           }}
           onRedesigningChange={setChatRedesigning}
+          onDesignSettled={(ok) => {
+            if (!ok) return;
+            dispatchDesign({ type: "resetAll" });
+            setDesignNote("");
+            setDesignSelectedKey(null);
+          }}
           projectLoading={projectLoadingFromUrl}
           savingStatus={savingStatus}
           currentProjectId={loadedProject?.id ?? null}
@@ -3636,6 +3739,8 @@ function NewV2Inner() {
                 soloLectura={soloLector}
                 inspectMode={inspectMode}
                 onToggleInspect={esApp ? undefined : toggleInspect}
+                designMode={designMode}
+                onToggleDesign={designAvailable ? () => setDesignMode((v) => !v) : undefined}
                 esApp={esApp}
                 usesTestData={hasDatabase}
                 insertRequest={insertRequest}
@@ -3849,6 +3954,29 @@ function NewV2Inner() {
                       {t("degraded.dismiss")}
                     </button>
                   </div>
+                </div>
+              )}
+              {designMode && (
+                <div className="absolute right-0 top-0 bottom-0 z-30 shadow-2xl max-md:left-12">
+                  <DesignPanel
+                    state={designEdits}
+                    selectedKey={designSelectedKey}
+                    generalNote={designNote}
+                    busy={chatRedesigning}
+                    onChange={(key, field, value) => dispatchDesign({ type: "set", key, field, value })}
+                    onPhoto={onDesignPhoto}
+                    onNote={(key, note) => dispatchDesign({ type: "note", key, note })}
+                    onGeneralNote={setDesignNote}
+                    onUndo={() => dispatchDesign({ type: "undo" })}
+                    onRedo={() => dispatchDesign({ type: "redo" })}
+                    onResetElement={(key) => dispatchDesign({ type: "resetElement", key })}
+                    onResetAll={() => dispatchDesign({ type: "resetAll" })}
+                    onSelectParent={() =>
+                      iframeElRef.current?.contentWindow?.postMessage({ type: "openlen:design-select-parent" }, "*")
+                    }
+                    onApply={applyDesign}
+                    onClose={() => setDesignMode(false)}
+                  />
                 </div>
               )}
               {inspectMode && (

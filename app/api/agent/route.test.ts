@@ -180,6 +180,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
+vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: vi.fn(async () => []) }));
 vi.mock("@/lib/projects/chat", () => ({
   // 12 turnos: `turnosQueSeQuedan(12)` son 12, la ventana de siempre.
   contarTurnosParaElHistorial: vi.fn(async () => 12),
@@ -372,6 +373,27 @@ describe("POST /api/agent credit gate", () => {
     }));
     expect(mocks.nacerComoApp).toHaveBeenCalledWith({ projectId: "p1", userId: "u1", titulo: "App", idioma: "es" });
     expect(orden).toEqual(["nace", "lee"]);
+  });
+
+  it("🔴 modo Diseño: en una app, `design` llega al contexto con fichero, líneas y cambios; en una página se ignora", async () => {
+    const FILES = { "/src/App.tsx": "a\nb\nc\nd\ne\nf\n<h1>Hola</h1>\n" };
+    const OK = { chain: [{ path: "/src/App.tsx", line: 7, component: null }], primary: 0, tag: "h1", text: "Hola", copies: 1, screen: "#/", changes: [{ property: "font-size", before: "32px", after: "48px" }] };
+    mocks.projectFiles.mockResolvedValue(FILES);
+    const pedir = () =>
+      POST(new Request("http://localhost/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ projectId: "p1", prompt: "Cambios de diseño · 1 elementos", design: { elements: [OK] } }),
+      }));
+    mocks.loadProject.mockResolvedValueOnce({
+      title: "App", subdomain: null, publishedAt: null, userBrief: "", brief: null, generatedRuntime: null,
+      data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" } },
+    });
+    await pedir();
+    expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(
+      expect.objectContaining({ design: expect.stringContaining("/src/App.tsx line 7") }),
+    );
+    await pedir(); // la página del beforeEach
+    expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ design: null }));
   });
 
   it("CONTRA-PRUEBA: sin naceComo, o con otro valor, no nace nada", async () => {

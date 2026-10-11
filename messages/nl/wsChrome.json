@@ -95,6 +95,8 @@
     "toolbar": {
       "editPage": "Pagina bewerken (⌘E)",
       "exitEdit": "Bewerkmodus verlaten (⌘E)",
+      "design": "Ontwerp: kies een element om aan te passen",
+      "exitDesign": "Ontwerpmodus verlaten",
       "refresh": "Voorbeeld vernieuwen",
       "openNewTab": "Openen in nieuw tabblad",
       "viewCode": "Bekijk de code",

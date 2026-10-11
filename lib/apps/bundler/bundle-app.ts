@@ -15,7 +15,8 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { compilarCarpeta, esFuenteCompilable, type Diagnostico } from "@/lib/apps/compilador";
+import { compilarCarpeta, esFuenteCompilable, JSX_DEV_RUNTIME, type Diagnostico } from "@/lib/apps/compilador";
+import { JSX_DEV_RUNTIME_MODULE } from "@/lib/apps/design/jsx-dev-runtime";
 import { catalogo, RAIZ_VENDOR, type ModoVendor } from "@/lib/apps/dependencias";
 import { BUNDLER_DID_NOT_ANSWER, directorioVendor } from "@/lib/apps/servir";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
@@ -111,6 +112,8 @@ export function bundleApp(args: {
     carpeta: args.carpeta,
     catalogo: app.catalogo,
     ...(args.entorno ? { entorno: args.entorno } : {}),
+    // EL MODO DISEÑO: el lienzo y los ojos saben de qué línea sale cada cosa.
+    ...(modo === "desarrollo" ? { development: true } : {}),
   });
   if (compilada.errores.length > 0) return Promise.resolve({ ok: false, errores: compilada.errores });
   if (!Object.hasOwn(compilada.ficheros, app.entrada)) {
@@ -138,7 +141,7 @@ export function bundleApp(args: {
     {
       entries: [app.entrada],
       modules,
-      virtual: {},
+      virtual: modo === "desarrollo" ? { [JSX_DEV_RUNTIME]: JSX_DEV_RUNTIME_MODULE } : {},
       mocked: [],
       empty: [],
       catalogFiles: Object.fromEntries((catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, raiz + d.fichero])),
