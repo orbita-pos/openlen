@@ -6,6 +6,9 @@ import { useTranslations } from "next-intl";
 import { DESIGN_PROPERTIES, type DesignProperty, type EditableField } from "@/lib/apps/design/types";
 import { changesOf, pendingCount, type DesignEditsState, type PendingElement } from "./design-edits";
 
+/** El ancho del panel: el lienzo reserva lo mismo a la derecha (`PreviewArea.reservaDerecha`). */
+export const DESIGN_PANEL_WIDTH = 320;
+
 export const GOOGLE_FONTS = [
   "Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins",
   "Playfair Display", "Merriweather", "DM Sans", "Space Grotesk", "Nunito", "Raleway",
@@ -83,7 +86,7 @@ export function DesignPanelView(p: DesignPanelViewProps) {
   const pendientes = pendingCount(p.state);
   const cls = "w-full rounded-md border bd bg-elev px-2 py-1 text-[12.5px] fg";
   return (
-    <aside className="workspace-v2 flex h-full w-[320px] flex-col bg-base fg" aria-label={t("designMode.title")}>
+    <aside className="workspace-v2 flex h-full flex-col bg-base fg" style={{ width: DESIGN_PANEL_WIDTH }} aria-label={t("designMode.title")}>
       <header className="flex items-center justify-between border-b bd px-3 py-2">
         <strong className="text-[13px]">{t("designMode.title")}</strong>
         <div className="flex gap-1">

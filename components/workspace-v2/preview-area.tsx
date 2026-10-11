@@ -117,6 +117,9 @@ interface PreviewAreaProps {
   /** EL MODO DISEÑO (sólo apps, spec local 2026-10-11): el script del lienzo elige y pinta la vista previa. */
   designMode?: boolean;
   onToggleDesign?: () => void;
+  /** Lo que ocupa a la derecha un panel abierto (el de diseño): el lienzo se estrecha y se
+   *  reescala en vez de quedar tapado, para que todo lo que hay en él se pueda elegir. */
+  reservaDerecha?: number;
   /** Abre las variables de entorno de la app (spec local 2026-10-10), desde la lente Código. */
   onEnvVars?: () => void;
   /** El proyecto tiene base de datos: el lienzo usa la de PRUEBA (spec local
@@ -268,6 +271,7 @@ export function PreviewArea({
   esApp = false,
   designMode = false,
   onToggleDesign,
+  reservaDerecha = 0,
   onEnvVars,
   usesTestData = false,
   onToggleInspect,
@@ -859,7 +863,10 @@ export function PreviewArea({
     // algo que no está resuelto, y el contenedor del lienzo llega a medirse
     // con altura CERO. Ahí `(0 - 24) / 800` da -3% y el lienzo sale en negro.
     // No aparecía ni una vez en este fichero.
-    <section className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a">
+    <section
+      className="relative flex flex-col flex-1 min-w-0 min-h-0 bg-preview-a"
+      style={reservaDerecha > 0 ? { paddingRight: reservaDerecha } : undefined}
+    >
       {/* DOS FILAS, como la maqueta de Jesús del 2026-08-31.
           ARRIBA lo que decide QUÉ se mira: la lente a la izquierda con su
           nombre escrito, la dirección en el centro y las acciones a la derecha.
