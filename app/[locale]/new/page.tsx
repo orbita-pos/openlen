@@ -15,7 +15,7 @@ import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { DesignPanel } from "@/components/workspace-v2/design-mode/design-panel";
+import { DESIGN_PANEL_WIDTH, DesignPanel } from "@/components/workspace-v2/design-mode/design-panel";
 import {
   designEditsReducer,
   EMPTY_DESIGN_EDITS,
@@ -3733,6 +3733,9 @@ function NewV2Inner() {
                 onToggleInspect={esApp ? undefined : toggleInspect}
                 designMode={designMode}
                 onToggleDesign={designAvailable ? () => setDesignMode((v) => !v) : undefined}
+                // EL PANEL EMPUJA EL LIENZO (11/10): flotando encima tapaba la derecha de
+                // la app, y lo que quedaba debajo —un botón, un menú— no se podía elegir.
+                reservaDerecha={designMode ? DESIGN_PANEL_WIDTH : 0}
                 esApp={esApp}
                 usesTestData={hasDatabase}
                 insertRequest={insertRequest}
