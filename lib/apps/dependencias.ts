@@ -223,6 +223,21 @@ export function ficherosDelCatalogo(nombreCatalogo: string): string[] {
   return c ? [...new Set([...c.dependencias.map((d) => d.fichero), ...c.internos])] : [];
 }
 
+/** Los nombres que son OTRO nombre del mismo fichero (`react-router-dom` →
+ *  `react-router`): alias → el primero que lo nombra. El paquete de tipos sólo
+ *  trae los del primero (el otro no está instalado), así que el comprobador
+ *  declara cada alias como el suyo. */
+export function catalogAliasesOf(nombreCatalogo: string): Record<string, string> {
+  const primero = new Map<string, string>();
+  const aliases: Record<string, string> = {};
+  for (const d of catalogo(nombreCatalogo)?.dependencias ?? []) {
+    const ya = primero.get(d.fichero);
+    if (ya) aliases[d.especificador] = ya;
+    else primero.set(d.fichero, d.especificador);
+  }
+  return aliases;
+}
+
 /** El import map de un catálogo: especificador → ruta del mismo origen. */
 export function importMapDe(nombreCatalogo: string): { imports: Record<string, string> } {
   const c = catalogo(nombreCatalogo);

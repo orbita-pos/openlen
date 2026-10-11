@@ -31,6 +31,14 @@ describe("el comprobador en su hilo (plan 03, tarea 3)", () => {
     expect(r!.typescript.map((d) => d.codigo)).toEqual(["TS2551"]);
   }, 60_000);
 
+  it.each(["2026-10", "2026-11"])("🔴 %s: react-router-dom, el otro nombre que el catálogo da a react-router, tiene SUS tipos (ni «Cannot find module» ni any)", async (catalogo) => {
+    const r = await checkAppInWorker({
+      files: { "/src/A.tsx": 'import { Link } from "react-router-dom";\nexport const A = () => <Link to={3}>x</Link>;' },
+      catalogo,
+    });
+    expect(r?.typescript.map((d) => [d.codigo, d.linea])).toEqual([["TS2322", 2]]);
+  }, 30_000);
+
   it("un catálogo sin types.json no rompe: los imports del catálogo serían any, el resto se comprueba", async () => {
     const r = await checkAppInWorker({ files: { "/src/A.tsx": "export const n: string = 3;" }, catalogo: "1999-01" });
     expect(r?.typescript.map((d) => d.codigo)).toEqual(["TS2322"]);

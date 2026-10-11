@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkApp, formatStylish, formatTsc, type CheckDiagnostic } from "./checker-core.mjs";
+import { EXTENSIONES_DE_URL } from "../compilador";
 import { esqueletoDeApp } from "../esqueleto";
 import { FICHEROS as APP_SHADCN } from "../shadcn-fixture";
 
@@ -43,6 +44,15 @@ describe("TypeScript", () => {
       "/src/datos.json": '{"a":1}',
     });
     expect(r.typescript).toEqual([]);
+  });
+
+  it("🔴 un fichero importado como lo entiende el compilador —por su URL (.svg, .txt, .md…, o ?url) o por su texto (?raw)— es un string, no «Cannot find module»", () => {
+    const rutas = [...EXTENSIONES_DE_URL.map((ext) => `./a${ext}`), "./datos.json?url", "./a.svg?raw"];
+    const r = revisar({
+      "/src/A.ts": rutas.map((ruta, i) => `import f${i} from "${ruta}";\nexport const n${i}: number = f${i};`).join("\n"),
+    });
+    // Cada uno resuelve y es un string: asignarlo a un number es TS2322 (no TS2307).
+    expect(r.typescript.map((d) => d.codigo)).toEqual(rutas.map(() => "TS2322"));
   });
 });
 
