@@ -7,6 +7,7 @@ import { sugerirRuta } from "@/lib/agent/ficheros/sitio";
 import { realDeps } from "@/lib/agent/tools";
 import { openProject } from "../access";
 import type { McpCaller } from "../auth";
+import { fileVersion } from "../file-version";
 import { textResult, toolError, type ToolResult } from "../results";
 import { mcpAgentSession } from "../session";
 import { defineTool, READ_ONLY } from "./define";
@@ -55,7 +56,8 @@ export const readFileTool = defineTool({
   title: "Read file",
   description:
     "Reads one file of a project with line numbers (like cat -n). Paths: /index.html is the home page, /<slug>/index.html other pages, " +
-    "/src/... an app's source, /AGENTS.md OpenLen's manual. Long files come in parts: use offset and limit (lines).",
+    "/src/... an app's source, /AGENTS.md OpenLen's manual. Long files come in parts: use offset and limit (lines). " +
+    "The first line shows the file's version: pass it as expected_version when you write, edit or delete the file.",
   inputSchema: z.object({
     project_id: z.string().min(1),
     path: z.string().min(1).describe("Absolute path inside the project, e.g. /src/App.tsx"),
@@ -70,7 +72,9 @@ export const readFileTool = defineTool({
       const like = suggestPath(path, Object.keys(t.tree));
       return toolError("not_found", `There is no file at ${path}.${like ? ` Did you mean ${like}?` : ""} get_project lists every file.`);
     }
-    return textResult(formatNumbered(path, t.tree[path] ?? "", offset, limit));
+    const content = t.tree[path] ?? "";
+    const [first, ...rest] = formatNumbered(path, content, offset, limit).split("\n");
+    return textResult([`${first} — version ${fileVersion(content)}`, ...rest].join("\n"));
   },
 });
 
