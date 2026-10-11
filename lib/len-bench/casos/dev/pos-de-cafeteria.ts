@@ -19,12 +19,17 @@
 // Modelado sobre `punto-de-venta.ts` (la caja de una PÁGINA, la de `miga`).
 // La corrida real cuesta modelo: se hace en local (`npm run bench:len --
 // --solo=pos-de-cafeteria`); aquí sólo se valida a $0.
-import { esqueletoDeApp } from "@/lib/apps/esqueleto";
+import { ENTRADA_JSX, cascaronDeLaApp, esqueletoDeApp } from "@/lib/apps/esqueleto";
 import type { DatosDelCaso, Encargo } from "@/lib/len-bench/tipos";
 import { flujo, sigueAhi, sinDesbordeMovil } from "@/lib/len-bench/graders";
 import { appVerificadaTrasCadaCambio } from "@/lib/len-bench/app-verificada";
 
 const ESQUELETO = esqueletoDeApp({ titulo: "Café Luna — Caja", idioma: "es" });
+// Una caja que ya existía: nació en .jsx, antes de que las apps nacieran en
+// TypeScript (10/10). Su entrada y su cascarón son los de entonces.
+const APP_DEL_CASO = { ...ESQUELETO.app, entrada: ENTRADA_JSX };
+const CASCARON = cascaronDeLaApp({ titulo: "Café Luna — Caja", idioma: "es", entrada: ENTRADA_JSX });
+const MAIN_JSX = ESQUELETO.ficheros["/src/main.tsx"]!.replace('getElementById("root")!', 'getElementById("root")');
 
 interface Opciones {
   readonly productos?: string;
@@ -161,11 +166,11 @@ export default function App() {
 function app(o: Opciones = {}): DatosDelCaso {
   const caja = o.caja ? o.caja(CAJA) : CAJA;
   return {
-    html: o.cascaron ?? ESQUELETO.html,
-    app: ESQUELETO.app,
+    html: o.cascaron ?? CASCARON,
+    app: APP_DEL_CASO,
     ficheros: {
-      "/src/main.jsx": ESQUELETO.ficheros["/src/main.jsx"]!,
-      "/src/lib/supabase.js": ESQUELETO.ficheros["/src/lib/supabase.js"]!,
+      "/src/main.jsx": MAIN_JSX,
+      "/src/lib/supabase.js": ESQUELETO.ficheros["/src/lib/supabase.ts"]!,
       "/src/App.jsx": o.app ?? APP,
       "/src/productos.js": o.productos ?? PRODUCTOS,
       "/src/lib/euros.js": EUROS,
@@ -249,7 +254,7 @@ export function crear(): Encargo {
     rotas: [
       { nombre: "no-compila", datos: app({ caja: (c) => cambia(c, "</main>\n  );", "</main\n  );") }) },
       // Compila, pero el cascarón ya no carga la entrada: la app sale en blanco.
-      { nombre: "cascaron-sin-entrada", datos: app({ cascaron: cambia(ESQUELETO.html, '<script type="module" src="/src/main.jsx"></script>', "") }) },
+      { nombre: "cascaron-sin-entrada", datos: app({ cascaron: cambia(CASCARON, '<script type="module" src="/src/main.jsx"></script>', "") }) },
       { nombre: "sin-zumo", datos: app({ productos: cambia(PRODUCTOS, '  { id: "zumo", nombre: "Zumo de naranja natural", precio: 3 },\n', "") }) },
       { nombre: "cortado-a-precio-viejo", datos: app({ productos: cambia(PRODUCTOS, "precio: 1.6", "precio: 1.5") }) },
       {

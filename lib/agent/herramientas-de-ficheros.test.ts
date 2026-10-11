@@ -1999,6 +1999,21 @@ describe("convertir una página en app", () => {
     assert.equal(JSON.stringify(store.data), antes);
   });
 
+  // 🔴 Las apps nacen en TSX (Jesús, 10/10): la conversión acepta la entrada que
+  // Len escriba, la de ahora (main.tsx) o la de siempre (main.jsx), y el cascarón
+  // carga ESA.
+  it("🔴 con /src/main.tsx convierte, y la app y el cascarón empiezan en main.tsx", async () => {
+    const { deps, store, archivos } = conPaginas();
+    archivos["/src/main.tsx"] = MAIN.replace('getElementById("root")', 'getElementById("root")!');
+    archivos["/src/App.tsx"] = APP_JSX;
+    archivos["/src/screens/Inicio.tsx"] = "export default function Inicio() {\n  return <h1>Tienda Brote</h1>;\n}\n";
+    archivos["/src/screens/Menu.tsx"] = "export default function Menu() {\n  return <h1>Menú</h1>;\n}\n";
+    const r = await runAgentTool(makeSession(), deps, "convert_to_app", {});
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.tsx" });
+    assert.match(store.data.html, /<script type="module" src="\/src\/main\.tsx"><\/script>/);
+  });
+
   it("🔴 si la app de /src no compila, NO convierte nada: la página sigue entera", async () => {
     const { deps, store, archivos } = conPaginas();
     conLaApp(archivos);

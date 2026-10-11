@@ -49,6 +49,7 @@ import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/termin
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
+import { appFileNames } from "@/lib/apps/esqueleto";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -298,7 +299,7 @@ async function aplicarPlan(
     return {
       response: respuesta(
         fallo(
-          `${plan.ruta}: this project is an app, and an app has no pages: a new screen is a component in /src and a <Route> in /src/App.jsx, reached at #/its-name.`,
+          `${plan.ruta}: this project is an app, and an app has no pages: a new screen is a component in /src and a <Route> in ${appFileNames(session.app).rutas}, reached at #/its-name.`,
         ),
       ),
     };

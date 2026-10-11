@@ -16,11 +16,12 @@ import { entradaServida } from "./servir";
 
 afterAll(() => stopBundlerWorker());
 
-const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" } as const;
-const SANA = esqueletoDeApp({ titulo: "Caja" }).ficheros;
-// La línea 5 cierra el return sin cerrar el <main>: «Unterminated JSX contents».
-const ROTA = { ...SANA, "/src/screens/Inicio.jsx": "export default function Inicio() {\n  return (\n    <main>\n      <h1>Hola</h1>\n  );\n}\n" };
-const CASCARON = '<!doctype html><html><head><title>app</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+const ESQ = esqueletoDeApp({ titulo: "Caja" });
+const APP = ESQ.app;
+const SANA = ESQ.ficheros;
+// La línea 5 cierra el return sin cerrar el <main>: el compilador no lo acepta.
+const ROTA = { ...SANA, "/src/screens/Inicio.tsx": "export default function Inicio() {\n  return (\n    <main>\n      <h1>Hola</h1>\n  );\n}\n" };
+const CASCARON = '<!doctype html><html><head><title>app</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>';
 
 async function abrir(carpeta: Record<string, string>) {
   const entrada = entradaServida(APP.entrada, await bundleApp({ carpeta, app: APP, modo: "desarrollo" }), carpeta);
@@ -66,7 +67,6 @@ describe("una app que no compila, en el lienzo", () => {
       expect(capa!.visible).toBe(true);
       // El sitio, el que da el compilador de verdad.
       const [d] = compilarCarpeta({ carpeta: ROTA, catalogo: APP.catalogo }).errores;
-      expect(d?.mensaje).toContain("Unterminated JSX contents");
       expect(capa!.texto).toContain(d!.mensaje);
       expect(capa!.texto).toContain(`${d!.ruta}:${d!.linea}:${d!.columna}`);
       expect(capa!.texto, "falta el trozo de código con la línea marcada").toMatch(new RegExp(`> ${d!.linea} \\|`));

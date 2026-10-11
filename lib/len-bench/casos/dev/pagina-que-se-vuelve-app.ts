@@ -16,7 +16,7 @@
 // que se pierde. Como `pos-de-cafeteria`, todo lo pintado va por Chromium.
 //
 // La corrida real cuesta modelo: se hace en local; aquí sólo se valida a $0.
-import { esqueletoDeApp } from "@/lib/apps/esqueleto";
+import { ENTRADA_JSX, cascaronDeLaApp, esqueletoDeApp } from "@/lib/apps/esqueleto";
 import type { DatosDelCaso, Encargo } from "@/lib/len-bench/tipos";
 import { cambiar } from "@/lib/len-bench/casos/cambiar";
 import { flujo, sigueAhi, sinDesbordeMovil } from "@/lib/len-bench/graders";
@@ -112,6 +112,11 @@ const INICIO: DatosDelCaso = {
 // ─── La solución: la misma web, como app, con la caja ────────────────────────
 
 const ESQUELETO = esqueletoDeApp({ titulo: "Horno Alba · Panadería y café", idioma: "es" });
+// La solución es una app que Len escribió en .jsx, la costumbre de antes del
+// 10/10: la conversión la acepta y la deja con SU entrada (`ENTRADA_JSX`).
+const APP_DEL_CASO = { ...ESQUELETO.app, entrada: ENTRADA_JSX };
+const CASCARON = cascaronDeLaApp({ titulo: "Horno Alba · Panadería y café", idioma: "es", entrada: ENTRADA_JSX });
+const MAIN_JSX = ESQUELETO.ficheros["/src/main.tsx"]!.replace('getElementById("root")!', 'getElementById("root")');
 
 const PRODUCTOS = `export const PRODUCTOS = [
   { id: "cafe-con-leche", nombre: "Café con leche", precio: 1.8, cat: "bebida" },
@@ -278,8 +283,8 @@ interface Opciones {
 
 function app(o: Opciones = {}): DatosDelCaso {
   const ficheros: Record<string, string> = {
-    "/src/main.jsx": ESQUELETO.ficheros["/src/main.jsx"]!,
-    "/src/lib/supabase.js": ESQUELETO.ficheros["/src/lib/supabase.js"]!,
+    "/src/main.jsx": MAIN_JSX,
+    "/src/lib/supabase.js": ESQUELETO.ficheros["/src/lib/supabase.ts"]!,
     "/src/App.jsx": APP_JSX,
     "/src/productos.js": PRODUCTOS,
     "/src/components/Cabecera.jsx": CABECERA,
@@ -289,7 +294,7 @@ function app(o: Opciones = {}): DatosDelCaso {
     "/src/screens/Contacto.jsx": CONTACTO_JSX,
     "/src/screens/Caja.jsx": CAJA_JSX,
   };
-  return { html: ESQUELETO.html, app: ESQUELETO.app, ficheros: o.ficheros ? o.ficheros(ficheros) : ficheros, ...(o.pages ? { pages: o.pages } : {}) };
+  return { html: CASCARON, app: APP_DEL_CASO, ficheros: o.ficheros ? o.ficheros(ficheros) : ficheros, ...(o.pages ? { pages: o.pages } : {}) };
 }
 
 /** Cambia un fichero de la app: el trozo TIENE que estar (`cambiar` lanza si no). */

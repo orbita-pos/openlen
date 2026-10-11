@@ -56,9 +56,9 @@ describe("un proyecto en blanco nace como app", () => {
 
   it("una segunda vez no hace nada: ya no está en blanco", async () => {
     expect(await nacerComoApp({ projectId: PROYECTO, userId: USUARIO, titulo: "Caja" })).toBe(true);
-    await db.update(schema.projectFiles).set({ content: "editado" }).where(eq(schema.projectFiles.path, "/src/App.jsx"));
+    await db.update(schema.projectFiles).set({ content: "editado" }).where(eq(schema.projectFiles.path, "/src/App.tsx"));
     expect(await nacerComoApp({ projectId: PROYECTO, userId: USUARIO, titulo: "Otra" })).toBe(false);
-    expect((await estado()).ficheros["/src/App.jsx"]).toBe("editado");
+    expect((await estado()).ficheros["/src/App.tsx"]).toBe("editado");
   });
 
   it("🔴 un proyecto con algo dentro NO se toca: portada, páginas o conversación", async () => {

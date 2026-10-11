@@ -92,6 +92,26 @@ describe("el manual de una app con el catálogo 2026-11 (apps 2026-11, tarea 6)"
   });
 });
 
+// 🔴 LOS NOMBRES, LOS DE ESA APP (Jesús, 10/10): las apps nacen en TSX, y las que
+// ya existen (Holi) siguen en JSX. Lo que lee Len nombra los ficheros que tiene.
+describe("los ficheros que nombran el prompt y el manual: los de ESA app", () => {
+  const TSX = { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.tsx" };
+  it("una app que nació en TSX lee App.tsx y supabase.ts", () => {
+    for (const t of [buildAgentSystemPrompt(ENV, "len", TSX), buildManualDeLaPlataforma(ENV, "len", TSX)]) {
+      expect(t).toContain("/src/App.tsx");
+      expect(t).toContain("/src/lib/supabase.ts");
+      expect(t).not.toMatch(/App\.jsx|supabase\.js\b/);
+    }
+  });
+  it("una que nació en JSX sigue leyendo App.jsx y supabase.js", () => {
+    for (const t of [buildAgentSystemPrompt(ENV, "len", APP), buildManualDeLaPlataforma(ENV, "len", APP)]) {
+      expect(t).toContain("/src/App.jsx");
+      expect(t).toContain("/src/lib/supabase.js");
+      expect(t).not.toMatch(/App\.tsx|supabase\.ts\b/);
+    }
+  });
+});
+
 describe("el manual de una app (/AGENTS.md)", () => {
   const manual = buildManualDeLaPlataforma(ENV, "len", APP);
 

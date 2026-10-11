@@ -183,7 +183,7 @@ export interface AppDeProyecto {
   /** El catálogo de dependencias, FIJADO al nacer (`lib/apps/dependencias.ts`):
    *  subirlo a todas las apps a la vez rompería las que ya existen. */
   catalogo: string;
-  /** El módulo que monta la app (`/src/main.jsx`). */
+  /** El módulo que monta la app: `/src/main.tsx` (las de antes del 10/10, `/src/main.jsx`). */
   entrada: string;
 }
 

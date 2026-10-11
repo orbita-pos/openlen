@@ -17,6 +17,13 @@ describe("el esqueleto de una app", () => {
     expect(problemasDelCascaron(e.app, e.html, e.ficheros)).toEqual([]);
   });
 
+  // 🔴 Jesús, 10/10: las apps nacían en .jsx y TypeScript no revisaba nada.
+  it("🔴 nace en TypeScript: main.tsx, App.tsx, la primera pantalla y el cliente del backend", () => {
+    expect(ENTRADA).toBe("/src/main.tsx");
+    expect(Object.keys(e.ficheros).sort()).toEqual(["/src/App.tsx", "/src/lib/supabase.ts", "/src/main.tsx", "/src/screens/Inicio.tsx"]);
+    expect(e.html).toContain(`<script type="module" src="/src/main.tsx"></script>`);
+  });
+
   it("es una app del catálogo actual, que empieza en su entrada", () => {
     expect(e.app).toEqual({ catalogo: CATALOGO_ACTUAL, entrada: ENTRADA });
     expect(e.html).toContain('<html lang="es">');
@@ -25,8 +32,8 @@ describe("el esqueleto de una app", () => {
   });
 
   it("el cliente del backend lee import.meta.env: ninguna clave escrita", () => {
-    expect(e.ficheros["/src/lib/supabase.js"]).toContain("import.meta.env.VITE_SUPABASE_URL");
-    expect(e.ficheros["/src/lib/supabase.js"]).not.toMatch(/sb_|https:\/\//);
+    expect(e.ficheros["/src/lib/supabase.ts"]).toContain("import.meta.env.VITE_SUPABASE_URL");
+    expect(e.ficheros["/src/lib/supabase.ts"]).not.toMatch(/sb_|https:\/\//);
   });
 
   it("un título con comillas o etiquetas no rompe ni el cascarón ni el JSX", () => {
@@ -39,7 +46,7 @@ describe("el esqueleto de una app", () => {
 
   it("lo que trae es lo que dice el manual de Len", () => {
     const manual = buildManualDeLaPlataforma({ OPENLEN_TERMINAL: "0" }, "len", e.app);
-    for (const ruta of ["/src/App.jsx", "/src/screens", "/src/components", "/src/lib/supabase.js", "<HashRouter>"]) {
+    for (const ruta of ["/src/App.tsx", "/src/screens", "/src/components", "/src/lib/supabase.ts", "<HashRouter>"]) {
       expect(manual, ruta).toContain(ruta);
     }
   });

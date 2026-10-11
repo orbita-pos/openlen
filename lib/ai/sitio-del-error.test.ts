@@ -48,19 +48,19 @@ describe("a través del paquete (plan 02, tarea 4)", () => {
   async function paquete() {
     const carpeta = {
       ...esqueletoDeApp({ titulo: "Caja" }).ficheros,
-      "/src/App.jsx": "export default function App() {\n  const datos = undefined;\n  return <p>{datos.precio}</p>;\n}\n",
+      "/src/App.tsx": "export default function App() {\n  const datos = undefined;\n  return <p>{datos.precio}</p>;\n}\n",
     };
-    const r = await bundleApp({ carpeta, app: { catalogo: "2026-11", entrada: "/src/main.jsx" }, modo: "desarrollo" });
+    const r = await bundleApp({ carpeta, app: { catalogo: "2026-11", entrada: "/src/main.tsx" }, modo: "desarrollo" });
     if (!r?.ok || !r.map) throw new Error("no empaquetó");
     const lineas = r.js.split("\n");
     const i = lineas.findIndex((l) => l.includes("datos.precio"));
     return { r, linea: i + 1, columna: lineas[i]!.indexOf("datos.precio") + 1 };
   }
 
-  it("🔴 un marco en el paquete (/src/main.jsx:L) vuelve a /src/App.jsx:3", async () => {
+  it("🔴 un marco en el paquete (/src/main.tsx:L) vuelve a /src/App.tsx:3", async () => {
     const { r, linea, columna } = await paquete();
-    const traza = `TypeError: Cannot read properties of undefined (reading 'precio')\n    at App (https://x.test/src/main.jsx:${linea}:${columna})`;
-    expect(sitioEnLaTraza(traza, traductorDeMapas({ "/src/main.jsx": r.map! }))).toMatchObject({ ruta: "/src/App.jsx", linea: 3 });
+    const traza = `TypeError: Cannot read properties of undefined (reading 'precio')\n    at App (https://x.test/src/main.tsx:${linea}:${columna})`;
+    expect(sitioEnLaTraza(traza, traductorDeMapas({ "/src/main.tsx": r.map! }))).toMatchObject({ ruta: "/src/App.tsx", linea: 3 });
   }, 60_000);
 
   it("🔴 los marcos de React (del catálogo, DENTRO del paquete) se saltan: gana el primero de la app (Review Focus 1)", async () => {
@@ -74,10 +74,10 @@ describe("a través del paquete (plan 02, tarea 4)", () => {
     expect(deReact).toBeGreaterThan(-1);
     const traza = [
       "TypeError: x",
-      `    at Zr (https://x.test/src/main.jsx:${deReact + 1}:1)`,
-      `    at App (https://x.test/src/main.jsx:${linea}:${columna})`,
+      `    at Zr (https://x.test/src/main.tsx:${deReact + 1}:1)`,
+      `    at App (https://x.test/src/main.tsx:${linea}:${columna})`,
     ].join("\n");
-    expect(sitioEnLaTraza(traza, traductorDeMapas({ "/src/main.jsx": r.map! }))?.ruta).toBe("/src/App.jsx");
+    expect(sitioEnLaTraza(traza, traductorDeMapas({ "/src/main.tsx": r.map! }))?.ruta).toBe("/src/App.tsx");
   }, 60_000);
 
   it("textoDelError lo dice con el sitio traducido; sin mapas, como siempre", () => {
