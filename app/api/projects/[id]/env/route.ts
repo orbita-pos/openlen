@@ -97,11 +97,11 @@ export async function PUT(req: Request, { params }: Ctx): Promise<Response> {
   if (!project.data?.app) return json({ error: "not_an_app" }, 400);
 
   const r = await replaceEnvVars({ projectId: id, ownerId: acceso.duenoId, userId: session.user.id, version: body.version, vars: body.vars });
-  if (!r.ok) {
-    if (r.reason === "not_found") return json({ error: "not_found" }, 404);
-    if (r.reason === "invalid") return json({ error: "invalid", problems: r.problems }, 400);
-    return json({ error: "conflict", ...(await envState(id, project, r.vars)) }, 409);
-  }
-  // `envHash` acaba de cambiar: «publica de nuevo» se lee de la fila de ahora.
-  return json(await envState(id, (await loadProject(id, acceso.duenoId)) ?? project, r.vars), 200);
+  if (!r.ok && r.reason === "not_found") return json({ error: "not_found" }, 404);
+  if (!r.ok && r.reason === "invalid") return json({ error: "invalid", problems: r.problems }, 400);
+  // `envHash` acaba de cambiar —con este guardado, o con el de otro en un 409—:
+  // «publica de nuevo» se lee de la fila de AHORA.
+  const now = (await loadProject(id, acceso.duenoId)) ?? project;
+  if (!r.ok) return json({ error: "conflict", ...(await envState(id, now, r.vars)) }, 409);
+  return json(await envState(id, now, r.vars), 200);
 }
