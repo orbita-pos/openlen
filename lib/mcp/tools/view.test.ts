@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const m = vi.hoisted(() => ({ openProject: vi.fn(), consumeQuota: vi.fn(), captureProjectView: vi.fn() }));
+const m = vi.hoisted(() => ({ openProject: vi.fn(), consumeQuota: vi.fn(), captureProjectView: vi.fn(), acquireCaptureSlot: vi.fn() }));
 vi.mock("../access", () => ({ openProject: m.openProject }));
 vi.mock("../quota", () => ({ consumeQuota: m.consumeQuota }));
-vi.mock("../capture", () => ({ captureProjectView: m.captureProjectView }));
+vi.mock("../capture", () => ({ captureProjectView: m.captureProjectView, acquireCaptureSlot: m.acquireCaptureSlot }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 vi.mock("@/lib/lienzo/documento", () => ({
   vistaParaMedir: (projectId: string, _f: unknown, pagina: string | null) => ({ projectId, pagina }),
@@ -19,12 +19,33 @@ const caller = { userId: "u1", tokenId: "t1", scopes: new Set(["projects:read" a
 const page = (data: object) => ({ ok: true, acceso: { rol: "dueno", duenoId: "u1" }, row: { title: "T", subdomain: null, data } });
 const textAt = (r: ToolResult, i: number) => (r.content[i] as { type: "text"; text: string }).text;
 
+const release = vi.fn();
+
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockReset());
+  release.mockReset();
   m.consumeQuota.mockResolvedValue(null);
+  m.acquireCaptureSlot.mockReturnValue(release);
 });
 
 describe("view_page", () => {
+  it("🔴 con todos los Chromium ocupados: busy accionable, sin capturar ni gastar cupo", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<p>" }));
+    m.acquireCaptureSlot.mockReturnValue(null);
+    const r = await viewPageTool.run({ project_id: "p1" }, caller);
+    expect(r.isError).toBe(true);
+    expect(textAt(r, 0)).toContain("busy");
+    expect(m.captureProjectView).not.toHaveBeenCalled();
+    expect(m.consumeQuota).not.toHaveBeenCalled();
+  });
+
+  it("suelta su hueco al terminar, también si la captura lanza", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<p>" }));
+    m.captureProjectView.mockRejectedValue(new Error("boom"));
+    await expect(viewPageTool.run({ project_id: "p1" }, caller)).rejects.toThrow("boom");
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
   it("una subpágina: la imagen primero y UN bloque de texto con las medidas", async () => {
     m.openProject.mockResolvedValue(page({ html: "<p>home", pages: { precios: { html: "<p>precios" } } }));
     m.captureProjectView.mockResolvedValue({ image: { mimeType: "image/jpeg", dataBase64: "B64" }, measurements: "Nothing overflows." });

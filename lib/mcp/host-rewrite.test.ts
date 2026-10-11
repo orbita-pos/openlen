@@ -2,7 +2,7 @@
 // En mcp.<dominio>, /mcp y la metadata van a sus rutas de /api; nada más cambia.
 import { describe, expect, it } from "vitest";
 import { resolveRewrites } from "@/lib/lienzo/resolve-rewrites";
-import { isMcpHost, MCP_REWRITES } from "./host-rewrite";
+import { isMcpHost, MCP_REWRITES, mcpHostAllows } from "./host-rewrite";
 
 const ruta = (host: string, url: string) => resolveRewrites(MCP_REWRITES, host, url).pathname;
 
@@ -23,5 +23,9 @@ describe("el host del MCP", () => {
     expect(isMcpHost("openlen.com")).toBe(false);
     expect(isMcpHost("mcpx.openlen.com")).toBe(false);
     expect(isMcpHost(null)).toBe(false);
+  });
+  it("🔴 en el host del MCP sólo vive /mcp: la app (portada, login, workspace) no se sirve ahí", () => {
+    expect(mcpHostAllows("/mcp")).toBe(true);
+    for (const p of ["/", "/en", "/en/new", "/es/login", "/new", "/mcpx"]) expect(mcpHostAllows(p)).toBe(false);
   });
 });

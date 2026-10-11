@@ -31,6 +31,25 @@ const MAX_FULL_HEIGHT = 4096;
 /** Por debajo de los 60 s de Codex, con margen para el resto de la llamada. */
 const PLAZO_MS = 40_000;
 
+/** CHROMIUM A LA VEZ, en todo el servidor: cada captura arranca dos (la foto y
+ *  la medida), y los cupos son por persona, no del proceso. Sin cola: con los
+ *  huecos llenos se contesta «ocupado» al momento, y el agente reintenta. */
+export const MAX_CONCURRENT_CAPTURES = 3;
+let capturesInFlight = 0;
+
+/** Un hueco para capturar, o null si están todos ocupados. Lo que devuelve lo
+ *  suelta, una sola vez aunque se llame dos. */
+export function acquireCaptureSlot(): (() => void) | null {
+  if (capturesInFlight >= MAX_CONCURRENT_CAPTURES) return null;
+  capturesInFlight++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    capturesInFlight--;
+  };
+}
+
 export async function captureProjectView(
   req: CaptureRequest,
   internals: {

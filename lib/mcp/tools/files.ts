@@ -1,5 +1,6 @@
 // read_file y search_files: el árbol del proyecto tal como lo ve Len
 // (`cargarFicherosDeLaTerminal`: páginas, carpeta, memoria y el manual).
+import { RE2JS } from "re2js";
 import * as z from "zod4";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { sugerirRuta } from "@/lib/agent/ficheros/sitio";
@@ -77,11 +78,11 @@ export const searchFilesTool = defineTool({
   name: "search_files",
   title: "Search files",
   description:
-    "Searches the project's files with a regular expression (JavaScript syntax) and returns matching lines as path:line: text, " +
-    "optionally with context lines. Narrow it with path (a folder or file prefix, e.g. /src/components).",
+    "Searches the project's files with a regular expression (RE2 / ripgrep syntax: no lookarounds or backreferences) and returns " +
+    "matching lines as path:line: text, optionally with context lines. Narrow it with path (a folder or file prefix, e.g. /src/components).",
   inputSchema: z.object({
     project_id: z.string().min(1),
-    pattern: z.string().min(1).describe("A JavaScript regular expression."),
+    pattern: z.string().min(1).describe("A regular expression in RE2 / ripgrep syntax."),
     path: z.string().optional().describe("Only files whose path starts with this (default /)."),
     case_insensitive: z.boolean().optional(),
     context: z.number().int().min(0).max(5).optional().describe("Lines of context before and after each match."),
@@ -89,11 +90,17 @@ export const searchFilesTool = defineTool({
   }),
   annotations: READ_ONLY,
   async run({ project_id, pattern, path = "/", case_insensitive = false, context = 0, max_results = 100 }, caller) {
-    let re: RegExp;
+    // RE2 y no RegExp: el patrón lo escribe cualquiera y corre en el hilo que
+    // atiende a todos. Con RegExp, `(a+)+$` sobre 28 caracteres bloqueó el
+    // proceso 15,7 s (medido el 11/10/2026); RE2 garantiza tiempo lineal.
+    let re: RE2JS;
     try {
-      re = new RegExp(pattern, case_insensitive ? "i" : "");
+      re = RE2JS.compile(pattern, case_insensitive ? RE2JS.CASE_INSENSITIVE : 0);
     } catch (e) {
-      return toolError("invalid_pattern", `The pattern is not a valid regular expression: ${e instanceof Error ? e.message : String(e)}`);
+      return toolError(
+        "invalid_pattern",
+        `The pattern is not valid RE2 / ripgrep syntax (no lookarounds or backreferences): ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
     const t = await loadTree(caller, project_id);
     if (!t.ok) return t.result;

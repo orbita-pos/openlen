@@ -561,7 +561,8 @@ len.openlen.com {
 # pequeños y comprimir retrasa los streams). Va ANTES del comodín de abajo:
 # el bloque más específico gana, como `len.openlen.com`. Recomendado: el
 # registro DNS de mcp.openlen.com SIN el proxy de Cloudflare (corta los
-# streams inactivos a ~100-120 s).
+# streams inactivos a ~100-120 s). Sólo pasan el endpoint y su metadata: la
+# app no se sirve en este origen (el middleware dice lo mismo, `mcpHostAllows`).
 mcp.openlen.com {
 	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
 	header {
@@ -570,12 +571,18 @@ mcp.openlen.com {
 		Referrer-Policy "no-referrer"
 		-Server
 	}
-	reverse_proxy 127.0.0.1:3000 {
-		flush_interval -1
-		stream_close_delay 5m
-		transport http {
-			read_timeout 120s
+	@mcp path /mcp /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/mcp
+	handle @mcp {
+		reverse_proxy 127.0.0.1:3000 {
+			flush_interval -1
+			stream_close_delay 5m
+			transport http {
+				read_timeout 120s
+			}
 		}
+	}
+	handle {
+		respond "Not found" 404
 	}
 }
 
