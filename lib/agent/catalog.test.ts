@@ -297,6 +297,29 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("instead of wrapping up early or leaving it half done");
   });
 
+  // CUÁNDO PREGUNTAR, como Claude Code (2.1.296, «Do ordinary work»), con
+  // palabras nuestras. Holi, 11/10: ante «¿la img dónde se guarda?» Len escribió
+  // una prueba en el proyecto para comprobar la dirección (turno 13); y ante «no
+  // empieces a programar hasta que me entiendas» preguntó píxeles y pantallas,
+  // decisiones suyas, en vez de enseñar lo que había entendido (turno 5).
+  it("🔴 una pregunta se contesta con palabras, sin cambiar sus ficheros; si además pide trabajo, contesta y lo hace", () => {
+    for (const p of [buildAgentSystemPrompt({}), buildAgentSystemPrompt({}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" })]) {
+      expect(p).toContain("If they are asking a question or still making up their mind, what they want is your answer in words, not a change to their files");
+      expect(p).toContain("answer first and then do it");
+    }
+  });
+
+  it("🔴 pregunta antes de empezar sólo sin una lectura más probable; si quiere aprobar antes de seguir, se para y enseña lo entendido", () => {
+    for (const p of [buildAgentSystemPrompt({}), buildAgentSystemPrompt({}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" })]) {
+      expect(p).toContain("Ask before starting only when you can't tell which reading of the request is the most likely");
+      expect(p).toContain("say in your final message which reading you went with");
+      expect(p).toContain("details you can decide yourself (how much, where, in what order) are never a reason to ask");
+      expect(p).toContain("If they ask you to wait for their OK before going on —on what you understood, on a plan—, stop there and show it to them");
+      // La regla vieja dejaba preguntar por los detalles de una lectura equivocada.
+      expect(p).not.toContain("you ask only when the possible readings lead to very different work");
+    }
+  });
+
   it("el prompt le ofrece escribir JavaScript, esté en la página que esté", () => {
     const p = instruccionesDeLen();
     expect(p).toContain("<script>");
