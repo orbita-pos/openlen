@@ -168,6 +168,9 @@ const targets = [
   // publishedEnvHash. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código:
   // getProject selecciona todas las columnas de projects.
   "env-vars-migrate",
+  // El servidor MCP (plans/mcp-de-openlen): la tabla mcpTokens. Aditiva e
+  // idempotente; ninguna consulta existente la lee.
+  "mcp-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

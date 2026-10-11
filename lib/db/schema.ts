@@ -2071,6 +2071,29 @@ export const movilLlaves = pgTable("movilLlaves", {
   ultimoUso: timestamp("ultimoUso", { mode: "date" }),
 }, (t) => [index("movilLlaves_userId_idx").on(t.userId)]);
 
+// LOS TOKENS DEL SERVIDOR MCP (plans/mcp-de-openlen): los personales (`olp_`,
+// creados por la persona) y, desde la Parte 3, los de acceso OAuth (`ola_`).
+// Sólo la HUELLA (SHA-256): quien lea la base no puede entrar con ellos.
+export const mcpTokens = pgTable("mcpTokens", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  hash: text("hash").notNull(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull().$type<"personal" | "oauth">(),
+  name: text("name").notNull(),
+  scopes: jsonb("scopes").notNull().$type<string[]>().default([]),
+  /** Acotado a UN proyecto, o null = todos los que la persona puede abrir. */
+  projectId: text("projectId").references(() => projects.id, { onDelete: "cascade" }),
+  /** El cliente OAuth que lo pidió (Parte 3); null en los personales. */
+  clientId: text("clientId"),
+  expiresAt: timestamp("expiresAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  lastUsedAt: timestamp("lastUsedAt", { mode: "date" }),
+  revokedAt: timestamp("revokedAt", { mode: "date" }),
+}, (t) => [
+  uniqueIndex("mcpTokens_hash_uq").on(t.hash),
+  index("mcpTokens_userId_idx").on(t.userId),
+]);
+
 /**
  * LEN POR CORREO (lib/len-email): cada correo a Len, GUARDADO antes de correr su
  * turno. Como hacen los grandes con el correo que reciben: primero se apunta,
