@@ -87,6 +87,8 @@
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
       "exitEdit": "退出编辑模式（⌘E）",
+      "design": "设计:选择要调整的元素",
+      "exitDesign": "退出设计模式",
       "refresh": "刷新预览",
       "openNewTab": "在新标签页中打开",
       "viewCode": "查看代码",

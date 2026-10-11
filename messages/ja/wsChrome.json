@@ -87,6 +87,8 @@
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
       "exitEdit": "編集モードを終了（⌘E）",
+      "design": "デザイン: 調整する要素を選ぶ",
+      "exitDesign": "デザインモードを終了",
       "refresh": "プレビューを更新",
       "openNewTab": "新しいタブで開く",
       "viewCode": "コードを見る",

@@ -87,6 +87,8 @@
     "toolbar": {
       "editPage": "Modifier la page (⌘E)",
       "exitEdit": "Quitter le mode édition (⌘E)",
+      "design": "Design : choisir un élément à ajuster",
+      "exitDesign": "Quitter le mode Design",
       "refresh": "Actualiser l'aperçu",
       "openNewTab": "Ouvrir dans un nouvel onglet",
       "viewCode": "Voir le code",
