@@ -157,6 +157,24 @@ describe("appToolsFor (plan 03, tarea 5)", () => {
     expect(mal.stderr).toBe("✘ [ERROR] Unexpected <\n\n    src/roto.ts:3:5:\n\n1 error\n");
   });
 
+  it("🔴 build empaqueta con /.env y el import.meta.env de borrador, como el lienzo (spec local 2026-10-10)", async () => {
+    let recibido: { files: Record<string, string>; entorno?: Readonly<Record<string, string>> } | null = null;
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" }, projectId: "p1" } as never,
+      {
+        checkApp: async () => null,
+        entornoDeLaApp: async (id: string) => ({ VITE_STRIPE: `pk_test_de_${id}` }),
+        buildApp: async (files: Record<string, string>, _app: unknown, o?: { entorno?: Readonly<Record<string, string>> }) => {
+          recibido = { files, ...(o?.entorno ? { entorno: o.entorno } : {}) };
+          return { ok: true as const, js: "x", map: null, bytes: 1, gzipBytes: 1, ms: 1 };
+        },
+      } as never,
+    )!;
+    expect((await tools.run("build", [], { "/src/main.jsx": "x", "/.env": "VITE_A=1", "/tests/a.test.ts": "t" })).exitCode).toBe(0);
+    expect(Object.keys(recibido!.files).sort()).toEqual(["/.env", "/src/main.jsx"]);
+    expect(recibido!.entorno).toEqual({ VITE_STRIPE: "pk_test_de_p1" });
+  });
+
   it("si el comprobador no llega, lo dice y falla", async () => {
     expect(await montar(null).tools.run("tsc", [], {})).toEqual({ stdout: "", stderr: "tsc: didn't finish in time; try again.\n", exitCode: 1 });
   });

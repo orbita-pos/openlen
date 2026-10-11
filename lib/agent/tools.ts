@@ -195,8 +195,13 @@ export interface AgentDeps {
     o?: { readonly supersedes?: object },
   ): Promise<CheckResult | null>;
   /** APPS WEB (plan 02): el paquete de producción, para `npm run build`
-   *  (`lib/apps/bundler/bundle-app.ts`). `null` si el empaquetador no contestó. */
-  buildApp?(files: Readonly<Record<string, string>>, app: AppDeProyecto): Promise<AppBundle | null>;
+   *  (`lib/apps/bundler/bundle-app.ts`), con su `import.meta.env` si lo hay.
+   *  `null` si el empaquetador no contestó. */
+  buildApp?(
+    files: Readonly<Record<string, string>>,
+    app: AppDeProyecto,
+    o?: { readonly entorno?: Readonly<Record<string, string>> },
+  ): Promise<AppBundle | null>;
   /** APPS WEB (plan 04): las pruebas de la app, corridas en el Chromium de los
    *  ojos (`lib/apps/tests/run-tests.ts`), para `npm test`. `null` si no se pudo. */
   testApp?(
@@ -511,9 +516,9 @@ export function realDeps(
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
       return checkAppInWorker({ files, catalogo, ...(o?.supersedes ? { supersedes: o.supersedes } : {}) });
     },
-    async buildApp(files, app) {
+    async buildApp(files, app, o) {
       const { bundleApp } = await import("@/lib/apps/bundler/bundle-app");
-      return bundleApp({ carpeta: files, app, modo: "produccion" });
+      return bundleApp({ carpeta: files, app, ...(o?.entorno ? { entorno: o.entorno } : {}), modo: "produccion" });
     },
     async testApp(files, app, o) {
       const { runAppTests } = await import("@/lib/apps/tests/run-tests");
