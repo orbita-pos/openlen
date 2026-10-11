@@ -1,0 +1,60 @@
+// @vitest-environment node
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const m = vi.hoisted(() => ({ openProject: vi.fn(), consumeQuota: vi.fn(), captureProjectView: vi.fn() }));
+vi.mock("../access", () => ({ openProject: m.openProject }));
+vi.mock("../quota", () => ({ consumeQuota: m.consumeQuota }));
+vi.mock("../capture", () => ({ captureProjectView: m.captureProjectView }));
+vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
+vi.mock("@/lib/lienzo/documento", () => ({
+  vistaParaMedir: (projectId: string, _f: unknown, pagina: string | null) => ({ projectId, pagina }),
+  vistaConCarpeta: async (v: unknown) => v,
+  pantallaDe: (s: string) => `#${s}`,
+}));
+
+import type { ToolResult } from "../results";
+import { viewPageTool } from "./view";
+
+const caller = { userId: "u1", tokenId: "t1", scopes: new Set(["projects:read" as const]), projectId: null };
+const page = (data: object) => ({ ok: true, acceso: { rol: "dueno", duenoId: "u1" }, row: { title: "T", subdomain: null, data } });
+const textAt = (r: ToolResult, i: number) => (r.content[i] as { type: "text"; text: string }).text;
+
+beforeEach(() => {
+  Object.values(m).forEach((f) => f.mockReset());
+  m.consumeQuota.mockResolvedValue(null);
+});
+
+describe("view_page", () => {
+  it("una subpágina: la imagen primero y UN bloque de texto con las medidas", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<p>home", pages: { precios: { html: "<p>precios" } } }));
+    m.captureProjectView.mockResolvedValue({ image: { mimeType: "image/jpeg", dataBase64: "B64" }, measurements: "Nothing overflows." });
+    const r = await viewPageTool.run({ project_id: "p1", page: "precios" }, caller);
+    expect(m.captureProjectView).toHaveBeenCalledWith(expect.objectContaining({ html: "<p>precios", viewport: "desktop", fullPage: false }));
+    expect(r.content[0]).toEqual({ type: "image", data: "B64", mimeType: "image/jpeg" });
+    expect(r.content).toHaveLength(2);
+    expect(textAt(r, 1)).toContain("Nothing overflows.");
+  });
+
+  it("una página que no existe: error con las que hay, y sin gastar cupo", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<p>", pages: { precios: { html: "" } } }));
+    const r = await viewPageTool.run({ project_id: "p1", page: "nada" }, caller);
+    expect(r.isError).toBe(true);
+    expect(textAt(r, 0)).toContain("precios");
+    expect(m.consumeQuota).not.toHaveBeenCalled();
+  });
+
+  it("si no sale ni la captura ni la medida: render_failed accionable", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<p>" }));
+    m.captureProjectView.mockResolvedValue({ image: null, measurements: null });
+    const r = await viewPageTool.run({ project_id: "p1" }, caller);
+    expect(r.isError).toBe(true);
+    expect(textAt(r, 0)).toContain("render_failed");
+  });
+
+  it("en una app, screen abre esa pantalla", async () => {
+    m.openProject.mockResolvedValue(page({ html: "<div id=root>", app: { catalogo: "2026-11", entrada: "/src/main.tsx" } }));
+    m.captureProjectView.mockResolvedValue({ image: null, measurements: "ok" });
+    await viewPageTool.run({ project_id: "p1", screen: "/ventas" }, caller);
+    expect(m.captureProjectView).toHaveBeenCalledWith(expect.objectContaining({ vista: expect.objectContaining({ pantalla: "#/ventas" }) }));
+  });
+});
