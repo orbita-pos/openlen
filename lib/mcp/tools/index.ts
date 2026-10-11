@@ -1,6 +1,18 @@
 // Las herramientas de OpenLen. Se registran todas aquí; cada una vive en su fichero.
 import type { McpServer } from "@modelcontextprotocol/server";
+import { runGuarded, type ToolDefinition } from "./define";
 
-export function registerOpenLenTools(server: McpServer): void {
-  void server; // Tarea 5: el adaptador común y la lista de herramientas.
+// Cada tarea siguiente añade las suyas a esta lista.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ALL_TOOLS: ToolDefinition<any>[] = [];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function registerOpenLenTools(server: McpServer, tools: ToolDefinition<any>[] = ALL_TOOLS): void {
+  for (const tool of tools) {
+    server.registerTool(
+      tool.name,
+      { title: tool.title, description: tool.description, inputSchema: tool.inputSchema, annotations: tool.annotations },
+      async (args: unknown, ctx) => runGuarded(tool, args as never, ctx.http?.authInfo),
+    );
+  }
 }
