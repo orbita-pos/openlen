@@ -40,9 +40,29 @@ import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
 
-/** Caracteres de resultados que viajan ENTEROS, contando desde el más reciente
- *  (~20 K tokens). Lo que queda más atrás, vaciado. */
-export const PRESUPUESTO_DE_RESULTADOS = 80_000;
+/** Caracteres de resultados de herramientas que viajan enteros en el historial:
+ *  se acumulan hasta `hasta`, y al pasarse se vacían los más viejos hasta `deja`.
+ *  A SALTOS y no contando desde el más reciente (era 80.000, desde el final):
+ *  así la frontera del vaciado no se mueve a cada turno, y entre dos vaciados el
+ *  historial sólo crece por el final, que es lo único que la caché del proveedor
+ *  sirve (Holi, 10/10: el primer paso de cada turno pagaba ~230.000 tokens sin
+ *  caché). Como el microcompact de Claude Code, que es un evento con su marca
+ *  (`microcompact_boundary`) y deja los recientes. Con caché, llevar más cuesta
+ *  poco: en DeepSeek V4.1 Flash un token en caché vale 50 veces menos. */
+export interface PresupuestoDeResultados {
+  readonly hasta: number;
+  readonly deja: number;
+}
+export const PRESUPUESTO_DE_RESULTADOS: PresupuestoDeResultados = { hasta: 400_000, deja: 200_000 };
+
+/** Los turnos que forman el historial, A SALTOS por lo mismo que el presupuesto:
+ *  hasta 2 × `TURNOS_DE_LA_VENTANA` todos; al pasarse, vuelven a ser 12 y crecen
+ *  otra vez. Una ventana fija de 12 dejaba caer el turno más viejo a CADA turno
+ *  nuevo, y la petición dejaba de coincidir desde el principio. */
+export const TURNOS_DE_LA_VENTANA = 12;
+export function turnosQueSeQuedan(total: number, ventana: number = TURNOS_DE_LA_VENTANA): number {
+  return total <= 2 * ventana ? total : ventana + ((total - 2 * ventana) % ventana);
+}
 
 /** Tope de una transcripción al guardarla. Un turno con muchas lecturas de
  *  páginas grandes no puede escribir megas en la fila: se vacían sus
@@ -109,6 +129,13 @@ export interface TranscripcionGuardada {
    *  turno —línea base o refresco—, tal y como se mandó. Vuelve en su sitio,
    *  antes de las palabras del dueño, para que el prefijo siga en caché. */
   readonly memoria?: string;
+  /** El bloque de contexto de ESTE turno (`buildAgentContext`: el HOY, el
+   *  idioma, el PROJECT STATE…), tal y como se mandó entre la memoria y las
+   *  palabras del dueño. Vuelve en su sitio por lo mismo que la memoria: sin él,
+   *  la petición del turno siguiente dejaba de coincidir con la de éste justo
+   *  donde éste empezaba, y el turno entero se pagaba otra vez sin caché (Holi,
+   *  10/10). Como DeepSeek, que guarda en la sesión el contexto con el que razonó. */
+  readonly contexto?: string;
   /** Las huellas de lo que el mensaje de memoria de ESTE turno mostró
    *  (`memoryMessageForTurn`). Se pliegan juntando las de todas las filas que
    *  el historial reenvía: lo que salió de la ventana vuelve a entrar. */
@@ -305,13 +332,15 @@ function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): Men
  *  (`fotos`); aquí no se descarga nada. */
 export function historialDesdeLaBase(
   filas: readonly FilaDelHistorial[],
-  presupuesto: number = PRESUPUESTO_DE_RESULTADOS,
+  presupuesto: PresupuestoDeResultados = PRESUPUESTO_DE_RESULTADOS,
   fotos: FotosDeLaConversacion = new Map(),
 ): MensajeDelHistorial[] {
   const mensajes: MensajeDelHistorial[] = [];
   for (const f of filas) {
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
     if (f.transcript?.memoria) mensajes.push({ role: "user", content: f.transcript.memoria });
+    // Y su contexto, en su sitio: lo de delante sigue en caché (ver `contexto`).
+    if (f.transcript?.contexto) mensajes.push({ role: "user", content: f.transcript.contexto });
     mensajes.push(mensajeDelDueno(f, fotos));
     if (f.transcript?.mensajes.length) {
       // Del bucle sólo salen mensajes de usuario y de asistente; uno de sistema
@@ -324,7 +353,40 @@ export function historialDesdeLaBase(
     }
     if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
   }
-  return microcompactar(mensajes, presupuesto);
+  return microcompactarASaltos(mensajes, presupuesto);
+}
+
+/**
+ * EL MICROCOMPACT DEL HISTORIAL, A SALTOS. Recorre las respuestas de la más
+ * vieja a la más reciente acumulando su tamaño; al pasarse de `hasta`, vacía las
+ * más viejas que siguen enteras hasta quedar en `deja` (la llamada se queda). Lo
+ * que decide sobre un mensaje sólo depende de lo que va delante de él y de los
+ * saltos: con un turno más al final, lo de antes sale igual salvo que ese turno
+ * provoque un salto. (`microcompactar`, desde el final, sigue siendo el tope de
+ * UNA transcripción al guardarla.)
+ */
+function microcompactarASaltos<M extends Message | MensajeDelHistorial>(mensajes: M[], presupuesto: PresupuestoDeResultados): M[] {
+  const salida = [...mensajes];
+  const enteras: Array<{ readonly i: number; readonly j: number; readonly tamano: number }> = [];
+  let usado = 0;
+  for (let i = 0; i < salida.length; i++) {
+    const respuestas = salida[i]!.functionResponses;
+    if (!respuestas?.length) continue;
+    respuestas.forEach((r, j) => {
+      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO) return;
+      const tamano = tamanoDeRespuesta(r.response);
+      enteras.push({ i, j, tamano });
+      usado += tamano;
+    });
+    if (usado <= presupuesto.hasta) continue;
+    while (usado > presupuesto.deja && enteras.length > 0) {
+      const v = enteras.shift()!;
+      const m = salida[v.i]!;
+      salida[v.i] = { ...m, functionResponses: m.functionResponses!.map((r, k) => (k === v.j ? { name: r.name, response: vaciada(r.response) } : r)) };
+      usado -= v.tamano;
+    }
+  }
+  return salida;
 }
 
 /** Las rutas cuya última lectura o escritura sigue ENTERA en el historial. */

@@ -150,7 +150,7 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
   });
 
   it("🔴 nada se vacía: el historial del turno siguiente vacía lo viejo por presupuesto, la traza del juez no", () => {
-    const grande = "x".repeat(PRESUPUESTO_DE_RESULTADOS + 1);
+    const grande = "x".repeat(PRESUPUESTO_DE_RESULTADOS.hasta + 1);
     const traza = trazaDeLasFilas([
       {
         userText: "lee la página",

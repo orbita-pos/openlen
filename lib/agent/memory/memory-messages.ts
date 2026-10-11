@@ -42,7 +42,7 @@ export function digestMemory(files: readonly MemoryFile[]): MemoryDigests {
  * Lo que el modelo ya conoce: las huellas de TODAS las filas que el historial
  * reenvía, de la más vieja a la más nueva (la más nueva gana). Cada fila guarda
  * sólo lo que ELLA mostró, así que lo que salió de la ventana de turnos
- * (`TURNOS_DEL_HISTORIAL`) deja de contar como visto y vuelve a entrar.
+ * (`turnosQueSeQuedan`) deja de contar como visto y vuelve a entrar.
  */
 export function foldMemoryDigests(
   rows: readonly { readonly transcript: { readonly memoriaHuellas?: MemoryDigests } | null }[],

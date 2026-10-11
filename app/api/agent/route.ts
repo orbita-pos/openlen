@@ -41,15 +41,17 @@ import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/l
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
+  TURNOS_DE_LA_VENTANA,
   historialDesdeLaBase,
   leidosSembrados,
   stateOnlyTranscript,
   transcripcionParaGuardar,
+  turnosQueSeQuedan,
   type FilaDelHistorial,
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
+import { contarTurnosParaElHistorial, filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { parseStyleDirection } from "@/lib/style-match/parse-direction";
@@ -153,10 +155,9 @@ import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 
 export const runtime = "nodejs";
 
-/** H4 · cuántos turnos de la base forman el historial. Los mismos ~12 que
- *  cabían en la ventana del navegador (36 mensajes); lo que pesa lo acota el
- *  microcompact (`PRESUPUESTO_DE_RESULTADOS`), no este número. */
-const TURNOS_DEL_HISTORIAL = 12;
+// ⚰️ Aquí vivía `TURNOS_DEL_HISTORIAL = 12`, una ventana fija: el turno más viejo
+// caía a CADA turno nuevo y la petición dejaba de coincidir desde el principio,
+// sin caché. Ahora cuántos entran lo dice `turnosQueSeQuedan`, a saltos.
 const ENCODER = new TextEncoder();
 // ⚰️ Aquí vivía `STREAM_TIMEOUT_MS = 360_000`, un reloj de PARED: el turno se
 // abortaba a los 6 minutos trabajara o no. Retirado con los topes (H1,
@@ -578,8 +579,12 @@ async function correrTurno(
   const compartido = genteDelProyecto.length > 1;
   let equipoAhora = "";
   let filasDelHistorial: FilaDelHistorial[];
+  // Cuántos turnos entran, A SALTOS (`turnosQueSeQuedan`): así el primero que se
+  // ve no cambia a cada turno y lo de delante sigue en caché. Si no se puede
+  // contar, los 12 de siempre.
+  const turnosQueEntran = turnosQueSeQuedan(await contarTurnosParaElHistorial(projectId).catch(() => TURNOS_DE_LA_VENTANA));
   if (compartido) {
-    const crudas = await filasParaElHistorialConEquipo(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+    const crudas = await filasParaElHistorialConEquipo(projectId, turnosQueEntran).catch(() => []);
     // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
     const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
     const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
@@ -590,7 +595,7 @@ async function correrTurno(
     filasDelHistorial = plegado.filas;
     equipoAhora = plegado.ahora;
   } else {
-    filasDelHistorial = await turnosParaElHistorial(projectId, TURNOS_DEL_HISTORIAL).catch(() => []);
+    filasDelHistorial = await turnosParaElHistorial(projectId, turnosQueEntran).catch(() => []);
   }
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
@@ -1199,6 +1204,10 @@ async function correrTurno(
                     // razonamiento (que vuelve en el historial) tenga su aviso al
                     // lado y no se lea como de AHORA. Como DeepSeek.
                     ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
+                    // Y el contexto con el que se mandó, que vuelve en su sitio:
+                    // sin él la petición siguiente dejaba de coincidir con ésta
+                    // justo donde empezaba este turno (sin caché).
+                    ...(built.ok && built.contextBlock ? { contexto: built.contextBlock } : {}),
                     // LEN.md: la memoria del proyecto que llevó este turno y lo que
                     // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
                     ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),

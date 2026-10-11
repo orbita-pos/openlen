@@ -181,6 +181,8 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/chat", () => ({
+  // 12 turnos: `turnosQueSeQuedan(12)` son 12, la ventana de siempre.
+  contarTurnosParaElHistorial: vi.fn(async () => 12),
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
