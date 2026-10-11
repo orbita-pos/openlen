@@ -28,7 +28,9 @@ export type DesignEditsAction =
   | { type: "undo" }
   | { type: "redo" }
   | { type: "resetElement"; key: string }
-  | { type: "resetAll" };
+  | { type: "resetAll" }
+  /** Otro proyecto: todo fuera, también el historial (deshacer no puede traer cambios de otra app). */
+  | { type: "clear" };
 
 export const EMPTY_DESIGN_EDITS: DesignEditsState = { elements: {}, order: [], past: [], future: [] };
 const HISTORIA = 100;
@@ -80,6 +82,8 @@ export function designEditsReducer(s: DesignEditsState, a: DesignEditsAction): D
     }
     case "resetAll":
       return s.order.length === 0 ? s : conHistoria(s, { elements: {}, order: [] });
+    case "clear":
+      return EMPTY_DESIGN_EDITS;
   }
 }
 

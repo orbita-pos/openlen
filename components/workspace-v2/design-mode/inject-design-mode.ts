@@ -90,15 +90,23 @@ const SCRIPT = `(function () {
     }
     return targetsOf(p.target.path, p.target.line, p.target.tag, MAX_CHAIN);
   }
+  function textNodesOf(el) {
+    var out = [];
+    for (var i = 0; i < el.childNodes.length; i++) if (el.childNodes[i].nodeType === 3) out.push(el.childNodes[i]);
+    return out;
+  }
   function remember(el) {
-    if (!originals.has(el)) originals.set(el, { style: {}, text: null, src: null, alt: null });
+    if (!originals.has(el)) originals.set(el, { style: {}, text: null, wrote: null, src: null, alt: null });
     return originals.get(el);
   }
   function restoreEl(el) {
     var o = originals.get(el);
     if (!o) return;
     for (var k in o.style) { if (o.style[k]) el.style.setProperty(k, o.style[k]); else el.style.removeProperty(k); }
-    if (o.text !== null) el.textContent = o.text;
+    if (o.text !== null) {
+      var tn = textNodesOf(el);
+      for (var r = 0; r < tn.length && r < o.text.length; r++) if (o.text[r] !== undefined) tn[r].nodeValue = o.text[r];
+    }
     if (o.src !== null) el.setAttribute('src', o.src);
     if (o.alt !== null) el.setAttribute('alt', o.alt);
     originals.delete(el);
@@ -113,7 +121,20 @@ const SCRIPT = `(function () {
         if (!(k in o.style)) o.style[k] = el.style.getPropertyValue(k);
         if (el.style.getPropertyValue(k) !== p.styles[k] || el.style.getPropertyPriority(k) !== 'important') el.style.setProperty(k, p.styles[k], 'important');
       }
-      if (typeof p.text === 'string') { if (o.text === null) o.text = el.textContent; if (el.textContent !== p.text) el.textContent = p.text; }
+      // EL TEXTO, en los nodos de React y sin cambiarlos por otros: si se
+      // reemplazan, React escribe sus cambios en nodos que ya no están y el
+      // texto deja de actualizarse. Lo que React escribió desde la última vez
+      // es el valor de verdad para restaurar.
+      if (typeof p.text === 'string') {
+        var tns = textNodesOf(el);
+        if (o.text === null) { o.text = []; o.wrote = []; }
+        for (var t = 0; t < tns.length; t++) {
+          if (o.wrote[t] === undefined || tns[t].nodeValue !== o.wrote[t]) o.text[t] = tns[t].nodeValue;
+          var nuevo = t === 0 ? p.text : '';
+          if (tns[t].nodeValue !== nuevo) tns[t].nodeValue = nuevo;
+          o.wrote[t] = nuevo;
+        }
+      }
       if (typeof p.src === 'string') { if (o.src === null) o.src = el.getAttribute('src') || ''; if (el.getAttribute('src') !== p.src) el.setAttribute('src', p.src); }
       if (typeof p.alt === 'string') { if (o.alt === null) o.alt = el.getAttribute('alt') || ''; if (el.getAttribute('alt') !== p.alt) el.setAttribute('alt', p.alt); }
     }
