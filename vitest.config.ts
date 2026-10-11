@@ -93,6 +93,10 @@ export default defineConfig({
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
+      // EL MODO DISEÑO de las apps (spec local 2026-10-11).
+      "lib/agent/design-request.test.ts",
+      "lib/agent/design-block.test.ts",
+      "lib/agent/design-screenshots.browser.test.ts",
       "app/api/len-email/**/*.test.ts",
       // Lo que cambió en el turno, fichero a fichero (la lente «Cambios»).
       "lib/agent/cambios-del-turno.test.ts",

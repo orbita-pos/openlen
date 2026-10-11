@@ -300,6 +300,8 @@ export function buildAgentContext(args: {
   attachedImages?: readonly AttachedImageForContext[] | null;
   /** Lo que el dueño señaló en el lienzo. Ver `SeleccionDelDueno`. */
   seleccion?: SeleccionDelDueno | null;
+  /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
+  design?: string | null;
   /** LA REFERENCIA POR URL de este mensaje (Crear es Len, 2026-10-06): el
    *  mismo bloque que Crear ponía delante del brief (`directionToBriefBlock`),
    *  aquí al final del contexto, justo antes de lo que pide el dueño. Ausente ⇒
@@ -387,7 +389,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -457,6 +459,8 @@ export interface BuildAgentMessagesArgs {
   styleDirection?: StyleDirection | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
+  /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
+  design?: string | null;
   /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
   maxPromptTokens: number;
 }
@@ -520,6 +524,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     attachedImages: args.attachedImages,
     styleDirection: args.styleDirection,
     seleccion: args.seleccion,
+    design: args.design,
   });
   const avisos = avisosDelTurno({
     turnoAnteriorMudo: args.turnoAnteriorMudo,

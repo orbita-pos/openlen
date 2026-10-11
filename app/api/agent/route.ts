@@ -105,6 +105,8 @@ import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
+import { parseDesignRequest } from "@/lib/agent/design-request";
+import { designBlock } from "@/lib/agent/design-block";
 import { observarPagina } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -307,6 +309,8 @@ type CuerpoDelTurno = {
    *  mensaje de un proyecto en blanco lo convierte en app antes del turno. Otra
    *  cosa no cuenta, y en un proyecto con algo dentro no hace nada. */
   naceComo?: unknown;
+  /** EL MODO DISEÑO de una app: los cambios del panel (`lib/agent/design-request.ts`). */
+  design?: unknown;
   /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
   idioma?: unknown;
 };
@@ -555,6 +559,12 @@ async function correrTurno(
   // sus herramientas son los suyos (`lib/agent/modo-app.ts`). Se decide UNA vez
   // por turno, con la fila del principio, como todo lo demás que lee el prompt.
   const appDelTurno = project.data?.app ?? null;
+  // EL MODO DISEÑO (spec local 2026-10-11): sólo en una app. Las líneas se
+  // leen de la carpeta, y un elemento inválido se descarta sin tumbar el turno.
+  const ficherosDelDiseno =
+    appDelTurno && body?.design ? ((await deps.projectFiles?.(projectId).catch(() => null)) ?? null) : null;
+  const disenoDelTurno = ficherosDelDiseno ? parseDesignRequest(body?.design, ficherosDelDiseno) : null;
+  const bloqueDeDiseno = disenoDelTurno && ficherosDelDiseno ? designBlock(disenoDelTurno, ficherosDelDiseno) : "";
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
   const tools = buildFunctionDeclarations(process.env, {}, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
@@ -874,6 +884,8 @@ async function correrTurno(
     // palabras de ahora y de las de antes en esta charla, no del historial del
     // modelo, donde van pegadas a avisos en inglés.
     writingLanguage: userWritingLanguage(prompt, filasDelHistorial.map((f) => f.userText)),
+    // Lo que el dueño ajustó en el panel de diseño (vacío si no es un «Aplicar»).
+    design: bloqueDeDiseno || null,
     state,
     memoryMessage: memoriaDelTurno?.text ?? null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
