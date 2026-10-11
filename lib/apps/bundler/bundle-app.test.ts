@@ -86,6 +86,36 @@ describe("bundleApp (plan 02, tarea 3)", () => {
     expect(ra2).toBe(ra);
   }, 90_000);
 
+  // 🔴 EL LIENZO NO ESPERA DETRÁS DE SUS PROPIAS RECARGAS VIEJAS (Jesús, 10/10).
+  // Cada cambio de Len recarga el lienzo con un iframe nuevo; la petición del
+  // viejo seguía en la cola —un hilo, una a la vez, compartida con los ojos—
+  // aunque ya nadie la esperara, y el lienzo nuevo esperaba detrás, en blanco.
+  // En cada una, `ocupa` tiene el hilo: las demás esperan en la cola.
+  const variante = (texto: string) => ({ ...FICHEROS, "/src/App.tsx": FICHEROS["/src/App.tsx"]!.replace("Guardar", texto) });
+
+  it("🔴 una petición nueva del lienzo de un proyecto sustituye a la suya que aún espera; la del lienzo de otro proyecto, no", async () => {
+    const ocupa = bundleApp({ carpeta: variante("Ocupa"), app: APP, modo: "desarrollo" });
+    const vieja = bundleApp({ carpeta: variante("Vieja"), app: APP, modo: "desarrollo", supersedes: "lienzo:p1" });
+    const deOtro = bundleApp({ carpeta: variante("DeOtro"), app: APP, modo: "desarrollo", supersedes: "lienzo:p2" });
+    const nueva = bundleApp({ carpeta: variante("Nueva"), app: APP, modo: "desarrollo", supersedes: "lienzo:p1" });
+    expect(await vieja).toBeNull();
+    const [rn, ro, rocupa] = await Promise.all([nueva, deOtro, ocupa]);
+    if (!rn?.ok || !ro?.ok || !rocupa?.ok) throw new Error("no empaquetó");
+    expect(rn.js).toContain("Nueva");
+    expect(ro.js).toContain("DeOtro");
+  }, 120_000);
+
+  it("🔴 los ojos de Len que piden lo mismo que el lienzo no se quedan sin paquete cuando el lienzo lo sustituye", async () => {
+    const ocupa = bundleApp({ carpeta: variante("Ocupa2"), app: APP, modo: "desarrollo" });
+    const delLienzo = bundleApp({ carpeta: variante("Mismo"), app: APP, modo: "desarrollo", supersedes: "lienzo:p1" });
+    const deLosOjos = bundleApp({ carpeta: variante("Mismo"), app: APP, modo: "desarrollo" });
+    const siguiente = bundleApp({ carpeta: variante("Siguiente"), app: APP, modo: "desarrollo", supersedes: "lienzo:p1" });
+    expect(await delLienzo).toBeNull();
+    const [ojos] = await Promise.all([deLosOjos, siguiente, ocupa]);
+    if (!ojos?.ok) throw new Error(`los ojos se quedaron sin paquete: ${JSON.stringify(ojos)}`);
+    expect(ojos.js).toContain("Mismo");
+  }, 120_000);
+
   it("🔴 si el hilo no contesta a tiempo: null, y la siguiente funciona (Review Focus 3)", async () => {
     const carpeta = { ...FICHEROS, "/src/X.ts": "export const x = 1;" };
     expect(await bundleApp({ carpeta, app: APP, modo: "desarrollo", timeoutMs: 1 })).toBeNull();
