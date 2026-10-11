@@ -55,6 +55,8 @@ export interface NewChatPanelProps {
   flatProjectChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
+  /** El turno de un «Aplicar» del modo Diseño acabó (`useAgentChat`). */
+  onDesignSettled?: (ok: boolean) => void;
   projectLoading?: boolean;
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
@@ -123,6 +125,7 @@ function AgentChatView({
   flatProjectChat,
   onChatChange,
   onRedesigningChange,
+  onDesignSettled,
   sectionSelectMode = false,
   onToggleSectionSelect,
   scopedSelection = null,
@@ -156,6 +159,7 @@ function AgentChatView({
     initialChat: flatProjectChat,
     onChatChange,
     onRedesigningChange,
+    onDesignSettled,
     scopedSelection,
     onClearScope,
     pendingDraft,

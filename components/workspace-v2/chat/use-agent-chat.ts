@@ -35,6 +35,7 @@ import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOf
 import type { AgentConfirm } from "../agent-confirm-card";
 import { tarjetaDeConfirmacion } from "@/components/llamada/puente-a-len";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
+import type { DesignRequest } from "@/lib/apps/design/types";
 import { ejecutarUndo, ficherosDelEvento, ofreceDeshacer, planDeUndo, type FalloDeUndo } from "../panels/undo-turn";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
@@ -273,12 +274,16 @@ export interface AgentChatOptions {
    *  fotos y la referencia por URL del estado vacío, el primer mensaje de un
    *  proyecto en blanco. Se consume con el borrador. */
   pendingAttachments?: PendingAttachments | null;
+  /** El turno de un «Aplicar» del modo Diseño acabó: `true` si terminó entero (ni error ni cortado). */
+  onDesignSettled?: (ok: boolean) => void;
 }
 
 /** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
 export interface PendingAttachments extends PideNacer {
   readonly images: readonly AttachedImage[];
   readonly styleDirection: StyleDirection | null;
+  /** «Aplicar» del modo Diseño de una app: los cambios del panel. */
+  readonly design?: DesignRequest | null;
   // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
   // convierte el proyecto en blanco en app antes del turno
   // (`lib/projects/nacer-como-app.ts`), con el idioma de la interfaz de `lang`.
@@ -298,6 +303,7 @@ export function useAgentChat({
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
   pendingAttachments = null,
+  onDesignSettled,
 }: AgentChatOptions) {
   const t = useTranslations("panelsChat");
   // Agent-mode messages live under the wsPage namespace (shared with the
@@ -1087,6 +1093,8 @@ export function useAgentChat({
     () => SIN_COMENTARIOS,
   );
 
+  /** El turno de un «Aplicar» del modo Diseño que aún no acabó (ver el efecto de `onDesignSettled`). */
+  const designTurnRef = useRef<string | null>(null);
   const send = useCallback(
     async (
       rawPrompt: string,
@@ -1105,6 +1113,8 @@ export function useAgentChat({
         /** El primer mensaje de un proyecto en blanco que nace como app. */
         readonly naceComo?: PideNacer["naceComo"];
         readonly idioma?: string;
+        /** «Aplicar» del modo Diseño: viaja en el cuerpo como `design`. */
+        readonly design?: DesignRequest | null;
       },
     ) => {
       const escrito = rawPrompt.trim();
@@ -1148,6 +1158,8 @@ export function useAgentChat({
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      // EL MODO DISEÑO: se vigila este turno para vaciar los pendientes al acabar entero.
+      if (opciones?.design) designTurnRef.current = turnId;
 
       const newTurn: DesignTurn = {
         id: turnId,
@@ -1370,6 +1382,8 @@ export function useAgentChat({
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
               ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
+              // EL MODO DISEÑO: los cambios del panel (`lib/agent/design-request.ts`).
+              ...(opciones?.design ? { design: opciones.design } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
               ...camposDeNacer(opciones),
             }),
@@ -2106,6 +2120,17 @@ export function useAgentChat({
    * el primer mensaje de una app salía dos veces —dos turnos pisándose—.
    */
   const autoSentDraftRef = useRef<string | null>(null);
+  // EL MODO DISEÑO: el turno de un «Aplicar», hasta que deja de correr. Entero
+  // (`applied` y no cortado; mientras corre es `streaming`) vacía los pendientes del panel; con
+  // error o parado, se quedan para reintentar.
+  useEffect(() => {
+    const id = designTurnRef.current;
+    if (!id) return;
+    const turno = turns.find((x) => x.id === id);
+    if (!turno || turno.status === "streaming") return;
+    designTurnRef.current = null;
+    onDesignSettled?.(turno.status === "applied" && !turno.cortado);
+  }, [turns, onDesignSettled]);
   useEffect(() => {
     if (!pendingDraft) autoSentDraftRef.current = null;
     if (!pendingDraftAutoSend || !pendingDraft) return;
@@ -2119,6 +2144,7 @@ export function useAgentChat({
     void send(texto, undefined, {
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
       ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
+      ...(adjuntos?.design ? { design: adjuntos.design } : {}),
       ...camposDeNacer(adjuntos),
     });
   }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);
