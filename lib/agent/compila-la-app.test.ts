@@ -1,7 +1,7 @@
 // @vitest-environment node
 // Lo que no compila de una app, de vuelta a Len (F3 de las apps web).
 import { describe, expect, it } from "vitest";
-import { diagnosticosDeLaApp, problemasDelCascaron } from "./compila-la-app";
+import { diagnosticosDeLaApp, problemasDelCascaron, shellEntry } from "./compila-la-app";
 
 const APP = { catalogo: "2026-10", entrada: "/src/main.jsx" };
 const CASCARON = '<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>';
@@ -83,5 +83,21 @@ describe("el tailwind.config del cascarón (apps 2026-11, tarea 6)", () => {
     ]) {
       expect(problemasDelCascaron(APP, conConfig(`<script>${config}</script>`), BIEN), config).toEqual([]);
     }
+  });
+});
+
+// COMO EN VITE, la entrada de una app es el módulo que carga su cascarón
+// (Jesús, 10/10: renombrar main.jsx a main.tsx dejaba la app sin arrancar).
+describe("shellEntry — la entrada que carga el cascarón", () => {
+  it("el src del <script type=\"module\"> que apunta a un fuente de /src, con los atributos en cualquier orden", () => {
+    expect(shellEntry('<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>')).toBe("/src/main.tsx");
+    expect(shellEntry("<script src='/src/index.jsx' type='module' defer></script>")).toBe("/src/index.jsx");
+  });
+
+  it("nada que no sea un módulo de /src: un script clásico, el CDN de Tailwind o un .css", () => {
+    expect(shellEntry('<script src="https://cdn.tailwindcss.com"></script>')).toBeNull();
+    expect(shellEntry('<script src="/src/main.tsx"></script>')).toBeNull();
+    expect(shellEntry('<script type="module" src="/js/app.js"></script>')).toBeNull();
+    expect(shellEntry('<link rel="stylesheet" href="/src/index.css">')).toBeNull();
   });
 });

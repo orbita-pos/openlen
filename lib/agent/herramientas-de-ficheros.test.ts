@@ -1846,6 +1846,57 @@ describe("la terminal DEL USUARIO en una app", () => {
   });
 });
 
+// 🔴 COMO EN VITE, LA ENTRADA ES LA QUE CARGA EL CASCARÓN (Jesús, 10/10). En una
+// app vieja, «pásala a TypeScript» renombra main.jsx a main.tsx y cambia el src
+// del cascarón; la entrada guardada (`data.app.entrada`) se quedaba en main.jsx
+// y la app no arrancaba.
+describe("la entrada de una app la dice su cascarón, como en Vite", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" };
+  const CASCARON =
+    '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  const MAIN = 'import { createRoot } from "react-dom/client";\nimport App from "./App";\ncreateRoot(document.getElementById("root")).render(<App />);\n';
+  const montar = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    c.archivos["/src/main.jsx"] = MAIN;
+    c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}\n";
+    return { ...c, s: { ...makeSession(), app: APP } as AgentSession };
+  };
+
+  it("🔴 renombrar la entrada y su src en el cascarón: la app empieza en la nueva, en la base y en el resto del turno", async () => {
+    const { deps, store, s } = montar();
+    await runAgentTool(s, deps, "Write", { file_path: "/src/main.tsx", content: MAIN.replace('getElementById("root")', 'getElementById("root")!') });
+    await runAgentTool(s, deps, "Read", { file_path: "/index.html" });
+    const r = await runAgentTool(s, deps, "Edit", { file_path: "/index.html", old_string: 'src="/src/main.jsx"', new_string: 'src="/src/main.tsx"' });
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    assert.deepEqual(s.app, store.data.app);
+    assert.doesNotMatch(JSON.stringify(r), /The shell no longer loads the app|that file doesn't exist/);
+  });
+
+  it("🔴 y desde la terminal, como se haría en Vite: mv de la entrada y sed -i del cascarón", async () => {
+    const { deps, store, s } = montar();
+    try {
+      const r = await conTerminal(() =>
+        runAgentTool(s, deps, "bash", { command: "mv /src/main.jsx /src/main.tsx && sed -i 's#/src/main.jsx#/src/main.tsx#' /index.html" }),
+      );
+      assert.equal(r.response.ok, true, JSON.stringify(r.response));
+      assert.deepEqual(store.data.app, { catalogo: "2026-11", entrada: "/src/main.tsx" });
+      assert.deepEqual(s.app, store.data.app);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("CONTRA-PRUEBA: cambiar otra cosa del cascarón (el título) no toca la entrada", async () => {
+    const { deps, store, s } = montar();
+    await runAgentTool(s, deps, "Read", { file_path: "/index.html" });
+    const r = await runAgentTool(s, deps, "Edit", { file_path: "/index.html", old_string: "<title>Caja</title>", new_string: "<title>Caja Luna</title>" });
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, APP);
+    assert.deepEqual(s.app, APP);
+  });
+});
+
 describe("un turno de app, guionizado (tarea #15)", () => {
   it("🔴 POS de una cafetería: escribe, ve lo que no compila, lo arregla y deja la tarjeta de publicar", async () => {
     const { runAgentLoop } = await import("./loop");

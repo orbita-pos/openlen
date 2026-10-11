@@ -19,7 +19,7 @@ import { persistPage } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
-import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
+import { diagnosticosDeLaApp, shellEntry } from "@/lib/agent/compila-la-app";
 import { typesAndLintAfterWrite } from "@/lib/agent/types-and-lint";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
@@ -311,6 +311,19 @@ async function aplicarPlan(
   const guardado = await guardarFichero(session, deps, data, plan.ruta, plan.contenido, { crea: plan.crea, etiqueta });
   if (!guardado.ok) {
     return { response: respuesta(fallo(guardado.error)), ...(guardado.ownerReason ? { ownerReason: guardado.ownerReason } : {}) };
+  }
+
+  // EN UNA APP, LA ENTRADA LA DICE EL CASCARÓN, como en Vite (Jesús, 10/10):
+  // renombrar main.jsx a main.tsx y cambiar su src dejaba la entrada guardada
+  // en main.jsx y la app sin arrancar. Si el cascarón carga otro módulo de
+  // /src, ésa es la entrada desde ahora: en la base —el lienzo la relee al
+  // subir el documento nuevo— y en el resto del turno. Si el fichero aún no
+  // existe, el diagnóstico del cascarón lo dice, como el error de Vite.
+  const entradaDelCascaron = session.app && plan.ruta === "/index.html" ? shellEntry(guardado.html) : null;
+  if (session.app && entradaDelCascaron && entradaDelCascaron !== session.app.entrada) {
+    const entrada = entradaDelCascaron;
+    await deps.saveProjectData(session.projectId, session.userId, (actual) => (actual.app ? { ...actual, app: { ...actual.app, entrada } } : actual));
+    session.app = { ...session.app, entrada };
   }
 
   // Lo que Len recuerda como leído es lo que SE GUARDÓ, como Claude Code tras su
