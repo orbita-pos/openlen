@@ -109,3 +109,9 @@ export async function revokeToken(userId: string, id: string): Promise<boolean> 
     .returning({ id: schema.mcpTokens.id });
   return rows.length > 0;
 }
+
+/** El nombre que la persona le dio a la conexión (lo enseña la aprobación). */
+export async function tokenName(id: string): Promise<string | null> {
+  const [row] = await db.select({ name: schema.mcpTokens.name }).from(schema.mcpTokens).where(eq(schema.mcpTokens.id, id)).limit(1);
+  return row?.name ?? null;
+}

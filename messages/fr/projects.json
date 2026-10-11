@@ -221,5 +221,21 @@
     "de": "de {nombre}",
     "rolEditor": "Éditeur",
     "rolLector": "Lecture seule"
+  },
+  "mcpApproval": {
+    "title": "Un assistant IA vous demande votre accord",
+    "publish": "Publier « {project} » sur {url}",
+    "unpublish": "Mettre « {project} » hors ligne (actuellement sur {url})",
+    "requestedBy": "Demandé par la connexion « {name} »",
+    "expires": "Cette demande expire {when}.",
+    "warning": "N'approuvez que si vous l'avez demandé à votre assistant. Sinon, refusez.",
+    "approve": "Approuver",
+    "deny": "Refuser",
+    "approved": "Approuvé. Retournez à votre assistant et dites-lui de continuer.",
+    "denied": "Refusé. Votre assistant ne le fera pas.",
+    "expired": "Cette demande a expiré. Demandez à votre assistant de réessayer.",
+    "used": "Cette demande a déjà été utilisée.",
+    "notFound": "Cette demande n'existe pas ou ne vous appartient pas.",
+    "failed": "Ça n'a pas marché. Rechargez la page et réessayez."
   }
 }

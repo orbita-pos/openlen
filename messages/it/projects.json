@@ -221,5 +221,21 @@
     "de": "di {nombre}",
     "rolEditor": "Editor",
     "rolLector": "Sola lettura"
+  },
+  "mcpApproval": {
+    "title": "Un assistente IA ti chiede il permesso",
+    "publish": "Pubblicare «{project}» su {url}",
+    "unpublish": "Mettere offline «{project}» (ora è su {url})",
+    "requestedBy": "Richiesto dalla connessione «{name}»",
+    "expires": "Questa richiesta scade {when}.",
+    "warning": "Approva solo se l'hai chiesto tu al tuo assistente. Altrimenti, rifiuta.",
+    "approve": "Approva",
+    "deny": "Rifiuta",
+    "approved": "Approvato. Torna dal tuo assistente e digli di continuare.",
+    "denied": "Rifiutato. Il tuo assistente non lo farà.",
+    "expired": "Questa richiesta è scaduta. Chiedi al tuo assistente di riprovare.",
+    "used": "Questa richiesta è già stata usata.",
+    "notFound": "Questa richiesta non esiste o non è tua.",
+    "failed": "Non ha funzionato. Ricarica la pagina e riprova."
   }
 }

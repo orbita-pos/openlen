@@ -221,5 +221,21 @@
     "de": "van {nombre}",
     "rolEditor": "Bewerker",
     "rolLector": "Alleen bekijken"
+  },
+  "mcpApproval": {
+    "title": "Een AI-assistent vraagt om je toestemming",
+    "publish": "«{project}» publiceren op {url}",
+    "unpublish": "«{project}» offline halen (staat nu op {url})",
+    "requestedBy": "Gevraagd door de verbinding «{name}»",
+    "expires": "Dit verzoek verloopt {when}.",
+    "warning": "Keur alleen goed als je dit aan je assistent hebt gevraagd. Zo niet, wijs het af.",
+    "approve": "Goedkeuren",
+    "deny": "Afwijzen",
+    "approved": "Goedgekeurd. Ga terug naar je assistent en zeg dat hij verder kan.",
+    "denied": "Afgewezen. Je assistent doet het niet.",
+    "expired": "Dit verzoek is verlopen. Vraag je assistent het opnieuw te proberen.",
+    "used": "Dit verzoek is al gebruikt.",
+    "notFound": "Dit verzoek bestaat niet of is niet van jou.",
+    "failed": "Dat lukte niet. Herlaad de pagina en probeer het opnieuw."
   }
 }
