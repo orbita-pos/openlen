@@ -30,6 +30,9 @@ import {
   GenerationBriefLimitFeedback,
   useGenerationBriefLimit,
 } from "@/components/generation-brief-limit";
+import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
+import { newProjectHref } from "@/components/workspace-v2/chat/nace-como";
+import { HeroKindPicker } from "./hero-kind-picker";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LO QUE LE PEDIRÍAS A UN DESARROLLADOR (04/10). La portada enseñaba las ideas
@@ -56,6 +59,9 @@ export function HeroPromptInput() {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // PÁGINA O APP (la píldora del input). Página por defecto, como en /new.
+  const [kind, setKind] = useState<NaceComo>("pagina");
+  const tw = useTranslations("wsChrome");
   // LAS FOTOS ADJUNTAS. Hasta `MAX_REFERENCIAS`.
   //
   // AQUI DECIA "una sola a proposito", y el motivo que daba era bueno: con dos
@@ -109,9 +115,11 @@ export function HeroPromptInput() {
   const reportLen = useHeroLenReport();
   const [focused, setFocused] = useState(false);
   // Teclea sola mientras está vacía y nadie la toca (use-ghost-typing.ts).
+  // Sus ejemplos son de páginas: con App elegida se calla y habla el
+  // placeholder de las apps.
   const ghost = useGhostTyping(
     t.raw("heroPrompt.ghost") as string[],
-    !focused && value === "" && referencias.length === 0 && !dictado.escuchando,
+    kind === "pagina" && !focused && value === "" && referencias.length === 0 && !dictado.escuchando,
   );
   useEffect(() => {
     reportLen({
@@ -136,8 +144,9 @@ export function HeroPromptInput() {
 
   // RELLENA Y NO ENVÍA (plans/crear-es-len), como DeepSeek con
   // `startSession(…, { prompt })`: el brief llega ESCRITO al compositor del
-  // proyecto en blanco y el usuario pulsa enviar. Sin `autostart`.
-  const target = `/new?brief=${encodeURIComponent(value.trim())}`;
+  // proyecto en blanco y el usuario pulsa enviar. Sin `autostart`. Con App
+  // elegida, lleva `kind=app` y /new abre con la tarjeta App marcada.
+  const target = newProjectHref(value, kind);
 
   const submit = () => {
     if (!canSend || submitting || status === "loading") return;
@@ -267,7 +276,13 @@ export function HeroPromptInput() {
               }
             }}
             rows={1}
-            placeholder={ghost.text ? "" : t("heroPrompt.placeholder")}
+            placeholder={
+              ghost.text
+                ? ""
+                : kind === "app"
+                  ? tw("start.kind.appPlaceholder")
+                  : t("heroPrompt.placeholder")
+            }
             maxLength={briefLimit.maxLength}
             aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
             className="mt-0.5 block w-full resize-none bg-transparent text-[15px] leading-normal text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-500"
@@ -306,7 +321,8 @@ export function HeroPromptInput() {
             counterClassName="text-zinc-500 dark:text-zinc-400"
           />
 
-          <div className="mt-0.5 flex items-center gap-[3px]">
+          {/* `relative`: el menú de la píldora Página/App se ancla aquí. */}
+          <div className="relative mt-0.5 flex items-center gap-[3px]">
             {/* El `<input>` real va oculto: su aspecto nativo no se puede
                 estilar. `accept` FILTRA, no valida — el reductor y el servidor
                 vuelven a comprobar el tipo. */}
@@ -408,6 +424,7 @@ export function HeroPromptInput() {
                 )}
               </button>
             )}
+            <HeroKindPicker value={kind} onChange={setKind} />
             {/* EL BOTÓN DEL CHAT: cuadrado redondeado, siempre del mismo tamaño;
                 sólo cambia de color al haber algo que mandar. */}
             <button

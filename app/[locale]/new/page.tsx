@@ -60,6 +60,7 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
+import { KIND_PARAM, kindFromParam } from "@/components/workspace-v2/chat/nace-como";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
@@ -927,11 +928,18 @@ function NewV2Inner() {
   // recargar no lo vuelva a escribir encima de lo que el usuario cambió.
   useEffect(() => {
     if (!projectParam) return;
-    if (briefParam === null && modeParam === null && searchParams.get("autostart") === null) return;
+    if (
+      briefParam === null &&
+      modeParam === null &&
+      searchParams.get("autostart") === null &&
+      searchParams.get(KIND_PARAM) === null
+    )
+      return;
     const qs = new URLSearchParams(searchParams.toString());
     qs.delete("brief");
     qs.delete("mode");
     qs.delete("autostart");
+    qs.delete(KIND_PARAM);
     router.replace(`/new?${qs.toString()}`);
   }, [projectParam, briefParam, modeParam, searchParams, router]);
   // ¿Ya se mandó el primer mensaje desde el estado vacío? Desde ese momento el
@@ -941,11 +949,17 @@ function NewV2Inner() {
   const [heroSending, setHeroSending] = useState(false);
   // PÁGINA O APP (las dos tarjetas del estado vacío). Página por defecto, y
   // vuelve a serlo al cambiar de proyecto: es una elección de ESTE proyecto.
-  const [naceComo, setNaceComo] = useState<NaceComo>("pagina");
+  // La portada puede traer App elegida (`kind=app`, su píldora del input):
+  // vale para el proyecto en blanco que se abre ahora, y se gasta en cuanto
+  // ese proyecto está abierto. La URL de antes de abrirlo se pierde al
+  // redirigir, por eso se guarda aquí.
+  const kindFromUrl = useRef(kindFromParam(searchParams.get(KIND_PARAM)));
+  const [naceComo, setNaceComo] = useState<NaceComo>(kindFromUrl.current);
   const [pendingChatAttachments, setPendingChatAttachments] = useState<PendingAttachments | null>(null);
   useEffect(() => {
     setHeroSent(false);
-    setNaceComo("pagina");
+    setNaceComo(kindFromUrl.current);
+    if (projectParam) kindFromUrl.current = "pagina";
   }, [projectParam]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
