@@ -1,5 +1,6 @@
 // Las herramientas de OpenLen. Se registran todas aquí; cada una vive en su fichero.
 import type { McpServer } from "@modelcontextprotocol/server";
+import { createProjectTool } from "./create";
 import { runGuarded, type ToolDefinition } from "./define";
 import { getDiagnosticsTool } from "./diagnostics";
 import { getDocsTool } from "./docs";
@@ -22,6 +23,7 @@ export const ALL_TOOLS: ToolDefinition<any>[] = [
   editFileTool,
   writeFileTool,
   deleteFileTool,
+  createProjectTool,
   publishTool,
   unpublishTool,
 ];

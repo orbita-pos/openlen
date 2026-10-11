@@ -85,6 +85,7 @@ export default defineConfig({
       "lib/mcp/**/*.test.ts",
       "app/api/mcp/**/*.test.ts",
       "lib/agent/version-labels.test.ts",
+      "lib/projects/create-from-html.test.ts",
       "movil/src/**/*.test.tsx",
       // Len-Bench (plans/len-2/diseno.md). Las piezas puras de la vara; lo
       // que abre Chromium o habla con el servidor se prueba con
