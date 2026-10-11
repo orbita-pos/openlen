@@ -152,7 +152,8 @@ describe("GET /api/lienzo/site — una app web", () => {
   it("🔴 un fuente roto, aunque nadie lo importe: la entrada es el módulo que lanza su error (como al publicar, que se niega)", async () => {
     vivo();
     const js = await (await pide(host(P1), "/src/main.jsx")).text();
-    expect(js).toMatch(/^throw new SyntaxError\(.*\/src\/Roto\.jsx:1/);
+    // Pinta la capa de error, como Vite (sin documento, nada) y LANZA, con fichero y línea.
+    expect(() => new Function(js)()).toThrow(/\/src\/Roto\.jsx:1/);
   }, 60_000);
 
   it("🔴 como la publicada: ni el catálogo suelto ni los fuentes sueltos (van DENTRO del paquete)", async () => {
@@ -162,10 +163,15 @@ describe("GET /api/lienzo/site — una app web", () => {
     expect((await pide(host(P1), "/src/Roto.jsx")).status).toBe(404);
   });
 
-  it("en una PÁGINA, /js/app.js sigue como está y un .tsx se compila", async () => {
+  // ⚠️ Decía «un .tsx se compila» y pasaba porque el módulo de error tampoco
+  // llevaba `<h1>`: en una PÁGINA el JSX no compila (el runtime automático
+  // importa `react/jsx-runtime`, y una página no importa paquetes; ver
+  // lib/apps/servir.test.ts). Lo destapó la capa de error, que trae el trozo de
+  // código. Lo que sí se cumple: el navegador nunca recibe el fuente tal cual.
+  it("en una PÁGINA, /js/app.js sigue como está y un .tsx nunca se sirve tal cual", async () => {
     vivo({ app: null });
     expect(await (await pide(host(P1), "/js/app.js")).text()).toBe("document.title = 'cargó'");
-    expect(await (await pide(host(P1), "/src/App.tsx")).text()).not.toContain("<h1>");
+    expect((await (await pide(host(P1), "/src/App.tsx")).text()).startsWith("export default function App")).toBe(false);
   });
 
   it("🔴 /tests y /supabase siguen sin servirse, aunque sean .ts", async () => {
