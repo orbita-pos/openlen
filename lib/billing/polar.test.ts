@@ -29,7 +29,12 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { applySubscriptionState, createCheckout, planForProduct } from "@/lib/billing/polar";
+import {
+  applySubscriptionState,
+  createCheckout,
+  createCustomerPortalUrl,
+  planForProduct,
+} from "@/lib/billing/polar";
 
 describe("applySubscriptionState", () => {
   beforeEach(() => {
@@ -259,5 +264,59 @@ describe("createCheckout por plan", () => {
     fetchMock.mockClear();
     await createCheckout({ userId: "u1", locale: "xx" });
     expect(vuelta().pathname).toBe("/en/projects");
+  });
+});
+
+describe("createCustomerPortalUrl", () => {
+  const saved = { ...process.env };
+  const fetchMock = vi.fn();
+  beforeEach(() => {
+    process.env.POLAR_ACCESS_TOKEN = "polar_tok";
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = { ...saved };
+  });
+
+  it("con cliente en Polar, la URL del portal", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ customer_portal_url: "https://polar.sh/portal/x" }), { status: 200 }),
+    );
+    await expect(createCustomerPortalUrl("u1")).resolves.toBe("https://polar.sh/portal/x");
+  });
+
+  it("🔴 sin cliente en Polar (nunca compró por Polar), null — no un error", async () => {
+    // La respuesta de producción del 11/10, tal cual (un plan puesto a mano).
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: "PolarRequestValidationError",
+          detail: [
+            {
+              type: "value_error",
+              loc: ["body", "external_customer_id"],
+              msg: "Customer does not exist.",
+              input: "u1",
+            },
+          ],
+        }),
+        { status: 422 },
+      ),
+    );
+    await expect(createCustomerPortalUrl("u1")).resolves.toBeNull();
+  });
+
+  it("cualquier otro fallo de Polar sigue siendo un error", async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{"error":"Unauthorized"}', { status: 401 }));
+    await expect(createCustomerPortalUrl("u1")).rejects.toThrow("401");
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ error: "PolarRequestValidationError", detail: [{ loc: ["body", "return_url"], msg: "x" }] }),
+        { status: 422 },
+      ),
+    );
+    await expect(createCustomerPortalUrl("u1")).rejects.toThrow("422");
   });
 });

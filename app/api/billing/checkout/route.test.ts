@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(async () => ({ user: { id: "u1", email: "ana@tiendaluna.mx" } })),
   plan: { value: "free" as "free" | "pro" | "max" | "ultra" },
   createCheckout: vi.fn(async (_o: { plan?: string }) => "https://polar.sh/checkout/x"),
-  createCustomerPortalUrl: vi.fn(async (_id: string) => "https://polar.sh/portal/x"),
+  createCustomerPortalUrl: vi.fn(async (_id: string): Promise<string | null> => "https://polar.sh/portal/x"),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -64,5 +64,23 @@ describe("GET /api/billing/checkout", () => {
     await get("locale=es");
     expect(mocks.createCheckout).not.toHaveBeenCalled();
     expect(mocks.createCustomerPortalUrl).toHaveBeenCalledWith("u1");
+  });
+
+  it("🔴 un plan puesto a mano (Polar no le conoce) abre el checkout, no un portal que falla", async () => {
+    // 11/10, producción: `users:set-plan` deja el plan sin cliente en Polar, y
+    // «Go Pro»/«Go Max» acababan en `portal_failed`.
+    mocks.plan.value = "pro";
+    mocks.createCustomerPortalUrl.mockResolvedValueOnce(null);
+    const res = await get("plan=max&locale=es");
+    expect(mocks.createCheckout).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", plan: "max" }));
+    expect(res.headers.get("location")).toBe("https://polar.sh/checkout/x");
+  });
+
+  it("si el portal falla por otra cosa, se dice, y no se abre un segundo checkout", async () => {
+    mocks.plan.value = "pro";
+    mocks.createCustomerPortalUrl.mockRejectedValueOnce(new Error("polar 401"));
+    const res = await get("plan=max&locale=es");
+    expect(mocks.createCheckout).not.toHaveBeenCalled();
+    expect(new URL(res.headers.get("location")!).searchParams.get("billing_error")).toBe("portal_failed");
   });
 });
