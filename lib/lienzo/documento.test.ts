@@ -309,4 +309,9 @@ describe("una app en la vista", () => {
     expect(Object.keys(servida.files)).toEqual(["/js/x.ts"]);
     expect(servida.files["/js/x.ts"]).toContain('"uno"');
   });
+
+  it("una PÁGINA cuya carpeta sólo tiene /.env se mide como sin carpeta, igual que antes", async () => {
+    expect(await carpetaDeLaVista({ ...ctx(), files: { "/.env": "VITE_A=1" } })).toBeUndefined();
+    expect(await carpetaDeLaVista({ ...ctx(), files: { "/.env": "VITE_A=1", "/js/a.js": "x" } })).toMatchObject({ files: { "/js/a.js": "x" } });
+  });
 });

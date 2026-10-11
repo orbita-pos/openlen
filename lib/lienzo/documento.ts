@@ -108,7 +108,9 @@ export async function carpetaDeLaVista(
 > {
   const app = vista?.app ?? null;
   const files = vista?.files ?? {};
-  if (!vista || (!app && Object.keys(files).length === 0)) return undefined;
+  // Una página con sólo `/.env` (que se compila pero no se sirve) no tiene
+  // carpeta que servir: se mide como siempre, sin ella.
+  if (!vista || (!app && !Object.keys(files).some(isPublishableFolderPath))) return undefined;
   const servida = await carpetaServida(files, app, vista.entorno);
   return {
     files: servida.files,
