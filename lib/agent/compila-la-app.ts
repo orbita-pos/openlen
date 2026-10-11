@@ -42,6 +42,20 @@ export function erroresDeLaApp(app: AppDeProyecto, carpeta: Carpeta): readonly D
   return compilarCarpeta({ carpeta: publicable(carpeta), catalogo: app.catalogo }).errores;
 }
 
+/** LA ENTRADA QUE CARGA EL CASCARÓN, como en Vite: el `src` del primer
+ *  `<script type="module">` que apunta a un fuente de /src, o `null`. Al
+ *  guardarse el cascarón, la entrada de la app pasa a ser ésta: renombrar
+ *  main.jsx a main.tsx y cambiar su src es todo lo que hace falta. */
+export function shellEntry(cascaron: string): string | null {
+  for (const m of cascaron.matchAll(/<script\b([^>]*)>/gi)) {
+    const atributos = m[1] ?? "";
+    if (!/\btype\s*=\s*["']module["']/i.test(atributos)) continue;
+    const src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(atributos)?.[1];
+    if (src && /^\/src\/[^?#"']+\.(?:tsx|ts|jsx|js|mjs)$/.test(src)) return src;
+  }
+  return null;
+}
+
 /** Lo que le falta al cascarón para arrancar la app, o `[]`. */
 export function problemasDelCascaron(app: AppDeProyecto, cascaron: string, carpeta: Carpeta): Diagnostico[] {
   const enLaCarpeta = publicable(carpeta);
