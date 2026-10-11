@@ -556,6 +556,29 @@ len.openlen.com {
 	}
 }
 
+# ─── mcp.openlen.com: EL SERVIDOR MCP (plans/mcp-de-openlen) ──────────
+# Proxy a Next sin buffer (SSE) y sin `encode` (las respuestas son JSON
+# pequeños y comprimir retrasa los streams). Va ANTES del comodín de abajo:
+# el bloque más específico gana, como `len.openlen.com`. Recomendado: el
+# registro DNS de mcp.openlen.com SIN el proxy de Cloudflare (corta los
+# streams inactivos a ~100-120 s).
+mcp.openlen.com {
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	reverse_proxy 127.0.0.1:3000 {
+		flush_interval -1
+		stream_close_delay 5m
+		transport http {
+			read_timeout 120s
+		}
+	}
+}
+
 # ─── *.openlen.com → *.openlen.app (308) ──────────────────────────────
 #
 # 🔴 ESTO EXISTE PORQUE QUITAR `*.openlen.com` DEL BLOQUE DE ARRIBA DEJÓ 404 A
