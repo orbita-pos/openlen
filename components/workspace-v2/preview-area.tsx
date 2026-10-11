@@ -706,6 +706,14 @@ export function PreviewArea({
         if (Number.isFinite(y)) scrollYRef.current = y;
         return;
       }
+      // «VIVO»: el host sirvió nuestro documento. Es lo que resuelve el plazo
+      // del lienzo remoto. `iframe-ready` sale en DOMContentLoaded, que espera
+      // a los módulos —en una app, al paquete entero—, y un paquete lento hacía
+      // caer el lienzo a local («the real canvas isn't responding»).
+      if (e.data.type === "openlen:lienzo-vivo") {
+        marcarListoRef.current();
+        return;
+      }
       if (e.data.type !== "openlen:iframe-ready") return;
       const win = iframeLocalRef.current?.contentWindow;
       if (!win) return;

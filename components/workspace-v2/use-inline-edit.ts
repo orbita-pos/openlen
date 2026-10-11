@@ -103,6 +103,8 @@ import {
 //
 // Parent contract:
 //   IN  { type: "openlen:set-mode", editMode: boolean, selectMode: boolean }
+//   OUT { type: "openlen:lienzo-vivo" }       (as soon as this script runs: the
+//                                              remote canvas deadline, see below)
 //   OUT { type: "openlen:iframe-ready" }      (parent responds with set-mode)
 //   OUT { type: "openlen:edit", op: "texto", path, tag, hijos, modo, antes,
 //         despues, ocurrencia, source: "inline-edit" }   (ver postTexto)
@@ -221,6 +223,12 @@ const CORE_SRC = [
 const INLINE_EDIT_SCRIPT = `
 ${PERSEGUIR_SCROLL_JS}
 (function () {
+  // ALIVE, BEFORE ANYTHING: the host served OUR document (a 404 page doesn't
+  // carry this script). The remote canvas deadline waits for this, not for
+  // iframe-ready: that one goes out on DOMContentLoaded, which waits for module
+  // scripts — in an app, for its whole bundle. See
+  // canvas-alive-before-the-app.browser.test.ts.
+  try { window.parent.postMessage({ type: 'openlen:lienzo-vivo' }, '*'); } catch (_v) {}
 ${CORE_SRC}
 
   var SKIP_TAG = {SCRIPT:1,STYLE:1,NOSCRIPT:1,HEAD:1,HTML:1,META:1,LINK:1,TITLE:1,TEMPLATE:1,IFRAME:1,CANVAS:1,OBJECT:1,EMBED:1,VIDEO:1,AUDIO:1,INPUT:1,TEXTAREA:1,SELECT:1,OPTION:1,SVG:1};
