@@ -1,11 +1,20 @@
 // Las herramientas de OpenLen. Se registran todas aquí; cada una vive en su fichero.
 import type { McpServer } from "@modelcontextprotocol/server";
 import { runGuarded, type ToolDefinition } from "./define";
+import { getDiagnosticsTool } from "./diagnostics";
+import { getDocsTool } from "./docs";
 import { readFileTool, searchFilesTool } from "./files";
 import { getProjectTool, listProjectsTool } from "./projects";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ALL_TOOLS: ToolDefinition<any>[] = [listProjectsTool, getProjectTool, readFileTool, searchFilesTool];
+export const ALL_TOOLS: ToolDefinition<any>[] = [
+  listProjectsTool,
+  getProjectTool,
+  readFileTool,
+  searchFilesTool,
+  getDocsTool,
+  getDiagnosticsTool,
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function registerOpenLenTools(server: McpServer, tools: ToolDefinition<any>[] = ALL_TOOLS): void {
