@@ -22,6 +22,7 @@ import {
   pendingCount,
   previewMessagesOf,
   toDesignRequest,
+  designSummary,
 } from "@/components/workspace-v2/design-mode/design-edits";
 import { isDesignSelection } from "@/lib/apps/design/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
@@ -1432,16 +1433,7 @@ function NewV2Inner() {
       return;
     }
     if (!request) return;
-    const lineas = request.elements.map((el) => {
-      const cambios = el.changes.map((c) => `${tDesign(`designMode.prop.${c.property}`)} ${c.before || "—"} → ${c.after}`);
-      if (el.photo) cambios.push(tDesign("designMode.photo"));
-      return `- <${el.tag}>${el.text ? ` «${el.text}»` : ""}: ${cambios.join("; ")}`;
-    });
-    const texto = [
-      tDesign("designMode.applyMessage", { n: String(request.elements.length) }),
-      ...lineas,
-      ...(request.note ? [request.note] : []),
-    ].join("\n");
+    const texto = designSummary(request, (k, v) => tDesign(k, v));
     setPendingChatAttachments({ images: [], styleDirection: null, design: request });
     setPendingChatDraft(texto);
     setPendingChatAutoSend(true);
