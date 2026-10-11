@@ -280,6 +280,13 @@ describe("las variables de entorno en una app (spec local 2026-10-10)", () => {
     expect(manual).toMatch(/ask the owner to add it in Environment variables/);
   });
 
+  // 🔴 Medido en un turno real (10/10): con «MODE, DEV and PROD» a secas, Len
+  // supuso lo de Vite y le dijo al dueño que el lienzo va en «development». Aquí
+  // es «production» en todas partes (`objetoEntorno`, lib/apps/compilador.ts).
+  it("🔴 dice que MODE es production en todas partes, también en el lienzo", () => {
+    expect(manual).toMatch(/MODE is "production", DEV false and PROD true everywhere, the canvas included/);
+  });
+
   it("el estado nombra las del dueño con sus entornos, sin valores; sin ninguna o en una página, nada", () => {
     const fila = {
       title: "Caja",
