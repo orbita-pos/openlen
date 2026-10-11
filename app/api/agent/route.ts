@@ -107,6 +107,8 @@ import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
+import { captureDesignElements } from "@/lib/agent/design-screenshots";
+import { vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { observarPagina } from "@/lib/agent/verify";
 import { usarPagina } from "@/lib/agent/usar-pagina";
 import {
@@ -749,6 +751,19 @@ async function correrTurno(
   const attachedInlines: InlineImage[] = attachedImages
     .map((f) => pixelesDe(f.url))
     .filter((p): p is InlineImage => p !== null);
+  // EL MODO DISEÑO: una captura de cada elemento, como v0 con «Apply». Comparten
+  // el tope de fotos de un mensaje con las que adjunte el dueño.
+  if (disenoDelTurno && disenoDelTurno.elements.length > 0) {
+    const vistaDelDiseno = await vistaConCarpeta(vistaParaMedir(projectId, project, null), deps, projectId);
+    const capturas = await captureDesignElements({
+      html: project.data?.html ?? "",
+      vista: vistaDelDiseno,
+      elements: disenoDelTurno.elements,
+      limit: MAX_PHOTOS_PER_MESSAGE - attachedInlines.length,
+    }).catch(() => []);
+    attachedInlines.push(...capturas);
+    if (capturas.length > 0) console.log(`[agent] modo Diseño — ${capturas.length} captura(s) de ${disenoDelTurno.elements.length} elemento(s)`);
+  }
   if (fotos.size > 0) {
     const valores = [...fotos.values()];
     const vistas = valores.filter((f) => f && f !== NO_CABE).length;
