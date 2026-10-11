@@ -800,9 +800,10 @@ export interface AgentSession {
    * etiqueta como suya, no como «Before AI edit».
    */
   autor?: "usuario";
-  /** Con `autor: "usuario"`, DESDE DÓNDE: su terminal (ausente) o el editor de
-   *  la lente «Código» (la #18). Sólo cambia cómo se llama su versión. */
-  desde?: "editor";
+  /** Con `autor: "usuario"`, DESDE DÓNDE: su terminal (ausente), el editor de
+   *  la lente «Código» (la #18) o un agente de fuera por el servidor MCP
+   *  (plans/mcp-de-openlen). Sólo cambia cómo se llama su versión. */
+  desde?: "editor" | "mcp";
   /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. Lo lee el
    *  /AGENTS.md que ve la terminal: en Dynamis no nombra Read, Edit ni Write. */
   mode?: AgentMode;
