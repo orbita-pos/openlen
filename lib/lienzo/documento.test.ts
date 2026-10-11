@@ -269,7 +269,8 @@ describe("una app en la vista", () => {
   }, 60_000);
 
   it("carpetaDeLaVista: una app sin ficheros trae igualmente su entrada (que dice qué falta); una página sin ficheros, nada", async () => {
-    expect((await carpetaDeLaVista(ctx({ app: APP })))?.files["/src/main.jsx"]).toMatch(/^throw new SyntaxError\(/);
+    const entrada = (await carpetaDeLaVista(ctx({ app: APP })))?.files["/src/main.jsx"];
+    expect(() => new Function(entrada!)()).toThrow(SyntaxError);
     expect(await carpetaDeLaVista(ctx())).toBeUndefined();
   });
 

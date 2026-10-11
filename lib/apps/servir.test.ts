@@ -28,21 +28,25 @@ describe("una app: la entrada y lo que no es un fuente", () => {
   it("entradaServida: el paquete; si no compila, un módulo que lanza sus errores; si no contestó, el aviso", () => {
     expect(entradaServida("/src/main.jsx", { ok: true, js: "JS", map: null, bytes: 2, gzipBytes: 1, ms: 1 })).toBe("JS");
     const roto = entradaServida("/src/main.jsx", { ok: false, errores: [{ ruta: "/src/A.jsx", linea: 3, columna: 1, mensaje: "x" }] });
-    expect(roto).toMatch(/^throw new SyntaxError\(/);
-    expect(roto).toContain("/src/A.jsx:3:1");
+    // Pinta la capa de error (sin documento, nada) y LANZA: es lo que leen la consola y los ojos.
+    expect(() => new Function(roto)()).toThrow(/\/src\/A\.jsx:3:1 — x/);
     expect(entradaServida("/src/main.jsx", null)).toContain(BUNDLER_DID_NOT_ANSWER.slice(0, 30));
   });
 });
 
 describe("los fuentes de una página", () => {
-  it("un .jsx/.tsx se compila (el navegador no ejecuta JSX)", () => {
-    expect(servirFuenteDePagina("/src/App.tsx", CARPETA)).not.toContain("<h1>");
+  // ⚠️ Decía «un .jsx/.tsx se compila» con `App.tsx`, y pasaba porque el módulo de
+  // error tampoco llevaba `<h1>`: en una PÁGINA, el JSX no compila (el runtime
+  // automático importa `react/jsx-runtime`, y una página no importa paquetes).
+  // Lo destapó el trozo de código de la capa de error (10/10). Aquí, lo que sí.
+  it("un .ts se compila (el navegador no ejecuta TypeScript)", () => {
+    const r = servirFuenteDePagina("/src/util.ts", { ...CARPETA, "/src/util.ts": "export const n: number = 1;" });
+    expect(r).toBe("export const n = 1;");
   });
 
   it("🔴 uno que no compila se sirve como un módulo que LANZA su error con fichero y línea", () => {
     const r = servirFuenteDePagina("/src/Roto.jsx", CARPETA);
-    expect(r).toMatch(/^throw new SyntaxError\(/);
-    expect(r).toContain("/src/Roto.jsx:1:");
+    expect(() => new Function(r!)()).toThrow(/\/src\/Roto\.jsx:1:/);
   });
 
   it("el /js/app.js de siempre, lo que no es un fuente o lo que no existe: no se contesta aquí", () => {
