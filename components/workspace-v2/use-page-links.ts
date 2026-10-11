@@ -145,6 +145,13 @@ ${PERSEGUIR_SCROLL_JS}
       // página estaba muerto en el taller desde siempre.
       //
       // Se desplaza a mano, que es lo que el usuario esperaba.
+      //
+      // MENOS UNA RUTA DE HASH: '#/destinos' no es una sección, es una
+      // PANTALLA —la de una app con HashRouter, o la de una página que se
+      // enruta escuchando hashchange—. Se deja pasar: React Router la lleva en
+      // su onClick, más abajo en el documento, y no navega un clic que alguien
+      // ya canceló. Si nadie la toma, la lleva el de burbuja de abajo.
+      if (href.indexOf('#/') === 0) return;
       if (href.charAt(0) === '#') {
         e.preventDefault();
         e.stopPropagation();
@@ -228,6 +235,21 @@ ${PERSEGUIR_SCROLL_JS}
     },
     true,
   );
+
+  // UNA RUTA DE HASH QUE NADIE TOMÓ (un <a href="#/contacto"> suelto, en una
+  // página que escucha hashchange): se cambia el hash AQUÍ, al final de la
+  // burbuja, cuando el router ya tuvo su turno. Dejar que el navegador siga el
+  // href no vale en un srcdoc —sin URL propia, se resuelve contra el padre y
+  // el lienzo se va del documento—; location.hash cambia el de ESTE documento,
+  // que es lo que hace la publicada.
+  window.addEventListener('click', function (e) {
+    if (e.defaultPrevented) return;
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    var href = a ? a.getAttribute('href') : null;
+    if (!href || href.indexOf('#/') !== 0 || (a.target && a.target !== '_self')) return;
+    e.preventDefault();
+    location.hash = href.slice(1);
+  });
 })();
 `;
 

@@ -1023,6 +1023,11 @@ ${CORE_SRC}
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!a) return;
     var href = a.getAttribute('href') || '';
+    // A hash ROUTE ('#/sales'): a screen of an app (HashRouter) or of a page
+    // routing on hashchange, not an anchor. Left to whoever routes —React
+    // Router's Link won't navigate a click someone already cancelled—; if
+    // nobody takes it, use-page-links changes the hash. Editing still wins.
+    if (href.indexOf('#/') === 0 && !isEditMode()) return;
     if (href.charAt(0) === '#') {
       e.preventDefault();
       if (isEditMode()) return; // editing the link text wins; don't scroll
