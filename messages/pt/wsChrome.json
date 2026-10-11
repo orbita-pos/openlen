@@ -95,6 +95,8 @@
     "toolbar": {
       "editPage": "Editar página (⌘E)",
       "exitEdit": "Sair do modo de edição (⌘E)",
+      "design": "Design: escolher um elemento para ajustá-lo",
+      "exitDesign": "Sair do modo Design",
       "refresh": "Atualizar pré-visualização",
       "openNewTab": "Abrir em nova aba",
       "viewCode": "Ver o código",
