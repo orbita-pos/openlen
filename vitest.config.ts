@@ -319,6 +319,9 @@ export default defineConfig({
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "app/api/billing/**/*.test.ts",
+      // La vuelta del cobro: /projects lleva ?billing_error / ?upgraded a la lista.
+      "app/[locale]/projects/page.test.ts",
+      "app/[locale]/projects/projects-view.test.tsx",
       "lib/auth/**/*.test.ts",
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list
