@@ -6,10 +6,12 @@ export type ToolContent =
   | { type: "text"; text: string }
   | { type: "image"; data: string; mimeType: string };
 
-export interface ToolResult {
+// `type` y no `interface`: el SDK exige una firma de índice en el resultado, y
+// sólo un alias de tipo la cumple sin declararla.
+export type ToolResult = {
   content: ToolContent[];
   isError?: boolean;
-}
+};
 
 export function jsonResult(value: unknown): ToolResult {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
