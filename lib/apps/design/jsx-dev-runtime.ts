@@ -15,13 +15,32 @@ export { JSX_DEV_RUNTIME };
 /** Dónde vive la tabla en el lienzo: `globalThis.__openlenSources`. */
 export const SOURCES_GLOBAL = "__openlenSources";
 
+// EL SITIO DE LA LLAMADA (`site`): sucrase no da la columna, así que dos
+// etiquetas iguales en la misma línea parecían copias. El sitio del paquete
+// desde el que se llamó a jsxDEV (`línea:columna`, sacado de la pila) es
+// distinto para cada etiqueta escrita en el código e igual para todas las
+// copias de un `.map`. Sólo vale dentro del mismo documento.
 export const JSX_DEV_RUNTIME_MODULE = `import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 const sources = (globalThis.${SOURCES_GLOBAL} ??= new WeakMap());
 export { Fragment };
+function siteOf() {
+  const limite = Error.stackTraceLimit;
+  Error.stackTraceLimit = 4;
+  const pila = new Error().stack || "";
+  Error.stackTraceLimit = limite;
+  const lineas = pila.split("\\n");
+  for (let i = 0; i < lineas.length; i++) {
+    const l = lineas[i];
+    if (l.indexOf("jsxDEV") !== -1 || l.indexOf("siteOf") !== -1) continue;
+    const m = /:(\\d+:\\d+)\\)?\\s*$/.exec(l);
+    if (m) return m[1];
+  }
+  return "";
+}
 export function jsxDEV(type, props, key, isStaticChildren, source) {
   const element = isStaticChildren ? jsxs(type, props, key) : jsx(type, props, key);
   if (source && element && element.props && typeof element.props === "object") {
-    sources.set(element.props, { path: source.fileName, line: source.lineNumber });
+    sources.set(element.props, { path: source.fileName, line: source.lineNumber, site: siteOf() });
   }
   return element;
 }

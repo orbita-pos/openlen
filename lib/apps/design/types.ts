@@ -35,6 +35,9 @@ export interface SourceLink {
   readonly path: string;
   readonly line: number;
   readonly component: string | null;
+  /** El sitio de la llamada en el paquete del lienzo (`línea:columna`): distingue dos
+   *  etiquetas iguales en la misma línea. Sólo vale dentro del mismo documento. */
+  readonly site?: string;
 }
 export type DesignProperty = (typeof DESIGN_PROPERTIES)[number];
 export type EditableField = DesignProperty | "text" | "alt";

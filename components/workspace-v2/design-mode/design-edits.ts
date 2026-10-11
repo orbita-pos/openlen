@@ -131,7 +131,7 @@ export type PreviewMessage =
       type: "openlen:design-preview";
       key: string;
       screen: string;
-      target: { path: string; line: number; tag: string } | { designId: string };
+      target: { path: string; line: number; tag: string; site?: string } | { designId: string };
       styles: Record<string, string>;
       text?: string;
       src?: string;
@@ -142,7 +142,11 @@ export type PreviewMessage =
 function mensajeDe(key: string, el: PendingElement): PreviewMessage | null {
   const sel = el.selection;
   const link = sel.primary >= 0 ? sel.chain[sel.primary] : undefined;
-  const target = link ? { path: link.path, line: link.line, tag: sel.tag } : sel.designId ? { designId: sel.designId } : null;
+  const target = link
+    ? { path: link.path, line: link.line, tag: sel.tag, ...(link.site ? { site: link.site } : {}) }
+    : sel.designId
+      ? { designId: sel.designId }
+      : null;
   if (!target) return null;
   const styles: Record<string, string> = {};
   let text: string | undefined;
