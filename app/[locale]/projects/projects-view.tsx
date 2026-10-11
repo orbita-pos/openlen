@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import {
   AlertTriangle,
   Archive,
@@ -126,6 +126,7 @@ export function ProjectsView({
   const t = useTranslations("projects");
   const toast = useToast();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   // Los proyectos en blanco no salen (plans/crear-es-len, como las sesiones en
   // blanco de DeepSeek): aquí no hay ninguno abierto.
@@ -160,6 +161,10 @@ export function ProjectsView({
   // Polar checkout/portal returns here with ?upgraded=1 on success or
   // ?billing_error=<code> on failure. Show a banner, then strip the param
   // so a refresh doesn't re-trigger it.
+  //
+  // Se quitan SÓLO esos dos y se queda en la URL de ahora: la lista vive en el
+  // taller (`/new?view=projects`), y volver a `/projects` sacaba de él, volvía a
+  // montar la lista y se llevaba el aviso (11/10).
   useEffect(() => {
     const upgraded = searchParams.get("upgraded");
     const errorParam = searchParams.get("billing_error");
@@ -171,8 +176,12 @@ export function ProjectsView({
       notice = { kind: "error", code: errorParam as BillingErrorCode };
     if (!notice) return;
     setBillingNotice(notice);
-    router.replace("/projects");
-  }, [searchParams, router]);
+    const rest = new URLSearchParams(searchParams.toString());
+    rest.delete("upgraded");
+    rest.delete("billing_error");
+    const qs = rest.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [searchParams, router, pathname]);
 
   // Keyboard: ⌘F focuses search, Esc clears selection or search.
   const searchRef = useRef<HTMLInputElement>(null);
