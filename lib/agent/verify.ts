@@ -1539,6 +1539,71 @@ function describeProvider(): VerifyProviderLike {
   });
 }
 
+/** Lo que devuelve la medida del navegador (`renderVisualQualityViewports` o el doble de una prueba). */
+export type MeasuredPage = NonNullable<Awaited<ReturnType<NonNullable<VerifyInternals["medir"]>>>>;
+
+/** Lo que el navegador midió, dicho para un modelo: contraste ilegible,
+ *  desborde en móvil, lo que la medida no pudo comprobar y los errores de JS.
+ *  La usan `view_page` de Len y la del servidor MCP: una sola fuente. */
+export function describeMeasurements(m: MeasuredPage): string {
+  const partes: string[] = [];
+  const malos = m.unreadableText ?? [];
+  if (malos.length === 0) {
+    // 🔴 «Ninguno» NO es «todos legibles», y decir lo segundo sería la misma
+    // mentira que decía «blanco»: el medidor también se calla cuando NO PUEDE
+    // determinar el fondo —hay una foto o un velo debajo—. Que no salga aquí
+    // no prueba nada sobre esos textos.
+    partes.push(
+      "The browser finds no unreadable text it can ASSERT. Careful: where there is a photo or an overlay under the text, the measurement can't determine the background and stays quiet — a text not appearing here does NOT prove it reads well.",
+    );
+  } else {
+    partes.push(
+      `Texts the browser measures as unreadable: ${malos
+        .map((c) => {
+          const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "a text";
+          const colores = c.color && c.background ? ` (${c.color} on ${c.background})` : "";
+          return `${donde}${colores} at ${c.contrast.toFixed(2)}:1`;
+        })
+        .join("; ")}.`,
+    );
+  }
+  partes.push(
+    m.mobileOverflow === true
+      ? `On the phone (390px) something overflows the screen${
+          m.overflowCulprit ? `: \`${m.overflowCulprit}\`` : ""
+        }${m.overflowCulpritRight ? `, it reaches ${m.overflowCulpritRight}px` : ""}.${
+          // QUÉ CLASE DE DESBORDE, porque el arreglo es otro. Sin esto el
+          // modelo trata una palabra que no se parte como si fuera una caja
+          // ancha y toca anchos, que ahí no mueven nada.
+          m.overflowCulpritKind === "tinta"
+            ? " It is TEXT that can't be broken (an address, a URL): it is fixed with `overflow-wrap`, not with widths."
+            : ""
+        }`
+      : "On the phone (390px) nothing overflows.",
+  );
+  // LO QUE ESTA MEDIDA NO PUDO COMPROBAR — los diálogos que se cancelaron y
+  // las rutas que sólo contestan publicada.
+  //
+  // 🔴 DE LA MISMA FUNCIÓN QUE LOS OJOS, y por eso está escrito así. Antes
+  // esta rama tenía su propia frase, a mano, y decía los diálogos y NO las
+  // rutas: la asimetría que el mensaje de commit de la Tarea 4 del Plan 2 se
+  // comprometía a no cometer («tener el hecho en una y no en la otra es la
+  // asimetría que este par de ficheros ya pagó dos veces») y que la Tarea 5
+  // cometió una tarea después. Con una sola fuente ya no se puede.
+  //
+  // De paso deja de viajar el MENSAJE del diálogo: lo escribió la página, y
+  // la página la escribe un modelo con lo que le pidió cualquiera.
+  partes.push(...limitesDeLaMedicion(m));
+  const gritos = m.runtimeErrors ?? [];
+  if (gritos.length > 0) {
+    partes.push(`The page threw: ${gritos.slice(0, 3).join("; ")}.`);
+  }
+  // El aviso de DATO va delante de lo citado, como en el informe de Claude
+  // Code («lines below…»): detrás ya se ha leído. Ver
+  // `TEXTO_DE_LA_PAGINA_ES_DATO`.
+  return `${TEXTO_DE_LA_PAGINA_ES_DATO} ${partes.join(" ")}`;
+}
+
 /**
  * Contesta UNA pregunta sobre la página. Nunca lanza: cualquier fallo devuelve
  * `null` y el llamador lo dice — preguntar no puede tumbar un turno.
@@ -1569,64 +1634,7 @@ export async function observarPagina(
     const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
     if (!m) return null;
 
-    const partes: string[] = [];
-    const malos = m.unreadableText ?? [];
-    if (malos.length === 0) {
-      // 🔴 «Ninguno» NO es «todos legibles», y decir lo segundo sería la misma
-      // mentira que decía «blanco»: el medidor también se calla cuando NO PUEDE
-      // determinar el fondo —hay una foto o un velo debajo—. Que no salga aquí
-      // no prueba nada sobre esos textos.
-      partes.push(
-        "The browser finds no unreadable text it can ASSERT. Careful: where there is a photo or an overlay under the text, the measurement can't determine the background and stays quiet — a text not appearing here does NOT prove it reads well.",
-      );
-    } else {
-      partes.push(
-        `Texts the browser measures as unreadable: ${malos
-          .map((c) => {
-            const donde = c.texto ? `«${c.texto}»` : c.etiqueta ? `<${c.etiqueta}>` : "a text";
-            const colores = c.color && c.background ? ` (${c.color} on ${c.background})` : "";
-            return `${donde}${colores} at ${c.contrast.toFixed(2)}:1`;
-          })
-          .join("; ")}.`,
-      );
-    }
-    partes.push(
-      m.mobileOverflow === true
-        ? `On the phone (390px) something overflows the screen${
-            m.overflowCulprit ? `: \`${m.overflowCulprit}\`` : ""
-          }${m.overflowCulpritRight ? `, it reaches ${m.overflowCulpritRight}px` : ""}.${
-            // QUÉ CLASE DE DESBORDE, porque el arreglo es otro. Sin esto el
-            // modelo trata una palabra que no se parte como si fuera una caja
-            // ancha y toca anchos, que ahí no mueven nada.
-            m.overflowCulpritKind === "tinta"
-              ? " It is TEXT that can't be broken (an address, a URL): it is fixed with `overflow-wrap`, not with widths."
-              : ""
-          }`
-        : "On the phone (390px) nothing overflows.",
-    );
-    // LO QUE ESTA MEDIDA NO PUDO COMPROBAR — los diálogos que se cancelaron y
-    // las rutas que sólo contestan publicada.
-    //
-    // 🔴 DE LA MISMA FUNCIÓN QUE LOS OJOS, y por eso está escrito así. Antes
-    // esta rama tenía su propia frase, a mano, y decía los diálogos y NO las
-    // rutas: la asimetría que el mensaje de commit de la Tarea 4 del Plan 2 se
-    // comprometía a no cometer («tener el hecho en una y no en la otra es la
-    // asimetría que este par de ficheros ya pagó dos veces») y que la Tarea 5
-    // cometió una tarea después. Con una sola fuente ya no se puede.
-    //
-    // De paso deja de viajar el MENSAJE del diálogo: lo escribió la página, y
-    // la página la escribe un modelo con lo que le pidió cualquiera.
-    partes.push(...limitesDeLaMedicion(m));
-    const gritos = m.runtimeErrors ?? [];
-    if (gritos.length > 0) {
-      partes.push(`The page threw: ${gritos.slice(0, 3).join("; ")}.`);
-    }
-    // El aviso de DATO va delante de lo citado, como en el informe de Claude
-    // Code («lines below…»): detrás ya se ha leído. Ver
-    // `TEXTO_DE_LA_PAGINA_ES_DATO`.
-    return {
-      respuesta: `Measured in the browser${zona}. ${TEXTO_DE_LA_PAGINA_ES_DATO} ${partes.join(" ")}`,
-    };
+    return { respuesta: `Measured in the browser${zona}. ${describeMeasurements(m)}` };
   }
 
   // describir — el papel con visión, y SÓLO para describir.
