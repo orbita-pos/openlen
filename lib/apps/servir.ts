@@ -20,6 +20,7 @@ import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import type { AppBundle } from "./bundler/bundle-app";
 import { compilarFuente, esFuenteCompilable, textoDeDiagnostico, type Diagnostico } from "./compilador";
+import { errorOverlayEntries, errorOverlayScript } from "./error-overlay";
 
 /** Dónde están las dependencias construidas (`npm run apps:vendor`): las
  *  entradas del empaquetador y los tipos del comprobador. En producción
@@ -32,18 +33,24 @@ export function directorioVendor(): string {
 /** El aviso cuando el empaquetador no contesta (`bundleApp` → `null`). */
 export const BUNDLER_DID_NOT_ANSWER = "The bundler didn't answer in time: nothing was built. Try again.";
 
-/** El módulo que se sirve en lugar de un fuente que no compila. */
-export function moduloDeError(ruta: string, errores: readonly Diagnostico[]): string {
+/** El módulo que se sirve en lugar de un fuente que no compila: pinta la capa
+ *  de error encima, como Vite (`error-overlay.ts`; con `carpeta`, con el trozo
+ *  de código), y LANZA el error, que es lo que leen la consola y los ojos. */
+export function moduloDeError(ruta: string, errores: readonly Diagnostico[], carpeta?: Readonly<Record<string, string>>): string {
   const texto = `OpenLen could not compile ${ruta}:\n${errores.map(textoDeDiagnostico).join("\n")}`;
-  return `throw new SyntaxError(${JSON.stringify(texto)});\n`;
+  // En la capa, como el «Transform failed with 1 error:» de Vite: `ruta` es la
+  // ENTRADA, y el fichero que falla lo dice cada error, debajo.
+  const titulo = `[openlen] Failed to compile with ${errores.length} error${errores.length === 1 ? "" : "s"}:`;
+  return `${errorOverlayScript(titulo, errorOverlayEntries(errores, carpeta))}throw new SyntaxError(${JSON.stringify(texto)});\n`;
 }
 
 /** Lo que el lienzo y los ojos sirven en la entrada de una app: el paquete, o
  *  un módulo que lanza los errores del compilador, o el aviso de que el
- *  empaquetador no contestó. (La publicación no sirve nada de eso: se niega.) */
-export function entradaServida(entrada: string, paquete: AppBundle | null): string {
+ *  empaquetador no contestó. (La publicación no sirve nada de eso: se niega.)
+ *  `carpeta`, la que se empaquetó: el trozo de código de cada error sale de ahí. */
+export function entradaServida(entrada: string, paquete: AppBundle | null, carpeta?: Readonly<Record<string, string>>): string {
   if (!paquete) return moduloDeError(entrada, [{ ruta: entrada, linea: null, columna: null, mensaje: BUNDLER_DID_NOT_ANSWER }]);
-  return paquete.ok ? paquete.js : moduloDeError(entrada, paquete.errores);
+  return paquete.ok ? paquete.js : moduloDeError(entrada, paquete.errores, carpeta);
 }
 
 /** La carpeta de una app tal como se sirve: lo publicable que no es un fuente,
@@ -74,5 +81,5 @@ export function servirFuenteDePagina(
 ): string | null {
   if (!esFuenteCompilable(ruta, false) || !Object.hasOwn(carpeta, ruta)) return null;
   const r = compilarFuente(ruta, carpeta[ruta]!, { carpeta, catalogo: null, ...(entorno ? { entorno } : {}) });
-  return r.ok ? r.js : moduloDeError(ruta, r.errores);
+  return r.ok ? r.js : moduloDeError(ruta, r.errores, carpeta);
 }

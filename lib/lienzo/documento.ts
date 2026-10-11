@@ -85,7 +85,7 @@ export async function carpetaServida(
   const publicable = Object.fromEntries(Object.entries(files).filter(([r]) => isCompileInputPath(r)));
   const paquete = await bundleApp({ carpeta: publicable, app, ...(entorno ? { entorno } : {}), modo: "desarrollo" });
   return {
-    files: ficherosDeLaApp(publicable, app, entradaServida(app.entrada, paquete)),
+    files: ficherosDeLaApp(publicable, app, entradaServida(app.entrada, paquete, publicable)),
     sourceMaps: paquete?.ok && paquete.map ? { [app.entrada]: paquete.map } : {},
   };
 }

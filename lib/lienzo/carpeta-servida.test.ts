@@ -21,8 +21,8 @@ describe("carpetaServida con el paquete (plan 02, tarea 5)", () => {
 
   it("🔴 una app que no compila: la entrada es un módulo que LANZA los errores del compilador, con su fichero y línea", async () => {
     const r = await carpetaServida({ ...FICHEROS, "/src/lib/utils.ts": "export const x = <;" }, APP);
-    expect(r.files["/src/main.jsx"]).toMatch(/^throw new SyntaxError\(/);
-    expect(r.files["/src/main.jsx"]).toContain("/src/lib/utils.ts:1");
+    // Pinta la capa de error (sin documento, nada) y LANZA, con su fichero y línea.
+    expect(() => new Function(r.files["/src/main.jsx"]!)()).toThrow(/\/src\/lib\/utils\.ts:1/);
   }, 60_000);
 
   it("🔴 la carpeta de una app es la que se publica: la entrada y lo que no es fuente; ni catálogo ni fuentes sueltos", async () => {
