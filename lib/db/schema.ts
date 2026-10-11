@@ -2094,6 +2094,21 @@ export const mcpTokens = pgTable("mcpTokens", {
   index("mcpTokens_userId_idx").on(t.userId),
 ]);
 
+// LO QUE HIZO CADA CONEXIÓN MCP, para la página de «Aplicaciones conectadas»
+// (Parte 4). Sin argumentos ni texto: sólo herramienta, proyecto, resultado y
+// tiempo (el directorio de Anthropic prohíbe guardar la conversación).
+export const mcpAudit = pgTable("mcpAudit", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenId: text("tokenId").notNull(),
+  tool: text("tool").notNull(),
+  projectId: text("projectId"),
+  ok: boolean("ok").notNull(),
+  errorCode: text("errorCode"),
+  durationMs: integer("durationMs").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("mcpAudit_userId_createdAt_idx").on(t.userId, t.createdAt)]);
+
 /**
  * LEN POR CORREO (lib/len-email): cada correo a Len, GUARDADO antes de correr su
  * turno. Como hacen los grandes con el correo que reciben: primero se apunta,
