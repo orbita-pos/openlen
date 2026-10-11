@@ -24,7 +24,7 @@ const APP_TSX = [
   "    <main>", // 6
   '      <h1 key={n} id="titulo">Hola</h1>', // 7
   '      <Link id="ir" to="/otra">Otra</Link>', // 8
-  '      <button id="mas" onClick={() => setN(n + 1)}>Más</button>', // 9
+  '      <button id="mas" onClick={() => setN(n + 1)}>Más</button><p id="mix">Clicks {n}</p>', // 9
   "    </main>", // 10
   "  );", // 11
   "}", // 12
@@ -108,6 +108,28 @@ describe("el modo Diseño en el lienzo de una app", () => {
       await new Promise((r) => setTimeout(r, 100));
       expect(await color()).not.toBe("rgb(255, 0, 0)");
       expect(await v.page.evaluate(() => document.getElementById("titulo")!.textContent)).toBe("Hola");
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+
+  it("🔴 la vista previa de un texto con varios nodos no le quita a React sus nodos: al restaurar sigue actualizándose", async () => {
+    const v = await abrir();
+    try {
+      const texto = () => v.page.evaluate(() => document.getElementById("mix")!.textContent);
+      expect(await texto()).toBe("Clicks 0");
+      await v.enviar({ type: "openlen:design-preview", key: "t", screen: "#/", target: { path: "/src/App.tsx", line: 9, tag: "p" }, styles: {}, text: "Otro texto" });
+      await new Promise((r) => setTimeout(r, 100));
+      expect(await texto()).toBe("Otro texto");
+      await v.page.click("#mas"); // React cambia {n} mientras dura la vista previa
+      await new Promise((r) => setTimeout(r, 200));
+      expect(await texto(), "la vista previa se perdió con el repintado").toBe("Otro texto");
+      await v.enviar({ type: "openlen:design-clear", key: "t" });
+      await new Promise((r) => setTimeout(r, 100));
+      expect(await texto(), "al restaurar volvió un valor viejo").toBe("Clicks 1");
+      await v.page.click("#mas");
+      await new Promise((r) => setTimeout(r, 200));
+      expect(await texto(), "React ya no actualiza el texto: sus nodos se quedaron fuera").toBe("Clicks 2");
     } finally {
       await v.cerrar();
     }

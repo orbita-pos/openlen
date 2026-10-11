@@ -54,6 +54,14 @@ describe("los cambios pendientes del modo Diseño", () => {
     expect(request!.elements[0]).toMatchObject({ tag: "h1", screen: "#/", changes: [{ property: "color", before: "rgb(17, 24, 39)", after: "#000000" }] });
   });
 
+  it("🔴 clear (cambiar de proyecto) lo vacía todo, también el historial: deshacer no resucita cambios de otro proyecto", () => {
+    let s = designEditsReducer(EMPTY_DESIGN_EDITS, { type: "select", selection: sel("a") });
+    s = designEditsReducer(s, { type: "set", key: "a", field: "color", value: "#000000" });
+    s = designEditsReducer(s, { type: "clear" });
+    expect(s).toEqual(EMPTY_DESIGN_EDITS);
+    expect(pendingCount(designEditsReducer(s, { type: "undo" }))).toBe(0);
+  });
+
   it("sin cambios ni nota, no hay nada que aplicar", () => {
     const s = designEditsReducer(EMPTY_DESIGN_EDITS, { type: "select", selection: sel("a") });
     expect(toDesignRequest(s, "  ").request).toBeNull();

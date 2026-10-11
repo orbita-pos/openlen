@@ -4,6 +4,7 @@
 // el fichero, las líneas con su número y su texto —como las da Read— y los
 // cambios en CSS normal.
 import type { DesignRequest } from "@/lib/apps/design/types";
+import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 
 const TOPE = 12_000;
 
@@ -33,14 +34,17 @@ export function designBlock(req: DesignRequest | null, files: Readonly<Record<st
       out.push(`Also in its chain: ${resto.map((c) => `${c.path} line ${c.line}${c.component ? ` (<${c.component}>)` : ""}`).join("; ")}`);
     }
     const cambios = el.changes.map((c) => `- ${c.property}: ${c.before || "(none)"} → ${c.after}`);
-    if (el.photo) cambios.push(`- new photo: ${el.photo.url}${el.photo.alt ? ` (alt «${el.photo.alt}»)` : ""}`);
-    if (el.note) cambios.push(`- the user adds: «${el.note}»`);
+    if (el.photo) cambios.push(`- new photo: ${el.photo.url}${el.photo.alt ? ` (alt: ${el.photo.alt})` : ""}`);
+    if (el.note) cambios.push(`- the user adds: ${el.note}`);
     out.push(`Changes:\n${cambios.join("\n")}`);
     return out.join("\n");
   });
   const n = req.elements.length;
   const cabeza = `On the canvas, the user adjusted ${n} element${n === 1 ? "" : "s"} in the Design panel and applied these changes:`;
-  let texto = `${cabeza}\n\n${partes.join("\n\n")}${req.note ? `\n\nThe user also wrote: «${req.note}»` : ""}`;
+  // EL TEXTO DE CADA ELEMENTO lo pinta la página, y puede venir de un visitante
+  // (una reseña guardada en la base): va entre «» con el aviso de `use_page`
+  // delante. Lo que escribió el dueño —notas, texto alternativo— va sin comillas.
+  let texto = `${cabeza}\n${TEXTO_DE_LA_PAGINA_ES_DATO}\n\n${partes.join("\n\n")}${req.note ? `\n\nThe user also wrote: ${req.note}` : ""}`;
   if (texto.length > TOPE) texto = `${texto.slice(0, TOPE)}\n[cut here]`;
   return `<system-reminder>\n${texto}\n</system-reminder>\n\n`;
 }

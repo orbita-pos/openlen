@@ -1398,6 +1398,15 @@ function NewV2Inner() {
   useEffect(() => {
     if (!designAvailable) setDesignMode(false);
   }, [designAvailable]);
+  // OTRO PROYECTO: los pendientes eran del anterior. Sin esto, «Aplicar» mandaría
+  // sus elementos a esta app (una línea como /src/App.tsx:7 existe en casi todas).
+  useEffect(() => {
+    dispatchDesign({ type: "clear" });
+    designPrevRef.current = EMPTY_DESIGN_EDITS;
+    setDesignMode(false);
+    setDesignSelectedKey(null);
+    setDesignNote("");
+  }, [loadedProject?.id]);
   // La vista previa del lienzo sigue a los pendientes.
   useEffect(() => {
     const win = iframeElRef.current?.contentWindow;
