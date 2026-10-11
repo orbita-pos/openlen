@@ -14,7 +14,7 @@ import { createServer, type Server } from "node:http";
 
 import { injectPageLinks } from "./use-page-links";
 import { injectInlineEdit } from "./use-inline-edit";
-import { SANDBOX_LOCAL } from "./sandbox-del-lienzo";
+import { SANDBOX_LOCAL, SANDBOX_REMOTO } from "./sandbox-del-lienzo";
 
 // 🔴 LOS DOS SCRIPTS, COMO EN EL TALLER. Esta prueba montaba SÓLO
 // `use-page-links` — y por eso salía verde mientras en producción el clic moría:
@@ -397,6 +397,111 @@ describe("el padre abriendo el destino que le sube el lienzo", () => {
     } finally {
       await browser.close();
       srv.close();
+    }
+  }, 90_000);
+});
+
+// ── UNA RUTA DE HASH: '#/destinos' ───────────────────────────────────────────
+//
+// En una app (HashRouter) '#/destinos' es una PANTALLA, no una sección; y lo
+// mismo en una página que se enruta escuchando `hashchange`. Los dos guiones de
+// arriba la trataban como un ancla: el de edición cancelaba el clic (y el Link
+// de React Router no navega si alguien lo canceló antes) y éste buscaba una
+// sección con id "/destinos", no la encontraba y avisaba. Jesús, 10/10: «aparece
+// “#/destinos” doesn't point to any section on this page, pero en el lienzo sí
+// lo hace» — abierto en su pestaña, sin los guiones del taller, funcionaba.
+describe("una ruta de hash ('#/destinos') es de quien enruta, no una sección", () => {
+  // La app: un Link como el de React Router —escucha en el CONTENEDOR, como
+  // React 17+, y sólo navega si nadie canceló el clic antes (`!defaultPrevented`
+  // en react-router)— y un <a> suelto que sólo cambia el hash.
+  const APP = injectPageLinks(
+    injectInlineEdit(
+      "<!doctype html><html><head><title>app</title></head><body>" +
+        '<div id="root"><a id="link" href="#/destinos">Destinos</a><a id="suelto" href="#/contacto">Contacto</a></div>' +
+        "<script>window.__rutas = [];" +
+        "document.getElementById('root').addEventListener('click', function (e) {" +
+        "  if (!e.target.closest('#link') || e.defaultPrevented) return;" +
+        "  e.preventDefault(); history.pushState(null, '', '#/destinos'); window.__rutas.push('router:/destinos');" +
+        "});" +
+        "window.addEventListener('hashchange', function () { window.__rutas.push('hashchange:' + location.hash); });" +
+        "</script></body></html>",
+    ),
+  );
+
+  // Un padre con el lienzo dentro: remoto (URL de verdad) o local (srcdoc).
+  async function montar(modo: "remoto" | "local") {
+    const iframe =
+      modo === "remoto"
+        ? `<iframe id="lienzo" src="/lienzo" sandbox="${SANDBOX_REMOTO}"></iframe>`
+        : `<iframe id="lienzo" sandbox="${SANDBOX_LOCAL}"></iframe><script>document.getElementById('lienzo').srcdoc = ${JSON.stringify(APP).replace(/<\//g, "<\\/")};</script>`;
+    const srv = createServer((req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(
+        req.url === "/lienzo"
+          ? APP
+          : "<!doctype html><html><body><script>window.__recibidos = [];" +
+              "window.addEventListener('message', function (e) { window.__recibidos.push(e.data); });</script>" +
+              iframe +
+              "</body></html>",
+      );
+    });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const dir = srv.address();
+    if (dir === null || typeof dir === "string") throw new Error("sin puerto");
+    const { default: puppeteer } = await import("puppeteer");
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] });
+    const page = await browser.newPage();
+    await page.goto(`http://127.0.0.1:${dir.port}/`, { waitUntil: "load", timeout: 20_000 });
+    let frame = null as Awaited<ReturnType<typeof page.mainFrame>> | null;
+    for (let i = 0; i < 60 && !frame; i++) {
+      for (const f of page.frames()) {
+        if (f !== page.mainFrame() && (await f.evaluate("!!document.getElementById('link')").catch(() => false))) frame = f;
+      }
+      if (!frame) await new Promise((r) => setTimeout(r, 100));
+    }
+    if (!frame) throw new Error("el iframe nunca cargó el documento");
+    const lienzo = frame;
+    return {
+      lienzo,
+      pulsar: async (id: string) => {
+        await lienzo.evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+        await new Promise((r) => setTimeout(r, 100));
+      },
+      avisos: () => page.evaluate("window.__recibidos.filter(function (m) { return m && m.type === 'openlen:ancla-perdida'; })") as Promise<unknown[]>,
+      cerrar: async () => {
+        await browser.close();
+        srv.close();
+      },
+    };
+  }
+
+  it("en el lienzo remoto (el de las apps): el Link del router la lleva, un <a> suelto cambia el hash, y ninguna se avisa como sección perdida", async () => {
+    const m = await montar("remoto");
+    try {
+      await m.pulsar("link");
+      expect(await m.lienzo.evaluate("window.__rutas"), "el clic no llegó al router").toContain("router:/destinos");
+      expect(await m.lienzo.evaluate("location.hash")).toBe("#/destinos");
+
+      await m.pulsar("suelto");
+      expect(await m.lienzo.evaluate("location.hash")).toBe("#/contacto");
+      expect(await m.lienzo.evaluate("window.__rutas")).toContain("hashchange:#/contacto");
+
+      expect(await m.avisos(), "una pantalla se avisó como una sección que no existe").toEqual([]);
+      expect(m.lienzo.url()).toMatch(/\/lienzo#\/contacto$/);
+    } finally {
+      await m.cerrar();
+    }
+  }, 90_000);
+
+  it("en el lienzo local (srcdoc): un <a href='#/contacto'> suelto cambia el hash SIN sacar el lienzo del documento", async () => {
+    const m = await montar("local");
+    try {
+      await m.pulsar("suelto");
+      expect(await m.lienzo.evaluate("window.__rutas")).toContain("hashchange:#/contacto");
+      expect(m.lienzo.url(), "el ancla se llevó el lienzo fuera del documento").toBe("about:srcdoc#/contacto");
+      expect(await m.avisos()).toEqual([]);
+    } finally {
+      await m.cerrar();
     }
   }, 90_000);
 });
