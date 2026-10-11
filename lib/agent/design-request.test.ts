@@ -17,6 +17,12 @@ describe("parseDesignRequest", () => {
     ];
     expect(parseDesignRequest({ elements: [...malos, OK] }, FILES)?.elements).toHaveLength(1);
   });
+  it("la cadena puede traer el sitio del lienzo (site): se acepta y no viaja a Len", () => {
+    const r = parseDesignRequest({ elements: [{ ...OK, chain: [{ path: "/src/App.tsx", line: 7, component: null, site: "123:45" }] }] }, FILES);
+    expect(r?.elements).toHaveLength(1);
+    expect(r!.elements[0]!.chain[0]).toEqual({ path: "/src/App.tsx", line: 7, component: null });
+  });
+
   it("sin cadena vale (va con su etiqueta y su texto)", () => {
     expect(parseDesignRequest({ elements: [{ ...OK, chain: [], primary: -1 }] }, FILES)?.elements).toHaveLength(1);
   });

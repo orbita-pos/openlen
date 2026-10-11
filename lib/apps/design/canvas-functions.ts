@@ -10,11 +10,11 @@
 // (`lib/apps/design/jsx-dev-runtime.ts`) con la clave `element.props`.
 
 type Fibra = { return?: Fibra | null; memoizedProps?: unknown; type?: unknown } | null;
-type Tabla = WeakMap<object, { path: string; line: number }>;
+type Tabla = WeakMap<object, { path: string; line: number; site?: string }>;
 
-export function sourceChainOf(node: Element, max: number): { path: string; line: number; component: string | null }[] {
+export function sourceChainOf(node: Element, max: number): { path: string; line: number; component: string | null; site?: string }[] {
   const tabla = (window as unknown as { __openlenSources?: Tabla }).__openlenSources;
-  const out: { path: string; line: number; component: string | null }[] = [];
+  const out: { path: string; line: number; component: string | null; site?: string }[] = [];
   if (!tabla) return out;
   const claves = Object.keys(node);
   let fibra: Fibra = null;
@@ -32,7 +32,9 @@ export function sourceChainOf(node: Element, max: number): { path: string; line:
       const component =
         typeof t === "string" || !t ? null : t.displayName || t.name || (t.render && (t.render.displayName || t.render.name)) || null;
       const prev = out[out.length - 1];
-      if (!prev || prev.path !== src.path || prev.line !== src.line) out.push({ path: src.path, line: src.line, component });
+      if (!prev || prev.path !== src.path || prev.line !== src.line) {
+        out.push(src.site ? { path: src.path, line: src.line, component, site: src.site } : { path: src.path, line: src.line, component });
+      }
     }
     fibra = fibra.return ?? null;
   }
@@ -62,13 +64,15 @@ export function readStylesOf(el: Element, properties: readonly string[]): Record
   return out;
 }
 
-export function targetsOf(path: string, line: number, tag: string, max: number): Element[] {
+/** Los elementos de la pantalla cuyo eslabón principal es ése. Con `site`, sólo los
+ *  de esa misma etiqueta del código (no la de al lado en la misma línea). */
+export function targetsOf(path: string, line: number, tag: string, max: number, site?: string): Element[] {
   const todos = document.getElementsByTagName(tag);
   const out: Element[] = [];
   for (let i = 0; i < todos.length; i++) {
     const chain = sourceChainOf(todos[i]!, max);
     const p = primaryOf(chain);
-    if (p >= 0 && chain[p]!.path === path && chain[p]!.line === line) out.push(todos[i]!);
+    if (p >= 0 && chain[p]!.path === path && chain[p]!.line === line && (!site || chain[p]!.site === site)) out.push(todos[i]!);
   }
   return out;
 }

@@ -48,11 +48,11 @@ const SCRIPT = `(function () {
     }
     var full = ownTextOf(el, 100000);
     return {
-      key: link ? screen() + '|' + link.path + ':' + link.line + '|' + tag : 'id:' + designId,
+      key: link ? screen() + '|' + link.path + ':' + link.line + '|' + tag + (link.site ? '|' + link.site : '') : 'id:' + designId,
       chain: chain, primary: p, tag: tag,
       text: ownTextOf(el, MAX_TEXT),
       textEditable: el.children.length === 0 && full.length > 0,
-      copies: link ? Math.max(1, targetsOf(link.path, link.line, tag, MAX_CHAIN).length) : 1,
+      copies: link ? Math.max(1, targetsOf(link.path, link.line, tag, MAX_CHAIN, link.site).length) : 1,
       screen: screen(),
       styles: readStylesOf(el, PROPS),
       image: tag === 'img' ? { src: el.getAttribute('src') || '', alt: el.getAttribute('alt') || '' } : null,
@@ -88,7 +88,11 @@ const SCRIPT = `(function () {
       var e = document.querySelector('[data-openlen-design-id="' + p.target.designId + '"]');
       return e ? [e] : [];
     }
-    return targetsOf(p.target.path, p.target.line, p.target.tag, MAX_CHAIN);
+    // Con el sitio, sólo esa etiqueta del código; si el paquete cambió (otro
+    // documento) y ya no hay ninguna con ese sitio, por fichero y línea.
+    var t = targetsOf(p.target.path, p.target.line, p.target.tag, MAX_CHAIN, p.target.site);
+    if (t.length === 0 && p.target.site) t = targetsOf(p.target.path, p.target.line, p.target.tag, MAX_CHAIN);
+    return t;
   }
   function textNodesOf(el) {
     var out = [];

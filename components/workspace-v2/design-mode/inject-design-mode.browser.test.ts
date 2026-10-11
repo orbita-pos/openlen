@@ -25,7 +25,7 @@ const APP_TSX = [
   '      <h1 key={n} id="titulo">Hola</h1>', // 7
   '      <Link id="ir" to="/otra">Otra</Link>', // 8
   '      <button id="mas" onClick={() => setN(n + 1)}>Más</button><p id="mix">Clicks {n}</p>', // 9
-  '      <button id="off" disabled>Off</button></main>', // 10
+  '      <button id="off" disabled>Off</button><span id="s1">uno</span><span id="s2">dos</span></main>', // 10
   "  );", // 11
   "}", // 12
   'function Otra() { return <h1 id="otra">Otra</h1>; }', // 13
@@ -164,6 +164,27 @@ describe("el modo Diseño en el lienzo de una app", () => {
         return { valor: st.getPropertyValue("color"), prioridad: st.getPropertyPriority("color") };
       });
       expect(r).toEqual({ valor: "rgb(1, 2, 3)", prioridad: "important" });
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+
+  it("🔴 dos etiquetas iguales en la misma línea no son copias: elegir una sólo pinta esa", async () => {
+    const v = await abrir();
+    try {
+      await v.enviar({ type: "openlen:set-mode", designMode: true });
+      await v.page.click("#s1");
+      await new Promise((r) => setTimeout(r, 200));
+      const [m] = (await v.recibidos("openlen:design-selected")) as { selection: { copies: number; primary: number; chain: { path: string; line: number; site?: string }[] } }[];
+      expect(m!.selection.copies, "las dos <span> de la línea 10 contaron como copias").toBe(1);
+      const link = m!.selection.chain[m!.selection.primary]!;
+      expect(link.line).toBe(10);
+      await v.enviar({ type: "openlen:set-mode", designMode: false });
+      await v.enviar({ type: "openlen:design-preview", key: "s", screen: "#/", target: { path: link.path, line: link.line, tag: "span", site: link.site }, styles: { color: "rgb(255, 0, 0)" } });
+      await new Promise((r) => setTimeout(r, 150));
+      const colores = await v.page.evaluate(() => ["s1", "s2"].map((id) => getComputedStyle(document.getElementById(id)!).color));
+      expect(colores[0]).toBe("rgb(255, 0, 0)");
+      expect(colores[1], "la vista previa pintó también la otra <span>").not.toBe("rgb(255, 0, 0)");
     } finally {
       await v.cerrar();
     }
