@@ -22,7 +22,7 @@ import {
 import { CodeView } from "./code-view";
 import { TestDataBadge } from "./test-data-badge";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
-import { FileDiff, Maximize, Terminal as TerminalIcon } from "lucide-react";
+import { FileDiff, Maximize, MousePointerClick, Terminal as TerminalIcon } from "lucide-react";
 import { TerminalView } from "./terminal-view";
 import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -32,6 +32,7 @@ import { useTerminalDelUsuario } from "./use-terminal-del-usuario";
 import { IconBtn, Segmented } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
+import { injectDesignMode } from "./design-mode/inject-design-mode";
 import { motivoParaNoRederivar } from "./rederivar-el-lienzo";
 import { ALLOW_REMOTO, SANDBOX_LOCAL, SANDBOX_REMOTO } from "./sandbox-del-lienzo";
 import { injectSoloPublicada } from "./solo-publicada";
@@ -113,6 +114,9 @@ interface PreviewAreaProps {
    *  corriendo, sin edición visual; la lente Código va la primera, y si el
    *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
   esApp?: boolean;
+  /** EL MODO DISEÑO (sólo apps, spec local 2026-10-11): el script del lienzo elige y pinta la vista previa. */
+  designMode?: boolean;
+  onToggleDesign?: () => void;
   /** Abre las variables de entorno de la app (spec local 2026-10-10), desde la lente Código. */
   onEnvVars?: () => void;
   /** El proyecto tiene base de datos: el lienzo usa la de PRUEBA (spec local
@@ -262,6 +266,8 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   esApp = false,
+  designMode = false,
+  onToggleDesign,
   onEnvVars,
   usesTestData = false,
   onToggleInspect,
@@ -459,6 +465,9 @@ export function PreviewArea({
     // que el orden de inyección no decide quién ve el clic primero — pero
     // aquí abajo se lee como lo que es: la última palabra sobre a dónde va
     // un clic que iba a sacar al usuario de su propio taller.
+    // EL MODO DISEÑO de una app, antes de los enlaces: su clic en captura tiene
+    // que parar el gesto antes que nadie mientras se elige.
+    if (esApp) html = injectDesignMode(html);
     html = injectPageLinks(html);
     // ── EL JAVASCRIPT DEL MODELO, TAMBIÉN EDITANDO ─────────────────────────
     //
@@ -600,12 +609,14 @@ export function PreviewArea({
     editMode: editingActive,
     selectMode: sectionSelectMode,
     dropEnabled,
+    designMode,
   });
   useEffect(() => {
     modesRef.current = {
       editMode: editingActive,
       selectMode: sectionSelectMode,
       dropEnabled,
+      designMode,
     };
     const iframe = iframeLocalRef.current;
     if (!iframe?.contentWindow) return;
@@ -613,7 +624,7 @@ export function PreviewArea({
       { type: "openlen:set-mode", ...modesRef.current },
       "*",
     );
-  }, [editingActive, sectionSelectMode, dropEnabled]);
+  }, [editingActive, sectionSelectMode, dropEnabled, designMode]);
 
   // MOTION, MÚSICA Y 3D RETIRADOS el 2026-08-26 — el inyector de la vista
   // previa se va con su horneado. Los tres eran presets nuestros que suplían
@@ -928,6 +939,16 @@ export function PreviewArea({
               onClick={onToggleInspect}
             >
               <Pencil size={ICONO_BARRA} />
+            </IconBtn>
+          )}
+          {lente === "pagina" && esApp && onToggleDesign && (
+            <IconBtn
+              label={designMode ? t("preview.toolbar.exitDesign") : t("preview.toolbar.design")}
+              size="sm"
+              active={designMode}
+              onClick={onToggleDesign}
+            >
+              <MousePointerClick size={ICONO_BARRA} />
             </IconBtn>
           )}
           {lente === "pagina" && (

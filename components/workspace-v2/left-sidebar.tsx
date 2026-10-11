@@ -219,6 +219,8 @@ interface LeftSidebarProps {
   /** Forwarded to ChatPanel — fires with the chat's streaming state so the
    *  parent can overlay the page-building loader on the preview. */
   onRedesigningChange?: (active: boolean) => void;
+  /** El turno de un «Aplicar» del modo Diseño acabó (`NewChatPanel` → `useAgentChat`). */
+  onDesignSettled?: (ok: boolean) => void;
   /** True while the parent is mid-fetch on /api/projects/<id>. Forwarded
    *  to ChatPanel so reloads show a skeleton instead of the empty state. */
   projectLoading?: boolean;
@@ -307,6 +309,7 @@ export function LeftSidebar({
   flatProjectChat,
   onChatChange,
   onRedesigningChange,
+  onDesignSettled,
   projectLoading = false,
   savingStatus = null,
   currentProjectId = null,
@@ -538,6 +541,7 @@ export function LeftSidebar({
                 flatProjectChat={flatProjectChat}
                 onChatChange={onChatChange}
                 onRedesigningChange={onRedesigningChange}
+                onDesignSettled={onDesignSettled}
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
                 onToggleSectionSelect={onToggleSectionSelect}
