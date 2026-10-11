@@ -2,6 +2,7 @@ import { withInariWatch } from "@inariwatch/capture/next";
 import createNextIntlPlugin from "next-intl/plugin";
 import path from "node:path";
 import { LIENZO_REWRITES } from "./lib/lienzo/site-rewrite";
+import { MCP_REWRITES } from "./lib/mcp/host-rewrite";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
@@ -35,9 +36,10 @@ const nextConfig = {
     ];
   },
   // En un host `lienzo-*` sólo responde el lienzo (pieza 9 de Len 2.5). Por
-  // qué aquí y no en el middleware: `lib/lienzo/site-rewrite.ts`.
+  // qué aquí y no en el middleware: `lib/lienzo/site-rewrite.ts`. Lo mismo para
+  // el servidor MCP en `mcp.*` (`lib/mcp/host-rewrite.ts`).
   async rewrites() {
-    return { beforeFiles: LIENZO_REWRITES, afterFiles: [], fallback: [] };
+    return { beforeFiles: [...LIENZO_REWRITES, ...MCP_REWRITES], afterFiles: [], fallback: [] };
   },
   outputFileTracingRoot: path.resolve(__dirname),
   // Force the standalone tracer to copy tailwindcss's package-relative CSS
