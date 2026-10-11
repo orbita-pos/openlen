@@ -69,7 +69,7 @@ const NOMBRE_DEL_FOCO: Record<FocoDelJuez, string> = {
  * lo recorta `recortar` por el medio, como el suyo.
  */
 export function trazaDeLasFilas(filas: readonly FilaDelHistorial[]): MensajeDelHistorial[] {
-  return historialDesdeLaBase(filas, Infinity);
+  return historialDesdeLaBase(filas, { hasta: Infinity, deja: Infinity });
 }
 
 /** Una llamada al modelo del juez: el texto que contestó y lo que costó. */

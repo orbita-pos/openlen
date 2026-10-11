@@ -8,6 +8,7 @@ import {
   historialDesdeLaBase,
   leidosSembrados,
   stateOnlyTranscript,
+  turnosQueSeQuedan,
   textoDelHistorial,
   transcripcionParaGuardar,
   type FilaDelHistorial,
@@ -134,11 +135,11 @@ describe("historialDesdeLaBase", () => {
     ]);
   });
 
-  it("🔴 los resultados MÁS VIEJOS se vacían con la marca de Claude Code; los recientes se quedan enteros", () => {
+  it("🔴 al pasarse de `hasta`, los resultados MÁS VIEJOS se vacían con la marca de Claude Code hasta `deja`; los recientes se quedan enteros", () => {
     const grande = "x".repeat(600);
     const h = historialDesdeLaBase(
       [fila("uno", leer("/a/index.html", grande)), fila("dos", leer("/b/index.html", grande))],
-      1000,
+      { hasta: 1000, deja: 700 },
     );
     const respuestas = h.flatMap((m) => m.functionResponses ?? []);
     expect(respuestas[0]!.response.tool_result).toBe(RESULTADO_VACIADO);
@@ -148,8 +149,48 @@ describe("historialDesdeLaBase", () => {
   });
 
   it("CONTRA-PRUEBA: con presupuesto de sobra no se vacía nada", () => {
-    const h = historialDesdeLaBase([fila("uno", leer("/a/index.html", "abc")), fila("dos", leer("/b/index.html", "def"))], 1000);
+    const h = historialDesdeLaBase([fila("uno", leer("/a/index.html", "abc")), fila("dos", leer("/b/index.html", "def"))], { hasta: 1000, deja: 500 });
     expect(h.flatMap((m) => m.functionResponses ?? []).map((r) => r.response.tool_result)).toEqual(["abc", "def"]);
+  });
+
+  // 🔴 LA CACHÉ (Holi, 10/10): el proveedor sólo sirve de caché el PRINCIPIO
+  // idéntico de la petición. Con el presupuesto contado desde el más reciente, la
+  // frontera del vaciado avanzaba a cada turno y vaciaba un resultado que el turno
+  // anterior había mandado entero: la petición dejaba de coincidir ahí, y el
+  // primer paso de cada turno pagaba ~230.000 tokens sin caché (7 créditos por una
+  // respuesta de dos líneas). Ahora se vacía a saltos, como el microcompact de
+  // Claude Code: entre dos vaciados, el historial sólo crece por el final.
+  it("🔴 entre dos vaciados, el historial del turno siguiente EMPIEZA por el de ahora: la caché lo sirve", () => {
+    const filas = Array.from({ length: 5 }, (_, i) => fila(`turno ${i}`, leer(`/p${i}/index.html`, String(i).repeat(30_000))));
+    const ahora = historialDesdeLaBase(filas.slice(0, 4));
+    const siguiente = historialDesdeLaBase(filas);
+    expect(siguiente.slice(0, ahora.length)).toEqual(ahora);
+  });
+
+  it("🔴 el contexto con el que se mandó cada turno vuelve en su sitio, entre la memoria y las palabras del dueño (como se mandó: así lo de delante sigue en caché)", () => {
+    const memoria = "<system-reminder>LEN.md</system-reminder>";
+    const contexto = "TODAY IS …\n\nPROJECT STATE (real, read from the server just now):\n{}";
+    const h = historialDesdeLaBase([
+      { userText: "Hola", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "¡Hola!" }], leidos: [], memoria, contexto } },
+    ]);
+    expect(h.slice(0, 3)).toEqual([
+      { role: "user", content: memoria },
+      { role: "user", content: contexto },
+      { role: "user", content: "Hola", opensTurn: true },
+    ]);
+  });
+});
+
+describe("turnosQueSeQuedan — la ventana del historial, a saltos", () => {
+  it("hasta 2 × 12 turnos, todos; al pasarse, vuelve a 12 y crece otra vez", () => {
+    expect([0, 5, 12, 24].map((n) => turnosQueSeQuedan(n))).toEqual([0, 5, 12, 24]);
+    expect([25, 26, 35, 36, 37].map((n) => turnosQueSeQuedan(n))).toEqual([13, 14, 23, 12, 13]);
+  });
+
+  it("🔴 el primer turno que se ve sólo se mueve una vez cada 12 turnos (la caché lo sirve entre medias)", () => {
+    const primero = (total: number) => total - turnosQueSeQuedan(total);
+    expect([24, 25, 30, 35].map(primero)).toEqual([0, 12, 12, 12]);
+    expect([36, 40, 47].map(primero)).toEqual([24, 24, 24]);
   });
 });
 
@@ -187,7 +228,7 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
 
   it("CONTRA-PRUEBA: si su resultado ya se vació, tampoco (el modelo no lo tiene delante)", () => {
     const t = transcripcionParaGuardar(leer("/index.html", PAGINA), new Map([["/index.html", { instantanea: PAGINA, offset: undefined, limit: undefined }]]));
-    const historial = historialDesdeLaBase([{ userText: "x", assistantReasoning: "", transcript: t }], 1);
+    const historial = historialDesdeLaBase([{ userText: "x", assistantReasoning: "", transcript: t }], { hasta: 1, deja: 1 });
     const leidos = leidosSembrados(t.leidos, historial, () => PAGINA);
     expect(leidos.has("/index.html")).toBe(false);
   });

@@ -178,6 +178,16 @@ export async function quitarEncargo(projectId: string, userId: string): Promise<
   return "ok";
 }
 
+/** Cuántos turnos de Len tiene la charla en curso: los mismos que podría leer
+ *  `turnosParaElHistorial`. Decide cuántos entran (`turnosQueSeQuedan`). */
+export async function contarTurnosParaElHistorial(projectId: string): Promise<number> {
+  const [fila] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.projectChatMessages)
+    .where(and(enCurso(projectId), ne(schema.projectChatMessages.status, ESTADO_EN_CURSO), isNull(schema.projectChatMessages.tipo)));
+  return fila?.n ?? 0;
+}
+
 /**
  * LOS ÚLTIMOS TURNOS PARA EL HISTORIAL DEL AGENTE (H4), del más viejo al más
  * reciente, con su transcripción. Sale de la base y lo escribió el servidor:
