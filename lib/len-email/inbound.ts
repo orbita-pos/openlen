@@ -3,7 +3,6 @@
  * quién lo manda, si es de verdad suyo, si lo escribió una persona y qué
  * escribió (sin lo citado). Lo usa `app/api/len-email/inbound/route.ts`.
  */
-import type { IdiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 
 /** La dirección de un `From` («Ana <ana@x.com>» o «ana@x.com»), en minúsculas. */
 export function mailboxAddress(from: string): string | null {
@@ -79,36 +78,8 @@ export function newReplyText(text: string): string {
   return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-const STOPWORDS: Readonly<Record<Exclude<IdiomaDelCorreo, "ja" | "ko" | "zh">, readonly string[]>> = {
-  es: ["que", "el", "la", "los", "las", "por", "para", "con", "una", "del", "pon", "cambia", "quita", "también", "página", "precio", "gracias"],
-  pt: ["que", "não", "uma", "com", "para", "você", "mais", "também", "página", "obrigado", "coloca", "muda", "do", "da"],
-  en: ["the", "and", "please", "with", "change", "add", "remove", "page", "price", "can", "you", "thanks", "make", "to"],
-  fr: ["le", "les", "des", "une", "avec", "pour", "est", "pas", "merci", "change", "ajoute", "dans", "sur"],
-  de: ["der", "die", "das", "und", "bitte", "mit", "nicht", "ist", "ein", "eine", "auf", "danke", "ändere"],
-  it: ["il", "che", "per", "con", "una", "non", "della", "grazie", "cambia", "aggiungi", "anche", "sono"],
-  nl: ["de", "het", "een", "en", "van", "niet", "met", "voor", "bedankt", "graag", "verander", "ook"],
-};
-
-/** El idioma de lo escrito, para lo que dice el servidor (Len contesta en el
- *  que le hablen). Sin señal clara, inglés, como `idiomaDelCorreo`. */
-export function detectLanguage(text: string): IdiomaDelCorreo {
-  if (/[぀-ヿ]/.test(text)) return "ja";
-  if (/[가-힯]/.test(text)) return "ko";
-  if (/[一-鿿]/.test(text)) return "zh";
-  if (/[¿¡ñ]/i.test(text)) return "es";
-  const words = text.toLowerCase().match(/[\p{L}]+/gu) ?? [];
-  let best: IdiomaDelCorreo = "en";
-  let bestScore = 0;
-  for (const [lang, list] of Object.entries(STOPWORDS) as [IdiomaDelCorreo, readonly string[]][]) {
-    const set = new Set(list);
-    const score = words.filter((w) => set.has(w)).length;
-    if (score > bestScore) {
-      best = lang;
-      bestScore = score;
-    }
-  }
-  return best;
-}
+// El idioma de lo escrito vive en `lib/language/detect.ts` (también lo usa el chat).
+export { detectLanguage } from "@/lib/language/detect";
 
 /** Lo que lee el MODELO delante del pedido. */
 export function contextForModel(subject: string): string {

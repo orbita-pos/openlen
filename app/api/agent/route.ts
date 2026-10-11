@@ -25,6 +25,7 @@ import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { buildAgentMessages } from "@/lib/agent/context";
+import { userWritingLanguage } from "@/lib/agent/user-language";
 import { formaDelTurno, lineaDeForma } from "@/lib/agent/forma-del-turno";
 import {
   creaGrabadora,
@@ -864,6 +865,10 @@ async function correrTurno(
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
+    // Y el que ESCRIBE, que manda sobre el de la interfaz (Holi, 10/10): de sus
+    // palabras de ahora y de las de antes en esta charla, no del historial del
+    // modelo, donde van pegadas a avisos en inglés.
+    writingLanguage: userWritingLanguage(prompt, filasDelHistorial.map((f) => f.userText)),
     state,
     memoryMessage: memoriaDelTurno?.text ?? null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:

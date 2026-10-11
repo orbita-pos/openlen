@@ -259,6 +259,9 @@ export function buildAgentContext(args: {
   zona?: string;
   /** El idioma de la interfaz del usuario (`es`, `pt`…), el que manda el panel. */
   idioma?: string;
+  /** El idioma en que ESCRIBE (`userWritingLanguage`). Si lo hay, se nombra
+   *  éste y no el de la interfaz. */
+  writingLanguage?: string | null;
   state: Record<string, unknown>;
   /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
    *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
@@ -334,10 +337,18 @@ export function buildAgentContext(args: {
   // inglés a un dueño que escribía en español; sólo el cierre salió bien. Como
   // el `language` de Claude Code: el idioma nombrado, para todo lo que lee el
   // usuario; el código, como está. Y su mensaje sigue mandando si escribe en otro.
+  //
+  // Y EL QUE ESCRIBE, ANTES QUE EL DE LA INTERFAZ (Holi, 10/10): con la interfaz
+  // en inglés y escribiendo en español, «the user's interface is in English» le
+  // ganó a su mensaje y Len contestó en inglés. Si se sabe en qué escribe
+  // (`userWritingLanguage`), se nombra ése; el de la interfaz, si no se sabe.
+  const nombreQueEscribe = args.writingLanguage ? LOCALE_ENGLISH_NAMES[args.writingLanguage] : undefined;
   const nombreDelIdioma = args.idioma ? LOCALE_ENGLISH_NAMES[args.idioma] : undefined;
-  const idiomaBlock = nombreDelIdioma
-    ? `LANGUAGE: the user's interface is in ${nombreDelIdioma}. Everything they read goes in the language of their message —${nombreDelIdioma} unless they write in another—: the notes between your steps as much as your final answer. Code, file names and identifiers stay as they are.\n\n`
-    : "";
+  const idiomaBlock = nombreQueEscribe
+    ? `LANGUAGE: the user writes in ${nombreQueEscribe}. Everything they read goes in ${nombreQueEscribe} —or in the language of their message, if they switch—: the notes between your steps as much as your final answer. Code, file names and identifiers stay as they are.\n\n`
+    : nombreDelIdioma
+      ? `LANGUAGE: the user's interface is in ${nombreDelIdioma}. Everything they read goes in the language of their message —${nombreDelIdioma} unless they write in another—: the notes between your steps as much as your final answer. Code, file names and identifiers stay as they are.\n\n`
+      : "";
 
   // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
   // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
@@ -412,6 +423,8 @@ export interface BuildAgentMessagesArgs {
   zona?: string;
   /** El idioma de la interfaz (ver buildAgentContext.idioma). */
   idioma?: string;
+  /** Ver buildAgentContext.writingLanguage. */
+  writingLanguage?: string | null;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
   /** Ver buildAgentContext.userMemory. */
@@ -495,6 +508,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     equipo: args.equipo,
     zona: args.zona,
     idioma: args.idioma,
+    writingLanguage: args.writingLanguage,
     state: args.state,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,

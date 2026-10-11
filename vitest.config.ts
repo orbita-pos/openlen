@@ -90,6 +90,9 @@ export default defineConfig({
       "lib/agent/web/**/*.test.ts",
       // Len por correo (infra/len-email-worker/README.md).
       "lib/len-email/**/*.test.ts",
+      // El idioma en que escribe el usuario, no el de su interfaz (10/10).
+      "lib/language/**/*.test.ts",
+      "lib/agent/user-language.test.ts",
       "app/api/len-email/**/*.test.ts",
       // Lo que cambió en el turno, fichero a fichero (la lente «Cambios»).
       "lib/agent/cambios-del-turno.test.ts",
