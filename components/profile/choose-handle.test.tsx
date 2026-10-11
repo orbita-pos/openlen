@@ -5,10 +5,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { NextIntlClientProvider } from "next-intl";
 
 const m = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ replace: m.replace }) }));
 
+import messages from "@/messages/es/explore.json";
 import ChooseHandle from "./choose-handle";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -25,13 +27,19 @@ describe("elegir el @ desde «Tu perfil»", () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     roots.push(root);
-    act(() => root.render(<ChooseHandle />));
+    act(() =>
+      root.render(
+        <NextIntlClientProvider locale="es" messages={{ explore: messages }}>
+          <ChooseHandle />
+        </NextIntlClientProvider>,
+      ),
+    );
     const input = host.querySelector("input")!;
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "ana");
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    const save = [...host.querySelectorAll("button")].find((b) => b.textContent === "Save")!;
+    const save = [...host.querySelectorAll("button")].find((b) => b.textContent === "Guardar")!;
     await act(async () => save.click());
     expect(m.replace).toHaveBeenCalledTimes(1);
     expect(m.replace).toHaveBeenCalledWith("/@ana");

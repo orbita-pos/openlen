@@ -53,6 +53,7 @@ export default defineConfig({
       "tools/visual-engine-2a-reviewer/**/*.test.ts",
       "tools/visual-engine-2a-reviewer/**/*.test.tsx",
       "components/community/**/*.test.ts",
+      "components/community/**/*.test.tsx",
       "lib/workspace-v2/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
