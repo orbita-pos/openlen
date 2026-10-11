@@ -59,10 +59,12 @@ export interface BundlerOutput {
 const cola = new WorkerQueue<BundlerOutput>({ workerPath: RUTA_DEL_HILO, resourceLimits: { maxOldGenerationSizeMb: 1024 } });
 const hechos = new Map<string, AppBundle>();
 const enCamino = new Map<string, Promise<AppBundle | null>>();
+/** `supersedes` de `bundleApp` (un texto) → la marca de la cola (un objeto). */
+const marcas = new Map<string, object>();
 
 /** El empaquetador, tal cual: para `bundleApp` y para las pruebas (`bundle-tests.ts`). */
-export function runBundler(m: BundlerMessage, timeoutMs: number): Promise<BundlerOutput | null> {
-  return cola.run(m, { timeoutMs });
+export function runBundler(m: BundlerMessage, timeoutMs: number, supersedes?: object): Promise<BundlerOutput | null> {
+  return cola.run(m, { timeoutMs, ...(supersedes ? { supersedes } : {}) });
 }
 
 // Los espacios de nombres del hilo (`bundler-worker.mjs`) salen en las rutas
@@ -97,8 +99,14 @@ export function bundleApp(args: {
   readonly entorno?: Readonly<Record<string, string>>;
   readonly modo: ModoVendor;
   readonly timeoutMs?: number;
+  /** Quién pide, si lo que pidió antes deja de importar en cuanto pide otra
+   *  cosa: el lienzo de un proyecto (`lienzo:<id>`), cuya recarga deja atrás
+   *  el iframe que esperaba. Su petición nueva SUSTITUYE (`null`) a la suya que
+   *  aún espera en la cola. Una petición sin marca —los ojos, publicar— nunca
+   *  se sustituye, ni se suma a una con marca: no puede perderla. */
+  readonly supersedes?: string;
 }): Promise<AppBundle | null> {
-  const { app, modo } = args;
+  const { app, modo, supersedes } = args;
   const compilada = compilarCarpeta({
     carpeta: args.carpeta,
     catalogo: app.catalogo,
@@ -116,8 +124,15 @@ export function bundleApp(args: {
     .digest("hex");
   const hecho = hechos.get(clave);
   if (hecho) return Promise.resolve(hecho);
-  const ya = enCamino.get(clave);
+  // Con marca, se suma a una sin marca (nadie la sustituye) o a la suya.
+  const claveEnCamino = supersedes ? `${clave}|${supersedes}` : clave;
+  const ya = enCamino.get(clave) ?? enCamino.get(claveEnCamino);
   if (ya) return ya;
+  let marca: object | undefined;
+  if (supersedes) {
+    marca = marcas.get(supersedes);
+    if (!marca) marcas.set(supersedes, (marca = {}));
+  }
   const raiz = `${RAIZ_VENDOR}/${app.catalogo}/`;
   const promesa = runBundler(
     {
@@ -133,16 +148,17 @@ export function bundleApp(args: {
       sourcemap: modo === "desarrollo",
     },
     args.timeoutMs ?? TOPE_MS,
+    marca,
   )
     .then((r) => {
-      enCamino.delete(clave);
+      enCamino.delete(claveEnCamino);
       if (!r) return null;
       const bundle = aBundle(r, app.entrada);
       hechos.set(clave, bundle);
       if (hechos.size > CACHE_MAX) hechos.delete(hechos.keys().next().value!);
       return bundle;
     });
-  enCamino.set(clave, promesa);
+  enCamino.set(claveEnCamino, promesa);
   return promesa;
 }
 

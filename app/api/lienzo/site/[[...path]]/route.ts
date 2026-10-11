@@ -73,8 +73,10 @@ export async function GET(
       if (!todos) return noEncontrado();
       const carpeta = Object.fromEntries(Object.entries(todos).filter(([r]) => isCompileInputPath(r)));
       const entorno = dueno.entorno ? { entorno: dueno.entorno } : {};
+      // Con la marca de ESTE lienzo: cada cambio de Len lo recarga, y la
+      // petición del iframe que ya no existe no puede hacer esperar a la nueva.
       const cuerpo = dueno.app
-        ? entradaServida(ruta, await bundleApp({ carpeta, app: dueno.app, ...entorno, modo: "desarrollo" }))
+        ? entradaServida(ruta, await bundleApp({ carpeta, app: dueno.app, ...entorno, modo: "desarrollo", supersedes: `lienzo:${dueno.projectId}` }))
         : servirFuenteDePagina(ruta, carpeta, dueno.entorno);
       if (cuerpo === null) return noEncontrado();
       return new Response(cuerpo, {
