@@ -49,6 +49,7 @@ import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/termin
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
+import { userEditLabels } from "@/lib/agent/version-labels";
 import { appFileNames } from "@/lib/apps/esqueleto";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
@@ -371,7 +372,7 @@ async function aplicarPlan(
  *  (`guardarFichero`). */
 function etiquetaDeVersion(session: AgentSession, herramienta: string, detalle: string): { label: string; source: "chat" | "manual" } {
   if (session.autor !== "usuario") return { label: `${herramienta} ${detalle}`, source: "chat" };
-  return { label: `${session.desde === "editor" ? "Code editor" : "Terminal"}: ${detalle}`, source: "manual" };
+  return { label: `${userEditLabels(session.desde).name}: ${detalle}`, source: "manual" };
 }
 
 /**
@@ -788,8 +789,9 @@ export async function guardarFichero(
   // Lo que escribe la terminal del USUARIO lleva su nombre en Versiones: ni
   // «Before AI edit» ni origen `chat`, que dirían que lo hizo Len.
   const delUsuario = session.autor === "usuario";
-  // Y desde dónde: su terminal o el editor de la lente «Código» (la #18).
-  const [nombre, previa] = session.desde === "editor" ? ["Code editor", "Before code edit"] : ["Terminal", "Before terminal edit"];
+  // Y desde dónde: su terminal, el editor de la lente «Código» (la #18) o un
+  // agente de fuera por el MCP.
+  const { name: nombre, before: previa } = userEditLabels(session.desde);
   const guardado = await persistPage(
     {
       projectId: session.projectId,
