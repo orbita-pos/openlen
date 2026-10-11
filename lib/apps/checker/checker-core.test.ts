@@ -7,12 +7,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkApp, formatStylish, formatTsc, type CheckDiagnostic } from "./checker-core.mjs";
 import { EXTENSIONES_DE_URL } from "../compilador";
+import { catalogAliasesOf } from "../dependencias";
 import { esqueletoDeApp } from "../esqueleto";
 import { FICHEROS as APP_SHADCN } from "../shadcn-fixture";
 
 const RAIZ = join(import.meta.dirname, "..", "..", "..");
 const TIPOS = JSON.parse(readFileSync(join(RAIZ, "public", "app-vendor", "2026-11", "types.json"), "utf8")) as Record<string, string>;
-const revisar = (files: Record<string, string>) => checkApp({ files, typesPack: TIPOS });
+// Con los alias del catálogo, como en producción (`check-app.ts`).
+const revisar = (files: Record<string, string>) => checkApp({ files, typesPack: TIPOS, aliases: catalogAliasesOf("2026-11") });
 
 describe("TypeScript", () => {
   it("un prop con el tipo que no es, a través del alias @/", () => {
@@ -79,8 +81,11 @@ describe("🔴 una app correcta da CERO diagnósticos (Review Focus 1)", () => {
     expect([...r.typescript, ...r.eslint]).toEqual([]);
   });
 
-  it("el esqueleto con el que nace una app", () => {
-    const r = revisar({ ...esqueletoDeApp({ titulo: "Caja", idioma: "es" }).ficheros });
+  // 🔴 Nace en TSX (Jesús, 10/10): en .jsx TypeScript no revisaba nada, y ahora lo revisa ENTERO.
+  it("🔴 el esqueleto con el que nace una app: en TypeScript, y sin un solo error", () => {
+    const ficheros = esqueletoDeApp({ titulo: "Caja", idioma: "es" }).ficheros;
+    expect(Object.keys(ficheros).every((r) => /.tsx?$/.test(r))).toBe(true);
+    const r = revisar({ ...ficheros });
     expect([...r.typescript, ...r.eslint]).toEqual([]);
   });
 });

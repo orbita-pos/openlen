@@ -11,6 +11,8 @@ import { bundleApp, stopBundlerWorker } from "./bundle-app";
 
 afterAll(() => stopBundlerWorker());
 const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" } as const;
+// El esqueleto con el que nace una app: en TypeScript, con SU entrada (main.tsx).
+const ESQ = esqueletoDeApp({ titulo: "Caja" });
 
 describe("bundleApp (plan 02, tarea 3)", () => {
   it("🔴 la app shadcn: un fichero, sin un solo import del catálogo por su nombre, y más ligero que hoy (352 KB gzip)", async () => {
@@ -24,22 +26,22 @@ describe("bundleApp (plan 02, tarea 3)", () => {
   }, 60_000);
 
   it("en desarrollo lleva su sourcemap, y una línea del paquete vuelve a su fichero y su línea", async () => {
-    const carpeta = { ...esqueletoDeApp({ titulo: "Caja" }).ficheros };
-    const r = await bundleApp({ carpeta, app: APP, modo: "desarrollo" });
+    const carpeta = { ...ESQ.ficheros };
+    const r = await bundleApp({ carpeta, app: ESQ.app, modo: "desarrollo" });
     if (!r?.ok || !r.map) throw new Error(JSON.stringify(r));
     const mapa = new TraceMap(r.map);
-    expect(mapa.sources.some((s) => s === "app:/src/App.jsx")).toBe(true);
+    expect(mapa.sources.some((s) => s === "app:/src/App.tsx")).toBe(true);
     expect(mapa.sources.some((s) => s?.startsWith("vendor:/openlen/vendor/2026-11/"))).toBe(true);
-    // La línea del paquete donde está el `createRoot` de main.jsx vuelve a main.jsx.
+    // La línea del paquete donde está el `createRoot` de main.tsx vuelve a main.tsx.
     const lineas = r.js.split("\n");
     const i = lineas.findIndex((l) => l.includes("createRoot(document.getElementById"));
     const o = originalPositionFor(mapa, { line: i + 1, column: lineas[i]!.indexOf("createRoot") });
-    expect(o.source).toBe("app:/src/main.jsx");
+    expect(o.source).toBe("app:/src/main.tsx");
   }, 60_000);
 
   it("🔴 un fichero que NO es la entrada no compila: los diagnósticos del COMPILADOR, con su línea (Review Focus 4)", async () => {
     const carpeta = { ...FICHEROS, "/src/lib/utils.ts": FICHEROS["/src/lib/utils.ts"] + "\nexport const x = <;" };
-    const r = await bundleApp({ carpeta, app: APP, modo: "desarrollo" });
+    const r = await bundleApp({ carpeta, app: ESQ.app, modo: "desarrollo" });
     expect(r?.ok).toBe(false);
     if (r && !r.ok) {
       expect(r.errores[0]).toMatchObject({ ruta: "/src/lib/utils.ts", linea: 4 });
@@ -48,25 +50,25 @@ describe("bundleApp (plan 02, tarea 3)", () => {
 
   it("🔴 un error de esbuild (tras un `export *`) dice las rutas como Len las escribe, sin el espacio de nombres del empaquetador", async () => {
     const carpeta = {
-      ...esqueletoDeApp({ titulo: "Caja" }).ficheros,
+      ...ESQ.ficheros,
       "/src/lib/datos.js": 'export const NOMBRE = "real";',
       "/src/lib/todo.js": 'export * from "./datos";',
-      "/src/App.jsx": 'import { APELLIDO } from "./lib/todo";\nexport default function App() { return <p>{APELLIDO}</p>; }',
+      "/src/App.tsx": 'import { APELLIDO } from "./lib/todo";\nexport default function App() { return <p>{APELLIDO}</p>; }',
     };
-    const r = await bundleApp({ carpeta, app: APP, modo: "desarrollo" });
+    const r = await bundleApp({ carpeta, app: ESQ.app, modo: "desarrollo" });
     if (!r || r.ok) throw new Error(JSON.stringify(r));
-    expect(r.errores[0]).toMatchObject({ ruta: "/src/App.jsx", linea: 1 });
+    expect(r.errores[0]).toMatchObject({ ruta: "/src/App.tsx", linea: 1 });
     expect(r.errores[0]!.mensaje).toContain('"/src/lib/todo.js"');
     expect(r.errores[0]!.mensaje).not.toContain("app:");
   }, 60_000);
 
   it("🔴 sonner (los avisos de shadcn) empaqueta, en desarrollo y en producción (ensayo de caja del 09/10)", async () => {
     const carpeta = {
-      ...esqueletoDeApp({ titulo: "Caja" }).ficheros,
-      "/src/App.jsx": 'import { Toaster, toast } from "sonner";\nexport default function App() { return <><Toaster /><button onClick={() => toast("Guardado")}>x</button></>; }',
+      ...ESQ.ficheros,
+      "/src/App.tsx": 'import { Toaster, toast } from "sonner";\nexport default function App() { return <><Toaster /><button onClick={() => toast("Guardado")}>x</button></>; }',
     };
     for (const modo of ["desarrollo", "produccion"] as const) {
-      const r = await bundleApp({ carpeta, app: APP, modo });
+      const r = await bundleApp({ carpeta, app: ESQ.app, modo });
       if (!r?.ok) throw new Error(`${modo}: ${JSON.stringify(r)}`);
       expect(r.js).toContain("Guardado");
     }

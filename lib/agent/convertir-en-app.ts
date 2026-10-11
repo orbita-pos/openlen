@@ -8,7 +8,7 @@
 //   1. CONSTRUIR, con la página intacta: Len lee cada página y escribe la app
 //      en /src con Write, como cualquier fichero de la carpeta (una página ya
 //      puede guardar `.jsx`). Las páginas pasan a pantallas (/menu/index.html
-//      → /src/screens/Menu.jsx, ruta `#/menu`), lo repetido a componentes, el
+//      → /src/screens/Menu.tsx, ruta `#/menu`), lo repetido a componentes, el
 //      JavaScript suelto a estado de React y los formularios a una tabla.
 //   2. VOLTEAR, con esta herramienta y de una vez: el /index.html pasa a ser
 //      el cascarón del esqueleto (con el <title> y el `lang` de la portada),
@@ -31,7 +31,7 @@
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { erroresDeLaApp, problemasDelCascaron } from "@/lib/agent/compila-la-app";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
-import { ENTRADA, esqueletoDeApp } from "@/lib/apps/esqueleto";
+import { ENTRADA, ENTRADA_JSX, cascaronDeLaApp, esqueletoDeApp } from "@/lib/apps/esqueleto";
 import { textoDeDiagnostico } from "@/lib/apps/compilador";
 import { titleFromHtml } from "@/lib/projects/titulo-del-html";
 import { RUTA_APPS } from "@/lib/agent/ficheros/manual";
@@ -72,7 +72,7 @@ export const DECLARACION_CONVERTIR_EN_APP = {
   name: CONVERTIR_EN_APP,
   description:
     "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. " +
-    `Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: ${ENTRADA} mounting /src/App.jsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.jsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. ` +
+    `Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: ${ENTRADA} mounting /src/App.tsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.tsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. ` +
     "If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\"#/menu\").",
   parameters: { type: "OBJECT", properties: {} },
 } as const;
@@ -86,7 +86,9 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
   if (row.data.app) return { response: { ok: false, error: "This project is already an app: there is nothing to convert." } };
   if (!deps.projectFiles) return { response: { ok: false, error: "convert_to_app isn't available in this environment." } };
   const ficheros = await deps.projectFiles(session.projectId);
-  if (!Object.hasOwn(ficheros, ENTRADA)) {
+  // La entrada que Len escribió: la de ahora (TypeScript) o la de siempre (.jsx).
+  const entrada = [ENTRADA, ENTRADA_JSX].find((r) => Object.hasOwn(ficheros, r));
+  if (!entrada) {
     return {
       response: {
         ok: false,
@@ -97,10 +99,10 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
     };
   }
 
-  const app: AppDeProyecto = { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA };
+  const app: AppDeProyecto = { catalogo: CATALOGO_ACTUAL, entrada };
   const portada = row.data.html ?? "";
   const idioma = idiomaDeLaPortada(portada);
-  const cascaron = esqueletoDeApp({ titulo: titleFromHtml(portada) ?? row.title ?? "App", ...(idioma ? { idioma } : {}) }).html;
+  const cascaron = cascaronDeLaApp({ titulo: titleFromHtml(portada) ?? row.title ?? "App", entrada, ...(idioma ? { idioma } : {}) });
   const problemas = [
     ...erroresDeLaApp(app, ficheros).map(textoDeDiagnostico),
     ...problemasDelCascaron(app, cascaron, ficheros).map((d) => `${d.ruta} — ${d.mensaje}`),
@@ -141,7 +143,7 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
     response: {
       ok: true,
       tool_result:
-        `Converted: this project is now a web app. /index.html is the shell that starts ${ENTRADA}` +
+        `Converted: this project is now a web app. /index.html is the shell that starts ${entrada}` +
         (quitadas.length ? `, and the pages ${quitadas.join(", ")} were removed.` : ".") +
         ` Now check the app works: view_page and use_page with file_path "#/"${pantallas.length ? ` and ${pantallas.map((p) => `"${p}"`).join(", ")}` : ""}.` +
         " When you finish, tell the user in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that undoing this turn brings their page back.",

@@ -29,6 +29,7 @@
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
+import { appFileNames } from "@/lib/apps/esqueleto";
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import {
@@ -87,11 +88,11 @@ const PROBAR_LA_PAGINA =
 const PROBAR_LA_APP =
   'If you change the app, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with use_page: the path the user asked for and some odd case (an empty or wrong value, reloading the app). What it SHOWS —a screen, a list, a total—, look at it with view_page mode="measure", which is free and tells whether something overflows on mobile. And check that the screens you didn\'t touch still work.';
 
-const LA_APP_SON_FICHEROS = (entrada: string) => `THE APP IS FILES:
-/index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
+const LA_APP_SON_FICHEROS = (app: AppDeProyecto, entrada = app.entrada, n = appFileNames(app)) => `THE APP IS FILES:
+/index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep. The app itself lives in /src: ${entrada} mounts it, ${n.rutas} holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and ${n.backend} exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
 - You write the files and OpenLen compiles and bundles them after every change, like Vite: there is no dev server to start and nothing to install. In bash, npm test, npm run build, npm run lint and npx tsc run for real (/AGENTS.md says how). Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and packages are only the ones listed in /AGENTS.md; anything else is written in the project.
-- After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and the app stays blank until you fix it: fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
-- Screens are hash routes (/#/sales): a new screen is a component and a <Route> in /src/App.jsx, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
+- After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and until you fix it the app does not start (the canvas shows that error over it, as Vite does): fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
+- Screens are hash routes (/#/sales): a new screen is a component and a <Route> in ${n.rutas}, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
 - 🔴 A CHANGE GOES THROUGH EVERY FILE THAT DEPENDS ON IT, and only those: a renamed prop or component, a removed field, a column that changes in a table — search for every use with Grep before changing it and change them all in the same turn, migration included when the data changes. A file left behind breaks the app at runtime, in a screen you didn't look at. <example>user: "call it 'stock' instead of 'quantity'" — agent: searches for quantity with Grep across /src and /supabase, writes a migration that renames the column, and changes every component that reads or writes it.</example>
 - "Undo that" is handled with undo_last_change, which undoes your previous turn whole, never by editing backwards from memory.`;
 
@@ -107,7 +108,7 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   let p = cambiar(promptDePagina, APERTURA_DE_PAGINA, APERTURA_DE_APP);
   p = cambiar(p, COMO_LA_PAGINA, COMO_LA_APP);
   p = cambiar(p, PROBAR_LA_PAGINA, PROBAR_LA_APP);
-  p = cambiarBloque(p, "THE SITE IS FILES:\n", "\n\nWHAT EXISTS AND WHAT DOESN'T:\n", LA_APP_SON_FICHEROS(app.entrada));
+  p = cambiarBloque(p, "THE SITE IS FILES:\n", "\n\nWHAT EXISTS AND WHAT DOESN'T:\n", LA_APP_SON_FICHEROS(app));
   // La viñeta de lo que puede una página es UNA línea: se cambia entera.
   const i = encontrar(p, LO_QUE_PUEDE_LA_PAGINA_INICIO);
   const fin = encontrar(p, "\n", i);
@@ -137,7 +138,7 @@ function seccionDeLaApp(app: AppDeProyecto): string {
   return `THIS PROJECT IS A WEB APP:
 React in /src —.jsx, .tsx, .ts or .js— that OpenLen compiles and publishes like a Vite project: each file is compiled (JSX and TypeScript to JavaScript, keeping its line numbers) and they are joined into one bundle with only what they use from the catalog's packages (see BUILD). Nothing gets installed: the packages are the catalog's, already there.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.
-- ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; /src/App.jsx holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; /src/lib/supabase.js exports the backend client.
+- ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; ${appFileNames(app).rutas} holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; ${appFileNames(app).backend} exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json"; import logo from "./logo.svg" gives its URL (also .txt and .md, or any file with ?url), and ?raw gives its text.
 - import.meta.env works as in Vite, public values only — everything in it ends up in the JavaScript any visitor can read, so a secret never goes there: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), set by OpenLen; the owner's own VITE_ variables, from Environment variables in the project's settings (their names are in env_vars in PROJECT STATE: the draft values in the canvas, your eyes and the terminal, the production values in the published app); the VITE_ variables in /.env, which you can write as in any Vite project (only /.env, only VITE_ names, and the owner's win over it); and MODE, DEV and PROD — unlike Vite's dev server, MODE is "production", DEV false and PROD true everywhere, the canvas included: the canvas runs the same code as the published app. When a value must differ between draft and production (Stripe's pk_test_ and pk_live_), ask the owner to add it in Environment variables.
 - PACKAGES, the only ones (catalog ${app.catalogo}):
@@ -146,7 +147,7 @@ ${paquetes}${shadcn}
 - ICONS: lucide-react has a selection of ${ICONOS_DE_LAS_APPS.length} icons, the usual ones for an app (${ALGUNOS_ICONOS.join(", ")}…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in ${app.entrada}) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
 - STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>. A .css file may use Tailwind's @layer and @apply, with the theme of the shell's tailwind.config, as in a Vite project. It is Tailwind CSS 3: the theme lives in that tailwind.config and the colors as CSS variables in @layer base — not Tailwind 4's @import "tailwindcss", @theme or @custom-variant, which do nothing here. That tailwind.config is plain data: no require() and no plugins (tailwindcss-animate is not available: write the keyframes and animations in theme.extend).
-- ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: the app is blank until it is fixed. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
+- ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: until it is fixed the app does not start, and the canvas shows that error over it, as Vite does. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
 - TYPES AND LINT: TypeScript (the .ts and .tsx files, with a lax tsconfig like Lovable's) and ESLint (with the React hooks rules, also on .jsx) check the files you change, like a language server: their problems arrive in <new-diagnostics> a moment after the change, with one of your next steps. They don't stop the app or the publish; a file that doesn't compile does. You can also run them in bash: npx tsc --noEmit and npm run lint (npm run typecheck too). npm install isn't needed —the catalog's packages are already there—.
 - BUILD: the app is served as ONE bundle (made by esbuild): your files plus only the parts of the catalog's packages they use — on the canvas, in view_page and use_page (with React's development build, whole error messages) and when publishing (production, minified). npm run build makes the production bundle and prints its size, like Vite. A browser error still points to your file and line.
 - TESTS: vitest and Testing Library, as in any Vite + React project: put tests next to the code (src/Cart.test.tsx) or in /tests, import { describe, it, expect, vi } from "vitest" (or use them as globals) and render, screen, within, waitFor from "@testing-library/react", with userEvent from "@testing-library/user-event"; the jest-dom matchers (toBeInTheDocument, toBeVisible, toHaveTextContent…) are already there. vi.fn, vi.spyOn, vi.mock (with a factory, at the top level; importOriginal works), vi.useFakeTimers and vi.stubGlobal work. Run them with npm test (npx vitest run Cart filters by file, -t by name): they run for real in a browser (Chromium), one page per file; the network works as in the browser (the app's backend included: mock what talks to it unless the test means to touch its data), and private or internal addresses are blocked. No snapshots and no coverage. Tests never ship: they aren't published and they don't stop the app.
@@ -178,18 +179,18 @@ Besides /src, the folder takes any other text file —/data/*.json, /manifest.js
 Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.`;
 
 const EN_LA_PAGINA_SUPABASE_INICIO = "- In the page, supabase-js as usual:";
-const EN_LA_APP_SUPABASE =
-  '- In the app, the client is created once in /src/lib/supabase.js, with createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY), and every file takes it from there: import { supabase } from "@/lib/supabase". The publishable key is meant to be in the code; a secret key, never.';
+const EN_LA_APP_SUPABASE = (app: AppDeProyecto) =>
+  `- In the app, the client is created once in ${appFileNames(app).backend}, with createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY), and every file takes it from there: import { supabase } from "@/lib/supabase". The publishable key is meant to be in the code; a secret key, never.`;
 
 /** La sección del backend del manual de la página, entera, con la línea de
  *  cómo se carga supabase-js dicha para una app. */
-function elBackend(manualDePagina: string): string {
+function elBackend(manualDePagina: string, app: AppDeProyecto): string {
   const i = encontrar(manualDePagina, "THE BACKEND (Supabase):");
   const j = encontrar(manualDePagina, "\n\nDESIGN GUIDE (", i);
   const seccion = manualDePagina.slice(i, j);
   const k = encontrar(seccion, EN_LA_PAGINA_SUPABASE_INICIO);
   const fin = encontrar(seccion, "\n", k);
-  return seccion.slice(0, k) + EN_LA_APP_SUPABASE + seccion.slice(fin);
+  return seccion.slice(0, k) + EN_LA_APP_SUPABASE(app) + seccion.slice(fin);
 }
 
 const QUE_PIDE_PUBLICAR = `WHAT PUBLISHING REQUIRES:
@@ -209,7 +210,7 @@ export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto): strin
     LO_QUE_EXISTE(manualDePagina),
     LOS_ENLACES,
     LA_CARPETA(app),
-    elBackend(manualDePagina),
+    elBackend(manualDePagina, app),
     QUE_PIDE_PUBLICAR,
     INDICE_DE_LA_APP,
   ].join("\n\n");
