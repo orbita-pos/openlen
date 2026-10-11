@@ -320,3 +320,16 @@ describe("las variables de entorno en una app (spec local 2026-10-10)", () => {
     expect(summarizeProjectState({ ...fila, data: { html: "" } })).not.toHaveProperty("env_vars");
   });
 });
+
+describe("modo Diseño de las apps", () => {
+  it("el manual de una app explica los cambios del panel de diseño; el de una página no", () => {
+    const m = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    expect(m).toContain("DESIGN CHANGES FROM THE CANVAS:");
+    expect(m).toContain("with the app's own Tailwind classes");
+    expect(m).toContain("goes where it is USED");
+    expect(m).toContain("add its Google Fonts stylesheet to the shell's <head>");
+    expect(m).toContain("say where it is changed");
+    expect(m).toContain("view_page on that screen");
+    expect(buildManualDeLaPlataforma(ENV)).not.toContain("DESIGN CHANGES FROM THE CANVAS:");
+  });
+});
