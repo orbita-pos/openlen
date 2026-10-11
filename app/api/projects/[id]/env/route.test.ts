@@ -129,4 +129,16 @@ describe("PUT /api/projects/[id]/env", () => {
     vi.mocked(replaceEnvVars).mockResolvedValueOnce({ ok: false, reason: "not_found" });
     expect((await pedirPUT(CUERPO)).status).toBe(404);
   });
+
+  it("🔴 el 409 dice si hay que volver a publicar con la fila de AHORA, no con la de antes del intento", async () => {
+    fila.actual = { ...fila.actual!, envHash: "a", publishedEnvHash: "a" };
+    // Mientras tanto, otra persona cambió una de producción: la huella se movió.
+    vi.mocked(replaceEnvVars).mockImplementationOnce(async () => {
+      fila.actual = { ...fila.actual!, envHash: "b" };
+      return { ok: false, reason: "conflict", vars: VARS };
+    });
+    const r = await pedirPUT(CUERPO);
+    expect(r.status).toBe(409);
+    expect(await r.json()).toMatchObject({ error: "conflict", pendingPublish: true });
+  });
 });
