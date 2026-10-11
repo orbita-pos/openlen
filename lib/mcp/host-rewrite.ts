@@ -18,3 +18,10 @@ export function isMcpHost(host: string | null): boolean {
   if (!host) return false;
   return /^mcp\.[^:]+(:\d+)?$/i.test(host.trim());
 }
+
+/** En el host del MCP sólo vive el MCP. El middleware ve lo que no es /api ni
+ *  lleva punto (su matcher): de eso, sólo `/mcp`; la app —portada, login,
+ *  workspace— no se sirve en este origen (404). Caddy hace lo mismo delante. */
+export function mcpHostAllows(pathname: string): boolean {
+  return pathname === "/mcp";
+}

@@ -184,6 +184,7 @@
     "pg": "^8.21.0",
     "puppeteer": "^25.0.2",
     "qrcode.react": "^4.2.0",
+    "re2js": "^2.8.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-easy-crop": "^5.5.7",

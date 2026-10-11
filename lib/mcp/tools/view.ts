@@ -3,7 +3,7 @@ import * as z from "zod4";
 import { realDeps } from "@/lib/agent/tools";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { openProject } from "../access";
-import { captureProjectView } from "../capture";
+import { acquireCaptureSlot, captureProjectView } from "../capture";
 import { consumeQuota } from "../quota";
 import { imageResult, textResult, toolError } from "../results";
 import { defineTool, READ_ONLY } from "./define";
@@ -37,11 +37,20 @@ export const viewPageTool = defineTool({
       const pages = Object.keys(row.data.pages ?? {});
       return toolError("not_found", `There is no page "${page}". Pages: home${pages.length ? `, ${pages.join(", ")}` : ""}.`);
     }
-    const denied = await consumeQuota(caller, "view_page");
-    if (denied) return denied;
-    let vista = await vistaConCarpeta(vistaParaMedir(project_id, row, slug), realDeps(), project_id);
-    if (app && screen) vista = { ...vista, pantalla: pantallaDe(screen) };
-    const r = await captureProjectView({ html, vista, viewport, fullPage: full_page });
+    const release = acquireCaptureSlot();
+    if (!release) {
+      return toolError("busy", "OpenLen is rendering other pages right now. Wait a few seconds and call view_page again.");
+    }
+    let r: Awaited<ReturnType<typeof captureProjectView>>;
+    try {
+      const denied = await consumeQuota(caller, "view_page");
+      if (denied) return denied;
+      let vista = await vistaConCarpeta(vistaParaMedir(project_id, row, slug), realDeps(), project_id);
+      if (app && screen) vista = { ...vista, pantalla: pantallaDe(screen) };
+      r = await captureProjectView({ html, vista, viewport, fullPage: full_page });
+    } finally {
+      release();
+    }
     if (!r.image && !r.measurements) {
       return toolError("render_failed", "The page could not be rendered right now. Try again in a moment; if it repeats, check get_diagnostics.");
     }

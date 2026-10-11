@@ -9,7 +9,7 @@ vi.mock("@/lib/security/render-ssrf-guard", () => ({ installSubresourceSsrfGuard
 vi.mock("@/lib/lienzo/documento", () => ({ carpetaDeLaVista: vi.fn(async () => null), documentoMedible: (html: string) => html }));
 vi.mock("@/lib/agent/verify", () => ({ describeMeasurements: () => "Nothing overflows." }));
 
-import { captureProjectView } from "./capture";
+import { acquireCaptureSlot, captureProjectView, MAX_CONCURRENT_CAPTURES } from "./capture";
 
 const vista = { projectId: "p1", title: null, sub: null, pagina: null, settings: undefined, logoUrl: null };
 
@@ -23,6 +23,28 @@ function fakeBrowser(screenshot = vi.fn(async () => "BASE64")) {
   };
   return { browser: { newPage: async () => page, close: vi.fn(async () => undefined) }, page };
 }
+
+describe("los huecos de captura (Chromium a la vez, en todo el servidor)", () => {
+  it("🔴 pasado el tope no hay hueco; al soltar uno, vuelve a haberlo", () => {
+    const releases = Array.from({ length: MAX_CONCURRENT_CAPTURES }, () => acquireCaptureSlot());
+    expect(releases.every((r) => typeof r === "function")).toBe(true);
+    expect(acquireCaptureSlot()).toBeNull();
+    releases[0]!();
+    const again = acquireCaptureSlot();
+    expect(again).not.toBeNull();
+    again!();
+    releases.slice(1).forEach((r) => r!());
+  });
+
+  it("soltar dos veces el mismo hueco no regala otro", () => {
+    const r = acquireCaptureSlot()!;
+    r();
+    r();
+    const all = Array.from({ length: MAX_CONCURRENT_CAPTURES }, () => acquireCaptureSlot());
+    expect(acquireCaptureSlot()).toBeNull();
+    all.forEach((x) => x!());
+  });
+});
 
 describe("captureProjectView", () => {
   it("devuelve la captura JPEG del viewport y las medidas", async () => {

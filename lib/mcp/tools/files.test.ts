@@ -69,4 +69,19 @@ describe("search_files", () => {
     expect(r.isError).toBe(true);
     expect(text(r)).toContain("invalid_pattern");
   });
+
+  it("🔴 una regex patológica no congela el servidor: tiempo lineal (RE2)", async () => {
+    m.cargarFicherosDeLaTerminal.mockResolvedValue({ "/x.txt": `${"a".repeat(27)}!` });
+    const t0 = performance.now();
+    const r = await searchFilesTool.run({ project_id: "p1", pattern: "(a+)+$" }, caller);
+    expect(performance.now() - t0).toBeLessThan(500);
+    expect(text(r)).toContain("No matches");
+  });
+
+  it("lookarounds y backreferences no existen en RE2: lo dice como en ripgrep", async () => {
+    const r = await searchFilesTool.run({ project_id: "p1", pattern: "Hola(?=<)" }, caller);
+    expect(r.isError).toBe(true);
+    expect(text(r)).toContain("invalid_pattern");
+    expect(text(r)).toMatch(/lookaround|RE2/i);
+  });
 });
