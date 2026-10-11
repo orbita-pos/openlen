@@ -12,6 +12,7 @@
 // como el `geterr` de tsserver. Las de otras sesiones no se tocan (en Claude
 // Code cada sesión tiene su propio servidor).
 import path from "node:path";
+import { catalogAliasesOf } from "@/lib/apps/dependencias";
 import { directorioVendor } from "@/lib/apps/servir";
 import { testKitFor } from "@/lib/apps/tests/test-kit";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
@@ -43,6 +44,8 @@ export function checkAppInWorker(
       files: input.files,
       // Los tipos del catálogo y los del kit de pruebas (plan 04): vitest y Testing Library.
       typesPackPaths: [path.join(directorioVendor(), input.catalogo, "types.json"), path.join(directorioVendor(), testKitFor(input.catalogo), "types.json")],
+      // Y sus alias (`react-router-dom`), que el paquete de tipos no trae.
+      aliases: catalogAliasesOf(input.catalogo),
     },
     { timeoutMs, ...(input.supersedes ? { supersedes: input.supersedes } : {}) },
   );

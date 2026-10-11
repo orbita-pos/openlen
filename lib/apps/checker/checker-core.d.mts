@@ -19,6 +19,8 @@ export interface CheckResult {
 export function checkApp(input: {
   readonly files: Readonly<Record<string, string>>;
   readonly typesPack: Readonly<Record<string, string>>;
+  /** Los alias del catálogo (`catalogAliasesOf`): alias → el nombre que tiene los tipos. */
+  readonly aliases?: Readonly<Record<string, string>>;
 }): CheckResult;
 
 export { formatStylish, formatTsc } from "./format.mjs";

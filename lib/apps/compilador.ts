@@ -65,8 +65,9 @@ const EN_UNA_APP = [".js", ".mjs"] as const;
 /** El orden en que se prueba un import sin extensión, como Vite. */
 const EXTENSIONES_RESOLUBLES = [".tsx", ".ts", ".jsx", ".js", ".mjs"] as const;
 /** Lo que se importa como su URL, como en Vite (la carpeta sólo guarda texto:
- *  las fotos son subidas, con su URL). */
-const EXTENSIONES_DE_URL = [".svg", ".txt", ".md", ".webmanifest"] as const;
+ *  las fotos son subidas, con su URL). Sus tipos, en el comprobador
+ *  (`checker/checker-core.mjs`, AMBIENTE). */
+export const EXTENSIONES_DE_URL =[".svg", ".txt", ".md", ".webmanifest"] as const;
 
 export interface ContextoDeCompilacion {
   /** La carpeta del proyecto: ruta (`/src/App.jsx`) → contenido. */
