@@ -25,7 +25,7 @@ const APP_TSX = [
   '      <h1 key={n} id="titulo">Hola</h1>', // 7
   '      <Link id="ir" to="/otra">Otra</Link>', // 8
   '      <button id="mas" onClick={() => setN(n + 1)}>Más</button><p id="mix">Clicks {n}</p>', // 9
-  "    </main>", // 10
+  '      <button id="off" disabled>Off</button></main>', // 10
   "  );", // 11
   "}", // 12
   'function Otra() { return <h1 id="otra">Otra</h1>; }', // 13
@@ -75,6 +75,21 @@ describe("el modo Diseño en el lienzo de una app", () => {
       expect(m!.selection.styles["font-size"]).toMatch(/px$/);
       expect(m!.selection.textEditable).toBe(true);
       expect(Array.isArray((m!.selection as unknown as { fonts: unknown }).fonts)).toBe(true);
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+
+  it("🔴 un botón deshabilitado también se elige (Chromium no le entrega el clic)", async () => {
+    const v = await abrir();
+    try {
+      await v.enviar({ type: "openlen:set-mode", designMode: true });
+      await v.page.click("#off");
+      await new Promise((r) => setTimeout(r, 200));
+      const sel = (await v.recibidos("openlen:design-selected")) as { selection: { tag: string; chain: { line: number }[] } }[];
+      expect(sel.length, "el botón deshabilitado no se pudo elegir").toBe(1);
+      expect(sel[0]!.selection.tag).toBe("button");
+      expect(sel[0]!.selection.chain[0]!.line).toBe(10);
     } finally {
       await v.cerrar();
     }

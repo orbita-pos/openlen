@@ -169,13 +169,16 @@ const SCRIPT = `(function () {
     var el = e.target && e.target.nodeType === 1 ? e.target : null;
     setHover(isOurs(el) ? null : el);
   }, true);
-  window.addEventListener('click', function (e) {
+  // SE ELIGE EN pointerdown, no en click: Chromium no entrega el clic a un
+  // control deshabilitado (el botón «Añadir» con el campo vacío), y el
+  // pointerdown sí. El clic se traga igual, para que no llegue a la app.
+  window.addEventListener('pointerdown', function (e) {
     if (!on) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
     var el = e.target && e.target.nodeType === 1 ? e.target : null;
     if (!isOurs(el)) select(el);
   }, true);
-  ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'submit'].forEach(function (t) {
+  ['click', 'mousedown', 'mouseup', 'pointerup', 'submit'].forEach(function (t) {
     window.addEventListener(t, function (e) { if (on) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); } }, true);
   });
   window.addEventListener('keydown', function (e) {
