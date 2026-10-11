@@ -2109,6 +2109,26 @@ export const mcpAudit = pgTable("mcpAudit", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 }, (t) => [index("mcpAudit_userId_createdAt_idx").on(t.userId, t.createdAt)]);
 
+// LAS APROBACIONES DEL MCP (plans/mcp-de-openlen, Parte 2): publicar o
+// despublicar desde un agente de fuera pide el OK de la persona en openlen.com,
+// al estilo de Stripe. Caducan a las 24 h y valen una vez.
+export const mcpApprovals = pgTable("mcpApprovals", {
+  id: text("id").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenId: text("tokenId").notNull(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  action: text("action").notNull().$type<"publish" | "unpublish">(),
+  subdomain: text("subdomain"),
+  status: text("status").notNull().$type<"pending" | "approved" | "denied" | "used">().default("pending"),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  expiresAt: timestamp("expiresAt", { mode: "date" }).notNull(),
+  decidedAt: timestamp("decidedAt", { mode: "date" }),
+  usedAt: timestamp("usedAt", { mode: "date" }),
+}, (t) => [
+  index("mcpApprovals_userId_idx").on(t.userId),
+  index("mcpApprovals_trust_idx").on(t.tokenId, t.projectId, t.action, t.subdomain, t.status),
+]);
+
 /**
  * LEN POR CORREO (lib/len-email): cada correo a Len, GUARDADO antes de correr su
  * turno. Como hacen los grandes con el correo que reciben: primero se apunta,

@@ -34,6 +34,21 @@ async function main() {
     "createdAt" timestamp NOT NULL DEFAULT now()
   );`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "mcpAudit_userId_createdAt_idx" ON "mcpAudit" ("userId", "createdAt");`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS "mcpApprovals" (
+    "id" text PRIMARY KEY,
+    "userId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "tokenId" text NOT NULL,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "action" text NOT NULL,
+    "subdomain" text,
+    "status" text NOT NULL DEFAULT 'pending',
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "expiresAt" timestamp NOT NULL,
+    "decidedAt" timestamp,
+    "usedAt" timestamp
+  );`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "mcpApprovals_userId_idx" ON "mcpApprovals" ("userId");`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS "mcpApprovals_trust_idx" ON "mcpApprovals" ("tokenId", "projectId", "action", "subdomain", "status");`);
   console.log("tablas del MCP listas.");
   process.exit(0);
 }
