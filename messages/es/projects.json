@@ -221,5 +221,21 @@
     "de": "de {nombre}",
     "rolEditor": "Editor",
     "rolLector": "Solo lectura"
+  },
+  "mcpApproval": {
+    "title": "Un asistente de IA te pide permiso",
+    "publish": "Publicar «{project}» en {url}",
+    "unpublish": "Quitar «{project}» de internet (ahora está en {url})",
+    "requestedBy": "Lo pide la conexión «{name}»",
+    "expires": "Esta petición caduca {when}.",
+    "warning": "Aprueba sólo si se lo pediste a tu asistente. Si no, recházala.",
+    "approve": "Aprobar",
+    "deny": "Rechazar",
+    "approved": "Aprobado. Vuelve a tu asistente y dile que siga.",
+    "denied": "Rechazado. Tu asistente no lo hará.",
+    "expired": "Esta petición caducó. Pídele a tu asistente que lo intente otra vez.",
+    "used": "Esta petición ya se usó.",
+    "notFound": "Esta petición no existe o no es tuya.",
+    "failed": "No funcionó. Recarga la página y prueba otra vez."
   }
 }

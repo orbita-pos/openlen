@@ -221,5 +221,21 @@
     "de": "by {nombre}",
     "rolEditor": "Editor",
     "rolLector": "View only"
+  },
+  "mcpApproval": {
+    "title": "An AI assistant is asking for your OK",
+    "publish": "Publish «{project}» at {url}",
+    "unpublish": "Take «{project}» offline (it is now at {url})",
+    "requestedBy": "Asked by the connection «{name}»",
+    "expires": "This request expires {when}.",
+    "warning": "Approve only if you asked your assistant to do this. If you didn't, deny it.",
+    "approve": "Approve",
+    "deny": "Deny",
+    "approved": "Approved. Go back to your assistant and tell it to continue.",
+    "denied": "Denied. Your assistant will not do it.",
+    "expired": "This request expired. Ask your assistant to try again.",
+    "used": "This request was already used.",
+    "notFound": "This request doesn't exist or isn't yours.",
+    "failed": "That didn't work. Reload the page and try again."
   }
 }

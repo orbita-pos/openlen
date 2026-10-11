@@ -221,5 +221,21 @@
     "de": "来自 {nombre}",
     "rolEditor": "编辑者",
     "rolLector": "仅查看"
+  },
+  "mcpApproval": {
+    "title": "一个 AI 助手在请求你的同意",
+    "publish": "将「{project}」发布到 {url}",
+    "unpublish": "将「{project}」下线(当前在 {url})",
+    "requestedBy": "由连接「{name}」发起",
+    "expires": "此请求将于{when}过期。",
+    "warning": "只有在你让助手这样做时才批准。否则请拒绝。",
+    "approve": "批准",
+    "deny": "拒绝",
+    "approved": "已批准。回到你的助手,让它继续。",
+    "denied": "已拒绝。你的助手不会执行。",
+    "expired": "此请求已过期。请让你的助手再试一次。",
+    "used": "此请求已被使用。",
+    "notFound": "此请求不存在或不属于你。",
+    "failed": "没有成功。请刷新页面后重试。"
   }
 }
