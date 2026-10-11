@@ -131,3 +131,17 @@ describe("bundleApp (plan 02, tarea 3)", () => {
     expect(fuente).toMatch(/syncBuiltinESMExports\(\)/);
   });
 });
+
+describe("modo Diseño de las apps", () => {
+  it("el paquete de desarrollo apunta el origen de cada elemento; el de producción no", async () => {
+    const dev = await bundleApp({ carpeta: ESQ.ficheros, app: ESQ.app, modo: "desarrollo" });
+    const prod = await bundleApp({ carpeta: ESQ.ficheros, app: ESQ.app, modo: "produccion" });
+    expect(dev?.ok).toBe(true);
+    expect(prod?.ok).toBe(true);
+    if (!dev?.ok || !prod?.ok) return;
+    expect(dev.js).toContain("__openlenSources");
+    expect(dev.js).toContain("/src/screens/Inicio.tsx");
+    expect(prod.js).not.toContain("__openlenSources");
+    expect(prod.js).not.toContain("/src/screens/Inicio.tsx");
+  }, 90_000);
+});
