@@ -93,10 +93,11 @@ export function TarjetasNaceComo({
 }
 
 // LOS DIBUJOS, en `currentColor`: la tarjeta elegida los tiñe del acento y la
-// otra los deja en gris, en claro y en oscuro sin una sola regla más.
+// otra los deja en gris, en claro y en oscuro sin una sola regla más. La
+// píldora de la portada los usa en miniatura (`hero-kind-picker.tsx`).
 
 /** Una página: un titular grande, su botón, y bloques que se leen de arriba abajo. */
-function DibujoPagina() {
+export function DibujoPagina() {
   return (
     <svg viewBox="0 0 160 84" className="block w-full h-auto" aria-hidden>
       <rect x="0" y="0" width="160" height="10" fill="currentColor" opacity="0.08" />
@@ -114,7 +115,7 @@ function DibujoPagina() {
 }
 
 /** Una app: su barra de pantallas a un lado, cifras y una tabla que se usa. */
-function DibujoApp() {
+export function DibujoApp() {
   return (
     <svg viewBox="0 0 160 84" className="block w-full h-auto" aria-hidden>
       <rect x="0" y="0" width="34" height="84" fill="currentColor" opacity="0.1" />
