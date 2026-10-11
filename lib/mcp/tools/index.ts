@@ -6,6 +6,7 @@ import { getDocsTool } from "./docs";
 import { readFileTool, searchFilesTool } from "./files";
 import { getProjectTool, listProjectsTool } from "./projects";
 import { viewPageTool } from "./view";
+import { deleteFileTool, writeFileTool } from "./write";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ALL_TOOLS: ToolDefinition<any>[] = [
@@ -16,6 +17,8 @@ export const ALL_TOOLS: ToolDefinition<any>[] = [
   getDocsTool,
   getDiagnosticsTool,
   viewPageTool,
+  writeFileTool,
+  deleteFileTool,
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

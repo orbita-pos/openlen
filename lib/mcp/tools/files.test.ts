@@ -27,6 +27,11 @@ describe("read_file", () => {
     expect(out).toContain("     2\t<p>mundo</p>");
   });
 
+  it("enseña la versión del fichero en la cabecera (la que piden las escrituras)", async () => {
+    const out = text(await readFileTool.run({ project_id: "p1", path: "/index.html" }, caller));
+    expect(out.split("\n")[0]).toMatch(/version [0-9a-f]{12}/);
+  });
+
   it("offset y limit cortan por líneas y dicen cómo seguir", () => {
     const big = Array.from({ length: 10 }, (_, i) => `l${i + 1}`).join("\n");
     const out = formatNumbered("/x.ts", big, 3, 2);

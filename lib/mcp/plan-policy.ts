@@ -14,7 +14,13 @@ export type ToolName =
   | "search_files"
   | "get_docs"
   | "get_diagnostics"
-  | "view_page";
+  | "view_page"
+  | "edit_file"
+  | "write_file"
+  | "delete_file"
+  | "create_project"
+  | "publish"
+  | "unpublish";
 
 export const TOOL_RULES: Record<ToolName, { scope: McpScope | null; minPlan: "free" | "paid" }> = {
   list_projects: { scope: "projects:read", minPlan: "free" },
@@ -24,6 +30,12 @@ export const TOOL_RULES: Record<ToolName, { scope: McpScope | null; minPlan: "fr
   get_docs: { scope: null, minPlan: "free" },
   get_diagnostics: { scope: "projects:read", minPlan: "free" },
   view_page: { scope: "projects:read", minPlan: "free" },
+  edit_file: { scope: "projects:write", minPlan: "paid" },
+  write_file: { scope: "projects:write", minPlan: "paid" },
+  delete_file: { scope: "projects:write", minPlan: "paid" },
+  create_project: { scope: "projects:write", minPlan: "paid" },
+  publish: { scope: "publish", minPlan: "paid" },
+  unpublish: { scope: "publish", minPlan: "paid" },
 };
 
 /** null = puede; si no, el error que recibe el modelo. */
