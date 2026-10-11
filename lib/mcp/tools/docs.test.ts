@@ -22,6 +22,7 @@ describe("get_docs", () => {
     const out = text(await getDocsTool.run({}, caller));
     expect(m.textoDeLaPlataforma).toHaveBeenCalledWith("/AGENTS.md", "len", null);
     expect(out).toContain("read_file");
+    expect(out).toContain("edit_file");
     expect(out).toContain("# Manual");
   });
 
