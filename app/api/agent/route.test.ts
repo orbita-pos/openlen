@@ -180,6 +180,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
+vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: vi.fn(async () => []) }));
 vi.mock("@/lib/projects/chat", () => ({
   // 12 turnos: `turnosQueSeQuedan(12)` son 12, la ventana de siempre.
   contarTurnosParaElHistorial: vi.fn(async () => 12),
