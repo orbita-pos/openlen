@@ -558,7 +558,8 @@
       "save": "Guardar",
       "delete": "Borrar",
       "confirmDelete": "¿Borrar?",
-      "loadError": "No se pudieron cargar los secretos."
+      "loadError": "No se pudieron cargar los secretos.",
+      "deleteFailed": "No se pudo borrar. Inténtalo otra vez."
     }
   }
 }

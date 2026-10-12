@@ -216,6 +216,43 @@ describe("las Edge Functions en la vista Base de datos", () => {
     });
   });
 
+  it("🔴 «Añadir» y «Guardar» no se pueden pulsar sin un valor", async () => {
+    stubFetch(rutas());
+    await render();
+    await click(button("Secretos"));
+    const anadir = () => button("Añadir") as HTMLButtonElement;
+    await type(host.querySelector('input[aria-label="Borrador · Nombre"]') as HTMLInputElement, "MY_KEY");
+    expect(anadir().disabled).toBe(true);
+    await type(host.querySelectorAll('input[type="password"]')[0] as HTMLInputElement, "   ");
+    expect(anadir().disabled).toBe(true);
+    await type(host.querySelectorAll('input[type="password"]')[0] as HTMLInputElement, "valor");
+    expect(anadir().disabled).toBe(false);
+    await click(button("Reemplazar"));
+    const guardar = () => button("Guardar") as HTMLButtonElement;
+    expect(guardar().disabled).toBe(true);
+    await type(host.querySelector('input[aria-label="STRIPE_SECRET_KEY · Para probar (borrador)"]') as HTMLInputElement, "sk_test_nuevo123456");
+    expect(guardar().disabled).toBe(false);
+  });
+
+  it("🔴 si borrar falla, lo dice y el secreto sigue en la lista", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+        if (method === "DELETE") return new Response(JSON.stringify({ error: "boom" }), { status: 500 });
+        return new Response(JSON.stringify(rutas()({ url, method, body: undefined })), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    await render();
+    await click(button("Secretos"));
+    await click(button("Borrar"));
+    await click(button("¿Borrar?"));
+    expect(calls.some((c) => c.method === "DELETE")).toBe(true);
+    expect(text()).toContain("No se pudo borrar. Inténtalo otra vez.");
+    expect(text()).toContain("STRIPE_SECRET_KEY");
+  });
+
   it("reemplazar un secreto no pide el valor viejo: sólo el nuevo", async () => {
     stubFetch(rutas());
     await render();
