@@ -39,6 +39,8 @@ export async function serveBackend(req: Request): Promise<Response> {
   const hb = await backendForHost(req.headers.get("host"));
   // Lo que contesta la pasarela de Supabase a una ruta que no existe.
   if (!hb) return json({ message: "no Route matched with those values" }, 404);
+  // El ref propio del borrador: siempre el borrador, sin mirar de dónde viene.
+  if (hb.environment) return serveIn(req, hb, hb.environment);
   const decision = decideEnvironment({
     origin: req.headers.get("origin"),
     referer: req.headers.get("referer"),
