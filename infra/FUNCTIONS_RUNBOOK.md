@@ -112,8 +112,10 @@ scripts) y no cobra lo que las funciones mandan a internet.
    ```
 
    Crea el namespace (si no está), sube el despachador e imprime `OPENLEN_CF_DISPATCH_URL=…`.
-6. En la caja, en `/etc/openlen/openlen.env`: `OPENLEN_FUNCTIONS_ENGINE=cloudflare` y las cinco `OPENLEN_CF_*`; luego
-   `sudo systemctl restart openlen-app`.
+6. En la caja, en `/etc/openlen/openlen.env`: `OPENLEN_FUNCTIONS_ENGINE=cloudflare` y las cinco `OPENLEN_CF_*`. Si
+   quedó un `OPENLEN_FUNCTIONS_CAP_FREE_USD` / `_PAID_USD` de antes (0.25 / 0.75, los topes de Lambda), quitarlo: si
+   está puesto gana a los de ahora ($1 / $25). Comprobarlo sin enseñar el resto del fichero:
+   `sudo grep -E '^OPENLEN_FUNCTIONS_CAP' /etc/openlen/openlen.env`. Luego `sudo systemctl restart openlen-app`.
 
 **Antes de abrirlo a todos, el ensayo real** (spec local 2026-10-12, Parte 8 y «Riesgos abiertos»): desplegar un
 borrador y publicar a producción; llamar a una función, también una que responde en streaming; cambiar un secreto;
@@ -123,7 +125,9 @@ probable es que el exceso corte el flujo a mitad en vez de lanzar en el `fetch` 
 hoy un 500 «the function stopped before finishing» en vez del 546, y el arreglo va en el despachador (reenviar sólo
 líneas enteras y, si el flujo se corta con ese mensaje, añadir `{t:"error",kind:"cpu"}` y el fin); comprobar que la
 etiqueta `h-<hash>` se guarda entera; que sube un paquete grande (Stripe + OpenAI, el del borrador sin minificar);
-borrar un proyecto; y medir lo que tarda la caja en llegar a Cloudflare.
+borrar un proyecto; medir lo que tarda la caja en llegar a Cloudflare; y mirar en la factura de prueba la CPU del
+despachador por llamada y si la llamada al despachador y la del script cuentan como UNA petición o como dos
+(`lib/functions/meter.ts` cuenta una y 5 ms de despachador: si es más, se sube ahí).
 
 **Ver los scripts:** panel de Cloudflare → Workers for Platforms → el namespace, o
 `GET /accounts/{id}/workers/dispatch/namespaces/{ns}/scripts` con el token.
