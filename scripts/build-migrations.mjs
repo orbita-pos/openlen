@@ -168,6 +168,12 @@ const targets = [
   // publishedEnvHash. Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código:
   // getProject selecciona todas las columnas de projects.
   "env-vars-migrate",
+  // Las Edge Functions: functionDeployments, functionUsage, functionPools,
+  // functionInvocations y projectBackendEnvironments.publicRef (relleno para los
+  // borradores de antes). Aditiva e idempotente; va después de
+  // `backend-environments-migrate`. 🔴 OBLIGATORIA antes que el código:
+  // lib/backend/environments.ts selecciona todas las columnas.
+  "functions-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

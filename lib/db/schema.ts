@@ -1,6 +1,7 @@
 import { sql as sqlOp } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
   date,
@@ -994,6 +995,11 @@ export const projectBackendEnvironments = pgTable(
     /** La contraseña del rol de sólo lectura (sólo `live`); null hasta que Len
      *  lee producción por primera vez. */
     readOnlyPasswordEncrypted: text("readOnlyPasswordEncrypted"),
+    /** El ref PROPIO del borrador (spec local 2026-10-11, Parte 3), como el de
+     *  una rama de Supabase: `<publicRef>.<publish host>` va SIEMPRE al
+     *  borrador, sin mirar el Origin. Lo usan las funciones del borrador (que
+     *  llaman sin Origin) y los webhooks de prueba. Null en `live`. */
+    publicRef: text("publicRef").unique(),
     provisionedAt: timestamp("provisionedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
@@ -2104,4 +2110,69 @@ export const lenEmailRequests = pgTable(
     uniqueIndex("lenEmailRequests_dedupeKey_uq").on(t.dedupeKey),
     index("lenEmailRequests_project_createdAt_idx").on(t.projectId, t.createdAt),
   ],
+);
+
+// LAS EDGE FUNCTIONS (spec local docs/superpowers/specs/2026-10-11-edge-functions-design.md):
+// lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el
+// tope de dinero), y las últimas llamadas con sus registros (7 días).
+// `npm run functions:migrate`.
+export const functionDeployments = pgTable(
+  "functionDeployments",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    catalog: text("catalog").notNull(),
+    hash: text("hash").notNull(),
+    functions: jsonb("functions").$type<{ name: string; verifyJwt: boolean }[]>().notNull(),
+    /** Los sourcemaps del paquete (sólo los que tienen fuentes del proyecto), en gzip y base64. */
+    sourceMapsGz: text("sourceMapsGz"),
+    deployedAt: timestamp("deployedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.environment] })],
+);
+
+export const functionUsage = pgTable(
+  "functionUsage",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** `AAAA-MM` en UTC. */
+    month: text("month").notNull(),
+    calls: integer("calls").notNull().default(0),
+    nanoUsd: bigint("nanoUsd", { mode: "number" }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.month] })],
+);
+
+export const functionPools = pgTable(
+  "functionPools",
+  {
+    month: text("month").notNull(),
+    pool: text("pool").$type<"free" | "paid">().notNull(),
+    reservedNanoUsd: bigint("reservedNanoUsd", { mode: "number" }).notNull().default(0),
+    spentNanoUsd: bigint("spentNanoUsd", { mode: "number" }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.month, t.pool] })],
+);
+
+export const functionInvocations = pgTable(
+  "functionInvocations",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    name: text("name").notNull(),
+    status: integer("status").notNull(),
+    errorCode: text("errorCode"),
+    ms: integer("ms").notNull(),
+    logs: jsonb("logs").$type<{ level: string; msg: string }[]>().notNull(),
+    error: text("error"),
+    startedAt: timestamp("startedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("functionInvocations_project_idx").on(t.projectId, t.environment, t.startedAt)],
 );
