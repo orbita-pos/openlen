@@ -19,6 +19,7 @@ function motor() {
       llamadas.push(`deploy ${dest.environment} ${b.hash} ${env.SUPABASE_URL}`);
       desplegados.set(`${dest.ref}|${dest.environment}`, b.hash);
     },
+    setEnv: async () => undefined,
     async deployedHash(dest) {
       return desplegados.get(`${dest.ref}|${dest.environment}`) ?? null;
     },

@@ -48,6 +48,7 @@ function montar(guion: Guion = () => responde("ok"), cambia: Partial<GatewayDeps
   const engine: FunctionsEngine = {
     name: "local",
     deploy: async () => undefined,
+    setEnv: async () => undefined,
     deployedHash: async () => "h",
     remove: async () => undefined,
     invoke: (_d, e) => {

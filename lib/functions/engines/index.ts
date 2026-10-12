@@ -26,12 +26,17 @@ export function configuredEngineName(env: Readonly<Record<string, string | undef
   return null;
 }
 
-let engine: FunctionsEngine | null | undefined;
+// UN MOTOR POR PROCESO, no por módulo: en desarrollo Next instancia este módulo
+// una vez por ruta (medido en lib/agent/direcciones.ts), y la ruta de los
+// secretos cambiaría las variables de un motor que la puerta no usa. En
+// `globalThis`, como las direcciones de Len.
+const CLAVE = Symbol.for("openlen.functions.engine");
+type Global = typeof globalThis & { [CLAVE]?: FunctionsEngine | null };
 
 export function functionsEngine(): FunctionsEngine | null {
-  if (engine !== undefined) return engine;
-  engine = configuredEngineName() === "local" ? new LocalEngine() : null;
-  return engine;
+  const g = globalThis as Global;
+  if (!(CLAVE in g)) g[CLAVE] = configuredEngineName() === "local" ? new LocalEngine() : null;
+  return g[CLAVE] ?? null;
 }
 
 /** Las funciones están encendidas: hay motor Y hay backend de las páginas. */

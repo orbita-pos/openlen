@@ -91,4 +91,27 @@ describe("LocalEngine", () => {
     expect(cuerpo(await marcos(DEST, evento("q")))).toBe("A");
     expect(cuerpo(await marcos(otro, evento("q")))).toBe("B");
   });
+
+  it("🔴 setEnv: la siguiente llamada ve lo nuevo; la que estaba en curso acaba con lo de antes", { timeout: T }, async () => {
+    await desplegar(
+      {
+        "/supabase/functions/k/index.ts":
+          'Deno.serve(async (req) => { const v = Deno.env.get("K"); if (req.url.includes("lento")) await new Promise((r) => setTimeout(r, 400)); return new Response(v ?? "-"); });\n',
+      },
+      { K: "1" },
+    );
+    const enCurso = marcos(DEST, evento("k", { path: "/lento" }));
+    await new Promise((r) => setTimeout(r, 100));
+    await engine.setEnv(DEST, { K: "2" });
+    expect(cuerpo(await marcos(DEST, evento("k")))).toBe("2");
+    const viejos = await enCurso;
+    expect(viejos.at(-1)!.t).toBe("end");
+    expect(cuerpo(viejos)).toBe("1");
+  });
+
+  it("setEnv sin nada desplegado no hace nada", async () => {
+    const nada: Destination = { ref: "nadanadanadanadanada", environment: "live" };
+    await engine.setEnv(nada, { K: "x" });
+    expect(await engine.deployedHash(nada)).toBeNull();
+  });
 });

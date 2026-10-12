@@ -1,6 +1,7 @@
 // lib/functions/engines/types.ts — LO QUE ES UN MOTOR DE EDGE FUNCTIONS (spec
 // local 2026-10-11, Parte 2): desplegar el paquete de un proyecto en un
-// entorno, decir qué hay desplegado, invocarlo con marcos y quitarlo. Hay dos:
+// entorno, decir qué hay desplegado, cambiar sus variables, invocarlo con
+// marcos y quitarlo. Hay dos:
 // `local` (desarrollo, pruebas, autohospedaje de UN dueño) y `lambda` (fase 3).
 
 import type { Frame, InvokeEvent } from "@/lib/functions/runtime/runtime.mjs";
@@ -28,6 +29,10 @@ export interface EngineLimits {
 export interface FunctionsEngine {
   readonly name: "local" | "lambda";
   deploy(dest: Destination, bundle: EngineBundle, env: Readonly<Record<string, string>>, limits: EngineLimits): Promise<void>;
+  /** Variables nuevas para lo desplegado ahí, con el MISMO código (`supabase
+   *  secrets set`: al momento). Sin nada desplegado, nada. En Lambda (fase 3):
+   *  `UpdateFunctionConfiguration`, y en producción versión nueva + alias. */
+  setEnv(dest: Destination, env: Readonly<Record<string, string>>): Promise<void>;
   /** El hash de lo desplegado ahí, o null. */
   deployedHash(dest: Destination): Promise<string | null>;
   invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number }): AsyncIterable<Frame>;

@@ -51,8 +51,20 @@ export class LocalEngine implements FunctionsEngine {
     return this.#slots.get(destinationName(dest))?.hash ?? null;
   }
 
+  async setEnv(dest: Destination, env: Readonly<Record<string, string>>): Promise<void> {
+    const nombre = destinationName(dest);
+    const viejo = this.#slots.get(nombre);
+    if (!viejo) return;
+    // Mismo código y misma carpeta; OTRO hilo para lo que llegue. Las llamadas
+    // en curso acaban en el suyo, con lo de antes: cambiar un secreto no corta
+    // el streaming de nadie (Lambda tampoco corta lo que corre).
+    this.#slots.set(nombre, { hash: viejo.hash, dir: viejo.dir, env: { ...env }, limits: viejo.limits, worker: null, nextId: 0, listeners: new Map() });
+    this.#retire(viejo);
+  }
+
   async *invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number }): AsyncIterable<Frame> {
-    const slot = this.#slots.get(destinationName(dest));
+    const nombre = destinationName(dest);
+    const slot = this.#slots.get(nombre);
     if (!slot) {
       yield { t: "error", kind: "not_found" };
       return;
@@ -76,6 +88,8 @@ export class LocalEngine implements FunctionsEngine {
     } finally {
       clearTimeout(timer);
       slot.listeners.delete(id);
+      // Un hilo retirado por `setEnv` se apaga al acabar su última llamada.
+      if (this.#slots.get(nombre) !== slot) this.#retire(slot);
     }
   }
 
@@ -126,6 +140,14 @@ export class LocalEngine implements FunctionsEngine {
     w.unref();
     slot.worker = w;
     return w;
+  }
+
+  /** Apaga el hilo de un hueco que ya no es el de su destino, si no le queda nada en curso. */
+  #retire(slot: Slot): void {
+    if (slot.listeners.size > 0) return;
+    const w = slot.worker;
+    slot.worker = null;
+    void w?.terminate();
   }
 
   /** El hilo fuera; lo que esperaba, con su error y su fin. */
