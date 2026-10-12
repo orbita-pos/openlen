@@ -25,6 +25,8 @@ vi.mock("../environments", () => ({
   listEnvironments: async () => entornos,
   dbNameOf: (s: string) => `ol_${s}`,
   newScope: (ref: string, env: string) => `${ref}_${env === "draft" ? "d" : "l"}`,
+  // El ref propio del borrador (spec local 2026-10-11): aquí ninguno lo es.
+  getEnvironmentByPublicRef: async () => null,
 }));
 vi.mock("@/lib/lienzo/host", () => ({ etiquetaDeLienzo: () => MINE }));
 
