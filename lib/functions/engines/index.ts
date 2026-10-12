@@ -1,12 +1,13 @@
 // lib/functions/engines/index.ts — QUÉ MOTOR DE EDGE FUNCTIONS HAY EN ESTE
 // SERVIDOR (spec local 2026-10-11). Sin motor, nada de las funciones corre: ni
 // empaquetar al escribir, ni el estado, ni el `curl`, y /functions/v1 contesta
-// 503. `lambda` llega en la fase 3: hasta entonces ese valor es «ninguno» (una
-// palanca que no lleva a ninguna parte no se deja puesta).
+// 503. `local` es para desarrollo; `cloudflare`, el de producción (spec local
+// 2026-10-12): sin sus cinco variables, tampoco hay motor.
 
 import { backendConfigured } from "@/lib/backend/pg";
 
-import { configuredEngineName } from "../enabled";
+import { cloudflareConfigFrom, configuredEngineName } from "../enabled";
+import { CloudflareEngine } from "./cloudflare";
 import { LocalEngine } from "./local";
 import type { FunctionsEngine } from "./types";
 
@@ -21,7 +22,11 @@ type Global = typeof globalThis & { [CLAVE]?: FunctionsEngine | null };
 
 export function functionsEngine(): FunctionsEngine | null {
   const g = globalThis as Global;
-  if (!(CLAVE in g)) g[CLAVE] = configuredEngineName() === "local" ? new LocalEngine() : null;
+  if (!(CLAVE in g)) {
+    const nombre = configuredEngineName();
+    const cf = nombre === "cloudflare" ? cloudflareConfigFrom(process.env) : null;
+    g[CLAVE] = nombre === "local" ? new LocalEngine() : cf ? new CloudflareEngine(cf) : null;
+  }
   return g[CLAVE] ?? null;
 }
 
