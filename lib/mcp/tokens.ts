@@ -20,6 +20,8 @@ export interface McpTokenRecord {
   scopes: McpScope[];
   projectId: string | null;
   clientId: string | null;
+  /** La familia OAuth (la conexión), o null en los personales. */
+  familyId: string | null;
   expiresAt: Date | null;
 }
 
@@ -71,6 +73,7 @@ function toRecord(row: typeof schema.mcpTokens.$inferSelect): McpTokenRecord {
     scopes: normalizeScopes(row.scopes),
     projectId: row.projectId,
     clientId: row.clientId,
+    familyId: row.familyId,
     expiresAt: row.expiresAt,
   };
 }
