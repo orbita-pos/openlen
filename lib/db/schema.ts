@@ -2160,6 +2160,8 @@ export const functionPools = pgTable(
     pool: text("pool").$type<"free" | "paid">().notNull(),
     reservedNanoUsd: bigint("reservedNanoUsd", { mode: "number" }).notNull().default(0),
     spentNanoUsd: bigint("spentNanoUsd", { mode: "number" }).notNull().default(0),
+    /** El aviso del 80 % ya salió este mes (fase 3). */
+    alertedAt: timestamp("alertedAt", { mode: "date" }),
   },
   (t) => [primaryKey({ columns: [t.month, t.pool] })],
 );

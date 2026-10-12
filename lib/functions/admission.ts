@@ -4,17 +4,27 @@
 // antes. Al acabar, `release` liquida lo real (recortado al peor caso: Lambda
 // nunca cobra más que su tiempo límite) y suelta la plaza. Así el tope de dinero
 // NO se pasa nunca, ni con muchas llamadas a la vez.
+// Y de aquí salen los avisos (fase 3): la cuota al 80 % y al 100 %, y la bolsa al 80 %.
 
 import type { Plan } from "@/lib/plan";
 
 import type { ConcurrencyLimiter } from "./concurrency";
-import { FUNCTION_LIMITS, poolOf, type FunctionLimits } from "./limits";
+import { FUNCTION_LIMITS, poolOf, type FunctionLimits, type Pool } from "./limits";
 import { costNanoUsd, monthKey, worstCaseNanoUsd, type PoolCaps } from "./meter";
 import type { UsageStore } from "./usage";
 
 export type Admission =
   | { readonly ok: true; readonly limits: FunctionLimits; release(actualMs: number): Promise<void> }
   | { readonly ok: false; readonly reason: "concurrency" | "quota" | "cap" };
+
+/** Los avisos que salen de contar (spec local 2026-10-11, Partes 5 y 6). No
+ *  esperan ni lanzan: quien los pone los manda por su cuenta. */
+export interface AdmissionAlerts {
+  /** El proyecto llegó justo al 80 % o al 100 % de sus llamadas del mes. */
+  quota?(o: { readonly projectId: string; readonly percent: 80 | 100; readonly calls: number; readonly quota: number }): void;
+  /** Lo gastado en una bolsa pasó del 80 % de su tope (una vez al mes por bolsa). */
+  pool?(o: { readonly pool: Pool; readonly month: string; readonly spentNanoUsd: number; readonly capNanoUsd: number }): void;
+}
 
 export async function admit(o: {
   readonly projectId: string;
@@ -23,13 +33,15 @@ export async function admit(o: {
   readonly usage: UsageStore;
   readonly limiter: ConcurrencyLimiter;
   readonly caps: PoolCaps;
+  readonly alerts?: AdmissionAlerts;
 }): Promise<Admission> {
   const limits = FUNCTION_LIMITS[o.plan];
   const soltar = o.limiter.tryAcquire(o.projectId, limits.concurrent);
   if (!soltar) return { ok: false, reason: "concurrency" };
   const month = monthKey(o.now);
   try {
-    if (!(await o.usage.consumeCall(o.projectId, month, limits.callsPerMonth))) {
+    const calls = await o.usage.consumeCall(o.projectId, month, limits.callsPerMonth);
+    if (calls === null) {
       soltar();
       return { ok: false, reason: "quota" };
     }
@@ -40,6 +52,10 @@ export async function admit(o: {
       soltar();
       return { ok: false, reason: "cap" };
     }
+    // El aviso de cuota lo da la llamada que deja el mes JUSTO en el umbral, y
+    // sólo si entra (una que la bolsa rechaza se devuelve: avisará la siguiente).
+    if (calls === limits.callsPerMonth) o.alerts?.quota?.({ projectId: o.projectId, percent: 100, calls, quota: limits.callsPerMonth });
+    else if (calls === Math.ceil(limits.callsPerMonth * 0.8)) o.alerts?.quota?.({ projectId: o.projectId, percent: 80, calls, quota: limits.callsPerMonth });
     let hecho = false;
     return {
       ok: true,
@@ -48,7 +64,11 @@ export async function admit(o: {
         if (hecho) return;
         hecho = true;
         try {
-          await o.usage.settle({ pool, month, reservedNanoUsd: peor, actualNanoUsd: Math.min(costNanoUsd(actualMs), peor), projectId: o.projectId });
+          const { poolSpentNanoUsd } = await o.usage.settle({ pool, month, reservedNanoUsd: peor, actualNanoUsd: Math.min(costNanoUsd(actualMs), peor), projectId: o.projectId });
+          const umbral = Math.floor(o.caps[pool] * 0.8);
+          if (o.alerts?.pool && poolSpentNanoUsd >= umbral && (await o.usage.claimPoolAlert(pool, month, umbral).catch(() => false))) {
+            o.alerts.pool({ pool, month, spentNanoUsd: poolSpentNanoUsd, capNanoUsd: o.caps[pool] });
+          }
         } finally {
           soltar();
         }

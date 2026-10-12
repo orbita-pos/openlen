@@ -14,7 +14,7 @@
 
 import type { Plan } from "@/lib/plan";
 
-import { admit } from "./admission";
+import { admit, type AdmissionAlerts } from "./admission";
 import { checkFunctionAuth } from "./auth";
 import type { ConcurrencyLimiter } from "./concurrency";
 import type { DeploymentRecord } from "./deployments";
@@ -71,6 +71,8 @@ export interface GatewayDeps {
   /** La marca de abuso de un proyecto (spec local 2026-10-11, Parte 3): con ella,
    *  503 y ni se despliega, ni se cuenta, ni se llama. */
   blocked?(projectId: string): Promise<boolean>;
+  /** Los avisos de cuota y de bolsa (fase 3). */
+  readonly alerts?: AdmissionAlerts;
 }
 
 const ERROR_DE: Record<Extract<Frame, { t: "error" }>["kind"], FunctionsErrorCode> = {
@@ -146,7 +148,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
     if (body.length > MAX_REQUEST_BYTES) return functionsError("REQUEST_TOO_LARGE");
   }
 
-  const admission = await admit({ projectId: target.projectId, plan: await deps.plan(target.projectId), now: deps.now(), usage: deps.usage, limiter: deps.limiter, caps: deps.caps });
+  const admission = await admit({ projectId: target.projectId, plan: await deps.plan(target.projectId), now: deps.now(), usage: deps.usage, limiter: deps.limiter, caps: deps.caps, alerts: deps.alerts });
   if (!admission.ok) return functionsError(admission.reason === "concurrency" ? "RATE_LIMIT_EXCEEDED" : "QUOTA_EXCEEDED");
   const terminar = deps.inflight?.start(target.projectId, target.environment);
 

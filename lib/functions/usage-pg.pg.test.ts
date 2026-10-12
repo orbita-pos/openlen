@@ -28,12 +28,12 @@ afterAll(async () => {
 });
 
 describe("pgUsageStore", () => {
-  it("la cuota: entra hasta el tope y se devuelve", async () => {
-    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(true);
-    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(true);
-    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(false);
+  it("la cuota: entra hasta el tope —cada una dice cuántas lleva— y se devuelve", async () => {
+    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(1);
+    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(2);
+    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBeNull();
     await pgUsageStore.refundCall(PROYECTO, MES);
-    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(true);
+    expect(await pgUsageStore.consumeCall(PROYECTO, MES, 2)).toBe(2);
   });
 
   it("🔴 diez reservas A LA VEZ con hueco para tres: entran exactamente tres", async () => {
@@ -42,10 +42,21 @@ describe("pgUsageStore", () => {
   });
 
   it("liquidar suelta la reserva y apunta lo gastado en la bolsa y en el proyecto", async () => {
-    await pgUsageStore.settle({ pool: "free", month: MES, reservedNanoUsd: 100, actualNanoUsd: 40, projectId: PROYECTO });
+    expect(await pgUsageStore.settle({ pool: "free", month: MES, reservedNanoUsd: 100, actualNanoUsd: 40, projectId: PROYECTO })).toEqual({ poolSpentNanoUsd: 40 });
     const [p] = await db.select().from(schema.functionPools).where(and(eq(schema.functionPools.month, MES), eq(schema.functionPools.pool, "free")));
     expect(p).toMatchObject({ reservedNanoUsd: 200, spentNanoUsd: 40 });
     const [u] = await db.select().from(schema.functionUsage).where(and(eq(schema.functionUsage.projectId, PROYECTO), eq(schema.functionUsage.month, MES)));
     expect(u!.nanoUsd).toBe(40);
+  });
+
+  it("🔴 diez a la vez: cada una ve SU número (el que cruza un umbral es uno solo)", async () => {
+    const r = await Promise.all(Array.from({ length: 10 }, () => pgUsageStore.consumeCall(PROYECTO, "1999-02", 100)));
+    expect([...r].map(Number).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it("el aviso de la bolsa: sólo pasado el umbral y sólo UNA vez al mes", async () => {
+    expect(await pgUsageStore.claimPoolAlert("free", MES, 1_000_000)).toBe(false); // lo gastado es 40
+    expect(await pgUsageStore.claimPoolAlert("free", MES, 40)).toBe(true);
+    expect(await pgUsageStore.claimPoolAlert("free", MES, 40)).toBe(false);
   });
 });
