@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./catalog";
-import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
+import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_APPS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
 import {
   adjuntoDelManual,
   buildManualDeLaPlataforma,
@@ -297,5 +297,12 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
       }
       expect(m.indexOf("Deno.serve")).toBeGreaterThan(m.indexOf("Live updates go through Realtime"));
     }
+  });
+
+  it("🔴 la guía para convertir una página en app (apps.md) dice lo mismo que el manual", () => {
+    expect(documentosDeLaPlataforma(null, {})[RUTA_APPS]).toContain("Edge Functions don't exist here yet");
+    const con = documentosDeLaPlataforma(null, CON)[RUTA_APPS]!;
+    expect(con).not.toContain("Edge Functions don't exist here yet");
+    expect(con).toContain("Deno.serve(async (req) => …)");
   });
 });
