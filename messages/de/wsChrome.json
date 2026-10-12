@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "Tabellen",
       "users": "Nutzer",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "Funktionen",
+      "secrets": "Secrets"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -533,6 +535,30 @@
       "resetConfirm": "Testdaten löschen und aus den Migrationen neu aufbauen?",
       "noLive": "Noch keine echten Daten: Sie beginnen beim Veröffentlichen.",
       "testMails": "Testdaten senden keine E-Mails: Neue Konten werden automatisch bestätigt."
+    },
+    "functions": {
+      "blocked": "Die Edge Functions dieses Projekts sind abgeschaltet. Schreib uns, wenn du das für einen Fehler hältst.",
+      "calls": "Aufrufe diesen Monat: {calls} von {quota}",
+      "callsLabel": "Aufrufe diesen Monat",
+      "empty": "Dieses Projekt hat noch keine Edge Functions.",
+      "draft": "Entwurf",
+      "live": "Produktion",
+      "noJwt": "Ohne JWT",
+      "errorsTitle": "Letzte Fehler",
+      "noErrors": "Keine Fehler in den letzten 7 Tagen."
+    },
+    "secrets": {
+      "hint": "Deine Funktionen lesen sie mit Deno.env.get. Die Werte werden nie wieder angezeigt: Du kannst sie nur ersetzen.",
+      "draft": "Entwurf",
+      "live": "Produktion",
+      "empty": "Keine Secrets.",
+      "nameField": "Name",
+      "add": "Hinzufügen",
+      "replace": "Ersetzen",
+      "save": "Speichern",
+      "delete": "Löschen",
+      "confirmDelete": "Löschen?",
+      "loadError": "Die Secrets konnten nicht geladen werden."
     }
   }
 }
