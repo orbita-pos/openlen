@@ -20,6 +20,8 @@ export const LEGACY_QUESTION_TOOL = "preguntar";
  *  pregunta, y lo que vuelve son NOMBRES (los valores van de la tarjeta a la
  *  ruta de secretos, nunca por el turno). */
 export const REQUEST_SECRETS = "request_secrets";
+/** El id de su pregunta: lo pone la herramienta y lo contesta la tarjeta. */
+export const SECRETS_QUESTION_ID = "secrets";
 
 /** Un secreto que Len pide por su nombre. */
 export interface SecretRequest {
