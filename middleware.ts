@@ -221,7 +221,8 @@ export const config = {
   // volvería redirigida a /es/rest/v1/… . `storage/v1/` (carril D): el Storage
   // de las páginas (lib/backend/storage), igual. Y `realtime/v1/` (carril D):
   // en producción va a su servicio, no a Next; en local, que no lo redirija.
+  // Y `functions/v1/`: las Edge Functions (lib/functions), igual.
   matcher: [
-    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|.*\\..*).*)",
+    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|functions/v1/|.*\\..*).*)",
   ],
 };
