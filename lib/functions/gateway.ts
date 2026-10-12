@@ -66,6 +66,8 @@ export interface GatewayDeps {
   readonly caps: PoolCaps;
   record(r: InvocationRecord): Promise<void>;
   now(): Date;
+  /** Pendiente de la fase 1: lo que `use_page` espera antes de leer su visita. */
+  readonly inflight?: { start(projectId: string, env: FunctionsEnvironment): () => void };
 }
 
 const ERROR_DE: Record<Extract<Frame, { t: "error" }>["kind"], FunctionsErrorCode> = {
@@ -142,6 +144,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
 
   const admission = await admit({ projectId: target.projectId, plan: await deps.plan(target.projectId), now: deps.now(), usage: deps.usage, limiter: deps.limiter, caps: deps.caps });
   if (!admission.ok) return functionsError(admission.reason === "concurrency" ? "RATE_LIMIT_EXCEEDED" : "QUOTA_EXCEEDED");
+  const terminar = deps.inflight?.start(target.projectId, target.environment);
 
   const event: InvokeEvent = {
     fn: name,
@@ -209,6 +212,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
         startedAt,
       })
       .catch(() => undefined);
+    terminar?.();
   };
   const vaciarYAnotar = () => void vaciar().catch(() => undefined).finally(() => void anotar());
 

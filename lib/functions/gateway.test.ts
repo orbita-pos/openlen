@@ -86,6 +86,21 @@ const leida = async (p: Promise<Response>) => {
 };
 
 describe("la puerta", () => {
+  it("pendiente de la fase 1: la llamada cuenta «en vuelo» hasta DESPUÉS de anotarse; la que no se admite, no", async () => {
+    const vuelo: string[] = [];
+    const montado = montar(undefined, {
+      inflight: { start: (p, e) => (vuelo.push(`start ${p} ${e}`), () => vuelo.push(`done ${montado.records.length}`)) },
+    });
+    const r = await llamar(montado.deps);
+    await r.arrayBuffer();
+    await vi.waitFor(() => expect(vuelo).toEqual(["start p1 draft", "done 1"]));
+    const tope = montar(undefined, { caps: { free: 1, paid: 1 }, inflight: { start: () => (vuelo.push("no"), () => {}) } });
+    const n = await llamar(tope.deps);
+    await n.arrayBuffer();
+    expect(n.status).toBe(429);
+    expect(vuelo).not.toContain("no");
+  });
+
   it("🔴 despublicada: producción contesta NOT_FOUND, y ni se repone ni se llama; el borrador sigue", async () => {
     const repuestos: string[] = [];
     const { deps, eventos } = montar(undefined, {
