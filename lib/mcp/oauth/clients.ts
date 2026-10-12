@@ -43,7 +43,11 @@ export async function resolveClient(clientId: string, fetchJson?: FetchJson): Pr
   if (row && fresh) return toClient(row);
   if (!isCimdClientId(clientId)) return row ? toClient(row) : null;
   const r = await fetchClientMetadataDocument(clientId, fetchJson);
-  if (!r.ok) return null;
+  if (!r.ok) {
+    // Sin esto, un CIMD que no baja es un «invalid_client» mudo en /authorize.
+    console.warn(`[mcp-oauth] CIMD ${clientId}: ${r.reason}`);
+    return null;
+  }
   const name = r.doc.client_name ?? new URL(clientId).host;
   await db
     .insert(schema.mcpOauthClients)
