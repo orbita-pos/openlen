@@ -270,6 +270,18 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
 }
 
 describe("summarizeProjectState", () => {
+  it("EDGE FUNCTIONS: las nombra con la URL del borrador; sin ellas, no", () => {
+    const con = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+      edgeFunctions: { draft: ["checkout", "stripe-webhook"], live: [], draftUrl: "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/" },
+    });
+    assert.deepEqual(con.edge_functions, { draft: ["checkout", "stripe-webhook"], production: [], draft_url: "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/" });
+    assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).edge_functions, undefined);
+  });
+
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);
@@ -531,6 +543,17 @@ describe("preparar_marketing, retirada", () => {
 // sobre el velo del hero antes de rendirse y pintar media portada de sólido.
 // No es un modelo tonto: es un modelo con una pregunta que no puede hacer.
 describe("view_page", () => {
+  it("EDGE FUNCTIONS: también view_page dice las llamadas de su visita", async () => {
+    const { deps } = makeDeps();
+    const conOjos = {
+      ...deps,
+      observarPagina: async () => ({ respuesta: "se ve bien" }),
+      edgeFunctionCalls: async () => "Edge Function calls during this visit (draft):\n- hello → 500 WORKER_ERROR (3 ms)",
+    };
+    const out = await runAgentTool(makeSession(), conOjos, "view_page", { mode: "measure", question: "¿se ve?" });
+    assert.match(String(out.response.edge_function_calls), /WORKER_ERROR/);
+  });
+
   it("tipo=medir devuelve la respuesta y NO toca la página", async () => {
     const { deps } = makeDeps();
     const vistas: unknown[] = [];
@@ -656,6 +679,22 @@ describe("use_page", () => {
       visitas.push(input);
       return { informe: "1. pulsa «Agregar» → pulsé un <button> «Agregar»." };
     },
+  });
+
+  it("EDGE FUNCTIONS: las llamadas de la visita van en edge_function_calls; sin ellas, el campo no está", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    // Con `as`: una asignación dentro de un callback no la sigue el estrechamiento de TS.
+    let desde = null as Date | null;
+    const con = {
+      ...conNavegador(deps, visitas),
+      edgeFunctionCalls: async (_p: string, d: Date) => ((desde = d), "Edge Function calls during this visit (draft):\n- checkout → 200 (12 ms)"),
+    };
+    const out = await runAgentTool(makeSession(), con, "use_page", { steps: [{ click: "Agregar" }] });
+    assert.match(String(out.response.edge_function_calls), /checkout → 200/);
+    assert.ok(desde instanceof Date);
+    const sin = await runAgentTool(makeSession(), conNavegador(deps, []), "use_page", { steps: [{ click: "Agregar" }] });
+    assert.equal(sin.response.edge_function_calls, undefined);
   });
 
   it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {

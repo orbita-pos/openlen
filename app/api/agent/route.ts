@@ -798,6 +798,9 @@ async function correrTurno(
         console.warn("[agent] no se pudo leer el backend del proyecto", err);
         return null;
       }),
+      // Las Edge Functions (spec local 2026-10-11): sus nombres y la URL del
+      // borrador. Si no se pueden leer, el turno sigue sin ellas.
+      edgeFunctions: await (deps.edgeFunctions?.(projectId) ?? Promise.resolve(null)).catch(() => null),
       // En una app, las rutas de su carpeta (su código) y los nombres de las
       // variables del dueño. Si no se pueden leer, el turno sigue sin ellos
       // (Len saca la carpeta con la terminal; las variables, del manual).
