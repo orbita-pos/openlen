@@ -5,7 +5,7 @@ import { hashSecretKey } from "@/lib/backend/keys";
 
 import { ConcurrencyLimiter } from "./concurrency";
 import type { DeploymentRecord } from "./deployments";
-import type { Frame, FunctionsEngine, InvokeEvent } from "./engines/types";
+import type { CallLimits, Destination, Frame, FunctionsEngine, InvokeEvent } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps, type InvocationRecord, type ResolvedTarget } from "./gateway";
 import { FUNCTION_LIMITS } from "./limits";
 import { memoryUsageStore } from "./usage";
@@ -331,5 +331,28 @@ describe("la puerta", () => {
     });
     await llamar(deps);
     expect(orden).toEqual(["ensure", "deployment"]);
+  });
+
+  it("se pasa de CPU en Cloudflare: 546 WORKER_RESOURCE_LIMIT", async () => {
+    const { deps } = montar(() => [{ t: "error", kind: "cpu", message: "Worker exceeded CPU time limit." }, { t: "end", ms: 0 }]);
+    const r = await llamar(deps);
+    expect(r.status).toBe(546);
+    expect(r.headers.get("sb-error-code")).toBe("WORKER_RESOURCE_LIMIT");
+  });
+
+  it("🔴 el motor no llega a Cloudflare: 503 FUNCTIONS_UNAVAILABLE", async () => {
+    const { deps } = montar(() => [{ t: "error", kind: "unavailable", message: "the dispatcher answered 403" }]);
+    const r = await llamar(deps);
+    expect(r.status).toBe(503);
+    expect(r.headers.get("sb-error-code")).toBe("FUNCTIONS_UNAVAILABLE");
+  });
+
+  it("🔴 la puerta le pasa al motor los límites del plan", async () => {
+    const limites: CallLimits[] = [];
+    const { deps } = montar();
+    const motor = deps.engine!;
+    const engine: FunctionsEngine = { ...motor, invoke: (d: Destination, e: InvokeEvent, o: { timeoutMs: number; limits: CallLimits }) => (limites.push(o.limits), motor.invoke(d, e, o)) };
+    await leida(llamar({ ...deps, engine }));
+    expect(limites).toEqual([{ cpuMs: 50, subRequests: 50 }]);
   });
 });
