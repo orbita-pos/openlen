@@ -11,14 +11,16 @@ import { withIss } from "./authorize";
 export const CODE_TTL_MS = 5 * 60_000;
 export type McpOauthRequestRow = typeof schema.mcpOauthRequests.$inferSelect;
 
-export async function getPendingRequest(id: string): Promise<(McpOauthRequestRow & { clientName: string }) | null> {
+export async function getPendingRequest(
+  id: string,
+): Promise<(McpOauthRequestRow & { clientName: string; clientKind: "dcr" | "cimd" }) | null> {
   const [row] = await db
-    .select({ request: schema.mcpOauthRequests, clientName: schema.mcpOauthClients.name })
+    .select({ request: schema.mcpOauthRequests, clientName: schema.mcpOauthClients.name, clientKind: schema.mcpOauthClients.kind })
     .from(schema.mcpOauthRequests)
     .innerJoin(schema.mcpOauthClients, eq(schema.mcpOauthClients.id, schema.mcpOauthRequests.clientId))
     .where(eq(schema.mcpOauthRequests.id, id))
     .limit(1);
-  return row ? { ...row.request, clientName: row.clientName } : null;
+  return row ? { ...row.request, clientName: row.clientName, clientKind: row.clientKind } : null;
 }
 
 export async function decideConsent(p: {

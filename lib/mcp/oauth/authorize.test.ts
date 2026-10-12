@@ -60,6 +60,18 @@ describe("/authorize", () => {
     expect(m.insert).toHaveBeenLastCalledWith(expect.objectContaining({ scopes: ["projects:read"] }));
   });
 
+  it("sólo offline_access (u openid): es no pedir ningún permiso del MCP — los tres", async () => {
+    await startAuthorization(qs({ scope: "offline_access" }), { resolveClient });
+    expect(m.insert).toHaveBeenLastCalledWith(expect.objectContaining({ scopes: ["projects:read", "projects:write", "publish"] }));
+    await startAuthorization(qs({ scope: "openid offline_access" }), { resolveClient });
+    expect(m.insert).toHaveBeenLastCalledWith(expect.objectContaining({ scopes: ["projects:read", "projects:write", "publish"] }));
+  });
+
+  it("un permiso que no existe, a solas: invalid_scope", async () => {
+    const r = await startAuthorization(qs({ scope: "admin" }), { resolveClient });
+    expect(r.kind === "redirect" && new URL(r.url).searchParams.get("error")).toBe("invalid_scope");
+  });
+
   it("withIss pone iss siempre", () => {
     expect(new URL(withIss("http://127.0.0.1:1/cb?x=1", { code: "c", state: undefined })).searchParams.get("iss")).toBe("https://openlen.com");
   });

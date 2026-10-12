@@ -27,6 +27,9 @@ export default async function McpConsentPage({ params }: { params: Promise<{ loc
   return (
     <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center gap-5 px-4 py-12">
       <h1 className="text-2xl font-semibold">{t("title", { client: req.clientName })}</h1>
+      <p className="text-sm opacity-70">
+        {req.clientKind === "cimd" ? t("verifiedBy", { host: new URL(req.clientId).host }) : t("unverified")}
+      </p>
       <p className="text-sm opacity-70">{t("returnsTo", { host: back.host || back.protocol })}</p>
       {loopback ? <p className="rounded-lg border px-4 py-3 text-sm">{t("localhost")}</p> : null}
       <p className="text-sm opacity-70">{t("signedInAs", { email: session?.user?.email ?? "" })}</p>

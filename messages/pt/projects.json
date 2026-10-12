@@ -256,6 +256,8 @@
     "notFound": "Este pedido não existe.",
     "used": "Este pedido já foi respondido.",
     "redirecting": "Voltando… você pode fechar esta aba se nada acontecer.",
-    "failed": "Não funcionou. Recarregue a página e tente de novo."
+    "failed": "Não funcionou. Recarregue a página e tente de novo.",
+    "verifiedBy": "Identidade publicada por {host}.",
+    "unverified": "Não verificado: o nome foi escolhido pelo próprio aplicativo. Veja para onde ele volta antes de permitir."
   }
 }

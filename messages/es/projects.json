@@ -256,6 +256,8 @@
     "notFound": "Esta petición no existe.",
     "used": "Esta petición ya se contestó.",
     "redirecting": "Volviendo… puedes cerrar esta pestaña si no pasa nada.",
-    "failed": "No funcionó. Recarga la página y prueba otra vez."
+    "failed": "No funcionó. Recarga la página y prueba otra vez.",
+    "verifiedBy": "Identidad publicada por {host}.",
+    "unverified": "Sin verificar: el nombre lo eligió la propia aplicación. Mira a dónde vuelve antes de permitirlo."
   }
 }

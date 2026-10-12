@@ -256,6 +256,8 @@
     "notFound": "Diese Anfrage gibt es nicht.",
     "used": "Diese Anfrage wurde bereits beantwortet.",
     "redirecting": "Du wirst zurückgeleitet … du kannst diesen Tab schließen, wenn nichts passiert.",
-    "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal."
+    "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal.",
+    "verifiedBy": "Identität veröffentlicht von {host}.",
+    "unverified": "Nicht verifiziert: Den Namen hat die App selbst gewählt. Prüfe, wohin sie zurückkehrt, bevor du sie erlaubst."
   }
 }

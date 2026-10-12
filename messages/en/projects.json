@@ -256,6 +256,8 @@
     "notFound": "This request doesn't exist.",
     "used": "This request was already answered.",
     "redirecting": "Taking you back… you can close this tab if nothing happens.",
-    "failed": "That didn't work. Reload the page and try again."
+    "failed": "That didn't work. Reload the page and try again.",
+    "verifiedBy": "Identity published by {host}.",
+    "unverified": "Unverified: this app chose its own name. Check where it returns before you allow it."
   }
 }
