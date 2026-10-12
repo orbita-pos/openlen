@@ -19,6 +19,11 @@ import {
 import { destinationName, type CallLimits, type Destination, type EngineBundle, type EngineLimits, type Frame, type FunctionsEngine, type InvokeEvent } from "./types";
 
 const HASH_TAG = "h-";
+/** Lo que se leyó de la API vale este rato; lo que el motor subió o quitó, lo
+ *  sabe sin preguntar. La puerta mira el hash ANTES DE CADA LLAMADA
+ *  (`ensureDeployed`): preguntarlo siempre sumaría la API de Cloudflare a cada
+ *  llamada y gastaría su límite de tasa (1.200 cada 5 minutos). */
+const HASH_TTL_MS = 5 * 60_000;
 
 const noEsta = (e: unknown) => e instanceof CloudflareApiError && e.status === 404;
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -27,10 +32,14 @@ export class CloudflareEngine implements FunctionsEngine {
   readonly name = "cloudflare" as const;
   readonly #cfg: CloudflareConfig;
   readonly #fetch: Fetch;
+  readonly #now: () => number;
+  /** El hash de cada script (null: no hay), y desde cuándo se sabe. */
+  readonly #hashes = new Map<string, { readonly hash: string | null; readonly at: number }>();
 
-  constructor(cfg: CloudflareConfig, f: Fetch = fetch) {
+  constructor(cfg: CloudflareConfig, f: Fetch = fetch, now: () => number = Date.now) {
     this.#cfg = cfg;
     this.#fetch = f;
+    this.#now = now;
   }
 
   #script(dest: Destination): string {
@@ -46,6 +55,7 @@ export class CloudflareEngine implements FunctionsEngine {
       tags: [`${HASH_TAG}${bundle.hash}`],
     };
     await cfRequest(this.#cfg, this.#fetch, "PUT", this.#script(dest), scriptForm(metadata, bundle.files));
+    this.#hashes.set(destinationName(dest), { hash: bundle.hash, at: this.#now() });
   }
 
   async setEnv(dest: Destination, env: Readonly<Record<string, string>>): Promise<void> {
@@ -65,14 +75,20 @@ export class CloudflareEngine implements FunctionsEngine {
   }
 
   async deployedHash(dest: Destination): Promise<string | null> {
+    const nombre = destinationName(dest);
+    const sabido = this.#hashes.get(nombre);
+    if (sabido && this.#now() - sabido.at <= HASH_TTL_MS) return sabido.hash;
+    let hash: string | null;
     try {
       const tags = await cfRequest<string[]>(this.#cfg, this.#fetch, "GET", `${this.#script(dest)}/tags`);
       const t = tags.find((x) => x.startsWith(HASH_TAG));
-      return t ? t.slice(HASH_TAG.length) : null;
+      hash = t ? t.slice(HASH_TAG.length) : null;
     } catch (e) {
-      if (noEsta(e)) return null;
-      throw e;
+      if (!noEsta(e)) throw e;
+      hash = null;
     }
+    this.#hashes.set(nombre, { hash, at: this.#now() });
+    return hash;
   }
 
   async remove(dest: Destination): Promise<void> {
@@ -81,6 +97,7 @@ export class CloudflareEngine implements FunctionsEngine {
     } catch (e) {
       if (!noEsta(e)) throw e;
     }
+    this.#hashes.set(destinationName(dest), { hash: null, at: this.#now() });
   }
 
   async *invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number; readonly limits: CallLimits }): AsyncIterable<Frame> {

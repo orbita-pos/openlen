@@ -1,6 +1,6 @@
 // lib/functions/secrets-real.ts — LOS SECRETOS CON LO DE VERDAD (spec local
 // 2026-10-11, Parte 4): el almacén cifrado, las `SUPABASE_*` de cada entorno
-// para medir los 4 KB, y el motor configurado. Sin motor (oscuro), null.
+// para contar las 128 variables, y el motor configurado. Sin motor (oscuro), null.
 
 import "server-only";
 

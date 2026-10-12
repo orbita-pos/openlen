@@ -118,8 +118,12 @@ scripts) y no cobra lo que las funciones mandan a internet.
 **Antes de abrirlo a todos, el ensayo real** (spec local 2026-10-12, Parte 8 y «Riesgos abiertos»): desplegar un
 borrador y publicar a producción; llamar a una función, también una que responde en streaming; cambiar un secreto;
 pasarse de CPU a propósito y apuntar el mensaje exacto de Cloudflare (el despachador lo trata como límite si dice
-«exceeded» o «limit»); comprobar que la etiqueta `h-<hash>` se guarda entera; borrar un proyecto; y medir lo que tarda la
-caja en llegar a Cloudflare.
+«exceeded» o «limit») y **dónde llega**: `worker.mjs` contesta en el acto y la función corre detrás, así que lo más
+probable es que el exceso corte el flujo a mitad en vez de lanzar en el `fetch` del despachador; entonces la puerta da
+hoy un 500 «the function stopped before finishing» en vez del 546, y el arreglo va en el despachador (reenviar sólo
+líneas enteras y, si el flujo se corta con ese mensaje, añadir `{t:"error",kind:"cpu"}` y el fin); comprobar que la
+etiqueta `h-<hash>` se guarda entera; que sube un paquete grande (Stripe + OpenAI, el del borrador sin minificar);
+borrar un proyecto; y medir lo que tarda la caja en llegar a Cloudflare.
 
 **Ver los scripts:** panel de Cloudflare → Workers for Platforms → el namespace, o
 `GET /accounts/{id}/workers/dispatch/namespaces/{ns}/scripts` con el token.

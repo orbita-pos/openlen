@@ -333,6 +333,23 @@ describe("la puerta", () => {
     expect(orden).toEqual(["ensure", "deployment"]);
   });
 
+  it("🔴 si comprobar lo desplegado falla (la API de Cloudflare no contesta), la llamada sigue con lo que haya, sin un 500 crudo", async () => {
+    const { deps, eventos } = montar(undefined, {
+      ensureDeployed: async () => {
+        throw new Error("Cloudflare API: HTTP 429");
+      },
+    });
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const r = await leida(llamar(deps));
+      expect(r.status).toBe(200);
+      expect(eventos).toHaveLength(1);
+      expect(error).toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it("se pasa de CPU en Cloudflare: 546 WORKER_RESOURCE_LIMIT", async () => {
     const { deps } = montar(() => [{ t: "error", kind: "cpu", message: "Worker exceeded CPU time limit." }, { t: "end", ms: 0 }]);
     const r = await llamar(deps);

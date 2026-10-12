@@ -74,6 +74,27 @@ describe("CloudflareEngine — la API", () => {
     expect(await api(() => mal(404, "This Worker does not exist")).engine.deployedHash(DEST)).toBeNull();
   });
 
+  it("🔴 deployedHash no pregunta a la API en cada llamada: lo que el motor subió o quitó lo sabe, y lo leído vale 5 minutos", async () => {
+    let ahora = 0;
+    const llamadas: string[] = [];
+    const f = (async (url: string, init: RequestInit = {}) => {
+      llamadas.push(`${init.method ?? "GET"} ${String(url).replace(BASE, "")}`);
+      return init.method === "GET" ? ok(["h-viejo"]) : ok(null);
+    }) as unknown as typeof fetch;
+    const engine = new CloudflareEngine(CFG, f, () => ahora);
+    expect(await engine.deployedHash(DEST)).toBe("viejo");
+    expect(await engine.deployedHash(DEST)).toBe("viejo");
+    expect(llamadas).toEqual(["GET /tags"]);
+    ahora += 5 * 60_000 + 1;
+    expect(await engine.deployedHash(DEST)).toBe("viejo");
+    expect(llamadas).toEqual(["GET /tags", "GET /tags"]);
+    await engine.deploy(DEST, { hash: "nuevo", files: { "worker.mjs": "w" } }, {}, { timeoutSec: 1, memoryMb: 128 });
+    expect(await engine.deployedHash(DEST)).toBe("nuevo");
+    await engine.remove(DEST);
+    expect(await engine.deployedHash(DEST)).toBeNull();
+    expect(llamadas).toEqual(["GET /tags", "GET /tags", "PUT ", "DELETE "]);
+  });
+
   it("setEnv: PUT de cada variable y DELETE de las que sobran; sin script, nada", async () => {
     const { engine, llamadas } = api((c) => (c.method === "GET" ? ok([{ name: "A", type: "secret_text" }, { name: "VIEJA", type: "secret_text" }]) : ok({})));
     await engine.setEnv(DEST, { A: "1", B: "2" });
