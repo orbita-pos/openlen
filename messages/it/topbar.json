@@ -67,7 +67,8 @@
     "editorSound": "Suono dell'editor",
     "manageSubscription": "Gestisci abbonamento",
     "signOut": "Esci",
-    "profile": "Il tuo profilo"
+    "profile": "Il tuo profilo",
+    "connectedApps": "App collegate"
   },
   "relativeTime": {
     "seconds": "{count} s fa",

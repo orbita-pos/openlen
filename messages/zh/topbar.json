@@ -67,7 +67,8 @@
     "editorSound": "编辑器音效",
     "manageSubscription": "管理订阅",
     "signOut": "退出登录",
-    "profile": "我的个人资料"
+    "profile": "我的个人资料",
+    "connectedApps": "已连接的应用"
   },
   "relativeTime": {
     "seconds": "{count} 秒前",

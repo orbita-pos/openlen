@@ -85,6 +85,7 @@ export default defineConfig({
       "lib/mcp/**/*.test.ts",
       "app/api/mcp/**/*.test.ts",
       "app/api/oauth/**/*.test.ts",
+      "components/mcp/**/*.test.tsx",
       "lib/agent/version-labels.test.ts",
       "lib/projects/create-from-html.test.ts",
       "movil/src/**/*.test.tsx",

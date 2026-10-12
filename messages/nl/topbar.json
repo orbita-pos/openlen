@@ -67,7 +67,8 @@
     "editorSound": "Editorgeluid",
     "manageSubscription": "Abonnement beheren",
     "signOut": "Afmelden",
-    "profile": "Je profiel"
+    "profile": "Je profiel",
+    "connectedApps": "Gekoppelde apps"
   },
   "relativeTime": {
     "seconds": "{count}s geleden",

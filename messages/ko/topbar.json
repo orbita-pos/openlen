@@ -67,7 +67,8 @@
     "editorSound": "에디터 소리",
     "manageSubscription": "구독 관리",
     "signOut": "로그아웃",
-    "profile": "내 프로필"
+    "profile": "내 프로필",
+    "connectedApps": "연결된 앱"
   },
   "relativeTime": {
     "seconds": "{count}초 전",
