@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { AVISO_DE_REINICIO, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, TerminalDeLen } from "./terminal";
 import { DE_SOLO_LECTURA } from "./ficheros";
+import type { CurlRequest } from "@/lib/functions/curl-types";
 
 const SITIO = {
   "/index.html": "<h1>Marejada</h1>\n<p>Calle Pelícanos 12</p>\n",
@@ -503,6 +504,48 @@ describe("TerminalDeLen", () => {
     it("en una página (sin appTools) no hay tsc ni npm", async () => {
       const { t } = terminal({});
       expect((await t.ejecutar("tsc; echo rc=$?")).stdout).toMatch(/rc=127\n$/);
+    }, 20_000);
+  });
+
+  // spec local 2026-10-11: `curl` a las funciones del proyecto, como prueban
+  // los docs de Supabase; la terminal sigue sin red.
+  describe("curl, sólo hacia las Edge Functions del proyecto", () => {
+    const PREFIJO = "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/";
+    function conCurl() {
+      const pedidas: CurlRequest[] = [];
+      const { t } = terminal({
+        functionsCurl: async () => ({
+          prefixes: [PREFIJO],
+          call: async (r) => {
+            pedidas.push(r);
+            return { status: 200, statusText: "OK", headers: { "content-type": "application/json" }, bodyB64: Buffer.from('{"message":"Hello Ana!"}').toString("base64") };
+          },
+        }),
+      });
+      return { t, pedidas };
+    }
+
+    it("POST a su función: llega con método, cabeceras y cuerpo, y sale la respuesta", async () => {
+      const { t, pedidas } = conCurl();
+      const r = await t.ejecutar(`curl -s -X POST '${PREFIJO}hello' -H 'Authorization: Bearer x' -H 'Content-Type: application/json' -d '{"name":"Ana"}'`);
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.stdout).toBe('{"message":"Hello Ana!"}');
+      expect(pedidas[0]).toMatchObject({ url: `${PREFIJO}hello`, method: "POST" });
+      expect(Buffer.from(pedidas[0]!.bodyB64!, "base64").toString()).toBe('{"name":"Ana"}');
+      expect(Object.entries(pedidas[0]!.headers).map(([k, v]) => [k.toLowerCase(), v])).toContainEqual(["authorization", "Bearer x"]);
+    }, 20_000);
+
+    it("cualquier otra URL: sin red, lo dice, y no llama a nada", async () => {
+      const { t, pedidas } = conCurl();
+      const r = await t.ejecutar("curl https://example.com/");
+      expect(r.exitCode).not.toBe(0);
+      expect(r.stderr).toMatch(/only reaches this project's Edge Functions/);
+      expect(pedidas).toHaveLength(0);
+    }, 20_000);
+
+    it("BRAZO DE CONTROL: sin funciones no hay curl (como antes)", async () => {
+      const { t } = terminal();
+      expect((await t.ejecutar("curl https://example.com/")).exitCode).toBe(127);
     }, 20_000);
   });
 });
