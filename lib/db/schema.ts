@@ -2116,6 +2116,7 @@ export const lenEmailRequests = pgTable(
 // lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el
 // tope de dinero), y las últimas llamadas con sus registros (7 días).
 // Desde la fase 2, sus secretos (cifrados) y el paquete de producción.
+// Desde la fase 3, la marca que apaga las de un proyecto.
 // `npm run functions:migrate`.
 export const functionDeployments = pgTable(
   "functionDeployments",
@@ -2200,3 +2201,14 @@ export const functionSecrets = pgTable(
   },
   (t) => [primaryKey({ columns: [t.projectId, t.environment, t.name] })],
 );
+
+/** Las Edge Functions APAGADAS de un proyecto (abuso; spec local 2026-10-11,
+ *  Parte 3): con fila, sus llamadas contestan 503. La pone y la quita el
+ *  operador con SQL (infra/FUNCTIONS_RUNBOOK.md). */
+export const functionBlocks = pgTable("functionBlocks", {
+  projectId: text("projectId")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  blockedAt: timestamp("blockedAt", { mode: "date" }).notNull().defaultNow(),
+});

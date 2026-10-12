@@ -86,6 +86,18 @@ const leida = async (p: Promise<Response>) => {
 };
 
 describe("la puerta", () => {
+  it("🔴 un proyecto con la marca de abuso: 503 con su motivo, sin desplegar, contar ni llamar", async () => {
+    let repuesto = false;
+    const { deps, eventos } = montar(undefined, { blocked: async (p) => p === "p1", ensureDeployed: async () => void (repuesto = true) });
+    const r = await llamar(deps);
+    expect(r.status).toBe(503);
+    expect(r.headers.get("sb-error-code")).toBe("FUNCTIONS_UNAVAILABLE");
+    expect(await r.json()).toEqual({ code: "FUNCTIONS_UNAVAILABLE", message: "Edge Functions are disabled for this project" });
+    expect(eventos).toHaveLength(0);
+    expect(repuesto).toBe(false);
+    expect((deps.usage as ReturnType<typeof memoryUsageStore>).calls.size).toBe(0);
+  });
+
   it("pendiente de la fase 1: la llamada cuenta «en vuelo» hasta DESPUÉS de anotarse; la que no se admite, no", async () => {
     const vuelo: string[] = [];
     const montado = montar(undefined, {

@@ -68,6 +68,9 @@ export interface GatewayDeps {
   now(): Date;
   /** Pendiente de la fase 1: lo que `use_page` espera antes de leer su visita. */
   readonly inflight?: { start(projectId: string, env: FunctionsEnvironment): () => void };
+  /** La marca de abuso de un proyecto (spec local 2026-10-11, Parte 3): con ella,
+   *  503 y ni se despliega, ni se cuenta, ni se llama. */
+  blocked?(projectId: string): Promise<boolean>;
 }
 
 const ERROR_DE: Record<Extract<Frame, { t: "error" }>["kind"], FunctionsErrorCode> = {
@@ -119,6 +122,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   const target = await deps.resolve(req, { forceDraft: o.forceDraft === true });
   if (!target) return functionsError("NOT_FOUND");
   if ("forbidden" in target) return functionsError("FORBIDDEN", { message: target.forbidden });
+  if (await deps.blocked?.(target.projectId)) return functionsError("FUNCTIONS_UNAVAILABLE", { message: "Edge Functions are disabled for this project" });
   // Despublicar deja lo desplegado en el motor, pero la puerta deja de llamarlo
   // (spec local 2026-10-11, Parte 2): ni se repone ni se cuenta.
   if (target.environment === "live" && !target.published) return functionsError("NOT_FOUND");
