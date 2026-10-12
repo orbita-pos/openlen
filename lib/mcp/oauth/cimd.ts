@@ -27,6 +27,16 @@ export function isCimdClientId(id: string): boolean {
   }
 }
 
+/** La resolución de la descarga, siempre a la IP ya validada. Node 24 la pide
+ *  con `{ all: true }` (autoSelectFamily) y entonces espera una LISTA. */
+export function pinnedLookup(ip: string) {
+  const family = ip.includes(":") ? 6 : 4;
+  return (_host: string, opts: { all?: boolean }, cb: (...args: unknown[]) => void): void => {
+    if (opts?.all) cb(null, [{ address: ip, family }]);
+    else cb(null, ip, family);
+  };
+}
+
 const pinnedFetchJson: FetchJson = async (url) => {
   const v = await validateUrl(url);
   if (!v.ok) throw new Error(`blocked: ${v.error.kind}`);
@@ -38,7 +48,7 @@ const pinnedFetchJson: FetchJson = async (url) => {
       {
         headers: { accept: "application/json" },
         timeout: TIMEOUT_MS,
-        lookup: (_host, _opts, cb) => cb(null, resolvedIp, resolvedIp.includes(":") ? 6 : 4),
+        lookup: pinnedLookup(resolvedIp) as unknown as https.RequestOptions["lookup"],
       },
       (res) => {
         if (res.statusCode !== 200) {
