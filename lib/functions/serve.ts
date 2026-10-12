@@ -14,6 +14,7 @@ import { adoptLegacyEnvironment, backendForHost, hasLiveEnvironment } from "@/li
 import { decryptToken } from "@/lib/integrations/crypto";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
+import { functionsBlocked } from "./blocks-pg";
 import { ConcurrencyLimiter } from "./concurrency";
 import { ensureDraftDeployed } from "./deploy-core";
 import { ownerOf, realDeployDeps } from "./deploy";
@@ -35,6 +36,7 @@ function realGatewayDeps(): GatewayDeps {
   return {
     engine: functionsEnabled() ? functionsEngine() : null,
     inflight: inflightCalls(),
+    blocked: functionsBlocked,
     async resolve(req, o) {
       const host = (req.headers.get("host") ?? new URL(req.url).host).toLowerCase().replace(/:\d+$/, "");
       const hb = await backendForHost(host);

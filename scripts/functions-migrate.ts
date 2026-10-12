@@ -1,5 +1,5 @@
-// Las Edge Functions (spec local 2026-10-11): sus cinco tablas (los secretos,
-// desde la fase 2), el paquete de producción y el ref propio
+// Las Edge Functions (spec local 2026-10-11): sus seis tablas (los secretos,
+// desde la fase 2; la marca de abuso, desde la 3), el paquete de producción y el ref propio
 // del borrador en projectBackendEnvironments (relleno para los borradores que
 // ya existen). Aditiva e idempotente. Mantener en sintonía con lib/db/schema.ts.
 //
@@ -93,6 +93,14 @@ async function main() {
     );
   `);
   await db.execute(sql`ALTER TABLE "functionDeployments" ADD COLUMN IF NOT EXISTS "bundleGz" text;`);
+  // FASE 3: la marca que apaga las funciones de un proyecto (abuso).
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "functionBlocks" (
+      "projectId" text PRIMARY KEY REFERENCES "projects"("id") ON DELETE CASCADE,
+      "reason" text NOT NULL,
+      "blockedAt" timestamp NOT NULL DEFAULT now()
+    );
+  `);
   console.log("[functions:migrate] tablas listas y borradores con su ref propio");
   process.exit(0);
 }
