@@ -1,4 +1,4 @@
-// Borrar un proyecto se lleva la base de su página.
+// Borrar un proyecto se lleva la base de su página y sus Edge Functions.
 //
 // La base vive en OTRO clúster (el de las páginas) y la fila de
 // `projectBackends` que dice cuál es se va en cascada con la del proyecto. Por
@@ -33,6 +33,11 @@ export async function pageDatabaseScopes(projectId: string): Promise<{ ref: stri
  *  existe, así que el borrado se da por hecho igual, y lo que quede se borra a
  *  mano (`infra/db/pages-orphans.sh`). */
 export async function dropPageDatabases(t: { ref: string; scopes: readonly string[] }): Promise<void> {
+  // Sus Edge Functions (spec local 2026-10-11): los dos destinos del motor. Lo
+  // de la base (secretos, lo desplegado, el uso, las llamadas) ya se fue en
+  // cascada con el proyecto.
+  const { removeProjectFunctions } = await import("@/lib/functions/teardown");
+  await removeProjectFunctions(t.ref);
   if (!backendConfigured()) return;
   for (const scope of t.scopes) {
     await dropProjectDatabase(scope).catch((err: unknown) => {
