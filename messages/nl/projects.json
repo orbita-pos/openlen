@@ -298,5 +298,22 @@
     "copied": "Gekopieerd",
     "done": "Klaar",
     "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw."
+  },
+  "mcpInstall": {
+    "title": "Koppel OpenLen aan je AI-assistent",
+    "intro": "Claude, ChatGPT, Codex, Cursor en anderen kunnen je OpenLen-projecten lezen, bewerken en publiceren met je eigen AI-abonnement. Voeg dit adres toe en log in met je OpenLen-account.",
+    "serverUrl": "Serveradres",
+    "signInHint": "De eerste keer opent je assistent openlen.com om je toestemming te vragen. Jij kiest wat hij mag doen en bij welke projecten.",
+    "plans": "Met het gratis abonnement kunnen assistenten je projecten lezen; bewerken, maken en publiceren vragen om een betaald abonnement.",
+    "stepsClaudeAi": "In Claude: Aanpassen → Connectors → + Toevoegen → Aangepaste connector toevoegen. Plak het adres en log in.",
+    "stepsChatgpt": "In ChatGPT: open chatgpt.com/plugins, klik op + en kies Aangepaste MCP-server toevoegen. Plak het adres en log in.",
+    "stepsVscode": "Met één klik op de knop, of voeg dit toe aan .vscode/mcp.json.",
+    "stepsCursor": "Met één klik op de knop, of voeg dit toe aan ~/.cursor/mcp.json.",
+    "installIn": "Installeren in {client}",
+    "thenSignIn": "Log daarna in met:",
+    "copy": "Kopiëren",
+    "copied": "Gekopieerd",
+    "tokenAlternative": "Lukt het je client niet om in te loggen? Maak een persoonlijke token en stuur hem mee in een Authorization: Bearer-header.",
+    "connectionsLink": "Gekoppelde apps"
   }
 }

@@ -298,5 +298,22 @@
     "copied": "Kopiert",
     "done": "Fertig",
     "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal."
+  },
+  "mcpInstall": {
+    "title": "Verbinde OpenLen mit deinem KI-Assistenten",
+    "intro": "Claude, ChatGPT, Codex, Cursor und andere können deine OpenLen-Projekte mit deinem eigenen KI-Abo lesen, bearbeiten und veröffentlichen. Füge diese Adresse hinzu und melde dich mit deinem OpenLen-Konto an.",
+    "serverUrl": "Serveradresse",
+    "signInHint": "Beim ersten Mal öffnet dein Assistent openlen.com und fragt nach deiner Erlaubnis. Du wählst, was er darf und bei welchen Projekten.",
+    "plans": "Im kostenlosen Plan können Assistenten deine Projekte lesen; Bearbeiten, Erstellen und Veröffentlichen brauchen einen bezahlten Plan.",
+    "stepsClaudeAi": "In Claude: Anpassen → Konnektoren → + Hinzufügen → Benutzerdefinierten Konnektor hinzufügen. Adresse einfügen und anmelden.",
+    "stepsChatgpt": "In ChatGPT: chatgpt.com/plugins öffnen, auf + klicken und Benutzerdefinierten MCP-Server hinzufügen wählen. Adresse einfügen und anmelden.",
+    "stepsVscode": "Mit einem Klick auf den Button, oder füge das in .vscode/mcp.json ein.",
+    "stepsCursor": "Mit einem Klick auf den Button, oder füge das in ~/.cursor/mcp.json ein.",
+    "installIn": "In {client} installieren",
+    "thenSignIn": "Dann anmelden mit:",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "tokenAlternative": "Dein Client kann sich nicht anmelden? Erstelle einen persönlichen Token und sende ihn im Header Authorization: Bearer.",
+    "connectionsLink": "Verbundene Apps"
   }
 }
