@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "Tabellen",
       "users": "Gebruikers",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "Functies",
+      "secrets": "Geheimen"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -533,6 +535,30 @@
       "resetConfirm": "Testgegevens wissen en opnieuw opbouwen vanuit de migraties?",
       "noLive": "Nog geen echte gegevens: die beginnen als je publiceert.",
       "testMails": "Testgegevens versturen geen e-mails: nieuwe accounts worden automatisch bevestigd."
+    },
+    "functions": {
+      "blocked": "De Edge Functions van dit project staan uit. Laat het ons weten als je denkt dat dit een fout is.",
+      "calls": "Aanroepen deze maand: {calls} van {quota}",
+      "callsLabel": "Aanroepen deze maand",
+      "empty": "Dit project heeft nog geen Edge Functions.",
+      "draft": "Concept",
+      "live": "Productie",
+      "noJwt": "Zonder JWT",
+      "errorsTitle": "Laatste fouten",
+      "noErrors": "Geen fouten in de afgelopen 7 dagen."
+    },
+    "secrets": {
+      "hint": "Je functies lezen ze met Deno.env.get. De waarden worden nooit meer getoond: je kunt ze alleen vervangen.",
+      "draft": "Concept",
+      "live": "Productie",
+      "empty": "Geen geheimen.",
+      "nameField": "Naam",
+      "add": "Toevoegen",
+      "replace": "Vervangen",
+      "save": "Opslaan",
+      "delete": "Verwijderen",
+      "confirmDelete": "Verwijderen?",
+      "loadError": "De geheimen konden niet worden geladen."
     }
   }
 }
