@@ -183,9 +183,9 @@ describe("de punta a punta", () => {
     expect(rec.error).toMatch(/supabase\/functions\/rota\/index\.ts:1:\d+/);
   });
 
-  it("🔴 el tope de dinero: bolsa a $0,0001 → 429 y el motor ni se entera", { timeout: T }, async () => {
+  it("🔴 el tope de dinero: bolsa a $0,000001 → 429 y el motor ni se entera", { timeout: T }, async () => {
     const antes = records.length;
-    const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/stripe-webhook`, { method: "POST", body: "{}" }), deps({ caps: { free: 100_000, paid: 1e15 } }));
+    const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/stripe-webhook`, { method: "POST", body: "{}" }), deps({ caps: { free: 1_000, paid: 1e15 } }));
     expect(r.status).toBe(429);
     expect(r.headers.get("sb-error-code")).toBe("QUOTA_EXCEEDED");
     expect(records.length).toBe(antes);

@@ -1,21 +1,15 @@
 // lib/functions/meter.ts — LO QUE CUESTA UNA LLAMADA, en NANOdólares (spec local
-// 2026-10-11, Parte 3). Precio de lista de AWS Lambda arm64 en us-east-1 ($0,20
-// por millón de peticiones; $0,0000133334 por GB‑s, redondeado hacia arriba),
-// SIN restar la capa gratis: así la factura real nunca pasa del tope. La fase 3
-// los vuelve a comprobar en https://aws.amazon.com/lambda/pricing/.
+// 2026-10-12, Parte 6). Precio de lista de Cloudflare Workers for Platforms:
+// $0,30 por millón de llamadas y $0,02 por millón de ms de CPU, SIN restar lo
+// que incluyen los $25 del mes: así la factura real nunca pasa del tope.
+// Cloudflare no da la CPU real de cada llamada: se cuenta TODA la permitida.
 
-import { FUNCTION_MEMORY_MB } from "./limits";
+export const NANO_USD_PER_REQUEST = 300;
+export const NANO_USD_PER_CPU_MS = 20;
 
-export const NANO_USD_PER_REQUEST = 200;
-export const NANO_USD_PER_GB_SECOND = 13_334;
-
-export function costNanoUsd(ms: number, memoryMb = FUNCTION_MEMORY_MB): number {
-  return NANO_USD_PER_REQUEST + Math.ceil((Math.max(0, ms) / 1000) * (memoryMb / 1024) * NANO_USD_PER_GB_SECOND);
-}
-
-/** Lo más que puede costar una llamada: su tiempo límite entero. */
-export function worstCaseNanoUsd(timeoutSec: number, memoryMb = FUNCTION_MEMORY_MB): number {
-  return costNanoUsd(timeoutSec * 1000, memoryMb);
+/** Lo que cuenta una llamada: la petición y toda la CPU que su plan le deja. */
+export function callCostNanoUsd(cpuMs: number): number {
+  return NANO_USD_PER_REQUEST + NANO_USD_PER_CPU_MS * Math.max(0, cpuMs);
 }
 
 /** `AAAA-MM` en UTC. */
@@ -37,7 +31,7 @@ function dolares(v: string | undefined, porDefecto: number): number {
 
 export function capsFromEnv(env: Readonly<Record<string, string | undefined>> = process.env): PoolCaps {
   return {
-    free: Math.round(dolares(env.OPENLEN_FUNCTIONS_CAP_FREE_USD, 0.25) * 1e9),
-    paid: Math.round(dolares(env.OPENLEN_FUNCTIONS_CAP_PAID_USD, 0.75) * 1e9),
+    free: Math.round(dolares(env.OPENLEN_FUNCTIONS_CAP_FREE_USD, 1) * 1e9),
+    paid: Math.round(dolares(env.OPENLEN_FUNCTIONS_CAP_PAID_USD, 25) * 1e9),
   };
 }
