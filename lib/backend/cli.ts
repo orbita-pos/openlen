@@ -81,5 +81,6 @@ export async function runSupabaseCli(
   // Las Edge Functions (spec local 2026-10-11): import perezoso, como el resto
   // de lo que necesita el motor.
   const { functionsCliFor } = await import("@/lib/functions/deploy");
-  return runCli(args, ficheros, { ...pgCli(rec, draft, ficheros), functions: functionsCliFor(projectId, rec.ref) });
+  const { secretsCliFor } = await import("@/lib/functions/secrets-real");
+  return runCli(args, ficheros, { ...pgCli(rec, draft, ficheros), functions: functionsCliFor(projectId, rec.ref), secrets: secretsCliFor(projectId) });
 }
