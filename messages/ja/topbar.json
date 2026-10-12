@@ -67,7 +67,8 @@
     "editorSound": "エディタの音",
     "manageSubscription": "サブスクリプションを管理",
     "signOut": "サインアウト",
-    "profile": "プロフィール"
+    "profile": "プロフィール",
+    "connectedApps": "接続済みのアプリ"
   },
   "relativeTime": {
     "seconds": "{count}秒前",
