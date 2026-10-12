@@ -2,6 +2,7 @@
 // openlen.com), nunca con un token del MCP — así un agente no se aprueba solo.
 import { auth } from "@/auth";
 import { decideApproval, getApprovalForUser } from "@/lib/mcp/approvals";
+import { isSameOriginRequest } from "@/lib/mcp/same-origin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
+  if (!isSameOriginRequest(req)) return json({ error: "cross_site" }, 403);
   const body = (await req.json().catch(() => null)) as { decision?: unknown } | null;
   const decision = body?.decision;
   if (decision !== "approve" && decision !== "deny") return json({ error: "invalid_body" }, 400);

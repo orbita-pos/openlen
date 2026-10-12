@@ -256,6 +256,8 @@
     "notFound": "Cette demande n'existe pas.",
     "used": "Cette demande a déjà reçu une réponse.",
     "redirecting": "Retour en cours… vous pouvez fermer cet onglet si rien ne se passe.",
-    "failed": "Ça n'a pas marché. Rechargez la page et réessayez."
+    "failed": "Ça n'a pas marché. Rechargez la page et réessayez.",
+    "verifiedBy": "Identité publiée par {host}.",
+    "unverified": "Non vérifié : c’est l’application qui a choisi son nom. Regardez où elle revient avant d’autoriser."
   }
 }

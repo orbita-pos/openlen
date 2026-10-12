@@ -9,6 +9,9 @@ import { normalizeScopes } from "../tokens";
 import { resolveClient as realResolveClient, type OauthClient } from "./clients";
 import { redirectUriMatches } from "./redirects";
 
+/** Lo que piden algunos clientes que no es un permiso del MCP. */
+const NOT_MCP_SCOPES = new Set(["offline_access", "openid"]);
+
 export const AUTH_REQUEST_TTL_MS = 10 * 60_000;
 const S256_CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
 
@@ -51,7 +54,10 @@ export async function startAuthorization(
     return back("invalid_target", "This authorization server only issues tokens for the OpenLen MCP server.");
   }
   const asked = (params.get("scope") ?? "").split(/\s+/).filter(Boolean);
-  const scopes = asked.length === 0 ? [...MCP_SCOPES] : normalizeScopes(asked);
+  const known = normalizeScopes(asked);
+  // Nada, u offline_access/openid a solas, es no haber pedido ningún permiso
+  // del MCP: los tres, y la persona los recorta en la pantalla.
+  const scopes = known.length === 0 && asked.every((s) => NOT_MCP_SCOPES.has(s)) ? [...MCP_SCOPES] : known;
   if (scopes.length === 0) return back("invalid_scope", "None of the requested scopes exist here.");
   const requestId = crypto.randomBytes(32).toString("base64url");
   await db.insert(schema.mcpOauthRequests).values({

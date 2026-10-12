@@ -42,4 +42,13 @@ describe("decidir una aprobación", () => {
     m.auth.mockResolvedValue({ user: { id: "u1" } });
     expect((await call({ decision: "maybe" })).status).toBe(400);
   });
+  it("🔴 desde otra web: 403 y no decide nada", async () => {
+    m.auth.mockResolvedValue({ user: { id: "u1" } });
+    const res = await POST(
+      new Request("http://x/api/mcp/approvals/abc", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: JSON.stringify({ decision: "approve" }) }),
+      { params: Promise.resolve({ id: "abc" }) },
+    );
+    expect(res.status).toBe(403);
+    expect(m.decideApproval).not.toHaveBeenCalled();
+  });
 });

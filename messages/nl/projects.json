@@ -256,6 +256,8 @@
     "notFound": "Dit verzoek bestaat niet.",
     "used": "Dit verzoek is al beantwoord.",
     "redirecting": "Je gaat terug… je kunt dit tabblad sluiten als er niets gebeurt.",
-    "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw."
+    "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw.",
+    "verifiedBy": "Identiteit gepubliceerd door {host}.",
+    "unverified": "Niet geverifieerd: de app heeft deze naam zelf gekozen. Kijk waar hij naartoe teruggaat voordat je het toestaat."
   }
 }

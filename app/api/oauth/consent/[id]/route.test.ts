@@ -36,4 +36,13 @@ describe("POST /api/oauth/consent/[id]", () => {
     m.auth.mockResolvedValue({ user: { id: "u1" } });
     expect((await call({ decision: "maybe" })).status).toBe(400);
   });
+  it("🔴 desde otra web: 403 y no decide nada", async () => {
+    m.auth.mockResolvedValue({ user: { id: "u1" } });
+    const res = await POST(
+      new Request("http://x", { method: "POST", headers: { "content-type": "application/json", origin: "https://evil.example" }, body: JSON.stringify({ decision: "allow" }) }),
+      { params: Promise.resolve({ id: "req1" }) },
+    );
+    expect(res.status).toBe(403);
+    expect(m.decideConsent).not.toHaveBeenCalled();
+  });
 });

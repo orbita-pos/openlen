@@ -34,9 +34,9 @@ afterAll(async () => {
 });
 
 describe("el consentimiento", () => {
-  it("la petición pendiente trae el nombre del cliente", async () => {
+  it("la petición pendiente trae el nombre y la clase del cliente", async () => {
     const id = await request();
-    expect(await getPendingRequest(id)).toMatchObject({ clientName: "Cliente de prueba", status: "pending" });
+    expect(await getPendingRequest(id)).toMatchObject({ clientName: "Cliente de prueba", clientKind: "dcr", status: "pending" });
   });
 
   it("aprobar: código de un solo uso en la vuelta, con state e iss; se guardan los permisos elegidos", async () => {
