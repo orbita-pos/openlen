@@ -18,7 +18,8 @@
  *   ver (lector y editor)
  *     GET /api/projects/[id] (con `rol`), …/ficheros (sin /.openlen/resultados
  *     ni /.openlen/bandeja), …/raw, …/preview, …/pages, …/versions ([vid]/raw),
- *     …/releases, …/assets, …/terminal (su historial), …/env (GET), POST /api/lienzo,
+ *     …/releases, …/assets, …/terminal (su historial), …/env (GET),
+ *     …/functions (GET: las funciones, su uso y sus últimos errores), POST /api/lienzo,
  *     /api/agent/turno/[fila] (reengancharse)
  *   editar (editor)
  *     PATCH /api/projects/[id] (título, brief, logo; NO el estado),

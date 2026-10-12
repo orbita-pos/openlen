@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
 
-import { pgUsageStore } from "./usage-pg";
+import { monthCalls, pgUsageStore } from "./usage-pg";
 
 const DUENO = "prueba-fnusage-dueno";
 const PROYECTO = "prueba-fnusage-proyecto";
@@ -52,6 +52,11 @@ describe("pgUsageStore", () => {
   it("🔴 diez a la vez: cada una ve SU número (el que cruza un umbral es uno solo)", async () => {
     const r = await Promise.all(Array.from({ length: 10 }, () => pgUsageStore.consumeCall(PROYECTO, "1999-02", 100)));
     expect([...r].map(Number).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it("las llamadas del mes de un proyecto (0 si no hay fila)", async () => {
+    expect(await monthCalls(PROYECTO, "1999-02")).toBe(10);
+    expect(await monthCalls(PROYECTO, "1998-12")).toBe(0);
   });
 
   it("el aviso de la bolsa: sólo pasado el umbral y sólo UNA vez al mes", async () => {

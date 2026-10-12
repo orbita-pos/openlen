@@ -61,3 +61,10 @@ export const pgUsageStore: UsageStore = {
     return filas(r).length > 0;
   },
 };
+
+/** Las llamadas del mes de un proyecto, para su vista (0 si aún no hay fila). */
+export async function monthCalls(projectId: string, month: string): Promise<number> {
+  const r = await db.execute(sql`SELECT "calls" FROM "functionUsage" WHERE "projectId" = ${projectId} AND "month" = ${month}`);
+  const [f] = filas(r) as { calls: number | string }[];
+  return f ? Number(f.calls) : 0;
+}
