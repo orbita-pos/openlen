@@ -589,6 +589,9 @@ export function realDeps(
     async edgeFunctionCalls(projectId, since) {
       const { functionsEnabled } = await import("@/lib/functions/engines");
       if (!functionsEnabled()) return null;
+      // La última llamada de la visita se anota al cerrar su cuerpo: se espera (con tope).
+      const { inflightCalls } = await import("@/lib/functions/inflight");
+      await inflightCalls().settled(projectId, "draft", 2_000);
       const { recentInvocations } = await import("@/lib/functions/invocations-pg");
       const { functionCallsReport } = await import("@/lib/functions/invocation-report");
       return functionCallsReport(await recentInvocations(projectId, "draft", since));

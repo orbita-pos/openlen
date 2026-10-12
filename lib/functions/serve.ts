@@ -21,6 +21,7 @@ import { pgDeploymentStore } from "./deployments-pg";
 import { functionsEnabled, functionsEngine } from "./engines";
 import type { FunctionsEnvironment } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps } from "./gateway";
+import { inflightCalls } from "./inflight";
 import { recordInvocation } from "./invocations-pg";
 import { ensureLiveDeployed } from "./live-core";
 import { capsFromEnv } from "./meter";
@@ -33,6 +34,7 @@ const limiter = new ConcurrencyLimiter();
 function realGatewayDeps(): GatewayDeps {
   return {
     engine: functionsEnabled() ? functionsEngine() : null,
+    inflight: inflightCalls(),
     async resolve(req, o) {
       const host = (req.headers.get("host") ?? new URL(req.url).host).toLowerCase().replace(/:\d+$/, "");
       const hb = await backendForHost(host);
