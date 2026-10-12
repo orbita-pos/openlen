@@ -76,6 +76,11 @@ function sanitizeNext(raw: string | null): string {
 // resolution. The cast bridges Auth.js's (req, ctx) handler signature to the
 // single-arg call we make here — ctx is unused.
 const authMiddleware = auth((req) => {
+  // El MCP (mcp-handler) declara en global `Request.auth?: AuthInfo`, y el
+  // `auth: Session | null` de Auth.js ya no encaja en NextRequest para tsc
+  // (11/10/2026: rompía `npm run typecheck` y `next build`). Es la misma
+  // petición; sólo se le quita el tipo de Auth.js para pasarla a next-intl.
+  const nextReq = req as unknown as NextRequest;
   if (!req.auth) {
     const locale = localeFromPath(req.nextUrl.pathname);
     const loginUrl = new URL(`/${locale}/login`, req.nextUrl.origin);
@@ -84,9 +89,9 @@ const authMiddleware = auth((req) => {
     // would double up (/en/new → /en/en/new → 404). Matches every other caller
     // (projects/page.tsx, use-template-button, …) which pass bare paths.
     loginUrl.searchParams.set("next", destinoDelLogin(pathWithoutLocale(req.nextUrl.pathname), req.nextUrl.search));
-    return fixRedirectHost(NextResponse.redirect(loginUrl), req);
+    return fixRedirectHost(NextResponse.redirect(loginUrl), nextReq);
   }
-  return fixRedirectHost(intlMiddleware(req), req);
+  return fixRedirectHost(intlMiddleware(nextReq), nextReq);
 }) as unknown as (req: NextRequest) => ReturnType<typeof intlMiddleware>;
 
 // Behind the Caddy proxy, Next builds absolute redirects from the upstream
