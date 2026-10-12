@@ -26,7 +26,8 @@
  *     …/pages, …/pages/[slug], …/html, …/versions (POST, [vid], [vid]/restore),
  *     …/turnos/[turnId]/deshacer, …/assets (POST), …/ai-edit-image,
  *     …/proxy-image, …/settings, …/env (PUT), …/preview (POST/DELETE), …/terminal (POST,
- *     en SU terminal), …/chat, …/rollback, /api/export/zip,
+ *     en SU terminal), …/function-secrets (POST/DELETE; GET en «ver», el lector sin
+ *     huellas), …/chat, …/rollback, /api/export/zip,
  *     …/publish (sólo a la dirección que ya tiene: elegir otra es del dueño),
  *     /api/agent (sin encargos, sin los datos de los visitantes, y contra el
  *     tope del proyecto: `lib/projects/miembros.ts`)
