@@ -558,7 +558,8 @@
       "save": "Salva",
       "delete": "Elimina",
       "confirmDelete": "Eliminare?",
-      "loadError": "Impossibile caricare i segreti."
+      "loadError": "Impossibile caricare i segreti.",
+      "deleteFailed": "Impossibile eliminare. Riprova."
     }
   }
 }

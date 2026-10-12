@@ -558,7 +558,8 @@
       "save": "Save",
       "delete": "Delete",
       "confirmDelete": "Delete?",
-      "loadError": "Couldn't load the secrets."
+      "loadError": "Couldn't load the secrets.",
+      "deleteFailed": "Couldn't delete it. Try again."
     }
   }
 }

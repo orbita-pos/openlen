@@ -558,7 +558,8 @@
       "save": "저장",
       "delete": "삭제",
       "confirmDelete": "삭제할까요?",
-      "loadError": "시크릿을 불러오지 못했습니다."
+      "loadError": "시크릿을 불러오지 못했습니다.",
+      "deleteFailed": "삭제하지 못했습니다. 다시 시도해 주세요."
     }
   }
 }

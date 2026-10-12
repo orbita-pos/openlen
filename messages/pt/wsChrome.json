@@ -558,7 +558,8 @@
       "save": "Salvar",
       "delete": "Apagar",
       "confirmDelete": "Apagar?",
-      "loadError": "Não foi possível carregar os segredos."
+      "loadError": "Não foi possível carregar os segredos.",
+      "deleteFailed": "Não foi possível apagar. Tente de novo."
     }
   }
 }

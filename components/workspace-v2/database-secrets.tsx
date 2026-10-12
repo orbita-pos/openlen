@@ -101,10 +101,16 @@ function EnvSecrets({
   };
   const remove = async (name: string) => {
     setBusy(true);
-    await fetch(ruta(projectId), { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ environment: env, names: [name] }) }).catch(() => null);
+    setError(null);
+    const res = await fetch(ruta(projectId), { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ environment: env, names: [name] }) }).catch(() => null);
     setBusy(false);
+    if (!res?.ok) {
+      setError(t("deleteFailed"));
+      return;
+    }
     await onChanged();
   };
+  const filled = (clave: string) => (values[`${clave}:${env}`] ?? "").trim().length > 0;
 
   return (
     <section className="mb-6 max-w-xl">
@@ -141,7 +147,7 @@ function EnvSecrets({
                   <button
                     type="button"
                     onClick={() => void save(r.name, `replace-${r.name}`)}
-                    disabled={busy}
+                    disabled={busy || !filled(`replace-${r.name}`)}
                     className="h-8 rounded-md bg-coral-500 px-3 text-[12px] font-medium text-white disabled:opacity-50"
                   >
                     {t("save")}
@@ -171,7 +177,7 @@ function EnvSecrets({
         <button
           type="button"
           onClick={() => void save(nombre.trim(), "nuevo")}
-          disabled={busy || !nombre.trim()}
+          disabled={busy || !nombre.trim() || !filled("nuevo")}
           className="inline-flex h-8 items-center gap-1 rounded-md bg-coral-500 px-3 text-[12px] font-medium text-white disabled:opacity-50"
         >
           <Plus size={13} />
