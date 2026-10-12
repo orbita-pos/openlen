@@ -1,4 +1,4 @@
-export type FrameErrorKind = "not_found" | "boot" | "uncaught" | "timeout" | "memory";
+export type FrameErrorKind = "not_found" | "boot" | "uncaught" | "timeout" | "memory" | "cpu" | "unavailable";
 
 export type Frame =
   | { readonly t: "head"; readonly status: number; readonly headers: [string, string][] }

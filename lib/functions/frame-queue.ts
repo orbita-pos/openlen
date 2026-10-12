@@ -1,5 +1,5 @@
 // lib/functions/frame-queue.ts — UNA COLA ASÍNCRONA de marcos: el motor empuja
-// lo que llega de su hilo (o de Lambda) y la puerta lo lee como `for await`.
+// lo que llega de su hilo y la puerta lo lee como `for await`.
 // Varios `next()` a la vez esperan en orden (la puerta lee desde `pull` del
 // cuerpo y, si el visitante corta, desde `cancel`).
 

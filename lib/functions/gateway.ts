@@ -81,6 +81,8 @@ const ERROR_DE: Record<Extract<Frame, { t: "error" }>["kind"], FunctionsErrorCod
   uncaught: "WORKER_ERROR",
   timeout: "IDLE_TIMEOUT",
   memory: "WORKER_RESOURCE_LIMIT",
+  cpu: "WORKER_RESOURCE_LIMIT",
+  unavailable: "FUNCTIONS_UNAVAILABLE",
 };
 
 const MAX_LINEAS = 100;
@@ -164,7 +166,12 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   };
   const startedAt = deps.now();
   const t0 = performance.now();
-  const frames = engine.invoke({ ref: target.ref, environment: target.environment }, event, { timeoutMs: admission.limits.timeoutSec * 1000 })[Symbol.asyncIterator]();
+  const frames = engine
+    .invoke({ ref: target.ref, environment: target.environment }, event, {
+      timeoutMs: admission.limits.timeoutSec * 1000,
+      limits: { cpuMs: admission.limits.cpuMs, subRequests: admission.limits.subRequests },
+    })
+    [Symbol.asyncIterator]();
 
   const logs: { level: string; msg: string }[] = [];
   const tapar = (s: string) => maskSecrets(s, target.secrets);
@@ -173,7 +180,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   let errorText: string | null = null;
   let anotada = false;
 
-  // El motor puede LANZAR (al arrancar, o a mitad: Lambda sin red, un hilo que
+  // El motor puede LANZAR (al arrancar, o a mitad: Cloudflare sin red, un hilo que
   // muere). Eso es un fin con error, nunca una excepción que deje la plaza y la
   // reserva colgadas.
   const siguiente = async (): Promise<IteratorResult<Frame>> => {

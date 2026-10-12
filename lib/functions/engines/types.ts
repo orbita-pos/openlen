@@ -1,8 +1,8 @@
 // lib/functions/engines/types.ts — LO QUE ES UN MOTOR DE EDGE FUNCTIONS (spec
 // local 2026-10-11, Parte 2): desplegar el paquete de un proyecto en un
 // entorno, decir qué hay desplegado, cambiar sus variables, invocarlo con
-// marcos y quitarlo. Hay dos:
-// `local` (desarrollo, pruebas, autohospedaje de UN dueño) y `lambda` (fase 3).
+// marcos y quitarlo. Hay dos: `local` (desarrollo, pruebas, autohospedaje de UN
+// dueño) y `cloudflare` (producción, spec local 2026-10-12).
 
 import type { Frame, InvokeEvent } from "@/lib/functions/runtime/runtime.mjs";
 
@@ -26,20 +26,27 @@ export interface EngineLimits {
   readonly memoryMb: number;
 }
 
+/** Los límites de UNA llamada (spec local 2026-10-12, Parte 6): los pone el
+ *  despachador de Cloudflare; el motor local los ignora. */
+export interface CallLimits {
+  readonly cpuMs: number;
+  readonly subRequests: number;
+}
+
 export interface FunctionsEngine {
-  readonly name: "local" | "lambda";
+  readonly name: "local" | "cloudflare";
   deploy(dest: Destination, bundle: EngineBundle, env: Readonly<Record<string, string>>, limits: EngineLimits): Promise<void>;
   /** Variables nuevas para lo desplegado ahí, con el MISMO código (`supabase
-   *  secrets set`: al momento). Sin nada desplegado, nada. En Lambda (fase 3):
-   *  `UpdateFunctionConfiguration`, y en producción versión nueva + alias. */
+   *  secrets set`: al momento). Sin nada desplegado, nada. En Cloudflare: los
+   *  secretos del script, al momento. */
   setEnv(dest: Destination, env: Readonly<Record<string, string>>): Promise<void>;
   /** El hash de lo desplegado ahí, o null. */
   deployedHash(dest: Destination): Promise<string | null>;
-  invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number }): AsyncIterable<Frame>;
+  invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number; readonly limits: CallLimits }): AsyncIterable<Frame>;
   remove(dest: Destination): Promise<void>;
 }
 
-/** El nombre de la Lambda (fase 3) y de la carpeta del motor local. Nunca lo ve Len. */
+/** El nombre del script de Cloudflare y de la carpeta del motor local. Nunca lo ve Len. */
 export function destinationName(dest: Destination): string {
   return `openlen-${dest.ref}-${dest.environment}`;
 }

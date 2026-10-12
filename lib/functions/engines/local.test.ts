@@ -34,7 +34,7 @@ const evento = (fn: string, o: Partial<InvokeEvent> = {}): InvokeEvent => ({
 
 async function marcos(dest: Destination, e: InvokeEvent, timeoutMs = 10_000): Promise<Frame[]> {
   const out: Frame[] = [];
-  for await (const f of engine.invoke(dest, e, { timeoutMs })) out.push(f);
+  for await (const f of engine.invoke(dest, e, { timeoutMs, limits: { cpuMs: 50, subRequests: 50 } })) out.push(f);
   return out;
 }
 

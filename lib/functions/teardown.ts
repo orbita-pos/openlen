@@ -1,6 +1,6 @@
 // lib/functions/teardown.ts — BORRAR UN PROYECTO SE LLEVA SUS FUNCIONES (spec
-// local 2026-10-11, Parte 2): sus dos destinos en el motor (en Lambda, fase 3,
-// sus dos funciones). Lo de la base —secretos, lo desplegado, el uso, las
+// local 2026-10-11, Parte 2): sus dos destinos en el motor (en Cloudflare,
+// sus dos scripts). Lo de la base —secretos, lo desplegado, el uso, las
 // llamadas— se va en cascada con la fila del proyecto. Nunca lanza: el proyecto
 // ya no existe, y lo que quede lo barre el motor (el local, al reiniciar).
 

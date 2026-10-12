@@ -12,7 +12,7 @@ import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 
 import { FrameQueue } from "../frame-queue";
-import { destinationName, type Destination, type EngineBundle, type EngineLimits, type Frame, type FunctionsEngine, type InvokeEvent } from "./types";
+import { destinationName, type CallLimits, type Destination, type EngineBundle, type EngineLimits, type Frame, type FunctionsEngine, type InvokeEvent } from "./types";
 
 const HILO = path.join(process.cwd(), "lib", "functions", "engines", "local-worker.mjs");
 const RAIZ = path.join(os.tmpdir(), "openlen-functions");
@@ -65,7 +65,7 @@ export class LocalEngine implements FunctionsEngine {
     this.#retire(viejo);
   }
 
-  async *invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number }): AsyncIterable<Frame> {
+  async *invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number; readonly limits: CallLimits }): AsyncIterable<Frame> {
     const nombre = destinationName(dest);
     const slot = this.#slots.get(nombre);
     if (!slot) {
