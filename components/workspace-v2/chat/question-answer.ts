@@ -4,7 +4,7 @@
 // el turno cerró, o la tarjeta es de una fila vieja—, la respuesta se manda como
 // un mensaje normal y abre el turno siguiente: nunca se pierde. Puro.
 
-import { RECOMMENDED_SUFFIX, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { RECOMMENDED_SUFFIX, type QuestionAnswer, type SecretRequest, type UserQuestion } from "@/lib/agent/ask-user-question";
 
 const textoDe = (a: QuestionAnswer | undefined): string =>
   a ? [...a.selected.map((s) => s.replace(RECOMMENDED_SUFFIX, "")), ...(a.custom ? [a.custom] : [])].join(", ") : "";
@@ -47,4 +47,23 @@ export function liveQuestionTurno(
   turnoId: string | null,
 ): string | null {
   return turn?.status === "streaming" && turn.pendingQuestions?.length && turnoId ? turnoId : null;
+}
+
+/** EDGE FUNCTIONS: la tarjeta de los secretos contestada cuando el turno ya no
+ *  espera. Sale como un mensaje NORMAL —sólo nombres y dónde, en el idioma del
+ *  dueño—: los valores ya fueron directos a la ruta de secretos. */
+export function secretsAnswerMessage(
+  secrets: readonly Pick<SecretRequest, "name">[],
+  answers: readonly QuestionAnswer[],
+  t: (key: string, values?: Record<string, string>) => string,
+): string {
+  const elegidas = new Set(answers.flatMap((a) => a.selected));
+  return secrets
+    .map(({ name }) => {
+      const donde = (["draft", "live"] as const)
+        .filter((e) => elegidas.has(`${name}:${e}`))
+        .map((e) => t(e === "draft" ? "functionSecrets.envDraft" : "functionSecrets.envLive"));
+      return donde.length > 0 ? t("functionSecrets.answerMessage", { name, where: donde.join(", ") }) : t("functionSecrets.answerSkipped", { name });
+    })
+    .join("\n");
 }

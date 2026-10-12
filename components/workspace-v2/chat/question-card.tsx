@@ -18,6 +18,7 @@ import { RECOMMENDED_SUFFIX, type QuestionAnswer, type UserQuestion } from "@/li
 import { APPROVE_LABEL, planTitle } from "@/lib/agent/plan-mode";
 import { PLAN_LABEL_KEYS } from "./plan-mode-state";
 import { TextoDeLen } from "../texto-de-len";
+import { SecretsCardView } from "./secrets-card";
 
 type Translate = (key: string, values?: Record<string, string>) => string;
 
@@ -37,6 +38,8 @@ export interface QuestionCardProps {
    *  sin enviar respuesta» (su `ASK_CANCELLED`), con el plan a la vista y sin
    *  nada que pulsar. */
   cancelled?: boolean;
+  /** EDGE FUNCTIONS: el proyecto, para la tarjeta de los secretos (`request_secrets`), que guarda directo en él. */
+  projectId?: string;
 }
 
 export function QuestionCard(props: QuestionCardProps) {
@@ -56,13 +59,19 @@ function shownAnswer(answer: string, conIntencion: boolean, t: Translate): strin
     .join(" · ");
 }
 
-export function QuestionCardView({ question, questions, answer, onAnswer, onDismiss, cancelled, t }: QuestionCardProps & { t: Translate }) {
+export function QuestionCardView({ question, questions, answer, onAnswer, onDismiss, cancelled, projectId, t }: QuestionCardProps & { t: Translate }) {
   const [elegidas, setElegidas] = useState<Record<string, string[]>>({});
   const [libres, setLibres] = useState<Record<string, string>>({});
   const [otraAbierta, setOtraAbierta] = useState<Record<string, boolean>>({});
   const [enviada, setEnviada] = useState(false);
   const [planAbierto, setPlanAbierto] = useState(false);
   const intent = questions?.[0]?.intent;
+
+  // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): la tarjeta segura es otra
+  // cosa — campos de contraseña que van directos a la ruta de secretos.
+  if (intent?.kind === "secrets") {
+    return <SecretsCardView projectId={projectId ?? null} secrets={intent.secrets} answer={answer} cancelled={cancelled} onAnswer={onAnswer} t={t} />;
+  }
 
   if (answer !== null || cancelled) {
     return (
