@@ -42,6 +42,7 @@ import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/catalog";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
+import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
 import {
   MAX_FOLDER_BYTES,
@@ -271,7 +272,8 @@ function lineasDeFunciones(): string {
     .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
     .join(", ");
   return [
-    "- Edge Functions, the Supabase way: each one is /supabase/functions/<name>/index.ts with `Deno.serve(async (req) => …)` (a name in lowercase letters, digits, - and _; up to 25). Code they share goes in /supabase/functions/_shared/. Every save redeploys the draft a few seconds later; `supabase functions deploy` does it now and waits, and `supabase functions list` shows what is deployed where.",
+    `- Edge Functions, the Supabase way: each one is /supabase/functions/<name>/index.ts with \`Deno.serve(async (req) => …)\` (a name that starts with a letter and has only letters, digits, - and _; up to ${MAX_FUNCTIONS}).` +
+      " Code they share goes in /supabase/functions/_shared/. Every save redeploys the draft a few seconds later; `supabase functions deploy` does it now and waits, and `supabase functions list` shows what is deployed where.",
     `- Their imports come only from the functions catalog: ${catalogo}; also as \`jsr:\` or \`https://esm.sh/\` URLs of those same packages, plus \`node:*\`. Anything else is a compile error with its file and line.`,
     "- They already have SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (and SUPABASE_PUBLISHABLE_KEYS and SUPABASE_SECRET_KEYS) for THEIR environment: the draft's functions use the test database, the published site's use production. There is no SUPABASE_DB_URL.",
     "- Secrets —API keys, webhook signing secrets— are read with `Deno.env.get(\"NAME\")`. Ask the user for them with request_secrets: never in the chat and never in a file. A value you generate yourself (a random token) can go to the draft with `supabase secrets set NAME=value`; production values are set only by the user, and the publish card asks for any that are missing.",

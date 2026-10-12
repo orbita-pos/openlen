@@ -292,9 +292,12 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
         "constructEventAsync",
         "`npm:stripe`",
         "don't retry",
+        // La regla de Supabase (FUNCTION_NAME_RE): empieza por letra; mayúsculas también valen.
+        "a name that starts with a letter and has only letters, digits, - and _; up to 25",
       ]) {
         expect(m, f).toContain(f);
       }
+      expect(m).not.toContain("lowercase letters");
       expect(m.indexOf("Deno.serve")).toBeGreaterThan(m.indexOf("Live updates go through Realtime"));
     }
   });
