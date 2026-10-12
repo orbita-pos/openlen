@@ -4,7 +4,10 @@
 // `secret_text` y el hash del paquete como etiqueta. Se llama a través de
 // NUESTRO despachador, que le pone los límites del plan, y los marcos del
 // envoltorio vuelven según salen (NDJSON). Sin estado propio: lo desplegado vive
-// en Cloudflare (y en `functionDeployments`).
+// en Cloudflare (y en `functionDeployments`); en memoria, sólo lo que ahorra
+// llamadas a su API (el hash de cada script y las huellas de sus variables).
+
+import { createHash } from "node:crypto";
 
 import {
   cfRequest,
@@ -26,6 +29,8 @@ const HASH_TAG = "h-";
 const HASH_TTL_MS = 5 * 60_000;
 
 const noEsta = (e: unknown) => e instanceof CloudflareApiError && e.status === 404;
+/** Para saber si un valor cambió sin guardarlo en claro en la memoria del proceso. */
+const huellaDe = (v: string) => createHash("sha256").update(v, "utf8").digest("hex");
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Lo que se anota cuando no se llega a Cloudflare (y Len puede leer): sin la
@@ -44,6 +49,10 @@ export class CloudflareEngine implements FunctionsEngine {
   readonly #now: () => number;
   /** El hash de cada script (null: no hay), y desde cuándo se sabe. */
   readonly #hashes = new Map<string, { readonly hash: string | null; readonly at: number }>();
+  /** Lo que el motor puso en cada script: variable → huella de su valor. Los
+   *  valores de un secreto no se leen de Cloudflare; con esto `setEnv` sube sólo
+   *  lo que cambió (cada uno es una llamada a la API, con su límite de tasa). */
+  readonly #puestos = new Map<string, Map<string, string>>();
 
   constructor(cfg: CloudflareConfig, f: Fetch = fetch, now: () => number = Date.now) {
     this.#cfg = cfg;
@@ -65,9 +74,11 @@ export class CloudflareEngine implements FunctionsEngine {
     };
     await cfRequest(this.#cfg, this.#fetch, "PUT", this.#script(dest), scriptForm(metadata, bundle.files));
     this.#hashes.set(destinationName(dest), { hash: bundle.hash, at: this.#now() });
+    this.#puestos.set(destinationName(dest), new Map(Object.entries(env).map(([k, v]) => [k, huellaDe(v)])));
   }
 
   async setEnv(dest: Destination, env: Readonly<Record<string, string>>): Promise<void> {
+    const nombre = destinationName(dest);
     let actuales: { name: string }[];
     try {
       actuales = await cfRequest<{ name: string }[]>(this.#cfg, this.#fetch, "GET", `${this.#script(dest)}/secrets`);
@@ -75,11 +86,19 @@ export class CloudflareEngine implements FunctionsEngine {
       if (noEsta(e)) return; // sin script, nada: lo que se despliegue después ya los lleva
       throw e;
     }
+    const enCloudflare = new Set(actuales.map((s) => s.name));
+    const puestos = this.#puestos.get(nombre) ?? new Map<string, string>();
+    this.#puestos.set(nombre, puestos);
     for (const [name, text] of Object.entries(env)) {
+      const huella = huellaDe(text);
+      if (enCloudflare.has(name) && puestos.get(name) === huella) continue;
       await cfRequest(this.#cfg, this.#fetch, "PUT", `${this.#script(dest)}/secrets`, JSON.stringify({ name, text, type: "secret_text" }), "application/json");
+      puestos.set(name, huella);
     }
     for (const { name } of actuales) {
-      if (!Object.hasOwn(env, name)) await cfRequest(this.#cfg, this.#fetch, "DELETE", `${this.#script(dest)}/secrets/${encodeURIComponent(name)}`);
+      if (Object.hasOwn(env, name)) continue;
+      await cfRequest(this.#cfg, this.#fetch, "DELETE", `${this.#script(dest)}/secrets/${encodeURIComponent(name)}`);
+      puestos.delete(name);
     }
   }
 
@@ -112,6 +131,7 @@ export class CloudflareEngine implements FunctionsEngine {
       if (!noEsta(e)) throw e;
     }
     this.#hashes.set(destinationName(dest), { hash: null, at: this.#now() });
+    this.#puestos.delete(destinationName(dest));
   }
 
   async *invoke(dest: Destination, event: InvokeEvent, o: { readonly timeoutMs: number; readonly limits: CallLimits }): AsyncIterable<Frame> {

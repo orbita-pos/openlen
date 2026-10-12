@@ -122,6 +122,22 @@ describe("CloudflareEngine — la API", () => {
     expect(sin.llamadas).toHaveLength(1);
   });
 
+  it("🔴 setEnv sube sólo lo que cambió desde lo que el motor puso (los valores no se pueden leer de Cloudflare)", async () => {
+    let enCloudflare = ["A", "B"];
+    const { engine, llamadas } = api((c) => (c.method === "GET" && c.url.endsWith("/secrets") ? ok(enCloudflare.map((name) => ({ name, type: "secret_text" }))) : ok({})));
+    await engine.deploy(DEST, { hash: "h", files: { "worker.mjs": "w" } }, { A: "1", B: "2" }, { timeoutSec: 1, memoryMb: 128 });
+    llamadas.length = 0;
+    await engine.setEnv(DEST, { A: "1", B: "otro", C: "3" });
+    expect(llamadas.map((c) => `${c.method} ${c.url.replace(BASE, "")}`)).toEqual(["GET /secrets", "PUT /secrets", "PUT /secrets"]);
+    expect(llamadas.slice(1).map((c) => (JSON.parse(String(c.init.body)) as { name: string }).name)).toEqual(["B", "C"]);
+    // Si a Cloudflare le falta una que el motor cree puesta (la quitaron a mano), se vuelve a subir.
+    enCloudflare = ["B", "C"];
+    llamadas.length = 0;
+    await engine.setEnv(DEST, { A: "1", B: "otro", C: "3" });
+    expect(llamadas.map((c) => `${c.method} ${c.url.replace(BASE, "")}`)).toEqual(["GET /secrets", "PUT /secrets"]);
+    expect((JSON.parse(String(llamadas[1]!.init.body)) as { name: string }).name).toBe("A");
+  });
+
   it("remove: DELETE; si ya no estaba (404), bien; otro fallo, se lanza", async () => {
     const { engine, llamadas } = api(() => ok(null));
     await engine.remove(DEST);
