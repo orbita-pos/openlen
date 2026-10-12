@@ -224,7 +224,7 @@ openlen.com, www.openlen.com {
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.jsx *.tsx *.ts *.json *.webmanifest *.txt *.md
-		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/*
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/*
 		not header_regexp Host ^lienzo-
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
@@ -311,6 +311,18 @@ openlen.com, www.openlen.com {
 	handle /auth/v1/* {
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
+		}
+	}
+
+	# Las Edge Functions de las páginas y las apps (lib/functions, spec local
+	# 2026-10-11): la API de Supabase, /functions/v1/<nombre>. Las atiende Next
+	# (la puerta: verify_jwt, cuotas, tope de dinero) y las corre el motor. SIN
+	# búfer: el SSE de una IA tiene que salir según llega. Excluidas de @doc:
+	# cada respuesta es de quien la pide.
+	handle /functions/v1/* {
+		reverse_proxy 127.0.0.1:3000 {
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+			flush_interval -1
 		}
 	}
 

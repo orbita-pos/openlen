@@ -14,6 +14,8 @@ export const RUTAS_SOLO_PUBLICADA: readonly string[] = [
   // o `/auth/v1` RELATIVO sólo contesta en la publicada.
   "/rest/v1/",
   "/auth/v1/",
+  // Las Edge Functions (lib/functions, spec local 2026-10-11): igual que el backend.
+  "/functions/v1/",
 ];
 
 /** La ruta de `url` si es una de la lista Y va al origen de la propia página
