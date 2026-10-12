@@ -4,27 +4,25 @@
 import { describe, expect, it } from "vitest";
 
 import { secretNameMessage, secretNameProblem } from "./secret-names";
-import { ENV_LIMIT_BYTES, envSizeBytes, envTooLargeMessage, fitEnv, literalEnvNames, missingSecrets, secretDigest } from "./secrets";
+import { ENV_VARS_MAX, envTooLargeMessage, fitEnv, literalEnvNames, MAX_SECRET_VALUE_BYTES, missingSecrets, secretDigest } from "./secrets";
 
 describe("secretNameProblem", () => {
-  it("los nombres de siempre valen", () => {
-    for (const n of ["STRIPE_SECRET_KEY", "Resend_Key", "OPENAI_API_KEY2", "MP"]) expect(secretNameProblem(n), n).toBeNull();
+  it("los nombres de siempre valen, también los de una letra y los AWS_/LAMBDA_ (eran reglas de Lambda)", () => {
+    for (const n of ["STRIPE_SECRET_KEY", "Resend_Key", "OPENAI_API_KEY2", "MP", "X", "AWS_ACCESS_KEY_ID", "LAMBDA_X"]) expect(secretNameProblem(n), n).toBeNull();
   });
 
-  it("🔴 SUPABASE_, AWS_ y LAMBDA_ son del sistema", () => {
+  it("🔴 SUPABASE_ es del sistema", () => {
     expect(secretNameProblem("SUPABASE_URL")).toEqual({ kind: "reserved", prefix: "SUPABASE_" });
-    expect(secretNameProblem("AWS_REGION")).toEqual({ kind: "reserved", prefix: "AWS_" });
-    expect(secretNameProblem("LAMBDA_TASK_ROOT")).toEqual({ kind: "reserved", prefix: "LAMBDA_" });
   });
 
-  it("lo que Lambda no aceptaría como variable", () => {
-    for (const n of ["9KEY", "_X", "X", "my-key", "MI CLAVE", "Ñ_KEY", "A".repeat(257)]) expect(secretNameProblem(n), n).toEqual({ kind: "invalid" });
+  it("lo que no es un nombre de variable", () => {
+    for (const n of ["9KEY", "_X", "my-key", "MI CLAVE", "Ñ_KEY", "A".repeat(257)]) expect(secretNameProblem(n), n).toEqual({ kind: "invalid" });
   });
 
   it("lo que lee Len, al estilo de la CLI de Supabase", () => {
     expect(secretNameMessage("SUPABASE_X", { kind: "reserved", prefix: "SUPABASE_" })).toBe("Env name cannot start with SUPABASE_: SUPABASE_X");
     expect(secretNameMessage("my-key", { kind: "invalid" })).toBe(
-      "Invalid secret name: my-key. Must start with a letter, and only include letters, digits and underscores. (^[A-Za-z][A-Za-z0-9_]+$)",
+      "Invalid secret name: my-key. Must start with a letter, and only include letters, digits and underscores. (^[A-Za-z][A-Za-z0-9_]*$)",
     );
   });
 });
@@ -35,23 +33,22 @@ describe("secretDigest", () => {
   });
 });
 
-describe("los 4 KB de Lambda", () => {
-  it("se mide el JSON entero, en bytes (lo que cita el error de AWS)", () => {
-    expect(envSizeBytes({ A: "1" })).toBe(9);
-    expect(envSizeBytes({ A: "ñ" })).toBe(10);
+describe("las 128 variables de Cloudflare", () => {
+  it("🔴 cuentan las variables, con las SUPABASE_* de la base, y dicen cuántas quedan", () => {
+    const base = { SUPABASE_URL: "u", SUPABASE_ANON_KEY: "a" };
+    const muchas = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`K${i}`, "v"]));
+    expect(fitEnv(base, muchas(126))).toEqual({ ok: true, used: 128 });
+    const f = fitEnv(base, muchas(127));
+    expect(f).toEqual({ ok: false, used: 129, base: 2, available: 126 });
+    if (f.ok) return;
+    expect(envTooLargeMessage(f)).toBe(
+      "Edge Function secrets don't fit: a function gets 128 environment variables and these would be 129 (the project's own SUPABASE_* variables are 2). 126 are left for secrets: remove some.",
+    );
   });
 
-  it("cabe o no CON lo que ya hay, y dice lo que queda", () => {
-    const base = { SUPABASE_URL: "https://abcdefghijklmnopqrst.openlen.app" };
-    expect(fitEnv(base, { K: "x" })).toEqual({ ok: true, usedBytes: envSizeBytes({ ...base, K: "x" }) });
-    const f = fitEnv(base, { K: "x".repeat(ENV_LIMIT_BYTES) });
-    expect(f.ok).toBe(false);
-    if (f.ok) return;
-    expect(f.baseBytes).toBe(envSizeBytes(base));
-    expect(f.availableBytes).toBe(ENV_LIMIT_BYTES - envSizeBytes(base));
-    expect(envTooLargeMessage(f)).toBe(
-      `Edge Function secrets don't fit: a function gets 4096 bytes of environment variables and these would take ${f.usedBytes} (the project's own SUPABASE_* variables take ${f.baseBytes}). ${f.availableBytes} bytes are left for secrets: remove or shorten some.`,
-    );
+  it("los topes, los de Cloudflare", () => {
+    expect(ENV_VARS_MAX).toBe(128);
+    expect(MAX_SECRET_VALUE_BYTES).toBe(5120);
   });
 });
 

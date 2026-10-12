@@ -1,42 +1,37 @@
 // lib/functions/secrets.ts — LAS REGLAS DE LOS VALORES (spec local 2026-10-11,
-// Parte 4): la huella que enseña `supabase secrets list` (sha256 en hex, como
-// la de Supabase), el tope de 4 KB de variables de Lambda y los
-// `Deno.env.get("…")` literales que publicar comprueba. Puro (node:crypto).
+// Parte 4, y 2026-10-12, Parte 5): la huella que enseña `supabase secrets list`
+// (sha256 en hex, como la de Supabase), los topes de Cloudflare (128 variables
+// por script, 5 KB cada una) y los `Deno.env.get("…")` literales que publicar
+// comprueba. Puro (node:crypto).
 
 import { createHash } from "node:crypto";
 
 import { FUNCTIONS_DIR } from "./project-files";
 
-/** El `maxLength` del valor en la API de Supabase (`CreateSecretBody`). */
-export const MAX_SECRET_VALUE_BYTES = 24_576;
-/** Las variables de una Lambda, todas juntas. */
-export const ENV_LIMIT_BYTES = 4096;
+/** Lo que admite Cloudflare por variable de un script. */
+export const MAX_SECRET_VALUE_BYTES = 5 * 1024;
+/** Las variables de un script de Cloudflare, contando las SUPABASE_* del proyecto. */
+export const ENV_VARS_MAX = 128;
 
 export function secretDigest(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-/** Lo que mide AWS: el JSON de las variables (su error cita «String measured:
- *  {…}»). Contarlo así es lo más estricto: lo que cabe aquí, cabe allí. */
-export function envSizeBytes(env: Readonly<Record<string, string>>): number {
-  return Buffer.byteLength(JSON.stringify(env), "utf8");
-}
-
 export type EnvFit =
-  | { readonly ok: true; readonly usedBytes: number }
-  | { readonly ok: false; readonly usedBytes: number; readonly baseBytes: number; readonly availableBytes: number };
+  | { readonly ok: true; readonly used: number }
+  | { readonly ok: false; readonly used: number; readonly base: number; readonly available: number };
 
 /** ¿Caben `base` (las `SUPABASE_*` de ese entorno) y los secretos juntos? */
 export function fitEnv(base: Readonly<Record<string, string>>, secrets: Readonly<Record<string, string>>): EnvFit {
-  const usedBytes = envSizeBytes({ ...base, ...secrets });
-  if (usedBytes <= ENV_LIMIT_BYTES) return { ok: true, usedBytes };
-  const baseBytes = envSizeBytes(base);
-  return { ok: false, usedBytes, baseBytes, availableBytes: Math.max(0, ENV_LIMIT_BYTES - baseBytes) };
+  const used = Object.keys({ ...base, ...secrets }).length;
+  if (used <= ENV_VARS_MAX) return { ok: true, used };
+  const b = Object.keys(base).length;
+  return { ok: false, used, base: b, available: Math.max(0, ENV_VARS_MAX - b) };
 }
 
 /** Lo que lee Len (la CLI) y la ruta cuando no caben. En inglés. */
 export function envTooLargeMessage(f: Extract<EnvFit, { ok: false }>): string {
-  return `Edge Function secrets don't fit: a function gets ${ENV_LIMIT_BYTES} bytes of environment variables and these would take ${f.usedBytes} (the project's own SUPABASE_* variables take ${f.baseBytes}). ${f.availableBytes} bytes are left for secrets: remove or shorten some.`;
+  return `Edge Function secrets don't fit: a function gets ${ENV_VARS_MAX} environment variables and these would be ${f.used} (the project's own SUPABASE_* variables are ${f.base}). ${f.available} are left for secrets: remove some.`;
 }
 
 const FUENTE = /\.(?:ts|tsx|js|jsx|mjs)$/;

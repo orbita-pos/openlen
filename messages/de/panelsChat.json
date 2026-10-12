@@ -340,7 +340,7 @@
     "liveInDraft": "Das ist ein Live-Schlüssel: Testzahlungen wären echt.",
     "testInLive": "Das ist ein Testschlüssel: Die veröffentlichte Seite würde nichts abrechnen.",
     "saveFailed": "Speichern fehlgeschlagen. Versuch es noch einmal.",
-    "tooLarge": "Sie passen nicht: Für die Schlüssel von {environment} sind noch {available} Bytes frei.",
+    "tooLarge": "Sie passen nicht: Für die Schlüssel von {environment} sind noch {available} Variablen frei.",
     "invalidName": "Der Name beginnt mit einem Buchstaben und enthält Buchstaben, Ziffern und _ (kein SUPABASE_, AWS_ oder LAMBDA_).",
     "envDraft": "Entwurf",
     "envLive": "Produktion",

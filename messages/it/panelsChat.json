@@ -340,7 +340,7 @@
     "liveInDraft": "È una chiave reale: i pagamenti di prova sarebbero veri.",
     "testInLive": "È una chiave di prova: la pagina pubblicata non incasserebbe nulla.",
     "saveFailed": "Impossibile salvare. Riprova.",
-    "tooLarge": "Non ci stanno: restano {available} byte per le chiavi di {environment}.",
+    "tooLarge": "Non ci stanno: restano {available} variabili per le chiavi di {environment}.",
     "invalidName": "Il nome inizia con una lettera e usa lettere, numeri e _ (senza SUPABASE_, AWS_ o LAMBDA_).",
     "envDraft": "bozza",
     "envLive": "produzione",

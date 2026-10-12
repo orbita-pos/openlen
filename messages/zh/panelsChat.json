@@ -340,7 +340,7 @@
     "liveInDraft": "这是正式密钥：测试付款会真的扣款。",
     "testInLive": "这是测试密钥：已发布的页面不会收款。",
     "saveFailed": "保存失败，请重试。",
-    "tooLarge": "放不下：{environment} 的密钥只剩 {available} 字节。",
+    "tooLarge": "放不下：{environment} 的密钥只剩 {available} 个变量。",
     "invalidName": "名称以字母开头，只能包含字母、数字和 _（不能以 SUPABASE_、AWS_ 或 LAMBDA_ 开头）。",
     "envDraft": "草稿",
     "envLive": "正式环境",

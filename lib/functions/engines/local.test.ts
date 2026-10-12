@@ -64,7 +64,7 @@ describe("LocalEngine", () => {
       { SUPABASE_URL: "https://x.openlen.app", AWS_ACCESS_KEY_ID: "AKIA" },
     );
     const r = JSON.parse(cuerpo(await marcos(DEST, evento("env")))) as { deno: Record<string, string>; proc: string[] };
-    expect(r.deno).toEqual({ SUPABASE_URL: "https://x.openlen.app" });
+    expect(r.deno).toEqual({ SUPABASE_URL: "https://x.openlen.app", AWS_ACCESS_KEY_ID: "AKIA" });
     expect(r.proc).not.toContain("DATABASE_URL_DE_PRUEBA");
     expect(r.proc).not.toContain("NEXTAUTH_SECRET");
   });

@@ -13,7 +13,7 @@ export interface SecretInput {
 
 export type SaveSecretsOutcome =
   | { readonly kind: "saved" }
-  | { readonly kind: "too_large"; readonly environment: SecretEnvironment; readonly availableBytes: number }
+  | { readonly kind: "too_large"; readonly environment: SecretEnvironment; readonly availableVars: number }
   | { readonly kind: "invalid_name"; readonly name: string }
   | { readonly kind: "error" };
 
@@ -25,7 +25,7 @@ export async function postFunctionSecrets(projectId: string, secrets: readonly S
     if (res.ok) return { kind: "saved" };
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (res.status === 422 && data.error === "env_too_large") {
-      return { kind: "too_large", environment: data.environment === "live" ? "live" : "draft", availableBytes: Number(data.availableBytes ?? 0) };
+      return { kind: "too_large", environment: data.environment === "live" ? "live" : "draft", availableVars: Number(data.availableVars ?? 0) };
     }
     if (data.error === "invalid_name") return { kind: "invalid_name", name: String(data.name ?? "") };
     return { kind: "error" };

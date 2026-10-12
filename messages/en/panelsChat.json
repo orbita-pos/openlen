@@ -340,7 +340,7 @@
     "liveInDraft": "This is a live key: test payments would be real.",
     "testInLive": "This is a test key: the published page wouldn't charge anything.",
     "saveFailed": "Couldn't save. Try again.",
-    "tooLarge": "They don't fit: {available} bytes are left for {environment} keys.",
+    "tooLarge": "They don't fit: {available} variables are left for {environment} keys.",
     "invalidName": "The name starts with a letter and uses letters, numbers and _ (no SUPABASE_, AWS_ or LAMBDA_).",
     "envDraft": "draft",
     "envLive": "production",

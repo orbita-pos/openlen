@@ -91,14 +91,11 @@ describe("createHandler", () => {
     expect((fs[0] as { message: string }).message).toMatch(/Deno\.readTextFile is not available in OpenLen Edge Functions/);
   });
 
-  it("Deno.env esconde lo de AWS y Lambda", () => {
-    process.env.AWS_SECRET_ACCESS_KEY = "x";
-    process.env.LAMBDA_TASK_ROOT = "/var/task";
+  it("Deno.env es el entorno de su proceso tal cual: lo pone el motor, y AWS_ ya no se esconde", () => {
+    process.env.AWS_ACCESS_KEY_ID = "AKIA";
     process.env.SUPABASE_URL = "https://a.openlen.app";
-    expect(Deno.env.get("AWS_SECRET_ACCESS_KEY")).toBeUndefined();
-    expect(Deno.env.has("LAMBDA_TASK_ROOT")).toBe(false);
-    expect(Deno.env.get("SUPABASE_URL")).toBe("https://a.openlen.app");
-    const todo = Deno.env.toObject();
-    expect(Object.keys(todo).some((k) => k.startsWith("AWS_") || k.startsWith("LAMBDA_"))).toBe(false);
+    expect(Deno.env.get("AWS_ACCESS_KEY_ID")).toBe("AKIA");
+    expect(Deno.env.has("SUPABASE_URL")).toBe(true);
+    expect(Deno.env.toObject()).toMatchObject({ AWS_ACCESS_KEY_ID: "AKIA", SUPABASE_URL: "https://a.openlen.app" });
   });
 });

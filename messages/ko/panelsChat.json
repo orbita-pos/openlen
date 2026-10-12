@@ -340,7 +340,7 @@
     "liveInDraft": "실제 키입니다. 테스트 결제가 실제로 청구됩니다.",
     "testInLive": "테스트 키입니다. 게시된 페이지에서 결제가 청구되지 않습니다.",
     "saveFailed": "저장하지 못했습니다. 다시 시도해 주세요.",
-    "tooLarge": "공간이 부족합니다. {environment} 키에 남은 용량은 {available}바이트입니다.",
+    "tooLarge": "공간이 부족합니다. {environment} 키에 남은 변수는 {available}개입니다.",
     "invalidName": "이름은 영문자로 시작하고 영문자, 숫자, _만 쓸 수 있습니다(SUPABASE_, AWS_, LAMBDA_ 제외).",
     "envDraft": "초안",
     "envLive": "프로덕션",

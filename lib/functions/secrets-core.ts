@@ -1,8 +1,8 @@
 // lib/functions/secrets-core.ts — GUARDAR Y QUITAR SECRETOS (spec local
 // 2026-10-11, Parte 4), lo mismo para la tarjeta (la ruta) y para `supabase
-// secrets set/unset` (la terminal): nombres válidos, valores de hasta 24.576
-// bytes, que quepan en los 4 KB de Lambda CON lo que ya hay —todo o nada—, y al
-// motor al momento. Sin base ni motor de verdad: todo entra por `SecretsDeps`.
+// secrets set/unset` (la terminal): nombres válidos, valores de hasta 5 KB, que
+// quepan en las 128 variables de un script de Cloudflare CON lo que ya hay —todo o
+// nada—, y al motor al momento. Sin base ni motor de verdad: todo entra por `SecretsDeps`.
 
 import type { FunctionsEnvironment } from "./engines/types";
 import { secretNameMessage, secretNameProblem } from "./secret-names";
@@ -17,7 +17,7 @@ export interface SecretEntry {
 
 export interface SecretsDeps {
   readonly store: SecretStore;
-  /** Las variables que toda función ya trae en ese entorno (`SUPABASE_*`): cuentan en los 4 KB. */
+  /** Las variables que toda función ya trae en ese entorno (`SUPABASE_*`): cuentan en las 128 variables. */
   baseEnv(projectId: string, env: FunctionsEnvironment): Promise<Record<string, string>>;
   /** Al motor, al momento (`applyFunctionEnv`). */
   apply(projectId: string, env: FunctionsEnvironment): Promise<void>;
@@ -30,9 +30,9 @@ export type SetSecretsResult =
       readonly ok: false;
       readonly error: "env_too_large";
       readonly environment: FunctionsEnvironment;
-      readonly usedBytes: number;
-      readonly baseBytes: number;
-      readonly availableBytes: number;
+      readonly usedVars: number;
+      readonly baseVars: number;
+      readonly availableVars: number;
       readonly message: string;
     };
 
@@ -71,7 +71,7 @@ export async function setFunctionSecrets(projectId: string, entries: readonly Se
     for (const [env, nuevos] of porEntorno) {
       const f = fitEnv(await deps.baseEnv(projectId, env), { ...(await deps.store.values(projectId, env)), ...nuevos });
       if (!f.ok) {
-        return { ok: false, error: "env_too_large", environment: env, usedBytes: f.usedBytes, baseBytes: f.baseBytes, availableBytes: f.availableBytes, message: envTooLargeMessage(f) } as const;
+        return { ok: false, error: "env_too_large", environment: env, usedVars: f.used, baseVars: f.base, availableVars: f.available, message: envTooLargeMessage(f) } as const;
       }
     }
     for (const [env, nuevos] of porEntorno) await deps.store.set(projectId, env, nuevos, by);

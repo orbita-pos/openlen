@@ -57,14 +57,14 @@ describe("supabase secrets set", () => {
     expect((await runCli(["secrets", "set", "--env-file=.env"], {}, b)).stderr).toBe(`failed to open env file: open .env: no such file or directory\n${DEBUG}`);
   });
 
-  it("SUPABASE_ (y AWS_, LAMBDA_) se saltan con el aviso de la CLI; sin nada que guardar, su error", async () => {
+  it("SUPABASE_ se salta con el aviso de la CLI (AWS_ ya vale); sin nada que guardar, su error", async () => {
     const { b, guardados } = backend({});
     expect(await runCli(["secrets", "set", "SUPABASE_URL=x", "AWS_REGION=y", "K=v"], {}, b)).toEqual({
       stdout: "Finished supabase secrets set.\n",
-      stderr: "Env name cannot start with SUPABASE_, skipping: SUPABASE_URL\nEnv name cannot start with AWS_, skipping: AWS_REGION\n",
+      stderr: "Env name cannot start with SUPABASE_, skipping: SUPABASE_URL\n",
       exitCode: 0,
     });
-    expect(guardados).toEqual([{ K: "v" }]);
+    expect(guardados).toEqual([{ AWS_REGION: "y", K: "v" }]);
     expect(await runCli(["secrets", "set", "SUPABASE_URL=x"], {}, b)).toEqual({
       stdout: "",
       stderr: `Env name cannot start with SUPABASE_, skipping: SUPABASE_URL\nNo arguments found. Use --env-file to read from a .env file.\n${DEBUG}`,

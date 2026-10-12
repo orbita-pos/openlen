@@ -340,7 +340,7 @@
     "liveInDraft": "本番用のキーです。テストの支払いが実際に請求されます。",
     "testInLive": "テスト用のキーです。公開ページでは請求されません。",
     "saveFailed": "保存できませんでした。もう一度お試しください。",
-    "tooLarge": "容量が足りません。{environment}のキーに使えるのは残り{available}バイトです。",
+    "tooLarge": "入りきりません。{environment}のキーに使える変数は残り{available}個です。",
     "invalidName": "名前は英字で始め、英字・数字・_ だけを使ってください（SUPABASE_、AWS_、LAMBDA_ は不可）。",
     "envDraft": "下書き",
     "envLive": "本番",

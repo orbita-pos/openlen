@@ -340,7 +340,7 @@
     "liveInDraft": "Dit is een live sleutel: testbetalingen zouden echt zijn.",
     "testInLive": "Dit is een testsleutel: de gepubliceerde pagina zou niets afrekenen.",
     "saveFailed": "Opslaan is mislukt. Probeer het opnieuw.",
-    "tooLarge": "Ze passen niet: er is nog {available} bytes over voor de sleutels van {environment}.",
+    "tooLarge": "Ze passen niet: er zijn nog {available} variabelen over voor de sleutels van {environment}.",
     "invalidName": "De naam begint met een letter en bevat letters, cijfers en _ (geen SUPABASE_, AWS_ of LAMBDA_).",
     "envDraft": "concept",
     "envLive": "productie",
