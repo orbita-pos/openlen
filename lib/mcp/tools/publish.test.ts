@@ -88,6 +88,14 @@ describe("publish", () => {
     expect(m.publishProject).toHaveBeenCalled();
   });
 
+  it("🔴 tras despublicar, la confianza no vale: volver a publicar pide aprobación", async () => {
+    m.openProject.mockResolvedValue(owner(null));
+    m.hasTrustedPublish.mockResolvedValue(true);
+    const out = parse(await publishTool.run({ project_id: "p1", subdomain: "cafe" }, caller));
+    expect(out).toMatchObject({ status: "approval_required" });
+    expect(m.publishProject).not.toHaveBeenCalled();
+  });
+
   it("nunca publicado y sin subdominio: lo pide", async () => {
     m.openProject.mockResolvedValue(owner(null));
     expect(text(await publishTool.run({ project_id: "p1" }, caller))).toContain("subdomain_required");

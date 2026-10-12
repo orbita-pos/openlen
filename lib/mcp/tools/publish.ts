@@ -113,7 +113,11 @@ export const publishTool = defineTool({
       return toolError("owner_only_address", `Only the owner can choose a new address; you can republish at ${row.subdomain ?? "its current address"}.`);
     }
     const req: ApprovalRequest = { userId: caller.userId, tokenId: caller.tokenId, projectId: project_id, action: "publish", subdomain: valid.value };
-    const stop = await gate(req, approval_id, await hasTrustedPublish(req));
+    // La confianza sólo vale si SIGUE publicado en esa dirección: tras
+    // despublicar (aquí o en el editor), volver a publicar es reclamar la
+    // dirección otra vez, y eso pide el OK de la persona.
+    const trusted = row.subdomain === valid.value && (await hasTrustedPublish(req));
+    const stop = await gate(req, approval_id, trusted);
     if (stop) return stop;
     const denied = await consumeQuota(caller, "publish");
     if (denied) return denied;
