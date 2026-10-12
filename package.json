@@ -33,6 +33,7 @@
     "librerias:cors": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/librerias-cors.ts",
     "apps:vendor": "tsx --tsconfig tsconfig.eval.json scripts/apps-vendor.ts",
     "functions:vendor": "tsx --tsconfig tsconfig.eval.json scripts/functions-vendor.ts",
+    "functions:cloudflare-setup": "tsx --tsconfig tsconfig.eval.json scripts/functions-cloudflare-setup.ts",
     "templates:count": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/count-templates.ts",
     "post-templates:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/post-templates-migrate.ts",
     "assistant:evals": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assistant-evals.ts",
