@@ -180,6 +180,16 @@ interface PreviewAreaProps {
   aplicando?: boolean;
   onAplicar?: () => void;
   onDescartar?: () => void;
+  /** Los cambios del modo Diseño de una app, en la MISMA barra que los
+   *  pendientes de una página (Jesús, 11/10: el pie del panel se veía feo al
+   *  lado de esta). Van aparte de `pendientes` porque ésos además frenan el
+   *  re-derivar del lienzo, y los de Diseño no tocan el documento. */
+  designBar?: {
+    count: number;
+    busy: boolean;
+    onApply: () => void;
+    onDiscard: () => void;
+  } | null;
   /** True whenever a project is open in editing mode — arms the drop engine
    *  (drag an image from the OS / paste-then-place). Deliberately NOT tied to
    *  the edit toggle: dragging a file over the page is unambiguous intent, and
@@ -285,6 +295,7 @@ export function PreviewArea({
   aplicando = false,
   onAplicar,
   onDescartar,
+  designBar = null,
   dropEnabled = false,
   suppressReloadNonce = 0,
   untrustedDoc = false,
@@ -856,6 +867,15 @@ export function PreviewArea({
             ? 0.5
             : 1;
 
+  // La barra de «cambios sin aplicar»: los del modo Diseño en una app, los
+  // pendientes del documento en una página.
+  const barra = designBar ?? {
+    count: pendientes,
+    busy: aplicando,
+    onApply: onAplicar,
+    onDiscard: onDescartar,
+  };
+
   return (
     // `min-h-0` NO ES DECORACIÓN. En una columna flex, un hijo trae
     // `min-height: auto`, así que NO puede encogerse por debajo de su
@@ -1083,29 +1103,30 @@ export function PreviewArea({
           debajo: son dos hechos sobre lo mismo, y el importante es éste.
           Nada que pueda perderlos ocurre sin aplicarlos antes (ver
           `flushPendingSave` en /new): cambiar de página, publicar, guardar una
-          versión. Cerrar la pestaña avisa. Sólo «Descartar» los tira. */}
-      {pendientes > 0 && !sectionSelectMode && (
+          versión. Cerrar la pestaña avisa. Sólo «Descartar» los tira.
+          En una app, la misma barra lleva los cambios del modo Diseño. */}
+      {barra.count > 0 && !sectionSelectMode && (
         <div className="relative z-10 shrink-0 h-9 flex items-center justify-center gap-3 text-[11.5px] bg-accent-soft text-accent border-b bd ui-small fade-in">
           <span className="inline-flex items-center gap-1.5 font-medium">
             <Pencil size={11} />
-            {t("preview.pendientes.count", { count: pendientes })}
+            {t("preview.pendientes.count", { count: barra.count })}
           </span>
           <span className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={onDescartar}
-              disabled={aplicando}
+              onClick={barra.onDiscard}
+              disabled={barra.busy}
               className="h-6 px-2.5 rounded-full border bd bg-app fg font-medium hover:bg-elev transition disabled:opacity-50"
             >
               {t("preview.pendientes.descartar")}
             </button>
             <button
               type="button"
-              onClick={onAplicar}
-              disabled={aplicando}
+              onClick={barra.onApply}
+              disabled={barra.busy}
               className="h-6 px-3 rounded-full bg-[var(--accent)] text-white font-medium hover:opacity-90 transition disabled:opacity-60"
             >
-              {aplicando
+              {barra.busy
                 ? t("preview.pendientes.aplicando")
                 : t("preview.pendientes.aplicar")}
             </button>

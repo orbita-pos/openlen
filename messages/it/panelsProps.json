@@ -262,9 +262,7 @@
     "noteElement": "Qualcos’altro per Len su questo elemento",
     "noteGeneral": "Qualcos’altro per Len",
     "resetElement": "Ripristina questo elemento",
-    "resetAll": "Ripristina tutto",
     "busy": "Len sta lavorando: applica quando ha finito.",
-    "apply": "Applica ({n})",
     "applyMessage": "Modifiche di design · {n, plural, one {# elemento} other {# elementi}}",
     "tooBig": "Troppe modifiche per un solo «Applica»: applicane prima una parte.",
     "group": {

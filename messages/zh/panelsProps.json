@@ -262,9 +262,7 @@
     "noteElement": "关于此元素还想告诉 Len 的",
     "noteGeneral": "还想告诉 Len 的",
     "resetElement": "还原此元素",
-    "resetAll": "全部还原",
     "busy": "Len 正在工作:完成后再应用。",
-    "apply": "应用 ({n})",
     "applyMessage": "设计更改 · {n} 个元素",
     "tooBig": "一次「应用」的更改太多:请先应用一部分。",
     "group": {

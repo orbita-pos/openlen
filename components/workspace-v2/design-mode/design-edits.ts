@@ -35,7 +35,7 @@ export type DesignEditsAction =
 export const EMPTY_DESIGN_EDITS: DesignEditsState = { elements: {}, order: [], past: [], future: [] };
 const HISTORIA = 100;
 
-function antesDe(sel: DesignSelection, field: EditableField): string {
+export function antesDe(sel: DesignSelection, field: EditableField): string {
   if (field === "text") return sel.text;
   if (field === "alt") return sel.image?.alt ?? "";
   return sel.styles[field] ?? "";

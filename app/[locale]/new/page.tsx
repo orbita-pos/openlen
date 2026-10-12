@@ -3737,6 +3737,20 @@ function NewV2Inner() {
                 aplicando={aplicandoLote}
                 onAplicar={() => void aplicarPendientesRef.current?.()}
                 onDescartar={descartarPendientes}
+                designBar={
+                  esApp
+                    ? {
+                        // La nota general sola también se aplica: cuenta como uno.
+                        count: designPending || (designNote.trim() ? 1 : 0),
+                        busy: chatRedesigning,
+                        onApply: applyDesign,
+                        onDiscard: () => {
+                          dispatchDesign({ type: "resetAll" });
+                          setDesignNote("");
+                        },
+                      }
+                    : null
+                }
                 redesigning={chatRedesigning}
                 untrustedDoc={chatUntrustedDoc}
                 editableInjection={editableInjection}
@@ -3979,11 +3993,9 @@ function NewV2Inner() {
                     onUndo={() => dispatchDesign({ type: "undo" })}
                     onRedo={() => dispatchDesign({ type: "redo" })}
                     onResetElement={(key) => dispatchDesign({ type: "resetElement", key })}
-                    onResetAll={() => dispatchDesign({ type: "resetAll" })}
                     onSelectParent={() =>
                       iframeElRef.current?.contentWindow?.postMessage({ type: "openlen:design-select-parent" }, "*")
                     }
-                    onApply={applyDesign}
                     onClose={() => setDesignMode(false)}
                   />
                 </div>
