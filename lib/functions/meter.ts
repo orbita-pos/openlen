@@ -7,9 +7,25 @@
 export const NANO_USD_PER_REQUEST = 300;
 export const NANO_USD_PER_CPU_MS = 20;
 
-/** Lo que cuenta una llamada: la petición y toda la CPU que su plan le deja. */
+/** La CPU de NUESTRO despachador en cada llamada (lee el evento y pasa el flujo):
+ *  también se cobra. Holgada; el ensayo real la mide (infra/FUNCTIONS_RUNBOOK.md §6). */
+export const DISPATCHER_CPU_MS = 5;
+
+/** Lo que cuesta una llamada con esa CPU, a precio de lista. */
 export function callCostNanoUsd(cpuMs: number): number {
   return NANO_USD_PER_REQUEST + NANO_USD_PER_CPU_MS * Math.max(0, cpuMs);
+}
+
+/** Lo que se reserva y se liquida: toda la CPU que su plan le deja a la función
+ *  y la del despachador. */
+export function worstCallNanoUsd(cpuMs: number): number {
+  return callCostNanoUsd(cpuMs + DISPATCHER_CPU_MS);
+}
+
+/** Una llamada que no llegó a la función (el despachador no contestó o no la
+ *  encontró por fallo nuestro): como mucho, el despachador. */
+export function unreachedCallNanoUsd(): number {
+  return callCostNanoUsd(DISPATCHER_CPU_MS);
 }
 
 /** `AAAA-MM` en UTC. */

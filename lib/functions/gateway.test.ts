@@ -8,6 +8,7 @@ import type { DeploymentRecord } from "./deployments";
 import type { CallLimits, Destination, Frame, FunctionsEngine, InvokeEvent } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps, type InvocationRecord, type ResolvedTarget } from "./gateway";
 import { FUNCTION_LIMITS } from "./limits";
+import { unreachedCallNanoUsd } from "./meter";
 import { memoryUsageStore } from "./usage";
 
 const SECRETO_KEY = "sb_secret_abcdefghijklmnopqrstuv";
@@ -357,11 +358,15 @@ describe("la puerta", () => {
     expect(r.headers.get("sb-error-code")).toBe("WORKER_RESOURCE_LIMIT");
   });
 
-  it("🔴 el motor no llega a Cloudflare: 503 FUNCTIONS_UNAVAILABLE", async () => {
-    const { deps } = montar(() => [{ t: "error", kind: "unavailable", message: "the dispatcher answered 403" }]);
+  it("🔴 el motor no llega a Cloudflare: 503 FUNCTIONS_UNAVAILABLE, y esa llamada no cuenta en la cuota (la bolsa, sólo el despachador)", async () => {
+    const usage = memoryUsageStore();
+    const { deps, records } = montar(() => [{ t: "error", kind: "unavailable", message: "Edge Functions are temporarily unavailable" }], { usage });
     const r = await llamar(deps);
     expect(r.status).toBe(503);
     expect(r.headers.get("sb-error-code")).toBe("FUNCTIONS_UNAVAILABLE");
+    await vi.waitFor(() => expect(records).toHaveLength(1));
+    expect(usage.calls.get("p1|2026-10")).toBe(0);
+    expect(usage.pools.get("2026-10|free")).toEqual({ reserved: 0, spent: unreachedCallNanoUsd() });
   });
 
   it("🔴 la puerta le pasa al motor los límites del plan", async () => {
