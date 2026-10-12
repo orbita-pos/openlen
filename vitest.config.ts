@@ -107,6 +107,8 @@ export default defineConfig({
       // El backend de las páginas: la API de Supabase sobre nuestro Postgres
       // (plans/pages-backend/design.md). Lista blanca: sin esta línea no corre.
       "lib/backend/**/*.test.ts",
+      // Las Edge Functions (spec local 2026-10-11). `include` es LISTA BLANCA.
+      "lib/functions/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
