@@ -318,5 +318,16 @@
   "lenCompanion": {
     "ask": "需要帮忙吗？",
     "aria": "请 Len 帮忙"
+  },
+  "mcp": {
+    "lenSays": "已经在付费用 Claude 或 ChatGPT？在这里也能用。",
+    "title": "你常用的 AI，<muted>为你的页面工作。</muted>",
+    "subtitle": "Claude、ChatGPT、Codex、Cursor 等通过 MCP 连接 OpenLen：用你自己的订阅读取、编辑和发布你的页面与应用。",
+    "step1": "在你的助手中添加 OpenLen 的地址。",
+    "step2": "用你的账户登录，并选择它能做什么、用于哪些项目。",
+    "step3": "直接提出修改。发布之前，它总会先征得你的同意。",
+    "cta": "如何连接",
+    "worksWith": "支持",
+    "anyClient": "以及任何支持 MCP 的其他客户端。"
   }
 }
