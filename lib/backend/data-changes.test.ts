@@ -20,6 +20,7 @@ const env = (environment: "draft" | "live", provisioned = true): EnvironmentReco
   jwtSecretEncrypted: "j",
   readOnlyPasswordEncrypted: null,
   provisionedAt: provisioned ? new Date() : null,
+  publicRef: null,
 });
 const M = { version: "2", name: "sin_descuento", statements: ["alter table ventas drop column descuento"] };
 

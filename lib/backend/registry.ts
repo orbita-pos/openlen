@@ -24,7 +24,9 @@ import {
   classifyExistingBackend,
   createEnvironment,
   dbNameOf,
+  ensureDraftPublicRef,
   getEnvironment,
+  getEnvironmentByPublicRef,
   listEnvironments,
   markEnvironmentProvisioned,
   type Environment,
@@ -63,7 +65,9 @@ export async function getBackendByRef(ref: string): Promise<BackendRecord | null
 /** ¿Es este subdominio el `ref` de algún backend? Un subdominio de página no
  *  puede serlo: los dos viven en el mismo comodín. */
 export async function isBackendRef(sub: string): Promise<boolean> {
-  return /^[a-z]{20}$/.test(sub) && (await getBackendByRef(sub)) !== null;
+  if (!/^[a-z]{20}$/.test(sub)) return false;
+  // El ref propio de un borrador (spec local 2026-10-11) también está tomado.
+  return (await getBackendByRef(sub)) !== null || (await getEnvironmentByPublicRef(sub)) !== null;
 }
 
 /** El backend del proyecto, creándolo si no tiene (sin la base todavía: ésa
@@ -120,6 +124,8 @@ export async function adoptLegacyEnvironment(rec: BackendRecord): Promise<void> 
       scope: rec.ref,
       jwtSecretEncrypted: rec.jwtSecretEncrypted,
       provisionedAt: rec.provisionedAt,
+      // El borrador nace con su ref propio (spec local 2026-10-11).
+      ...(classifyExistingBackend({ status: p?.status ?? null }) === "draft" ? { publicRef: newProjectRef() } : {}),
     })
     .onConflictDoNothing();
   adopted.add(rec.projectId);
@@ -182,6 +188,14 @@ export function projectUrl(ref: string): string {
   return `https://${ref}.${publishBaseHost()}`;
 }
 
+/** La URL propia del borrador (`https://<publicRef>.<publish host>`), creando
+ *  el registro del entorno si aún no está (sin crear su base). */
+export async function draftProjectUrl(rec: BackendRecord): Promise<string> {
+  await adoptLegacyEnvironment(rec);
+  const e = (await getEnvironment(rec.projectId, "draft")) ?? (await createEnvironment(rec.projectId, rec.ref, "draft"));
+  return projectUrl(await ensureDraftPublicRef(e));
+}
+
 /** El host sin puerto y en minúsculas. */
 function cleanHost(host: string | null): string {
   return (host ?? "").toLowerCase().replace(/:\d+$/, "");
@@ -191,6 +205,8 @@ export interface HostBackend {
   readonly record: BackendRecord;
   /** El subdominio de la página publicada, si lo tiene. */
   readonly pageSub: string | null;
+  /** Fijado por el host: el ref propio del borrador va SIEMPRE al borrador. */
+  readonly environment?: Environment;
 }
 
 export async function backendForHost(hostHeader: string | null): Promise<HostBackend | null> {
@@ -204,6 +220,15 @@ export async function backendForHost(hostHeader: string | null): Promise<HostBac
       if (rec) {
         const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, rec.projectId)).limit(1);
         return { record: rec, pageSub: p?.subdomain ?? null };
+      }
+      // El ref propio de un borrador (spec local 2026-10-11), como una rama de Supabase.
+      const draft = await getEnvironmentByPublicRef(label);
+      if (draft) {
+        const byProject = await getBackendByProject(draft.projectId);
+        if (byProject) {
+          const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, draft.projectId)).limit(1);
+          return { record: byProject, pageSub: p?.subdomain ?? null, environment: "draft" };
+        }
       }
     }
   }

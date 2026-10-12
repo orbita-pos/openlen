@@ -1,0 +1,8 @@
+{
+  "name": "openlen-functions-workerd",
+  "private": true,
+  "description": "El motor de Cloudflare (workerd) en local, vía miniflare, para probar las Edge Functions como corren en Cloudflare. Sólo pruebas y desarrollo; aparte de los paquetes del producto (el node_modules de la raíz es compartido entre ramas).",
+  "devDependencies": {
+    "miniflare": "4.20260730.0"
+  }
+}

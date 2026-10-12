@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "表",
       "users": "用户",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "函数",
+      "secrets": "密钥"
     },
     "unavailable": {
       "title": "此处无法使用数据库",
@@ -533,6 +535,31 @@
       "resetConfirm": "清除测试数据并根据迁移重新生成？",
       "noLive": "还没有真实数据：发布后才会开始。",
       "testMails": "测试数据不会发送邮件：新账号会自动确认。"
+    },
+    "functions": {
+      "blocked": "此项目的 Edge Functions 已被关闭。如果你认为这是误判，请联系我们。",
+      "calls": "本月调用：{calls} / {quota}",
+      "callsLabel": "本月调用",
+      "empty": "此项目还没有 Edge Functions。",
+      "draft": "草稿",
+      "live": "正式环境",
+      "noJwt": "无 JWT",
+      "errorsTitle": "最近的错误",
+      "noErrors": "过去 7 天没有错误。"
+    },
+    "secrets": {
+      "hint": "函数用 Deno.env.get 读取它们。值不会再显示，只能替换。",
+      "draft": "草稿",
+      "live": "正式环境",
+      "empty": "没有密钥。",
+      "nameField": "名称",
+      "add": "添加",
+      "replace": "替换",
+      "save": "保存",
+      "delete": "删除",
+      "confirmDelete": "确定删除？",
+      "loadError": "无法加载密钥。",
+      "deleteFailed": "无法删除，请重试。"
     }
   }
 }

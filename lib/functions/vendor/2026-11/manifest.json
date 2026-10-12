@@ -1,0 +1,12 @@
+{
+  "catalog": "2026-11",
+  "files": {
+    "supabase-js.mjs": "a8abca26693a3cc12957680afdaf464878a3d81e9a94553975be5a1c5d02fd09",
+    "stripe.mjs": "7b8a53a9162528415f32cd5628f48cba30f0d607dab990e877b01fb98a19f486",
+    "resend.mjs": "b78745997b0dbcc3556c31550ca564bce5fe863347f36ebc1bd209231bf6ab8b",
+    "openai.mjs": "57f4e23ee7b7232601c199e325d2be7fe4a356a27cb6a3a3a497917291820e9c",
+    "mercadopago.mjs": "9f81ace4ac0bb3a74483781e371d057a6153e473e66d98a508f7f85cd02b96ce",
+    "zod.mjs": "6bc949a2317e3622ddad06d7e992560edfba6e76786d8b1bf7f31788a6771115",
+    "LICENCIAS.txt": "fc8ff1c61f34db4d82194b46aab109527b4ea1168c86d1de5a3a4852a9d4a434"
+  }
+}

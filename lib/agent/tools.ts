@@ -28,6 +28,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
+import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
@@ -95,6 +96,7 @@ import {
   ASK_CANCELLED_ERROR,
   ASK_USER_QUESTION,
   QUESTION_DISMISSED,
+  REQUEST_SECRETS,
   answerSummary,
   questionText,
   validateQuestions,
@@ -103,6 +105,8 @@ import {
 } from "@/lib/agent/ask-user-question";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
+import { toolRequestSecrets } from "@/lib/agent/request-secrets";
+import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -231,7 +235,21 @@ export interface AgentDeps {
     projectId: string,
     args: readonly string[],
     ficheros: Readonly<Record<string, string>>,
-  ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
+  ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+  /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
+   *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
+  functionsCurl?(projectId: string): Promise<FunctionsCurl | null>;
+  /** EDGE FUNCTIONS: tras escribir en /supabase/functions/** o config.toml,
+   *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
+  functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
+  /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
+  edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
+  /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
+   *  los lee para contestar). null = sin funciones en este servidor. */
+  functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
+  /** EDGE FUNCTIONS: las llamadas del borrador desde `since`, en el texto de
+   *  `edge_function_calls` (use_page, view_page). `null` si no hubo. */
+  edgeFunctionCalls?(projectId: string, since: Date): Promise<string | null>;
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).
@@ -333,6 +351,10 @@ export interface AgentDeps {
   /** Lo que publicar haría con los datos (spec local 2026-10-09), ensayado en
    *  producción. null = sin backend. */
   previewDataChanges?(projectId: string): Promise<DataChangesPreview | null>;
+  /** EDGE FUNCTIONS (spec local 2026-10-11): lo que publicar haría con las
+   *  funciones —compilarlas para producción, y los secretos que les faltan
+   *  allí—, sin hacerlo. null = sin funciones (o sin motor). */
+  previewFunctionsRelease?(projectId: string): Promise<FunctionsReleasePreview | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -548,6 +570,32 @@ export function realDeps(
       const { runSupabaseCli } = await import("@/lib/backend/cli");
       return runSupabaseCli(projectId, args, ficheros);
     },
+    async functionsCurl(projectId) {
+      const { functionsCurlFor } = await import("@/lib/functions/curl");
+      return functionsCurlFor(projectId);
+    },
+    async functionsAfterWrite(projectId, written) {
+      const { draftDeployAfterWrite } = await import("@/lib/functions/deploy");
+      return draftDeployAfterWrite(projectId, written);
+    },
+    async edgeFunctions(projectId) {
+      const { edgeFunctionsState } = await import("@/lib/functions/state");
+      return edgeFunctionsState(projectId);
+    },
+    async functionSecretNames(projectId) {
+      const { functionSecretNames } = await import("@/lib/functions/secrets-real");
+      return functionSecretNames(projectId);
+    },
+    async edgeFunctionCalls(projectId, since) {
+      const { functionsEnabled } = await import("@/lib/functions/engines");
+      if (!functionsEnabled()) return null;
+      // La última llamada de la visita se anota al cerrar su cuerpo: se espera (con tope).
+      const { inflightCalls } = await import("@/lib/functions/inflight");
+      await inflightCalls().settled(projectId, "draft", 2_000);
+      const { recentInvocations } = await import("@/lib/functions/invocations-pg");
+      const { functionCallsReport } = await import("@/lib/functions/invocation-report");
+      return functionCallsReport(await recentInvocations(projectId, "draft", since));
+    },
     async supabaseProject(projectId) {
       const { backendConfigured } = await import("@/lib/backend/pg");
       if (!backendConfigured()) return null;
@@ -560,6 +608,10 @@ export function realDeps(
       if (!backendConfigured()) return null;
       const { previewDataChanges } = await import("@/lib/backend/data-changes");
       return previewDataChanges(projectId, { rehearse: true });
+    },
+    async previewFunctionsRelease(projectId) {
+      const { previewFunctionsForPublish } = await import("@/lib/functions/publish");
+      return previewFunctionsForPublish(projectId);
     },
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
@@ -1059,7 +1111,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview }
+    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview; secretosQueFaltan?: string[] }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1163,6 +1215,14 @@ export function summarizeProjectState(
     /** En una APP, las variables del dueño (spec local 2026-10-10): nombre →
      *  entornos. Sin valores: para escribir el código basta el nombre. */
     envVars?: Readonly<Record<string, readonly EnvTarget[]>> | null;
+    /** Las Edge Functions (spec local 2026-10-11): por NOMBRE, en el borrador y
+     *  en producción, y la URL del borrador para su `curl`. Ausente ⇒ no hay. */
+    edgeFunctions?: {
+      readonly draft: readonly string[];
+      readonly live: readonly string[];
+      readonly draftUrl: string;
+      readonly secrets: { readonly draft: readonly string[]; readonly live: readonly string[] };
+    } | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1228,6 +1288,19 @@ export function summarizeProjectState(
     ...(row.supabase ? { supabase: { project_url: row.supabase.url, publishable_key: row.supabase.publishableKey } } : {}),
     // Las del dueño, por su NOMBRE (`import.meta.env.VITE_X`), y dónde valen.
     ...(app && row.envVars && Object.keys(row.envVars).length > 0 ? { env_vars: row.envVars } : {}),
+    // Las funciones, con los nombres de Supabase (como `supabase functions list`),
+    // y los NOMBRES de sus secretos por entorno (nunca un valor).
+    ...(row.edgeFunctions &&
+    row.edgeFunctions.draft.length + row.edgeFunctions.live.length + row.edgeFunctions.secrets.draft.length + row.edgeFunctions.secrets.live.length > 0
+      ? {
+          edge_functions: {
+            draft: [...row.edgeFunctions.draft],
+            production: [...row.edgeFunctions.live],
+            draft_url: row.edgeFunctions.draftUrl,
+            secrets: { draft: [...row.edgeFunctions.secrets.draft], production: [...row.edgeFunctions.secrets.live] },
+          },
+        }
+      : {}),
   };
 }
 
@@ -1497,6 +1570,7 @@ async function toolMirarPagina(
     return { response: { ok: false, error: "this page doesn't have a document to look at yet" } };
   }
 
+  const desde = new Date();
   const visto = await deps
     .observarPagina({
       html,
@@ -1526,7 +1600,9 @@ async function toolMirarPagina(
 
   // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
   // cambió — preguntar no es editar.
-  return { response: { ok: true, answer: visto.respuesta } };
+  // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
+  const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
+  return { response: { ok: true, answer: visto.respuesta, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
 }
 
 // ─── use_page: usarla como un visitante (H9) ──────────────────────────────
@@ -1598,6 +1674,7 @@ async function toolUsarPagina(
   // Chromium a la vez en el turno; la que sobra espera su plaza.
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+  const desde = new Date();
   const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
@@ -1611,7 +1688,9 @@ async function toolUsarPagina(
       },
     };
   }
-  return { response: { ok: true, visit: visto.informe } };
+  // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
+  const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
+  return { response: { ok: true, visit: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
 }
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
@@ -1896,6 +1975,19 @@ async function toolPublicar(
     }
   }
 
+  // LAS EDGE FUNCTIONS (spec local 2026-10-11, Parte 2): unas que no compilan
+  // para producción no se publican, y se dice ANTES, a Len, como una app que no
+  // compila. Los secretos que les faltan en producción van a la tarjeta: los
+  // pone el dueño (Len nunca escribe en producción).
+  const funciones = deps.previewFunctionsRelease ? await deps.previewFunctionsRelease(session.projectId).catch(() => null) : null;
+  if (funciones?.kind === "errors") {
+    return { response: { ok: false, error: `The Edge Functions can't be published yet: fix this first (nothing was published).\n${funciones.errors.join("\n")}` } };
+  }
+  if (funciones?.kind === "unavailable") {
+    return { response: { ok: false, error: "The Edge Functions bundler didn't answer, so nothing was published: call publish again in a moment." } };
+  }
+  const secretosQueFaltan = funciones?.kind === "ok" ? [...funciones.missingSecrets] : [];
+
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
 
@@ -2051,11 +2143,17 @@ async function toolPublicar(
       republish: republicar,
       ...(ignorados.length ? { ignored_languages: ignorados } : {}),
       ...(conDatos ? { data_changes: conDatos } : {}),
+      ...(secretosQueFaltan.length
+        ? {
+            missing_production_secrets: secretosQueFaltan,
+            secrets_note: "These have no value in production yet: the publish card asks the user for them, or to publish anyway. You can't set production secrets.",
+          }
+        : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
     // siempre; sólo la acción tiene el nombre de la herramienta.
-    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}) },
+    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}), ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}) },
   };
 }
 
@@ -2371,6 +2469,9 @@ async function ejecutarHerramienta(
         return await toolConvertirEnApp(session, deps);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
+      // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
+      case REQUEST_SECRETS:
+        return await toolRequestSecrets(session, deps, args);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
       case ENTER_PLAN_MODE:
         return await toolEnterPlanMode(session, deps, args);

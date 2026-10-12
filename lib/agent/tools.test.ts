@@ -270,6 +270,26 @@ function makeSession(arg?: string | { page?: string | null; html?: string }): Ag
 }
 
 describe("summarizeProjectState", () => {
+  it("EDGE FUNCTIONS: las nombra con la URL del borrador y los NOMBRES de sus secretos; sin nada, no", () => {
+    const con = summarizeProjectState({
+      data: { html: HTML },
+      title: "Tacos",
+      subdomain: null,
+      publishedAt: null,
+      edgeFunctions: { draft: ["checkout", "stripe-webhook"], live: [], draftUrl: "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/", secrets: { draft: ["STRIPE_SECRET_KEY"], live: [] } },
+    });
+    assert.deepEqual(con.edge_functions, {
+      draft: ["checkout", "stripe-webhook"],
+      production: [],
+      draft_url: "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/",
+      secrets: { draft: ["STRIPE_SECRET_KEY"], production: [] },
+    });
+    // Secretos sin funciones todavía (los pidió antes de escribirlas): también se dicen.
+    const soloSecretos = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null, edgeFunctions: { draft: [], live: [], draftUrl: "https://x.openlen.app/functions/v1/", secrets: { draft: ["K"], live: [] } } });
+    assert.deepEqual(soloSecretos.edge_functions, { draft: [], production: [], draft_url: "https://x.openlen.app/functions/v1/", secrets: { draft: ["K"], production: [] } });
+    assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).edge_functions, undefined);
+  });
+
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);
@@ -531,6 +551,17 @@ describe("preparar_marketing, retirada", () => {
 // sobre el velo del hero antes de rendirse y pintar media portada de sólido.
 // No es un modelo tonto: es un modelo con una pregunta que no puede hacer.
 describe("view_page", () => {
+  it("EDGE FUNCTIONS: también view_page dice las llamadas de su visita", async () => {
+    const { deps } = makeDeps();
+    const conOjos = {
+      ...deps,
+      observarPagina: async () => ({ respuesta: "se ve bien" }),
+      edgeFunctionCalls: async () => "Edge Function calls during this visit (draft):\n- hello → 500 WORKER_ERROR (3 ms)",
+    };
+    const out = await runAgentTool(makeSession(), conOjos, "view_page", { mode: "measure", question: "¿se ve?" });
+    assert.match(String(out.response.edge_function_calls), /WORKER_ERROR/);
+  });
+
   it("tipo=medir devuelve la respuesta y NO toca la página", async () => {
     const { deps } = makeDeps();
     const vistas: unknown[] = [];
@@ -656,6 +687,22 @@ describe("use_page", () => {
       visitas.push(input);
       return { informe: "1. pulsa «Agregar» → pulsé un <button> «Agregar»." };
     },
+  });
+
+  it("EDGE FUNCTIONS: las llamadas de la visita van en edge_function_calls; sin ellas, el campo no está", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    // Con `as`: una asignación dentro de un callback no la sigue el estrechamiento de TS.
+    let desde = null as Date | null;
+    const con = {
+      ...conNavegador(deps, visitas),
+      edgeFunctionCalls: async (_p: string, d: Date) => ((desde = d), "Edge Function calls during this visit (draft):\n- checkout → 200 (12 ms)"),
+    };
+    const out = await runAgentTool(makeSession(), con, "use_page", { steps: [{ click: "Agregar" }] });
+    assert.match(String(out.response.edge_function_calls), /checkout → 200/);
+    assert.ok(desde instanceof Date);
+    const sin = await runAgentTool(makeSession(), conNavegador(deps, []), "use_page", { steps: [{ click: "Agregar" }] });
+    assert.equal(sin.response.edge_function_calls, undefined);
   });
 
   it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {
@@ -1078,6 +1125,34 @@ describe("edit_image", () => {
 });
 
 describe("publish", () => {
+  it("🔴 EDGE FUNCTIONS: unas funciones que no compilan para producción se le dicen a Len, sin tarjeta", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(
+      makeSession(),
+      { ...deps, previewFunctionsRelease: async () => ({ kind: "errors" as const, errors: ['/supabase/functions/checkout/index.ts:3:5 — Expected ";"'] }) },
+      "publish",
+      {},
+    );
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /^The Edge Functions can't be published yet/);
+    assert.match(String(out.response.error), /supabase\/functions\/checkout\/index\.ts:3:5/);
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("🔴 EDGE FUNCTIONS: los secretos que faltan en producción van a la tarjeta, y Len sabe que no los pone él", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(
+      makeSession(),
+      { ...deps, previewFunctionsRelease: async () => ({ kind: "ok" as const, functions: ["checkout"], missingSecrets: ["STRIPE_SECRET_KEY"] }) },
+      "publish",
+      {},
+    );
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.missing_production_secrets, ["STRIPE_SECRET_KEY"]);
+    assert.match(String(out.response.secrets_note), /You can't set production secrets/);
+    assert.deepEqual((pub(out) as { secretosQueFaltan?: string[] }).secretosQueFaltan, ["STRIPE_SECRET_KEY"]);
+  });
+
   // Borrador y producción de datos (spec local 2026-10-09): lo que publicar
   // haría con las tablas, ensayado ANTES de la tarjeta.
   it("🔴 publish le dice a Len qué migración fallaría en producción, y no enseña la tarjeta", async () => {
@@ -1425,6 +1500,49 @@ describe("ask_user_question (antes preguntar)", () => {
 
 // Pieza 5 de Len 2.5: buscar en las charlas del proyecto, como session-query de
 // DeepSeek. La base es un doble (`chatRows`, `chatTranscript`).
+describe("request_secrets (Edge Functions, fase 2)", () => {
+  const PIDE = { secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar con Stripe", url: "https://dashboard.stripe.com/test/apikeys" }] };
+
+  it("🔴 pregunta por el canal de ask_user_question con la intención de secretos, y contesta con lo GUARDADO (sólo nombres)", async () => {
+    const { deps } = makeDeps();
+    let preguntado: unknown = null;
+    const out = await runAgentTool(
+      makeSession(),
+      {
+        ...deps,
+        askUser: async (qs) => ((preguntado = qs), [{ id: "secrets", selected: ["STRIPE_SECRET_KEY:draft"] }]),
+        functionSecretNames: async () => ({ draft: ["STRIPE_SECRET_KEY"], live: [] }),
+      },
+      "request_secrets",
+      PIDE,
+    );
+    assert.deepEqual((preguntado as { intent: unknown }[])[0]!.intent, { kind: "secrets", secrets: PIDE.secrets });
+    assert.equal(out.response.ok, true);
+    assert.equal(out.response.result, "STRIPE_SECRET_KEY saved in: draft\nProduction values are set by the user (you can't): the publish card asks for any that are missing.");
+    assert.equal(out.respuesta, "STRIPE_SECRET_KEY saved in: draft");
+  });
+
+  it("descartada → el error de DeepSeek y el turno cierra; sin respuesta → la tarjeta cierra el turno", async () => {
+    const { deps } = makeDeps();
+    const base = { ...deps, functionSecretNames: async () => ({ draft: [], live: [] }) };
+    const d = await runAgentTool(makeSession(), { ...base, askUser: async () => "dismissed" as const }, "request_secrets", PIDE);
+    assert.equal(d.dismissed, true);
+    assert.equal(d.response.error, "the user cancelled ask_user_question");
+    const n = await runAgentTool(makeSession(), { ...base, askUser: async () => null }, "request_secrets", PIDE);
+    assert.equal(n.response.preguntado, true);
+    assert.equal(n.preguntas?.[0]?.intent?.kind, "secrets");
+  });
+
+  it("un nombre que no vale: el modelo lee qué cambiar y el dueño no ve tarjeta; sin funciones, lo dice", async () => {
+    const { deps } = makeDeps();
+    const mal = await runAgentTool(makeSession(), { ...deps, functionSecretNames: async () => ({ draft: [], live: [] }) }, "request_secrets", { secrets: [{ name: "SUPABASE_X", description: "d" }] });
+    assert.equal(mal.response.ok, false);
+    assert.equal(mal.preguntas, undefined);
+    const sin = await runAgentTool(makeSession(), deps, "request_secrets", PIDE);
+    assert.equal(sin.response.error, "Edge Function secrets aren't available on this server.");
+  });
+});
+
 describe("session_search, session_event_search y session_event_read", () => {
   const filas = [
     { id: "a1", conversation: "c-vieja", userText: "Pon el horario de la tienda", assistantReasoning: "Listo: lunes a viernes de 9 a 18.", actions: null, createdAt: new Date("2026-09-01T10:00:00Z"), status: "applied" },

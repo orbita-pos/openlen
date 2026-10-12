@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt } from "./catalog";
-import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
+import { CARPETA_DOCS, esAdjuntoDelManual, RUTA_APPS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL, RUTAS_DE_DOCS } from "./ficheros/manual";
 import {
   adjuntoDelManual,
   buildManualDeLaPlataforma,
@@ -264,5 +264,52 @@ describe("el manual cuenta las dos bases", () => {
     expect(text).not.toContain("this is the live database");
     expect(text).not.toContain("use_page uses this same live database");
     expect(text).not.toContain("it doesn't create accounts");
+  });
+});
+
+describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
+  const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+
+  it("sin motor, el manual sigue diciendo que aquí no hay, y no enseña nada de ellas", () => {
+    const m = buildManualDeLaPlataforma({});
+    expect(m).toContain("Edge Functions don't exist here yet");
+    expect(m).not.toContain("Deno.serve");
+  });
+
+  it("🔴 con motor: cómo son aquí, tras Realtime, igual en la página y en la app", () => {
+    const pagina = buildManualDeLaPlataforma(CON);
+    const app = buildManualDeLaPlataforma(CON, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    for (const m of [pagina, app]) {
+      expect(m).not.toContain("Edge Functions don't exist here yet");
+      expect(m).toContain("It also runs the project's Edge Functions (below).");
+      for (const f of [
+        "/supabase/functions/<name>/index.ts",
+        "Deno.serve(async (req) => …)",
+        "request_secrets",
+        "supabase secrets set NAME=value",
+        "supabase.functions.invoke",
+        "verify_jwt = false",
+        "constructEventAsync",
+        "`npm:stripe`",
+        "don't retry",
+        // La regla de Supabase (FUNCTION_NAME_RE): empieza por letra; mayúsculas también valen.
+        "a name that starts with a letter and has only letters, digits, - and _; up to 25",
+        "128 MB of memory",
+        "50 ms of CPU",
+        "200 ms of CPU",
+        "546 WORKER_RESOURCE_LIMIT",
+      ]) {
+        expect(m, f).toContain(f);
+      }
+      expect(m).not.toContain("lowercase letters");
+      expect(m.indexOf("Deno.serve")).toBeGreaterThan(m.indexOf("Live updates go through Realtime"));
+    }
+  });
+
+  it("🔴 la guía para convertir una página en app (apps.md) dice lo mismo que el manual", () => {
+    expect(documentosDeLaPlataforma(null, {})[RUTA_APPS]).toContain("Edge Functions don't exist here yet");
+    const con = documentosDeLaPlataforma(null, CON)[RUTA_APPS]!;
+    expect(con).not.toContain("Edge Functions don't exist here yet");
+    expect(con).toContain("Deno.serve(async (req) => …)");
   });
 });

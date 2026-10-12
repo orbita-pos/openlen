@@ -38,6 +38,7 @@ import { rutasPublicadas } from "./graders";
 import { decidirComoCliente, MAX_RESPUESTAS_POR_PASO, preguntoLen, respetaLaFicha } from "./cliente-simulado";
 import { DIR_WEB, problemasDelEntorno } from "./entorno";
 import { htmlDe } from "./extraer";
+import { benchPublishParams } from "./owner-publish";
 import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
@@ -167,7 +168,7 @@ export async function calificarDatos(
   // En Windows, el rename de la release de un sitio de varias páginas falla a
   // veces con EPERM un instante (ver `reintentar-publicar.ts`).
   const publicar = () =>
-    conReintentoPorEperm(() => publishProject({ projectId, userId: o.owner.id, subdomain: sub, languages: [], skipFlightCheck: true }));
+    conReintentoPorEperm(() => publishProject(benchPublishParams({ projectId, ownerId: o.owner.id, subdomain: sub })));
   // UNA APP QUE NO COMPILA NO SE PUBLICA (`publishToDir` la rechaza), y el
   // visitante no tendría nada: cada grader suspende con el porqué, en vez de
   // tumbar la corrida (o el validador) como un fallo del arnés. Sólo en los

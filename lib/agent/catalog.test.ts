@@ -58,6 +58,11 @@ const RETIRADAS = [
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
+  it("EDGE FUNCTIONS: sin motor de funciones (functionSecrets: false), request_secrets no se declara", () => {
+    expect(buildFunctionDeclarations(undefined, { functionSecrets: false }).some((d) => d.name === "request_secrets")).toBe(false);
+    expect(buildFunctionDeclarations().some((d) => d.name === "request_secrets")).toBe(true);
+  });
+
   it("declara exactamente las de Len por defecto: los ficheros primero y la terminal al final", () => {
     const names = buildFunctionDeclarations().map((d) => d.name);
     expect(names).toEqual([
@@ -79,6 +84,8 @@ describe("buildFunctionDeclarations", () => {
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
       // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
       "ask_user_question",
+      // Edge Functions (fase 2): la tarjeta segura de los secretos.
+      "request_secrets",
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",

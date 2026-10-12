@@ -15,6 +15,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import {
   AVISO_DE_VISITANTES_EN_LA_TERMINAL,
   cargarFicherosDeLaTerminal,
+  diagnosticosDeFuncionesTrasEscribir,
   diagnosticosDeLaAppTrasEscribir,
   guardarLoDeLaTerminal,
   type GuardadoDeLaTerminal,
@@ -58,6 +59,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       : {}),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
     appTools: appToolsFor(session, deps),
+    // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).
+    ...(deps.functionsCurl ? { functionsCurl: () => deps.functionsCurl!(session.projectId) } : {}),
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
@@ -133,6 +136,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(session.app && (appCambiada || paginas.length > 0)
       ? await diagnosticosDeLaAppTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))
       : []),
+    // LAS EDGE FUNCTIONS: una vez por comando, con lo ya guardado.
+    ...(await diagnosticosDeFuncionesTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))),
   ];
   // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
   const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);

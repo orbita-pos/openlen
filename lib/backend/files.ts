@@ -27,6 +27,15 @@ async function refreshFilesHash(projectId: string): Promise<void> {
   await db.update(schema.projects).set({ filesHash: folderFingerprint(files) }).where(eq(schema.projects.id, projectId));
 }
 
+/** LAS EDGE FUNCTIONS (spec local 2026-10-11): un cambio en
+ *  /supabase/functions/** o en config.toml redespliega el borrador, como
+ *  `supabase functions serve` al guardar. Import perezoso: lib/functions/deploy
+ *  importa el registro, que importa este fichero. */
+function despuesDeCambiar(projectId: string, paths: readonly string[]): void {
+  if (!paths.some((p) => p.startsWith("/supabase/functions/") || p === "/supabase/config.toml")) return;
+  void import("@/lib/functions/deploy").then((m) => m.scheduleDraftDeployIfEnabled(projectId)).catch(() => undefined);
+}
+
 export async function saveProjectFile(projectId: string, path: string, content: string): Promise<void> {
   await db
     .insert(schema.projectFiles)
@@ -36,6 +45,7 @@ export async function saveProjectFile(projectId: string, path: string, content: 
       set: { content, updatedAt: new Date() },
     });
   await refreshFilesHash(projectId);
+  despuesDeCambiar(projectId, [path]);
 }
 
 /** Borra un fichero. `false` si no existía. */
@@ -44,7 +54,10 @@ export async function deleteProjectFile(projectId: string, path: string): Promis
     .delete(schema.projectFiles)
     .where(and(eq(schema.projectFiles.projectId, projectId), eq(schema.projectFiles.path, path)))
     .returning({ path: schema.projectFiles.path });
-  if (gone.length > 0) await refreshFilesHash(projectId);
+  if (gone.length > 0) {
+    await refreshFilesHash(projectId);
+    despuesDeCambiar(projectId, [path]);
+  }
   return gone.length > 0;
 }
 
@@ -59,6 +72,7 @@ export async function copyProjectFiles(
   if (files.length === 0) return 0;
   await db.insert(schema.projectFiles).values(files.map(([path, content]) => ({ projectId: toProjectId, path, content })));
   await refreshFilesHash(toProjectId);
+  despuesDeCambiar(toProjectId, files.map(([p]) => p));
   return files.length;
 }
 

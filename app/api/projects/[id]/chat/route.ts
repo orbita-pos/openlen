@@ -111,6 +111,15 @@ const ActionSchema = z.object({
           .union([
             z.object({ kind: z.literal("plan-review"), plan: z.string().min(1) }),
             z.object({ kind: z.literal("plan-consent") }),
+            // Edge Functions: los secretos que pidió `request_secrets`. Sólo
+            // nombre, para qué y dónde (zod quita lo demás): nunca un valor.
+            z.object({
+              kind: z.literal("secrets"),
+              secrets: z
+                .array(z.object({ name: z.string().min(1).max(256), description: z.string().max(300), url: z.string().max(500).optional() }))
+                .min(1)
+                .max(5),
+            }),
           ])
           .optional()
           .catch(undefined),

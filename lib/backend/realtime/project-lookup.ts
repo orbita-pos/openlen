@@ -18,7 +18,7 @@ import { publishedBaseHosts } from "@/lib/publish/request-origin";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
 import { decideEnvironment } from "../environment-routing";
-import { dbNameOf, listEnvironments, newScope } from "../environments";
+import { dbNameOf, getEnvironmentByPublicRef, listEnvironments, newScope, type Environment } from "../environments";
 import { projectDatabase } from "../pg";
 import type { RealtimeProject } from "./channel";
 import { ensureRealtimeProvisioned } from "./provision";
@@ -39,13 +39,23 @@ export function refFromHost(hostHeader: string, bases: readonly string[] = publi
 export async function realtimeProjectForHost(host: string, origin: string | null = null, bases?: readonly string[]): Promise<RealtimeProject | null> {
   const ref = refFromHost(host, bases);
   if (!ref) return null;
-  const [rec] = await db.select().from(schema.projectBackends).where(eq(schema.projectBackends.ref, ref)).limit(1);
-  if (!rec) return null;
+  let [rec] = await db.select().from(schema.projectBackends).where(eq(schema.projectBackends.ref, ref)).limit(1);
+  // El ref propio del borrador (spec local 2026-10-11): siempre el borrador.
+  let fijado: Environment | null = null;
+  if (!rec) {
+    const draft = await getEnvironmentByPublicRef(ref);
+    if (!draft) return null;
+    [rec] = await db.select().from(schema.projectBackends).where(eq(schema.projectBackends.projectId, draft.projectId)).limit(1);
+    if (!rec) return null;
+    fijado = "draft";
+  }
   // El entorno, como `serveBackend` (lib/backend/serve.ts): el lienzo propio y
   // los ojos de Len al borrador, un lienzo ajeno fuera, lo demás a producción.
   const envs = await listEnvironments(rec.projectId);
   const hasLive = envs.some((e) => e.environment === "live" && e.provisionedAt);
-  const decision = decideEnvironment({ origin, referer: null, lienzoLabel: etiquetaDeLienzo(rec.projectId), hasLive });
+  const decision = fijado
+    ? ({ kind: "env", environment: fijado, attributed: true } as const)
+    : decideEnvironment({ origin, referer: null, lienzoLabel: etiquetaDeLienzo(rec.projectId), hasLive });
   // Un lienzo ajeno: como un tenant que no existe.
   if (decision.kind === "forbidden") return null;
   const env = envs.find((e) => e.environment === decision.environment) ?? null;

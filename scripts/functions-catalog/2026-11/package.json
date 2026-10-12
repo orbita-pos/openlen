@@ -1,0 +1,13 @@
+{
+  "name": "openlen-functions-catalog-2026-11",
+  "private": true,
+  "description": "Los paquetes del catálogo 2026-11 de las Edge Functions: los construye npm run functions:vendor. Aparte de los del producto y de los de las apps (es Node en servidor).",
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "mercadopago": "3.6.1",
+    "openai": "7.32.0",
+    "resend": "6.32.1",
+    "stripe": "23.0.0",
+    "zod": "3.25.76"
+  }
+}

@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { AVISO_DE_REINICIO, DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, TerminalDeLen } from "./terminal";
 import { DE_SOLO_LECTURA } from "./ficheros";
+import type { CurlRequest } from "@/lib/functions/curl-types";
 
 const SITIO = {
   "/index.html": "<h1>Marejada</h1>\n<p>Calle Pelícanos 12</p>\n",
@@ -320,7 +321,7 @@ describe("TerminalDeLen", () => {
   // la base); el hilo de la terminal le pasa los argumentos y los ficheros de
   // `/supabase/` como están en la terminal, y escribe los que la CLI crea.
   describe("supabase, la CLI del backend del proyecto", () => {
-    function conSupabase(responder?: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>) {
+    function conSupabase(responder?: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>) {
       const llamadas: { args: readonly string[]; ficheros: Readonly<Record<string, string>> }[] = [];
       const { t } = terminal({
         supabase: async (args, ficheros) => {
@@ -365,6 +366,15 @@ describe("TerminalDeLen", () => {
       expect(r.exitCode).toBe(1);
       expect(r.stderr).toBe("supabase: la base no contesta\n");
       expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 20_000);
+
+    it("functions delete: lo que la CLI borra desaparece de la terminal y vuelve en `ficheros`", async () => {
+      const { t } = conSupabase(async () => ({ stdout: "Deleted Function hola from project x.\n", stderr: "", exitCode: 0, borrar: ["/supabase/functions/hola/index.ts"] }));
+      await t.ejecutar("mkdir -p /supabase/functions/hola && echo 'x' > /supabase/functions/hola/index.ts");
+      const r = await t.ejecutar("supabase functions delete hola");
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.ficheros?.["/supabase/functions/hola/index.ts"]).toBeUndefined();
+      expect((await t.ejecutar("ls /supabase/functions/hola 2>/dev/null | wc -l")).stdout.trim()).toBe("0");
     }, 20_000);
 
     it("BRAZO DE CONTROL: sin backend no hay comando (no se finge)", async () => {
@@ -494,6 +504,48 @@ describe("TerminalDeLen", () => {
     it("en una página (sin appTools) no hay tsc ni npm", async () => {
       const { t } = terminal({});
       expect((await t.ejecutar("tsc; echo rc=$?")).stdout).toMatch(/rc=127\n$/);
+    }, 20_000);
+  });
+
+  // spec local 2026-10-11: `curl` a las funciones del proyecto, como prueban
+  // los docs de Supabase; la terminal sigue sin red.
+  describe("curl, sólo hacia las Edge Functions del proyecto", () => {
+    const PREFIJO = "https://zyxwvutsrqponmlkjihg.openlen.app/functions/v1/";
+    function conCurl() {
+      const pedidas: CurlRequest[] = [];
+      const { t } = terminal({
+        functionsCurl: async () => ({
+          prefixes: [PREFIJO],
+          call: async (r) => {
+            pedidas.push(r);
+            return { status: 200, statusText: "OK", headers: { "content-type": "application/json" }, bodyB64: Buffer.from('{"message":"Hello Ana!"}').toString("base64") };
+          },
+        }),
+      });
+      return { t, pedidas };
+    }
+
+    it("POST a su función: llega con método, cabeceras y cuerpo, y sale la respuesta", async () => {
+      const { t, pedidas } = conCurl();
+      const r = await t.ejecutar(`curl -s -X POST '${PREFIJO}hello' -H 'Authorization: Bearer x' -H 'Content-Type: application/json' -d '{"name":"Ana"}'`);
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.stdout).toBe('{"message":"Hello Ana!"}');
+      expect(pedidas[0]).toMatchObject({ url: `${PREFIJO}hello`, method: "POST" });
+      expect(Buffer.from(pedidas[0]!.bodyB64!, "base64").toString()).toBe('{"name":"Ana"}');
+      expect(Object.entries(pedidas[0]!.headers).map(([k, v]) => [k.toLowerCase(), v])).toContainEqual(["authorization", "Bearer x"]);
+    }, 20_000);
+
+    it("cualquier otra URL: sin red, lo dice, y no llama a nada", async () => {
+      const { t, pedidas } = conCurl();
+      const r = await t.ejecutar("curl https://example.com/");
+      expect(r.exitCode).not.toBe(0);
+      expect(r.stderr).toMatch(/only reaches this project's Edge Functions/);
+      expect(pedidas).toHaveLength(0);
+    }, 20_000);
+
+    it("BRAZO DE CONTROL: sin funciones no hay curl (como antes)", async () => {
+      const { t } = terminal();
+      expect((await t.ejecutar("curl https://example.com/")).exitCode).toBe(127);
     }, 20_000);
   });
 });

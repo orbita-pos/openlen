@@ -14,11 +14,16 @@
 //   supabase db push / migration up las migraciones nuevas, a la base de pruebas
 //   supabase db reset               rehace la base de pruebas (migraciones + seed)
 //   supabase db query "<sql>"       --local (pruebas) o --linked (producción, sólo lectura)
+//   supabase secrets set|list|unset los secretos de las Edge Functions, del BORRADOR
 //
 // Lo que no se puede aquí lo dice (db reset --linked borraría producción; no
 // hay gen types todavía), no lo finge.
 
 import { randomBytes } from "node:crypto";
+
+import { parseDotEnv } from "@/lib/apps/env/dotenv";
+import { CONFIG_TOML, FUNCTION_NAME_RE, functionDirOf, functionNamesIn } from "@/lib/functions/project-files";
+import { RESERVED_SECRET_PREFIXES } from "@/lib/functions/secret-names";
 
 import { splitSqlStatements } from "./sql-split";
 
@@ -28,6 +33,24 @@ export type QueryOutcome =
   | { readonly kind: "command"; readonly tag: string }
   | { readonly kind: "error"; readonly message: string; readonly code?: string }
   | { readonly kind: "no_live" };
+
+export interface FunctionsCli {
+  readonly ref: string;
+  /** Despliega el BORRADOR con estos ficheros (los de la terminal, aún sin guardar). */
+  deploy(ficheros: Readonly<Record<string, string>>): Promise<{ ok: true; functions: readonly string[] } | { ok: false; message: string }>;
+  deployedAt(): Promise<{ readonly draft: Readonly<Record<string, Date>>; readonly live: Readonly<Record<string, Date>> }>;
+  /** `https://<ref del borrador>.<host>/functions/v1/`. */
+  draftBaseUrl(): Promise<string>;
+}
+
+/** Los secretos de las funciones (spec local 2026-10-11, Parte 4). SIEMPRE el
+ *  borrador: Len nunca escribe en producción (ésos los pone el usuario). */
+export interface SecretsCli {
+  /** Nombre y huella (sha256), como `supabase secrets list`. Nunca el valor. */
+  list(): Promise<readonly { readonly name: string; readonly digest: string }[]>;
+  set(entries: Readonly<Record<string, string>>): Promise<{ ok: true } | { ok: false; message: string }>;
+  unset(names: readonly string[]): Promise<void>;
+}
 
 export interface CliBackend {
   status(): Promise<{ apiUrl: string; publishableKey: string }>;
@@ -42,6 +65,10 @@ export interface CliBackend {
   reset(): Promise<{ ok: true; applied: string[]; seeded: boolean } | { ok: false; message: string }>;
   /** `db query`: una sentencia en pruebas (`local`) o en producción (`linked`). */
   query(sql: string, target: "local" | "linked"): Promise<QueryOutcome>;
+  /** Las Edge Functions (spec local 2026-10-11). `null`/ausente: este servidor no las tiene. */
+  readonly functions?: FunctionsCli | null;
+  /** Los secretos de las funciones. `null`/ausente: este servidor no las tiene. */
+  readonly secrets?: SecretsCli | null;
 }
 
 export interface CliResult {
@@ -50,6 +77,8 @@ export interface CliResult {
   exitCode: number;
   /** Ficheros que la CLI crea (migration new). */
   escribir?: Record<string, string>;
+  /** Ficheros que la CLI borra (`functions delete`). */
+  borrar?: string[];
 }
 
 const MIGRATIONS_DIR = "/supabase/migrations/";
@@ -149,7 +178,7 @@ export function renderAgentJson(columns: readonly string[], rows: readonly (read
 
 // ─── Los argumentos ──────────────────────────────────────────────────────────
 
-const VALUE_FLAGS = new Set(["-f", "--file", "-o", "--output", "--db-url", "--project-ref"]);
+const VALUE_FLAGS = new Set(["-f", "--file", "-o", "--output", "--db-url", "--project-ref", "--env-file"]);
 
 function parseArgs(args: readonly string[]): { words: string[]; flags: Set<string>; values: Map<string, string> } {
   const words: string[] = [];
@@ -183,11 +212,204 @@ Available Commands:
   db push           Push new migrations to the test database
   db reset          Recreate the test database from the migrations and supabase/seed.sql
   db query          Execute a SQL query (--local: test database, the default; --linked: production, read-only)
+  functions new     Create a new Function in supabase/functions
+  functions deploy  Deploy the Functions to the draft (every save also redeploys them)
+  functions list    List the Functions deployed to the draft and to production
+  functions delete  Delete a Function and its folder
+  functions serve   Show where the draft serves the Functions
+  secrets set       Set secrets for the Edge Functions in the draft (NAME=VALUE, or --env-file)
+  secrets list      List the draft's secrets: name and SHA-256 digest
+  secrets unset     Unset secrets from the draft
 
 Flags for db push:
   --dry-run         Print the migrations that would be applied, without applying them
   --include-all     Include migrations older than the last one applied
+
+Flags for functions deploy:
+  --no-verify-jwt   Let calls without a JWT in (webhooks); saved as verify_jwt = false in supabase/config.toml
 `;
+
+// ─── supabase functions … (spec local 2026-10-11) ───────────────────────────
+// El borrador hace de «local»: `deploy` va al borrador (como `db push` a la base
+// de pruebas) y `serve` dice dónde las sirve ya. `delete` borra la carpeta: aquí
+// el borrador ES lo que dicen los ficheros (si quedara, se volvería a desplegar).
+
+/** La de `supabase functions new` de la CLI (su `internal/functions/new`). */
+export const NEW_FUNCTION_SOURCE = `// Setup type definitions for built-in Supabase Runtime APIs
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+console.log("Hello from Functions!");
+
+Deno.serve(async (req) => {
+  const { name } = await req.json();
+  const data = {
+    message: \`Hello \${name}!\`,
+  };
+
+  return new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
+});
+`;
+
+const SIN_FUNCIONES = "Error: Edge Functions are not available on this server.\n";
+const NOMBRE_INVALIDO = (n: string) =>
+  `Invalid Function name: ${n}. Must start with at least one letter, and only include alphanumeric characters, underscores, and hyphens. (^[A-Za-z][A-Za-z0-9_-]*$)\n`;
+
+/** `verify_jwt = false` para esas funciones en config.toml, sin tocar lo demás. */
+export function withVerifyJwtOff(toml: string, names: readonly string[]): string {
+  let lineas = toml === "" ? [] : toml.replace(/\n$/, "").split("\n");
+  for (const n of names) {
+    const cab = lineas.findIndex((l) => new RegExp(`^\\[\\s*functions\\.(?:"${n}"|${n})\\s*\\]`).test(l.trim()));
+    if (cab < 0) {
+      lineas = [...lineas, ...(lineas.length > 0 ? [""] : []), `[functions.${n}]`, "verify_jwt = false"];
+      continue;
+    }
+    let fin = lineas.findIndex((l, i) => i > cab && /^\s*\[/.test(l));
+    if (fin < 0) fin = lineas.length;
+    const v = lineas.findIndex((l, i) => i > cab && i < fin && /^\s*verify_jwt\s*=/.test(l));
+    if (v >= 0) lineas[v] = "verify_jwt = false";
+    else lineas.splice(cab + 1, 0, "verify_jwt = false");
+  }
+  return `${lineas.join("\n")}\n`;
+}
+
+async function functionsCommand(
+  sub: string | undefined,
+  rest: readonly string[],
+  flags: ReadonlySet<string>,
+  ficheros: Readonly<Record<string, string>>,
+  fx: FunctionsCli | null,
+): Promise<CliResult> {
+  const ref = fx?.ref ?? "local";
+  if (sub === "new") {
+    const name = rest[0];
+    if (!name) return err(`Usage:\n  supabase functions new <Function name>\n\nError: accepts 1 arg(s), received 0\n`);
+    if (!FUNCTION_NAME_RE.test(name)) return err(NOMBRE_INVALIDO(name));
+    const dir = functionDirOf(name);
+    if (Object.keys(ficheros).some((r) => r.startsWith(dir))) {
+      return err(`Error: failed to create entrypoint: file already exists\nRemove supabase/functions/${name}/index.ts or use a different Function name.\n`);
+    }
+    return ok(`Created new Function at supabase/functions/${name}\n`, { escribir: { [`${dir}index.ts`]: NEW_FUNCTION_SOURCE } });
+  }
+  if (sub === "delete") {
+    const name = rest[0];
+    if (!name) return err(`Usage:\n  supabase functions delete <Function name>\n\nError: accepts 1 arg(s), received 0\n`);
+    const borrar = Object.keys(ficheros).filter((r) => r.startsWith(functionDirOf(name)));
+    if (borrar.length === 0) return err(`Error: Function ${name} does not exist in supabase/functions\n`);
+    return ok(`Deleted Function ${name} from project ${ref}.\n`, { borrar });
+  }
+  if (sub !== "deploy" && sub !== "list" && sub !== "serve") {
+    return err(`Error: unknown command "functions${sub ? ` ${sub}` : ""}" for "supabase"\nRun 'supabase --help' for usage.\n`);
+  }
+  if (!fx) return err(SIN_FUNCIONES);
+  if (sub === "serve") {
+    return ok(`Functions are already served from the draft, like \`supabase functions serve\`: every save redeploys them.\n  ${await fx.draftBaseUrl()}<function name>\n`);
+  }
+  if (sub === "list") {
+    const { draft, live } = await fx.deployedAt();
+    const nombres = [...new Set([...functionNamesIn(ficheros), ...Object.keys(draft), ...Object.keys(live)])].sort();
+    const fecha = (d?: Date) => (d ? d.toISOString().slice(0, 19).replace("T", " ") : "").padEnd(19);
+    return ok(
+      [
+        "",
+        `   ${"NAME".padEnd(24)} | DRAFT (UTC)         | PRODUCTION (UTC)    `,
+        `  ${"-".repeat(26)}|---------------------|---------------------`,
+        ...nombres.map((n) => `   ${n.padEnd(24)} | ${fecha(draft[n])} | ${fecha(live[n])} `),
+        "",
+      ].join("\n"),
+    );
+  }
+  // deploy
+  const nombres = functionNamesIn(ficheros);
+  const faltan = rest.filter((n) => !nombres.includes(n));
+  if (faltan.length > 0) return err(`Error: Function ${faltan[0]} does not exist in supabase/functions\n`);
+  if (nombres.length === 0) return ok("No Functions specified or found in supabase/functions\n");
+  let aDesplegar = ficheros;
+  let escribir: Record<string, string> | undefined;
+  let nota = "";
+  if (flags.has("--no-verify-jwt")) {
+    const cuales = rest.length > 0 ? rest : nombres;
+    const toml = withVerifyJwtOff(ficheros[CONFIG_TOML] ?? "", cuales);
+    escribir = { [CONFIG_TOML]: toml };
+    aDesplegar = { ...ficheros, [CONFIG_TOML]: toml };
+    nota = `Set verify_jwt = false for ${cuales.join(", ")} in supabase/config.toml.\n`;
+  }
+  const r = await fx.deploy(aDesplegar);
+  if (!r.ok) return err(r.message);
+  return ok(`${nota}Deployed Functions on project ${ref}: ${(rest.length > 0 ? rest : r.functions).join(", ")}\n`, escribir ? { escribir } : {});
+}
+
+// ─── supabase secrets … (spec local 2026-10-11, Parte 4) ────────────────────
+// Los textos son los de la CLI de Supabase (apps/cli/src/commands/secrets, HEAD
+// del 12/10/2026). Todo va al BORRADOR: producción la pone el usuario (la
+// tarjeta, publicar).
+
+/** La tabla de la CLI (`apps/cli/src/output/glamour-table.ts`), copiada: una
+ *  línea en blanco, una decorativa, la cabecera, los guiones, las filas y otra
+ *  en blanco; cada celda con un espacio a cada lado, unidas por «|». */
+export function renderGlamourTable(headers: readonly string[], rows: readonly (readonly string[])[]): string {
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
+  const fila = (cells: readonly string[]) => "  " + cells.map((c, i) => ` ${c.padEnd(widths[i] ?? 0)} `).join("|");
+  return ["", "  ", fila(headers), "  " + widths.map((w) => "-".repeat(w + 2)).join("|"), ...rows.map(fila), ""].join("\n") + "\n";
+}
+
+/** Lo que la CLI escribe tras un error suyo (`output.layer.ts`). */
+const DEBUG_HINT = "Try rerunning the command with --debug to troubleshoot the error.\n";
+
+async function secretsCommand(
+  sub: string | undefined,
+  rest: readonly string[],
+  values: ReadonlyMap<string, string>,
+  ficheros: Readonly<Record<string, string>>,
+  sx: SecretsCli | null,
+): Promise<CliResult> {
+  if (sub !== "set" && sub !== "list" && sub !== "unset") {
+    return err(`Error: unknown command "secrets${sub ? ` ${sub}` : ""}" for "supabase"\nRun 'supabase --help' for usage.\n`);
+  }
+  if (!sx) return err(SIN_FUNCIONES);
+  if (sub === "list") return ok(renderGlamourTable(["NAME", "DIGEST"], (await sx.list()).map((s) => [s.name, s.digest])));
+  if (sub === "set") {
+    const merged = new Map<string, string>();
+    const envFile = values.get("--env-file");
+    if (envFile !== undefined) {
+      const ruta = envFile.startsWith("/") ? envFile : `/${envFile.replace(/^\.\//, "")}`;
+      const texto = ficheros[ruta];
+      if (texto === undefined) return err(`failed to open env file: open ${envFile}: no such file or directory\n${DEBUG_HINT}`);
+      const p = parseDotEnv(texto);
+      if (p.errors.length > 0) return err(`failed to parse env file: ${p.errors[0]!.message}\n${DEBUG_HINT}`);
+      for (const [n, v] of Object.entries(p.vars)) merged.set(n, v);
+    }
+    for (const pair of rest) {
+      const i = pair.indexOf("=");
+      if (i === -1) return err(`Invalid secret pair: ${pair}. Must be NAME=VALUE.\n${DEBUG_HINT}`);
+      merged.set(pair.slice(0, i), pair.slice(i + 1));
+    }
+    let stderr = "";
+    const body: Record<string, string> = {};
+    for (const [name, value] of merged) {
+      // La CLI salta SUPABASE_ con este aviso (lib/functions/secret-names.ts).
+      const prefix = RESERVED_SECRET_PREFIXES.find((p) => name.startsWith(p));
+      if (prefix) {
+        stderr += `Env name cannot start with ${prefix}, skipping: ${name}\n`;
+        continue;
+      }
+      body[name] = value;
+    }
+    if (Object.keys(body).length === 0) return { stdout: "", stderr: `${stderr}No arguments found. Use --env-file to read from a .env file.\n${DEBUG_HINT}`, exitCode: 1 };
+    const r = await sx.set(body);
+    if (!r.ok) return { stdout: "", stderr: `${stderr}${r.message}`, exitCode: 1 };
+    return { stdout: "Finished supabase secrets set.\n", stderr, exitCode: 0 };
+  }
+  // unset: sin nombres, todos (menos SUPABASE_*); la pregunta de la CLI sale
+  // siempre y, sin terminal ni nada por stdin, vale su «sí» por defecto.
+  const names = rest.length > 0 ? [...rest] : (await sx.list()).map((s) => s.name).filter((n) => !n.startsWith("SUPABASE_"));
+  if (names.length === 0) return { stdout: "", stderr: "You have not set any function secrets, nothing to do.\n", exitCode: 0 };
+  await sx.unset(names);
+  return {
+    stdout: "Finished supabase secrets unset.\n",
+    stderr: `Do you want to unset these function secrets?\n • ${names.join("\n • ")}\n\n [Y/n] \n`,
+    exitCode: 0,
+  };
+}
 
 export async function runCli(
   args: readonly string[],
@@ -319,6 +541,9 @@ export async function runCli(
     const note = r.truncated ? `Showing the first ${r.rows.length} rows.\n` : "";
     return { stdout: renderAgentJson(r.columns, r.rows, boundary()), stderr: connecting + note, exitCode: 0 };
   }
+
+  if (cmd === "functions") return functionsCommand(sub, rest, flags, ficheros, backend.functions ?? null);
+  if (cmd === "secrets") return secretsCommand(sub, rest, values, ficheros, backend.secrets ?? null);
 
   if (cmd === "gen") return err("supabase gen is not available here yet.\n");
   if (["login", "link", "init", "start", "stop", "projects"].includes(cmd)) {

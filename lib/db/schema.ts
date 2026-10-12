@@ -1,6 +1,7 @@
 import { sql as sqlOp } from "drizzle-orm";
 import {
   type AnyPgColumn,
+  bigint,
   boolean,
   check,
   date,
@@ -994,6 +995,11 @@ export const projectBackendEnvironments = pgTable(
     /** La contraseña del rol de sólo lectura (sólo `live`); null hasta que Len
      *  lee producción por primera vez. */
     readOnlyPasswordEncrypted: text("readOnlyPasswordEncrypted"),
+    /** El ref PROPIO del borrador (spec local 2026-10-11, Parte 3), como el de
+     *  una rama de Supabase: `<publicRef>.<publish host>` va SIEMPRE al
+     *  borrador, sin mirar el Origin. Lo usan las funciones del borrador (que
+     *  llaman sin Origin) y los webhooks de prueba. Null en `live`. */
+    publicRef: text("publicRef").unique(),
     provisionedAt: timestamp("provisionedAt", { mode: "date" }),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
@@ -2219,3 +2225,108 @@ export const lenEmailRequests = pgTable(
     index("lenEmailRequests_project_createdAt_idx").on(t.projectId, t.createdAt),
   ],
 );
+
+// LAS EDGE FUNCTIONS (spec local docs/superpowers/specs/2026-10-11-edge-functions-design.md):
+// lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el
+// tope de dinero), y las últimas llamadas con sus registros (7 días).
+// Desde la fase 2, sus secretos (cifrados) y el paquete de producción.
+// Desde la fase 3, la marca que apaga las de un proyecto.
+// `npm run functions:migrate`.
+export const functionDeployments = pgTable(
+  "functionDeployments",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    catalog: text("catalog").notNull(),
+    hash: text("hash").notNull(),
+    functions: jsonb("functions").$type<{ name: string; verifyJwt: boolean }[]>().notNull(),
+    /** Los sourcemaps del paquete (sólo los que tienen fuentes del proyecto), en gzip y base64. */
+    sourceMapsGz: text("sourceMapsGz"),
+    /** El paquete de PRODUCCIÓN (gzip+base64): con él se repone si el motor lo
+     *  pierde (un reinicio del motor local). En el borrador, null: se rehace de
+     *  los ficheros. */
+    bundleGz: text("bundleGz"),
+    deployedAt: timestamp("deployedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.environment] })],
+);
+
+export const functionUsage = pgTable(
+  "functionUsage",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** `AAAA-MM` en UTC. */
+    month: text("month").notNull(),
+    calls: integer("calls").notNull().default(0),
+    nanoUsd: bigint("nanoUsd", { mode: "number" }).notNull().default(0),
+    /** El aviso de cuota más alto ya dado este mes: 0, 80 o 100 (fase 3). */
+    quotaAlertedPercent: integer("quotaAlertedPercent").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.month] })],
+);
+
+export const functionPools = pgTable(
+  "functionPools",
+  {
+    month: text("month").notNull(),
+    pool: text("pool").$type<"free" | "paid">().notNull(),
+    reservedNanoUsd: bigint("reservedNanoUsd", { mode: "number" }).notNull().default(0),
+    spentNanoUsd: bigint("spentNanoUsd", { mode: "number" }).notNull().default(0),
+    /** El aviso del 80 % ya salió este mes (fase 3). */
+    alertedAt: timestamp("alertedAt", { mode: "date" }),
+  },
+  (t) => [primaryKey({ columns: [t.month, t.pool] })],
+);
+
+export const functionInvocations = pgTable(
+  "functionInvocations",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    name: text("name").notNull(),
+    status: integer("status").notNull(),
+    errorCode: text("errorCode"),
+    ms: integer("ms").notNull(),
+    logs: jsonb("logs").$type<{ level: string; msg: string }[]>().notNull(),
+    error: text("error"),
+    startedAt: timestamp("startedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("functionInvocations_project_idx").on(t.projectId, t.environment, t.startedAt)],
+);
+
+/** Los secretos de las funciones (`supabase secrets set`, la tarjeta de Len): el
+ *  valor cifrado con `encryptToken` y su huella sha256, que es lo único que
+ *  vuelve a salir. Una fila por proyecto, entorno y nombre. */
+export const functionSecrets = pgTable(
+  "functionSecrets",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    name: text("name").notNull(),
+    valueEncrypted: text("valueEncrypted").notNull(),
+    digest: text("digest").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    updatedBy: text("updatedBy"),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.environment, t.name] })],
+);
+
+/** Las Edge Functions APAGADAS de un proyecto (abuso; spec local 2026-10-11,
+ *  Parte 3): con fila, sus llamadas contestan 503. La pone y la quita el
+ *  operador con SQL (infra/FUNCTIONS_RUNBOOK.md). */
+export const functionBlocks = pgTable("functionBlocks", {
+  projectId: text("projectId")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  blockedAt: timestamp("blockedAt", { mode: "date" }).notNull().defaultNow(),
+});

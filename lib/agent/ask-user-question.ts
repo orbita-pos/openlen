@@ -15,6 +15,21 @@ export const ASK_USER_QUESTION = "ask_user_question";
  *  transcripción, tarjetas, grabaciones); el modelo ya no lo ve. */
 export const LEGACY_QUESTION_TOOL = "preguntar";
 
+/** EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): pedirle al dueño secretos en
+ *  una tarjeta segura. Va por este canal: espera dentro del turno como la
+ *  pregunta, y lo que vuelve son NOMBRES (los valores van de la tarjeta a la
+ *  ruta de secretos, nunca por el turno). */
+export const REQUEST_SECRETS = "request_secrets";
+/** El id de su pregunta: lo pone la herramienta y lo contesta la tarjeta. */
+export const SECRETS_QUESTION_ID = "secrets";
+
+/** Un secreto que Len pide por su nombre. */
+export interface SecretRequest {
+  name: string;
+  description: string;
+  url?: string;
+}
+
 export interface QuestionOption {
   label: string;
   description?: string;
@@ -24,7 +39,7 @@ export interface QuestionOption {
  *  plan (`exit_plan_mode`) o el consentimiento para entrar en modo plan
  *  (`enter_plan_mode`). La pone SÓLO el servidor; el chat la usa para pintar la
  *  tarjeta (como el `intent` de DeepSeek: «presentation only»). */
-export type QuestionIntent = { kind: "plan-review"; plan: string } | { kind: "plan-consent" };
+export type QuestionIntent = { kind: "plan-review"; plan: string } | { kind: "plan-consent" } | { kind: "secrets"; secrets: SecretRequest[] };
 
 export interface UserQuestion {
   id: string;
@@ -110,6 +125,14 @@ function intentFrom(raw: unknown): QuestionIntent | null {
   if (!isObject(raw)) return null;
   if (raw.kind === "plan-consent") return { kind: "plan-consent" };
   if (raw.kind === "plan-review" && typeof raw.plan === "string" && raw.plan.trim()) return { kind: "plan-review", plan: raw.plan };
+  // Sólo nombre, para qué y dónde: aunque llegue algo más, aquí no viaja.
+  if (raw.kind === "secrets" && Array.isArray(raw.secrets)) {
+    const secrets = raw.secrets
+      .filter(isObject)
+      .map((s) => ({ name: text(s.name), description: text(s.description), ...(text(s.url) ? { url: text(s.url) } : {}) }))
+      .filter((s) => s.name);
+    return secrets.length > 0 ? { kind: "secrets", secrets } : null;
+  }
   return null;
 }
 
@@ -154,12 +177,12 @@ export function isQuestionTool(name: string): boolean {
   return name === ASK_USER_QUESTION || name === LEGACY_QUESTION_TOOL;
 }
 
-/** PIEZA 7 · las herramientas que le preguntan al dueño y esperan: la pregunta
- *  y las dos del modo plan (el consentimiento para entrar, la revisión del
- *  plan). Su tarjeta es una pregunta en el chat, en la barra, en el aviso del
- *  cierre y en Len-Bench. Con los nombres en texto: `plan-mode.ts` ya importa
- *  de aquí. */
-const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode"]);
+/** PIEZA 7 · las herramientas que le preguntan al dueño y esperan: la pregunta,
+ *  las dos del modo plan (el consentimiento para entrar, la revisión del plan)
+ *  y la de los secretos (`request_secrets`). Su tarjeta es una pregunta en el
+ *  chat, en la barra, en el aviso del cierre y en Len-Bench. Con los nombres en
+ *  texto: `plan-mode.ts` ya importa de aquí. */
+const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode", REQUEST_SECRETS]);
 
 /** ¿Le pregunta al dueño y espera su respuesta? */
 export function asksTheOwner(name: string): boolean {

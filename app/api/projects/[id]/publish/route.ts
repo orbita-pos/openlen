@@ -2,6 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { dataChangesErrorBody } from "@/lib/backend/data-changes";
+import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
@@ -38,6 +39,13 @@ export const dynamic = "force-dynamic";
 //                      nothing was applied and the release wasn't switched
 //                      (spec local 2026-10-09-borrador-y-produccion-de-datos)
 //   422 migrations_diverged — production has migrations the test database lacks
+//   422 functions_do_not_compile — the Edge Functions don't compile for production;
+//                      `errors` lists file:line — message (spec local 2026-10-11)
+//   428 secrets_required — a literal Deno.env.get("…") has no production value;
+//                      `missing` names them; resend with `skipMissingSecrets`
+//   502 functions_deploy_failed — production functions couldn't be deployed;
+//                      the release wasn't switched
+//   503 functions_bundler_unavailable — the functions bundler didn't answer
 //   428 confirmation_required — the publish would delete real data; `destructive`
 //                      lists it and the client resends with `confirmFingerprint`
 //   500 error         — disk write or DB error after validation passed
@@ -52,6 +60,8 @@ const PublishBodySchema = z.object({
   confirmFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   /** Primera publicación: producción nace como copia del borrador. */
   copyDraftData: z.boolean().optional(),
+  /** «Publicar igual» aunque falten secretos de las funciones (428). */
+  skipMissingSecrets: z.boolean().optional(),
 });
 
 export const POST = paraLaApp(async (
@@ -93,6 +103,7 @@ export const POST = paraLaApp(async (
       subdomain: parsed.data.subdomain,
       languages: parsed.data.languages,
       dataChanges: { mode: "owner", confirmFingerprint: parsed.data.confirmFingerprint, copyDraftData: parsed.data.copyDraftData },
+      functions: { skipMissingSecrets: parsed.data.skipMissingSecrets === true },
     }));
     return json(result, 200);
   } catch (err) {
@@ -117,6 +128,10 @@ export const POST = paraLaApp(async (
     // o lo destructivo sin confirmar.
     const dataError = dataChangesErrorBody(err);
     if (dataError) return json(dataError.body, dataError.status);
+    // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
+    // o su despliegue falló (la página no cambió).
+    const fnError = functionsPublishErrorBody(err);
+    if (fnError) return json(fnError.body, fnError.status);
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);
     return json({ error: "publish_failed" }, 500);

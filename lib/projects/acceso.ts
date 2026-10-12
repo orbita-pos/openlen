@@ -18,7 +18,8 @@
  *   ver (lector y editor)
  *     GET /api/projects/[id] (con `rol`), …/ficheros (sin /.openlen/resultados
  *     ni /.openlen/bandeja), …/raw, …/preview, …/pages, …/versions ([vid]/raw),
- *     …/releases, …/assets, …/terminal (su historial), …/env (GET), POST /api/lienzo,
+ *     …/releases, …/assets, …/terminal (su historial), …/env (GET),
+ *     …/functions (GET: las funciones, su uso y sus últimos errores), POST /api/lienzo,
  *     /api/agent/turno/[fila] (reengancharse)
  *   editar (editor)
  *     PATCH /api/projects/[id] (título, brief, logo; NO el estado),
@@ -26,7 +27,8 @@
  *     …/pages, …/pages/[slug], …/html, …/versions (POST, [vid], [vid]/restore),
  *     …/turnos/[turnId]/deshacer, …/assets (POST), …/ai-edit-image,
  *     …/proxy-image, …/settings, …/env (PUT), …/preview (POST/DELETE), …/terminal (POST,
- *     en SU terminal), …/chat, …/rollback, /api/export/zip,
+ *     en SU terminal), …/function-secrets (POST/DELETE; GET en «ver», el lector sin
+ *     huellas), …/chat, …/rollback, /api/export/zip,
  *     …/publish (sólo a la dirección que ya tiene: elegir otra es del dueño),
  *     /api/agent (sin encargos, sin los datos de los visitantes, y contra el
  *     tope del proyecto: `lib/projects/miembros.ts`)

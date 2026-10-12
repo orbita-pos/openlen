@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
@@ -8,6 +8,7 @@ import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import type { DataChangesPreview, DestructiveChange } from "@/lib/backend/data-changes-types";
 import { postPublish } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
+import { MissingSecrets } from "./missing-secrets";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -22,6 +23,8 @@ export type AgentConfirm = {
   republicar: boolean;
   /** Lo que publicar hará con los datos (lib/backend/data-changes.ts). */
   cambiosDeDatos?: DataChangesPreview;
+  /** Edge Functions: los secretos que Len vio que faltan en producción. */
+  secretosQueFaltan?: string[];
 };
 
 type CardState =
@@ -36,6 +39,8 @@ type CardState =
   | { kind: "cancelled" }
   // Lo destructivo que pide confirmar la ruta (428, spec local 2026-10-09).
   | { kind: "confirm_destructive"; list: DestructiveChange[]; fingerprint: string }
+  // Edge Functions (spec local 2026-10-11): secretos sin valor en producción.
+  | { kind: "secrets_required"; missing: string[] }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -59,7 +64,14 @@ export function AgentConfirmCard({
 }) {
   const t = useTranslations("wsPage");
   const tDatos = useTranslations("modalsDomain.dataChanges");
-  const [state, setState] = useState<CardState>({ kind: "idle" });
+  const tSecretos = useTranslations("panelsChat");
+  // Los secretos que Len ya vio que faltan salen desde el principio.
+  const [state, setState] = useState<CardState>(
+    confirm.secretosQueFaltan?.length ? { kind: "secrets_required", missing: confirm.secretosQueFaltan } : { kind: "idle" },
+  );
+  // Elegido «Publicar igual», vale para las peticiones siguientes (también la
+  // de confirmar lo destructivo).
+  const saltarSecretos = useRef(false);
   // Primera publicación con base de datos: la casilla de copiar los de prueba.
   const [copyDraftData, setCopyDraftData] = useState(false);
 
@@ -67,7 +79,7 @@ export function AgentConfirmCard({
 
   const inert = state.kind === "published" || state.kind === "cancelled";
 
-  const handlePublish = useCallback(async (confirmFingerprint?: string) => {
+  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean } = {}) => {
     if (busy || inert) return;
     const { subdominio, idiomas, republicar } = confirm;
 
@@ -106,6 +118,7 @@ export function AgentConfirmCard({
       }
     }
 
+    if (o.skipMissingSecrets) saltarSecretos.current = true;
     setState({ kind: "publishing" });
     try {
       // `languages` is only sent when the agent actually chose some: the
@@ -118,10 +131,23 @@ export function AgentConfirmCard({
         subdomain: subdominio,
         ...(idiomas.length > 0 ? { languages: idiomas } : {}),
         copyDraftData,
-        ...(confirmFingerprint ? { confirmFingerprint } : {}),
+        ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
+        ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
       });
       if (outcome.kind === "needs_confirmation") {
         setState({ kind: "confirm_destructive", list: outcome.destructive, fingerprint: outcome.fingerprint });
+        return;
+      }
+      if (outcome.kind === "secrets_required") {
+        setState({ kind: "secrets_required", missing: outcome.missing });
+        return;
+      }
+      if (outcome.kind === "functions_do_not_compile") {
+        setState({ kind: "error", text: tSecretos("functionSecrets.functionsDoNotCompile", { errors: outcome.errors.join("\n") }) });
+        return;
+      }
+      if (outcome.kind === "functions_failed") {
+        setState({ kind: "error", text: tSecretos("functionSecrets.functionsFailed") });
         return;
       }
       if (outcome.kind === "migration_failed") {
@@ -155,7 +181,7 @@ export function AgentConfirmCard({
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
     }
-  }, [busy, inert, confirm, projectId, t, tDatos, copyDraftData, onPublished]);
+  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, copyDraftData, onPublished]);
 
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
@@ -243,19 +269,32 @@ export function AgentConfirmCard({
         <div className="mt-2">
           <DestructiveConfirm
             destructive={state.list}
-            onConfirm={() => void handlePublish(state.fingerprint)}
+            onConfirm={() => void handlePublish({ confirmFingerprint: state.fingerprint })}
             onCancel={() => setState({ kind: "idle" })}
           />
         </div>
       )}
 
+      {state.kind === "secrets_required" && (
+        <div className="mt-2">
+          <MissingSecrets
+            projectId={projectId}
+            missing={state.missing}
+            busy={busy}
+            onSavedPublish={() => void handlePublish()}
+            onPublishAnyway={() => void handlePublish({ skipMissingSecrets: true })}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+
       {state.kind === "error" && (
-        <div className="mt-2 text-[11px] text-red-600 dark:text-red-400">
+        <div className="mt-2 whitespace-pre-line text-[11px] text-red-600 dark:text-red-400">
           {state.text}
         </div>
       )}
 
-      {state.kind !== "cancelled" && state.kind !== "confirm_destructive" && (
+      {state.kind !== "cancelled" && state.kind !== "confirm_destructive" && state.kind !== "secrets_required" && (
         <div className="mt-2.5 flex items-center gap-2">
           <button
             type="button"

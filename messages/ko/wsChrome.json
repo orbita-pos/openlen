@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "테이블",
       "users": "사용자",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "함수",
+      "secrets": "시크릿"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -533,6 +535,31 @@
       "resetConfirm": "테스트 데이터를 지우고 마이그레이션으로 다시 만들까요?",
       "noLive": "아직 실제 데이터가 없습니다. 게시하면 시작됩니다.",
       "testMails": "테스트 데이터는 이메일을 보내지 않습니다. 새 계정은 자동으로 확인됩니다."
+    },
+    "functions": {
+      "blocked": "이 프로젝트의 Edge Functions가 꺼져 있습니다. 오류라고 생각되면 알려 주세요.",
+      "calls": "이번 달 호출: {calls} / {quota}",
+      "callsLabel": "이번 달 호출",
+      "empty": "이 프로젝트에는 아직 Edge Functions가 없습니다.",
+      "draft": "초안",
+      "live": "프로덕션",
+      "noJwt": "JWT 없음",
+      "errorsTitle": "최근 오류",
+      "noErrors": "최근 7일간 오류가 없습니다."
+    },
+    "secrets": {
+      "hint": "함수는 Deno.env.get으로 읽습니다. 값은 다시 표시되지 않으며 교체만 할 수 있습니다.",
+      "draft": "초안",
+      "live": "프로덕션",
+      "empty": "시크릿이 없습니다.",
+      "nameField": "이름",
+      "add": "추가",
+      "replace": "교체",
+      "save": "저장",
+      "delete": "삭제",
+      "confirmDelete": "삭제할까요?",
+      "loadError": "시크릿을 불러오지 못했습니다.",
+      "deleteFailed": "삭제하지 못했습니다. 다시 시도해 주세요."
     }
   }
 }

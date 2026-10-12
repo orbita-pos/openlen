@@ -20,6 +20,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { diagnosticosDeLaApp, shellEntry } from "@/lib/agent/compila-la-app";
+import { isFunctionsInputPath } from "@/lib/functions/project-files";
 import { typesAndLintAfterWrite } from "@/lib/agent/types-and-lint";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
@@ -290,8 +291,12 @@ async function aplicarPlan(
     const guardado = await guardarEnLaCarpeta(session, deps, v.folder, plan, herramienta, detalle, sinOpIds(data.html ?? ""));
     // Lo que no compila, una vez por herramienta: la terminal lo pide ella
     // misma al acabar el comando entero (`terminal/herramienta.ts`).
-    if (!guardado.appCambiada || herramienta === "bash") return guardado;
-    return { ...guardado, ...conDiagnosticos(await diagnosticosDeLaAppTrasEscribir(session, deps, [plan.ruta])) };
+    if (herramienta === "bash") return guardado;
+    const diagnosticos = [
+      ...(guardado.appCambiada ? await diagnosticosDeLaAppTrasEscribir(session, deps, [plan.ruta]) : []),
+      ...(await diagnosticosDeFuncionesTrasEscribir(session, deps, [plan.ruta])),
+    ];
+    return { ...guardado, ...conDiagnosticos(diagnosticos) };
   }
   // UNA APP NO TIENE PÁGINAS (F3): una pantalla nueva es un componente y una
   // ruta de hash. Un /<slug>/index.html sería una página estática FUERA de la
@@ -435,6 +440,20 @@ async function guardarEnLaCarpeta(
  *
  * @param written lo que escribió ESTA herramienta.
  */
+/**
+ * LAS EDGE FUNCTIONS (spec local 2026-10-11): tras una herramienta que tocó
+ * /supabase/functions/** o config.toml, lo que no compila. En páginas y apps.
+ * Fail-soft: si no se puede, nada (el `curl` y los ojos lo verán igual).
+ */
+export async function diagnosticosDeFuncionesTrasEscribir(session: AgentSession, deps: AgentDeps, written: readonly string[]): Promise<Diagnostico[]> {
+  if (!deps.functionsAfterWrite || !written.some(isFunctionsInputPath)) return [];
+  try {
+    return await deps.functionsAfterWrite(session.projectId, written);
+  } catch {
+    return [];
+  }
+}
+
 export async function diagnosticosDeLaAppTrasEscribir(
   session: AgentSession,
   deps: AgentDeps,
