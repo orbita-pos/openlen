@@ -25,6 +25,8 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
   description: string;
   inputSchema: S;
   annotations: ToolAnnotations;
+  /** `_meta` del registro, p. ej. `anthropic/requiresUserInteraction` (Claude pide confirmación). */
+  meta?: Record<string, unknown>;
   run(args: z.infer<S>, caller: McpCaller): Promise<ToolResult>;
 }
 

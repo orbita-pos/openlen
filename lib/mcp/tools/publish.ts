@@ -101,6 +101,7 @@ export const publishTool = defineTool({
     approval_id: z.string().optional().describe("From a previous approval_required answer, once the user approved it."),
   }),
   annotations: PUBLISH_ANNOTATIONS,
+  meta: { "anthropic/requiresUserInteraction": true },
   async run({ project_id, subdomain, approval_id }, caller) {
     const open = await openProject(caller, project_id, "editar");
     if (!open.ok) return open.result;
@@ -144,6 +145,7 @@ export const unpublishTool = defineTool({
     approval_id: z.string().optional(),
   }),
   annotations: PUBLISH_ANNOTATIONS,
+  meta: { "anthropic/requiresUserInteraction": true },
   async run({ project_id, approval_id }, caller) {
     const open = await openProject(caller, project_id, "editar");
     if (!open.ok) return open.result;
