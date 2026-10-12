@@ -87,6 +87,9 @@ export class CloudflareEngine implements FunctionsEngine {
     const nombre = destinationName(dest);
     const sabido = this.#hashes.get(nombre);
     if (sabido && this.#now() - sabido.at <= HASH_TTL_MS) return sabido.hash;
+    // Si mientras se pregunta el motor sube o quita ese script, gana lo suyo: lo
+    // leído puede ser de antes.
+    const antes = this.#hashes.get(nombre);
     let hash: string | null;
     try {
       const tags = await cfRequest<string[]>(this.#cfg, this.#fetch, "GET", `${this.#script(dest)}/tags`);
@@ -96,6 +99,8 @@ export class CloudflareEngine implements FunctionsEngine {
       if (!noEsta(e)) throw e;
       hash = null;
     }
+    const ahora = this.#hashes.get(nombre);
+    if (ahora !== antes && ahora) return ahora.hash;
     this.#hashes.set(nombre, { hash, at: this.#now() });
     return hash;
   }
