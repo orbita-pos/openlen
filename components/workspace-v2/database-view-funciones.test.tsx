@@ -44,11 +44,11 @@ async function type(input: HTMLInputElement, value: string) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
-async function render() {
+async function render(projectId = "p1") {
   await act(async () => {
     root.render(
       <NextIntlClientProvider locale="es" messages={{ wsChrome, panelsChat }}>
-        <DatabaseView projectId="p1" />
+        <DatabaseView projectId={projectId} />
       </NextIntlClientProvider>,
     );
   });
@@ -100,6 +100,65 @@ describe("las Edge Functions en la vista Base de datos", () => {
     expect(button("Funciones")).toBeTruthy();
     expect(button("Secretos")).toBeTruthy();
     expect(button("Tablas")).toBeUndefined();
+  });
+
+  it("🔴 sin tablas pero con funciones: abre ya en Funciones, con su pestaña elegida", async () => {
+    stubFetch(rutas());
+    await render();
+    expect(button("Funciones")?.getAttribute("aria-selected")).toBe("true");
+    expect(text()).toContain("checkout");
+  });
+
+  it("🔴 al cambiar de proyecto no se ve el resumen del anterior mientras llega el suyo", async () => {
+    const FN2 = { ...FN, functions: [{ name: "otra-funcion", draft: true, live: false, verifyJwt: true }], errors: [] };
+    let soltar: (() => void) | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/p2/functions")) await new Promise<void>((r) => (soltar = r));
+        const body = url.endsWith("/backend") ? EMPTY : url.endsWith("/functions") ? (url.includes("/p2/") ? FN2 : FN) : SECRETS;
+        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    await render("p1");
+    expect(text()).toContain("checkout");
+    await render("p2");
+    expect(text()).not.toContain("checkout");
+    await act(async () => soltar!());
+    await settle();
+    expect(text()).toContain("otra-funcion");
+  });
+
+  it("una respuesta tardía del proyecto anterior no pisa la del que se mira", async () => {
+    const FN2 = { ...FN, functions: [{ name: "otra-funcion", draft: true, live: false, verifyJwt: true }], errors: [] };
+    let soltar: (() => void) | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/p1/functions")) await new Promise<void>((r) => (soltar = r));
+        const body = url.endsWith("/backend") ? EMPTY : url.endsWith("/functions") ? (url.includes("/p2/") ? FN2 : FN) : SECRETS;
+        return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    await render("p1");
+    await render("p2");
+    expect(text()).toContain("otra-funcion");
+    await act(async () => soltar!());
+    await settle();
+    expect(text()).toContain("otra-funcion");
+    expect(text()).not.toContain("checkout");
+  });
+
+  it("si las funciones desaparecen con su pestaña elegida, vuelve a Tablas (no pinta Storage)", async () => {
+    let fn: unknown = FN;
+    stubFetch((c) => (c.url.endsWith("/backend") ? READY : c.url.endsWith("/functions") ? fn : {}));
+    await render();
+    await click(button("Funciones"));
+    fn = { available: false };
+    await click(button("Recargar"));
+    expect(button("Funciones")).toBeUndefined();
+    expect(button("Tablas")?.getAttribute("aria-selected")).toBe("true");
+    expect(calls.some((c) => c.url.includes("/storage"))).toBe(false);
   });
 
   it("Funciones: cada una con dónde está, la barra del mes y los últimos errores", async () => {
