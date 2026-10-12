@@ -9,7 +9,7 @@
 //
 // Las rutas: app/api/projects/[id]/backend/** (lib/backend/dashboard.ts).
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -102,19 +102,25 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
 
   // LAS EDGE FUNCTIONS (spec local 2026-10-11, Parte 6): sus dos pestañas salen
   // si este servidor las tiene, también con la base aún sin tablas.
-  const [fn, setFn] = useState<FunctionsOverview | null>(null);
+  // Con el proyecto de quien es: lo de otro no se enseña nunca, ni mientras
+  // llega lo de éste ni si llega tarde.
+  const [fnState, setFnState] = useState<{ readonly projectId: string; readonly overview: FunctionsOverview | null } | null>(null);
+  const currentProject = useRef(projectId);
+  useEffect(() => {
+    currentProject.current = projectId;
+  }, [projectId]);
   const loadFn = useCallback(async () => {
-    if (!projectId) {
-      setFn(null);
-      return;
-    }
+    if (!projectId) return;
+    let overview: FunctionsOverview | null = null;
     try {
       const r = await call<{ available?: unknown }>(`/api/projects/${projectId}/functions`);
-      setFn(r.available === true ? (r as unknown as FunctionsOverview) : null);
+      overview = r.available === true ? (r as unknown as FunctionsOverview) : null;
     } catch {
-      setFn(null);
+      overview = null;
     }
+    if (currentProject.current === projectId) setFnState({ projectId, overview });
   }, [projectId]);
+  const fn = fnState?.projectId === projectId ? fnState.overview : null;
 
   useEffect(() => {
     void loadFn();
@@ -137,7 +143,11 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     await load();
   }, [projectId, load, t]);
 
-  const fnTab = fn !== null && projectId !== null && (tab === "functions" || tab === "secrets") && (overview.status === "ready" || overview.status === "empty");
+  // La pestaña que se ve: sin tablas pero con funciones, Funciones (no hay otra
+  // que enseñar); si las funciones ya no están, Tablas.
+  const tableTab = tab === "tables" || tab === "users" || tab === "storage";
+  const activeTab = !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : tab;
+  const fnTab = fn !== null && projectId !== null && (activeTab === "functions" || activeTab === "secrets") && (overview.status === "ready" || overview.status === "empty");
 
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-app text-zinc-900 dark:text-zinc-100">
@@ -197,15 +207,15 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
           <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
             {overview.status === "ready" && (
               <>
-                <TabButton active={tab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
-                <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={<Users size={14} />} label={t("tabs.users")} />
-                <TabButton active={tab === "storage"} onClick={() => setTab("storage")} icon={<HardDrive size={14} />} label={t("tabs.storage")} />
+                <TabButton active={activeTab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
+                <TabButton active={activeTab === "users"} onClick={() => setTab("users")} icon={<Users size={14} />} label={t("tabs.users")} />
+                <TabButton active={activeTab === "storage"} onClick={() => setTab("storage")} icon={<HardDrive size={14} />} label={t("tabs.storage")} />
               </>
             )}
             {fn && (
               <>
-                <TabButton active={tab === "functions"} onClick={() => setTab("functions")} icon={<Zap size={14} />} label={t("tabs.functions")} />
-                <TabButton active={tab === "secrets"} onClick={() => setTab("secrets")} icon={<KeyRound size={14} />} label={t("tabs.secrets")} />
+                <TabButton active={activeTab === "functions"} onClick={() => setTab("functions")} icon={<Zap size={14} />} label={t("tabs.functions")} />
+                <TabButton active={activeTab === "secrets"} onClick={() => setTab("secrets")} icon={<KeyRound size={14} />} label={t("tabs.secrets")} />
               </>
             )}
           </div>
@@ -251,16 +261,16 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
         {overview.status === "ready" && projectId && !fnTab && (
           // Un entorno nuevo vuelve a montar las pestañas: piden sus datos otra vez.
           <PanelEnvContext.Provider key={shown ?? "default"} value={shown}>
-            {tab === "tables" ? (
+            {activeTab === "tables" ? (
               <TablesTab projectId={projectId} tables={overview.tables} />
-            ) : tab === "users" ? (
+            ) : activeTab === "users" ? (
               <UsersTab projectId={projectId} />
             ) : (
               <StorageTab projectId={projectId} />
             )}
           </PanelEnvContext.Provider>
         )}
-        {fnTab && fn && projectId && (tab === "functions" ? <FunctionsTab overview={fn} /> : <SecretsTab projectId={projectId} />)}
+        {fnTab && fn && projectId && (activeTab === "functions" ? <FunctionsTab overview={fn} /> : <SecretsTab projectId={projectId} />)}
       </div>
     </section>
   );
