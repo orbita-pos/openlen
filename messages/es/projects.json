@@ -237,5 +237,25 @@
     "used": "Esta petición ya se usó.",
     "notFound": "Esta petición no existe o no es tuya.",
     "failed": "No funcionó. Recarga la página y prueba otra vez."
+  },
+  "mcpConsent": {
+    "title": "«{client}» quiere conectarse a tu cuenta de OpenLen",
+    "returnsTo": "Al permitirlo volverás a {host}.",
+    "localhost": "Esta aplicación corre en tu propio ordenador (localhost). Sigue sólo si acabas de abrirla.",
+    "signedInAs": "Sesión iniciada como {email}",
+    "scopesTitle": "Podrá",
+    "scopeRead": "Ver tus proyectos y sus ficheros",
+    "scopeWrite": "Cambiar los ficheros de tus proyectos y crear proyectos",
+    "scopePublish": "Publicar y despublicar (cada vez, con tu permiso)",
+    "projectsTitle": "Qué proyectos",
+    "allProjects": "Todos mis proyectos",
+    "oneProject": "Sólo este",
+    "allow": "Permitir",
+    "deny": "Rechazar",
+    "expired": "Esta petición caducó. Vuelve a tu asistente y conecta otra vez.",
+    "notFound": "Esta petición no existe.",
+    "used": "Esta petición ya se contestó.",
+    "redirecting": "Volviendo… puedes cerrar esta pestaña si no pasa nada.",
+    "failed": "No funcionó. Recarga la página y prueba otra vez."
   }
 }

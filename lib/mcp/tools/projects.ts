@@ -4,12 +4,11 @@ import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros
 import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { paginaDeRuta } from "@/lib/agent/ficheros/sitio";
 import { realDeps } from "@/lib/agent/tools";
-import { listProjects, listProjectsByIds } from "@/lib/projects";
-import { proyectosCompartidos } from "@/lib/projects/miembros";
 import { deployUrlFor } from "@/lib/publish/deploy-url";
 import { openProject } from "../access";
 import { editorUrl } from "../config";
 import { jsonResult } from "../results";
+import { projectsVisibleTo } from "../projects-list";
 import { mcpAgentSession } from "../session";
 import { defineTool, READ_ONLY } from "./define";
 
@@ -27,15 +26,7 @@ export const listProjectsTool = defineTool({
   }),
   annotations: READ_ONLY,
   async run({ limit = 20, cursor }, caller) {
-    const [own, shared] = await Promise.all([listProjects(caller.userId), proyectosCompartidos(caller.userId)]);
-    const sharedRows = await listProjectsByIds(shared.map((s) => s.projectId));
-    const roleOf = new Map<string, string>(shared.map((s) => [s.projectId, ROLE[s.rol]]));
-    const all = [
-      ...own.filter((p) => !p.isBlank).map((p) => ({ p, role: "owner" })),
-      ...sharedRows.filter((p) => !p.isBlank).map((p) => ({ p, role: roleOf.get(p.id) ?? "viewer" })),
-    ]
-      .filter(({ p }) => !caller.projectId || p.id === caller.projectId)
-      .sort((a, b) => b.p.updatedAt.getTime() - a.p.updatedAt.getTime());
+    const all = (await projectsVisibleTo(caller.userId)).filter(({ p }) => !caller.projectId || p.id === caller.projectId);
     const start = Math.max(0, Number.parseInt(cursor ?? "0", 10) || 0);
     const page = all.slice(start, start + limit);
     return jsonResult({

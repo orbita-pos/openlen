@@ -237,5 +237,25 @@
     "used": "이미 사용된 요청이에요.",
     "notFound": "이 요청이 없거나 내 요청이 아니에요.",
     "failed": "잘 안 됐어요. 페이지를 새로고침하고 다시 시도해 주세요."
+  },
+  "mcpConsent": {
+    "title": "“{client}”에서 OpenLen 계정에 연결하려고 해요",
+    "returnsTo": "허용하면 {host}(으)로 돌아가요.",
+    "localhost": "이 앱은 내 컴퓨터(localhost)에서 실행돼요. 방금 직접 실행한 경우에만 계속하세요.",
+    "signedInAs": "{email}(으)로 로그인됨",
+    "scopesTitle": "할 수 있는 일",
+    "scopeRead": "프로젝트와 파일 보기",
+    "scopeWrite": "프로젝트 파일 변경 및 프로젝트 만들기",
+    "scopePublish": "게시 및 게시 취소 (매번 내 승인 필요)",
+    "projectsTitle": "대상 프로젝트",
+    "allProjects": "내 모든 프로젝트",
+    "oneProject": "이 프로젝트만",
+    "allow": "허용",
+    "deny": "거부",
+    "expired": "이 요청은 만료됐어요. 어시스턴트로 돌아가 다시 연결하세요.",
+    "notFound": "이 요청은 존재하지 않아요.",
+    "used": "이 요청은 이미 처리됐어요.",
+    "redirecting": "돌아가는 중… 아무 일도 일어나지 않으면 이 탭을 닫아도 돼요.",
+    "failed": "잘 안 됐어요. 페이지를 새로고침하고 다시 시도하세요."
   }
 }

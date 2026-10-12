@@ -237,5 +237,25 @@
     "used": "This request was already used.",
     "notFound": "This request doesn't exist or isn't yours.",
     "failed": "That didn't work. Reload the page and try again."
+  },
+  "mcpConsent": {
+    "title": "“{client}” wants to connect to your OpenLen account",
+    "returnsTo": "After you allow it, you'll go back to {host}.",
+    "localhost": "This app runs on your own computer (localhost). Only continue if you just started it.",
+    "signedInAs": "Signed in as {email}",
+    "scopesTitle": "It will be able to",
+    "scopeRead": "See your projects and their files",
+    "scopeWrite": "Change your projects' files and create projects",
+    "scopePublish": "Publish and unpublish (each time, with your OK)",
+    "projectsTitle": "Which projects",
+    "allProjects": "All my projects",
+    "oneProject": "Only this one",
+    "allow": "Allow",
+    "deny": "Deny",
+    "expired": "This request expired. Go back to your assistant and connect again.",
+    "notFound": "This request doesn't exist.",
+    "used": "This request was already answered.",
+    "redirecting": "Taking you back… you can close this tab if nothing happens.",
+    "failed": "That didn't work. Reload the page and try again."
   }
 }
