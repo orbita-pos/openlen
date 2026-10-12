@@ -1,0 +1,24 @@
+[Unit]
+Description=OpenLen — limpieza diaria del MCP (peticiones, tokens y clientes caducados, auditoría vieja)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# El MISMO fichero de secretos que openlen-app.service: sólo usa DATABASE_URL.
+WorkingDirectory=/opt/openlen-app
+EnvironmentFile=/etc/openlen/openlen.env
+
+ExecStart=/usr/bin/node /opt/openlen-app/cron/mcp-cleanup.mjs
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-mcp-cleanup
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only

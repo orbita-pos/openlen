@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenLen — limpieza del MCP, una vez al día
+Requires=openlen-mcp-cleanup.service
+
+[Timer]
+# 09:30 UTC = 3:30 en Ciudad de México: de madrugada para quien más lo usa.
+# Persistent=true recupera la corrida perdida si la caja estaba apagada.
+OnCalendar=*-*-* 09:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target
