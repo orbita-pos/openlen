@@ -76,6 +76,13 @@ const nextConfig = {
       // Las pruebas de una app (plan 04): `bundle-tests.ts` lee nuestro vitest
       // por ruta y lo empaqueta con cada prueba. El kit vive en public/.
       "./lib/apps/tests/vitest-runtime.js",
+      // LAS EDGE FUNCTIONS (spec local 2026-10-11): el hilo del empaquetador
+      // lee el catálogo, el envoltorio y el resolvedor POR RUTA, y el motor
+      // local arranca su hilo por ruta.
+      "./lib/functions/vendor/**/*",
+      "./lib/functions/runtime/runtime.mjs",
+      "./lib/functions/bundler/resolve.mjs",
+      "./lib/functions/engines/local-worker.mjs",
     ],
   },
   // External Node packages:
