@@ -2149,6 +2149,8 @@ export const functionUsage = pgTable(
     month: text("month").notNull(),
     calls: integer("calls").notNull().default(0),
     nanoUsd: bigint("nanoUsd", { mode: "number" }).notNull().default(0),
+    /** El aviso de cuota más alto ya dado este mes: 0, 80 o 100 (fase 3). */
+    quotaAlertedPercent: integer("quotaAlertedPercent").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.month] })],
 );

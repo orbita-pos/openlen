@@ -18,6 +18,9 @@ export interface UsageStore {
   /** El aviso de la bolsa: `true` para UNA llamada al mes y bolsa, cuando lo
    *  gastado ya llega a `thresholdNanoUsd`. */
   claimPoolAlert(pool: Pool, month: string, thresholdNanoUsd: number): Promise<boolean>;
+  /** El aviso de cuota: `true` para UNA llamada por nivel (80, 100) al mes y
+   *  proyecto; dado el del 100 %, el del 80 % ya no sale. */
+  claimQuotaAlert(projectId: string, month: string, percent: 80 | 100): Promise<boolean>;
 }
 
 export function memoryUsageStore(): UsageStore & {
@@ -29,6 +32,7 @@ export function memoryUsageStore(): UsageStore & {
   const pools = new Map<string, { reserved: number; spent: number }>();
   const projectNanoUsd = new Map<string, number>();
   const avisadas = new Set<string>();
+  const avisosDeCuota = new Map<string, number>();
   const bolsa = (pool: Pool, month: string) => {
     const k = `${month}|${pool}`;
     if (!pools.has(k)) pools.set(k, { reserved: 0, spent: 0 });
@@ -67,6 +71,12 @@ export function memoryUsageStore(): UsageStore & {
       const k = `${month}|${pool}`;
       if (avisadas.has(k) || bolsa(pool, month).spent < threshold) return false;
       avisadas.add(k);
+      return true;
+    },
+    async claimQuotaAlert(projectId, month, percent) {
+      const k = `${projectId}|${month}`;
+      if ((avisosDeCuota.get(k) ?? 0) >= percent) return false;
+      avisosDeCuota.set(k, percent);
       return true;
     },
   };

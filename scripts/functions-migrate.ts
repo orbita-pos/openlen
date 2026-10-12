@@ -103,6 +103,8 @@ async function main() {
   `);
   // FASE 3: el aviso del 80 % de cada bolsa sale una vez al mes.
   await db.execute(sql`ALTER TABLE "functionPools" ADD COLUMN IF NOT EXISTS "alertedAt" timestamp;`);
+  // FASE 3: el aviso de cuota de cada proyecto, uno por nivel (80, 100) y mes.
+  await db.execute(sql`ALTER TABLE "functionUsage" ADD COLUMN IF NOT EXISTS "quotaAlertedPercent" integer NOT NULL DEFAULT 0;`);
   console.log("[functions:migrate] tablas listas y borradores con su ref propio");
   process.exit(0);
 }

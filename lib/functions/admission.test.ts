@@ -96,6 +96,27 @@ describe("los avisos (fase 3)", () => {
     expect(avisos).toEqual([{ projectId: "p1", percent: 80, calls: Math.ceil(q * 0.8), quota: q }]);
   });
 
+  it("🔴 la que llega justo al 80 % la rechaza la bolsa mientras otra ya pasó: avisa esa otra, y una sola vez", async () => {
+    const avisos: unknown[] = [];
+    const q = FUNCTION_LIMITS.free.callsPerMonth;
+    const ochenta = Math.ceil(q * 0.8);
+    const usage = memoryUsageStore();
+    let primera = true;
+    const o = {
+      ...base(),
+      usage: { ...usage, reserve: async (...a: Parameters<typeof usage.reserve>) => (primera ? ((primera = false), false) : usage.reserve(...a)) },
+      alerts: { quota: (a: unknown) => void avisos.push(a) },
+    };
+    usage.calls.set("p1|2026-10", ochenta - 1);
+    const [a, b] = await Promise.all([admit(o), admit(o)]);
+    expect(a).toEqual({ ok: false, reason: "cap" });
+    expect(b.ok).toBe(true);
+    if (b.ok) await b.release(10);
+    const c = await admit(o);
+    if (c.ok) await c.release(10);
+    expect(avisos).toEqual([{ projectId: "p1", percent: 80, calls: ochenta + 1, quota: q }]);
+  });
+
   it("🔴 la bolsa: UN aviso al mes cuando lo gastado pasa del 80 % del tope", async () => {
     const avisos: unknown[] = [];
     const cap = worstCaseNanoUsd(FUNCTION_LIMITS.free.timeoutSec) * 10;

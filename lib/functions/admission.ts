@@ -20,7 +20,7 @@ export type Admission =
 /** Los avisos que salen de contar (spec local 2026-10-11, Partes 5 y 6). No
  *  esperan ni lanzan: quien los pone los manda por su cuenta. */
 export interface AdmissionAlerts {
-  /** El proyecto llegó justo al 80 % o al 100 % de sus llamadas del mes. */
+  /** El proyecto llegó al 80 % o al 100 % de sus llamadas del mes (una vez por nivel y mes). */
   quota?(o: { readonly projectId: string; readonly percent: 80 | 100; readonly calls: number; readonly quota: number }): void;
   /** Lo gastado en una bolsa pasó del 80 % de su tope (una vez al mes por bolsa). */
   pool?(o: { readonly pool: Pool; readonly month: string; readonly spentNanoUsd: number; readonly capNanoUsd: number }): void;
@@ -52,10 +52,16 @@ export async function admit(o: {
       soltar();
       return { ok: false, reason: "cap" };
     }
-    // El aviso de cuota lo da la llamada que deja el mes JUSTO en el umbral, y
-    // sólo si entra (una que la bolsa rechaza se devuelve: avisará la siguiente).
-    if (calls === limits.callsPerMonth) o.alerts?.quota?.({ projectId: o.projectId, percent: 100, calls, quota: limits.callsPerMonth });
-    else if (calls === Math.ceil(limits.callsPerMonth * 0.8)) o.alerts?.quota?.({ projectId: o.projectId, percent: 80, calls, quota: limits.callsPerMonth });
+    // El aviso de cuota lo da la PRIMERA llamada que entra con el mes en el 80 %
+    // o en el 100 %, una vez por nivel. No «la que cae justo en el umbral»: si
+    // a ésa la rechaza la bolsa y se devuelve mientras otra ya pasó con el
+    // número siguiente, el aviso no saldría nunca.
+    if (o.alerts?.quota && calls >= Math.ceil(limits.callsPerMonth * 0.8)) {
+      const percent = calls >= limits.callsPerMonth ? 100 : 80;
+      if (await o.usage.claimQuotaAlert(o.projectId, month, percent).catch(() => false)) {
+        o.alerts.quota({ projectId: o.projectId, percent, calls, quota: limits.callsPerMonth });
+      }
+    }
     let hecho = false;
     return {
       ok: true,

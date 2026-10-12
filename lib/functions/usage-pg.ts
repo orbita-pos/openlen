@@ -15,6 +15,9 @@ function filas(r: unknown): unknown[] {
   return Array.isArray(r) ? r : ((r as { rows?: unknown[] }).rows ?? []);
 }
 
+/** El aviso de cuota más alto ya dado, por proyecto y mes, en este proceso. */
+const avisosDeCuota = new Map<string, number>();
+
 export const pgUsageStore: UsageStore = {
   async consumeCall(projectId, month, quota) {
     // La primera del mes inserta 1 (la cuota es siempre ≥ 1).
@@ -58,6 +61,20 @@ export const pgUsageStore: UsageStore = {
       UPDATE "functionPools" SET "alertedAt" = now()
       WHERE "month" = ${month} AND "pool" = ${pool} AND "alertedAt" IS NULL AND "spentNanoUsd" >= ${threshold}
       RETURNING 1`);
+    return filas(r).length > 0;
+  },
+  async claimQuotaAlert(projectId, month, percent) {
+    // Pasado el umbral, cada llamada lo pide: lo ya dado en este proceso no
+    // vuelve a la base.
+    const k = `${projectId}|${month}`;
+    if ((avisosDeCuota.get(k) ?? 0) >= percent) return false;
+    // Como el de la bolsa: UNA fila que se marca; dos a la vez, sólo una.
+    const r = await db.execute(sql`
+      UPDATE "functionUsage" SET "quotaAlertedPercent" = ${percent}
+      WHERE "projectId" = ${projectId} AND "month" = ${month} AND "quotaAlertedPercent" < ${percent}
+      RETURNING 1`);
+    if (avisosDeCuota.size > 10_000) avisosDeCuota.clear();
+    avisosDeCuota.set(k, Math.max(avisosDeCuota.get(k) ?? 0, percent));
     return filas(r).length > 0;
   },
 };
