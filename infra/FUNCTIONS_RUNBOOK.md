@@ -8,7 +8,8 @@ nuestro motor por dentro. **Hoy están APAGADAS en producción**: sin `OPENLEN_F
 ## 0. Lo que el deploy ya hace solo
 
 - **La migración** `functions-migrate` va en el paquete de migraciones (`scripts/build-migrations.mjs`) y corre antes
-  del código: `functionDeployments` (con el paquete de producción, `bundleGz`), `functionUsage`, `functionPools` (con
+  del código: `functionDeployments` (con el paquete de producción, `bundleGz`), `functionUsage` (con
+  `quotaAlertedPercent`), `functionPools` (con
   `alertedAt`), `functionInvocations`, `functionSecrets`, `functionBlocks` y el ref propio del borrador en
   `projectBackendEnvironments`. Aditiva e idempotente.
 - **Caddy**: el `Caddyfile` del repo lleva `handle /functions/v1/*` en el comodín de `*.openlen.app` (con streaming).
@@ -67,7 +68,8 @@ this project» sin contar ni gastar, y su vista Base de datos → Funciones lo d
 ## 4. Los avisos
 
 - **Al dueño**, cuando las llamadas del mes de un proyecto llegan al 80 % y al 100 % de su plan: push y correo (el
-  correo en inglés, como el del chat). Al 100 % las llamadas siguientes dan 429 hasta que acabe el mes.
+  correo en inglés, como el del chat), uno por nivel y mes (lo marca `functionUsage.quotaAlertedPercent`). Al 100 %
+  las llamadas siguientes dan 429 hasta que acabe el mes.
 - **Al operador**, cuando lo gastado de una bolsa pasa del 80 % de su tope: un correo al mes por bolsa (lo marca
   `functionPools.alertedAt`). Para que vuelva a avisar este mes: `update "functionPools" set "alertedAt" = null where
   "month" = '<AAAA-MM>' and "pool" = '<free|paid>';`.

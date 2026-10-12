@@ -54,6 +54,15 @@ describe("pgUsageStore", () => {
     expect([...r].map(Number).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 
+  it("el aviso de cuota: uno por nivel y mes; el del 100 % sale aunque el del 80 % ya saliera, y al revés no", async () => {
+    expect(await pgUsageStore.claimQuotaAlert(PROYECTO, "1999-02", 80)).toBe(true);
+    expect(await pgUsageStore.claimQuotaAlert(PROYECTO, "1999-02", 80)).toBe(false);
+    expect(await pgUsageStore.claimQuotaAlert(PROYECTO, "1999-02", 100)).toBe(true);
+    expect(await pgUsageStore.claimQuotaAlert(PROYECTO, "1999-02", 80)).toBe(false);
+    const [u] = await db.select().from(schema.functionUsage).where(and(eq(schema.functionUsage.projectId, PROYECTO), eq(schema.functionUsage.month, "1999-02")));
+    expect(u!.quotaAlertedPercent).toBe(100);
+  });
+
   it("las llamadas del mes de un proyecto (0 si no hay fila)", async () => {
     expect(await monthCalls(PROYECTO, "1999-02")).toBe(10);
     expect(await monthCalls(PROYECTO, "1998-12")).toBe(0);
