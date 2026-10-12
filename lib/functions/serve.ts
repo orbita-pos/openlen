@@ -25,7 +25,8 @@ import { handleFunctionsRequest, type GatewayDeps } from "./gateway";
 import { inflightCalls } from "./inflight";
 import { recordInvocation } from "./invocations-pg";
 import { ensureLiveDeployed } from "./live-core";
-import { capsFromEnv } from "./meter";
+import { capsFromEnv, monthKey } from "./meter";
+import { poolAlertEmail } from "./quota-messages";
 import { pgSecretStore } from "./secret-store-pg";
 import { pgUsageStore } from "./usage-pg";
 
@@ -89,6 +90,26 @@ function realGatewayDeps(): GatewayDeps {
     usage: pgUsageStore,
     limiter,
     caps: capsFromEnv(),
+    // Los avisos (spec local 2026-10-11, Partes 5 y 6): no esperan ni lanzan.
+    alerts: {
+      quota(a) {
+        void (async () => {
+          const owner = await ownerOf(a.projectId);
+          if (!owner) return;
+          const { scheduleNotification } = await import("@/lib/notifications/dispatch");
+          await scheduleNotification(
+            { type: "functions_quota", projectId: a.projectId, recipientUserId: owner.userId, percent: a.percent, calls: a.calls, limit: a.quota },
+            `functions_quota:${a.projectId}:${monthKey(new Date())}:${a.percent}`,
+          );
+        })().catch((e: unknown) => console.error("[functions] el aviso de cuota no salió", a.projectId, e));
+      },
+      pool(a) {
+        void (async () => {
+          const { sendFunctionsPoolAlertEmail } = await import("@/lib/email");
+          await sendFunctionsPoolAlertEmail(poolAlertEmail(a));
+        })().catch((e: unknown) => console.error("[functions] el aviso de la bolsa no salió", a.pool, e));
+      },
+    },
     record: recordInvocation,
     now: () => new Date(),
   };
