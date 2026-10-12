@@ -225,6 +225,41 @@ describe("la puerta", () => {
     expect(limiter.inFlight("p1")).toBe(0);
   });
 
+  it("🔴 un motor que lanza al empezar: 500, la plaza se suelta y queda anotado", async () => {
+    const limiter = new ConcurrencyLimiter();
+    const { deps, records } = montar(
+      () =>
+        (async function* (): AsyncGenerator<Frame> {
+          throw new Error("el motor no arrancó");
+        })(),
+      { limiter },
+    );
+    const r = await llamar(deps);
+    expect(r.status).toBe(500);
+    expect(r.headers.get("sb-error-code")).toBe("WORKER_ERROR");
+    expect(limiter.inFlight("p1")).toBe(0);
+    await vi.waitFor(() => expect(records).toHaveLength(1));
+    expect(records[0]!.error).toMatch(/el motor no arrancó/);
+  });
+
+  it("🔴 un motor que lanza a mitad del cuerpo: el cuerpo acaba y la plaza se suelta", async () => {
+    const limiter = new ConcurrencyLimiter();
+    const { deps, records } = montar(
+      () =>
+        (async function* (): AsyncGenerator<Frame> {
+          yield { t: "head", status: 200, headers: [] };
+          yield { t: "body", b: b64("a") };
+          throw new Error("se cayó");
+        })(),
+      { limiter },
+    );
+    const r = await llamar(deps);
+    expect(await r.text()).toBe("a");
+    await vi.waitFor(() => expect(records).toHaveLength(1));
+    expect(records[0]).toMatchObject({ errorCode: "WORKER_ERROR" });
+    expect(limiter.inFlight("p1")).toBe(0);
+  });
+
   it("204 sin cuerpo también se anota", async () => {
     const { deps, records } = montar(() => [{ t: "head", status: 204, headers: [] }, { t: "body_end" }, { t: "end", ms: 1 }]);
     const r = await llamar(deps);
