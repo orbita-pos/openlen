@@ -219,7 +219,7 @@ function NewTokenForm({
       <p className="text-sm opacity-70">{t("newTokenHelp")}</p>
       <label className="flex flex-col gap-1 text-sm">
         {t("tokenName")}
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("tokenNamePlaceholder")} maxLength={100} className="rounded-lg border px-3 py-2" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("tokenNamePlaceholder")} maxLength={100} className="rounded-lg border bg-transparent px-3 py-2 dark:[color-scheme:dark]" />
       </label>
       <fieldset className="flex flex-col gap-1 text-sm">
         <label className="flex items-center gap-2 opacity-70">
@@ -232,7 +232,7 @@ function NewTokenForm({
           <input type="checkbox" checked={scopes.includes("publish")} onChange={() => toggle("publish")} /> {t("scopePublish")}
         </label>
       </fieldset>
-      <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+      <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="rounded-lg border bg-transparent px-3 py-2 text-sm dark:[color-scheme:dark]">
         <option value="">{t("allProjects")}</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>
@@ -245,7 +245,7 @@ function NewTokenForm({
         <select
           value={String(expiry)}
           onChange={(e) => setExpiry(e.target.value === "null" ? null : (Number(e.target.value) as Exclude<Expiry, null>))}
-          className="rounded-lg border px-3 py-2"
+          className="rounded-lg border bg-transparent px-3 py-2 dark:[color-scheme:dark]"
         >
           {EXPIRY.map((d) => (
             <option key={String(d)} value={String(d)}>
