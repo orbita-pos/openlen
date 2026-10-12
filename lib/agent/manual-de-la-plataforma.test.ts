@@ -266,3 +266,36 @@ describe("el manual cuenta las dos bases", () => {
     expect(text).not.toContain("it doesn't create accounts");
   });
 });
+
+describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
+  const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+
+  it("sin motor, el manual sigue diciendo que aquí no hay, y no enseña nada de ellas", () => {
+    const m = buildManualDeLaPlataforma({});
+    expect(m).toContain("Edge Functions don't exist here yet");
+    expect(m).not.toContain("Deno.serve");
+  });
+
+  it("🔴 con motor: cómo son aquí, tras Realtime, igual en la página y en la app", () => {
+    const pagina = buildManualDeLaPlataforma(CON);
+    const app = buildManualDeLaPlataforma(CON, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    for (const m of [pagina, app]) {
+      expect(m).not.toContain("Edge Functions don't exist here yet");
+      expect(m).toContain("It also runs the project's Edge Functions (below).");
+      for (const f of [
+        "/supabase/functions/<name>/index.ts",
+        "Deno.serve(async (req) => …)",
+        "request_secrets",
+        "supabase secrets set NAME=value",
+        "supabase.functions.invoke",
+        "verify_jwt = false",
+        "constructEventAsync",
+        "`npm:stripe`",
+        "don't retry",
+      ]) {
+        expect(m, f).toContain(f);
+      }
+      expect(m.indexOf("Deno.serve")).toBeGreaterThan(m.indexOf("Live updates go through Realtime"));
+    }
+  });
+});
