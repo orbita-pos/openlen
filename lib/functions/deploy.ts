@@ -1,13 +1,13 @@
 // lib/functions/deploy.ts — DESPLEGAR, CON LO DE VERDAD: el motor configurado,
 // el registro en Postgres, los ficheros de /supabase/ del proyecto, su backend
-// (ref, URL propia del borrador, claves) y el plan de su dueño.
+// (ref, la URL de cada entorno, claves), sus secretos y el plan de su dueño.
 
 import "server-only";
 
 import { eq } from "drizzle-orm";
 
 import { listProjectFiles } from "@/lib/backend/files";
-import { draftProjectUrl, ensureBackend } from "@/lib/backend/registry";
+import { draftProjectUrl, ensureBackend, projectUrl } from "@/lib/backend/registry";
 import { db, schema } from "@/lib/db";
 import { decryptToken } from "@/lib/integrations/crypto";
 import { planFromDb, type Plan } from "@/lib/plan";
@@ -20,6 +20,7 @@ import { bundleFunctions } from "./bundler/bundle-functions";
 import { deployDraftSerialized, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
 import { pgDeploymentStore } from "./deployments-pg";
 import { functionsEnabled, functionsEngine } from "./engines";
+import { pgSecretStore } from "./secret-store-pg";
 
 /** El dueño del proyecto y su plan: la cuota, la bolsa y el tiempo límite son
  *  los SUYOS (como los créditos de Len). Sin `lib/limits.ts`, que arrastra el
@@ -41,19 +42,21 @@ export function realDeployDeps(): DeployDeps | null {
     engine,
     store: pgDeploymentStore,
     loadFiles: (projectId) => listProjectFiles(projectId, "/supabase/"),
-    async target(projectId) {
+    async target(projectId, environment) {
       const rec = await ensureBackend(projectId);
       const owner = await ownerOf(projectId);
       if (!owner) throw new Error(`no existe el proyecto ${projectId}`);
       return {
         ref: rec.ref,
-        url: await draftProjectUrl(rec),
+        // Una función llama a SUPABASE_URL sin Origin: el borrador, con su ref propio.
+        url: environment === "draft" ? await draftProjectUrl(rec) : projectUrl(rec.ref),
         publishableKey: rec.publishableKey,
         secretKey: decryptToken(rec.secretKeyEncrypted),
         plan: owner.plan,
+        secrets: await pgSecretStore.values(projectId, environment),
       };
     },
-    bundle: (files, catalog) => bundleFunctions({ files, catalog, mode: "development" }),
+    bundle: (files, catalog, mode) => bundleFunctions({ files, catalog, mode }),
   };
 }
 

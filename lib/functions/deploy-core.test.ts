@@ -2,9 +2,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FunctionsBundle } from "./bundler/bundle-functions";
-import { deployDraft, deployDraftSerialized, ensureDraftDeployed, pendingDraftDeploy, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
+import { applyFunctionEnv, deployDraft, deployDraftSerialized, ensureDraftDeployed, pendingDraftDeploy, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
 import { memoryDeploymentStore } from "./deployments";
-import type { Destination, EngineBundle, FunctionsEngine } from "./engines/types";
+import type { Destination, EngineBundle, FunctionsEngine, FunctionsEnvironment } from "./engines/types";
 
 afterEach(() => vi.useRealTimers());
 
@@ -12,14 +12,19 @@ const REF = "abcdefghijklmnopqrst";
 
 function motor() {
   const desplegados = new Map<string, string>();
+  const entornos = new Map<string, Record<string, string>>();
   const llamadas: string[] = [];
   const engine: FunctionsEngine = {
     name: "local",
     async deploy(dest: Destination, b: EngineBundle, env: Readonly<Record<string, string>>) {
       llamadas.push(`deploy ${dest.environment} ${b.hash} ${env.SUPABASE_URL}`);
       desplegados.set(`${dest.ref}|${dest.environment}`, b.hash);
+      entornos.set(`${dest.ref}|${dest.environment}`, { ...env });
     },
-    setEnv: async () => undefined,
+    async setEnv(dest, env) {
+      llamadas.push(`setEnv ${dest.environment}`);
+      if (desplegados.has(`${dest.ref}|${dest.environment}`)) entornos.set(`${dest.ref}|${dest.environment}`, { ...env });
+    },
     async deployedHash(dest) {
       return desplegados.get(`${dest.ref}|${dest.environment}`) ?? null;
     },
@@ -29,7 +34,7 @@ function motor() {
       desplegados.delete(`${dest.ref}|${dest.environment}`);
     },
   };
-  return { engine, llamadas, desplegados };
+  return { engine, llamadas, desplegados, entornos };
 }
 
 const ok = (hash: string, nombres: string[]): FunctionsBundle => ({
@@ -45,14 +50,22 @@ function deps(o: { bundle: (files: Record<string, string>) => FunctionsBundle | 
   const m = motor();
   const store = memoryDeploymentStore();
   let files = o.files ?? { "/supabase/functions/a/index.ts": "v1" };
+  const secretos: Record<FunctionsEnvironment, Record<string, string>> = { draft: {}, live: {} };
   const d: DeployDeps = {
     engine: m.engine,
     store,
     loadFiles: async () => files,
-    target: async () => ({ ref: REF, url: "https://draftrefdraftrefdraf.openlen.app", publishableKey: "sb_publishable_x", secretKey: "sb_secret_y", plan: "free" }),
+    target: async (_p, env) => ({
+      ref: REF,
+      url: env === "draft" ? "https://draftrefdraftrefdraf.openlen.app" : `https://${REF}.openlen.app`,
+      publishableKey: "sb_publishable_x",
+      secretKey: "sb_secret_y",
+      plan: "free",
+      secrets: { ...secretos[env] },
+    }),
     bundle: async (f) => o.bundle(f),
   };
-  return { d, m, store, setFiles: (f: Record<string, string>) => (files = f) };
+  return { d, m, store, secretos, setFiles: (f: Record<string, string>) => (files = f) };
 }
 
 describe("deployDraft", () => {
@@ -122,7 +135,7 @@ describe("en serie, programado, y tras un reinicio", () => {
     let soltar!: () => void;
     const espera = new Promise<void>((r) => (soltar = r));
     const { d, m } = deps({ bundle: () => ok("nuevo", ["a"]) });
-    const lento: DeployDeps = { ...d, bundle: async (f) => (await espera, d.bundle(f, "2026-11")) };
+    const lento: DeployDeps = { ...d, bundle: async (f, c, mode) => (await espera, d.bundle(f, c, mode)) };
     void deployDraftSerialized("p4", lento);
     let listo = false;
     const e = ensureDraftDeployed("p4", REF, lento).then(() => (listo = true));
@@ -151,5 +164,49 @@ describe("en serie, programado, y tras un reinicio", () => {
     await ensureDraftDeployed("p5", REF, d);
     expect(m.desplegados.get(`${REF}|draft`)).toBe("h1");
     expect(m.llamadas.filter((l) => l.startsWith("deploy"))).toHaveLength(2);
+  });
+});
+
+describe("los secretos (fase 2)", () => {
+  it("el despliegue del borrador lleva SUS secretos como variables, junto a las SUPABASE_*", async () => {
+    const { d, m, secretos } = deps({ bundle: () => ok("h1", ["a"]) });
+    secretos.draft.STRIPE_SECRET_KEY = "sk_test_1";
+    secretos.live.STRIPE_SECRET_KEY = "sk_live_NO";
+    await deployDraft("p-sec", d);
+    expect(m.entornos.get(`${REF}|draft`)).toMatchObject({ SUPABASE_URL: "https://draftrefdraftrefdraf.openlen.app", STRIPE_SECRET_KEY: "sk_test_1" });
+  });
+
+  it("applyFunctionEnv: al motor con el mismo código; sin nada desplegado, nada", async () => {
+    const { d, m, secretos } = deps({ bundle: () => ok("h1", ["a"]) });
+    await applyFunctionEnv("p-apl", "draft", d);
+    expect(m.llamadas).toEqual([]);
+    await deployDraft("p-apl", d);
+    secretos.draft.K = "nuevo";
+    await applyFunctionEnv("p-apl", "draft", d);
+    expect(m.llamadas).toEqual(["deploy draft h1 https://draftrefdraftrefdraf.openlen.app", "setEnv draft"]);
+    expect(m.entornos.get(`${REF}|draft`)!.K).toBe("nuevo");
+  });
+
+  it("con el motor vacío (un reinicio) no hace nada: lo repondrá ensureDraftDeployed, ya con lo nuevo", async () => {
+    const { d, m } = deps({ bundle: () => ok("h1", ["a"]) });
+    await deployDraft("p-vacio", d);
+    m.desplegados.clear();
+    await applyFunctionEnv("p-vacio", "draft", d);
+    expect(m.llamadas.filter((l) => l.startsWith("setEnv"))).toEqual([]);
+  });
+
+  it("🔴 un secreto guardado DURANTE un despliegue acaba en el motor (no lo pisa lo de antes)", async () => {
+    let soltar!: () => void;
+    const puerta = new Promise<void>((r) => (soltar = r));
+    const { d, m, secretos } = deps({ bundle: () => ok("h1", ["a"]) });
+    const deployOriginal = d.engine.deploy;
+    const d2: DeployDeps = { ...d, engine: { ...d.engine, deploy: async (...a) => { await puerta; return deployOriginal(...a); } } };
+    const despliegue = deployDraftSerialized("p-carrera", d2);
+    await new Promise((r) => setTimeout(r, 0)); // ya leyó los secretos de antes
+    secretos.draft.STRIPE_SECRET_KEY = "sk_test_nuevo";
+    const aplicar = applyFunctionEnv("p-carrera", "draft", d2);
+    soltar();
+    await Promise.all([despliegue, aplicar]);
+    expect(m.entornos.get(`${REF}|draft`)!.STRIPE_SECRET_KEY).toBe("sk_test_nuevo");
   });
 });
