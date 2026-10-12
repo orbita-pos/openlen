@@ -614,6 +614,8 @@ export default defineConfig({
       "app/api/projects/[id]/ficheros/route.test.ts",
       // Las variables de entorno de las apps (spec local 2026-10-10). LISTA BLANCA.
       "app/api/projects/[id]/env/route.test.ts",
+      // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.
+      "app/api/projects/[id]/function-secrets/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
       "app/api/projects/[id]/hilos/route.test.ts",
       // El chat del equipo: escribir a una persona del proyecto.
