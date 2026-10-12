@@ -30,6 +30,9 @@ interface Slot {
 export class LocalEngine implements FunctionsEngine {
   readonly name = "local" as const;
   readonly #slots = new Map<string, Slot>();
+  /** Los hilos retirados por `setEnv` que aún acaban una llamada: comparten la
+   *  carpeta de su código, que no se borra hasta que acaban. */
+  readonly #retired = new Set<Slot>();
 
   async deploy(dest: Destination, bundle: EngineBundle, env: Readonly<Record<string, string>>, limits: EngineLimits): Promise<void> {
     const nombre = destinationName(dest);
@@ -43,7 +46,7 @@ export class LocalEngine implements FunctionsEngine {
     this.#slots.set(nombre, { hash: bundle.hash, dir, env: { ...env }, limits, worker: null, nextId: 0, listeners: new Map() });
     if (viejo) {
       this.#kill(viejo, "uncaught", "the function was redeployed");
-      if (viejo.dir !== dir) rmSync(viejo.dir, { recursive: true, force: true });
+      this.#removeDir(viejo.dir);
     }
   }
 
@@ -99,13 +102,15 @@ export class LocalEngine implements FunctionsEngine {
     if (!slot) return;
     this.#slots.delete(nombre);
     this.#kill(slot, "not_found", null);
-    rmSync(slot.dir, { recursive: true, force: true });
+    this.#removeDir(slot.dir);
   }
 
   /** Para las pruebas y el apagado. */
   async stopAll(): Promise<void> {
-    for (const [nombre, slot] of this.#slots) {
-      this.#slots.delete(nombre);
+    const todos = [...this.#slots.values(), ...this.#retired];
+    this.#slots.clear();
+    this.#retired.clear();
+    for (const slot of todos) {
       this.#kill(slot, "uncaught", "the engine stopped");
       rmSync(slot.dir, { recursive: true, force: true });
     }
@@ -144,10 +149,23 @@ export class LocalEngine implements FunctionsEngine {
 
   /** Apaga el hilo de un hueco que ya no es el de su destino, si no le queda nada en curso. */
   #retire(slot: Slot): void {
-    if (slot.listeners.size > 0) return;
+    if (slot.listeners.size > 0) {
+      this.#retired.add(slot);
+      return;
+    }
+    this.#retired.delete(slot);
     const w = slot.worker;
     slot.worker = null;
     void w?.terminate();
+    this.#removeDir(slot.dir);
+  }
+
+  /** Borra la carpeta de un código si ya no la usa nadie: ni el hueco de un
+   *  destino ni un hilo retirado que aún acaba una llamada. */
+  #removeDir(dir: string): void {
+    for (const s of this.#slots.values()) if (s.dir === dir) return;
+    for (const s of this.#retired) if (s.dir === dir) return;
+    rmSync(dir, { recursive: true, force: true });
   }
 
   /** El hilo fuera; lo que esperaba, con su error y su fin. */
