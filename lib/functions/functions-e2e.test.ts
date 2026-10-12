@@ -24,6 +24,7 @@ const HOST = `${REF}.openlen.app`;
 const PUBLICABLE = "sb_publishable_e2e";
 const SECRETA = "sb_secret_e2e_0123456789abcdef";
 const WHSEC = "whsec_prueba_0123456789";
+const STRIPE = "sk_test_e2e_0123456789abcdef";
 const engine = new LocalEngine();
 const store = memoryDeploymentStore();
 const records: InvocationRecord[] = [];
@@ -66,6 +67,14 @@ const FUENTES: Record<string, string> = {
     "}));",
     "",
   ].join("\n"),
+  "/supabase/functions/fuga/index.ts": [
+    "Deno.serve(() => {",
+    '  const k = Deno.env.get("STRIPE_SECRET_KEY")!;',
+    '  console.log("la clave es", k);',
+    "  return new Response(k);",
+    "});",
+    "",
+  ].join("\n"),
   "/supabase/functions/rota/index.ts": 'Deno.serve(() => { const p = undefined as unknown as { price: number }; return new Response(String(p.price)); });\n',
 };
 
@@ -76,7 +85,7 @@ const TARGET: ResolvedTarget = {
   environment: "draft",
   publishableKey: PUBLICABLE,
   secretKeyHash: hashSecretKey(SECRETA),
-  secrets: { SUPABASE_SERVICE_ROLE_KEY: SECRETA },
+  secrets: { SUPABASE_SERVICE_ROLE_KEY: SECRETA, STRIPE_SECRET_KEY: STRIPE },
   jwtSecret: async () => "j".repeat(48),
 };
 
@@ -108,6 +117,7 @@ beforeAll(async () => {
       SUPABASE_URL: `https://draftrefdraftrefdraf.openlen.app`,
       SUPABASE_SERVICE_ROLE_KEY: SECRETA,
       STRIPE_WEBHOOK_SECRET: WHSEC,
+      STRIPE_SECRET_KEY: STRIPE,
       AWS_ACCESS_KEY_ID: "AKIAEXAMPLE",
     },
     { timeoutSec: 150, memoryMb: 256 },
@@ -147,10 +157,19 @@ describe("de punta a punta", () => {
   it("🔴 brazo de control: la función no ve nada del servidor ni de AWS; lo que devuelve llega tal cual al visitante (el tapado es para Len)", { timeout: T }, async () => {
     const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/hostil`, { headers: { authorization: `Bearer ${PUBLICABLE}` } }), deps());
     const j = (await r.json()) as { deno: string[]; proc: string[]; role: string };
-    expect(j.deno).toEqual(["STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
+    expect(j.deno).toEqual(["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
     expect(j.proc).not.toContain("NEXTAUTH_SECRET");
     expect(j.proc).not.toContain("DATABASE_URL");
     expect(j.role).toBe(SECRETA);
+  });
+
+  it("🔴 un secreto del usuario: la función lo lee como variable, el visitante lo recibe tal cual, y en lo que lee Len sale tapado", { timeout: T }, async () => {
+    const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/fuga`, { headers: { apikey: PUBLICABLE } }), deps());
+    expect(await r.text()).toBe(STRIPE);
+    await vi.waitFor(() => expect(records.some((x) => x.name === "fuga")).toBe(true));
+    const rec = records.find((x) => x.name === "fuga")!;
+    expect(JSON.stringify(rec)).not.toContain(STRIPE);
+    expect(rec.logs[0]!.msg).toBe("la clave es [STRIPE_SECRET_KEY]");
   });
 
   it("un error de Len: 500 WORKER_ERROR y la traza en SU fichero y línea", { timeout: T }, async () => {
