@@ -54,7 +54,8 @@ export type DeployOutcome =
   | { readonly kind: "deployed" | "unchanged"; readonly functions: readonly string[]; readonly warnings: readonly Diagnostico[] }
   | { readonly kind: "removed" }
   | { readonly kind: "failed"; readonly errors: readonly Diagnostico[]; readonly warnings: readonly Diagnostico[] }
-  | { readonly kind: "unavailable" };
+  | { readonly kind: "unavailable" }
+  | { readonly kind: "engine_error"; readonly message: string };
 
 export async function deployDraft(projectId: string, deps: DeployDeps, o: { readonly files?: Readonly<Record<string, string>> } = {}): Promise<DeployOutcome> {
   const files = o.files ?? (await deps.loadFiles(projectId));
@@ -63,17 +64,22 @@ export async function deployDraft(projectId: string, deps: DeployDeps, o: { read
   if (!b.ok) return { kind: "failed", errors: b.errors, warnings: b.warnings };
   const t = await deps.target(projectId, "draft");
   const dest: Destination = { ref: t.ref, environment: "draft" };
-  if (b.functions.length === 0) {
-    await deps.engine.remove(dest);
-    await deps.store.delete(projectId, "draft");
-    return { kind: "removed" };
+  try {
+    if (b.functions.length === 0) {
+      await deps.engine.remove(dest);
+      await deps.store.delete(projectId, "draft");
+      return { kind: "removed" };
+    }
+    const anotado = await deps.store.get(projectId, "draft");
+    if (anotado?.hash === b.hash && (await deps.engine.deployedHash(dest)) === b.hash) {
+      return { kind: "unchanged", functions: b.functions.map((f) => f.name), warnings: b.warnings };
+    }
+    await deps.engine.deploy(dest, { hash: b.hash, files: b.files }, functionEnv(t), engineLimits(t.plan));
+  } catch (e) {
+    // El motor no pudo (Cloudflare contestó un error, o no contestó): lo de antes
+    // sigue sirviendo, y Len lo lee como un diagnóstico (after-write.ts).
+    return { kind: "engine_error", message: e instanceof Error ? e.message : String(e) };
   }
-  const nombres = b.functions.map((f) => f.name);
-  const anotado = await deps.store.get(projectId, "draft");
-  if (anotado?.hash === b.hash && (await deps.engine.deployedHash(dest)) === b.hash) {
-    return { kind: "unchanged", functions: nombres, warnings: b.warnings };
-  }
-  await deps.engine.deploy(dest, { hash: b.hash, files: b.files }, functionEnv(t), engineLimits(t.plan));
   await deps.store.put(
     {
       projectId,
@@ -85,7 +91,7 @@ export async function deployDraft(projectId: string, deps: DeployDeps, o: { read
     },
     b.maps,
   );
-  return { kind: "deployed", functions: nombres, warnings: b.warnings };
+  return { kind: "deployed", functions: b.functions.map((f) => f.name), warnings: b.warnings };
 }
 
 const cadenas = new Map<string, Promise<unknown>>();

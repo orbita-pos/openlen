@@ -78,6 +78,7 @@ export function functionsCliFor(projectId: string, ref: string): FunctionsCli | 
         return { ok: false, message: `Error: failed to bundle the Edge Functions:\n${r.errors.map((d) => `${d.ruta.slice(1)}:${d.linea}:${d.columna}: ${d.mensaje}`).join("\n")}\n` };
       }
       if (r.kind === "unavailable") return { ok: false, message: "Error: the bundler didn't answer. Try again in a moment.\n" };
+      if (r.kind === "engine_error") return { ok: false, message: `Error: failed to deploy the Edge Functions: ${r.message}\n` };
       return { ok: true, functions: r.kind === "removed" ? [] : r.functions };
     },
     async deployedAt() {

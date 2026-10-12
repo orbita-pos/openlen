@@ -105,6 +105,15 @@ describe("deployDraft", () => {
     await deployDraft("p1", d, { files: { "/supabase/functions/a/index.ts": "de la terminal" } });
     expect(vistos[0]).toEqual({ "/supabase/functions/a/index.ts": "de la terminal" });
   });
+
+  it("🔴 si el motor falla al desplegar (Cloudflare contesta un error), es engine_error con su mensaje y no se anota nada", async () => {
+    const { d, m, store } = deps({ bundle: () => ok("h1", ["a"]) });
+    m.engine.deploy = async () => {
+      throw new Error("Uncaught SyntaxError at worker.mjs");
+    };
+    expect(await deployDraft("p1", d)).toEqual({ kind: "engine_error", message: "Uncaught SyntaxError at worker.mjs" });
+    expect(await store.get("p1", "draft")).toBeNull();
+  });
 });
 
 describe("en serie, programado, y tras un reinicio", () => {
