@@ -22,6 +22,7 @@ import type { FunctionsEnvironment } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps } from "./gateway";
 import { recordInvocation } from "./invocations-pg";
 import { capsFromEnv } from "./meter";
+import { pgSecretStore } from "./secret-store-pg";
 import { pgUsageStore } from "./usage-pg";
 
 /** Un proceso, una caja: las plazas «a la vez» viven aquí. */
@@ -55,7 +56,9 @@ function realGatewayDeps(): GatewayDeps {
         environment,
         publishableKey: rec.publishableKey,
         secretKeyHash: rec.secretKeyHash,
-        secrets: { SUPABASE_SERVICE_ROLE_KEY: decryptToken(rec.secretKeyEncrypted) },
+        // Lo que se tapa en lo que Len lee: la clave del servicio y los secretos
+        // de ESTE entorno (al visitante no se le tapa nada: es su respuesta).
+        secrets: { SUPABASE_SERVICE_ROLE_KEY: decryptToken(rec.secretKeyEncrypted), ...(await pgSecretStore.values(rec.projectId, environment)) },
         async jwtSecret() {
           await adoptLegacyEnvironment(rec);
           const e = (await getEnvironment(rec.projectId, environment)) ?? (environment === "draft" ? await createEnvironment(rec.projectId, rec.ref, "draft") : null);
