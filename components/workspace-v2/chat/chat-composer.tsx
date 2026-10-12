@@ -10,14 +10,15 @@
 // Lo que hace cada botón lo decide `useAgentChat` (`submit`, `handleCancel`…):
 // aquí no hay lógica de turno.
 
-import { useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowUp, Crosshair, Flag, ImageIcon, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Crosshair, Flag, ImageIcon, KeyRound, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
 import { ModePicker } from "../panels/mode-picker";
 import { useMandoDesplegable } from "../use-mando-desplegable";
 import type { AgentMode } from "@/lib/agent/dynamis";
+import { findSecretsInText, type FoundSecret } from "@/lib/apps/env/secret-patterns";
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
@@ -60,6 +61,7 @@ export function ChatComposer({
   esApp = false,
   mencionables,
   bloqueado = false,
+  secretGuard,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -109,6 +111,10 @@ export function ChatComposer({
   /** No se puede enviar lo que hay en la caja (un mensaje al equipo en vuelo,
    *  o un lector que le pide algo a Len): ni el botón ni Enter envían. */
   bloqueado?: boolean;
+  /** EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): lo que parece una clave
+   *  secreta no sale hacia Len sin preguntar. `available` dice si este
+   *  servidor guarda secretos (sin funciones, se manda como siempre). */
+  secretGuard?: { available(): Promise<boolean>; onSaveAsSecret(found: FoundSecret): void };
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -120,10 +126,50 @@ export function ChatComposer({
   const typed = value.trim().length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
   const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
+  // La clave que se iba a mandar, a la espera de «Guardar como secreto» o «Mandar igual».
+  const [secretoPendiente, setSecretoPendiente] = useState<FoundSecret | null>(null);
+  useEffect(() => setSecretoPendiente(null), [value]);
+  /** Mandar (o dirigir), salvo que lleve una clave y el servidor guarde secretos. */
+  const enviar = async () => {
+    if (secretGuard) {
+      const found = findSecretsInText(value);
+      if (found.length > 0 && (await secretGuard.available())) {
+        setSecretoPendiente(found[0]!);
+        return;
+      }
+    }
+    onSubmit();
+  };
 
   return (
     <div>
       <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
+        {secretoPendiente && secretGuard && (
+          <div role="alert" className="mb-1.5 flex flex-wrap items-center gap-2 rounded-[10px] border bd bg-app px-2.5 py-1.5 text-[12px] fg">
+            <KeyRound size={13} className="shrink-0 text-amber-600" />
+            <span className="min-w-0 flex-1">{t("functionSecrets.composerFound")}</span>
+            <button
+              type="button"
+              onClick={() => {
+                secretGuard.onSaveAsSecret(secretoPendiente);
+                setSecretoPendiente(null);
+              }}
+              className="h-6 rounded-md bg-[var(--accent-strong)] px-2 text-[11.5px] font-medium text-white"
+            >
+              {t("functionSecrets.saveAsSecret")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSecretoPendiente(null);
+                onSubmit();
+              }}
+              className="h-6 rounded-md px-2 text-[11.5px] font-medium fg-faint hover:bg-hover hover:fg"
+            >
+              {t("functionSecrets.sendAnyway")}
+            </button>
+          </div>
+        )}
         {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
           <div className="mb-1 flex flex-wrap gap-1.5">
             {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
@@ -184,7 +230,7 @@ export function ChatComposer({
               if (arroba.tecla(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (!bloqueado) onSubmit();
+                if (!bloqueado) void enviar();
               }
             },
             rows: 1,
@@ -339,7 +385,7 @@ export function ChatComposer({
               corriendo = «Dirigir», que corrige sin parar; parado = enviar. */}
           <button
             type="button"
-            onClick={busy && !typed ? onStop : onSubmit}
+            onClick={busy && !typed ? onStop : () => void enviar()}
             disabled={(!busy && !hasContent) || (bloqueado && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}

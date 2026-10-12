@@ -405,8 +405,12 @@ export interface StoredChatTurn {
       header?: string;
       options?: Array<{ label: string; description?: string }>;
       multiSelect?: boolean;
-      /** Pieza 7: la revisión del plan o el consentimiento (`QuestionIntent`). */
-      intent?: { kind: "plan-review"; plan: string } | { kind: "plan-consent" };
+      /** Pieza 7: la revisión del plan o el consentimiento (`QuestionIntent`);
+       *  Edge Functions: los secretos que pide `request_secrets` (sólo nombres). */
+      intent?:
+        | { kind: "plan-review"; plan: string }
+        | { kind: "plan-consent" }
+        | { kind: "secrets"; secrets: Array<{ name: string; description: string; url?: string }> };
     }>;
     /** Lo que contestó el dueño dentro del turno, en una línea. */
     respuesta?: string;

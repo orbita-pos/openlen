@@ -114,6 +114,8 @@ export default defineConfig({
       // El backend de las páginas: la API de Supabase sobre nuestro Postgres
       // (plans/pages-backend/design.md). Lista blanca: sin esta línea no corre.
       "lib/backend/**/*.test.ts",
+      // Las Edge Functions (spec local 2026-10-11). `include` es LISTA BLANCA.
+      "lib/functions/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
@@ -443,6 +445,7 @@ export default defineConfig({
       "lib/agent/concurrency-limit.test.ts",
       // Pieza 3 de Len 2.5: ask_user_question, como DeepSeek. LISTA BLANCA.
       "lib/agent/ask-user-question.test.ts",
+      "lib/agent/request-secrets.test.ts",
       "lib/agent/historial-saneado.test.ts",
       // Pieza 5 de Len 2.5: buscar en las charlas, como session-query de DeepSeek.
       "lib/agent/session-query.test.ts",
@@ -619,6 +622,10 @@ export default defineConfig({
       "app/api/projects/[id]/ficheros/route.test.ts",
       // Las variables de entorno de las apps (spec local 2026-10-10). LISTA BLANCA.
       "app/api/projects/[id]/env/route.test.ts",
+      // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.
+      "app/api/projects/[id]/function-secrets/route.test.ts",
+      // Las Edge Functions de un proyecto, para la vista Base de datos (fase 3). LISTA BLANCA.
+      "app/api/projects/[id]/functions/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
       "app/api/projects/[id]/hilos/route.test.ts",
       // El chat del equipo: escribir a una persona del proyecto.

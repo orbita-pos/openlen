@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { inArray, and, isNotNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { DataChangesNeedOwnerError } from "@/lib/backend/data-changes";
+import { FunctionsNeedOwnerError } from "@/lib/functions/publish-errors";
 import { publishProject } from "@/lib/projects";
 import { internalSecretOk } from "@/lib/publish/internal-auth";
 
@@ -50,8 +51,9 @@ export async function POST(req: Request) {
       });
       republished.push(row.id);
     } catch (err) {
-      // Cambios de tablas sin publicar: los publica el dueño (spec local 2026-10-09).
-      if (err instanceof DataChangesNeedOwnerError) {
+      // Cambios de tablas o de funciones sin publicar: los publica el dueño
+      // (specs locales 2026-10-09 y 2026-10-11).
+      if (err instanceof DataChangesNeedOwnerError || err instanceof FunctionsNeedOwnerError) {
         skipped.push(row.id);
         continue;
       }

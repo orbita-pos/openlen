@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { ChatMessageEvent, LenTurnoEvent } from "@/lib/notifications/types";
+import type { ChatMessageEvent, FunctionsQuotaEvent, LenTurnoEvent } from "@/lib/notifications/types";
 
 // CADA CANAL, POR TIPO DE EVENTO. Nació como `live-event.test.ts` para probar
 // que los dos canales ramificaban por `event.type` cuando llegó el segundo
@@ -92,6 +92,15 @@ const lenEvent: LenTurnoEvent = {
   pregunta: false,
 };
 
+const cuotaEvent: FunctionsQuotaEvent = {
+  type: "functions_quota",
+  projectId: "proj-cuota-que-no-existe",
+  recipientUserId: UID,
+  percent: 80,
+  calls: 8000,
+  limit: 10000,
+};
+
 describe("webPushChannel.send — por tipo", () => {
   it("chat_message builds /inbox?conv=<id>", async () => {
     await webPushChannel.send(chatEvent);
@@ -102,6 +111,11 @@ describe("webPushChannel.send — por tipo", () => {
     expect(payload.url).not.toContain("undefined");
   });
 
+  it("functions_quota: Edge Functions, sus números y la vista de la base de datos", async () => {
+    await webPushChannel.send(cuotaEvent);
+    const [, body] = mockSendNotification().mock.calls[0] as unknown as [unknown, string];
+    expect(JSON.parse(body)).toMatchObject({ title: "Edge Functions", body: "80% · 8000 / 10000", url: "/new?project=proj-cuota-que-no-existe&view=database" });
+  });
 });
 
 // The REAL sendChatNotificationEmail runs (no helper stub) with the Resend
@@ -127,5 +141,12 @@ describe("emailChannel.send — por tipo (real helper, transport mocked)", () =>
   it("len_turno no manda correo", async () => {
     await expect(emailChannel.send(lenEvent)).resolves.toBe("skipped");
     expect(mockEmailsSend).not.toHaveBeenCalled();
+  });
+
+  it("functions_quota manda el correo de la cuota", async () => {
+    await expect(emailChannel.send(cuotaEvent)).resolves.toBe("sent");
+    const payload = mockEmailsSend.mock.calls[0]?.[0] as { subject?: string; text?: string };
+    expect(payload.subject).toBe("Your Edge Functions used 80% of this month's calls — your project");
+    expect(payload.text).toContain("8000 of the 10000 calls");
   });
 });

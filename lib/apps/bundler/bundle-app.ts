@@ -68,6 +68,12 @@ export function runBundler(m: BundlerMessage, timeoutMs: number, supersedes?: ob
   return cola.run(m, { timeoutMs, ...(supersedes ? { supersedes } : {}) });
 }
 
+/** LAS EDGE FUNCTIONS (lib/functions/bundler/) usan el MISMO hilo: un solo
+ *  esbuild-wasm en memoria en la caja. Su mensaje lleva `kind: "functions"`. */
+export function runOnBundlerThread<T>(m: Record<string, unknown>, timeoutMs: number): Promise<T | null> {
+  return (cola as unknown as WorkerQueue<T>).run(m, { timeoutMs });
+}
+
 // Los espacios de nombres del hilo (`bundler-worker.mjs`) salen en las rutas
 // de esbuild —`app:/src/x.js`, `virtual:hoist:/src/x.test.js`—, también dentro
 // del texto del error; Len escribió rutas, y es lo que lee.

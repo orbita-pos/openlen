@@ -772,3 +772,32 @@ export async function sendBookingEmail(input: BookingEmail): Promise<void> {
       : {}),
   });
 }
+
+/** EDGE FUNCTIONS: un proyecto llegó al 80 % o al 100 % de sus llamadas del mes
+ *  (el texto, `lib/functions/quota-messages.ts`). */
+export async function sendFunctionsQuotaEmail(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("functions quota email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] Functions quota to ${input.to}\n     ${input.subject}\n`);
+    }
+    return;
+  }
+  await enviar(live, "functions quota email", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
+/** EDGE FUNCTIONS: una bolsa pasó del 80 % de su tope. Al operador (la bandeja
+ *  de los reportes de abuso, si no hay una propia), una vez al mes por bolsa. */
+export async function sendFunctionsPoolAlertEmail(input: { subject: string; text: string }): Promise<void> {
+  const to = process.env.OPENLEN_FUNCTIONS_ALERT_EMAIL?.trim() || process.env.ABUSE_REPORT_EMAIL?.trim() || "info@jesusbr.com";
+  const live = liveClientOrWarn("functions pool alert email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] Functions pool alert to ${to}\n     ${input.subject}\n     ${input.text}\n`);
+    }
+    return;
+  }
+  await enviar(live, "functions pool alert email", { from, to, subject: input.subject, text: input.text });
+}

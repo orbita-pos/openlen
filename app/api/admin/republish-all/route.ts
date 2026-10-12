@@ -2,6 +2,7 @@ import { and, isNotNull } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin-only";
 import { db, schema } from "@/lib/db";
 import { DataChangesNeedOwnerError } from "@/lib/backend/data-changes";
+import { FunctionsNeedOwnerError } from "@/lib/functions/publish-errors";
 import { publishProject } from "@/lib/projects";
 
 export const runtime = "nodejs";
@@ -57,7 +58,8 @@ async function runSweep(
       // eslint-disable-next-line no-console
       console.log(`[republish-all] ✓ ${row.subdomain}`);
     } catch (err) {
-      if (err instanceof DataChangesNeedOwnerError) {
+      // Cambios de tablas o de funciones sin publicar: los publica el dueño.
+      if (err instanceof DataChangesNeedOwnerError || err instanceof FunctionsNeedOwnerError) {
         run.skippedPendingTableChanges.push(row.subdomain);
         // eslint-disable-next-line no-console
         console.log(`[republish-all] − ${row.subdomain}: cambios de tablas pendientes, los publica el dueño`);

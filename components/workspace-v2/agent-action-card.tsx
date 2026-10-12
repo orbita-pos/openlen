@@ -178,6 +178,7 @@ export const KNOWN_TOOLS = new Set([
   // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
   "ask_user_question",
+  "request_secrets",
   // Pieza 7 de Len 2.5: el modo plan (pedir planear, presentar el plan).
   "enter_plan_mode",
   "exit_plan_mode",

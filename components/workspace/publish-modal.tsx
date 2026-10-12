@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DestructiveChange } from "@/lib/backend/data-changes-types";
 import { postPublish } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
+import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
 import {
   AlertCircle,
   CheckCircle2,
@@ -110,6 +111,7 @@ export function PublishModal({
   onAntesDePublicar,
 }: PublishModalProps) {
   const t = useTranslations("modalsDomain");
+  const tSecretos = useTranslations("panelsChat");
   const [value, setValue] = useState(project.subdomain ?? "");
   const [langs, setLangs] = useState<string[]>(project.languages ?? []);
   const [check, setCheck] = useState<CheckState>({ kind: "idle" });
@@ -126,6 +128,11 @@ export function PublishModal({
   // en la primera publicación, y lo destructivo que pide confirmar (428).
   const [copyDraftData, setCopyDraftData] = useState(false);
   const [destructive, setDestructive] = useState<{ list: DestructiveChange[]; fingerprint: string } | null>(null);
+  // Las Edge Functions (spec local 2026-10-11): los secretos que faltan en
+  // producción (428), y si ya se eligió «Publicar igual» (vale también para la
+  // petición que confirma lo destructivo).
+  const [missingSecrets, setMissingSecrets] = useState<string[] | null>(null);
+  const saltarSecretos = useRef(false);
   const dataPreview = useDataChangesPreview(project.id, open);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,6 +150,8 @@ export function PublishModal({
     setConfirmUnpublish(false);
     setCopyDraftData(false);
     setDestructive(null);
+    setMissingSecrets(null);
+    saltarSecretos.current = false;
     // Focus input after the modal mount animation settles.
     const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => clearTimeout(t);
@@ -225,11 +234,12 @@ export function PublishModal({
     };
   }, [normalized, isCurrent]);
 
-  const doPublish = useCallback(async (confirmFingerprint?: string) => {
+  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean } = {}) => {
     if (submitting) return;
     // Allow the existing subdomain through even when the availability check
     // hasn't settled yet — same precedence as `canPublish` below.
     if (check.kind !== "available" && !isCurrent) return;
+    if (o.skipMissingSecrets) saltarSecretos.current = true;
     setSubmitting("publishing");
     setError(null);
     try {
@@ -241,11 +251,29 @@ export function PublishModal({
         // En una app no hay traducción automática (invariante 6): no se mandan idiomas.
         ...(project.esApp ? {} : { languages: langs }),
         copyDraftData,
-        ...(confirmFingerprint ? { confirmFingerprint } : {}),
+        ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
+        ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
       });
       // Lo destructivo (428): la confirmación roja sustituye al botón.
       if (outcome.kind === "needs_confirmation") {
         setDestructive({ list: outcome.destructive, fingerprint: outcome.fingerprint });
+        setSubmitting(null);
+        return;
+      }
+      // Las Edge Functions (spec local 2026-10-11): secretos que faltan en
+      // producción, funciones que no compilan, o que no se pudieron poner en marcha.
+      if (outcome.kind === "secrets_required") {
+        setMissingSecrets(outcome.missing);
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "functions_do_not_compile") {
+        setError(tSecretos("functionSecrets.functionsDoNotCompile", { errors: outcome.errors.join("\n") }));
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "functions_failed") {
+        setError(tSecretos("functionSecrets.functionsFailed"));
         setSubmitting(null);
         return;
       }
@@ -270,6 +298,7 @@ export function PublishModal({
         return;
       }
       setDestructive(null);
+      setMissingSecrets(null);
       // LO QUE SE PIDIÓ CONTRA LO QUE SALIÓ. El endpoint devuelve el
       // PublishResult entero y esto lo tiraba sin leerlo: llamaba a onSuccess
       // y cerraba. Medido el 2026-08-28, la traducción llevaba desde su
@@ -309,6 +338,7 @@ export function PublishModal({
     onClose,
     onAntesDePublicar,
     t,
+    tSecretos,
   ]);
 
   const doUnpublish = useCallback(async () => {
@@ -541,15 +571,26 @@ export function PublishModal({
             <DestructiveConfirm
               destructive={destructive.list}
               busy={submitting !== null}
-              onConfirm={() => void doPublish(destructive.fingerprint)}
+              onConfirm={() => void doPublish({ confirmFingerprint: destructive.fingerprint })}
               onCancel={() => setDestructive(null)}
+            />
+          )}
+
+          {missingSecrets && (
+            <MissingSecrets
+              projectId={project.id}
+              missing={missingSecrets}
+              busy={submitting !== null}
+              onSavedPublish={() => void doPublish()}
+              onPublishAnyway={() => void doPublish({ skipMissingSecrets: true })}
+              onCancel={() => setMissingSecrets(null)}
             />
           )}
 
           {error && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 dark:bg-red-500/10 ring-1 ring-red-200 dark:ring-red-500/30 px-3 py-2 text-[12px] text-red-700 dark:text-red-300">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
+              <span className="whitespace-pre-line">{error}</span>
             </div>
           )}
 

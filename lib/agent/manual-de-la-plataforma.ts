@@ -39,6 +39,10 @@ import {
   RUTA_MANUAL,
 } from "@/lib/agent/ficheros/manual";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
+import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/catalog";
+import { functionsEnabledIn } from "@/lib/functions/enabled";
+import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
+import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
 import {
   MAX_FOLDER_BYTES,
@@ -254,20 +258,63 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
  *  Dynamis no nombra Read, Edit ni Write, que no tiene. En una APP es el suyo
  *  (`lib/agent/modo-app.ts`), con las secciones que valen en los dos sitios
  *  tomadas enteras de éste. */
+// ─── Edge Functions (spec local 2026-10-11, Parte 1) ──────────────────────────
+// Sólo donde hay motor: la frase de «no existen» cambia y sus líneas van dentro
+// de THE BACKEND, tras las de Realtime. El manual de la app copia esa sección
+// entera (`elBackend`, modo-app.ts), así que les llega igual. Estable por
+// servidor: no rompe la caché del prompt.
+const SIN_FUNCIONES = "Edge Functions don't exist here yet: if something needs them, say so.";
+const CON_FUNCIONES = "It also runs the project's Edge Functions (below).";
+const LINEA_DE_REALTIME = "\n- Live updates go through Realtime";
+
+function lineasDeFunciones(): string {
+  const catalogo = functionsCatalog(FUNCTIONS_CATALOG_CURRENT)!
+    .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
+    .join(", ");
+  return [
+    `- Edge Functions, the Supabase way: each one is /supabase/functions/<name>/index.ts with \`Deno.serve(async (req) => …)\` (a name that starts with a letter and has only letters, digits, - and _; up to ${MAX_FUNCTIONS}).` +
+      " Code they share goes in /supabase/functions/_shared/. Every save redeploys the draft a few seconds later; `supabase functions deploy` does it now and waits, and `supabase functions list` shows what is deployed where.",
+    `- Their imports come only from the functions catalog: ${catalogo}; also as \`jsr:\` or \`https://esm.sh/\` URLs of those same packages, plus \`node:*\`. Anything else is a compile error with its file and line.`,
+    "- They already have SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (and SUPABASE_PUBLISHABLE_KEYS and SUPABASE_SECRET_KEYS) for THEIR environment: the draft's functions use the test database, the published site's use production. There is no SUPABASE_DB_URL.",
+    "- Secrets —API keys, webhook signing secrets— are read with `Deno.env.get(\"NAME\")`. Ask the user for them with request_secrets: never in the chat and never in a file. A value you generate yourself (a random token) can go to the draft with `supabase secrets set NAME=value`; production values are set only by the user, and the publish card asks for any that are missing.",
+    "- From the page: `supabase.functions.invoke(\"name\", { body })`. Try one from the terminal with `curl -i` on the draft URL that PROJECT STATE gives you under `edge_functions`, plus its name; use_page and view_page report the calls the page made, with their logs and errors.",
+    "- A function needs the user's JWT or the project's key in Authorization unless `verify_jwt` is off: a webhook (Stripe, Mercado Pago) needs `[functions.<name>]` with `verify_jwt = false` in /supabase/config.toml (or `supabase functions deploy <name> --no-verify-jwt`). Check Stripe's signature on the raw text body with `stripe.webhooks.constructEventAsync(body, signature, secret, undefined, Stripe.createSubtleCryptoProvider())`.",
+    `- Limits: ${FUNCTION_MEMORY_MB} MB of memory; per call, ${FUNCTION_LIMITS.free.cpuMs} ms of CPU and ${FUNCTION_LIMITS.free.timeoutSec} s in total on the Free plan, ${FUNCTION_LIMITS.pro.cpuMs} ms of CPU and ${FUNCTION_LIMITS.pro.timeoutSec} s on paid plans (waiting for another service doesn't count as CPU; going over it ends the call with a 546 WORKER_RESOURCE_LIMIT); ${MAX_REQUEST_BYTES / 1024 / 1024} MB per request body. Publishing compiles them for production, and if they don't compile nothing is published. A 429 means the project used its calls for the month, or has too many at once: explain it to the user; don't retry.`,
+  ].join("\n");
+}
+
+/** El manual con las Edge Functions de este servidor. Sin la frase o sin la
+ *  línea de Realtime (otro manual), tal cual. */
+export function conEdgeFunctions(manual: string): string {
+  const i = manual.indexOf(LINEA_DE_REALTIME);
+  if (i === -1 || !manual.includes(SIN_FUNCIONES)) return manual;
+  const fin = manual.indexOf("\n", i + 1);
+  const conLineas = fin === -1 ? `${manual}\n${lineasDeFunciones()}` : `${manual.slice(0, fin)}\n${lineasDeFunciones()}${manual.slice(fin)}`;
+  return conLineas.replace(SIN_FUNCIONES, CON_FUNCIONES);
+}
+
 export function buildManualDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
   mode: AgentMode = "len",
   app: AppDeProyecto | null = null,
 ): string {
-  const agents = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
+  const base = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
+  const agents = functionsEnabledIn(env) ? conEdgeFunctions(base) : base;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
 }
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
- *  (sus paquetes son los de su catálogo, en /AGENTS.md). */
-export function documentosDeLaPlataforma(app: AppDeProyecto | null = null): Readonly<Record<string, string>> {
-  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : { ...partirElManual().docs, [RUTA_APPS]: manualParaConvertir() };
+ *  (sus paquetes son los de su catálogo, en /AGENTS.md). La guía para
+ *  convertir lleva el backend de la app: con motor, también sus Edge Functions,
+ *  como el manual. */
+export function documentosDeLaPlataforma(
+  app: AppDeProyecto | null = null,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Readonly<Record<string, string>> {
+  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP };
+  const convertir = manualParaConvertir();
+  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir) : convertir };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */

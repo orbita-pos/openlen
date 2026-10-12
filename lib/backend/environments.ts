@@ -20,7 +20,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
-import { newJwtSecret } from "./keys";
+import { newJwtSecret, newProjectRef } from "./keys";
 
 export type Environment = "draft" | "live";
 
@@ -34,6 +34,9 @@ export interface EnvironmentRecord {
   readonly jwtSecretEncrypted: string;
   readonly readOnlyPasswordEncrypted: string | null;
   readonly provisionedAt: Date | null;
+  /** El ref propio del borrador (spec local 2026-10-11): su URL va siempre al
+   *  borrador. Null en producción y en un borrador de antes aún sin él. */
+  readonly publicRef: string | null;
 }
 
 /** Lo que hace falta para trabajar en la base de UN entorno, ya descifrado. */
@@ -79,6 +82,7 @@ function toRecord(row: Row): EnvironmentRecord {
     jwtSecretEncrypted: row.jwtSecretEncrypted,
     readOnlyPasswordEncrypted: row.readOnlyPasswordEncrypted ?? null,
     provisionedAt: row.provisionedAt ?? null,
+    publicRef: row.publicRef ?? null,
   };
 }
 
@@ -98,7 +102,13 @@ export async function listEnvironments(projectId: string): Promise<EnvironmentRe
 export async function createEnvironment(projectId: string, ref: string, env: Environment): Promise<EnvironmentRecord> {
   const rows = await db
     .insert(T)
-    .values({ projectId, environment: env, scope: newScope(ref, env), jwtSecretEncrypted: encryptToken(newJwtSecret()) })
+    .values({
+      projectId,
+      environment: env,
+      scope: newScope(ref, env),
+      jwtSecretEncrypted: encryptToken(newJwtSecret()),
+      ...(env === "draft" ? { publicRef: newProjectRef() } : {}),
+    })
     .onConflictDoNothing()
     .returning();
   if (rows[0]) return toRecord(rows[0]);
@@ -125,4 +135,25 @@ export async function claimReadOnlyPassword(projectId: string, encrypted: string
   const e = await getEnvironment(projectId, "live");
   if (!e?.readOnlyPasswordEncrypted) throw new Error("producción sin contraseña de lectura");
   return e.readOnlyPasswordEncrypted;
+}
+
+/** El entorno cuyo ref propio es éste (sólo borradores lo tienen). */
+export async function getEnvironmentByPublicRef(publicRef: string): Promise<EnvironmentRecord | null> {
+  if (!REF_RE.test(publicRef)) return null;
+  const [row] = await db.select().from(T).where(eq(T.publicRef, publicRef)).limit(1);
+  return row ? toRecord(row) : null;
+}
+
+/** El ref propio del borrador; uno de antes que no lo tenga lo recibe aquí
+ *  (sólo si sigue sin él: dos a la vez acaban con el mismo). */
+export async function ensureDraftPublicRef(e: EnvironmentRecord): Promise<string> {
+  if (e.environment !== "draft") throw new Error("sólo el borrador tiene ref propio");
+  if (e.publicRef) return e.publicRef;
+  await db
+    .update(T)
+    .set({ publicRef: newProjectRef() })
+    .where(and(eq(T.projectId, e.projectId), eq(T.environment, "draft"), isNull(T.publicRef)));
+  const again = await getEnvironment(e.projectId, "draft");
+  if (!again?.publicRef) throw new Error(`el borrador de ${e.projectId} sigue sin ref propio`);
+  return again.publicRef;
 }

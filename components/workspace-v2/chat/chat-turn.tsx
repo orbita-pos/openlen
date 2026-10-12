@@ -285,6 +285,7 @@ export function LenTurn({
       )}
       {liveQuestions && (
         <QuestionCard
+          projectId={projectId}
           question={questionText(liveQuestions)}
           questions={liveQuestions}
           answer={turn.answeredLive ?? null}
@@ -293,10 +294,11 @@ export function LenTurn({
         />
       )}
       {cancelledQuestions.map((a, i) => (
-        <QuestionCard key={`cancelada-${i}`} question={questionText(a.preguntas!)} questions={a.preguntas} answer={null} cancelled />
+        <QuestionCard key={`cancelada-${i}`} projectId={projectId} question={questionText(a.preguntas!)} questions={a.preguntas} answer={null} cancelled />
       ))}
       {question !== null && (
         <QuestionCard
+          projectId={projectId}
           question={question}
           questions={endedQuestions}
           answer={nextAnswer.answer}

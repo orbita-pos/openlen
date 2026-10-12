@@ -9,7 +9,7 @@
 //
 // Las rutas: app/api/projects/[id]/backend/** (lib/backend/dashboard.ts).
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -18,6 +18,7 @@ import {
   Database,
   ExternalLink,
   HardDrive,
+  KeyRound,
   LogOut,
   Plus,
   RefreshCw,
@@ -26,10 +27,15 @@ import {
   Table2,
   Trash2,
   Users,
+  Zap,
 } from "lucide-react";
 
 import type { ColumnInfo, PanelUser, Row, TableInfo } from "@/lib/backend/dashboard";
 import type { PanelBucket, PanelFile } from "@/lib/backend/storage/dashboard";
+import type { FunctionsOverview } from "@/lib/functions/overview";
+import { ConfirmButton } from "./confirm-button";
+import { FunctionsTab } from "./database-functions";
+import { SecretsTab } from "./database-secrets";
 
 type Overview =
   | { readonly status: "loading" }
@@ -67,7 +73,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users" | "storage">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
   // El entorno que pide el selector; el que se ve es el que contestó el servidor.
   const [wanted, setWanted] = useState<PanelEnv | null>(null);
@@ -94,6 +100,32 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     void load();
   }, [load]);
 
+  // LAS EDGE FUNCTIONS (spec local 2026-10-11, Parte 6): sus dos pestañas salen
+  // si este servidor las tiene, también con la base aún sin tablas.
+  // Con el proyecto de quien es: lo de otro no se enseña nunca, ni mientras
+  // llega lo de éste ni si llega tarde.
+  const [fnState, setFnState] = useState<{ readonly projectId: string; readonly overview: FunctionsOverview | null } | null>(null);
+  const currentProject = useRef(projectId);
+  useEffect(() => {
+    currentProject.current = projectId;
+  }, [projectId]);
+  const loadFn = useCallback(async () => {
+    if (!projectId) return;
+    let overview: FunctionsOverview | null = null;
+    try {
+      const r = await call<{ available?: unknown }>(`/api/projects/${projectId}/functions`);
+      overview = r.available === true ? (r as unknown as FunctionsOverview) : null;
+    } catch {
+      overview = null;
+    }
+    if (currentProject.current === projectId) setFnState({ projectId, overview });
+  }, [projectId]);
+  const fn = fnState?.projectId === projectId ? fnState.overview : null;
+
+  useEffect(() => {
+    void loadFn();
+  }, [loadFn]);
+
   const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
   const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
 
@@ -111,6 +143,12 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     await load();
   }, [projectId, load, t]);
 
+  // La pestaña que se ve: sin tablas pero con funciones, Funciones (no hay otra
+  // que enseñar); si las funciones ya no están, Tablas.
+  const tableTab = tab === "tables" || tab === "users" || tab === "storage";
+  const activeTab = !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : tab;
+  const fnTab = fn !== null && projectId !== null && (activeTab === "functions" || activeTab === "secrets") && (overview.status === "ready" || overview.status === "empty");
+
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-app text-zinc-900 dark:text-zinc-100">
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
@@ -122,7 +160,10 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
           {"url" in overview && <ProjectUrl url={overview.url} />}
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => {
+              void load();
+              void loadFn();
+            }}
             aria-label={t("refresh")}
             title={t("refresh")}
             className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
@@ -162,11 +203,21 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             )}
           </div>
         )}
-        {overview.status === "ready" ? (
+        {overview.status === "ready" || (overview.status === "empty" && fn) ? (
           <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
-            <TabButton active={tab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
-            <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={<Users size={14} />} label={t("tabs.users")} />
-            <TabButton active={tab === "storage"} onClick={() => setTab("storage")} icon={<HardDrive size={14} />} label={t("tabs.storage")} />
+            {overview.status === "ready" && (
+              <>
+                <TabButton active={activeTab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
+                <TabButton active={activeTab === "users"} onClick={() => setTab("users")} icon={<Users size={14} />} label={t("tabs.users")} />
+                <TabButton active={activeTab === "storage"} onClick={() => setTab("storage")} icon={<HardDrive size={14} />} label={t("tabs.storage")} />
+              </>
+            )}
+            {fn && (
+              <>
+                <TabButton active={activeTab === "functions"} onClick={() => setTab("functions")} icon={<Zap size={14} />} label={t("tabs.functions")} />
+                <TabButton active={activeTab === "secrets"} onClick={() => setTab("secrets")} icon={<KeyRound size={14} />} label={t("tabs.secrets")} />
+              </>
+            )}
           </div>
         ) : (
           <div className="h-3" />
@@ -190,7 +241,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("unavailable.body")}</p>
           </Centered>
         )}
-        {overview.status === "empty" && shown === "live" && hasLive === false && (
+        {!fnTab && overview.status === "empty" && shown === "live" && hasLive === false && (
           <Centered>
             <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
               <Database size={20} />
@@ -198,7 +249,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             <p className="max-w-sm text-[13px] text-zinc-500">{t("env.noLive")}</p>
           </Centered>
         )}
-        {(overview.status === "none" || (overview.status === "empty" && !(shown === "live" && hasLive === false))) && (
+        {!fnTab && (overview.status === "none" || (overview.status === "empty" && !(shown === "live" && hasLive === false))) && (
           <Centered>
             <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
               <Database size={20} />
@@ -207,18 +258,19 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("noData.body")}</p>
           </Centered>
         )}
-        {overview.status === "ready" && projectId && (
+        {overview.status === "ready" && projectId && !fnTab && (
           // Un entorno nuevo vuelve a montar las pestañas: piden sus datos otra vez.
           <PanelEnvContext.Provider key={shown ?? "default"} value={shown}>
-            {tab === "tables" ? (
+            {activeTab === "tables" ? (
               <TablesTab projectId={projectId} tables={overview.tables} />
-            ) : tab === "users" ? (
+            ) : activeTab === "users" ? (
               <UsersTab projectId={projectId} />
             ) : (
               <StorageTab projectId={projectId} />
             )}
           </PanelEnvContext.Provider>
         )}
+        {fnTab && fn && projectId && (activeTab === "functions" ? <FunctionsTab overview={fn} /> : <SecretsTab projectId={projectId} />)}
       </div>
     </section>
   );
@@ -264,48 +316,6 @@ function ProjectUrl({ url }: { url: string }) {
     >
       <span className="truncate">{url}</span>
       <span className="shrink-0 text-[11px] font-sans">{copied ? t("copied") : <Copy size={12} />}</span>
-    </button>
-  );
-}
-
-/** Dos clics: el primero arma, el segundo hace. Sin diálogo nativo. */
-function ConfirmButton({
-  label,
-  confirmLabel,
-  onConfirm,
-  icon,
-  disabled,
-}: {
-  label: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  icon: React.ReactNode;
-  disabled?: boolean;
-}) {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const id = setTimeout(() => setArmed(false), 4000);
-    return () => clearTimeout(id);
-  }, [armed]);
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      title={label}
-      aria-label={armed ? confirmLabel : label}
-      onClick={() => {
-        if (armed) {
-          setArmed(false);
-          onConfirm();
-        } else setArmed(true);
-      }}
-      className={`inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[12px] transition disabled:opacity-40 ${
-        armed ? "bg-red-500 text-white" : "text-zinc-500 hover:bg-zinc-100 hover:text-red-600 dark:hover:bg-zinc-900"
-      }`}
-    >
-      {icon}
-      {armed && <span>{confirmLabel}</span>}
     </button>
   );
 }

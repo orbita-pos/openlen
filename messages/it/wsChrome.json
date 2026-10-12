@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "Tabelle",
       "users": "Utenti",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "Funzioni",
+      "secrets": "Segreti"
     },
     "unavailable": {
       "title": "Il database non è disponibile qui",
@@ -533,6 +535,31 @@
       "resetConfirm": "Cancellare i dati di prova e ricostruirli dalle migrazioni?",
       "noLive": "Ancora nessun dato reale: iniziano quando pubblichi.",
       "testMails": "I dati di prova non inviano email: i nuovi account vengono confermati automaticamente."
+    },
+    "functions": {
+      "blocked": "Le Edge Functions di questo progetto sono disattivate. Scrivici se pensi che sia un errore.",
+      "calls": "Chiamate questo mese: {calls} su {quota}",
+      "callsLabel": "Chiamate questo mese",
+      "empty": "Questo progetto non ha ancora Edge Functions.",
+      "draft": "Bozza",
+      "live": "Produzione",
+      "noJwt": "Senza JWT",
+      "errorsTitle": "Ultimi errori",
+      "noErrors": "Nessun errore negli ultimi 7 giorni."
+    },
+    "secrets": {
+      "hint": "Le tue funzioni li leggono con Deno.env.get. I valori non vengono più mostrati: si possono solo sostituire.",
+      "draft": "Bozza",
+      "live": "Produzione",
+      "empty": "Nessun segreto.",
+      "nameField": "Nome",
+      "add": "Aggiungi",
+      "replace": "Sostituisci",
+      "save": "Salva",
+      "delete": "Elimina",
+      "confirmDelete": "Eliminare?",
+      "loadError": "Impossibile caricare i segreti.",
+      "deleteFailed": "Impossibile eliminare. Riprova."
     }
   }
 }

@@ -781,6 +781,9 @@ interface PublishParams {
    *  Sin esto, `system`: nunca se aplica nada sin el dueño. Sólo la ruta de
    *  publicar del dueño pasa `owner`. */
   dataChanges?: { mode: "owner" | "system"; confirmFingerprint?: string; copyDraftData?: boolean };
+  /** Las Edge Functions (spec local 2026-10-11): «Publicar igual» aunque falten
+   *  secretos en producción (el 428). Sólo la ruta del dueño lo pasa. */
+  functions?: { skipMissingSecrets?: boolean };
 }
 interface PublishResult {
   subdomain: string;
@@ -852,6 +855,16 @@ export async function publishProject(
     const count = others[0]?.count ?? 0;
     if (count >= cap) throw new SubdomainLimitError(cap);
   }
+
+  // 3b. LAS EDGE FUNCTIONS (spec local 2026-10-11, Parte 2): compiladas para
+  // producción y con sus secretos comprobados ANTES de reclamar nada — si no
+  // compilan (422) o faltan secretos (428), no ha cambiado nada. Se despliegan
+  // dentro de `beforeSwap`, tras las migraciones.
+  const { prepareFunctionsForPublish } = await import("@/lib/functions/publish");
+  const funciones = await prepareFunctionsForPublish(params.projectId, {
+    mode: params.dataChanges?.mode ?? "system",
+    skipMissingSecrets: params.functions?.skipMissingSecrets === true,
+  });
 
   // Born-complete the <head> at publish too, so even legacy projects (and
   // pages published without ever opening the editor) ship with a real meta
@@ -1033,13 +1046,16 @@ export async function publishProject(
       app,
       ...(entornoDeLaApp ? { entorno: entornoDeLaApp } : {}),
       // LOS DATOS (spec local 2026-10-09): con la release ya escrita y antes de
-      // activarla, las migraciones del borrador a producción. Si fallan o piden
-      // confirmación, la release no se activa y el catch de abajo deshace la fila.
+      // activarla, las migraciones del borrador a producción. Y DESPUÉS, las
+      // Edge Functions de producción (spec local 2026-10-11). Si algo falla o
+      // pide confirmación, la release no se activa y el catch de abajo deshace la fila.
       beforeSwap: async () => {
         const { backendConfigured } = await import("@/lib/backend/pg");
-        if (!backendConfigured()) return;
-        const { publishDataChanges } = await import("@/lib/backend/data-changes");
-        await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
+        if (backendConfigured()) {
+          const { publishDataChanges } = await import("@/lib/backend/data-changes");
+          await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
+        }
+        await funciones?.deploy();
       },
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),

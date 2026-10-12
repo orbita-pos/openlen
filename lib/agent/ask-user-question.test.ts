@@ -1,7 +1,13 @@
 // ask_user_question (pieza 3 de Len 2.5): el esquema de DeepSeek, validado antes
 // de enseñar nada al dueño.
 import { describe, expect, it } from "vitest";
-import { isQuestionTool, questionsFrom, questionText, validateQuestions, asksTheOwner } from "./ask-user-question";
+import { isQuestionTool, questionsFrom, questionText, validateQuestions, asksTheOwner, SECRETS_QUESTION_ID } from "./ask-user-question";
+
+describe("SECRETS_QUESTION_ID", () => {
+  it("el id de la pregunta de los secretos vive aquí, una sola vez (lo usan la herramienta y la tarjeta)", () => {
+    expect(SECRETS_QUESTION_ID).toBe("secrets");
+  });
+});
 
 describe("validateQuestions", () => {
   it("acepta la forma de DeepSeek y la normaliza", () => {
@@ -109,4 +115,12 @@ describe("asksTheOwner (pieza 7)", () => {
     expect(["ask_user_question", "preguntar", "enter_plan_mode", "exit_plan_mode"].map(asksTheOwner)).toEqual([true, true, true, true]);
     expect(asksTheOwner("Read")).toBe(false);
   });
+});
+
+it("EDGE FUNCTIONS: la intención de los secretos sobrevive al chat, SIN campos de más; y request_secrets le pregunta al dueño", () => {
+  const q = questionsFrom([
+    { id: "secrets", question: "Enter…", intent: { kind: "secrets", secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys", value: "NO" }] } },
+  ]);
+  expect(q?.[0]?.intent).toEqual({ kind: "secrets", secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys" }] });
+  expect(asksTheOwner("request_secrets")).toBe(true);
 });

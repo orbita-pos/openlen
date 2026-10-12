@@ -456,7 +456,9 @@
     "tabs": {
       "tables": "テーブル",
       "users": "ユーザー",
-      "storage": "Storage"
+      "storage": "Storage",
+      "functions": "関数",
+      "secrets": "シークレット"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -533,6 +535,31 @@
       "resetConfirm": "テストデータを消去して、マイグレーションから作り直しますか？",
       "noLive": "まだ本番データはありません。公開すると始まります。",
       "testMails": "テストデータはメールを送信しません。新しいアカウントは自動で確認されます。"
+    },
+    "functions": {
+      "blocked": "このプロジェクトの Edge Functions は停止されています。間違いだと思われる場合はご連絡ください。",
+      "calls": "今月の呼び出し: {calls} / {quota}",
+      "callsLabel": "今月の呼び出し",
+      "empty": "このプロジェクトにはまだ Edge Functions がありません。",
+      "draft": "下書き",
+      "live": "本番",
+      "noJwt": "JWT なし",
+      "errorsTitle": "最近のエラー",
+      "noErrors": "過去7日間にエラーはありません。"
+    },
+    "secrets": {
+      "hint": "関数は Deno.env.get で読み込みます。値は二度と表示されません。置き換えのみ可能です。",
+      "draft": "下書き",
+      "live": "本番",
+      "empty": "シークレットはありません。",
+      "nameField": "名前",
+      "add": "追加",
+      "replace": "置き換え",
+      "save": "保存",
+      "delete": "削除",
+      "confirmDelete": "削除しますか?",
+      "loadError": "シークレットを読み込めませんでした。",
+      "deleteFailed": "削除できませんでした。もう一度お試しください。"
     }
   }
 }

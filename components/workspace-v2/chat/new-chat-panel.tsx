@@ -26,6 +26,9 @@ import { ReplaceAssetModal } from "../replace-asset-modal";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
+import { SecretDialog } from "./secret-dialog";
+import { functionSecretsAvailable } from "@/lib/workspace-v2/function-secrets-request";
+import type { FoundSecret } from "@/lib/apps/env/secret-patterns";
 import { ChatHeader } from "./chat-header";
 import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
@@ -168,6 +171,21 @@ function AgentChatView({
     pendingAttachments,
   });
   const { seguirTurnoDelHilo } = chat;
+  // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): una clave en el mensaje se
+  // guarda como secreto en vez de mandársela a Len. Se pregunta UNA vez si el
+  // servidor guarda secretos (sin funciones, el compositor manda como siempre).
+  const [secretoAGuardar, setSecretoAGuardar] = useState<FoundSecret | null>(null);
+  const secretosDisponibles = useRef<Promise<boolean> | null>(null);
+  const secretGuard = useMemo(
+    () =>
+      soloLectura
+        ? undefined
+        : {
+            available: () => (secretosDisponibles.current ??= functionSecretsAvailable(projectId)),
+            onSaveAsSecret: (f: FoundSecret) => setSecretoAGuardar(f),
+          },
+    [projectId, soloLectura],
+  );
   useEffect(() => {
     if (!turnoDelHilo) return;
     turnosDelHilo.recogido(projectId, turnoDelHilo);
@@ -441,6 +459,7 @@ function AgentChatView({
             goalAvailable={chat.goalAvailable}
             esApp={esApp}
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
+            {...(secretGuard ? { secretGuard } : {})}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),
@@ -462,6 +481,17 @@ function AgentChatView({
           />
         )}
       </div>
+      {secretoAGuardar && (
+        <SecretDialog
+          projectId={projectId}
+          found={secretoAGuardar}
+          onSaved={(name) => {
+            chat.setDraft(chat.draft.split(secretoAGuardar.value).join(name));
+            setSecretoAGuardar(null);
+          }}
+          onClose={() => setSecretoAGuardar(null)}
+        />
+      )}
       <ReplaceAssetModal
         open={chat.imageModalOpen}
         kind={chat.imageModalOpen ? "image" : null}
