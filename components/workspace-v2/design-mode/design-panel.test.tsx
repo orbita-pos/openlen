@@ -30,7 +30,7 @@ function montar(p: Partial<DesignPanelViewProps> = {}) {
     root.render(
       <DesignPanelView state={state} selectedKey="a" generalNote="" busy={false} t={t}
         onChange={vacio} onPhoto={vacio} onNote={vacio} onGeneralNote={vacio} onUndo={vacio} onRedo={vacio}
-        onResetElement={vacio} onResetAll={vacio} onSelectParent={vacio} onApply={vacio} onClose={vacio} {...p} />,
+        onResetElement={vacio} onSelectParent={vacio} onClose={vacio} {...p} />,
     );
   });
   return host;
@@ -51,14 +51,9 @@ describe("el panel de diseño", () => {
     });
     expect(onChange).toHaveBeenCalledWith("a", "font-size", "48px");
   });
-  it("🔴 «Aplicar» está apagado sin cambios y mientras Len trabaja", () => {
-    const boton = (h: HTMLElement) => h.querySelector('[data-testid="design-apply"]') as HTMLButtonElement;
-    expect(boton(montar()).disabled).toBe(true);
-    const conCambio = designEditsReducer(designEditsReducer(EMPTY_DESIGN_EDITS, { type: "select", selection: sel }), { type: "set", key: "a", field: "font-size", value: "48px" });
-    expect(boton(montar({ state: conCambio })).disabled).toBe(false);
-    const ocupado = montar({ state: conCambio, busy: true });
-    expect(boton(ocupado).disabled).toBe(true);
-    expect(ocupado.textContent).toContain("designMode.busy");
+  it("mientras Len trabaja, el panel lo dice («Aplicar» está en la barra del lienzo)", () => {
+    expect(montar().textContent).not.toContain("designMode.busy");
+    expect(montar({ busy: true }).textContent).toContain("designMode.busy");
   });
   it("el tipo de letra ofrece las fuentes que ya carga la app y las de Google Fonts", () => {
     const opciones = [...montar().querySelectorAll("#openlen-design-fonts option")].map((o) => (o as HTMLOptionElement).value);

@@ -60,7 +60,10 @@ describe("las dos pantallas del taller", () => {
   );
 
   it("el rail sólo existe con una página abierta", () => {
-    expect(pagina).toMatch(/\{enElEditor && \(\s*<LeftSidebar/);
+    // Y no en el proyecto en blanco (12/10): hasta el primer mensaje es la
+    // portada, con la misma barra de inicio y sin rail.
+    expect(pagina).toMatch(/\{!pantallaDeInicio && \(\s*<LeftSidebar/);
+    expect(pagina).toMatch(/const pantallaDeInicio =\s*!enElEditor \|\|\s*proyectoEnBlanco \|\|/);
   });
 
   it("y sin ella la barra recibe la navegación global", () => {
