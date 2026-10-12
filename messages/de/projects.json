@@ -304,7 +304,7 @@
     "title": "Verbinde OpenLen mit deinem KI-Assistenten",
     "intro": "Claude, ChatGPT, Codex, Cursor und andere können deine OpenLen-Projekte mit deinem eigenen KI-Abo lesen, bearbeiten und veröffentlichen. Füge diese Adresse hinzu und melde dich mit deinem OpenLen-Konto an.",
     "serverUrl": "Serveradresse",
-    "signInHint": "Beim ersten Mal öffnet dein Assistent openlen.com und fragt nach deiner Erlaubnis. Du wählst, was er darf und bei welchen Projekten.",
+    "signInHint": "Beim ersten Mal öffnet dein Assistent {site} und fragt nach deiner Erlaubnis. Du wählst, was er darf und bei welchen Projekten.",
     "plans": "Im kostenlosen Plan können Assistenten deine Projekte lesen; Bearbeiten, Erstellen und Veröffentlichen brauchen einen bezahlten Plan.",
     "stepsClaudeAi": "In Claude: Anpassen → Connectoren → + Hinzufügen → Benutzerdefinierten Connector hinzufügen. Adresse einfügen und anmelden.",
     "stepsChatgpt": "In ChatGPT: chatgpt.com/plugins öffnen, auf + klicken und einen benutzerdefinierten MCP-Server hinzufügen („Add custom MCP server“ auf Englisch). Adresse einfügen und anmelden.",

@@ -304,7 +304,7 @@
     "title": "Conecta OpenLen con tu asistente de IA",
     "intro": "Claude, ChatGPT, Codex, Cursor y otros pueden leer, editar y publicar tus proyectos de OpenLen con tu propia suscripción de IA. Añade esta dirección y entra con tu cuenta de OpenLen.",
     "serverUrl": "Dirección del servidor",
-    "signInHint": "La primera vez, tu asistente abre openlen.com para pedirte permiso. Tú eliges qué puede hacer y en qué proyectos.",
+    "signInHint": "La primera vez, tu asistente abre {site} para pedirte permiso. Tú eliges qué puede hacer y en qué proyectos.",
     "plans": "En el plan gratuito, los asistentes pueden leer tus proyectos; editar, crear y publicar piden un plan de pago.",
     "stepsClaudeAi": "En Claude: Personalizar → Conectores → + Añadir → Añadir conector personalizado. Pega la dirección y entra.",
     "stepsChatgpt": "En ChatGPT: abre chatgpt.com/plugins, pulsa + y elige añadir un servidor MCP personalizado («Add custom MCP server» si lo ves en inglés). Pega la dirección y entra.",
