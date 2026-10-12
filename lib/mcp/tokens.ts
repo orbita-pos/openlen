@@ -2,7 +2,7 @@
 // basta (no hay diccionario que probar), como las llaves del teléfono
 // (lib/movil/secreto.ts). El secreto se enseña UNA vez, al crearlo.
 import crypto from "node:crypto";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { MCP_SCOPES, type McpScope } from "./config";
 
@@ -113,8 +113,13 @@ export async function revokeToken(userId: string, id: string): Promise<boolean> 
   return rows.length > 0;
 }
 
-/** El nombre que la persona le dio a la conexión (lo enseña la aprobación). */
+/** El nombre de la conexión (lo enseña la aprobación): `id` es el de un token
+ *  personal o la familia de uno OAuth, que es lo que guarda `McpCaller.tokenId`. */
 export async function tokenName(id: string): Promise<string | null> {
-  const [row] = await db.select({ name: schema.mcpTokens.name }).from(schema.mcpTokens).where(eq(schema.mcpTokens.id, id)).limit(1);
+  const [row] = await db
+    .select({ name: schema.mcpTokens.name })
+    .from(schema.mcpTokens)
+    .where(or(eq(schema.mcpTokens.id, id), eq(schema.mcpTokens.familyId, id)))
+    .limit(1);
   return row?.name ?? null;
 }

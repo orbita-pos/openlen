@@ -6,6 +6,7 @@ import { findActiveToken, isTokenShaped, normalizeScopes } from "./tokens";
 
 export interface McpCaller {
   userId: string;
+  /** La conexión: el id del token personal, o la familia OAuth. */
   tokenId: string;
   scopes: ReadonlySet<McpScope>;
   /** Acotado a UN proyecto, o null. */
@@ -21,7 +22,10 @@ export async function verifyMcpToken(_req: Request, bearer?: string): Promise<Au
     clientId: t.clientId ?? `personal:${t.id}`,
     scopes: t.scopes,
     ...(t.expiresAt ? { expiresAt: Math.floor(t.expiresAt.getTime() / 1000) } : {}),
-    extra: { userId: t.userId, tokenId: t.id, projectId: t.projectId },
+    // LA CONEXIÓN: en OAuth la familia (el token de acceso cambia cada hora al
+    // refrescar; las aprobaciones, la confianza y la ráfaga no pueden perderse
+    // por eso); en los personales, el propio token.
+    extra: { userId: t.userId, tokenId: t.familyId ?? t.id, projectId: t.projectId },
   };
 }
 
