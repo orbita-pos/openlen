@@ -39,7 +39,7 @@ export type SetSecretsResult =
 const ENTORNOS: readonly FunctionsEnvironment[] = ["draft", "live"];
 
 // Medir y guardar, DE UNO EN UNO por proyecto: dos guardados a la vez (la
-// tarjeta y `supabase secrets set`) no pasan juntos de los 4 KB. En
+// tarjeta y `supabase secrets set`) no pasan juntos de las 128 variables. En
 // `globalThis`, como el motor: en desarrollo Next carga este módulo una vez por
 // ruta, y la tarjeta y la terminal son rutas distintas.
 const COLAS = Symbol.for("openlen.functions.secrets.queue");

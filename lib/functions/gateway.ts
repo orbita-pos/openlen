@@ -131,7 +131,9 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   // (spec local 2026-10-11, Parte 2): ni se repone ni se cuenta.
   if (target.environment === "live" && !target.published) return functionsError("NOT_FOUND");
 
-  await deps.ensureDeployed(target);
+  // Reponer lo desplegado es un extra: si el motor no contesta (la API de
+  // Cloudflare caída o limitando), se llama a lo que haya, nunca un 500 crudo.
+  await deps.ensureDeployed(target).catch((e: unknown) => console.error("[functions] no se pudo comprobar lo desplegado", target.projectId, target.environment, e));
   const deployment = await deps.deployment(target.projectId, target.environment);
   const fn = deployment?.functions.find((f) => f.name === name);
   if (!deployment || !fn) return functionsError("NOT_FOUND");

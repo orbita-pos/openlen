@@ -1,5 +1,5 @@
-// lib/functions/base-env.ts — LAS `SUPABASE_*` DE UN ENTORNO, PARA MEDIR LOS 4 KB
-// de sus secretos (spec local 2026-10-11, Parte 4). Un proyecto SIN backend no
+// lib/functions/base-env.ts — LAS `SUPABASE_*` DE UN ENTORNO, PARA CONTAR LAS 128
+// variables con sus secretos (spec local 2026-10-12, Parte 5). Un proyecto SIN backend no
 // lo gana por guardar un secreto: se mide con unas de la misma forma (los
 // mismos generadores, los mismos largos) y el backend lo crea el primer
 // despliegue, como siempre.
