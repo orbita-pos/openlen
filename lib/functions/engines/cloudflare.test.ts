@@ -95,6 +95,23 @@ describe("CloudflareEngine — la API", () => {
     expect(llamadas).toEqual(["GET /tags", "GET /tags", "PUT ", "DELETE "]);
   });
 
+  it("🔴 una lectura que estaba en vuelo durante un deploy no pisa lo recién subido", async () => {
+    let soltarGet: (r: Response) => void = () => undefined;
+    const llamadas: string[] = [];
+    const f = (async (_url: string, init: RequestInit = {}) => {
+      llamadas.push(init.method ?? "GET");
+      if ((init.method ?? "GET") === "GET") return new Promise<Response>((r) => (soltarGet = r));
+      return ok(null);
+    }) as unknown as typeof fetch;
+    const engine = new CloudflareEngine(CFG, f);
+    const enVuelo = engine.deployedHash(DEST);
+    await engine.deploy(DEST, { hash: "nuevo", files: { "worker.mjs": "w" } }, {}, { timeoutSec: 1, memoryMb: 128 });
+    soltarGet(ok(["h-viejo"]));
+    expect(await enVuelo).toBe("nuevo");
+    expect(await engine.deployedHash(DEST)).toBe("nuevo");
+    expect(llamadas).toEqual(["GET", "PUT"]);
+  });
+
   it("setEnv: PUT de cada variable y DELETE de las que sobran; sin script, nada", async () => {
     const { engine, llamadas } = api((c) => (c.method === "GET" ? ok([{ name: "A", type: "secret_text" }, { name: "VIEJA", type: "secret_text" }]) : ok({})));
     await engine.setEnv(DEST, { A: "1", B: "2" });
