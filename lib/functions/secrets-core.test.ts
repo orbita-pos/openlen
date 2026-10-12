@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { memorySecretStore } from "./secret-store";
-import { ENV_LIMIT_BYTES } from "./secrets";
+import { ENV_VARS_MAX, MAX_SECRET_VALUE_BYTES } from "./secrets";
 import { setFunctionSecrets, unsetFunctionSecrets, type SecretsDeps } from "./secrets-core";
 
 function montar(o: { apply?: SecretsDeps["apply"] } = {}) {
@@ -46,29 +46,27 @@ describe("setFunctionSecrets", () => {
     expect(aplicados.sort()).toEqual(["draft", "live"]);
   });
 
-  it("🔴 nombres: SUPABASE_/AWS_/LAMBDA_ y lo que Lambda no acepta, sin guardar NADA", async () => {
+  it("🔴 nombres: SUPABASE_ y lo que no es un nombre de variable, sin guardar NADA; AWS_ ya vale", async () => {
     const { store, deps } = montar();
-    const r = await setFunctionSecrets("p1", [{ environment: "draft", name: "OK_KEY", value: "1" }, { environment: "draft", name: "AWS_REGION", value: "x" }], null, deps);
-    expect(r).toEqual({ ok: false, error: "invalid_name", name: "AWS_REGION", message: "Env name cannot start with AWS_: AWS_REGION" });
+    const r = await setFunctionSecrets("p1", [{ environment: "draft", name: "OK_KEY", value: "1" }, { environment: "draft", name: "SUPABASE_X", value: "x" }], null, deps);
+    expect(r).toEqual({ ok: false, error: "invalid_name", name: "SUPABASE_X", message: "Env name cannot start with SUPABASE_: SUPABASE_X" });
     expect(await store.list("p1")).toEqual([]);
     expect(await setFunctionSecrets("p1", [{ environment: "live", name: "mi-clave", value: "1" }], null, deps)).toMatchObject({ ok: false, error: "invalid_name", name: "mi-clave" });
+    expect(await setFunctionSecrets("p1", [{ environment: "draft", name: "AWS_ACCESS_KEY_ID", value: "AKIA" }], null, deps)).toMatchObject({ ok: true });
   });
 
-  it("🔴 4 KB: si un entorno no cabe CON lo que ya tiene, no se guarda nada en ninguno y se dice lo que queda", async () => {
+  it("🔴 128 variables: si un entorno no cabe CON lo que ya tiene, no se guarda nada en ninguno y se dice cuántas quedan", async () => {
+    // La base de montar() trae UNA variable (SUPABASE_URL).
     const { store, aplicados, deps } = montar();
-    await store.set("p1", "live", { GRANDE: "x".repeat(3000) }, null);
+    await store.set("p1", "live", Object.fromEntries(Array.from({ length: 120 }, (_, i) => [`YA_${i}`, "v"])), null);
     const r = await setFunctionSecrets(
       "p1",
-      [
-        { environment: "draft", name: "PEQUE", value: "1" },
-        { environment: "live", name: "OTRO", value: "y".repeat(1200) },
-      ],
+      [{ environment: "draft", name: "PEQUE", value: "1" }, ...Array.from({ length: 8 }, (_, i) => ({ environment: "live" as const, name: `NUEVO_${i}`, value: "v" }))],
       null,
       deps,
     );
-    expect(r).toMatchObject({ ok: false, error: "env_too_large", environment: "live" });
+    expect(r).toMatchObject({ ok: false, error: "env_too_large", environment: "live", usedVars: 129, baseVars: 1, availableVars: ENV_VARS_MAX - 1 });
     if (r.ok || r.error !== "env_too_large") return;
-    expect(r.availableBytes).toBe(ENV_LIMIT_BYTES - r.baseBytes);
     expect(r.message).toMatch(/^Edge Function secrets don't fit/);
     expect(await store.values("p1", "draft")).toEqual({});
     expect(aplicados).toEqual([]);
@@ -76,22 +74,21 @@ describe("setFunctionSecrets", () => {
 
   it("🔴 dos guardados A LA VEZ que caben cada uno solo pero no juntos: entra uno, el otro no cabe", async () => {
     const { store, deps } = montar();
-    const [a, b] = await Promise.all([
-      setFunctionSecrets("p1", [{ environment: "live", name: "UNO", value: "x".repeat(2500) }], null, deps),
-      setFunctionSecrets("p1", [{ environment: "live", name: "DOS", value: "y".repeat(2500) }], null, deps),
-    ]);
+    const lote = (p: string) => Array.from({ length: 64 }, (_, i) => ({ environment: "live" as const, name: `${p}_${i}`, value: "v" }));
+    const [a, b] = await Promise.all([setFunctionSecrets("p1", lote("UNO"), null, deps), setFunctionSecrets("p1", lote("DOS"), null, deps)]);
     expect([a.ok, b.ok].sort()).toEqual([false, true]);
-    expect(Object.keys(await store.values("p1", "live"))).toHaveLength(1);
+    expect(Object.keys(await store.values("p1", "live"))).toHaveLength(64);
   });
 
-  it("un valor de más de 24.576 bytes no entra", async () => {
+  it("🔴 un valor de más de 5 KB no entra (el tope de Cloudflare); justo 5 KB, sí", async () => {
     const { deps } = montar();
-    expect(await setFunctionSecrets("p1", [{ environment: "draft", name: "MY_KEY", value: "x".repeat(24_577) }], null, deps)).toEqual({
+    expect(await setFunctionSecrets("p1", [{ environment: "draft", name: "MY_KEY", value: "x".repeat(MAX_SECRET_VALUE_BYTES + 1) }], null, deps)).toEqual({
       ok: false,
       error: "value_too_long",
       name: "MY_KEY",
-      message: "The value of MY_KEY is longer than 24576 bytes.",
+      message: "The value of MY_KEY is longer than 5120 bytes.",
     });
+    expect(await setFunctionSecrets("p1", [{ environment: "draft", name: "MY_KEY", value: "x".repeat(MAX_SECRET_VALUE_BYTES) }], null, deps)).toMatchObject({ ok: true });
   });
 
   it("si el motor falla, lo guardado se queda (lo leerá el próximo despliegue)", async () => {

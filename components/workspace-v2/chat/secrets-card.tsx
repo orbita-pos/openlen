@@ -20,7 +20,7 @@ const claveDe = (name: string, env: SecretEnvironment) => `${name}:${env}`;
 const envKey = (env: SecretEnvironment) => (env === "draft" ? "functionSecrets.envDraft" : "functionSecrets.envLive");
 
 export function saveErrorText(o: Exclude<SaveSecretsOutcome, { kind: "saved" }>, t: Translate): string {
-  if (o.kind === "too_large") return t("functionSecrets.tooLarge", { available: String(o.availableBytes), environment: t(envKey(o.environment)) });
+  if (o.kind === "too_large") return t("functionSecrets.tooLarge", { available: String(o.availableVars), environment: t(envKey(o.environment)) });
   if (o.kind === "invalid_name") return t("functionSecrets.invalidName");
   return t("functionSecrets.saveFailed");
 }

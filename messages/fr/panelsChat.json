@@ -340,7 +340,7 @@
     "liveInDraft": "C'est une clé réelle : les paiements de test seraient réels.",
     "testInLive": "C'est une clé de test : la page publiée n'encaisserait rien.",
     "saveFailed": "Impossible d'enregistrer. Réessayez.",
-    "tooLarge": "Elles ne tiennent pas : il reste {available} octets pour les clés de {environment}.",
+    "tooLarge": "Elles ne tiennent pas : il reste {available} variables pour les clés de {environment}.",
     "invalidName": "Le nom commence par une lettre et utilise des lettres, des chiffres et _ (sans SUPABASE_, AWS_ ni LAMBDA_).",
     "envDraft": "brouillon",
     "envLive": "production",

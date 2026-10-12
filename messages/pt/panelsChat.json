@@ -340,7 +340,7 @@
     "liveInDraft": "É uma chave real: os pagamentos de teste seriam de verdade.",
     "testInLive": "É uma chave de teste: a página publicada não cobraria nada.",
     "saveFailed": "Não foi possível salvar. Tente de novo.",
-    "tooLarge": "Não cabem: restam {available} bytes para as chaves de {environment}.",
+    "tooLarge": "Não cabem: restam {available} variáveis para as chaves de {environment}.",
     "invalidName": "O nome começa com letra e usa letras, números e _ (sem SUPABASE_, AWS_ nem LAMBDA_).",
     "envDraft": "rascunho",
     "envLive": "produção",

@@ -99,7 +99,7 @@ describe("la tarjeta de los secretos", () => {
   });
 
   it("si la ruta dice que no cabe, la tarjeta se queda con lo que queda y NO contesta", async () => {
-    servidor(422, { error: "env_too_large", environment: "live", availableBytes: 120 });
+    servidor(422, { error: "env_too_large", environment: "live", availableVars: 120 });
     const respuestas: QuestionAnswer[][] = [];
     const host = montar({ onAnswer: (a) => respuestas.push(a) });
     escribir(campos(host)[1]!, "x".repeat(50));

@@ -83,10 +83,13 @@ describe("/api/projects/[id]/function-secrets", () => {
     const n = await pedir("POST", { secrets: [{ environment: "draft", name: "SUPABASE_X", value: "v" }] });
     expect(n.status).toBe(400);
     expect(await n.json()).toEqual({ error: "invalid_name", name: "SUPABASE_X", message: "Env name cannot start with SUPABASE_: SUPABASE_X" });
-    const g = await pedir("POST", { secrets: [{ environment: "live", name: "MY_KEY", value: "x".repeat(5000) }] });
+    // La base de la prueba trae UNA variable: con 120 guardadas, 8 más no caben.
+    await real.deps!.store.set("p1", "live", Object.fromEntries(Array.from({ length: 120 }, (_, i) => [`YA_${i}`, "v"])), null);
+    const g = await pedir("POST", { secrets: Array.from({ length: 8 }, (_, i) => ({ environment: "live", name: `MY_KEY_${i}`, value: "v" })) });
     expect(g.status).toBe(422);
-    expect(await g.json()).toMatchObject({ error: "env_too_large", environment: "live", availableBytes: expect.any(Number) });
-    expect(await (await pedir("GET")).json()).toMatchObject({ live: [] });
+    expect(await g.json()).toMatchObject({ error: "env_too_large", environment: "live", availableVars: 127 });
+    const lista = (await (await pedir("GET")).json()) as { live: { name: string }[] };
+    expect(lista.live.some((s) => s.name.startsWith("MY_KEY_"))).toBe(false);
   });
 
   it("quitar", async () => {

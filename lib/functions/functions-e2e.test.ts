@@ -155,10 +155,10 @@ describe("de punta a punta", () => {
     await mala.arrayBuffer();
   });
 
-  it("🔴 brazo de control: la función no ve nada del servidor ni de AWS; lo que devuelve llega tal cual al visitante (el tapado es para Len)", { timeout: T }, async () => {
+  it("🔴 brazo de control: la función no ve nada del servidor; lo que devuelve llega tal cual al visitante (el tapado es para Len)", { timeout: T }, async () => {
     const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/hostil`, { headers: { authorization: `Bearer ${PUBLICABLE}` } }), deps());
     const j = (await r.json()) as { deno: string[]; proc: string[]; role: string };
-    expect(j.deno).toEqual(["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
+    expect(j.deno).toEqual(["AWS_ACCESS_KEY_ID", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
     expect(j.proc).not.toContain("NEXTAUTH_SECRET");
     expect(j.proc).not.toContain("DATABASE_URL");
     expect(j.role).toBe(SECRETA);

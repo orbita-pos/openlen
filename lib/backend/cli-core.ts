@@ -386,7 +386,7 @@ async function secretsCommand(
     let stderr = "";
     const body: Record<string, string> = {};
     for (const [name, value] of merged) {
-      // La CLI salta SUPABASE_ con este aviso; AWS_ y LAMBDA_ son del sistema en Lambda: igual.
+      // La CLI salta SUPABASE_ con este aviso (lib/functions/secret-names.ts).
       const prefix = RESERVED_SECRET_PREFIXES.find((p) => name.startsWith(p));
       if (prefix) {
         stderr += `Env name cannot start with ${prefix}, skipping: ${name}\n`;

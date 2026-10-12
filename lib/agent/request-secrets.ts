@@ -45,7 +45,7 @@ export const REQUEST_SECRETS_DECLARATION: Record<string, unknown> = {
           properties: {
             name: {
               type: "STRING",
-              description: "The name the functions read with Deno.env.get, e.g. STRIPE_SECRET_KEY: a letter, then letters, digits and underscores; not SUPABASE_*, AWS_* or LAMBDA_*.",
+              description: "The name the functions read with Deno.env.get, e.g. STRIPE_SECRET_KEY: a letter, then letters, digits and underscores; not SUPABASE_*.",
             },
             description: { type: "STRING", description: "What it is for, in one sentence, in the user's language." },
             url: { type: "STRING", description: "Optional: the https page where the user gets it, e.g. https://dashboard.stripe.com/test/apikeys." },
