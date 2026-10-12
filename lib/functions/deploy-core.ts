@@ -131,7 +131,12 @@ export function scheduleDraftDeploy(projectId: string, deps: DeployDeps, delayMs
     projectId,
     setTimeout(() => {
       temporizadores.delete(projectId);
-      void deployDraftSerialized(projectId, deps).catch((e: unknown) => console.error("[functions] el despliegue del borrador falló", projectId, e));
+      void deployDraftSerialized(projectId, deps)
+        .then((r) => {
+          // Lo programado no tiene a quién contárselo (no hay turno de Len): al registro.
+          if (r.kind === "engine_error") console.error("[functions] el motor rechazó el despliegue del borrador", projectId, r.message);
+        })
+        .catch((e: unknown) => console.error("[functions] el despliegue del borrador falló", projectId, e));
     }, delayMs),
   );
 }

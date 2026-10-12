@@ -140,6 +140,23 @@ describe("en serie, programado, y tras un reinicio", () => {
     expect(veces).toHaveLength(1);
   });
 
+  it("🔴 lo programado que el motor rechaza queda en el registro del servidor (nadie más lo vería)", async () => {
+    vi.useFakeTimers();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { d, m } = deps({ bundle: () => ok("h", ["a"]) });
+      m.engine.deploy = async () => {
+        throw new Error("Cloudflare: rate limited");
+      };
+      scheduleDraftDeploy("p-rechazo", d);
+      await vi.advanceTimersByTimeAsync(2_000);
+      await pendingDraftDeploy("p-rechazo");
+      expect(error.mock.calls.map((c) => c.join(" ")).join("\n")).toMatch(/p-rechazo[\s\S]*Cloudflare: rate limited/);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it("🔴 ensureDraftDeployed espera el despliegue en curso", async () => {
     let soltar!: () => void;
     const espera = new Promise<void>((r) => (soltar = r));
