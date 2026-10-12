@@ -4,6 +4,8 @@ import { realDeps } from "@/lib/agent/tools";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { openProject } from "../access";
 import { acquireCaptureSlot, captureProjectView } from "../capture";
+import { captureUrl, storeCapture } from "../capture-store";
+import { siteOrigin } from "../config";
 import { consumeQuota } from "../quota";
 import { imageResult, textResult, toolError } from "../results";
 import { defineTool, READ_ONLY } from "./define";
@@ -54,10 +56,12 @@ export const viewPageTool = defineTool({
     if (!r.image && !r.measurements) {
       return toolError("render_failed", "The page could not be rendered right now. Try again in a moment; if it repeats, check get_diagnostics.");
     }
+    const shot = r.image ? captureUrl(storeCapture(r.image), siteOrigin()) : null;
     const where = app ? `app${screen ? ` screen ${screen}` : ""}` : slug ? `page /${slug}` : "home page";
     const text = [
       `Draft ${where} at ${viewport} — this is the saved draft, not the published site.`,
       r.measurements ?? "Measurements unavailable this time.",
+      shot ? `Screenshot URL (valid 10 minutes, for clients that cannot see the image): ${shot}` : "",
       r.image ? "" : "Screenshot unavailable this time.",
       QUOTA_NOTE,
     ].filter(Boolean).join("\n");
