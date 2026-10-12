@@ -72,6 +72,19 @@ describe("bundleFunctions", () => {
     const b = await bundleFunctions({ catalog: CAT, mode: "development", files: { ...files } });
     expect(a).toBe(b);
   });
+
+  it("🔴 lleva la entrada de Cloudflare y ningún import.meta.url (en workerd no existe)", { timeout: T }, async () => {
+    const r = await bundleFunctions({
+      catalog: CAT,
+      mode: "production",
+      files: { "/supabase/functions/pago/index.ts": 'import Stripe from "npm:stripe@23";\nDeno.serve(() => new Response(typeof Stripe));\n' },
+    });
+    expect(r?.ok).toBe(true);
+    if (!r?.ok) return;
+    expect(r.files["worker.mjs"]).toContain('import { invoke } from "./index.mjs";');
+    expect(r.files["worker.mjs"]).toContain("export default");
+    for (const [f, texto] of Object.entries(r.files)) expect(texto.includes("import.meta.url"), f).toBe(false);
+  });
 });
 
 describe("entrySource", () => {
@@ -79,6 +92,6 @@ describe("entrySource", () => {
     const s = entrySource([{ name: "hola", entry: "/supabase/functions/hola/index.ts", verifyJwt: true, importMap: null }]);
     expect(s).toContain('import { createHandler, installGlobals } from "openlen:runtime";');
     expect(s).toContain('"hola": () => import("/supabase/functions/hola/index.ts"),');
-    expect(s).toContain("awslambda.streamifyResponse");
+    expect(s).not.toContain("awslambda");
   });
 });
