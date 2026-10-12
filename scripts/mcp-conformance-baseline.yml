@@ -1,0 +1,8 @@
+# Fallos esperados de la suite oficial de conformidad (scripts/mcp-conformance.mjs).
+# Cada entrada lleva su porqué. Un fallo nuevo, o una entrada que ya pasa, hace
+# fallar el comando (así lo define la suite).
+server:
+  # Pide la herramienta de prueba `json_schema_2020_12_tool` del servidor de
+  # ejemplo del SDK; un servidor de producto no la tiene. Nuestros esquemas
+  # son planos, sin $defs ni $ref en la raíz (lo exige catalog.test.ts).
+  - json-schema-2020-12

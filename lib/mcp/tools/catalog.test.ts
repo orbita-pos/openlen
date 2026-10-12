@@ -29,6 +29,8 @@ describe("el catálogo de herramientas", () => {
   for (const t of ALL_TOOLS) {
     it(`${t.name}: cumple lo de los directorios`, () => {
       expect(t.name).toMatch(/^[a-z][a-z0-9_]{0,63}$/);
+      expect(t.name.length).toBeLessThanOrEqual(63); // Gemini CLI corta a 63
+      expect(t.description.length).toBeLessThanOrEqual(2048); // Claude Code corta a 2.048
       expect(t.title.length).toBeGreaterThan(0);
       for (const k of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"] as const) {
         expect(typeof t.annotations[k]).toBe("boolean");

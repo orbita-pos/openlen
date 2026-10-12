@@ -33,7 +33,13 @@ export function registerOpenLenTools(server: McpServer, tools: ToolDefinition<an
   for (const tool of tools) {
     server.registerTool(
       tool.name,
-      { title: tool.title, description: tool.description, inputSchema: tool.inputSchema, annotations: tool.annotations },
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        annotations: tool.annotations,
+        ...(tool.meta ? { _meta: tool.meta } : {}),
+      },
       async (args: unknown, ctx) => runGuarded(tool, args as never, ctx.http?.authInfo),
     );
   }
