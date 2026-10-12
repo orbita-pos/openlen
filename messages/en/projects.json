@@ -304,7 +304,7 @@
     "title": "Connect OpenLen to your AI assistant",
     "intro": "Claude, ChatGPT, Codex, Cursor and others can read, edit and publish your OpenLen projects with your own AI subscription. Add this address and sign in with your OpenLen account.",
     "serverUrl": "Server address",
-    "signInHint": "The first time, your assistant opens openlen.com to ask for your permission. You choose what it can do and on which projects.",
+    "signInHint": "The first time, your assistant opens {site} to ask for your permission. You choose what it can do and on which projects.",
     "plans": "On the free plan, assistants can read your projects; editing, creating and publishing need a paid plan.",
     "stepsClaudeAi": "In Claude: Customize → Connectors → + Add → Add custom connector. Paste the address and sign in.",
     "stepsChatgpt": "In ChatGPT: open chatgpt.com/plugins, click + and choose Add custom MCP server. Paste the address and sign in.",

@@ -304,7 +304,7 @@
     "title": "将 OpenLen 连接到你的 AI 助手",
     "intro": "Claude、ChatGPT、Codex、Cursor 等可以用你自己的 AI 订阅读取、编辑和发布你的 OpenLen 项目。添加这个地址，并用你的 OpenLen 账户登录。",
     "serverUrl": "服务器地址",
-    "signInHint": "第一次使用时，你的助手会打开 openlen.com 请求你的许可。它能做什么、能用于哪些项目，由你决定。",
+    "signInHint": "第一次使用时，你的助手会打开 {site} 请求你的许可。它能做什么、能用于哪些项目，由你决定。",
     "plans": "在免费方案中，助手可以读取你的项目；编辑、创建和发布需要付费方案。",
     "stepsClaudeAi": "在 Claude 中：自定义 → 连接器 → + 添加 → 添加自定义连接器。粘贴地址并登录。",
     "stepsChatgpt": "在 ChatGPT 中：打开 chatgpt.com/plugins，点击 + 并选择添加自定义 MCP 服务器（英文界面为“Add custom MCP server”）。粘贴地址并登录。",

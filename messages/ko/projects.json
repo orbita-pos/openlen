@@ -304,7 +304,7 @@
     "title": "OpenLen을 AI 어시스턴트에 연결하기",
     "intro": "Claude, ChatGPT, Codex, Cursor 등이 내 AI 구독으로 OpenLen 프로젝트를 읽고, 편집하고, 게시할 수 있어요. 이 주소를 추가하고 OpenLen 계정으로 로그인하세요.",
     "serverUrl": "서버 주소",
-    "signInHint": "처음에는 어시스턴트가 openlen.com을 열어 권한을 요청해요. 무엇을 할 수 있는지, 어떤 프로젝트에서 쓸지는 내가 정해요.",
+    "signInHint": "처음에는 어시스턴트가 {site}을 열어 권한을 요청해요. 무엇을 할 수 있는지, 어떤 프로젝트에서 쓸지는 내가 정해요.",
     "plans": "무료 플랜에서는 어시스턴트가 프로젝트를 읽을 수 있어요. 편집, 만들기, 게시에는 유료 플랜이 필요해요.",
     "stepsClaudeAi": "Claude에서: 사용자 정의 → 커넥터 → + 추가 → 커스텀 커넥터 추가. 주소를 붙여 넣고 로그인하세요.",
     "stepsChatgpt": "ChatGPT에서: chatgpt.com/plugins를 열고 +를 눌러 맞춤형 MCP 서버 추가를 고르세요(영어로는 “Add custom MCP server”). 주소를 붙여 넣고 로그인하세요.",

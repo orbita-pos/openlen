@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CopyButton } from "@/components/mcp/copy-button";
 import { Link } from "@/i18n/navigation";
-import { mcpResourceUrl } from "@/lib/mcp/config";
+import { mcpResourceUrl, siteOrigin } from "@/lib/mcp/config";
 import { installSnippets, type InstallSnippet } from "@/lib/mcp/install-snippets";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -32,7 +32,7 @@ export default async function McpInstallPage({ params }: { params: Promise<{ loc
           <code className="text-sm">{url}</code>
           <CopyButton text={url} />
         </div>
-        <p className="text-sm opacity-70">{t("signInHint")}</p>
+        <p className="text-sm opacity-70">{t("signInHint", { site: new URL(siteOrigin()).host })}</p>
         <p className="text-sm opacity-70">{t("plans")}</p>
       </header>
       <ul className="flex flex-col gap-4">
