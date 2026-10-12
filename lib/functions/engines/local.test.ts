@@ -1,11 +1,14 @@
 // @vitest-environment node
+import { existsSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
 import { bundleFunctions } from "../bundler/bundle-functions";
 import type { Frame, InvokeEvent } from "../runtime/runtime.mjs";
 import { LocalEngine } from "./local";
-import type { Destination } from "./types";
+import { destinationName, type Destination } from "./types";
 
 const engine = new LocalEngine();
 afterAll(async () => {
@@ -107,6 +110,19 @@ describe("LocalEngine", () => {
     const viejos = await enCurso;
     expect(viejos.at(-1)!.t).toBe("end");
     expect(cuerpo(viejos)).toBe("1");
+  });
+
+  it("🔴 setEnv y luego redesplegar: la carpeta del hilo retirado sigue mientras acaba su llamada, y se borra después", { timeout: T }, async () => {
+    const b1 = await desplegar({ "/supabase/functions/r/index.ts": 'Deno.serve(async () => { await new Promise((r) => setTimeout(r, 400)); return new Response("viejo"); });\n' });
+    const carpeta = path.join(os.tmpdir(), "openlen-functions", destinationName(DEST), b1.hash);
+    const enCurso = marcos(DEST, evento("r"));
+    await new Promise((r) => setTimeout(r, 100));
+    await engine.setEnv(DEST, { K: "2" });
+    await desplegar({ "/supabase/functions/r/index.ts": 'Deno.serve(() => new Response("nuevo"));\n' });
+    expect(existsSync(carpeta)).toBe(true);
+    expect(cuerpo(await enCurso)).toBe("viejo");
+    expect(existsSync(carpeta)).toBe(false);
+    expect(cuerpo(await marcos(DEST, evento("r")))).toBe("nuevo");
   });
 
   it("setEnv sin nada desplegado no hace nada", async () => {
