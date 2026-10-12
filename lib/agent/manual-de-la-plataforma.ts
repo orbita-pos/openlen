@@ -303,9 +303,16 @@ export function buildManualDeLaPlataforma(
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
- *  (sus paquetes son los de su catálogo, en /AGENTS.md). */
-export function documentosDeLaPlataforma(app: AppDeProyecto | null = null): Readonly<Record<string, string>> {
-  return app ? { [RUTA_GUIA]: GUIA_DE_LA_APP } : { ...partirElManual().docs, [RUTA_APPS]: manualParaConvertir() };
+ *  (sus paquetes son los de su catálogo, en /AGENTS.md). La guía para
+ *  convertir lleva el backend de la app: con motor, también sus Edge Functions,
+ *  como el manual. */
+export function documentosDeLaPlataforma(
+  app: AppDeProyecto | null = null,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Readonly<Record<string, string>> {
+  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP };
+  const convertir = manualParaConvertir();
+  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir) : convertir };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
