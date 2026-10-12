@@ -1,6 +1,7 @@
 // lib/functions/bundler/bundle-functions.ts — LAS FUNCIONES DE UN PROYECTO, EN
 // UN PAQUETE (spec local 2026-10-11, Parte 2): todas en un zip con el
 // envoltorio y un enrutador por nombre; cada función se carga la primera vez.
+// El mismo paquete sirve a los dos motores: `index.mjs` (el local) y `worker.mjs` (Cloudflare).
 // El hilo es el de las apps (`runOnBundlerThread`); aquí se arma el mensaje y
 // se traducen sus errores y avisos a diagnósticos con fichero y línea, que es
 // lo que Len lee en `<new-diagnostics>`. Caché por contenido.
@@ -12,6 +13,7 @@ import type { Diagnostico, Gravedad } from "@/lib/agent/diagnosticos";
 import { runOnBundlerThread, stripNamespaces } from "@/lib/apps/bundler/bundle-app";
 
 import { functionsCatalog } from "../catalog";
+import { WORKER_MAIN_MODULE } from "../engines/cloudflare-api";
 import { readFunctionsLayout, type FunctionSpec } from "../project-files";
 
 export type FunctionsBundleMode = "development" | "production";
@@ -54,10 +56,37 @@ export function entrySource(functions: readonly FunctionSpec[]): string {
   return (
     'import { createHandler, installGlobals } from "openlen:runtime";\n' +
     "installGlobals();\n" +
-    `export const invoke = createHandler({\n${loaders}\n});\n` +
-    'export const handler = typeof awslambda !== "undefined" ? awslambda.streamifyResponse((event, stream) => invoke(event, stream)) : undefined;\n'
+    `export const invoke = createHandler({\n${loaders}\n});\n`
   );
 }
+
+/** La entrada de Cloudflare (spec local 2026-10-12, Parte 2): el evento entra
+ *  como JSON y los marcos salen según los escribe el envoltorio (NDJSON). */
+export const WORKER_ENTRY = String.raw`// La entrada de Cloudflare: el evento entra como JSON y los marcos salen
+// según los escribe el envoltorio.
+import { invoke } from "./index.mjs";
+
+const enc = new TextEncoder();
+const linea = (f) => enc.encode(JSON.stringify(f) + "\n");
+
+export default {
+  async fetch(request, env, ctx) {
+    const event = await request.json();
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const hecho = invoke(event, {
+      write: (l) => void writer.write(enc.encode(l)).catch(() => {}),
+      end: () => void writer.close().catch(() => {}),
+    }).catch(async (e) => {
+      await writer.write(linea({ t: "error", kind: "uncaught", message: String((e && e.message) || e) })).catch(() => {});
+      await writer.write(linea({ t: "end", ms: 0 })).catch(() => {});
+      await writer.close().catch(() => {});
+    });
+    ctx.waitUntil(hecho);
+    return new Response(readable, { headers: { "content-type": "application/x-ndjson" } });
+  },
+};
+`;
 
 /** Sólo los mapas que tienen fuentes del proyecto (`app:`): los trozos que son
  *  sólo catálogo no traducen ninguna traza de Len y pesan megas. */
@@ -135,6 +164,7 @@ export function bundleFunctions(args: {
       if (nombre.endsWith(".map")) maps[nombre.slice(0, -".map".length)] = texto;
       else files[nombre] = texto;
     }
+    files[WORKER_MAIN_MODULE] = WORKER_ENTRY;
     const hash = createHash("sha256")
       .update(JSON.stringify(Object.entries(files).sort(([a], [b]) => a.localeCompare(b))))
       .digest("hex");

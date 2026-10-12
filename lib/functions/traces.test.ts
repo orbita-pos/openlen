@@ -26,6 +26,11 @@ describe("translateStack", () => {
   it("sin mapas deja sólo el mensaje", () => {
     expect(translateStack(PILA, {})).toBe("TypeError: Cannot read properties of undefined (reading 'price')");
   });
+
+  it("una traza sin carpeta (como puede darla Cloudflare) también se traduce", () => {
+    const pila = ["TypeError: x", "    at handler (index.mjs:2:9)", "    at chunks/stripe-AB12.mjs:1:3"].join("\n");
+    expect(translateStack(pila, MAPAS)).toBe(["TypeError: x", "    at handler (supabase/functions/checkout/index.ts:2:1)"].join("\n"));
+  });
 });
 
 describe("firstProjectSite", () => {

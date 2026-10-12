@@ -7,8 +7,9 @@
 
 import { traductorDeMapas, type SitioDelError } from "@/lib/ai/sitio-del-error";
 
-/** `    at fn (file:///…/chunks/x.mjs:L:C)` · `    at file:///…/index.mjs:L:C` */
-const MARCO = /^(\s*at\s+)(?:(.+?)\s+\()?(?:file:\/\/)?[^\s()]*?\/((?:chunks\/)?[\w.$-]+\.mjs):(\d+):(\d+)\)?\s*$/;
+/** `    at fn (file:///…/chunks/x.mjs:L:C)` · `    at file:///…/index.mjs:L:C` ·
+ *  `    at fn (chunks/x.mjs:L:C)` (sin carpeta, como puede darla Cloudflare). */
+const MARCO = /^(\s*at\s+)(?:(.+?)\s+\()?(?:file:\/\/)?(?:[^\s()]*?\/)??((?:chunks\/)?[\w.$-]+\.mjs):(\d+):(\d+)\)?\s*$/;
 const ES_MARCO = /^\s*at\s/;
 
 function traductor(maps: Readonly<Record<string, string>>) {
