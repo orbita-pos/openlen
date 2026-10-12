@@ -298,5 +298,22 @@
     "copied": "복사됨",
     "done": "완료",
     "failed": "잘 안 됐어요. 페이지를 새로고침하고 다시 시도하세요."
+  },
+  "mcpInstall": {
+    "title": "OpenLen을 AI 어시스턴트에 연결하기",
+    "intro": "Claude, ChatGPT, Codex, Cursor 등이 내 AI 구독으로 OpenLen 프로젝트를 읽고, 편집하고, 게시할 수 있어요. 이 주소를 추가하고 OpenLen 계정으로 로그인하세요.",
+    "serverUrl": "서버 주소",
+    "signInHint": "처음에는 어시스턴트가 openlen.com을 열어 권한을 요청해요. 무엇을 할 수 있는지, 어떤 프로젝트에서 쓸지는 내가 정해요.",
+    "plans": "무료 플랜에서는 어시스턴트가 프로젝트를 읽을 수 있어요. 편집, 만들기, 게시에는 유료 플랜이 필요해요.",
+    "stepsClaudeAi": "Claude에서: 사용자 지정 → 커넥터 → + 추가 → 사용자 지정 커넥터 추가. 주소를 붙여 넣고 로그인하세요.",
+    "stepsChatgpt": "ChatGPT에서: chatgpt.com/plugins를 열고 +를 눌러 사용자 지정 MCP 서버 추가를 고르세요. 주소를 붙여 넣고 로그인하세요.",
+    "stepsVscode": "버튼으로 한 번에, 또는 .vscode/mcp.json에 추가하세요.",
+    "stepsCursor": "버튼으로 한 번에, 또는 ~/.cursor/mcp.json에 추가하세요.",
+    "installIn": "{client}에 설치",
+    "thenSignIn": "그다음 로그인:",
+    "copy": "복사",
+    "copied": "복사됨",
+    "tokenAlternative": "클라이언트가 로그인하지 못하나요? 개인 토큰을 만들어 Authorization: Bearer 헤더로 보내세요.",
+    "connectionsLink": "연결된 앱"
   }
 }

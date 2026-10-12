@@ -298,5 +298,22 @@
     "copied": "Copié",
     "done": "Terminé",
     "failed": "Ça n’a pas marché. Rechargez la page et réessayez."
+  },
+  "mcpInstall": {
+    "title": "Connectez OpenLen à votre assistant IA",
+    "intro": "Claude, ChatGPT, Codex, Cursor et d’autres peuvent lire, modifier et publier vos projets OpenLen avec votre propre abonnement IA. Ajoutez cette adresse et connectez-vous avec votre compte OpenLen.",
+    "serverUrl": "Adresse du serveur",
+    "signInHint": "La première fois, votre assistant ouvre openlen.com pour vous demander l’autorisation. Vous choisissez ce qu’il peut faire et sur quels projets.",
+    "plans": "Avec l’offre gratuite, les assistants peuvent lire vos projets ; modifier, créer et publier demandent une offre payante.",
+    "stepsClaudeAi": "Dans Claude : Personnaliser → Connecteurs → + Ajouter → Ajouter un connecteur personnalisé. Collez l’adresse et connectez-vous.",
+    "stepsChatgpt": "Dans ChatGPT : ouvrez chatgpt.com/plugins, cliquez sur + et choisissez Ajouter un serveur MCP personnalisé. Collez l’adresse et connectez-vous.",
+    "stepsVscode": "En un clic avec le bouton, ou ajoutez ceci à .vscode/mcp.json.",
+    "stepsCursor": "En un clic avec le bouton, ou ajoutez ceci à ~/.cursor/mcp.json.",
+    "installIn": "Installer dans {client}",
+    "thenSignIn": "Puis connectez-vous avec :",
+    "copy": "Copier",
+    "copied": "Copié",
+    "tokenAlternative": "Votre client n’arrive pas à se connecter ? Créez un jeton personnel et envoyez-le dans un en-tête Authorization: Bearer.",
+    "connectionsLink": "Applications connectées"
   }
 }
