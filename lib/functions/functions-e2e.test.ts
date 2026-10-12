@@ -1,9 +1,11 @@
 // @vitest-environment node
 //
-// DE PUNTA A PUNTA, SIN BASE: el empaquetador de verdad, el motor local de
-// verdad, la puerta de verdad y los CLIENTES de verdad —supabase-js con
-// `functions.invoke`, y el SDK de Stripe (del catálogo) verificando un webhook
-// firmado—. Lo de la base va en memoria.
+// DE PUNTA A PUNTA, SIN BASE, CON LOS DOS MOTORES: el empaquetador de verdad, la
+// puerta de verdad y los CLIENTES de verdad —supabase-js con `functions.invoke`,
+// y el SDK de Stripe (del catálogo) verificando un webhook firmado—, primero con
+// el motor `local` y luego con el `cloudflare`: su API y su despachador de
+// verdad, y cada script en workerd con miniflare (fake-cloudflare.ts). Lo de la
+// base va en memoria.
 import { createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -14,20 +16,29 @@ import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
 import { bundleFunctions } from "./bundler/bundle-functions";
 import { ConcurrencyLimiter } from "./concurrency";
 import { memoryDeploymentStore } from "./deployments";
+import { CloudflareEngine } from "./engines/cloudflare";
+import { FAKE_CONFIG, fakeCloudflare } from "./engines/cloudflare/fake-cloudflare";
 import { LocalEngine } from "./engines/local";
+import type { Destination, FunctionsEngine } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps, type InvocationRecord, type ResolvedTarget } from "./gateway";
 import { memoryUsageStore } from "./usage";
 
-const T = 90_000;
+const T = 120_000;
 const REF = "abcdefghijklmnopqrst";
 const HOST = `${REF}.openlen.app`;
+const DEST: Destination = { ref: REF, environment: "draft" };
 const PUBLICABLE = "sb_publishable_e2e";
 const SECRETA = "sb_secret_e2e_0123456789abcdef";
 const WHSEC = "whsec_prueba_0123456789";
 const STRIPE = "sk_test_e2e_0123456789abcdef";
-const engine = new LocalEngine();
-const store = memoryDeploymentStore();
-const records: InvocationRecord[] = [];
+
+const ENV: Record<string, string> = {
+  SUPABASE_URL: "https://draftrefdraftrefdraf.openlen.app",
+  SUPABASE_SERVICE_ROLE_KEY: SECRETA,
+  STRIPE_WEBHOOK_SECRET: WHSEC,
+  STRIPE_SECRET_KEY: STRIPE,
+  AWS_ACCESS_KEY_ID: "AKIAEXAMPLE",
+};
 
 const FUENTES: Record<string, string> = {
   "/supabase/config.toml": "[functions.stripe-webhook]\nverify_jwt = false\n",
@@ -76,6 +87,22 @@ const FUENTES: Record<string, string> = {
     "",
   ].join("\n"),
   "/supabase/functions/rota/index.ts": 'Deno.serve(() => { const p = undefined as unknown as { price: number }; return new Response(String(p.price)); });\n',
+  "/supabase/functions/lento/index.ts": [
+    "Deno.serve(() => {",
+    "  const enc = new TextEncoder();",
+    "  const body = new ReadableStream({",
+    "    async start(c) {",
+    '      c.enqueue(enc.encode("data: uno\\n\\n"));',
+    "      await new Promise((r) => setTimeout(r, 1500));",
+    '      c.enqueue(enc.encode("data: dos\\n\\n"));',
+    "      c.close();",
+    "    },",
+    "  });",
+    '  return new Response(body, { headers: { "content-type": "text/event-stream" } });',
+    "});",
+    "",
+  ].join("\n"),
+  "/supabase/functions/cambiante/index.ts": 'Deno.serve(() => new Response(Deno.env.get("CAMBIANTE") ?? "-"));\n',
 };
 
 const TARGET: ResolvedTarget = {
@@ -90,50 +117,69 @@ const TARGET: ResolvedTarget = {
   jwtSecret: async () => "j".repeat(48),
 };
 
-function deps(o: Partial<GatewayDeps> = {}): GatewayDeps {
-  return {
-    engine,
-    resolve: async () => TARGET,
-    plan: async () => "free",
-    ensureDeployed: async () => undefined,
-    deployment: (p, e) => store.get(p, e),
-    maps: (p, e) => store.maps(p, e),
-    usage: memoryUsageStore(),
-    limiter: new ConcurrencyLimiter(),
-    caps: { free: 1e15, paid: 1e15 },
-    record: async (r) => void records.push(r),
-    now: () => new Date(),
-    ...o,
-  };
+interface Motor {
+  readonly nombre: string;
+  crear(): { readonly engine: FunctionsEngine; parar(): Promise<void> };
 }
 
-beforeAll(async () => {
-  process.env.NEXTAUTH_SECRET ??= "secreto-del-servidor";
-  const b = await bundleFunctions({ files: FUENTES, catalog: "2026-11", mode: "development" });
-  if (!b?.ok) throw new Error(JSON.stringify(b));
-  await engine.deploy(
-    { ref: REF, environment: "draft" },
-    { hash: b.hash, files: b.files },
-    {
-      SUPABASE_URL: `https://draftrefdraftrefdraf.openlen.app`,
-      SUPABASE_SERVICE_ROLE_KEY: SECRETA,
-      STRIPE_WEBHOOK_SECRET: WHSEC,
-      STRIPE_SECRET_KEY: STRIPE,
-      AWS_ACCESS_KEY_ID: "AKIAEXAMPLE",
+const MOTORES: readonly Motor[] = [
+  {
+    nombre: "local",
+    crear() {
+      const engine = new LocalEngine();
+      return { engine, parar: () => engine.stopAll() };
     },
-    { timeoutSec: 150, memoryMb: 256 },
-  );
-  await store.put({ projectId: "p-e2e", environment: "draft", catalog: "2026-11", hash: b.hash, functions: b.functions.map((f) => ({ name: f.name, verifyJwt: f.verifyJwt })), deployedAt: new Date() }, b.maps);
-}, T);
-afterAll(async () => {
-  await engine.stopAll();
-  stopBundlerWorker();
-});
+  },
+  {
+    nombre: "cloudflare",
+    crear() {
+      const cf = fakeCloudflare();
+      return { engine: new CloudflareEngine(FAKE_CONFIG, cf.fetch), parar: () => cf.dispose() };
+    },
+  },
+];
 
-const supabase = (d: GatewayDeps) =>
-  createClient(`https://${HOST}`, PUBLICABLE, { global: { fetch: (input, init) => handleFunctionsRequest(new Request(input as RequestInfo, init), d) } });
+afterAll(() => stopBundlerWorker());
 
-describe("de punta a punta", () => {
+describe.each(MOTORES)("de punta a punta — motor $nombre", (motor) => {
+  let engine: FunctionsEngine;
+  let parar: () => Promise<void> = async () => undefined;
+  let hash = "";
+  const store = memoryDeploymentStore();
+  const records: InvocationRecord[] = [];
+
+  function deps(o: Partial<GatewayDeps> = {}): GatewayDeps {
+    return {
+      engine,
+      resolve: async () => TARGET,
+      plan: async () => "free",
+      ensureDeployed: async () => undefined,
+      deployment: (p, e) => store.get(p, e),
+      maps: (p, e) => store.maps(p, e),
+      usage: memoryUsageStore(),
+      limiter: new ConcurrencyLimiter(),
+      caps: { free: 1e15, paid: 1e15 },
+      record: async (r) => void records.push(r),
+      now: () => new Date(),
+      ...o,
+    };
+  }
+
+  const supabase = (d: GatewayDeps) =>
+    createClient(`https://${HOST}`, PUBLICABLE, { global: { fetch: (input, init) => handleFunctionsRequest(new Request(input as RequestInfo, init), d) } });
+  const llamar = (fn: string, init: RequestInit = {}) => handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/${fn}`, { headers: { apikey: PUBLICABLE }, ...init }), deps());
+
+  beforeAll(async () => {
+    process.env.NEXTAUTH_SECRET ??= "secreto-del-servidor";
+    ({ engine, parar } = motor.crear());
+    const b = await bundleFunctions({ files: FUENTES, catalog: "2026-11", mode: "development" });
+    if (!b?.ok) throw new Error(JSON.stringify(b));
+    hash = b.hash;
+    await engine.deploy(DEST, { hash: b.hash, files: b.files }, ENV, { timeoutSec: 150, memoryMb: 128 });
+    await store.put({ projectId: "p-e2e", environment: "draft", catalog: "2026-11", hash: b.hash, functions: b.functions.map((f) => ({ name: f.name, verifyJwt: f.verifyJwt })), deployedAt: new Date() }, b.maps);
+  }, T);
+  afterAll(() => parar(), T);
+
   it("supabase.functions.invoke de verdad, con su registro", { timeout: T }, async () => {
     const { data, error } = await supabase(deps()).functions.invoke("hello", { body: { name: "Ana" } });
     expect(error).toBeNull();
@@ -165,7 +211,7 @@ describe("de punta a punta", () => {
   });
 
   it("🔴 un secreto del usuario: la función lo lee como variable, el visitante lo recibe tal cual, y en lo que lee Len sale tapado", { timeout: T }, async () => {
-    const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/fuga`, { headers: { apikey: PUBLICABLE } }), deps());
+    const r = await llamar("fuga");
     expect(await r.text()).toBe(STRIPE);
     await vi.waitFor(() => expect(records.some((x) => x.name === "fuga")).toBe(true));
     const rec = records.find((x) => x.name === "fuga")!;
@@ -174,7 +220,7 @@ describe("de punta a punta", () => {
   });
 
   it("un error de Len: 500 WORKER_ERROR y la traza en SU fichero y línea", { timeout: T }, async () => {
-    const r = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/rota`, { headers: { apikey: PUBLICABLE } }), deps());
+    const r = await llamar("rota");
     expect(r.status).toBe(500);
     await vi.waitFor(() => expect(records.some((x) => x.name === "rota")).toBe(true));
     const rec = records.find((x) => x.name === "rota")!;
@@ -189,5 +235,39 @@ describe("de punta a punta", () => {
     expect(r.status).toBe(429);
     expect(r.headers.get("sb-error-code")).toBe("QUOTA_EXCEEDED");
     expect(records.length).toBe(antes);
+  });
+
+  it("🔴 streaming de punta a punta: lo primero llega antes de que la función acabe", { timeout: T }, async () => {
+    const t0 = Date.now();
+    const r = await llamar("lento");
+    expect(r.headers.get("content-type")).toBe("text/event-stream");
+    const reader = r.body!.getReader();
+    const dec = new TextDecoder();
+    const primero = dec.decode((await reader.read()).value);
+    const tPrimero = Date.now() - t0;
+    expect(primero).toContain("data: uno");
+    let resto = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      resto += dec.decode(value);
+    }
+    expect(resto).toContain("data: dos");
+    expect(Date.now() - t0 - tPrimero).toBeGreaterThan(1000);
+  });
+
+  it("🔴 setEnv: cambiar un secreto lo ve la siguiente llamada, sin redesplegar", { timeout: T }, async () => {
+    expect(await (await llamar("cambiante")).text()).toBe("-");
+    await engine.setEnv(DEST, { ...ENV, CAMBIANTE: "nuevo" });
+    expect(await (await llamar("cambiante")).text()).toBe("nuevo");
+    expect(await engine.deployedHash(DEST)).toBe(hash);
+  });
+
+  it("🔴 sin script (el proyecto se quedó sin funciones): 404 NOT_FOUND, no un 500", { timeout: T }, async () => {
+    await engine.remove(DEST);
+    expect(await engine.deployedHash(DEST)).toBeNull();
+    const r = await llamar("hello", { method: "POST", body: JSON.stringify({ name: "Ana" }) });
+    expect(r.status).toBe(404);
+    expect(r.headers.get("sb-error-code")).toBe("NOT_FOUND");
   });
 });
