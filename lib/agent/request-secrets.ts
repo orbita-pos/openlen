@@ -16,13 +16,13 @@ import {
   ASK_CANCELLED_ERROR,
   QUESTION_DISMISSED,
   REQUEST_SECRETS,
+  SECRETS_QUESTION_ID,
   questionText,
   type SecretRequest,
   type UserQuestion,
 } from "@/lib/agent/ask-user-question";
 import { secretNameMessage, secretNameProblem } from "@/lib/functions/secret-names";
 
-export const SECRETS_QUESTION_ID = "secrets";
 const MAX_SECRETS = 5;
 const DESCRIPTION_MAX = 300;
 const URL_MAX = 500;

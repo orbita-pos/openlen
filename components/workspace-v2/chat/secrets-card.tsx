@@ -9,13 +9,12 @@
 import { useState } from "react";
 import { AlertTriangle, Check, ExternalLink, KeyRound, Loader, X } from "lucide-react";
 
-import type { QuestionAnswer, SecretRequest } from "@/lib/agent/ask-user-question";
+import { SECRETS_QUESTION_ID, type QuestionAnswer, type SecretRequest } from "@/lib/agent/ask-user-question";
 import { secretModeWarning } from "@/lib/apps/env/secret-patterns";
 import { postFunctionSecrets, type SaveSecretsOutcome, type SecretEnvironment, type SecretInput } from "@/lib/workspace-v2/function-secrets-request";
 
 type Translate = (key: string, values?: Record<string, string>) => string;
 
-export const SECRETS_QUESTION_ID = "secrets";
 const ENTORNOS: readonly SecretEnvironment[] = ["draft", "live"];
 const claveDe = (name: string, env: SecretEnvironment) => `${name}:${env}`;
 const envKey = (env: SecretEnvironment) => (env === "draft" ? "functionSecrets.envDraft" : "functionSecrets.envLive");
