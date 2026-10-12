@@ -31,11 +31,14 @@ const DAY_MS = 86_400_000;
 
 export function ConnectionsView({
   initial,
+  nextCursor: firstCursor,
   projects,
   mcpUrl,
   locale,
 }: {
   initial: ConnectionItem[];
+  /** El cursor de la siguiente página (de 20 en 20), o null si no hay más. */
+  nextCursor: string | null;
   projects: { id: string; title: string }[];
   mcpUrl: string;
   locale: string;
@@ -45,6 +48,11 @@ export function ConnectionsView({
   const [open, setOpen] = useState<string | null>(null);
   const [activity, setActivity] = useState<Record<string, ActivityItem[]>>({});
   const [failed, setFailed] = useState(false);
+  const [cursor, setCursor] = useState(firstCursor);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Dos conexiones con el mismo nombre (dos «Cursor», dos «CI»): una marca de su id las distingue.
+  const counts = new Map<string, number>();
+  for (const c of items) counts.set(c.name, (counts.get(c.name) ?? 0) + 1);
   const when = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
   const scopeLabel = (s: string) => (s === "projects:write" ? t("scopeWrite") : s === "publish" ? t("scopePublish") : t("scopeRead"));
 
@@ -56,11 +64,23 @@ export function ConnectionsView({
     const body = res?.ok ? ((await res.json()) as { activity: ActivityItem[] }) : null;
     setActivity((a) => ({ ...a, [id]: body?.activity ?? [] }));
   };
+  const showMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    const res = await fetch(`/api/mcp/connections?cursor=${encodeURIComponent(cursor)}`).catch(() => null);
+    setLoadingMore(false);
+    const body = res?.ok ? ((await res.json()) as { connections: ConnectionItem[]; next_cursor: string | null }) : null;
+    if (!body) return setFailed(true);
+    setItems((xs) => [...xs, ...body.connections.filter((n) => !xs.some((x) => x.id === n.id))]);
+    setCursor(body.next_cursor);
+  };
   const revoke = async (c: ConnectionItem) => {
     if (!window.confirm(t("revokeConfirm", { name: c.name }))) return;
     const res = await fetch(`/api/mcp/connections/${encodeURIComponent(c.id)}`, { method: "DELETE" }).catch(() => null);
     if (!res?.ok) return setFailed(true);
     setItems((xs) => xs.filter((x) => x.id !== c.id));
+    // La lista del servidor tiene una menos: la página siguiente empieza una antes.
+    setCursor((cur) => (cur ? String(Math.max(0, Number(cur) - 1)) : cur));
   };
 
   return (
@@ -78,7 +98,14 @@ export function ConnectionsView({
             <li key={c.id} className="rounded-lg border px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-col gap-1">
-                  <span className="font-medium">{c.name}</span>
+                  <span className="font-medium">
+                    {c.name}
+                    {(counts.get(c.name) ?? 0) > 1 ? (
+                      <span data-connection-tag className="ml-2 font-mono text-xs opacity-60">
+                        #{c.id.slice(-4)}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="text-xs opacity-70">
                     {c.kind === "personal" ? t("kindPersonal") : t("kindOauth")}
                     {c.kind === "oauth" ? ` · ${c.verified ? t("verified") : t("unverified")}` : ""}
@@ -121,6 +148,11 @@ export function ConnectionsView({
           ))}
         </ul>
       )}
+      {cursor ? (
+        <button type="button" disabled={loadingMore} onClick={showMore} className="self-start rounded-full border px-4 py-1.5 text-sm disabled:opacity-50">
+          {t("showMore")}
+        </button>
+      ) : null}
       <NewTokenForm projects={projects} mcpUrl={mcpUrl} onCreated={(c) => setItems((xs) => [c, ...xs])} onFailed={() => setFailed(true)} />
     </div>
   );

@@ -297,7 +297,8 @@
     "copy": "Kopiëren",
     "copied": "Gekopieerd",
     "done": "Klaar",
-    "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw."
+    "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw.",
+    "showMore": "Meer tonen"
   },
   "mcpInstall": {
     "title": "Koppel OpenLen aan je AI-assistent",

@@ -297,7 +297,8 @@
     "copy": "복사",
     "copied": "복사됨",
     "done": "완료",
-    "failed": "잘 안 됐어요. 페이지를 새로고침하고 다시 시도하세요."
+    "failed": "잘 안 됐어요. 페이지를 새로고침하고 다시 시도하세요.",
+    "showMore": "더 보기"
   },
   "mcpInstall": {
     "title": "OpenLen을 AI 어시스턴트에 연결하기",
