@@ -262,9 +262,7 @@
     "noteElement": "이 요소에 대해 Len에게 더 전할 말",
     "noteGeneral": "Len에게 더 전할 말",
     "resetElement": "이 요소 되돌리기",
-    "resetAll": "모두 되돌리기",
     "busy": "Len이 작업 중입니다. 끝나면 적용하세요.",
-    "apply": "적용 ({n})",
     "applyMessage": "디자인 변경 · 요소 {n}개",
     "tooBig": "한 번의 «적용»에 변경이 너무 많습니다. 일부를 먼저 적용하세요.",
     "group": {

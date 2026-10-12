@@ -262,9 +262,7 @@
     "noteElement": "Noch etwas für Len zu diesem Element",
     "noteGeneral": "Noch etwas für Len",
     "resetElement": "Dieses Element zurücksetzen",
-    "resetAll": "Alles zurücksetzen",
     "busy": "Len arbeitet gerade: Wende es an, wenn er fertig ist.",
-    "apply": "Anwenden ({n})",
     "applyMessage": "Design-Änderungen · {n, plural, one {# Element} other {# Elemente}}",
     "tooBig": "Zu viele Änderungen für ein einziges „Anwenden“: Wende zuerst einen Teil an.",
     "group": {
