@@ -76,6 +76,7 @@
     "profile:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/profile-migrate.ts",
     "movil:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/movil-migrate.ts",
     "mcp:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/mcp-migrate.ts",
+    "mcp:cleanup": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/mcp-cleanup.ts",
     "mcp:token": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/mcp-token.ts",
     "renewal-reminders:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/renewal-reminders-migrate.ts",
     "publish-hash:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/publish-hash-migrate.ts",

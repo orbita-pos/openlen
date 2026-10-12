@@ -57,4 +57,6 @@ export const BOX_FILES = [
   { repo: "infra/app/openlen-notifications-drain.timer", box: "/etc/systemd/system/openlen-notifications-drain.timer" },
   { repo: "infra/app/openlen-renewal-reminders.service", box: "/etc/systemd/system/openlen-renewal-reminders.service" },
   { repo: "infra/app/openlen-renewal-reminders.timer", box: "/etc/systemd/system/openlen-renewal-reminders.timer" },
+  { repo: "infra/app/openlen-mcp-cleanup.service", box: "/etc/systemd/system/openlen-mcp-cleanup.service" },
+  { repo: "infra/app/openlen-mcp-cleanup.timer", box: "/etc/systemd/system/openlen-mcp-cleanup.timer" },
 ];
