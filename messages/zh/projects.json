@@ -237,5 +237,25 @@
     "used": "此请求已被使用。",
     "notFound": "此请求不存在或不属于你。",
     "failed": "没有成功。请刷新页面后重试。"
+  },
+  "mcpConsent": {
+    "title": "“{client}”想要连接你的 OpenLen 账户",
+    "returnsTo": "允许后，你将回到 {host}。",
+    "localhost": "此应用运行在你自己的电脑上（localhost）。只有在你刚刚启动它时才继续。",
+    "signedInAs": "已登录为 {email}",
+    "scopesTitle": "它将能够",
+    "scopeRead": "查看你的项目及其文件",
+    "scopeWrite": "修改你的项目文件并创建项目",
+    "scopePublish": "发布和取消发布（每次都需要你的同意）",
+    "projectsTitle": "哪些项目",
+    "allProjects": "我的全部项目",
+    "oneProject": "仅此项目",
+    "allow": "允许",
+    "deny": "拒绝",
+    "expired": "此请求已过期。请回到你的助手重新连接。",
+    "notFound": "此请求不存在。",
+    "used": "此请求已处理过。",
+    "redirecting": "正在返回…如果没有反应，可以关闭此标签页。",
+    "failed": "没有成功。请刷新页面后重试。"
   }
 }

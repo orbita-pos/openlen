@@ -237,5 +237,25 @@
     "used": "Dit verzoek is al gebruikt.",
     "notFound": "Dit verzoek bestaat niet of is niet van jou.",
     "failed": "Dat lukte niet. Herlaad de pagina en probeer het opnieuw."
+  },
+  "mcpConsent": {
+    "title": "“{client}” wil verbinding maken met je OpenLen-account",
+    "returnsTo": "Als je het toestaat, ga je terug naar {host}.",
+    "localhost": "Deze app draait op je eigen computer (localhost). Ga alleen verder als je hem net hebt gestart.",
+    "signedInAs": "Ingelogd als {email}",
+    "scopesTitle": "Hij kan dan",
+    "scopeRead": "Je projecten en hun bestanden bekijken",
+    "scopeWrite": "De bestanden van je projecten wijzigen en projecten maken",
+    "scopePublish": "Publiceren en depubliceren (telkens met jouw toestemming)",
+    "projectsTitle": "Welke projecten",
+    "allProjects": "Al mijn projecten",
+    "oneProject": "Alleen dit",
+    "allow": "Toestaan",
+    "deny": "Weigeren",
+    "expired": "Dit verzoek is verlopen. Ga terug naar je assistent en maak opnieuw verbinding.",
+    "notFound": "Dit verzoek bestaat niet.",
+    "used": "Dit verzoek is al beantwoord.",
+    "redirecting": "Je gaat terug… je kunt dit tabblad sluiten als er niets gebeurt.",
+    "failed": "Dat is niet gelukt. Herlaad de pagina en probeer het opnieuw."
   }
 }

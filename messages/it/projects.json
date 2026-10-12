@@ -237,5 +237,25 @@
     "used": "Questa richiesta è già stata usata.",
     "notFound": "Questa richiesta non esiste o non è tua.",
     "failed": "Non ha funzionato. Ricarica la pagina e riprova."
+  },
+  "mcpConsent": {
+    "title": "«{client}» vuole collegarsi al tuo account OpenLen",
+    "returnsTo": "Dopo averlo consentito, tornerai a {host}.",
+    "localhost": "Questa applicazione gira sul tuo computer (localhost). Continua solo se l'hai appena avviata.",
+    "signedInAs": "Accesso effettuato come {email}",
+    "scopesTitle": "Potrà",
+    "scopeRead": "Vedere i tuoi progetti e i loro file",
+    "scopeWrite": "Modificare i file dei tuoi progetti e creare progetti",
+    "scopePublish": "Pubblicare e ritirare la pubblicazione (ogni volta, con il tuo consenso)",
+    "projectsTitle": "Quali progetti",
+    "allProjects": "Tutti i miei progetti",
+    "oneProject": "Solo questo",
+    "allow": "Consenti",
+    "deny": "Rifiuta",
+    "expired": "Questa richiesta è scaduta. Torna al tuo assistente e collegati di nuovo.",
+    "notFound": "Questa richiesta non esiste.",
+    "used": "Questa richiesta ha già ricevuto una risposta.",
+    "redirecting": "Stai tornando indietro… puoi chiudere questa scheda se non succede nulla.",
+    "failed": "Non ha funzionato. Ricarica la pagina e riprova."
   }
 }

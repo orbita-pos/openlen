@@ -237,5 +237,25 @@
     "used": "Diese Anfrage wurde schon verwendet.",
     "notFound": "Diese Anfrage gibt es nicht oder sie gehört dir nicht.",
     "failed": "Das hat nicht geklappt. Lade die Seite neu und versuch es noch einmal."
+  },
+  "mcpConsent": {
+    "title": "„{client}“ möchte sich mit deinem OpenLen-Konto verbinden",
+    "returnsTo": "Wenn du es erlaubst, kehrst du zu {host} zurück.",
+    "localhost": "Diese App läuft auf deinem eigenen Computer (localhost). Fahre nur fort, wenn du sie gerade gestartet hast.",
+    "signedInAs": "Angemeldet als {email}",
+    "scopesTitle": "Sie kann dann",
+    "scopeRead": "Deine Projekte und ihre Dateien sehen",
+    "scopeWrite": "Die Dateien deiner Projekte ändern und Projekte erstellen",
+    "scopePublish": "Veröffentlichen und die Veröffentlichung zurücknehmen (jedes Mal mit deiner Zustimmung)",
+    "projectsTitle": "Welche Projekte",
+    "allProjects": "Alle meine Projekte",
+    "oneProject": "Nur dieses",
+    "allow": "Erlauben",
+    "deny": "Ablehnen",
+    "expired": "Diese Anfrage ist abgelaufen. Geh zurück zu deinem Assistenten und verbinde dich erneut.",
+    "notFound": "Diese Anfrage gibt es nicht.",
+    "used": "Diese Anfrage wurde bereits beantwortet.",
+    "redirecting": "Du wirst zurückgeleitet … du kannst diesen Tab schließen, wenn nichts passiert.",
+    "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal."
   }
 }
