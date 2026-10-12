@@ -83,6 +83,7 @@ const TARGET: ResolvedTarget = {
   ref: REF,
   host: HOST,
   environment: "draft",
+  published: true,
   publishableKey: PUBLICABLE,
   secretKeyHash: hashSecretKey(SECRETA),
   secrets: { SUPABASE_SERVICE_ROLE_KEY: SECRETA, STRIPE_SECRET_KEY: STRIPE },

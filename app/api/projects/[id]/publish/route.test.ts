@@ -22,13 +22,14 @@ vi.mock("@/lib/projects", async () => {
 
 import { POST } from "./route";
 import { AppNoCompilaError } from "@/lib/apps/compilador";
+import { FunctionSecretsMissingError, FunctionsDeployFailedError, FunctionsDoNotCompileError } from "@/lib/functions/publish-errors";
 
-const pide = () =>
+const pide = (extra: Record<string, unknown> = {}) =>
   POST(
     new Request("https://openlen.com/api/projects/p1/publish", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ subdomain: "mi-pos" }),
+      body: JSON.stringify({ subdomain: "mi-pos", ...extra }),
     }),
     { params: Promise.resolve({ id: "p1" }) },
   );
@@ -52,5 +53,26 @@ describe("POST /publish — una app web", () => {
     const res = await pide();
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "publish_failed" });
+  });
+});
+
+describe("POST /publish — las Edge Functions (spec local 2026-10-11)", () => {
+  it("🔴 faltan secretos en producción: 428 con sus nombres; «Publicar igual» viaja hasta publishProject", async () => {
+    mocks.publishProject.mockRejectedValueOnce(new FunctionSecretsMissingError(["STRIPE_SECRET_KEY"]));
+    const res = await pide();
+    expect(res.status).toBe(428);
+    expect(await res.json()).toEqual({ error: "secrets_required", missing: ["STRIPE_SECRET_KEY"] });
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "mi-pos", url: "https://mi-pos.openlen.app", publishedAt: new Date() });
+    expect((await pide({ skipMissingSecrets: true })).status).toBe(200);
+    expect(mocks.publishProject.mock.calls.at(-1)![0]).toMatchObject({ functions: { skipMissingSecrets: true } });
+  });
+
+  it("no compilan: 422 con fichero y línea; el despliegue falla: 502 (la página no cambió)", async () => {
+    mocks.publishProject.mockRejectedValueOnce(new FunctionsDoNotCompileError([{ ruta: "/supabase/functions/checkout/index.ts", linea: 3, columna: 5, gravedad: "Error", mensaje: "x" }]));
+    const a = await pide();
+    expect(a.status).toBe(422);
+    expect(await a.json()).toEqual({ error: "functions_do_not_compile", errors: ["/supabase/functions/checkout/index.ts:3:5 — x"] });
+    mocks.publishProject.mockRejectedValueOnce(new FunctionsDeployFailedError(new Error("motor")));
+    expect((await pide()).status).toBe(502);
   });
 });

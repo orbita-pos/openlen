@@ -33,6 +33,8 @@ export interface ResolvedTarget {
   /** El host por el que entró: el de la URL que ve la función. */
   readonly host: string;
   readonly environment: FunctionsEnvironment;
+  /** La página tiene dirección (está publicada). Despublicada, producción no se llama. */
+  readonly published: boolean;
   readonly publishableKey: string;
   readonly secretKeyHash: string;
   /** Nombre → valor de lo que hay que tapar en lo que Len puede leer. */
@@ -103,12 +105,21 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   const url = new URL(req.url);
   const m = /^\/functions\/v1\/([^/]+)(\/.*)?$/.exec(url.pathname);
   if (!m) return functionsError("NOT_FOUND");
-  const name = decodeURIComponent(m[1]!);
+  let name: string;
+  try {
+    name = decodeURIComponent(m[1]!);
+  } catch {
+    // Un `%` mal formado no es una función que exista: lo de Supabase, no un 500.
+    return functionsError("NOT_FOUND");
+  }
   const subpath = m[2] ?? "";
 
   const target = await deps.resolve(req, { forceDraft: o.forceDraft === true });
   if (!target) return functionsError("NOT_FOUND");
   if ("forbidden" in target) return functionsError("FORBIDDEN", { message: target.forbidden });
+  // Despublicar deja lo desplegado en el motor, pero la puerta deja de llamarlo
+  // (spec local 2026-10-11, Parte 2): ni se repone ni se cuenta.
+  if (target.environment === "live" && !target.published) return functionsError("NOT_FOUND");
 
   await deps.ensureDeployed(target);
   const deployment = await deps.deployment(target.projectId, target.environment);
