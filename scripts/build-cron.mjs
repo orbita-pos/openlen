@@ -6,6 +6,21 @@
 // EnvironmentFile at runtime (the bundle reads process.env directly).
 import { build } from "esbuild";
 
+// LAS EDGE FUNCTIONS: lib/backend/files.ts redespliega el borrador al guardar
+// con un import perezoso de lib/functions/deploy, que esbuild empaqueta igual, y
+// con él el registro, lib/projects y los crates nativos (.node), que aquí no se
+// pueden empaquetar (el drenaje de avisos llega a files.ts por el chat del
+// equipo → deshacer un turno). Los trabajos del cron no guardan ficheros de un
+// proyecto: para ellos ese módulo no hace nada. Un import con otro nombre de
+// él falla al empaquetar, no en silencio.
+const noFunctionsDeploy = {
+  name: "no-functions-deploy",
+  setup(b) {
+    b.onResolve({ filter: /^@\/lib\/functions\/deploy$/ }, () => ({ path: "functions-deploy", namespace: "cron-stub" }));
+    b.onLoad({ filter: /.*/, namespace: "cron-stub" }, () => ({ contents: "export function scheduleDraftDeployIfEnabled() {}", loader: "js" }));
+  },
+};
+
 const common = {
   bundle: true,
   platform: "node",
@@ -23,6 +38,7 @@ const common = {
   // chat (lib/projects/chat-equipo → hilos.ts) tumbaba el drenaje entero de
   // avisos (ensayo de caja, 08/10; lib/notifications/cron-bundle.test.ts).
   alias: { "server-only": "./node_modules/server-only/empty.js" },
+  plugins: [noFunctionsDeploy],
 };
 
 const targets = [
