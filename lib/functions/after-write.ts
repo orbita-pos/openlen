@@ -13,6 +13,9 @@ export async function functionDiagnosticsAfterWrite(written: readonly string[], 
   if (!written.some(isFunctionsInputPath)) return [];
   const r = await deploy();
   if (r.kind === "failed") return [...r.errors, ...r.warnings];
+  if (r.kind === "engine_error") {
+    return [{ ruta: "/supabase/functions/", linea: 1, columna: 1, gravedad: "Error", mensaje: `The Edge Functions could not be deployed: ${r.message}`, codigo: "functions-deploy", fuente: "supabase" }];
+  }
   if (r.kind === "deployed" || r.kind === "unchanged") return [...r.warnings];
   return [];
 }

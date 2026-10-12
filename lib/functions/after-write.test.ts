@@ -24,4 +24,10 @@ describe("functionDiagnosticsAfterWrite", () => {
     expect(await functionDiagnosticsAfterWrite(["/supabase/functions/a/index.ts"], async () => ({ kind: "removed" }))).toEqual([]);
     expect(await functionDiagnosticsAfterWrite(["/supabase/functions/a/index.ts"], async () => ({ kind: "unavailable" }))).toEqual([]);
   });
+
+  it("🔴 el motor falló al desplegar: un diagnóstico con su mensaje, para Len", async () => {
+    expect(await functionDiagnosticsAfterWrite(["/supabase/functions/a/index.ts"], async () => ({ kind: "engine_error", message: "rate limited" }))).toEqual([
+      { ruta: "/supabase/functions/", linea: 1, columna: 1, gravedad: "Error", mensaje: "The Edge Functions could not be deployed: rate limited", codigo: "functions-deploy", fuente: "supabase" },
+    ]);
+  });
 });
