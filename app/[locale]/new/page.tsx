@@ -10,6 +10,7 @@ import {
   useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
@@ -254,6 +255,19 @@ const ALL_TABS: SidebarMode[] = [
   "chat",
   "versions",
 ];
+
+/** El proyecto en blanco de esta pestaña (ver `pantallaDeInicio`). */
+const BLANCO_DE_LA_PESTANA = "openlen:proyecto-en-blanco";
+function leerBlancoDeLaPestana(): string | null {
+  try {
+    return sessionStorage.getItem(BLANCO_DE_LA_PESTANA);
+  } catch {
+    // Sin almacenamiento, recargar el blanco enseña el taller mientras carga.
+    return null;
+  }
+}
+// Se lee una vez por render; nada avisa de cambios (la pestaña es la única que escribe).
+const sinSuscripcion = () => () => {};
 
 // Build the "Original" theme baseline from a page-meta payload — the resolved
 // --ol-* token values + mode the page loaded with. Empty string for a token
@@ -900,6 +914,17 @@ function NewV2Inner() {
   // un enlace viejo con `autostart=1`) sólo RELLENA el compositor.
   const [blankFailure, setBlankFailure] = useState<ProjectLoadFailure | null>(null);
   const [blankAttempt, setBlankAttempt] = useState(0);
+  /** El blanco al que se acaba de redirigir: mientras carga ya se sabe que es la
+   *  portada, y la barra del proyecto no asoma medio segundo antes. Recargar
+   *  pierde la referencia, así que también se apunta en `sessionStorage`. Se
+   *  lee en el PRIMER render del cliente (con un efecto, el taller asomaba
+   *  medio segundo al recargar); en el servidor no existe y vale null. */
+  const blankIdRef = useRef<string | null>(null);
+  const blancoDeLaPestana = useSyncExternalStore(
+    sinSuscripcion,
+    leerBlancoDeLaPestana,
+    () => null,
+  );
   const resolvingBlank = entryMode === "ai" && startSurface === "crear";
   useEffect(() => {
     if (!resolvingBlank) return;
@@ -913,7 +938,10 @@ function NewV2Inner() {
         // El brief que trajera la URL ya está en `aiPrompt` (nace de él), y el
         // componente no se vuelve a montar al cambiar la URL: no hace falta
         // llevarlo. `mode` y `autostart` se quedan atrás.
-        if (vivo) router.replace(`/new?project=${encodeURIComponent(d.id)}`);
+        if (vivo) {
+          blankIdRef.current = d.id;
+          router.replace(`/new?project=${encodeURIComponent(d.id)}`);
+        }
       })
       .catch((status: unknown) => {
         if (!vivo) return;
@@ -1342,6 +1370,30 @@ function NewV2Inner() {
   // Ni cargando ni abierto: el proyecto de la URL no se pudo abrir.
   const projectUnavailable = Boolean(projectParam && !loadedProject && projectLoadFailure);
   const projectLoadingFromUrl = Boolean(projectParam && !loadedProject && !projectLoadFailure);
+  // UN PROYECTO EN BLANCO ES LA PORTADA, NO EL TALLER (Jesús, 12/10). Hasta el
+  // primer mensaje no hay proyecto que ver: el chat del rail repetía el
+  // compositor del centro con un Len que aún no sabe si hará Página o App, y
+  // Resultados, Mensajes, Versiones, Invitar y Publicar apuntaban a nada. Lleva
+  // la barra de inicio y no hay rail, como sin proyecto (v0, Lovable: el chat
+  // nace al mandar). Mandar ya despliega el chat (`handleHeroSend`).
+  const pantallaDeInicio =
+    !enElEditor ||
+    proyectoEnBlanco ||
+    (projectLoadingFromUrl &&
+      !!projectParam &&
+      (projectParam === blankIdRef.current || projectParam === blancoDeLaPestana));
+  // Lo que se apunta: el blanco abierto, y se borra en cuanto deja de serlo
+  // (el primer mensaje), para que recargarlo después no enseñe la portada.
+  useEffect(() => {
+    if (!loadedProject) return;
+    try {
+      if (proyectoEnBlanco) sessionStorage.setItem(BLANCO_DE_LA_PESTANA, loadedProject.id);
+      else if (sessionStorage.getItem(BLANCO_DE_LA_PESTANA) === loadedProject.id)
+        sessionStorage.removeItem(BLANCO_DE_LA_PESTANA);
+    } catch {
+      // Sin almacenamiento no hay nada que recordar.
+    }
+  }, [loadedProject, proyectoEnBlanco]);
 
   // ── Cross-tab / cross-device convergence ────────────────────────────────
   // Same browser: a BroadcastChannel — a save in one tab nudges the others to
@@ -3393,10 +3445,11 @@ function NewV2Inner() {
         savingStatus={savingStatus}
         // Un lector no publica; elegir dominio, integraciones y miembros,
         // sólo el dueño (lib/projects/acceso.ts lo hace cumplir en el servidor).
-        onPublish={soloLector ? undefined : onPublish}
+        // En la portada (`pantallaDeInicio`) no hay nada que publicar ni a quién invitar.
+        onPublish={soloLector || pantallaDeInicio ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
-        onMiembros={loadedProject ? () => setMiembrosOpen(true) : undefined}
+        onMiembros={loadedProject && !pantallaDeInicio ? () => setMiembrosOpen(true) : undefined}
         onEnvVars={abrirVariables}
         onRolledBack={() => {
           if (loadedProject?.id) {
@@ -3427,18 +3480,22 @@ function NewV2Inner() {
         // El rail entero actúa SOBRE una página —Chat, Resultados, Mensajes,
         // Versiones—, así que sin página abierta son cuatro iconos
         // que no llevan a ningún sitio. Y la cuenta vive a su pie, o sea que se
-        // iría con él: por eso vuelve a la barra en esta pantalla.
+        // iría con él: por eso vuelve a la barra en esta pantalla. Lo mismo con
+        // el proyecto en blanco (`pantallaDeInicio`).
         inicio={
-          enElEditor
+          !pantallaDeInicio
             ? undefined
             : {
                 activa: startSurface,
-                onIr: (s) =>
+                onIr: (s) => {
+                  // En el blanco ya estás en «Crear»: ir a `/new` lo volvería a buscar.
+                  if (s === "crear" && enElEditor) return;
                   router.replace(
                     s === "crear"
                       ? "/new"
                       : `/new?view=${s === "mispaginas" ? "projects" : "explore"}`,
-                  ),
+                  );
+                },
                 etiqueta: (s) => tws(`startTabs.${s}`),
                 dark,
                 onToggleDark: toggleDark,
@@ -3449,7 +3506,7 @@ function NewV2Inner() {
         }
       />
       <div className="flex-1 min-h-0 flex relative">
-        {enElEditor && (
+        {!pantallaDeInicio && (
         <LeftSidebar
           dark={dark}
           onToggleDark={toggleDark}
