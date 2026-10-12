@@ -1,4 +1,5 @@
-// Las Edge Functions (spec local 2026-10-11): sus cuatro tablas y el ref propio
+// Las Edge Functions (spec local 2026-10-11): sus cinco tablas (los secretos,
+// desde la fase 2), el paquete de producción y el ref propio
 // del borrador en projectBackendEnvironments (relleno para los borradores que
 // ya existen). Aditiva e idempotente. Mantener en sintonía con lib/db/schema.ts.
 //
@@ -78,6 +79,20 @@ async function main() {
       END LOOP;
     END $$;
   `);
+  // FASE 2: los secretos (cifrados) y el paquete de producción.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "functionSecrets" (
+      "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+      "environment" text NOT NULL CHECK ("environment" IN ('draft', 'live')),
+      "name" text NOT NULL,
+      "valueEncrypted" text NOT NULL,
+      "digest" text NOT NULL,
+      "updatedAt" timestamp NOT NULL DEFAULT now(),
+      "updatedBy" text,
+      PRIMARY KEY ("projectId", "environment", "name")
+    );
+  `);
+  await db.execute(sql`ALTER TABLE "functionDeployments" ADD COLUMN IF NOT EXISTS "bundleGz" text;`);
   console.log("[functions:migrate] tablas listas y borradores con su ref propio");
   process.exit(0);
 }

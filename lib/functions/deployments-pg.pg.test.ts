@@ -35,4 +35,12 @@ describe("pgDeploymentStore", () => {
     await pgDeploymentStore.delete(PROYECTO, "draft");
     expect(await pgDeploymentStore.get(PROYECTO, "draft")).toBeNull();
   });
+
+  it("el paquete de producción se guarda y vuelve; sin él, null", async () => {
+    const rec = { projectId: PROYECTO, environment: "live" as const, catalog: "2026-11", hash: "hl", functions: [{ name: "a", verifyJwt: true }], deployedAt: new Date() };
+    await pgDeploymentStore.put(rec, {}, { "index.mjs": "export const invoke = 1;" });
+    expect(await pgDeploymentStore.bundle(PROYECTO, "live")).toEqual({ "index.mjs": "export const invoke = 1;" });
+    await pgDeploymentStore.put({ ...rec, environment: "draft" }, {});
+    expect(await pgDeploymentStore.bundle(PROYECTO, "draft")).toBeNull();
+  });
 });
