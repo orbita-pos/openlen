@@ -12,8 +12,10 @@ import { db, schema } from "@/lib/db";
 import { decryptToken } from "@/lib/integrations/crypto";
 import { planFromDb, type Plan } from "@/lib/plan";
 
+import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { FunctionsCli } from "@/lib/backend/cli-core";
 
+import { functionDiagnosticsAfterWrite } from "./after-write";
 import { bundleFunctions } from "./bundler/bundle-functions";
 import { deployDraftSerialized, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
 import { pgDeploymentStore } from "./deployments-pg";
@@ -87,4 +89,11 @@ export function functionsCliFor(projectId: string, ref: string): FunctionsCli | 
       return `${await draftProjectUrl(rec)}/functions/v1/`;
     },
   };
+}
+
+/** Tras Edit/Write/bash: despliega el borrador y devuelve lo que no compila. */
+export async function draftDeployAfterWrite(projectId: string, written: readonly string[]): Promise<Diagnostico[]> {
+  const deps = realDeployDeps();
+  if (!deps) return [];
+  return functionDiagnosticsAfterWrite(written, () => deployDraftSerialized(projectId, deps));
 }

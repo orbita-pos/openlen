@@ -15,6 +15,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import {
   AVISO_DE_VISITANTES_EN_LA_TERMINAL,
   cargarFicherosDeLaTerminal,
+  diagnosticosDeFuncionesTrasEscribir,
   diagnosticosDeLaAppTrasEscribir,
   guardarLoDeLaTerminal,
   type GuardadoDeLaTerminal,
@@ -135,6 +136,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(session.app && (appCambiada || paginas.length > 0)
       ? await diagnosticosDeLaAppTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))
       : []),
+    // LAS EDGE FUNCTIONS: una vez por comando, con lo ya guardado.
+    ...(await diagnosticosDeFuncionesTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))),
   ];
   // LA CARPETA (pieza 9): los ficheros que tocó el comando, para «Deshacer».
   const ficherosTocados = escrituras.flatMap((o) => o.ficherosTocados ?? []);

@@ -236,6 +236,14 @@ export interface AgentDeps {
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
    *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
   functionsCurl?(projectId: string): Promise<FunctionsCurl | null>;
+  /** EDGE FUNCTIONS: tras escribir en /supabase/functions/** o config.toml,
+   *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
+  functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
+  /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
+  edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string } | null>;
+  /** EDGE FUNCTIONS: las llamadas del borrador desde `since`, en el texto de
+   *  `edge_function_calls` (use_page, view_page). `null` si no hubo. */
+  edgeFunctionCalls?(projectId: string, since: Date): Promise<string | null>;
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).
@@ -555,6 +563,21 @@ export function realDeps(
     async functionsCurl(projectId) {
       const { functionsCurlFor } = await import("@/lib/functions/curl");
       return functionsCurlFor(projectId);
+    },
+    async functionsAfterWrite(projectId, written) {
+      const { draftDeployAfterWrite } = await import("@/lib/functions/deploy");
+      return draftDeployAfterWrite(projectId, written);
+    },
+    async edgeFunctions(projectId) {
+      const { edgeFunctionsState } = await import("@/lib/functions/state");
+      return edgeFunctionsState(projectId);
+    },
+    async edgeFunctionCalls(projectId, since) {
+      const { functionsEnabled } = await import("@/lib/functions/engines");
+      if (!functionsEnabled()) return null;
+      const { recentInvocations } = await import("@/lib/functions/invocations-pg");
+      const { functionCallsReport } = await import("@/lib/functions/invocation-report");
+      return functionCallsReport(await recentInvocations(projectId, "draft", since));
     },
     async supabaseProject(projectId) {
       const { backendConfigured } = await import("@/lib/backend/pg");
@@ -1170,6 +1193,9 @@ export function summarizeProjectState(
     /** En una APP, las variables del dueño (spec local 2026-10-10): nombre →
      *  entornos. Sin valores: para escribir el código basta el nombre. */
     envVars?: Readonly<Record<string, readonly EnvTarget[]>> | null;
+    /** Las Edge Functions (spec local 2026-10-11): por NOMBRE, en el borrador y
+     *  en producción, y la URL del borrador para su `curl`. Ausente ⇒ no hay. */
+    edgeFunctions?: { readonly draft: readonly string[]; readonly live: readonly string[]; readonly draftUrl: string } | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1235,6 +1261,10 @@ export function summarizeProjectState(
     ...(row.supabase ? { supabase: { project_url: row.supabase.url, publishable_key: row.supabase.publishableKey } } : {}),
     // Las del dueño, por su NOMBRE (`import.meta.env.VITE_X`), y dónde valen.
     ...(app && row.envVars && Object.keys(row.envVars).length > 0 ? { env_vars: row.envVars } : {}),
+    // Las funciones, con los nombres de Supabase (como `supabase functions list`).
+    ...(row.edgeFunctions && row.edgeFunctions.draft.length + row.edgeFunctions.live.length > 0
+      ? { edge_functions: { draft: [...row.edgeFunctions.draft], production: [...row.edgeFunctions.live], draft_url: row.edgeFunctions.draftUrl } }
+      : {}),
   };
 }
 
@@ -1504,6 +1534,7 @@ async function toolMirarPagina(
     return { response: { ok: false, error: "this page doesn't have a document to look at yet" } };
   }
 
+  const desde = new Date();
   const visto = await deps
     .observarPagina({
       html,
@@ -1533,7 +1564,9 @@ async function toolMirarPagina(
 
   // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
   // cambió — preguntar no es editar.
-  return { response: { ok: true, answer: visto.respuesta } };
+  // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
+  const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
+  return { response: { ok: true, answer: visto.respuesta, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
 }
 
 // ─── use_page: usarla como un visitante (H9) ──────────────────────────────
@@ -1605,6 +1638,7 @@ async function toolUsarPagina(
   // Chromium a la vez en el turno; la que sobra espera su plaza.
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+  const desde = new Date();
   const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
@@ -1618,7 +1652,9 @@ async function toolUsarPagina(
       },
     };
   }
-  return { response: { ok: true, visit: visto.informe } };
+  // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
+  const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
+  return { response: { ok: true, visit: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
 }
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */
