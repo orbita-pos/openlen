@@ -106,8 +106,15 @@ export function scheduleDraftDeploy(projectId: string, deps: DeployDeps, delayMs
   );
 }
 
-/** Antes de llamar al borrador: lo que esté en curso, y lo anotado en el motor. */
+/** Antes de llamar al borrador: lo programado (YA, sin esperar sus 2 s: alguien
+ *  guardó y el lienzo está llamando), lo que esté en curso, y lo anotado en el motor. */
 export async function ensureDraftDeployed(projectId: string, ref: string, deps: DeployDeps): Promise<void> {
+  const programado = temporizadores.get(projectId);
+  if (programado) {
+    clearTimeout(programado);
+    temporizadores.delete(projectId);
+    await deployDraftSerialized(projectId, deps).catch(() => undefined);
+  }
   await pendingDraftDeploy(projectId);
   const anotado = await deps.store.get(projectId, "draft");
   if (!anotado) return;

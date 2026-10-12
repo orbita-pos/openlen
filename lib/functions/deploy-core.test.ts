@@ -132,6 +132,17 @@ describe("en serie, programado, y tras un reinicio", () => {
     expect(m.desplegados.get(`${REF}|draft`)).toBe("nuevo");
   });
 
+  it("🔴 ensureDraftDeployed no se queda con lo viejo: lo programado se despliega YA, sin esperar los 2 s", async () => {
+    vi.useFakeTimers();
+    const { d, m, setFiles } = deps({ bundle: (f) => ok(f["/supabase/functions/a/index.ts"]!, ["a"]) });
+    await deployDraft("p6", d);
+    expect(m.desplegados.get(`${REF}|draft`)).toBe("v1");
+    setFiles({ "/supabase/functions/a/index.ts": "v2" });
+    scheduleDraftDeploy("p6", d); // se guardó desde la lente Código: el despliegue espera 2 s
+    await ensureDraftDeployed("p6", REF, d); // y el lienzo llama ya
+    expect(m.desplegados.get(`${REF}|draft`)).toBe("v2");
+  });
+
   it("🔴 redespliega si el motor no tiene el hash anotado (reinicio)", async () => {
     const { d, m } = deps({ bundle: () => ok("h1", ["a"]) });
     await deployDraft("p5", d);

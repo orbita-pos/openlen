@@ -153,6 +153,18 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   let errorText: string | null = null;
   let anotada = false;
 
+  // El motor puede LANZAR (al arrancar, o a mitad: Lambda sin red, un hilo que
+  // muere). Eso es un fin con error, nunca una excepción que deje la plaza y la
+  // reserva colgadas.
+  const siguiente = async (): Promise<IteratorResult<Frame>> => {
+    try {
+      return await frames.next();
+    } catch (e) {
+      errorCode ??= "WORKER_ERROR";
+      errorText ??= e instanceof Error ? (e.stack ?? e.message) : String(e);
+      return { done: true, value: undefined };
+    }
+  };
   const tomar = (f: Frame): void => {
     if (f.t === "log") logs.push({ level: f.level, msg: f.msg });
     else if (f.t === "error") {
@@ -162,7 +174,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   };
   const vaciar = async (): Promise<void> => {
     for (;;) {
-      const r = await frames.next();
+      const r = await siguiente();
       if (r.done) return;
       tomar(r.value);
     }
@@ -210,7 +222,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
     const stream = new ReadableStream<Uint8Array>({
       async pull(c) {
         for (;;) {
-          const r = await frames.next();
+          const r = await siguiente();
           if (r.done) {
             cerrar(c);
             void anotar();
@@ -247,11 +259,11 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   };
 
   for (;;) {
-    const r = await frames.next();
+    const r = await siguiente();
     if (r.done) {
       status = 500;
-      errorCode = "WORKER_ERROR";
-      errorText = "the function ended without a response";
+      errorCode ??= "WORKER_ERROR";
+      errorText ??= "the function ended without a response";
       await anotar();
       return functionsError("WORKER_ERROR");
     }
