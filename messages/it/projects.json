@@ -306,7 +306,7 @@
     "signInHint": "La prima volta, il tuo assistente apre openlen.com per chiederti il permesso. Scegli tu cosa può fare e su quali progetti.",
     "plans": "Con il piano gratuito gli assistenti possono leggere i tuoi progetti; modificare, creare e pubblicare richiedono un piano a pagamento.",
     "stepsClaudeAi": "In Claude: Personalizza → Connettori → + Aggiungi → Aggiungi connettore personalizzato. Incolla l’indirizzo e accedi.",
-    "stepsChatgpt": "In ChatGPT: apri chatgpt.com/plugins, fai clic su + e scegli Aggiungi server MCP personalizzato. Incolla l’indirizzo e accedi.",
+    "stepsChatgpt": "In ChatGPT: apri chatgpt.com/plugins, fai clic su + e scegli di aggiungere un server MCP personalizzato («Add custom MCP server» in inglese). Incolla l’indirizzo e accedi.",
     "stepsVscode": "Con un clic sul pulsante, oppure aggiungi questo a .vscode/mcp.json.",
     "stepsCursor": "Con un clic sul pulsante, oppure aggiungi questo a ~/.cursor/mcp.json.",
     "installIn": "Installa in {client}",
