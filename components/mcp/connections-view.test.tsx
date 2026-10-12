@@ -70,4 +70,12 @@ describe("Aplicaciones conectadas", () => {
     expect(c.textContent).not.toContain("olp_secreto");
     expect(c.textContent).toContain("CI");
   });
+
+  it("🔴 los controles del formulario siguen el tema oscuro (fondo propio, color-scheme), no el blanco del navegador", () => {
+    const c = render();
+    const controls = Array.from(c.querySelectorAll("input:not([type=checkbox]), select"));
+    expect(controls.length).toBeGreaterThan(0);
+    for (const el of controls) expect(el.className).toMatch(/bg-transparent/);
+    for (const el of controls) expect(el.className).toMatch(/dark:\[color-scheme:dark\]/);
+  });
 });

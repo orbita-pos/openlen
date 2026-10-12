@@ -44,7 +44,7 @@ export function ConsentForm({ id, asked, projects }: { id: string; asked: string
       </fieldset>
       <label className="flex flex-col gap-1">
         <span className="font-medium">{t("projectsTitle")}</span>
-        <select className="rounded-lg border px-3 py-2" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+        <select className="rounded-lg border bg-transparent px-3 py-2 dark:[color-scheme:dark]" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
           <option value="">{t("allProjects")}</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
