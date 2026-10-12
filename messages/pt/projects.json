@@ -297,7 +297,8 @@
     "copy": "Copiar",
     "copied": "Copiado",
     "done": "Pronto",
-    "failed": "Não funcionou. Recarregue a página e tente de novo."
+    "failed": "Não funcionou. Recarregue a página e tente de novo.",
+    "showMore": "Mostrar mais"
   },
   "mcpInstall": {
     "title": "Conecte o OpenLen ao seu assistente de IA",

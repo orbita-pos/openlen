@@ -297,7 +297,8 @@
     "copy": "复制",
     "copied": "已复制",
     "done": "完成",
-    "failed": "没有成功。请刷新页面后重试。"
+    "failed": "没有成功。请刷新页面后重试。",
+    "showMore": "显示更多"
   },
   "mcpInstall": {
     "title": "将 OpenLen 连接到你的 AI 助手",

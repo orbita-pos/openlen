@@ -19,12 +19,14 @@ const oauth: ConnectionItem = {
 };
 
 const roots: Root[] = [];
-function render() {
+function render(initial: ConnectionItem[] = [oauth], nextCursor: string | null = null) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   act(() => {
     const root = createRoot(container);
-    root.render(<ConnectionsView initial={[oauth]} projects={[{ id: "p1", title: "Café Luna" }]} mcpUrl="https://mcp.openlen.com/mcp" locale="es" />);
+    root.render(
+      <ConnectionsView initial={initial} nextCursor={nextCursor} projects={[{ id: "p1", title: "Café Luna" }]} mcpUrl="https://mcp.openlen.com/mcp" locale="es" />,
+    );
     roots.push(root);
   });
   return container;
@@ -77,5 +79,36 @@ describe("Aplicaciones conectadas", () => {
     expect(controls.length).toBeGreaterThan(0);
     for (const el of controls) expect(el.className).toMatch(/bg-transparent/);
     for (const el of controls) expect(el.className).toMatch(/dark:\[color-scheme:dark\]/);
+  });
+
+  it("dos conexiones con el mismo nombre llevan una marca de su id; una con nombre único, no", () => {
+    const c = render([
+      { ...oauth, id: "fam-aaaa1111", name: "Cursor" },
+      { ...oauth, id: "fam-bbbb2222", name: "Cursor" },
+      { ...oauth, id: "fam-cccc3333", name: "Claude Code" },
+    ]);
+    const tags = Array.from(c.querySelectorAll("[data-connection-tag]")).map((e) => e.textContent);
+    expect(tags).toEqual(["#1111", "#2222"]);
+  });
+
+  it("con más de una página: «Mostrar más» trae la siguiente y desaparece al acabar", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ connections: [{ ...oauth, id: "fam-2", name: "Gemini CLI" }], next_cursor: null }), { status: 200 }),
+    );
+    const c = render([oauth], "20");
+    await act(async () => button(c, "showMore").click());
+    expect(fetchMock).toHaveBeenCalledWith("/api/mcp/connections?cursor=20");
+    expect(c.textContent).toContain("Gemini CLI");
+    expect(c.textContent).toContain("Claude Code");
+    expect(Array.from(c.querySelectorAll("button")).some((b) => b.textContent === "showMore")).toBe(false);
+  });
+
+  it("🔴 revocar una de la primera página retrocede el cursor: la siguiente no se salta ninguna", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ connections: [], next_cursor: null }), { status: 200 }));
+    const c = render([oauth], "20");
+    await act(async () => button(c, "revoke").click());
+    await act(async () => button(c, "showMore").click());
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/mcp/connections?cursor=19");
   });
 });

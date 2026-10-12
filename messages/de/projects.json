@@ -297,7 +297,8 @@
     "copy": "Kopieren",
     "copied": "Kopiert",
     "done": "Fertig",
-    "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal."
+    "failed": "Das hat nicht geklappt. Lade die Seite neu und versuche es noch einmal.",
+    "showMore": "Mehr anzeigen"
   },
   "mcpInstall": {
     "title": "Verbinde OpenLen mit deinem KI-Assistenten",

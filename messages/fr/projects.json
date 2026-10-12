@@ -297,7 +297,8 @@
     "copy": "Copier",
     "copied": "Copié",
     "done": "Terminé",
-    "failed": "Ça n’a pas marché. Rechargez la page et réessayez."
+    "failed": "Ça n’a pas marché. Rechargez la page et réessayez.",
+    "showMore": "Afficher plus"
   },
   "mcpInstall": {
     "title": "Connectez OpenLen à votre assistant IA",

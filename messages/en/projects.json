@@ -297,7 +297,8 @@
     "copy": "Copy",
     "copied": "Copied",
     "done": "Done",
-    "failed": "That did not work. Reload the page and try again."
+    "failed": "That did not work. Reload the page and try again.",
+    "showMore": "Show more"
   },
   "mcpInstall": {
     "title": "Connect OpenLen to your AI assistant",

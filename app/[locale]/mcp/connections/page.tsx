@@ -7,6 +7,7 @@ import { ConnectionsView } from "@/components/mcp/connections-view";
 import { Link, redirect } from "@/i18n/navigation";
 import { mcpResourceUrl } from "@/lib/mcp/config";
 import { listConnections } from "@/lib/mcp/connections";
+import { pageConnections } from "@/lib/mcp/connections-page";
 import { projectsVisibleTo } from "@/lib/mcp/projects-list";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,8 @@ export default async function McpConnectionsPage({ params }: { params: Promise<{
   const t = await getTranslations({ locale, namespace: "projects.mcpConnections" });
   const userId = (await auth())?.user?.id;
   if (!userId) redirect({ href: "/login?next=/mcp/connections", locale });
-  const [connections, visible] = await Promise.all([listConnections(userId!), projectsVisibleTo(userId!)]);
+  const [all, visible] = await Promise.all([listConnections(userId!), projectsVisibleTo(userId!)]);
+  const { items: connections, nextCursor } = pageConnections(all);
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 px-4 py-12">
       <header className="flex flex-col gap-2">
@@ -29,6 +31,7 @@ export default async function McpConnectionsPage({ params }: { params: Promise<{
       </header>
       <ConnectionsView
         locale={locale}
+        nextCursor={nextCursor}
         mcpUrl={mcpResourceUrl()}
         projects={visible.map(({ p }) => ({ id: p.id, title: p.title }))}
         initial={connections.map((c) => ({
