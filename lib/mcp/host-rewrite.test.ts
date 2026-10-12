@@ -2,7 +2,7 @@
 // En mcp.<dominio>, /mcp y la metadata van a sus rutas de /api; nada más cambia.
 import { describe, expect, it } from "vitest";
 import { resolveRewrites } from "@/lib/lienzo/resolve-rewrites";
-import { isMcpHost, MCP_REWRITES, mcpHostAllows, OAUTH_REWRITES } from "./host-rewrite";
+import { isMcpHost, MCP_REGISTRY_REWRITES, MCP_REWRITES, mcpHostAllows, OAUTH_REWRITES } from "./host-rewrite";
 
 const ruta = (host: string, url: string) => resolveRewrites(MCP_REWRITES, host, url).pathname;
 
@@ -40,5 +40,11 @@ describe("las rutas bien conocidas del servidor de autorización", () => {
   });
   it("nada más", () => {
     expect(r("openlen.com", "/.well-known/security.txt")).toBe("/.well-known/security.txt");
+  });
+});
+
+describe("la verificación del registro oficial de MCP", () => {
+  it("vive en el issuer (openlen.com), sin condición de host", () => {
+    expect(MCP_REGISTRY_REWRITES).toEqual([{ source: "/.well-known/mcp-registry-auth", destination: "/api/mcp/registry-auth" }]);
   });
 });

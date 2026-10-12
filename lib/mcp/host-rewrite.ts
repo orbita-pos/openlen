@@ -33,3 +33,6 @@ export function isMcpHost(host: string | null): boolean {
 export function mcpHostAllows(pathname: string): boolean {
   return pathname === "/mcp";
 }
+
+/** La verificación del dominio para el registro oficial de MCP (en el issuer). */
+export const MCP_REGISTRY_REWRITES = [{ source: "/.well-known/mcp-registry-auth", destination: "/api/mcp/registry-auth" }];

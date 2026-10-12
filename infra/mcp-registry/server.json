@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.openlen/openlen",
+  "title": "OpenLen",
+  "description": "Edit, check and publish your OpenLen landing pages and web apps from your AI assistant.",
+  "version": "1.0.0",
+  "websiteUrl": "https://openlen.com/mcp",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.openlen.com/mcp"
+    }
+  ]
+}
