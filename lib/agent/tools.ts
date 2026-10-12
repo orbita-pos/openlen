@@ -96,6 +96,7 @@ import {
   ASK_CANCELLED_ERROR,
   ASK_USER_QUESTION,
   QUESTION_DISMISSED,
+  REQUEST_SECRETS,
   answerSummary,
   questionText,
   validateQuestions,
@@ -104,6 +105,7 @@ import {
 } from "@/lib/agent/ask-user-question";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
+import { toolRequestSecrets } from "@/lib/agent/request-secrets";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -240,7 +242,10 @@ export interface AgentDeps {
    *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
   /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
-  edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string } | null>;
+  edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
+  /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
+   *  los lee para contestar). null = sin funciones en este servidor. */
+  functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
   /** EDGE FUNCTIONS: las llamadas del borrador desde `since`, en el texto de
    *  `edge_function_calls` (use_page, view_page). `null` si no hubo. */
   edgeFunctionCalls?(projectId: string, since: Date): Promise<string | null>;
@@ -571,6 +576,10 @@ export function realDeps(
     async edgeFunctions(projectId) {
       const { edgeFunctionsState } = await import("@/lib/functions/state");
       return edgeFunctionsState(projectId);
+    },
+    async functionSecretNames(projectId) {
+      const { functionSecretNames } = await import("@/lib/functions/secrets-real");
+      return functionSecretNames(projectId);
     },
     async edgeFunctionCalls(projectId, since) {
       const { functionsEnabled } = await import("@/lib/functions/engines");
@@ -1195,7 +1204,12 @@ export function summarizeProjectState(
     envVars?: Readonly<Record<string, readonly EnvTarget[]>> | null;
     /** Las Edge Functions (spec local 2026-10-11): por NOMBRE, en el borrador y
      *  en producción, y la URL del borrador para su `curl`. Ausente ⇒ no hay. */
-    edgeFunctions?: { readonly draft: readonly string[]; readonly live: readonly string[]; readonly draftUrl: string } | null;
+    edgeFunctions?: {
+      readonly draft: readonly string[];
+      readonly live: readonly string[];
+      readonly draftUrl: string;
+      readonly secrets: { readonly draft: readonly string[]; readonly live: readonly string[] };
+    } | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1261,9 +1275,18 @@ export function summarizeProjectState(
     ...(row.supabase ? { supabase: { project_url: row.supabase.url, publishable_key: row.supabase.publishableKey } } : {}),
     // Las del dueño, por su NOMBRE (`import.meta.env.VITE_X`), y dónde valen.
     ...(app && row.envVars && Object.keys(row.envVars).length > 0 ? { env_vars: row.envVars } : {}),
-    // Las funciones, con los nombres de Supabase (como `supabase functions list`).
-    ...(row.edgeFunctions && row.edgeFunctions.draft.length + row.edgeFunctions.live.length > 0
-      ? { edge_functions: { draft: [...row.edgeFunctions.draft], production: [...row.edgeFunctions.live], draft_url: row.edgeFunctions.draftUrl } }
+    // Las funciones, con los nombres de Supabase (como `supabase functions list`),
+    // y los NOMBRES de sus secretos por entorno (nunca un valor).
+    ...(row.edgeFunctions &&
+    row.edgeFunctions.draft.length + row.edgeFunctions.live.length + row.edgeFunctions.secrets.draft.length + row.edgeFunctions.secrets.live.length > 0
+      ? {
+          edge_functions: {
+            draft: [...row.edgeFunctions.draft],
+            production: [...row.edgeFunctions.live],
+            draft_url: row.edgeFunctions.draftUrl,
+            secrets: { draft: [...row.edgeFunctions.secrets.draft], production: [...row.edgeFunctions.secrets.live] },
+          },
+        }
       : {}),
   };
 }
@@ -2414,6 +2437,9 @@ async function ejecutarHerramienta(
         return await toolConvertirEnApp(session, deps);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
+      // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
+      case REQUEST_SECRETS:
+        return await toolRequestSecrets(session, deps, args);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
       case ENTER_PLAN_MODE:
         return await toolEnterPlanMode(session, deps, args);

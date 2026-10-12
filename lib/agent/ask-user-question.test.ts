@@ -110,3 +110,11 @@ describe("asksTheOwner (pieza 7)", () => {
     expect(asksTheOwner("Read")).toBe(false);
   });
 });
+
+it("EDGE FUNCTIONS: la intención de los secretos sobrevive al chat, SIN campos de más; y request_secrets le pregunta al dueño", () => {
+  const q = questionsFrom([
+    { id: "secrets", question: "Enter…", intent: { kind: "secrets", secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys", value: "NO" }] } },
+  ]);
+  expect(q?.[0]?.intent).toEqual({ kind: "secrets", secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys" }] });
+  expect(asksTheOwner("request_secrets")).toBe(true);
+});
