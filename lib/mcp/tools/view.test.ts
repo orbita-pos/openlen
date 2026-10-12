@@ -12,6 +12,7 @@ vi.mock("@/lib/lienzo/documento", () => ({
   pantallaDe: (s: string) => `#${s}`,
 }));
 
+import { getCapture } from "../capture-store";
 import type { ToolResult } from "../results";
 import { viewPageTool } from "./view";
 
@@ -54,6 +55,16 @@ describe("view_page", () => {
     expect(r.content[0]).toEqual({ type: "image", data: "B64", mimeType: "image/jpeg" });
     expect(r.content).toHaveLength(2);
     expect(textAt(r, 1)).toContain("Nothing overflows.");
+  });
+
+  it("el texto lleva la URL de la captura (para clientes que no ven la imagen), y la URL la sirve", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://openlen.com");
+    m.openProject.mockResolvedValue(page({ html: "<p>" }));
+    m.captureProjectView.mockResolvedValue({ image: { mimeType: "image/jpeg", dataBase64: Buffer.from("jpg").toString("base64") }, measurements: "ok" });
+    const r = await viewPageTool.run({ project_id: "p1" }, caller);
+    const id = /\/api\/mcp\/capture\/([A-Za-z0-9_-]{43})/.exec(textAt(r, 1))?.[1];
+    expect(textAt(r, 1)).toContain("https://openlen.com/api/mcp/capture/");
+    expect(getCapture(id!)?.bytes.toString()).toBe("jpg");
   });
 
   it("una página que no existe: error con las que hay, y sin gastar cupo", async () => {
