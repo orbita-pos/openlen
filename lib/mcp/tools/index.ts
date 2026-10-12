@@ -11,7 +11,6 @@ import { publishTool, unpublishTool } from "./publish";
 import { viewPageTool } from "./view";
 import { deleteFileTool, writeFileTool } from "./write";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ALL_TOOLS: ToolDefinition<any>[] = [
   listProjectsTool,
   getProjectTool,
@@ -28,7 +27,6 @@ export const ALL_TOOLS: ToolDefinition<any>[] = [
   unpublishTool,
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function registerOpenLenTools(server: McpServer, tools: ToolDefinition<any>[] = ALL_TOOLS): void {
   for (const tool of tools) {
     server.registerTool(

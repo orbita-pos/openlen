@@ -29,6 +29,15 @@ describe("el servidor MCP", () => {
     await client.close();
   });
 
+  it("🔴 tools/list lleva el _meta de publicar hasta el cliente (Claude pide confirmación con él)", async () => {
+    const client = await connectTestClient(buildMcpHandler(verify));
+    const { tools } = await client.listTools();
+    const publish = tools.find((t) => t.name === "publish");
+    expect(publish?._meta).toMatchObject({ "anthropic/requiresUserInteraction": true });
+    expect(publish?.annotations).toMatchObject({ destructiveHint: true, openWorldHint: true });
+    await client.close();
+  });
+
   it("sin token: 401 con el enlace ABSOLUTO a la metadata del recurso", async () => {
     const res = await buildMcpHandler(verify)(rpc());
     expect(res.status).toBe(401);
