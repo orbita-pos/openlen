@@ -43,7 +43,18 @@ export interface MencionEvent {
   idioma?: string | null;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent;
+/** EDGE FUNCTIONS: las llamadas del mes de un proyecto llegaron al 80 % o al
+ *  100 % de las de su plan (spec local 2026-10-11, Parte 6). Push y correo. */
+export interface FunctionsQuotaEvent {
+  type: "functions_quota";
+  projectId: string;
+  recipientUserId: string;
+  percent: 80 | 100;
+  calls: number;
+  limit: number;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

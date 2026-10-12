@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { sendChatNotificationEmail, sendMentionEmail } from "@/lib/email";
-import type { NotificationChannel, NotificationEvent, DeliveryResult, MencionEvent } from "../types";
+import { sendChatNotificationEmail, sendFunctionsQuotaEmail, sendMentionEmail } from "@/lib/email";
+import { quotaEmail } from "@/lib/functions/quota-messages";
+import type { NotificationChannel, NotificationEvent, DeliveryResult, FunctionsQuotaEvent, MencionEvent } from "../types";
 import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
@@ -15,6 +16,7 @@ export const emailChannel: NotificationChannel = {
     // verdad —la app móvil— vive de push.
     if (event.type === "len_turno") return "skipped";
     if (event.type === "mencion") return enviarMencion(event);
+    if (event.type === "functions_quota") return enviarCuota(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -67,6 +69,19 @@ async function enviarMencion(event: MencionEvent): Promise<DeliveryResult> {
     ...(enElChat ? { donde: "chat" as const } : { ruta: event.ruta!, linea: event.linea ?? 1 }),
     texto: event.preview,
     url: siteUrl + (enElChat ? urlDelChat(event.projectId) : urlDelHilo(event.projectId, event.ruta!)),
+  });
+  return "sent";
+}
+
+/** EDGE FUNCTIONS: la cuota del mes, al correo del dueño. */
+async function enviarCuota(event: FunctionsQuotaEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+  await sendFunctionsQuotaEmail({
+    to: u.email,
+    ...quotaEmail({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, calls: event.calls, limit: event.limit, siteUrl }),
   });
   return "sent";
 }

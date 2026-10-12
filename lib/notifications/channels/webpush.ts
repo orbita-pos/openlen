@@ -1,7 +1,8 @@
 import webpush from "web-push";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
+import { quotaPush } from "@/lib/functions/quota-messages";
+import type { FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -95,6 +96,13 @@ async function avisoDeLen(event: LenTurnoEvent): Promise<PushPayload> {
   };
 }
 
+// ── Edge Functions · la cuota del mes ─────────────────────────────────────────
+
+async function avisoDeCuota(event: FunctionsQuotaEvent): Promise<PushPayload> {
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  return quotaPush({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, calls: event.calls, limit: event.limit });
+}
+
 /** Al fichero del hilo, en la lente «Código» (`?codigo=` lo abre `/new`). */
 export function urlDelHilo(projectId: string, ruta: string): string {
   return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
@@ -122,11 +130,13 @@ export const webPushChannel: NotificationChannel = {
               body: event.donde === "chat" || !event.ruta ? event.preview : `${event.ruta.replace(/^\/+/, "")}:${event.linea ?? 1} — ${event.preview}`,
               url: event.donde === "chat" || !event.ruta ? urlDelChat(event.projectId) : urlDelHilo(event.projectId, event.ruta),
             }
-          : {
-              title: event.senderName,
-              body: event.preview,
-              url: "/inbox?conv=" + event.conversationId,
-            };
+          : event.type === "functions_quota"
+            ? await avisoDeCuota(event)
+            : {
+                title: event.senderName,
+                body: event.preview,
+                url: "/inbox?conv=" + event.conversationId,
+              };
 
     const { sent, failed } = await sendPushToUser(event.recipientUserId, payload);
 
