@@ -2085,6 +2085,9 @@ export const mcpTokens = pgTable("mcpTokens", {
   projectId: text("projectId").references(() => projects.id, { onDelete: "cascade" }),
   /** El cliente OAuth que lo pidió (Parte 3); null en los personales. */
   clientId: text("clientId"),
+  /** La FAMILIA de un token OAuth (Parte 3): la conexión. Estable al refrescar;
+   *  con ella se revoca todo de una vez. null en los personales. */
+  familyId: text("familyId"),
   expiresAt: timestamp("expiresAt", { mode: "date" }),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   lastUsedAt: timestamp("lastUsedAt", { mode: "date" }),
@@ -2092,6 +2095,7 @@ export const mcpTokens = pgTable("mcpTokens", {
 }, (t) => [
   uniqueIndex("mcpTokens_hash_uq").on(t.hash),
   index("mcpTokens_userId_idx").on(t.userId),
+  index("mcpTokens_familyId_idx").on(t.familyId),
 ]);
 
 // LO QUE HIZO CADA CONEXIÓN MCP, para la página de «Aplicaciones conectadas»
@@ -2127,6 +2131,58 @@ export const mcpApprovals = pgTable("mcpApprovals", {
 }, (t) => [
   index("mcpApprovals_userId_idx").on(t.userId),
   index("mcpApprovals_trust_idx").on(t.tokenId, t.projectId, t.action, t.subdomain, t.status),
+]);
+
+// LOS CLIENTES OAUTH DEL MCP (Parte 3): los registrados por DCR (`olc_…`) y los
+// CIMD (el id ES la URL de su documento, guardado 24 h).
+export const mcpOauthClients = pgTable("mcpOauthClients", {
+  id: text("id").primaryKey(),
+  kind: text("kind").notNull().$type<"dcr" | "cimd">(),
+  name: text("name").notNull(),
+  redirectUris: jsonb("redirectUris").notNull().$type<string[]>(),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  fetchedAt: timestamp("fetchedAt", { mode: "date" }),
+  lastUsedAt: timestamp("lastUsedAt", { mode: "date" }),
+});
+
+// UNA PETICIÓN DE AUTORIZACIÓN: la valida /authorize, la aprueba la persona en
+// la pantalla de consentimiento (con su sesión) y se canjea UNA vez en /token.
+export const mcpOauthRequests = pgTable("mcpOauthRequests", {
+  id: text("id").primaryKey(),
+  clientId: text("clientId").notNull().references(() => mcpOauthClients.id, { onDelete: "cascade" }),
+  redirectUri: text("redirectUri").notNull(),
+  state: text("state"),
+  codeChallenge: text("codeChallenge").notNull(),
+  scopes: jsonb("scopes").notNull().$type<string[]>(),
+  resource: text("resource"),
+  status: text("status").notNull().$type<"pending" | "approved" | "denied" | "used">().default("pending"),
+  userId: text("userId").references(() => users.id, { onDelete: "cascade" }),
+  grantedScopes: jsonb("grantedScopes").$type<string[]>(),
+  projectId: text("projectId").references(() => projects.id, { onDelete: "cascade" }),
+  codeHash: text("codeHash"),
+  codeExpiresAt: timestamp("codeExpiresAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  expiresAt: timestamp("expiresAt", { mode: "date" }).notNull(),
+}, (t) => [uniqueIndex("mcpOauthRequests_codeHash_uq").on(t.codeHash)]);
+
+// LOS REFRESH TOKENS (`olr_`): rotatorios, por familia (la conexión), con
+// ventana de gracia para el anterior. Sólo la huella.
+export const mcpRefreshTokens = pgTable("mcpRefreshTokens", {
+  id: text("id").primaryKey(),
+  hash: text("hash").notNull(),
+  familyId: text("familyId").notNull(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  clientId: text("clientId").notNull(),
+  scopes: jsonb("scopes").notNull().$type<string[]>(),
+  projectId: text("projectId").references(() => projects.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  expiresAt: timestamp("expiresAt", { mode: "date" }).notNull(),
+  rotatedAt: timestamp("rotatedAt", { mode: "date" }),
+  revokedAt: timestamp("revokedAt", { mode: "date" }),
+}, (t) => [
+  uniqueIndex("mcpRefreshTokens_hash_uq").on(t.hash),
+  index("mcpRefreshTokens_familyId_idx").on(t.familyId),
+  index("mcpRefreshTokens_userId_idx").on(t.userId),
 ]);
 
 /**
