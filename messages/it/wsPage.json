@@ -36,6 +36,7 @@
       "leer_de_internet": "Lettura della pagina indicata",
       "preguntar": "Ti sta chiedendo",
       "ask_user_question": "Ti sta chiedendo",
+      "request_secrets": "Ti chiede delle chiavi",
       "enter_plan_mode": "Chiede di pianificare prima",
       "exit_plan_mode": "Presenta il piano",
       "session_search": "Cerca nelle conversazioni passate",

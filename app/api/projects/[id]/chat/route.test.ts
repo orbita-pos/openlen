@@ -100,6 +100,22 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(acciones[1]!.preguntas![0]!.intent).toBeUndefined();
   });
 
+  it("🔴 EDGE FUNCTIONS: la intención de los secretos llega a guardarse (la tarjeta se pinta igual al recargar), SIN campos de más", async () => {
+    const pide = {
+      id: "secrets",
+      question: "Enter the secret values for: STRIPE_SECRET_KEY.",
+      intent: { kind: "secrets", secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys", value: "sk_test_NO" }] },
+    };
+    const res = await guardar(turno([{ tool: "request_secrets", status: "done", summary: "", preguntas: [pide], respuesta: "STRIPE_SECRET_KEY saved in: draft" }]));
+    expect(res.status).toBe(200);
+    const acciones = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(acciones[0]!.preguntas![0]!.intent).toEqual({
+      kind: "secrets",
+      secrets: [{ name: "STRIPE_SECRET_KEY", description: "Para cobrar", url: "https://dashboard.stripe.com/test/apikeys" }],
+    });
+    expect(JSON.stringify(acciones)).not.toContain("sk_test_NO");
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

@@ -38,7 +38,8 @@ import {
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
-import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
+import { ASK_USER_QUESTION, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
+import { REQUEST_SECRETS_DECLARATION } from "@/lib/agent/request-secrets";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
@@ -125,6 +126,9 @@ export interface CapacidadesDelEntorno {
   readonly mirarPagina?: boolean;
   /** `false` cuando el llamador no cablea `usarPagina`. */
   readonly usarPagina?: boolean;
+  /** `false` cuando este servidor no tiene motor de Edge Functions: sin él no
+   *  hay dónde guardar un secreto, y la tarjeta no se ofrece. */
+  readonly functionSecrets?: boolean;
 }
 
 export function buildFunctionDeclarations(
@@ -148,6 +152,7 @@ function declaracionesDelModo(
   const fuera = new Set<string>();
   if (capacidades.mirarPagina === false) fuera.add("view_page");
   if (capacidades.usarPagina === false) fuera.add("use_page");
+  if (capacidades.functionSecrets === false) fuera.add(REQUEST_SECRETS);
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
@@ -387,6 +392,9 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         required: ["questions"],
       },
     },
+    // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): la tarjeta segura de
+    // los secretos, por el canal de la pregunta (`lib/agent/request-secrets.ts`).
+    REQUEST_SECRETS_DECLARATION,
     // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
     // acepta) y la salida de DeepSeek (el plan se revisa) en
     // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:

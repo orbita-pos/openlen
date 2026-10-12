@@ -22,6 +22,7 @@ import {
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { functionsEnabled } from "@/lib/functions/engines";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
 import { buildAgentMessages } from "@/lib/agent/context";
@@ -568,7 +569,8 @@ async function correrTurno(
   const disenoDelTurno = ficherosDelDiseno ? parseDesignRequest(body?.design, ficherosDelDiseno) : null;
   const bloqueDeDiseno = disenoDelTurno && ficherosDelDiseno ? designBlock(disenoDelTurno, ficherosDelDiseno) : "";
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
-  const tools = buildFunctionDeclarations(process.env, {}, mode, appDelTurno);
+  // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
+  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled() }, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
