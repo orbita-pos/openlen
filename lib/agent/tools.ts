@@ -231,7 +231,7 @@ export interface AgentDeps {
     projectId: string,
     args: readonly string[],
     ficheros: Readonly<Record<string, string>>,
-  ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
+  ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).

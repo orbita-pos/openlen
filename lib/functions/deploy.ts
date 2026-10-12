@@ -12,8 +12,10 @@ import { db, schema } from "@/lib/db";
 import { decryptToken } from "@/lib/integrations/crypto";
 import { planFromDb, type Plan } from "@/lib/plan";
 
+import type { FunctionsCli } from "@/lib/backend/cli-core";
+
 import { bundleFunctions } from "./bundler/bundle-functions";
-import { scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
+import { deployDraftSerialized, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
 import { pgDeploymentStore } from "./deployments-pg";
 import { functionsEnabled, functionsEngine } from "./engines";
 
@@ -57,4 +59,32 @@ export function realDeployDeps(): DeployDeps | null {
 export function scheduleDraftDeployIfEnabled(projectId: string): void {
   const deps = realDeployDeps();
   if (deps) scheduleDraftDeploy(projectId, deps);
+}
+
+/** `supabase functions …` contra lo de verdad; null sin motor. */
+export function functionsCliFor(projectId: string, ref: string): FunctionsCli | null {
+  const deps = realDeployDeps();
+  if (!deps) return null;
+  return {
+    ref,
+    async deploy(ficheros) {
+      const r = await deployDraftSerialized(projectId, deps, { files: ficheros });
+      if (r.kind === "failed") {
+        return { ok: false, message: `Error: failed to bundle the Edge Functions:\n${r.errors.map((d) => `${d.ruta.slice(1)}:${d.linea}:${d.columna}: ${d.mensaje}`).join("\n")}\n` };
+      }
+      if (r.kind === "unavailable") return { ok: false, message: "Error: the bundler didn't answer. Try again in a moment.\n" };
+      return { ok: true, functions: r.kind === "removed" ? [] : r.functions };
+    },
+    async deployedAt() {
+      const fechas = async (env: "draft" | "live") => {
+        const d = await pgDeploymentStore.get(projectId, env);
+        return d ? Object.fromEntries(d.functions.map((f) => [f.name, d.deployedAt])) : {};
+      };
+      return { draft: await fechas("draft"), live: await fechas("live") };
+    },
+    async draftBaseUrl() {
+      const rec = await ensureBackend(projectId);
+      return `${await draftProjectUrl(rec)}/functions/v1/`;
+    },
+  };
 }

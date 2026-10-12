@@ -76,7 +76,7 @@ export class TerminalDeLen {
       readonly supabase?: (
         args: readonly string[],
         ficheros: Readonly<Record<string, string>>,
-      ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>;
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
       /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
        *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
        *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
