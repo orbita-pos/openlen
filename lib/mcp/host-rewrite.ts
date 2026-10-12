@@ -13,6 +13,14 @@ export const MCP_REWRITES = [
   { source: "/.well-known/oauth-protected-resource/mcp", has: ON_MCP_HOST, destination: "/api/mcp/resource-metadata" },
 ];
 
+/** Las rutas bien conocidas del servidor de autorización (en el issuer) y, en
+ *  local, la metadata del recurso con la ruta insertada de /api/mcp (en
+ *  producción la sirve el host mcp.* con MCP_REWRITES). */
+export const OAUTH_REWRITES = [
+  { source: "/.well-known/oauth-authorization-server", destination: "/api/oauth/metadata" },
+  { source: "/.well-known/oauth-protected-resource/api/mcp", destination: "/api/mcp/resource-metadata" },
+];
+
 /** Para el middleware: en este host no hay idioma ni login que poner. */
 export function isMcpHost(host: string | null): boolean {
   if (!host) return false;

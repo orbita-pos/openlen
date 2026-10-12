@@ -2,7 +2,7 @@
 // En mcp.<dominio>, /mcp y la metadata van a sus rutas de /api; nada más cambia.
 import { describe, expect, it } from "vitest";
 import { resolveRewrites } from "@/lib/lienzo/resolve-rewrites";
-import { isMcpHost, MCP_REWRITES, mcpHostAllows } from "./host-rewrite";
+import { isMcpHost, MCP_REWRITES, mcpHostAllows, OAUTH_REWRITES } from "./host-rewrite";
 
 const ruta = (host: string, url: string) => resolveRewrites(MCP_REWRITES, host, url).pathname;
 
@@ -27,5 +27,18 @@ describe("el host del MCP", () => {
   it("🔴 en el host del MCP sólo vive /mcp: la app (portada, login, workspace) no se sirve ahí", () => {
     expect(mcpHostAllows("/mcp")).toBe(true);
     for (const p of ["/", "/en", "/en/new", "/es/login", "/new", "/mcpx"]) expect(mcpHostAllows(p)).toBe(false);
+  });
+});
+
+describe("las rutas bien conocidas del servidor de autorización", () => {
+  const r = (host: string, url: string) => resolveRewrites(OAUTH_REWRITES, host, url).pathname;
+  it("la metadata del AS en el issuer", () => {
+    expect(r("openlen.com", "/.well-known/oauth-authorization-server")).toBe("/api/oauth/metadata");
+  });
+  it("en local, la metadata del recurso con la ruta insertada de /api/mcp", () => {
+    expect(r("localhost:3007", "/.well-known/oauth-protected-resource/api/mcp")).toBe("/api/mcp/resource-metadata");
+  });
+  it("nada más", () => {
+    expect(r("openlen.com", "/.well-known/security.txt")).toBe("/.well-known/security.txt");
   });
 });
