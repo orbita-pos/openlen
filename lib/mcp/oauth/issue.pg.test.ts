@@ -109,3 +109,16 @@ describe("🔴 el refresh rotatorio con ventana de gracia", () => {
     expect(await refreshTokens({ refreshToken: "olr_" + "x".repeat(43), clientId: CLIENT })).toEqual({ ok: false, error: "invalid_grant" });
   });
 });
+
+describe("revocar", () => {
+  it("revocar el refresh tumba también el acceso de su familia", async () => {
+    const { revokeByToken } = await import("./revoke");
+    const code = `code-rv-${Math.random().toString(36).slice(2).padEnd(35, "0")}`;
+    await approvedCode(code);
+    const r = await exchangeCode({ code, clientId: CLIENT, redirectUri: REDIRECT, codeVerifier: VERIFIER });
+    if (!r.ok) throw new Error("no canjeó");
+    await revokeByToken(r.tokens.refresh_token);
+    expect(await findActiveToken(r.tokens.access_token)).toBeNull();
+    expect((await refreshTokens({ refreshToken: r.tokens.refresh_token, clientId: CLIENT })).ok).toBe(false);
+  });
+});

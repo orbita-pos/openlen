@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
-import { findActiveToken, listTokens, mintPersonalToken, revokeToken } from "./tokens";
+import { findActiveToken, listTokens, mintPersonalToken, revokeToken, tokenHash, tokenName } from "./tokens";
 
 const USER = "prueba-mcp-user";
 
@@ -47,5 +47,15 @@ describe("los tokens MCP", () => {
     const { id, secret } = await mintPersonalToken({ userId: USER, name: "mío", scopes: [] });
     expect(await revokeToken("otra-persona", id)).toBe(false);
     expect(await findActiveToken(secret)).not.toBeNull();
+  });
+  it("🔴 el nombre de la conexión: por el id de un personal, o por la familia de uno OAuth (la aprobación guarda la familia)", async () => {
+    const { id } = await mintPersonalToken({ userId: USER, name: "Mi Cursor", scopes: [] });
+    expect(await tokenName(id)).toBe("Mi Cursor");
+    await db.insert(schema.mcpTokens).values({
+      id: `acc-${Math.random().toString(36).slice(2)}`, hash: tokenHash(`ola_${Math.random()}`), userId: USER, kind: "oauth",
+      name: "Claude", scopes: [], familyId: "fam-nombre-prueba", expiresAt: new Date(Date.now() + 60_000),
+    });
+    expect(await tokenName("fam-nombre-prueba")).toBe("Claude");
+    expect(await tokenName("no-existe")).toBeNull();
   });
 });
