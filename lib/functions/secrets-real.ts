@@ -5,9 +5,10 @@
 import "server-only";
 
 import type { SecretsCli } from "@/lib/backend/cli-core";
+import { getBackendByProject } from "@/lib/backend/registry";
 import { autorDelCambio } from "@/lib/projects/autor-del-cambio";
 
-import { defaultFunctionEnv } from "./default-env";
+import { functionBaseEnv } from "./base-env";
 import { realDeployDeps } from "./deploy";
 import { applyFunctionEnv } from "./deploy-core";
 import { secretNamesOf } from "./secret-store";
@@ -19,7 +20,9 @@ export function realSecretsDeps(): SecretsDeps | null {
   if (!deploy) return null;
   return {
     store: pgSecretStore,
-    baseEnv: async (projectId, env) => defaultFunctionEnv(await deploy.target(projectId, env)),
+    // Sin backend todavía, guardar un secreto no lo crea (lib/functions/base-env.ts).
+    baseEnv: (projectId, env) =>
+      functionBaseEnv(projectId, env, { hasBackend: async (p) => (await getBackendByProject(p)) !== null, target: (p, e) => deploy.target(p, e) }),
     apply: (projectId, env) => applyFunctionEnv(projectId, env, deploy),
   };
 }
