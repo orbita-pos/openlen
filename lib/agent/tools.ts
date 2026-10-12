@@ -106,6 +106,7 @@ import {
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
 import { toolRequestSecrets } from "@/lib/agent/request-secrets";
+import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -350,6 +351,10 @@ export interface AgentDeps {
   /** Lo que publicar haría con los datos (spec local 2026-10-09), ensayado en
    *  producción. null = sin backend. */
   previewDataChanges?(projectId: string): Promise<DataChangesPreview | null>;
+  /** EDGE FUNCTIONS (spec local 2026-10-11): lo que publicar haría con las
+   *  funciones —compilarlas para producción, y los secretos que les faltan
+   *  allí—, sin hacerlo. null = sin funciones (o sin motor). */
+  previewFunctionsRelease?(projectId: string): Promise<FunctionsReleasePreview | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -600,6 +605,10 @@ export function realDeps(
       if (!backendConfigured()) return null;
       const { previewDataChanges } = await import("@/lib/backend/data-changes");
       return previewDataChanges(projectId, { rehearse: true });
+    },
+    async previewFunctionsRelease(projectId) {
+      const { previewFunctionsForPublish } = await import("@/lib/functions/publish");
+      return previewFunctionsForPublish(projectId);
     },
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
@@ -1098,7 +1107,7 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview }
+    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview; secretosQueFaltan?: string[] }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1962,6 +1971,19 @@ async function toolPublicar(
     }
   }
 
+  // LAS EDGE FUNCTIONS (spec local 2026-10-11, Parte 2): unas que no compilan
+  // para producción no se publican, y se dice ANTES, a Len, como una app que no
+  // compila. Los secretos que les faltan en producción van a la tarjeta: los
+  // pone el dueño (Len nunca escribe en producción).
+  const funciones = deps.previewFunctionsRelease ? await deps.previewFunctionsRelease(session.projectId).catch(() => null) : null;
+  if (funciones?.kind === "errors") {
+    return { response: { ok: false, error: `The Edge Functions can't be published yet: fix this first (nothing was published).\n${funciones.errors.join("\n")}` } };
+  }
+  if (funciones?.kind === "unavailable") {
+    return { response: { ok: false, error: "The Edge Functions bundler didn't answer, so nothing was published: call publish again in a moment." } };
+  }
+  const secretosQueFaltan = funciones?.kind === "ok" ? [...funciones.missingSecrets] : [];
+
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
 
@@ -2117,11 +2139,17 @@ async function toolPublicar(
       republish: republicar,
       ...(ignorados.length ? { ignored_languages: ignorados } : {}),
       ...(conDatos ? { data_changes: conDatos } : {}),
+      ...(secretosQueFaltan.length
+        ? {
+            missing_production_secrets: secretosQueFaltan,
+            secrets_note: "These have no value in production yet: the publish card asks the user for them, or to publish anyway. You can't set production secrets.",
+          }
+        : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
     // siempre; sólo la acción tiene el nombre de la herramienta.
-    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}) },
+    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}), ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}) },
   };
 }
 

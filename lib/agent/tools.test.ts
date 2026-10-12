@@ -1125,6 +1125,34 @@ describe("edit_image", () => {
 });
 
 describe("publish", () => {
+  it("🔴 EDGE FUNCTIONS: unas funciones que no compilan para producción se le dicen a Len, sin tarjeta", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(
+      makeSession(),
+      { ...deps, previewFunctionsRelease: async () => ({ kind: "errors" as const, errors: ['/supabase/functions/checkout/index.ts:3:5 — Expected ";"'] }) },
+      "publish",
+      {},
+    );
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /^The Edge Functions can't be published yet/);
+    assert.match(String(out.response.error), /supabase\/functions\/checkout\/index\.ts:3:5/);
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("🔴 EDGE FUNCTIONS: los secretos que faltan en producción van a la tarjeta, y Len sabe que no los pone él", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(
+      makeSession(),
+      { ...deps, previewFunctionsRelease: async () => ({ kind: "ok" as const, functions: ["checkout"], missingSecrets: ["STRIPE_SECRET_KEY"] }) },
+      "publish",
+      {},
+    );
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.missing_production_secrets, ["STRIPE_SECRET_KEY"]);
+    assert.match(String(out.response.secrets_note), /You can't set production secrets/);
+    assert.deepEqual((pub(out) as { secretosQueFaltan?: string[] }).secretosQueFaltan, ["STRIPE_SECRET_KEY"]);
+  });
+
   // Borrador y producción de datos (spec local 2026-10-09): lo que publicar
   // haría con las tablas, ensayado ANTES de la tarjeta.
   it("🔴 publish le dice a Len qué migración fallaría en producción, y no enseña la tarjeta", async () => {

@@ -2,6 +2,7 @@
 // el host → el backend (registry), el entorno como el resto del backend (el ref
 // propio del borrador lo fija; si no, el Origin), el plan del dueño, lo
 // desplegado y los contadores en Postgres, y las llamadas guardadas.
+// Producción, sólo publicada; si el motor la perdió, se repone lo publicado.
 // `invokeFunctionInternally` es el `curl` de la terminal de Len: SIEMPRE el
 // borrador (Len no toca producción).
 
@@ -21,6 +22,7 @@ import { functionsEnabled, functionsEngine } from "./engines";
 import type { FunctionsEnvironment } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps } from "./gateway";
 import { recordInvocation } from "./invocations-pg";
+import { ensureLiveDeployed } from "./live-core";
 import { capsFromEnv } from "./meter";
 import { pgSecretStore } from "./secret-store-pg";
 import { pgUsageStore } from "./usage-pg";
@@ -54,6 +56,7 @@ function realGatewayDeps(): GatewayDeps {
         ref: rec.ref,
         host,
         environment,
+        published: hb.pageSub !== null,
         publishableKey: rec.publishableKey,
         secretKeyHash: rec.secretKeyHash,
         // Lo que se tapa en lo que Len lee: la clave del servicio y los secretos
@@ -71,9 +74,11 @@ function realGatewayDeps(): GatewayDeps {
       return (await ownerOf(projectId))?.plan ?? "free";
     },
     async ensureDeployed(t) {
-      if (t.environment !== "draft") return;
       const deps = realDeployDeps();
-      if (deps) await ensureDraftDeployed(t.projectId, t.ref, deps);
+      if (!deps) return;
+      if (t.environment === "draft") await ensureDraftDeployed(t.projectId, t.ref, deps);
+      // Producción: si el motor la perdió, el paquete guardado al publicar.
+      else await ensureLiveDeployed(t.projectId, t.ref, deps);
     },
     deployment: (p, e) => pgDeploymentStore.get(p, e),
     maps: (p, e) => pgDeploymentStore.maps(p, e),

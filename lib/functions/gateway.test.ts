@@ -16,6 +16,7 @@ const TARGET: ResolvedTarget = {
   ref: "abcdefghijklmnopqrst",
   host: "abcdefghijklmnopqrst.openlen.app",
   environment: "draft",
+  published: true,
   publishableKey: "sb_publishable_abc",
   secretKeyHash: hashSecretKey(SECRETO_KEY),
   secrets: { SUPABASE_SERVICE_ROLE_KEY: SECRETO_KEY },
@@ -85,6 +86,32 @@ const leida = async (p: Promise<Response>) => {
 };
 
 describe("la puerta", () => {
+  it("🔴 despublicada: producción contesta NOT_FOUND, y ni se repone ni se llama; el borrador sigue", async () => {
+    const repuestos: string[] = [];
+    const { deps, eventos } = montar(undefined, {
+      resolve: async () => ({ ...TARGET, environment: "live" as const, published: false }),
+      deployment: async () => ({ ...DEPLOY, environment: "live" as const }),
+      ensureDeployed: async (t) => void repuestos.push(t.environment),
+    });
+    const r = await llamar(deps);
+    await r.arrayBuffer();
+    expect(r.status).toBe(404);
+    expect(r.headers.get("sb-error-code")).toBe("NOT_FOUND");
+    expect(eventos).toHaveLength(0);
+    expect(repuestos).toEqual([]);
+    const borrador = montar(undefined, { resolve: async () => ({ ...TARGET, published: false }) });
+    const b = await llamar(borrador.deps);
+    await b.arrayBuffer();
+    expect(b.status).toBe(200);
+  });
+
+  it("pendiente de la fase 1: un % mal formado en el nombre es NOT_FOUND, no un 500", async () => {
+    const { deps } = montar();
+    const r = await llamar(deps, "/functions/v1/%E0%A4%A");
+    expect(r.status).toBe(404);
+    expect(r.headers.get("sb-error-code")).toBe("NOT_FOUND");
+  });
+
   it("sin motor → 503 FUNCTIONS_UNAVAILABLE", async () => {
     const { deps } = montar(undefined, { engine: null });
     const r = await llamar(deps);
