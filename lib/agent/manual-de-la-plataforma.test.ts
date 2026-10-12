@@ -294,6 +294,10 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
         "don't retry",
         // La regla de Supabase (FUNCTION_NAME_RE): empieza por letra; mayúsculas también valen.
         "a name that starts with a letter and has only letters, digits, - and _; up to 25",
+        "128 MB of memory",
+        "50 ms of CPU",
+        "200 ms of CPU",
+        "546 WORKER_RESOURCE_LIMIT",
       ]) {
         expect(m, f).toContain(f);
       }
