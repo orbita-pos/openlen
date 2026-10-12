@@ -28,6 +28,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
+import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
@@ -232,6 +233,9 @@ export interface AgentDeps {
     args: readonly string[],
     ficheros: Readonly<Record<string, string>>,
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+  /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
+   *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
+  functionsCurl?(projectId: string): Promise<FunctionsCurl | null>;
   // ⚰️ `almacenesDelProyecto`, `aplicarAlmacen` y `avisoDeCuota`: los almacenes
   // `data-ol-stores` como ficheros de /datos, retirados el 2026-10-04 (los datos
   // de una página van a su backend de Supabase).
@@ -547,6 +551,10 @@ export function realDeps(
     async supabaseCli(projectId, args, ficheros) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
       return runSupabaseCli(projectId, args, ficheros);
+    },
+    async functionsCurl(projectId) {
+      const { functionsCurlFor } = await import("@/lib/functions/curl");
+      return functionsCurlFor(projectId);
     },
     async supabaseProject(projectId) {
       const { backendConfigured } = await import("@/lib/backend/pg");

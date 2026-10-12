@@ -12,6 +12,8 @@
  */
 import path from "node:path";
 import { Worker } from "node:worker_threads";
+import type { CurlRequest, FunctionsCurl } from "@/lib/functions/curl-types";
+
 import { formatDuration } from "./formato";
 
 /** El tiempo de un comando, el del `Bash` de Claude Code (leído en su binario
@@ -59,6 +61,8 @@ export class TerminalDeLen {
   private readonly pendientes = new Map<number, { resolve: (r: Respuesta) => void; reject: (e: Error) => void }>();
   /** Lo que el hilo le pidió a la app y sigue corriendo: un `timeout` dentro del guion lo cancela. */
   private readonly appEnCurso = new Map<number, AbortController>();
+  /** El `curl` de las Edge Functions de esta terminal (null: no hay `curl`). */
+  private curl: FunctionsCurl | null = null;
 
   constructor(
     private readonly o: {
@@ -100,6 +104,10 @@ export class TerminalDeLen {
           timedOut?: true;
         }>;
       };
+      /** Las Edge Functions (spec local 2026-10-11): `curl` a las del proyecto,
+       *  resuelto por la puerta en el borrador. Sin él (o si da null), no hay
+       *  `curl` en la terminal. */
+      readonly functionsCurl?: () => Promise<FunctionsCurl | null>;
       readonly limiteMs?: number;
       readonly margenMs?: number;
     },
@@ -115,6 +123,10 @@ export class TerminalDeLen {
     hilo.on("message", (m: Respuesta) => {
       if (typeof m.perezoso === "number") {
         void this.servirPerezoso(hilo, m.perezoso, String(m.ruta ?? ""));
+        return;
+      }
+      if (typeof m.funcion === "number") {
+        void this.servirFuncion(hilo, m.funcion, m.peticion as CurlRequest);
         return;
       }
       if (typeof m.supabase === "number") {
@@ -142,11 +154,13 @@ export class TerminalDeLen {
     });
     this.hilo = hilo;
     const [ficheros, perezosos] = await Promise.all([this.o.cargarFicheros(), this.o.perezosos?.rutas() ?? []]);
+    this.curl = (await this.o.functionsCurl?.().catch(() => null)) ?? null;
     await this.pedir({
       tipo: "iniciar",
       ficheros,
       perezosos,
       supabase: Boolean(this.o.supabase),
+      functions: this.curl ? { prefixes: [...this.curl.prefixes] } : undefined,
       app: this.o.appTools
         ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
         : undefined,
@@ -187,6 +201,18 @@ export class TerminalDeLen {
       respuesta = { tipo: "supabase", pid, resultado: await this.o.supabase(args, ficheros) };
     } catch (e) {
       respuesta = { tipo: "supabase", pid, error: e instanceof Error ? e.message : String(e) };
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
+  }
+
+  /** `curl` a una función del proyecto: lo resuelve la puerta, aquí. */
+  private async servirFuncion(hilo: Worker, pid: number, peticion: CurlRequest): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    try {
+      if (!this.curl) throw new Error("this project has no Edge Functions here");
+      respuesta = { tipo: "funcion", pid, resultado: await this.curl.call(peticion) };
+    } catch (e) {
+      respuesta = { tipo: "funcion", pid, error: e instanceof Error ? e.message : String(e) };
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
