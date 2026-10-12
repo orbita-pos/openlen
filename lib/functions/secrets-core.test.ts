@@ -74,6 +74,16 @@ describe("setFunctionSecrets", () => {
     expect(aplicados).toEqual([]);
   });
 
+  it("🔴 dos guardados A LA VEZ que caben cada uno solo pero no juntos: entra uno, el otro no cabe", async () => {
+    const { store, deps } = montar();
+    const [a, b] = await Promise.all([
+      setFunctionSecrets("p1", [{ environment: "live", name: "UNO", value: "x".repeat(2500) }], null, deps),
+      setFunctionSecrets("p1", [{ environment: "live", name: "DOS", value: "y".repeat(2500) }], null, deps),
+    ]);
+    expect([a.ok, b.ok].sort()).toEqual([false, true]);
+    expect(Object.keys(await store.values("p1", "live"))).toHaveLength(1);
+  });
+
   it("un valor de más de 24.576 bytes no entra", async () => {
     const { deps } = montar();
     expect(await setFunctionSecrets("p1", [{ environment: "draft", name: "MY_KEY", value: "x".repeat(24_577) }], null, deps)).toEqual({

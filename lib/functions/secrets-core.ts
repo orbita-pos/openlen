@@ -38,6 +38,24 @@ export type SetSecretsResult =
 
 const ENTORNOS: readonly FunctionsEnvironment[] = ["draft", "live"];
 
+// Medir y guardar, DE UNO EN UNO por proyecto: dos guardados a la vez (la
+// tarjeta y `supabase secrets set`) no pasan juntos de los 4 KB. En
+// `globalThis`, como el motor: en desarrollo Next carga este módulo una vez por
+// ruta, y la tarjeta y la terminal son rutas distintas.
+const COLAS = Symbol.for("openlen.functions.secrets.queue");
+type ConColas = typeof globalThis & { [COLAS]?: Map<string, Promise<unknown>> };
+
+function inSeries<T>(projectId: string, fn: () => Promise<T>): Promise<T> {
+  const colas = ((globalThis as ConColas)[COLAS] ??= new Map());
+  const ahora = (colas.get(projectId) ?? Promise.resolve()).then(fn, fn);
+  const cola = ahora.catch(() => undefined);
+  colas.set(projectId, cola);
+  void cola.then(() => {
+    if (colas.get(projectId) === cola) colas.delete(projectId);
+  });
+  return ahora;
+}
+
 export async function setFunctionSecrets(projectId: string, entries: readonly SecretEntry[], by: string | null, deps: SecretsDeps): Promise<SetSecretsResult> {
   for (const e of entries) {
     const p = secretNameProblem(e.name);
@@ -48,14 +66,18 @@ export async function setFunctionSecrets(projectId: string, entries: readonly Se
   }
   const porEntorno = new Map<FunctionsEnvironment, Record<string, string>>();
   for (const e of entries) porEntorno.set(e.environment, { ...(porEntorno.get(e.environment) ?? {}), [e.name]: e.value });
-  // Todo o nada: se mide CADA entorno, con lo que ya tiene, antes de guardar ninguno.
-  for (const [env, nuevos] of porEntorno) {
-    const f = fitEnv(await deps.baseEnv(projectId, env), { ...(await deps.store.values(projectId, env)), ...nuevos });
-    if (!f.ok) {
-      return { ok: false, error: "env_too_large", environment: env, usedBytes: f.usedBytes, baseBytes: f.baseBytes, availableBytes: f.availableBytes, message: envTooLargeMessage(f) };
+  const noCabe = await inSeries(projectId, async () => {
+    // Todo o nada: se mide CADA entorno, con lo que ya tiene, antes de guardar ninguno.
+    for (const [env, nuevos] of porEntorno) {
+      const f = fitEnv(await deps.baseEnv(projectId, env), { ...(await deps.store.values(projectId, env)), ...nuevos });
+      if (!f.ok) {
+        return { ok: false, error: "env_too_large", environment: env, usedBytes: f.usedBytes, baseBytes: f.baseBytes, availableBytes: f.availableBytes, message: envTooLargeMessage(f) } as const;
+      }
     }
-  }
-  for (const [env, nuevos] of porEntorno) await deps.store.set(projectId, env, nuevos, by);
+    for (const [env, nuevos] of porEntorno) await deps.store.set(projectId, env, nuevos, by);
+    return null;
+  });
+  if (noCabe) return noCabe;
   for (const env of porEntorno.keys()) {
     // Lo guardado ya es durable: si el motor falla ahora, lo lee el próximo despliegue.
     await deps.apply(projectId, env).catch((err: unknown) => console.error("[functions] los secretos no llegaron al motor", projectId, env, err));
