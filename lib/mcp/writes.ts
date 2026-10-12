@@ -2,6 +2,7 @@
 // (`guardarLoDeLaTerminal`), con una sesión de la persona «desde el MCP» y la
 // app puesta, dentro de `conAutor` para que Versiones diga quién fue.
 import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
 import { redactarDiagnosticos } from "@/lib/agent/diagnosticos";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { realDeps } from "@/lib/agent/tools";
@@ -53,8 +54,27 @@ export async function applyChanges(
   cambios: CambioDeLaTerminal[],
   antes: Readonly<Record<string, string>>,
 ): Promise<{ ok: true; saved: Record<string, string | null>; diagnostics: string | null } | { ok: false; result: ToolResult }> {
-  const g = await conAutor(caller.userId, () => guardarLoDeLaTerminal(sessionFor(caller, open), realDeps(), cambios, antes));
+  const session = sessionFor(caller, open);
+  const g = await conAutor(caller.userId, () => guardarLoDeLaTerminal(session, realDeps(), cambios, antes));
   if (g.rechazado) return { ok: false, result: toolError("rejected", g.notas.join("\n")) };
-  const diagnostics = redactarDiagnosticos(g.escrituras.flatMap((e) => [...(e.diagnosticos ?? [])]));
-  return { ok: true, saved: g.enLaTerminal, diagnostics };
+  const found = g.escrituras.flatMap((e) => [...(e.diagnosticos ?? [])]);
+  // UNA APP: la terminal guarda como «bash» y no pide los diagnósticos (los pide
+  // ella al acabar el comando entero), así que aquí se calculan tras guardar,
+  // con la función pura de Len: sólo lo NUEVO frente a lo de antes de escribir.
+  // Sin `typesAndLintAfterWrite`: su resultado se recoge en el turno siguiente
+  // de Len, y aquí no hay turno siguiente (los tipos los da get_diagnostics).
+  const app = open.row.data.app;
+  if (app) {
+    const after = await cargarFicherosDeLaTerminal(session, realDeps());
+    found.push(
+      ...diagnosticosDeLaApp({
+        app,
+        ahora: after,
+        alEmpezar: antes,
+        escritos: cambios.map((c) => c.ruta),
+        cascaron: after["/index.html"] ?? open.row.data.html ?? "",
+      }),
+    );
+  }
+  return { ok: true, saved: g.enLaTerminal, diagnostics: redactarDiagnosticos(found) };
 }

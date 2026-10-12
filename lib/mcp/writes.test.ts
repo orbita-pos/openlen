@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const m = vi.hoisted(() => ({ guardarLoDeLaTerminal: vi.fn(), autor: vi.fn() }));
-vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ guardarLoDeLaTerminal: m.guardarLoDeLaTerminal, cargarFicherosDeLaTerminal: vi.fn() }));
+const m = vi.hoisted(() => ({ guardarLoDeLaTerminal: vi.fn(), cargarFicherosDeLaTerminal: vi.fn(), autor: vi.fn() }));
+vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ guardarLoDeLaTerminal: m.guardarLoDeLaTerminal, cargarFicherosDeLaTerminal: m.cargarFicherosDeLaTerminal }));
 vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
 vi.mock("@/lib/projects/autor-del-cambio", () => ({
   conAutor: (id: string, fn: () => unknown) => {
@@ -21,7 +21,30 @@ const text = (r: ToolResult) => (r.content[0] as { type: "text"; text: string })
 
 beforeEach(() => {
   m.guardarLoDeLaTerminal.mockReset();
+  m.cargarFicherosDeLaTerminal.mockReset();
   m.autor.mockReset();
+});
+
+describe("🔴 lo que rompe una app vuelve como diagnóstico al escribir (medido en el ensayo del 12/10)", () => {
+  it("la terminal guarda con «bash» y no los pide: el MCP los calcula tras guardar, sólo los nuevos", async () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const appOpen = { projectId: "a1", acceso: { rol: "dueno" as const, duenoId: "u1" }, row: { data: { html: "<div id=root>", app } } } as never;
+    m.guardarLoDeLaTerminal.mockResolvedValue({ notas: [], rechazado: false, enLaTerminal: { "/src/App.tsx": "const = ;" }, escrituras: [] });
+    m.cargarFicherosDeLaTerminal.mockResolvedValue({ "/index.html": "<div id=root>", "/src/App.tsx": "const = ;" });
+    const r = await applyChanges(caller, appOpen, [{ tipo: "escrito", ruta: "/src/App.tsx", contenido: "const = ;", crea: false }], {
+      "/index.html": "<div id=root>",
+      "/src/App.tsx": "export const a = 1;",
+    });
+    expect(r.ok && r.diagnostics).toContain("<new-diagnostics>");
+    expect(r.ok && r.diagnostics).toContain("/src/App.tsx");
+  });
+
+  it("en una página no hay compilación que pedir", async () => {
+    m.guardarLoDeLaTerminal.mockResolvedValue({ notas: [], rechazado: false, enLaTerminal: {}, escrituras: [] });
+    const r = await applyChanges(caller, open, [{ tipo: "escrito", ruta: "/index.html", contenido: "<p>", crea: false }], {});
+    expect(r.ok && r.diagnostics).toBeNull();
+    expect(m.cargarFicherosDeLaTerminal).not.toHaveBeenCalled();
+  });
 });
 
 describe("la puerta de escritura del MCP", () => {
