@@ -6,7 +6,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, lt, or } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -43,7 +43,23 @@ export async function recentInvocations(projectId: string, env: FunctionsEnviron
     .where(and(eq(T.projectId, projectId), eq(T.environment, env), gte(T.startedAt, since)))
     .orderBy(desc(T.startedAt))
     .limit(limit);
-  return filas.reverse().map((f) => ({
+  return filas.reverse().map(aRegistro);
+}
+
+/** Las llamadas que fallaron (5xx o con código de error), de los dos entornos y
+ *  de los últimos 7 días, las más nuevas primero: la vista Funciones. */
+export async function recentFunctionErrors(projectId: string, limit = 20): Promise<InvocationRecord[]> {
+  const filas = await db
+    .select()
+    .from(T)
+    .where(and(eq(T.projectId, projectId), gte(T.startedAt, new Date(Date.now() - SIETE_DIAS_MS)), or(gte(T.status, 500), isNotNull(T.errorCode))))
+    .orderBy(desc(T.startedAt))
+    .limit(limit);
+  return filas.map(aRegistro);
+}
+
+function aRegistro(f: typeof T.$inferSelect): InvocationRecord {
+  return {
     projectId: f.projectId,
     environment: f.environment,
     name: f.name,
@@ -53,5 +69,5 @@ export async function recentInvocations(projectId: string, env: FunctionsEnviron
     logs: f.logs,
     error: f.error,
     startedAt: f.startedAt,
-  }));
+  };
 }
