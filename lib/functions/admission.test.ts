@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { admit } from "./admission";
 import { ConcurrencyLimiter } from "./concurrency";
 import { FUNCTION_LIMITS } from "./limits";
-import { callCostNanoUsd } from "./meter";
+import { unreachedCallNanoUsd, worstCallNanoUsd } from "./meter";
 import { memoryUsageStore } from "./usage";
 
 const AHORA = new Date("2026-10-11T12:00:00Z");
@@ -14,7 +14,7 @@ const base = () => ({ projectId: "p1", plan: "free" as const, now: AHORA, usage:
 describe("admit", () => {
   it("admite, y al soltar libera la plaza y liquida el PEOR caso (Cloudflare no da la CPU real)", async () => {
     const o = base();
-    const peor = callCostNanoUsd(FUNCTION_LIMITS.free.cpuMs);
+    const peor = worstCallNanoUsd(FUNCTION_LIMITS.free.cpuMs);
     const a = await admit(o);
     expect(a.ok).toBe(true);
     expect(o.limiter.inFlight("p1")).toBe(1);
@@ -25,6 +25,18 @@ describe("admit", () => {
     expect(o.limiter.inFlight("p1")).toBe(0);
     expect(o.usage.pools.get("2026-10|free")).toEqual({ reserved: 0, spent: peor });
     expect(o.usage.projectNanoUsd.get("p1|2026-10")).toBe(peor);
+  });
+
+  it("🔴 una llamada que no llegó a la función (fallo nuestro): se devuelve a la cuota y la bolsa sólo cuenta el despachador", async () => {
+    const o = base();
+    const a = await admit(o);
+    expect(o.usage.calls.get("p1|2026-10")).toBe(1);
+    if (!a.ok) return;
+    await a.release("unreached");
+    await a.release("unreached");
+    expect(o.limiter.inFlight("p1")).toBe(0);
+    expect(o.usage.calls.get("p1|2026-10")).toBe(0);
+    expect(o.usage.pools.get("2026-10|free")).toEqual({ reserved: 0, spent: unreachedCallNanoUsd() });
   });
 
   it("llamadas a la vez: la tercera de Gratis espera fuera", async () => {
@@ -42,7 +54,7 @@ describe("admit", () => {
   });
 
   it("🔴 la bolsa: reserva y liquida el PEOR caso; sin hueco no se llama y la llamada se devuelve", async () => {
-    const peor = callCostNanoUsd(FUNCTION_LIMITS.free.cpuMs);
+    const peor = worstCallNanoUsd(FUNCTION_LIMITS.free.cpuMs);
     const o = { ...base(), caps: { free: peor * 2, paid: 1e15 } };
     const a = await admit(o);
     const b = await admit({ ...o, projectId: "p2" });
@@ -118,7 +130,7 @@ describe("los avisos (fase 3)", () => {
 
   it("🔴 la bolsa: UN aviso al mes cuando lo gastado pasa del 80 % del tope", async () => {
     const avisos: unknown[] = [];
-    const peor = callCostNanoUsd(FUNCTION_LIMITS.free.cpuMs);
+    const peor = worstCallNanoUsd(FUNCTION_LIMITS.free.cpuMs);
     const cap = peor * 10;
     const o = { ...base(), caps: { free: cap, paid: 1e15 }, alerts: { pool: (a: unknown) => void avisos.push(a) } };
     const antes = Math.floor(cap * 0.8) - 10;

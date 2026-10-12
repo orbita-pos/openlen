@@ -2,13 +2,20 @@
 import { describe, expect, it } from "vitest";
 
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB } from "./limits";
-import { callCostNanoUsd, capsFromEnv, monthKey } from "./meter";
+import { callCostNanoUsd, capsFromEnv, DISPATCHER_CPU_MS, monthKey, unreachedCallNanoUsd, worstCallNanoUsd } from "./meter";
 
 describe("meter", () => {
   it("una llamada = 300 n$ + 20 n$ por ms de CPU (la lista de Workers for Platforms)", () => {
     expect(callCostNanoUsd(0)).toBe(300);
     expect(callCostNanoUsd(50)).toBe(1_300);
     expect(callCostNanoUsd(200)).toBe(4_300);
+  });
+
+  it("🔴 el peor caso suma la CPU del despachador; la que no llegó a la función cuenta sólo el despachador", () => {
+    expect(DISPATCHER_CPU_MS).toBe(5);
+    expect(worstCallNanoUsd(50)).toBe(1_400);
+    expect(worstCallNanoUsd(200)).toBe(4_400);
+    expect(unreachedCallNanoUsd()).toBe(400);
   });
 
   it("el mes en UTC", () => {

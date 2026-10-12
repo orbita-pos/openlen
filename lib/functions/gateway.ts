@@ -181,6 +181,8 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   let errorCode: FunctionsErrorCode | null = null;
   let errorText: string | null = null;
   let anotada = false;
+  /** El motor no llegó a la función (fallo nuestro): no cuenta en la cuota. */
+  let noLlego = false;
 
   // El motor puede LANZAR (al arrancar, o a mitad: Cloudflare sin red, un hilo que
   // muere). Eso es un fin con error, nunca una excepción que deje la plaza y la
@@ -197,6 +199,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   const tomar = (f: Frame): void => {
     if (f.t === "log") logs.push({ level: f.level, msg: f.msg });
     else if (f.t === "error") {
+      if (f.kind === "unavailable") noLlego = true;
       errorCode ??= ERROR_DE[f.kind];
       errorText ??= f.stack ?? f.message ?? f.kind;
     }
@@ -212,7 +215,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
     if (anotada) return;
     anotada = true;
     const ms = Math.round(performance.now() - t0);
-    await admission.release().catch(() => undefined);
+    await admission.release(noLlego ? "unreached" : "ran").catch(() => undefined);
     const error = errorText === null ? null : tapar(translateStack(errorText, await deps.maps(target.projectId, target.environment).catch(() => ({}))));
     await deps
       .record({
