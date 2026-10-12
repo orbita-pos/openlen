@@ -2,7 +2,7 @@
 //
 // EL MOTOR `cloudflare` (spec local 2026-10-12, Parte 4) contra una API de
 // Cloudflare simulada: lo que pide y cómo lee lo que le contestan.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CloudflareEngine } from "./cloudflare";
 import { CloudflareApiError } from "./cloudflare-api";
@@ -146,10 +146,16 @@ describe("CloudflareEngine — invoke", () => {
       () => new Response("forbidden", { status: 403 }),
       () => new Response("bad gateway", { status: 502 }),
     ];
-    for (const responder of respuestas) {
-      const fs = await todos(api(responder).engine.invoke(DEST, EVENTO, { timeoutMs: 5000, limits: LIMITS }));
-      expect(fs).toHaveLength(1);
-      expect(fs[0]).toMatchObject({ t: "error", kind: "unavailable" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      for (const responder of respuestas) {
+        const fs = await todos(api(responder).engine.invoke(DEST, EVENTO, { timeoutMs: 5000, limits: LIMITS }));
+        // Lo que se anota (y Len puede leer) no habla de la fontanería; el detalle va al registro del servidor.
+        expect(fs).toEqual([{ t: "error", kind: "unavailable", message: "Edge Functions are temporarily unavailable. Try again in a moment." }]);
+      }
+      expect(error.mock.calls.map((c) => c.join(" ")).join("\n")).toMatch(/fetch failed[\s\S]*403[\s\S]*502/);
+    } finally {
+      error.mockRestore();
     }
   });
 

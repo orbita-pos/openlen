@@ -28,6 +28,15 @@ const HASH_TTL_MS = 5 * 60_000;
 const noEsta = (e: unknown) => e instanceof CloudflareApiError && e.status === 404;
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+/** Lo que se anota cuando no se llega a Cloudflare (y Len puede leer): sin la
+ *  fontanería. El detalle va al registro del servidor, para el operador. */
+const NO_DISPONIBLE = "Edge Functions are temporarily unavailable. Try again in a moment.";
+
+function noDisponible(dest: Destination, detalle: string): Frame {
+  console.error("[functions] el despachador de Cloudflare no contestó", destinationName(dest), detalle);
+  return { t: "error", kind: "unavailable", message: NO_DISPONIBLE };
+}
+
 export class CloudflareEngine implements FunctionsEngine {
   readonly name = "cloudflare" as const;
   readonly #cfg: CloudflareConfig;
@@ -119,12 +128,12 @@ export class CloudflareEngine implements FunctionsEngine {
           signal: ac.signal,
         });
       } catch (e) {
-        yield ac.signal.aborted ? { t: "error", kind: "timeout" } : { t: "error", kind: "unavailable", message: mensaje(e) };
+        yield ac.signal.aborted ? { t: "error", kind: "timeout" } : noDisponible(dest, mensaje(e));
         return;
       }
       if (!res.ok || !res.body) {
         await res.body?.cancel().catch(() => undefined);
-        yield { t: "error", kind: "unavailable", message: `the dispatcher answered ${res.status}` };
+        yield noDisponible(dest, `HTTP ${res.status}`);
         return;
       }
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
