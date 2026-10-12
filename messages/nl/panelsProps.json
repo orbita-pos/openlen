@@ -262,9 +262,7 @@
     "noteElement": "Nog iets voor Len over dit element",
     "noteGeneral": "Nog iets voor Len",
     "resetElement": "Dit element herstellen",
-    "resetAll": "Alles herstellen",
     "busy": "Len is bezig: pas toe als hij klaar is.",
-    "apply": "Toepassen ({n})",
     "applyMessage": "Ontwerpwijzigingen · {n, plural, one {# element} other {# elementen}}",
     "tooBig": "Te veel wijzigingen voor één keer «Toepassen»: pas eerst een deel toe.",
     "group": {

@@ -262,9 +262,7 @@
     "noteElement": "この要素についてLenへの追加の指示",
     "noteGeneral": "Lenへの追加の指示",
     "resetElement": "この要素を元に戻す",
-    "resetAll": "すべて元に戻す",
     "busy": "Lenが作業中です。終わってから適用してください。",
-    "apply": "適用 ({n})",
     "applyMessage": "デザインの変更 · {n}個の要素",
     "tooBig": "1回の「適用」には変更が多すぎます。まず一部を適用してください。",
     "group": {
