@@ -101,6 +101,8 @@ async function main() {
       "blockedAt" timestamp NOT NULL DEFAULT now()
     );
   `);
+  // FASE 3: el aviso del 80 % de cada bolsa sale una vez al mes.
+  await db.execute(sql`ALTER TABLE "functionPools" ADD COLUMN IF NOT EXISTS "alertedAt" timestamp;`);
   console.log("[functions:migrate] tablas listas y borradores con su ref propio");
   process.exit(0);
 }

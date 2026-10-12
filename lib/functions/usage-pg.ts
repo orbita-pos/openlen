@@ -23,7 +23,8 @@ export const pgUsageStore: UsageStore = {
       ON CONFLICT ("projectId", "month") DO UPDATE SET "calls" = "functionUsage"."calls" + 1
       WHERE "functionUsage"."calls" < ${quota}
       RETURNING "calls"`);
-    return filas(r).length > 0;
+    const [f] = filas(r) as { calls: number | string }[];
+    return f ? Number(f.calls) : null;
   },
   async refundCall(projectId, month) {
     await db.execute(sql`
@@ -39,13 +40,24 @@ export const pgUsageStore: UsageStore = {
     return filas(r).length > 0;
   },
   async settle({ pool, month, reservedNanoUsd, actualNanoUsd, projectId }) {
-    await db.execute(sql`
+    const r = await db.execute(sql`
       UPDATE "functionPools"
          SET "reservedNanoUsd" = GREATEST("reservedNanoUsd" - ${reservedNanoUsd}, 0),
              "spentNanoUsd" = "spentNanoUsd" + ${actualNanoUsd}
-       WHERE "month" = ${month} AND "pool" = ${pool}`);
+       WHERE "month" = ${month} AND "pool" = ${pool}
+       RETURNING "spentNanoUsd"`);
     await db.execute(sql`
       UPDATE "functionUsage" SET "nanoUsd" = "nanoUsd" + ${actualNanoUsd}
       WHERE "projectId" = ${projectId} AND "month" = ${month}`);
+    const [f] = filas(r) as { spentNanoUsd: number | string }[];
+    return { poolSpentNanoUsd: f ? Number(f.spentNanoUsd) : 0 };
+  },
+  async claimPoolAlert(pool, month, threshold) {
+    // El aviso es UNA fila que se marca: dos a la vez, sólo una la marca.
+    const r = await db.execute(sql`
+      UPDATE "functionPools" SET "alertedAt" = now()
+      WHERE "month" = ${month} AND "pool" = ${pool} AND "alertedAt" IS NULL AND "spentNanoUsd" >= ${threshold}
+      RETURNING 1`);
+    return filas(r).length > 0;
   },
 };

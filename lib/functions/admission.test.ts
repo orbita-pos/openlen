@@ -61,3 +61,51 @@ describe("admit", () => {
     expect((await admit({ ...o, plan: "pro" })).ok).toBe(true);
   });
 });
+
+describe("los avisos (fase 3)", () => {
+  it("🔴 la cuota: avisa UNA vez al llegar al 80 % y otra al 100 %; la que ya no entra, no", async () => {
+    const avisos: unknown[] = [];
+    const o = { ...base(), alerts: { quota: (a: unknown) => void avisos.push(a) } };
+    const q = FUNCTION_LIMITS.free.callsPerMonth;
+    const ochenta = Math.ceil(q * 0.8);
+    o.usage.calls.set("p1|2026-10", ochenta - 2);
+    for (let i = 0; i < 3; i++) {
+      const a = await admit(o);
+      if (a.ok) await a.release(10);
+    }
+    expect(avisos).toEqual([{ projectId: "p1", percent: 80, calls: ochenta, quota: q }]);
+    o.usage.calls.set("p1|2026-10", q - 1);
+    const ultima = await admit(o);
+    if (ultima.ok) await ultima.release(10);
+    expect(await admit(o)).toEqual({ ok: false, reason: "quota" });
+    expect(avisos).toEqual([
+      { projectId: "p1", percent: 80, calls: ochenta, quota: q },
+      { projectId: "p1", percent: 100, calls: q, quota: q },
+    ]);
+  });
+
+  it("una llamada que la bolsa rechaza se devuelve y no avisa: avisa la que entre", async () => {
+    const avisos: unknown[] = [];
+    const q = FUNCTION_LIMITS.free.callsPerMonth;
+    const o = { ...base(), caps: { free: 0, paid: 1e15 }, alerts: { quota: (a: unknown) => void avisos.push(a) } };
+    o.usage.calls.set("p1|2026-10", Math.ceil(q * 0.8) - 1);
+    expect(await admit(o)).toEqual({ ok: false, reason: "cap" });
+    expect(avisos).toEqual([]);
+    const a = await admit({ ...o, caps: MUCHO });
+    if (a.ok) await a.release(10);
+    expect(avisos).toEqual([{ projectId: "p1", percent: 80, calls: Math.ceil(q * 0.8), quota: q }]);
+  });
+
+  it("🔴 la bolsa: UN aviso al mes cuando lo gastado pasa del 80 % del tope", async () => {
+    const avisos: unknown[] = [];
+    const cap = worstCaseNanoUsd(FUNCTION_LIMITS.free.timeoutSec) * 10;
+    const o = { ...base(), caps: { free: cap, paid: 1e15 }, alerts: { pool: (a: unknown) => void avisos.push(a) } };
+    const antes = Math.floor(cap * 0.8) - 10;
+    o.usage.pools.set("2026-10|free", { reserved: 0, spent: antes });
+    const a = await admit(o);
+    if (a.ok) await a.release(1000);
+    const b = await admit({ ...o, projectId: "p2" });
+    if (b.ok) await b.release(1000);
+    expect(avisos).toEqual([{ pool: "free", month: "2026-10", spentNanoUsd: antes + costNanoUsd(1000), capNanoUsd: cap }]);
+  });
+});

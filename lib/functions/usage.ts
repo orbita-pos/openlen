@@ -6,13 +6,18 @@
 import type { Pool } from "./limits";
 
 export interface UsageStore {
-  /** +1 llamada si no llega a la cuota. `false` = cuota agotada. */
-  consumeCall(projectId: string, month: string, quota: number): Promise<boolean>;
+  /** +1 llamada si no llega a la cuota: devuelve cuántas lleva el mes CON ésta,
+   *  o `null` si la cuota está agotada. Atómico: dos a la vez ven números distintos. */
+  consumeCall(projectId: string, month: string, quota: number): Promise<number | null>;
   refundCall(projectId: string, month: string): Promise<void>;
   /** Reserva `nanoUsd` si cabe bajo el tope (gastado + reservado + esto ≤ tope). */
   reserve(pool: Pool, month: string, nanoUsd: number, capNanoUsd: number): Promise<boolean>;
-  /** Suelta la reserva y apunta lo gastado (en la bolsa y en el proyecto). */
-  settle(o: { pool: Pool; month: string; reservedNanoUsd: number; actualNanoUsd: number; projectId: string }): Promise<void>;
+  /** Suelta la reserva y apunta lo gastado (en la bolsa y en el proyecto).
+   *  Devuelve lo gastado de la bolsa en el mes, con esto. */
+  settle(o: { pool: Pool; month: string; reservedNanoUsd: number; actualNanoUsd: number; projectId: string }): Promise<{ readonly poolSpentNanoUsd: number }>;
+  /** El aviso de la bolsa: `true` para UNA llamada al mes y bolsa, cuando lo
+   *  gastado ya llega a `thresholdNanoUsd`. */
+  claimPoolAlert(pool: Pool, month: string, thresholdNanoUsd: number): Promise<boolean>;
 }
 
 export function memoryUsageStore(): UsageStore & {
@@ -23,6 +28,7 @@ export function memoryUsageStore(): UsageStore & {
   const calls = new Map<string, number>();
   const pools = new Map<string, { reserved: number; spent: number }>();
   const projectNanoUsd = new Map<string, number>();
+  const avisadas = new Set<string>();
   const bolsa = (pool: Pool, month: string) => {
     const k = `${month}|${pool}`;
     if (!pools.has(k)) pools.set(k, { reserved: 0, spent: 0 });
@@ -35,9 +41,9 @@ export function memoryUsageStore(): UsageStore & {
     async consumeCall(projectId, month, quota) {
       const k = `${projectId}|${month}`;
       const n = calls.get(k) ?? 0;
-      if (n >= quota) return false;
+      if (n >= quota) return null;
       calls.set(k, n + 1);
-      return true;
+      return n + 1;
     },
     async refundCall(projectId, month) {
       const k = `${projectId}|${month}`;
@@ -55,6 +61,13 @@ export function memoryUsageStore(): UsageStore & {
       b.spent += actualNanoUsd;
       const k = `${projectId}|${month}`;
       projectNanoUsd.set(k, (projectNanoUsd.get(k) ?? 0) + actualNanoUsd);
+      return { poolSpentNanoUsd: b.spent };
+    },
+    async claimPoolAlert(pool, month, threshold) {
+      const k = `${month}|${pool}`;
+      if (avisadas.has(k) || bolsa(pool, month).spent < threshold) return false;
+      avisadas.add(k);
+      return true;
     },
   };
 }
