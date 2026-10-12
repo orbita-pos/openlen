@@ -1,7 +1,7 @@
 // CONTESTAR A LEN DESDE LA TARJETA (pieza 3 de Len 2.5): dentro del turno si
 // todavía espera, o como un mensaje normal que abre el siguiente.
 import { describe, expect, it } from "vitest";
-import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder, secretsAnswerMessage } from "./question-answer";
 
 const plazo = { id: "plazo", question: "¿Cuánto tarda la entrega?" };
 const envio = { id: "envio", question: "¿Envías a todo el país?" };
@@ -61,5 +61,15 @@ describe("liveQuestionTurno (lote 7-8)", () => {
     expect(liveQuestionTurno({ status: "streaming", pendingQuestions: [] }, "t1")).toBeNull();
     expect(liveQuestionTurno({ status: "streaming", pendingQuestions: [plazo] }, null)).toBeNull();
     expect(liveQuestionTurno(undefined, "t1")).toBeNull();
+  });
+});
+
+describe("secretsAnswerMessage (la tarjeta de secretos, cuando ya nadie espera)", () => {
+  it("dónde quedó cada uno, en el idioma del dueño; sin valores", () => {
+    const t = (k: string, v?: Record<string, string>) => (v ? `${k}(${Object.values(v).join("|")})` : k);
+    const secrets = [{ name: "STRIPE_SECRET_KEY", description: "x" }, { name: "STRIPE_WEBHOOK_SECRET", description: "y" }];
+    expect(secretsAnswerMessage(secrets, [{ id: "secrets", selected: ["STRIPE_SECRET_KEY:draft", "STRIPE_SECRET_KEY:live"] }], t)).toBe(
+      "functionSecrets.answerMessage(STRIPE_SECRET_KEY|functionSecrets.envDraft, functionSecrets.envLive)\nfunctionSecrets.answerSkipped(STRIPE_WEBHOOK_SECRET)",
+    );
   });
 });

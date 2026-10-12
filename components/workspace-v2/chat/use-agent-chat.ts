@@ -29,7 +29,7 @@ import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client"
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
 import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder } from "./question-answer";
+import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder, secretsAnswerMessage } from "./question-answer";
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
@@ -2377,8 +2377,13 @@ export function useAgentChat({
           // Sin red: cae al mensaje normal, abajo.
         }
       }
-      // Pieza 7: con las etiquetas del modo plan en el idioma del dueño.
-      const mensaje = composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
+      // Pieza 7: con las etiquetas del modo plan en el idioma del dueño. EDGE
+      // FUNCTIONS: la de los secretos dice qué se guardó dónde (sin valores).
+      const intencion = questions[0]?.intent;
+      const mensaje =
+        intencion?.kind === "secrets"
+          ? secretsAnswerMessage(intencion.secrets, answers, (k, v) => t(k as never, v as never))
+          : composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
       if (!mensaje.trim()) return;
       // PIEZA 7: contestar después la tarjeta del modo plan es la puerta del
       // dueño: aceptar entrar lo enciende, aprobar el plan lo apaga.
