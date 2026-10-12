@@ -6,25 +6,11 @@
 
 import { backendConfigured } from "@/lib/backend/pg";
 
+import { configuredEngineName } from "../enabled";
 import { LocalEngine } from "./local";
 import type { FunctionsEngine } from "./types";
 
-let avisado = false;
-
-export function configuredEngineName(env: Readonly<Record<string, string | undefined>> = process.env): "local" | null {
-  if (env.OPENLEN_FUNCTIONS === "0") return null;
-  const v = (env.OPENLEN_FUNCTIONS_ENGINE ?? "").trim();
-  if (v === "local") {
-    // El motor local corre código ajeno EN el proceso de la app.
-    if (env.NODE_ENV === "production" && env.OPENLEN_FUNCTIONS_ALLOW_LOCAL_IN_PRODUCTION !== "1") return null;
-    return "local";
-  }
-  if (v !== "" && !avisado) {
-    avisado = true;
-    console.warn(`[functions] OPENLEN_FUNCTIONS_ENGINE="${v}" no es un motor de este servidor: las Edge Functions quedan apagadas.`);
-  }
-  return null;
-}
+export { configuredEngineName };
 
 // UN MOTOR POR PROCESO, no por módulo: en desarrollo Next instancia este módulo
 // una vez por ruta (medido en lib/agent/direcciones.ts), y la ruta de los
