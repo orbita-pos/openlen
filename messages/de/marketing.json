@@ -318,5 +318,16 @@
   "lenCompanion": {
     "ask": "Brauchst du etwas?",
     "aria": "Len um etwas bitten"
+  },
+  "mcp": {
+    "lenSays": "Du zahlst schon für Claude oder ChatGPT? Nutze sie auch hier.",
+    "title": "Die KI, die du schon nutzt, <muted>arbeitet an deinen Seiten.</muted>",
+    "subtitle": "Claude, ChatGPT, Codex, Cursor und weitere verbinden sich per MCP mit OpenLen: Sie lesen, bearbeiten und veröffentlichen deine Seiten und Apps mit deinem eigenen Abo.",
+    "step1": "Füge die Adresse von OpenLen in deinem Assistenten hinzu.",
+    "step2": "Melde dich mit deinem Konto an und wähle, was er darf und bei welchen Projekten.",
+    "step3": "Bitte um Änderungen. Vor dem Veröffentlichen fragt er immer nach deiner Zustimmung.",
+    "cta": "So verbindest du ihn",
+    "worksWith": "Funktioniert mit",
+    "anyClient": "Und mit jedem anderen Client, der MCP spricht."
   }
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
 import { MosaicWall } from "@/components/marketing/mosaic-wall";
 import { AnalyticsLeads } from "@/components/marketing/analytics-leads";
+import { ConnectYourAi } from "@/components/marketing/connect-your-ai";
 import { Trust } from "@/components/marketing/trust";
 import { Pricing } from "@/components/marketing/pricing";
 import { FinalCta } from "@/components/marketing/final-cta";
@@ -86,6 +87,7 @@ export default function HomePage() {
         <Hero />
         <MosaicWall />
         <AnalyticsLeads />
+        <ConnectYourAi />
         <Trust />
         <Pricing />
         <FinalCta />

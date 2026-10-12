@@ -5,6 +5,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CopyButton } from "@/components/mcp/copy-button";
+import { ClientLogo, INSTALL_CLIENT_LOGO } from "@/components/ui/client-logos";
 import { Link } from "@/i18n/navigation";
 import { mcpResourceUrl, siteOrigin } from "@/lib/mcp/config";
 import { installSnippets, type InstallSnippet } from "@/lib/mcp/install-snippets";
@@ -38,7 +39,10 @@ export default async function McpInstallPage({ params }: { params: Promise<{ loc
       <ul className="flex flex-col gap-4">
         {installSnippets(url).map((s) => (
           <li key={s.client} id={s.client} className="flex flex-col gap-2 rounded-lg border px-4 py-3">
-            <h2 className="font-medium">{s.label}</h2>
+            <h2 className="flex items-center gap-2 font-medium">
+              {INSTALL_CLIENT_LOGO[s.client] ? <ClientLogo name={INSTALL_CLIENT_LOGO[s.client]!} size={18} /> : null}
+              {s.label}
+            </h2>
             {s.stepsKey ? <p className="text-sm opacity-80">{steps(s.stepsKey)}</p> : null}
             {s.deepLink ? (
               <a href={s.deepLink} className="self-start rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white dark:bg-white dark:text-black">

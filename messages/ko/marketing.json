@@ -318,5 +318,16 @@
   "lenCompanion": {
     "ask": "필요한 거 있으세요?",
     "aria": "Len에게 요청하기"
+  },
+  "mcp": {
+    "lenSays": "이미 Claude나 ChatGPT를 구독 중인가요? 여기서도 쓰세요.",
+    "title": "늘 쓰던 AI가 <muted>내 페이지에서 일해요.</muted>",
+    "subtitle": "Claude, ChatGPT, Codex, Cursor 등이 MCP로 OpenLen에 연결돼, 내 구독으로 페이지와 앱을 읽고, 편집하고, 게시해요.",
+    "step1": "어시스턴트에 OpenLen 주소를 추가하세요.",
+    "step2": "내 계정으로 로그인하고, 무엇을 할 수 있는지와 어떤 프로젝트에서 쓸지 고르세요.",
+    "step3": "변경을 요청하세요. 게시하기 전에는 항상 허락을 구해요.",
+    "cta": "연결 방법",
+    "worksWith": "지원하는 클라이언트",
+    "anyClient": "MCP를 지원하는 다른 클라이언트에서도 쓸 수 있어요."
   }
 }

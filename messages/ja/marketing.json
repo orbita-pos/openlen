@@ -318,5 +318,16 @@
   "lenCompanion": {
     "ask": "何かお手伝いしましょうか？",
     "aria": "Lenに頼む"
+  },
+  "mcp": {
+    "lenSays": "Claude や ChatGPT をもう契約していますか？ ここでも使えます。",
+    "title": "いつもの AI が、<muted>あなたのページで働きます。</muted>",
+    "subtitle": "Claude、ChatGPT、Codex、Cursor などが MCP で OpenLen に接続し、あなた自身のサブスクリプションでページやアプリを閲覧・編集・公開します。",
+    "step1": "アシスタントに OpenLen のアドレスを追加します。",
+    "step2": "アカウントでログインし、何ができるか、どのプロジェクトで使えるかを選びます。",
+    "step3": "変更を頼むだけ。公開の前には必ずあなたの許可を求めます。",
+    "cta": "接続方法",
+    "worksWith": "対応クライアント",
+    "anyClient": "MCP に対応したほかのクライアントでも使えます。"
   }
 }
