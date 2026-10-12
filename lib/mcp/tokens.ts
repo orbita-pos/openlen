@@ -121,5 +121,13 @@ export async function tokenName(id: string): Promise<string | null> {
     .from(schema.mcpTokens)
     .where(or(eq(schema.mcpTokens.id, id), eq(schema.mcpTokens.familyId, id)))
     .limit(1);
-  return row?.name ?? null;
+  if (row) return row.name;
+  // La limpieza borra los accesos caducados de una familia; su nombre sigue en el cliente de sus refrescos.
+  const [family] = await db
+    .select({ name: schema.mcpOauthClients.name })
+    .from(schema.mcpRefreshTokens)
+    .innerJoin(schema.mcpOauthClients, eq(schema.mcpOauthClients.id, schema.mcpRefreshTokens.clientId))
+    .where(eq(schema.mcpRefreshTokens.familyId, id))
+    .limit(1);
+  return family?.name ?? null;
 }
