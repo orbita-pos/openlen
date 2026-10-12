@@ -320,7 +320,7 @@ describe("TerminalDeLen", () => {
   // la base); el hilo de la terminal le pasa los argumentos y los ficheros de
   // `/supabase/` como están en la terminal, y escribe los que la CLI crea.
   describe("supabase, la CLI del backend del proyecto", () => {
-    function conSupabase(responder?: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string> }>) {
+    function conSupabase(responder?: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>) {
       const llamadas: { args: readonly string[]; ficheros: Readonly<Record<string, string>> }[] = [];
       const { t } = terminal({
         supabase: async (args, ficheros) => {
@@ -365,6 +365,15 @@ describe("TerminalDeLen", () => {
       expect(r.exitCode).toBe(1);
       expect(r.stderr).toBe("supabase: la base no contesta\n");
       expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 20_000);
+
+    it("functions delete: lo que la CLI borra desaparece de la terminal y vuelve en `ficheros`", async () => {
+      const { t } = conSupabase(async () => ({ stdout: "Deleted Function hola from project x.\n", stderr: "", exitCode: 0, borrar: ["/supabase/functions/hola/index.ts"] }));
+      await t.ejecutar("mkdir -p /supabase/functions/hola && echo 'x' > /supabase/functions/hola/index.ts");
+      const r = await t.ejecutar("supabase functions delete hola");
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.ficheros?.["/supabase/functions/hola/index.ts"]).toBeUndefined();
+      expect((await t.ejecutar("ls /supabase/functions/hola 2>/dev/null | wc -l")).stdout.trim()).toBe("0");
     }, 20_000);
 
     it("BRAZO DE CONTROL: sin backend no hay comando (no se finge)", async () => {

@@ -51,6 +51,11 @@ describe("createHandler", () => {
     for (const fn of ["a", "b", "c"]) expect(cuerpo(await correr(formas, evento({ fn, method: "GET", bodyB64: null })))).toBe(fn);
   });
 
+  it("la forma nueva de Supabase: `export default { fetch }` también vale", async () => {
+    const fs = await correr({ hola: async () => ({ default: { fetch: async (req: Request) => new Response(`nuevo ${new URL(req.url).pathname}`) } }) });
+    expect(cuerpo(fs)).toBe("nuevo /hola/x");
+  });
+
   it("console dentro de la llamada es un marco; fuera, la consola de siempre", async () => {
     const fs = await correr({ hola: async () => Deno.serve(() => (console.log("pedido", { id: 7 }), new Response("ok"))) });
     expect(fs).toContainEqual({ t: "log", level: "log", msg: "pedido { id: 7 }" });

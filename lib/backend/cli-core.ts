@@ -20,6 +20,8 @@
 
 import { randomBytes } from "node:crypto";
 
+import { CONFIG_TOML, FUNCTION_NAME_RE, functionDirOf, functionNamesIn } from "@/lib/functions/project-files";
+
 import { splitSqlStatements } from "./sql-split";
 
 /** Lo que devuelve una consulta de `db query`. */
@@ -28,6 +30,15 @@ export type QueryOutcome =
   | { readonly kind: "command"; readonly tag: string }
   | { readonly kind: "error"; readonly message: string; readonly code?: string }
   | { readonly kind: "no_live" };
+
+export interface FunctionsCli {
+  readonly ref: string;
+  /** Despliega el BORRADOR con estos ficheros (los de la terminal, aún sin guardar). */
+  deploy(ficheros: Readonly<Record<string, string>>): Promise<{ ok: true; functions: readonly string[] } | { ok: false; message: string }>;
+  deployedAt(): Promise<{ readonly draft: Readonly<Record<string, Date>>; readonly live: Readonly<Record<string, Date>> }>;
+  /** `https://<ref del borrador>.<host>/functions/v1/`. */
+  draftBaseUrl(): Promise<string>;
+}
 
 export interface CliBackend {
   status(): Promise<{ apiUrl: string; publishableKey: string }>;
@@ -42,6 +53,8 @@ export interface CliBackend {
   reset(): Promise<{ ok: true; applied: string[]; seeded: boolean } | { ok: false; message: string }>;
   /** `db query`: una sentencia en pruebas (`local`) o en producción (`linked`). */
   query(sql: string, target: "local" | "linked"): Promise<QueryOutcome>;
+  /** Las Edge Functions (spec local 2026-10-11). `null`/ausente: este servidor no las tiene. */
+  readonly functions?: FunctionsCli | null;
 }
 
 export interface CliResult {
@@ -50,6 +63,8 @@ export interface CliResult {
   exitCode: number;
   /** Ficheros que la CLI crea (migration new). */
   escribir?: Record<string, string>;
+  /** Ficheros que la CLI borra (`functions delete`). */
+  borrar?: string[];
 }
 
 const MIGRATIONS_DIR = "/supabase/migrations/";
@@ -183,11 +198,128 @@ Available Commands:
   db push           Push new migrations to the test database
   db reset          Recreate the test database from the migrations and supabase/seed.sql
   db query          Execute a SQL query (--local: test database, the default; --linked: production, read-only)
+  functions new     Create a new Function in supabase/functions
+  functions deploy  Deploy the Functions to the draft (every save also redeploys them)
+  functions list    List the Functions deployed to the draft and to production
+  functions delete  Delete a Function and its folder
+  functions serve   Show where the draft serves the Functions
 
 Flags for db push:
   --dry-run         Print the migrations that would be applied, without applying them
   --include-all     Include migrations older than the last one applied
+
+Flags for functions deploy:
+  --no-verify-jwt   Let calls without a JWT in (webhooks); saved as verify_jwt = false in supabase/config.toml
 `;
+
+// ─── supabase functions … (spec local 2026-10-11) ───────────────────────────
+// El borrador hace de «local»: `deploy` va al borrador (como `db push` a la base
+// de pruebas) y `serve` dice dónde las sirve ya. `delete` borra la carpeta: aquí
+// el borrador ES lo que dicen los ficheros (si quedara, se volvería a desplegar).
+
+/** La de `supabase functions new` de la CLI (su `internal/functions/new`). */
+export const NEW_FUNCTION_SOURCE = `// Setup type definitions for built-in Supabase Runtime APIs
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+console.log("Hello from Functions!");
+
+Deno.serve(async (req) => {
+  const { name } = await req.json();
+  const data = {
+    message: \`Hello \${name}!\`,
+  };
+
+  return new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
+});
+`;
+
+const SIN_FUNCIONES = "Error: Edge Functions are not available on this server.\n";
+const NOMBRE_INVALIDO = (n: string) =>
+  `Invalid Function name: ${n}. Must start with at least one letter, and only include alphanumeric characters, underscores, and hyphens. (^[A-Za-z][A-Za-z0-9_-]*$)\n`;
+
+/** `verify_jwt = false` para esas funciones en config.toml, sin tocar lo demás. */
+export function withVerifyJwtOff(toml: string, names: readonly string[]): string {
+  let lineas = toml === "" ? [] : toml.replace(/\n$/, "").split("\n");
+  for (const n of names) {
+    const cab = lineas.findIndex((l) => new RegExp(`^\\[\\s*functions\\.(?:"${n}"|${n})\\s*\\]`).test(l.trim()));
+    if (cab < 0) {
+      lineas = [...lineas, ...(lineas.length > 0 ? [""] : []), `[functions.${n}]`, "verify_jwt = false"];
+      continue;
+    }
+    let fin = lineas.findIndex((l, i) => i > cab && /^\s*\[/.test(l));
+    if (fin < 0) fin = lineas.length;
+    const v = lineas.findIndex((l, i) => i > cab && i < fin && /^\s*verify_jwt\s*=/.test(l));
+    if (v >= 0) lineas[v] = "verify_jwt = false";
+    else lineas.splice(cab + 1, 0, "verify_jwt = false");
+  }
+  return `${lineas.join("\n")}\n`;
+}
+
+async function functionsCommand(
+  sub: string | undefined,
+  rest: readonly string[],
+  flags: ReadonlySet<string>,
+  ficheros: Readonly<Record<string, string>>,
+  fx: FunctionsCli | null,
+): Promise<CliResult> {
+  const ref = fx?.ref ?? "local";
+  if (sub === "new") {
+    const name = rest[0];
+    if (!name) return err(`Usage:\n  supabase functions new <Function name>\n\nError: accepts 1 arg(s), received 0\n`);
+    if (!FUNCTION_NAME_RE.test(name)) return err(NOMBRE_INVALIDO(name));
+    const dir = functionDirOf(name);
+    if (Object.keys(ficheros).some((r) => r.startsWith(dir))) {
+      return err(`Error: failed to create entrypoint: file already exists\nRemove supabase/functions/${name}/index.ts or use a different Function name.\n`);
+    }
+    return ok(`Created new Function at supabase/functions/${name}\n`, { escribir: { [`${dir}index.ts`]: NEW_FUNCTION_SOURCE } });
+  }
+  if (sub === "delete") {
+    const name = rest[0];
+    if (!name) return err(`Usage:\n  supabase functions delete <Function name>\n\nError: accepts 1 arg(s), received 0\n`);
+    const borrar = Object.keys(ficheros).filter((r) => r.startsWith(functionDirOf(name)));
+    if (borrar.length === 0) return err(`Error: Function ${name} does not exist in supabase/functions\n`);
+    return ok(`Deleted Function ${name} from project ${ref}.\n`, { borrar });
+  }
+  if (sub !== "deploy" && sub !== "list" && sub !== "serve") {
+    return err(`Error: unknown command "functions${sub ? ` ${sub}` : ""}" for "supabase"\nRun 'supabase --help' for usage.\n`);
+  }
+  if (!fx) return err(SIN_FUNCIONES);
+  if (sub === "serve") {
+    return ok(`Functions are already served from the draft, like \`supabase functions serve\`: every save redeploys them.\n  ${await fx.draftBaseUrl()}<function name>\n`);
+  }
+  if (sub === "list") {
+    const { draft, live } = await fx.deployedAt();
+    const nombres = [...new Set([...functionNamesIn(ficheros), ...Object.keys(draft), ...Object.keys(live)])].sort();
+    const fecha = (d?: Date) => (d ? d.toISOString().slice(0, 19).replace("T", " ") : "").padEnd(19);
+    return ok(
+      [
+        "",
+        `   ${"NAME".padEnd(24)} | DRAFT (UTC)         | PRODUCTION (UTC)    `,
+        `  ${"-".repeat(26)}|---------------------|---------------------`,
+        ...nombres.map((n) => `   ${n.padEnd(24)} | ${fecha(draft[n])} | ${fecha(live[n])} `),
+        "",
+      ].join("\n"),
+    );
+  }
+  // deploy
+  const nombres = functionNamesIn(ficheros);
+  const faltan = rest.filter((n) => !nombres.includes(n));
+  if (faltan.length > 0) return err(`Error: Function ${faltan[0]} does not exist in supabase/functions\n`);
+  if (nombres.length === 0) return ok("No Functions specified or found in supabase/functions\n");
+  let aDesplegar = ficheros;
+  let escribir: Record<string, string> | undefined;
+  let nota = "";
+  if (flags.has("--no-verify-jwt")) {
+    const cuales = rest.length > 0 ? rest : nombres;
+    const toml = withVerifyJwtOff(ficheros[CONFIG_TOML] ?? "", cuales);
+    escribir = { [CONFIG_TOML]: toml };
+    aDesplegar = { ...ficheros, [CONFIG_TOML]: toml };
+    nota = `Set verify_jwt = false for ${cuales.join(", ")} in supabase/config.toml.\n`;
+  }
+  const r = await fx.deploy(aDesplegar);
+  if (!r.ok) return err(r.message);
+  return ok(`${nota}Deployed Functions on project ${ref}: ${(rest.length > 0 ? rest : r.functions).join(", ")}\n`, escribir ? { escribir } : {});
+}
 
 export async function runCli(
   args: readonly string[],
@@ -319,6 +451,8 @@ export async function runCli(
     const note = r.truncated ? `Showing the first ${r.rows.length} rows.\n` : "";
     return { stdout: renderAgentJson(r.columns, r.rows, boundary()), stderr: connecting + note, exitCode: 0 };
   }
+
+  if (cmd === "functions") return functionsCommand(sub, rest, flags, ficheros, backend.functions ?? null);
 
   if (cmd === "gen") return err("supabase gen is not available here yet.\n");
   if (["login", "link", "init", "start", "stop", "projects"].includes(cmd)) {
