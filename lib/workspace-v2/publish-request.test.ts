@@ -26,3 +26,18 @@ describe("lo que contesta publicar", () => {
     expect(await postPublish("p", { subdomain: "t" })).toEqual({ kind: "error", status: 409, error: "taken" });
   });
 });
+
+describe("postPublish — las Edge Functions", () => {
+  it("428 de secretos, 422 de funciones que no compilan, y el despliegue o el empaquetador que fallan", async () => {
+    reply(428, { error: "secrets_required", missing: ["STRIPE_SECRET_KEY"] });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "secrets_required", missing: ["STRIPE_SECRET_KEY"] });
+    reply(422, { error: "functions_do_not_compile", errors: ["/supabase/functions/a/index.ts:1:1 — x"] });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "functions_do_not_compile", errors: ["/supabase/functions/a/index.ts:1:1 — x"] });
+    reply(502, { error: "functions_deploy_failed" });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "functions_failed" });
+    reply(503, { error: "functions_bundler_unavailable" });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "functions_failed" });
+    reply(428, { error: "confirmation_required", destructive: [], fingerprint: "a".repeat(64) });
+    expect((await postPublish("p1", { subdomain: "x" })).kind).toBe("needs_confirmation");
+  });
+});
