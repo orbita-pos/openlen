@@ -203,7 +203,7 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
     if (anotada) return;
     anotada = true;
     const ms = Math.round(performance.now() - t0);
-    await admission.release(ms).catch(() => undefined);
+    await admission.release().catch(() => undefined);
     const error = errorText === null ? null : tapar(translateStack(errorText, await deps.maps(target.projectId, target.environment).catch(() => ({}))));
     await deps
       .record({

@@ -208,7 +208,7 @@ describe("la puerta", () => {
   });
 
   it("🔴 el tope de dinero: con la bolsa a casi cero, 429 sin invocar", async () => {
-    const { deps, eventos } = montar(undefined, { caps: { free: 100_000, paid: 1e15 } });
+    const { deps, eventos } = montar(undefined, { caps: { free: 1_000, paid: 1e15 } });
     expect((await llamar(deps)).headers.get("sb-error-code")).toBe("QUOTA_EXCEEDED");
     expect(eventos).toHaveLength(0);
   });
