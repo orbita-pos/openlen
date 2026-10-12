@@ -14,13 +14,16 @@
 //   supabase db push / migration up las migraciones nuevas, a la base de pruebas
 //   supabase db reset               rehace la base de pruebas (migraciones + seed)
 //   supabase db query "<sql>"       --local (pruebas) o --linked (producción, sólo lectura)
+//   supabase secrets set|list|unset los secretos de las Edge Functions, del BORRADOR
 //
 // Lo que no se puede aquí lo dice (db reset --linked borraría producción; no
 // hay gen types todavía), no lo finge.
 
 import { randomBytes } from "node:crypto";
 
+import { parseDotEnv } from "@/lib/apps/env/dotenv";
 import { CONFIG_TOML, FUNCTION_NAME_RE, functionDirOf, functionNamesIn } from "@/lib/functions/project-files";
+import { RESERVED_SECRET_PREFIXES } from "@/lib/functions/secret-names";
 
 import { splitSqlStatements } from "./sql-split";
 
@@ -40,6 +43,15 @@ export interface FunctionsCli {
   draftBaseUrl(): Promise<string>;
 }
 
+/** Los secretos de las funciones (spec local 2026-10-11, Parte 4). SIEMPRE el
+ *  borrador: Len nunca escribe en producción (ésos los pone el usuario). */
+export interface SecretsCli {
+  /** Nombre y huella (sha256), como `supabase secrets list`. Nunca el valor. */
+  list(): Promise<readonly { readonly name: string; readonly digest: string }[]>;
+  set(entries: Readonly<Record<string, string>>): Promise<{ ok: true } | { ok: false; message: string }>;
+  unset(names: readonly string[]): Promise<void>;
+}
+
 export interface CliBackend {
   status(): Promise<{ apiUrl: string; publishableKey: string }>;
   /** Las versiones aplicadas en la base de PRUEBAS (`supabase_migrations.schema_migrations`). */
@@ -55,6 +67,8 @@ export interface CliBackend {
   query(sql: string, target: "local" | "linked"): Promise<QueryOutcome>;
   /** Las Edge Functions (spec local 2026-10-11). `null`/ausente: este servidor no las tiene. */
   readonly functions?: FunctionsCli | null;
+  /** Los secretos de las funciones. `null`/ausente: este servidor no las tiene. */
+  readonly secrets?: SecretsCli | null;
 }
 
 export interface CliResult {
@@ -164,7 +178,7 @@ export function renderAgentJson(columns: readonly string[], rows: readonly (read
 
 // ─── Los argumentos ──────────────────────────────────────────────────────────
 
-const VALUE_FLAGS = new Set(["-f", "--file", "-o", "--output", "--db-url", "--project-ref"]);
+const VALUE_FLAGS = new Set(["-f", "--file", "-o", "--output", "--db-url", "--project-ref", "--env-file"]);
 
 function parseArgs(args: readonly string[]): { words: string[]; flags: Set<string>; values: Map<string, string> } {
   const words: string[] = [];
@@ -203,6 +217,9 @@ Available Commands:
   functions list    List the Functions deployed to the draft and to production
   functions delete  Delete a Function and its folder
   functions serve   Show where the draft serves the Functions
+  secrets set       Set secrets for the Edge Functions in the draft (NAME=VALUE, or --env-file)
+  secrets list      List the draft's secrets: name and SHA-256 digest
+  secrets unset     Unset secrets from the draft
 
 Flags for db push:
   --dry-run         Print the migrations that would be applied, without applying them
@@ -319,6 +336,79 @@ async function functionsCommand(
   const r = await fx.deploy(aDesplegar);
   if (!r.ok) return err(r.message);
   return ok(`${nota}Deployed Functions on project ${ref}: ${(rest.length > 0 ? rest : r.functions).join(", ")}\n`, escribir ? { escribir } : {});
+}
+
+// ─── supabase secrets … (spec local 2026-10-11, Parte 4) ────────────────────
+// Los textos son los de la CLI de Supabase (apps/cli/src/commands/secrets, HEAD
+// del 12/10/2026). Todo va al BORRADOR: producción la pone el usuario (la
+// tarjeta, publicar).
+
+/** La tabla de la CLI (`apps/cli/src/output/glamour-table.ts`), copiada: una
+ *  línea en blanco, una decorativa, la cabecera, los guiones, las filas y otra
+ *  en blanco; cada celda con un espacio a cada lado, unidas por «|». */
+export function renderGlamourTable(headers: readonly string[], rows: readonly (readonly string[])[]): string {
+  const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
+  const fila = (cells: readonly string[]) => "  " + cells.map((c, i) => ` ${c.padEnd(widths[i] ?? 0)} `).join("|");
+  return ["", "  ", fila(headers), "  " + widths.map((w) => "-".repeat(w + 2)).join("|"), ...rows.map(fila), ""].join("\n") + "\n";
+}
+
+/** Lo que la CLI escribe tras un error suyo (`output.layer.ts`). */
+const DEBUG_HINT = "Try rerunning the command with --debug to troubleshoot the error.\n";
+
+async function secretsCommand(
+  sub: string | undefined,
+  rest: readonly string[],
+  values: ReadonlyMap<string, string>,
+  ficheros: Readonly<Record<string, string>>,
+  sx: SecretsCli | null,
+): Promise<CliResult> {
+  if (sub !== "set" && sub !== "list" && sub !== "unset") {
+    return err(`Error: unknown command "secrets${sub ? ` ${sub}` : ""}" for "supabase"\nRun 'supabase --help' for usage.\n`);
+  }
+  if (!sx) return err(SIN_FUNCIONES);
+  if (sub === "list") return ok(renderGlamourTable(["NAME", "DIGEST"], (await sx.list()).map((s) => [s.name, s.digest])));
+  if (sub === "set") {
+    const merged = new Map<string, string>();
+    const envFile = values.get("--env-file");
+    if (envFile !== undefined) {
+      const ruta = envFile.startsWith("/") ? envFile : `/${envFile.replace(/^\.\//, "")}`;
+      const texto = ficheros[ruta];
+      if (texto === undefined) return err(`failed to open env file: open ${envFile}: no such file or directory\n${DEBUG_HINT}`);
+      const p = parseDotEnv(texto);
+      if (p.errors.length > 0) return err(`failed to parse env file: ${p.errors[0]!.message}\n${DEBUG_HINT}`);
+      for (const [n, v] of Object.entries(p.vars)) merged.set(n, v);
+    }
+    for (const pair of rest) {
+      const i = pair.indexOf("=");
+      if (i === -1) return err(`Invalid secret pair: ${pair}. Must be NAME=VALUE.\n${DEBUG_HINT}`);
+      merged.set(pair.slice(0, i), pair.slice(i + 1));
+    }
+    let stderr = "";
+    const body: Record<string, string> = {};
+    for (const [name, value] of merged) {
+      // La CLI salta SUPABASE_ con este aviso; AWS_ y LAMBDA_ son del sistema en Lambda: igual.
+      const prefix = RESERVED_SECRET_PREFIXES.find((p) => name.startsWith(p));
+      if (prefix) {
+        stderr += `Env name cannot start with ${prefix}, skipping: ${name}\n`;
+        continue;
+      }
+      body[name] = value;
+    }
+    if (Object.keys(body).length === 0) return { stdout: "", stderr: `${stderr}No arguments found. Use --env-file to read from a .env file.\n${DEBUG_HINT}`, exitCode: 1 };
+    const r = await sx.set(body);
+    if (!r.ok) return { stdout: "", stderr: `${stderr}${r.message}`, exitCode: 1 };
+    return { stdout: "Finished supabase secrets set.\n", stderr, exitCode: 0 };
+  }
+  // unset: sin nombres, todos (menos SUPABASE_*); la pregunta de la CLI sale
+  // siempre y, sin terminal ni nada por stdin, vale su «sí» por defecto.
+  const names = rest.length > 0 ? [...rest] : (await sx.list()).map((s) => s.name).filter((n) => !n.startsWith("SUPABASE_"));
+  if (names.length === 0) return { stdout: "", stderr: "You have not set any function secrets, nothing to do.\n", exitCode: 0 };
+  await sx.unset(names);
+  return {
+    stdout: "Finished supabase secrets unset.\n",
+    stderr: `Do you want to unset these function secrets?\n • ${names.join("\n • ")}\n\n [Y/n] \n`,
+    exitCode: 0,
+  };
 }
 
 export async function runCli(
@@ -453,6 +543,7 @@ export async function runCli(
   }
 
   if (cmd === "functions") return functionsCommand(sub, rest, flags, ficheros, backend.functions ?? null);
+  if (cmd === "secrets") return secretsCommand(sub, rest, values, ficheros, backend.secrets ?? null);
 
   if (cmd === "gen") return err("supabase gen is not available here yet.\n");
   if (["login", "link", "init", "start", "stop", "projects"].includes(cmd)) {

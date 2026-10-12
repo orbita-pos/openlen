@@ -4,12 +4,15 @@
 
 import "server-only";
 
+import type { SecretsCli } from "@/lib/backend/cli-core";
+import { autorDelCambio } from "@/lib/projects/autor-del-cambio";
+
 import { defaultFunctionEnv } from "./default-env";
 import { realDeployDeps } from "./deploy";
 import { applyFunctionEnv } from "./deploy-core";
 import { secretNamesOf } from "./secret-store";
 import { pgSecretStore } from "./secret-store-pg";
-import type { SecretsDeps } from "./secrets-core";
+import { setFunctionSecrets, unsetFunctionSecrets, type SecretsDeps } from "./secrets-core";
 
 export function realSecretsDeps(): SecretsDeps | null {
   const deploy = realDeployDeps();
@@ -25,4 +28,27 @@ export function realSecretsDeps(): SecretsDeps | null {
 export async function functionSecretNames(projectId: string): Promise<{ draft: string[]; live: string[] } | null> {
   if (!realSecretsDeps()) return null;
   return secretNamesOf(await pgSecretStore.list(projectId));
+}
+
+/** `supabase secrets …` de la terminal de Len: SIEMPRE el borrador. */
+export function secretsCliFor(projectId: string): SecretsCli | null {
+  const deps = realSecretsDeps();
+  if (!deps) return null;
+  return {
+    async list() {
+      return (await deps.store.list(projectId)).filter((r) => r.environment === "draft").map((r) => ({ name: r.name, digest: r.digest }));
+    },
+    async set(entries) {
+      const r = await setFunctionSecrets(
+        projectId,
+        Object.entries(entries).map(([name, value]) => ({ environment: "draft" as const, name, value })),
+        autorDelCambio(),
+        deps,
+      );
+      return r.ok ? { ok: true } : { ok: false, message: `${r.message}\n` };
+    },
+    async unset(names) {
+      await unsetFunctionSecrets(projectId, "draft", names, deps);
+    },
+  };
 }
