@@ -23,7 +23,15 @@ export class RegistryUnavailableError extends Error {}
 
 const MAX_BYTES = 20 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
+/** Documents kept for ETag revalidation; the least recently used goes (some weigh megabytes). */
+export const MAX_CACHED_PACKUMENTS = 64;
 const cache = new Map<string, { etag: string | null; doc: Packument }>();
+
+function remember(name: string, entry: { etag: string | null; doc: Packument }): void {
+  cache.delete(name);
+  cache.set(name, entry);
+  while (cache.size > MAX_CACHED_PACKUMENTS) cache.delete(cache.keys().next().value!);
+}
 
 export function clearPackumentCache(): void {
   cache.clear();
@@ -41,13 +49,16 @@ export async function getPackument(name: string, fetchImpl: FetchLike = fetch): 
   } catch (e) {
     throw new RegistryUnavailableError(e instanceof Error ? e.message : String(e));
   }
-  if (res.status === 304 && cached) return cached.doc;
+  if (res.status === 304 && cached) {
+    remember(name, cached);
+    return cached.doc;
+  }
   if (res.status === 404) return null;
   if (!res.ok) throw new RegistryUnavailableError(`the registry answered ${res.status}`);
   if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) throw new RegistryUnavailableError(`${name}: the registry document is over 20 MB`);
   const text = await res.text();
   if (text.length > MAX_BYTES) throw new RegistryUnavailableError(`${name}: the registry document is over 20 MB`);
   const doc = JSON.parse(text) as Packument;
-  cache.set(name, { etag: res.headers.get("etag"), doc });
+  remember(name, { etag: res.headers.get("etag"), doc });
   return doc;
 }

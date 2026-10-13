@@ -28,6 +28,19 @@ describe("module store", () => {
     expect(await store.get(sha256Hex(`${"x".repeat(60)}4`))).not.toBeNull();
   });
 
+  it("🔴 memory: past its byte cap, the least recently used module goes (it lives in the server's process)", async () => {
+    const store = memoryStore(150);
+    const text = (n: string) => `${"x".repeat(59)}${n}`;
+    await store.put(sha256Hex(text("a")), text("a"));
+    await store.put(sha256Hex(text("b")), text("b"));
+    // Read again: it becomes the most recent.
+    expect(await store.get(sha256Hex(text("a")))).toBe(text("a"));
+    await store.put(sha256Hex(text("c")), text("c"));
+    expect(await store.get(sha256Hex(text("b")))).toBeNull();
+    expect(await store.get(sha256Hex(text("a")))).toBe(text("a"));
+    expect(await store.get(sha256Hex(text("c")))).toBe(text("c"));
+  });
+
   it("layered: a hit in a slower layer fills the faster one", async () => {
     const fast = memoryStore();
     const slow = memoryStore();

@@ -19,17 +19,37 @@ export function sha256Hex(text: string): string {
   return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
-export function memoryStore(): ModuleStore {
+/** In memory, least recently used out past `maxBytes` (UTF-16 length, close enough for a cap). */
+export function memoryStore(maxBytes = Number.POSITIVE_INFINITY): ModuleStore {
   const map = new Map<string, string>();
+  let used = 0;
   return {
     async get(sha) {
-      return map.get(sha) ?? null;
+      const text = map.get(sha);
+      if (text === undefined) return null;
+      map.delete(sha);
+      map.set(sha, text);
+      return text;
     },
     async put(sha, contents) {
+      const before = map.get(sha);
+      if (before !== undefined) {
+        used -= before.length;
+        map.delete(sha);
+      }
       map.set(sha, contents);
+      used += contents.length;
+      while (used > maxBytes && map.size > 0) {
+        const [oldest, text] = map.entries().next().value!;
+        map.delete(oldest);
+        used -= text.length;
+      }
     },
   };
 }
+
+/** The server's memory layer: hot modules only; the disk and R2 keep the rest. */
+const MEMORY_LAYER_BYTES = 256 * 1024 * 1024;
 
 export function diskStore(dir: string, maxBytes: number): ModuleStore {
   const fileOf = (sha: string) => path.join(dir, sha.slice(0, 2), `${sha}.txt`);
@@ -127,7 +147,7 @@ export function defaultModuleStore(): ModuleStore {
   if (!current) {
     const dir = process.env.OPENLEN_ESM_CACHE_DIR || path.join(os.tmpdir(), "openlen-esm-cache");
     const r2 = r2Store();
-    current = layeredStore([memoryStore(), diskStore(dir, 1024 * 1024 * 1024), ...(r2 ? [r2] : [])]);
+    current = layeredStore([memoryStore(MEMORY_LAYER_BYTES), diskStore(dir, 1024 * 1024 * 1024), ...(r2 ? [r2] : [])]);
   }
   return current;
 }
