@@ -198,6 +198,8 @@ export default defineConfig({
       "lib/ai/origen-de-medida.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5), en un Chromium de verdad.
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
+      // Los ojos ven WebGL (three.js, mapas, juegos) en la captura. LISTA BLANCA.
+      "lib/ai/ojos-ven-webgl.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
