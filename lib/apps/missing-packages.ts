@@ -1,25 +1,26 @@
-// WHICH PACKAGES LEN ASKS FOR THAT ITS CATALOG DOESN'T HAVE, so the catalog
-// grows from data and not by eye.
+// WHICH PACKAGES LEN COULD NOT INSTALL, and why: since open npm (spec
+// 2026-10-13) any npm package installs, so what this counts is what the gate
+// or esm.sh refused — the list that says whether the gate is too strict.
 //
-// There is no separate log: every clash is already in the turn's transcript
-// (`projectChatMessages.transcript`), with the exact text the model read.
-// There are four messages, and this is their only reader:
+// There is no separate log: every refusal is already in the turn's transcript
+// (`projectChatMessages.transcript`), with the exact text the model read — in
+// a <new-diagnostics> line (installing on save) or after `npm error` (the
+// terminal). The messages, and this is their only reader:
 //
-//   npm-install  an app's terminal: since open npm (2026-10-13), the package
-//                a `npm install` error names (`herramientas-de-app.ts`):
-//                «npm error young: published 10 days ago; …»; before it,
-//                «three: isn't available here — there is no npm; …»
-//   import       the compiler, a package nothing serves yet — the catalog
-//                doesn't have it and installing it (open npm) didn't happen
-//                or failed: «"three" is not installed in this app. …»
-//   url-import   the compiler, an import from a CDN:
-//                «"https://esm.sh/three": imports from URLs or "https:" are not supported here.»
-//   page-import  the compiler, a package imported in a PAGE (not an app):
-//                «"chart.js" is a package name, and packages can only be imported in an app.»
+//   not-installed  the compiler, a package nothing serves yet:
+//                  «"three" is not installed in this app. …» (before open npm:
+//                  «… is not available in this app.» and the terminal's
+//                  «three: isn't available here — there is no npm; …»)
+//   too-new        the gate (lib/apps/npm/gate.ts): «three@^0.181.0: every matching version is newer than 7 days …»
+//   too-young      the gate: «young: published 10 days ago; packages must be at least 30 days old.»
+//   malware        the gate: «x@1.2.3 is flagged as malware (MAL-…) …»
+//   build-failed   the installer (lib/apps/npm/install.ts): «x@1.2.3: esm.sh could not build it: …»
+//   page-import    the compiler, a package imported in a PAGE (not an app):
+//                  «"chart.js" is a package name, and packages can only be imported in an app.»
 //
 // If one of those texts changes, `missing-packages.test.ts` says so.
 
-export type MissingSource = "npm-install" | "import" | "url-import" | "page-import";
+export type MissingSource = "not-installed" | "too-new" | "too-young" | "malware" | "build-failed" | "page-import";
 
 export interface MissingHit {
   readonly pkg: string;
@@ -39,14 +40,17 @@ export interface MissingPackageRow {
   readonly inCurrentCatalog: boolean;
 }
 
+// The gate's messages start a line after `npm error ` or after a diagnostic's
+// `[Line 1:1] `: what comes before the name is the start of a line or a space.
 const PATTERNS: readonly (readonly [MissingSource, RegExp])[] = [
-  // Open npm: the package a `npm install` error names (the gate or esm.sh refused it).
-  ["npm-install", /^npm error ((?:@[^\s/@]+\/)?[^\s@:/]+(?:@[^\s:]*)?)(?::| is | depends on )/gm],
+  ["not-installed", /"([^"]+)" is not installed in this app\./g],
   // Before open npm, still in stored turns.
-  ["npm-install", /^(\S+): isn't available here — there is no npm;/gm],
-  // "available": the wording before open npm, still in stored turns.
-  ["import", /"([^"]+)" is not (?:installed|available) in this app\./g],
-  ["url-import", /"([^"]+)": imports from URLs or "[^"]*" are not supported here\./g],
+  ["not-installed", /"([^"]+)" is not available in this app\./g],
+  ["not-installed", /^(\S+): isn't available here — there is no npm;/gm],
+  ["too-new", /(?:^|\s)((?:@[^/\s]+\/)?[^@\s]+)@\S+: every matching version is newer than/gm],
+  ["too-young", /(?:^|\s)((?:@[^/\s]+\/)?[^:\s]+): published \d+ days ago; packages must be at least/gm],
+  ["malware", /((?:@[^/\s]+\/)?[^@\s]+)@\S+ is flagged as malware/g],
+  ["build-failed", /((?:@[^/\s]+\/)?[^@\s]+)@\S+: esm\.sh could not build it/g],
   ["page-import", /"([^"]+)" is a package name, and packages can only be imported in an app\./g],
 ];
 
