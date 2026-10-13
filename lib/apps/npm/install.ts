@@ -301,6 +301,32 @@ async function installCatalogParts(add: InstallAdd, version: string | null, ctx:
   };
 }
 
+async function installTypesOnly(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
+  const { packages, dependencies, deps } = ctx;
+  const decision = await chooseVersion(add.name, add.range, deps);
+  if (!decision.ok) return refused(decision.message, decision.code);
+  const types = await typesFor(add.name, decision.version, ctx);
+  if (!types?.types) return nothing(error(`${add.name}@${decision.version} has no .d.ts files; nothing was installed.`));
+  packages[add.name] = {
+    version: decision.version,
+    publishedAt: decision.publishedAt,
+    externals: [],
+    development: {},
+    production: {},
+    assets: {},
+    types: types.types,
+    ...(types.typesFrom ? { typesFrom: types.typesFrom } : {}),
+    warnings: [],
+    bytes: 0,
+  };
+  dependencies[add.name] = add.range ?? `^${decision.version}`;
+  return {
+    notes: [{ severity: "Info", message: `Installed ${add.name}@${decision.version} from npm (types only).` }],
+    installed: `${add.name}@${decision.version}`,
+    discovered: [],
+  };
+}
+
 async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
   const { app, dependencies, packages, deps } = ctx;
 
@@ -316,6 +342,10 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
     dependencies[add.name] = add.range ?? dependencies[add.name] ?? catalogRange(app.catalogo, add.name);
     return installCatalogParts(add, catalogVersion, ctx);
   }
+
+  // `npm install @types/node`: only .d.ts files, like npm puts in node_modules —
+  // never a JavaScript build from esm.sh (Len's real turn got @types/leaflet as one).
+  if (add.name.startsWith("@types/")) return installTypesOnly(add, ctx);
 
   const range = add.range ?? dependencies[add.name] ?? null;
   // Parts of the catalog's copy are not this package from esm.sh: another version replaces them.

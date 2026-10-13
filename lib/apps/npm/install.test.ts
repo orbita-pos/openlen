@@ -45,6 +45,7 @@ beforeAll(async () => {
       { name: "zod", createdDaysAgo: 3000, versions: { "3.25.76": { daysAgo: 400 } } },
       { name: "react-dom", createdDaysAgo: 4000, versions: { "19.2.6": { daysAgo: 60, peerDependencies: { react: "^19.2.6" } } } },
       { name: "@types/react-dom", createdDaysAgo: 3000, versions: { "19.2.7": { daysAgo: 50 } } },
+      { name: "@types/onlytypes", createdDaysAgo: 3000, versions: { "2.0.1": { daysAgo: 90 } } },
     ],
     modules: {
       ...both("tiny", "1.0.0", `import { dep } from "/dep@^2.0.0?target=es2022";\nexport default function tiny() { return "tiny" + dep; }`),
@@ -74,6 +75,8 @@ beforeAll(async () => {
       "@types/react-dom@19.2.7/server.d.ts": `export * from "./static";\nimport "./client";\nexport declare function renderToString(x: unknown): string;`,
       "@types/react-dom@19.2.7/static.d.ts": "export declare const prerender: unknown;",
       "@types/react-dom@19.2.7/client.d.ts": "export {};",
+      "@types/onlytypes@2.0.1/package.json": JSON.stringify({ name: "@types/onlytypes", types: "index.d.ts" }),
+      "@types/onlytypes@2.0.1/index.d.ts": "export declare function only(): void;",
     },
   });
   restore = npm.useEnv();
@@ -255,6 +258,18 @@ describe("installForApp", () => {
     // client.d.ts and package.json are in the catalog's types already: they stay the catalog's.
     expect(Object.keys(reactDom.types ?? {}).sort()).toEqual(["/node_modules/@types/react-dom/server.d.ts", "/node_modules/@types/react-dom/static.d.ts"]);
     expect(pendingInstall({ ...files, ...out.files }, APP)).toEqual({ add: [], remove: [] });
+  });
+
+  it("🔴 an @types package installs as types only, like npm: its .d.ts for the checker, no JavaScript asked of esm.sh", async () => {
+    const files = source("export {};", { [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: {} }) });
+    const before = npm.requests.length;
+    const out = await installForApp({ files, app: APP, request: { add: [{ name: "@types/onlytypes", range: null, subpaths: [""], explicit: true }], remove: [] }, deps: deps() });
+    expect(out.notes).toEqual([{ severity: "Info", message: "Installed @types/onlytypes@2.0.1 from npm (types only)." }]);
+    expect(readPackageJson(out.files)?.dependencies).toEqual({ "@types/onlytypes": "^2.0.1" });
+    const locked = readEsmLock(out.files).packages["@types/onlytypes"]!;
+    expect(locked).toMatchObject({ version: "2.0.1", development: {}, production: {}, typesFrom: { name: "@types/onlytypes", version: "2.0.1" } });
+    expect(Object.keys(locked.types ?? {}).sort()).toEqual(["/node_modules/@types/onlytypes/index.d.ts", "/node_modules/@types/onlytypes/package.json"]);
+    expect(npm.requests.slice(before).filter((r) => r.includes("?target="))).toEqual([]);
   });
 
   it("uninstall removes it from package.json and the lock", async () => {
