@@ -57,6 +57,7 @@ import { isTestSupportFile } from "./tests/test-files";
 import { DOTENV_PATH } from "./env/rules";
 import { dotEnvPublicVars } from "./env/dotenv";
 import { catalogPartsOf, sourceOf } from "@/lib/apps/npm/lock";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
@@ -345,6 +346,20 @@ function effectiveEnv(ctx: ContextoDeCompilacion): Record<string, string> {
   return { ...(dotEnv === undefined ? {} : dotEnvPublicVars(dotEnv)), ...(ctx.entorno ?? {}) };
 }
 
+// NPM ABIERTO: quién sirve un paquete lo dicen /package.json y el lock por lo
+// que DICEN (sourceOf), así que su texto entra en la clave. Una vez por carpeta.
+const paquetesDe = new WeakMap<object, { readonly pkg: string; readonly lock: string; readonly huella: string }>();
+function huellaDePaquetes(carpeta: ContextoDeCompilacion["carpeta"]): string {
+  const pkg = carpeta[PACKAGE_JSON_PATH] ?? "";
+  const lock = carpeta[ESM_LOCK_PATH] ?? "";
+  const visto = paquetesDe.get(carpeta);
+  // La misma carpeta con los mismos textos (si alguien la cambió, se recalcula).
+  if (visto && visto.pkg === pkg && visto.lock === lock) return visto.huella;
+  const huella = createHash("sha256").update(pkg).update("\0").update(lock).digest("hex");
+  paquetesDe.set(carpeta, { pkg, lock, huella });
+  return huella;
+}
+
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
   // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
@@ -371,6 +386,8 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
     .update("\0")
     .update(hojas)
+    .update("\0")
+    .update(huellaDePaquetes(ctx.carpeta))
     .update("\0")
     .update(ctx.development ? "development" : "production")
     .digest("hex");

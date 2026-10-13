@@ -54,6 +54,19 @@ describe("compiler and open npm", () => {
     expect(r.ficheros["/src/main.tsx"]).toContain('from "three"');
   });
 
+  it("🔴 the compile cache follows /package.json and the lock: installing a second package (same paths, new contents) clears its «not installed», and uninstalling brings it back", () => {
+    // An app that already has both files: the paths don't change, only what they say.
+    const source = `import * as THREE from "three";\nexport default THREE;`;
+    const without = app(source, { [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: {} }), [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: {} }) });
+    const withThree = app(source, {
+      [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { three: "^0.186.0" } }),
+      [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { three: lockedThree } }),
+    });
+    expect(compilarCarpeta({ carpeta: without, catalogo: CATALOG }).errores.map((e) => e.mensaje).join("\n")).toMatch(/"three" is not installed/);
+    expect(compilarCarpeta({ carpeta: withThree, catalogo: CATALOG }).errores).toEqual([]);
+    expect(compilarCarpeta({ carpeta: without, catalogo: CATALOG }).errores.map((e) => e.mensaje).join("\n")).toMatch(/"three" is not installed/);
+  });
+
   it("🔴 a type-only import installs nothing (sucrase drops it)", () => {
     const r = compilarCarpeta({ carpeta: app(`import type { Mesh } from "three";\nexport const m: Mesh | null = null;`), catalogo: CATALOG });
     expect(r.paquetes).not.toContain("three");
