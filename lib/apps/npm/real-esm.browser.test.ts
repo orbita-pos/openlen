@@ -74,12 +74,16 @@ describe.skipIf(!REAL)("open npm against the real esm.sh", () => {
   it("🔴 three + @react-three/fiber: one copy of three, useThree works inside <Canvas>, and the eyes see the red cube — development and production", async () => {
     const { js, files } = await installAndBundle(`import { createRoot } from "react-dom/client";
 import { Canvas, useThree } from "@react-three/fiber";
+import { Color } from "three";
 function Probe() { const { gl } = useThree(); (window as any).__ok = Boolean(gl); return null; }
 createRoot(document.getElementById("root")!).render(
-  <Canvas style={{ width: 300, height: 300 }}><Probe /><mesh><boxGeometry args={[3, 3, 3]} /><meshBasicMaterial color="red" /></mesh></Canvas>,
+  <Canvas style={{ width: 300, height: 300 }}><Probe /><mesh><boxGeometry args={[3, 3, 3]} /><meshBasicMaterial color={new Color("red")} /></mesh></Canvas>,
 );`);
     const lock = readEsmLock(files);
     expect(Date.now() - Date.parse(lock.packages["@react-three/fiber"]!.publishedAt)).toBeGreaterThan(7 * 86_400_000);
+    // The checker finds three through @types/three's "exports" (build/three.module.d.ts), so fiber's JSX elements type too.
+    const checked = await checkAppInWorker({ files: Object.fromEntries(Object.entries(files).filter(([p]) => isCompileInputPath(p))), catalogo: APP.catalogo });
+    expect((checked?.typescript ?? []).map((d) => `${d.codigo} ${d.mensaje}`)).toEqual([]);
     for (const modo of MODES) {
       await withPage(js[modo], `<body style="margin:0;background:#000"><div id="root"></div></body>`, async (page, errors, warnings) => {
         await page.setViewport({ width: 300, height: 300 });
@@ -93,7 +97,7 @@ createRoot(document.getElementById("root")!).render(
   }, 300_000);
 
   it("leaflet + react-leaflet: its CSS applies and the marker image loads with the usual Vite fix — development and production", async () => {
-    const { js } = await installAndBundle(`import { createRoot } from "react-dom/client";
+    const { js, files } = await installAndBundle(`import { createRoot } from "react-dom/client";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -104,6 +108,9 @@ L.Icon.Default.mergeOptions({ iconUrl: icon, iconRetinaUrl: icon, shadowUrl: sha
 createRoot(document.getElementById("root")!).render(
   <MapContainer center={[19.43, -99.13]} zoom={12} style={{ width: 400, height: 300 }}><Marker position={[19.43, -99.13]} /></MapContainer>,
 );`);
+    // The checker: @types/leaflet and react-leaflet's types, and the package's .png imported as URLs.
+    const checked = await checkAppInWorker({ files: Object.fromEntries(Object.entries(files).filter(([p]) => isCompileInputPath(p))), catalogo: APP.catalogo });
+    expect((checked?.typescript ?? []).map((d) => `${d.codigo} ${d.mensaje}`)).toEqual([]);
     for (const modo of MODES) {
       await withPage(js[modo], `<div id="root"></div>`, async (page) => {
         await page.waitForSelector(".leaflet-marker-icon", { timeout: 20_000 });
