@@ -15,7 +15,7 @@
 //
 // Lo que no llega antes de que el turno acabe se pierde: en Claude Code iría con
 // el mensaje siguiente del usuario, y aquí la sesión es de un turno.
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 
@@ -64,7 +64,8 @@ export function typesAndLintAfterWrite(args: {
   if (args.compileErrors > 0) return;
   const mia = ++estado.version;
   const pares = args.now instanceof Map ? [...args.now.entries()] : Object.entries(args.now);
-  const fuentes = Object.fromEntries(pares.filter(([ruta]) => isPublishableFolderPath(ruta)));
+  // Con /package.json y el lock de esm.sh: los tipos de los paquetes instalados (npm abierto).
+  const fuentes = Object.fromEntries(pares.filter(([ruta]) => isCompileInputPath(ruta)));
   void deps
     // La marca de la sesión: su petición nueva sustituye a la que aún espera.
     .checkApp(fuentes, app.catalogo, { supersedes: estado })

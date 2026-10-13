@@ -175,6 +175,28 @@ describe("appToolsFor (plan 03, tarea 5)", () => {
     expect(recibido!.entorno).toEqual({ VITE_STRIPE: "pk_test_de_p1" });
   });
 
+  it("🔴 npm abierto: tsc, build y test reciben /package.json y el lock del servidor (la terminal no lleva /.openlen)", async () => {
+    const LOCK = '{"lockfileVersion":1,"packages":{}}\n';
+    const vistos: Record<string, Record<string, string>> = {};
+    const tools = appToolsFor(
+      { app: { catalogo: "2026-11", entrada: "/src/main.jsx" }, projectId: "p1" } as never,
+      {
+        projectFiles: async () => ({ "/.openlen/esm-lock.json": LOCK, "/src/main.jsx": "old" }),
+        checkApp: async (files: Record<string, string>) => ((vistos.tsc = files), { typescript: [], eslint: [] }),
+        buildApp: async (files: Record<string, string>) => ((vistos.build = files), { ok: true as const, js: "x", map: null, bytes: 1, gzipBytes: 1, ms: 1 }),
+        testApp: async (files: Record<string, string>) => ((vistos.test = files), { files: [], notRun: [], blocked: [], ms: 1 }),
+      } as never,
+    )!;
+    const ficheros = { "/src/main.jsx": "x", "/package.json": '{"dependencies":{}}' };
+    for (const program of ["tsc", "build", "test"] as const) await tools.run(program, [], ficheros, 120_000);
+    for (const program of ["tsc", "build", "test"]) {
+      expect(vistos[program]!["/.openlen/esm-lock.json"], program).toBe(LOCK);
+      expect(vistos[program]!["/package.json"], program).toBe('{"dependencies":{}}');
+      // Lo de la terminal manda: el resto del servidor no pisa nada.
+      expect(vistos[program]!["/src/main.jsx"], program).toBe("x");
+    }
+  });
+
   it("si el comprobador no llega, lo dice y falla", async () => {
     expect(await montar(null).tools.run("tsc", [], {})).toEqual({ stdout: "", stderr: "tsc: didn't finish in time; try again.\n", exitCode: 1 });
   });

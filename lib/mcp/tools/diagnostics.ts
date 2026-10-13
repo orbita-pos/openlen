@@ -2,7 +2,7 @@
 // (el mismo comprobador que la terminal de Len), con fichero y línea.
 import * as z from "zod4";
 import { erroresDeLaApp, problemasDelCascaron } from "@/lib/agent/compila-la-app";
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import { realDeps } from "@/lib/agent/tools";
 import { checkAppInWorker } from "@/lib/apps/checker/check-app";
 import { textoDeDiagnostico } from "@/lib/apps/compilador";
@@ -50,7 +50,7 @@ export const getDiagnosticsTool = defineTool({
         types_and_lint: compile.length > 0 ? "skipped: fix the compile errors first" : "not requested",
       });
     }
-    const files = Object.fromEntries(Object.entries(carpeta).filter(([ruta]) => isPublishableFolderPath(ruta)));
+    const files = Object.fromEntries(Object.entries(carpeta).filter(([ruta]) => isCompileInputPath(ruta)));
     const checked = await checkAppInWorker({ files, catalogo: app.catalogo });
     if (!checked) return jsonResult({ type: "app", compile, types_and_lint: "unavailable: the checker did not answer in time, try again" });
     return jsonResult({ type: "app", compile, types: checked.typescript.map(line), lint: checked.eslint.map(line) });

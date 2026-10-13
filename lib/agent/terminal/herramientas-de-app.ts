@@ -9,10 +9,11 @@
 // (`deps.buildApp`), con su tamaño como lo imprime Vite. Y `npm test` (plan 04):
 // las pruebas de la app en el Chromium de los ojos (`deps.testApp`), con el
 // informe de vitest.
-import { isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
+import { ESM_LOCK_PATH } from "@/lib/apps/npm/paths";
 import { formatVitestReport } from "@/lib/apps/tests/report";
 import { typesPackagesOf } from "@/lib/apps/checker/types-pack";
 import type { TerminalDeLen } from "./terminal";
@@ -30,7 +31,7 @@ function dentroDe(rutas: readonly string[], ruta: string): boolean {
 
 export function appToolsFor(
   session: Pick<AgentSession, "app" | "projectId">,
-  deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp">,
+  deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp" | "projectFiles">,
 ): AppTools | undefined {
   const app = session.app;
   const check = deps.checkApp;
@@ -41,7 +42,13 @@ export function appToolsFor(
     catalogSpecifiers: (catalogo(app.catalogo)?.dependencias ?? []).map((d) => d.especificador),
     // Y los @types que trae su paquete de tipos: `npm install -D @types/react` ya está.
     typesPackages: typesPackagesOf(app.catalogo),
-    run: async (program, args, ficheros, timeLeftMs = 120_000, signal) => {
+    run: async (program, args, deLaTerminal, timeLeftMs = 120_000, signal) => {
+      // NPM ABIERTO (spec 2026-10-13): el lock de esm.sh vive en /.openlen, que
+      // es de sólo lectura y no viaja a la terminal; sin él, los paquetes
+      // instalados no los sirve nadie. Se suma el del servidor; lo demás es lo
+      // de la terminal, como está AHORA.
+      const server = session.projectId && deps.projectFiles ? await deps.projectFiles(session.projectId).catch(() => ({}) as Record<string, string>) : {};
+      const ficheros = server[ESM_LOCK_PATH] !== undefined ? { ...deLaTerminal, [ESM_LOCK_PATH]: server[ESM_LOCK_PATH] } : deLaTerminal;
       if (program === "test") {
         if (args.some((a) => a === "--coverage" || a.startsWith("--coverage."))) return { stdout: "", stderr: "vitest: coverage isn't available here.\n", exitCode: 1 };
         if (args.some((a) => a === "-u" || a === "--update")) return { stdout: "", stderr: "vitest: snapshots aren't available here (there is no snapshot file).\n", exitCode: 1 };
@@ -75,7 +82,7 @@ export function appToolsFor(
         const { stdout, exitCode, timedOut } = formatVitestReport(r, ficheros);
         return { stdout, stderr: "", exitCode, ...(timedOut ? { timedOut } : {}) };
       }
-      const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isPublishableFolderPath(ruta)));
+      const fuentes = Object.fromEntries(Object.entries(ficheros).filter(([ruta]) => isCompileInputPath(ruta)));
       if (program === "build") {
         if (!deps.buildApp) return { stdout: "", stderr: "npm run build: not available here.\n", exitCode: 1 };
         // Con `/.env` y el `import.meta.env` de borrador, como el lienzo y los
