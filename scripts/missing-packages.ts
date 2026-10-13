@@ -18,7 +18,7 @@ import { db } from "../lib/db";
 // The messages lib/apps/missing-packages.ts reads (with the wording from before
 // open npm), so Postgres only returns the turns that have one.
 const ANY_MESSAGE =
-  "is not installed in this app|is not available in this app|isn't available here — there is no npm|every matching version is newer than|packages must be at least|is flagged as malware|esm.sh could not build it|packages can only be imported in an app|is not part of this app's";
+  "is not installed in this app|is not available in this app|isn't available here — there is no npm|every matching version is newer than|packages must be at least|is flagged as malware|esm.sh could not build it|packages can only be imported in an app";
 
 async function main() {
   const days = Number(process.argv.find((a) => a.startsWith("--days="))?.slice(7) ?? 90);

@@ -23,20 +23,50 @@ interface TypesOptions {
 
 type Manifest = { types?: unknown; typings?: unknown; exports?: unknown };
 
+/** The `types` of an `exports` entry, through its conditions. */
+function pickTypes(x: unknown): string | null {
+  if (!x || typeof x !== "object") return null;
+  const o = x as Record<string, unknown>;
+  if (typeof o.types === "string") return o.types;
+  for (const k of ["import", "default", "require"]) {
+    const inner = pickTypes(o[k]);
+    if (inner) return inner;
+  }
+  return null;
+}
+
+const exportOf = (manifest: Manifest, key: string): unknown =>
+  manifest.exports && typeof manifest.exports === "object" ? (manifest.exports as Record<string, unknown>)[key] : null;
+
 function typesEntryOf(manifest: Manifest): string | null {
   for (const v of [manifest.types, manifest.typings]) if (typeof v === "string") return v;
-  const dot = manifest.exports && typeof manifest.exports === "object" ? (manifest.exports as Record<string, unknown>)["."] : null;
-  const pick = (x: unknown): string | null => {
-    if (!x || typeof x !== "object") return null;
-    const o = x as Record<string, unknown>;
-    if (typeof o.types === "string") return o.types;
-    for (const k of ["import", "default", "require"]) {
-      const inner = pick(o[k]);
-      if (inner) return inner;
+  return pickTypes(exportOf(manifest, "."));
+}
+
+/** Where a subpath's types may start ("" = the package's): its `exports` entry, else the file by name. */
+function entriesFor(manifest: Manifest, subpath: string, rootFallback: string | null): string[] {
+  if (subpath === "") {
+    const entry = typesEntryOf(manifest) ?? rootFallback;
+    return entry ? [entry] : [];
+  }
+  const entry = pickTypes(exportOf(manifest, `./${subpath}`));
+  return entry ? [entry] : [`${subpath}.d.ts`, `${subpath}/index.d.ts`];
+}
+
+/** Every subpath's types, crawled from the first entry that exists; null if none has any. */
+async function crawlSubpaths(pkg: string, version: string, manifest: { text: string; manifest: Manifest }, subpaths: readonly string[], rootFallback: string | null, opts: TypesOptions): Promise<Record<string, string> | null> {
+  const files: Record<string, string> = {};
+  let found = false;
+  for (const subpath of subpaths) {
+    for (const entry of entriesFor(manifest.manifest, subpath, rootFallback)) {
+      const got = await crawl(pkg, version, entry, manifest.text, opts);
+      if (!got) continue;
+      Object.assign(files, got);
+      found = true;
+      break;
     }
-    return null;
-  };
-  return pick(dot);
+  }
+  return found ? files : null;
 }
 
 const mangle = (name: string) => (name.startsWith("@") ? name.slice(1).replace("/", "__") : name);
@@ -101,11 +131,12 @@ export interface TypesFetched {
   readonly files: Record<string, string>;
 }
 
-export async function fetchTypes(name: string, version: string, opts: TypesOptions): Promise<TypesFetched | null> {
+/** `subpaths`: the parts whose types are wanted ("" = the package itself). */
+export async function fetchTypes(name: string, version: string, opts: TypesOptions, subpaths: readonly string[] = [""]): Promise<TypesFetched | null> {
   const own = await manifestOf(name, version, opts);
-  const ownEntry = own ? typesEntryOf(own.manifest) : null;
-  if (own && ownEntry) {
-    const files = await crawl(name, version, ownEntry, own.text, opts);
+  // A package that types its own entry types its parts too.
+  if (own && typesEntryOf(own.manifest)) {
+    const files = await crawlSubpaths(name, version, own, subpaths, null, opts);
     return files && { name, version, files };
   }
 
@@ -119,7 +150,7 @@ export async function fetchTypes(name: string, version: string, opts: TypesOptio
     if (!(await checkResolved(typesName, v, opts.gate)).ok) continue;
     const m = await manifestOf(typesName, v, opts);
     if (!m) return null;
-    const files = await crawl(typesName, v, typesEntryOf(m.manifest) ?? "index.d.ts", m.text, opts);
+    const files = await crawlSubpaths(typesName, v, m, subpaths, "index.d.ts", opts);
     return files && { name: typesName, version: v, files };
   }
   return null;

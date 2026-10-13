@@ -5,7 +5,7 @@
 // (several at a time).
 import { rawUrl } from "./esm-url";
 import { fetchText } from "./fetch-graph";
-import { lockedOrigin, readPackageJson, sourceOf, type LockedPackage } from "./lock";
+import { catalogPartsLocked, lockedOrigin, readEsmLock, readPackageJson, sourceOf, type LockedPackage } from "./lock";
 import { mapLimited } from "./pool";
 import type { FetchLike } from "./registry";
 import { defaultModuleStore, sha256Hex, type ModuleStore } from "./store";
@@ -37,14 +37,22 @@ export async function npmTypesFor(
   fetchImpl: FetchLike = fetch,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
-  for (const name of Object.keys(readPackageJson(files)?.dependencies ?? {})) {
-    const source = sourceOf(name, files, catalogName);
-    if (source.kind !== "esm" || !source.locked.types) continue;
-    const types = Object.entries(source.locked.types);
-    const texts = await mapLimited(types, async ([p, sha]) => (await store.get(sha)) ?? (await refetch(name, source.locked, p, sha, store, fetchImpl)));
+  const add = async (name: string, locked: LockedPackage) => {
+    if (!locked.types) return;
+    const types = Object.entries(locked.types);
+    const texts = await mapLimited(types, async ([p, sha]) => (await store.get(sha)) ?? (await refetch(name, locked, p, sha, store, fetchImpl)));
     types.forEach(([p], i) => {
       if (texts[i] !== null) out[p] = texts[i]!;
     });
+  };
+  for (const name of Object.keys(readPackageJson(files)?.dependencies ?? {})) {
+    const source = sourceOf(name, files, catalogName);
+    if (source.kind === "esm") await add(name, source.locked);
+  }
+  // The parts of catalog packages: only what the catalog's types don't have.
+  for (const name of Object.keys(readEsmLock(files).packages)) {
+    const parts = catalogPartsLocked(name, files, catalogName);
+    if (parts) await add(name, parts);
   }
   return out;
 }

@@ -40,6 +40,10 @@ export interface LockedPackage {
   readonly warnings: readonly string[];
   /** Bytes of the code modules (both modes), for the per-app cap. */
   readonly bytes: number;
+  /** Only PARTS of a catalog package the catalog doesn't ship (`react-dom/server`,
+   *  `zod/v4`), built at the catalog's version with the package itself
+   *  external: the package is still the catalog's, one copy. */
+  readonly catalogParts?: true;
 }
 
 export interface EsmLock {
@@ -94,13 +98,25 @@ export function catalogVersionOf(catalogName: string, packageName: string): stri
   return target && Object.hasOwn(table, target) ? table[target]! : null;
 }
 
-/** What the catalog ships of a package: `react-dom` → ["react-dom", "react-dom/client"]. */
-export function catalogPartsOf(catalogName: string, packageName: string): string[] {
-  return (catalogo(catalogName)?.dependencias ?? []).map((d) => d.especificador).filter((s) => parseBareSpecifier(s)?.name === packageName);
+export function catalogServes(catalogName: string, packageName: string): boolean {
+  return (catalogo(catalogName)?.dependencias ?? []).some((d) => parseBareSpecifier(d.especificador)?.name === packageName);
 }
 
-export function catalogServes(catalogName: string, packageName: string): boolean {
-  return catalogPartsOf(catalogName, packageName).length > 0;
+/** Whether the catalog ships this exact specifier: `react-dom/client` yes, `react-dom/server` no. */
+export function catalogShips(catalogName: string, specifier: string): boolean {
+  return (catalogo(catalogName)?.dependencias ?? []).some((d) => d.especificador === specifier);
+}
+
+export function servesSubpath(locked: LockedPackage, subpath: string): boolean {
+  return Object.hasOwn(locked.development, subpath) || Object.hasOwn(locked.assets, subpath);
+}
+
+/** The parts locked from esm.sh for a package the catalog serves (`catalogParts`):
+ *  they count while the catalog serves the package and they are at its version. */
+export function catalogPartsLocked(name: string, files: Files, catalogName: string): LockedPackage | null {
+  const locked = readEsmLock(files).packages[name];
+  if (!locked?.catalogParts || locked.version !== catalogVersionOf(catalogName, name)) return null;
+  return sourceOf(name, files, catalogName).kind === "catalog" ? locked : null;
 }
 
 /** The range package.json gets for a catalog package: "^<its version>", or "*" if unknown. */

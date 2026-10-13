@@ -8,7 +8,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { fetchPackageAsset } from "./assets";
 import type { EsmMode } from "./esm-url";
 import { fetchText } from "./fetch-graph";
-import { lockedOrigin, readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
+import { catalogPartsLocked, lockedOrigin, readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
 import { PACKAGE_JSON_PATH } from "./paths";
 import { mapLimited } from "./pool";
 import type { FetchLike } from "./registry";
@@ -73,12 +73,9 @@ export async function npmForBundle(
   const urls: Record<string, string> = {};
   const servedByEsm: string[] = [];
   const errores: Diagnostico[] = [];
-  for (const name of Object.keys(dependencies).sort()) {
-    const source = sourceOf(name, files, app.catalogo);
-    if (source.kind !== "esm") continue;
-    servedByEsm.push(name);
+  const add = async (name: string, locked: LockedPackage) => {
     const wanted = new Map<string, string>();
-    for (const [subpath, set] of Object.entries(mode === "development" ? source.locked.development : source.locked.production)) {
+    for (const [subpath, set] of Object.entries(mode === "development" ? locked.development : locked.production)) {
       entries[specifierOf(name, subpath)] = set.entry;
       for (const [url, sha] of Object.entries(set.modules)) if (modules[url] === undefined) wanted.set(url, sha);
     }
@@ -88,15 +85,27 @@ export async function npmForBundle(
       if (code === null) errores.push(missing(name, url));
       else modules[url] = code;
     });
-    for (const [subpath, sha] of Object.entries(source.locked.assets)) {
-      const text = await assetText(name, source.locked, subpath, sha, deps);
+    for (const [subpath, sha] of Object.entries(locked.assets)) {
+      const text = await assetText(name, locked, subpath, sha, deps);
       const spec = specifierOf(name, subpath);
       if (text === null) errores.push(missing(name, spec));
       else (subpath.toLowerCase().endsWith(".css") ? styles : urls)[spec] = text;
     }
+  };
+  for (const name of Object.keys(dependencies).sort()) {
+    const source = sourceOf(name, files, app.catalogo);
+    if (source.kind !== "esm") continue;
+    servedByEsm.push(name);
+    await add(name, source.locked);
+  }
+  // The parts of catalog packages the catalog doesn't ship: the package itself
+  // stays the catalog's (not in servedByEsm), only its parts come from here.
+  for (const name of Object.keys(readEsmLock(files).packages).sort()) {
+    const parts = catalogPartsLocked(name, files, app.catalogo);
+    if (parts) await add(name, parts);
   }
   if (errores.length > 0) return { ok: false, errores };
-  if (servedByEsm.length === 0) return { ok: true, npm: null, key: "" };
+  if (Object.keys(entries).length + Object.keys(styles).length + Object.keys(urls).length === 0) return { ok: true, npm: null, key: "" };
   const key = sha256Hex(`${mode}\n${JSON.stringify(dependencies)}\n${serializeEsmLock(readEsmLock(files))}`);
   return { ok: true, npm: { entries, modules, styles, urls, servedByEsm }, key };
 }
