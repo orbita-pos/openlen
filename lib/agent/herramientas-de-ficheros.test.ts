@@ -1802,44 +1802,61 @@ describe("la terminal DEL USUARIO en una app", () => {
   const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" };
   const CASCARON =
     '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  // NPM ABIERTO: `npm install` va al instalador de verdad (realDeps), como en la
+  // terminal de Len; aquí, uno que apunta lo que le piden.
+  const PKG = '{\n  "dependencies": {\n    "zod": "^3.25.76"\n  }\n}\n';
+  const LOCK = '{"lockfileVersion":1,"packages":{}}';
   const conComprobador = (data: ProjectData) => {
     const c = conCarpeta(data);
     c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}";
     const comprobados: string[][] = [];
+    const instalados: string[][] = [];
     const deps = {
       ...c.deps,
       async checkApp(ficheros: Record<string, string>) {
         comprobados.push(Object.keys(ficheros).sort());
         return null;
       },
+      async installPackages(_files: unknown, _app: unknown, request: { add: { name: string }[] }) {
+        instalados.push(request.add.map((a) => a.name));
+        return { files: { "/package.json": PKG, "/.openlen/esm-lock.json": LOCK }, notes: [], installed: ["zod@3.25.76"] };
+      },
     } as unknown as AgentDeps;
-    return { ...c, deps, comprobados };
+    return { ...c, deps, comprobados, instalados };
   };
   const correr = (deps: AgentDeps, command: string, proyecto: string) =>
     conTerminal(() => ejecutarEnLaTerminalDelUsuario(proyecto, "u1", command, deps));
 
-  it("🔴 tiene los comandos de la app, como la de Len: npm install contesta con el catálogo y npx tsc corre el comprobador", async () => {
-    const { deps, comprobados } = conComprobador({ html: CASCARON, app: APP });
+  it("🔴 tiene los comandos de la app, como la de Len: npm install instala y npx tsc corre el comprobador", async () => {
+    const { deps, comprobados, instalados, archivos } = conComprobador({ html: CASCARON, app: APP });
     try {
       const npm = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-app");
-      assert.match(npm.salida, /zod: already available \(catalog\)/);
+      assert.deepEqual(instalados, [["zod"]]);
+      assert.match(npm.salida, /\+ zod@3\.25\.76/);
       assert.match(npm.salida, /rc=0/);
+      assert.equal(archivos["/package.json"], PKG, "el /package.json nuevo se guarda");
+      assert.equal(archivos["/.openlen/esm-lock.json"], LOCK, "y el lock, que la terminal no escribe");
+      // Guardar /package.json es escribir la app: tipos y lint pasivos, ya con el lock.
+      const conElLock = ["/.openlen/esm-lock.json", "/package.json", "/src/App.jsx"];
+      assert.deepEqual(comprobados, [conElLock]);
       await correr(deps, "npx tsc --noEmit", "p-usuario-app");
-      assert.deepEqual(comprobados, [["/src/App.jsx"]]);
+      assert.deepEqual(comprobados, [conElLock, conElLock]);
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
   });
 
   it("🔴 una página que se convierte en app con la terminal abierta tiene los comandos de la app en el comando siguiente", async () => {
-    const { deps, store, archivos } = conComprobador({ html: HOME });
+    const { deps, store, archivos, instalados } = conComprobador({ html: HOME });
     try {
       const antes = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
       assert.match(antes.salida, /rc=127/, "en una página no hay npm");
+      assert.deepEqual(instalados, []);
       store.data = { html: CASCARON, app: APP };
       archivos["/src/main.jsx"] = 'import App from "./App";';
       const despues = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
-      assert.match(despues.salida, /zod: already available \(catalog\)/);
+      assert.deepEqual(instalados, [["zod"]]);
+      assert.match(despues.salida, /rc=0/);
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }

@@ -108,11 +108,11 @@ describe("publicar una app web", () => {
     assert.ok(!existsSync(path.join(root, "approta", "current")), "no hay release");
   });
 
-  it("un import que no existe, o que no está en el catálogo, tampoco se publica", async () => {
+  it("un import de un paquete que no está instalado (ni en el catálogo ni en el lock) tampoco se publica", async () => {
     const conAxios = [...CARPETA, { path: "/src/api.js", content: 'import axios from "axios";\nexport default axios;' }];
     await assert.rejects(
       publishToDir({ subdomain: "appaxios", html: CASCARON, files: conAxios, app: APP }),
-      (err: unknown) => err instanceof AppNoCompilaError && /"axios" is not available/.test(err.message),
+      (err: unknown) => err instanceof AppNoCompilaError && /"axios" is not installed in this app/.test(err.message),
     );
   });
 
