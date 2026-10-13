@@ -572,7 +572,7 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     // `--enable-unsafe-swiftshader`: WebGL por software. Sin ella, en la caja
     // (sin GPU) `getContext("webgl")` da null y Len ve negra una escena de
     // three.js, un mapa 3D o un juego — medido el 2026-10-13, Chrome 148
-    // (`ojos-ven-webgl.browser.test.ts`). Chrome la llama «unsafe» porque
+    // (`eyes-see-webgl.browser.test.ts`). Chrome la llama «unsafe» porque
     // SwiftShader es más superficie para contenido ajeno; este Chromium ya
     // corre sin sandbox y con la red filtrada.
     args: [
