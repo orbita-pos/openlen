@@ -273,6 +273,16 @@ describe("npm in an app's terminal: what is already there", () => {
     });
   });
 
+  it("🔴 @types of a package installed from esm.sh whose types already came from them: already there, like npm with it installed (Len's real turn installed @types/leaflet as a package)", async () => {
+    const locked = { version: "1.9.4", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: {}, production: {}, assets: {}, types: {}, typesFrom: { name: "@types/leaflet", version: "1.9.22" }, warnings: [], bytes: 0 };
+    const lock = JSON.stringify({ lockfileVersion: 1, packages: { leaflet: locked } });
+    const installPackages = vi.fn();
+    const t = appToolsFor({ app: APP, projectId: "p1", autor: "len" } as never, { checkApp: vi.fn(), installPackages, saveProjectFile: vi.fn(), projectFiles: vi.fn(async () => ({ "/.openlen/esm-lock.json": lock })) } as never)!;
+    const r = await t.run("npm-install", ["-D", "@types/leaflet"], { [PACKAGE_JSON_PATH]: '{"dependencies":{"leaflet":"^1.9.4"}}\n' });
+    expect(installPackages).not.toHaveBeenCalled();
+    expect(r).toEqual({ stdout: "@types/leaflet: already available (its types come with leaflet)\n", stderr: "", exitCode: 0 });
+  });
+
   it("mixed: the kit line first, the rest installs", async () => {
     const { t, installPackages } = tools();
     const r = await t.run("npm-install", ["vitest", "three"], {});

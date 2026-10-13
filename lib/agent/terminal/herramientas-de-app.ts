@@ -14,6 +14,7 @@ import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
 import { listPackages, pendingInstall, type InstallOutcome, type InstallRequest } from "@/lib/apps/npm/install";
+import { readEsmLock, sourceOf } from "@/lib/apps/npm/lock";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { formatVitestReport } from "@/lib/apps/tests/report";
@@ -54,12 +55,24 @@ function npmOutput(outcome: InstallOutcome, request: InstallRequest, ms: number)
 /** Lo que `npm install` no tiene que traer de npm porque ya está: el kit de
  *  pruebas (plan 04) y los `@types` del paquete de tipos del catálogo. Su línea
  *  es la de antes de npm abierto; `null` si hay que instalarlo. */
-function alreadyThere(name: string, typesPackages: readonly string[]): string | null {
+function alreadyThere(name: string, typesPackages: readonly string[], typesOfInstalled: ReadonlyMap<string, string>): string | null {
   if (name === "vitest") return "vitest: already available (tests run with OpenLen's test kit)";
   if (/^@(?:testing-library|vitest)\//.test(name)) return `${name}: already available (test kit)`;
   if (name === "jsdom" || name === "happy-dom") return `${name}: not needed: tests run in a real browser (Chromium), like Vitest's browser mode`;
   if (typesPackages.includes(name)) return `${name}: already available (its types come with the catalog)`;
+  const of = typesOfInstalled.get(name);
+  if (of) return `${name}: already available (its types come with ${of})`;
   return null;
+}
+
+/** The @types an installed esm.sh package's types already came from: "@types/leaflet" → "leaflet". */
+function typesOfInstalled(files: Readonly<Record<string, string>>, catalogName: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const [name, locked] of Object.entries(readEsmLock(files).packages)) {
+    const from = locked.typesFrom?.name;
+    if (from?.startsWith("@types/") && from !== name && sourceOf(name, files, catalogName).kind === "esm") out.set(from, name);
+  }
+  return out;
 }
 
 export function appToolsFor(
@@ -91,7 +104,8 @@ export function appToolsFor(
         if (program === "npm-ls") return { stdout: listPackages(ficheros, app), stderr: "", exitCode: 0 };
         const names = args.filter((a) => !a.startsWith("-"));
         const typesPackages = typesPackagesOf(app.catalogo);
-        const here = program === "npm-install" ? names.map((n) => alreadyThere(parseInstallArg(n).name, typesPackages)) : [];
+        const installedTypes = typesOfInstalled(ficheros, app.catalogo);
+        const here = program === "npm-install" ? names.map((n) => alreadyThere(parseInstallArg(n).name, typesPackages, installedTypes)) : [];
         const local = here.filter((l): l is string => l !== null).map((l) => `${l}\n`).join("");
         const toInstall = names.filter((_, i) => !here[i]);
         if (program === "npm-install" && names.length > 0 && toInstall.length === 0) return { stdout: local, stderr: "", exitCode: 0 };
