@@ -4,6 +4,9 @@
 // evaluaba ANTES que su vi.mock: medido).
 import { afterAll, describe, expect, it } from "vitest";
 import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
+import { serializeEsmLock, type LockedPackage } from "@/lib/apps/npm/lock";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { __setModuleStoreForTest, memoryStore, sha256Hex } from "@/lib/apps/npm/store";
 import { bundleAppTests, TESTS_PREFIX } from "./bundle-tests";
 
 afterAll(() => stopBundlerWorker());
@@ -110,5 +113,34 @@ describe("bundleAppTests", () => {
     const js = r!.files[r!.entries["/src/App.test.jsx"]!]!;
     expect(js).toContain("__mockedModule");
     expect(js).toContain('"real"');
+  }, 60_000);
+
+  it("🔴 npm abierto: una prueba que importa un paquete del lock se empaqueta con él (los mismos paquetes que la app)", async () => {
+    const code = 'export default function tiny() { return "tiny-from-esm"; }';
+    const url = "https://esm.sh/tiny@1.0.0/x.mjs";
+    const set = { entry: url, modules: { [url]: sha256Hex(code) } };
+    const tiny: LockedPackage = {
+      version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set },
+      assets: {}, types: null, warnings: [], bytes: code.length,
+    };
+    const store = memoryStore();
+    await store.put(sha256Hex(code), code);
+    __setModuleStoreForTest(store);
+    try {
+      const r = await bundleAppTests({
+        carpeta: {
+          ...CARPETA,
+          [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { tiny: "^1.0.0" } }),
+          [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { tiny } }),
+          "/src/tiny.test.js": 'import { it, expect } from "vitest";\nimport tiny from "tiny";\nit("t", () => expect(tiny()).toBe("tiny-from-esm"));',
+        },
+        app: APP,
+        testFiles: ["/src/tiny.test.js"],
+      });
+      expect(r!.failed).toEqual([]);
+      expect(r!.files[r!.entries["/src/tiny.test.js"]!]).toContain("tiny-from-esm");
+    } finally {
+      __setModuleStoreForTest(null);
+    }
   }, 60_000);
 });

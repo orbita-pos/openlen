@@ -15,6 +15,9 @@ import { parse } from "es-module-lexer/js";
 import { esbuildDiagnostic, runBundler, type BundlerMessage } from "@/lib/apps/bundler/bundle-app";
 import { compilarCarpeta, type Diagnostico } from "@/lib/apps/compilador";
 import { catalogo, RAIZ_VENDOR } from "@/lib/apps/dependencias";
+import { npmForBundle } from "@/lib/apps/npm/for-bundle";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
+import { defaultModuleStore } from "@/lib/apps/npm/store";
 import { directorioVendor } from "@/lib/apps/servir";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { compileTestFile, ORIGINAL_SUFFIX, type MockSpec } from "./compile-tests";
@@ -130,9 +133,19 @@ export async function bundleAppTests(args: {
   });
   if (Object.keys(entries).length === 0) return { files: {}, maps: {}, entries, failed, ms: Date.now() - t0 };
 
+  // NPM ABIERTO (spec 2026-10-13): los mismos paquetes del lock que la app. Si
+  // alguno no se puede conseguir, fallan todas, con su motivo (como un error
+  // que no es de un fichero).
+  const npm = await npmForBundle(carpeta, app, "development", { store: defaultModuleStore(), fetch });
+  if (!npm.ok) {
+    return { files: {}, maps: {}, entries: {}, failed: [...failed, ...Object.keys(entries).map((file) => ({ file, errores: npm.errores }))], ms: Date.now() - t0 };
+  }
+  const servedByEsm = new Set(npm.npm?.servedByEsm ?? []);
   const kit = testKitFor(app.catalogo);
   const catalogFiles: Record<string, string> = Object.fromEntries([
-    ...(catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, `${RAIZ_VENDOR}/${app.catalogo}/${d.fichero}`]),
+    ...(catalogo(app.catalogo)?.dependencias ?? [])
+      .filter((d) => !servedByEsm.has(parseBareSpecifier(d.especificador)?.name ?? ""))
+      .map((d) => [d.especificador, `${RAIZ_VENDOR}/${app.catalogo}/${d.fichero}`]),
     ...TEST_KIT.dependencias.map((d) => [d.especificador, `${RAIZ_VENDOR}/${kit}/${d.fichero}`]),
   ]);
   const mensaje: BundlerMessage = {
@@ -149,6 +162,7 @@ export async function bundleAppTests(args: {
     minify: false,
     nodeEnv: "development",
     sourcemap: true,
+    npm: npm.npm,
   };
   // Un error de esbuild (un nombre que un módulo no exporta, p. ej.) es de UN
   // fichero: fallan con él las pruebas que lo alcanzan, y las demás se
