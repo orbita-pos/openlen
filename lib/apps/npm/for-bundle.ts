@@ -5,9 +5,10 @@
 // module that can't be had is an error that names the package and the fix.
 import type { Diagnostico } from "@/lib/apps/compilador";
 import type { AppDeProyecto } from "@/lib/projects/types";
+import { fetchPackageAsset } from "./assets";
 import type { EsmMode } from "./esm-url";
 import { fetchText } from "./fetch-graph";
-import { readEsmLock, readPackageJson, serializeEsmLock, sourceOf } from "./lock";
+import { readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
 import { PACKAGE_JSON_PATH } from "./paths";
 import type { FetchLike } from "./registry";
 import { specifierOf } from "./specifier";
@@ -32,6 +33,20 @@ async function moduleCode(url: string, sha: string, deps: { store: ModuleStore; 
   const cached = await deps.store.get(sha);
   if (cached !== null) return cached;
   const got = await fetchText(url, { fetch: deps.fetch, deadline: Date.now() + 20_000 });
+  if (!got.ok || sha256Hex(got.text) !== sha) return null;
+  await deps.store.put(sha, got.text).catch(() => {});
+  return got.text;
+}
+
+/** A package's CSS or image (processed text: CSS with data: URLs, or a data:
+ *  URL): the cache first; if it lost it, built again from esm.sh's raw files —
+ *  at the origin the lock was made with — and kept only if the hash matches. */
+async function assetText(name: string, locked: LockedPackage, subpath: string, sha: string, deps: { store: ModuleStore; fetch: FetchLike }): Promise<string | null> {
+  const cached = await deps.store.get(sha);
+  if (cached !== null) return cached;
+  const entry = Object.values(locked.development)[0]?.entry ?? Object.values(locked.production)[0]?.entry;
+  const origin = entry ? new URL(entry).origin : undefined;
+  const got = await fetchPackageAsset(name, locked.version, subpath, { fetch: deps.fetch, deadline: Date.now() + 20_000, ...(origin ? { origin } : {}) });
   if (!got.ok || sha256Hex(got.text) !== sha) return null;
   await deps.store.put(sha, got.text).catch(() => {});
   return got.text;
@@ -72,7 +87,7 @@ export async function npmForBundle(
       }
     }
     for (const [subpath, sha] of Object.entries(source.locked.assets)) {
-      const text = await deps.store.get(sha);
+      const text = await assetText(name, source.locked, subpath, sha, deps);
       const spec = specifierOf(name, subpath);
       if (text === null) errores.push(missing(name, spec));
       else (subpath.toLowerCase().endsWith(".css") ? styles : urls)[spec] = text;

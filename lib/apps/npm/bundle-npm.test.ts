@@ -38,8 +38,15 @@ const filesWith = (source: string, deps: Record<string, string>, packages: Recor
   [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages }),
 });
 
+const PIN = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+
 beforeAll(async () => {
-  npm = await startFakeNpm({ now: new Date(), packages: [], modules: { "/tiny@1.0.0/x.mjs": `export default function tiny() { return "tiny-from-esm"; }` } });
+  npm = await startFakeNpm({
+    now: new Date(),
+    packages: [],
+    modules: { "/tiny@1.0.0/x.mjs": `export default function tiny() { return "tiny-from-esm"; }` },
+    raw: { "map2@1.0.0/dist/map.css": ".m2{color:blue}", "map2@1.0.0/img/pin.png": PIN, "map3@1.0.0/dist/map.css": ".m3{color:green}" },
+  });
 });
 afterAll(async () => {
   stopBundlerWorker();
@@ -94,6 +101,27 @@ describe("bundling packages from the esm lock", () => {
     expect(r.js).toContain(".m{color:red}");
     expect(r.js).toContain('document.createElement("style")');
     expect(r.js).toContain("data:image/png;base64,AAAA");
+  });
+
+  it("🔴 cache lost: a package's CSS and image come back from esm.sh, checked against their hash (measured against the real esm.sh with leaflet)", async () => {
+    const pin = `data:image/png;base64,${Buffer.from(PIN).toString("base64")}`;
+    const map = lockFor(npm.origin, "map2", "1.0.0", `export default 1;`, { "dist/map.css": ".m2{color:blue}", "img/pin.png": pin });
+    // Only the module is in the cache; the CSS and the image are not.
+    for (const code of Object.values(map.modules)) await store.put(sha256Hex(code), code);
+    const files = filesWith(`import "map2/dist/map.css";\nimport p from "map2/img/pin.png";\ndocument.title = p;`, { map2: "^1.0.0" }, { map2: map.locked });
+    const r = await bundleApp({ carpeta: files, app: APP, modo: "desarrollo" });
+    if (!r?.ok) throw new Error(JSON.stringify(r));
+    expect(r.js).toContain(".m2{color:blue}");
+    expect(r.js).toContain(pin);
+  });
+
+  it("cache lost and esm.sh gives back a different file: the error names the package", async () => {
+    const map = lockFor(npm.origin, "map3", "1.0.0", `export default 3;`, { "dist/map.css": ".m3{color:red}" });
+    for (const code of Object.values(map.modules)) await store.put(sha256Hex(code), code);
+    const files = filesWith(`import "map3/dist/map.css";\ndocument.title = "x";`, { map3: "^1.0.0" }, { map3: map.locked });
+    const r = await bundleApp({ carpeta: files, app: APP, modo: "desarrollo" });
+    expect(r?.ok).toBe(false);
+    if (r && !r.ok) expect(r.errores[0]?.mensaje).toMatch(/^map3: map3\/dist\/map\.css is missing from the package cache/);
   });
 
   it("🔴 cache lost: fetched again from esm.sh by its exact URL if the hash matches", async () => {
