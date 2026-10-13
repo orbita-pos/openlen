@@ -143,4 +143,72 @@ describe("bundleAppTests", () => {
       __setModuleStoreForTest(null);
     }
   }, 60_000);
+
+  it("🔴 npm abierto: vi.mock de un paquete del lock — el simulado exporta lo que exporta el real, también lo que llega por export *", async () => {
+    // Como las entradas de esm.sh: la de fuera re-exporta la de dentro.
+    const outer = 'export * from "/tiny@1.0.0/es2022/tiny.mjs";\nexport { default } from "/tiny@1.0.0/es2022/tiny.mjs";\n';
+    const inner = 'export const size = 3;\nexport default function tiny() { return "tiny-from-esm"; }\n';
+    const outerUrl = "https://esm.sh/tiny@1.0.0?target=es2022";
+    const innerUrl = "https://esm.sh/tiny@1.0.0/es2022/tiny.mjs";
+    const set = { entry: outerUrl, modules: { [outerUrl]: sha256Hex(outer), [innerUrl]: sha256Hex(inner) } };
+    const tiny: LockedPackage = {
+      version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set },
+      assets: {}, types: null, warnings: [], bytes: outer.length + inner.length,
+    };
+    const store = memoryStore();
+    await store.put(sha256Hex(outer), outer);
+    await store.put(sha256Hex(inner), inner);
+    __setModuleStoreForTest(store);
+    try {
+      const r = await bundleAppTests({
+        carpeta: {
+          ...CARPETA,
+          [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { tiny: "^1.0.0" } }),
+          [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { tiny } }),
+          "/src/tiny.test.js":
+            'import { it, expect, vi } from "vitest";\nimport tiny, { size } from "tiny";\nvi.mock("tiny", () => ({ default: () => "mocked", size: 9 }));\nit("t", () => expect([tiny(), size]).toEqual(["mocked", 9]));',
+        },
+        app: APP,
+        testFiles: ["/src/tiny.test.js"],
+      });
+      expect(r!.failed).toEqual([]);
+      const js = r!.files[r!.entries["/src/tiny.test.js"]!]!;
+      expect(js).toContain("__mockedModule");
+      // El real sigue dentro, para importOriginal.
+      expect(js).toContain("tiny-from-esm");
+    } finally {
+      __setModuleStoreForTest(null);
+    }
+  }, 60_000);
+
+  it("npm abierto: vi.mock de un paquete del lock cuyos nombres no se pueden saber (export * de un paquete del catálogo) hace fallar SOLO a quien lo simula, diciendo por qué", async () => {
+    const code = 'export * from "react";\n';
+    const url = "https://esm.sh/wrap@1.0.0?target=es2022";
+    const set = { entry: url, modules: { [url]: sha256Hex(code) } };
+    const wrap: LockedPackage = {
+      version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set },
+      assets: {}, types: null, warnings: [], bytes: code.length,
+    };
+    const store = memoryStore();
+    await store.put(sha256Hex(code), code);
+    __setModuleStoreForTest(store);
+    try {
+      const r = await bundleAppTests({
+        carpeta: {
+          ...CARPETA,
+          [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { wrap: "^1.0.0" } }),
+          [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { wrap } }),
+          "/src/wrap.test.js": 'import { it, vi } from "vitest";\nvi.mock("wrap", () => ({}));\nit("w", () => {});',
+          "/src/suma.test.js": 'import { it } from "vitest";\nimport { suma } from "./suma";\nit("s", () => suma);',
+        },
+        app: APP,
+        testFiles: ["/src/wrap.test.js", "/src/suma.test.js"],
+      });
+      expect(r!.failed.map((f) => f.file)).toEqual(["/src/wrap.test.js"]);
+      expect(r!.failed[0]!.errores[0]!.mensaje).toMatch(/vi\.mock\("wrap"\): the names this package exports couldn't be read/);
+      expect(Object.keys(r!.entries)).toEqual(["/src/suma.test.js"]);
+    } finally {
+      __setModuleStoreForTest(null);
+    }
+  }, 60_000);
 });

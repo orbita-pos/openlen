@@ -22,6 +22,8 @@ import {
   type Diagnostico,
 } from "@/lib/apps/compilador";
 import { dependenciaDe } from "@/lib/apps/dependencias";
+import { sourceOf } from "@/lib/apps/npm/lock";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { TEST_SPECIFIERS } from "./test-kit";
 
 export const ORIGINAL_SUFFIX = "?original";
@@ -32,6 +34,8 @@ export interface MockSpec {
   /** Lo que exporta por su nombre el módulo real: lo que exportará el simulado. */
   readonly exports: readonly string[];
   readonly hasDefault: boolean;
+  /** Un paquete del lock de esm.sh: sus nombres los pone el empaquetador. */
+  readonly fromLock?: true;
 }
 
 export type CompiledTest =
@@ -203,7 +207,7 @@ function dedupe(mocks: readonly MockSpec[]): MockSpec[] {
 
 function mockSpecOf(especificador: string, ruta: string, ctx: ContextoDeCompilacion): MockSpec | { error: string } {
   if (TEST_SPECIFIERS.includes(especificador)) {
-    return { error: `vi.mock("${especificador}"): the test libraries can't be mocked here; mock your own module or a package of the catalog.` };
+    return { error: `vi.mock("${especificador}"): the test libraries can't be mocked here; mock your own module or an installed package.` };
   }
   const local = resolveLocalImport(especificador, ruta, ctx.carpeta);
   if (local === undefined) return { error: `vi.mock("${especificador}"): there is no such file in the project.` };
@@ -218,8 +222,16 @@ function mockSpecOf(especificador: string, ruta: string, ctx: ContextoDeCompilac
     const nombres = exps.map((e) => ("name" in e ? e.name : ""));
     return { id: local, exports: nombres.filter((x) => x !== "default").sort(), hasDefault: nombres.includes("default") };
   }
+  // NPM ABIERTO: un paquete del lock. Lo que exporta se lee de su módulo de
+  // esm.sh al empaquetar (`bundle-tests.ts`), que es cuando se tiene.
+  const bare = parseBareSpecifier(especificador);
+  const source = bare && ctx.catalogo ? sourceOf(bare.name, ctx.carpeta, ctx.catalogo) : null;
+  if (bare && source?.kind === "esm") {
+    if (!Object.hasOwn(source.locked.development, bare.subpath)) return { error: `vi.mock("${especificador}"): it is not installed in this app.` };
+    return { id: especificador, exports: [], hasDefault: false, fromLock: true };
+  }
   const dep = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
-  if (!dep) return { error: `vi.mock("${especificador}"): it isn't a file of the app nor a package of its catalog.` };
+  if (!dep) return { error: `vi.mock("${especificador}"): it isn't a file of the app nor an installed package.` };
   const nombres = catalogExportsOf(ctx.catalogo!, dep.fichero) ?? [];
   return { id: especificador, exports: nombres.filter((x) => x !== "default").sort(), hasDefault: nombres.includes("default") };
 }

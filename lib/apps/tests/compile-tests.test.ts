@@ -3,6 +3,8 @@
 // nombre, vi.mock izado como en vitest y las LÍNEAS intactas.
 import { describe, expect, it } from "vitest";
 import { compilarCarpeta } from "@/lib/apps/compilador";
+import { serializeEsmLock, type LockedPackage } from "@/lib/apps/npm/lock";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { compileTestFile, hoistedStatements } from "./compile-tests";
 import { isTestFile, isTestSupportFile, setupFilesOf } from "./test-files";
 
@@ -68,6 +70,24 @@ describe("compileTestFile", () => {
     const r = compileTestFile("/src/a.test.js", 'import { vi } from "vitest";\nvi.mock("zod", () => ({ z: {} }));', ctx());
     expect(r.ok && r.mocks[0]?.id).toBe("zod");
     expect(r.ok && r.mocks[0]?.exports).toContain("z");
+  });
+
+  it("🔴 npm abierto: vi.mock de un paquete del lock se acepta (sus nombres los pone el empaquetador); una subruta que el lock no tiene, o un paquete sin instalar, no", () => {
+    const set = { entry: "https://esm.sh/tiny@1.0.0?target=es2022", modules: {} };
+    const tiny: LockedPackage = {
+      version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set },
+      assets: {}, types: null, warnings: [], bytes: 0,
+    };
+    const conLock = ctx({
+      [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { tiny: "^1.0.0" } }),
+      [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { tiny } }),
+    });
+    const r = compileTestFile("/src/a.test.js", 'import { vi } from "vitest";\nvi.mock("tiny", () => ({}));', conLock);
+    expect(r.ok && r.mocks).toEqual([{ id: "tiny", exports: [], hasDefault: false, fromLock: true }]);
+    const sub = compileTestFile("/src/a.test.js", 'import { vi } from "vitest";\nvi.mock("tiny/sub", () => ({}));', conLock);
+    expect(!sub.ok && sub.errores[0]).toMatchObject({ linea: 2, mensaje: 'vi.mock("tiny/sub"): it is not installed in this app.' });
+    const otro = compileTestFile("/src/a.test.js", 'import { vi } from "vitest";\nvi.mock("left-pad", () => ({}));', conLock);
+    expect(!otro.ok && otro.errores[0]!.mensaje).toBe('vi.mock("left-pad"): it isn\'t a file of the app nor an installed package.');
   });
 
   it("🔴 los bordes de vi.mock, con su línea (Review Focus 3)", () => {
