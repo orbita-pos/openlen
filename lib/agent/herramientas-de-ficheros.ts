@@ -650,9 +650,12 @@ export async function guardarLoDeLaTerminal(
       // página, no: la quita el dueño en el editor.
       if (isFolderPath(c.ruta) && deps.deleteProjectFile && Object.hasOwn(antes, c.ruta)) {
         const detalle = rutaRelativa(c.ruta);
-        // UNA APP: la carpeta de antes de la primera escritura del turno.
-        if (session.app) {
-          session.carpetaAlEmpezar ??= new Map(Object.entries(antes).filter(([r]) => isFolderPath(r)));
+        // UNA APP: la carpeta de antes de la primera escritura del turno, con
+        // el lock del servidor (la terminal no lleva /.openlen): sin él, lo que
+        // sirve esm.sh ya «no estaba instalado» al empezar, y romperlo no se vería.
+        if (session.app && !session.carpetaAlEmpezar) {
+          const lock = deps.projectFiles ? ((await deps.projectFiles(session.projectId).catch(() => ({}) as Record<string, string>))[ESM_LOCK_PATH] ?? null) : null;
+          session.carpetaAlEmpezar = withEsmLock(new Map(Object.entries(antes).filter(([r]) => isFolderPath(r))), lock);
         }
         const { versionPrevia } = await deps.deleteProjectFile(session.projectId, c.ruta, {
           before: antes[c.ruta]!,

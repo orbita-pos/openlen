@@ -2339,4 +2339,41 @@ describe("open npm: saving a source that imports a package installs it", () => {
       await cerrarTerminalDeLaSesion(s);
     }
   });
+
+  // Without installPackages: nothing reinstalls what Len takes out of /package.json.
+  const conTinyInstalado = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    Object.assign(c.archivos, {
+      "/src/main.tsx": 'import tiny from "./other";\nexport default tiny;\n',
+      "/src/other.tsx": SOURCE,
+      "/src/extra.ts": "export {};\n",
+      "/package.json": PKG,
+      "/.openlen/esm-lock.json": LOCK,
+    });
+    return c;
+  };
+
+  it("CONTROL: taking a package out of /package.json breaks another file that imports it, and that shows", async () => {
+    const c = conTinyInstalado();
+    const s = sesion();
+    await runAgentTool(s, c.deps, "Read", { file_path: "/package.json" });
+    const w = await runAgentTool(s, c.deps, "Write", { file_path: "/package.json", content: '{\n  "dependencies": {}\n}\n' });
+    const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+    assert.ok(mensajes.some((m) => /"tiny" is not installed in this app/.test(m)), JSON.stringify(mensajes));
+  });
+
+  it("🔴 when the turn's first write is a terminal rm, the starting folder still has the lock: breaking another file's package is Len's, and shows", async () => {
+    const c = conTinyInstalado();
+    const s = sesion();
+    try {
+      const rm = await conTerminal(() => runAgentTool(s, c.deps, "bash", { command: "rm /src/extra.ts" }));
+      assert.equal(rm.response.ok, true, texto(rm));
+      await runAgentTool(s, c.deps, "Read", { file_path: "/package.json" });
+      const w = await runAgentTool(s, c.deps, "Write", { file_path: "/package.json", content: '{\n  "dependencies": {}\n}\n' });
+      const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+      assert.ok(mensajes.some((m) => /"tiny" is not installed in this app/.test(m)), JSON.stringify(mensajes));
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
 });
