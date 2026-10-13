@@ -6,8 +6,9 @@ import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { decodificarPng, leerPixel } from "@/lib/ai/png-crudo";
 import { bundleApp, stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
+import { checkAppInWorker, stopCheckerWorker } from "@/lib/apps/checker/check-app";
 import { installForApp, pendingInstall } from "./install";
-import { readEsmLock } from "./lock";
+import { readEsmLock, readPackageJson } from "./lock";
 import { __setModuleStoreForTest, memoryStore } from "./store";
 
 const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
@@ -17,6 +18,7 @@ beforeAll(() => __setModuleStoreForTest(memoryStore()));
 afterAll(() => {
   __setModuleStoreForTest(null);
   stopBundlerWorker();
+  stopCheckerWorker();
 });
 
 async function installAndBundle(main: string): Promise<{ js: string; files: Record<string, string> }> {
@@ -81,5 +83,59 @@ createRoot(document.getElementById("root")!).render(
     } finally {
       await browser.close();
     }
+  }, 240_000);
+
+  /** Runs the bundle in Chromium and returns `window.__out` once set, with the page's errors. */
+  async function runInChromium(js: string): Promise<{ out: unknown; errors: string[] }> {
+    const browser = await lanzarChromium();
+    try {
+      const page = await browser.newPage();
+      const errors: string[] = [];
+      page.on("console", (m) => {
+        if (m.type() === "error") errors.push(m.text());
+      });
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await page.setContent(`<!doctype html><div id="root"></div><script type="module">${js.replace(/<\/script/g, "<\\/script")}</script>`, { waitUntil: "load" });
+      await page.waitForFunction("window.__out !== undefined", { timeout: 20_000 });
+      return { out: await page.evaluate("window.__out"), errors };
+    } finally {
+      await browser.close();
+    }
+  }
+
+  it("🔴 react-dom/server, a part the catalog doesn't ship: one React (hooks work in renderToString and on the canvas), and the checker finds its types", async () => {
+    const { js, files } = await installAndBundle(`import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+function Hello() { const [n] = useState(3); return <b>{"n=" + n}</b>; }
+const html = renderToString(<Hello />);
+createRoot(document.getElementById("root")!).render(<Hello />);
+setTimeout(() => { (window as any).__out = [html, document.getElementById("root")!.innerHTML]; }, 200);`);
+    const part = readEsmLock(files).packages["react-dom"]!;
+    console.log("react-dom/server modules:", Object.keys(part.development.server!.modules));
+    expect(part).toMatchObject({ version: "19.2.6", catalogParts: true, externals: ["react", "react-dom"], typesFrom: { name: "@types/react-dom" } });
+    // Nothing of React or react-dom's own entry from esm.sh: those stay the catalog's.
+    expect(Object.keys(part.development.server!.modules).filter((u) => /\/react@\d|\/react-dom\.(?:development\.)?mjs/.test(u))).toEqual([]);
+    expect(Object.keys(part.types ?? {})).toContain("/node_modules/@types/react-dom/server.d.ts");
+    expect(Object.keys(part.types ?? {})).not.toContain("/node_modules/@types/react-dom/client.d.ts");
+    const { out, errors } = await runInChromium(js);
+    expect(errors).toEqual([]);
+    expect(out).toEqual(["<b>n=3</b>", "<b>n=3</b>"]);
+    // The checker, with an empty cache: it fetches the part's .d.ts again from esm.sh (typesFrom).
+    const checked = await checkAppInWorker({ files: Object.fromEntries(Object.entries(files).filter(([p]) => isCompileInputPath(p))), catalogo: APP.catalogo });
+    expect((checked?.typescript ?? []).filter((d) => /react-dom\/server|TS2307/.test(`${d.mensaje} ${d.codigo}`))).toEqual([]);
+  }, 240_000);
+
+  it("🔴 zod/v4 next to the catalog's zod: the part comes from esm.sh at the same version, both work", async () => {
+    const { js, files } = await installAndBundle(`import { z } from "zod";
+import { z as z4 } from "zod/v4";
+(window as any).__out = [z.string().parse("a"), z4.string().parse("b"), typeof z4.email];`);
+    const part = readEsmLock(files).packages.zod!;
+    console.log("zod/v4 modules:", Object.keys(part.development.v4!.modules));
+    expect(part).toMatchObject({ version: "3.25.76", catalogParts: true, externals: ["zod"] });
+    expect(readPackageJson(files)?.dependencies?.zod).toBe("^3.25.76");
+    const { out, errors } = await runInChromium(js);
+    expect(errors).toEqual([]);
+    expect(out).toEqual(["a", "b", "function"]);
   }, 240_000);
 });

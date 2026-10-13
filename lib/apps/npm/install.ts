@@ -68,6 +68,8 @@ export interface InstallAdd {
   readonly subpaths: readonly string[];
   /** Asked by name (`npm install x`): a package with no JavaScript entry is still recorded. */
   readonly explicit?: boolean;
+  /** Found inside a package's graph, not imported by the app: no types are looked for. */
+  readonly fromGraph?: boolean;
 }
 export interface InstallRequest {
   readonly add: readonly InstallAdd[];
@@ -220,12 +222,15 @@ async function lockParts(
   }
   const nodeOnly = nodeOnlyBuiltinsIn(urls);
   if (nodeOnly.length > 0) parts.warnings.push(`${name}@${version} uses Node's ${nodeOnly.join(", ")}; that part won't work in the browser.`);
-  // What esm.sh left bare: React (the catalog's) or one of this app's esm.sh
-  // packages marked external — whose subpath must be locked too.
+  // What esm.sh left bare: what the catalog ships (react, react-dom/client)
+  // it serves; anything else of an external package is locked too — a subpath
+  // of one of this app's esm.sh packages, or a part of a catalog package, even
+  // its own internal files (measured 2026-10-12: with react-dom external,
+  // react-dom/server imports "react-dom/cjs/react-dom-server.browser.development").
   const discovered: InstallAdd[] = [];
   for (const spec of bare) {
     const b = parseBareSpecifier(spec);
-    if (b && !isFixed(b.name) && externals.includes(b.name)) discovered.push({ name: b.name, range: null, subpaths: [b.subpath] });
+    if (b && externals.includes(b.name) && !catalogShips(ctx.app.catalogo, spec)) discovered.push({ name: b.name, range: null, subpaths: [b.subpath], fromGraph: true });
   }
   return { ok: true, parts, discovered };
 }
@@ -271,7 +276,7 @@ async function installCatalogParts(add: InstallAdd, version: string | null, ctx:
   const parts = await lockParts(add.name, version, missing, externals, ctx);
   if (!parts.ok) return refused(parts.message, parts.code);
   const code = missing.filter((s) => !isAssetSubpath(s));
-  const types = code.length > 0 ? await typesFor(add.name, version, ctx, code, catalogTypePathsOf(app.catalogo)) : null;
+  const types = code.length > 0 && !add.fromGraph ? await typesFor(add.name, version, ctx, code, catalogTypePathsOf(app.catalogo)) : null;
   const allTypes = { ...(existing?.types ?? {}), ...(types?.types ?? {}) };
   const typesFrom = types?.typesFrom ?? existing?.typesFrom;
   packages[add.name] = {
@@ -287,6 +292,8 @@ async function installCatalogParts(add: InstallAdd, version: string | null, ctx:
     warnings: [...(existing?.warnings ?? []), ...parts.parts.warnings],
     bytes: (existing?.bytes ?? 0) + parts.parts.bytes,
   };
+  // A file found inside another part's graph goes in quietly, as part of that one.
+  if (add.fromGraph) return { notes: parts.parts.warnings.map(warning), installed: null, discovered: parts.discovered };
   return {
     notes: [{ severity: "Info", message: `Installed ${specs} from npm (esm.sh), from the same ${add.name}@${version} this app already has.` }, ...parts.parts.warnings.map(warning)],
     installed: `${add.name}@${version} (${specs})`,

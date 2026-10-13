@@ -61,7 +61,10 @@ beforeAll(async () => {
       ...both("nodey", "1.0.0", `import "/node/fs.mjs";\nexport default 1;`),
       "/node/fs.mjs": `export default {};`,
       ...both("zod", "3.25.76/v4", `import { z } from "zod";\nexport const z4 = z;`, "&external=zod"),
-      ...both("react-dom", "19.2.6/server", `import * as R from "react";\nimport * as D from "react-dom";\nexport const renderToString = () => [R, D];`, "&external=react,react-dom"),
+      // Like the real one (measured 2026-10-12): with react-dom external, esm.sh
+      // leaves react-dom's own internal files as bare imports of react-dom.
+      ...both("react-dom", "19.2.6/server", `import * as impl from "react-dom/cjs/server-impl";\nexport const renderToString = impl.render;`, "&external=react,react-dom"),
+      ...both("react-dom", "19.2.6/cjs/server-impl", `import * as R from "react";\nimport * as D from "react-dom";\nexport const render = () => [R, D];`, "&external=react,react-dom"),
     },
     raw: {
       "tiny@1.0.0/package.json": JSON.stringify({ name: "tiny", types: "index.d.ts" }),
@@ -245,8 +248,13 @@ describe("installForApp", () => {
     expect(out.notes).toEqual([{ severity: "Info", message: "Installed react-dom/server from npm (esm.sh), from the same react-dom@19.2.6 this app already has." }]);
     const reactDom = readEsmLock(out.files).packages["react-dom"]!;
     expect(reactDom).toMatchObject({ version: "19.2.6", catalogParts: true, externals: ["react", "react-dom"], typesFrom: { name: "@types/react-dom", version: "19.2.7" } });
+    // The internal file it imports by name is locked too (a part the catalog doesn't ship either)…
+    expect(Object.keys(reactDom.development).sort()).toEqual(["cjs/server-impl", "server"]);
+    // …without looking for types of it: nobody imports it.
+    expect(npm.requests.filter((r) => r.includes("server-impl") && r.includes(".d.ts"))).toEqual([]);
     // client.d.ts and package.json are in the catalog's types already: they stay the catalog's.
     expect(Object.keys(reactDom.types ?? {}).sort()).toEqual(["/node_modules/@types/react-dom/server.d.ts", "/node_modules/@types/react-dom/static.d.ts"]);
+    expect(pendingInstall({ ...files, ...out.files }, APP)).toEqual({ add: [], remove: [] });
   });
 
   it("uninstall removes it from package.json and the lock", async () => {
