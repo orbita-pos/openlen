@@ -13,8 +13,10 @@ import {
   folderSaveProblem,
   isCompileInputPath,
   isPublishableFolderPath,
+  isRemixedFolderPath,
   publishableFolderFiles,
 } from "./folder";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 
 const kind = (p: string) => {
   const c = classifyFolderPath(p);
@@ -226,5 +228,36 @@ describe("/.env (spec local 2026-10-10-variables-de-entorno)", () => {
   it("lo que no vale de /.env se dice al guardar", () => {
     expect(folderSaveProblem("/.env", "VITE_A=1\n", new Map())).toBeNull();
     expect(folderSaveProblem("/.env", "SECRET=1\n", new Map())).toMatch(/would never reach the app/);
+  });
+});
+
+describe("package.json and the esm lock", () => {
+  it("package.json is a manifest: saved, compiled as input, never published", () => {
+    expect(classifyFolderPath(PACKAGE_JSON_PATH)).toEqual({ ok: true, kind: "manifest" });
+    expect(isPublishableFolderPath(PACKAGE_JSON_PATH)).toBe(false);
+    expect(isCompileInputPath(PACKAGE_JSON_PATH)).toBe(true);
+  });
+
+  it("the lock belongs to the platform (read-only for Len) but is a compile input", () => {
+    expect(classifyFolderPath(ESM_LOCK_PATH).ok).toBe(false);
+    expect(isCompileInputPath(ESM_LOCK_PATH)).toBe(true);
+    expect(isPublishableFolderPath(ESM_LOCK_PATH)).toBe(false);
+  });
+
+  it("a package.json that isn't a JSON object is not saved, with the reason", () => {
+    expect(folderSaveProblem(PACKAGE_JSON_PATH, "{ broken", new Map())).toMatch(/not valid JSON/);
+    expect(folderSaveProblem(PACKAGE_JSON_PATH, "[1, 2]", new Map())).toMatch(/must be a JSON object/);
+    expect(folderSaveProblem(PACKAGE_JSON_PATH, '{"dependencies":{}}', new Map())).toBeNull();
+  });
+});
+
+describe("what a remix takes", () => {
+  it("what the published site shows, plus package.json and the lock (without them a remixed app doesn't compile)", () => {
+    expect(isRemixedFolderPath("/src/App.tsx")).toBe(true);
+    expect(isRemixedFolderPath(PACKAGE_JSON_PATH)).toBe(true);
+    expect(isRemixedFolderPath(ESM_LOCK_PATH)).toBe(true);
+    expect(isRemixedFolderPath("/tests/a.spec.ts")).toBe(false);
+    expect(isRemixedFolderPath("/.env")).toBe(false);
+    expect(isRemixedFolderPath("/supabase/migrations/1_a.sql")).toBe(false);
   });
 });
