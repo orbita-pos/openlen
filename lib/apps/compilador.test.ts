@@ -119,13 +119,13 @@ describe("los imports", () => {
     expect(js).toContain('from "@supabase/supabase-js"');
   });
 
-  it("🔴 un nombre que no está en el catálogo es un error con su línea y lo que sí hay", () => {
+  it("🔴 un nombre que no está en el catálogo ni instalado es un error con su línea y cómo se instala", () => {
     const r = compilarFuente("/src/App.tsx", 'import x from "react";\nimport axios from "axios";\naxios; x;', app(CARPETA));
     expect(r.ok).toBe(false);
     if (r.ok) return;
     expect(r.errores).toHaveLength(1);
     expect(r.errores[0]).toMatchObject({ ruta: "/src/App.tsx", linea: 2 });
-    expect(r.errores[0]!.mensaje).toMatch(/"axios" is not available in this app\. Available packages: react, /);
+    expect(r.errores[0]!.mensaje).toMatch(/"axios" is not installed in this app\. It installs when a file that imports it is saved \(or with npm install axios\)/);
   });
 
   it("un import de una URL o de node: no se resuelve, y lo dice", () => {
