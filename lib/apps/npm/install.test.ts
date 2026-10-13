@@ -97,6 +97,27 @@ describe("installForApp", () => {
     for (const sha of Object.values(locked.production[""]!.modules)) expect(await store.get(sha)).not.toBeNull();
   });
 
+  it("🔴 the modules go into the cache several at a time (each put may be an upload to R2), not one after another", async () => {
+    const files = source(`import tiny from "tiny";\nexport default tiny;`);
+    let inFlight = 0;
+    let most = 0;
+    const slow: ModuleStore = {
+      get: (sha) => store.get(sha),
+      async put(sha, text) {
+        inFlight++;
+        most = Math.max(most, inFlight);
+        await new Promise((r) => setTimeout(r, 20));
+        await store.put(sha, text);
+        inFlight--;
+      },
+    };
+    const out = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: { ...deps(), store: slow } });
+    expect(out.installed).toEqual(["tiny@1.0.0"]);
+    for (const sha of Object.values(readEsmLock(out.files).packages.tiny!.development[""]!.modules)) expect(await store.get(sha)).not.toBeNull();
+    expect(most).toBeGreaterThan(1);
+    expect(most).toBeLessThanOrEqual(8);
+  });
+
   it("a refused package is an Error note and nothing is written", async () => {
     const files = source(`import y from "young";\nexport default y;`);
     const out = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });

@@ -10,6 +10,7 @@ import type { EsmMode } from "./esm-url";
 import { fetchText } from "./fetch-graph";
 import { lockedOrigin, readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
 import { PACKAGE_JSON_PATH } from "./paths";
+import { mapLimited } from "./pool";
 import type { FetchLike } from "./registry";
 import { specifierOf } from "./specifier";
 import { sha256Hex, type ModuleStore } from "./store";
@@ -76,15 +77,17 @@ export async function npmForBundle(
     const source = sourceOf(name, files, app.catalogo);
     if (source.kind !== "esm") continue;
     servedByEsm.push(name);
+    const wanted = new Map<string, string>();
     for (const [subpath, set] of Object.entries(mode === "development" ? source.locked.development : source.locked.production)) {
       entries[specifierOf(name, subpath)] = set.entry;
-      for (const [url, sha] of Object.entries(set.modules)) {
-        if (modules[url] !== undefined) continue;
-        const code = await moduleCode(url, sha, deps);
-        if (code === null) errores.push(missing(name, url));
-        else modules[url] = code;
-      }
+      for (const [url, sha] of Object.entries(set.modules)) if (modules[url] === undefined) wanted.set(url, sha);
     }
+    const codes = await mapLimited([...wanted], ([url, sha]) => moduleCode(url, sha, deps));
+    [...wanted.keys()].forEach((url, i) => {
+      const code = codes[i]!;
+      if (code === null) errores.push(missing(name, url));
+      else modules[url] = code;
+    });
     for (const [subpath, sha] of Object.entries(source.locked.assets)) {
       const text = await assetText(name, source.locked, subpath, sha, deps);
       const spec = specifierOf(name, subpath);

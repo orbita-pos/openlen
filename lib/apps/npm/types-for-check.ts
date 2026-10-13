@@ -1,10 +1,12 @@
 // The .d.ts files of the app's esm.sh packages (from the lock, out of the
 // cache), laid out under /node_modules like the catalog's types.json. One the
 // cache lost is read again from esm.sh — from the package the lock says the
-// types came from — and kept only if its hash matches, like modules and assets.
+// types came from — and kept only if its hash matches, like modules and assets
+// (several at a time).
 import { rawUrl } from "./esm-url";
 import { fetchText } from "./fetch-graph";
 import { lockedOrigin, readPackageJson, sourceOf, type LockedPackage } from "./lock";
+import { mapLimited } from "./pool";
 import type { FetchLike } from "./registry";
 import { defaultModuleStore, sha256Hex, type ModuleStore } from "./store";
 
@@ -38,10 +40,11 @@ export async function npmTypesFor(
   for (const name of Object.keys(readPackageJson(files)?.dependencies ?? {})) {
     const source = sourceOf(name, files, catalogName);
     if (source.kind !== "esm" || !source.locked.types) continue;
-    for (const [p, sha] of Object.entries(source.locked.types)) {
-      const text = (await store.get(sha)) ?? (await refetch(name, source.locked, p, sha, store, fetchImpl));
-      if (text !== null) out[p] = text;
-    }
+    const types = Object.entries(source.locked.types);
+    const texts = await mapLimited(types, async ([p, sha]) => (await store.get(sha)) ?? (await refetch(name, source.locked, p, sha, store, fetchImpl)));
+    types.forEach(([p], i) => {
+      if (texts[i] !== null) out[p] = texts[i]!;
+    });
   }
   return out;
 }
