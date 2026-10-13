@@ -35,6 +35,8 @@ export interface LockedPackage {
   readonly assets: Readonly<Record<string, string>>;
   /** "/node_modules/<name>/…d.ts" → sha256, or null when the package has no types. */
   readonly types: Readonly<Record<string, string>> | null;
+  /** The package those .d.ts were read from (itself, or its @types), to fetch them again. Older locks don't have it. */
+  readonly typesFrom?: { readonly name: string; readonly version: string };
   readonly warnings: readonly string[];
   /** Bytes of the code modules (both modes), for the per-app cap. */
   readonly bytes: number;
@@ -113,6 +115,12 @@ export function satisfiesSafe(version: string, range: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** The esm.sh origin the package was locked from (a test's fake one, or the real one). */
+export function lockedOrigin(locked: LockedPackage): string | undefined {
+  const entry = Object.values(locked.development)[0]?.entry ?? Object.values(locked.production)[0]?.entry;
+  return entry ? new URL(entry).origin : undefined;
 }
 
 export type PackageSource =

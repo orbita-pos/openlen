@@ -93,6 +93,7 @@ describe("installForApp", () => {
     expect(locked.version).toBe("1.0.0");
     expect(Object.keys(locked.development[""]!.modules)).toHaveLength(4);
     expect(locked.types).not.toBeNull();
+    expect(locked.typesFrom).toEqual({ name: "tiny", version: "1.0.0" });
     for (const sha of Object.values(locked.production[""]!.modules)) expect(await store.get(sha)).not.toBeNull();
   });
 

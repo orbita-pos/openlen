@@ -94,10 +94,20 @@ async function manifestOf(name: string, version: string, opts: TypesOptions): Pr
   }
 }
 
-export async function fetchTypes(name: string, version: string, opts: TypesOptions): Promise<Record<string, string> | null> {
+/** The .d.ts files, and the package they were read from (the package itself or its @types). */
+export interface TypesFetched {
+  readonly name: string;
+  readonly version: string;
+  readonly files: Record<string, string>;
+}
+
+export async function fetchTypes(name: string, version: string, opts: TypesOptions): Promise<TypesFetched | null> {
   const own = await manifestOf(name, version, opts);
   const ownEntry = own ? typesEntryOf(own.manifest) : null;
-  if (own && ownEntry) return crawl(name, version, ownEntry, own.text, opts);
+  if (own && ownEntry) {
+    const files = await crawl(name, version, ownEntry, own.text, opts);
+    return files && { name, version, files };
+  }
 
   const typesName = `@types/${mangle(name)}`;
   const doc = await getPackument(typesName, opts.fetch).catch(() => null);
@@ -109,7 +119,8 @@ export async function fetchTypes(name: string, version: string, opts: TypesOptio
     if (!(await checkResolved(typesName, v, opts.gate)).ok) continue;
     const m = await manifestOf(typesName, v, opts);
     if (!m) return null;
-    return crawl(typesName, v, typesEntryOf(m.manifest) ?? "index.d.ts", m.text, opts);
+    const files = await crawl(typesName, v, typesEntryOf(m.manifest) ?? "index.d.ts", m.text, opts);
+    return files && { name: typesName, version: v, files };
   }
   return null;
 }
