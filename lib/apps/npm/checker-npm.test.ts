@@ -36,6 +36,21 @@ describe("types of installed packages", () => {
     expect(codes).not.toContain("TS2307");
   }, 60_000);
 
+  it("🔴 a package's images and fonts are imported as URLs, like Vite's client types say (leaflet's marker-icon.png: TS2307 in the box rehearsal)", async () => {
+    __setModuleStoreForTest(memoryStore());
+    const files = {
+      "/src/main.tsx": [
+        'import icon from "leaflet/dist/images/marker-icon.png";',
+        'import photo from "pkg/img/a.jpg";',
+        'import font from "pkg/fonts/a.woff2";',
+        "const urls: string[] = [icon, photo, font];",
+        "export default urls;",
+      ].join("\n"),
+    };
+    const r = await checkAppInWorker({ files, catalogo: "2026-11" });
+    expect((r?.typescript ?? []).map((d) => `${d.codigo} ${d.mensaje}`)).toEqual([]);
+  }, 60_000);
+
   it("CONTROL: without them, the module isn't found", async () => {
     __setModuleStoreForTest(memoryStore());
     const r = await checkAppInWorker({ files: filesWith(false), catalogo: "2026-11" });

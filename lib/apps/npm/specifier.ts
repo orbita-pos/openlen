@@ -18,7 +18,7 @@ export function parseBareSpecifier(spec: string): BareSpecifier | null {
   return { name, subpath: parts.slice(nameParts.length).join("/") };
 }
 
-const ASSET_EXTENSIONS = [".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".woff", ".woff2", ".ttf", ".otf"] as const;
+export const ASSET_EXTENSIONS = [".css", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".woff", ".woff2", ".ttf", ".otf"] as const;
 
 /** A package file that is imported as CSS (injected) or as a URL (images, fonts), like in Vite. */
 export function isAssetSubpath(subpath: string): boolean {
