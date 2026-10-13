@@ -27,6 +27,7 @@ import {
 } from "./lock";
 import { nodeOnlyBuiltinsIn, packageVersionsIn } from "./module-scan";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "./paths";
+import { mapLimited } from "./pool";
 import { getPackument } from "./registry";
 import { isAssetSubpath, parseBareSpecifier, specifierOf } from "./specifier";
 import { sha256Hex, type ModuleStore } from "./store";
@@ -194,10 +195,8 @@ async function lockParts(
       const moduleUrls = g.graph.modules.map((m) => m.url);
       const refused = await nestedProblem(moduleUrls, name, version, ctx);
       if (refused) return { ok: false, message: refused, code: "refused" };
-      for (const m of g.graph.modules) {
-        await ctx.deps.store.put(m.sha, m.code);
-        parts.bytes += m.code.length;
-      }
+      await mapLimited(g.graph.modules, (m) => ctx.deps.store.put(m.sha, m.code));
+      for (const m of g.graph.modules) parts.bytes += m.code.length;
       urls.push(...moduleUrls);
       (mode === "development" ? parts.development : parts.production)[subpath] = {
         entry: g.graph.entry,
@@ -221,12 +220,8 @@ async function lockParts(
 async function typesFor(name: string, version: string, ctx: Ctx): Promise<Pick<LockedPackage, "types" | "typesFrom"> | null> {
   const got = await fetchTypes(name, version, { fetch: ctx.deps.fetch, gate: ctx.deps, deadline: ctx.deadline, origin: ctx.deps.origin }).catch(() => null);
   if (!got) return null;
-  const shas: Record<string, string> = {};
-  for (const [p, text] of Object.entries(got.files)) {
-    const sha = sha256Hex(text);
-    await ctx.deps.store.put(sha, text);
-    shas[p] = sha;
-  }
+  const shas = Object.fromEntries(Object.entries(got.files).map(([p, text]) => [p, sha256Hex(text)]));
+  await mapLimited(Object.entries(got.files), ([p, text]) => ctx.deps.store.put(shas[p]!, text));
   return { types: shas, typesFrom: { name: got.name, version: got.version } };
 }
 

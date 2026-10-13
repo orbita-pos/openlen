@@ -92,6 +92,29 @@ describe("npmTypesFor", () => {
     for (const text of Object.values(out)) expect(await store.get(sha256Hex(text))).toBe(text);
   });
 
+  it("🔴 the lost .d.ts come back several at a time, not one after another", async () => {
+    const typed = await fetchTypes("typed", "1.0.0", opts());
+    const shas = Object.fromEntries(Object.entries(typed!.files).map(([p, t]) => [p, sha256Hex(t)]));
+    const files = {
+      [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { typed: "^1.0.0" } }),
+      [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { typed: lockFor("typed", "1.0.0", shas) } }),
+    };
+    let inFlight = 0;
+    let most = 0;
+    const counting = async (url: string, init?: RequestInit) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      try {
+        await new Promise((r) => setTimeout(r, 20));
+        return await fetch(url, init);
+      } finally {
+        inFlight--;
+      }
+    };
+    expect(await npmTypesFor(files, "2026-11", memoryStore(), counting)).toEqual(typed!.files);
+    expect(most).toBeGreaterThan(1);
+  });
+
   it("CONTROL: what esm.sh gives back with another hash is not used", async () => {
     const files = {
       [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { typed: "^1.0.0" } }),

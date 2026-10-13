@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { bundleApp, stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
+import { npmForBundle } from "./for-bundle";
 import { serializeEsmLock, type LockedPackage } from "./lock";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "./paths";
 import { __setModuleStoreForTest, memoryStore, sha256Hex, type ModuleStore } from "./store";
@@ -129,6 +130,31 @@ describe("bundling packages from the esm lock", () => {
     const files = filesWith(`import tiny from "tiny";\ndocument.title = tiny();`, { tiny: "^1.0.0" }, { tiny: tiny.locked });
     const r = await bundleApp({ carpeta: files, app: APP, modo: "desarrollo" });
     expect(r?.ok).toBe(true);
+  });
+
+  it("🔴 cache lost: the modules come back from esm.sh several at a time, not one after another", async () => {
+    const codes = Array.from({ length: 6 }, (_, i) => `export const m${i} = ${i};`);
+    const urls = codes.map((_, i) => `https://esm.example/many@1.0.0/m${i}.mjs`);
+    const set = { entry: urls[0]!, modules: Object.fromEntries(urls.map((u, i) => [u, sha256Hex(codes[i]!)])) };
+    const many: LockedPackage = {
+      version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set },
+      assets: {}, types: null, warnings: [], bytes: 0,
+    };
+    let inFlight = 0;
+    let most = 0;
+    const slowFetch = async (url: string | URL | Request) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 20));
+      inFlight--;
+      return new Response(codes[urls.indexOf(String(url))] ?? "", { status: 200 });
+    };
+    const files = filesWith(`import "many";`, { many: "^1.0.0" }, { many });
+    const r = await npmForBundle(files, APP, "development", { store: memoryStore(), fetch: slowFetch });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(Object.keys(r.npm!.modules).sort()).toEqual([...urls].sort());
+    expect(most).toBeGreaterThan(1);
+    expect(most).toBeLessThanOrEqual(8);
   });
 
   it("🔴 cache lost and esm.sh down: the error names the package and the fix", async () => {
