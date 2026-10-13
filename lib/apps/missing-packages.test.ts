@@ -9,7 +9,7 @@ describe("the four messages are still worded like this where they're born", () =
     const terminal = readFileSync(join(root, "lib", "agent", "terminal", "trabajador.mjs"), "utf8");
     const compiler = readFileSync(join(root, "lib", "apps", "compilador.ts"), "utf8");
     expect(terminal).toContain("${p}: isn't available here — there is no npm;");
-    expect(compiler).toContain('"${especificador}" is not available in this app.');
+    expect(compiler).toContain('"${especificador}" is not installed in this app.');
     expect(compiler).toContain('"${especificador}": imports from URLs or "${especificador.split(":")[0]}:" are not supported here.');
     expect(compiler).toContain('"${especificador}" is a package name, and packages can only be imported in an app.');
   });
@@ -19,8 +19,8 @@ describe("the four messages are still worded like this where they're born", () =
 // compiler (lib/apps/compilador.ts) write them. If one changes its text, these
 // tests say so: otherwise the counter would silently stop seeing it.
 const NPM = "three: isn't available here — there is no npm; the catalog has: react, react-dom\n@react-three/fiber: isn't available here — there is no npm; the catalog has: react, react-dom\n";
-const IMPORT = `"three/examples/jsm/controls/PointerLockControls.js" is not available in this app. Available packages: react, react-dom. Anything else has to be written in the project.`;
-const URL_IMPORT = `"https://esm.sh/leaflet@1.9.4": imports from URLs or "https:" are not supported here. Available packages: react.`;
+const IMPORT = `"three/examples/jsm/controls/PointerLockControls.js" is not installed in this app. It installs when a file that imports it is saved (or with npm install three); if that failed, the reason is in this same report.`;
+const URL_IMPORT = `"https://esm.sh/leaflet@1.9.4": imports from URLs or "https:" are not supported here. Import the package by its name and it installs from npm.`;
 const PAGE = `"chart.js" is a package name, and packages can only be imported in an app. Import files by path (./file.js).`;
 
 describe("packageNameOf", () => {
@@ -74,6 +74,11 @@ describe("missingPackagesOfTurn", () => {
     ]);
   });
 
+  it("the compiler's wording before open npm still counts (turns already stored)", () => {
+    const old = `"three" is not available in this app. Available packages: react, react-dom. Anything else has to be written in the project.`;
+    expect(missingPackagesOfTurn({ m: old })).toEqual([{ pkg: "three", source: "import" }]);
+  });
+
   it("a text that starts with a brace but isn't JSON is read as is", () => {
     expect(missingPackagesOfTurn({ m: `{ broken\n${NPM}` })).toEqual([
       { pkg: "three", source: "npm-install" },
@@ -116,7 +121,7 @@ describe("tallyMissingPackages", () => {
         turn("p1", "2026-10-10T10:00:00Z", NPM, IMPORT),
         turn("p1", "2026-10-11T10:00:00Z", IMPORT),
         turn("p2", "2026-10-12T10:00:00Z", IMPORT),
-        turn("p3", "2026-10-12T11:00:00Z", `"framer-motion" is not available in this app. Available packages: react.`),
+        turn("p3", "2026-10-12T11:00:00Z", `"framer-motion" is not installed in this app. It installs when a file that imports it is saved (or with npm install framer-motion); if that failed, the reason is in this same report.`),
       ],
       ["react", "react-dom", "framer-motion"],
     );

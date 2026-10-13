@@ -7,8 +7,9 @@
 //
 //   npm-install  an app's terminal (`trabajador.mjs`, `npmInstall`):
 //                «three: isn't available here — there is no npm; …»
-//   import       the compiler, a name the catalog doesn't have:
-//                «"three" is not available in this app. …»
+//   import       the compiler, a package nothing serves yet — the catalog
+//                doesn't have it and installing it (open npm) didn't happen
+//                or failed: «"three" is not installed in this app. …»
 //   url-import   the compiler, an import from a CDN:
 //                «"https://esm.sh/three": imports from URLs or "https:" are not supported here.»
 //   page-import  the compiler, a package imported in a PAGE (not an app):
@@ -38,7 +39,8 @@ export interface MissingPackageRow {
 
 const PATTERNS: readonly (readonly [MissingSource, RegExp])[] = [
   ["npm-install", /^(\S+): isn't available here — there is no npm;/gm],
-  ["import", /"([^"]+)" is not available in this app\./g],
+  // "available": the wording before open npm, still in stored turns.
+  ["import", /"([^"]+)" is not (?:installed|available) in this app\./g],
   ["url-import", /"([^"]+)": imports from URLs or "[^"]*" are not supported here\./g],
   ["page-import", /"([^"]+)" is a package name, and packages can only be imported in an app\./g],
 ];
