@@ -365,8 +365,10 @@ export async function installForApp(args: { readonly files: Files; readonly app:
   }
 
   // A fresh package.json lists what the app already imports from the catalog.
+  // Without one, nothing is written unless something was added (`npm install
+  // recharts` adds a catalog package and nothing to the lock).
   const hasEsm = Object.keys(ctx.packages).length > 0;
-  if (!pkgBefore && !hasEsm) return { files: {}, notes, installed };
+  if (!pkgBefore && !hasEsm && Object.keys(ctx.dependencies).length === 0) return { files: {}, notes, installed };
   if (!pkgBefore) {
     for (const spec of importedSpecifiers(files, app)) {
       const name = parseBareSpecifier(spec)?.name;
