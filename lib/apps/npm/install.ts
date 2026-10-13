@@ -35,6 +35,24 @@ import { fetchTypes } from "./types";
 export const MAX_ESM_PACKAGES = 50;
 export const MAX_MODULE_BYTES = 40 * 1024 * 1024;
 export const INSTALL_DEADLINE_MS = 60_000;
+/** How long a refusal (the gate's or esm.sh's, never a service that didn't
+ *  answer) is remembered: saving again doesn't ask npm again. `npm install
+ *  <name>` always asks. */
+export const REFUSAL_TTL_MS = 10 * 60_000;
+const MAX_REFUSALS = 500;
+const refusals = new Map<string, { readonly message: string; readonly until: number }>();
+
+export function clearRefusalCache(): void {
+  refusals.clear();
+}
+
+const refusalKey = (catalog: string, add: InstallAdd) => [catalog, add.name, add.range ?? "", [...add.subpaths].sort().join(",")].join("\0");
+
+function rememberRefusal(key: string, message: string, until: number): void {
+  refusals.delete(key);
+  refusals.set(key, { message, until });
+  while (refusals.size > MAX_REFUSALS) refusals.delete(refusals.keys().next().value!);
+}
 
 export interface InstallAdd {
   readonly name: string;
@@ -212,9 +230,13 @@ async function typesFor(name: string, version: string, ctx: Ctx): Promise<Record
   return shas;
 }
 
-async function installOne(add: InstallAdd, ctx: Ctx): Promise<{ notes: NpmNote[]; installed: string | null; discovered: InstallAdd[] }> {
+type OneOutcome = { notes: NpmNote[]; installed: string | null; discovered: InstallAdd[]; refused?: string };
+
+async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
   const { app, dependencies, packages, deps } = ctx;
-  const nothing = (note?: NpmNote) => ({ notes: note ? [note] : [], installed: null, discovered: [] });
+  const nothing = (note?: NpmNote): OneOutcome => ({ notes: note ? [note] : [], installed: null, discovered: [] });
+  // A refusal worth remembering: the answer, not a service that didn't give one.
+  const refused = (message: string, code: string): OneOutcome => ({ ...nothing(error(message)), ...(code === "unavailable" ? {} : { refused: message }) });
 
   if (isFixed(add.name)) {
     const v = catalogVersionOf(app.catalogo, add.name)!;
@@ -236,7 +258,7 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<{ notes: NpmNote[]
     dependencies[add.name] = range ?? `^${existing.version}`;
     if (missing.length === 0) return nothing();
     const more = await lockParts(add.name, existing.version, missing, existing.externals, ctx);
-    if (!more.ok) return nothing(error(more.message));
+    if (!more.ok) return refused(more.message, more.code);
     packages[add.name] = {
       ...existing,
       development: { ...existing.development, ...more.parts.development },
@@ -251,7 +273,7 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<{ notes: NpmNote[]
     return nothing(error(`this app already has ${MAX_ESM_PACKAGES} packages outside its catalog; ${add.name} was not installed.`));
   }
   const decision = await chooseVersion(add.name, add.range, deps);
-  if (!decision.ok) return nothing(error(decision.message));
+  if (!decision.ok) return refused(decision.message, decision.code);
   const manifest = decision.packument.versions[decision.version] ?? { version: decision.version };
   const externals = externalsFor(manifest, new Set(Object.keys(packages).filter((n) => n !== add.name)));
   const subpaths = add.subpaths.length > 0 ? add.subpaths : [""];
@@ -262,7 +284,7 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<{ notes: NpmNote[]
     parts = { ok: true, parts: { development: {}, production: {}, assets: {}, warnings: [], bytes: 0 }, discovered: [] };
     warnings.push(`${add.name}@${decision.version} has no JavaScript entry; import its files by path (${add.name}/<file>).`);
   }
-  if (!parts.ok) return nothing(error(parts.message));
+  if (!parts.ok) return refused(parts.message, parts.code);
   warnings.push(...parts.parts.warnings);
   const reactVersion = catalogVersionOf(app.catalogo, "react");
   const peerReact = manifest.peerDependencies?.react;
@@ -347,7 +369,16 @@ export async function installForApp(args: { readonly files: Files; readonly app:
         notes.push(error(`${add.name}: installing took longer than ${INSTALL_DEADLINE_MS / 1000} s; it was not installed. Try again.`));
         continue;
       }
+      const key = refusalKey(app.catalogo, add);
+      const now = deps.now().getTime();
+      const known = add.explicit ? undefined : refusals.get(key);
+      if (known && known.until > now) {
+        notes.push(error(known.message));
+        continue;
+      }
       const r = await installOne(add, ctx);
+      if (r.refused) rememberRefusal(key, r.refused, now + REFUSAL_TTL_MS);
+      else refusals.delete(key);
       notes.push(...r.notes);
       if (r.installed) {
         installed.push(r.installed);
