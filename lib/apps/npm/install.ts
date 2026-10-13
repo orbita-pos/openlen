@@ -218,16 +218,16 @@ async function lockParts(
   return { ok: true, parts, discovered };
 }
 
-async function typesFor(name: string, version: string, ctx: Ctx): Promise<Record<string, string> | null> {
-  const files = await fetchTypes(name, version, { fetch: ctx.deps.fetch, gate: ctx.deps, deadline: ctx.deadline, origin: ctx.deps.origin }).catch(() => null);
-  if (!files) return null;
+async function typesFor(name: string, version: string, ctx: Ctx): Promise<Pick<LockedPackage, "types" | "typesFrom"> | null> {
+  const got = await fetchTypes(name, version, { fetch: ctx.deps.fetch, gate: ctx.deps, deadline: ctx.deadline, origin: ctx.deps.origin }).catch(() => null);
+  if (!got) return null;
   const shas: Record<string, string> = {};
-  for (const [p, text] of Object.entries(files)) {
+  for (const [p, text] of Object.entries(got.files)) {
     const sha = sha256Hex(text);
     await ctx.deps.store.put(sha, text);
     shas[p] = sha;
   }
-  return shas;
+  return { types: shas, typesFrom: { name: got.name, version: got.version } };
 }
 
 type OneOutcome = { notes: NpmNote[]; installed: string | null; discovered: InstallAdd[]; refused?: string };
@@ -300,7 +300,8 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
     development: parts.parts.development,
     production: parts.parts.production,
     assets: parts.parts.assets,
-    types,
+    types: types?.types ?? null,
+    ...(types?.typesFrom ? { typesFrom: types.typesFrom } : {}),
     warnings,
     bytes: parts.parts.bytes,
   };

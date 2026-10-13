@@ -8,7 +8,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { fetchPackageAsset } from "./assets";
 import type { EsmMode } from "./esm-url";
 import { fetchText } from "./fetch-graph";
-import { readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
+import { lockedOrigin, readEsmLock, readPackageJson, serializeEsmLock, sourceOf, type LockedPackage } from "./lock";
 import { PACKAGE_JSON_PATH } from "./paths";
 import type { FetchLike } from "./registry";
 import { specifierOf } from "./specifier";
@@ -44,8 +44,7 @@ async function moduleCode(url: string, sha: string, deps: { store: ModuleStore; 
 async function assetText(name: string, locked: LockedPackage, subpath: string, sha: string, deps: { store: ModuleStore; fetch: FetchLike }): Promise<string | null> {
   const cached = await deps.store.get(sha);
   if (cached !== null) return cached;
-  const entry = Object.values(locked.development)[0]?.entry ?? Object.values(locked.production)[0]?.entry;
-  const origin = entry ? new URL(entry).origin : undefined;
+  const origin = lockedOrigin(locked);
   const got = await fetchPackageAsset(name, locked.version, subpath, { fetch: deps.fetch, deadline: Date.now() + 20_000, ...(origin ? { origin } : {}) });
   if (!got.ok || sha256Hex(got.text) !== sha) return null;
   await deps.store.put(sha, got.text).catch(() => {});
