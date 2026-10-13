@@ -231,6 +231,10 @@ describe("las herramientas en una app", () => {
     expect(bashApp).toMatch(/\/tests holds the app's tests \(vitest\)/);
     expect(bashPagina).toMatch(/no node, npm, pip or git/);
     expect(bashPagina).toMatch(/Playwright/);
+    // NPM ABIERTO: el /node_modules que se lee, sólo en una app.
+    expect(bashApp).toMatch(/- \/node_modules: the installed packages, read-only: each one's package\.json and its type declarations/);
+    expect(bashApp).toMatch(/\n- \/tmp: scratch space/);
+    expect(bashPagina).not.toMatch(/node_modules/);
   });
 });
 

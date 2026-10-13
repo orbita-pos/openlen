@@ -54,6 +54,7 @@ import { userEditLabels } from "@/lib/agent/version-labels";
 import { appFileNames } from "@/lib/apps/esqueleto";
 import { installPackagesAfterSave } from "@/lib/agent/npm-after-save";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { NODE_MODULES, nodeModulesOf } from "@/lib/apps/npm/node-modules";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -198,13 +199,22 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   const v = await virtualesDe(session, deps, row.userBrief);
   const file_path = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
   if (isLegacyMemoryPath(resolverRuta(file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
+  const sitio = sitioDe(row.data, session, v);
+  // NPM ABIERTO: en una app, /node_modules se abre por su ruta, como en Claude
+  // Code (lo mismo que `cat` en la terminal, `lib/apps/npm/node-modules.ts`).
+  const enNodeModules = session.app && deps.projectFiles && resolverRuta(file_path).startsWith(`${NODE_MODULES}/`) ? resolverRuta(file_path) : null;
+  const deNodeModules = enNodeModules
+    ? await deps.projectFiles!(session.projectId)
+        .then((files) => nodeModulesOf(files, session.app!.catalogo).read(enNodeModules))
+        .catch(() => null)
+    : null;
   const r = ejecutarRead(
     {
       file_path,
       ...(numero(args.offset) !== undefined ? { offset: numero(args.offset) } : {}),
       ...(numero(args.limit) !== undefined ? { limit: numero(args.limit) } : {}),
     },
-    sitioDe(row.data, session, v),
+    deNodeModules === null ? sitio : { ...sitio, contenido: (ruta) => (ruta === enNodeModules ? deNodeModules : sitio.contenido(ruta)) },
     leidosDe(session),
   );
   const ruta = resolverRuta(file_path);
