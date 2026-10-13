@@ -1,8 +1,10 @@
 // @vitest-environment node
 // `tsc` y `eslint` de la terminal de una app, del lado del hilo de la app (plan 03,
 // tarea 5): qué ficheros van al comprobador, qué salida y qué código vuelven.
-import { describe, expect, it } from "vitest";
-import { appToolsFor } from "./herramientas-de-app";
+import { describe, expect, it, vi } from "vitest";
+import type { InstallOutcome } from "@/lib/apps/npm/install";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { appToolsFor, parseInstallArg } from "./herramientas-de-app";
 
 const d = (ruta: string, fuente: "typescript" | "eslint", gravedad: "Error" | "Warning" = "Error") => ({
   ruta,
@@ -199,5 +201,82 @@ describe("appToolsFor (plan 03, tarea 5)", () => {
 
   it("si el comprobador no llega, lo dice y falla", async () => {
     expect(await montar(null).tools.run("tsc", [], {})).toEqual({ stdout: "", stderr: "tsc: didn't finish in time; try again.\n", exitCode: 1 });
+  });
+});
+
+describe("npm in an app's terminal (open npm)", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+  const outcome: InstallOutcome = {
+    files: { [PACKAGE_JSON_PATH]: '{"dependencies":{"three":"^0.186.1"}}\n', [ESM_LOCK_PATH]: '{"lockfileVersion":1,"packages":{}}\n' },
+    notes: [{ severity: "Info" as const, message: "Installed three@0.186.1 from npm (esm.sh)." }, { severity: "Warning" as const, message: "three@0.186.1 has no TypeScript types; what it exports is typed as any." }],
+    installed: ["three@0.186.1"],
+  };
+  function tools() {
+    const installPackages = vi.fn(async () => outcome);
+    const saveProjectFile = vi.fn(async () => ({ versionPrevia: null }));
+    const projectFiles = vi.fn(async () => ({ [ESM_LOCK_PATH]: '{"lockfileVersion":1,"packages":{}}\n' }));
+    const t = appToolsFor({ app: APP, projectId: "p1", autor: "len" } as never, { checkApp: vi.fn(), installPackages, saveProjectFile, projectFiles } as never)!;
+    return { t, installPackages, saveProjectFile };
+  }
+
+  it("parses name@range like npm", () => {
+    expect(parseInstallArg("three")).toEqual({ name: "three", range: null });
+    expect(parseInstallArg("three@^0.186")).toEqual({ name: "three", range: "^0.186" });
+    expect(parseInstallArg("@react-three/fiber@9")).toEqual({ name: "@react-three/fiber", range: "9" });
+  });
+
+  it("npm install three: installs, saves the lock, returns package.json for the terminal to save, prints like npm", async () => {
+    const { t, installPackages, saveProjectFile } = tools();
+    const r = await t.run("npm-install", ["three"], { "/src/main.tsx": "export {};" });
+    expect(installPackages).toHaveBeenCalledWith(expect.objectContaining({ [ESM_LOCK_PATH]: expect.any(String) }), APP, { add: [{ name: "three", range: null, subpaths: [""], explicit: true }], remove: [] });
+    expect((saveProjectFile.mock.calls[0] as unknown[])[1]).toBe(ESM_LOCK_PATH);
+    expect(r).toMatchObject({ exitCode: 0, files: { [PACKAGE_JSON_PATH]: outcome.files[PACKAGE_JSON_PATH]! } });
+    expect(r.stdout).toMatch(/^\+ three@0\.186\.1\nadded 1 package in \d+\.\ds\n$/);
+    expect(r.stderr).toBe("npm warn three@0.186.1 has no TypeScript types; what it exports is typed as any.\n");
+  });
+
+  it("npm uninstall three asks to remove it", async () => {
+    const { t, installPackages } = tools();
+    await t.run("npm-uninstall", ["three"], {});
+    expect(installPackages).toHaveBeenCalledWith(expect.any(Object), APP, { add: [], remove: ["three"] });
+  });
+
+  it("an install error exits 1 with npm error", async () => {
+    const { t, installPackages } = tools();
+    installPackages.mockResolvedValueOnce({ files: {}, notes: [{ severity: "Error", message: "young: published 10 days ago; packages must be at least 30 days old." }], installed: [] });
+    const r = await t.run("npm-install", ["young"], {});
+    expect(r).toMatchObject({ exitCode: 1, stderr: "npm error young: published 10 days ago; packages must be at least 30 days old.\n" });
+  });
+});
+
+describe("npm in an app's terminal: what is already there", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+  function tools() {
+    const installPackages = vi.fn(async () => ({
+      files: { [PACKAGE_JSON_PATH]: '{"dependencies":{"three":"^0.186.1"}}\n' },
+      notes: [{ severity: "Info" as const, message: "Installed three@0.186.1 from npm (esm.sh)." }],
+      installed: ["three@0.186.1"],
+    }));
+    const t = appToolsFor({ app: APP, projectId: "p1", autor: "len" } as never, { checkApp: vi.fn(), installPackages, saveProjectFile: vi.fn(), projectFiles: vi.fn(async () => ({})) } as never)!;
+    return { t, installPackages };
+  }
+
+  it("🔴 the test kit and the catalog's types answer as before: nothing goes to npm", async () => {
+    const { t, installPackages } = tools();
+    const r = await t.run("npm-install", ["-D", "vitest", "@testing-library/react", "jsdom", "@types/react"], {});
+    expect(installPackages).not.toHaveBeenCalled();
+    expect(r).toEqual({
+      stdout:
+        "vitest: already available (tests run with OpenLen's test kit)\n@testing-library/react: already available (test kit)\njsdom: not needed: tests run in a real browser (Chromium), like Vitest's browser mode\n@types/react: already available (its types come with the catalog)\n",
+      stderr: "",
+      exitCode: 0,
+    });
+  });
+
+  it("mixed: the kit line first, the rest installs", async () => {
+    const { t, installPackages } = tools();
+    const r = await t.run("npm-install", ["vitest", "three"], {});
+    expect(installPackages).toHaveBeenCalledWith(expect.any(Object), APP, { add: [{ name: "three", range: null, subpaths: [""], explicit: true }], remove: [] });
+    expect(r.stdout).toMatch(/^vitest: already available \(tests run with OpenLen's test kit\)\n\+ three@0\.186\.1\nadded 1 package in /);
   });
 });

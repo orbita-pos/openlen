@@ -29,6 +29,9 @@ const RUTA_DEL_TRABAJADOR = path.join(process.cwd(), "lib", "agent", "terminal",
 export const AVISO_DE_REINICIO =
   "The terminal was reset: the next command starts in a fresh terminal (the files are kept; the directory and variables are not).";
 
+/** Lo que el hilo de la app corre por la terminal de una app (`herramientas-de-app.ts`). */
+export type AppProgram = "tsc" | "eslint" | "build" | "test" | "npm-install" | "npm-uninstall" | "npm-ls";
+
 export interface SalidaDeUnComando {
   readonly stdout: string;
   readonly stderr: string;
@@ -89,7 +92,7 @@ export class TerminalDeLen {
         /** Los `@types/*` que ya trae el paquete de tipos del catálogo. */
         readonly typesPackages?: readonly string[];
         readonly run: (
-          program: "tsc" | "eslint" | "build" | "test",
+          program: AppProgram,
           args: readonly string[],
           ficheros: Readonly<Record<string, string>>,
           /** Lo que le queda al comando que lo pidió. */
@@ -102,6 +105,9 @@ export class TerminalDeLen {
           exitCode: number;
           /** Se acabó el tiempo del comando: se corta ENTERO, como en Claude Code. */
           timedOut?: true;
+          /** NPM ABIERTO: ficheros que la terminal escribe antes de acabar el
+           *  comando (el /package.json de `npm install`); `null` lo borra. */
+          readonly files?: Readonly<Record<string, string | null>>;
         }>;
       };
       /** Las Edge Functions (spec local 2026-10-11): `curl` a las del proyecto,
@@ -134,7 +140,7 @@ export class TerminalDeLen {
         return;
       }
       if (typeof m.app === "number") {
-        void this.servirAppTools(hilo, m.app, m.program as "tsc" | "eslint" | "build" | "test", m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
+        void this.servirAppTools(hilo, m.app, m.program as AppProgram, m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
       }
       if (typeof m.cancelarApp === "number") {
@@ -173,7 +179,7 @@ export class TerminalDeLen {
   private async servirAppTools(
     hilo: Worker,
     pid: number,
-    program: "tsc" | "eslint" | "build" | "test",
+    program: AppProgram,
     args: string[],
     ficheros: Record<string, string>,
     tiempoQueQueda: number,

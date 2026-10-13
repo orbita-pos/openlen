@@ -15,9 +15,9 @@ import { CATALOGO_ACTUAL, catalogo } from "../lib/apps/dependencias";
 import { tallyMissingPackages, type TurnForTally } from "../lib/apps/missing-packages";
 import { db } from "../lib/db";
 
-// The four messages (in the order of lib/apps/missing-packages.ts; "import" in
-// its old and new wording), so Postgres only returns the turns that have one.
-const ANY_MESSAGE = "isn't available here — there is no npm|is not available in this app|is not installed in this app|imports from URLs or|packages can only be imported in an app";
+// The four messages (lib/apps/missing-packages.ts; "npm-install" and "import"
+// in their old and new wording), so Postgres only returns the turns that have one.
+const ANY_MESSAGE = "npm error |isn't available here — there is no npm|is not available in this app|is not installed in this app|imports from URLs or|packages can only be imported in an app";
 
 async function main() {
   const days = Number(process.argv.find((a) => a.startsWith("--days="))?.slice(7) ?? 90);
