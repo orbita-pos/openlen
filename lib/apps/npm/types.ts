@@ -44,33 +44,78 @@ function typesEntryOf(manifest: Manifest): string | null {
   return pickTypes(exportOf(manifest, "."));
 }
 
-/** Where a subpath's types may start ("" = the package's): its `exports` entry, else the file by name. */
-function entriesFor(manifest: Manifest, subpath: string, rootFallback: string | null): string[] {
-  if (subpath === "") {
-    const entry = typesEntryOf(manifest) ?? rootFallback;
-    return entry ? [entry] : [];
-  }
-  const entry = pickTypes(exportOf(manifest, `./${subpath}`));
-  return entry ? [entry] : [`${subpath}.d.ts`, `${subpath}/index.d.ts`];
+/** The file TypeScript reads for a JS file of the package: x.js → x.d.ts (.mjs → .d.mts, .cjs → .d.cts). */
+function dtsOf(target: string): string | null {
+  if (target.includes("*")) return null;
+  const t = target.replace(/^\.\//, "");
+  if (/\.d\.[mc]?ts$/.test(t)) return t;
+  if (t.endsWith(".js")) return t.replace(/\.js$/, ".d.ts");
+  if (t.endsWith(".mjs")) return t.replace(/\.mjs$/, ".d.mts");
+  if (t.endsWith(".cjs")) return t.replace(/\.cjs$/, ".d.cts");
+  return null;
 }
 
-/** Every subpath's types, crawled from the first entry that exists; null if none has any. */
-async function crawlSubpaths(pkg: string, version: string, manifest: { text: string; manifest: Manifest }, subpaths: readonly string[], rootFallback: string | null, opts: TypesOptions): Promise<Record<string, string> | null> {
-  const files: Record<string, string> = {};
-  let found = false;
-  for (const subpath of subpaths) {
-    for (const entry of entriesFor(manifest.manifest, subpath, rootFallback)) {
-      const got = await crawl(pkg, version, entry, manifest.text, opts);
-      if (!got) continue;
-      Object.assign(files, got);
-      found = true;
-      break;
-    }
+/** Every file an `exports` entry can send TypeScript to: its `types` condition, else the .d.ts of each target. */
+function exportTargets(x: unknown): string[] {
+  if (typeof x === "string") {
+    const d = dtsOf(x);
+    return d ? [d] : [];
   }
-  return found ? files : null;
+  if (!x || typeof x !== "object") return [];
+  const o = x as Record<string, unknown>;
+  if (typeof o.types === "string") return [o.types.replace(/^\.\//, "")];
+  return Object.values(o).flatMap(exportTargets);
+}
+
+/** Where a subpath's types may start ("" = the package's): "types" and what "exports" points at —
+ *  TypeScript resolves through "exports" (@types/three's "types" is index.d.ts, its "exports"
+ *  build/three.module.d.ts) — else the file by name. */
+function entriesFor(manifest: Manifest, subpath: string, rootFallback: string | null): string[] {
+  const fromExports = exportTargets(exportOf(manifest, subpath ? `./${subpath}` : "."));
+  if (subpath === "") {
+    const declared = [manifest.types, manifest.typings].filter((v): v is string => typeof v === "string");
+    const all = [...declared, ...fromExports];
+    return all.length > 0 ? all : rootFallback ? [rootFallback] : [];
+  }
+  return fromExports.length > 0 ? fromExports : [`${subpath}.d.ts`, `${subpath}/index.d.ts`];
+}
+
+/** Every subpath's types, in ONE crawl (what two entries share is fetched once); null if no entry exists. */
+async function crawlSubpaths(pkg: string, version: string, manifest: { text: string; manifest: Manifest }, subpaths: readonly string[], rootFallback: string | null, opts: TypesOptions): Promise<Record<string, string> | null> {
+  const entries = subpaths.flatMap((subpath) => entriesFor(manifest.manifest, subpath, rootFallback));
+  return entries.length > 0 ? crawl(pkg, version, entries, manifest.text, opts) : null;
 }
 
 const mangle = (name: string) => (name.startsWith("@") ? name.slice(1).replace("/", "__") : name);
+
+/** `foo__bar` (the @types name of `@foo/bar`) → `@foo/bar`. */
+const unmangle = (name: string) => (name.includes("__") ? `@${name.replace("__", "/")}` : name);
+
+/** The name an esm.sh types URL stands for: `@types/three@~0.186.0/index.d.ts` → `three`,
+ *  `zustand@5.0.15/esm/traditional.d.mts` → `zustand/traditional`. */
+function bareOf(pkg: string, rest: string): string {
+  const file = rest.replace(/\.d\.[mc]?ts$/, "");
+  if (pkg.startsWith("@types/")) {
+    const sub = file.replace(/(?:^|\/)index$/, "");
+    const name = unmangle(pkg.slice("@types/".length));
+    return sub ? `${name}/${sub}` : name;
+  }
+  const base = file.split("/").pop()!;
+  return base === "index" ? pkg : `${pkg}/${base}`;
+}
+
+/**
+ * esm.sh rewrites a .d.ts's package imports into its own URLs, even with
+ * `?raw` (measured 2026-10-13: fiber's three-types.d.ts imports
+ * "https://esm.sh/@types/three@~0.186.0/index.d.ts"). TypeScript can't resolve
+ * a URL, so fiber's JSX elements lost three's types. They go back to the names
+ * the package wrote ("three"), which the checker's node_modules does resolve.
+ */
+export function bareTypeImports(text: string, origin: string): string {
+  const escaped = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const url = new RegExp(`(["'])${escaped}/((?:@[^/@"']+/)?[^/@"']+)@[^/"']+/([^"']*)\\1`, "g");
+  return text.replace(url, (_m, quote: string, pkg: string, rest: string) => `${quote}${bareOf(pkg, rest)}${quote}`);
+}
 
 function candidatesFor(fromFile: string, spec: string): string[] {
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), spec));
@@ -79,33 +124,33 @@ function candidatesFor(fromFile: string, spec: string): string[] {
   return [`${base}.d.ts`, `${base}/index.d.ts`];
 }
 
-async function crawl(pkgName: string, pkgVersion: string, entry: string, manifestText: string, opts: TypesOptions): Promise<Record<string, string> | null> {
+async function crawl(pkgName: string, pkgVersion: string, entries: readonly string[], manifestText: string, opts: TypesOptions): Promise<Record<string, string> | null> {
   const origin = opts.origin ?? esmOrigin();
   const root = `/node_modules/${pkgName}/`;
   const files: Record<string, string> = { [`${root}package.json`]: manifestText };
-  const entryFile = path.posix.normalize(entry.replace(/^\.\//, ""));
-  const seen = new Set([entryFile]);
+  const entryFiles = [...new Set(entries.map((e) => path.posix.normalize(e.replace(/^\.\//, ""))))];
+  const seen = new Set(entryFiles);
+  let found = false;
   let bytes = manifestText.length;
   // In waves, each fetched several at a time (measured in the box rehearsal:
   // @types/three's 415 files one by one took 52.6 s of the 60 s install).
-  let wave = [entryFile];
+  let wave = entryFiles;
   while (wave.length > 0) {
     const got = await mapLimited(wave, (file) => fetchText(rawUrl(pkgName, pkgVersion, file, origin), opts));
     const next: string[] = [];
     for (const [i, file] of wave.entries()) {
       const g = got[i]!;
-      if (!g.ok) {
-        // The entry missing means no types; another file missing is one of the
-        // two candidates of a reference (x.d.ts / x/index.d.ts): the other may be there.
-        if (file === entryFile) return null;
-        continue;
-      }
-      files[`${root}${file}`] = g.text;
-      bytes += g.text.length;
+      // An entry may not exist (a "require" target with no .d.cts), and a
+      // reference has two candidates (x.d.ts / x/index.d.ts): only one is there.
+      if (!g.ok) continue;
+      found = true;
+      const text = bareTypeImports(g.text, origin);
+      files[`${root}${file}`] = text;
+      bytes += text.length;
       if (Object.keys(files).length > MAX_FILES || bytes > MAX_BYTES) return files;
       const refs = [
-        ...[...g.text.matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!),
-        ...[...g.text.matchAll(/\/\/\/\s*<reference\s+path=["']([^"']+)["']/g)].map((m) => m[1]!),
+        ...[...text.matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!),
+        ...[...text.matchAll(/\/\/\/\s*<reference\s+path=["']([^"']+)["']/g)].map((m) => m[1]!),
       ];
       for (const ref of refs) {
         for (const candidate of candidatesFor(file, ref.startsWith(".") ? ref : `./${ref}`)) {
@@ -118,7 +163,7 @@ async function crawl(pkgName: string, pkgVersion: string, entry: string, manifes
     }
     wave = next;
   }
-  return files;
+  return found ? files : null;
 }
 
 async function manifestOf(name: string, version: string, opts: TypesOptions): Promise<{ text: string; manifest: Manifest } | null> {

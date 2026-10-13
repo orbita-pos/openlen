@@ -6,9 +6,11 @@
 import { rawUrl } from "./esm-url";
 import { fetchText } from "./fetch-graph";
 import { catalogPartsLocked, lockedOrigin, readEsmLock, readPackageJson, sourceOf, type LockedPackage } from "./lock";
+import { esmOrigin } from "./paths";
 import { mapLimited } from "./pool";
 import type { FetchLike } from "./registry";
 import { defaultModuleStore, sha256Hex, type ModuleStore } from "./store";
+import { bareTypeImports } from "./types";
 
 /** "/node_modules/@types/x/index.d.ts" → { pkg: "@types/x", file: "index.d.ts" }. */
 function splitTypesPath(p: string): { pkg: string; file: string } | null {
@@ -24,10 +26,14 @@ async function refetch(name: string, locked: LockedPackage, p: string, sha: stri
   // Older locks don't say where the types came from: only the package's own are known.
   const version = locked.typesFrom?.name === where.pkg ? locked.typesFrom.version : where.pkg === name ? locked.version : null;
   if (!version) return null;
-  const got = await fetchText(rawUrl(where.pkg, version, where.file, lockedOrigin(locked)), { fetch: fetchImpl, deadline: Date.now() + 20_000 });
-  if (!got.ok || sha256Hex(got.text) !== sha) return null;
-  await store.put(sha, got.text).catch(() => {});
-  return got.text;
+  const origin = lockedOrigin(locked) ?? esmOrigin();
+  const got = await fetchText(rawUrl(where.pkg, version, where.file, origin), { fetch: fetchImpl, deadline: Date.now() + 20_000 });
+  if (!got.ok) return null;
+  // What the installer stored: esm.sh's URLs back to names (`bareTypeImports`), then hashed.
+  const text = bareTypeImports(got.text, origin);
+  if (sha256Hex(text) !== sha) return null;
+  await store.put(sha, text).catch(() => {});
+  return text;
 }
 
 export async function npmTypesFor(

@@ -4,7 +4,7 @@ import { serializeEsmLock, type LockedPackage } from "./lock";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "./paths";
 import { clearPackumentCache } from "./registry";
 import { memoryStore, sha256Hex } from "./store";
-import { fetchTypes } from "./types";
+import { bareTypeImports, fetchTypes } from "./types";
 import { npmTypesFor } from "./types-for-check";
 import { startFakeNpm, type FakeNpm } from "./test-support/fake-npm";
 
@@ -25,6 +25,18 @@ beforeAll(async () => {
       "untyped@2.3.4/package.json": JSON.stringify({ name: "untyped", main: "index.js" }),
       "@types/untyped@2.3.0/package.json": JSON.stringify({ name: "@types/untyped", types: "index.d.ts" }),
       "@types/untyped@2.3.0/index.d.ts": "export declare function u(): void;",
+      // Like @types/three@0.186.0 (measured in the box rehearsal): "types" says
+      // index.d.ts, but TypeScript resolves the package through "exports".
+      "exported@1.0.0/package.json": JSON.stringify({
+        name: "exported",
+        types: "index.d.ts",
+        exports: { ".": { import: "./build/mod.js", require: "./build/mod.cjs" }, "./addons": "./addons/all.js" },
+      }),
+      "exported@1.0.0/index.d.ts": `export * from "./src/core.js";`,
+      "exported@1.0.0/build/mod.d.ts": `export * from "../src/core.js";`,
+      "exported@1.0.0/build/mod.d.cts": `export * from "../src/core.js";`,
+      "exported@1.0.0/src/core.d.ts": "export declare const REVISION: string;",
+      "exported@1.0.0/addons/all.d.ts": "export declare const Orbit: unknown;",
     },
   });
   restore = npm.useEnv();
@@ -56,6 +68,41 @@ describe("fetchTypes", () => {
 
   it("no types anywhere → null", async () => {
     expect(await fetchTypes("nothing", "1.0.0", opts())).toBeNull();
+  });
+
+  it("🔴 crawls from where TypeScript resolves the package — its \"exports\" too, not only \"types\" (@types/three: TS2307 in the box rehearsal)", async () => {
+    const got = await fetchTypes("exported", "1.0.0", opts(), ["", "addons"]);
+    expect(Object.keys(got?.files ?? {}).sort()).toEqual([
+      "/node_modules/exported/addons/all.d.ts",
+      "/node_modules/exported/build/mod.d.cts",
+      "/node_modules/exported/build/mod.d.ts",
+      "/node_modules/exported/index.d.ts",
+      "/node_modules/exported/package.json",
+      "/node_modules/exported/src/core.d.ts",
+    ]);
+  });
+
+  it("🔴 esm.sh's URLs inside a .d.ts go back to the names the package wrote (measured 2026-10-13: fiber's three-types.d.ts, also with ?raw)", () => {
+    const fromEsm = [
+      `import type * as THREE from "https://esm.sh/@types/three@~0.186.0/index.d.ts";`,
+      `import * as React from 'https://esm.sh/@types/react@~19.3.0/index.d.ts';`,
+      `import { Fiber } from "https://esm.sh/@types/react-reconciler@0.28.9/constants.d.ts";`,
+      `import type { Store } from "https://esm.sh/@types/foo__bar@1.0.0/index.d.ts";`,
+      `import measure from "https://esm.sh/react-use-measure@2.1.7/dist/index.d.ts";`,
+      `import { create } from "https://esm.sh/zustand@5.0.15/esm/traditional.d.mts";`,
+      `export * from "./core/index.d.ts";`,
+      `import x from "https://other.example/@types/three@1.0.0/index.d.ts";`,
+    ].join("\n");
+    expect(bareTypeImports(fromEsm, "https://esm.sh").split("\n")).toEqual([
+      `import type * as THREE from "three";`,
+      `import * as React from 'react';`,
+      `import { Fiber } from "react-reconciler/constants";`,
+      `import type { Store } from "@foo/bar";`,
+      `import measure from "react-use-measure";`,
+      `import { create } from "zustand/traditional";`,
+      `export * from "./core/index.d.ts";`,
+      `import x from "https://other.example/@types/three@1.0.0/index.d.ts";`,
+    ]);
   });
 
   it("🔴 says which package and version the types came from (to fetch them again)", async () => {
