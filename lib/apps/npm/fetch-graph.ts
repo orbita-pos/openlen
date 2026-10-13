@@ -42,7 +42,9 @@ export async function fetchText(url: string, opts: Pick<GraphOptions, "fetch" | 
       const message = text.trim().slice(0, 300) || `esm.sh answered ${res.status}`;
       if (res.status === 404) return { ok: false, error: { code: "not-found", message } };
       if (res.status < 500) return { ok: false, error: { code: "build-failed", message } };
-      last = { code: "build-failed", message };
+      // A 5xx is esm.sh failing, not the package (measured 2026-10-12: «no
+      // space left on device» on every new build): unavailable, like silence.
+      last = { code: "unavailable", message: `esm.sh answered ${res.status}${text.trim() ? `: ${text.trim().slice(0, 300)}` : ""}` };
     } catch {
       last = { code: "unavailable", message: "esm.sh did not answer" };
     }

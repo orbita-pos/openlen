@@ -143,6 +143,29 @@ describe("installForApp", () => {
     expect(npm.requests.length).toBeGreaterThan(explicitAsked);
   });
 
+  it("🔴 a refusal is remembered while /package.json doesn't change: a different /package.json asks again", async () => {
+    const files = source(`import y from "young";\nexport default y;`, { [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: {} }) });
+    await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    const asked = npm.requests.length;
+    await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    expect(npm.requests.length).toBe(asked);
+    const edited = { ...files, [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { recharts: "^2.15.4" } }) };
+    await installForApp({ files: edited, app: APP, request: pendingInstall(edited, APP), deps: deps() });
+    expect(npm.requests.length).toBeGreaterThan(asked);
+  });
+
+  it("🔴 esm.sh failing (5xx) is the service, not the package: the note says so, and the next save asks again", async () => {
+    const files = source(`import tiny from "tiny";\nexport default tiny;`);
+    npm.setDown("esm", true);
+    const down = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    npm.setDown("esm", false);
+    expect(down.notes).toEqual([
+      { severity: "Error", message: "tiny: esm.sh answered 503: esm.sh is down; nothing was installed. It's the package service, not the package: try again." },
+    ]);
+    const up = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    expect(up.installed).toEqual(["tiny@1.0.0"]);
+  });
+
   it("CONTROL: a registry that didn't answer isn't remembered — the next save asks again", async () => {
     const files = source(`import y from "young";\nexport default y;`);
     const down = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: { ...deps(), fetch: () => Promise.reject(new Error("down")) } });
