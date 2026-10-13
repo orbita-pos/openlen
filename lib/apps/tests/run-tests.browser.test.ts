@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { stopBundlerWorker } from "@/lib/apps/bundler/bundle-app";
 import { FICHEROS } from "@/lib/apps/shadcn-fixture";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
+import { cascaronDeLaApp } from "@/lib/apps/esqueleto";
 import { findTestFiles, runAppTests } from "./run-tests";
 
 afterAll(() => stopBundlerWorker());
@@ -143,6 +144,33 @@ describe("runAppTests", () => {
     expect(Date.now() - cancelado).toBeLessThan(3_000);
     expect(Date.now() - t0).toBeLessThan(25_000);
   }, 60_000);
+
+  it("🔴 el Tailwind del cascarón, con su tailwind.config, ya está al montar: un h-96 mide 384 en el acto (el turno real de Len medía 0)", async () => {
+    const cascaron = cascaronDeLaApp({ titulo: "Mapa", entrada: "/src/main.jsx" }).replace(
+      "</head>",
+      '<script>tailwind.config = { theme: { extend: { colors: { marca: "#ff0000" } } } }</script>\n</head>',
+    );
+    const r = await runAppTests({
+      carpeta: {
+        "/index.html": cascaron,
+        "/src/main.jsx": 'import App from "./App";',
+        "/src/App.jsx": 'export default function App() { return <div data-testid="mapa" className="h-96 bg-marca" />; }',
+        "/src/App.test.jsx": [
+          'import { it, expect } from "vitest";',
+          'import { render, screen } from "@testing-library/react";',
+          'import App from "./App";',
+          'it("mide", () => {',
+          "  render(<App />);",
+          '  const el = screen.getByTestId("mapa");',
+          "  expect(el.getBoundingClientRect().height).toBe(384);",
+          '  expect(getComputedStyle(el).backgroundColor).toBe("rgb(255, 0, 0)");',
+          "});",
+        ].join("\n"),
+      },
+      app: APP,
+    });
+    expect(estados(r)).toEqual(["/src/App.test.jsx: pass mide"]);
+  }, 120_000);
 
   it("sin pruebas: ningún fichero", async () => {
     expect((await runAppTests({ carpeta: { "/src/main.jsx": "" }, app: APP }))!.files).toEqual([]);

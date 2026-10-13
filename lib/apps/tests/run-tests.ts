@@ -12,7 +12,7 @@ import { esperarALaRed, origenDeMedida } from "@/lib/ai/origen-de-medida";
 import { sitioEnLaTraza, traductorDeMapas } from "@/lib/ai/sitio-del-error";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { esFuenteCompilable } from "@/lib/apps/compilador";
+import { esFuenteCompilable, usesTailwindDirectives } from "@/lib/apps/compilador";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { bundleAppTests } from "./bundle-tests";
@@ -66,6 +66,31 @@ interface CrudoFichero { file: string; tests: { name: string[]; state: TestCaseR
 const HTML = (entrada: string) =>
   `<!doctype html><html><head><meta charset="utf-8"><title>tests</title></head><body><script type="module" src="${entrada}"></script></body></html>`;
 
+/** La página de cada fichero: el CASCARÓN de la app (`/index.html`) sin su
+ *  entrada, con la del fichero. Su Tailwind va HORNEADO de los fuentes —con su
+ *  `tailwind.config` y sus hojas con `@apply`—, como Vite con PostCSS: las
+ *  clases ya existen cuando la prueba monta, no un instante después como con el
+ *  CDN (que mira el DOM vivo). Sin él, un `h-96` medía 0 (turno real de Len,
+ *  13/10). El horneado es el de publicar; si no hornea, se queda el CDN. */
+async function testPage(carpeta: Readonly<Record<string, string>>, app: AppDeProyecto): Promise<(entrada: string) => string> {
+  const cascaron = carpeta["/index.html"];
+  if (cascaron === undefined) return HTML;
+  const deLaApp = Object.entries(carpeta).filter(([r]) => !/^\/(?:\.|node_modules\/)/.test(r));
+  const fuentes = deLaApp
+    .filter(([r]) => /\.(?:m?js|jsx|tsx?)$/i.test(r))
+    .map(([r, raw]) => ({ raw, extension: /\.([a-z]+)$/i.exec(r)![1]!.toLowerCase() }));
+  const hojas = deLaApp.filter(([r, c]) => /\.css$/i.test(r) && usesTailwindDirectives(c)).map(([, c]) => c);
+  const { bakeTailwind } = await import("@/lib/publish/optimize-html");
+  const { html } = await bakeTailwind(cascaron, fuentes, hojas).catch(() => ({ html: cascaron }));
+  const escapada = app.entrada.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sinEntrada = html.replace(new RegExp(`<script\\b[^>]*\\bsrc\\s*=\\s*["']${escapada}["'][^>]*>\\s*</script\\s*>`, "gi"), "");
+  const cierre = /<\/body\s*>/i;
+  return (entrada) => {
+    const script = `<script type="module" src="${entrada}"></script>`;
+    return cierre.test(sinEntrada) ? sinEntrada.replace(cierre, (c) => `${script}${c}`) : `${sinEntrada}${script}`;
+  };
+}
+
 export async function runAppTests(args: {
   readonly carpeta: Readonly<Record<string, string>>;
   readonly app: AppDeProyecto;
@@ -96,6 +121,7 @@ export async function runAppTests(args: {
   });
   if (Date.now() >= plazo || cancelado()) return { files: [], notRun: testFiles, blocked: [], ms: Date.now() - t0 };
   if (!paquete) return null;
+  const pagina = await testPage(args.carpeta, args.app);
   const files: TestFileResult[] = paquete.failed.map(({ file, errores }) => ({
     file,
     tests: [],
@@ -124,7 +150,7 @@ export async function runAppTests(args: {
         // Cerrar la página hace fallar en el acto lo que espera dentro.
         const alCancelar = () => void page.close().catch(() => undefined);
         args.signal?.addEventListener("abort", alCancelar, { once: true });
-        const doc = origen.publicar(HTML(entrada), { files: estaticos, platformFiles: paquete.files });
+        const doc = origen.publicar(pagina(entrada), { files: estaticos, platformFiles: paquete.files });
         const t1 = Date.now();
         try {
           // Lo que corta el guardia (lo privado o interno) y una navegación que
