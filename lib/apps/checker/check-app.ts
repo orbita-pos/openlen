@@ -14,6 +14,7 @@
 import path from "node:path";
 import { catalogAliasesOf } from "@/lib/apps/dependencias";
 import { ESM_LOCK_PATH } from "@/lib/apps/npm/paths";
+import { ASSET_EXTENSIONS } from "@/lib/apps/npm/specifier";
 import { npmTypesFor } from "@/lib/apps/npm/types-for-check";
 import { directorioVendor } from "@/lib/apps/servir";
 import { testKitFor } from "@/lib/apps/tests/test-kit";
@@ -51,6 +52,8 @@ export async function checkAppInWorker(
       typesPackPaths: [path.join(directorioVendor(), input.catalogo, "types.json"), path.join(directorioVendor(), testKitFor(input.catalogo), "types.json")],
       // Y sus alias (`react-router-dom`), que el paquete de tipos no trae.
       aliases: catalogAliasesOf(input.catalogo),
+      // Y los ficheros de un paquete que se importan por su URL (imágenes, fuentes).
+      urlExtensions: ASSET_EXTENSIONS.filter((e) => e !== ".css"),
       extraTypes,
     },
     { timeoutMs, ...(input.supersedes ? { supersedes: input.supersedes } : {}) },
