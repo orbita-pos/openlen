@@ -3,6 +3,7 @@ import path from "node:path";
 import { contentTypeFor as folderContentType, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import { lookupDomain } from "@/lib/custom-domains";
 import { NOT_FOUND_HTML } from "@/lib/publish/not-found-page";
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Custom-domain HTML server (`/served/...`).
@@ -76,7 +77,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "SAMEORIGIN",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Permissions-Policy": PAGE_PERMISSIONS_POLICY,
 };
 
 function contentTypeFor(filename: string): string {
