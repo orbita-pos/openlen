@@ -133,6 +133,13 @@ describe("installForApp", () => {
     expect(npm.requests.slice(before).filter((r) => !r.includes("/-/"))).toEqual([]);
   });
 
+  it("🔴 npm install of a catalog package in an app with no package.json writes one, with it and what the app already imports", async () => {
+    const files = source(`import { useState } from "react";\nexport default useState;`);
+    const out = await installForApp({ files, app: APP, request: { add: [{ name: "recharts", range: null, subpaths: [""], explicit: true }], remove: [] }, deps: deps() });
+    expect(readPackageJson(out.files)?.dependencies).toEqual({ react: "^19.2.6", recharts: "^2.15.4" });
+    expect(out.files[ESM_LOCK_PATH]).toBeUndefined();
+  });
+
   it("uninstall removes it from package.json and the lock", async () => {
     const files = source(`import tiny from "tiny";\nexport default tiny;`);
     const a = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
