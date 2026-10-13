@@ -2252,3 +2252,74 @@ describe("crear, renombrar y borrar a mano, desde el explorador", () => {
     assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/nada" }, deps), { ok: false, motivo: "no_existe" });
   });
 });
+
+// NPM ABIERTO (spec 2026-10-13): guardar un fuente que importa un paquete lo
+// instala, por cualquier puerta; el compilador ve el lock recién escrito.
+describe("open npm: saving a source that imports a package installs it", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+  const CASCARON = '<!doctype html><html><head><title>A</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>';
+  const PKG = '{\n  "dependencies": {\n    "tiny": "^1.0.0"\n  }\n}\n';
+  const set = { entry: "https://esm.sh/tiny@1.0.0?target=es2022", modules: {} };
+  const LOCK = JSON.stringify({
+    lockfileVersion: 1,
+    packages: { tiny: { version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set }, assets: {}, types: null, warnings: [], bytes: 0 } },
+  });
+  const conNpm = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    c.archivos["/src/main.tsx"] = "export {};\n";
+    const pedidos: unknown[] = [];
+    const deps = {
+      ...c.deps,
+      async installPackages(_files: unknown, _app: unknown, request: unknown) {
+        pedidos.push(request);
+        return {
+          files: { "/package.json": PKG, "/.openlen/esm-lock.json": LOCK },
+          notes: [{ severity: "Info", message: "Installed tiny@1.0.0 from npm (esm.sh)." }],
+          installed: ["tiny@1.0.0"],
+        };
+      },
+    } as unknown as AgentDeps;
+    return { ...c, deps, pedidos };
+  };
+  const sesion = (): AgentSession => ({ ...makeSession(), app: APP });
+  const SOURCE = 'import tiny from "tiny";\nexport default tiny;\n';
+
+  it("🔴 Len's Write: installs, says so, and the compiler sees the new lock (no «not installed»)", async () => {
+    const { deps, archivos, pedidos } = conNpm();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/main.tsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/main.tsx", content: SOURCE });
+    assert.equal(w.response.ok, true, JSON.stringify(w.response));
+    assert.deepEqual(pedidos, [{ add: [{ name: "tiny", range: null, subpaths: [""] }], remove: [] }]);
+    assert.equal(archivos["/package.json"], PKG);
+    assert.equal(archivos["/.openlen/esm-lock.json"], LOCK);
+    const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+    assert.ok(mensajes.includes("Installed tiny@1.0.0 from npm (esm.sh)."), JSON.stringify(mensajes));
+    assert.ok(!mensajes.some((m) => /not installed/.test(m)), JSON.stringify(mensajes));
+  });
+
+  it("🔴 the terminal's door: npmNotes and the new /package.json in the terminal", async () => {
+    const { deps } = conNpm();
+    const antes = { "/src/main.tsx": "export {};\n" };
+    const g = await guardarLoDeLaTerminal(sesion(), deps, [{ tipo: "escrito", ruta: "/src/main.tsx", contenido: SOURCE, crea: false }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual((g.npmNotes ?? []).map((d) => d.mensaje), ["Installed tiny@1.0.0 from npm (esm.sh)."]);
+    assert.equal(g.enLaTerminal["/package.json"], PKG);
+  });
+
+  it("🔴 Len's bash: the note comes back with the command's diagnostics, and the next command sees /package.json", async () => {
+    const { deps } = conNpm();
+    const s = sesion();
+    try {
+      const out = await conTerminal(() => runAgentTool(s, deps, "bash", { command: `echo 'import tiny from "tiny"; export default tiny;' > /src/main.tsx` }));
+      assert.equal(out.response.ok, true, texto(out));
+      const mensajes = (out.diagnosticos ?? []).map((d) => d.mensaje);
+      assert.ok(mensajes.includes("Installed tiny@1.0.0 from npm (esm.sh)."), JSON.stringify(mensajes));
+      assert.ok(!mensajes.some((m) => /not installed/.test(m)), JSON.stringify(mensajes));
+      const cat = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "cat /package.json" }));
+      assert.match(texto(cat), /"tiny": "\^1\.0\.0"/);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+});

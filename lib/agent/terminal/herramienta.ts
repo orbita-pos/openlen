@@ -133,6 +133,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const appCambiada = escrituras.some((o) => o.appCambiada);
   const diagnosticos = [
     ...escrituras.flatMap((o) => o.diagnosticos ?? []),
+    // NPM ABIERTO: lo que dijo instalar lo que importan los ficheros guardados.
+    ...(guardado?.npmNotes ?? []),
     ...(session.app && (appCambiada || paginas.length > 0)
       ? await diagnosticosDeLaAppTrasEscribir(session, deps, escrituras.flatMap((o) => (o.ficherosTocados ?? []).map((f) => f.ruta)))
       : []),

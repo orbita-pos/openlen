@@ -52,6 +52,8 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 import { userEditLabels } from "@/lib/agent/version-labels";
 import { appFileNames } from "@/lib/apps/esqueleto";
+import { installPackagesAfterSave } from "@/lib/agent/npm-after-save";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -91,6 +93,15 @@ interface Virtuales {
   readonly memoria: ReadonlyMap<string, string>;
   /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
   readonly folder: ReadonlyMap<string, string>;
+  /** NPM ABIERTO (spec 2026-10-13): el lock de esm.sh, que vive en /.openlen
+   *  (de la plataforma: no es de la carpeta) y el compilador necesita para
+   *  saber quién sirve cada paquete. `null` si la app no tiene. */
+  readonly esmLock: string | null;
+}
+
+/** La carpeta con el lock de esm.sh: lo que entra a compilar la app. */
+function withEsmLock(folder: ReadonlyMap<string, string>, esmLock: string | null): Map<string, string> {
+  return new Map(esmLock === null ? folder : [...folder, [ESM_LOCK_PATH, esmLock]]);
 }
 
 async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
@@ -124,10 +135,11 @@ async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: st
       ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
     ]),
     folder: new Map(Object.entries(folder).filter(([ruta]) => isFolderPath(ruta))),
+    esmLock: folder[ESM_LOCK_PATH] ?? null,
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { memoria: new Map(), folder: new Map() };
+const SIN_VIRTUALES: Virtuales = { memoria: new Map(), folder: new Map(), esmLock: null };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -288,11 +300,16 @@ async function aplicarPlan(
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
   if (isFolderPath(plan.ruta)) {
+    // UNA APP: la carpeta de antes de la primera escritura del turno, con su lock.
+    if (session.app) session.carpetaAlEmpezar ??= withEsmLock(v.folder, v.esmLock);
     const guardado = await guardarEnLaCarpeta(session, deps, v.folder, plan, herramienta, detalle, sinOpIds(data.html ?? ""));
     // Lo que no compila, una vez por herramienta: la terminal lo pide ella
     // misma al acabar el comando entero (`terminal/herramienta.ts`).
     if (herramienta === "bash") return guardado;
+    // NPM ABIERTO: lo que importa y nadie sirve se instala ANTES de compilar.
+    const npm = guardado.appCambiada ? await installPackagesAfterSave(session, deps, (d) => etiquetaDeVersion(session, "npm", d)) : { notes: [] as Diagnostico[] };
     const diagnosticos = [
+      ...npm.notes,
       ...(guardado.appCambiada ? await diagnosticosDeLaAppTrasEscribir(session, deps, [plan.ruta]) : []),
       ...(await diagnosticosDeFuncionesTrasEscribir(session, deps, [plan.ruta])),
     ];
@@ -464,15 +481,16 @@ export async function diagnosticosDeLaAppTrasEscribir(
     const row = await deps.loadProject(session.projectId, session.userId);
     if (!row) return [];
     const v = await virtualesDe(session, deps, row.userBrief);
+    const ahora = withEsmLock(v.folder, v.esmLock);
     const deCompilacion = diagnosticosDeLaApp({
       app: session.app,
-      ahora: v.folder,
+      ahora,
       alEmpezar: session.carpetaAlEmpezar ?? null,
       escritos: session.escritos ?? [],
       cascaron: sinOpIds(row.data.html ?? ""),
     });
     const compileErrors = deCompilacion.filter((d) => d.codigo === "compila").length;
-    typesAndLintAfterWrite({ session, deps, now: v.folder, written, compileErrors });
+    typesAndLintAfterWrite({ session, deps, now: ahora, written, compileErrors });
     return deCompilacion;
   } catch {
     return [];
@@ -573,6 +591,8 @@ export interface GuardadoDeLaTerminal {
   readonly enLaTerminal: Record<string, string | null>;
   /** El resultado de cada escritura que fue bien, en orden. */
   readonly escrituras: ToolOutcome[];
+  /** OPEN NPM: what installing the imports of the saved files said. */
+  readonly npmNotes?: Diagnostico[];
 }
 
 /**
@@ -697,6 +717,15 @@ export async function guardarLoDeLaTerminal(
       enLaTerminal[c.ruta] = ahora.memoria.get(c.ruta) ?? ahora.folder.get(c.ruta) ?? c.contenido;
     }
     notas.push(`${rutaRelativa(c.ruta)}: saved${c.crea && paginaDeRuta(c.ruta) ? " (new page)" : ""}.`);
+  }
+  // NPM ABIERTO (spec 2026-10-13): una vez por comando, si se guardó algo que
+  // entra a compilar la app. El /package.json nuevo vuelve a la terminal: el
+  // comando siguiente no pisa lo que se acaba de instalar.
+  const tocoLaApp = escrituras.some((o) => (o.ficherosTocados ?? []).some((f) => isCompileInputPath(f.ruta)));
+  if (session.app && tocoLaApp) {
+    const npm = await installPackagesAfterSave(session, deps, (d) => etiquetaDeVersion(session, "npm", d));
+    if (npm.packageJson !== null) enLaTerminal[PACKAGE_JSON_PATH] = npm.packageJson;
+    return { notas, rechazado, enLaTerminal, escrituras, npmNotes: npm.notes };
   }
   return { notas, rechazado, enLaTerminal, escrituras };
 }

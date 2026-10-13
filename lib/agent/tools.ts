@@ -31,6 +31,7 @@ import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
+import type { InstallOutcome, InstallRequest } from "@/lib/apps/npm/install";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import type { EnvTarget } from "@/lib/apps/env/rules";
 import { debitCredits } from "@/lib/credits";
@@ -180,6 +181,8 @@ export interface AgentDeps {
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
   projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** OPEN NPM (spec 2026-10-13): install packages for an app; returns the files to save and notes for Len. */
+  installPackages?(files: Readonly<Record<string, string>>, app: AppDeProyecto, request: InstallRequest): Promise<InstallOutcome>;
   /** APPS WEB (spec local 2026-10-07-apps): lo que vale `import.meta.env` en la
    *  app en BORRADOR —las variables de borrador del dueño, la URL de su backend
    *  y su clave PUBLICABLE—, para que los ojos de Len midan la app hablando con
@@ -537,6 +540,11 @@ export function realDeps(
     async checkApp(files, catalogo, o) {
       const { checkAppInWorker } = await import("@/lib/apps/checker/check-app");
       return checkAppInWorker({ files, catalogo, ...(o?.supersedes ? { supersedes: o.supersedes } : {}) });
+    },
+    async installPackages(files, app, request) {
+      const { installForApp } = await import("@/lib/apps/npm/install");
+      const { defaultModuleStore } = await import("@/lib/apps/npm/store");
+      return installForApp({ files, app, request, deps: { fetch, now: () => new Date(), store: defaultModuleStore() } });
     },
     async buildApp(files, app, o) {
       const { bundleApp } = await import("@/lib/apps/bundler/bundle-app");
