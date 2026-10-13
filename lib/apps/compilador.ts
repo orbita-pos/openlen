@@ -56,7 +56,7 @@ import EXPORTACIONES from "./exportaciones.json";
 import { isTestSupportFile } from "./tests/test-files";
 import { DOTENV_PATH } from "./env/rules";
 import { dotEnvPublicVars } from "./env/dotenv";
-import { sourceOf } from "@/lib/apps/npm/lock";
+import { catalogPartsOf, sourceOf } from "@/lib/apps/npm/lock";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
@@ -481,6 +481,13 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         error(imp.start, `"${especificador}": imports from URLs or "${especificador.split(":")[0]}:" are not supported here. Import the package by its name and it installs from npm.`);
       } else if (!ctx.catalogo) {
         error(imp.start, `"${especificador}" is a package name, and packages can only be imported in an app. Import files by path (./file.js).`);
+      } else if (source?.kind === "catalog" && bare) {
+        // A part the catalog's copy doesn't ship: nothing will install it (one copy).
+        const parts = catalogPartsOf(ctx.catalogo, bare.name);
+        error(
+          imp.start,
+          `"${especificador}" is not part of this app's ${bare.name}: ${bare.name} comes preinstalled from the catalog, with ${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0] ?? bare.name} only, and other parts of it can't be installed on top (one copy of each package).`,
+        );
       } else {
         error(imp.start, `"${especificador}" is not installed in this app. It installs when a file that imports it is saved (or with npm install ${bare?.name ?? especificador}); if that failed, the reason is in this same report.`);
       }

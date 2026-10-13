@@ -32,6 +32,16 @@ describe("compiler and open npm", () => {
     expect(r.errores.map((e) => e.mensaje).join("\n")).toMatch(/"three" is not installed in this app\. It installs when a file that imports it is saved/);
   });
 
+  it("🔴 a part of a catalog package the catalog doesn't ship says so, and doesn't promise an install that never comes", () => {
+    const r = compilarCarpeta({ carpeta: app(`import { renderToString } from "react-dom/server";\nexport default renderToString;`), catalogo: CATALOG });
+    const message = r.errores.map((e) => e.mensaje).join("\n");
+    expect(message).toBe(
+      `"react-dom/server" is not part of this app's react-dom: react-dom comes preinstalled from the catalog, with react-dom and react-dom/client only, and other parts of it can't be installed on top (one copy of each package).`,
+    );
+    const zod = compilarCarpeta({ carpeta: app(`import { z } from "zod/v4";\nexport default z;`), catalogo: CATALOG });
+    expect(zod.errores[0]?.mensaje).toMatch(/^"zod\/v4" is not part of this app's zod: zod comes preinstalled from the catalog, with zod only,/);
+  });
+
   it("a locked package compiles and stays a bare import for the bundler", () => {
     const r = compilarCarpeta({
       carpeta: app(`import * as THREE from "three";\nexport default THREE;`, {

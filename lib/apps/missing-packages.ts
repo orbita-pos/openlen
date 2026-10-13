@@ -17,10 +17,12 @@
 //   build-failed   the installer (lib/apps/npm/install.ts): «x@1.2.3: esm.sh could not build it: …»
 //   page-import    the compiler, a package imported in a PAGE (not an app):
 //                  «"chart.js" is a package name, and packages can only be imported in an app.»
+//   catalog-part   the compiler, a part of a catalog package the catalog doesn't ship:
+//                  «"react-dom/server" is not part of this app's react-dom: …»
 //
 // If one of those texts changes, `missing-packages.test.ts` says so.
 
-export type MissingSource = "not-installed" | "too-new" | "too-young" | "malware" | "build-failed" | "page-import";
+export type MissingSource = "not-installed" | "too-new" | "too-young" | "malware" | "build-failed" | "page-import" | "catalog-part";
 
 export interface MissingHit {
   readonly pkg: string;
@@ -52,6 +54,7 @@ const PATTERNS: readonly (readonly [MissingSource, RegExp])[] = [
   ["malware", /((?:@[^/\s]+\/)?[^@\s]+)@\S+ is flagged as malware/g],
   ["build-failed", /((?:@[^/\s]+\/)?[^@\s]+)@\S+: esm\.sh could not build it/g],
   ["page-import", /"([^"]+)" is a package name, and packages can only be imported in an app\./g],
+  ["catalog-part", /"([^"]+)" is not part of this app's /g],
 ];
 
 // The CDNs that serve npm by name: what follows the prefix is `package[@version][/path]`.
