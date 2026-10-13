@@ -50,6 +50,10 @@ const DECLARADOS_FUERA: ReadonlyArray<readonly [string, string]> = [
     "lib/publish/font-bake.live.test.ts",
     "smoke LIVE contra fonts.googleapis.com; su cabecera documenta OPENLEN_LIVE_TESTS=1",
   ],
+  [
+    "lib/agent/open-npm-real.test.ts",
+    "npm abierto por las puertas de Len contra el registro de npm, OSV y esm.sh de VERDAD (node:test); su cabecera documenta OPENLEN_REAL_ESM=1",
+  ],
   ["tests/e2e/", "Playwright, runner propio"],
   ["infra/", "subproyecto con su propio package.json"],
 ];
