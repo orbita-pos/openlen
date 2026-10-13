@@ -62,6 +62,30 @@ describe("fetchTypes", () => {
     expect(await typesSource("typed", "1.0.0")).toEqual({ name: "typed", version: "1.0.0" });
     expect(await typesSource("untyped", "2.3.4")).toEqual({ name: "@types/untyped", version: "2.3.0" });
   });
+
+  it("🔴 the files a .d.ts references are fetched several at a time (measured in the box rehearsal: @types/three's 415 files one by one took 52.6 s of the 60 s install)", async () => {
+    let inFlight = 0;
+    let most = 0;
+    const counting = async (url: string, init?: RequestInit) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      try {
+        await new Promise((r) => setTimeout(r, 20));
+        return await fetch(url, init);
+      } finally {
+        inFlight--;
+      }
+    };
+    const files = await fetchTypes("typed", "1.0.0", { ...opts(), fetch: counting });
+    expect(Object.keys(files?.files ?? {}).sort()).toEqual([
+      "/node_modules/typed/dist/a.d.ts",
+      "/node_modules/typed/dist/b.d.ts",
+      "/node_modules/typed/dist/globals.d.ts",
+      "/node_modules/typed/dist/index.d.ts",
+      "/node_modules/typed/package.json",
+    ]);
+    expect(most).toBeGreaterThan(1);
+  });
 });
 
 async function typesSource(name: string, version: string) {
