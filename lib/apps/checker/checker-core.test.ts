@@ -84,7 +84,9 @@ describe("🔴 una app correcta da CERO diagnósticos (Review Focus 1)", () => {
   // 🔴 Nace en TSX (Jesús, 10/10): en .jsx TypeScript no revisaba nada, y ahora lo revisa ENTERO.
   it("🔴 el esqueleto con el que nace una app: en TypeScript, y sin un solo error", () => {
     const ficheros = esqueletoDeApp({ titulo: "Caja", idioma: "es" }).ficheros;
-    expect(Object.keys(ficheros).every((r) => /.tsx?$/.test(r))).toBe(true);
+    // Sus fuentes; y su /package.json, como un proyecto de Vite (npm abierto, 2026-10-13).
+    expect(Object.keys(ficheros).filter((r) => r !== "/package.json").every((r) => /.tsx?$/.test(r))).toBe(true);
+    expect(Object.keys(ficheros)).toContain("/package.json");
     const r = revisar({ ...ficheros });
     expect([...r.typescript, ...r.eslint]).toEqual([]);
   });
