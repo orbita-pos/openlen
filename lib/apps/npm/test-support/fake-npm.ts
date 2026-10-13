@@ -44,7 +44,10 @@ export async function startFakeNpm(o: FakeNpmOptions): Promise<FakeNpm> {
   const requests: string[] = [];
   const iso = (days: number) => new Date(o.now.getTime() - days * 86_400_000).toISOString();
   const server = createServer((req, res) => {
-    const url = req.url ?? "/";
+    // Percent-escapes decoded, like the real esm.sh: `new URL()` turns the "^"
+    // esm.sh writes ("/dep@^2.0.0?…") into "%5E" (measured 2026-10-13: esm.sh
+    // answers both the same).
+    const url = decodeURI(req.url ?? "/");
     requests.push(`${req.method} ${url}`);
     if (url.startsWith("/-/registry/")) {
       if (down.has("registry")) return void res.writeHead(503).end("down");
