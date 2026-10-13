@@ -41,6 +41,10 @@ beforeAll(async () => {
       { name: "fiberish", createdDaysAgo: 400, versions: { "1.0.0": { daysAgo: 300, peerDependencies: { react: ">=19", three: ">=0.150" } } } },
       { name: "three", createdDaysAgo: 4000, versions: { "0.186.1": { daysAgo: 20 } } },
       { name: "nodey", createdDaysAgo: 400, versions: { "1.0.0": { daysAgo: 300 } } },
+      // At the catalog's versions (2026-11): their parts come from esm.sh.
+      { name: "zod", createdDaysAgo: 3000, versions: { "3.25.76": { daysAgo: 400 } } },
+      { name: "react-dom", createdDaysAgo: 4000, versions: { "19.2.6": { daysAgo: 60, peerDependencies: { react: "^19.2.6" } } } },
+      { name: "@types/react-dom", createdDaysAgo: 3000, versions: { "19.2.7": { daysAgo: 50 } } },
     ],
     modules: {
       ...both("tiny", "1.0.0", `import { dep } from "/dep@^2.0.0?target=es2022";\nexport default function tiny() { return "tiny" + dep; }`),
@@ -56,10 +60,17 @@ beforeAll(async () => {
       ...built("three", "0.186.1/examples/jsm/controls/OrbitControls.js", `export const Orbit = 1;`, "prod"),
       ...both("nodey", "1.0.0", `import "/node/fs.mjs";\nexport default 1;`),
       "/node/fs.mjs": `export default {};`,
+      ...both("zod", "3.25.76/v4", `import { z } from "zod";\nexport const z4 = z;`, "&external=zod"),
+      ...both("react-dom", "19.2.6/server", `import * as R from "react";\nimport * as D from "react-dom";\nexport const renderToString = () => [R, D];`, "&external=react,react-dom"),
     },
     raw: {
       "tiny@1.0.0/package.json": JSON.stringify({ name: "tiny", types: "index.d.ts" }),
       "tiny@1.0.0/index.d.ts": "export default function tiny(): string;",
+      "react-dom@19.2.6/package.json": JSON.stringify({ name: "react-dom" }),
+      "@types/react-dom@19.2.7/package.json": JSON.stringify({ name: "@types/react-dom", types: "index.d.ts" }),
+      "@types/react-dom@19.2.7/server.d.ts": `export * from "./static";\nimport "./client";\nexport declare function renderToString(x: unknown): string;`,
+      "@types/react-dom@19.2.7/static.d.ts": "export declare const prerender: unknown;",
+      "@types/react-dom@19.2.7/client.d.ts": "export {};",
     },
   });
   restore = npm.useEnv();
@@ -212,6 +223,30 @@ describe("installForApp", () => {
     const out = await installForApp({ files, app: APP, request: { add: [{ name: "recharts", range: null, subpaths: [""], explicit: true }], remove: [] }, deps: deps() });
     expect(readPackageJson(out.files)?.dependencies).toEqual({ react: "^19.2.6", recharts: "^2.15.4" });
     expect(out.files[ESM_LOCK_PATH]).toBeUndefined();
+  });
+
+  it("🔴 a part of a catalog package the catalog doesn't ship installs from esm.sh at the catalog's version, with the package itself external (one copy: the catalog's)", async () => {
+    const files = source(`import { z } from "zod";\nimport { z4 } from "zod/v4";\nexport default [z, z4];`);
+    const out = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    expect(out.notes).toEqual([{ severity: "Info", message: "Installed zod/v4 from npm (esm.sh), from the same zod@3.25.76 this app already has." }]);
+    expect(out.installed).toEqual(["zod@3.25.76 (zod/v4)"]);
+    expect(readPackageJson(out.files)?.dependencies).toEqual({ zod: "^3.25.76" });
+    const zod = readEsmLock(out.files).packages.zod!;
+    expect(zod).toMatchObject({ version: "3.25.76", catalogParts: true, externals: ["zod"] });
+    expect(Object.keys(zod.development)).toEqual(["v4"]);
+    expect(zod.development.v4!.entry).toContain("/zod@3.25.76/v4?target=es2022&external=zod&dev");
+    // Saving again installs nothing more: the part is there.
+    expect(pendingInstall({ ...files, ...out.files }, APP)).toEqual({ add: [], remove: [] });
+  });
+
+  it("🔴 a part of React's own (react-dom/server): React and react-dom stay external, and its types come from @types without what the catalog already has", async () => {
+    const files = source(`import { renderToString } from "react-dom/server";\nexport default renderToString;`);
+    const out = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    expect(out.notes).toEqual([{ severity: "Info", message: "Installed react-dom/server from npm (esm.sh), from the same react-dom@19.2.6 this app already has." }]);
+    const reactDom = readEsmLock(out.files).packages["react-dom"]!;
+    expect(reactDom).toMatchObject({ version: "19.2.6", catalogParts: true, externals: ["react", "react-dom"], typesFrom: { name: "@types/react-dom", version: "19.2.7" } });
+    // client.d.ts and package.json are in the catalog's types already: they stay the catalog's.
+    expect(Object.keys(reactDom.types ?? {}).sort()).toEqual(["/node_modules/@types/react-dom/server.d.ts", "/node_modules/@types/react-dom/static.d.ts"]);
   });
 
   it("uninstall removes it from package.json and the lock", async () => {

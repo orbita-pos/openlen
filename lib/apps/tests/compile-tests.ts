@@ -22,7 +22,7 @@ import {
   type Diagnostico,
 } from "@/lib/apps/compilador";
 import { dependenciaDe } from "@/lib/apps/dependencias";
-import { sourceOf } from "@/lib/apps/npm/lock";
+import { catalogPartsLocked, sourceOf } from "@/lib/apps/npm/lock";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { TEST_SPECIFIERS } from "./test-kit";
 
@@ -230,6 +230,9 @@ function mockSpecOf(especificador: string, ruta: string, ctx: ContextoDeCompilac
     if (!Object.hasOwn(source.locked.development, bare.subpath)) return { error: `vi.mock("${especificador}"): it is not installed in this app.` };
     return { id: especificador, exports: [], hasDefault: false, fromLock: true };
   }
+  // Una parte de un paquete del catálogo que el catálogo no trae (react-dom/server), del lock.
+  const parts = bare && source?.kind === "catalog" ? catalogPartsLocked(bare.name, ctx.carpeta, ctx.catalogo!) : null;
+  if (parts && Object.hasOwn(parts.development, bare!.subpath)) return { id: especificador, exports: [], hasDefault: false, fromLock: true };
   const dep = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
   if (!dep) return { error: `vi.mock("${especificador}"): it isn't a file of the app nor an installed package.` };
   const nombres = catalogExportsOf(ctx.catalogo!, dep.fichero) ?? [];

@@ -147,16 +147,16 @@ export async function bundleAppTests(args: {
   // Un simulado de un paquete del lock exporta lo que exporta su módulo de
   // esm.sh. Si no se puede saber, fallan los ficheros que lo simulan (y todos,
   // si es uno de configuración), con su motivo.
-  for (const [id, quienes] of lockMocks) {
+  for (const [id, mockedBy] of lockMocks) {
     const exp = npm.npm?.entries[id] ? esmExportsOf(npm.npm.entries[id], npm.npm.modules, npm.npm.entries) : null;
     if (exp) {
       virtual[`mock:${id}`] = mockModule({ id, exports: exp.names, hasDefault: exp.hasDefault });
       continue;
     }
     for (const file of Object.keys(entries)) {
-      const quien = [...setup, file].find((f) => quienes.has(f));
-      if (!quien) continue;
-      failed.push({ file, errores: [{ ruta: quien, linea: null, columna: null, mensaje: `vi.mock("${id}"): the names this package exports couldn't be read from its esm.sh build, so it can't be mocked.` }] });
+      const by = [...setup, file].find((f) => mockedBy.has(f));
+      if (!by) continue;
+      failed.push({ file, errores: [{ ruta: by, linea: null, columna: null, mensaje: `vi.mock("${id}"): the names this package exports couldn't be read from its esm.sh build, so it can't be mocked.` }] });
       delete entries[file];
     }
   }

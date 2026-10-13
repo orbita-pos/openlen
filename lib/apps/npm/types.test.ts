@@ -115,6 +115,18 @@ describe("npmTypesFor", () => {
     expect(most).toBeGreaterThan(1);
   });
 
+  it("🔴 the types of a catalog package's parts (catalogParts) go to the checker too", async () => {
+    const dts = "export declare function renderToString(x: unknown): string;";
+    const store = memoryStore();
+    await store.put(sha256Hex(dts), dts);
+    const parts: LockedPackage = { ...lockFor("react-dom", "19.2.6", { "/node_modules/@types/react-dom/server.d.ts": sha256Hex(dts) }), catalogParts: true };
+    const files = {
+      [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { "react-dom": "^19.2.6" } }),
+      [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { "react-dom": parts } }),
+    };
+    expect(await npmTypesFor(files, "2026-11", store, fetch)).toEqual({ "/node_modules/@types/react-dom/server.d.ts": dts });
+  });
+
   it("CONTROL: what esm.sh gives back with another hash is not used", async () => {
     const files = {
       [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { typed: "^1.0.0" } }),

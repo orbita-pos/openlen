@@ -12,7 +12,6 @@ describe("the messages are still worded like this where they're born", () => {
     const install = read("lib", "apps", "npm", "install.ts");
     expect(compiler).toContain('"${especificador}" is not installed in this app.');
     expect(compiler).toContain('"${especificador}" is a package name, and packages can only be imported in an app.');
-    expect(compiler).toContain('"${especificador}" is not part of this app\'s ${bare.name}: ');
     expect(gate).toContain(": every matching version is newer than ${MIN_VERSION_AGE_DAYS} days");
     expect(gate).toContain(": published ${Math.floor(ageDays(created, now))} days ago; packages must be at least ${MIN_PACKAGE_AGE_DAYS} days old.");
     expect(gate).toContain("is flagged as malware (");
@@ -22,7 +21,7 @@ describe("the messages are still worded like this where they're born", () => {
   it("🔴 the script's SQL prefilter lets every message through (otherwise Postgres drops the turn before the counter sees it)", () => {
     const script = read("scripts", "missing-packages.ts");
     const anyMessage = new RegExp(/const ANY_MESSAGE =\s*"([^"]+)"/.exec(script)![1]!);
-    for (const m of [NOT_INSTALLED, PAGE, CATALOG_PART, ...TERMINAL.split("\n").slice(0, 4), ON_SAVE]) expect(m).toMatch(anyMessage);
+    for (const m of [NOT_INSTALLED, PAGE, ...TERMINAL.split("\n").slice(0, 4), ON_SAVE]) expect(m).toMatch(anyMessage);
   });
 });
 
@@ -33,7 +32,6 @@ describe("the messages are still worded like this where they're born", () => {
 // counter would silently stop seeing it.
 const NOT_INSTALLED = `"three/examples/jsm/controls/PointerLockControls.js" is not installed in this app. It installs when a file that imports it is saved (or with npm install three); if that failed, the reason is in this same report.`;
 const PAGE = `"chart.js" is a package name, and packages can only be imported in an app. Import files by path (./file.js).`;
-const CATALOG_PART = `"react-dom/server" is not part of this app's react-dom: react-dom comes preinstalled from the catalog, with react-dom and react-dom/client only, and other parts of it can't be installed on top (one copy of each package).`;
 const TERMINAL = [
   "npm error young: published 10 days ago; packages must be at least 30 days old.",
   "npm error three@^0.181.0: every matching version is newer than 7 days (newest allowed: 0.180.0).",
@@ -91,10 +89,6 @@ describe("missingPackagesOfTurn", () => {
       { pkg: "three", source: "not-installed" },
       { pkg: "chart.js", source: "page-import" },
     ]);
-  });
-
-  it("🔴 a part of a catalog package the catalog doesn't ship counts as catalog-part", () => {
-    expect(missingPackagesOfTurn({ m: CATALOG_PART })).toEqual([{ pkg: "react-dom", source: "catalog-part" }]);
   });
 
   it("the wording before open npm still counts, as not installed (turns already stored)", () => {

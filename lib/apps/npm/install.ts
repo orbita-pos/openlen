@@ -3,6 +3,7 @@
 // esm.sh said as notes for Len. It only fetches and caches; it never saves a
 // file: the caller saves the returned ones through its own door.
 import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
+import { catalogTypePathsOf } from "@/lib/apps/checker/types-pack";
 import { compilarCarpeta } from "@/lib/apps/compilador";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { fetchPackageAsset } from "./assets";
@@ -10,8 +11,10 @@ import { esmUrl, externalsFor } from "./esm-url";
 import { fetchGraph, type GraphError } from "./fetch-graph";
 import { checkResolved, chooseVersion, type GateDecision, type GateDeps } from "./gate";
 import {
+  catalogPartsLocked,
   catalogRange,
   catalogServes,
+  catalogShips,
   catalogVersionOf,
   EMPTY_LOCK,
   FIXED_TO_CATALOG,
@@ -20,6 +23,7 @@ import {
   satisfiesSafe,
   serializeEsmLock,
   serializePackageJson,
+  servesSubpath,
   sourceOf,
   type LockedModules,
   type LockedPackage,
@@ -104,7 +108,6 @@ interface Ctx {
 const error = (message: string): NpmNote => ({ severity: "Error", message });
 const warning = (message: string): NpmNote => ({ severity: "Warning", message });
 const isFixed = (name: string) => (FIXED_TO_CATALOG as readonly string[]).includes(name);
-const servesSubpath = (p: LockedPackage, subpath: string) => Object.hasOwn(p.development, subpath) || Object.hasOwn(p.assets, subpath);
 const sortKeys = (o: Record<string, string>) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
 
 export function importedSpecifiers(files: Files, app: AppDeProyecto): readonly string[] {
@@ -122,8 +125,15 @@ export function pendingInstall(files: Files, app: AppDeProyecto): InstallRequest
   };
   for (const spec of importedSpecifiers(files, app)) {
     const bare = parseBareSpecifier(spec);
-    if (!bare || isFixed(bare.name)) continue;
+    if (!bare) continue;
     const source = sourceOf(bare.name, files, app.catalogo);
+    // A part of a catalog package the catalog doesn't ship (react-dom/server): from esm.sh, at its version.
+    if (source.kind === "catalog" && !catalogShips(app.catalogo, spec)) {
+      const parts = catalogPartsLocked(bare.name, files, app.catalogo);
+      if (!parts || !servesSubpath(parts, bare.subpath)) want(bare.name, null, bare.subpath);
+      continue;
+    }
+    if (isFixed(bare.name)) continue;
     if (source.kind === "missing") want(bare.name, source.range, bare.subpath);
     else if (source.kind === "esm" && bare.subpath && !servesSubpath(source.locked, bare.subpath)) want(bare.name, pkg?.dependencies?.[bare.name] ?? null, bare.subpath);
     else if (source.kind === "catalog" && pkg && !pkg.dependencies?.[bare.name]) want(bare.name, null, bare.subpath);
@@ -220,37 +230,89 @@ async function lockParts(
   return { ok: true, parts, discovered };
 }
 
-async function typesFor(name: string, version: string, ctx: Ctx): Promise<Pick<LockedPackage, "types" | "typesFrom"> | null> {
-  const got = await fetchTypes(name, version, { fetch: ctx.deps.fetch, gate: ctx.deps, deadline: ctx.deadline, origin: ctx.deps.origin }).catch(() => null);
+/** The .d.ts of `subpaths` ("" = the package), cached; `skip`: paths the catalog's types already have. */
+async function typesFor(name: string, version: string, ctx: Ctx, subpaths: readonly string[] = [""], skip: ReadonlySet<string> = new Set()): Promise<Pick<LockedPackage, "types" | "typesFrom"> | null> {
+  const got = await fetchTypes(name, version, { fetch: ctx.deps.fetch, gate: ctx.deps, deadline: ctx.deadline, origin: ctx.deps.origin }, subpaths).catch(() => null);
   if (!got) return null;
-  const shas = Object.fromEntries(Object.entries(got.files).map(([p, text]) => [p, sha256Hex(text)]));
-  await mapLimited(Object.entries(got.files), ([p, text]) => ctx.deps.store.put(shas[p]!, text));
+  const files = Object.entries(got.files).filter(([p]) => !skip.has(p));
+  const shas = Object.fromEntries(files.map(([p, text]) => [p, sha256Hex(text)]));
+  await mapLimited(files, ([p, text]) => ctx.deps.store.put(shas[p]!, text));
   return { types: shas, typesFrom: { name: got.name, version: got.version } };
 }
 
 type OneOutcome = { notes: NpmNote[]; installed: string | null; discovered: InstallAdd[]; refused?: string };
 
+const nothing = (note?: NpmNote): OneOutcome => ({ notes: note ? [note] : [], installed: null, discovered: [] });
+// A refusal worth remembering: the answer, not a service that didn't give one.
+const refused = (message: string, code: string): OneOutcome => ({ ...nothing(error(message)), ...(code === "unavailable" ? {} : { refused: message }) });
+
+/**
+ * The parts of a catalog package the catalog doesn't ship (`react-dom/server`,
+ * `zod/v4`, a stylesheet), as v0 has them — the whole package is in its
+ * node_modules. From esm.sh at the catalog's exact version, with the package
+ * itself, React and whatever else the catalog serves external: what they import
+ * by name is the catalog's copy (one copy). Their types skip what the catalog's
+ * types already have.
+ */
+async function installCatalogParts(add: InstallAdd, version: string | null, ctx: Ctx): Promise<OneOutcome> {
+  const { app, packages, deps } = ctx;
+  const before = packages[add.name];
+  const existing = before?.catalogParts && before.version === version ? before : undefined;
+  const missing = add.subpaths.filter((s) => !catalogShips(app.catalogo, specifierOf(add.name, s)) && !(existing && servesSubpath(existing, s)));
+  if (missing.length === 0) return nothing();
+  const specs = missing.map((s) => specifierOf(add.name, s)).join(", ");
+  if (version === null) return nothing(error(`${specs}: this app's ${add.name} has no known version, so its other parts can't be installed.`));
+  const decision = await chooseVersion(add.name, version, deps);
+  if (!decision.ok) return refused(decision.message, decision.code);
+  const manifest = decision.packument.versions[version] ?? { version };
+  const declared = [...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.peerDependencies ?? {}), ...Object.keys(manifest.optionalDependencies ?? {})];
+  const others = new Set(Object.keys(packages).filter((n) => n !== add.name && !packages[n]!.catalogParts));
+  const externals = existing?.externals ?? [...new Set([add.name, ...externalsFor(manifest, others), ...declared.filter((d) => catalogServes(app.catalogo, d))])].sort();
+  const parts = await lockParts(add.name, version, missing, externals, ctx);
+  if (!parts.ok) return refused(parts.message, parts.code);
+  const code = missing.filter((s) => !isAssetSubpath(s));
+  const types = code.length > 0 ? await typesFor(add.name, version, ctx, code, catalogTypePathsOf(app.catalogo)) : null;
+  const allTypes = { ...(existing?.types ?? {}), ...(types?.types ?? {}) };
+  const typesFrom = types?.typesFrom ?? existing?.typesFrom;
+  packages[add.name] = {
+    version,
+    publishedAt: decision.publishedAt,
+    externals,
+    catalogParts: true,
+    development: { ...existing?.development, ...parts.parts.development },
+    production: { ...existing?.production, ...parts.parts.production },
+    assets: { ...existing?.assets, ...parts.parts.assets },
+    types: Object.keys(allTypes).length > 0 ? allTypes : null,
+    ...(typesFrom ? { typesFrom } : {}),
+    warnings: [...(existing?.warnings ?? []), ...parts.parts.warnings],
+    bytes: (existing?.bytes ?? 0) + parts.parts.bytes,
+  };
+  return {
+    notes: [{ severity: "Info", message: `Installed ${specs} from npm (esm.sh), from the same ${add.name}@${version} this app already has.` }, ...parts.parts.warnings.map(warning)],
+    installed: `${add.name}@${version} (${specs})`,
+    discovered: parts.discovered,
+  };
+}
+
 async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
   const { app, dependencies, packages, deps } = ctx;
-  const nothing = (note?: NpmNote): OneOutcome => ({ notes: note ? [note] : [], installed: null, discovered: [] });
-  // A refusal worth remembering: the answer, not a service that didn't give one.
-  const refused = (message: string, code: string): OneOutcome => ({ ...nothing(error(message)), ...(code === "unavailable" ? {} : { refused: message }) });
 
   if (isFixed(add.name)) {
     const v = catalogVersionOf(app.catalogo, add.name)!;
     if (add.range && !satisfiesSafe(v, add.range)) return nothing(error(`${add.name} is fixed to ${v} in this app (one copy); other versions can't be installed.`));
     dependencies[add.name] = catalogRange(app.catalogo, add.name);
-    return nothing();
+    return installCatalogParts(add, v, ctx);
   }
 
   const catalogVersion = catalogVersionOf(app.catalogo, add.name);
   if (catalogServes(app.catalogo, add.name) && (add.range === null || catalogVersion === null || satisfiesSafe(catalogVersion, add.range))) {
-    dependencies[add.name] = add.range ?? catalogRange(app.catalogo, add.name);
-    return nothing();
+    dependencies[add.name] = add.range ?? dependencies[add.name] ?? catalogRange(app.catalogo, add.name);
+    return installCatalogParts(add, catalogVersion, ctx);
   }
 
   const range = add.range ?? dependencies[add.name] ?? null;
-  const existing = packages[add.name];
+  // Parts of the catalog's copy are not this package from esm.sh: another version replaces them.
+  const existing = packages[add.name]?.catalogParts ? undefined : packages[add.name];
   if (existing && (range === null || satisfiesSafe(existing.version, range))) {
     const missing = add.subpaths.filter((s) => !servesSubpath(existing, s));
     dependencies[add.name] = range ?? `^${existing.version}`;
@@ -267,13 +329,13 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
     return { notes: more.parts.warnings.map(warning), installed: null, discovered: more.discovered };
   }
 
-  if (!existing && Object.keys(packages).length >= MAX_ESM_PACKAGES) {
+  if (!existing && Object.values(packages).filter((p) => !p.catalogParts).length >= MAX_ESM_PACKAGES) {
     return nothing(error(`this app already has ${MAX_ESM_PACKAGES} packages outside its catalog; ${add.name} was not installed.`));
   }
   const decision = await chooseVersion(add.name, add.range, deps);
   if (!decision.ok) return refused(decision.message, decision.code);
   const manifest = decision.packument.versions[decision.version] ?? { version: decision.version };
-  const externals = externalsFor(manifest, new Set(Object.keys(packages).filter((n) => n !== add.name)));
+  const externals = externalsFor(manifest, new Set(Object.keys(packages).filter((n) => n !== add.name && !packages[n]!.catalogParts)));
   const subpaths = add.subpaths.length > 0 ? add.subpaths : [""];
   let parts = await lockParts(add.name, decision.version, subpaths, externals, ctx);
   const warnings: string[] = [];
@@ -320,9 +382,11 @@ async function installOne(add: InstallAdd, ctx: Ctx): Promise<OneOutcome> {
 async function reExternalize(ctx: Ctx, notes: NpmNote[]): Promise<InstallAdd[]> {
   const discovered: InstallAdd[] = [];
   for (const [name, locked] of Object.entries(ctx.packages)) {
+    // Parts of a catalog package keep the package itself external: nothing to redo.
+    if (locked.catalogParts) continue;
     const manifest = (await getPackument(name, ctx.deps.fetch).catch(() => null))?.versions[locked.version];
     if (!manifest) continue;
-    const externals = externalsFor(manifest, new Set(Object.keys(ctx.packages).filter((n) => n !== name)));
+    const externals = externalsFor(manifest, new Set(Object.keys(ctx.packages).filter((n) => n !== name && !ctx.packages[n]!.catalogParts)));
     if (externals.join(",") === locked.externals.join(",")) continue;
     const parts = await lockParts(name, locked.version, Object.keys(locked.development), externals, ctx);
     if (!parts.ok) {

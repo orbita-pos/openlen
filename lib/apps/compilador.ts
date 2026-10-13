@@ -56,7 +56,7 @@ import EXPORTACIONES from "./exportaciones.json";
 import { isTestSupportFile } from "./tests/test-files";
 import { DOTENV_PATH } from "./env/rules";
 import { dotEnvPublicVars } from "./env/dotenv";
-import { catalogPartsOf, sourceOf } from "@/lib/apps/npm/lock";
+import { catalogPartsLocked, servesSubpath, sourceOf } from "@/lib/apps/npm/lock";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 
@@ -348,16 +348,16 @@ function effectiveEnv(ctx: ContextoDeCompilacion): Record<string, string> {
 
 // NPM ABIERTO: quién sirve un paquete lo dicen /package.json y el lock por lo
 // que DICEN (sourceOf), así que su texto entra en la clave. Una vez por carpeta.
-const paquetesDe = new WeakMap<object, { readonly pkg: string; readonly lock: string; readonly huella: string }>();
-function huellaDePaquetes(carpeta: ContextoDeCompilacion["carpeta"]): string {
+const packagesSeen = new WeakMap<object, { readonly pkg: string; readonly lock: string; readonly fingerprint: string }>();
+function packagesFingerprint(carpeta: ContextoDeCompilacion["carpeta"]): string {
   const pkg = carpeta[PACKAGE_JSON_PATH] ?? "";
   const lock = carpeta[ESM_LOCK_PATH] ?? "";
-  const visto = paquetesDe.get(carpeta);
+  const seen = packagesSeen.get(carpeta);
   // La misma carpeta con los mismos textos (si alguien la cambió, se recalcula).
-  if (visto && visto.pkg === pkg && visto.lock === lock) return visto.huella;
-  const huella = createHash("sha256").update(pkg).update("\0").update(lock).digest("hex");
-  paquetesDe.set(carpeta, { pkg, lock, huella });
-  return huella;
+  if (seen && seen.pkg === pkg && seen.lock === lock) return seen.fingerprint;
+  const fingerprint = createHash("sha256").update(pkg).update("\0").update(lock).digest("hex");
+  packagesSeen.set(carpeta, { pkg, lock, fingerprint });
+  return fingerprint;
 }
 
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
@@ -387,7 +387,7 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update("\0")
     .update(hojas)
     .update("\0")
-    .update(huellaDePaquetes(ctx.carpeta))
+    .update(packagesFingerprint(ctx.carpeta))
     .update("\0")
     .update(ctx.development ? "development" : "production")
     .digest("hex");
@@ -494,19 +494,18 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         }
         continue;
       }
+      // A PART of a catalog package the catalog doesn't ship (react-dom/server),
+      // locked from esm.sh at the catalog's version: the bundler resolves it.
+      const parts = ctx.catalogo && bare && source?.kind === "catalog" ? catalogPartsLocked(bare.name, ctx.carpeta, ctx.catalogo) : null;
+      if (parts && servesSubpath(parts, bare!.subpath)) continue;
       if (/^[a-z][a-z0-9+.-]*:/i.test(especificador)) {
         error(imp.start, `"${especificador}": imports from URLs or "${especificador.split(":")[0]}:" are not supported here. Import the package by its name and it installs from npm.`);
       } else if (!ctx.catalogo) {
         error(imp.start, `"${especificador}" is a package name, and packages can only be imported in an app. Import files by path (./file.js).`);
-      } else if (source?.kind === "catalog" && bare) {
-        // A part the catalog's copy doesn't ship: nothing will install it (one copy).
-        const parts = catalogPartsOf(ctx.catalogo, bare.name);
-        error(
-          imp.start,
-          `"${especificador}" is not part of this app's ${bare.name}: ${bare.name} comes preinstalled from the catalog, with ${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0] ?? bare.name} only, and other parts of it can't be installed on top (one copy of each package).`,
-        );
       } else {
-        error(imp.start, `"${especificador}" is not installed in this app. It installs when a file that imports it is saved (or with npm install ${bare?.name ?? especificador}); if that failed, the reason is in this same report.`);
+        // A part of a catalog package installs with `npm install` (no name): by name it is already there.
+        const how = source?.kind === "catalog" ? "npm install" : `npm install ${bare?.name ?? especificador}`;
+        error(imp.start, `"${especificador}" is not installed in this app. It installs when a file that imports it is saved (or with ${how}); if that failed, the reason is in this same report.`);
       }
       continue;
     }

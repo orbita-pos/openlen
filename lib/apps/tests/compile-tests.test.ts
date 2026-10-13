@@ -90,6 +90,20 @@ describe("compileTestFile", () => {
     expect(!otro.ok && otro.errores[0]!.mensaje).toBe('vi.mock("left-pad"): it isn\'t a file of the app nor an installed package.');
   });
 
+  it("🔴 vi.mock of an installed part of a catalog package (react-dom/server) is a package of the lock too", () => {
+    const set = { entry: "https://esm.sh/react-dom@19.2.6/server?target=es2022&external=react,react-dom", modules: {} };
+    const parts: LockedPackage = {
+      version: "19.2.6", publishedAt: "2026-01-01T00:00:00.000Z", externals: ["react", "react-dom"], catalogParts: true,
+      development: { server: set }, production: { server: set }, assets: {}, types: null, warnings: [], bytes: 0,
+    };
+    const conParte = ctx({
+      [PACKAGE_JSON_PATH]: JSON.stringify({ dependencies: { "react-dom": "^19.2.6" } }),
+      [ESM_LOCK_PATH]: serializeEsmLock({ lockfileVersion: 1, packages: { "react-dom": parts } }),
+    });
+    const r = compileTestFile("/src/a.test.js", 'import { vi } from "vitest";\nvi.mock("react-dom/server", () => ({}));', conParte);
+    expect(r.ok && r.mocks).toEqual([{ id: "react-dom/server", exports: [], hasDefault: false, fromLock: true }]);
+  });
+
   it("🔴 los bordes de vi.mock, con su línea (Review Focus 3)", () => {
     const dentro = compileTestFile("/src/a.test.js", 'import { vi, describe } from "vitest";\ndescribe("g", () => {\n  vi.mock("./lib/datos");\n});', ctx());
     expect(dentro).toEqual({ ok: false, errores: [expect.objectContaining({ ruta: "/src/a.test.js", linea: 3, mensaje: expect.stringMatching(/vi\.mock must be at the top level of the test file/) })] });

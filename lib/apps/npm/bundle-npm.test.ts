@@ -81,6 +81,25 @@ describe("bundling packages from the esm lock", () => {
     expect((JSON.parse(r.map!) as { sources: string[] }).sources.some((s) => s.includes("/openlen/vendor/2026-11/recharts"))).toBe(false);
   });
 
+  it("🔴 a part of a catalog package (zod/v4) comes from the lock, and what it imports of the package itself is the catalog's copy", async () => {
+    const code = `import { z } from "zod";\nexport const z4 = "zod-v4-from-esm";\nexport const same = z;`;
+    const url = `${npm.origin}/zod@3.25.76/X-ZXpvZA/es2022/v4.mjs`;
+    const set = { entry: url, modules: { [url]: sha256Hex(code) } };
+    const zod: LockedPackage = {
+      version: "3.25.76", publishedAt: "2025-07-08T00:00:00.000Z", externals: ["zod"], catalogParts: true,
+      development: { v4: set }, production: { v4: set }, assets: {}, types: null, warnings: [], bytes: code.length,
+    };
+    await store.put(sha256Hex(code), code);
+    const files = filesWith(`import { z } from "zod";\nimport { z4, same } from "zod/v4";\nconsole.log(z4, same === z);`, { zod: "^3.25.76" }, { zod });
+    const r = await bundleApp({ carpeta: files, app: APP, modo: "desarrollo" });
+    if (!r?.ok) throw new Error(JSON.stringify(r));
+    expect(r.js).toContain("zod-v4-from-esm");
+    const sources = (JSON.parse(r.map!) as { sources: string[] }).sources;
+    expect(sources.some((s) => s.includes("/openlen/vendor/2026-11/zod"))).toBe(true);
+    // One zod: no esm.sh build of the package itself.
+    expect(sources.filter((s) => /zod@/.test(s))).toEqual([expect.stringContaining("/zod@3.25.76/X-ZXpvZA/es2022/v4.mjs")]);
+  });
+
   it("React imported from a package is the catalog's", async () => {
     const hooky = lockFor(npm.origin, "hooky", "1.0.0", `import { useState } from "react";\nexport const s = useState;`);
     await seed([hooky]);
