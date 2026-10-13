@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { installForApp, listPackages, pendingInstall, type InstallDeps } from "./install";
+import { clearRefusalCache, installForApp, listPackages, pendingInstall, REFUSAL_TTL_MS, type InstallDeps } from "./install";
 import { readEsmLock, readPackageJson } from "./lock";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "./paths";
 import { clearPackumentCache } from "./registry";
@@ -71,6 +71,7 @@ afterAll(async () => {
 beforeEach(() => {
   store = memoryStore();
   clearPackumentCache();
+  clearRefusalCache();
 });
 
 describe("pendingInstall", () => {
@@ -100,6 +101,34 @@ describe("installForApp", () => {
     const out = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
     expect(out.files).toEqual({});
     expect(out.notes).toEqual([{ severity: "Error", message: "young: published 10 days ago; packages must be at least 30 days old." }]);
+  });
+
+  it("🔴 a refusal is remembered: saving again doesn't ask npm again for 10 minutes, and npm install <name> always asks", async () => {
+    const files = source(`import y from "young";\nexport default y;`);
+    const at = (ms: number): InstallDeps => ({ ...deps(), now: () => new Date(NOW.getTime() + ms) });
+    const first = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: at(0) });
+    const asked = npm.requests.length;
+    const again = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: at(60_000) });
+    expect(again).toEqual(first);
+    expect(npm.requests.length).toBe(asked);
+    await installForApp({ files, app: APP, request: { add: [{ name: "young", range: null, subpaths: [""], explicit: true }], remove: [] }, deps: at(60_000) });
+    expect(npm.requests.length).toBeGreaterThan(asked);
+    const explicitAsked = npm.requests.length;
+    // The explicit one, at the minute, remembered it again: ten minutes from then.
+    await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: at(60_000 + REFUSAL_TTL_MS - 1) });
+    expect(npm.requests.length).toBe(explicitAsked);
+    await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: at(60_000 + REFUSAL_TTL_MS + 1) });
+    expect(npm.requests.length).toBeGreaterThan(explicitAsked);
+  });
+
+  it("CONTROL: a registry that didn't answer isn't remembered — the next save asks again", async () => {
+    const files = source(`import y from "young";\nexport default y;`);
+    const down = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: { ...deps(), fetch: () => Promise.reject(new Error("down")) } });
+    expect(down.notes[0]!.message).toMatch(/did not answer/);
+    const asked = npm.requests.length;
+    const up = await installForApp({ files, app: APP, request: pendingInstall(files, APP), deps: deps() });
+    expect(up.notes[0]!.message).toMatch(/published 10 days ago/);
+    expect(npm.requests.length).toBeGreaterThan(asked);
   });
 
   it("a dependency esm.sh picked that is too new refuses the package", async () => {
