@@ -12,6 +12,8 @@
  *   · `env`      `/.env`, sólo en la raíz (spec local 2026-10-10): lo lee el
  *                compilador para `import.meta.env`; se guarda y viaja al
  *                exportar, pero nunca se publica ni se sirve (como en Vite).
+ *   · `manifest` /package.json: the app's packages (lib/apps/npm/); read by the
+ *                compiler, never published.
  *
  * Cualquier carpeta vale, también la raíz, como en Vercel: el modelo escribe
  * `/app.js` y `/style.css` por costumbre, y OpenLen se adapta a Len. Se prohíbe
@@ -24,8 +26,9 @@
 import { esFicheroDeSupabase, motivoParaNoGuardar as supabaseSaveProblem } from "./supabase";
 import { DOTENV_PATH } from "@/lib/apps/env/rules";
 import { dotEnvSaveProblem } from "@/lib/apps/env/dotenv";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 
-export type FolderFileKind = "web" | "tests" | "supabase" | "env";
+export type FolderFileKind = "web" | "tests" | "supabase" | "env" | "manifest";
 
 /** `.jsx`, `.tsx` y `.ts` son FUENTES (apps web, spec local 2026-10-07-apps):
  *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
@@ -76,6 +79,8 @@ export function classifyFolderPath(path: string): FolderPathClass {
   // EL `.env` DE VITE (spec local 2026-10-10): sólo `/.env`, en la raíz. Los
   // demás `.env*` se rechazan con el porqué: aquí no hay modos que los elijan.
   if (path === DOTENV_PATH) return { ok: true, kind: "env" };
+  // OPEN NPM (spec 2026-10-13): /package.json, only at the root, like in Vite.
+  if (path === PACKAGE_JSON_PATH) return { ok: true, kind: "manifest" };
   if (/^\.env(?:\..+)?$/.test(segments[segments.length - 1] ?? "")) {
     return {
       ok: false,
@@ -122,11 +127,20 @@ export function isPublishableFolderPath(path: string): boolean {
   return c.ok && c.kind === "web";
 }
 
-/** Lo que entra a CONSTRUIR el sitio: lo que se publica y `/.env`, que el
- *  compilador lee para `import.meta.env` (lib/apps/compilador.ts) y que nunca se
- *  escribe en la release (`publishableFolderFiles` sólo deja la web). */
+/** Lo que entra a CONSTRUIR el sitio: lo que se publica, `/.env`, que el
+ *  compilador lee para `import.meta.env` (lib/apps/compilador.ts), y
+ *  `/package.json` con el lock de esm.sh (lib/apps/npm/), que dicen de dónde sale
+ *  cada paquete. Ninguno de los tres se escribe en la release
+ *  (`publishableFolderFiles` sólo deja la web). */
 export function isCompileInputPath(path: string): boolean {
-  return path === DOTENV_PATH || isPublishableFolderPath(path);
+  return path === DOTENV_PATH || path === PACKAGE_JSON_PATH || path === ESM_LOCK_PATH || isPublishableFolderPath(path);
+}
+
+/** What a REMIX takes (lib/backend/files.ts): what the published site already
+ *  shows, plus /package.json and the esm lock — without them a remixed app
+ *  doesn't compile. Not the tests, /.env or /supabase: those stay the author's. */
+export function isRemixedFolderPath(path: string): boolean {
+  return path === PACKAGE_JSON_PATH || path === ESM_LOCK_PATH || isPublishableFolderPath(path);
 }
 
 function bytes(s: string): number {
@@ -139,6 +153,15 @@ export function folderSaveProblem(path: string, content: string, existing: Reado
   const c = classifyFolderPath(path);
   if (!c.ok) return c.reason;
   const creates = !existing.has(path);
+  if (c.kind === "manifest") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch (e) {
+      return `${path} is not valid JSON: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return `${path} must be a JSON object, like npm's.`;
+  }
   if (c.kind === "supabase") {
     const supabaseCount = [...existing.keys()].filter(esFicheroDeSupabase).length;
     const problem = supabaseSaveProblem(path, content, supabaseCount, creates);
