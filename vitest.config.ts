@@ -492,6 +492,8 @@ export default defineConfig({
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
       "lib/agent/types-and-lint.test.ts",
+      // Open npm: installing on save. LISTA BLANCA.
+      "lib/agent/npm-after-save.test.ts",
       "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",

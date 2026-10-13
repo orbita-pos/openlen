@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const m = vi.hoisted(() => ({ guardarLoDeLaTerminal: vi.fn(), cargarFicherosDeLaTerminal: vi.fn(), autor: vi.fn() }));
+const m = vi.hoisted(() => ({ guardarLoDeLaTerminal: vi.fn(), cargarFicherosDeLaTerminal: vi.fn(), autor: vi.fn(), deps: {} as Record<string, unknown> }));
 vi.mock("@/lib/agent/herramientas-de-ficheros", () => ({ guardarLoDeLaTerminal: m.guardarLoDeLaTerminal, cargarFicherosDeLaTerminal: m.cargarFicherosDeLaTerminal }));
-vi.mock("@/lib/agent/tools", () => ({ realDeps: () => ({}) }));
+vi.mock("@/lib/agent/tools", () => ({ realDeps: () => m.deps }));
 vi.mock("@/lib/projects/autor-del-cambio", () => ({
   conAutor: (id: string, fn: () => unknown) => {
     m.autor(id);
@@ -23,6 +23,7 @@ beforeEach(() => {
   m.guardarLoDeLaTerminal.mockReset();
   m.cargarFicherosDeLaTerminal.mockReset();
   m.autor.mockReset();
+  m.deps = {};
 });
 
 describe("🔴 lo que rompe una app vuelve como diagnóstico al escribir (medido en el ensayo del 12/10)", () => {
@@ -85,5 +86,26 @@ describe("la versión que exige la escritura", () => {
     const r = checkVersion(tree, "/a.txt", "000000000000");
     expect(r && text(r)).toContain("version_conflict");
     expect(r && text(r)).toContain(fileVersion("hola"));
+  });
+});
+
+describe("open npm through the MCP", () => {
+  it("🔴 what installing said comes back, and the compiler sees the new lock (no «not installed»)", async () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const appOpen = { projectId: "a1", acceso: { rol: "dueno" as const, duenoId: "u1" }, row: { data: { html: '<div id="root"></div><script type="module" src="/src/main.tsx"></script>', app } } } as never;
+    const source = 'import tiny from "tiny";\nexport default tiny;\n';
+    const pkg = '{"dependencies":{"tiny":"^1.0.0"}}';
+    const set = { entry: "https://esm.sh/tiny@1.0.0?target=es2022", modules: {} };
+    const lock = JSON.stringify({ lockfileVersion: 1, packages: { tiny: { version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set }, assets: {}, types: null, warnings: [], bytes: 0 } } });
+    m.guardarLoDeLaTerminal.mockResolvedValue({
+      notas: [], rechazado: false, enLaTerminal: { "/src/main.tsx": source, "/package.json": pkg }, escrituras: [],
+      npmNotes: [{ ruta: "/package.json", linea: 1, columna: 1, gravedad: "Info", mensaje: "Installed tiny@1.0.0 from npm (esm.sh).", codigo: "npm", fuente: "npm" }],
+    });
+    // The terminal's files don't carry /.openlen; the server's do.
+    m.cargarFicherosDeLaTerminal.mockResolvedValue({ "/index.html": '<div id="root"></div><script type="module" src="/src/main.tsx"></script>', "/src/main.tsx": source, "/package.json": pkg });
+    m.deps = { projectFiles: async () => ({ "/src/main.tsx": source, "/package.json": pkg, "/.openlen/esm-lock.json": lock }) };
+    const r = await applyChanges(caller, appOpen, [{ tipo: "escrito", ruta: "/src/main.tsx", contenido: source, crea: false }], { "/src/main.tsx": "export {};" });
+    expect(r.ok && r.diagnostics).toContain("Installed tiny@1.0.0 from npm (esm.sh).");
+    expect(r.ok && r.diagnostics).not.toContain("not installed");
   });
 });

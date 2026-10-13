@@ -6,6 +6,7 @@ import { diagnosticosDeLaApp } from "@/lib/agent/compila-la-app";
 import { redactarDiagnosticos } from "@/lib/agent/diagnosticos";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { realDeps } from "@/lib/agent/tools";
+import { ESM_LOCK_PATH } from "@/lib/apps/npm/paths";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
 import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import { openProject, type LoadedProject } from "./access";
@@ -57,7 +58,8 @@ export async function applyChanges(
   const session = sessionFor(caller, open);
   const g = await conAutor(caller.userId, () => guardarLoDeLaTerminal(session, realDeps(), cambios, antes));
   if (g.rechazado) return { ok: false, result: toolError("rejected", g.notas.join("\n")) };
-  const found = g.escrituras.flatMap((e) => [...(e.diagnosticos ?? [])]);
+  // NPM ABIERTO (spec 2026-10-13): lo que dijo instalar lo que importa lo guardado.
+  const found = [...(g.npmNotes ?? []), ...g.escrituras.flatMap((e) => [...(e.diagnosticos ?? [])])];
   // UNA APP: la terminal guarda como «bash» y no pide los diagnósticos (los pide
   // ella al acabar el comando entero), así que aquí se calculan tras guardar,
   // con la función pura de Len: sólo lo NUEVO frente a lo de antes de escribir.
@@ -66,10 +68,12 @@ export async function applyChanges(
   const app = open.row.data.app;
   if (app) {
     const after = await cargarFicherosDeLaTerminal(session, realDeps());
+    // El lock de esm.sh vive en /.openlen, que la terminal no lleva: el del servidor.
+    const lock = (await realDeps().projectFiles?.(session.projectId).catch(() => null))?.[ESM_LOCK_PATH];
     found.push(
       ...diagnosticosDeLaApp({
         app,
-        ahora: after,
+        ahora: lock === undefined ? after : { ...after, [ESM_LOCK_PATH]: lock },
         alEmpezar: antes,
         escritos: cambios.map((c) => c.ruta),
         cascaron: after["/index.html"] ?? open.row.data.html ?? "",
