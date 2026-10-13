@@ -32,6 +32,8 @@
 
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CATALOGO_ACTUAL } from "./dependencias";
+import { catalogRange, serializePackageJson } from "./npm/lock";
+import { PACKAGE_JSON_PATH } from "./npm/paths";
 
 export const ENTRADA = "/src/main.tsx";
 /** La de las apps que nacieron antes, en .jsx: la conversión la acepta si es la que Len escribió. */
@@ -129,6 +131,13 @@ export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
 );
 `,
+    // OPEN NPM (spec 2026-10-13): like a Vite project, the app lists its packages.
+    [PACKAGE_JSON_PATH]: serializePackageJson({
+      name: "app",
+      private: true,
+      type: "module",
+      dependencies: Object.fromEntries(["@supabase/supabase-js", "react", "react-dom", "react-router-dom"].map((n) => [n, catalogRange(CATALOGO_ACTUAL, n)])),
+    }),
   };
   return { html, ficheros, app: { catalogo: CATALOGO_ACTUAL, entrada: ENTRADA } };
 }

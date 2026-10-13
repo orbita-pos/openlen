@@ -14,6 +14,8 @@
  *                                         (`diff /.openlen/versiones/<id>/index.html /index.html`)
  *   /.openlen/docs/*.md                   F4: la guía de diseño y las librerías, que el
  *                                         índice de /AGENTS.md nombra
+ *   /node_modules/…                       en una app: el package.json y los .d.ts de sus
+ *                                         paquetes (`lib/apps/npm/node-modules.ts`)
  *
  * Cuando el sitio cambia en el turno, se vuelven a listar y a calcular
  * (`refrescarPerezosos`): una versión guardada sale en el comando siguiente.
@@ -38,6 +40,7 @@ import { todasLasFotosCuradas } from "@/lib/agent/photo-search";
 import { ficherosDelSitio, paginaDeRuta, rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { fechaLocal, restarDias, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 import { documentosDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { NODE_MODULES, nodeModulesOf, type NodeModulesView } from "@/lib/apps/npm/node-modules";
 
 /** La carpeta oculta de lo que no es el sitio (la regla, en `ficheros.ts`). */
 export const CARPETA_DE_SOLO_LECTURA = "/.openlen";
@@ -89,7 +92,15 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
     }
   }
 
+  // En una app, lo que npm deja en node_modules para leer: de su /package.json y su lock, como están AHORA.
+  let nodeModules: NodeModulesView | null = null;
+  if (session.app && deps.projectFiles) {
+    const files = await deps.projectFiles(session.projectId).catch(() => null);
+    if (files) nodeModules = nodeModulesOf(files, session.app.catalogo);
+  }
+
   const rutas = [
+    ...(nodeModules?.paths ?? []),
     ...(deps.resultados ? [RUTA_VISITAS, RUTA_FORMULARIOS, RUTA_MENSAJES] : []),
     RUTA_FOTOS,
     ...(indice.length > 0 ? [RUTA_INDICE_DE_VERSIONES, ...versiones.keys()] : []),
@@ -149,6 +160,11 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         const html = await deps.versionHtml(session.projectId, session.userId, id);
         if (html === null) throw new Error("that version no longer exists");
         return sinOpIds(html);
+      }
+      if (nodeModules && ruta.startsWith(`${NODE_MODULES}/`)) {
+        const texto = await nodeModules.read(ruta);
+        if (texto === null) throw new Error("its types couldn't be read now");
+        return texto;
       }
       const doc = textoDeLaPlataforma(ruta, session.mode, session.app ?? null);
       if (doc !== null) return doc;

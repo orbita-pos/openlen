@@ -11,7 +11,7 @@ import { and, asc, eq, like } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isRemixedFolderPath } from "@/lib/agent/ficheros/folder";
 
 export async function listProjectFiles(projectId: string, prefix = "/"): Promise<Record<string, string>> {
   const rows = await db
@@ -76,10 +76,11 @@ export async function copyProjectFiles(
   return files.length;
 }
 
-/** REMEZCLAR se lleva sólo lo que la publicada ya enseña: las pruebas
+/** REMEZCLAR se lleva sólo lo que la publicada ya enseña, más el
+ *  `/package.json` y el lock de una app (sin ellos no compila): las pruebas
  *  (`tests/`) y las migraciones (`supabase/`) del autor no son públicas. */
 export function copyFolderForRemix(fromProjectId: string, toProjectId: string): Promise<number> {
-  return copyProjectFiles(fromProjectId, toProjectId, isPublishableFolderPath);
+  return copyProjectFiles(fromProjectId, toProjectId, isRemixedFolderPath);
 }
 
 /** DUPLICAR es tu propia carpeta: entera. */

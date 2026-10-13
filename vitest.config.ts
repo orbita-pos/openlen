@@ -198,6 +198,8 @@ export default defineConfig({
       "lib/ai/origen-de-medida.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5), en un Chromium de verdad.
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
+      // Len's eyes see WebGL (three.js, maps, games) in the screenshot. WHITELIST.
+      "lib/ai/eyes-see-webgl.browser.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
@@ -490,6 +492,8 @@ export default defineConfig({
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
       "lib/agent/types-and-lint.test.ts",
+      // Open npm: installing on save. LISTA BLANCA.
+      "lib/agent/npm-after-save.test.ts",
       "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
       "lib/agent/facts-kept.test.ts",
@@ -539,6 +543,8 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/form-identity.test.ts",
+      // La Permissions-Policy de las páginas, igual en sus cinco copias. LISTA BLANCA.
+      "lib/publish/permissions-policy.test.ts",
       // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
       "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un

@@ -1802,44 +1802,61 @@ describe("la terminal DEL USUARIO en una app", () => {
   const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" };
   const CASCARON =
     '<!doctype html><html lang="es"><head><title>Caja</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>';
+  // NPM ABIERTO: `npm install` va al instalador de verdad (realDeps), como en la
+  // terminal de Len; aquí, uno que apunta lo que le piden.
+  const PKG = '{\n  "dependencies": {\n    "zod": "^3.25.76"\n  }\n}\n';
+  const LOCK = '{"lockfileVersion":1,"packages":{}}';
   const conComprobador = (data: ProjectData) => {
     const c = conCarpeta(data);
     c.archivos["/src/App.jsx"] = "export default function App() {\n  return <h1>Caja</h1>;\n}";
     const comprobados: string[][] = [];
+    const instalados: string[][] = [];
     const deps = {
       ...c.deps,
       async checkApp(ficheros: Record<string, string>) {
         comprobados.push(Object.keys(ficheros).sort());
         return null;
       },
+      async installPackages(_files: unknown, _app: unknown, request: { add: { name: string }[] }) {
+        instalados.push(request.add.map((a) => a.name));
+        return { files: { "/package.json": PKG, "/.openlen/esm-lock.json": LOCK }, notes: [], installed: ["zod@3.25.76"] };
+      },
     } as unknown as AgentDeps;
-    return { ...c, deps, comprobados };
+    return { ...c, deps, comprobados, instalados };
   };
   const correr = (deps: AgentDeps, command: string, proyecto: string) =>
     conTerminal(() => ejecutarEnLaTerminalDelUsuario(proyecto, "u1", command, deps));
 
-  it("🔴 tiene los comandos de la app, como la de Len: npm install contesta con el catálogo y npx tsc corre el comprobador", async () => {
-    const { deps, comprobados } = conComprobador({ html: CASCARON, app: APP });
+  it("🔴 tiene los comandos de la app, como la de Len: npm install instala y npx tsc corre el comprobador", async () => {
+    const { deps, comprobados, instalados, archivos } = conComprobador({ html: CASCARON, app: APP });
     try {
       const npm = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-app");
-      assert.match(npm.salida, /zod: already available \(catalog\)/);
+      assert.deepEqual(instalados, [["zod"]]);
+      assert.match(npm.salida, /\+ zod@3\.25\.76/);
       assert.match(npm.salida, /rc=0/);
+      assert.equal(archivos["/package.json"], PKG, "el /package.json nuevo se guarda");
+      assert.equal(archivos["/.openlen/esm-lock.json"], LOCK, "y el lock, que la terminal no escribe");
+      // Guardar /package.json es escribir la app: tipos y lint pasivos, ya con el lock.
+      const conElLock = ["/.openlen/esm-lock.json", "/package.json", "/src/App.jsx"];
+      assert.deepEqual(comprobados, [conElLock]);
       await correr(deps, "npx tsc --noEmit", "p-usuario-app");
-      assert.deepEqual(comprobados, [["/src/App.jsx"]]);
+      assert.deepEqual(comprobados, [conElLock, conElLock]);
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
   });
 
   it("🔴 una página que se convierte en app con la terminal abierta tiene los comandos de la app en el comando siguiente", async () => {
-    const { deps, store, archivos } = conComprobador({ html: HOME });
+    const { deps, store, archivos, instalados } = conComprobador({ html: HOME });
     try {
       const antes = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
       assert.match(antes.salida, /rc=127/, "en una página no hay npm");
+      assert.deepEqual(instalados, []);
       store.data = { html: CASCARON, app: APP };
       archivos["/src/main.jsx"] = 'import App from "./App";';
       const despues = await correr(deps, "npm install zod; echo rc=$?", "p-usuario-convertida");
-      assert.match(despues.salida, /zod: already available \(catalog\)/);
+      assert.deepEqual(instalados, [["zod"]]);
+      assert.match(despues.salida, /rc=0/);
     } finally {
       await cerrarLasTerminalesDelUsuario();
     }
@@ -2103,6 +2120,16 @@ describe("convertir una página en app", () => {
     assert.ok((rota.diagnosticos ?? []).some((d) => d.ruta === "/src/screens/Nueva.jsx"), "lo que no compila ya vuelve en el acto");
   });
 
+  it("🔴 en una app, Read abre /node_modules por su ruta, como Claude Code (el turno real de Len lo buscó); en una página no existe", async () => {
+    const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const { deps } = conCarpeta({ html: "<!doctype html>", app: APP });
+    const enApp = await runAgentTool({ ...makeSession(), app: APP }, deps, "Read", { file_path: "/node_modules/lucide-react/package.json" });
+    assert.equal(enApp.response.ok, true, texto(enApp));
+    assert.match(texto(enApp), /"name":"lucide-react"/);
+    const enPagina = await runAgentTool(makeSession(), conCarpeta({ html: HOME }).deps, "Read", { file_path: "/node_modules/lucide-react/package.json" });
+    assert.equal(enPagina.response.ok, false);
+  });
+
   it("una app no se vuelve a convertir", async () => {
     const { deps, archivos } = conCarpeta({ html: "<!doctype html>", app: { catalogo: "2026-10", entrada: "/src/main.jsx" } });
     conLaApp(archivos);
@@ -2250,5 +2277,113 @@ describe("crear, renombrar y borrar a mano, desde el explorador", () => {
     assert.equal(archivos["/menu/extra.css"], undefined, "lo que no es página sí se borró");
     assert.ok(store.data.pages?.menu, "la página la borra su propia ruta");
     assert.deepEqual(await operarAMano("p1", "u1", { tipo: "borrar", ruta: "/nada" }, deps), { ok: false, motivo: "no_existe" });
+  });
+});
+
+// NPM ABIERTO (spec 2026-10-13): guardar un fuente que importa un paquete lo
+// instala, por cualquier puerta; el compilador ve el lock recién escrito.
+describe("open npm: saving a source that imports a package installs it", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+  const CASCARON = '<!doctype html><html><head><title>A</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>';
+  const PKG = '{\n  "dependencies": {\n    "tiny": "^1.0.0"\n  }\n}\n';
+  const set = { entry: "https://esm.sh/tiny@1.0.0?target=es2022", modules: {} };
+  const LOCK = JSON.stringify({
+    lockfileVersion: 1,
+    packages: { tiny: { version: "1.0.0", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: { "": set }, production: { "": set }, assets: {}, types: null, warnings: [], bytes: 0 } },
+  });
+  const conNpm = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    c.archivos["/src/main.tsx"] = "export {};\n";
+    const pedidos: unknown[] = [];
+    const deps = {
+      ...c.deps,
+      async installPackages(_files: unknown, _app: unknown, request: unknown) {
+        pedidos.push(request);
+        return {
+          files: { "/package.json": PKG, "/.openlen/esm-lock.json": LOCK },
+          notes: [{ severity: "Info", message: "Installed tiny@1.0.0 from npm (esm.sh)." }],
+          installed: ["tiny@1.0.0"],
+        };
+      },
+    } as unknown as AgentDeps;
+    return { ...c, deps, pedidos };
+  };
+  const sesion = (): AgentSession => ({ ...makeSession(), app: APP });
+  const SOURCE = 'import tiny from "tiny";\nexport default tiny;\n';
+
+  it("🔴 Len's Write: installs, says so, and the compiler sees the new lock (no «not installed»)", async () => {
+    const { deps, archivos, pedidos } = conNpm();
+    const s = sesion();
+    await runAgentTool(s, deps, "Read", { file_path: "/src/main.tsx" });
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/src/main.tsx", content: SOURCE });
+    assert.equal(w.response.ok, true, JSON.stringify(w.response));
+    assert.deepEqual(pedidos, [{ add: [{ name: "tiny", range: null, subpaths: [""] }], remove: [] }]);
+    assert.equal(archivos["/package.json"], PKG);
+    assert.equal(archivos["/.openlen/esm-lock.json"], LOCK);
+    const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+    assert.ok(mensajes.includes("Installed tiny@1.0.0 from npm (esm.sh)."), JSON.stringify(mensajes));
+    assert.ok(!mensajes.some((m) => /not installed/.test(m)), JSON.stringify(mensajes));
+  });
+
+  it("🔴 the terminal's door: npmNotes and the new /package.json in the terminal", async () => {
+    const { deps } = conNpm();
+    const antes = { "/src/main.tsx": "export {};\n" };
+    const g = await guardarLoDeLaTerminal(sesion(), deps, [{ tipo: "escrito", ruta: "/src/main.tsx", contenido: SOURCE, crea: false }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual((g.npmNotes ?? []).map((d) => d.mensaje), ["Installed tiny@1.0.0 from npm (esm.sh)."]);
+    assert.equal(g.enLaTerminal["/package.json"], PKG);
+  });
+
+  it("🔴 Len's bash: the note comes back with the command's diagnostics, and the next command sees /package.json", async () => {
+    const { deps } = conNpm();
+    const s = sesion();
+    try {
+      const out = await conTerminal(() => runAgentTool(s, deps, "bash", { command: `echo 'import tiny from "tiny"; export default tiny;' > /src/main.tsx` }));
+      assert.equal(out.response.ok, true, texto(out));
+      const mensajes = (out.diagnosticos ?? []).map((d) => d.mensaje);
+      assert.ok(mensajes.includes("Installed tiny@1.0.0 from npm (esm.sh)."), JSON.stringify(mensajes));
+      assert.ok(!mensajes.some((m) => /not installed/.test(m)), JSON.stringify(mensajes));
+      const cat = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "cat /package.json" }));
+      assert.match(texto(cat), /"tiny": "\^1\.0\.0"/);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  // Without installPackages: nothing reinstalls what Len takes out of /package.json.
+  const conTinyInstalado = () => {
+    const c = conCarpeta({ html: CASCARON, app: APP });
+    Object.assign(c.archivos, {
+      "/src/main.tsx": 'import tiny from "./other";\nexport default tiny;\n',
+      "/src/other.tsx": SOURCE,
+      "/src/extra.ts": "export {};\n",
+      "/package.json": PKG,
+      "/.openlen/esm-lock.json": LOCK,
+    });
+    return c;
+  };
+
+  it("CONTROL: taking a package out of /package.json breaks another file that imports it, and that shows", async () => {
+    const c = conTinyInstalado();
+    const s = sesion();
+    await runAgentTool(s, c.deps, "Read", { file_path: "/package.json" });
+    const w = await runAgentTool(s, c.deps, "Write", { file_path: "/package.json", content: '{\n  "dependencies": {}\n}\n' });
+    const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+    assert.ok(mensajes.some((m) => /"tiny" is not installed in this app/.test(m)), JSON.stringify(mensajes));
+  });
+
+  it("🔴 when the turn's first write is a terminal rm, the starting folder still has the lock: breaking another file's package is Len's, and shows", async () => {
+    const c = conTinyInstalado();
+    const s = sesion();
+    try {
+      const rm = await conTerminal(() => runAgentTool(s, c.deps, "bash", { command: "rm /src/extra.ts" }));
+      assert.equal(rm.response.ok, true, texto(rm));
+      await runAgentTool(s, c.deps, "Read", { file_path: "/package.json" });
+      const w = await runAgentTool(s, c.deps, "Write", { file_path: "/package.json", content: '{\n  "dependencies": {}\n}\n' });
+      const mensajes = (w.diagnosticos ?? []).map((d) => d.mensaje);
+      assert.ok(mensajes.some((m) => /"tiny" is not installed in this app/.test(m)), JSON.stringify(mensajes));
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
   });
 });

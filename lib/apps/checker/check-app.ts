@@ -13,6 +13,9 @@
 // Code cada sesión tiene su propio servidor).
 import path from "node:path";
 import { catalogAliasesOf } from "@/lib/apps/dependencias";
+import { ESM_LOCK_PATH } from "@/lib/apps/npm/paths";
+import { ASSET_EXTENSIONS } from "@/lib/apps/npm/specifier";
+import { npmTypesFor } from "@/lib/apps/npm/types-for-check";
 import { directorioVendor } from "@/lib/apps/servir";
 import { testKitFor } from "@/lib/apps/tests/test-kit";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
@@ -30,7 +33,7 @@ const cola = new WorkerQueue<CheckResult>({
 
 /** Los tipos y el lint de una app, o `null` si no llegan a tiempo, algo falla,
  *  o los sustituye otra petición con el mismo `supersedes`. */
-export function checkAppInWorker(
+export async function checkAppInWorker(
   input: {
     readonly files: Readonly<Record<string, string>>;
     readonly catalogo: string;
@@ -39,13 +42,19 @@ export function checkAppInWorker(
   },
   timeoutMs = TOPE_MS,
 ): Promise<CheckResult | null> {
+  // OPEN NPM (spec 2026-10-13): the types of the app's esm.sh packages; the lock itself isn't a source.
+  const extraTypes = await npmTypesFor(input.files, input.catalogo).catch(() => ({}));
+  const files = Object.fromEntries(Object.entries(input.files).filter(([p]) => p !== ESM_LOCK_PATH));
   return cola.run(
     {
-      files: input.files,
+      files,
       // Los tipos del catálogo y los del kit de pruebas (plan 04): vitest y Testing Library.
       typesPackPaths: [path.join(directorioVendor(), input.catalogo, "types.json"), path.join(directorioVendor(), testKitFor(input.catalogo), "types.json")],
       // Y sus alias (`react-router-dom`), que el paquete de tipos no trae.
       aliases: catalogAliasesOf(input.catalogo),
+      // Y los ficheros de un paquete que se importan por su URL (imágenes, fuentes).
+      urlExtensions: ASSET_EXTENSIONS.filter((e) => e !== ".css"),
+      extraTypes,
     },
     { timeoutMs, ...(input.supersedes ? { supersedes: input.supersedes } : {}) },
   );

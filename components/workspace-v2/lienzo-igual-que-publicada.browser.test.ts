@@ -17,9 +17,11 @@
 // límites por delante (qué peticiones de la página se rechazan y qué queda
 // desactivado). Nunca dice «igual que publicada» a secas. Aquí igual:
 //
-//   CUBRE  diez capacidades iguales (origen real, localStorage, sessionStorage,
-//          indexedDB, serviceWorker, prompt, confirm, window.open, ancla y
-//          envío de formulario), y la cookie como DIFERENCIA fijada.
+//   CUBRE  catorce capacidades iguales (origen real, localStorage,
+//          sessionStorage, indexedDB, serviceWorker, prompt, confirm,
+//          window.open, ancla, envío de formulario, bloquear el puntero, y si la
+//          política deja pedir cámara, micrófono y ubicación), y la cookie como
+//          DIFERENCIA fijada.
 //   NO CUBRE  portapapeles ni pantalla completa (headless no los distingue: M7,
 //          a mano), ni si la página se VE bien, ni el viaje por Cloudflare.
 //
@@ -37,9 +39,12 @@
 // `allow-same-origin` ya concede, o sea que ninguna tocaba nada que la bandera
 // gobierne.
 //
-// La sonda que sí discrimina está abajo, y es la ÚNICA capacidad del caso:
-// `allow-pointer-lock` NO está en SANDBOX_REMOTO, así que una ventana que
-// HEREDA el sandbox no puede `requestPointerLock()` y una que ESCAPÓ sí.
+// La sonda que sí discrimina está abajo: una ventana que HEREDA un sandbox sin
+// `allow-pointer-lock` no puede `requestPointerLock()`, y una que ESCAPÓ sí.
+// Desde el 2026-10-13 SANDBOX_REMOTO SÍ lleva `allow-pointer-lock` (un juego
+// en primera persona mira con el ratón en el lienzo, como en la publicada), así
+// que M6 quita esa bandera en SUS DOS brazos: la sonda sólo discrimina si el
+// sandbox heredado no la concede.
 // Medido el 2026-09-17, reproducido en tres corridas:
 //
 //   con la bandera   document.pointerLockElement === true
@@ -87,6 +92,7 @@ for (const m of /header \{([\s\S]*?)\n\t\}/.exec(bloqueApp)![1]!.matchAll(/^\s*(
 const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</title></head>
 <body style="margin:0;font:16px system-ui">
 <button id="go" type="button">con gesto</button>
+<button id="lock" type="button">bloquear</button>
 <a id="ancla" href="#destino">ancla</a>
 <form id="f" method="get"><input name="x" value="1"></form>
 <div id="destino" style="margin-top:3000px">destino</div>
@@ -100,6 +106,20 @@ const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</ti
   t('cookie', function(){ document.cookie = 'k=v'; return /k=v/.test(document.cookie); });
   t('indexedDB', function(){ return new Promise(function(res, rej){ var r = indexedDB.open('sonda'); r.onsuccess = function(){ res('abre'); }; r.onerror = function(){ rej(r.error); }; }); });
   t('serviceWorker', function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function(){ return 'api'; }) : Promise.reject({ name: 'sin_api' }); });
+  // Lo que la POLÍTICA deja pedir. Headless no tiene cámara ni micrófono: se
+  // mide si el documento puede preguntar, que es lo que decide la cabecera.
+  function policyAllows(f){ var p = document.permissionsPolicy || document.featurePolicy; return p ? p.allowsFeature(f) : 'sin_api'; }
+  t('camara', function(){ return policyAllows('camera'); });
+  t('microfono', function(){ return policyAllows('microphone'); });
+  t('ubicacion', function(){ return policyAllows('geolocation'); });
+  // El puntero, y se suelta en el acto: con él bloqueado los clics siguientes
+  // de la sonda (el ancla) no llegarían a su sitio.
+  document.getElementById('lock').addEventListener('click', function(){
+    var p;
+    try { p = document.body.requestPointerLock(); } catch (e) { R.pointer_lock = 'lanza:' + e.name; return; }
+    if (p && typeof p.then === 'function') p.then(function(){ R.pointer_lock = 'ok'; document.exitPointerLock(); }, function(e){ R.pointer_lock = 'falla:' + e.name; });
+    else R.pointer_lock = 'sin-promesa';
+  });
   document.getElementById('go').addEventListener('click', function(){
     t('prompt', function(){ return JSON.stringify(prompt('nombre?')); });
     t('confirm', function(){ return confirm('seguro?'); });
@@ -167,10 +187,12 @@ beforeAll(async () => {
     if (ruta === "/ventana/") return res.end(VENTANA);
     if (ruta === "/abridor/") return res.end(ABRIDOR(`http://${HEX_HOST}:${puerto}/ventana/`));
     if (ruta === "/taller-escape/" || ruta === "/taller-sin-escape/") {
+      // Sin `allow-pointer-lock` en los dos brazos: es la sonda (ver arriba).
+      const withoutPointerLock = SANDBOX_REMOTO.replace(" allow-pointer-lock", "");
       const flags =
         ruta === "/taller-escape/"
-          ? SANDBOX_REMOTO
-          : SANDBOX_REMOTO.replace(" allow-popups-to-escape-sandbox", "");
+          ? withoutPointerLock
+          : withoutPointerLock.replace(" allow-popups-to-escape-sandbox", "");
       return res.end(
         `<!doctype html><body style="margin:0"><iframe id="lienzo" sandbox="${flags}" allow="${ALLOW_REMOTO}" style="width:1000px;height:600px;border:0" src="http://${HEX_HOST}:${puerto}/abridor/"></iframe></body>`,
       );
@@ -204,6 +226,8 @@ async function medir(url: string, marco: "principal" | "hijo"): Promise<Fila> {
     await esperar(1_000);
     await (await frame()).click("#go");
     await esperar(1_500);
+    await (await frame()).click("#lock");
+    await esperar(800);
     const fila = { ...((await (await frame()).evaluate("window.__caps")) as Fila) };
 
     await (await frame()).click("#ancla");
@@ -222,11 +246,12 @@ async function medir(url: string, marco: "principal" | "hijo"): Promise<Fila> {
 
 // LO QUE ESTA MATRIZ CUBRE, dicho como lo hace Claude Code en su informe de
 // `preview` (lo que comprueba, y aparte que NO comprueba si se ve bien): se
-// enumera el alcance en vez de afirmar que todo va bien. Aquí son estas diez capacidades,
+// enumera el alcance en vez de afirmar que todo va bien. Aquí son estas catorce capacidades,
 // y la cookie va aparte porque NO es igual y se fija abajo tal cual sale.
 const IGUALES = [
   "origen_real", "localStorage", "sessionStorage", "indexedDB", "serviceWorker",
   "prompt", "confirm", "window_open", "ancla_desplaza", "formulario_envia",
+  "pointer_lock", "camara", "microfono", "ubicacion",
 ] as const;
 
 describe("el lienzo remoto da lo mismo que la publicada", () => {
@@ -268,6 +293,17 @@ describe("el lienzo remoto da lo mismo que la publicada", () => {
     expect(publicada.cookie).toBe("ok:true");
     expect(remoto.cookie).toBe("ok:false");
     expect(local.cookie).toMatch(/^lanza:SecurityError/);
+  });
+
+  it("🔴 lo que la página pide al visitante lo PUEDE pedir: puntero, cámara, micrófono y ubicación", () => {
+    // Sin esto, «remoto = publicada» pasaría en verde con las dos bloqueadas,
+    // que es como estuvo hasta el 2026-10-13.
+    expect(publicada.pointer_lock).toBe("ok");
+    expect(publicada.camara).toBe("ok:true");
+    expect(publicada.microfono).toBe("ok:true");
+    expect(publicada.ubicacion).toBe("ok:true");
+    // La reserva local también bloquea el puntero; la cámara no (sin `allow`).
+    expect(local.pointer_lock).toBe("ok");
   });
 
   it("BRAZO DE CONTROL: la reserva local SIGUE distinta en almacenamiento y formularios", () => {

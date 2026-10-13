@@ -48,7 +48,7 @@ import { transform, type Transform } from "sucrase";
 import { parse } from "es-module-lexer/js";
 // El parser de CSS de Tailwind (`usesTailwindDirectives`). Síncrono y puro.
 import postcss from "postcss";
-import { catalogo as catalogoDe, dependenciaDe } from "./dependencias";
+import { dependenciaDe } from "./dependencias";
 import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
 // `npm run apps:vendor` (que lo comprueba con `--comprobar`).
@@ -56,6 +56,9 @@ import EXPORTACIONES from "./exportaciones.json";
 import { isTestSupportFile } from "./tests/test-files";
 import { DOTENV_PATH } from "./env/rules";
 import { dotEnvPublicVars } from "./env/dotenv";
+import { catalogPartsLocked, servesSubpath, sourceOf } from "@/lib/apps/npm/lock";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 
 /** Lo que el compilador traduce SIEMPRE: el navegador no ejecuta ni JSX ni TS. */
 const SIEMPRE = [".jsx", ".tsx", ".ts"] as const;
@@ -109,8 +112,17 @@ export type Compilado =
       readonly js: string;
       /** Los módulos LOCALES que importa, ya resueltos: el grafo de la app. */
       readonly locales: readonly string[];
+      /** Every package specifier it imports (open npm), served or not. */
+      readonly packages: readonly string[];
     }
-  | { readonly ok: false; readonly errores: readonly Diagnostico[] };
+  | {
+      readonly ok: false;
+      readonly errores: readonly Diagnostico[];
+      /** The packages it imports, when the failure came after reading its imports:
+       *  a package that isn't installed yet is itself an error here, and the
+       *  installer still has to see it. */
+      readonly packages?: readonly string[];
+    };
 
 function extensionDe(ruta: string): string {
   const nombre = ruta.slice(ruta.lastIndexOf("/") + 1);
@@ -334,6 +346,20 @@ function effectiveEnv(ctx: ContextoDeCompilacion): Record<string, string> {
   return { ...(dotEnv === undefined ? {} : dotEnvPublicVars(dotEnv)), ...(ctx.entorno ?? {}) };
 }
 
+// NPM ABIERTO: quién sirve un paquete lo dicen /package.json y el lock por lo
+// que DICEN (sourceOf), así que su texto entra en la clave. Una vez por carpeta.
+const packagesSeen = new WeakMap<object, { readonly pkg: string; readonly lock: string; readonly fingerprint: string }>();
+function packagesFingerprint(carpeta: ContextoDeCompilacion["carpeta"]): string {
+  const pkg = carpeta[PACKAGE_JSON_PATH] ?? "";
+  const lock = carpeta[ESM_LOCK_PATH] ?? "";
+  const seen = packagesSeen.get(carpeta);
+  // La misma carpeta con los mismos textos (si alguien la cambió, se recalcula).
+  if (seen && seen.pkg === pkg && seen.lock === lock) return seen.fingerprint;
+  const fingerprint = createHash("sha256").update(pkg).update("\0").update(lock).digest("hex");
+  packagesSeen.set(carpeta, { pkg, lock, fingerprint });
+  return fingerprint;
+}
+
 function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion): string {
   // La resolución depende de QUÉ ficheros hay, no de lo que dicen: las rutas
   // entran en la clave, sus contenidos no. Salvo las HOJAS: una con `@apply`
@@ -360,6 +386,8 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update(Object.keys(ctx.carpeta).sort().join("\n"))
     .update("\0")
     .update(hojas)
+    .update("\0")
+    .update(packagesFingerprint(ctx.carpeta))
     .update("\0")
     .update(ctx.development ? "development" : "production")
     .digest("hex");
@@ -414,7 +442,7 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
   }
   const errores: Diagnostico[] = [];
   const locales = new Set<string>();
-  const nombres = catalogoDe(ctx.catalogo ?? "")?.dependencias.map((d) => d.especificador) ?? [];
+  const packages = new Set<string>();
   const error = (posicion: number, mensaje: string) =>
     errores.push({ ruta, linea: lineaDe(js, posicion), columna: null, mensaje });
 
@@ -448,8 +476,16 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       if (ctx.extraSpecifiers?.includes(especificador)) continue;
       // EL MODO DISEÑO: el runtime de desarrollo lo da el empaquetador.
       if (ctx.development && especificador === JSX_DEV_RUNTIME) continue;
-      // UN NOMBRE: o es del catálogo (lo resuelve el empaquetador) o no existe.
-      const dependencia = ctx.catalogo ? dependenciaDe(ctx.catalogo, especificador) : null;
+      // A NAME (open npm, spec 2026-10-13): the catalog serves it, or the esm
+      // lock does (the bundler resolves both), or nothing does yet.
+      packages.add(especificador);
+      const bare = parseBareSpecifier(especificador);
+      const source = ctx.catalogo && bare ? sourceOf(bare.name, ctx.carpeta, ctx.catalogo) : null;
+      if (source?.kind === "esm") {
+        const servesPart = !bare!.subpath || Object.hasOwn(source.locked.development, bare!.subpath) || Object.hasOwn(source.locked.assets, bare!.subpath);
+        if (servesPart) continue;
+      }
+      const dependencia = ctx.catalogo && source?.kind === "catalog" ? dependenciaDe(ctx.catalogo, especificador) : null;
       if (ctx.catalogo && dependencia) {
         const hay = catalogExportsOf(ctx.catalogo, dependencia.fichero);
         const tomados = dinamico || !hay ? null : nombresImportados(js.slice(imp.importStart, imp.importEnd));
@@ -458,12 +494,18 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         }
         continue;
       }
+      // A PART of a catalog package the catalog doesn't ship (react-dom/server),
+      // locked from esm.sh at the catalog's version: the bundler resolves it.
+      const parts = ctx.catalogo && bare && source?.kind === "catalog" ? catalogPartsLocked(bare.name, ctx.carpeta, ctx.catalogo) : null;
+      if (parts && servesSubpath(parts, bare!.subpath)) continue;
       if (/^[a-z][a-z0-9+.-]*:/i.test(especificador)) {
-        error(imp.start, `"${especificador}": imports from URLs or "${especificador.split(":")[0]}:" are not supported here. Available packages: ${nombres.join(", ") || "none (this is not an app)"}.`);
+        error(imp.start, `"${especificador}": imports from URLs or "${especificador.split(":")[0]}:" are not supported here. Import the package by its name and it installs from npm.`);
       } else if (!ctx.catalogo) {
         error(imp.start, `"${especificador}" is a package name, and packages can only be imported in an app. Import files by path (./file.js).`);
       } else {
-        error(imp.start, `"${especificador}" is not available in this app. Available packages: ${nombres.join(", ")}. Anything else has to be written in the project.`);
+        // A part of a catalog package installs with `npm install` (no name): by name it is already there.
+        const how = source?.kind === "catalog" ? "npm install" : `npm install ${bare?.name ?? especificador}`;
+        error(imp.start, `"${especificador}" is not installed in this app. It installs when a file that imports it is saved (or with ${how}); if that failed, the reason is in this same report.`);
       }
       continue;
     }
@@ -519,8 +561,8 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     error(imp.start, `${resuelto}: ${ext || "this kind of"} files cannot be imported. Reference it by its URL instead ("${resuelto}").`);
   }
 
-  if (errores.length > 0) return { ok: false, errores: errores.sort((a, b) => (a.linea ?? 0) - (b.linea ?? 0)) };
-  return { ok: true, js, locales: [...locales].sort() };
+  if (errores.length > 0) return { ok: false, errores: errores.sort((a, b) => (a.linea ?? 0) - (b.linea ?? 0)), packages: [...packages] };
+  return { ok: true, js, locales: [...locales].sort(), packages: [...packages] };
 }
 
 export interface CarpetaCompilada {
@@ -528,6 +570,9 @@ export interface CarpetaCompilada {
    *  Un fuente que no compila NO está, no a medias: su error, en `errores`. */
   readonly ficheros: Readonly<Record<string, string>>;
   readonly errores: readonly Diagnostico[];
+  /** Every package specifier the app's sources import (not the tests), served
+   *  or not: what the installer reads (lib/apps/npm/install.ts). */
+  readonly paquetes: readonly string[];
 }
 
 /** Toda la carpeta de una vez: lo que publica una app y lo que ven los ojos. */
@@ -536,6 +581,7 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
   const ficheros: Record<string, string> = {};
   const errores: Diagnostico[] = [];
   const localesDe = new Map<string, readonly string[]>();
+  const paquetes = new Set<string>();
   for (const [ruta, codigo] of Object.entries(ctx.carpeta)) {
     // LAS PRUEBAS NO SON DE LA APP (plan 04): ni se compilan con ella —importan
     // `vitest`, que no es del catálogo— ni se empaquetan ni se publican. Las
@@ -546,13 +592,14 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
       continue;
     }
     const r = compilarFuente(ruta, codigo, ctx);
+    for (const p of r.packages ?? []) paquetes.add(p);
     if (r.ok) {
       ficheros[ruta] = r.js;
       localesDe.set(ruta, r.locales);
     } else errores.push(...r.errores);
   }
   errores.push(...nombresLocalesQueNoExisten(ficheros, localesDe));
-  return { ficheros, errores };
+  return { ficheros, errores, paquetes: [...paquetes] };
 }
 
 /**
