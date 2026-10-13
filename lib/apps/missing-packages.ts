@@ -5,7 +5,9 @@
 // (`projectChatMessages.transcript`), with the exact text the model read.
 // There are four messages, and this is their only reader:
 //
-//   npm-install  an app's terminal (`trabajador.mjs`, `npmInstall`):
+//   npm-install  an app's terminal: since open npm (2026-10-13), the package
+//                a `npm install` error names (`herramientas-de-app.ts`):
+//                «npm error young: published 10 days ago; …»; before it,
 //                «three: isn't available here — there is no npm; …»
 //   import       the compiler, a package nothing serves yet — the catalog
 //                doesn't have it and installing it (open npm) didn't happen
@@ -38,6 +40,9 @@ export interface MissingPackageRow {
 }
 
 const PATTERNS: readonly (readonly [MissingSource, RegExp])[] = [
+  // Open npm: the package a `npm install` error names (the gate or esm.sh refused it).
+  ["npm-install", /^npm error ((?:@[^\s/@]+\/)?[^\s@:/]+(?:@[^\s:]*)?)(?::| is | depends on )/gm],
+  // Before open npm, still in stored turns.
   ["npm-install", /^(\S+): isn't available here — there is no npm;/gm],
   // "available": the wording before open npm, still in stored turns.
   ["import", /"([^"]+)" is not (?:installed|available) in this app\./g],

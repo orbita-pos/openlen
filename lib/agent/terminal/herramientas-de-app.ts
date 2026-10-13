@@ -13,7 +13,9 @@ import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
-import { ESM_LOCK_PATH } from "@/lib/apps/npm/paths";
+import { listPackages, pendingInstall, type InstallOutcome, type InstallRequest } from "@/lib/apps/npm/install";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { formatVitestReport } from "@/lib/apps/tests/report";
 import { typesPackagesOf } from "@/lib/apps/checker/types-pack";
 import type { TerminalDeLen } from "./terminal";
@@ -29,9 +31,40 @@ function dentroDe(rutas: readonly string[], ruta: string): boolean {
   });
 }
 
+/** `three`, `three@^0.186`, `@scope/pkg@1.2.3` → name and range, like npm. */
+export function parseInstallArg(arg: string): { name: string; range: string | null } {
+  const at = arg.indexOf("@", 1);
+  return at > 0 ? { name: arg.slice(0, at), range: arg.slice(at + 1) || null } : { name: arg, range: null };
+}
+
+function npmOutput(outcome: InstallOutcome, request: InstallRequest, ms: number): { stdout: string; stderr: string; exitCode: number } {
+  const errors = outcome.notes.filter((n) => n.severity === "Error");
+  const stderr = [
+    ...outcome.notes.filter((n) => n.severity === "Warning").map((n) => `npm warn ${n.message}`),
+    ...errors.map((n) => `npm error ${n.message}`),
+  ];
+  const secs = (ms / 1000).toFixed(1);
+  const plural = (n: number) => `${n} package${n === 1 ? "" : "s"}`;
+  const lines = outcome.installed.map((p) => `+ ${p}`);
+  if (request.remove.length > 0) lines.push(`removed ${plural(request.remove.length)} in ${secs}s`);
+  else lines.push(outcome.installed.length > 0 ? `added ${plural(outcome.installed.length)} in ${secs}s` : `up to date in ${secs}s`);
+  return { stdout: `${lines.join("\n")}\n`, stderr: stderr.length > 0 ? `${stderr.join("\n")}\n` : "", exitCode: errors.length > 0 ? 1 : 0 };
+}
+
+/** Lo que `npm install` no tiene que traer de npm porque ya está: el kit de
+ *  pruebas (plan 04) y los `@types` del paquete de tipos del catálogo. Su línea
+ *  es la de antes de npm abierto; `null` si hay que instalarlo. */
+function alreadyThere(name: string, typesPackages: readonly string[]): string | null {
+  if (name === "vitest") return "vitest: already available (tests run with OpenLen's test kit)";
+  if (/^@(?:testing-library|vitest)\//.test(name)) return `${name}: already available (test kit)`;
+  if (name === "jsdom" || name === "happy-dom") return `${name}: not needed: tests run in a real browser (Chromium), like Vitest's browser mode`;
+  if (typesPackages.includes(name)) return `${name}: already available (its types come with the catalog)`;
+  return null;
+}
+
 export function appToolsFor(
-  session: Pick<AgentSession, "app" | "projectId">,
-  deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp" | "projectFiles">,
+  session: Pick<AgentSession, "app" | "projectId" | "autor">,
+  deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp" | "projectFiles" | "installPackages" | "saveProjectFile">,
 ): AppTools | undefined {
   const app = session.app;
   const check = deps.checkApp;
@@ -49,6 +82,46 @@ export function appToolsFor(
       // de la terminal, como está AHORA.
       const server = session.projectId && deps.projectFiles ? await deps.projectFiles(session.projectId).catch(() => ({}) as Record<string, string>) : {};
       const ficheros = server[ESM_LOCK_PATH] !== undefined ? { ...deLaTerminal, [ESM_LOCK_PATH]: server[ESM_LOCK_PATH] } : deLaTerminal;
+      // NPM ABIERTO: `npm install|uninstall|ls`, por el mismo instalador que
+      // guardar un import (`deps.installPackages`). El lock se guarda aquí (la
+      // terminal no escribe /.openlen); el /package.json nuevo vuelve en `files`
+      // y lo guarda el comando, por la puerta de siempre.
+      if (program === "npm-install" || program === "npm-uninstall" || program === "npm-ls") {
+        if (!deps.installPackages) return { stdout: "", stderr: "npm: not available here.\n", exitCode: 1 };
+        if (program === "npm-ls") return { stdout: listPackages(ficheros, app), stderr: "", exitCode: 0 };
+        const names = args.filter((a) => !a.startsWith("-"));
+        const typesPackages = typesPackagesOf(app.catalogo);
+        const here = program === "npm-install" ? names.map((n) => alreadyThere(parseInstallArg(n).name, typesPackages)) : [];
+        const local = here.filter((l): l is string => l !== null).map((l) => `${l}\n`).join("");
+        const toInstall = names.filter((_, i) => !here[i]);
+        if (program === "npm-install" && names.length > 0 && toInstall.length === 0) return { stdout: local, stderr: "", exitCode: 0 };
+        const request: InstallRequest =
+          program === "npm-uninstall"
+            ? { add: [], remove: names.map((n) => parseInstallArg(n).name) }
+            : toInstall.length === 0
+              ? pendingInstall(ficheros, app)
+              : {
+                  add: toInstall.map((n) => {
+                    const p = parseInstallArg(n);
+                    return { name: parseBareSpecifier(p.name)?.name ?? p.name, range: p.range, subpaths: [""], explicit: true };
+                  }),
+                  remove: [],
+                };
+        const started = Date.now();
+        const outcome = await deps.installPackages(ficheros, app, request);
+        const lock = outcome.files[ESM_LOCK_PATH];
+        if (lock !== undefined && deps.saveProjectFile && session.projectId) {
+          const verb = program === "npm-uninstall" ? "uninstall" : "install";
+          await deps.saveProjectFile(session.projectId, ESM_LOCK_PATH, lock, {
+            before: ficheros[ESM_LOCK_PATH] ?? null,
+            label: `npm ${verb} ${names.join(" ")}`.trim(),
+            source: session.autor === "usuario" ? "manual" : "chat",
+          });
+        }
+        const out = npmOutput(outcome, request, Date.now() - started);
+        const pkg = outcome.files[PACKAGE_JSON_PATH];
+        return { ...out, stdout: local + out.stdout, ...(pkg !== undefined ? { files: { [PACKAGE_JSON_PATH]: pkg } } : {}) };
+      }
       if (program === "test") {
         if (args.some((a) => a === "--coverage" || a.startsWith("--coverage."))) return { stdout: "", stderr: "vitest: coverage isn't available here.\n", exitCode: 1 };
         if (args.some((a) => a === "-u" || a === "--update")) return { stdout: "", stderr: "vitest: snapshots aren't available here (there is no snapshot file).\n", exitCode: 1 };
