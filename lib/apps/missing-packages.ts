@@ -1,20 +1,20 @@
-// QUÉ PAQUETES PIDE LEN QUE SU CATÁLOGO NO TIENE, para que el catálogo crezca
-// con datos y no a ojo.
+// WHICH PACKAGES LEN ASKS FOR THAT ITS CATALOG DOESN'T HAVE, so the catalog
+// grows from data and not by eye.
 //
-// No hay registro aparte: cada choque ya queda en la transcripción del turno
-// (`projectChatMessages.transcript`), con el texto exacto que leyó el modelo.
-// Son cuatro mensajes, y éste es su único lector:
+// There is no separate log: every clash is already in the turn's transcript
+// (`projectChatMessages.transcript`), with the exact text the model read.
+// There are four messages, and this is their only reader:
 //
-//   npm-install  la terminal de una app (`trabajador.mjs`, `npmInstall`):
+//   npm-install  an app's terminal (`trabajador.mjs`, `npmInstall`):
 //                «three: isn't available here — there is no npm; …»
-//   import       el compilador, un nombre que el catálogo no tiene:
+//   import       the compiler, a name the catalog doesn't have:
 //                «"three" is not available in this app. …»
-//   url-import   el compilador, un import desde un CDN:
+//   url-import   the compiler, an import from a CDN:
 //                «"https://esm.sh/three": imports from URLs or "https:" are not supported here.»
-//   page-import  el compilador, un paquete importado en una PÁGINA (no app):
+//   page-import  the compiler, a package imported in a PAGE (not an app):
 //                «"chart.js" is a package name, and packages can only be imported in an app.»
 //
-// Si cambia uno de esos textos, `missing-packages.test.ts` lo dice.
+// If one of those texts changes, `missing-packages.test.ts` says so.
 
 export type MissingSource = "npm-install" | "import" | "url-import" | "page-import";
 
@@ -25,26 +25,26 @@ export interface MissingHit {
 
 export interface MissingPackageRow {
   readonly pkg: string;
-  /** Proyectos distintos que lo pidieron. */
+  /** Distinct projects that asked for it. */
   readonly projects: number;
-  /** Turnos en los que apareció (por cualquier fuente). */
+  /** Turns it showed up in (from any source). */
   readonly turns: number;
   readonly sources: readonly MissingSource[];
-  /** Fecha (AAAA-MM-DD, UTC) del último turno que lo pidió. */
+  /** Date (YYYY-MM-DD, UTC) of the last turn that asked for it. */
   readonly lastSeen: string;
-  /** Ya está en el catálogo con el que nacen las apps nuevas: lo pidió una app de un catálogo anterior. */
+  /** Already in the catalog new apps are born with: an app on an older catalog asked for it. */
   readonly inCurrentCatalog: boolean;
 }
 
-const PATRONES: readonly (readonly [MissingSource, RegExp])[] = [
+const PATTERNS: readonly (readonly [MissingSource, RegExp])[] = [
   ["npm-install", /^(\S+): isn't available here — there is no npm;/gm],
   ["import", /"([^"]+)" is not available in this app\./g],
   ["url-import", /"([^"]+)": imports from URLs or "[^"]*" are not supported here\./g],
   ["page-import", /"([^"]+)" is a package name, and packages can only be imported in an app\./g],
 ];
 
-// Los CDN que sirven npm por su nombre: lo que va detrás del prefijo es `paquete[@versión][/ruta]`.
-const CDNS: readonly RegExp[] = [
+// The CDNs that serve npm by name: what follows the prefix is `package[@version][/path]`.
+const CDN_PREFIXES: readonly RegExp[] = [
   /^https?:\/\/esm\.sh\/(?:v\d+\/|stable\/)?(.+)$/i,
   /^https?:\/\/cdn\.jsdelivr\.net\/npm\/(.+)$/i,
   /^https?:\/\/unpkg\.com\/(.+)$/i,
@@ -52,60 +52,60 @@ const CDNS: readonly RegExp[] = [
   /^https?:\/\/ga\.jspm\.io\/npm:(.+)$/i,
 ];
 
-const NOMBRE_NPM = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
+const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
 
-/** El paquete de un especificador (`three/examples/x.js` → `three`) o de una URL de CDN; `null` si no lo hay. */
-export function packageNameOf(especificador: string): string | null {
-  let s = especificador.trim();
+/** The package of a specifier (`three/examples/x.js` → `three`) or of a CDN URL; `null` if there is none. */
+export function packageNameOf(specifier: string): string | null {
+  let s = specifier.trim();
   if (/^[a-z][a-z0-9+.-]*:/i.test(s)) {
-    const cdn = CDNS.map((re) => re.exec(s)).find(Boolean);
+    const cdn = CDN_PREFIXES.map((re) => re.exec(s)).find(Boolean);
     if (!cdn) return null;
     s = cdn[1]!.split(/[?#]/)[0]!;
   }
-  const partes = s.split("/");
-  const tramos = partes.slice(0, s.startsWith("@") ? 2 : 1);
-  const ultimo = tramos.length - 1;
-  tramos[ultimo] = tramos[ultimo]!.replace(/@.*$/, "");
-  const nombre = tramos.join("/");
-  return NOMBRE_NPM.test(nombre) ? nombre : null;
+  const parts = s.split("/");
+  const segments = parts.slice(0, s.startsWith("@") ? 2 : 1);
+  const last = segments.length - 1;
+  segments[last] = segments[last]!.replace(/@.*$/, "");
+  const name = segments.join("/");
+  return NPM_NAME.test(name) ? name : null;
 }
 
-// Una respuesta de herramienta sin texto propio se guarda como
-// `JSON.stringify(respuesta)` (`contenidoDeRespuesta`, lib/agent/fireworks-bridge.ts):
-// dentro, el mensaje no empieza línea y sus comillas van escapadas. Se abre y se
-// recorre como lo demás.
-function* textosDe(valor: unknown): Generator<string> {
-  if (typeof valor === "string") {
-    const t = valor.trimStart();
+// A tool response without its own text is stored as `JSON.stringify(response)`
+// (`contenidoDeRespuesta`, lib/agent/fireworks-bridge.ts): inside it, the
+// message doesn't start a line and its quotes are escaped. It is parsed and
+// walked like everything else.
+function* stringsIn(value: unknown): Generator<string> {
+  if (typeof value === "string") {
+    const t = value.trimStart();
     if (t.startsWith("{") || t.startsWith("[")) {
-      let abierto: unknown;
+      let parsed: unknown;
       try {
-        abierto = JSON.parse(valor);
+        parsed = JSON.parse(value);
       } catch {
-        yield valor;
+        yield value;
         return;
       }
-      yield* textosDe(abierto);
+      yield* stringsIn(parsed);
       return;
     }
-    yield valor;
-  } else if (Array.isArray(valor)) {
-    for (const v of valor) yield* textosDe(v);
-  } else if (valor && typeof valor === "object") {
-    for (const v of Object.values(valor)) yield* textosDe(v);
+    yield value;
+  } else if (Array.isArray(value)) {
+    for (const v of value) yield* stringsIn(v);
+  } else if (value && typeof value === "object") {
+    for (const v of Object.values(value)) yield* stringsIn(v);
   }
 }
 
-/** Los paquetes que faltaron en UN turno: cada uno una vez por fuente, en el orden en que salieron. */
+/** The packages missing in ONE turn: each once per source, in the order they came up. */
 export function missingPackagesOfTurn(transcript: unknown): MissingHit[] {
-  const vistos = new Set<string>();
+  const seen = new Set<string>();
   const out: MissingHit[] = [];
-  for (const texto of textosDe(transcript)) {
-    for (const [source, patron] of PATRONES) {
-      for (const m of texto.matchAll(patron)) {
+  for (const text of stringsIn(transcript)) {
+    for (const [source, pattern] of PATTERNS) {
+      for (const m of text.matchAll(pattern)) {
         const pkg = packageNameOf(m[1]!);
-        if (!pkg || vistos.has(`${source}\0${pkg}`)) continue;
-        vistos.add(`${source}\0${pkg}`);
+        if (!pkg || seen.has(`${source}\0${pkg}`)) continue;
+        seen.add(`${source}\0${pkg}`);
         out.push({ pkg, source });
       }
     }
@@ -119,32 +119,32 @@ export interface TurnForTally {
   readonly transcript: unknown;
 }
 
-/** La tabla por paquete: más proyectos primero, luego más turnos. */
+/** The table by package: most projects first, then most turns. */
 export function tallyMissingPackages(
-  turnos: readonly TurnForTally[],
+  turns: readonly TurnForTally[],
   currentCatalog: readonly string[],
 ): MissingPackageRow[] {
-  const enCatalogo = new Set(currentCatalog.map((e) => packageNameOf(e) ?? e));
-  const porPaquete = new Map<string, { projects: Set<string>; turns: number; sources: Set<MissingSource>; last: Date }>();
-  for (const t of turnos) {
+  const inCatalog = new Set(currentCatalog.map((e) => packageNameOf(e) ?? e));
+  const byPackage = new Map<string, { projects: Set<string>; turns: number; sources: Set<MissingSource>; last: Date }>();
+  for (const t of turns) {
     const hits = missingPackagesOfTurn(t.transcript);
     for (const pkg of new Set(hits.map((h) => h.pkg))) {
-      const fila = porPaquete.get(pkg) ?? { projects: new Set(), turns: 0, sources: new Set(), last: t.createdAt };
-      fila.projects.add(t.projectId);
-      fila.turns += 1;
-      for (const h of hits) if (h.pkg === pkg) fila.sources.add(h.source);
-      if (t.createdAt > fila.last) fila.last = t.createdAt;
-      porPaquete.set(pkg, fila);
+      const row = byPackage.get(pkg) ?? { projects: new Set(), turns: 0, sources: new Set(), last: t.createdAt };
+      row.projects.add(t.projectId);
+      row.turns += 1;
+      for (const h of hits) if (h.pkg === pkg) row.sources.add(h.source);
+      if (t.createdAt > row.last) row.last = t.createdAt;
+      byPackage.set(pkg, row);
     }
   }
-  return [...porPaquete.entries()]
-    .map(([pkg, f]) => ({
+  return [...byPackage.entries()]
+    .map(([pkg, r]) => ({
       pkg,
-      projects: f.projects.size,
-      turns: f.turns,
-      sources: [...f.sources].sort(),
-      lastSeen: f.last.toISOString().slice(0, 10),
-      inCurrentCatalog: enCatalogo.has(pkg),
+      projects: r.projects.size,
+      turns: r.turns,
+      sources: [...r.sources].sort(),
+      lastSeen: r.last.toISOString().slice(0, 10),
+      inCurrentCatalog: inCatalog.has(pkg),
     }))
     .sort((a, b) => b.projects - a.projects || b.turns - a.turns || a.pkg.localeCompare(b.pkg));
 }

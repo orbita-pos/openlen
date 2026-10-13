@@ -108,10 +108,10 @@ const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</ti
   t('serviceWorker', function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function(){ return 'api'; }) : Promise.reject({ name: 'sin_api' }); });
   // Lo que la POLÍTICA deja pedir. Headless no tiene cámara ni micrófono: se
   // mide si el documento puede preguntar, que es lo que decide la cabecera.
-  function politica(f){ var p = document.permissionsPolicy || document.featurePolicy; return p ? p.allowsFeature(f) : 'sin_api'; }
-  t('camara', function(){ return politica('camera'); });
-  t('microfono', function(){ return politica('microphone'); });
-  t('ubicacion', function(){ return politica('geolocation'); });
+  function policyAllows(f){ var p = document.permissionsPolicy || document.featurePolicy; return p ? p.allowsFeature(f) : 'sin_api'; }
+  t('camara', function(){ return policyAllows('camera'); });
+  t('microfono', function(){ return policyAllows('microphone'); });
+  t('ubicacion', function(){ return policyAllows('geolocation'); });
   // El puntero, y se suelta en el acto: con él bloqueado los clics siguientes
   // de la sonda (el ancla) no llegarían a su sitio.
   document.getElementById('lock').addEventListener('click', function(){
@@ -188,11 +188,11 @@ beforeAll(async () => {
     if (ruta === "/abridor/") return res.end(ABRIDOR(`http://${HEX_HOST}:${puerto}/ventana/`));
     if (ruta === "/taller-escape/" || ruta === "/taller-sin-escape/") {
       // Sin `allow-pointer-lock` en los dos brazos: es la sonda (ver arriba).
-      const sinPuntero = SANDBOX_REMOTO.replace(" allow-pointer-lock", "");
+      const withoutPointerLock = SANDBOX_REMOTO.replace(" allow-pointer-lock", "");
       const flags =
         ruta === "/taller-escape/"
-          ? sinPuntero
-          : sinPuntero.replace(" allow-popups-to-escape-sandbox", "");
+          ? withoutPointerLock
+          : withoutPointerLock.replace(" allow-popups-to-escape-sandbox", "");
       return res.end(
         `<!doctype html><body style="margin:0"><iframe id="lienzo" sandbox="${flags}" allow="${ALLOW_REMOTO}" style="width:1000px;height:600px;border:0" src="http://${HEX_HOST}:${puerto}/abridor/"></iframe></body>`,
       );
