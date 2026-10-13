@@ -244,6 +244,13 @@ describe("package.json and the esm lock", () => {
     expect(isPublishableFolderPath(ESM_LOCK_PATH)).toBe(false);
   });
 
+  it("/node_modules is npm's, read-only: nothing is saved there, and the reason says how packages get in", () => {
+    const c = classifyFolderPath("/node_modules/leaflet/dist/leaflet.js");
+    expect(c.ok).toBe(false);
+    if (!c.ok) expect(c.reason).toMatch(/npm's and read-only; packages are installed with npm install/);
+    expect(classifyFolderPath("/src/node_modules.ts").ok).toBe(true);
+  });
+
   it("a package.json that isn't a JSON object is not saved, with the reason", () => {
     expect(folderSaveProblem(PACKAGE_JSON_PATH, "{ broken", new Map())).toMatch(/not valid JSON/);
     expect(folderSaveProblem(PACKAGE_JSON_PATH, "[1, 2]", new Map())).toMatch(/must be a JSON object/);

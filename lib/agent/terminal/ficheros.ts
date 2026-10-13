@@ -23,8 +23,10 @@ const DEL_SISTEMA = /^\/(?:tmp|bin|usr|dev|proc)(?:\/|$)/;
 /** F5 · la carpeta de SÓLO LECTURA, `/.openlen` (resultados, bandeja, catálogo
  *  de fotos y versiones). Se calcula al leerla (`solo-lectura.ts`) y nadie la
  *  escribe: el hilo contesta EROFS (`trabajador.mjs`, con la misma expresión).
- *  Oculta, como el `.git` de DeepSeek: una búsqueda del sitio no entra en ella. */
-export const DE_SOLO_LECTURA = /^\/\.openlen(?:\/|$)/;
+ *  Oculta, como el `.git` de DeepSeek: una búsqueda del sitio no entra en ella.
+ *  Y el `/node_modules` de una app (npm abierto): los package.json y .d.ts de
+ *  sus paquetes (`lib/apps/npm/node-modules.ts`), que tampoco son del proyecto. */
+export const DE_SOLO_LECTURA = /^\/(?:\.openlen|node_modules)(?:\/|$)/;
 
 export function esDeSoloLectura(ruta: string): boolean {
   return DE_SOLO_LECTURA.test(ruta);

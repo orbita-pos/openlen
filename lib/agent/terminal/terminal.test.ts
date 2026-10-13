@@ -384,6 +384,49 @@ describe("TerminalDeLen", () => {
     }, 20_000);
   });
 
+  // NPM ABIERTO: el turno real de Len (13/10) buscó el código de un paquete en
+  // node_modules, como en v0, y no existía. Como en Claude Code: se abre por su
+  // ruta, y una búsqueda del proyecto no entra (su Grep es ripgrep, con .gitignore).
+  describe("el /node_modules de una app", () => {
+    const DTS = "export declare function map(id: string): Map;\n";
+    function conNodeModules() {
+      const leidos: string[] = [];
+      const { t } = terminal({
+        cargarFicheros: async () => ({ ...SITIO, "/src/App.tsx": "map('x');\n" }),
+        perezosos: {
+          rutas: async () => ["/node_modules/@types/leaflet/index.d.ts", "/node_modules/leaflet/package.json"],
+          leer: async (ruta) => {
+            leidos.push(ruta);
+            return ruta.endsWith(".d.ts") ? DTS : '{ "name": "leaflet", "version": "1.9.4" }\n';
+          },
+        },
+        appTools: { catalogSpecifiers: [], typesPackages: [], run: async () => ({ stdout: "", stderr: "", exitCode: 0 }) },
+      });
+      return { t, leidos };
+    }
+
+    it("🔴 se lee por su ruta (ls, cat, grep dentro de él) y no se escribe", async () => {
+      const { t } = conNodeModules();
+      expect((await t.ejecutar("ls /node_modules /node_modules/@types")).stdout).toContain("leaflet");
+      expect((await t.ejecutar("cat /node_modules/@types/leaflet/index.d.ts")).stdout).toBe(DTS);
+      expect((await t.ejecutar("grep -rn 'function map' /node_modules/@types/leaflet")).stdout).toContain("index.d.ts:1:");
+      const escribir = await t.ejecutar("echo x > /node_modules/leaflet/package.json");
+      expect(escribir.exitCode).not.toBe(0);
+      expect(escribir.stderr).toContain("EROFS");
+      expect(Object.keys(escribir.ficheros ?? {}).some((r) => r.startsWith("/node_modules"))).toBe(false);
+    }, 20_000);
+
+    it("🔴 una búsqueda del proyecto no entra: grep -rn / y rg ni lo calculan ni lo enseñan", async () => {
+      const { t, leidos } = conNodeModules();
+      const grep = await t.ejecutar("grep -rn map /");
+      expect(grep.stdout).toContain("/src/App.tsx:1:");
+      expect(grep.stdout).not.toContain("node_modules");
+      expect((await t.ejecutar("cd / && grep -Rni map .")).stdout).not.toContain("node_modules");
+      expect((await t.ejecutar("rg map /")).stdout).not.toContain("node_modules");
+      expect(leidos).toEqual([]);
+    }, 20_000);
+  });
+
   // Plan 03 de las apps: `tsc`, `eslint`, `npx` y `npm` en una app los contesta
   // el comprobador de verdad (en el hilo de la app); `npm install`, el catálogo.
   describe("tsc, eslint, npx y npm en una app (plan 03, tarea 5)", () => {

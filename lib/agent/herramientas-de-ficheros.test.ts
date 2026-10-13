@@ -2120,6 +2120,16 @@ describe("convertir una página en app", () => {
     assert.ok((rota.diagnosticos ?? []).some((d) => d.ruta === "/src/screens/Nueva.jsx"), "lo que no compila ya vuelve en el acto");
   });
 
+  it("🔴 en una app, Read abre /node_modules por su ruta, como Claude Code (el turno real de Len lo buscó); en una página no existe", async () => {
+    const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const { deps } = conCarpeta({ html: "<!doctype html>", app: APP });
+    const enApp = await runAgentTool({ ...makeSession(), app: APP }, deps, "Read", { file_path: "/node_modules/lucide-react/package.json" });
+    assert.equal(enApp.response.ok, true, texto(enApp));
+    assert.match(texto(enApp), /"name":"lucide-react"/);
+    const enPagina = await runAgentTool(makeSession(), conCarpeta({ html: HOME }).deps, "Read", { file_path: "/node_modules/lucide-react/package.json" });
+    assert.equal(enPagina.response.ok, false);
+  });
+
   it("una app no se vuelve a convertir", async () => {
     const { deps, archivos } = conCarpeta({ html: "<!doctype html>", app: { catalogo: "2026-10", entrada: "/src/main.jsx" } });
     conLaApp(archivos);

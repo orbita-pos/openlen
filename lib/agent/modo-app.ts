@@ -275,7 +275,8 @@ const PUBLICAR_EN_LA_APP =
 export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish", "bash"] as const;
 
 /** `bash` en una app: lo que la de una página no tiene, la app sí —npm test,
- *  npm run build, npm run lint, npx tsc (planes 02–04)— y /tests es de vitest.
+ *  npm run build, npm run lint, npx tsc (planes 02–04)—, /tests es de vitest y
+ *  hay un /node_modules para leer.
  *  La descripción decía «no node, npm…» mientras el manual pedía npm test. */
 function bashDeLaApp(descripcion: string): string {
   const conNpm = cambiar(
@@ -283,10 +284,16 @@ function bashDeLaApp(descripcion: string): string {
     "no node, npm, pip or git",
     "no node, pip or git (in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
   );
-  return cambiar(
+  const conTests = cambiar(
     conNpm,
     "/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published",
     "/tests holds the app's tests (vitest), never published",
+  );
+  // NPM ABIERTO: lo que npm deja en node_modules para leer (`lib/apps/npm/node-modules.ts`).
+  return cambiar(
+    conTests,
+    "- /tmp: scratch space for this turn, never saved.",
+    "- /node_modules: the installed packages, read-only: each one's package.json and its type declarations (.d.ts), not its JavaScript (it comes built for the browser); a search like grep -r / does not enter it unless you name it.\n- /tmp: scratch space for this turn, never saved.",
   );
 }
 

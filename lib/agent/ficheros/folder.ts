@@ -76,6 +76,10 @@ export function classifyFolderPath(path: string): FolderPathClass {
   if (RESERVED_FILES.includes(path) || segments[0] === ".openlen") {
     return { ok: false, reason: `${path} belongs to the platform and is read-only.` };
   }
+  // OPEN NPM: /node_modules is what npm installs, read-only (`lib/apps/npm/node-modules.ts`).
+  if (segments[0] === "node_modules") {
+    return { ok: false, reason: `${path}: /node_modules is npm's and read-only; packages are installed with npm install, or by importing them.` };
+  }
   // EL `.env` DE VITE (spec local 2026-10-10): sólo `/.env`, en la raíz. Los
   // demás `.env*` se rechazan con el porqué: aquí no hay modos que los elijan.
   if (path === DOTENV_PATH) return { ok: true, kind: "env" };
