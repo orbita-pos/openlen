@@ -33,12 +33,12 @@ describe("fetchGraph", () => {
     expect(r).toEqual({ ok: false, error: { code: "not-found", message: "/nope@1.0.0?target=es2022 not found" } });
   });
 
-  it("esm.sh down (after one retry) is unavailable-or-build-failed with its text, never a crash", async () => {
+  it("🔴 esm.sh failing with a 5xx (after one retry) is unavailable — the service, not the package — with its status and text, never a crash", async () => {
+    // Measured 2026-10-12: «500 storage(put): … no space left on device» on every new build.
     npm.setDown("esm", true);
     const r = await fetchGraph(`${npm.origin}/tiny@1.0.0?target=es2022`, opts());
     npm.setDown("esm", false);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.message).toMatch(/esm\.sh is down/);
+    expect(r).toEqual({ ok: false, error: { code: "unavailable", message: "esm.sh answered 503: esm.sh is down" } });
   });
 
   it("a server that doesn't answer is unavailable", async () => {

@@ -36,10 +36,12 @@ import { fetchTypes } from "./types";
 export const MAX_ESM_PACKAGES = 50;
 export const MAX_MODULE_BYTES = 40 * 1024 * 1024;
 export const INSTALL_DEADLINE_MS = 60_000;
-/** How long a refusal (the gate's or esm.sh's, never a service that didn't
- *  answer) is remembered: saving again doesn't ask npm again. `npm install
+/** A refusal (the gate's or esm.sh's, never a service that failed or didn't
+ *  answer) is remembered while /package.json stays the same — like v0, which
+ *  installs again when package.json changes, not on every save — and at most
+ *  this long (a version too new today may be old enough later). `npm install
  *  <name>` always asks. */
-export const REFUSAL_TTL_MS = 10 * 60_000;
+export const REFUSAL_TTL_MS = 60 * 60_000;
 const MAX_REFUSALS = 500;
 const refusals = new Map<string, { readonly message: string; readonly until: number }>();
 
@@ -47,7 +49,8 @@ export function clearRefusalCache(): void {
   refusals.clear();
 }
 
-const refusalKey = (catalog: string, add: InstallAdd) => [catalog, add.name, add.range ?? "", [...add.subpaths].sort().join(",")].join("\0");
+const refusalKey = (catalog: string, add: InstallAdd, packageJson: string) =>
+  [catalog, add.name, add.range ?? "", [...add.subpaths].sort().join(","), sha256Hex(packageJson)].join("\0");
 
 function rememberRefusal(key: string, message: string, until: number): void {
   refusals.delete(key);
@@ -140,7 +143,7 @@ function graphMessage(name: string, version: string, subpath: string, e: GraphEr
     case "too-large":
       return `${name}@${version}: ${e.message}; not installed.`;
     default:
-      return `${name}: the package service did not answer; nothing was installed. Try again.`;
+      return `${name}: ${e.message}; nothing was installed. It's the package service, not the package: try again.`;
   }
 }
 
@@ -365,7 +368,7 @@ export async function installForApp(args: { readonly files: Files; readonly app:
         notes.push(error(`${add.name}: installing took longer than ${INSTALL_DEADLINE_MS / 1000} s; it was not installed. Try again.`));
         continue;
       }
-      const key = refusalKey(app.catalogo, add);
+      const key = refusalKey(app.catalogo, add, files[PACKAGE_JSON_PATH] ?? "");
       const now = deps.now().getTime();
       const known = add.explicit ? undefined : refusals.get(key);
       if (known && known.until > now) {
