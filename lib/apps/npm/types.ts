@@ -9,6 +9,7 @@ import { rawUrl } from "./esm-url";
 import { fetchText } from "./fetch-graph";
 import { checkResolved, type GateDeps } from "./gate";
 import { esmOrigin } from "./paths";
+import { mapLimited } from "./pool";
 import { getPackument, type FetchLike } from "./registry";
 
 const MAX_FILES = 600;
@@ -83,33 +84,39 @@ async function crawl(pkgName: string, pkgVersion: string, entry: string, manifes
   const root = `/node_modules/${pkgName}/`;
   const files: Record<string, string> = { [`${root}package.json`]: manifestText };
   const entryFile = path.posix.normalize(entry.replace(/^\.\//, ""));
-  const queue = [entryFile];
-  const seen = new Set(queue);
+  const seen = new Set([entryFile]);
   let bytes = manifestText.length;
-  while (queue.length > 0) {
-    const file = queue.shift()!;
-    const got = await fetchText(rawUrl(pkgName, pkgVersion, file, origin), opts);
-    if (!got.ok) {
-      // The entry missing means no types; another file missing is one of the
-      // two candidates of a reference (x.d.ts / x/index.d.ts): try the next.
-      if (file === entryFile) return null;
-      continue;
-    }
-    files[`${root}${file}`] = got.text;
-    bytes += got.text.length;
-    if (Object.keys(files).length > MAX_FILES || bytes > MAX_BYTES) break;
-    const refs = [
-      ...[...got.text.matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!),
-      ...[...got.text.matchAll(/\/\/\/\s*<reference\s+path=["']([^"']+)["']/g)].map((m) => m[1]!),
-    ];
-    for (const ref of refs) {
-      for (const candidate of candidatesFor(file, ref.startsWith(".") ? ref : `./${ref}`)) {
-        if (!seen.has(candidate)) {
-          seen.add(candidate);
-          queue.push(candidate);
+  // In waves, each fetched several at a time (measured in the box rehearsal:
+  // @types/three's 415 files one by one took 52.6 s of the 60 s install).
+  let wave = [entryFile];
+  while (wave.length > 0) {
+    const got = await mapLimited(wave, (file) => fetchText(rawUrl(pkgName, pkgVersion, file, origin), opts));
+    const next: string[] = [];
+    for (const [i, file] of wave.entries()) {
+      const g = got[i]!;
+      if (!g.ok) {
+        // The entry missing means no types; another file missing is one of the
+        // two candidates of a reference (x.d.ts / x/index.d.ts): the other may be there.
+        if (file === entryFile) return null;
+        continue;
+      }
+      files[`${root}${file}`] = g.text;
+      bytes += g.text.length;
+      if (Object.keys(files).length > MAX_FILES || bytes > MAX_BYTES) return files;
+      const refs = [
+        ...[...g.text.matchAll(/(?:from|import)\s*\(?\s*["'](\.{1,2}\/[^"']+)["']/g)].map((m) => m[1]!),
+        ...[...g.text.matchAll(/\/\/\/\s*<reference\s+path=["']([^"']+)["']/g)].map((m) => m[1]!),
+      ];
+      for (const ref of refs) {
+        for (const candidate of candidatesFor(file, ref.startsWith(".") ? ref : `./${ref}`)) {
+          if (!seen.has(candidate)) {
+            seen.add(candidate);
+            next.push(candidate);
+          }
         }
       }
     }
+    wave = next;
   }
   return files;
 }
