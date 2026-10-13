@@ -158,7 +158,9 @@ openlen.com, www.openlen.com {
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# La página puede pedir cámara, micrófono y ubicación; el navegador le
+		# pregunta al visitante. La misma cadena que lib/publish/permissions-policy.ts.
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
 	}
 
 	# Cache-Control — assets immutable for a month; the HTML document gets a

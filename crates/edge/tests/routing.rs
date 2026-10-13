@@ -528,7 +528,7 @@ async fn security_headers_emitted_on_subdomain_responses() {
     );
     assert_eq!(
         header_str("permissions-policy"),
-        "camera=(), microphone=(), geolocation=()"
+        "camera=(self), microphone=(self), geolocation=(self)"
     );
 }
 

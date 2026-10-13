@@ -539,6 +539,8 @@ export default defineConfig({
       // `lib/publish/**` entra fichero a fichero, no por directorio: es la
       // convención de arriba y hay pruebas ahí que necesitan el binding nativo.
       "lib/publish/form-identity.test.ts",
+      // La Permissions-Policy de las páginas, igual en sus cinco copias. LISTA BLANCA.
+      "lib/publish/permissions-policy.test.ts",
       // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
       "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un

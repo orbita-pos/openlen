@@ -19,6 +19,7 @@ const raiz = vi.hoisted(() => {
 const mocks = vi.hoisted(() => ({ lookupDomain: vi.fn() }));
 vi.mock("@/lib/custom-domains", () => ({ lookupDomain: mocks.lookupDomain }));
 
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { GET, HEAD } from "./route";
 
 const DOMINIO = "landing.miempresa.com";
@@ -42,6 +43,9 @@ describe("/served/<host>/", () => {
     const res = await GET(pide(DOMINIO), params());
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(PAGINA);
+    // La misma que la publicada en *.openlen.app: la página puede pedir cámara,
+    // micrófono y ubicación, y el navegador se lo pregunta al visitante.
+    expect(res.headers.get("permissions-policy")).toBe(PAGE_PERMISSIONS_POLICY);
   });
 
   it("también con puerto y en mayúsculas", async () => {

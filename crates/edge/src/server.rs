@@ -45,7 +45,7 @@ const HSTS_VALUE: &str = "max-age=31536000; includeSubDomains";
 const X_CTO_VALUE: &str = "nosniff";
 const X_FRAME_OPTIONS_VALUE: &str = "SAMEORIGIN";
 const REFERRER_POLICY_VALUE: &str = "strict-origin-when-cross-origin";
-const PERMISSIONS_POLICY_VALUE: &str = "camera=(), microphone=(), geolocation=()";
+const PERMISSIONS_POLICY_VALUE: &str = "camera=(self), microphone=(self), geolocation=(self)";
 
 /// Permissions-Policy isn't a `http::header::HeaderName` constant in the
 /// current http crate version. `HeaderName::from_static` is a cheap

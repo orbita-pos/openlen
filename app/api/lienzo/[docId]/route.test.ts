@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { GET } from "./route";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 
 const ID = "4f9c10cb-8781-48f1-b291-c5d146579f09";
 // La etiqueta es un HMAC del id con AUTH_SECRET (pieza 9 de Len 2.5).
@@ -33,7 +34,7 @@ describe("GET /api/lienzo/[docId]", () => {
     expect(res.headers.get("content-type")).toContain("text/html");
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
-    expect(res.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+    expect(res.headers.get("permissions-policy")).toBe(PAGE_PERMISSIONS_POLICY);
   });
 
   // ⚠️ ESTAS DOS NO FIJAN LA GUARDA DE FORMATO, y no pueden: `openlen.com` y
