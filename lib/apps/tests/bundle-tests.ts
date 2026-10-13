@@ -15,6 +15,10 @@ import { parse } from "es-module-lexer/js";
 import { esbuildDiagnostic, runBundler, type BundlerMessage } from "@/lib/apps/bundler/bundle-app";
 import { compilarCarpeta, type Diagnostico } from "@/lib/apps/compilador";
 import { catalogo, RAIZ_VENDOR } from "@/lib/apps/dependencias";
+import { esmExportsOf } from "@/lib/apps/npm/esm-exports";
+import { npmForBundle } from "@/lib/apps/npm/for-bundle";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
+import { defaultModuleStore } from "@/lib/apps/npm/store";
 import { directorioVendor } from "@/lib/apps/servir";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { compileTestFile, ORIGINAL_SUFFIX, type MockSpec } from "./compile-tests";
@@ -88,6 +92,8 @@ export async function bundleAppTests(args: {
   const modules: Record<string, string> = { ...deLaApp.ficheros };
   const virtual: Record<string, string> = { vitest: readFileSync(RUNTIME, "utf8") };
   const mocked = new Set<string>();
+  // Los simulados de paquetes del lock, y qué ficheros los simulan.
+  const lockMocks = new Map<string, Set<string>>();
   const failed: { file: string; errores: Diagnostico[] }[] = [];
   const entries: Record<string, string> = {};
   const setup = setupFilesOf(carpeta);
@@ -100,7 +106,8 @@ export async function bundleAppTests(args: {
     virtual[`hoist:${ruta}`] = c.hoist;
     for (const m of c.mocks) {
       mocked.add(m.id);
-      virtual[`mock:${m.id}`] = mockModule(m);
+      if (m.fromLock) lockMocks.set(m.id, (lockMocks.get(m.id) ?? new Set()).add(ruta));
+      else virtual[`mock:${m.id}`] = mockModule(m);
     }
     return true;
   };
@@ -130,9 +137,36 @@ export async function bundleAppTests(args: {
   });
   if (Object.keys(entries).length === 0) return { files: {}, maps: {}, entries, failed, ms: Date.now() - t0 };
 
+  // NPM ABIERTO (spec 2026-10-13): los mismos paquetes del lock que la app. Si
+  // alguno no se puede conseguir, fallan todas, con su motivo (como un error
+  // que no es de un fichero).
+  const npm = await npmForBundle(carpeta, app, "development", { store: defaultModuleStore(), fetch });
+  if (!npm.ok) {
+    return { files: {}, maps: {}, entries: {}, failed: [...failed, ...Object.keys(entries).map((file) => ({ file, errores: npm.errores }))], ms: Date.now() - t0 };
+  }
+  // Un simulado de un paquete del lock exporta lo que exporta su módulo de
+  // esm.sh. Si no se puede saber, fallan los ficheros que lo simulan (y todos,
+  // si es uno de configuración), con su motivo.
+  for (const [id, mockedBy] of lockMocks) {
+    const exp = npm.npm?.entries[id] ? esmExportsOf(npm.npm.entries[id], npm.npm.modules, npm.npm.entries) : null;
+    if (exp) {
+      virtual[`mock:${id}`] = mockModule({ id, exports: exp.names, hasDefault: exp.hasDefault });
+      continue;
+    }
+    for (const file of Object.keys(entries)) {
+      const by = [...setup, file].find((f) => mockedBy.has(f));
+      if (!by) continue;
+      failed.push({ file, errores: [{ ruta: by, linea: null, columna: null, mensaje: `vi.mock("${id}"): the names this package exports couldn't be read from its esm.sh build, so it can't be mocked.` }] });
+      delete entries[file];
+    }
+  }
+  if (Object.keys(entries).length === 0) return { files: {}, maps: {}, entries, failed, ms: Date.now() - t0 };
+  const servedByEsm = new Set(npm.npm?.servedByEsm ?? []);
   const kit = testKitFor(app.catalogo);
   const catalogFiles: Record<string, string> = Object.fromEntries([
-    ...(catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, `${RAIZ_VENDOR}/${app.catalogo}/${d.fichero}`]),
+    ...(catalogo(app.catalogo)?.dependencias ?? [])
+      .filter((d) => !servedByEsm.has(parseBareSpecifier(d.especificador)?.name ?? ""))
+      .map((d) => [d.especificador, `${RAIZ_VENDOR}/${app.catalogo}/${d.fichero}`]),
     ...TEST_KIT.dependencias.map((d) => [d.especificador, `${RAIZ_VENDOR}/${kit}/${d.fichero}`]),
   ]);
   const mensaje: BundlerMessage = {
@@ -149,6 +183,7 @@ export async function bundleAppTests(args: {
     minify: false,
     nodeEnv: "development",
     sourcemap: true,
+    npm: npm.npm,
   };
   // Un error de esbuild (un nombre que un módulo no exporta, p. ej.) es de UN
   // fichero: fallan con él las pruebas que lo alcanzan, y las demás se

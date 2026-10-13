@@ -7,6 +7,8 @@ import { CATALOGO_ACTUAL } from "./dependencias";
 import { ENTRADA, esqueletoDeApp } from "./esqueleto";
 import { problemasDelCascaron } from "@/lib/agent/compila-la-app";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { pendingInstall } from "@/lib/apps/npm/install";
+import { PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 
 describe("el esqueleto de una app", () => {
   const e = esqueletoDeApp({ titulo: "Caja del Café", idioma: "es" });
@@ -20,7 +22,8 @@ describe("el esqueleto de una app", () => {
   // 🔴 Jesús, 10/10: las apps nacían en .jsx y TypeScript no revisaba nada.
   it("🔴 nace en TypeScript: main.tsx, App.tsx, la primera pantalla y el cliente del backend", () => {
     expect(ENTRADA).toBe("/src/main.tsx");
-    expect(Object.keys(e.ficheros).sort()).toEqual(["/src/App.tsx", "/src/lib/supabase.ts", "/src/main.tsx", "/src/screens/Inicio.tsx"]);
+    // Y su /package.json, como un proyecto de Vite (npm abierto, 2026-10-13).
+    expect(Object.keys(e.ficheros).sort()).toEqual(["/package.json", "/src/App.tsx", "/src/lib/supabase.ts", "/src/main.tsx", "/src/screens/Inicio.tsx"]);
     expect(e.html).toContain(`<script type="module" src="/src/main.tsx"></script>`);
   });
 
@@ -49,5 +52,19 @@ describe("el esqueleto de una app", () => {
     for (const ruta of ["/src/App.tsx", "/src/screens", "/src/components", "/src/lib/supabase.ts", "<HashRouter>"]) {
       expect(manual, ruta).toContain(ruta);
     }
+  });
+});
+
+describe("the app skeleton and package.json", () => {
+  it("is born with /package.json listing what it imports, at the catalog's versions, and nothing to install", () => {
+    const e = esqueletoDeApp({ titulo: "Demo" });
+    const files = e.ficheros as Record<string, string>;
+    expect(JSON.parse(files[PACKAGE_JSON_PATH]!).dependencies).toEqual({
+      "@supabase/supabase-js": "^2.117.2",
+      react: "^19.2.6",
+      "react-dom": "^19.2.6",
+      "react-router-dom": "^7.18.4",
+    });
+    expect(pendingInstall(files, { catalogo: "2026-11", entrada: "/src/main.tsx" })).toEqual({ add: [], remove: [] });
   });
 });

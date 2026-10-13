@@ -16,6 +16,7 @@ vi.mock("@/lib/backend/files", () => ({
 import { GET } from "./route";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 
 const SECRETO = "s3cr3t";
 const P1 = "4f9c10cb-8781-48f1-b291-c5d146579f09";
@@ -53,7 +54,7 @@ describe("GET /api/lienzo/site — el documento en su ruta", () => {
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
-    expect(res.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+    expect(res.headers.get("permissions-policy")).toBe(PAGE_PERMISSIONS_POLICY);
   });
 
   it("una página en `/<slug>/index.html`; en otra ruta, 404", async () => {

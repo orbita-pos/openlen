@@ -18,6 +18,10 @@ import { gzipSync } from "node:zlib";
 import { compilarCarpeta, esFuenteCompilable, JSX_DEV_RUNTIME, type Diagnostico } from "@/lib/apps/compilador";
 import { JSX_DEV_RUNTIME_MODULE } from "@/lib/apps/design/jsx-dev-runtime";
 import { catalogo, RAIZ_VENDOR, type ModoVendor } from "@/lib/apps/dependencias";
+import { npmForBundle, type NpmBundleInput } from "@/lib/apps/npm/for-bundle";
+import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
+import { defaultModuleStore } from "@/lib/apps/npm/store";
 import { BUNDLER_DID_NOT_ANSWER, directorioVendor } from "@/lib/apps/servir";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
 import type { AppDeProyecto } from "@/lib/projects/types";
@@ -48,6 +52,8 @@ export type BundlerMessage = {
   readonly minify: boolean;
   readonly nodeEnv: string;
   readonly sourcemap: boolean;
+  /** OPEN NPM (spec 2026-10-13): what the esm lock serves; null when the app has none. */
+  readonly npm?: NpmBundleInput | null;
 };
 
 export interface BundlerOutput {
@@ -75,9 +81,10 @@ export function runOnBundlerThread<T>(m: Record<string, unknown>, timeoutMs: num
 }
 
 // Los espacios de nombres del hilo (`bundler-worker.mjs`) salen en las rutas
-// de esbuild —`app:/src/x.js`, `virtual:hoist:/src/x.test.js`—, también dentro
-// del texto del error; Len escribió rutas, y es lo que lee.
-const NAMESPACE = /\b(?:app|virtual|mock|empty|vendor):(?:(?:hoist|suite):)?(?=\/)/g;
+// de esbuild —`app:/src/x.js`, `virtual:hoist:/src/x.test.js`,
+// `npm:https://esm.sh/…`—, también dentro del texto del error; Len escribió
+// rutas, y es lo que lee.
+const NAMESPACE = /\b(?:app|virtual|mock|empty|vendor):(?:(?:hoist|suite):)?(?=\/)|\bnpm:(?=https?:)|\bnpm-(?:style|url):/g;
 
 export function stripNamespaces(texto: string): string {
   return texto.replace(NAMESPACE, "");
@@ -100,7 +107,7 @@ function aBundle(r: BundlerOutput, entrada: string): AppBundle {
   return { ok: true, js, map: r.outputs[`${nombre}.map`] ?? null, bytes: Buffer.byteLength(js), gzipBytes: gzipSync(js).length, ms: r.ms };
 }
 
-export function bundleApp(args: {
+export async function bundleApp(args: {
   readonly carpeta: Readonly<Record<string, string>>;
   readonly app: AppDeProyecto;
   readonly entorno?: Readonly<Record<string, string>>;
@@ -121,18 +128,25 @@ export function bundleApp(args: {
     // EL MODO DISEÑO: el lienzo y los ojos saben de qué línea sale cada cosa.
     ...(modo === "desarrollo" ? { development: true } : {}),
   });
-  if (compilada.errores.length > 0) return Promise.resolve({ ok: false, errores: compilada.errores });
+  if (compilada.errores.length > 0) return { ok: false, errores: compilada.errores };
   if (!Object.hasOwn(compilada.ficheros, app.entrada)) {
-    return Promise.resolve({ ok: false, errores: [{ ruta: app.entrada, linea: null, columna: null, mensaje: "the app's entry module does not exist" }] });
+    return { ok: false, errores: [{ ruta: app.entrada, linea: null, columna: null, mensaje: "the app's entry module does not exist" }] };
   }
+  // OPEN NPM (spec 2026-10-13): the lock's packages, from the cache.
+  const npm = await npmForBundle(args.carpeta, app, modo === "produccion" ? "production" : "development", { store: defaultModuleStore(), fetch });
+  if (!npm.ok) return { ok: false, errores: npm.errores };
+  const servedByEsm = new Set(npm.npm?.servedByEsm ?? []);
+  // /package.json y el lock son entradas del compilador, no módulos de la app.
   const modules = Object.fromEntries(
-    Object.entries(compilada.ficheros).filter(([r]) => esFuenteCompilable(r, true) || r.endsWith(".json")),
+    Object.entries(compilada.ficheros).filter(
+      ([r]) => r !== PACKAGE_JSON_PATH && r !== ESM_LOCK_PATH && (esFuenteCompilable(r, true) || r.endsWith(".json")),
+    ),
   );
   const clave = createHash("sha256")
-    .update(JSON.stringify([modo, app.catalogo, app.entrada, Object.entries(modules).sort(([a], [b]) => a.localeCompare(b))]))
+    .update(JSON.stringify([modo, app.catalogo, app.entrada, Object.entries(modules).sort(([a], [b]) => a.localeCompare(b)), npm.key]))
     .digest("hex");
   const hecho = hechos.get(clave);
-  if (hecho) return Promise.resolve(hecho);
+  if (hecho) return hecho;
   // Con marca, se suma a una sin marca (nadie la sustituye) o a la suya.
   const claveEnCamino = supersedes ? `${clave}|${supersedes}` : clave;
   const ya = enCamino.get(clave) ?? enCamino.get(claveEnCamino);
@@ -150,11 +164,16 @@ export function bundleApp(args: {
       virtual: modo === "desarrollo" ? { [JSX_DEV_RUNTIME]: JSX_DEV_RUNTIME_MODULE } : {},
       mocked: [],
       empty: [],
-      catalogFiles: Object.fromEntries((catalogo(app.catalogo)?.dependencias ?? []).map((d) => [d.especificador, raiz + d.fichero])),
+      catalogFiles: Object.fromEntries(
+        (catalogo(app.catalogo)?.dependencias ?? [])
+          .filter((d) => !servedByEsm.has(parseBareSpecifier(d.especificador)?.name ?? ""))
+          .map((d) => [d.especificador, raiz + d.fichero]),
+      ),
       vendorRoots: { [raiz]: path.join(directorioVendor(), app.catalogo, modo) },
       minify: modo === "produccion",
       nodeEnv: modo === "produccion" ? "production" : "development",
       sourcemap: modo === "desarrollo",
+      npm: npm.npm,
     },
     args.timeoutMs ?? TOPE_MS,
     marca,

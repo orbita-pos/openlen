@@ -384,6 +384,49 @@ describe("TerminalDeLen", () => {
     }, 20_000);
   });
 
+  // NPM ABIERTO: el turno real de Len (13/10) buscó el código de un paquete en
+  // node_modules, como en v0, y no existía. Como en Claude Code: se abre por su
+  // ruta, y una búsqueda del proyecto no entra (su Grep es ripgrep, con .gitignore).
+  describe("el /node_modules de una app", () => {
+    const DTS = "export declare function map(id: string): Map;\n";
+    function conNodeModules() {
+      const leidos: string[] = [];
+      const { t } = terminal({
+        cargarFicheros: async () => ({ ...SITIO, "/src/App.tsx": "map('x');\n" }),
+        perezosos: {
+          rutas: async () => ["/node_modules/@types/leaflet/index.d.ts", "/node_modules/leaflet/package.json"],
+          leer: async (ruta) => {
+            leidos.push(ruta);
+            return ruta.endsWith(".d.ts") ? DTS : '{ "name": "leaflet", "version": "1.9.4" }\n';
+          },
+        },
+        appTools: { catalogSpecifiers: [], typesPackages: [], run: async () => ({ stdout: "", stderr: "", exitCode: 0 }) },
+      });
+      return { t, leidos };
+    }
+
+    it("🔴 se lee por su ruta (ls, cat, grep dentro de él) y no se escribe", async () => {
+      const { t } = conNodeModules();
+      expect((await t.ejecutar("ls /node_modules /node_modules/@types")).stdout).toContain("leaflet");
+      expect((await t.ejecutar("cat /node_modules/@types/leaflet/index.d.ts")).stdout).toBe(DTS);
+      expect((await t.ejecutar("grep -rn 'function map' /node_modules/@types/leaflet")).stdout).toContain("index.d.ts:1:");
+      const escribir = await t.ejecutar("echo x > /node_modules/leaflet/package.json");
+      expect(escribir.exitCode).not.toBe(0);
+      expect(escribir.stderr).toContain("EROFS");
+      expect(Object.keys(escribir.ficheros ?? {}).some((r) => r.startsWith("/node_modules"))).toBe(false);
+    }, 20_000);
+
+    it("🔴 una búsqueda del proyecto no entra: grep -rn / y rg ni lo calculan ni lo enseñan", async () => {
+      const { t, leidos } = conNodeModules();
+      const grep = await t.ejecutar("grep -rn map /");
+      expect(grep.stdout).toContain("/src/App.tsx:1:");
+      expect(grep.stdout).not.toContain("node_modules");
+      expect((await t.ejecutar("cd / && grep -Rni map .")).stdout).not.toContain("node_modules");
+      expect((await t.ejecutar("rg map /")).stdout).not.toContain("node_modules");
+      expect(leidos).toEqual([]);
+    }, 20_000);
+  });
+
   // Plan 03 de las apps: `tsc`, `eslint`, `npx` y `npm` en una app los contesta
   // el comprobador de verdad (en el hilo de la app); `npm install`, el catálogo.
   describe("tsc, eslint, npx y npm en una app (plan 03, tarea 5)", () => {
@@ -420,24 +463,47 @@ describe("TerminalDeLen", () => {
       expect(llamadas[0]!.args).toEqual(["."]);
     }, 20_000);
 
-    it("🔴 npm install: lo del catálogo ya está; lo demás no se puede (Review Focus 5)", async () => {
-      const { t } = conApp();
-      const si = await t.ejecutar("npm install zod @radix-ui/react-dialog@1.1.0; echo rc=$?");
-      expect(si.stdout).toMatch(/zod.*already available/);
-      expect(si.stdout).toMatch(/@radix-ui\/react-dialog: already available/);
-      expect(si.stdout).toMatch(/rc=0\n$/);
-      const no = await t.ejecutar("npm i axios; echo rc=$?");
-      expect(no.stdout + no.stderr).toMatch(/axios.*isn't available/);
-      expect(no.stdout).toMatch(/rc=1\n$/);
-    }, 20_000);
+    // NPM ABIERTO (spec 2026-10-13): `npm install` ya no contesta con el
+    // catálogo: se lo pide al hilo de la app, que instala de verdad (lo que ya
+    // está —el kit de pruebas, los @types del catálogo— lo dice él:
+    // herramientas-de-app.test.ts).
+    it("🔴 npm install/i/add y yarn/pnpm/bun add van a npm-install; uninstall/rm a npm-uninstall; ls a npm-ls", async () => {
+      const { t, llamadas } = conApp();
+      for (const c of ["npm install zod @radix-ui/react-dialog@1.1.0", "npm i axios", "npm add -D @types/node", "pnpm add zod", "yarn add three", "bun i three"]) {
+        expect((await t.ejecutar(`${c}; echo rc=$?`)).stdout, c).toMatch(/rc=0\n$/);
+      }
+      await t.ejecutar("npm uninstall three; npm rm zod; yarn remove x; npm ls; npm list");
+      expect(llamadas.map((l) => [l.program, l.args])).toEqual([
+        ["npm-install", ["zod", "@radix-ui/react-dialog@1.1.0"]],
+        ["npm-install", ["axios"]],
+        ["npm-install", ["-D", "@types/node"]],
+        ["npm-install", ["zod"]],
+        ["npm-install", ["three"]],
+        ["npm-install", ["three"]],
+        ["npm-uninstall", ["three"]],
+        ["npm-uninstall", ["zod"]],
+        ["npm-uninstall", ["x"]],
+        ["npm-ls", []],
+        ["npm-ls", []],
+      ]);
+    }, 30_000);
 
-    it("🔴 npm install -D @types/react: ya está (los tipos vienen con el catálogo); @types/node, no", async () => {
-      const { t } = conApp();
-      const si = await t.ejecutar("npm install -D @types/react; echo rc=$?");
-      expect(si.stdout).toMatch(/@types\/react: already available \(its types come with the catalog\)\nrc=0\n$/);
-      const no = await t.ejecutar("npm i --save-dev @types/node; echo rc=$?");
-      expect(no.stderr).toMatch(/@types\/node: isn't available here/);
-      expect(no.stdout).toMatch(/rc=1\n$/);
+    it("🔴 npm install three: el /package.json que devuelve el hilo de la app queda en la terminal (y se guarda con el comando)", async () => {
+      const llamadas: { program: string; args: readonly string[] }[] = [];
+      const PKG = '{"dependencies":{"three":"^0.186.1"}}\n';
+      const { t } = terminal({
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: async (program, args) => {
+            llamadas.push({ program, args });
+            return { stdout: "+ three@0.186.1\n", stderr: "", exitCode: 0, files: { "/package.json": PKG } };
+          },
+        },
+      });
+      const r = await t.ejecutar("npm install three");
+      expect(llamadas).toEqual([{ program: "npm-install", args: ["three"] }]);
+      expect(r.stdout).toBe("+ three@0.186.1\n");
+      expect(r.ficheros?.["/package.json"]).toBe(PKG);
     }, 20_000);
 
     it("🔴 los comandos de pruebas de Claude Code corren vitest; npm run build, el paquete; un npx de otra cosa no existe", async () => {
@@ -449,8 +515,10 @@ describe("TerminalDeLen", () => {
       const jest = await t.ejecutar("jest; echo rc=$?");
       expect(jest.stderr).toBe("jest isn't available here: tests run with vitest, which has the same API (vi.fn instead of jest.fn). Run npm test.\n");
       expect(jest.stdout).toMatch(/rc=1\n$/);
-      expect((await t.ejecutar("pnpm add zod; echo rc=$?")).stderr).toBe("pnpm add: not available here — there is no package manager; the app's packages are its catalog.\n");
-      expect((await t.ejecutar("npx prettier .; echo rc=$?")).stdout).toMatch(/rc=1\n$/);
+      expect((await t.ejecutar("pnpm why zod; echo rc=$?")).stderr).toBe("pnpm why: not available here; use npm install, npm test, npm run build or npm run lint.\n");
+      const npx = await t.ejecutar("npx prettier .; echo rc=$?");
+      expect(npx.stdout).toMatch(/rc=1\n$/);
+      expect(npx.stderr).toBe("npx: prettier isn't available here: there is no Node to run it. To add a package to the app: npm install <name>.\n");
       expect((await t.ejecutar("npm run x")).stderr).toMatch(/The scripts are: lint, typecheck, build, test\.\n$/);
       const { t: t2, llamadas: l2 } = conApp();
       await t2.ejecutar("npm run build");
@@ -491,14 +559,6 @@ describe("TerminalDeLen", () => {
       // Lo que arrancó el comando acaba con él: al hilo de la app le llega la orden de parar.
       await new Promise((ok) => setTimeout(ok, 100));
       expect(señal?.aborted).toBe(true);
-    }, 20_000);
-
-    it("npm install -D vitest y lo del kit: ya están; jsdom no hace falta", async () => {
-      const { t } = conApp();
-      const r = await t.ejecutar("npm install -D vitest @testing-library/react jsdom; echo rc=$?");
-      expect(r.stdout).toBe(
-        "vitest: already available (tests run with OpenLen's test kit)\n@testing-library/react: already available (test kit)\njsdom: not needed: tests run in a real browser (Chromium), like Vitest's browser mode\nrc=0\n",
-      );
     }, 20_000);
 
     it("en una página (sin appTools) no hay tsc ni npm", async () => {

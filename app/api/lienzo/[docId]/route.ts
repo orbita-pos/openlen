@@ -1,5 +1,6 @@
 import { leerDocumento } from "@/lib/lienzo/almacen";
 import { etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lienzo/[docId] — sirve un documento del lienzo en SU host,
@@ -55,7 +56,7 @@ export async function GET(
       "cache-control": "no-store",
       "content-security-policy": `frame-ancestors ${frameAncestors()}`,
       // La misma que la publicada (infra/caddy/Caddyfile, bloque *.openlen.app).
-      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "permissions-policy": PAGE_PERMISSIONS_POLICY,
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
     },

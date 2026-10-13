@@ -4,6 +4,7 @@ import { entradaServida, servirFuenteDePagina } from "@/lib/apps/servir";
 import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { leerDocumento, proyectoDeEtiqueta } from "@/lib/lienzo/almacen";
 import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
+import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lienzo/site/<ruta> — EL SITIO ENTERO DEL LIENZO (pieza 9 de Len 2.5).
@@ -128,7 +129,7 @@ export async function GET(
       "cache-control": "no-store",
       "content-security-policy": `frame-ancestors ${frameAncestors()}`,
       // La misma que la publicada (infra/caddy/Caddyfile, bloque *.openlen.app).
-      "permissions-policy": "camera=(), microphone=(), geolocation=()",
+      "permissions-policy": PAGE_PERMISSIONS_POLICY,
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
     },

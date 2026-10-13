@@ -23,7 +23,7 @@
 // Puro: la carpeta y el cascarón los pone quien llama.
 
 import { compilarCarpeta, textoDeDiagnostico, type Diagnostico as DeCompilacion } from "@/lib/apps/compilador";
-import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { readTwConfigProblem } from "@/lib/publish/tw-config";
@@ -32,14 +32,15 @@ type Carpeta = ReadonlyMap<string, string> | Readonly<Record<string, string>>;
 
 const FUENTE = "compiler";
 
-function publicable(carpeta: Carpeta): Record<string, string> {
-  const pares = carpeta instanceof Map ? [...carpeta.entries()] : Object.entries(carpeta);
-  return Object.fromEntries(pares.filter(([ruta]) => isPublishableFolderPath(ruta)));
+/** What goes into compiling the app: the web files, /.env, /package.json and the esm lock. */
+function compileInputs(carpeta: Carpeta): Record<string, string> {
+  const pairs = carpeta instanceof Map ? [...carpeta.entries()] : Object.entries(carpeta);
+  return Object.fromEntries(pairs.filter(([ruta]) => isCompileInputPath(ruta)));
 }
 
 /** Lo que no compila de la app con esta carpeta. */
 export function erroresDeLaApp(app: AppDeProyecto, carpeta: Carpeta): readonly DeCompilacion[] {
-  return compilarCarpeta({ carpeta: publicable(carpeta), catalogo: app.catalogo }).errores;
+  return compilarCarpeta({ carpeta: compileInputs(carpeta), catalogo: app.catalogo }).errores;
 }
 
 /** LA ENTRADA QUE CARGA EL CASCARÓN, como en Vite: el `src` del primer
@@ -58,7 +59,7 @@ export function shellEntry(cascaron: string): string | null {
 
 /** Lo que le falta al cascarón para arrancar la app, o `[]`. */
 export function problemasDelCascaron(app: AppDeProyecto, cascaron: string, carpeta: Carpeta): Diagnostico[] {
-  const enLaCarpeta = publicable(carpeta);
+  const enLaCarpeta = compileInputs(carpeta);
   const fuera: Diagnostico[] = [];
   const diag = (mensaje: string, codigo: string): Diagnostico => ({
     ruta: "/index.html",

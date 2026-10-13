@@ -30,6 +30,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
 import { appFileNames } from "@/lib/apps/esqueleto";
+import { MIN_PACKAGE_AGE_DAYS, MIN_VERSION_AGE_DAYS } from "@/lib/apps/npm/gate";
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import {
@@ -90,7 +91,7 @@ const PROBAR_LA_APP =
 
 const LA_APP_SON_FICHEROS = (app: AppDeProyecto, entrada = app.entrada, n = appFileNames(app)) => `THE APP IS FILES:
 /index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="${entrada}"> that it must keep: that src IS the app's entry, as in Vite, so renaming the entry means changing it there too. The app itself lives in /src: ${entrada} mounts it, ${n.rutas} holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and ${n.backend} exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, Grep to search the whole site and Glob to list files. PROJECT STATE lists the app's files; the files themselves don't come in your context, so whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: otherwise, read it first or don't describe it.
-- You write the files and OpenLen compiles and bundles them after every change, like Vite: there is no dev server to start and nothing to install. In bash, npm test, npm run build, npm run lint and npx tsc run for real (/AGENTS.md says how). Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and packages are only the ones listed in /AGENTS.md; anything else is written in the project.
+- You write the files and OpenLen compiles and bundles them after every change, like Vite: there is no dev server to start. In bash, npm install, npm test, npm run build, npm run lint and npx tsc run for real (/AGENTS.md says how). Imports work as in Vite (relative, "@/" for /src, without extension, CSS and JSON), and any npm package works: importing it installs it (/AGENTS.md says how).
 - After each Edit or Write the change is ALREADY saved and the user sees the app running on their canvas. If a file doesn't compile, the <new-diagnostics> give you its file, its line and why, and until you fix it the app does not start (the canvas shows that error over it, as Vite does): fix it in this turn. Every change is also kept: the user goes back from the editor, so never tell them that no copies are kept.
 - Screens are hash routes (/#/sales): a new screen is a component and a <Route> in ${n.rutas}, and you reach it with <Link to="/sales">. Never a /<slug>/index.html: that would be a separate static page, outside the app.
 - 🔴 A CHANGE GOES THROUGH EVERY FILE THAT DEPENDS ON IT, and only those: a renamed prop or component, a removed field, a column that changes in a table — search for every use with Grep before changing it and change them all in the same turn, migration included when the data changes. A file left behind breaks the app at runtime, in a screen you didn't look at. <example>user: "call it 'stock' instead of 'quantity'" — agent: searches for quantity with Grep across /src and /supabase, writes a migration that renames the column, and changes every component that reads or writes it.</example>
@@ -136,20 +137,20 @@ function seccionDeLaApp(app: AppDeProyecto): string {
     ? `\n  shadcn/ui works as usual: you write its components in /src/components/ui (one per file, as its CLI would), cn() in /src/lib/utils.ts with clsx and tailwind-merge, and each Radix primitive imports from "radix-ui" or as @radix-ui/react-<name>.`
     : "";
   return `THIS PROJECT IS A WEB APP:
-React in /src —.jsx, .tsx, .ts or .js— that OpenLen compiles and publishes like a Vite project: each file is compiled (JSX and TypeScript to JavaScript, keeping its line numbers) and they are joined into one bundle with only what they use from the catalog's packages (see BUILD). Nothing gets installed: the packages are the catalog's, already there.
+React in /src —.jsx, .tsx, .ts or .js— that OpenLen compiles and publishes like a Vite project: each file is compiled (JSX and TypeScript to JavaScript, keeping its line numbers) and they are joined into one bundle with only what they use (see BUILD). The catalog's packages come preinstalled; any other npm package installs when a file that imports it is saved.
 - /index.html is the shell: its <head> (<title>, <meta>, the Tailwind and Google Fonts tags, a <style> of your own) and, in its <body>, <div id="root"> and <script type="module" src="${app.entrada}">. Without those two the app doesn't start. The app itself never goes in it.
 - ${app.entrada} mounts the app (createRoot(document.getElementById("root")).render(…)) inside <HashRouter>; ${appFileNames(app).rutas} holds the routes; each screen goes in /src/screens and each component in /src/components, one per file; ${appFileNames(app).backend} exports the backend client.
 - IMPORTS work as in Vite: "./x", "../x", "/src/x" and "@/x" (= /src/x), with or without extension, or a folder's index; import "./x.css" adds that stylesheet; import data from "./x.json"; import logo from "./logo.svg" gives its URL (also .txt and .md, or any file with ?url), and ?raw gives its text.
 - import.meta.env works as in Vite, public values only — everything in it ends up in the JavaScript any visitor can read, so a secret never goes there: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (also as VITE_SUPABASE_ANON_KEY), set by OpenLen; the owner's own VITE_ variables, from Environment variables in the project's settings (their names are in env_vars in PROJECT STATE: the draft values in the canvas, your eyes and the terminal, the production values in the published app); the VITE_ variables in /.env, which you can write as in any Vite project (only /.env, only VITE_ names, and the owner's win over it); and MODE, DEV and PROD — unlike Vite's dev server, MODE is "production", DEV false and PROD true everywhere, the canvas included: the canvas runs the same code as the published app. When a value must differ between draft and production (Stripe's pk_test_ and pk_live_), ask the owner to add it in Environment variables.
-- PACKAGES, the only ones (catalog ${app.catalogo}):
+- PACKAGES: these come preinstalled (catalog ${app.catalogo}):
 ${paquetes}${shadcn}
-  Nothing else can be installed —npm install only answers with this list—: anything else is written in the project. A package or an export that isn't there is a compile error that names the closest ones.
+  Any other npm package works too: import it and save the file, or run npm install <name> in bash. It's added to /package.json as with npm and comes from npm through esm.sh, built for the browser; its types too. Versions published in the last ${MIN_VERSION_AGE_DAYS} days and packages younger than ${MIN_PACKAGE_AGE_DAYS} days aren't installed (the message says why); react and react-dom stay at the catalog's version. A package that needs Node (its fs, processes or sockets) doesn't work in the browser. A package's CSS is imported as in Vite (import "leaflet/dist/leaflet.css"), and its images too (import icon from "leaflet/dist/images/marker-icon.png").
 - ICONS: lucide-react has a selection of ${ICONOS_DE_LAS_APPS.length} icons, the usual ones for an app (${ALGUNOS_ICONOS.join(", ")}…), by their current name or their old one, with or without the Icon suffix. If one isn't there, the compiler says so and suggests the closest; or draw it as an inline <svg>.
 - SCREENS are hash routes: <HashRouter> (in ${app.entrada}) with <Routes> and <Route path="/sales" element={<Sales />} />, <Link to="/sales">, useNavigate() and useParams(). The address is /#/sales. BrowserRouter, createBrowserRouter and the data routers (loaders, actions) don't exist here: a path without # breaks when the published app is reloaded. Never write a /<slug>/index.html in an app: it would be a static page outside it.
 - STYLES are Tailwind classes in className, written WHOLE. When publishing, OpenLen builds the CSS from the classes that appear in the files, so a class assembled in pieces (\`bg-\${color}-500\`) is missing from the published app even though it worked on the canvas. To vary one, choose between whole names: ok ? "bg-green-600" : "bg-red-600". Your own CSS goes in a .css file imported from ${app.entrada}, or in the shell's <style>. A .css file may use Tailwind's @layer and @apply, with the theme of the shell's tailwind.config, as in a Vite project. It is Tailwind CSS 3: the theme lives in that tailwind.config and the colors as CSS variables in @layer base — not Tailwind 4's @import "tailwindcss", @theme or @custom-variant, which do nothing here. That tailwind.config is plain data: no require() and no plugins (tailwindcss-animate is not available: write the keyframes and animations in theme.extend).
 - ERRORS: a file that doesn't compile comes back in <new-diagnostics> with its file and line, and is NOT served: until it is fixed the app does not start, and the canvas shows that error over it, as Vite does. What fails while the app runs (view_page and use_page) comes with the error's message and, when the browser gives it, the file and line of the source. The canvas, view_page and use_page run React's development build, with its whole error messages; the published app, the production one.
-- TYPES AND LINT: TypeScript (the .ts and .tsx files, with a lax tsconfig like Lovable's) and ESLint (with the React hooks rules, also on .jsx) check the files you change, like a language server: their problems arrive in <new-diagnostics> a moment after the change, with one of your next steps. They don't stop the app or the publish; a file that doesn't compile does. You can also run them in bash: npx tsc --noEmit and npm run lint (npm run typecheck too). npm install isn't needed —the catalog's packages are already there—.
-- BUILD: the app is served as ONE bundle (made by esbuild): your files plus only the parts of the catalog's packages they use — on the canvas, in view_page and use_page (with React's development build, whole error messages) and when publishing (production, minified). npm run build makes the production bundle and prints its size, like Vite. A browser error still points to your file and line.
+- TYPES AND LINT: TypeScript (the .ts and .tsx files, with a lax tsconfig like Lovable's) and ESLint (with the React hooks rules, also on .jsx) check the files you change, like a language server: their problems arrive in <new-diagnostics> a moment after the change, with one of your next steps. They don't stop the app or the publish; a file that doesn't compile does. You can also run them in bash: npx tsc --noEmit and npm run lint (npm run typecheck too). Installed packages bring their types.
+- BUILD: the app is served as ONE bundle (made by esbuild): your files plus only the parts of the packages they use — on the canvas, in view_page and use_page (with React's development build, whole error messages) and when publishing (production, minified). npm run build makes the production bundle and prints its size, like Vite. A browser error still points to your file and line.
 - TESTS: vitest and Testing Library, as in any Vite + React project: put tests next to the code (src/Cart.test.tsx) or in /tests, import { describe, it, expect, vi } from "vitest" (or use them as globals) and render, screen, within, waitFor from "@testing-library/react", with userEvent from "@testing-library/user-event"; the jest-dom matchers (toBeInTheDocument, toBeVisible, toHaveTextContent…) are already there. vi.fn, vi.spyOn, vi.mock (with a factory, at the top level; importOriginal works), vi.useFakeTimers and vi.stubGlobal work. Run them with npm test (npx vitest run Cart filters by file, -t by name): they run for real in a browser (Chromium), one page per file; the network works as in the browser (the app's backend included: mock what talks to it unless the test means to touch its data), and private or internal addresses are blocked. No snapshots and no coverage. Tests never ship: they aren't published and they don't stop the app.
 - There is no StrictMode: each effect runs once, as in the published app.`;
 }
@@ -274,18 +275,25 @@ const PUBLICAR_EN_LA_APP =
 export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "undo_last_change", "publish", "bash"] as const;
 
 /** `bash` en una app: lo que la de una página no tiene, la app sí —npm test,
- *  npm run build, npm run lint, npx tsc (planes 02–04)— y /tests es de vitest.
+ *  npm run build, npm run lint, npx tsc (planes 02–04)—, /tests es de vitest y
+ *  hay un /node_modules para leer.
  *  La descripción decía «no node, npm…» mientras el manual pedía npm test. */
 function bashDeLaApp(descripcion: string): string {
   const conNpm = cambiar(
     descripcion,
     "no node, npm, pip or git",
-    "no node, pip or git (in this app, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
+    "no node, pip or git (in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
   );
-  return cambiar(
+  const conTests = cambiar(
     conNpm,
     "/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published",
     "/tests holds the app's tests (vitest), never published",
+  );
+  // NPM ABIERTO: lo que npm deja en node_modules para leer (`lib/apps/npm/node-modules.ts`).
+  return cambiar(
+    conTests,
+    "- /tmp: scratch space for this turn, never saved.",
+    "- /node_modules: the installed packages, read-only: each one's package.json and its type declarations (.d.ts), not its JavaScript (it comes built for the browser); a search like grep -r / does not enter it unless you name it.\n- /tmp: scratch space for this turn, never saved.",
   );
 }
 

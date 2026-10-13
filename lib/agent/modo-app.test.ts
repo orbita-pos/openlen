@@ -231,6 +231,10 @@ describe("las herramientas en una app", () => {
     expect(bashApp).toMatch(/\/tests holds the app's tests \(vitest\)/);
     expect(bashPagina).toMatch(/no node, npm, pip or git/);
     expect(bashPagina).toMatch(/Playwright/);
+    // NPM ABIERTO: el /node_modules que se lee, sólo en una app.
+    expect(bashApp).toMatch(/- \/node_modules: the installed packages, read-only: each one's package\.json and its type declarations/);
+    expect(bashApp).toMatch(/\n- \/tmp: scratch space/);
+    expect(bashPagina).not.toMatch(/node_modules/);
   });
 });
 
@@ -331,5 +335,18 @@ describe("modo Diseño de las apps", () => {
     expect(m).toContain("say where it is changed");
     expect(m).toContain("view_page on that screen");
     expect(buildManualDeLaPlataforma(ENV)).not.toContain("DESIGN CHANGES FROM THE CANVAS:");
+  });
+});
+
+describe("open npm in Len's manual", () => {
+  it("🔴 says any npm package works, how it installs, and the gate's numbers; no longer that nothing else can be installed", () => {
+    const m = buildManualDeLaPlataforma(ENV, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    expect(m).toContain("Any other npm package works too");
+    expect(m).toContain("npm install");
+    expect(m).toContain("published in the last 7 days");
+    expect(m).toContain("younger than 30 days");
+    expect(m).not.toContain("Nothing else can be installed");
+    expect(m).not.toContain("npm install isn't needed");
+    expect(m).not.toContain("Nothing gets installed");
   });
 });
