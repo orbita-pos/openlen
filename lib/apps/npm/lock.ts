@@ -92,8 +92,13 @@ export function catalogVersionOf(catalogName: string, packageName: string): stri
   return target && Object.hasOwn(table, target) ? table[target]! : null;
 }
 
+/** What the catalog ships of a package: `react-dom` → ["react-dom", "react-dom/client"]. */
+export function catalogPartsOf(catalogName: string, packageName: string): string[] {
+  return (catalogo(catalogName)?.dependencias ?? []).map((d) => d.especificador).filter((s) => parseBareSpecifier(s)?.name === packageName);
+}
+
 export function catalogServes(catalogName: string, packageName: string): boolean {
-  return (catalogo(catalogName)?.dependencias ?? []).some((d) => parseBareSpecifier(d.especificador)?.name === packageName);
+  return catalogPartsOf(catalogName, packageName).length > 0;
 }
 
 /** The range package.json gets for a catalog package: "^<its version>", or "*" if unknown. */
