@@ -506,6 +506,35 @@ describe("TerminalDeLen", () => {
       expect(r.ficheros?.["/package.json"]).toBe(PKG);
     }, 20_000);
 
+    // Turno real del 14/10: `npm install three && ls node_modules/three/` daba
+    // «No such file or directory» porque /node_modules se volvía a listar al
+    // ACABAR el comando. Con npm de verdad existe en cuanto acaba el install.
+    it("🔴 tras npm install, /node_modules ya tiene el paquete en el MISMO comando", async () => {
+      const leidos: string[] = [];
+      const { t } = terminal({
+        perezosos: {
+          rutas: async () => ["/node_modules/react/package.json"],
+          leer: async (ruta) => (leidos.push(ruta), ruta.endsWith("three/package.json") ? '{ "name": "three", "version": "0.186.1" }\n' : "{}\n"),
+        },
+        appTools: {
+          catalogSpecifiers: ["react"],
+          run: async () => ({
+            stdout: "+ three@0.186.1\n",
+            stderr: "",
+            exitCode: 0,
+            files: { "/package.json": '{"dependencies":{"three":"^0.186.1"}}\n' },
+            nodeModules: ["/node_modules/react/package.json", "/node_modules/three/package.json", "/node_modules/@types/three/index.d.ts"],
+          }),
+        },
+      });
+      const r = await t.ejecutar("npm install three && ls node_modules/three/ && cat node_modules/three/package.json && ls node_modules/@types");
+      expect(r.exitCode).toBe(0);
+      expect(r.stdout).toContain("package.json\n");
+      expect(r.stdout).toContain('"name": "three"');
+      expect(r.stdout).toContain("three\n");
+      expect(leidos).toEqual(["/node_modules/three/package.json"]);
+    }, 20_000);
+
     it("🔴 los comandos de pruebas de Claude Code corren vitest; npm run build, el paquete; un npx de otra cosa no existe", async () => {
       const { t, llamadas } = conApp();
       const comandos = ["npm test", "npm run test", "npm run test:unit", "pnpm test", "yarn test", "bun test", "npx vitest run src/a", "vitest", "npm test -- -t suma"];

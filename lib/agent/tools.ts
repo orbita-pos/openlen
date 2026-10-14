@@ -28,6 +28,7 @@ import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { InlineImage } from "@/lib/ai-gateway";
+import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
@@ -945,6 +946,9 @@ export interface AgentSession {
   /** Capturas de `view_page` en este turno (los ojos como Claude Code, 14/10):
    *  gratis, pero cada una son ~1.000 tokens en las vueltas siguientes. */
   screenshotsThisTurn?: number;
+  /** El /node_modules de la terminal de una app, al día tras `npm install`
+   *  aunque el comando no haya acabado (`herramientas-de-app.ts`). */
+  nodeModulesView?: NodeModulesView;
   /** Miradas `medir` de este turno — Chromium, sin modelo. Tienen tope igual,
    *  pero más alto: lo que acota es el tiempo de render, no el dinero. */
   miradasMedirEsteTurno?: number;
