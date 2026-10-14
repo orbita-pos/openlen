@@ -37,4 +37,23 @@ select 'a;b', "c;d"; /* otro; comentario /* anidado; */ */ select $body$ x; y $b
   it("sólo comentarios o vacío: nada", () => {
     expect(splitSqlStatements("-- nada\n\n/* tampoco */\n")).toEqual([]);
   });
+
+  // EL SERVIDOR ENTERO SE COLGÓ (ensayo del 14/10). Len escribió una migración
+  // con separadores como `-- PERFILES ------…` (66 guiones) delante de cada
+  // bloque, y `supabase db push` dejó el hilo principal al 100 % para siempre:
+  // la regex que miraba si un trozo era «sólo comentarios» podía repartir esa
+  // fila de guiones de 2^n maneras antes de rendirse. 40 guiones bastan para
+  // verlo (segundos con la regex) sin colgar esta suite; 66 serían años.
+  it("🔴 un separador de guiones delante del SQL no cuelga (era exponencial)", () => {
+    const divider = `-- PERFILES ${"-".repeat(40)}\n`;
+    const sql = `${divider}create table a (id int);\n${divider}create table b (id int);\n${divider}`;
+    const t0 = performance.now();
+    const s = splitSqlStatements(sql);
+    expect(performance.now() - t0).toBeLessThan(50);
+    expect(s).toEqual([`${divider}create table a (id int)`, `${divider}create table b (id int)`]);
+  });
+
+  it("un trozo con sólo comentarios anidados tampoco es una sentencia", () => {
+    expect(splitSqlStatements("/* fuera /* dentro; */ sigue */\n-- y otro\n")).toEqual([]);
+  });
 });

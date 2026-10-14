@@ -8,14 +8,22 @@ export function splitSqlStatements(sql: string): string[] {
   let start = 0;
   let i = 0;
   const n = sql.length;
+  // Si desde el último `;` ha salido algo que no es comentario ni espacio. Lo
+  // anota el propio recorrido, que ya se salta los comentarios: hasta el 14/10
+  // lo decidía una regex sobre cada trozo, `^(?:--[^\n]*\n?|…|\s)*$`, que con
+  // un separador `-- PERFILES ------…` delante del SQL probaba 2^n maneras de
+  // partir los guiones y colgaba el hilo principal (ver la prueba).
+  let hasCode = false;
   const push = (end: number) => {
     const stmt = sql.slice(start, end).trim();
-    if (stmt.length > 0 && !/^(?:--[^\n]*\n?|\/\*[\s\S]*?\*\/|\s)*$/.test(stmt)) out.push(stmt);
+    if (hasCode && stmt.length > 0) out.push(stmt);
     start = end + 1;
+    hasCode = false;
   };
   while (i < n) {
     const c = sql[i]!;
     const next = sql[i + 1];
+    if (c !== ";" && !(c === "-" && next === "-") && !(c === "/" && next === "*") && !/\s/.test(c)) hasCode = true;
     if (c === "-" && next === "-") {
       const end = sql.indexOf("\n", i);
       i = end === -1 ? n : end + 1;
