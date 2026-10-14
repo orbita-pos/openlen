@@ -13,7 +13,8 @@ import { describe, expect, it } from "vitest";
 
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 
-import { PRELUDIO_DE_USO, usarPagina, type PasoDeUso } from "./usar-pagina";
+import { newBrowserTabHolder } from "./pasos-de-uso";
+import { closeBrowserTab, PRELUDIO_DE_USO, usarPagina, type PasoDeUso } from "./usar-pagina";
 
 const marco = (cuerpo: string) =>
   `<!doctype html><html><head><meta charset="utf-8"><title>Prueba</title>
@@ -418,4 +419,74 @@ describe("use_page — captura, eval y lo que hace el navegador", () => {
     expect(noPide).not.toContain("pointer lock");
     expect(noPide).toMatch(/nothing changed/);
   }, 90_000);
+});
+
+// LA PESTAÑA DEL TURNO (14/10). En Claude Code la sesión del navegador dura:
+// cada orden actúa sobre la página que hay. En el turno de los ojos Len repitió
+// «Click to play» en CADA visita porque cada `use_page` empezaba de cero.
+describe("use_page — la pestaña que dura el turno", () => {
+  const juego = (titulo: string) =>
+    marco(`<h1>${titulo}</h1><div id="ov">Click to play</div><p id="st">puntos: <span id="n">0</span></p>
+    <p id="guardado"></p>
+    <script>
+      document.getElementById("guardado").textContent = "guardado: " + (localStorage.getItem("partidas") || "0");
+      document.getElementById("ov").addEventListener("click", function () {
+        document.getElementById("ov").remove();
+        document.getElementById("n").textContent = "1";
+        localStorage.setItem("partidas", String(Number(localStorage.getItem("partidas") || "0") + 1));
+      });
+    </script>`);
+  const visita = (html: string, pasos: PasoDeUso[], extra: Partial<Parameters<typeof usarPagina>[0]> = {}) =>
+    usarPagina({ html, pasos, ruta: "/index.html", ...extra }).then((r) => r.informe);
+
+  it("🔴 la segunda llamada sigue donde la dejó la primera; BRAZO DE CONTROL: sin pestaña, vuelve a empezar", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      const primera = await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      expect(primera).toContain("in a desktop browser tab that stays open");
+      const segunda = await visita(juego("Voxel"), [{ read: "puntos" }, { read: "Click to play" }], { tab });
+      expect(segunda).toContain("Same tab as your last call, still on /index.html");
+      expect(segunda).toContain("it reads: «puntos: 1»");
+      expect(segunda).toContain("«Click to play» isn't shown on the page.");
+      const sinPestana = await visita(juego("Voxel"), [{ read: "puntos" }]);
+      expect(sinPestana).toContain("it reads: «puntos: 0»");
+      expect(sinPestana).not.toContain("Same tab");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 si los ficheros cambiaron, carga la versión nueva en la misma pestaña y conserva lo guardado; new_visit empieza de cero", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      const nueva = await visita(juego("Voxel World"), [{ read: "Voxel World" }, { read: "guardado" }, { read: "Click to play" }], { tab });
+      expect(nueva).toContain("loaded again with the files as they are now");
+      expect(nueva).toContain("it reads: «guardado: 1»");
+      expect(nueva).toContain("it reads: «Click to play»");
+      const deCero = await visita(juego("Voxel World"), [{ read: "guardado" }], { tab, newVisit: true });
+      expect(deCero).toContain("as a new visitor (with nothing saved from before)");
+      expect(deCero).toContain("it reads: «guardado: 0»");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 un eval que no vuelve cierra la pestaña y lo dice; la siguiente llamada empieza de cero; closeBrowserTab la cierra", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      const colgada = await visita(juego("Voxel"), [{ eval: "while (true) {}" }], { tab });
+      expect(colgada).toContain("the page is busy");
+      expect(colgada).toContain("the tab was closed");
+      expect(tab.current).toBeNull();
+      const despues = await visita(juego("Voxel"), [{ read: "puntos" }], { tab });
+      expect(despues).toContain("in a desktop browser tab that stays open");
+      expect(despues).toContain("it reads: «puntos: 0»");
+      expect(tab.current).not.toBeNull();
+    } finally {
+      await closeBrowserTab(tab);
+    }
+    expect(tab.current).toBeNull();
+  }, 120_000);
 });

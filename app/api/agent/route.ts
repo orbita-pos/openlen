@@ -111,7 +111,7 @@ import { designBlock } from "@/lib/agent/design-block";
 import { captureDesignElements } from "@/lib/agent/design-screenshots";
 import { vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { observarPagina } from "@/lib/agent/verify";
-import { usarPagina } from "@/lib/agent/usar-pagina";
+import { closeBrowserTab, usarPagina } from "@/lib/agent/usar-pagina";
 import {
   createVisualQualityRendererPool,
   renderVisualQualityViewports,
@@ -1933,6 +1933,8 @@ async function correrTurno(
         // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
         // route.test.ts, «el navegador del turno se cierra al acabar»).
         void cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
+        // Y LA PESTAÑA DEL TURNO (`use_page`, 14/10): su Chromium muere con él.
+        void closeBrowserTab(agentSession.browserTab).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
         // cerrarla (`cerrarFila` es idempotente). ANTES de sacar el turno del
         // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva

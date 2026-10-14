@@ -39,7 +39,7 @@ import type { EnvTarget } from "@/lib/apps/env/rules";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
-import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import { newBrowserTabHolder, validarPasos, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { DataChangesPreview } from "@/lib/backend/data-changes-types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -348,6 +348,9 @@ export interface AgentDeps {
     ruta: string;
     vista?: ContextoDeVista | null;
     signedInAs?: SignedInAs | null;
+    /** La pestaña del turno; sin ella, cada visita abre y cierra la suya. */
+    tab?: BrowserTabHolder;
+    newVisit?: boolean;
   }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
@@ -949,6 +952,10 @@ export interface AgentSession {
   /** El /node_modules de la terminal de una app, al día tras `npm install`
    *  aunque el comando no haya acabado (`herramientas-de-app.ts`). */
   nodeModulesView?: NodeModulesView;
+  /** LA PESTAÑA DEL TURNO (14/10): `use_page` y la captura de `view_page` siguen
+   *  donde la dejó la anterior, como la sesión de navegador de Claude Code. Se
+   *  cierra al acabar el turno (`closeBrowserTab`, en la ruta). */
+  browserTab?: BrowserTabHolder;
   /** Miradas `medir` de este turno — Chromium, sin modelo. Tienen tope igual,
    *  pero más alto: lo que acota es el tiempo de render, no el dinero. */
   miradasMedirEsteTurno?: number;
@@ -1598,7 +1605,9 @@ async function toolMirarPagina(
     // en blanco.
     const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
     const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
-    const visto = await visitar(() => deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista })).catch(() => null);
+    // EN LA PESTAÑA DEL TURNO: la captura es de lo que hay en ella, como la de Claude Code.
+    const tab = (session.browserTab ??= newBrowserTabHolder());
+    const visto = await visitar(() => deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab })).catch(() => null);
     if (!visto) {
       return {
         response: {
@@ -1704,7 +1713,9 @@ async function toolUsarPagina(
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
   const desde = new Date();
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
+  const tab = (session.browserTab ??= newBrowserTabHolder());
+  const newVisit = args.new_visit === true;
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}) }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
