@@ -32,7 +32,7 @@
 
 import { createHash } from "node:crypto";
 import { Script } from "node:vm";
-import type { Browser, ElementHandle, Page } from "puppeteer";
+import type { Browser, CDPSession, ElementHandle, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -943,10 +943,16 @@ interface OpenTab {
   inicio: string;
   enUnaApp: boolean;
   sessionScript: { identifier: string } | null;
+  /** Our own DevTools session, to make the page stand still between calls. */
+  cdp: CDPSession | null;
+  standingStill: boolean;
 }
 
 /** Una pestaña que nadie usa en este tiempo se cierra sola (el turno la cierra antes). */
 const TAB_IDLE_MS = 3 * 60_000;
+
+/** What `standStill` means for the page, said where the tab carries on. */
+const STOOD_STILL = "Between your calls it stood still (its scripts, timers and animations waited), so a game's clock sees that gap as one long frame.";
 
 function versionOf(html: string, opciones: OpenTab["opciones"]): string {
   const h = createHash("sha256");
@@ -977,6 +983,8 @@ async function openTab(internals: VisitaInternals, signedInAs: SignedInAs | null
       inicio: "",
       enUnaApp: false,
       sessionScript: null,
+      cdp: null,
+      standingStill: false,
     };
     await installSubresourceSsrfGuard(page, {
       allowOrigins: [origen.origin],
@@ -1020,6 +1028,49 @@ async function closeOpenTab(tab: OpenTab): Promise<void> {
   tab.doc?.soltar();
   tab.doc = null;
   await tab.browser.close().catch(() => undefined);
+}
+
+/**
+ * BETWEEN CALLS THE PAGE STANDS STILL (14/10). Claude Code's browser runs on
+ * the user's machine; this tab runs on our server. Left running, an idle
+ * three.js scene kept drawing in software at 12 cores (measured here; the box
+ * has 3), and in the eyes' turn `tsc`, ESLint and the bundler ran out of time
+ * while it drew. So when a visit ends its scripts wait at a debugger pause and
+ * its animations at rate 0 (0.02 cores, measured), and the next visit lets
+ * them carry on. Freezing the page (`Page.setWebLifecycleState`) was measured
+ * too and rejected: it hides the page, so it releases the pointer lock and,
+ * headless, never draws again.
+ */
+async function standStill(tab: OpenTab): Promise<void> {
+  // Set first: whatever got paused, `carryOn` undoes.
+  tab.standingStill = true;
+  try {
+    tab.cdp ??= await tab.page.createCDPSession();
+    await tab.cdp.send("Animation.enable");
+    await tab.cdp.send("Animation.setPlaybackRate", { playbackRate: 0 });
+    await tab.cdp.send("Debugger.enable");
+    // With no script running, the pause waits for the next one to start.
+    await tab.cdp.send("Debugger.pause");
+  } catch {
+    // It couldn't be paused: it carries on running.
+  }
+}
+
+/** The page carries on where it stood; `false` if it can't (the tab is no use). */
+async function carryOn(tab: OpenTab): Promise<boolean> {
+  if (!tab.standingStill) return true;
+  tab.standingStill = false;
+  if (!tab.cdp) return true;
+  try {
+    // A pause still waiting for a script has nothing to resume: `disable` drops it.
+    await tab.cdp.send("Debugger.resume").catch(() => undefined);
+    await tab.cdp.send("Debugger.disable");
+    await tab.cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
+    await tab.cdp.send("Animation.disable");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Carga en la pestaña ESTA versión del documento (la primera vez, o porque los
@@ -1081,7 +1132,9 @@ async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internal
   holder.timer = null;
   let tab = holder.current as OpenTab | null;
   let recovered = false;
-  if (tab && (!tab.browser.connected || tab.page.isClosed())) {
+  const closedIdle = holder.closedIdle;
+  holder.closedIdle = false;
+  if (tab && (!tab.browser.connected || tab.page.isClosed() || !(await carryOn(tab)))) {
     await closeOpenTab(tab);
     holder.current = tab = null;
     recovered = true;
@@ -1092,7 +1145,7 @@ async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internal
   }
   if (!tab) holder.current = tab = await openTab(internals, null);
   try {
-    const r = await visitTab(tab, p, internals, { persistent: true, recovered });
+    const r = await visitTab(tab, p, internals, { persistent: true, recovered, closedIdle: closedIdle && !p.newVisit });
     // Un `eval` que no volvió deja la página colgada: la pestaña no sirve más.
     if (r.stuck) {
       holder.current = null;
@@ -1106,7 +1159,11 @@ async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internal
     throw e;
   } finally {
     if (holder.current) {
-      holder.timer = setTimeout(() => void closeBrowserTab(holder), TAB_IDLE_MS);
+      await standStill(holder.current as OpenTab);
+      holder.timer = setTimeout(() => {
+        holder.closedIdle = true;
+        void closeBrowserTab(holder);
+      }, TAB_IDLE_MS);
       holder.timer.unref?.();
     }
   }
@@ -1126,7 +1183,7 @@ async function visitTab(
   tab: OpenTab,
   p: VisitaParams,
   internals: VisitaInternals,
-  o: { readonly persistent: boolean; readonly recovered: boolean },
+  o: { readonly persistent: boolean; readonly recovered: boolean; readonly closedIdle?: boolean },
 ): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean }> {
   const html = documentoMedible(p.html, p.vista ?? null);
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
@@ -1171,14 +1228,15 @@ async function visitTab(
     : "as a new visitor (with nothing saved from before)";
   const encabezadoDeLaVisita = {
     nueva: o.persistent
-      ? `Visit to ${p.ruta} ${visitor}, in a desktop browser tab that stays open: your next use_page in this turn carries on from where this one leaves it.`
+      ? `Visit to ${p.ruta} ${visitor}, in a desktop browser tab that stays open: your next use_page in this turn carries on from where this one leaves it (in between, the page stands still).`
       : `Visit to ${p.ruta} ${visitor}, in a desktop browser.`,
-    igual: `Same tab as your last call, still on ${p.ruta}: the files didn't change, so the page is as you left it (what is on screen and what it saved).`,
-    otra: `Same tab, now on ${p.ruta}: the files didn't change, so what the page saved in the browser is kept.`,
+    igual: `Same tab as your last call, still on ${p.ruta}: the files didn't change, so the page is as you left it (what is on screen and what it saved). ${STOOD_STILL}`,
+    otra: `Same tab, now on ${p.ruta}: the files didn't change, so what the page saved in the browser is kept. ${STOOD_STILL}`,
     recargada: `Same tab, ${p.ruta} loaded again with the files as they are now (they changed since your last call): what the page saved in the browser is kept, what was on screen is not.`,
   }[como];
   const lineas: string[] = [`${encabezadoDeLaVisita} ${TEXTO_DE_LA_PAGINA_ES_DATO}`];
   if (o.recovered) lineas.push("(note: the tab from your last call had stopped responding, so this is a new visit.)");
+  if (o.closedIdle) lineas.push(`(note: the tab from your last call was closed after ${TAB_IDLE_MS / 60_000} minutes without use, so this is a new visit.)`);
   const notas = new Set<string>();
   const images: InlineImage[] = [];
   const ev = tab.ev;

@@ -472,6 +472,47 @@ describe("use_page — la pestaña que dura el turno", () => {
     }
   }, 120_000);
 
+  // The tab lives on our server: an idle 3D scene left drawing burned 12 cores
+  // (measured; production has 3). Between calls it stands still.
+  it("🔴 between calls the page stands still and then carries on, pointer lock kept; CONTROL: within a visit its loop runs", async () => {
+    const loop = marco(`<canvas id="c" width="200" height="100"></canvas><div id="ov">Click to play</div>
+    <script>
+      window.f = 0;
+      (function tick() { window.f++; requestAnimationFrame(tick); })();
+      document.getElementById("ov").addEventListener("click", function () { document.getElementById("c").requestPointerLock(); });
+    </script>`);
+    const number = (report: string, step: number) => Number(new RegExp(`${step}\\. eval → (\\d+)`).exec(report)?.[1] ?? NaN);
+    const tab = newBrowserTabHolder();
+    try {
+      const first = await visita(loop, [{ click: "Click to play" }, { eval: "f" }], { tab });
+      expect(first).toContain("the page took the pointer (pointer lock is on)");
+      expect(first).toContain("(in between, the page stands still)");
+      await new Promise((r) => setTimeout(r, 1500));
+      const second = await visita(loop, [{ eval: "f" }, { eval: "new Promise((r) => setTimeout(() => r(f), 500))" }, { eval: "Boolean(document.pointerLockElement)" }], { tab });
+      expect(second).toContain("Same tab as your last call");
+      expect(second).toContain("Between your calls it stood still");
+      // 1.5 s running would be ~90 frames; standing still, only the few around the visits.
+      expect(number(second, 1) - number(first, 2)).toBeLessThan(20);
+      // CONTROL: once the visit is on, the loop runs again.
+      expect(number(second, 2) - number(second, 1)).toBeGreaterThan(5);
+      expect(second).toContain("3. eval → true");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 a static page (the pause waits for a script that never comes) still answers the next call", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(marco("<h1>Quieta</h1>"), [{ read: "Quieta" }], { tab });
+      const again = await visita(marco("<h1>Quieta</h1>"), [{ eval: "1 + 1" }, { read: "Quieta" }], { tab });
+      expect(again).toContain("Same tab as your last call");
+      expect(again).toContain("1. eval → 2");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
   it("🔴 un eval que no vuelve cierra la pestaña y lo dice; la siguiente llamada empieza de cero; closeBrowserTab la cierra", async () => {
     const tab = newBrowserTabHolder();
     try {
