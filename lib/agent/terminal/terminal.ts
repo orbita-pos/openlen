@@ -108,6 +108,9 @@ export class TerminalDeLen {
           /** NPM ABIERTO: ficheros que la terminal escribe antes de acabar el
            *  comando (el /package.json de `npm install`); `null` lo borra. */
           readonly files?: Readonly<Record<string, string | null>>;
+          /** Las rutas de /node_modules tras `npm install|uninstall`: se montan
+           *  YA, dentro del mismo comando, como deja npm la carpeta. */
+          readonly nodeModules?: readonly string[];
         }>;
       };
       /** Las Edge Functions (spec local 2026-10-11): `curl` a las del proyecto,

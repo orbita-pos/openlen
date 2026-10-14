@@ -103,7 +103,13 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
       // resultado, nunca parte de su payload. Y sólo si hay algo que decir: el
       // bucle empuja `content: ""` en cada tanda, y un mensaje vacío por tanda
       // sería ruido en todos los turnos del producto.
-      if (message.content) out.push({ role: "user", content: message.content });
+      //
+      // Y LAS CAPTURAS DE LA TANDA (`ToolOutcome.images`, 14/10), en ese mismo
+      // mensaje: un `role:"tool"` sólo lleva texto en este cable.
+      const images = message.images?.length ? message.images : null;
+      if (message.content || images) {
+        out.push({ role: "user", content: message.content || "Screenshots:", ...(images ? { images } : {}) });
+      }
       pending = [];
       return;
     }

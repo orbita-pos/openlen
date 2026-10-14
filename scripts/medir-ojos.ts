@@ -48,7 +48,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
-import { observarPagina, verifyEditedPage } from "@/lib/agent/verify";
+import { verifyEditedPage } from "@/lib/agent/verify";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
 const SI = process.argv.includes("--si");
@@ -149,15 +149,10 @@ async function main(): Promise<void> {
   console.log(`\ncaptura guardada  → ${png}  (${imagen.dataBase64.length} chars b64)`);
   console.log("   MÍRALA antes de creerte lo de abajo.\n");
 
-  console.log("── ARM 1 · describir (sólo la imagen, nunca el HTML) ──");
-  for (const { pregunta, esperado } of PREGUNTAS) {
-    const t0 = Date.now();
-    const r = await observarPagina({ html, tipo: "describir", pregunta });
-    const ms = Date.now() - t0;
-    console.log(`\nP: ${pregunta}`);
-    console.log(`   (se comprueba: ${esperado})`);
-    console.log(`R: ${r ? r.respuesta : "«null» — la llamada falló o vino vacía"}   [${ms}ms]`);
-  }
+  // ⚰️ Aquí preguntaba a la rama `describir` de `observarPagina` (las PREGUNTAS
+  // de arriba). Se fue el 2026-10-14: la captura le llega al Agente como imagen
+  // (los ojos como Claude Code), así que ya no hay un modelo aparte que medir.
+  void PREGUNTAS;
 
   // ── ARM 2 ────────────────────────────────────────────────────────────────
   console.log("\n── ARM 2 · verificar, con el titular BLANCO SOBRE BLANCO ──");
@@ -218,26 +213,7 @@ async function main(): Promise<void> {
       "\n   determinista puede verlo — si sale, lo vio el modelo.",
   );
 
-  // ── ARM 4 ────────────────────────────────────────────────────────────────
-  // SEPARA PERCEPCIÓN DE PERMISO. Si el ARM 3 dice «no roto», hay dos causas
-  // incompatibles y el arreglo es distinto en cada una: (a) el modelo no
-  // RESUELVE el defecto en la captura, o (b) lo ve y el prompt de verificación
-  // —escrito para ser conservador a propósito— no le deja llamarlo rotura.
-  // Aquí se pregunta a pelo, sin ese prompt: la rama `describir` sólo pide
-  // describir píxeles.
-  console.log("\n── ARM 4 · describir el MISMO defecto, preguntando a pelo ──");
-  const r4 = await observarPagina({
-    html: encimado,
-    tipo: "describir",
-    pregunta:
-      "Mira el titular grande de la parte de arriba. ¿Se ve limpio, o hay algo raro en cómo están dibujadas las letras?",
-    zona: "el titular del hero",
-  });
-  console.log(`R: ${r4 ? r4.respuesta : "«null» — la llamada falló o vino vacía"}`);
-  console.log(
-    "\n   Si aquí SÍ describe la duplicación, el modelo ve y el problema es" +
-      "\n   el prompt de `verify.ts`. Si tampoco, es que no lo resuelve.",
-  );
+  // ⚰️ ARM 4 preguntaba lo mismo a la rama `describir`, que se fue el 2026-10-14.
 }
 
 void main();

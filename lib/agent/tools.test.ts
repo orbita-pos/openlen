@@ -585,60 +585,64 @@ describe("view_page", () => {
     assert.equal((vistas[0] as { tipo: string }).tipo, "medir");
   });
 
-  it("pasa la zona cuando se da, y no la inventa cuando no", async () => {
+  // LOS OJOS COMO CLAUDE CODE (14/10): la captura vuelve a Len como IMAGEN, por
+  // la visita de `use_page` (un navegador, un documento), sin un modelo que la
+  // describa. `describe` sigue entrando: es la captura.
+  const CAPTURA = { mimeType: "image/jpeg", dataBase64: "JPEG" };
+  const conCaptura = (deps: AgentDeps, pasos: unknown[][]) => ({
+    ...deps,
+    observarPagina: async () => ({ respuesta: "medido" }),
+    usarPagina: async (input: { pasos: readonly unknown[] }) => {
+      pasos.push([...input.pasos]);
+      return { informe: "Visit to /index.html…\n1. screenshot of the screen → attached below as image 1.", images: [CAPTURA] };
+    },
+  });
+
+  it("🔴 screenshot vuelve como imagen (images), por la visita de use_page; describe es la misma", async () => {
     const { deps } = makeDeps();
+    const pasos: unknown[][] = [];
+    const out = await runAgentTool(makeSession(), conCaptura(deps, pasos), "view_page", { mode: "screenshot" });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.screenshot), /attached below as image 1/);
+    assert.deepEqual(out.images, [CAPTURA]);
+    const alias = await runAgentTool(makeSession(), conCaptura(deps, pasos), "view_page", { mode: "describe", question: "¿qué hay?" });
+    assert.deepEqual(alias.images, [CAPTURA]);
+    assert.deepEqual(pasos, [[{ screenshot: "screen" }], [{ screenshot: "screen" }]]);
+    // Read-only de verdad: ni tarjeta de acción ni documento nuevo.
+    assert.equal(out.action, undefined);
+    assert.equal(out.updatedHtml, undefined);
+  });
+
+  it("la zona: en screenshot recorta ese bloque; en measure viaja; sin ella no se inventa", async () => {
+    const { deps } = makeDeps();
+    const pasos: unknown[][] = [];
     const vistas: Record<string, unknown>[] = [];
-    const conOjos = {
-      ...deps,
-      observarPagina: async (input: Record<string, unknown>) => {
-        vistas.push(input);
-        return { respuesta: "se ven tres cajas de color plano" };
-      },
-    };
-    await runAgentTool(makeSession(), conOjos, "view_page", {
-      mode: "describe", question: "¿qué hay?", area: "las tarjetas",
-    });
-    await runAgentTool(makeSession(), conOjos, "view_page", {
-      mode: "describe", question: "¿qué hay?",
-    });
+    const ojos = { ...conCaptura(deps, pasos), observarPagina: async (input: Record<string, unknown>) => (vistas.push(input), { respuesta: "x" }) };
+    await runAgentTool(makeSession(), ojos, "view_page", { mode: "screenshot", area: "Precios" });
+    await runAgentTool(makeSession(), ojos, "view_page", { mode: "measure", question: "¿?", area: "las tarjetas" });
+    await runAgentTool(makeSession(), ojos, "view_page", { mode: "measure", question: "¿?" });
+    assert.deepEqual(pasos, [[{ screenshot: "Precios" }]]);
     assert.equal(vistas[0].zona, "las tarjetas");
     assert.equal("zona" in vistas[1], false);
   });
 
-  // El tope de `describir` es 2 porque GASTA. Pasado el tope se endurece la
-  // respuesta, no se bloquea la llamada — misma doctrina que find_photo.
-  it("pasado el tope de describir, endurece la respuesta sin fallar", async () => {
+  // Pasado el tope se endurece la respuesta, no se bloquea la llamada — misma
+  // doctrina que find_photo. Y los dos topes son INDEPENDIENTES.
+  it("pasado el tope de capturas, endurece la respuesta sin fallar; y no agota measure", async () => {
     const { deps } = makeDeps();
     const session = makeSession();
-    const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "se ve algo" }) };
-    for (let i = 0; i < 2; i++) {
-      const ok = await runAgentTool(session, conOjos, "view_page", {
-        mode: "describe", question: "¿?",
-      });
-      assert.equal(ok.response.ok, true, `la mirada #${i + 1} no debería estar topada`);
+    const ojos = conCaptura(deps, []);
+    for (let i = 0; i < 6; i++) {
+      const ok = await runAgentTool(session, ojos, "view_page", { mode: "screenshot" });
+      assert.equal(ok.response.ok, true, `la captura #${i + 1} no debería estar topada`);
       assert.equal(ok.response.note, undefined);
     }
-    const tercera = await runAgentTool(session, conOjos, "view_page", {
-      mode: "describe", question: "¿?",
-    });
-    assert.equal(tercera.response.ok, true);
-    assert.match(String(tercera.response.note), /too many looks/i);
-  });
-
-  // Y los dos topes son INDEPENDIENTES: gastar el de la cara no puede dejar al
-  // Agente sin la medición, que es gratis y es la que de verdad desatasca.
-  it("agotar describir NO agota medir", async () => {
-    const { deps } = makeDeps();
-    const session = makeSession();
-    const conOjos = { ...deps, observarPagina: async () => ({ respuesta: "dato" }) };
-    for (let i = 0; i < 3; i++) {
-      await runAgentTool(session, conOjos, "view_page", { mode: "describe", question: "¿?" });
-    }
-    const medida = await runAgentTool(session, conOjos, "view_page", {
-      mode: "measure", question: "¿qué hay detrás del titular?",
-    });
-    assert.equal(medida.response.answer, "dato");
-    assert.equal(medida.response.note, undefined);
+    const septima = await runAgentTool(session, ojos, "view_page", { mode: "screenshot" });
+    assert.equal(septima.response.ok, true);
+    assert.match(String(septima.response.note), /too many looks/i);
+    assert.equal(septima.images, undefined);
+    const medida = await runAgentTool(session, ojos, "view_page", { mode: "measure", question: "¿qué hay detrás del titular?" });
+    assert.equal(medida.response.answer, "medido");
   });
 
   it("un tipo que no existe se rechaza diciendo cuáles hay", async () => {
@@ -649,7 +653,7 @@ describe("view_page", () => {
     });
     assert.equal(out.response.ok, false);
     assert.match(String(out.response.error), /measure/);
-    assert.match(String(out.response.error), /describe/);
+    assert.match(String(out.response.error), /screenshot/);
   });
 
   it("sin la dependencia inyectada lo DICE, no revienta", async () => {
@@ -703,6 +707,35 @@ describe("use_page", () => {
     assert.ok(desde instanceof Date);
     const sin = await runAgentTool(makeSession(), conNavegador(deps, []), "use_page", { steps: [{ click: "Agregar" }] });
     assert.equal(sin.response.edge_function_calls, undefined);
+  });
+
+  // LA PESTAÑA DEL TURNO (14/10), como la sesión de navegador de Claude Code:
+  // use_page y la captura de view_page van a la MISMA, la de la sesión.
+  it("🔴 use_page y la captura de view_page usan la misma pestaña de la sesión; new_visit llega", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    const session = makeSession();
+    const con = conNavegador(deps, visitas);
+    await runAgentTool(session, con, "use_page", { steps: [{ click: "Play" }] });
+    await runAgentTool(session, con, "view_page", { mode: "screenshot" });
+    await runAgentTool(session, con, "use_page", { steps: [{ read: "x" }], new_visit: true });
+    assert.ok(visitas[0]!.tab);
+    assert.equal(visitas[1]!.tab, visitas[0]!.tab);
+    assert.equal(visitas[2]!.tab, visitas[0]!.tab);
+    assert.equal(visitas[0]!.newVisit, undefined);
+    assert.equal(visitas[2]!.newVisit, true);
+    assert.equal(session.browserTab, visitas[0]!.tab);
+  });
+
+  it("🔴 las capturas de la visita vuelven como imágenes (images); sin capturas, no hay campo", async () => {
+    const { deps } = makeDeps();
+    const captura = { mimeType: "image/jpeg", dataBase64: "JPEG" };
+    const con = { ...deps, usarPagina: async () => ({ informe: "1. screenshot of the screen → attached below as image 1.", images: [captura] }) };
+    const out = await runAgentTool(makeSession(), con, "use_page", { steps: [{ click: "Play" }, { screenshot: "screen" }] });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.images, [captura]);
+    const sin = await runAgentTool(makeSession(), conNavegador(deps, []), "use_page", { steps: [{ click: "Agregar" }] });
+    assert.equal(sin.images, undefined);
   });
 
   it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {

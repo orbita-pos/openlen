@@ -17,6 +17,7 @@
 
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
+import { WEBGL_ARGS } from "@/lib/ai/visual-quality-renderer";
 import { OPENLEN_PAGE_HOSTS, OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 
 /** `--host-resolver-rules` de Chromium: cada dominio de OpenLen y todos sus
@@ -56,7 +57,8 @@ export async function lanzarNavegador(): Promise<Browser> {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      "--disable-gpu",
+      // El WebGL de los ojos (14/10): un juego 3D de Len se califica con su escena.
+      ...WEBGL_ARGS,
       `--host-resolver-rules=${REGLAS_SIN_PRODUCCION}`,
     ],
   });

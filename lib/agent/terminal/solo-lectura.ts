@@ -96,7 +96,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
   let nodeModules: NodeModulesView | null = null;
   if (session.app && deps.projectFiles) {
     const files = await deps.projectFiles(session.projectId).catch(() => null);
-    if (files) nodeModules = nodeModulesOf(files, session.app.catalogo);
+    if (files) nodeModules = session.nodeModulesView = nodeModulesOf(files, session.app.catalogo);
   }
 
   const rutas = [
@@ -161,8 +161,10 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         if (html === null) throw new Error("that version no longer exists");
         return sinOpIds(html);
       }
-      if (nodeModules && ruta.startsWith(`${NODE_MODULES}/`)) {
-        const texto = await nodeModules.read(ruta);
+      // La de la sesión, que `npm install` deja al día a mitad de un comando.
+      const vista = session.nodeModulesView ?? nodeModules;
+      if (vista && ruta.startsWith(`${NODE_MODULES}/`)) {
+        const texto = await vista.read(ruta);
         if (texto === null) throw new Error("its types couldn't be read now");
         return texto;
       }

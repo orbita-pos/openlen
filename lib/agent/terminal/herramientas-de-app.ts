@@ -15,6 +15,7 @@ import { formatStylish, formatTsc } from "@/lib/apps/checker/format.mjs";
 import { catalogo } from "@/lib/apps/dependencias";
 import { listPackages, pendingInstall, type InstallOutcome, type InstallRequest } from "@/lib/apps/npm/install";
 import { readEsmLock, sourceOf } from "@/lib/apps/npm/lock";
+import { nodeModulesOf } from "@/lib/apps/npm/node-modules";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { formatVitestReport } from "@/lib/apps/tests/report";
@@ -76,7 +77,7 @@ function typesOfInstalled(files: Readonly<Record<string, string>>, catalogName: 
 }
 
 export function appToolsFor(
-  session: Pick<AgentSession, "app" | "projectId" | "autor">,
+  session: Pick<AgentSession, "app" | "projectId" | "autor" | "nodeModulesView">,
   deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp" | "projectFiles" | "installPackages" | "saveProjectFile">,
 ): AppTools | undefined {
   const app = session.app;
@@ -134,7 +135,17 @@ export function appToolsFor(
         }
         const out = npmOutput(outcome, request, Date.now() - started);
         const pkg = outcome.files[PACKAGE_JSON_PATH];
-        return { ...out, stdout: local + out.stdout, ...(pkg !== undefined ? { files: { [PACKAGE_JSON_PATH]: pkg } } : {}) };
+        // /node_modules como lo deja npm, YA: la terminal lo monta en este mismo
+        // comando y la sesión lo lee de aquí hasta que el comando se guarde.
+        const after = { ...ficheros, ...(lock !== undefined ? { [ESM_LOCK_PATH]: lock } : {}), ...(pkg !== undefined ? { [PACKAGE_JSON_PATH]: pkg } : {}) };
+        const nodeModules = nodeModulesOf(after, app.catalogo);
+        session.nodeModulesView = nodeModules;
+        return {
+          ...out,
+          stdout: local + out.stdout,
+          ...(pkg !== undefined ? { files: { [PACKAGE_JSON_PATH]: pkg } } : {}),
+          nodeModules: nodeModules.paths,
+        };
       }
       if (program === "test") {
         if (args.some((a) => a === "--coverage" || a.startsWith("--coverage."))) return { stdout: "", stderr: "vitest: coverage isn't available here.\n", exitCode: 1 };

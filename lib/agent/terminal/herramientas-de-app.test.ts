@@ -3,6 +3,8 @@
 // tarea 5): qué ficheros van al comprobador, qué salida y qué código vuelven.
 import { describe, expect, it, vi } from "vitest";
 import type { InstallOutcome } from "@/lib/apps/npm/install";
+import { serializeEsmLock } from "@/lib/apps/npm/lock";
+import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { appToolsFor, parseInstallArg } from "./herramientas-de-app";
 
@@ -233,6 +235,28 @@ describe("npm in an app's terminal (open npm)", () => {
     expect(r).toMatchObject({ exitCode: 0, files: { [PACKAGE_JSON_PATH]: outcome.files[PACKAGE_JSON_PATH]! } });
     expect(r.stdout).toMatch(/^\+ three@0\.186\.1\nadded 1 package in \d+\.\ds\n$/);
     expect(r.stderr).toBe("npm warn three@0.186.1 has no TypeScript types; what it exports is typed as any.\n");
+  });
+
+  // Real turn, 14/10: `npm install three && ls node_modules/three/` said «No
+  // such file»: /node_modules was listed again only when the command ended.
+  it("🔴 npm install hands back /node_modules with the new package, and the session reads it until the command is saved", async () => {
+    const lock = serializeEsmLock({
+      lockfileVersion: 1,
+      packages: {
+        three: {
+          version: "0.186.1", publishedAt: "2026-01-01T00:00:00.000Z", externals: [], development: {}, production: {}, assets: {},
+          types: { "/node_modules/@types/three/index.d.ts": "sha" }, typesFrom: { name: "@types/three", version: "0.186.0" }, warnings: [], bytes: 1,
+        },
+      },
+    });
+    const installPackages = vi.fn(async () => ({ ...outcome, files: { ...outcome.files, [ESM_LOCK_PATH]: lock } }));
+    const session = { app: APP, projectId: "p1", autor: "len" } as { app: typeof APP; projectId: string; autor: string; nodeModulesView?: NodeModulesView };
+    const t = appToolsFor(session as never, { checkApp: vi.fn(), installPackages, saveProjectFile: vi.fn(async () => ({ versionPrevia: null })), projectFiles: vi.fn(async () => ({})) } as never)!;
+    const r = (await t.run("npm-install", ["three"], { "/src/main.tsx": "export {};" })) as { nodeModules?: readonly string[] };
+    expect(r.nodeModules).toContain("/node_modules/three/package.json");
+    expect(r.nodeModules).toContain("/node_modules/@types/three/index.d.ts");
+    expect(session.nodeModulesView?.paths).toEqual(r.nodeModules);
+    expect(JSON.parse((await session.nodeModulesView!.read("/node_modules/three/package.json"))!)).toEqual({ name: "three", version: "0.186.1" });
   });
 
   it("npm uninstall three asks to remove it", async () => {
