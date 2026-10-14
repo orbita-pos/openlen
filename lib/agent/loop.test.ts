@@ -3470,6 +3470,41 @@ describe("el encargo en el bucle", () => {
     expect(conRespuestas.content).toContain("<goal_complete>\nescribe el cierre\n</goal_complete>");
   });
 
+  // LOS OJOS COMO CLAUDE CODE (14/10): la captura de `view_page`/`use_page` le
+  // llega al modelo como IMAGEN en el mensaje de las respuestas, con su rótulo.
+  it("🔴 las capturas de una herramienta llegan al modelo como imágenes, rotuladas, en el mensaje de las respuestas", async () => {
+    const vistos: Message[][] = [];
+    const captura = { mimeType: "image/jpeg", dataBase64: "JPEG" };
+    const stream = scripted(
+      [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, done],
+      [{ type: "text_delta", text: "La vi." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "mírala" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true, screenshot: "attached below as image 1." }, images: [captura] }),
+      emit: () => {},
+    });
+    const conRespuestas = vistos[1]!.at(-1)!;
+    expect(conRespuestas.functionResponses?.[0]?.name).toBe("view_page");
+    expect(conRespuestas.images).toEqual([captura]);
+    expect(conRespuestas.content).toContain("Screenshots below, in order: image 1 from view_page.");
+  });
+
+  it("BRAZO DE CONTROL: sin capturas, el mensaje de las respuestas no lleva imágenes ni rótulo", async () => {
+    const vistos: Message[][] = [];
+    const stream = scripted([{ type: "function_call", name: "view_page", args: { mode: "measure" } }, done], [{ type: "text_delta", text: "Ok." }, done]);
+    await runAgentLoop({
+      messages: [{ role: "user", content: "mídela" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true, answer: "medido" } }),
+      emit: () => {},
+    });
+    const conRespuestas = vistos[1]!.at(-1)!;
+    expect(conRespuestas.images).toBeUndefined();
+    expect(conRespuestas.content).not.toContain("Screenshots below");
+  });
+
   it("get_goal, create_goal y update_goal no gastan presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,

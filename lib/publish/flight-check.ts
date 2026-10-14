@@ -26,15 +26,15 @@
 // to InariWatch. A publish is never blocked or delayed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { captureException } from "@inariwatch/capture";
 import { db, schema } from "@/lib/db";
 import { getPublishRoot } from "@/lib/publish/filesystem";
-import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
-import { allowEgressOrigin, isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { allowEgressOrigin } from "@/lib/security/egress-proxy";
+import { serveRelease } from "@/lib/publish/serve-release";
 
 const HARD_DEADLINE_MS = 120_000;
 const MAX_CONCURRENT = Math.max(
@@ -146,72 +146,9 @@ export function extractFlightSummary(lhr: LhrLike): FlightSummary {
 }
 
 // ─── Ephemeral release server ───────────────────────────────────────────────
-
-const MIME: Record<string, string> = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css",
-  ".js": "text/javascript",
-  ".json": "application/json",
-  ".webp": "image/webp",
-  ".avif": "image/avif",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".svg": "image/svg+xml",
-  ".ico": "image/x-icon",
-  ".woff2": "font/woff2",
-  ".woff": "font/woff",
-};
-
-/** Serve one release + the subdomain's shared assets dir on a random
- *  loopback port — the same two roots Caddy maps in production. */
-async function serveRelease(
-  subDir: string,
-  releaseSha: string,
-): Promise<{ server: Server; port: number }> {
-  const releaseDir = path.join(subDir, "releases", releaseSha);
-  const assetsDir = path.join(subDir, "assets");
-
-  const handler = async (req: IncomingMessage, res: ServerResponse) => {
-    try {
-      const pathname = new URL(req.url ?? "/", "http://flight.local").pathname;
-      let file: string | null = null;
-      if (pathname === "/" || pathname === "/index.html") {
-        file = path.join(releaseDir, "index.html");
-      } else if (pathname.startsWith("/assets/")) {
-        const name = decodeURIComponent(pathname.slice("/assets/".length));
-        if (/^[A-Za-z0-9._-]+$/.test(name) && !name.includes("..")) {
-          file = path.join(assetsDir, name);
-        }
-      }
-      if (!file) {
-        res.writeHead(404).end();
-        return;
-      }
-      const bytes = await readFile(file);
-      res.writeHead(200, {
-        "content-type": MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream",
-        "cache-control": "no-store",
-      });
-      res.end(bytes);
-    } catch {
-      res.writeHead(404).end();
-    }
-  };
-
-  const server = createServer((req, res) => void handler(req, res));
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const address = server.address();
-  if (address === null || typeof address === "string") {
-    server.close();
-    throw new Error("flight server failed to bind a port");
-  }
-  return { server, port: address.port };
-}
+// `serveRelease` lives in ./serve-release.ts, shared with the card thumbnail:
+// it serves the whole release the way Caddy does. The copy that lived here
+// served only `/` and `/assets/`, so an app measured as an empty page.
 
 // ─── Audit runner ───────────────────────────────────────────────────────────
 
@@ -219,30 +156,12 @@ async function runLighthouse(url: string, allowOrigin: string): Promise<LhrLike 
   // Dynamic imports keep puppeteer/lighthouse out of the static module
   // graph of every route that touches lib/projects.ts (both are in
   // serverExternalPackages — same contract as the thumbnail renderer).
-  const { default: puppeteer } = await import("puppeteer");
   const { default: lighthouse } = await import("lighthouse");
-
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-  // HOME=/tmp on the box: ProtectHome makes $HOME read-only for the service
-  // (memory: puppeteer-hetzner-chrome). Leave dev machines alone.
-  const launchEnv =
-    process.platform === "linux" ? { ...process.env, HOME: "/tmp" } : process.env;
-
-  const browser = await puppeteer.launch({
-    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
-    ...SIN_VENTANAS_NUEVAS,
-    headless: true,
-    executablePath,
-    env: launchEnv,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-crash-reporter",
-      // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
-      ...(await isolatedNetworkArgs()),
-    ],
-  });
+  // UN SOLO NAVEGADOR (14/10): el de los ojos de Len (`lanzarChromium`), con
+  // WebGL por software. Aquí había otro `puppeteer.launch` sin él, y un juego
+  // 3D publicado se medía sin su escena.
+  const { lanzarChromium } = await import("@/lib/ai/visual-quality-renderer");
+  const browser = await lanzarChromium();
   const watchdog = setTimeout(() => {
     void browser.close().catch(() => {});
   }, HARD_DEADLINE_MS);
@@ -281,9 +200,9 @@ export async function measureRelease(
   subDir: string,
   releaseSha: string,
 ): Promise<FlightSummary | null> {
-  const { server, port } = await serveRelease(subDir, releaseSha);
+  const { server, url, origin } = await serveRelease(subDir, releaseSha);
   try {
-    const lhr = await runLighthouse(`http://127.0.0.1:${port}/`, `127.0.0.1:${port}`);
+    const lhr = await runLighthouse(url, origin);
     return lhr ? extractFlightSummary(lhr) : null;
   } finally {
     server.close();

@@ -10,6 +10,7 @@ import { rutaSoloPublicada } from "@/lib/lienzo/rutas-solo-publicada";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
+import { deprioritizeChromium } from "@/lib/ai/chromium-nice";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
@@ -553,8 +554,18 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
   return salida;
 }
 
-/** Chromium como lo arrancan los ojos. Lo usa también `use_page`
- *  (`lib/agent/usar-pagina.ts`), que necesita la `Browser` entera de Puppeteer. */
+/** WebGL por software (SwiftShader): sin GPU en la caja, sin esto
+ *  `getContext("webgl")` da null. Lo comparten TODOS los Chromium que miran una
+ *  página de Len —este, el de Len-Bench y el brazo de la batería—: uno que no
+ *  lo lleve ve en blanco un juego 3D. Ver `one-chromium-launcher.test.ts`. */
+export const WEBGL_ARGS: readonly string[] = ["--disable-gpu", "--enable-unsafe-swiftshader"];
+
+/** Chromium como lo arrancan los ojos. EL ÚNICO LANZADOR (14/10): lo usan
+ *  `use_page` (`lib/agent/usar-pagina.ts`), la captura de los ojos
+ *  (`renderHtmlToInlineImage`), las miniaturas, la og-card y el Flight Check.
+ *  Un segundo `puppeteer.launch` es justo lo que deja de recibir sus arreglos:
+ *  la Fase A puso WebGL aquí y los demás siguieron sin él. Lo vigila
+ *  `one-chromium-launcher.test.ts`. */
 export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   // Los perfiles huerfanos del temporal, una vez por proceso y sin bloquear.
   // Va aqui porque es el unico punto por el que pasan TODOS los que crean
@@ -563,7 +574,7 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   barrerUnaVezPorProceso();
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
     // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
     ...SIN_VENTANAS_NUEVAS,
     headless: true,
@@ -579,12 +590,18 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--enable-unsafe-swiftshader",
+      ...WEBGL_ARGS,
+      // Sin volcados de crashpad en el HOME=/tmp compartido (lo llevaban las
+      // miniaturas, la og-card y el Flight Check, que ahora lanzan por aquí).
+      "--disable-crash-reporter",
       ...(await isolatedNetworkArgs()),
     ],
     env: { ...process.env, HOME: "/tmp" },
   });
+  // Antes de que dibuje nada: en la caja, cede la CPU a la app (medido: una
+  // escena 3D se comía 2,56 de sus 3 núcleos). Ver `lib/ai/chromium-nice.ts`.
+  deprioritizeChromium(browser.process()?.pid);
+  return browser;
 }
 
 async function defaultLaunchBrowser(): Promise<BrowserLike> {

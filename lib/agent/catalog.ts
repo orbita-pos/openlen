@@ -211,19 +211,21 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
       name: "view_page",
       // F4: la forma de DeepSeek, el detalle en los parámetros (MP1–MP10 de
       // plans/len-agente-2026/notas/f4-tabla-de-reglas.md).
+      // Los ojos como Claude Code (14/10): la captura le llega a Len como imagen
+      // y la mira él; antes un modelo la describía por él y costaba créditos.
       description:
-        "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. "
-        + 'mode="measure" is answered by the browser, for FREE: the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. '
-        + 'mode="describe" is answered by a model looking at a screenshot and COSTS CREDITS: it describes without a verdict —from pixels a placeholder put there on purpose can\'t be told apart from a bug— and the conclusion is yours, since you have the file.',
+        "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. Both modes are free. "
+        + 'mode="measure": the browser measures the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. '
+        + 'mode="screenshot": a screenshot of the page as a visitor sees it on a desktop screen comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step.',
       parameters: {
         type: "OBJECT",
         properties: {
-          mode: { type: "STRING", description: '"measure" or "describe".' },
-          question: { type: "STRING", description: "What you want to know, in natural language." },
-          area: { type: "STRING", description: 'Optional: where to look, e.g. "the hero" or "the pricing cards".' },
+          mode: { type: "STRING", description: '"measure" or "screenshot".' },
+          question: { type: "STRING", description: "Optional, for measure: what you want to know, in natural language." },
+          area: { type: "STRING", description: 'Optional: a text from the block to look at, e.g. "Pricing"; with screenshot, only that block is captured.' },
           file_path: FILE_PATH_OPCIONAL,
         },
-        required: ["mode", "question"],
+        required: ["mode"],
       },
     },
     // H9 (2026-09-26): usar la página, no sólo mirarla — Claude Code también pide
@@ -234,9 +236,9 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
       // F4: la forma de DeepSeek; cada clave de un paso, en su parámetro
       // (UP1–UP15 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md).
       description:
-        "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened, and the conclusion is yours. "
-        + "Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. "
-        + "It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. "
+        "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened —including what the browser did for the page, like taking the pointer or going fullscreen— and the conclusion is yours. "
+        + "The browser tab stays open for the whole turn, like a tab you keep open: each call carries on from where the last one left the page (what is on screen and what it saved), and if you changed files since, the page is loaded again with the new version first. The steps run in order, each one does ONE thing, and it stops at the first one that can't be done. "
+        + "It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going). "
         + "What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
       parameters: {
         type: "OBJECT",
@@ -257,6 +259,14 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
                 },
                 reload: { type: "BOOLEAN", description: "true: loads the page again, like someone coming back later." },
                 read: { type: "STRING", description: "A text from the area you want to read: returns what is shown in that block." },
+                screenshot: {
+                  type: "STRING",
+                  description: '"screen": a screenshot of what is on screen at that moment comes back to you as an image; or a text from a block, to capture only that block. At most 3 per visit.',
+                },
+                eval: {
+                  type: "STRING",
+                  description: "JavaScript run in the page at that moment —an expression, or statements with return— and its value comes back as JSON: to inspect what can't be read, like a canvas, a variable or the state of a game, without adding debug code to the page.",
+                },
               },
             },
           },
@@ -267,6 +277,7 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
             description:
               'Optional: to visit signed in to the test database (Supabase Auth) as one of its users, their email; if there is no user with that email, a test user is created. "only_user" if there is a single user. If there are several and nobody said which one, it doesn\'t visit and tells you who they are.',
           },
+          new_visit: { type: "BOOLEAN", description: "Optional: true starts over in a fresh tab, as a new visitor with nothing saved." },
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["steps"],

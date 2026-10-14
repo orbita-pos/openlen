@@ -30,15 +30,18 @@
 // llega al correo del dueño y un enlace a otro sitio no se abre — se dice a
 // dónde iba.
 
-import type { Browser, ElementHandle, Page } from "puppeteer";
+import { createHash } from "node:crypto";
+import { Script } from "node:vm";
+import type { Browser, CDPSession, ElementHandle, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
-import { esperarALaRed, origenDeMedida } from "@/lib/ai/origen-de-medida";
+import type { InlineImage } from "@/lib/ai-gateway";
+import { esperarALaRed, origenDeMedida, type DocumentoServido } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-del-error";
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
-import type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import type { BrowserTabHolder, PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -73,8 +76,22 @@ export const PRELUDIO_DE_USO = `
     if (TIPOS_CAMPO[tipo]) oyenCampo.add(this);
     return orig.call(this, tipo, fn, op);
   };
-  var R = { salidas: [], envios: [], elegido: null };
+  var R = { salidas: [], envios: [], elegido: null, hechos: [], webgl: "" };
   window.open = function (u) { R.salidas.push(String(u == null ? "" : u)); return null; };
+  // LO QUE EL NAVEGADOR HACE POR LA PÁGINA Y NO SE VE EN EL DOM (14/10): tomar
+  // el puntero, la pantalla completa, un contexto WebGL. En el turno del
+  // Minecraft Len concluyó que este navegador no concede el pointer lock (sí lo
+  // concede) porque nadie le dijo lo que pasó. Con el addEventListener ORIGINAL.
+  orig.call(document, "pointerlockchange", function () { R.hechos.push(document.pointerLockElement ? "lock-on" : "lock-off"); });
+  orig.call(document, "pointerlockerror", function () { R.hechos.push("lock-error"); });
+  orig.call(document, "fullscreenchange", function () { R.hechos.push(document.fullscreenElement ? "fullscreen-on" : "fullscreen-off"); });
+  orig.call(document, "fullscreenerror", function () { R.hechos.push("fullscreen-error"); });
+  var getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (tipo) {
+    var c = getContext.apply(this, arguments);
+    if (/webgl/i.test(String(tipo))) R.webgl = c ? "ok" : R.webgl || "failed";
+    return c;
+  };
   // Los enlaces que sacan de ESTE documento no se siguen: se apunta a dónde iban.
   // En window y en burbuja: corre lo último, así que lee el href que el script
   // de la página le acaba de poner. Registrado con el addEventListener ORIGINAL:
@@ -314,18 +331,26 @@ export const PRELUDIO_DE_USO = `
     return r;
   }
 
-  function leer(q0) {
+  // El bloque que se lee (o se captura): el elemento más adentro con ese texto,
+  // subiendo hasta que tenga algo de contexto.
+  function bloque(q0) {
     var q = norm(q0);
     var todos = Array.from(document.querySelectorAll("body *")).filter(function (el) {
       return visible(el) && norm(el.innerText).indexOf(q) >= 0 && ["SCRIPT", "STYLE", "TEMPLATE", "NOSCRIPT"].indexOf(el.tagName) < 0;
     });
-    if (todos.length === 0) return { encontrado: false };
+    if (todos.length === 0) return null;
     var chicos = masAdentro(todos);
     var el = chicos[0];
     var minimo = Math.max(q.length * 3, 40);
     while (el.parentElement && el.parentElement !== document.body && (el.innerText || "").length < minimo && (el.parentElement.innerText || "").length <= 800) {
       el = el.parentElement;
     }
+    return { el: el, sitios: chicos.length };
+  }
+  function leer(q0) {
+    var b = bloque(q0);
+    if (!b) return { encontrado: false };
+    var el = b.el;
     var texto = (el.innerText || "").replace(/\\s+/g, " ").trim();
     var campos = [];
     el.querySelectorAll("input, select, textarea").forEach(function (e) {
@@ -334,7 +359,7 @@ export const PRELUDIO_DE_USO = `
       var v = e.tagName === "SELECT" ? (e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : "") : e.value;
       campos.push("[field «" + (etiquetaDe(e) || t) + "»: «" + String(v).slice(0, 80) + "»]");
     });
-    return { encontrado: true, texto: texto.slice(0, 600), campos: campos, sitios: chicos.length };
+    return { encontrado: true, texto: texto.slice(0, 600), campos: campos, sitios: b.sitios };
   }
 
   // ¿Alguien escucha el clic de este control? El control, sus contenedores,
@@ -397,6 +422,10 @@ export const PRELUDIO_DE_USO = `
     escuchaElegido: function () { var e = R.elegido; return e ? { escucha: escuchaCampo(e) || escucha(e), propia: false, campo: true } : null; },
     antesDeActuar: antesDeActuar, tapadoAhora: function () { return R.elegido ? tapado(R.elegido) : ""; },
     ancla: ancla, sacar: sacar,
+    hechos: function () { var h = R.hechos.slice(); R.hechos.length = 0; return h; },
+    webgl: function () { return R.webgl; },
+    // El bloque que se captura (Puppeteer lo lleva a la vista y lo recorta).
+    bloqueDe: function (q0) { var b = bloque(q0); return b ? b.el : null; },
     elegido: function () { return R.elegido; },
     vaciarCampo: function () { var e = R.elegido; if (!e) return; e.focus(); e.value = ""; e.dispatchEvent(new Event("input", { bubbles: true })); },
     ponerValor: function (v) {
@@ -567,8 +596,99 @@ function describirPaso(p: PasoDeUso): string {
   if ("type" in p) return `type ${q(p.type)} into ${q(p.into)}`;
   if ("choose" in p) return `choose ${q(p.choose)}${p.within ? ` within ${q(p.within)}` : ""}`;
   if ("reload" in p) return "reload";
+  if ("screenshot" in p) return isScreen(p.screenshot) ? "screenshot of the screen" : `screenshot of ${q(p.screenshot)}`;
+  if ("eval" in p) return "eval";
   return `read ${q(p.read)}`;
 }
+
+const isScreen = (target: string) => target.trim().toLowerCase() === "screen";
+
+// ─── Los ojos como Claude Code (14/10) ──────────────────────────────────────
+//
+// La captura y `eval` son pasos de la MISMA visita, como en `chromium-cli`
+// (`nav` → actuar → `screenshot` → `console --errors`): lo que se ve después de
+// «Click to play» sólo existe después del clic. La captura vuelve al modelo como
+// imagen —sin nadie que la describa por él— y `eval` le deja inspeccionar lo
+// que no se lee (un canvas, el estado de un juego) sin meter código de
+// depuración en la app, que es lo que tuvo que hacer en el turno del Minecraft.
+
+/** Un `eval` que no vuelve en este tiempo tiene la página colgada: la visita para. */
+const EVAL_MS = 10_000;
+/** Lo que se devuelve de un valor: una inspección, no un volcado. */
+const MAX_EVAL_RESULT = 2_000;
+
+/** Dos fotogramas: lo que la página acaba de pedir ya está pintado (un canvas, una
+ *  transición que empezó). Acotado: una página con el hilo ocupado no espera aquí. */
+async function twoFrames(page: Page): Promise<void> {
+  await Promise.race([
+    page.evaluate("new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))").catch(() => undefined),
+    dormir(1_500),
+  ]);
+}
+
+async function takeScreenshot(page: Page, target: string, images: InlineImage[]): Promise<string> {
+  await twoFrames(page);
+  let dataBase64: string;
+  if (isScreen(target)) {
+    dataBase64 = (await page.screenshot({ type: "jpeg", quality: 80, encoding: "base64" })) as string;
+  } else {
+    const handle = (await page.evaluateHandle(US(`bloqueDe(${JSON.stringify(target)})`))).asElement() as ElementHandle<Element> | null;
+    if (!handle) return `${q(target)} isn't shown on the page.`;
+    await handle.scrollIntoView().catch(() => undefined);
+    await twoFrames(page);
+    dataBase64 = (await handle.screenshot({ type: "jpeg", quality: 80, encoding: "base64" })) as string;
+  }
+  images.push({ mimeType: "image/jpeg", dataBase64 });
+  return `attached below as image ${images.length}${isScreen(target) ? " (what a visitor sees on a 1280×900 desktop screen)" : ""}.`;
+}
+
+/** ¿Es una expresión? Se compila sin correr (`vm.Script` no ejecuta): si lo es, se
+ *  devuelve su valor, como en una consola; si no, son sentencias con su `return`. */
+function isExpression(code: string): boolean {
+  try {
+    new Script(`(async () => (${code}\n))`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runEval(page: Page, code: string): Promise<{ text: string; stuck: boolean }> {
+  const body = isExpression(code) ? `return (${code}\n);` : code;
+  const script = `(async () => {
+  const show = (v) => {
+    if (v === undefined) return "undefined";
+    if (typeof v === "function") return "a function";
+    if (typeof Element !== "undefined" && v instanceof Element) return "<" + v.tagName.toLowerCase() + ">";
+    try { const j = JSON.stringify(v); return j === undefined ? String(v) : j; } catch (e) { return String(v); }
+  };
+  try {
+    const v = await (async () => {
+${body}
+    })();
+    return { ok: true, text: show(v) };
+  } catch (e) {
+    return { ok: false, text: (e && e.name ? e.name + ": " : "") + (e && e.message !== undefined ? e.message : String(e)) };
+  }
+})()`;
+  const r = (await Promise.race([
+    page.evaluate(script).catch((e: unknown) => ({ ok: false, text: e instanceof Error ? e.message : String(e) })),
+    dormir(EVAL_MS).then(() => null),
+  ])) as { ok: boolean; text: string } | null;
+  if (!r) return { text: `didn't return in ${EVAL_MS / 1000} s: the page is busy (an endless loop?), so the visit stops here.`, stuck: true };
+  const text = r.text.length > MAX_EVAL_RESULT ? `${r.text.slice(0, MAX_EVAL_RESULT)}… (cut at ${MAX_EVAL_RESULT} characters)` : r.text;
+  return { text: r.ok ? text : `threw ${text}`, stuck: false };
+}
+
+/** Lo que hizo el navegador por la página en el paso (el preludio lo apunta). */
+const BROWSER_FACTS: Record<string, string> = {
+  "lock-on": "the page took the pointer (pointer lock is on): the mouse now moves the view, as for a visitor who clicked.",
+  "lock-off": "the page released the pointer (pointer lock is off).",
+  "lock-error": "the page asked for the pointer (pointer lock) and the browser refused it.",
+  "fullscreen-on": "the page went fullscreen.",
+  "fullscreen-off": "the page left fullscreen.",
+  "fullscreen-error": "the page asked for fullscreen and the browser refused it.",
+};
 
 export interface VisitaParams {
   readonly html: string;
@@ -580,6 +700,11 @@ export interface VisitaParams {
   /** Entrar como un usuario de la página (lib/backend/auth/visit-session.ts):
    *  la sesión de supabase-js, guardada en su clave antes de que corra la página. */
   readonly signedInAs?: SignedInAs | null;
+  /** La pestaña del turno: con ella la visita sigue donde la dejó la anterior
+   *  (`newBrowserTabHolder`, en la sesión). Sin ella, abre y cierra la suya. */
+  readonly tab?: BrowserTabHolder;
+  /** Empezar de cero en la pestaña, como un visitante nuevo. */
+  readonly newVisit?: boolean;
 }
 
 export interface SignedInAs {
@@ -659,7 +784,7 @@ const SIN_TECLEAR = new Set(["range", "date", "time", "month", "week", "datetime
 
 async function actuar(
   page: Page,
-  paso: Exclude<PasoDeUso, { readonly read: string }>,
+  paso: Exclude<PasoDeUso, { readonly read: string } | { readonly screenshot: string } | { readonly eval: string }>,
   cambiantes: Set<string>,
 ): Promise<Actuacion> {
   if ("reload" in paso) {
@@ -798,184 +923,457 @@ interface Eventos {
   otrasApi: string[];
 }
 
-/**
- * Una visita a la página. Nunca lanza por algo de la página: lo que no se pudo
- * hacer va al informe. Lanza sólo si no hay navegador — y quien llama dice «no
- * se pudo abrir», que no es «funciona» ni «no funciona».
- */
-export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string }> {
-  const html = documentoMedible(p.html, p.vista ?? null);
+/** Una pestaña abierta: el navegador, su página y la versión del documento que
+ *  enseña. Lo que la página escucha se registra UNA vez, al abrirla. */
+interface OpenTab {
+  readonly browser: Browser;
+  readonly page: Page;
+  readonly origen: Awaited<ReturnType<typeof origenDeMedida>>;
+  readonly ev: Eventos;
+  /** Los errores de JavaScript desde que se abrió; cada visita cuenta los suyos. */
+  readonly errores: string[];
+  /** Lo que cambia solo, aprendido en esta versión de la página. */
+  readonly cambiantes: Set<string>;
+  traducir: Traductor | undefined;
+  doc: DocumentoServido | null;
+  opciones: Awaited<ReturnType<typeof carpetaDeLaVista>>;
+  /** La versión que enseña: el documento y sus ficheros, sin la pantalla. */
+  version: string;
+  /** Lo que se abrió (el documento y la pantalla de una app). */
+  inicio: string;
+  enUnaApp: boolean;
+  sessionScript: { identifier: string } | null;
+  /** Our own DevTools session, to make the page stand still between calls. */
+  cdp: CDPSession | null;
+  standingStill: boolean;
+}
+
+/** Una pestaña que nadie usa en este tiempo se cierra sola (el turno la cierra antes). */
+const TAB_IDLE_MS = 3 * 60_000;
+
+/** What `standStill` means for the page, said where the tab carries on. */
+const STOOD_STILL = "Between your calls it stood still (its scripts, timers and animations waited), so a game's clock sees that gap as one long frame.";
+
+function versionOf(html: string, opciones: OpenTab["opciones"]): string {
+  const h = createHash("sha256");
+  h.update(html);
+  h.update(`\0${opciones?.pagina ?? ""}`);
+  const files = opciones?.files ?? {};
+  for (const k of Object.keys(files).sort()) h.update(`\0${k}\0${files[k]}`);
+  return h.digest("hex");
+}
+
+async function openTab(internals: VisitaInternals, signedInAs: SignedInAs | null | undefined): Promise<OpenTab> {
   const browser = await (internals.lanzar ?? lanzarChromium)();
-  const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
-  const plazo = Date.now() + plazoMs;
-  const visitor = p.signedInAs
-    ? `signed in as ${p.signedInAs.email} (a real session of the page's backend, closed when the visit ends; nothing else saved from before)`
-    : "as a new visitor (with nothing saved from before)";
-  const lineas: string[] = [`Visit to ${p.ruta} ${visitor}, in a desktop browser. ${TEXTO_DE_LA_PAGINA_ES_DATO}`];
-  const errores: string[] = [];
-  const notas = new Set<string>();
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     const origen = await origenDeMedida();
-    const ev: Eventos = { fueraPorRed: [], dialogos: [], otrasApi: [] };
+    const tab: OpenTab = {
+      browser,
+      page,
+      origen,
+      ev: { fueraPorRed: [], dialogos: [], otrasApi: [] },
+      errores: [],
+      cambiantes: new Set(),
+      traducir: undefined,
+      doc: null,
+      opciones: undefined,
+      version: "",
+      inicio: "",
+      enUnaApp: false,
+      sessionScript: null,
+      cdp: null,
+      standingStill: false,
+    };
     await installSubresourceSsrfGuard(page, {
       allowOrigins: [origen.origin],
-      alSalir: (u) => ev.fueraPorRed.push(u),
+      alSalir: (u) => tab.ev.fueraPorRed.push(u),
     });
     await page.evaluateOnNewDocument(PRELUDIO_DE_USO);
-    const sessionScript = p.signedInAs ? await page.evaluateOnNewDocument(storeSessionScript(p.signedInAs)) : null;
+    tab.sessionScript = signedInAs ? await page.evaluateOnNewDocument(storeSessionScript(signedInAs)) : null;
     page.on("dialog", (d) => {
       const cual = d.type() === "confirm" ? "a question (confirm)" : d.type() === "prompt" ? "a prompt" : "an alert";
-      ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
+      tab.ev.dialogos.push(`${cual} came up saying ${q(d.message(), 120)}; I accepted it.`);
       void d.accept().catch(() => undefined);
     });
     // Con DÓNDE nació, si la traza lo dice: en una app, su fichero de /src; y si
-    // va empaquetada (plan 02), por su mapa, que llega con la carpeta (abajo).
-    let traducir: Traductor | undefined;
-    page.on("pageerror", (e) => errores.push(textoDelError(e, 200, traducir)));
+    // va empaquetada (plan 02), por su mapa, que llega con la carpeta.
+    page.on("pageerror", (e) => tab.errores.push(textoDelError(e, 200, tab.traducir)));
     page.on("console", (m) => {
       if (m.type() !== "error") return;
       const t = m.text();
       // Un subrecurso relativo que aquí no se sirve no es un error de la página.
       if (/^Failed to load resource/i.test(t)) return;
-      errores.push(t.slice(0, 200));
+      tab.errores.push(t.slice(0, 200));
     });
     page.on("response", (r) => {
       try {
         const u = new URL(r.url());
         if (u.host === origen.origin && u.pathname.startsWith("/api/")) {
-          ev.otrasApi.push(`${r.request().method()} ${u.pathname}`);
+          tab.ev.otrasApi.push(`${r.request().method()} ${u.pathname}`);
         }
       } catch {
         /* no es una URL: nada que apuntar */
       }
     });
+    return tab;
+  } catch (e) {
+    await browser.close().catch(() => undefined);
+    throw e;
+  }
+}
 
-    // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
-    // desde memoria (el guardia), y el documento vive en la ruta de su página.
-    const opciones = await carpetaDeLaVista(p.vista);
-    traducir = traductorDeMapas(opciones?.sourceMaps);
-    const doc = origen.publicar(html, opciones);
-    // UNA APP: la visita empieza en la pantalla pedida (`#/ventas`) y espera a
-    // que la app pida sus datos —tras cargar y tras cada paso— (H12).
-    const inicio = doc.url + (opciones?.hash ?? "");
-    const enUnaApp = Boolean(p.vista?.app);
-    const sinHash = (u: string) => u.split("#")[0];
+async function closeOpenTab(tab: OpenTab): Promise<void> {
+  tab.doc?.soltar();
+  tab.doc = null;
+  await tab.browser.close().catch(() => undefined);
+}
+
+/**
+ * BETWEEN CALLS THE PAGE STANDS STILL (14/10). Claude Code's browser runs on
+ * the user's machine; this tab runs on our server. Left running, an idle
+ * three.js scene kept drawing in software at 12 cores (measured here; the box
+ * has 3), and in the eyes' turn `tsc`, ESLint and the bundler ran out of time
+ * while it drew. So when a visit ends its scripts wait at a debugger pause and
+ * its animations at rate 0 (0.02 cores, measured), and the next visit lets
+ * them carry on. Freezing the page (`Page.setWebLifecycleState`) was measured
+ * too and rejected: it hides the page, so it releases the pointer lock and,
+ * headless, never draws again.
+ */
+async function standStill(tab: OpenTab): Promise<void> {
+  // Set first: whatever got paused, `carryOn` undoes.
+  tab.standingStill = true;
+  try {
+    tab.cdp ??= await tab.page.createCDPSession();
+    await tab.cdp.send("Animation.enable");
+    await tab.cdp.send("Animation.setPlaybackRate", { playbackRate: 0 });
+    await tab.cdp.send("Debugger.enable");
+    // With no script running, the pause waits for the next one to start.
+    await tab.cdp.send("Debugger.pause");
+  } catch {
+    // It couldn't be paused: it carries on running.
+  }
+}
+
+/** The page carries on where it stood; `false` if it can't (the tab is no use). */
+async function carryOn(tab: OpenTab): Promise<boolean> {
+  if (!tab.standingStill) return true;
+  tab.standingStill = false;
+  if (!tab.cdp) return true;
+  try {
+    // A pause still waiting for a script has nothing to resume: `disable` drops it.
+    await tab.cdp.send("Debugger.resume").catch(() => undefined);
+    await tab.cdp.send("Debugger.disable");
+    await tab.cdp.send("Animation.setPlaybackRate", { playbackRate: 1 });
+    await tab.cdp.send("Animation.disable");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Carga en la pestaña ESTA versión del documento (la primera vez, o porque los
+ *  ficheros cambiaron): mismo origen, así que lo que la página guardó se queda. */
+async function loadVersion(tab: OpenTab, html: string, opciones: OpenTab["opciones"], version: string, enUnaApp: boolean): Promise<void> {
+  const anterior = tab.doc;
+  // LA CARPETA (pieza 9 de Len 2.5): los ficheros de la vista se contestan
+  // desde memoria (el guardia), y el documento vive en la ruta de su página.
+  tab.traducir = traductorDeMapas(opciones?.sourceMaps);
+  tab.doc = tab.origen.publicar(html, opciones ?? undefined);
+  tab.opciones = opciones;
+  tab.version = version;
+  tab.enUnaApp = enUnaApp;
+  // UNA APP: la visita empieza en la pantalla pedida (`#/ventas`) y espera a
+  // que la app pida sus datos —tras cargar y tras cada paso— (H12).
+  tab.inicio = tab.doc.url + (opciones?.hash ?? "");
+  tab.cambiantes.clear();
+  await tab.page.goto(tab.inicio, { waitUntil: "load", timeout: 20_000 });
+  await esperarALaRed(tab.page, opciones ?? undefined);
+  anterior?.soltar();
+  if (tab.sessionScript) {
+    await tab.page.removeScriptToEvaluateOnNewDocument(tab.sessionScript.identifier);
+    tab.sessionScript = null;
+  }
+}
+
+/**
+ * Una visita a la página. Nunca lanza por algo de la página: lo que no se pudo
+ * hacer va al informe. Lanza sólo si no hay navegador — y quien llama dice «no
+ * se pudo abrir», que no es «funciona» ni «no funciona».
+ *
+ * Con `tab` (la pestaña del turno), la visita sigue donde la dejó la anterior,
+ * como la sesión de navegador de Claude Code; si los ficheros cambiaron, la
+ * página se carga otra vez con la versión nueva —lo que haría el HMR de un
+ * servidor de desarrollo— y se dice. Sin `tab` (y con `signedInAs`, que abre y
+ * cierra su sesión del backend), cada visita abre y cierra la suya.
+ */
+export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string; images?: InlineImage[] }> {
+  if (!p.tab || p.signedInAs) {
+    const tab = await openTab(internals, p.signedInAs);
     try {
-      await page.goto(inicio, { waitUntil: "load", timeout: 20_000 });
-      await esperarALaRed(page, opciones);
-      if (sessionScript) await page.removeScriptToEvaluateOnNewDocument(sessionScript.identifier);
-      const cambiantes = new Set<string>();
-      let hechos = 0;
+      const { informe, images } = await visitTab(tab, p, internals, { persistent: false, recovered: false });
+      return { informe, ...(images ? { images } : {}) };
+    } finally {
+      await closeOpenTab(tab);
+    }
+  }
+  const holder = p.tab;
+  const turn = holder.queue.then(() => visitInHolder(holder, p, internals));
+  holder.queue = turn.then(
+    () => undefined,
+    () => undefined,
+  );
+  return turn;
+}
 
-      for (const [i, paso] of p.pasos.entries()) {
-        const encabezado = `${i + 1}. ${describirPaso(paso)}`;
-        hechos = i + 1;
-        if (Date.now() > plazo) {
-          lineas.push(`${encabezado} → not done: the visit went over ${Math.round(plazoMs / 1000)} s and was cut here.`);
-          break;
-        }
-        if ("read" in paso) {
-          lineas.push(`${encabezado} → ${await leerPaso(page, paso.read)}`);
-          continue;
-        }
-        const accion = await actuar(page, paso, cambiantes);
-        if (!accion.ok) {
-          lineas.push(`${encabezado} → ${accion.hecho}`);
-          break;
-        }
-        await dormir(VENTANA_MS);
-        await esperarALaRed(page, opciones);
+async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internals: VisitaInternals): Promise<{ informe: string; images?: InlineImage[] }> {
+  if (holder.timer) clearTimeout(holder.timer);
+  holder.timer = null;
+  let tab = holder.current as OpenTab | null;
+  let recovered = false;
+  const closedIdle = holder.closedIdle;
+  holder.closedIdle = false;
+  if (tab && (!tab.browser.connected || tab.page.isClosed() || !(await carryOn(tab)))) {
+    await closeOpenTab(tab);
+    holder.current = tab = null;
+    recovered = true;
+  }
+  if (tab && p.newVisit) {
+    await closeOpenTab(tab);
+    holder.current = tab = null;
+  }
+  if (!tab) holder.current = tab = await openTab(internals, null);
+  try {
+    const r = await visitTab(tab, p, internals, { persistent: true, recovered, closedIdle: closedIdle && !p.newVisit });
+    // Un `eval` que no volvió deja la página colgada: la pestaña no sirve más.
+    if (r.stuck) {
+      holder.current = null;
+      await closeOpenTab(tab);
+    }
+    return { informe: r.informe, ...(r.images ? { images: r.images } : {}) };
+  } catch (e) {
+    // No se pudo abrir o cargar: la pestaña no queda a medias para la siguiente.
+    holder.current = null;
+    await closeOpenTab(tab);
+    throw e;
+  } finally {
+    if (holder.current) {
+      await standStill(holder.current as OpenTab);
+      holder.timer = setTimeout(() => {
+        holder.closedIdle = true;
+        void closeBrowserTab(holder);
+      }, TAB_IDLE_MS);
+      holder.timer.unref?.();
+    }
+  }
+}
 
-        const detalle = [...accion.detalle];
-        // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
-        // del script. Se apunta y se vuelve, porque los pasos siguen.
-        let seFue = "";
-        if (sinHash(page.url()) !== sinHash(doc.url)) {
-          seFue = page.url();
-          await page.goto(inicio, { waitUntil: "load", timeout: 20_000 }).catch(() => undefined);
-          await esperarALaRed(page, opciones);
-        }
-        const despues = await foto(page);
-        const cambios = seFue ? [] : contarCambios(accion.antes, despues, cambiantes, accion.propio);
-        const propios = cambios.filter((c) => !c.solo);
-        const sale = (await page.evaluate(US("sacar()")).catch(() => ({ salidas: [], envios: [] }))) as {
-          salidas: string[];
-          envios: { cancelado: boolean; campos: [string, string][]; porScript?: boolean }[];
-        };
-        const salidas = [...new Set([...sale.salidas, ...ev.fueraPorRed].map(decodificada))];
-        ev.fueraPorRed.length = 0;
-        for (const s of salidas) {
+/** Al acabar el turno: la pestaña se cierra y la sesión la olvida. */
+export async function closeBrowserTab(holder: BrowserTabHolder | undefined): Promise<void> {
+  if (!holder) return;
+  if (holder.timer) clearTimeout(holder.timer);
+  holder.timer = null;
+  const tab = holder.current as OpenTab | null;
+  holder.current = null;
+  if (tab) await closeOpenTab(tab);
+}
+
+async function visitTab(
+  tab: OpenTab,
+  p: VisitaParams,
+  internals: VisitaInternals,
+  o: { readonly persistent: boolean; readonly recovered: boolean; readonly closedIdle?: boolean },
+): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean }> {
+  const html = documentoMedible(p.html, p.vista ?? null);
+  const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
+  const plazo = Date.now() + plazoMs;
+  const opciones = await carpetaDeLaVista(p.vista);
+  const version = versionOf(html, opciones);
+  const enUnaApp = Boolean(p.vista?.app);
+  const inicio = (doc: DocumentoServido) => doc.url + (opciones?.hash ?? "");
+
+  // Qué visita es: la primera de la pestaña, la misma página tal cual, otra
+  // pantalla de la misma versión, o la versión nueva tras cambiar los ficheros.
+  let como: "nueva" | "igual" | "otra" | "recargada";
+  if (!tab.doc) {
+    como = "nueva";
+    await loadVersion(tab, html, opciones, version, enUnaApp);
+  } else if (tab.version !== version) {
+    como = "recargada";
+    await loadVersion(tab, html, opciones, version, enUnaApp);
+  } else if (inicio(tab.doc) !== tab.inicio) {
+    como = "otra";
+    tab.inicio = inicio(tab.doc);
+    tab.cambiantes.clear();
+    await tab.page.goto(tab.inicio, { waitUntil: "load", timeout: 20_000 });
+    await esperarALaRed(tab.page, opciones ?? undefined);
+  } else {
+    como = "igual";
+  }
+  const page = tab.page;
+  const doc = tab.doc!;
+  // Lo que pasó ENTRE visitas no es de esta: se empieza con la cuenta a cero.
+  const desdeError = como === "nueva" ? 0 : tab.errores.length;
+  if (como !== "nueva") {
+    tab.ev.fueraPorRed.length = 0;
+    tab.ev.dialogos.length = 0;
+    tab.ev.otrasApi.length = 0;
+    await page.evaluate(US("hechos()")).catch(() => undefined);
+    await page.evaluate(US("sacar()")).catch(() => undefined);
+  }
+
+  const visitor = p.signedInAs
+    ? `signed in as ${p.signedInAs.email} (a real session of the page's backend, closed when the visit ends; nothing else saved from before)`
+    : "as a new visitor (with nothing saved from before)";
+  const encabezadoDeLaVisita = {
+    nueva: o.persistent
+      ? `Visit to ${p.ruta} ${visitor}, in a desktop browser tab that stays open: your next use_page in this turn carries on from where this one leaves it (in between, the page stands still).`
+      : `Visit to ${p.ruta} ${visitor}, in a desktop browser.`,
+    igual: `Same tab as your last call, still on ${p.ruta}: the files didn't change, so the page is as you left it (what is on screen and what it saved). ${STOOD_STILL}`,
+    otra: `Same tab, now on ${p.ruta}: the files didn't change, so what the page saved in the browser is kept. ${STOOD_STILL}`,
+    recargada: `Same tab, ${p.ruta} loaded again with the files as they are now (they changed since your last call): what the page saved in the browser is kept, what was on screen is not.`,
+  }[como];
+  const lineas: string[] = [`${encabezadoDeLaVisita} ${TEXTO_DE_LA_PAGINA_ES_DATO}`];
+  if (o.recovered) lineas.push("(note: the tab from your last call had stopped responding, so this is a new visit.)");
+  if (o.closedIdle) lineas.push(`(note: the tab from your last call was closed after ${TAB_IDLE_MS / 60_000} minutes without use, so this is a new visit.)`);
+  const notas = new Set<string>();
+  const images: InlineImage[] = [];
+  const ev = tab.ev;
+  const cambiantes = tab.cambiantes;
+  const sinHash = (u: string) => u.split("#")[0];
+  let stuck = false;
+
+  let hechos = 0;
+  for (const [i, paso] of p.pasos.entries()) {
+    const encabezado = `${i + 1}. ${describirPaso(paso)}`;
+    hechos = i + 1;
+    if (Date.now() > plazo) {
+      lineas.push(`${encabezado} → not done: the visit went over ${Math.round(plazoMs / 1000)} s and was cut here.`);
+      break;
+    }
+    if ("read" in paso) {
+      lineas.push(`${encabezado} → ${await leerPaso(page, paso.read)}`);
+      continue;
+    }
+    if ("screenshot" in paso) {
+      lineas.push(`${encabezado} → ${await takeScreenshot(page, paso.screenshot, images).catch(() => "the screenshot couldn't be taken this time.")}`);
+      continue;
+    }
+    if ("eval" in paso) {
+      const r = await runEval(page, paso.eval);
+      lineas.push(`${encabezado} → ${r.text}`);
+      if (r.stuck) {
+        stuck = true;
+        break;
+      }
+      continue;
+    }
+    const accion = await actuar(page, paso, cambiantes);
+    if (!accion.ok) {
+      lineas.push(`${encabezado} → ${accion.hecho}`);
+      break;
+    }
+    await dormir(VENTANA_MS);
+    await esperarALaRed(page, tab.opciones ?? undefined);
+
+    const detalle = [...accion.detalle];
+    // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
+    // del script. Se apunta y se vuelve, porque los pasos siguen.
+    let seFue = "";
+    if (sinHash(page.url()) !== sinHash(doc.url)) {
+      seFue = page.url();
+      await page.goto(tab.inicio, { waitUntil: "load", timeout: 20_000 }).catch(() => undefined);
+      await esperarALaRed(page, tab.opciones ?? undefined);
+    }
+    const despues = await foto(page);
+    const cambios = seFue ? [] : contarCambios(accion.antes, despues, cambiantes, accion.propio);
+    const propios = cambios.filter((c) => !c.solo);
+    const sale = (await page.evaluate(US("sacar()")).catch(() => ({ salidas: [], envios: [] }))) as {
+      salidas: string[];
+      envios: { cancelado: boolean; campos: [string, string][]; porScript?: boolean }[];
+    };
+    const salidas = [...new Set([...sale.salidas, ...ev.fueraPorRed].map(decodificada))];
+    ev.fueraPorRed.length = 0;
+    for (const s of salidas) {
+      detalle.push(
+        /^[a-z][a-z0-9+.-]*:/i.test(s)
+          ? `it was sending to ${q(s, 300)} (not opened).`
+          : `it was sending to ${q(s, 200)}, another page of the site (not opened in this visit).`,
+      );
+    }
+    if (seFue) detalle.push("the page tried to leave, so I loaded it again to carry on: what wasn't saved was lost.");
+    for (const e of sale.envios) {
+      const campos = e.campos.length ? e.campos.map(([k, v]) => `${k}=${q(v, 60)}`).join(", ") : "no field with a name";
+      if (e.cancelado && tab.enUnaApp) {
+        // En una app, TODO formulario lo maneja su código con
+        // `preventDefault`: es lo normal, no una entrega que se pierde.
+        detalle.push(`the app handled the form submission in its code. It carried: ${campos}.`);
+      } else if (e.cancelado) {
+        detalle.push(`the page's script CANCELED the form submission (preventDefault). It carried: ${campos}.`);
+        notas.add(
+          "(note: a form whose submission the script cancels doesn't reach the user on the published page: OpenLen gives it its destination at publish time, and the `preventDefault` cancels that.)",
+        );
+      } else {
+        detalle.push(`sent the form${e.porScript ? " (by script)" : ""} with: ${campos}.`);
+        notas.add("(note: in this visit forms aren't sent; once published, what a visitor sends reaches the user's email and their Inbox.)");
+      }
+    }
+    detalle.push(...ev.dialogos);
+    ev.dialogos.length = 0;
+    const hechosDelNavegador = ((await page.evaluate(US("hechos()")).catch(() => [])) as string[])
+      .map((h) => BROWSER_FACTS[h])
+      .filter((h): h is string => !!h);
+    detalle.push(...hechosDelNavegador);
+    for (const a of new Set(ev.otrasApi)) detalle.push(`called \`${a}\`, which only answers on the published page: it couldn't be checked here.`);
+    ev.otrasApi.length = 0;
+
+    // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
+    // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
+    if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0) {
+      const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
+      if ("reload" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
+      else {
+        const campo = accion.previo?.campo === true;
+        detalle.push(
+          campo
+            ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
+            : `nothing changed: not what is shown, not the fields, not what is saved in the browser${salvo}.`,
+        );
+        if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
           detalle.push(
-            /^[a-z][a-z0-9+.-]*:/i.test(s)
-              ? `it was sending to ${q(s, 300)} (not opened).`
-              : `it was sending to ${q(s, 200)}, another page of the site (not opened in this visit).`,
+            campo
+              ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
+              : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
           );
         }
-        if (seFue) detalle.push("the page tried to leave, so I loaded it again to carry on: what wasn't saved was lost.");
-        for (const e of sale.envios) {
-          const campos = e.campos.length ? e.campos.map(([k, v]) => `${k}=${q(v, 60)}`).join(", ") : "no field with a name";
-          if (e.cancelado && enUnaApp) {
-            // En una app, TODO formulario lo maneja su código con
-            // `preventDefault`: es lo normal, no una entrega que se pierde.
-            detalle.push(`the app handled the form submission in its code. It carried: ${campos}.`);
-          } else if (e.cancelado) {
-            detalle.push(`the page's script CANCELED the form submission (preventDefault). It carried: ${campos}.`);
-            notas.add(
-              "(note: a form whose submission the script cancels doesn't reach the user on the published page: OpenLen gives it its destination at publish time, and the `preventDefault` cancels that.)",
-            );
-          } else {
-            detalle.push(`sent the form${e.porScript ? " (by script)" : ""} with: ${campos}.`);
-            notas.add("(note: in this visit forms aren't sent; once published, what a visitor sends reaches the user's email and their Inbox.)");
-          }
-        }
-        detalle.push(...ev.dialogos);
-        ev.dialogos.length = 0;
-        for (const a of new Set(ev.otrasApi)) detalle.push(`called \`${a}\`, which only answers on the published page: it couldn't be checked here.`);
-        ev.otrasApi.length = 0;
-
-        // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
-        // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
-        if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue) {
-          const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
-          if ("reload" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
-          else {
-            const campo = accion.previo?.campo === true;
-            detalle.push(
-              campo
-                ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
-                : `nothing changed: not what is shown, not the fields, not what is saved in the browser${salvo}.`,
-            );
-            if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
-              detalle.push(
-                campo
-                  ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
-                  : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
-              );
-            }
-          }
-        }
-        detalle.push(...(accion.alFinal ?? []));
-        lineas.push(`${encabezado} → ${accion.hecho}`);
-        for (const c of [...cambios.map((x) => x.texto), ...detalle]) lineas.push(`   · ${c}`);
       }
-      if (hechos < p.pasos.length) {
-        const faltan = p.pasos.slice(hechos).map((_, k) => String(hechos + k + 1));
-        lineas.push(`${faltan.length === 1 ? "Step" : "Steps"} ${faltan.join(", ")} ${faltan.length === 1 ? "wasn't" : "weren't"} done.`);
-      }
-    } finally {
-      doc.soltar();
     }
-  } finally {
-    await browser.close().catch(() => undefined);
+    detalle.push(...(accion.alFinal ?? []));
+    lineas.push(`${encabezado} → ${accion.hecho}`);
+    for (const c of [...cambios.map((x) => x.texto), ...detalle]) lineas.push(`   · ${c}`);
   }
-  const unicos = [...new Set(errores)];
+  if (hechos < p.pasos.length) {
+    const faltan = p.pasos.slice(hechos).map((_, k) => String(hechos + k + 1));
+    lineas.push(`${faltan.length === 1 ? "Step" : "Steps"} ${faltan.join(", ")} ${faltan.length === 1 ? "wasn't" : "weren't"} done.`);
+  }
+  // LO QUE ES DEL ENTORNO, dicho (la skill `verify` de Claude Code: decidir
+  // si algo es del cambio o del entorno). En el turno del Minecraft Len vio
+  // 10 fps y tuvo que adivinar que era el render por software.
+  const webgl = stuck ? "" : ((await page.evaluate(US("webgl()")).catch(() => "")) as string);
+  if (webgl === "ok") {
+    notas.add("(note: this browser draws WebGL in software, without a GPU: what it draws is right, but it runs far slower than for a visitor — frame rates read here aren't a visitor's.)");
+  } else if (webgl === "failed") {
+    notas.add("(note: the page asked for a WebGL context and this browser couldn't create one: what depends on it isn't drawn here.)");
+  }
+  if (stuck && o.persistent) notas.add("(note: because the page got stuck, the tab was closed: your next use_page opens it again as a new visitor.)");
+
+  const unicos = [...new Set(tab.errores.slice(desdeError))];
   lineas.push(
     unicos.length === 0
       ? "JavaScript errors in the visit: none."
       : `JavaScript errors in the visit: ${unicos.slice(0, 5).map((e) => q(e, 200)).join("; ")}${unicos.length > 5 ? ` (and ${unicos.length - 5} more)` : ""}.`,
   );
   lineas.push(...notas);
-  return { informe: lineas.join("\n") };
+  return { informe: lineas.join("\n"), ...(images.length > 0 ? { images } : {}), stuck };
 }

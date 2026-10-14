@@ -27,6 +27,8 @@ import {
 import { getOrCreateOwnerChatUser } from "@/lib/chat/store";
 import { stripOpIds } from "@/lib/html-ops";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
+import type { InlineImage } from "@/lib/ai-gateway";
+import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
@@ -37,7 +39,7 @@ import type { EnvTarget } from "@/lib/apps/env/rules";
 import { debitCredits } from "@/lib/credits";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
-import { validarPasos, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import { newBrowserTabHolder, validarPasos, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 import type { SignedInAs } from "@/lib/agent/usar-pagina";
 import type { DataChangesPreview } from "@/lib/backend/data-changes-types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
@@ -329,7 +331,7 @@ export interface AgentDeps {
    *  de prueba, por ejemplo— no arranca un navegador por sorpresa. */
   observarPagina?(input: {
     html: string;
-    tipo: "medir" | "describir";
+    tipo: "medir";
     pregunta: string;
     zona?: string;
     /** El contexto con el que se hornea lo que se MIDE, para que sea el mismo
@@ -346,7 +348,10 @@ export interface AgentDeps {
     ruta: string;
     vista?: ContextoDeVista | null;
     signedInAs?: SignedInAs | null;
-  }): Promise<{ informe: string }>;
+    /** La pestaña del turno; sin ella, cada visita abre y cierra la suya. */
+    tab?: BrowserTabHolder;
+    newVisit?: boolean;
+  }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
    *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
@@ -941,9 +946,16 @@ export interface AgentSession {
    *  primera que sí encuentra: lo que delata un callejón sin salida son las
    *  vacías CONSECUTIVAS, no el total. */
   busquedasVaciasSeguidas: number;
-  /** Miradas `describir` de este turno — las que llaman al modelo con visión y
-   *  CUESTAN. Tope propio, separado del de `medir`, que es gratis. */
-  miradasDescribirEsteTurno?: number;
+  /** Capturas de `view_page` en este turno (los ojos como Claude Code, 14/10):
+   *  gratis, pero cada una son ~1.000 tokens en las vueltas siguientes. */
+  screenshotsThisTurn?: number;
+  /** El /node_modules de la terminal de una app, al día tras `npm install`
+   *  aunque el comando no haya acabado (`herramientas-de-app.ts`). */
+  nodeModulesView?: NodeModulesView;
+  /** LA PESTAÑA DEL TURNO (14/10): `use_page` y la captura de `view_page` siguen
+   *  donde la dejó la anterior, como la sesión de navegador de Claude Code. Se
+   *  cierra al acabar el turno (`closeBrowserTab`, en la ruta). */
+  browserTab?: BrowserTabHolder;
   /** Miradas `medir` de este turno — Chromium, sin modelo. Tienen tope igual,
    *  pero más alto: lo que acota es el tiempo de render, no el dinero. */
   miradasMedirEsteTurno?: number;
@@ -995,6 +1007,10 @@ export interface AgentSession {
 export interface ToolOutcome {
   /** functionResponse.response que vuelve al modelo. Siempre presente. */
   response: Record<string, unknown>;
+  /** Los ojos como Claude Code (14/10): capturas que vuelven al modelo como
+   *  IMÁGENES —él las mira, sin nadie que se las describa—. El bucle las pone
+   *  en el mensaje que sigue a los resultados de la tanda. */
+  images?: readonly InlineImage[];
   /** Pieza 8 · el `deferContext` de DeepSeek: un texto que el modelo lee en su
    *  paso siguiente, detrás de los resultados de la tanda (el cierre de un
    *  encargo). Lo añade el bucle al mensaje que lleva las respuestas. */
@@ -1490,15 +1506,15 @@ const PHOTO_PIVOT_NOTE =
   + "Then GO ON with the rest of what they asked: running out of a photo doesn't cancel the rest or make you ask permission to continue. "
   + "In your answer say which photo there wasn't and what you put in its place.";
 
-// ─── view_page: el derecho a preguntar ────────────────────────────────────
+// ─── view_page: mirar la página ───────────────────────────────────────────
 //
-// TOPES SEPARADOS POR COSTE, y no por simetría: `describir` llama al modelo con
-// visión y gasta; `medir` es Chromium y no gasta un crédito, así que no tiene
-// por qué compartir techo con la cara. Misma doctrina que `find_photo`: pasado
-// el tope se ENDURECE la respuesta, no se bloquea la llamada — bloquear no
-// ahorra nada (la vuelta ya se gastó) y puede dejar al Agente sin un dato que
-// existía.
-const MAX_MIRADAS_DESCRIBIR = 2;
+// DOS MANERAS, LAS DOS GRATIS (14/10). `measure`: Chromium mide contraste,
+// desborde y errores. `screenshot`: la captura vuelve a Len como IMAGEN y la
+// mira él, como Claude Code — antes un modelo con visión la describía por él
+// (`describe`, que costaba créditos), y en el turno del Minecraft contestó en
+// chino «blanco puro» de una escena que pintaba bien. Misma doctrina que
+// `find_photo`: pasado el tope se ENDURECE la respuesta, no se bloquea.
+const MAX_SCREENSHOTS_PER_TURN = 6;
 const MAX_MIRADAS_MEDIR = 4;
 
 /** Pieza 4: visitas de `use_page` a la vez en un turno. Cada una arranca su
@@ -1525,24 +1541,20 @@ async function toolMirarPagina(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  // Los parámetros del modelo, en inglés desde el 2026-10-06 (`mode`,
-  // `question`, `area`); dentro, `observarPagina` sigue con los suyos.
-  const tipo = args.mode === "describe" ? "describir" : args.mode === "measure" ? "medir" : null;
+  // `describe` sigue entrando (historial y costumbre): ahora es la captura.
+  const tipo = args.mode === "screenshot" || args.mode === "describe" ? "captura" : args.mode === "measure" ? "medir" : null;
   if (!tipo) {
     return {
       response: {
         ok: false,
-        error: '"mode" has to be "measure" (the browser answers it, free) or "describe" (a model looks at it, it costs credits).',
+        error: '"mode" has to be "measure" (the browser measures it) or "screenshot" (you get a screenshot to look at). Both are free.',
       },
     };
   }
   const pregunta = typeof args.question === "string" ? args.question.trim() : "";
-  if (!pregunta) {
-    return { response: { ok: false, error: '"question" is missing: say what you want to know about the page.' } };
-  }
   const zona = typeof args.area === "string" && args.area.trim() ? args.area.trim() : undefined;
 
-  if (!deps.observarPagina) {
+  if (tipo === "medir" ? !deps.observarPagina : !deps.usarPagina) {
     return {
       response: {
         ok: false,
@@ -1551,20 +1563,17 @@ async function toolMirarPagina(
     };
   }
 
-  const usadas =
-    tipo === "describir"
-      ? (session.miradasDescribirEsteTurno ?? 0)
-      : (session.miradasMedirEsteTurno ?? 0);
-  const tope = tipo === "describir" ? MAX_MIRADAS_DESCRIBIR : MAX_MIRADAS_MEDIR;
+  const usadas = tipo === "captura" ? (session.screenshotsThisTurn ?? 0) : (session.miradasMedirEsteTurno ?? 0);
+  const tope = tipo === "captura" ? MAX_SCREENSHOTS_PER_TURN : MAX_MIRADAS_MEDIR;
   if (usadas >= tope) {
     return {
       response: {
         ok: true,
-        note: `You already took too many looks of mode "${args.mode}" in this turn. Stop looking and decide with what you already know: you have the document, which is the half the screenshot is missing.`,
+        note: `You already took too many looks of mode "${tipo === "captura" ? "screenshot" : "measure"}" in this turn. Stop looking and decide with what you already know: you have the files, and use_page can still read what the page shows.`,
       },
     };
   }
-  if (tipo === "describir") session.miradasDescribirEsteTurno = usadas + 1;
+  if (tipo === "captura") session.screenshotsThisTurn = usadas + 1;
   else session.miradasMedirEsteTurno = usadas + 1;
 
   const row = await deps.loadProject(session.projectId, session.userId);
@@ -1578,22 +1587,44 @@ async function toolMirarPagina(
     return { response: { ok: false, error: "this page doesn't have a document to look at yet" } };
   }
 
+  // LA VISTA, para que lo que se mira sea el documento que el usuario tiene
+  // delante y no el pelado. En una app, con la pantalla que se pidió (`#/ventas`).
+  const pantalla = row.data.app ? pantallaDe(args.screen) : null;
+  const vista = {
+    ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
+    ...(pantalla ? { pantalla } : {}),
+  };
   const desde = new Date();
+  const llamadasDelBorrador = async () =>
+    (await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null)) ?? null;
+
+  if (tipo === "captura") {
+    // EL MISMO NAVEGADOR Y EL MISMO DOCUMENTO que `use_page` (y que el lienzo):
+    // una visita con un solo paso, la captura. Antes esta rama abría OTRO
+    // Chromium sin WebGL sobre el cascarón crudo, y por eso la escena 3D salía
+    // en blanco.
+    const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
+    const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+    // EN LA PESTAÑA DEL TURNO: la captura es de lo que hay en ella, como la de Claude Code.
+    const tab = (session.browserTab ??= newBrowserTabHolder());
+    const visto = await visitar(() => deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab })).catch(() => null);
+    if (!visto) {
+      return {
+        response: {
+          ok: false,
+          error: "the page couldn't be opened in the browser this time. Don't take it as meaning it's fine or that it's wrong.",
+        },
+      };
+    }
+    const llamadas = await llamadasDelBorrador();
+    return {
+      response: { ok: true, screenshot: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) },
+      ...(visto.images?.length ? { images: visto.images } : {}),
+    };
+  }
+
   const visto = await deps
-    .observarPagina({
-      html,
-      tipo,
-      pregunta,
-      ...(zona ? { zona } : {}),
-      // LA VISTA, para que lo que se mide sea el documento que el usuario tiene
-      // delante y no el pelado. La fila ya está leída aquí arriba, así que no
-      // cuesta una consulta. Ver `MiradaParams.vista`. En una app, con la
-      // pantalla que se pidió (`#/ventas`).
-      vista: {
-        ...(await vistaConCarpeta(vistaParaMedir(session.projectId, row, pedida.page), deps, session.projectId)),
-        ...(row.data.app ? { pantalla: pantallaDe(args.screen) } : {}),
-      },
-    })
+    .observarPagina!({ html, tipo, pregunta, ...(zona ? { zona } : {}), vista })
     .catch(() => null);
   if (!visto) {
     // Fail-open y DICIÉNDOLO: «no se pudo mirar» no puede leerse como «está
@@ -1605,11 +1636,10 @@ async function toolMirarPagina(
       },
     };
   }
-
   // Read-only: sin tarjeta de acción y sin documento nuevo. La página no
   // cambió — preguntar no es editar.
   // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
-  const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
+  const llamadas = await llamadasDelBorrador();
   return { response: { ok: true, answer: visto.respuesta, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
 }
 
@@ -1683,7 +1713,9 @@ async function toolUsarPagina(
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
   const desde = new Date();
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs }))
+  const tab = (session.browserTab ??= newBrowserTabHolder());
+  const newVisit = args.new_visit === true;
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}) }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -1698,7 +1730,10 @@ async function toolUsarPagina(
   }
   // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
   const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
-  return { response: { ok: true, visit: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) } };
+  return {
+    response: { ok: true, visit: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) },
+    ...(visto.images?.length ? { images: visto.images } : {}),
+  };
 }
 
 /** Por qué `sign_in_as` no abrió sesión, dicho para que Len sepa qué hacer. */

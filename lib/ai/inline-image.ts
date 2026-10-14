@@ -13,8 +13,8 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas } from "@/lib/ai/sitio-del-error";
-import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
-import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 import { PULSAR_CONTROLES } from "@/lib/ai/press-controls";
 import { esCargaFallida } from "@/lib/generation/rotura-ajena";
 
@@ -281,33 +281,12 @@ export async function renderHtmlToInlineImage(
   const maxBytes = opts.maxBytes ?? 1024 * 1024;
   const errores: string[] = [];
   try {
-    const puppeteer = (await import("puppeteer")).default;
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-    // Override HOME for the Chrome subprocess so its XDG bootstrap (mimeapps,
-    // crashpad database, default config) lands somewhere writable. The
-    // openlen-app systemd unit hardens /home/<service-user> as read-only via
-    // ProtectHome — without this, Chrome crashes at launch with
-    // "cannot create directory '~/.local': Read-only file system".
-    // /tmp is always writable; the env override only affects the spawned
-    // Chrome process, not the Node parent.
-    const browser = await puppeteer.launch({
-      // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
-      ...SIN_VENTANAS_NUEVAS,
-      headless: true,
-      executablePath,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
-        ...(await isolatedNetworkArgs()),
-      ],
-      env: {
-        ...process.env,
-        HOME: "/tmp",
-      },
-    });
+    // UN SOLO NAVEGADOR (14/10): el de los ojos, con WebGL por software. Aquí
+    // había otro `puppeteer.launch` con `--disable-gpu` y sin SwiftShader, y
+    // una escena 3D salía en blanco: three.js no conseguía su contexto y la
+    // app se desmontaba. Un segundo lanzador es justo lo que deja de recibir
+    // los arreglos del primero (la Fase A sólo arregló aquél).
+    const browser = await lanzarChromium();
     try {
       const page = await browser.newPage();
       // LO QUE LA PAGINA GRITA AL CARGAR. El modelo escribe JavaScript y nunca

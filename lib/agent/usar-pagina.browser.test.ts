@@ -13,7 +13,8 @@ import { describe, expect, it } from "vitest";
 
 import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
 
-import { PRELUDIO_DE_USO, usarPagina, type PasoDeUso } from "./usar-pagina";
+import { newBrowserTabHolder } from "./pasos-de-uso";
+import { closeBrowserTab, PRELUDIO_DE_USO, usarPagina, type PasoDeUso } from "./usar-pagina";
 
 const marco = (cuerpo: string) =>
   `<!doctype html><html><head><meta charset="utf-8"><title>Prueba</title>
@@ -341,4 +342,192 @@ describe("use_page — la carpeta del proyecto", () => {
     expect(con).toContain("«Sin aplicar» → «Aplicado»");
     expect(sin).toContain("there is nothing behind it");
   }, 90_000);
+});
+
+// LOS OJOS COMO CLAUDE CODE (14/10). En el turno del Minecraft los ojos dijeron
+// «blanco puro» de una escena 3D que pintaba bien, y Len metió código de
+// depuración en su app para leer el canvas. Claude Code mira con UN navegador:
+// navegar, actuar, capturar (la captura le llega a él) y `eval` para inspeccionar.
+describe("use_page — captura, eval y lo que hace el navegador", () => {
+  const pixelAt = async (dataBase64: string, fx: number, fy: number) => {
+    const sharp = (await import("sharp")).default;
+    const { data, info } = await sharp(Buffer.from(dataBase64, "base64")).raw().toBuffer({ resolveWithObject: true });
+    const x = Math.floor(info.width * fx);
+    const y = Math.floor(info.height * fy);
+    const i = (y * info.width + x) * info.channels;
+    return { r: data[i]!, g: data[i + 1]!, b: data[i + 2]!, width: info.width, height: info.height };
+  };
+  const webglRojo = (conWebgl: boolean) =>
+    marco(`<canvas id="c" width="800" height="600" style="position:fixed;inset:0;width:100vw;height:100vh"></canvas>
+    <script>
+      ${conWebgl ? 'var gl = document.getElementById("c").getContext("webgl2"); gl.clearColor(1, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);' : ""}
+    </script>`);
+
+  it("🔴 la captura llega como imagen y ve el WebGL (rojo); BRAZO DE CONTROL: sin WebGL, el fondo blanco", async () => {
+    const con = await usarPagina({ html: webglRojo(true), pasos: [{ screenshot: "screen" }], ruta: "/index.html" });
+    const sin = await usarPagina({ html: webglRojo(false), pasos: [{ screenshot: "screen" }], ruta: "/index.html" });
+    expect(con.images).toHaveLength(1);
+    expect(con.images![0]!.mimeType).toBe("image/jpeg");
+    const rojo = await pixelAt(con.images![0]!.dataBase64, 0.5, 0.5);
+    const blanco = await pixelAt(sin.images![0]!.dataBase64, 0.5, 0.5);
+    expect(rojo.r).toBeGreaterThan(200);
+    expect(rojo.g).toBeLessThan(60);
+    expect(blanco.g).toBeGreaterThan(200);
+    expect(con.informe).toContain("1. screenshot of the screen → attached below as image 1");
+    // Lo que es del entorno, dicho: el WebGL de aquí es por software.
+    expect(con.informe).toContain("WebGL in software");
+    expect(sin.informe).not.toContain("WebGL in software");
+  }, 90_000);
+
+  it("🔴 la captura de un bloque recorta ese bloque; un texto que no está, lo dice sin imagen", async () => {
+    const html = marco(`<section style="height:700px">Inicio</section>
+      <section style="width:400px;height:200px;background:#0000ff;color:#fff">Precios del plan</section>`);
+    const r = await usarPagina({ html, pasos: [{ screenshot: "Precios del plan" }, { screenshot: "No existe" }], ruta: "/index.html" });
+    expect(r.images).toHaveLength(1);
+    const azul = await pixelAt(r.images![0]!.dataBase64, 0.5, 0.8);
+    expect(azul.b).toBeGreaterThan(200);
+    expect(azul.r).toBeLessThan(60);
+    expect(azul.width).toBeLessThan(600);
+    expect(r.informe).toContain("1. screenshot of «Precios del plan» → attached below as image 1");
+    expect(r.informe).toContain("2. screenshot of «No existe» → «No existe» isn't shown on the page.");
+  }, 90_000);
+
+  it("🔴 eval devuelve el valor (una expresión o un cuerpo con return) y el error, sin tocar la página", async () => {
+    const html = marco(`<canvas width="320" height="200"></canvas><script>window.game = { chunks: 33 };</script>`);
+    const r = await usarPagina({
+      html,
+      pasos: [{ eval: "document.title" }, { eval: "const c = document.querySelector('canvas'); return [c.width, c.height]" }, { eval: "game.chunks" }, { eval: "noExiste.x" }],
+      ruta: "/index.html",
+    });
+    expect(r.informe).toContain('1. eval → "Prueba"');
+    expect(r.informe).toContain("2. eval → [320,200]");
+    expect(r.informe).toContain("3. eval → 33");
+    expect(r.informe).toMatch(/4\. eval → threw ReferenceError: noExiste is not defined/);
+    expect(r.images ?? []).toHaveLength(0);
+  }, 90_000);
+
+  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y «nothing changed»", async () => {
+    const juego = (pide: boolean) =>
+      marco(`<canvas id="c" width="400" height="300"></canvas><div id="ov">Click to play</div>
+      <script>
+        document.getElementById("ov").addEventListener("click", function () { ${pide ? 'document.getElementById("c").requestPointerLock();' : ""} });
+      </script>`);
+    const pide = (await usarPagina({ html: juego(true), pasos: [{ click: "Click to play" }], ruta: "/index.html" })).informe;
+    const noPide = (await usarPagina({ html: juego(false), pasos: [{ click: "Click to play" }], ruta: "/index.html" })).informe;
+    expect(pide).toContain("the page took the pointer (pointer lock is on)");
+    expect(pide).not.toMatch(/nothing (else )?changed/);
+    expect(noPide).not.toContain("pointer lock");
+    expect(noPide).toMatch(/nothing changed/);
+  }, 90_000);
+});
+
+// LA PESTAÑA DEL TURNO (14/10). En Claude Code la sesión del navegador dura:
+// cada orden actúa sobre la página que hay. En el turno de los ojos Len repitió
+// «Click to play» en CADA visita porque cada `use_page` empezaba de cero.
+describe("use_page — la pestaña que dura el turno", () => {
+  const juego = (titulo: string) =>
+    marco(`<h1>${titulo}</h1><div id="ov">Click to play</div><p id="st">puntos: <span id="n">0</span></p>
+    <p id="guardado"></p>
+    <script>
+      document.getElementById("guardado").textContent = "guardado: " + (localStorage.getItem("partidas") || "0");
+      document.getElementById("ov").addEventListener("click", function () {
+        document.getElementById("ov").remove();
+        document.getElementById("n").textContent = "1";
+        localStorage.setItem("partidas", String(Number(localStorage.getItem("partidas") || "0") + 1));
+      });
+    </script>`);
+  const visita = (html: string, pasos: PasoDeUso[], extra: Partial<Parameters<typeof usarPagina>[0]> = {}) =>
+    usarPagina({ html, pasos, ruta: "/index.html", ...extra }).then((r) => r.informe);
+
+  it("🔴 la segunda llamada sigue donde la dejó la primera; BRAZO DE CONTROL: sin pestaña, vuelve a empezar", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      const primera = await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      expect(primera).toContain("in a desktop browser tab that stays open");
+      const segunda = await visita(juego("Voxel"), [{ read: "puntos" }, { read: "Click to play" }], { tab });
+      expect(segunda).toContain("Same tab as your last call, still on /index.html");
+      expect(segunda).toContain("it reads: «puntos: 1»");
+      expect(segunda).toContain("«Click to play» isn't shown on the page.");
+      const sinPestana = await visita(juego("Voxel"), [{ read: "puntos" }]);
+      expect(sinPestana).toContain("it reads: «puntos: 0»");
+      expect(sinPestana).not.toContain("Same tab");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 si los ficheros cambiaron, carga la versión nueva en la misma pestaña y conserva lo guardado; new_visit empieza de cero", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      const nueva = await visita(juego("Voxel World"), [{ read: "Voxel World" }, { read: "guardado" }, { read: "Click to play" }], { tab });
+      expect(nueva).toContain("loaded again with the files as they are now");
+      expect(nueva).toContain("it reads: «guardado: 1»");
+      expect(nueva).toContain("it reads: «Click to play»");
+      const deCero = await visita(juego("Voxel World"), [{ read: "guardado" }], { tab, newVisit: true });
+      expect(deCero).toContain("as a new visitor (with nothing saved from before)");
+      expect(deCero).toContain("it reads: «guardado: 0»");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  // The tab lives on our server: an idle 3D scene left drawing burned 12 cores
+  // (measured; production has 3). Between calls it stands still.
+  it("🔴 between calls the page stands still and then carries on, pointer lock kept; CONTROL: within a visit its loop runs", async () => {
+    const loop = marco(`<canvas id="c" width="200" height="100"></canvas><div id="ov">Click to play</div>
+    <script>
+      window.f = 0;
+      (function tick() { window.f++; requestAnimationFrame(tick); })();
+      document.getElementById("ov").addEventListener("click", function () { document.getElementById("c").requestPointerLock(); });
+    </script>`);
+    const number = (report: string, step: number) => Number(new RegExp(`${step}\\. eval → (\\d+)`).exec(report)?.[1] ?? NaN);
+    const tab = newBrowserTabHolder();
+    try {
+      const first = await visita(loop, [{ click: "Click to play" }, { eval: "f" }], { tab });
+      expect(first).toContain("the page took the pointer (pointer lock is on)");
+      expect(first).toContain("(in between, the page stands still)");
+      await new Promise((r) => setTimeout(r, 1500));
+      const second = await visita(loop, [{ eval: "f" }, { eval: "new Promise((r) => setTimeout(() => r(f), 500))" }, { eval: "Boolean(document.pointerLockElement)" }], { tab });
+      expect(second).toContain("Same tab as your last call");
+      expect(second).toContain("Between your calls it stood still");
+      // 1.5 s running would be ~90 frames; standing still, only the few around the visits.
+      expect(number(second, 1) - number(first, 2)).toBeLessThan(20);
+      // CONTROL: once the visit is on, the loop runs again.
+      expect(number(second, 2) - number(second, 1)).toBeGreaterThan(5);
+      expect(second).toContain("3. eval → true");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 a static page (the pause waits for a script that never comes) still answers the next call", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(marco("<h1>Quieta</h1>"), [{ read: "Quieta" }], { tab });
+      const again = await visita(marco("<h1>Quieta</h1>"), [{ eval: "1 + 1" }, { read: "Quieta" }], { tab });
+      expect(again).toContain("Same tab as your last call");
+      expect(again).toContain("1. eval → 2");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
+  it("🔴 un eval que no vuelve cierra la pestaña y lo dice; la siguiente llamada empieza de cero; closeBrowserTab la cierra", async () => {
+    const tab = newBrowserTabHolder();
+    try {
+      await visita(juego("Voxel"), [{ click: "Click to play" }], { tab });
+      const colgada = await visita(juego("Voxel"), [{ eval: "while (true) {}" }], { tab });
+      expect(colgada).toContain("the page is busy");
+      expect(colgada).toContain("the tab was closed");
+      expect(tab.current).toBeNull();
+      const despues = await visita(juego("Voxel"), [{ read: "puntos" }], { tab });
+      expect(despues).toContain("in a desktop browser tab that stays open");
+      expect(despues).toContain("it reads: «puntos: 0»");
+      expect(tab.current).not.toBeNull();
+    } finally {
+      await closeBrowserTab(tab);
+    }
+    expect(tab.current).toBeNull();
+  }, 120_000);
 });
