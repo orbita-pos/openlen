@@ -10,6 +10,7 @@
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
+import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
@@ -1564,6 +1565,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
      *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
     const avisos: string[] = [];
+    /** Los ojos como Claude Code (14/10): las capturas de la tanda
+     *  (`ToolOutcome.images`), que vuelven al modelo como imágenes. */
+    const capturas: BatchScreenshots[] = [];
     // Los nombres que el modelo puede llamar en ESTE turno. Salen de las
     // declaraciones que se le mandaron, no de una lista escrita a mano: una
     // lista a mano no avisa de lo que falta, y aquí faltarían justo las
@@ -1794,6 +1798,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         }
         if (outcome.dismissed) ownerTookOver = true;
         if (outcome.notice) avisos.push(outcome.notice);
+        if (outcome.images?.length) capturas.push({ tool: call.name, images: outcome.images });
         const respuesta = outcome.response;
         // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
         // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
@@ -1943,11 +1948,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // Pieza 8: y detrás, lo que las herramientas dejaron para este paso (el
     // cierre de un encargo), como el `deferContext` de DeepSeek.
     const medido = await medirYRedactar();
+    // Y LAS CAPTURAS, en este mismo mensaje y con su rótulo: el modelo las mira
+    // él, sin nadie que se las describa (la skill `verify` de Claude Code: «That
+    // capture is your evidence»). Las viejas pierden los píxeles.
+    const imagenes = capturas.flatMap((c) => c.images);
     messages.push({
       role: "user",
-      content: [medido, ...avisos].filter((x) => x.length > 0).join("\n\n"),
+      content: [medido, ...avisos, imagenes.length > 0 ? screenshotsLabel(capturas) : ""].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
+      ...(imagenes.length > 0 ? { images: imagenes } : {}),
     });
+    if (imagenes.length > 0) keepRecentScreenshots(messages);
     // Lote 7-8 (2): lo que el dueño escribió mientras la pregunta esperaba, detrás
     // de la tanda; como la corrección tardía, con su margen de vueltas.
     if (pendiente) {

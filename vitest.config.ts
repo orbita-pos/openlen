@@ -333,6 +333,8 @@ export default defineConfig({
       // brazo de control dentro de cada prueba. `include` es LISTA BLANCA.
       "lib/agent/usar-pagina.browser.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
+      // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
+      "lib/agent/screenshots-in-context.test.ts",
       "lib/business-profiles/**/*.test.ts",
       "lib/billing/**/*.test.ts",
       "app/api/billing/**/*.test.ts",
