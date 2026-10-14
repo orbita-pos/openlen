@@ -1496,7 +1496,11 @@ broken=true for it.
 // Esto es *pull*, la forma que usan v0/agent-browser, Claude Code y OpenCode:
 // el que actúa PIDE, y lo que recibe son DATOS, no una sentencia.
 
-export type TipoDeMirada = "medir" | "describir";
+// ⚰️ Aquí había un segundo tipo, `describir`: un modelo con visión miraba una
+// captura y se la contaba al Agente. Se fue el 2026-10-14 (los ojos como Claude
+// Code): la captura le llega a él como imagen por la visita de `use_page`, el
+// mismo navegador y el mismo documento que el lienzo. Ver `toolMirarPagina`.
+export type TipoDeMirada = "medir";
 
 export interface MiradaParams {
   /** El documento tal y como se guardó. */
@@ -1531,14 +1535,6 @@ export interface MiradaParams {
 
 /** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
  *  pero SIN modo JSON — aquí se pide prosa corta, no un veredicto. */
-function describeProvider(): VerifyProviderLike {
-  return fireworksStreamProvider({
-    requestId: "agent-mirar",
-    operation: "agent_visual_verify",
-    maxOutputTokens: 512,
-  });
-}
-
 /** Lo que devuelve la medida del navegador (`renderVisualQualityViewports` o el doble de una prueba). */
 export type MeasuredPage = NonNullable<Awaited<ReturnType<NonNullable<VerifyInternals["medir"]>>>>;
 
@@ -1605,14 +1601,8 @@ export function describeMeasurements(m: MeasuredPage): string {
 }
 
 /**
- * Contesta UNA pregunta sobre la página. Nunca lanza: cualquier fallo devuelve
- * `null` y el llamador lo dice — preguntar no puede tumbar un turno.
- *
- * ⚠️ El bucle de streaming de abajo está duplicado respecto al de `runVerify` a
- * propósito. Aquél va entrelazado con sus propios retornos de veredicto de
- * reserva y con la contabilidad de tokens; un ayudante común tendría que
- * llevarse las dos cosas como parámetros y dejaría de ser más simple que las
- * doce líneas que ahorra, sobre la función más delicada del archivo.
+ * Mide la página (`view_page mode="measure"`). Nunca lanza: cualquier fallo
+ * devuelve `null` y el llamador lo dice — preguntar no puede tumbar un turno.
  */
 export async function observarPagina(
   params: MiradaParams,
@@ -1620,88 +1610,20 @@ export async function observarPagina(
 ): Promise<{ respuesta: string } | null> {
   const zona = params.zona ? ` (${params.zona})` : "";
 
-  if (params.tipo === "medir") {
-    // Chromium. Sin modelo, sin crédito.
-    //
-    // 🔴 SOBRE EL DOCUMENTO HORNEADO, como los ojos. Ver `MiradaParams.vista`:
-    // hasta el 2026-09-16 esta rama medía el html pelado, así que el modelo y
-    // el usuario miraban páginas distintas. Fallo blando, como allí: si el
-    // binding nativo no carga se mide crudo, que ya es útil.
-    const medir = internals.medir ?? renderVisualQualityViewports;
-    const doc = documentoMedible(params.html, params.vista ?? null);
-    // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-    const carpeta = await carpetaDeLaVista(params.vista);
-    const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
-    if (!m) return null;
-
-    return { respuesta: `Measured in the browser${zona}. ${describeMeasurements(m)}` };
-  }
-
-  // describir — el papel con visión, y SÓLO para describir.
+  // Chromium. Sin modelo, sin crédito.
   //
-  // ⚠️ ESTA RAMA NO HORNEA, y es la MISMA decisión que la foto de los ojos, no
-  // un olvido: el modelo con visión no necesita direcciones, y cambiarle el
-  // documento cambiaría lo que ve. Queda dicho aquí porque es una diferencia
-  // entre superficies, y en este repo ésas se escriben o se vuelven accidentes.
-  //
-  // 🔴 MEDIDO EL 2026-09-16, y la decisión es NO HORNEAR. La pregunta abierta
-  // era que ninguno de los dos ojos ve la página con la burbuja del asistente
-  // como la recibe el visitante. Se midió sobre las 231 plantillas del corpus,
-  // en móvil (390) y escritorio (1280), y sale que hornear no compra casi nada
-  // y cuesta bastante:
-  //
-  //   · la pasada DETERMINISTA ya hornea, y aun así no ve el botón en 443 de
-  //     462 miradas: la burbuja monta en shadow DOM y el recorrido va por el
-  //     documento claro. Hornearla más no la hace verla — eso lo arreglaría
-  //     atravesar el shadow root, que es otra cosa. (Una sesión anterior ya lo
-  //     había medido por el otro lado: 15 plantillas, `cambiaContraste: 0`,
-  //     `cambiaDesborde: 0`.)
-  //   · lo que la burbuja llega a TAPAR de verdad es poco: algo interactivo en
-  //     7 de 231 en móvil (3,0%) y 3 de 231 en escritorio (1,3%).
-  //   · y hornear la FOTO metería un mueble NUESTRO en todas las capturas. Ese
-  //     camino ya se pagó una vez —ver la memoria del defecto que era de la
-  //     demo—: el crítico con visión reporta lo nuestro como defecto de la
-  //     página del usuario. Cambiaría 48,8 KB por página para ganar un 3% y
-  //     regalar ruido en el 100%.
-  //
-  // El defecto que SÍ era común —el icono blanco ilegible sobre un acento
-  // claro, de 1,0 a 1,9:1— se arregló donde tocaba, en el origen: el widget
-  // calcula su color en vez de asumir blanco (`lib/publish/assistant-widget.ts`).
-  // Avisar de un contraste que sabemos calcular es darle trabajo al usuario.
-  const render = internals.render ?? renderHtmlToInlineImage;
+  // 🔴 SOBRE EL DOCUMENTO HORNEADO, como los ojos. Ver `MiradaParams.vista`:
+  // hasta el 2026-09-16 esta rama medía el html pelado, así que el modelo y
+  // el usuario miraban páginas distintas. Fallo blando, como allí: si el
+  // binding nativo no carga se mide crudo, que ya es útil.
+  const medir = internals.medir ?? renderVisualQualityViewports;
+  const doc = documentoMedible(params.html, params.vista ?? null);
+  // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
   const carpeta = await carpetaDeLaVista(params.vista);
-  const foto = params.html;
-  const image = await (carpeta ? render(foto, { carpeta }) : render(foto)).catch(() => null);
-  if (!image) return null;
+  const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
+  if (!m) return null;
 
-  const provider = internals.provider ?? describeProvider();
-  const prompt = `<role>You are describing a screenshot for a teammate who is editing this page's HTML and cannot see it. They hold the intent; you hold the pixels.</role>
-<question>${params.pregunta}</question>${params.zona ? `${SALTO}<area>${params.zona}</area>` : ""}
-<rules>
-Describe ONLY what you can see: shapes, colours, and whether an area shows a photo, a flat colour, a gradient, text, or nothing at all.
-NEVER say whether something is broken, wrong, missing, or a defect. You cannot know that from pixels and your teammate can: a flat box is very often a deliberate placeholder.
-Answer in the SAME LANGUAGE as the question, in at most three sentences.
-</rules>`;
-
-  try {
-    let raw = "";
-    for await (const ev of provider.stream(
-      { messages: [{ role: "user", content: prompt }], images: [image], maxOutputTokens: 512 },
-      {},
-    )) {
-      if (ev.type === "text_delta") raw += ev.text;
-      else if (ev.type === "done" && ev.stopReason.kind === "error") return null;
-    }
-    const t = raw.trim();
-    // LA GEMELA. Esta rama no mide: describe una captura. Pero el papel con
-    // visión TRANSCRIBE lo que ve, así que devuelve texto de la página igual
-    // que la otra — y dejarla fuera sería exactamente la asimetría que
-    // `TEXTO_DE_LA_PAGINA_ES_DATO` existe para no repetir.
-    return t ? { respuesta: `${TEXTO_DE_LA_PAGINA_ES_DATO} ${t}` } : null;
-  } catch {
-    // Fail-open, como todo en este archivo.
-    return null;
-  }
+  return { respuesta: `Measured in the browser${zona}. ${describeMeasurements(m)}` };
 }
 
 /** Parse + valida el veredicto. null → fallback (lo mapea el caller). */

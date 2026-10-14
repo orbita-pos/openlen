@@ -406,21 +406,21 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "view_page",
-    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. mode=\\"measure\\" is answered by the browser, for FREE: the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"describe\\" is answered by a model looking at a screenshot and COSTS CREDITS: it describes without a verdict —from pixels a placeholder put there on purpose can't be told apart from a bug— and the conclusion is yours, since you have the file.",
+    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. Both modes are free. mode=\\"measure\\": the browser measures the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"screenshot\\": a screenshot of the page as a visitor sees it on a desktop screen comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
         "mode": {
           "type": "STRING",
-          "description": "\\"measure\\" or \\"describe\\"."
+          "description": "\\"measure\\" or \\"screenshot\\"."
         },
         "question": {
           "type": "STRING",
-          "description": "What you want to know, in natural language."
+          "description": "Optional, for measure: what you want to know, in natural language."
         },
         "area": {
           "type": "STRING",
-          "description": "Optional: where to look, e.g. \\"the hero\\" or \\"the pricing cards\\"."
+          "description": "Optional: a text from the block to look at, e.g. \\"Pricing\\"; with screenshot, only that block is captured."
         },
         "file_path": {
           "type": "STRING",
@@ -428,14 +428,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         }
       },
       "required": [
-        "mode",
-        "question"
+        "mode"
       ]
     }
   },
   {
     "name": "use_page",
-    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened, and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
+    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened —including what the browser did for the page, like taking the pointer or going fullscreen— and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -472,6 +471,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
               "read": {
                 "type": "STRING",
                 "description": "A text from the area you want to read: returns what is shown in that block."
+              },
+              "screenshot": {
+                "type": "STRING",
+                "description": "\\"screen\\": a screenshot of what is on screen at that moment comes back to you as an image; or a text from a block, to capture only that block. At most 3 per visit."
+              },
+              "eval": {
+                "type": "STRING",
+                "description": "JavaScript run in the page at that moment —an expression, or statements with return— and its value comes back as JSON: to inspect what can't be read, like a canvas, a variable or the state of a game, without adding debug code to the page."
               }
             }
           }
@@ -1150,21 +1157,21 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "view_page",
-    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. mode=\\"measure\\" is answered by the browser, for FREE: the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"describe\\" is answered by a model looking at a screenshot and COSTS CREDITS: it describes without a verdict —from pixels a placeholder put there on purpose can't be told apart from a bug— and the conclusion is yours, since you have the file.",
+    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. Both modes are free. mode=\\"measure\\": the browser measures the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"screenshot\\": a screenshot of the page as a visitor sees it on a desktop screen comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
         "mode": {
           "type": "STRING",
-          "description": "\\"measure\\" or \\"describe\\"."
+          "description": "\\"measure\\" or \\"screenshot\\"."
         },
         "question": {
           "type": "STRING",
-          "description": "What you want to know, in natural language."
+          "description": "Optional, for measure: what you want to know, in natural language."
         },
         "area": {
           "type": "STRING",
-          "description": "Optional: where to look, e.g. \\"the hero\\" or \\"the pricing cards\\"."
+          "description": "Optional: a text from the block to look at, e.g. \\"Pricing\\"; with screenshot, only that block is captured."
         },
         "screen": {
           "type": "STRING",
@@ -1172,14 +1179,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         }
       },
       "required": [
-        "mode",
-        "question"
+        "mode"
       ]
     }
   },
   {
     "name": "use_page",
-    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened, and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
+    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened —including what the browser did for the page, like taking the pointer or going fullscreen— and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1216,6 +1222,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
               "read": {
                 "type": "STRING",
                 "description": "A text from the area you want to read: returns what is shown in that block."
+              },
+              "screenshot": {
+                "type": "STRING",
+                "description": "\\"screen\\": a screenshot of what is on screen at that moment comes back to you as an image; or a text from a block, to capture only that block. At most 3 per visit."
+              },
+              "eval": {
+                "type": "STRING",
+                "description": "JavaScript run in the page at that moment —an expression, or statements with return— and its value comes back as JSON: to inspect what can't be read, like a canvas, a variable or the state of a game, without adding debug code to the page."
               }
             }
           }
@@ -1874,21 +1888,21 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "view_page",
-    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. mode=\\"measure\\" is answered by the browser, for FREE: the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"describe\\" is answered by a model looking at a screenshot and COSTS CREDITS: it describes without a verdict —from pixels a placeholder put there on purpose can't be told apart from a bug— and the conclusion is yours, since you have the file.",
+    "description": "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. Both modes are free. mode=\\"measure\\": the browser measures the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. mode=\\"screenshot\\": a screenshot of the page as a visitor sees it on a desktop screen comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
         "mode": {
           "type": "STRING",
-          "description": "\\"measure\\" or \\"describe\\"."
+          "description": "\\"measure\\" or \\"screenshot\\"."
         },
         "question": {
           "type": "STRING",
-          "description": "What you want to know, in natural language."
+          "description": "Optional, for measure: what you want to know, in natural language."
         },
         "area": {
           "type": "STRING",
-          "description": "Optional: where to look, e.g. \\"the hero\\" or \\"the pricing cards\\"."
+          "description": "Optional: a text from the block to look at, e.g. \\"Pricing\\"; with screenshot, only that block is captured."
         },
         "file_path": {
           "type": "STRING",
@@ -1896,14 +1910,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         }
       },
       "required": [
-        "mode",
-        "question"
+        "mode"
       ]
     }
   },
   {
     "name": "use_page",
-    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened, and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
+    "description": "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened —including what the browser did for the page, like taking the pointer or going fullscreen— and the conclusion is yours. Each call is a new visit to the page as it is saved; the steps run in order, each one does ONE thing, and it stops at the first one that can't be done. It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going); what the page saves in the browser starts empty on each visit. What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1940,6 +1953,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
               "read": {
                 "type": "STRING",
                 "description": "A text from the area you want to read: returns what is shown in that block."
+              },
+              "screenshot": {
+                "type": "STRING",
+                "description": "\\"screen\\": a screenshot of what is on screen at that moment comes back to you as an image; or a text from a block, to capture only that block. At most 3 per visit."
+              },
+              "eval": {
+                "type": "STRING",
+                "description": "JavaScript run in the page at that moment —an expression, or statements with return— and its value comes back as JSON: to inspect what can't be read, like a canvas, a variable or the state of a game, without adding debug code to the page."
               }
             }
           }
@@ -2596,7 +2617,7 @@ THE PROJECT'S FOLDER:
 Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at /src/main.tsx. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
-Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; view_page mode="screenshot" shows it to you as an image; use_page tries it like a user, screen by screen, and can take a screenshot after a step or inspect it with eval. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
@@ -2698,7 +2719,7 @@ Besides its pages, the project is a folder like any Vercel + Supabase project: /
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
-Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors; use_page tries it like a visitor. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors; view_page mode="screenshot" shows it to you as an image; use_page tries it like a visitor, and can take a screenshot after a step. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
@@ -2755,7 +2776,7 @@ Besides its pages, the project is a folder like any Vercel + Supabase project: /
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
-Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors; use_page tries it like a visitor. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors; view_page mode="screenshot" shows it to you as an image; use_page tries it like a visitor, and can take a screenshot after a step. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.
@@ -2842,7 +2863,7 @@ THE PROJECT'S FOLDER:
 Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at /src/main.jsx. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
-Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; use_page tries it like a user, screen by screen. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
+Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; view_page mode="screenshot" shows it to you as an image; use_page tries it like a user, screen by screen, and can take a screenshot after a step or inspect it with eval. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
 
 THE BACKEND (Supabase):
 This project has its own Supabase backend —a Postgres database behind the REST API, Auth with email and password, Storage for files (photos, videos, PDFs), and Realtime for live updates— at the URL and with the publishable key that PROJECT STATE gives you under \`supabase\` (\`supabase status\` in the terminal prints them too). Edge Functions don't exist here yet: if something needs them, say so. Anything that has to live on a server —a cart that is still there tomorrow, reviews everyone sees, a menu the user maintains, people who sign in— goes here.

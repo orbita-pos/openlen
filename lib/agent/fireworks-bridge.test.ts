@@ -170,6 +170,26 @@ describe("puente del Agente al cable de Fireworks", () => {
     expect(wire[1]).toEqual({ role: "assistant", content: "hola" });
   });
 
+  it("🔴 las capturas de una tanda viajan DETRÁS de los `tool`, en el mensaje hermano (los ojos como Claude Code)", () => {
+    // Un `role:"tool"` sólo lleva texto en el cable de Fireworks: la imagen va
+    // en el mensaje de usuario que sigue, donde ya va lo medido.
+    const captura = { mimeType: "image/jpeg", dataBase64: "BBBB" };
+    const conTexto = messagesForFireworks([
+      { role: "assistant", content: "", functionCalls: [{ name: "view_page", args: {} }] },
+      { role: "user", content: "Image 1: view_page", images: [captura], functionResponses: [{ name: "view_page", response: { ok: true } }] },
+    ]);
+    expect(conTexto).toHaveLength(3);
+    expect(conTexto[1].role).toBe("tool");
+    expect(conTexto[2]).toEqual({ role: "user", content: "Image 1: view_page", images: [captura] });
+    // Sin texto, la imagen sola también viaja: el mensaje no se calla por estar vacío.
+    const sinTexto = messagesForFireworks([
+      { role: "assistant", content: "", functionCalls: [{ name: "view_page", args: {} }] },
+      { role: "user", content: "", images: [captura], functionResponses: [{ name: "view_page", response: { ok: true } }] },
+    ]);
+    expect(sinTexto).toHaveLength(3);
+    expect(sinTexto[2]).toEqual({ role: "user", content: "Screenshots:", images: [captura] });
+  });
+
   it("las imágenes de un mensaje de usuario viajan con él", () => {
     const foto = { mimeType: "image/jpeg", dataBase64: "AAAA" };
     const wire = messagesForFireworks([

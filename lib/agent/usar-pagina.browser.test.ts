@@ -342,3 +342,80 @@ describe("use_page — la carpeta del proyecto", () => {
     expect(sin).toContain("there is nothing behind it");
   }, 90_000);
 });
+
+// LOS OJOS COMO CLAUDE CODE (14/10). En el turno del Minecraft los ojos dijeron
+// «blanco puro» de una escena 3D que pintaba bien, y Len metió código de
+// depuración en su app para leer el canvas. Claude Code mira con UN navegador:
+// navegar, actuar, capturar (la captura le llega a él) y `eval` para inspeccionar.
+describe("use_page — captura, eval y lo que hace el navegador", () => {
+  const pixelAt = async (dataBase64: string, fx: number, fy: number) => {
+    const sharp = (await import("sharp")).default;
+    const { data, info } = await sharp(Buffer.from(dataBase64, "base64")).raw().toBuffer({ resolveWithObject: true });
+    const x = Math.floor(info.width * fx);
+    const y = Math.floor(info.height * fy);
+    const i = (y * info.width + x) * info.channels;
+    return { r: data[i]!, g: data[i + 1]!, b: data[i + 2]!, width: info.width, height: info.height };
+  };
+  const webglRojo = (conWebgl: boolean) =>
+    marco(`<canvas id="c" width="800" height="600" style="position:fixed;inset:0;width:100vw;height:100vh"></canvas>
+    <script>
+      ${conWebgl ? 'var gl = document.getElementById("c").getContext("webgl2"); gl.clearColor(1, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);' : ""}
+    </script>`);
+
+  it("🔴 la captura llega como imagen y ve el WebGL (rojo); BRAZO DE CONTROL: sin WebGL, el fondo blanco", async () => {
+    const con = await usarPagina({ html: webglRojo(true), pasos: [{ screenshot: "screen" }], ruta: "/index.html" });
+    const sin = await usarPagina({ html: webglRojo(false), pasos: [{ screenshot: "screen" }], ruta: "/index.html" });
+    expect(con.images).toHaveLength(1);
+    expect(con.images![0]!.mimeType).toBe("image/jpeg");
+    const rojo = await pixelAt(con.images![0]!.dataBase64, 0.5, 0.5);
+    const blanco = await pixelAt(sin.images![0]!.dataBase64, 0.5, 0.5);
+    expect(rojo.r).toBeGreaterThan(200);
+    expect(rojo.g).toBeLessThan(60);
+    expect(blanco.g).toBeGreaterThan(200);
+    expect(con.informe).toContain("1. screenshot of the screen → attached below as image 1");
+    // Lo que es del entorno, dicho: el WebGL de aquí es por software.
+    expect(con.informe).toContain("WebGL in software");
+    expect(sin.informe).not.toContain("WebGL in software");
+  }, 90_000);
+
+  it("🔴 la captura de un bloque recorta ese bloque; un texto que no está, lo dice sin imagen", async () => {
+    const html = marco(`<section style="height:700px">Inicio</section>
+      <section style="width:400px;height:200px;background:#0000ff;color:#fff">Precios del plan</section>`);
+    const r = await usarPagina({ html, pasos: [{ screenshot: "Precios del plan" }, { screenshot: "No existe" }], ruta: "/index.html" });
+    expect(r.images).toHaveLength(1);
+    const azul = await pixelAt(r.images![0]!.dataBase64, 0.5, 0.8);
+    expect(azul.b).toBeGreaterThan(200);
+    expect(azul.r).toBeLessThan(60);
+    expect(azul.width).toBeLessThan(600);
+    expect(r.informe).toContain("1. screenshot of «Precios del plan» → attached below as image 1");
+    expect(r.informe).toContain("2. screenshot of «No existe» → «No existe» isn't shown on the page.");
+  }, 90_000);
+
+  it("🔴 eval devuelve el valor (una expresión o un cuerpo con return) y el error, sin tocar la página", async () => {
+    const html = marco(`<canvas width="320" height="200"></canvas><script>window.game = { chunks: 33 };</script>`);
+    const r = await usarPagina({
+      html,
+      pasos: [{ eval: "document.title" }, { eval: "const c = document.querySelector('canvas'); return [c.width, c.height]" }, { eval: "game.chunks" }, { eval: "noExiste.x" }],
+      ruta: "/index.html",
+    });
+    expect(r.informe).toContain('1. eval → "Prueba"');
+    expect(r.informe).toContain("2. eval → [320,200]");
+    expect(r.informe).toContain("3. eval → 33");
+    expect(r.informe).toMatch(/4\. eval → threw ReferenceError: noExiste is not defined/);
+    expect(r.images ?? []).toHaveLength(0);
+  }, 90_000);
+
+  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y «nothing changed»", async () => {
+    const juego = (pide: boolean) =>
+      marco(`<canvas id="c" width="400" height="300"></canvas><div id="ov">Click to play</div>
+      <script>
+        document.getElementById("ov").addEventListener("click", function () { ${pide ? 'document.getElementById("c").requestPointerLock();' : ""} });
+      </script>`);
+    const pide = (await usarPagina({ html: juego(true), pasos: [{ click: "Click to play" }], ruta: "/index.html" })).informe;
+    const noPide = (await usarPagina({ html: juego(false), pasos: [{ click: "Click to play" }], ruta: "/index.html" })).informe;
+    expect(pide).toContain("the page took the pointer (pointer lock is on)");
+    expect(pide).not.toMatch(/nothing (else )?changed/);
+    expect(noPide).not.toContain("pointer lock");
+    expect(noPide).toMatch(/nothing changed/);
+  }, 90_000);
+});
