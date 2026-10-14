@@ -124,6 +124,8 @@ export interface BrowserTabHolder {
   queue: Promise<unknown>;
   /** Cierra la pestaña si nadie la usa un rato (por si el turno no la cierra). */
   timer: ReturnType<typeof setTimeout> | null;
+  /** The idle timer closed it: the next visit says so. */
+  closedIdle: boolean;
 }
 
-export const newBrowserTabHolder = (): BrowserTabHolder => ({ current: null, queue: Promise.resolve(), timer: null });
+export const newBrowserTabHolder = (): BrowserTabHolder => ({ current: null, queue: Promise.resolve(), timer: null, closedIdle: false });
