@@ -10,6 +10,7 @@ import { rutaSoloPublicada } from "@/lib/lienzo/rutas-solo-publicada";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 import { juzgarContraste, type CandidatoDeContraste, type UnreadableTextFinding } from "@/lib/ai/contraste";
 import { barrerUnaVezPorProceso } from "@/lib/ai/perfiles-huerfanos";
+import { deprioritizeChromium } from "@/lib/ai/chromium-nice";
 
 export const VISUAL_QUALITY_DESKTOP_VIEWPORT = { width: 1280, height: 720 } as const;
 export const VISUAL_QUALITY_MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
@@ -573,7 +574,7 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   barrerUnaVezPorProceso();
   const puppeteer = (await import("puppeteer")).default;
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
     // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
     ...SIN_VENTANAS_NUEVAS,
     headless: true,
@@ -597,6 +598,10 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     ],
     env: { ...process.env, HOME: "/tmp" },
   });
+  // Antes de que dibuje nada: en la caja, cede la CPU a la app (medido: una
+  // escena 3D se comía 2,56 de sus 3 núcleos). Ver `lib/ai/chromium-nice.ts`.
+  deprioritizeChromium(browser.process()?.pid);
+  return browser;
 }
 
 async function defaultLaunchBrowser(): Promise<BrowserLike> {
