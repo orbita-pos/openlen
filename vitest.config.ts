@@ -200,6 +200,8 @@ export default defineConfig({
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // Len's eyes see WebGL (three.js, maps, games) in the screenshot. WHITELIST.
       "lib/ai/eyes-see-webgl.browser.test.ts",
+      // Un solo lanzador de Chromium (14/10): ninguno nuevo sin WebGL. LISTA BLANCA.
+      "lib/ai/one-chromium-launcher.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.
@@ -547,6 +549,9 @@ export default defineConfig({
       "lib/publish/form-identity.test.ts",
       // La Permissions-Policy de las páginas, igual en sus cinco copias. LISTA BLANCA.
       "lib/publish/permissions-policy.test.ts",
+      // Servir una release como Caddy (14/10): lo usan el Flight Check y la miniatura. LISTA BLANCA.
+      "lib/publish/serve-release.test.ts",
+      "lib/publish/serve-release.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
       "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un

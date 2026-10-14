@@ -82,26 +82,11 @@ export function buildOgCardHtml(input: OgCardInput): string {
 export async function renderOgCard(input: OgCardInput): Promise<Buffer | null> {
   const html = buildOgCardHtml(input);
   try {
-    const { default: puppeteer } = await import("puppeteer");
-    const executablePath =
-      process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-    // ProtectHome=read-only on the box → Chrome needs a writable HOME; /tmp is
-    // PrivateTmp-isolated. Linux only (memory: puppeteer-hetzner-chrome).
-    const launchEnv =
-      process.platform === "linux"
-        ? { ...process.env, HOME: "/tmp" }
-        : process.env;
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath,
-      env: launchEnv,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-crash-reporter",
-      ],
-    });
+    // ONE BROWSER (14/10): the eyes' launcher (`lanzarChromium`), which sets
+    // the writable HOME the box needs and WebGL in software, instead of a
+    // second `puppeteer.launch` that stops getting its fixes.
+    const { lanzarChromium } = await import("@/lib/ai/visual-quality-renderer");
+    const browser = await lanzarChromium();
     const watchdog = setTimeout(() => {
       void browser.close().catch(() => {});
     }, HARD_DEADLINE_MS);

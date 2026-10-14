@@ -1233,8 +1233,9 @@ export async function publishProject(
 
   // 9. Refresh the card thumbnail from the just-published bytes. Fire-and-
   // forget + soft-fail (same posture as the R2 backup above) — the publish is
-  // already done; a stale or missing thumbnail must never block it.
-  void renderProjectThumbnail({ projectId: params.projectId, html });
+  // already done; a stale or missing thumbnail must never block it. From the
+  // RELEASE served like Caddy (14/10): an app's shell alone painted nothing.
+  void renderProjectThumbnail({ projectId: params.projectId, html, release: { subdomain: v.value, sha: publishResult.sha } });
 
   // 10. Flight Check: Lighthouse the release artifact and persist the lab
   // report (the publish modal's Speed Card polls it). Fire-and-forget,

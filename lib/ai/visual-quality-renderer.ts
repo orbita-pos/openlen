@@ -553,8 +553,18 @@ function leerCandidatos(value: unknown): CandidatoDeContraste[] {
   return salida;
 }
 
-/** Chromium como lo arrancan los ojos. Lo usa también `use_page`
- *  (`lib/agent/usar-pagina.ts`), que necesita la `Browser` entera de Puppeteer. */
+/** WebGL por software (SwiftShader): sin GPU en la caja, sin esto
+ *  `getContext("webgl")` da null. Lo comparten TODOS los Chromium que miran una
+ *  página de Len —este, el de Len-Bench y el brazo de la batería—: uno que no
+ *  lo lleve ve en blanco un juego 3D. Ver `one-chromium-launcher.test.ts`. */
+export const WEBGL_ARGS: readonly string[] = ["--disable-gpu", "--enable-unsafe-swiftshader"];
+
+/** Chromium como lo arrancan los ojos. EL ÚNICO LANZADOR (14/10): lo usan
+ *  `use_page` (`lib/agent/usar-pagina.ts`), la captura de los ojos
+ *  (`renderHtmlToInlineImage`), las miniaturas, la og-card y el Flight Check.
+ *  Un segundo `puppeteer.launch` es justo lo que deja de recibir sus arreglos:
+ *  la Fase A puso WebGL aquí y los demás siguieron sin él. Lo vigila
+ *  `one-chromium-launcher.test.ts`. */
 export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
   // Los perfiles huerfanos del temporal, una vez por proceso y sin bloquear.
   // Va aqui porque es el unico punto por el que pasan TODOS los que crean
@@ -579,8 +589,10 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--enable-unsafe-swiftshader",
+      ...WEBGL_ARGS,
+      // Sin volcados de crashpad en el HOME=/tmp compartido (lo llevaban las
+      // miniaturas, la og-card y el Flight Check, que ahora lanzan por aquí).
+      "--disable-crash-reporter",
       ...(await isolatedNetworkArgs()),
     ],
     env: { ...process.env, HOME: "/tmp" },
