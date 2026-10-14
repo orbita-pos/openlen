@@ -107,3 +107,23 @@ export function validarPasos(
   }
   return { ok: true, pasos };
 }
+
+/**
+ * LA PESTAÑA DEL TURNO (los ojos como Claude Code, 14/10). Claude Code conduce
+ * UNA sesión de navegador (`chromium-cli --session app`, o la pestaña de su
+ * navegador): cada orden actúa sobre la página que hay. Aquí, igual: cada
+ * `use_page` del turno sigue donde la dejó el anterior. Vive en la sesión del
+ * turno y se cierra al acabarlo (o sola, sin usarse un rato). El motor
+ * (`usar-pagina.ts`) es quien sabe qué hay dentro; aquí sólo su forma, para
+ * que `tools.ts` la cree sin arrastrar Chromium.
+ */
+export interface BrowserTabHolder {
+  /** La pestaña abierta (del motor), o nada. */
+  current: unknown;
+  /** Las visitas a la misma pestaña van en fila: dos a la vez se pisarían. */
+  queue: Promise<unknown>;
+  /** Cierra la pestaña si nadie la usa un rato (por si el turno no la cierra). */
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+export const newBrowserTabHolder = (): BrowserTabHolder => ({ current: null, queue: Promise.resolve(), timer: null });

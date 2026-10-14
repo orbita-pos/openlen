@@ -709,6 +709,24 @@ describe("use_page", () => {
     assert.equal(sin.response.edge_function_calls, undefined);
   });
 
+  // LA PESTAÑA DEL TURNO (14/10), como la sesión de navegador de Claude Code:
+  // use_page y la captura de view_page van a la MISMA, la de la sesión.
+  it("🔴 use_page y la captura de view_page usan la misma pestaña de la sesión; new_visit llega", async () => {
+    const { deps } = makeDeps();
+    const visitas: Record<string, unknown>[] = [];
+    const session = makeSession();
+    const con = conNavegador(deps, visitas);
+    await runAgentTool(session, con, "use_page", { steps: [{ click: "Play" }] });
+    await runAgentTool(session, con, "view_page", { mode: "screenshot" });
+    await runAgentTool(session, con, "use_page", { steps: [{ read: "x" }], new_visit: true });
+    assert.ok(visitas[0]!.tab);
+    assert.equal(visitas[1]!.tab, visitas[0]!.tab);
+    assert.equal(visitas[2]!.tab, visitas[0]!.tab);
+    assert.equal(visitas[0]!.newVisit, undefined);
+    assert.equal(visitas[2]!.newVisit, true);
+    assert.equal(session.browserTab, visitas[0]!.tab);
+  });
+
   it("🔴 las capturas de la visita vuelven como imágenes (images); sin capturas, no hay campo", async () => {
     const { deps } = makeDeps();
     const captura = { mimeType: "image/jpeg", dataBase64: "JPEG" };
