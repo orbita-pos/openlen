@@ -35,19 +35,28 @@ describe("la landing no nombra proveedores de modelo", () => {
   // landing sobrevivió a dos migraciones de proveedor con el nombre puesto.
   const PROVEEDORES = ["Gemini", "DeepSeek", "Fireworks", "Qwen", "GPT-", "Claude"];
 
+  // UNA SECCIÓN QUEDA FUERA, y sólo una: la del MCP («Tu IA de siempre»,
+  // b0d615be, 12/10). Ahí Claude o ChatGPT no son el modelo que mueve a Len,
+  // son los CLIENTES que el usuario ya paga y conecta a OpenLen: su nombre ES
+  // la instrucción, como lo fue el de las claves del self-host («Bring your own
+  // Fireworks and OpenAI keys») hasta el 04/10. Y no caduca con nuestras
+  // migraciones de proveedor, que es la otra razón de esta guarda.
+  const CLIENT_SECTION = "mcp";
+
   it.each(LOCALES)("%s — ninguna cadena de marketing nombra un modelo", (locale) => {
-    const crudo = readFileSync(
-      resolve(process.cwd(), `messages/${locale}/marketing.json`),
-      "utf8",
-    );
-    // SIN EXCEPCIÓN desde el 04/10. El plan self-host la tenía porque nombraba
-    // las claves que hacían falta («Bring your own Fireworks and OpenAI keys»):
-    // ahí el proveedor era la instrucción. El rediseño de la portada lo bajó a
-    // una tira que dice «tus propias claves» sin nombrar a nadie, así que ya
-    // no queda ninguna cadena que tenga derecho a decirlo.
+    const { [CLIENT_SECTION]: _clients, ...rest } = marketing(locale);
+    const crudo = JSON.stringify(rest);
     for (const p of PROVEEDORES) {
       expect(crudo, `${locale}: la landing nombra «${p}»`).not.toContain(p);
     }
+  });
+
+  // BRAZO DE CONTROL DE LA EXCEPCIÓN: que lo que queda fuera siga siendo la
+  // sección del MCP. Una excepción cuya razón caducó es como una guarda deja de
+  // guardar sin ponerse roja nunca (ver `platforms`, más abajo).
+  it.each(LOCALES)("%s — lo que queda fuera es la sección del MCP, y habla de MCP", (locale) => {
+    const clients = marketing(locale)[CLIENT_SECTION] as unknown as { subtitle?: string } | undefined;
+    expect(clients?.subtitle, `${locale}: la sección «${CLIENT_SECTION}» ya no es la del MCP`).toContain("MCP");
   });
 });
 
