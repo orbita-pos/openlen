@@ -202,6 +202,7 @@ export default defineConfig({
       "lib/ai/eyes-see-webgl.browser.test.ts",
       // Un solo lanzador de Chromium (14/10): ninguno nuevo sin WebGL. LISTA BLANCA.
       "lib/ai/one-chromium-launcher.test.ts",
+      "lib/ai/chromium-nice.test.ts",
       // La suite de la página corriendo en Chromium de verdad: es la única que
       // puede decir si el programa con las promesas guardadas se ejecuta y si
       // lo que devuelve el navegador se reparte bien. LISTA BLANCA.

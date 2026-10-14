@@ -47,6 +47,10 @@ describe("one Chromium launcher", () => {
     expect(readFileSync(path.join(process.cwd(), OWNER), "utf8")).toContain("...WEBGL_ARGS");
   });
 
+  it("🔴 the launcher yields the box's CPU: every Chromium it starts is deprioritized (lib/ai/chromium-nice.ts)", () => {
+    expect(readFileSync(path.join(process.cwd(), OWNER), "utf8")).toContain("deprioritizeChromium(browser.process()?.pid)");
+  });
+
   it("thumbnails, the og-card and the Flight Check use the eyes' launcher", () => {
     for (const file of ["lib/projects/thumbnail.ts", "lib/branding/og-card.ts", "lib/publish/flight-check.ts", "lib/ai/inline-image.ts"]) {
       const text = readFileSync(path.join(process.cwd(), file), "utf8");
