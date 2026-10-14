@@ -27,8 +27,11 @@ import { soltarVuelo, tomarVuelo, type Vuelo } from "./miniatura-en-vuelo";
 import { db, schema } from "@/lib/db";
 import { processImage } from "@/lib/images";
 import { getStorage } from "@/lib/storage";
-import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
-import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import path from "node:path";
+import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
+import { allowEgressOrigin } from "@/lib/security/egress-proxy";
+import { getPublishRoot } from "@/lib/publish/filesystem";
+import { serveRelease } from "@/lib/publish/serve-release";
 
 // 16:10 — matches the card's `aspect-[16/10]` frame and the template
 // thumbnail viewport, so previews are framed identically across the app.
@@ -82,8 +85,13 @@ async function withSlot<T>(fn: () => Promise<T>): Promise<T> {
 export async function renderProjectThumbnail(opts: {
   projectId: string;
   html: string;
+  /** THE PUBLISHED RELEASE (14/10): when the thumbnail comes from a publish, it
+   *  is taken from the release served the way Caddy serves it — what a visitor
+   *  sees, an app's bundle included. Without it, the bare HTML (an app's shell
+   *  alone paints nothing). */
+  release?: { readonly subdomain: string; readonly sha: string };
 }): Promise<string | null> {
-  const { projectId, html } = opts;
+  const { projectId, html, release } = opts;
   // EL INTERRUPTOR DE LA MINIATURA — vive con los demás, en
   // `lib/publish/kill-switches.ts`, que es donde está su porqué entero.
   if (!thumbnailsEnabled()) return null;
@@ -100,7 +108,7 @@ export async function renderProjectThumbnail(opts: {
   // `miniatura-en-vuelo.ts`.
   const vuelo = tomarVuelo(projectId);
   try {
-    return await withSlot(() => doRender(projectId, html, vuelo));
+    return await withSlot(() => doRender(projectId, html, vuelo, release));
   } catch (err) {
     // Cancelado a proposito no es un fallo: el navegador se cerro por debajo y
     // la promesa pendiente revienta con «Target closed». Registrarlo como
@@ -126,42 +134,23 @@ export async function renderProjectThumbnail(opts: {
   }
 }
 
-async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<string | null> {
+async function doRender(
+  projectId: string,
+  html: string,
+  vuelo: Vuelo,
+  release?: { readonly subdomain: string; readonly sha: string },
+): Promise<string | null> {
   // PUNTO DE CONTROL 1 — al salir de la cola, y es donde MAS se ahorra: con
   // `MAX_CONCURRENT` en 1 un render puede pasarse un buen rato esperando turno,
   // y rendirse aqui no cuesta ni un Chromium.
   if (vuelo.cancelado) return null;
+  // ONE BROWSER (14/10): the eyes' launcher (`lanzarChromium`), with the
+  // writable HOME the box needs, the filtering proxy and WebGL in software —
+  // a 3D page's card was blank with the separate launcher that lived here.
   // Dynamic import keeps puppeteer out of the static module graph of every
   // route that imports lib/projects.ts. Paired with serverExternalPackages.
-  const { default: puppeteer } = await import("puppeteer");
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim() || undefined;
-
-  // On the Hetzner box the service runs with ProtectHome=read-only, so Chrome
-  // can't write to $HOME. PrivateTmp=true gives an isolated, writable /tmp —
-  // point HOME there. (memory: puppeteer-hetzner-chrome.) Only on Linux: on a
-  // Windows/macOS dev box HOME=/tmp would be wrong, so leave the env alone.
-  const launchEnv =
-    process.platform === "linux" ? { ...process.env, HOME: "/tmp" } : process.env;
-
-  const browser = await puppeteer.launch({
-    // Vuelve a encender el bloqueador de ventanas (ver render-ssrf-guard.ts).
-    ...SIN_VENTANAS_NUEVAS,
-    headless: true,
-    executablePath,
-    env: launchEnv,
-    // No --user-data-dir: puppeteer mints a unique temp profile per launch
-    // (and removes it on close), so concurrent renders never collide.
-    // --disable-crash-reporter keeps crashpad from writing dumps under the
-    // shared HOME=/tmp.
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-crash-reporter",
-      // Toda su red por el proxy que filtra (lib/security/egress-proxy.ts).
-      ...(await isolatedNetworkArgs()),
-    ],
-  });
+  const { lanzarChromium } = await import("@/lib/ai/visual-quality-renderer");
+  const browser = await lanzarChromium();
   // Watchdog: if anything past the bounded load phase hangs (screenshot /
   // rasterisation has no timeout of its own), force-close the browser so the
   // awaited call rejects, the finally runs, and the semaphore slot is freed.
@@ -178,17 +167,22 @@ async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<
     return null;
   }
   const page = await browser.newPage();
+  // The published release, served like Caddy (lib/publish/serve-release.ts):
+  // our ephemeral server is the only loopback the egress proxy lets through.
+  const served = release ? await serveRelease(path.join(getPublishRoot(), release.subdomain), release.sha).catch(() => null) : null;
+  const releaseEgressOrigin = served ? allowEgressOrigin(served.origin) : () => {};
   try {
     // Block subresource fetches to internal/loopback/metadata hosts before any
     // of this user-controlled HTML's assets load. (SSRF guard.)
-    await installSubresourceSsrfGuard(page);
+    await installSubresourceSsrfGuard(page, served ? { allowOrigins: [served.origin] } : {});
     await page.setViewport(VIEWPORT);
     // setContent's waitUntil only takes load/domcontentloaded — neither waits
     // for the Tailwind Play CDN to fetch + generate styles (it scans classes
     // AFTER load). So wait for load, then for the network to go idle, which is
     // the equivalent of goto's networkidle0 (best-effort — a dead CDN tab just
     // settles on the timeout and we capture whatever rendered).
-    await page.setContent(html, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
+    if (served) await page.goto(served.url, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
+    else await page.setContent(html, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
     await page
       .waitForNetworkIdle({ idleTime: 500, timeout: PAGE_TIMEOUT_MS })
       .catch(() => {});
@@ -239,6 +233,8 @@ async function doRender(projectId: string, html: string, vuelo: Vuelo): Promise<
     return url;
   } finally {
     clearTimeout(watchdog);
+    releaseEgressOrigin();
+    served?.server.close();
     await page.close().catch(() => {});
     await browser.close().catch(() => {});
   }
