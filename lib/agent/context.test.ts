@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { TOKENS_POR_FOTO, avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens } from "./context";
+import { TOKENS_POR_FOTO, avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens, gitStatusBlock } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
 import { esAdjuntoDelManual } from "./ficheros/manual";
 import type { MensajeDelHistorial } from "./transcripcion";
@@ -744,5 +744,15 @@ describe("LEN.md en los mensajes del turno", () => {
     const r = buildAgentMessages({ state: {}, prompt: "hola", history: [], maxPromptTokens: 60_000 });
     if (!r.ok) throw new Error("no cupo");
     expect(r.messages.map((m) => m.role)).toEqual(["system", "user", "user", "user"]);
+  });
+});
+
+describe("the git status block in the turn's context", () => {
+  const STATE = { ficheros: ["/index.html"] };
+  it("goes after the change log, as given; absent ⇒ the context is byte-identical", () => {
+    const without = buildAgentContext({ state: STATE, now: new Date(0) });
+    const withBlock = buildAgentContext({ state: STATE, now: new Date(0), gitStatus: "This is the git status at the start of this turn." });
+    expect(withBlock).toBe(`${without}This is the git status at the start of this turn.\n\n`);
+    expect(gitStatusBlock(null)).toBe("");
   });
 });

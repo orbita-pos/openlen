@@ -51,4 +51,12 @@ describe("esFalloDeLaTerminal — la regla de Claude Code para el código de sal
     expect(esFalloDeLaTerminal("case $a in x) grep y /a;; esac", 1)).toBe(true);
     expect(esFalloDeLaTerminal("", 1)).toBe(true);
   });
+
+  it("git grep with no match and git diff --exit-code answer with 1, like Claude Code; other git 1s are failures", () => {
+    expect(esFalloDeLaTerminal("git grep nada", 1)).toBe(false);
+    expect(esFalloDeLaTerminal("git --no-pager diff --exit-code", 1)).toBe(false);
+    expect(esFalloDeLaTerminal("git -C src grep x", 1)).toBe(false);
+    expect(esFalloDeLaTerminal("git commit -m x", 1)).toBe(true);
+    expect(esFalloDeLaTerminal("git grep x", 2)).toBe(true);
+  });
 });

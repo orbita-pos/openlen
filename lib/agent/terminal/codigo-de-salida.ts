@@ -6,8 +6,8 @@
  * regla es la de Claude Code:
  * para `grep`, `egrep`, `fgrep`, `rg`, `find`, `diff`, `test` y `[`, el 1 es
  * respuesta y del 2 en adelante, fallo; para todo lo demás, cualquier código
- * distinto de 0 es fallo. Allí también `git diff` y `git grep`; aquí no, porque
- * en la terminal de Len no hay `git` (127).
+ * distinto de 0 es fallo. Y `git diff` (con `--exit-code`) y `git grep`, como allí,
+ * desde que la terminal tiene git (spec local 2026-10-15-git-for-len).
  *
  * Cuenta el ÚLTIMO comando de la línea, que es el que pone el código. Y si su
  * tubería va detrás de `&&`, el 1 puede ser del de antes (`cd x && grep y`:
@@ -21,12 +21,15 @@
  */
 
 const RESPONDEN_CON_1 = new Set(["grep", "egrep", "fgrep", "rg", "find", "diff", "test", "["]);
+/** git subcommands whose 1 is an answer: grep found nothing, diff --exit-code found differences. */
+const GIT_ANSWERS_WITH_1 = new Set(["grep", "diff"]);
 
 export function esFalloDeLaTerminal(command: string, exitCode: number): boolean {
   if (exitCode === 0) return false;
   if (exitCode !== 1) return true;
   const ultimo = ultimoComando(command);
   if (!ultimo || ultimo.trasY) return true;
+  if (ultimo.palabra === "git") return !GIT_ANSWERS_WITH_1.has(ultimo.subGit ?? "");
   return !RESPONDEN_CON_1.has(ultimo.palabra);
 }
 
@@ -36,13 +39,26 @@ interface Trozo {
   readonly antes: string | null;
 }
 
-/** La primera palabra del último comando y si su tubería va detrás de `&&`. */
-function ultimoComando(linea: string): { palabra: string; trasY: boolean } | null {
+/** La primera palabra del último comando, su suborden si es git (saltándose -C <ruta>, -c <k=v>
+ *  y las opciones globales) y si su tubería va detrás de `&&`. */
+function ultimoComando(linea: string): { palabra: string; subGit: string | null; trasY: boolean } | null {
   const ts = trozos(linea)?.filter((t) => t.texto.trim() !== "");
   if (!ts || ts.length === 0) return null;
   let inicio = ts.length - 1;
   while (inicio > 0 && ts[inicio]!.antes === "|") inicio--;
-  return { palabra: ts.at(-1)!.texto.trim().split(/\s+/)[0]!, trasY: ts[inicio]!.antes === "&&" };
+  const palabras = ts.at(-1)!.texto.trim().split(/\s+/);
+  let subGit: string | null = null;
+  if (palabras[0] === "git") {
+    for (let i = 1; i < palabras.length; i++) {
+      const p = palabras[i]!;
+      if (p === "-C" || p === "-c") i++;
+      else if (!p.startsWith("-")) {
+        subGit = p;
+        break;
+      }
+    }
+  }
+  return { palabra: palabras[0]!, subGit, trasY: ts[inicio]!.antes === "&&" };
 }
 
 /**

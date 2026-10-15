@@ -279,11 +279,18 @@ export const HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP = ["view_page", "use_page", "un
  *  hay un /node_modules para leer.
  *  La descripción decía «no node, npm…» mientras el manual pedía npm test. */
 function bashDeLaApp(descripcion: string): string {
-  const conNpm = cambiar(
-    descripcion,
-    "no node, npm, pip or git",
-    "no node, pip or git (in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
-  );
+  // Con git (spec local 2026-10-15) la frase ya dice «no node, npm or pip, but git»; sin él, la de siempre.
+  const conNpm = descripcion.includes("no node, npm or pip, but git")
+    ? cambiar(
+        descripcion,
+        "no node, npm or pip, but git",
+        "no node or pip (in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how), but git",
+      )
+    : cambiar(
+        descripcion,
+        "no node, npm, pip or git",
+        "no node, pip or git (in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: /AGENTS.md says how)",
+      );
   const conTests = cambiar(
     conNpm,
     "/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published",

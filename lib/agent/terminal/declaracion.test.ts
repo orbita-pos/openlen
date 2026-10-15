@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly } from "./declaracion";
+import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = { OPENLEN_TERMINAL: "0" };
@@ -154,5 +154,27 @@ describe("la lista de ficheros de bash nombra la carpeta", () => {
   it("/tests, que no se publica, y que rm borra un fichero de la carpeta", () => {
     expect(d).toContain("/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published");
     expect(d).toContain("rm deletes a folder file");
+  });
+});
+
+describe("git in the bash description (spec local 2026-10-15-git-for-len, §5)", () => {
+  const bash = (env: Record<string, string>) => String(buildFunctionDeclarations(env).find((d) => d.name === "bash")!.description);
+  it("says git works, keeps the versions apart from commits, and carries Claude Code's commit section", () => {
+    const d = bash({ OPENLEN_TERMINAL: "1" });
+    expect(d).toContain("no network, no node, npm or pip, but git (this project's repository: one branch, main, no remote yet), grep,");
+    expect(d).not.toContain("no node, npm, pip or git");
+    expect(d).toContain("These versions are automatic checkpoints the person can restore; git commits exist only when someone asks for one.");
+    expect(d.endsWith(COMMITTING_WITH_GIT)).toBe(true);
+    expect(COMMITTING_WITH_GIT).toContain("Only create commits when requested by the user. If unclear, ask first.");
+    expect(COMMITTING_WITH_GIT).toContain("Co-Authored-By: Len <noreply@openlen.com>");
+    expect(COMMITTING_WITH_GIT).not.toMatch(/--no-verify|force push|gh pr|amend/);
+  });
+  it("OPENLEN_GIT=0 leaves it exactly as before", () => {
+    expect(bash({ OPENLEN_TERMINAL: "1", OPENLEN_GIT: "0" })).toContain("no network, no node, npm, pip or git, but grep,");
+    expect(bash({ OPENLEN_TERMINAL: "1", OPENLEN_GIT: "0" })).not.toContain("Committing changes with git");
+  });
+  it("withGit finds its sentence (a substitution that finds nothing is a lever to nowhere)", () => {
+    expect(() => withGit("nothing to replace")).toThrow();
+    expect(withGit(String(DECLARACION_BASH.description))).not.toBe(String(DECLARACION_BASH.description));
   });
 });

@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -2329,4 +2330,34 @@ export const functionBlocks = pgTable("functionBlocks", {
     .references(() => projects.id, { onDelete: "cascade" }),
   reason: text("reason").notNull(),
   blockedAt: timestamp("blockedAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+// GIT FOR LEN (spec local 2026-10-15-git-for-len, §2): each project's repository. Objects are
+// git's, byte for byte (blob, tree, commit; the oid is git's SHA-1), immutable and per project;
+// `projectGitRepos` holds `main`, the index and the compare-and-swap version.
+const bytea = customType<{ data: Uint8Array; driverData: Buffer | string }>({
+  dataType: () => "bytea",
+  toDriver: (value) => Buffer.from(value),
+  fromDriver: (value) => (typeof value === "string" ? Buffer.from(value.startsWith("\\x") ? value.slice(2) : value, "hex") : value),
+});
+
+export const projectGitObjects = pgTable(
+  "projectGitObjects",
+  {
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    oid: text("oid").notNull(),
+    type: text("type").notNull(),
+    content: bytea("content").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.oid] })],
+);
+
+export const projectGitRepos = pgTable("projectGitRepos", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  head: text("head").notNull(),
+  index: jsonb("index").$type<Record<string, string>>().notNull(),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
