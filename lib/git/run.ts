@@ -38,10 +38,38 @@ export async function ensureRepository(store: GitStore, tree: WorkingTree, owner
   return store.createRepo(commit.oid, index);
 }
 
+/** The first "usage:" line git prints for each command (git 2.45.2); the option list after it is
+ *  the one deliberate difference (spec §4): it isn't reproduced. */
+const USAGE: Readonly<Record<string, string>> = {
+  status: "usage: git status [<options>] [--] [<pathspec>...]",
+  add: "usage: git add [<options>] [--] <pathspec>...",
+  commit: "usage: git commit [-a | --interactive | --patch] [-s] [-v] [-u<mode>] [--amend]",
+  reset: "usage: git reset [--mixed | --soft | --hard | --merge | --keep] [-q] [<commit>]",
+  restore: "usage: git restore [<options>] [--source=<branch>] <file>...",
+  checkout: "usage: git checkout [<options>] <branch>",
+  revert: "usage: git revert [--[no-]edit] [-n] [-m <parent-number>] [-s] [-S[<keyid>]] <commit>...",
+  grep: "usage: git grep [<options>] [-e] <pattern> [<rev>...] [[--] <path>...]",
+  blame: "usage: git blame [<options>] [<rev-opts>] [<rev>] [--] <file>",
+  "ls-files": "usage: git ls-files [<options>] [<file>...]",
+  branch: "usage: git branch [<options>] [-r | -a] [--merged] [--no-merged]",
+  config: "usage: git config [<options>]",
+  init: "usage: git init [-q | --quiet] [--bare] [--template=<template-directory>]",
+  remote: "usage: git remote [-v | --verbose]",
+  push: "usage: git push [<options>] [<repository> [<refspec>...]]",
+  fetch: "usage: git fetch [<options>] [<repository> [<refspec>...]]",
+  pull: "usage: git pull [<options>] [<repository> [<refspec>...]]",
+  diff: "usage: git diff [<options>] [<commit>] [--] [<path>...]",
+};
+
+/** What git says for an option it doesn't know: each family has its own words. */
 function unknownOption(sub: string, option: string): GitRunResult {
-  if (REVISION_COMMANDS.has(sub)) return { stdout: "", stderr: `fatal: unrecognized argument: ${option}\n`, exitCode: 128 };
-  const first = option.startsWith("--") ? `error: unknown option \`${option.slice(2)}'` : `error: unknown switch \`${option.slice(1)}'`;
-  return { stdout: "", stderr: `${first}\nusage: git ${sub} [<options>]\n`, exitCode: 129 };
+  if (REVISION_COMMANDS.has(sub) && sub !== "diff") return { stdout: "", stderr: `fatal: unrecognized argument: ${option}\n`, exitCode: 128 };
+  const usage = USAGE[sub] ?? `usage: git ${sub} [<options>]`;
+  if (sub === "diff") return { stdout: "", stderr: `error: invalid option: ${option}\n${usage}\n`, exitCode: 129 };
+  if (sub === "revert") return { stdout: "", stderr: `${usage}\n`, exitCode: 129 };
+  const name = option.startsWith("--") ? (sub === "blame" ? option : option.slice(2)) : option.slice(1);
+  const first = option.startsWith("--") ? `error: unknown option \`${name}'` : `error: unknown switch \`${name}'`;
+  return { stdout: "", stderr: `${first}\n${usage}\n`, exitCode: 129 };
 }
 
 export async function runGit(input: GitRunInput, argv: readonly string[]): Promise<GitRunResult> {
