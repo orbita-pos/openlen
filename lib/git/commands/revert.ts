@@ -65,9 +65,13 @@ export const revert: Command = async (ctx, args) => {
       const t = await text(theirs, p);
       if (ours !== null && b !== null && t !== null && ours !== b && t !== b && ours !== t) stdout += `Auto-merging ${p}\n`;
       const r = merge3(ours, b, t);
-      if (r.conflict === "content") conflicts.push(`CONFLICT (content): Merge conflict in ${p}\n`);
-      else if (r.conflict === "modify/delete") conflicts.push(`CONFLICT (modify/delete): ${p} deleted in parent of ${abbrev(oid)} (${subjectOf(c.message)}) and modified in HEAD.  Version HEAD of ${p} left in tree.\n`);
-      else if (r.text === null) {
+      if (r.conflict !== false) {
+        conflicts.push(
+          r.conflict === "content"
+            ? `CONFLICT (content): Merge conflict in ${p}\n`
+            : `CONFLICT (modify/delete): ${p} deleted in parent of ${abbrev(oid)} (${subjectOf(c.message)}) and modified in HEAD.  Version HEAD of ${p} left in tree.\n`,
+        );
+      } else if (r.text === null) {
         delete next[p];
         write[toAbsolute(p)] = null;
       } else {
