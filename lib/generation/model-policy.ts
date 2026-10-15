@@ -210,7 +210,11 @@ export type ModelOperation =
   /** El JUEZ de Len-Bench (`lib/len-bench/juez.ts`): el grader `llm` de las
    *  evals de Claude Code — un criterio, PASS o FAIL, tres votos. Sólo lo llama
    *  el banco, nunca un usuario. */
-  | "len_bench_juez";
+  | "len_bench_juez"
+  /** LA IA DE LAS APPS (`lib/app-ai/`, spec local 2026-10-15): la Edge Function
+   *  de una app pidió `openlen-fast` u `openlen-smart`. Se cobra al dueño. */
+  | "app_ai_fast"
+  | "app_ai_smart";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -272,6 +276,11 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // criterio. Texto, así que el razonador; y sin pensar, porque contestar una
   // palabra no mejora discurriendo — lo que reduce el ruido son los tres votos.
   len_bench_juez: { role: "reasoner", effort: "none" },
+  // La IA de las apps: `openlen-fast` contesta sin pensar —ordenar un pedido,
+  // clasificar, resumir—; `openlen-smart` piensa, con el único esfuerzo que el
+  // razonador admite además de `none` (`reasoningEffortAllowed`).
+  app_ai_fast: { role: "reasoner", effort: "none" },
+  app_ai_smart: { role: "reasoner", effort: "high" },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
