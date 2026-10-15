@@ -84,6 +84,15 @@ export const revert: Command = async (ctx, args) => {
     if (conflicts.length > 0) {
       return { stdout: stdout + conflicts.join(""), stderr: `error: could not revert ${abbrev(oid)}... ${subjectOf(c.message)}\n${REVERT_CONFLICT_NOTE}`, exitCode: 1 };
     }
+    // A deletion the terminal would refuse (a page): refuse the whole revert, or the history would
+    // say the file is gone while the project keeps it.
+    for (const p of touched) {
+      if (index[p] === undefined || next[p] !== undefined) continue;
+      const why = ctx.undeletable?.(toAbsolute(p));
+      if (why) {
+        return { stdout, stderr: `error: could not revert ${abbrev(oid)}... ${subjectOf(c.message)}\nNothing was changed: reverting it would delete ${p}, and ${why}\n`, exitCode: 1 };
+      }
+    }
     if (!noCommit) {
       const message = `Revert "${subjectOf(c.message)}"\n\nThis reverts commit ${oid}.\n`;
       const { root, objects: trees } = buildTree(next);

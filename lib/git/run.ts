@@ -111,6 +111,7 @@ export async function runGit(input: GitRunInput, argv: readonly string[]): Promi
     cwd: repoDir(cwd),
     identity: input.identity,
     now,
+    ...(input.undeletable ? { undeletable: input.undeletable } : {}),
     save: async (head, index) => (await input.store.updateRepo(state.version, head, index)) !== null,
   };
   try {

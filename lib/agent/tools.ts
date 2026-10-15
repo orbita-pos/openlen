@@ -252,6 +252,8 @@ export interface AgentDeps {
     args: readonly string[];
     cwd: string;
     files: Readonly<Record<string, string>>;
+    /** Why the terminal won't delete a file, or null (`lib/agent/terminal/deletion-rule.ts`). */
+    undeletable?: (absolutePath: string) => string | null;
   }): Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
   /** GIT: Claude Code's git status block for the start of a turn; null if git can't answer. */
   gitStatusForTurn?(p: { projectId: string; ownerId: string; personId: string; loadFiles: () => Promise<Record<string, string>> }): Promise<string | null>;
