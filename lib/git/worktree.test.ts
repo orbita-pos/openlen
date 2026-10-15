@@ -8,7 +8,8 @@ describe("what git sees", () => {
     for (const p of ["/tmp/x", "/.openlen/versiones/indice.jsonl", "/node_modules/three/package.json", "/home/user/.len/LEN.md", "/AGENTS.md"]) {
       expect(isVersionable(p), p).toBe(false);
     }
-    for (const p of ["/index.html", "/src/App.tsx", "/supabase/migrations/1_x.sql", "/LEN.md", "/.len/memory/a.md", "/ajustes/proyecto.json", "/.env"]) {
+    // A page whose slug is "home" is the project's; only ~ (/home/user) is the person's.
+    for (const p of ["/index.html", "/src/App.tsx", "/supabase/migrations/1_x.sql", "/LEN.md", "/.len/memory/a.md", "/ajustes/proyecto.json", "/.env", "/home/index.html"]) {
       expect(isVersionable(p), p).toBe(true);
     }
   });

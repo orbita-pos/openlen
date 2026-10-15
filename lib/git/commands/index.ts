@@ -3,12 +3,16 @@ import type { Command } from "../command";
 import { add } from "./add";
 import { commit } from "./commit";
 import { diff } from "./diff";
+import { log } from "./log";
 import { reset } from "./reset";
+import { show } from "./show";
 import { status } from "./status";
 
 export const COMMANDS: Readonly<Record<string, Command>> = {
   status,
   diff,
+  log,
+  show,
   add,
   reset,
   commit,
