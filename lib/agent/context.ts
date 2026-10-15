@@ -168,6 +168,8 @@ ${lineas.join("\n")}
 export function avisosDelTurno(args: {
   turnoAnteriorMudo?: boolean;
   degradaciones?: readonly DegradacionConocida[];
+  /** La lista de progreso que salió del historial (`todosForTurn`). */
+  todoRestore?: string | null;
 }): string {
   const mudo = args.turnoAnteriorMudo
     ? `NOTICE: your previous turn did NOT call any tool, so the page did NOT change — whatever you do now, don't take for granted what you said you had done. If the user asked you for a change and it still isn't applied, apply it NOW with the editing tool that fits.
@@ -175,11 +177,12 @@ export function avisosDelTurno(args: {
 `
     : "";
   const roto = degradacionesBlock(args.degradaciones ?? []);
-  if (!mudo && !roto) return "";
+  const lista = args.todoRestore ? `${args.todoRestore}\n\n` : "";
+  if (!mudo && !roto && !lista) return "";
   return `
 
 SYSTEM (the user did NOT write this):
-${mudo}${roto}`;
+${mudo}${roto}${lista}`;
 }
 
 /**
@@ -429,6 +432,8 @@ export interface BuildAgentMessagesArgs {
   writingLanguage?: string | null;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
   turnoAnteriorMudo?: boolean;
+  /** Ver `avisosDelTurno.todoRestore`. */
+  todoRestore?: string | null;
   /** Ver buildAgentContext.userMemory. */
   userMemory?: string | null;
   /** Ver buildAgentContext.cambios. */
@@ -529,6 +534,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const avisos = avisosDelTurno({
     turnoAnteriorMudo: args.turnoAnteriorMudo,
     degradaciones: args.degradaciones,
+    todoRestore: args.todoRestore,
   });
   // H4: con los resultados enteros en el historial, el techo cuenta también las
   // llamadas y sus respuestas, no sólo el texto (ver `textoDelHistorial`).

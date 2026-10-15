@@ -419,7 +419,7 @@ export interface StoredChatTurn {
     dismissed?: true;
     /** La lista de progreso que escribió `todo_write` (spec local 2026-10-15).
      *  Sólo en tarjetas de `todo_write`; la última del turno es su lista. */
-    todos?: Array<{ content: string; status: "pending" | "in_progress" | "completed" }>;
+    todos?: ReadonlyArray<{ readonly content: string; readonly status: "pending" | "in_progress" | "completed" }>;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

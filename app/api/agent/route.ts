@@ -18,6 +18,7 @@ import {
   debitCredits,
   creditsForUsage,
   techoDelTurno,
+  NEAR_TURN_CAP_RATIO,
 } from "@/lib/credits";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
@@ -52,7 +53,8 @@ import {
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { contarTurnosParaElHistorial, filasParaElHistorialConEquipo, turnosParaElHistorial } from "@/lib/projects/chat";
+import { contarTurnosParaElHistorial, filasParaElHistorialConEquipo, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { parseStyleDirection } from "@/lib/style-match/parse-direction";
@@ -780,6 +782,10 @@ async function correrTurno(
   const history: MensajeDelHistorial[] =
     historialDeLaBase ?? sanearHistorial(body?.history, new Set(tools.map((d) => String(d.name))));
   const ventanaVisible = ventanaVisibleDe(history);
+  // LA LISTA DE PROGRESO (spec local 2026-10-15): la heredada, para que el bucle
+  // sepa que «hay lista», y una línea con ella SÓLO si ya no está en el historial.
+  // Fail-soft: sin la base, el turno sigue sin lista.
+  const listaDelTurno = todosForTurn(await latestTodoListForChat(projectId).catch(() => null), history);
 
   const state = summarizeProjectState(
     {
@@ -947,6 +953,7 @@ async function correrTurno(
     // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
     // Un historial vacío (primer turno) no dispara nada.
     turnoAnteriorMudo: turnoAnteriorMudoDe(history),
+    todoRestore: listaDelTurno.restoreLine,
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     // LA REFERENCIA POR URL (plans/crear-es-len): el mismo bloque que Crear
     // ponía delante del brief, en el contexto de ESTE turno. Sólo para el
@@ -1522,6 +1529,13 @@ async function correrTurno(
           excedePresupuesto: (g) =>
             g.inputTokens + g.outputTokens > 0 &&
             creditsForUsage(g.inputTokens, g.outputTokens, brain.creditRate(), g.cachedTokens) >= techo,
+          // La lista de progreso (spec local 2026-10-15): el aviso al 70 %, con
+          // la MISMA cuenta; si sigue solo un encargo, y la lista heredada.
+          nearBudget: (g) =>
+            g.inputTokens + g.outputTokens > 0 &&
+            creditsForUsage(g.inputTokens, g.outputTokens, brain.creditRate(), g.cachedTokens) >= techo * NEAR_TURN_CAP_RATIO,
+          goalContinues: () => goalArmado && goalActual?.phase === "active",
+          initialTodos: listaDelTurno.initialTodos,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
           // principal de Claude Code, el turno no topa pasos. El dinero se topa
           // por MES (`CREDITS_BY_PLAN`); un cuelgue, el reloj de silencio.
