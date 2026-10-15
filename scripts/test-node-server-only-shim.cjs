@@ -1,5 +1,5 @@
 // Preloaded via `tsx --require` in package.json's test:node AND evals:agent
-// scripts (see NB
+// scripts, and by sites/len/scripts/check-content.mjs (see NB
 // below the require line for why this file has to exist at all).
 //
 // "server-only" (node_modules/server-only) only resolves to its harmless
