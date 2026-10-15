@@ -16,6 +16,7 @@ import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
 import { functionsBlocked } from "./blocks-pg";
 import { ConcurrencyLimiter } from "./concurrency";
+import { WindowLimiter } from "./window-limiter";
 import { ensureDraftDeployed } from "./deploy-core";
 import { ownerOf, realDeployDeps } from "./deploy";
 import { pgDeploymentStore } from "./deployments-pg";
@@ -32,6 +33,8 @@ import { pgUsageStore } from "./usage-pg";
 
 /** Un proceso, una caja: las plazas «a la vez» viven aquí. */
 const limiter = new ConcurrencyLimiter();
+/** Las llamadas de cada visitante, también en este proceso. */
+const ipLimiter = new WindowLimiter();
 
 function realGatewayDeps(): GatewayDeps {
   return {
@@ -89,6 +92,7 @@ function realGatewayDeps(): GatewayDeps {
     maps: (p, e) => pgDeploymentStore.maps(p, e),
     usage: pgUsageStore,
     limiter,
+    ipLimiter,
     caps: capsFromEnv(),
     // Los avisos (spec local 2026-10-11, Partes 5 y 6): no esperan ni lanzan.
     alerts: {
