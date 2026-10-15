@@ -112,7 +112,7 @@ export const es = {
     },
     tarjeta: {
       antetitulo: "Len 2.5 · octubre 2026",
-      titulo: "Veintiséis herramientas, un solo desarrollador",
+      titulo: "Veintisiete herramientas, un solo desarrollador",
       texto:
         "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero, y tiene su propia terminal para buscar y cambiar con precisión. Si se lo pides, te propone un plan antes de tocar nada. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
       como: "Cómo trabaja →",
@@ -129,7 +129,7 @@ export const es = {
         },
         editar: {
           titulo: "Escribir",
-          texto: "Cambia el texto exacto que hay que cambiar, escribe páginas nuevas enteras y deshace su último cambio.",
+          texto: "Cambia el texto exacto que hay que cambiar, escribe páginas nuevas enteras, convierte una página en app cuando crece y deshace su último cambio.",
         },
         fotos: { titulo: "Fotos", texto: "Elegir y editar imágenes para tu rubro." },
         datos: {

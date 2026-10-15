@@ -114,7 +114,7 @@ export const en: Diccionario = {
     },
     tarjeta: {
       antetitulo: "Len 2.5 · October 2026",
-      titulo: "Twenty-six tools, one developer",
+      titulo: "Twenty-seven tools, one developer",
       texto:
         "It works on your site the way a programmer works on code: every page is a file, and it has its own terminal to search and change things precisely. If you ask, it proposes a plan before touching anything. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",
       como: "How it works →",
@@ -131,7 +131,7 @@ export const en: Diccionario = {
         },
         editar: {
           titulo: "Write",
-          texto: "It changes the exact text that needs changing, writes whole new pages and undoes its last change.",
+          texto: "It changes the exact text that needs changing, writes whole new pages, turns a page into an app when it grows and undoes its last change.",
         },
         fotos: { titulo: "Photos", texto: "Choose and edit images for your line of business." },
         datos: {

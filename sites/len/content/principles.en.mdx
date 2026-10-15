@@ -41,7 +41,7 @@ And there is a measurement: the case that asks for the same change on four pages
 
 **Why.** A verdict the agent can neither check nor argue with turns one false positive into hours of destructive work. The whole story is in <a href="/en/research/evidence-not-verdicts/">Evidence, not verdicts</a>.
 
-**How we check it.** With tests that spend no model: `mirar_pagina` with `tipo="medir"` returns the measurement and does not touch the page <Fuente ruta="lib/agent/tools.test.ts" />, and when the browser cannot assert anything —a photo or a veil under the text— it says so instead of going quiet as if all were well. <Fuente ruta="lib/agent/verify.ts" /> The case `aurora-marcador-no-es-rotura` —a headline change has to stay a headline change— belonged to the battery before Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="7afd419d" />, and it has no counterpart in Len-Bench yet.
+**How we check it.** With tests that spend no model: `view_page` with `mode="measure"` returns the measurement and does not touch the page <Fuente ruta="lib/agent/tools.test.ts" />, and when the browser cannot assert anything —a photo or a veil under the text— it says so instead of going quiet as if all were well. <Fuente ruta="lib/agent/verify.ts" /> The case `aurora-marcador-no-es-rotura` —a headline change has to stay a headline change— belonged to the battery before Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="7afd419d" />, and it has no counterpart in Len-Bench yet.
 </section>
 
 <section className="principio">
@@ -50,7 +50,7 @@ And there is a measurement: the case that asks for the same change on four pages
 
 **What it promises.** When you create a page, Len does not enter an automatic repair loop. It measures what is there and **tells you**; you correct it.
 
-**Why.** This is not a to-do item or a cost saving: it is a decision. Automatic repair existed, was cheap and worked, and was removed on purpose. The other half of the rule is what makes it fair — what gets measured gets told to you, not hidden. <Fuente ruta="app/api/generate/route.ts" />
+**Why.** This is not a to-do item or a cost saving: it is a decision. Automatic repair existed, was cheap and worked, and was removed on purpose. The other half of the rule is what makes it fair — what gets measured gets told to you, not hidden. <Fuente commit="b4a47ae1" />
 
 **How we check it.** By its absence —creation has no loop— and with a test that holds it down: the Agent is never handed a fix you did not ask for mid-turn, and a breakage the eyes catch closes the turn with what the model did, reported on the card and not undone behind your back. <Fuente ruta="lib/agent/loop.test.ts" /> If you ever see a loop, that’s a bug on our side.
 </section>
