@@ -105,7 +105,11 @@ function withEsmLock(folder: ReadonlyMap<string, string>, esmLock: string | null
   return new Map(esmLock === null ? folder : [...folder, [ESM_LOCK_PATH, esmLock]]);
 }
 
-async function virtualesDe(session: AgentSession, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
+/** What loading the terminal's files needs from a session: the agent route has it before the
+ *  turn's session exists (the git status block, spec local 2026-10-15-git-for-len). */
+export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app">;
+
+async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
   let dueno = "";
   try {
     dueno = (await deps.leerMemoriaDelDueno?.(personOf(session))) ?? "";
@@ -568,7 +572,7 @@ async function guardarMemoria(
  * op-ids, la memoria, la carpeta del proyecto (pieza 9) y el manual—, con su
  * contenido de AHORA.
  */
-export async function cargarFicherosDeLaTerminal(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, deps: AgentDeps): Promise<Record<string, string>> {
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return {};
   const v = await virtualesDe(session, deps, row.userBrief);
