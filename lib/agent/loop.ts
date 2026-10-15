@@ -22,7 +22,7 @@ import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/
 import { ASK_USER_QUESTION, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
-import { TODO_WRITE } from "@/lib/agent/todo-list";
+import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -140,6 +140,10 @@ export type AgentStreamEvent =
       /** Alinear con DeepSeek: el dueño DESCARTÓ la pregunta (su `ASK_CANCELLED`).
        *  La tarjeta se pinta «cancelada», asentada: ya no pide nada. */
       dismissed?: true;
+      /** LA LISTA DE PROGRESO (spec local 2026-10-15): la lista que escribió
+       *  `todo_write`. Sólo de pantalla y de la tarjeta guardada; el modelo lee
+       *  su propia llamada en el historial. */
+      todos?: readonly TodoItem[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -1741,6 +1745,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
           ...(outcome.respuesta ? { respuesta: outcome.respuesta } : {}),
           ...(outcome.dismissed ? { dismissed: true as const } : {}),
+          // La lista de progreso, entera (también vacía: Len puede vaciarla).
+          ...(outcome.todos ? { todos: outcome.todos } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
