@@ -41,6 +41,10 @@ export type FireworksStreamEvent =
   // saliendo igual: el trozo sólo se enseña, nunca se ejecuta.
   | { readonly type: "function_call_delta"; readonly index: number; readonly name?: string; readonly argsDelta: string }
   | { readonly type: "function_call"; readonly name: string; readonly args: Record<string, unknown> }
+  // LA LLAMADA QUE EL TOPE CORTÓ (`length`): no se arma ni se ejecuta, pero se
+  // nombra, con el principio de sus argumentos, para que el bucle le diga a
+  // Len cuál no corrió. Ver `CUT_ARGS_HEAD_CHARS`.
+  | { readonly type: "function_call_cut"; readonly name: string; readonly argsHead: string }
   // Misma forma discriminada que el transporte de Gemini, para que el consumidor
   // los lea con el mismo `switch` y ninguno de los dos necesite un adaptador.
   | { readonly type: "done"; readonly stopReason: FireworksStopReason };
@@ -252,6 +256,12 @@ function stopReasonFor(finishReason: string): FireworksStopReason {
   // ejecute algo. Tratarlo como error mataría el Agente en su primera acción.
   return { kind: "end_turn" };
 }
+
+/** Cuánto del principio de una llamada cortada se le enseña al modelo: lo
+ *  justo para la ruta y el arranque del contenido (`{"file_path":…,"content":…`).
+ *  El resto ya lo escribió y no corrió; devolvérselo entero le llenaría el
+ *  contexto con decenas de miles de tokens que no se van a usar. */
+const CUT_ARGS_HEAD_CHARS = 200;
 
 export function createFireworksStreamClient(options: FireworksStreamClientOptions = {}): FireworksStreamClient {
   const env = options.env ?? process.env;
@@ -508,7 +518,10 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
         if (!call.name) continue;
         let args: unknown;
         try { args = call.args.trim() === "" ? {} : JSON.parse(call.args); } catch {
-          if (finishReason === "length") continue;
+          if (finishReason === "length") {
+            yield { type: "function_call_cut", name: call.name, argsHead: call.args.slice(0, CUT_ARGS_HEAD_CHARS) };
+            continue;
+          }
           yield { type: "done", stopReason: { kind: "error", error: `tool arguments were not JSON: ${call.name}` } };
           return;
         }

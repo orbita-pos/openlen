@@ -156,7 +156,12 @@ export type StreamEvent =
       type: "function_call";
       name: string;
       args: Record<string, unknown>;
-    };
+    }
+  /** Una llamada que el tope de salida cortó a mitad de sus argumentos
+   *  (`finish_reason: "length"`). No es una llamada —nunca se ejecuta—: va
+   *  para que el bucle le diga al modelo CUÁL no corrió (`argsHead`, su
+   *  principio, acotado) y siga en piezas más pequeñas. */
+  | { type: "function_call_cut"; name: string; argsHead: string };
 
 export type StopReason =
   | { kind: "end_turn" }

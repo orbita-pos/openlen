@@ -593,6 +593,36 @@ describe("el stream que se corta a mitad de una llamada (ensayo de caja, 06/10)"
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "max_tokens" } });
   });
 
+  // 2026-10-15: la llamada a medias no se ejecuta, pero el bucle tiene que
+  // poder decirle a Len CUÁL fue — sin esto, una tanda con sólo esa llamada
+  // parecía una respuesta que se quedó pensando.
+  it("🔴 con «length», la llamada a medias sale como function_call_cut, con su nombre y su principio", async () => {
+    const { client: c } = client(writeAMedias + chunk({}, "length"));
+    const events = await drain(c.stream(REQUEST));
+    expect(events.find((e) => e.type === "function_call_cut")).toEqual({
+      type: "function_call_cut",
+      name: "Write",
+      argsHead: '{"file_path":"/index.html","content":"<!doctype html><ht',
+    });
+  });
+
+  it("y la completa de ANTES de la cortada se arma igual; el principio va acotado", async () => {
+    const largo = "x".repeat(5000);
+    const { client: c } = client(
+      chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/a.html","content":"<p>a</p>"}' } }] }) +
+        chunk({ tool_calls: [{ index: 1, id: "c2", function: { name: "Write", arguments: `{"file_path":"/b.html","content":"${largo}` } }] }) +
+        chunk({}, "length"),
+    );
+    const events = await drain(c.stream(REQUEST));
+    expect(events.filter((e) => e.type === "function_call")).toEqual([
+      { type: "function_call", name: "Write", args: { file_path: "/a.html", content: "<p>a</p>" } },
+    ]);
+    const cut = events.find((e) => e.type === "function_call_cut") as { argsHead: string };
+    expect(cut.argsHead.startsWith('{"file_path":"/b.html"')).toBe(true);
+    expect(cut.argsHead.length).toBeLessThan(500);
+    expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "max_tokens" } });
+  });
+
   it("BRAZO DE CONTROL: una llamada entera con «tool_calls» se arma como siempre", async () => {
     const { client: c } = client(
       chunk({ tool_calls: [{ index: 0, id: "c1", function: { name: "Write", arguments: '{"file_path":"/index.html","content":"<p>x</p>"}' } }] }, "tool_calls"),
