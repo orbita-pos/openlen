@@ -177,6 +177,9 @@ const targets = [
   // `backend-environments-migrate`. 🔴 OBLIGATORIA antes que el código:
   // lib/backend/environments.ts selecciona todas las columnas.
   "functions-migrate",
+  // GIT FOR LEN (spec local 2026-10-15): projectGitObjects and projectGitRepos. New tables with IF
+  // NOT EXISTS. 🔴 MANDATORY before the code: the terminal's git and the turn's status block use them.
+  "git-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
