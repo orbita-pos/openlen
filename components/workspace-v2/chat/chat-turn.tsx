@@ -268,7 +268,7 @@ export function LenTurn({
   const showChanges = turn.status === "applied" || turn.status === "reverted";
   // LA LISTA DE PROGRESO (spec local 2026-10-15): la última del turno.
   const todos = latestTodosOfActions(turn.actions);
-  const offer = continueStep({ todos, isLast, status: turn.status, cortado: turn.cortado, goalRunsOn });
+  const offer = continueStep({ todos, isLast, status: turn.status, cortado: turn.cortado, goalRunsOn, endedOnQuestion: question !== null });
 
   // Nada que enseñar todavía: la barra viva dice «Pensando». Una pregunta que
   // espera SÍ es algo (va fuera de los pasos, en su tarjeta): si Len empieza
