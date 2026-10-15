@@ -54,7 +54,19 @@ export interface FunctionsQuotaEvent {
   limit: number;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent;
+/** LA IA DE LAS APPS: lo que gastaron este mes las apps de una cuenta llegó al
+ *  80 % o al 100 % de su tope (spec local 2026-10-15). Push y correo. El
+ *  proyecto es el de la llamada que lo cruzó: el enlace abre su Base de datos. */
+export interface AppAiCapEvent {
+  type: "app_ai_cap";
+  projectId: string;
+  recipientUserId: string;
+  percent: 80 | 100;
+  spent: number;
+  cap: number;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;
