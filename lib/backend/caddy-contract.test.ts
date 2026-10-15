@@ -12,7 +12,7 @@ const caddy = readFileSync(join(process.cwd(), "infra", "caddy", "Caddyfile"), "
 const paginas = caddy.slice(caddy.indexOf("*.openlen.app {"), caddy.indexOf("\nlen.openlen.com {"));
 
 describe("Caddy pasa el backend de las páginas a Next", () => {
-  for (const ruta of ["/rest/v1/*", "/auth/v1/*", "/functions/v1/*"]) {
+  for (const ruta of ["/rest/v1/*", "/auth/v1/*", "/functions/v1/*", "/ai/v1/*"]) {
     it(`hay un handle ${ruta} en el bloque de las páginas, hacia Next`, () => {
       expect(paginas.length).toBeGreaterThan(0);
       const escaped = ruta.replace(/[/*]/g, (c) => `\\${c}`);
@@ -49,6 +49,7 @@ describe("el middleware de idiomas no toca el backend", () => {
     expect(matches("/auth/v1/token")).toBe(false);
     expect(matches("/functions/v1/hello")).toBe(false);
     expect(matches("/functions/v1/stripe-webhook/x")).toBe(false);
+    expect(matches("/ai/v1/chat/completions")).toBe(false);
   });
 
   /* ── carril D: storage ── */
@@ -108,6 +109,14 @@ describe("Caddy pasa /functions/v1 a Next SIN búfer (streaming)", () => {
   it("su handle lleva flush_interval -1", () => {
     const bloque = paginas.match(/handle \/functions\/v1\/\*\s*\{[\s\S]{0,300}?\n\t\}/);
     expect(bloque, "falta el handle /functions/v1/*").not.toBeNull();
+    expect(bloque![0]).toContain("flush_interval -1");
+  });
+});
+
+describe("Caddy pasa /ai/v1 a Next SIN búfer (la IA de las apps contesta en streaming)", () => {
+  it("su handle lleva flush_interval -1", () => {
+    const bloque = paginas.match(/handle \/ai\/v1\/\*\s*\{[\s\S]{0,300}?\n\t\}/);
+    expect(bloque, "falta el handle /ai/v1/*").not.toBeNull();
     expect(bloque![0]).toContain("flush_interval -1");
   });
 });
