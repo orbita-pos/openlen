@@ -27,6 +27,7 @@ import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
+import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -60,6 +61,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
             deps.supabaseCli!(session.projectId, args, ficheros, o),
         }
       : {}),
+    // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
+    // writes comes back as any other changed file and is saved below, Write's way.
+    ...((git) => (git ? { git } : {}))(gitForTerminal(session, deps)),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
     appTools: appToolsFor(session, deps),
     // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).

@@ -317,6 +317,51 @@ describe("TerminalDeLen", () => {
     });
   });
 
+  // GIT FOR LEN (spec local 2026-10-15): `git …` runs in the app's thread, with the project's files
+  // as they are now in the terminal, and what it writes comes back as any command's change.
+  describe("git, answered by the app's thread", () => {
+    function withGit(answer?: (args: readonly string[], cwd: string, files: Readonly<Record<string, string>>) => Promise<{ stdout: string; stderr: string; exitCode: number; write?: Record<string, string | null> }>) {
+      const calls: { args: readonly string[]; cwd: string; files: Readonly<Record<string, string>> }[] = [];
+      const { t } = terminal({
+        git: async (args, cwd, files) => {
+          calls.push({ args, cwd, files });
+          return answer ? answer(args, cwd, files) : { stdout: "ok\n", stderr: "", exitCode: 0 };
+        },
+      });
+      return { t, calls };
+    }
+
+    it("gets the args, the cwd and the project's files (not /tmp)", async () => {
+      const { t, calls } = withGit();
+      await t.ejecutar("echo x > /tmp/scratch; mkdir -p /surf && cd /surf && git status -s");
+      expect(calls[0]!.args).toEqual(["status", "-s"]);
+      expect(calls[0]!.cwd).toBe("/surf");
+      expect(Object.keys(calls[0]!.files).sort()).toEqual(["/AGENTS.md", "/index.html", "/surf/index.html"]);
+    }, 20_000);
+
+    it("a heredoc message arrives whole", async () => {
+      const { t, calls } = withGit();
+      await t.ejecutar(`git commit -m "$(cat <<'EOF'\nAdd the cart.\n\nCo-Authored-By: Len <noreply@openlen.com>\nEOF\n)"`);
+      expect(calls[0]!.args).toEqual(["commit", "-m", "Add the cart.\n\nCo-Authored-By: Len <noreply@openlen.com>"]);
+    }, 20_000);
+
+    it("what git writes or deletes is in the terminal and in `ficheros`, and its exit code stands", async () => {
+      const { t } = withGit(async () => ({ stdout: "", stderr: "Updated 1 path from the index\n", exitCode: 0, write: { "/index.html": "<h1>Vuelta</h1>\n", "/surf/index.html": null } }));
+      const r = await t.ejecutar("git checkout -- .");
+      expect(r.stderr).toBe("Updated 1 path from the index\n");
+      expect(r.ficheros?.["/index.html"]).toBe("<h1>Vuelta</h1>\n");
+      expect(r.ficheros?.["/surf/index.html"]).toBeUndefined();
+      const fails = withGit(async () => ({ stdout: "", stderr: "fatal: x\n", exitCode: 128 }));
+      expect((await fails.t.ejecutar("git log")).exitCode).toBe(128);
+    }, 20_000);
+
+    it("without the option there is no git, as before", async () => {
+      const { t } = terminal();
+      const r = await t.ejecutar("git status");
+      expect(r.exitCode).toBe(127);
+    }, 20_000);
+  });
+
   // plans/pages-backend/design.md: `supabase …` lo corre el hilo de la app (con
   // la base); el hilo de la terminal le pasa los argumentos y los ficheros de
   // `/supabase/` como están en la terminal, y escribe los que la CLI crea.
