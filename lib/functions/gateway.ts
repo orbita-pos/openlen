@@ -20,11 +20,12 @@ import type { ConcurrencyLimiter } from "./concurrency";
 import type { DeploymentRecord } from "./deployments";
 import type { Frame, FunctionsEngine, FunctionsEnvironment, InvokeEvent } from "./engines/types";
 import { functionsError, statusOf, type FunctionsErrorCode } from "./errors";
-import { MAX_REQUEST_BYTES } from "./limits";
+import { FUNCTION_IP_RULES, MAX_REQUEST_BYTES } from "./limits";
 import { maskSecrets } from "./mask";
 import type { PoolCaps } from "./meter";
 import { translateStack } from "./traces";
 import type { UsageStore } from "./usage";
+import type { WindowLimiter } from "./window-limiter";
 
 export interface ResolvedTarget {
   readonly projectId: string;
@@ -73,6 +74,8 @@ export interface GatewayDeps {
   blocked?(projectId: string): Promise<boolean>;
   /** Los avisos de cuota y de bolsa (fase 3). */
   readonly alerts?: AdmissionAlerts;
+  /** Las llamadas de cada visitante (IP) por proyecto (spec local 2026-10-15, 4.5). */
+  readonly ipLimiter?: WindowLimiter;
 }
 
 const ERROR_DE: Record<Extract<Frame, { t: "error" }>["kind"], FunctionsErrorCode> = {
@@ -127,6 +130,11 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   if (!target) return functionsError("NOT_FOUND");
   if ("forbidden" in target) return functionsError("FORBIDDEN", { message: target.forbidden });
   if (await deps.blocked?.(target.projectId)) return functionsError("FUNCTIONS_UNAVAILABLE", { message: "Edge Functions are disabled for this project" });
+  // Un visitante no se come el proyecto: ni las llamadas del mes ni, con la IA
+  // de las apps, los créditos del dueño (spec local 2026-10-15, 4.5).
+  if ((deps.ipLimiter?.hit(`${target.projectId}|${clientIp(req.headers)}`, FUNCTION_IP_RULES) ?? 0) > 0) {
+    return functionsError("RATE_LIMIT_EXCEEDED", { message: "Too many calls from this address to this project's Edge Functions" });
+  }
   // Despublicar deja lo desplegado en el motor, pero la puerta deja de llamarlo
   // (spec local 2026-10-11, Parte 2): ni se repone ni se cuenta.
   if (target.environment === "live" && !target.published) return functionsError("NOT_FOUND");

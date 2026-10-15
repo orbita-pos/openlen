@@ -7,9 +7,10 @@ import { ConcurrencyLimiter } from "./concurrency";
 import type { DeploymentRecord } from "./deployments";
 import type { CallLimits, Destination, Frame, FunctionsEngine, InvokeEvent } from "./engines/types";
 import { handleFunctionsRequest, type GatewayDeps, type InvocationRecord, type ResolvedTarget } from "./gateway";
-import { FUNCTION_LIMITS } from "./limits";
+import { FUNCTION_IP_RULES, FUNCTION_LIMITS } from "./limits";
 import { unreachedCallNanoUsd } from "./meter";
 import { memoryUsageStore } from "./usage";
+import { WindowLimiter } from "./window-limiter";
 
 const SECRETO_KEY = "sb_secret_abcdefghijklmnopqrstuv";
 const TARGET: ResolvedTarget = {
@@ -87,6 +88,26 @@ const leida = async (p: Promise<Response>) => {
 };
 
 describe("la puerta", () => {
+  it("🔴 un visitante con demasiadas llamadas: 429 sin llamar; otra IP sigue entrando", async () => {
+    const { deps, eventos } = montar(undefined, { ipLimiter: new WindowLimiter(() => 0) });
+    const desde = (ip: string) => ({ headers: { "cf-connecting-ip": ip } });
+    const tope = FUNCTION_IP_RULES[0]!.max;
+    for (let i = 0; i < tope; i++) expect((await leida(llamar(deps, "/functions/v1/webhook", desde("203.0.113.7")))).status).toBe(200);
+    const r = await llamar(deps, "/functions/v1/webhook", desde("203.0.113.7"));
+    expect(r.status).toBe(429);
+    expect(r.headers.get("sb-error-code")).toBe("RATE_LIMIT_EXCEEDED");
+    expect((await r.json()).message).toBe("Too many calls from this address to this project's Edge Functions");
+    expect(eventos).toHaveLength(tope);
+    expect((await leida(llamar(deps, "/functions/v1/webhook", desde("198.51.100.1")))).status).toBe(200);
+  });
+
+  it("los límites por visitante son los de la spec", () => {
+    expect(FUNCTION_IP_RULES).toEqual([
+      { windowMs: 60_000, max: 120 },
+      { windowMs: 3_600_000, max: 2_000 },
+    ]);
+  });
+
   it("🔴 un proyecto con la marca de abuso: 503 con su motivo, sin desplegar, contar ni llamar", async () => {
     let repuesto = false;
     const { deps, eventos } = montar(undefined, { blocked: async (p) => p === "p1", ensureDeployed: async () => void (repuesto = true) });

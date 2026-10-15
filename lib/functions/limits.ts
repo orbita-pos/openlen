@@ -7,6 +7,8 @@
 
 import type { Plan } from "@/lib/plan";
 
+import type { WindowRule } from "./window-limiter";
+
 export interface FunctionLimits {
   readonly callsPerMonth: number;
   readonly concurrent: number;
@@ -36,3 +38,12 @@ export type Pool = "free" | "paid";
 
 /** Gratis tiene su bolsa: su abuso nunca apaga a los de pago. */
 export const poolOf = (plan: Plan): Pool => (plan === "free" ? "free" : "paid");
+
+/** Lo que deja un visitante (una IP) por proyecto (spec local 2026-10-15, 4.5).
+ *  Es justicia, no seguridad —otra IP vuelve a entrar— y deja pasar las
+ *  ráfagas de un webhook de Stripe, que llegan de pocas IP. Si un día muerde,
+ *  se exime a las funciones con `verify_jwt = false`, que son las de los webhooks. */
+export const FUNCTION_IP_RULES: readonly WindowRule[] = [
+  { windowMs: 60_000, max: 120 },
+  { windowMs: 3_600_000, max: 2_000 },
+];
