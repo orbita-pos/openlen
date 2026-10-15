@@ -119,6 +119,8 @@ export default defineConfig({
       "lib/backend/**/*.test.ts",
       // Las Edge Functions (spec local 2026-10-11). `include` es LISTA BLANCA.
       "lib/functions/**/*.test.ts",
+      // La IA de las apps (spec local 2026-10-15). `include` es LISTA BLANCA.
+      "lib/app-ai/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
