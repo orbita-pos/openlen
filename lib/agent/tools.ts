@@ -243,6 +243,20 @@ export interface AgentDeps {
     ficheros: Readonly<Record<string, string>>,
     o?: { readonly signal?: AbortSignal },
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+  /** GIT (spec local 2026-10-15-git-for-len): `git …` in the terminals, over the project's
+   *  repository (`lib/git/service.ts`). `write`: what the command changes in the working tree. */
+  gitCli?(p: {
+    projectId: string;
+    ownerId: string;
+    personId: string;
+    args: readonly string[];
+    cwd: string;
+    files: Readonly<Record<string, string>>;
+    /** Why the terminal won't delete a file, or null (`lib/agent/terminal/deletion-rule.ts`). */
+    undeletable?: (absolutePath: string) => string | null;
+  }): Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
+  /** GIT: Claude Code's git status block for the start of a turn; null if git can't answer. */
+  gitStatusForTurn?(p: { projectId: string; ownerId: string; personId: string; loadFiles: () => Promise<Record<string, string>> }): Promise<string | null>;
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
    *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
   functionsCurl?(projectId: string): Promise<FunctionsCurl | null>;
@@ -584,6 +598,14 @@ export function realDeps(
     async supabaseCli(projectId, args, ficheros, o) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
       return runSupabaseCli(projectId, args, ficheros, o);
+    },
+    async gitCli(p) {
+      const { gitCli } = await import("@/lib/git/service");
+      return gitCli(p);
+    },
+    async gitStatusForTurn(p) {
+      const { gitStatusForTurn } = await import("@/lib/git/service");
+      return gitStatusForTurn(p);
     },
     async functionsCurl(projectId) {
       const { functionsCurlFor } = await import("@/lib/functions/curl");

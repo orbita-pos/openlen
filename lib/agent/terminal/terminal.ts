@@ -87,6 +87,14 @@ export class TerminalDeLen {
         /** Se aborta si el comando pasa de su tiempo (14/10): lo que arrancó acaba con él. */
         o?: { readonly signal?: AbortSignal },
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+      /** GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository, answered
+       *  here (its objects are in Postgres). `write`: files it changes (`null` deletes). Without
+       *  it, the terminal has no `git`. */
+      readonly git?: (
+        args: readonly string[],
+        cwd: string,
+        files: Readonly<Record<string, string>>,
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
       /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
        *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
        *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
@@ -145,6 +153,10 @@ export class TerminalDeLen {
         void this.servirSupabase(hilo, m.supabase, m.args as string[], m.ficheros as Record<string, string>);
         return;
       }
+      if (typeof m.git === "number") {
+        void this.servirGit(hilo, m.git, m.args as string[], String(m.cwd ?? "/"), m.ficheros as Record<string, string>);
+        return;
+      }
       if (typeof m.app === "number") {
         void this.servirAppTools(hilo, m.app, m.program as AppProgram, m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
@@ -176,6 +188,7 @@ export class TerminalDeLen {
       ficheros,
       perezosos,
       supabase: Boolean(this.o.supabase),
+      git: Boolean(this.o.git),
       functions: this.curl ? { prefixes: [...this.curl.prefixes] } : undefined,
       app: this.o.appTools
         ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
@@ -221,6 +234,18 @@ export class TerminalDeLen {
       respuesta = { tipo: "supabase", pid, error: e instanceof Error ? e.message : String(e) };
     } finally {
       this.supabaseInFlight.delete(pid);
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
+  }
+
+  /** `git …`: answered here and sent back to the worker, like `supabase`. */
+  private async servirGit(hilo: Worker, pid: number, args: string[], cwd: string, ficheros: Record<string, string>): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    try {
+      if (!this.o.git) throw new Error("this terminal has no git");
+      respuesta = { tipo: "git", pid, resultado: await this.o.git(args, cwd, ficheros) };
+    } catch (e) {
+      respuesta = { tipo: "git", pid, error: e instanceof Error ? e.message : String(e) };
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }

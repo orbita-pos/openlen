@@ -226,15 +226,21 @@ describe("las herramientas en una app", () => {
     const bashApp = de(buildFunctionDeclarations(CON_TERMINAL, {}, "len", APP), "bash").description;
     const bashPagina = de(buildFunctionDeclarations(CON_TERMINAL), "bash").description;
     expect(bashApp).not.toMatch(/no node, npm, pip or git/);
+    expect(bashApp).toMatch(/no node or pip \(in this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's real ones: \/AGENTS\.md says how\), but git/);
     expect(bashApp).toMatch(/npm test, npm run build, npm run lint and npx tsc/);
     expect(bashApp).not.toMatch(/Playwright/);
     expect(bashApp).toMatch(/\/tests holds the app's tests \(vitest\)/);
-    expect(bashPagina).toMatch(/no node, npm, pip or git/);
+    expect(bashPagina).toMatch(/no node, npm or pip, but git/);
     expect(bashPagina).toMatch(/Playwright/);
     // NPM ABIERTO: el /node_modules que se lee, sólo en una app.
     expect(bashApp).toMatch(/- \/node_modules: the installed packages, read-only: each one's package\.json and its type declarations/);
     expect(bashApp).toMatch(/\n- \/tmp: scratch space/);
     expect(bashPagina).not.toMatch(/node_modules/);
+  });
+
+  it("bash in an app without git: the old sentence still gets its npm clause", () => {
+    const bashApp = de(buildFunctionDeclarations({ OPENLEN_TERMINAL: "1", OPENLEN_GIT: "0" }, {}, "len", APP), "bash").description;
+    expect(bashApp).toMatch(/no node, pip or git \(in this app, npm install/);
   });
 });
 

@@ -34,7 +34,9 @@ import {
   SUSTITUIDAS_POR_LA_TERMINAL,
   terminalEncendida,
   terminalOnly,
+  withGit,
 } from "@/lib/agent/terminal/declaracion";
+import { gitEnabled } from "@/lib/git/enabled";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
@@ -159,7 +161,11 @@ function declaracionesDelModo(
   // Len Dynamis: sólo la terminal para los ficheros, sin Read/Edit/Write.
   if (terminalOnly(mode, _env)) for (const n of SUSTITUIDAS_EN_SOLO_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
-    ? [...buildTodasLasDeclaraciones(), DECLARACION_BASH].map((d) =>
+    ? [
+        ...buildTodasLasDeclaraciones(),
+        // GIT (spec local 2026-10-15-git-for-len, §5): with git on, bash says so and carries the commit protocol.
+        gitEnabled(_env) ? { ...DECLARACION_BASH, description: withGit(String(DECLARACION_BASH.description)) } : DECLARACION_BASH,
+      ].map((d) =>
         // Lo que nombra las herramientas que salen se dice con la terminal.
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
       )

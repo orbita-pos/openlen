@@ -34,6 +34,7 @@ import {
   nombreDeFichero,
 } from "@/lib/agent/grabacion";
 import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memory";
+import { gitEnabled } from "@/lib/git/enabled";
 import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
@@ -164,6 +165,9 @@ export const runtime = "nodejs";
 // caía a CADA turno nuevo y la petición dejaba de coincidir desde el principio,
 // sin caché. Ahora cuántos entran lo dice `turnosQueSeQuedan`, a saltos.
 const ENCODER = new TextEncoder();
+/** GIT (spec local 2026-10-15-git-for-len, §5): the status block waits this long at most;
+ *  without it the turn goes on. */
+const GIT_STATUS_TIMEOUT_MS = 2_000;
 // ⚰️ Aquí vivía `STREAM_TIMEOUT_MS = 360_000`, un reloj de PARED: el turno se
 // abortaba a los 6 minutos trabajara o no. Retirado con los topes (H1,
 // 2026-09-25): Claude Code no pone plazo a un turno. Lo que corta un cuelgue es
@@ -851,7 +855,7 @@ async function correrTurno(
   // Las versiones se leen UNA vez y alimentan dos cosas: el registro de cambios
   // y lo que el dueño cambió a mano desde el último turno de Len (H07).
   const versionesDelProyecto = listVersions({ projectId, userId: userId }).catch(() => []);
-  const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno, notasDeMemoria] = await Promise.all([
+  const [userMemory, esfuerzoDelUsuario, cambios, cambiosDelDueno, notasDeMemoria, gitStatus] = await Promise.all([
     // La memoria PERSONAL es de quien habla, no del dueño (lib/agent/person.ts).
     getUserMemoryBounded(quien),
     getEsfuerzoGuardado(userId),
@@ -873,6 +877,22 @@ async function correrTurno(
     // LEN.md: las notas de /.len/memory, para su índice. Fail-soft y con
     // plazo, como la memoria: sin ellas el turno sigue, sin índice.
     conPlazo(async () => (await deps.memoryNotes?.list(projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+    // GIT (spec local 2026-10-15-git-for-len, §5): Claude Code's git status block, at the start
+    // of EVERY turn (its session start; a conversation with Len lasts days). The repository is
+    // created here if the project doesn't have one. Fail-soft, with a deadline.
+    gitEnabled() && deps.gitStatusForTurn
+      ? conPlazo(
+          () =>
+            deps.gitStatusForTurn!({
+              projectId,
+              ownerId: userId,
+              personId: quien,
+              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno }, deps),
+            }),
+          GIT_STATUS_TIMEOUT_MS,
+          null,
+        ).catch(() => null)
+      : Promise.resolve(null),
   ]);
   // LEN.md (plans/len-md): la memoria del PROYECTO —/LEN.md y el índice de las
   // notas— como mensaje duradero, como DeepSeek: línea base la primera vez, y
@@ -921,6 +941,8 @@ async function correrTurno(
     cambios,
     // Lo que el dueño cambió a mano desde el último turno de Len en esta página.
     cambiosDelDueno,
+    // GIT: Claude Code's status block for this turn (null without git).
+    gitStatus,
     // Lo que la ingestión ya sabe que se perdió en esta página. El Chat lo
     // recibe desde hace tiempo (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo
     // veía por ningún lado, así que empezaba a ciegas una conversación sobre

@@ -95,6 +95,9 @@ export default defineConfig({
       "lib/len-bench/**/*.test.ts",
       // La terminal de Len (plans/len-agente-2026, F1).
       "lib/agent/terminal/**/*.test.ts",
+      // GIT FOR LEN (spec local 2026-10-15-git-for-len): the repository, its commands and the
+      // differential tests against the real git binary. WHITELIST: without this line they never run.
+      "lib/git/**/*.test.ts",
       // Buscar y leer en internet (plans/len-agente-2026, F2).
       "lib/agent/web/**/*.test.ts",
       // Len por correo (infra/len-email-worker/README.md).

@@ -20,6 +20,9 @@ import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
 import { runCli } from "@/lib/backend/cli-core";
+import { memoryStore } from "@/lib/git/memory-store";
+import { runGit } from "@/lib/git/run";
+import { AUTHOR, START } from "@/lib/git/test-support/real-git";
 
 const HOME = `<!doctype html>
 <html lang="es">
@@ -1340,10 +1343,7 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
     const js = await guardarAMano("p-editor", "u1", "/index.html", conAlert, CON_SCRIPT, deps);
     assert.equal(js.ok, true, JSON.stringify(js));
     assert.match(store.data.html, /<script>alert\(1\)<\/script>/);
-    const ficheros = await cargarFicherosDeLaTerminal(
-      { projectId: "p-editor", userId: "u1", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 },
-      deps,
-    );
+    const ficheros = await cargarFicherosDeLaTerminal({ projectId: "p-editor", userId: "u1" }, deps);
     const manual = await guardarAMano("p-editor", "u1", "/AGENTS.md", "otro manual", ficheros["/AGENTS.md"]!, deps);
     assert.equal(manual.ok, false);
     assert.equal(!manual.ok && manual.motivo, "rechazado");
@@ -2384,6 +2384,55 @@ describe("open npm: saving a source that imports a package installs it", () => {
       assert.ok(mensajes.some((m) => /"tiny" is not installed in this app/.test(m)), JSON.stringify(mensajes));
     } finally {
       await cerrarTerminalDeLaSesion(s);
+    }
+  });
+});
+
+describe("git in Len's terminal, end to end (spec local 2026-10-15-git-for-len)", () => {
+  function withGit(data: ProjectData) {
+    const { deps, store } = makeDeps(data);
+    const repo = memoryStore();
+    const gitDeps = {
+      ...deps,
+      gitCli: (p: { args: readonly string[]; cwd: string; files: Readonly<Record<string, string>> }) =>
+        runGit({ store: repo, files: p.files, cwd: p.cwd, identity: AUTHOR, owner: AUTHOR, now: () => new Date(START * 1000) }, p.args),
+    } as unknown as AgentDeps;
+    return { deps: gitDeps, store };
+  }
+
+  it("Len sees its own change with git diff, and git checkout brings the page back through Write's checks", async () => {
+    const { deps, store } = withGit({ html: HOME });
+    const session = makeSession();
+    try {
+      await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git status -s" }));
+      await conTerminal(() => runAgentTool(session, deps, "bash", { command: "sed -i 's#Tienda Brote#Tienda Nueva#' /index.html" }));
+      const status = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git status -s" }));
+      assert.match(texto(status), /^ M index\.html$/m);
+      const diff = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git diff" }));
+      assert.match(texto(diff), /^\+<h1>Tienda Nueva<\/h1>$/m);
+      const back = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git checkout -- index.html" }));
+      assert.equal(back.response.ok, true, texto(back));
+      assert.match(texto(back), /index\.html: saved\./);
+      assert.match(store.data.html, /<h1>Tienda Brote<\/h1>/);
+      assert.ok(store.versions.some((v) => v.label.startsWith("bash ")));
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
+  it("a restore that would delete a page is refused by the page's rule, and says so", async () => {
+    const { deps, store } = withGit({ html: HOME });
+    const session = makeSession();
+    try {
+      await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git status" }));
+      // A new page is a new file; a copy of the home passes the page's gate.
+      await conTerminal(() => runAgentTool(session, deps, "bash", { command: "mkdir -p /menu && cp /index.html /menu/index.html && git add -A && git commit -qm 'Add the menu'" }));
+      assert.ok(store.data.pages?.menu, "the menu page was created");
+      const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git restore --source=HEAD~1 ." }));
+      assert.match(texto(out), /menu\/index\.html: not saved/);
+      assert.ok(store.data.pages?.menu, "the menu page is still there");
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
     }
   });
 });
