@@ -75,11 +75,23 @@ const groups = JSON.parse(readFileSync(join(SITE, "data", "herramientas.json"), 
 // otros cinco: la puerta contaba 18 con 26 de verdad, y seguía dando por buena
 // `preguntar` (que ya es `ask_user_question`) y Grep y Glob (que la terminal
 // sustituye). Preguntárselo al catálogo no se queda viejo.
+// Con el shim de `server-only` de `test:node`: el catálogo llega a módulos de
+// servidor (catalog → manual → modo-app → … → tw-config), y con `tsx` a secas
+// ese `import "server-only"` lanza y la puerta muere antes de comparar nada.
 const catalog = JSON.parse(
-  execFileSync(process.execPath, [join(REPO, "node_modules", "tsx", "dist", "cli.mjs"), join(SITE, "scripts", "catalogo-de-len.mts")], {
-    cwd: REPO,
-    encoding: "utf8",
-  })
+  execFileSync(
+    process.execPath,
+    [
+      join(REPO, "node_modules", "tsx", "dist", "cli.mjs"),
+      "--require",
+      join(REPO, "scripts", "test-node-server-only-shim.cjs"),
+      join(SITE, "scripts", "catalogo-de-len.mts"),
+    ],
+    {
+      cwd: REPO,
+      encoding: "utf8",
+    },
+  )
     .trim()
     .split("\n")
     .at(-1),
