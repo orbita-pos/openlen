@@ -1,7 +1,7 @@
 // The real git binary in a throwaway repository, with a fixed author and clock: what every
 // differential test compares our git against (spec local 2026-10-15-git-for-len, "Pruebas").
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -85,6 +85,21 @@ export class RealRepo {
         writeFileSync(abs, content);
       }
     }
+  }
+
+  /** Every file outside .git: repository path → content. */
+  snapshot(): Record<string, string> {
+    const out: Record<string, string> = {};
+    const walk = (dir: string, prefix: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (prefix === "" && entry.name === ".git") continue;
+        const abs = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(abs, `${prefix}${entry.name}/`);
+        else out[`${prefix}${entry.name}`] = readFileSync(abs, "utf8");
+      }
+    };
+    walk(this.dir, "");
+    return out;
   }
 
   dispose(): void {
