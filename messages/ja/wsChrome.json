@@ -458,7 +458,8 @@
       "users": "ユーザー",
       "storage": "Storage",
       "functions": "関数",
-      "secrets": "シークレット"
+      "secrets": "シークレット",
+      "ai": "AI"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -560,6 +561,22 @@
       "confirmDelete": "削除しますか?",
       "loadError": "シークレットを読み込めませんでした。",
       "deleteFailed": "削除できませんでした。もう一度お試しください。"
+    },
+    "ai": {
+      "account": "今月のアプリ: {cap} クレジット中 {spent}",
+      "accountLabel": "今月アプリが使った AI クレジット",
+      "accountNote": "この上限はアカウント内のすべてのアプリの合計です。",
+      "off": "アプリの AI はオフです（上限 0）。",
+      "thisProject": "このプロジェクトの今月",
+      "usage": "{credits} クレジット · {calls} 回",
+      "draft": "下書き",
+      "live": "本番",
+      "capLabel": "月の上限（クレジット）",
+      "capHint": "初期値はプランの 25%：{credits} クレジット。最大 {max}。",
+      "save": "保存",
+      "saving": "保存中…",
+      "useDefault": "初期値に戻す",
+      "saveError": "上限を保存できませんでした。"
     }
   }
 }

@@ -458,7 +458,8 @@
       "users": "Gebruikers",
       "storage": "Storage",
       "functions": "Functies",
-      "secrets": "Geheimen"
+      "secrets": "Geheimen",
+      "ai": "AI"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -560,6 +561,22 @@
       "confirmDelete": "Verwijderen?",
       "loadError": "De geheimen konden niet worden geladen.",
       "deleteFailed": "Verwijderen is mislukt. Probeer het opnieuw."
+    },
+    "ai": {
+      "account": "Je apps deze maand: {spent} van {cap} credits",
+      "accountLabel": "AI-credits die je apps deze maand gebruikten",
+      "accountNote": "Deze limiet geldt voor alle apps in je account samen.",
+      "off": "AI voor je apps staat uit (limiet 0).",
+      "thisProject": "Dit project deze maand",
+      "usage": "{credits} credits · {calls} aanroepen",
+      "draft": "Concept",
+      "live": "Productie",
+      "capLabel": "Maandlimiet, in credits",
+      "capHint": "Standaard 25% van je abonnement: {credits} credits. Tot {max}.",
+      "save": "Opslaan",
+      "saving": "Opslaan…",
+      "useDefault": "Standaard gebruiken",
+      "saveError": "De limiet kon niet worden opgeslagen."
     }
   }
 }

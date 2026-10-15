@@ -458,7 +458,8 @@
       "users": "Users",
       "storage": "Storage",
       "functions": "Functions",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "ai": "AI"
     },
     "unavailable": {
       "title": "The database isn't available here",
@@ -560,6 +561,22 @@
       "confirmDelete": "Delete?",
       "loadError": "Couldn't load the secrets.",
       "deleteFailed": "Couldn't delete it. Try again."
+    },
+    "ai": {
+      "account": "Your apps this month: {spent} of {cap} credits",
+      "accountLabel": "AI credits your apps used this month",
+      "accountNote": "This limit is for all the apps in your account together.",
+      "off": "AI is turned off for your apps (limit 0).",
+      "thisProject": "This project this month",
+      "usage": "{credits} credits · {calls} calls",
+      "draft": "Draft",
+      "live": "Production",
+      "capLabel": "Monthly limit, in credits",
+      "capHint": "By default, 25% of your plan: {credits} credits. Up to {max}.",
+      "save": "Save",
+      "saving": "Saving…",
+      "useDefault": "Use the default",
+      "saveError": "The limit couldn't be saved."
     }
   }
 }

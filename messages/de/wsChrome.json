@@ -458,7 +458,8 @@
       "users": "Nutzer",
       "storage": "Storage",
       "functions": "Funktionen",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "ai": "KI"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -560,6 +561,22 @@
       "confirmDelete": "Löschen?",
       "loadError": "Die Secrets konnten nicht geladen werden.",
       "deleteFailed": "Löschen fehlgeschlagen. Versuch es noch einmal."
+    },
+    "ai": {
+      "account": "Deine Apps diesen Monat: {spent} von {cap} Credits",
+      "accountLabel": "KI-Credits, die deine Apps diesen Monat verbraucht haben",
+      "accountNote": "Dieses Limit gilt für alle Apps deines Kontos zusammen.",
+      "off": "Die KI deiner Apps ist ausgeschaltet (Limit 0).",
+      "thisProject": "Dieses Projekt diesen Monat",
+      "usage": "{credits} Credits · {calls} Aufrufe",
+      "draft": "Entwurf",
+      "live": "Produktion",
+      "capLabel": "Monatliches Limit in Credits",
+      "capHint": "Standardmäßig 25 % deines Plans: {credits} Credits. Bis zu {max}.",
+      "save": "Speichern",
+      "saving": "Wird gespeichert…",
+      "useDefault": "Standard verwenden",
+      "saveError": "Das Limit konnte nicht gespeichert werden."
     }
   }
 }

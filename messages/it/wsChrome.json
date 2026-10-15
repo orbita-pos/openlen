@@ -458,7 +458,8 @@
       "users": "Utenti",
       "storage": "Storage",
       "functions": "Funzioni",
-      "secrets": "Segreti"
+      "secrets": "Segreti",
+      "ai": "IA"
     },
     "unavailable": {
       "title": "Il database non è disponibile qui",
@@ -560,6 +561,22 @@
       "confirmDelete": "Eliminare?",
       "loadError": "Impossibile caricare i segreti.",
       "deleteFailed": "Impossibile eliminare. Riprova."
+    },
+    "ai": {
+      "account": "Le tue app questo mese: {spent} di {cap} crediti",
+      "accountLabel": "Crediti di IA usati dalle tue app questo mese",
+      "accountNote": "Questo limite vale per tutte le app del tuo account insieme.",
+      "off": "L'IA delle tue app è disattivata (limite 0).",
+      "thisProject": "Questo progetto questo mese",
+      "usage": "{credits} crediti · {calls} chiamate",
+      "draft": "Bozza",
+      "live": "Produzione",
+      "capLabel": "Limite mensile, in crediti",
+      "capHint": "Per impostazione predefinita, il 25% del tuo piano: {credits} crediti. Fino a {max}.",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "useDefault": "Usa il predefinito",
+      "saveError": "Impossibile salvare il limite."
     }
   }
 }

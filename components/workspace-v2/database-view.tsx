@@ -24,6 +24,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Table2,
   Trash2,
   Users,
@@ -32,8 +33,10 @@ import {
 
 import type { ColumnInfo, PanelUser, Row, TableInfo } from "@/lib/backend/dashboard";
 import type { PanelBucket, PanelFile } from "@/lib/backend/storage/dashboard";
+import type { AppAiOverview } from "@/lib/app-ai/overview";
 import type { FunctionsOverview } from "@/lib/functions/overview";
 import { ConfirmButton } from "./confirm-button";
+import { AppAiTab } from "./database-app-ai";
 import { FunctionsTab } from "./database-functions";
 import { SecretsTab } from "./database-secrets";
 
@@ -73,7 +76,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
   // El entorno que pide el selector; el que se ve es el que contestó el servidor.
   const [wanted, setWanted] = useState<PanelEnv | null>(null);
@@ -126,6 +129,26 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     void loadFn();
   }, [loadFn]);
 
+  // LA IA DE LAS APPS (spec local 2026-10-15, 4.6): su pestaña sale si la puerta
+  // está encendida y quien mira es el dueño (a un miembro la API le da 403).
+  const [aiState, setAiState] = useState<{ readonly projectId: string; readonly overview: AppAiOverview | null } | null>(null);
+  const loadAi = useCallback(async () => {
+    if (!projectId) return;
+    let overview: AppAiOverview | null = null;
+    try {
+      const r = await call<{ available?: unknown }>(`/api/projects/${projectId}/app-ai`);
+      overview = r.available === true ? (r as unknown as AppAiOverview) : null;
+    } catch {
+      overview = null;
+    }
+    if (currentProject.current === projectId) setAiState({ projectId, overview });
+  }, [projectId]);
+  const ai = aiState?.projectId === projectId ? aiState.overview : null;
+
+  useEffect(() => {
+    void loadAi();
+  }, [loadAi]);
+
   const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
   const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
 
@@ -146,8 +169,8 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
   // La pestaña que se ve: sin tablas pero con funciones, Funciones (no hay otra
   // que enseñar); si las funciones ya no están, Tablas.
   const tableTab = tab === "tables" || tab === "users" || tab === "storage";
-  const activeTab = !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : tab;
-  const fnTab = fn !== null && projectId !== null && (activeTab === "functions" || activeTab === "secrets") && (overview.status === "ready" || overview.status === "empty");
+  const activeTab = !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : tab === "ai" && !ai ? "functions" : tab;
+  const fnTab = fn !== null && projectId !== null && (activeTab === "functions" || activeTab === "secrets" || activeTab === "ai") && (overview.status === "ready" || overview.status === "empty");
 
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-app text-zinc-900 dark:text-zinc-100">
@@ -216,6 +239,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
               <>
                 <TabButton active={activeTab === "functions"} onClick={() => setTab("functions")} icon={<Zap size={14} />} label={t("tabs.functions")} />
                 <TabButton active={activeTab === "secrets"} onClick={() => setTab("secrets")} icon={<KeyRound size={14} />} label={t("tabs.secrets")} />
+                {ai && <TabButton active={activeTab === "ai"} onClick={() => setTab("ai")} icon={<Sparkles size={14} />} label={t("tabs.ai")} />}
               </>
             )}
           </div>
@@ -270,7 +294,15 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             )}
           </PanelEnvContext.Provider>
         )}
-        {fnTab && fn && projectId && (activeTab === "functions" ? <FunctionsTab overview={fn} /> : <SecretsTab projectId={projectId} />)}
+        {fnTab && fn && projectId && (
+          activeTab === "functions" ? (
+            <FunctionsTab overview={fn} />
+          ) : activeTab === "ai" && ai ? (
+            <AppAiTab key={projectId} projectId={projectId} overview={ai} onChange={(next) => setAiState({ projectId, overview: next })} />
+          ) : (
+            <SecretsTab projectId={projectId} />
+          )
+        )}
       </div>
     </section>
   );

@@ -458,7 +458,8 @@
       "users": "Utilisateurs",
       "storage": "Storage",
       "functions": "Fonctions",
-      "secrets": "Secrets"
+      "secrets": "Secrets",
+      "ai": "IA"
     },
     "unavailable": {
       "title": "La base de données n'est pas disponible ici",
@@ -560,6 +561,22 @@
       "confirmDelete": "Supprimer ?",
       "loadError": "Impossible de charger les secrets.",
       "deleteFailed": "Impossible de supprimer. Réessayez."
+    },
+    "ai": {
+      "account": "Vos apps ce mois-ci : {spent} sur {cap} crédits",
+      "accountLabel": "Crédits d'IA utilisés par vos apps ce mois-ci",
+      "accountNote": "Cette limite vaut pour toutes les apps de votre compte ensemble.",
+      "off": "L'IA de vos apps est désactivée (limite 0).",
+      "thisProject": "Ce projet ce mois-ci",
+      "usage": "{credits} crédits · {calls} appels",
+      "draft": "Brouillon",
+      "live": "Production",
+      "capLabel": "Limite mensuelle, en crédits",
+      "capHint": "Par défaut, 25 % de votre forfait : {credits} crédits. Jusqu'à {max}.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "useDefault": "Utiliser la valeur par défaut",
+      "saveError": "Impossible d'enregistrer la limite."
     }
   }
 }
