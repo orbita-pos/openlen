@@ -42,6 +42,7 @@ import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del
 import { activityOf, openQuestionIndex, type Activity } from "./live-status";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { TODO_WRITE } from "@/lib/agent/todo-list";
 import type { DesignTurn } from "./use-agent-chat";
 
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
@@ -69,8 +70,9 @@ export function visibleSteps(actions: readonly AgentAction[] | undefined): Agent
   // Pieza 3: una contestada dentro del turno (`respuesta`) sí es un paso.
   // Alinear con DeepSeek: una cancelada va en su tarjeta, esté donde esté. Y la
   // que espera, también: aunque otras llamadas de su tanda vayan detrás.
+  // La lista de progreso tampoco es un paso: se pinta ella (`TodoListView`).
   const abierta = openQuestionIndex(list);
-  return list.filter((a, i) => !(asksTheOwner(a.tool) && a.dismissed) && i !== abierta);
+  return list.filter((a, i) => !(asksTheOwner(a.tool) && a.dismissed) && i !== abierta && a.tool !== TODO_WRITE);
 }
 
 /** Cuántas tarjetas de la terminal van antes de la `i`-ésima: su posición entre ellas. */

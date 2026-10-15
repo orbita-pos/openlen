@@ -307,6 +307,12 @@
       "showPlan": "查看完整计划",
       "hidePlan": "收起计划"
     },
+    "todos": {
+      "progress": "已完成 {done}/{total}",
+      "halfDone": "未完成",
+      "continue": "好的，继续“{step}”",
+      "continueMessage": "继续“{step}”。"
+    },
     "goal": {
       "option": "目标",
       "optionHint": "Len 会一轮接一轮地自己推进，直到完成。",

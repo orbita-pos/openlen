@@ -2351,6 +2351,17 @@ export function useAgentChat({
     void send(draft, undefined, { comentarios });
   }, [comentarios, draft, reenganche, send, sending]);
 
+  /** LA LISTA DE PROGRESO (spec local 2026-10-15): «Sí, sigue con…» manda ese
+   *  texto como un mensaje normal del dueño. Con un turno en vuelo no hace nada:
+   *  el botón sólo sale con el turno cerrado. */
+  const continueWith = useCallback(
+    (text: string) => {
+      if (sending || reenganche) return;
+      void send(text);
+    },
+    [reenganche, send, sending],
+  );
+
   /**
    * PIEZA 3 · CONTESTAR A LEN DESDE LA TARJETA. Si el turno sigue esperando la
    * respuesta (`ask_user_question`), vuelve a ESE turno y Len sigue. Si ya nadie
@@ -2490,6 +2501,8 @@ export function useAgentChat({
     reenganche,
     /** Hay un turno trabajando, propio o reenganchado: ■ y corregir valen. */
     busy: sending || reenganche !== null,
+    /** «Sí, sigue con…» de la lista de progreso. */
+    continueWith,
     latest,
     showThinkingDots: Boolean(showThinkingDots),
     taRef,

@@ -307,6 +307,12 @@
       "showPlan": "Ganzen Plan ansehen",
       "hidePlan": "Plan ausblenden"
     },
+    "todos": {
+      "progress": "{done} von {total} erledigt",
+      "halfDone": "halb fertig",
+      "continue": "Ja, mach weiter mit „{step}“",
+      "continueMessage": "Mach weiter mit „{step}“."
+    },
     "goal": {
       "option": "Ziel",
       "optionHint": "Len macht allein weiter, Runde um Runde, bis es fertig ist.",

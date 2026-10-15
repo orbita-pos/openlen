@@ -307,6 +307,12 @@
       "showPlan": "Hele plan bekijken",
       "hidePlan": "Plan verbergen"
     },
+    "todos": {
+      "progress": "{done} van {total} klaar",
+      "halfDone": "half af",
+      "continue": "Ja, ga verder met ‘{step}’",
+      "continueMessage": "Ga verder met ‘{step}’."
+    },
     "goal": {
       "option": "Doel",
       "optionHint": "Len gaat zelf door, ronde na ronde, tot het af is.",

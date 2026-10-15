@@ -407,6 +407,8 @@ function AgentChatView({
                 onDismissQuestion={(id) => void chat.dismissQuestion(id)}
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
+                goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
+                {...(soloLectura ? {} : { onContinue: chat.continueWith })}
                 esApp={esApp}
               />
             </div>

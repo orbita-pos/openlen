@@ -307,6 +307,12 @@
       "showPlan": "Ver el plan entero",
       "hidePlan": "Ocultar el plan"
     },
+    "todos": {
+      "progress": "{done} de {total} hechos",
+      "halfDone": "a medias",
+      "continue": "Sí, sigue con «{step}»",
+      "continueMessage": "Sigue con «{step}»."
+    },
     "goal": {
       "option": "Encargo",
       "optionHint": "Len sigue solo, ronda tras ronda, hasta terminarlo.",
