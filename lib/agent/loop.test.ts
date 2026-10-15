@@ -32,6 +32,23 @@ const usage = (o: number, cached = 0): StreamEvent => ({
 });
 
 describe("runAgentLoop", () => {
+  // LA LISTA DE PROGRESO (spec local 2026-10-15): viaja en el evento de su tarjeta.
+  it("la lista de todo_write sale en su evento action", async () => {
+    const events: AgentStreamEvent[] = [];
+    const lista = [{ content: "Inicio", status: "in_progress" as const }];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "todo_write", args: { todos: lista } }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, todos: lista }),
+      emit: (e) => events.push(e),
+    });
+    const tarjeta = events.find((e) => e.type === "action" && e.status !== "running") as { todos?: unknown };
+    expect(tarjeta.todos).toEqual(lista);
+  });
+
   it("text-only turn finishes without tools", async () => {
     const events: AgentStreamEvent[] = [];
     const r = await runAgentLoop({

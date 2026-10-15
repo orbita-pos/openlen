@@ -116,6 +116,24 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(JSON.stringify(acciones)).not.toContain("sk_test_NO");
   });
 
+  it("🔴 la lista de todo_write LLEGA a guardarse, recortada y sin tirar el turno", async () => {
+    const res = await guardar(
+      turno([
+        {
+          tool: "todo_write",
+          status: "done",
+          summary: "",
+          todos: [{ content: "Inicio", status: "completed" }, { content: "x".repeat(900), status: "pending" }, { content: 3 }],
+        },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(guardada().todos).toEqual([
+      { content: "Inicio", status: "completed" },
+      { content: "x".repeat(200), status: "pending" },
+    ]);
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

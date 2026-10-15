@@ -11,6 +11,7 @@ import { currentToolName } from "@/lib/agent/tool-renames";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
+import type { TodoItem } from "@/lib/agent/todo-list";
 
 export interface AgentAction {
   tool: string;
@@ -96,6 +97,8 @@ export interface AgentAction {
   /** El dueño DESCARTÓ la pregunta («Pedir cambios»): se pinta «cancelada»,
    *  asentada, como el `ASK_CANCELLED` de DeepSeek. Tampoco es «te toca». */
   dismissed?: true;
+  /** La lista de progreso de `todo_write` (spec local 2026-10-15). */
+  todos?: readonly TodoItem[];
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
