@@ -666,25 +666,131 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(true);
   });
 
-  it("NO continúa si la tanda traía llamadas: repetirlas podría aplicar dos veces", async () => {
+  // 🔴 2026-10-15: un juego de terror entero en un `Write` (pedido de Jesús para
+  // medir a Len) murió con «try a shorter request». Una vuelta cortada CON
+  // llamadas terminaba el turno: «repetirlas podría aplicar dos veces». Pero
+  // nunca se habían ejecutado — no había nada que repetir. Como Claude Code
+  // («Output token limit hit… Break remaining work into smaller pieces»), el
+  // turno sigue: corren las completas y se le dice cuál no corrió.
+  const cutWrite = (path: string): StreamEvent => ({
+    type: "function_call_cut",
+    name: "Write",
+    argsHead: `{"file_path":"${path}","content":"import * as THREE from 'three'`,
+  });
+  const writeOf = (path: string): StreamEvent => ({
+    type: "function_call",
+    name: "Write",
+    args: { file_path: path, content: "export {}" },
+  });
+  const maxTokens: StreamEvent = { type: "done", stopReason: { kind: "max_tokens" } };
+
+  it("🔴 un corte con llamadas: corren las completas, se le dice cuál no corrió y el turno sigue", async () => {
+    const events: AgentStreamEvent[] = [];
+    const vistos: Message[][] = [];
+    const ran: unknown[] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "Escribo la casa y el monstruo." }, writeOf("/src/House.tsx"), cutWrite("/src/Monster.tsx"), maxTokens],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme el juego" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async (_name, a) => { ran.push(a); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    // La completa corrió UNA vez; la cortada, nunca.
+    expect(ran).toEqual([{ file_path: "/src/House.tsx", content: "export {}" }]);
+    const asistente = vistos[1]!.filter((x) => x.role === "assistant").at(-1)!;
+    expect(asistente.functionCalls).toHaveLength(1);
+    // El aviso viaja con los resultados de la tanda y nombra lo que no corrió.
+    const aviso = vistos[1]!.at(-1)!;
+    expect(aviso.functionResponses).toHaveLength(1);
+    expect(aviso.content).toContain("Output token limit hit");
+    expect(aviso.content).toContain("the user did NOT write this");
+    expect(aviso.content).toContain("/src/Monster.tsx");
+    expect(aviso.content).toContain("did NOT run");
+    expect(aviso.content).toContain("smaller pieces");
+    expect(events.find((e) => e.type === "error")).toBeUndefined();
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toBe("Listo.");
+  });
+
+  // 🔴 Y EL CASO QUE MENTÍA: con la ÚNICA llamada cortada no quedaba ninguna
+  // armada, así que se le decía «se te acabó pensando y no salió nada» a un
+  // modelo que acababa de escribir 30.000 tokens de un Write. Lo reintentaba
+  // igual de grande, y se volvía a cortar.
+  it("🔴 se corta la ÚNICA llamada: se le dice cuál no corrió, no que se quedó pensando", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [cutWrite("/index.html"), maxTokens],
+      [writeOf("/index.html"), done],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme el juego" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    const aviso = String(vistos[1]!.at(-1)!.content);
+    expect(aviso).toContain("/index.html");
+    expect(aviso).toContain("did NOT run");
+    expect(aviso).not.toContain("nothing came out");
+    expect(r.terminalError).toBe(false);
+  });
+
+  // BRAZO DE CONTROL: el corte sigue teniendo TECHO, y es el de Claude Code:
+  // tres SEGUIDOS. Uno que se corta siempre no vacía los créditos.
+  it("se corta la llamada SIEMPRE: tres avisos y entonces sí termina en truncated, sin culpar al usuario", async () => {
     const events: AgentStreamEvent[] = [];
     let opened = 0;
+    const ran: string[] = [];
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: () => {
         opened += 1;
         return (async function* () {
-          yield { type: "text_delta", text: "voy a editar" } as StreamEvent;
-          yield { type: "function_call", name: "editar_pagina", args: {} } as StreamEvent;
-          yield { type: "done", stopReason: { kind: "max_tokens" } } as StreamEvent;
+          yield writeOf("/src/House.tsx");
+          yield cutWrite("/src/Monster.tsx");
+          yield maxTokens;
         })();
       },
+      runTool: async (name) => { ran.push(name); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    expect(opened).toBe(4);
+    // Las tres tandas avisadas corrieron sus completas; la cuarta, que ya no se
+    // puede continuar, no corre nada: nadie leería sus resultados.
+    expect(ran).toHaveLength(3);
+    const err = events.find((e) => e.type === "error") as { code?: string; message: string };
+    expect(err.code).toBe("truncated");
+    expect(err.message).toContain("espacio");
+    expect(err.message).not.toMatch(/más corto|shorter/);
+    expect(r.terminalError).toBe(true);
+  });
+
+  // Claude Code pone su cuenta a cero en cada vuelta que ejecuta herramientas:
+  // el techo es de cortes SEGUIDOS, no del turno. Un turno largo que avanza
+  // entre corte y corte no muere al cuarto.
+  it("una vuelta limpia entre cortes pone la cuenta a cero", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hazme el juego" }], tools: [],
+      openStream: scripted(
+        [cutWrite("/src/A.tsx"), maxTokens],
+        [cutWrite("/src/A.tsx"), maxTokens],
+        [cutWrite("/src/A.tsx"), maxTokens],
+        [writeOf("/src/A.tsx"), done],
+        [cutWrite("/src/B.tsx"), maxTokens],
+        [cutWrite("/src/B.tsx"), maxTokens],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
       runTool: async () => ({ response: { ok: true } }),
       emit: (e) => events.push(e),
     });
-    expect(opened).toBe(1);
-    expect((events.find((e) => e.type === "error") as { code?: string })?.code).toBe("truncated");
-    expect(r.terminalError).toBe(true);
+    expect(events.find((e) => e.type === "error")).toBeUndefined();
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toBe("Listo.");
   });
 
   it("surfaces an error and stops the loop when a turn is cancelled", async () => {
