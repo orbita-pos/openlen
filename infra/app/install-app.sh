@@ -77,7 +77,7 @@ install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.timer"   /etc/systemd/
 # habilita a mano cuando el clúster de las páginas tenga replicación lógica
 # (infra/PAGES_BACKEND_RUNBOOK.md §4c):  systemctl enable --now openlen-realtime
 install -m 644 "${SCRIPT_DIR}/openlen-realtime.service" /etc/systemd/system/openlen-realtime.service 2>/dev/null || true
-# Las actualizaciones automáticas de Ubuntu no reinician la app a media
+# Las actualizaciones automáticas de Ubuntu no reinician la app (ni el tiempo real) a media
 # ejecución de un turno (15/10: 91 s caída); lo hace el próximo deploy. Ver el fichero.
 install -d -m 755 /etc/needrestart/conf.d
 install -m 644 "${SCRIPT_DIR}/needrestart-openlen.conf" /etc/needrestart/conf.d/openlen.conf
