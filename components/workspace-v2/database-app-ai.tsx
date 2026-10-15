@@ -77,8 +77,10 @@ export function AppAiTab({ projectId, overview, onChange }: { projectId: string;
         className="mt-6 max-w-xl"
         onSubmit={(e) => {
           e.preventDefault();
-          const n = Number(draft);
+          // An empty field is not a 0: saving it would turn the AI of every app off.
+          const n = draft.trim() === "" ? Number.NaN : Number(draft);
           if (Number.isInteger(n) && n >= 0) void save(n);
+          else setFailed(true);
         }}
       >
         <label htmlFor="app-ai-cap" className="block text-[12.5px] font-medium">

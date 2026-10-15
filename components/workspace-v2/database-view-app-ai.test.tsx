@@ -123,6 +123,18 @@ describe("the AI tab", () => {
     expect(text()).toContain("12 de 75 créditos");
   });
 
+  it("🔴 an empty or broken limit is not saved (an empty field must not turn the AI off)", async () => {
+    stubFetch(() => ({ status: 200, body: AI }));
+    await render();
+    await click(button("IA"));
+    for (const value of ["", "  ", "12.5", "-3"]) {
+      await type(host.querySelector("input#app-ai-cap") as HTMLInputElement, value);
+      await click(button("Guardar"));
+    }
+    expect(calls.filter((c) => c.method === "PUT")).toEqual([]);
+    expect(text()).toContain("No se pudo guardar el tope.");
+  });
+
   it("says so when saving fails", async () => {
     stubFetch((c) => (c.method === "PUT" ? { status: 500, body: { error: "x" } } : { status: 200, body: AI }));
     await render();
