@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { splitSqlStatements } from "./sql-split";
+import { splitSqlStatements } from "./sql-split.mjs";
 
 describe("partir una migración en sentencias", () => {
   it("por punto y coma", () => {

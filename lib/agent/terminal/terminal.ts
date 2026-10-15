@@ -64,6 +64,7 @@ export class TerminalDeLen {
   private readonly pendientes = new Map<number, { resolve: (r: Respuesta) => void; reject: (e: Error) => void }>();
   /** Lo que el hilo le pidió a la app y sigue corriendo: un `timeout` dentro del guion lo cancela. */
   private readonly appEnCurso = new Map<number, AbortController>();
+  private readonly supabaseInFlight = new Map<number, AbortController>();
   /** El `curl` de las Edge Functions de esta terminal (null: no hay `curl`). */
   private curl: FunctionsCurl | null = null;
 
@@ -83,6 +84,8 @@ export class TerminalDeLen {
       readonly supabase?: (
         args: readonly string[],
         ficheros: Readonly<Record<string, string>>,
+        /** Se aborta si el comando pasa de su tiempo (14/10): lo que arrancó acaba con él. */
+        o?: { readonly signal?: AbortSignal },
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
       /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
        *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
@@ -146,6 +149,10 @@ export class TerminalDeLen {
         void this.servirAppTools(hilo, m.app, m.program as AppProgram, m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
       }
+      if (typeof m.cancelSupabase === "number") {
+        this.supabaseInFlight.get(m.cancelSupabase)?.abort();
+        return;
+      }
       if (typeof m.cancelarApp === "number") {
         this.appEnCurso.get(m.cancelarApp)?.abort();
         return;
@@ -205,11 +212,15 @@ export class TerminalDeLen {
    *  ya se cortó (el comando pasó del tope), la respuesta no va a ningún sitio. */
   private async servirSupabase(hilo: Worker, pid: number, args: string[], ficheros: Record<string, string>): Promise<void> {
     let respuesta: Record<string, unknown>;
+    const cancel = new AbortController();
+    this.supabaseInFlight.set(pid, cancel);
     try {
       if (!this.o.supabase) throw new Error("this project has no backend here");
-      respuesta = { tipo: "supabase", pid, resultado: await this.o.supabase(args, ficheros) };
+      respuesta = { tipo: "supabase", pid, resultado: await this.o.supabase(args, ficheros, { signal: cancel.signal }) };
     } catch (e) {
       respuesta = { tipo: "supabase", pid, error: e instanceof Error ? e.message : String(e) };
+    } finally {
+      this.supabaseInFlight.delete(pid);
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
@@ -319,6 +330,8 @@ export class TerminalDeLen {
   async cerrar(): Promise<void> {
     const hilo = this.hilo;
     this.hilo = null;
+    // Lo que `supabase` dejó corriendo aquí (partir el SQL en su hilo) acaba con la terminal.
+    for (const cancel of this.supabaseInFlight.values()) cancel.abort();
     if (hilo) await hilo.terminate();
   }
 }

@@ -19,12 +19,14 @@ import { backendConfigured } from "./pg";
 import { provisionReadOnlyRole } from "./read-only";
 import { applyMigrationAs, readRecordedMigrations } from "./recorded-migrations";
 import { ensureBackend, ensureEnvironmentReady, projectUrl, type BackendRecord } from "./registry";
+import { splitSqlOffThread } from "./split-off-thread";
 import { runDraftQuery, runLiveQuery } from "./sql-query";
 
 /** La CLI contra la base de PRUEBAS del proyecto: lo que Len empuja va al
  *  borrador; a producción llega al publicar. `e` es null en los comandos que no
- *  tocan la base (status, migration new). */
-function pgCli(rec: BackendRecord, e: EnvironmentRecord | null, ficheros: Readonly<Record<string, string>>): CliBackend {
+ *  tocan la base (status, migration new). `signal`: el del comando; si se corta,
+ *  se corta lo que parte el SQL en su hilo (14/10). */
+function pgCli(rec: BackendRecord, e: EnvironmentRecord | null, ficheros: Readonly<Record<string, string>>, signal?: AbortSignal): CliBackend {
   const draft = (): ScopeCreds => {
     if (!e) throw new Error("sin base de pruebas");
     return credsOf(rec.ref, rec.dbPasswordEncrypted, e);
@@ -38,6 +40,7 @@ function pgCli(rec: BackendRecord, e: EnvironmentRecord | null, ficheros: Readon
       return (await readRecordedMigrations(live.scope)).map((m) => ({ version: m.version, name: m.name }));
     },
     applyMigration: (m) => applyMigrationAs(draft(), { version: m.version, name: m.name, statements: m.statements }),
+    splitStatements: (sql) => splitSqlOffThread(sql, signal ? { signal } : {}),
     reset: async () => {
       const live = await getEnvironment(rec.projectId, "live");
       const d = draft();
@@ -46,6 +49,7 @@ function pgCli(rec: BackendRecord, e: EnvironmentRecord | null, ficheros: Readon
         live: live?.provisionedAt ? { scope: live.scope, ref: rec.ref, password: d.password } : null,
         files: ficheros,
         includeLocal: true,
+        ...(signal ? { signal } : {}),
       });
       if (r.ok) return r;
       const code = r.error.code ? ` (SQLSTATE ${r.error.code})` : "";
@@ -68,6 +72,7 @@ export async function runSupabaseCli(
   projectId: string,
   args: readonly string[],
   ficheros: Readonly<Record<string, string>>,
+  o: { readonly signal?: AbortSignal } = {},
 ): Promise<CliResult> {
   if (!backendConfigured()) {
     return { stdout: "", stderr: "Error: this server has no database for project backends (PAGES_DATABASE_URL is not set).\n", exitCode: 1 };
@@ -82,5 +87,5 @@ export async function runSupabaseCli(
   // de lo que necesita el motor.
   const { functionsCliFor } = await import("@/lib/functions/deploy");
   const { secretsCliFor } = await import("@/lib/functions/secrets-real");
-  return runCli(args, ficheros, { ...pgCli(rec, draft, ficheros), functions: functionsCliFor(projectId, rec.ref), secrets: secretsCliFor(projectId) });
+  return runCli(args, ficheros, { ...pgCli(rec, draft, ficheros, o.signal), functions: functionsCliFor(projectId, rec.ref), secrets: secretsCliFor(projectId) });
 }

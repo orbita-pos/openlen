@@ -68,6 +68,10 @@ const nextConfig = {
       "./lib/apps/checker/checker-worker.mjs",
       "./lib/apps/checker/checker-core.mjs",
       "./lib/apps/checker/format.mjs",
+      // Splitting migration SQL off the app's thread (14/10):
+      // `lib/backend/split-off-thread.ts` starts `sql-split-worker.mjs` by path.
+      "./lib/backend/sql-split-worker.mjs",
+      "./lib/backend/sql-split.mjs",
       "./node_modules/typescript/lib/*.d.ts",
       // El empaquetador de las apps (plan 02): `bundle-app.ts` arranca
       // `bundler-worker.mjs` por ruta, y el hilo lee el wasm por ruta. Va la

@@ -358,6 +358,37 @@ describe("TerminalDeLen", () => {
       expect(r.stderr).toBe("ERROR: boom\n");
     }, 20_000);
 
+    it("🔴 un supabase que no acaba: «Command timed out» y 143, y lo que corre en el hilo de la app recibe la orden de parar", async () => {
+      // 14/10: `supabase db push` colgó el servidor. Partir el SQL va ya en su
+      // hilo; esto es lo que lo para cuando el comando se pasa de su tiempo.
+      let signal: AbortSignal | undefined;
+      const { t } = terminal({
+        supabase: (_args, _ficheros, o) => {
+          signal = o?.signal;
+          return new Promise(() => {});
+        },
+      });
+      const r = await t.ejecutar("supabase db push", { timeoutMs: 1_000 });
+      expect([r.stdout, r.exitCode]).toEqual(["Command timed out after 1s", 143]);
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(signal?.aborted).toBe(true);
+      expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
+    }, 20_000);
+
+    it("`timeout 1 supabase db push` corta sólo supabase, como en bash: $? es 124 y el guion sigue", async () => {
+      let signal: AbortSignal | undefined;
+      const { t } = terminal({
+        supabase: (_args, _ficheros, o) => {
+          signal = o?.signal;
+          return new Promise(() => {});
+        },
+      });
+      const r = await t.ejecutar('timeout 1 supabase db push; echo "rc=$?"');
+      expect(r.stdout).toBe("rc=124\n");
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(signal?.aborted).toBe(true);
+    }, 20_000);
+
     it("si el hilo de la app falla, el comando falla y lo dice; la terminal sigue", async () => {
       const { t } = conSupabase(async () => {
         throw new Error("la base no contesta");

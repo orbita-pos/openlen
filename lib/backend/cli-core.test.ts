@@ -153,6 +153,48 @@ const fake = (over: Partial<CliBackend> = {}): CliBackend => ({
 });
 const files = { "/supabase/migrations/20261009000000_productos.sql": "create table public.productos (id int);" };
 
+// 14/10: partir el SQL corre en su hilo (`split-off-thread.ts`), y la CLI lo
+// recibe por `splitStatements`. Si no acaba (o el comando se cortó), null.
+describe("db push con el SQL partido fuera del hilo de la app", () => {
+  it("🔴 parte cada migración con `splitStatements` y aplica lo que devuelve", async () => {
+    const vistos: string[] = [];
+    const aplicadas: (readonly string[])[] = [];
+    const cli = fake({
+      remoteMigrations: async () => [],
+      splitStatements: async (sql) => {
+        vistos.push(sql);
+        return ["create table public.productos (id int)"];
+      },
+      applyMigration: async (m) => {
+        aplicadas.push(m.statements);
+        return { ok: true };
+      },
+    });
+    const r = await runCli(["db", "push"], files, cli);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(vistos).toEqual(["create table public.productos (id int);"]);
+    expect(aplicadas).toEqual([["create table public.productos (id int)"]]);
+  });
+
+  it("🔴 si partir una migración no acaba, lo dice y no aplica nada", async () => {
+    let aplicadas = 0;
+    const cli = fake({
+      remoteMigrations: async () => [],
+      splitStatements: async () => null,
+      applyMigration: async () => {
+        aplicadas++;
+        return { ok: true };
+      },
+    });
+    const r = await runCli(["db", "push"], files, cli);
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toBe(
+      "ERROR: could not split supabase/migrations/20261009000000_productos.sql into statements in time. This is a problem on OpenLen's side, not in your SQL.\n",
+    );
+    expect(aplicadas).toBe(0);
+  });
+});
+
 describe("db query", () => {
   it("devuelve el sobre JSON de Supabase para agentes, con las claves ordenadas y el HTML escapado", async () => {
     const r = await runCli(["db", "query", "select nombre, id from productos"], files, fake(), new Date(), () => "b0b0");

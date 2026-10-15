@@ -25,7 +25,7 @@ import { parseDotEnv } from "@/lib/apps/env/dotenv";
 import { CONFIG_TOML, FUNCTION_NAME_RE, functionDirOf, functionNamesIn } from "@/lib/functions/project-files";
 import { RESERVED_SECRET_PREFIXES } from "@/lib/functions/secret-names";
 
-import { splitSqlStatements } from "./sql-split";
+import { splitSqlStatements } from "./sql-split.mjs";
 
 /** Lo que devuelve una consulta de `db query`. */
 export type QueryOutcome =
@@ -65,6 +65,10 @@ export interface CliBackend {
   reset(): Promise<{ ok: true; applied: string[]; seeded: boolean } | { ok: false; message: string }>;
   /** `db query`: una sentencia en pruebas (`local`) o en producción (`linked`). */
   query(sql: string, target: "local" | "linked"): Promise<QueryOutcome>;
+  /** Partir una migración en sentencias. El servidor lo hace en su hilo
+   *  (`split-off-thread.ts`, 14/10): `null` = no acabó a tiempo o el comando se
+   *  cortó. Ausente (las pruebas): `splitSqlStatements` aquí mismo. */
+  splitStatements?(sql: string): Promise<string[] | null>;
   /** Las Edge Functions (spec local 2026-10-11). `null`/ausente: este servidor no las tiene. */
   readonly functions?: FunctionsCli | null;
   /** Los secretos de las funciones. `null`/ausente: este servidor no las tiene. */
@@ -491,7 +495,11 @@ export async function runCli(
     }
     for (const m of pending) {
       out += `Applying migration ${m.file}...\n`;
-      const statements = splitSqlStatements(ficheros[m.path] ?? "");
+      const sql = ficheros[m.path] ?? "";
+      const statements = backend.splitStatements ? await backend.splitStatements(sql) : splitSqlStatements(sql);
+      if (!statements) {
+        return err(`ERROR: could not split supabase/migrations/${m.file} into statements in time. This is a problem on OpenLen's side, not in your SQL.\n`, out);
+      }
       const r = await backend.applyMigration({ version: m.version, name: m.name, statements });
       if (!r.ok) {
         const code = r.error.code ? ` (SQLSTATE ${r.error.code})` : "";

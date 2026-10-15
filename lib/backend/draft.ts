@@ -11,7 +11,7 @@ import type { ScopeCreds } from "./environments";
 import { dropProjectDatabase, provisionDatabase } from "./provision";
 import { ensureRealtimeProvisioned, forgetRealtimeProvisioned } from "./realtime/provision";
 import { applyMigrationAs, migrationLabel, readRecordedMigrations, runStatementsAs, type RecordedMigration } from "./recorded-migrations";
-import { splitSqlStatements } from "./sql-split";
+import { splitSqlOffThread } from "./split-off-thread";
 import { ensureStorageProvisioned, forgetStorageProvisioned } from "./storage/provision";
 
 export const SEED_PATH = "/supabase/seed.sql";
@@ -31,16 +31,30 @@ export interface BuildDraftOptions {
   readonly live: ScopeCreds | null;
   readonly files: Readonly<Record<string, string>>;
   readonly includeLocal: boolean;
+  /** El del comando que lo pidió (`supabase db reset`): si se corta, se corta
+   *  también lo que parte el SQL (14/10). */
+  readonly signal?: AbortSignal;
 }
+
+/** El SQL partido en el hilo del separador (`split-off-thread.ts`, 14/10): un
+ *  borrador puede nacer de la petición de un visitante, y aquí no se puede
+ *  parar el hilo de la app. `null` = no acabó a tiempo o se canceló. */
+const splitOf = (sql: string, o: BuildDraftOptions) => splitSqlOffThread(sql, o.signal ? { signal: o.signal } : {});
+const tooSlow = (name: string) => ({ message: `could not split ${name} into statements in time` });
 
 export async function buildDraftDatabase(o: BuildDraftOptions): Promise<BuildDraftResult> {
   const fromLive = o.live ? await readRecordedMigrations(o.live.scope) : [];
   const known = new Set(fromLive.map((m) => m.version));
-  const local: RecordedMigration[] = o.includeLocal
-    ? localMigrations(o.files)
-        .migrations.filter((m) => !known.has(m.version))
-        .map((m) => ({ version: m.version, name: m.name, statements: splitSqlStatements(o.files[m.path] ?? "") }))
-    : [];
+  const local: RecordedMigration[] = [];
+  if (o.includeLocal) {
+    for (const m of localMigrations(o.files).migrations.filter((x) => !known.has(x.version))) {
+      const statements = await splitOf(o.files[m.path] ?? "", o);
+      if (!statements) {
+        return { ok: false, step: "migration", name: migrationLabel(m), failedAt: 0, error: tooSlow(m.path.slice(1)) };
+      }
+      local.push({ version: m.version, name: m.name, statements });
+    }
+  }
   const applied: string[] = [];
   for (const m of [...fromLive, ...local]) {
     const r = await applyMigrationAs(o.draft, m);
@@ -49,7 +63,9 @@ export async function buildDraftDatabase(o: BuildDraftOptions): Promise<BuildDra
   }
   const seed = o.files[SEED_PATH] ?? "";
   if (!seed.trim()) return { ok: true, applied, seeded: false };
-  const r = await runStatementsAs(o.draft, splitSqlStatements(seed));
+  const seedStatements = await splitOf(seed, o);
+  if (!seedStatements) return { ok: false, step: "seed", name: "supabase/seed.sql", failedAt: 0, error: tooSlow("supabase/seed.sql") };
+  const r = await runStatementsAs(o.draft, seedStatements);
   if (!r.ok) return { ok: false, step: "seed", name: "supabase/seed.sql", failedAt: r.failedAt, error: r.error };
   return { ok: true, applied, seeded: true };
 }

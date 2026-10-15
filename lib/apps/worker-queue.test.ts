@@ -61,6 +61,28 @@ describe("WorkerQueue (plan 02, tarea 1)", () => {
     expect(b?.threadId).not.toBe(a?.threadId);
   });
 
+  it("🔴 con `signal`: abortada mientras espera no llega a correr; mientras corre, el hilo se termina en el acto y la siguiente va a uno nuevo", async () => {
+    // Lo que arrancó un comando acaba con él (la terminal de Len, 14/10): un
+    // `supabase db push` que se pasa de su tiempo no deja el hilo comiendo CPU.
+    const c = nueva();
+    const primero = await c.run({ value: 0 }, { timeoutMs: 5_000 });
+    const running = new AbortController();
+    const waiting = new AbortController();
+    const enCurso = c.run({ ms: 10_000, value: 1 }, { timeoutMs: 60_000, signal: running.signal });
+    const enCola = c.run({ value: 2 }, { timeoutMs: 60_000, signal: waiting.signal });
+    waiting.abort();
+    expect(await enCola).toBeNull();
+    const t0 = Date.now();
+    running.abort();
+    expect(await enCurso).toBeNull();
+    expect(Date.now() - t0).toBeLessThan(1_000);
+    const despues = await c.run({ value: 3 }, { timeoutMs: 5_000 });
+    expect(despues?.value).toBe(3);
+    expect(despues?.threadId).not.toBe(primero?.threadId);
+    // Ya abortada al pedirla: null sin entrar en la cola.
+    expect(await c.run({ value: 4 }, { timeoutMs: 5_000, signal: AbortSignal.abort() })).toBeNull();
+  });
+
   it("stop() suelta lo pendiente a null", async () => {
     const c = nueva();
     const p = c.run({ ms: 10_000, value: 1 }, { timeoutMs: 60_000 });
