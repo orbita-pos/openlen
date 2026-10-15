@@ -307,6 +307,12 @@
       "showPlan": "Voir tout le plan",
       "hidePlan": "Masquer le plan"
     },
+    "todos": {
+      "progress": "{done} sur {total} faits",
+      "halfDone": "à moitié",
+      "continue": "Oui, continue avec « {step} »",
+      "continueMessage": "Continue avec « {step} »."
+    },
     "goal": {
       "option": "Objectif",
       "optionHint": "Len continue seul, tour après tour, jusqu'à ce que ce soit fini.",

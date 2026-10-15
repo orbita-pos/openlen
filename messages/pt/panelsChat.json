@@ -307,6 +307,12 @@
       "showPlan": "Ver o plano inteiro",
       "hidePlan": "Ocultar o plano"
     },
+    "todos": {
+      "progress": "{done} de {total} feitos",
+      "halfDone": "pela metade",
+      "continue": "Sim, continue com «{step}»",
+      "continueMessage": "Continue com «{step}»."
+    },
     "goal": {
       "option": "Objetivo",
       "optionHint": "Len segue sozinho, rodada após rodada, até terminar.",
