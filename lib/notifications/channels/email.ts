@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { sendChatNotificationEmail, sendFunctionsQuotaEmail, sendMentionEmail } from "@/lib/email";
+import { capEmail } from "@/lib/app-ai/cap-messages";
+import { sendAppAiCapEmail, sendChatNotificationEmail, sendFunctionsQuotaEmail, sendMentionEmail } from "@/lib/email";
 import { quotaEmail } from "@/lib/functions/quota-messages";
-import type { NotificationChannel, NotificationEvent, DeliveryResult, FunctionsQuotaEvent, MencionEvent } from "../types";
+import type { AppAiCapEvent, NotificationChannel, NotificationEvent, DeliveryResult, FunctionsQuotaEvent, MencionEvent } from "../types";
 import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
@@ -17,6 +18,7 @@ export const emailChannel: NotificationChannel = {
     if (event.type === "len_turno") return "skipped";
     if (event.type === "mencion") return enviarMencion(event);
     if (event.type === "functions_quota") return enviarCuota(event);
+    if (event.type === "app_ai_cap") return sendAppAiCapAlert(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -82,6 +84,19 @@ async function enviarCuota(event: FunctionsQuotaEvent): Promise<DeliveryResult> 
   await sendFunctionsQuotaEmail({
     to: u.email,
     ...quotaEmail({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, calls: event.calls, limit: event.limit, siteUrl }),
+  });
+  return "sent";
+}
+
+/** La IA de las apps al 80 o al 100 % del tope: al correo del dueño. */
+async function sendAppAiCapAlert(event: AppAiCapEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+  await sendAppAiCapEmail({
+    to: u.email,
+    ...capEmail({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, spent: event.spent, cap: event.cap, siteUrl }),
   });
   return "sent";
 }

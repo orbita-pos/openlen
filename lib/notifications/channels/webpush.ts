@@ -1,8 +1,9 @@
 import webpush from "web-push";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
-import type { FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
+import type { AppAiCapEvent, FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -103,6 +104,13 @@ async function avisoDeCuota(event: FunctionsQuotaEvent): Promise<PushPayload> {
   return quotaPush({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, calls: event.calls, limit: event.limit });
 }
 
+// ── La IA de las apps · el tope del mes de la cuenta ──────────────────────────
+
+async function appAiCapPush(event: AppAiCapEvent): Promise<PushPayload> {
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  return capPush({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, spent: event.spent, cap: event.cap });
+}
+
 /** Al fichero del hilo, en la lente «Código» (`?codigo=` lo abre `/new`). */
 export function urlDelHilo(projectId: string, ruta: string): string {
   return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
@@ -132,11 +140,13 @@ export const webPushChannel: NotificationChannel = {
             }
           : event.type === "functions_quota"
             ? await avisoDeCuota(event)
-            : {
-                title: event.senderName,
-                body: event.preview,
-                url: "/inbox?conv=" + event.conversationId,
-              };
+            : event.type === "app_ai_cap"
+              ? await appAiCapPush(event)
+              : {
+                  title: event.senderName,
+                  body: event.preview,
+                  url: "/inbox?conv=" + event.conversationId,
+                };
 
     const { sent, failed } = await sendPushToUser(event.recipientUserId, payload);
 

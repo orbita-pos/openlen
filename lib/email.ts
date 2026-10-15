@@ -787,6 +787,19 @@ export async function sendFunctionsQuotaEmail(input: { to: string; subject: stri
   await enviar(live, "functions quota email", { from, to: input.to, subject: input.subject, text: input.text });
 }
 
+/** LA IA DE LAS APPS: el tope del mes de la cuenta al 80 o al 100 %. */
+export async function sendAppAiCapEmail(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("app AI cap email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] App AI cap to ${input.to}\n     ${input.subject}\n`);
+    }
+    return;
+  }
+  await enviar(live, "app AI cap email", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
 /** EDGE FUNCTIONS: una bolsa pasó del 80 % de su tope. Al operador (la bandeja
  *  de los reportes de abuso, si no hay una propia), una vez al mes por bolsa. */
 export async function sendFunctionsPoolAlertEmail(input: { subject: string; text: string }): Promise<void> {
