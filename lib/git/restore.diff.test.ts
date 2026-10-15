@@ -86,6 +86,24 @@ describe("bringing files back, against the real git", () => {
     await same(["revert", "--no-edit", "HEAD~1"]);
   });
 
+  it("revert of the commit that created a file changed since: git's modify/delete conflict, word for word", async () => {
+    pair = new Pair();
+    await pair.start({ "index.html": "home\n" });
+    pair.tick(600);
+    pair.write({ "page.html": "p1\n" });
+    await pair.both(["add", "page.html"]);
+    await pair.both(["commit", "-q", "-m", "Add the page"]);
+    pair.tick(600);
+    pair.write({ "page.html": "p2\n" });
+    await pair.both(["commit", "-qam", "Change the page"]);
+    const ours = await pair.ours.git(["revert", "--no-edit", "HEAD~1"]);
+    const real = pair.real.git(["revert", "--no-edit", "HEAD~1"]);
+    expect(ours.exitCode).toBe(real.exitCode);
+    expect(ours.stdout).toBe(real.stdout);
+    expect(ours.stderr.split("\n")[0]).toBe(real.stderr.split("\n")[0]);
+    expect(ours.write).toBeUndefined();
+  });
+
   it("revert with a conflict changes nothing here (git would leave markers)", async () => {
     await threeCommits();
     pair.tick(600);

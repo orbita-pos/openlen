@@ -19,6 +19,8 @@ export interface GitCliInput {
   readonly args: readonly string[];
   readonly cwd: string;
   readonly files: Readonly<Record<string, string>>;
+  /** Why the terminal won't delete a file, or null: see GitRunInput.undeletable. */
+  readonly undeletable?: (absolutePath: string) => string | null;
 }
 
 export async function identityOf(userId: string): Promise<GitIdentity> {
@@ -34,7 +36,10 @@ async function identities(ownerId: string, personId: string): Promise<{ identity
 export async function gitCli(p: GitCliInput): Promise<GitRunResult> {
   try {
     const { identity, owner } = await identities(p.ownerId, p.personId);
-    return await runGit({ store: postgresStore(p.projectId), files: p.files, cwd: p.cwd, identity, owner, now: () => new Date() }, p.args);
+    return await runGit(
+      { store: postgresStore(p.projectId), files: p.files, cwd: p.cwd, identity, owner, now: () => new Date(), ...(p.undeletable ? { undeletable: p.undeletable } : {}) },
+      p.args,
+    );
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[git] the repository could not be read", err);

@@ -40,6 +40,7 @@ import {
 import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
+import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
 import { findSecret } from "@/lib/agent/memory/secrets";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
@@ -656,7 +657,8 @@ export async function guardarLoDeLaTerminal(
         continue;
       }
       if (capa !== null) {
-        deshacer(c.ruta, capa === "index" ? `${MEMORY_INDEX} is generated from the notes.` : "write it empty to clear it.");
+        // El motivo sale de la misma regla que usa git (`deletion-rule.ts`).
+        deshacer(c.ruta, deletionRefusal(c.ruta) ?? SITE_FILE_REFUSAL);
         continue;
       }
       // LA CARPETA (pieza 9): un fichero de la carpeta se borra, como `rm` en
@@ -687,7 +689,7 @@ export async function guardarLoDeLaTerminal(
         });
         continue;
       }
-      deshacer(c.ruta, "the terminal cannot delete files of the site (a page is removed by the user, in the editor).");
+      deshacer(c.ruta, SITE_FILE_REFUSAL);
       continue;
     }
     if (esDeLaPlataforma(c.ruta)) {

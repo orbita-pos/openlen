@@ -3,7 +3,7 @@ import type { Command } from "../command";
 import { GitFatal, INDEX_LOCKED } from "../errors";
 import { blobOf, type GitObject } from "../objects";
 import { parseOptions } from "../options";
-import { matchesPathspec, resolveFromCwd } from "../paths";
+import { matchesPathspec, relativeToCwd, resolveFromCwd } from "../paths";
 
 export const add: Command = async (ctx, args) => {
   const o = parseOptions(args, { flags: ["-A", "--all", "-u", "--update", "-f", "--force", "-v", "--verbose", "-n", "--dry-run", "--no-ignore-removal"] });
@@ -27,15 +27,13 @@ export const add: Command = async (ctx, args) => {
   const ignored: string[] = [];
   specs.forEach((spec, k) => {
     let matched = false;
+    let onlyIgnored = false;
     for (const [p, content] of ctx.tree.files) {
       if (!matchesPathspec(spec, p)) continue;
       if (index[p] === undefined) {
         if (update) continue;
         if (ctx.tree.isIgnored(p) && !force) {
-          if (spec === p) {
-            ignored.push(typed[k] ?? p);
-            matched = true;
-          }
+          onlyIgnored = true;
           continue;
         }
       }
@@ -53,7 +51,13 @@ export const add: Command = async (ctx, args) => {
       delete index[p];
       lines.push(`remove '${p}'`);
     }
-    if (!matched) throw new GitFatal(`fatal: pathspec '${typed[k] ?? ""}' did not match any files\n`);
+    if (matched) return;
+    // A file or folder (not a glob) that only matches ignored files: git lists it as ignored.
+    if (onlyIgnored && !/[*?[]/.test(spec)) {
+      ignored.push(relativeToCwd(ctx.cwd, spec) || ".");
+      return;
+    }
+    throw new GitFatal(`fatal: pathspec '${typed[k] ?? ""}' did not match any files\n`);
   });
   const stdout = verbose && lines.length > 0 ? `${lines.join("\n")}\n` : "";
   if (!dryRun && (blobs.length > 0 || lines.length > 0)) {

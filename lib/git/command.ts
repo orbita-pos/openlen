@@ -34,6 +34,9 @@ export interface GitRunInput {
   /** The project's owner: the author of the "Initial commit". */
   readonly owner: GitIdentity;
   readonly now: () => Date;
+  /** Why the terminal won't delete a file (absolute path), or null if it can. A revert that would
+   *  delete such a file is refused whole: the history must not say a page is gone while it stays. */
+  readonly undeletable?: (absolutePath: string) => string | null;
 }
 
 export interface CommandContext {
@@ -46,6 +49,8 @@ export interface CommandContext {
   readonly cwd: string;
   readonly identity: GitIdentity;
   readonly now: Date;
+  /** See GitRunInput.undeletable. */
+  readonly undeletable?: (absolutePath: string) => string | null;
   /** Compare-and-swap of `main` and the index: false if someone wrote the repository first. */
   save(head: string, index: Index): Promise<boolean>;
 }

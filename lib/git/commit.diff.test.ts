@@ -82,6 +82,16 @@ describe("add and commit, against the real git", () => {
     await same(["status", "-s"]);
   });
 
+  it("add of a folder whose files are all ignored lists it as ignored; a glob that only matches ignored files matches nothing", async () => {
+    pair = new Pair();
+    await pair.start({ "index.html": "a\n", ".gitignore": "dist/\n*.log\n" });
+    pair.write({ "dist/a.js": "x\n", "x.log": "l\n" });
+    await same(["add", "dist"]);
+    await same(["add", "dist/"]);
+    await same(["add", "*.log"]);
+    await same(["status", "-s"]);
+  });
+
   it("reset unstages: all, or some paths", async () => {
     pair = new Pair();
     await pair.start(SITE);
