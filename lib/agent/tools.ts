@@ -112,6 +112,8 @@ import { toolRequestSecrets } from "@/lib/agent/request-secrets";
 import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
+import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
+import { toolTodoWrite } from "@/lib/agent/todo-write";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -1039,6 +1041,10 @@ export interface ToolOutcome {
    *  paso siguiente, detrás de los resultados de la tanda (el cierre de un
    *  encargo). Lo añade el bucle al mensaje que lleva las respuestas. */
   notice?: string;
+  /** LA LISTA DE PROGRESO (spec local 2026-10-15): la lista entera que acaba
+   *  de escribir `todo_write`. El bucle la lleva en el evento `action` y de ahí
+   *  a la tarjeta guardada, su única copia; el modelo lee la línea de `response`. */
+  todos?: readonly TodoItem[];
   /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
    *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
    *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,
@@ -2534,6 +2540,9 @@ async function ejecutarHerramienta(
         return await toolPublicar(session, deps, args);
       case CONVERTIR_EN_APP:
         return await toolConvertirEnApp(session, deps);
+      // La lista de progreso del usuario: el `todo_write` de DeepSeek.
+      case TODO_WRITE:
+        return toolTodoWrite(args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.

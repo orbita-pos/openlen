@@ -307,6 +307,12 @@
       "showPlan": "계획 전체 보기",
       "hidePlan": "계획 숨기기"
     },
+    "todos": {
+      "progress": "{total}개 중 {done}개 완료",
+      "halfDone": "미완료",
+      "continue": "네, “{step}” 계속해 줘",
+      "continueMessage": "“{step}” 계속해 줘."
+    },
     "goal": {
       "option": "목표",
       "optionHint": "끝날 때까지 Len이 라운드를 거듭하며 스스로 진행합니다.",

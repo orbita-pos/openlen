@@ -81,7 +81,9 @@ describe("buildFunctionDeclarations", () => {
       "publish",
       "web_search",
       "web_fetch",
-      // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026).
+      // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026). La lista de
+      // progreso del usuario es la de DeepSeek (spec local 2026-10-15).
+      "todo_write",
       // Pieza 3 de Len 2.5: el nombre y el esquema de DeepSeek.
       "ask_user_question",
       // Edge Functions (fase 2): la tarjeta segura de los secretos.

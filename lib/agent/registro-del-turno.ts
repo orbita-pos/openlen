@@ -111,6 +111,9 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           ...(ev.respuesta ? { respuesta: ev.respuesta } : {}),
           // Y la marca de «cancelada» (alinear con DeepSeek), por lo mismo.
           ...(ev.dismissed ? { dismissed: true as const } : {}),
+          // Y LA LISTA DE PROGRESO (spec local 2026-10-15): la tarjeta es su
+          // única copia, así que sin esta línea se vería en vivo y no al recargar.
+          ...(ev.todos ? { todos: ev.todos.map((t) => ({ content: t.content, status: t.status })) } : {}),
           // Y EL RECUENTO DE COBERTURA, por la misma razón que los dos de
           // arriba: esta lista es BLANCA, así que un campo que no se nombre aquí
           // se ve en vivo y desaparece al recargar.

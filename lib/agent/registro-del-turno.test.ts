@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { corteDelTurno, crearRegistroDelTurno } from "./registro-del-turno";
 
 describe("la fila del turno que escribe el servidor", () => {
-  const base = { terminalError: true, topeAlcanzado: null, errorCode: "cancelled" as const, mutoDurable: true };
+  it("guarda la lista de todo_write en su tarjeta, también vacía", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "todo_write", status: "done", summary: "", todos: [{ content: "Inicio", status: "completed" }] });
+    r.observar({ type: "action", tool: "todo_write", status: "done", summary: "", todos: [] });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "todo_write", todos: [{ content: "Inicio", status: "completed" }] });
+    expect(r.tarjetas[1]).toMatchObject({ tool: "todo_write", todos: [] });
+  });
+
+  const base ={ terminalError: true, topeAlcanzado: null, errorCode: "cancelled" as const, mutoDurable: true };
 
   it("🔴 H05 · cortado a medias habiendo escrito: se guarda como cortado", () => {
     expect(corteDelTurno(base)).toBe("cancelled");

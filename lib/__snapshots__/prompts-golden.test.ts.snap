@@ -595,6 +595,44 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "todo_write",
+    "description": "Record and update a task list to plan multi-step work and show progress; skip it for trivial single-step tasks. Add one todo per concrete step before you start. While work remains, keep exactly one todo \`in_progress\`. Mark each todo \`completed\` as soon as it is done. The user sees this list in the chat: write each step in their language, in words someone who doesn't code understands.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "todos": {
+          "type": "ARRAY",
+          "description": "The COMPLETE task list, replacing any previous list.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "content": {
+                "type": "STRING",
+                "description": "What the task is — a short imperative line."
+              },
+              "status": {
+                "type": "STRING",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed"
+                ],
+                "description": "pending (not started) | in_progress (now) | completed (done)."
+              }
+            },
+            "required": [
+              "content",
+              "status"
+            ]
+          }
+        }
+      },
+      "required": [
+        "todos"
+      ]
+    }
+  },
+  {
     "name": "ask_user_question",
     "description": "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. The questions are shown to the user in a card, so don't repeat them in your reply; if they don't answer in a while, the turn ends with your questions shown and their answer opens the next turn.",
     "parameters": {
@@ -1343,6 +1381,44 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "todo_write",
+    "description": "Record and update a task list to plan multi-step work and show progress; skip it for trivial single-step tasks. Add one todo per concrete step before you start. While work remains, keep exactly one todo \`in_progress\`. Mark each todo \`completed\` as soon as it is done. The user sees this list in the chat: write each step in their language, in words someone who doesn't code understands.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "todos": {
+          "type": "ARRAY",
+          "description": "The COMPLETE task list, replacing any previous list.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "content": {
+                "type": "STRING",
+                "description": "What the task is — a short imperative line."
+              },
+              "status": {
+                "type": "STRING",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed"
+                ],
+                "description": "pending (not started) | in_progress (now) | completed (done)."
+              }
+            },
+            "required": [
+              "content",
+              "status"
+            ]
+          }
+        }
+      },
+      "required": [
+        "todos"
+      ]
+    }
+  },
+  {
     "name": "ask_user_question",
     "description": "Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. The questions are shown to the user in a card, so don't repeat them in your reply; if they don't answer in a while, the turn ends with your questions shown and their answer opens the next turn.",
     "parameters": {
@@ -2081,6 +2157,44 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "url"
+      ]
+    }
+  },
+  {
+    "name": "todo_write",
+    "description": "Record and update a task list to plan multi-step work and show progress; skip it for trivial single-step tasks. Add one todo per concrete step before you start. While work remains, keep exactly one todo \`in_progress\`. Mark each todo \`completed\` as soon as it is done. The user sees this list in the chat: write each step in their language, in words someone who doesn't code understands.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "todos": {
+          "type": "ARRAY",
+          "description": "The COMPLETE task list, replacing any previous list.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "content": {
+                "type": "STRING",
+                "description": "What the task is — a short imperative line."
+              },
+              "status": {
+                "type": "STRING",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed"
+                ],
+                "description": "pending (not started) | in_progress (now) | completed (done)."
+              }
+            },
+            "required": [
+              "content",
+              "status"
+            ]
+          }
+        }
+      },
+      "required": [
+        "todos"
       ]
     }
   },

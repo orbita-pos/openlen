@@ -22,6 +22,7 @@ import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/
 import { ASK_USER_QUESTION, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
+import { TODO_WRITE, nearCapNotice, todoCapFacts, type TodoItem } from "@/lib/agent/todo-list";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -139,6 +140,10 @@ export type AgentStreamEvent =
       /** Alinear con DeepSeek: el dueño DESCARTÓ la pregunta (su `ASK_CANCELLED`).
        *  La tarjeta se pinta «cancelada», asentada: ya no pide nada. */
       dismissed?: true;
+      /** LA LISTA DE PROGRESO (spec local 2026-10-15): la lista que escribió
+       *  `todo_write`. Sólo de pantalla y de la tarjeta guardada; el modelo lee
+       *  su propia llamada en el historial. */
+      todos?: readonly TodoItem[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -288,6 +293,21 @@ export interface AgentLoopArgs {
    * bucle). Ausente ⇒ sin techo, como las evals y las pruebas.
    */
   excedePresupuesto?(gastado: AgentLoopResult["usage"]): boolean;
+  /**
+   * LA LISTA DE PROGRESO (spec local 2026-10-15): ¿el turno ya gastó lo
+   * bastante de su techo como para ir cerrando entre pasos? La MISMA cuenta que
+   * `excedePresupuesto`, con `NEAR_TURN_CAP_RATIO` (lib/credits.ts). Se pregunta
+   * antes de cada llamada al modelo; la primera vez que dice que sí, el bucle
+   * añade UN aviso (`nearCapNotice`). Ausente ⇒ sin aviso, como hoy (evals,
+   * pruebas, subagentes).
+   */
+  nearBudget?(spent: AgentLoopResult["usage"]): boolean;
+  /** Hay un encargo armado y activo: tras este turno la ronda siguiente arranca
+   *  sola, así que el aviso no manda preguntar. */
+  goalContinues?(): boolean;
+  /** La lista con pasos sin hacer que el turno hereda (`todosForTurn`): con
+   *  ella, el aviso es el de «hay lista». */
+  initialTodos?: readonly TodoItem[] | null;
 }
 export interface AgentLoopResult {
   finalText: string;
@@ -692,6 +712,9 @@ const READ_ONLY_TOOLS = new Set([
   "get_goal",
   "create_goal",
   "update_goal",
+  // La lista de progreso no cambia la página: escribirla no es «actuar» (la
+  // insistencia del «listo» sin cambio sigue) ni gasta una vuelta de trabajo.
+  TODO_WRITE,
   // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
   "session_search",
   "session_event_search",
@@ -975,6 +998,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** El turno acabó esperando al dueño (ver `AgentLoopResult.endedOnQuestion`). */
   let endedOnQuestion = false;
   let continuaciones = 0;
+  /** La lista de progreso vigente: la heredada o la última de `todo_write`. */
+  let currentTodos: readonly TodoItem[] | null = args.initialTodos ?? null;
+  /** El aviso del 70 % sale una vez por turno. */
+  let nearCapNotified = false;
 
   const buildResult = (
     terminalError: boolean,
@@ -1146,7 +1173,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           role: "user",
           content:
             (code === "budget_limit" ? WRAP_UP_PRESUPUESTO : WRAP_UP_INSTRUCTION) +
-            hechosDelTurno + estadoDeLaPagina,
+            hechosDelTurno + estadoDeLaPagina +
+            // La lista como hechos, en el cierre del dinero (spec local 2026-10-15).
+            (code === "budget_limit" && currentTodos && currentTodos.length > 0 ? todoCapFacts(currentTodos) : ""),
         },
       ])) {
         if (ev.type === "text_delta") {
@@ -1196,6 +1225,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // se hizo queda guardado y el cierre lo cuenta.
     if (args.excedePresupuesto?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens })) {
       return await finishOnCap("budget_limit");
+    }
+    // LA LISTA DE PROGRESO (spec local 2026-10-15): cerca del techo, UN aviso
+    // para que Len cierre ENTRE pasos —termina el que lleva y pregunta— en vez
+    // de que el techo lo corte a media tarea. Aquí, antes de llamar al modelo,
+    // por lo mismo que el techo: nunca a media herramienta.
+    if (!nearCapNotified && args.nearBudget?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens })) {
+      nearCapNotified = true;
+      messages.push({
+        role: "user",
+        content: nearCapNotice({
+          hasList: currentTodos !== null && currentTodos.length > 0,
+          goalContinues: args.goalContinues?.() === true,
+        }),
+      });
     }
     turns += 1;
 
@@ -1737,6 +1780,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.preguntas?.length ? { preguntas: outcome.preguntas } : {}),
           ...(outcome.respuesta ? { respuesta: outcome.respuesta } : {}),
           ...(outcome.dismissed ? { dismissed: true as const } : {}),
+          // La lista de progreso, entera (también vacía: Len puede vaciarla).
+          ...(outcome.todos ? { todos: outcome.todos } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
@@ -1798,6 +1843,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         }
         if (outcome.dismissed) ownerTookOver = true;
         if (outcome.notice) avisos.push(outcome.notice);
+        // La lista vigente es la última que escribió (también vacía).
+        if (outcome.todos) currentTodos = outcome.todos;
         if (outcome.images?.length) capturas.push({ tool: call.name, images: outcome.images });
         const respuesta = outcome.response;
         // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`

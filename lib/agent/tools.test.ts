@@ -1774,6 +1774,19 @@ describe("TodoWrite, retirada (F4)", () => {
   });
 });
 
+describe("todo_write, la lista de progreso (spec local 2026-10-15)", () => {
+  it("devuelve la lista y no guarda ni cambia la página", async () => {
+    const { deps, store } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "todo_write", {
+      todos: [{ content: "Página de Inicio", status: "in_progress" }],
+    });
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.todos, [{ content: "Página de Inicio", status: "in_progress" }]);
+    assert.equal(store.saved.length, 0);
+    assert.equal(out.updatedHtml, undefined);
+  });
+});
+
 describe("publicar sin subdominio ya no da órdenes de comportamiento", () => {
   it("señala `ask_user_question` en vez de pedirle al modelo que se pare solo", async () => {
     const { deps } = makeDeps();

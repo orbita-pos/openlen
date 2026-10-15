@@ -307,6 +307,12 @@
       "showPlan": "See the whole plan",
       "hidePlan": "Hide the plan"
     },
+    "todos": {
+      "progress": "{done} of {total} done",
+      "halfDone": "half-done",
+      "continue": "Yes, continue with “{step}”",
+      "continueMessage": "Continue with “{step}”."
+    },
     "goal": {
       "option": "Goal",
       "optionHint": "Len keeps going on its own, round after round, until it's done.",

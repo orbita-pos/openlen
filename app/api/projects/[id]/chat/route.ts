@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
+import { todosFrom } from "@/lib/agent/todo-list";
 import {
   appendChatMessage,
   updateChatMessageStatus,
@@ -133,6 +134,14 @@ const ActionSchema = z.object({
     .optional(),
   // Alinear con DeepSeek: la pregunta descartada se queda «cancelada» al recargar.
   dismissed: z.literal(true).optional().catch(undefined),
+  /** La lista de progreso de `todo_write` (spec local 2026-10-15). Aquí por lo
+   *  mismo que `valores`: el guardado del navegador reescribe `actions` con lo
+   *  que este esquema deja pasar. Se LIMPIA, no se rechaza (`todosFrom`
+   *  recorta y quita lo mal formado): una lista rara haría 400 al turno entero. */
+  todos: z
+    .unknown()
+    .transform((v) => todosFrom(v) ?? undefined)
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

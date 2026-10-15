@@ -307,6 +307,12 @@
       "showPlan": "計画をすべて見る",
       "hidePlan": "計画を隠す"
     },
+    "todos": {
+      "progress": "{total}件中{done}件完了",
+      "halfDone": "途中",
+      "continue": "はい、「{step}」を続けて",
+      "continueMessage": "「{step}」を続けてください。"
+    },
     "goal": {
       "option": "ゴール",
       "optionHint": "終わるまで、Len がラウンドを重ねて自分で進めます。",

@@ -46,6 +46,7 @@ import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/se
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
+import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
@@ -352,8 +353,12 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // ⚰️ Sustituyen a `leer_de_internet` (3 URLs, 4.000 caracteres de texto).
     DECLARACION_WEB_SEARCH,
     DECLARACION_WEB_FETCH,
-    // ⚰️ Aquí iba TodoWrite, la lista de tareas. Retirada en F4
-    // (plans/len-agente-2026), como Claude Code con los modelos nuevos.
+    // ⚰️ Aquí iba TodoWrite, la lista de tareas de Claude Code (23 reglas,
+    // 1.383 tokens). Retirada en F4 (plans/len-agente-2026), y sigue fuera:
+    // Claude Code tampoco se la da a los modelos nuevos. Vuelve la de DeepSeek,
+    // en tres frases, como lista de progreso PARA EL USUARIO (spec local
+    // 2026-10-15-len-progress-list-design).
+    TODO_WRITE_DECLARATION,
     // 🔴 PIEZA 3 DE LEN 2.5: `ask_user_question` de DeepSeek TAL CUAL, nombre
     // incluido (`deepseek-harness` @ 5badb15, MIT,
     // LICENSES/deepseek-harness.MIT.txt: packages/interaction/tool-ask-user/

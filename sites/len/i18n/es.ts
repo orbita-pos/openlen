@@ -112,7 +112,7 @@ export const es = {
     },
     tarjeta: {
       antetitulo: "Len 2.5 · octubre 2026",
-      titulo: "Veintisiete herramientas, un solo desarrollador",
+      titulo: "Veintiocho herramientas, un solo desarrollador",
       texto:
         "Trabaja tu sitio como un programador trabaja su código: cada página es un fichero, y tiene su propia terminal para buscar y cambiar con precisión. Si se lo pides, te propone un plan antes de tocar nada. Y antes de entregar, usa la página como la usaría un visitante: pulsa, escribe, recarga y mira qué pasó.",
       como: "Cómo trabaja →",
@@ -149,7 +149,7 @@ export const es = {
         planear: {
           titulo: "Planear y encargos",
           texto:
-            "Si se lo pides, te propone un plan y no toca nada hasta que lo apruebas. Un encargo largo lo trabaja solo, ronda tras ronda.",
+            "En un trabajo largo te enseña la lista de pasos y por dónde va. Si se lo pides, te propone un plan y no toca nada hasta que lo apruebas. Un encargo largo lo trabaja solo, ronda tras ronda.",
         },
         recordar: {
           titulo: "Recordar",
