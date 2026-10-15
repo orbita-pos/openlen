@@ -312,4 +312,18 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
     expect(con).not.toContain("Edge Functions don't exist here yet");
     expect(con).toContain("Deno.serve(async (req) => …)");
   });
+
+  it("con la IA de las apps encendida, el manual dice cómo llamarla y el plan B; apagada, nada", () => {
+    const m = buildManualDeLaPlataforma(CON);
+    expect(m).toContain("/ai/v1/chat/completions");
+    expect(m).toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(m).toContain("`openlen-fast`");
+    expect(m).toContain("`openlen-smart`");
+    expect(m).toContain("never call it from the page");
+    expect(m).toContain("must keep working without it");
+    expect(m).toContain("too many from one visitor");
+    expect(documentosDeLaPlataforma(null, CON)[RUTA_APPS]).toContain("/ai/v1/chat/completions");
+    expect(buildManualDeLaPlataforma({ ...CON, OPENLEN_APP_AI: "0" })).not.toContain("/ai/v1/chat/completions");
+    expect(buildManualDeLaPlataforma({})).not.toContain("/ai/v1/chat/completions");
+  });
 });

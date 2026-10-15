@@ -40,6 +40,7 @@ import {
 } from "@/lib/agent/ficheros/manual";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/catalog";
+import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
@@ -267,7 +268,16 @@ const SIN_FUNCIONES = "Edge Functions don't exist here yet: if something needs t
 const CON_FUNCIONES = "It also runs the project's Edge Functions (below).";
 const LINEA_DE_REALTIME = "\n- Live updates go through Realtime";
 
-function lineasDeFunciones(): string {
+// LA IA DE LAS APPS (spec local 2026-10-15, 4.7): sólo con su puerta encendida,
+// dentro de las líneas de las funciones (las llama una función, nunca la página).
+const LINEA_DE_IA =
+  "- AI from a function, with no key of your own: POST `${SUPABASE_URL}/ai/v1/chat/completions` with `Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}` and OpenAI's chat format (the `openai` package pointed at `${SUPABASE_URL}/ai/v1` works too)." +
+  " Two models: `openlen-fast` answers without thinking —sort, classify, extract, summarize; use it unless the task needs reasoning— and `openlen-smart` thinks first and costs more." +
+  " Text only; `response_format: { type: \"json_object\" }` for JSON (a json_schema is not enforced: validate what comes back); `stream: true` for a chat." +
+  " It is server-only: never call it from the page and never send the key to the browser." +
+  " Every call spends the owner's credits, within a monthly limit for all their apps together: a 402 (no credits, or the limit reached), 429 or 503 means no AI right now, and the app must keep working without it —save the text as it came, show the plain form— instead of failing.";
+
+function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): string {
   const catalogo = functionsCatalog(FUNCTIONS_CATALOG_CURRENT)!
     .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
     .join(", ");
@@ -279,17 +289,18 @@ function lineasDeFunciones(): string {
     "- Secrets —API keys, webhook signing secrets— are read with `Deno.env.get(\"NAME\")`. Ask the user for them with request_secrets: never in the chat and never in a file. A value you generate yourself (a random token) can go to the draft with `supabase secrets set NAME=value`; production values are set only by the user, and the publish card asks for any that are missing.",
     "- From the page: `supabase.functions.invoke(\"name\", { body })`. Try one from the terminal with `curl -i` on the draft URL that PROJECT STATE gives you under `edge_functions`, plus its name; use_page and view_page report the calls the page made, with their logs and errors.",
     "- A function needs the user's JWT or the project's key in Authorization unless `verify_jwt` is off: a webhook (Stripe, Mercado Pago) needs `[functions.<name>]` with `verify_jwt = false` in /supabase/config.toml (or `supabase functions deploy <name> --no-verify-jwt`). Check Stripe's signature on the raw text body with `stripe.webhooks.constructEventAsync(body, signature, secret, undefined, Stripe.createSubtleCryptoProvider())`.",
-    `- Limits: ${FUNCTION_MEMORY_MB} MB of memory; per call, ${FUNCTION_LIMITS.free.cpuMs} ms of CPU and ${FUNCTION_LIMITS.free.timeoutSec} s in total on the Free plan, ${FUNCTION_LIMITS.pro.cpuMs} ms of CPU and ${FUNCTION_LIMITS.pro.timeoutSec} s on paid plans (waiting for another service doesn't count as CPU; going over it ends the call with a 546 WORKER_RESOURCE_LIMIT); ${MAX_REQUEST_BYTES / 1024 / 1024} MB per request body. Publishing compiles them for production, and if they don't compile nothing is published. A 429 means the project used its calls for the month, or has too many at once: explain it to the user; don't retry.`,
+    `- Limits: ${FUNCTION_MEMORY_MB} MB of memory; per call, ${FUNCTION_LIMITS.free.cpuMs} ms of CPU and ${FUNCTION_LIMITS.free.timeoutSec} s in total on the Free plan, ${FUNCTION_LIMITS.pro.cpuMs} ms of CPU and ${FUNCTION_LIMITS.pro.timeoutSec} s on paid plans (waiting for another service doesn't count as CPU; going over it ends the call with a 546 WORKER_RESOURCE_LIMIT); ${MAX_REQUEST_BYTES / 1024 / 1024} MB per request body. Publishing compiles them for production, and if they don't compile nothing is published. A 429 means the project used its calls for the month, has too many at once, or too many from one visitor: explain it to the user; don't retry.`,
+    ...(appAiEnabledIn(env) ? [LINEA_DE_IA] : []),
   ].join("\n");
 }
 
 /** El manual con las Edge Functions de este servidor. Sin la frase o sin la
  *  línea de Realtime (otro manual), tal cual. */
-export function conEdgeFunctions(manual: string): string {
+export function conEdgeFunctions(manual: string, env: Readonly<Record<string, string | undefined>> = process.env): string {
   const i = manual.indexOf(LINEA_DE_REALTIME);
   if (i === -1 || !manual.includes(SIN_FUNCIONES)) return manual;
   const fin = manual.indexOf("\n", i + 1);
-  const conLineas = fin === -1 ? `${manual}\n${lineasDeFunciones()}` : `${manual.slice(0, fin)}\n${lineasDeFunciones()}${manual.slice(fin)}`;
+  const conLineas = fin === -1 ? `${manual}\n${lineasDeFunciones(env)}` : `${manual.slice(0, fin)}\n${lineasDeFunciones(env)}${manual.slice(fin)}`;
   return conLineas.replace(SIN_FUNCIONES, CON_FUNCIONES);
 }
 
@@ -299,7 +310,7 @@ export function buildManualDeLaPlataforma(
   app: AppDeProyecto | null = null,
 ): string {
   const base = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
-  const agents = functionsEnabledIn(env) ? conEdgeFunctions(base) : base;
+  const agents = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
 }
 
@@ -314,7 +325,7 @@ export function documentosDeLaPlataforma(
 ): Readonly<Record<string, string>> {
   if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP };
   const convertir = manualParaConvertir();
-  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir) : convertir };
+  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
