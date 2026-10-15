@@ -41,7 +41,7 @@ Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró 
 
 **Por qué.** Un veredicto que el agente no puede comprobar ni discutir convierte un falso positivo en horas de trabajo destructivo. Lo contamos entero en <a href="/es/research/evidence-not-verdicts/">Evidencia, no veredictos</a>.
 
-**Cómo lo comprobamos.** Con pruebas que no gastan modelo: `mirar_pagina` con `tipo="medir"` devuelve la medida y no toca la página <Fuente ruta="lib/agent/tools.test.ts" />, y cuando el navegador no puede afirmar nada —una foto o un velo debajo del texto— lo dice, en vez de callarse como si estuviera bien. <Fuente ruta="lib/agent/verify.ts" /> El caso `aurora-marcador-no-es-rotura` —un cambio de titular tiene que seguir siendo un cambio de titular— era de la batería anterior a Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="7afd419d" />, y en Len-Bench todavía no tiene pareja.
+**Cómo lo comprobamos.** Con pruebas que no gastan modelo: `view_page` con `mode="measure"` devuelve la medida y no toca la página <Fuente ruta="lib/agent/tools.test.ts" />, y cuando el navegador no puede afirmar nada —una foto o un velo debajo del texto— lo dice, en vez de callarse como si estuviera bien. <Fuente ruta="lib/agent/verify.ts" /> El caso `aurora-marcador-no-es-rotura` —un cambio de titular tiene que seguir siendo un cambio de titular— era de la batería anterior a Len 2.0 <Fuente ruta="lib/agent/evals/cases.ts" commit="7afd419d" />, y en Len-Bench todavía no tiene pareja.
 </section>
 
 <section className="principio">
@@ -50,7 +50,7 @@ Y hay una medida: el caso que pide el mismo cambio en cuatro páginas se cerró 
 
 **Qué promete.** Cuando creas una página, Len no entra en un bucle de reparación automática. Mide lo que hay y **te lo dice**; corriges tú.
 
-**Por qué.** No es una tarea pendiente ni un ahorro: es una decisión. La reparación automática existió, era barata y funcionaba, y se retiró a propósito. La otra mitad de la regla es la que la hace justa — lo medido se te cuenta, no se esconde. <Fuente ruta="app/api/generate/route.ts" />
+**Por qué.** No es una tarea pendiente ni un ahorro: es una decisión. La reparación automática existió, era barata y funcionaba, y se retiró a propósito. La otra mitad de la regla es la que la hace justa — lo medido se te cuenta, no se esconde. <Fuente commit="b4a47ae1" />
 
 **Cómo lo comprobamos.** Por su ausencia —crear no tiene ciclo— y con una prueba que la sujeta: al Agente no se le inyecta a mitad de turno un arreglo que tú no pediste, y una rotura que ven los ojos cierra el turno con lo que el modelo hizo, dicha en la tarjeta y no deshecha a tus espaldas. <Fuente ruta="lib/agent/loop.test.ts" /> Si algún día ves un ciclo, es un error nuestro.
 </section>
