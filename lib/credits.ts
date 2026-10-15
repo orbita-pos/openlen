@@ -86,6 +86,10 @@ export function techoDelTurno(state: Pick<CreditState, "plan" | "balance">): num
   return Math.max(0, Math.min(TECHO_POR_TURNO[state.plan], state.balance));
 }
 
+/** LA LISTA DE PROGRESO (spec local 2026-10-15): pasado este tanto del techo
+ *  del turno, Len recibe UN aviso para cerrar entre pasos. Un solo número, aquí. */
+export const NEAR_TURN_CAP_RATIO = 0.7;
+
 /** Flat charge for an autofill / style-match run. Cheap + occasional, so it
  *  isn't token-metered like generate / chat. */
 export const AUTOFILL_CREDIT_COST = 5 * CENTICREDITOS_POR_CREDITO;

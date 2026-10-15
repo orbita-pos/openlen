@@ -746,3 +746,15 @@ describe("LEN.md en los mensajes del turno", () => {
     expect(r.messages.map((m) => m.role)).toEqual(["system", "user", "user", "user"]);
   });
 });
+
+describe("avisosDelTurno — la lista de progreso (spec local 2026-10-15)", () => {
+  it("con la línea de la lista, la añade marcada como del sistema", () => {
+    const a = avisosDelTurno({ todoRestore: "Your task list from earlier…\n1. [pending] Galería" });
+    expect(a).toContain("SYSTEM (the user did NOT write this):");
+    expect(a).toContain("1. [pending] Galería");
+  });
+
+  it("BRAZO DE CONTROL: sin línea y sin nada más, no hay avisos", () => {
+    expect(avisosDelTurno({})).toBe("");
+  });
+});

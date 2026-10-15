@@ -12,6 +12,7 @@ import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transc
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
+import { TODO_WRITE, latestTodosOfActions, type TodoItem } from "@/lib/agent/todo-list";
 import { photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
@@ -223,6 +224,31 @@ export async function turnosParaElHistorial(projectId: string, cuantos: number):
     transcript: r.transcript ?? null,
     attachedImage: r.attachedImage ?? null,
   }));
+}
+
+/**
+ * LA ÚLTIMA LISTA DE PROGRESO DE LA CHARLA (spec local 2026-10-15): la de la
+ * fila más reciente que tiene una tarjeta de `todo_write`, fuera de la ventana
+ * del historial si hace falta. Ni de un turno en curso ni de uno DESHECHO: su
+ * trabajo ya no está, y su lista tampoco vale.
+ */
+export async function latestTodoListForChat(projectId: string): Promise<TodoItem[] | null> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({ actions: t.actions })
+    .from(t)
+    .where(
+      and(
+        enCurso(projectId),
+        ne(t.status, ESTADO_EN_CURSO),
+        ne(t.status, "reverted"),
+        isNull(t.tipo),
+        sql`${t.actions} @> ${JSON.stringify([{ tool: TODO_WRITE }])}::jsonb`,
+      ),
+    )
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  return rows[0] ? latestTodosOfActions(rows[0].actions) : null;
 }
 
 /** Una fila de la charla en curso con lo que hace falta para plegar el equipo. */

@@ -47,6 +47,7 @@ vi.mock("@/lib/db", () => {
 import {
   CENTICREDITOS_POR_CREDITO,
   CREDITS_BY_PLAN,
+  NEAR_TURN_CAP_RATIO,
   REFILL_MS,
   creditRate,
   formatCredits,
@@ -526,5 +527,11 @@ describe("los créditos de los planes de pago, contra la portada", () => {
     const st = await getCreditState("u1");
     expect(st.plan).toBe("max");
     expect(st.allotment).toBe((CREDITS_BY_PLAN as Record<string, number>).max);
+  });
+});
+
+describe("la lista de progreso (spec local 2026-10-15)", () => {
+  it("el aviso de la lista de progreso va al 70 % del techo", () => {
+    expect(NEAR_TURN_CAP_RATIO).toBe(0.7);
   });
 });

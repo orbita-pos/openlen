@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { getChatMessages, leerTurnoDelUsuario, quitarEncargo } = await import("./chat");
+const { getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo } = await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
   id: "g1",
@@ -41,6 +41,15 @@ async function fila(o: { id: string; minuto: number; status?: string; transcript
     `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "transcript")
      values ($1, 'p1', 'hola', '', $2, $3, $4::jsonb)`,
     [o.id, o.status ?? "applied", new Date(Date.UTC(2026, 9, 5, 12, o.minuto)), o.transcript === undefined ? null : JSON.stringify(o.transcript)],
+  );
+}
+
+/** Una fila con tarjetas (la lista de progreso vive en las de `todo_write`). */
+async function filaConTarjetas(o: { id: string; minuto: number; status?: string; actions: unknown; conversation?: string }) {
+  await pg.query(
+    `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "actions", "conversation")
+     values ($1, 'p1', 'hola', '', $2, $3, $4::jsonb, $5)`,
+    [o.id, o.status ?? "applied", new Date(Date.UTC(2026, 9, 5, 12, o.minuto)), JSON.stringify(o.actions), o.conversation ?? null],
   );
 }
 
@@ -113,5 +122,28 @@ describe("el estado de la charla en Postgres", () => {
     await fila({ id: "a", minuto: 1, transcript: { mensajes: [], leidos: [], goal: ENCARGO } });
     expect(await quitarEncargo("p1", "u2")).toBe("no_encontrado");
     expect((await goalCrudo("a"))!.tipo).toBe("object");
+  });
+});
+
+describe("latestTodoListForChat (la lista de progreso, spec local 2026-10-15)", () => {
+  const lista = (estado: string) => [{ tool: "todo_write", status: "done", summary: "", todos: [{ content: "Galería", status: estado }] }];
+
+  it("devuelve la lista de la última fila que la tiene, aunque luego haya turnos sin lista", async () => {
+    await filaConTarjetas({ id: "a", minuto: 1, actions: lista("pending") });
+    await filaConTarjetas({ id: "b", minuto: 2, actions: [{ tool: "Write", status: "done", summary: "" }] });
+    expect(await latestTodoListForChat("p1")).toEqual([{ content: "Galería", status: "pending" }]);
+  });
+
+  it("🔴 no la saca de un turno DESHECHO, ni del que sigue en curso, ni de otra charla", async () => {
+    await filaConTarjetas({ id: "a", minuto: 1, actions: lista("completed") });
+    await filaConTarjetas({ id: "b", minuto: 2, status: "reverted", actions: lista("pending") });
+    await filaConTarjetas({ id: "c", minuto: 3, status: "en_curso", actions: lista("in_progress") });
+    await filaConTarjetas({ id: "d", minuto: 4, conversation: "archivada", actions: lista("pending") });
+    expect(await latestTodoListForChat("p1")).toEqual([{ content: "Galería", status: "completed" }]);
+  });
+
+  it("sin ninguna lista, null", async () => {
+    await filaConTarjetas({ id: "a", minuto: 1, actions: [{ tool: "Write", status: "done", summary: "" }] });
+    expect(await latestTodoListForChat("p1")).toBeNull();
   });
 });
