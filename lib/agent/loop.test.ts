@@ -2755,6 +2755,87 @@ describe("el techo de dinero del turno", () => {
       [{ type: "text_delta", text: "Listo, todo hecho." }, usage(5), done],
     );
 
+  // LA LISTA DE PROGRESO (spec local 2026-10-15) — REVIEW FOCUS 4.
+  const avisos = (m: Message[]) => m.filter((x) => x.role === "user" && String(x.content).includes("this turn has used most of its budget"));
+
+  it("🔴 al cruzar el 70 % sale UN aviso, y no se repite en las vueltas siguientes", async () => {
+    const vistos: Message[][] = [];
+    const guion = dosEdiciones();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme la tienda entera" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      nearBudget: (g) => g.outputTokens >= 50,
+    });
+    expect(avisos(vistos[0]!)).toHaveLength(0);
+    expect(avisos(vistos[1]!)).toHaveLength(1);
+    expect(avisos(vistos[2]!)).toHaveLength(1);
+    // Sin lista: el aviso de «lo hecho y lo pendiente».
+    expect(String(avisos(vistos[1]!)[0]!.content)).toContain("what is still pending");
+  });
+
+  it("con una lista heredada y sin encargo, el aviso pide preguntar por el paso siguiente", async () => {
+    const vistos: Message[][] = [];
+    const guion = dosEdiciones();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "sigue" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      nearBudget: (g) => g.outputTokens >= 50,
+      initialTodos: [{ content: "Galería", status: "pending" }],
+    });
+    expect(String(avisos(vistos[1]!)[0]!.content)).toContain("ask whether to continue with the next step");
+  });
+
+  it("con un encargo que sigue solo, el aviso dice que no pregunte", async () => {
+    const vistos: Message[][] = [];
+    const guion = dosEdiciones();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true }, todos: [{ content: "Galería", status: "in_progress" as const }] }),
+      emit: () => {},
+      nearBudget: (g) => g.outputTokens >= 50,
+      goalContinues: () => true,
+    });
+    expect(String(avisos(vistos[1]!)[0]!.content)).toContain("so do not ask");
+  });
+
+  it("BRAZO DE CONTROL: sin `nearBudget` no hay aviso nunca", async () => {
+    const vistos: Message[][] = [];
+    const guion = dosEdiciones();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(vistos.every((m) => avisos(m).length === 0)).toBe(true);
+  });
+
+  it("🔴 al 100 % el cierre recibe la lista como hechos", async () => {
+    const instrucciones: string[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme la tienda entera" }], tools: [],
+      openStream: dosEdiciones(),
+      closeOut: (m) => {
+        instrucciones.push(String(m.at(-1)?.content ?? ""));
+        return scripted([{ type: "text_delta", text: "Paré." }, usage(5), done])(m);
+      },
+      runTool: async () => ({
+        response: { ok: true },
+        todos: [{ content: "Inicio", status: "completed" as const }, { content: "Menú", status: "in_progress" as const }],
+      }),
+      emit: () => {},
+      excedePresupuesto: (g) => g.outputTokens >= 100,
+    });
+    expect(instrucciones[0]).toContain("spending cap");
+    expect(instrucciones[0]).toContain("1. [completed] Inicio");
+    expect(instrucciones[0]).toContain("2. [in_progress] Menú");
+  });
+
   it("🔴 pasado el techo, el turno cierra con su propio cierre y `budget_limit`", async () => {
     const vistos: number[] = [];
     const instrucciones: string[] = [];
