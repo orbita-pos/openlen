@@ -108,6 +108,6 @@ describe("add and commit, against the real git", () => {
       ["commit", "-a", "-m", "Second"],
     );
     expect(late).toEqual({ stdout: "", stderr: INDEX_LOCKED, exitCode: 128 });
-    expect((await store.readRepo())!.version).toBe(1);
+    expect((await pair.ours.git(["log", "--format=%s"])).stdout).toBe("First\nInitial commit\n");
   });
 });

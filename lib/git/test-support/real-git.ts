@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 export const AUTHOR = { name: "Ana Lopez", email: "ana@users.noreply.openlen.com" } as const;
-/** 2026-10-15 03:46:40 UTC: every test clock starts here. */
+/** 2025-10-15 03:46:40 UTC: every test clock starts here. */
 export const START = 1_760_500_000;
 
 export interface GitOutput {
@@ -34,6 +34,9 @@ export class RealRepo {
     this.git(["init", "-q", "-b", "main"]);
     this.git(["config", "core.autocrlf", "false"]);
     this.git(["config", "core.filemode", "false"]);
+    // OpenLen's git doesn't detect renames (a deliberate difference, ledgered): compare like for like.
+    this.git(["config", "diff.renames", "false"]);
+    this.git(["config", "status.renames", "false"]);
   }
 
   private env(): NodeJS.ProcessEnv {
