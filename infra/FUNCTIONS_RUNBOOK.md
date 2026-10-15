@@ -136,3 +136,18 @@ despachador por llamada y si la llamada al despachador y la del script cuentan c
 en `OPENLEN_CF_DISPATCH_KEY`; reiniciar. Entre los dos pasos, las llamadas dan 503.
 
 **Apagarlas todas:** `OPENLEN_FUNCTIONS=0` (§1). **Las de un proyecto:** la marca de §3.
+
+## 7. La IA de las apps (`/ai/v1`)
+
+Va encima de las funciones: con ellas encendidas, está encendida.
+
+- **Apagarla en caliente:** `OPENLEN_APP_AI=0` en `/etc/openlen/openlen.env` y reiniciar la app → 503 `app_ai_disabled`.
+- **La bolsa diaria del plan gratis:** `OPENLEN_APP_AI_FREE_DAILY_USD` (por defecto 2). Al 80 % llega un correo al operador; al 100 %, las cuentas gratis reciben 503 `app_ai_busy` hasta el día siguiente (UTC). Vive en memoria: reiniciar la app la vacía.
+- **Un proyecto que abusa:** la misma marca de abuso de las funciones (§3) apaga también su IA.
+- **Ver el gasto del mes** (psql de la base de la app):
+
+      SELECT "userId", sum("centicredits") / 100.0 AS credits, sum("calls") AS calls
+      FROM "appAiSpend" WHERE "month" = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM')
+      GROUP BY "userId" ORDER BY 2 DESC LIMIT 20;
+
+- **Desplegar:** `app-ai-migrate` corre con las demás migraciones (antes que el código); el `handle /ai/v1/*` nuevo pide recargar Caddy (paso 8).
