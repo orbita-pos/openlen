@@ -111,7 +111,7 @@
       "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",
       "budget_limit": "Len hat an der Ausgabengrenze für einen Zug angehalten. Was erledigt ist, ist gespeichert; bitte ihn weiterzumachen, wenn du mehr willst.",
       "cancelled": "Der Zug wurde abgebrochen.",
-      "truncated": "Die Antwort ist ausgegangen – versuche eine kürzere Anfrage.",
+      "truncated": "Der Antwort ist mehrmals hintereinander der Platz ausgegangen – bitte Len, weiterzumachen.",
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
       "no_credits": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie erneuern sich alle 30 Tage — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten.",
       "no_credits_at": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie kommen am {date} zurück — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten."
