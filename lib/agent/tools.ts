@@ -235,11 +235,13 @@ export interface AgentDeps {
   supabaseProject?(projectId: string): Promise<{ url: string; publishableKey: string } | null>;
   /** `supabase …` en la terminal de Len: la CLI de Supabase contra el backend
    *  del proyecto (`lib/backend/cli.ts`). `ficheros`: los de `/supabase/` tal
-   *  como están en la terminal; `escribir`: los que crea (`migration new`). */
+   *  como están en la terminal; `escribir`: los que crea (`migration new`).
+   *  `signal`: el del comando, que se aborta si el comando pasa de su tiempo. */
   supabaseCli?(
     projectId: string,
     args: readonly string[],
     ficheros: Readonly<Record<string, string>>,
+    o?: { readonly signal?: AbortSignal },
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
    *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
@@ -579,9 +581,9 @@ export function realDeps(
       await deleteProjectFile(projectId, path);
       return { versionPrevia };
     },
-    async supabaseCli(projectId, args, ficheros) {
+    async supabaseCli(projectId, args, ficheros, o) {
       const { runSupabaseCli } = await import("@/lib/backend/cli");
-      return runSupabaseCli(projectId, args, ficheros);
+      return runSupabaseCli(projectId, args, ficheros, o);
     },
     async functionsCurl(projectId) {
       const { functionsCurlFor } = await import("@/lib/functions/curl");

@@ -55,7 +55,10 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     // `supabase …`: lo que crea (una migración nueva) vuelve como cualquier otro
     // fichero cambiado y se guarda abajo, por el camino de Write.
     ...(deps.supabaseCli
-      ? { supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>) => deps.supabaseCli!(session.projectId, args, ficheros) }
+      ? {
+          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o),
+        }
       : {}),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
     appTools: appToolsFor(session, deps),

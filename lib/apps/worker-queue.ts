@@ -13,7 +13,10 @@
 //     un caso patológico no se queda comiendo CPU. La siguiente renace.
 //   · El hilo que se recicla (su umbral de memoria) lo dice EN su respuesta
 //     (`recycling`), y la siguiente va a uno nuevo en vez de perderse.
-// Fail-soft: lo que no llega, falla o se sustituye es `null`.
+//   · `signal` (14/10): lo que arrancó un comando acaba con él. Abortada en la
+//     cola, sale sin correr; abortada dentro, el hilo se termina en el acto
+//     (no se queda comiendo CPU hasta su tope).
+// Fail-soft: lo que no llega, falla, se sustituye o se aborta es `null`.
 //
 // Protocolo: entra `{ id, ...mensaje }`, sale `{ id, ok, result?, recycling? }`.
 import { Worker, type ResourceLimits } from "node:worker_threads";
@@ -33,8 +36,15 @@ export class WorkerQueue<Out> {
 
   constructor(private readonly o: { readonly workerPath: string; readonly resourceLimits?: ResourceLimits; readonly workerData?: unknown }) {}
 
-  run(message: Record<string, unknown>, o: { readonly timeoutMs: number; readonly supersedes?: object }): Promise<Out | null> {
-    return new Promise((resolve) => {
+  run(
+    message: Record<string, unknown>,
+    o: { readonly timeoutMs: number; readonly supersedes?: object; readonly signal?: AbortSignal },
+  ): Promise<Out | null> {
+    return new Promise((done) => {
+      if (o.signal?.aborted) {
+        done(null);
+        return;
+      }
       if (o.supersedes) {
         for (let i = this.#cola.length - 1; i >= 0; i--) {
           if (this.#cola[i]!.supersedes !== o.supersedes) continue;
@@ -42,9 +52,29 @@ export class WorkerQueue<Out> {
           this.#cola.splice(i, 1);
         }
       }
-      this.#cola.push({ message, timeoutMs: o.timeoutMs, ...(o.supersedes ? { supersedes: o.supersedes } : {}), resolve });
+      const onAbort = () => this.#cancel(request);
+      const resolve = (r: Out | null) => {
+        o.signal?.removeEventListener("abort", onAbort);
+        done(r);
+      };
+      const request: Peticion<Out> = { message, timeoutMs: o.timeoutMs, ...(o.supersedes ? { supersedes: o.supersedes } : {}), resolve };
+      o.signal?.addEventListener("abort", onAbort, { once: true });
+      this.#cola.push(request);
       this.#despachar();
     });
+  }
+
+  /** Una petición abortada: fuera de la cola, o el hilo terminado si ya corría. */
+  #cancel(request: Peticion<Out>): void {
+    const queued = this.#cola.indexOf(request);
+    if (queued >= 0) {
+      this.#cola.splice(queued, 1);
+      request.resolve(null);
+      return;
+    }
+    if (this.#enCurso?.peticion !== request) return;
+    this.#soltarElHilo();
+    this.#despachar();
   }
 
   /** Para las pruebas y el apagado: suelta lo pendiente y termina el hilo. */
