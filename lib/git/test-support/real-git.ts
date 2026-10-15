@@ -39,6 +39,7 @@ export class RealRepo {
   private env(): NodeJS.ProcessEnv {
     const date = `${this.timestamp} +0000`;
     return {
+      NODE_ENV: "test",
       PATH: process.env.PATH,
       SystemRoot: process.env.SystemRoot,
       HOME: this.home,
