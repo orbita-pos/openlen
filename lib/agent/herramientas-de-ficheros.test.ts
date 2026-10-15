@@ -1343,10 +1343,7 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
     const js = await guardarAMano("p-editor", "u1", "/index.html", conAlert, CON_SCRIPT, deps);
     assert.equal(js.ok, true, JSON.stringify(js));
     assert.match(store.data.html, /<script>alert\(1\)<\/script>/);
-    const ficheros = await cargarFicherosDeLaTerminal(
-      { projectId: "p-editor", userId: "u1", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 },
-      deps,
-    );
+    const ficheros = await cargarFicherosDeLaTerminal({ projectId: "p-editor", userId: "u1" }, deps);
     const manual = await guardarAMano("p-editor", "u1", "/AGENTS.md", "otro manual", ficheros["/AGENTS.md"]!, deps);
     assert.equal(manual.ok, false);
     assert.equal(!manual.ok && manual.motivo, "rechazado");
