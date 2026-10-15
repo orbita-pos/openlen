@@ -22,6 +22,7 @@ import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/
 import { ASK_USER_QUESTION, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
+import { TODO_WRITE } from "@/lib/agent/todo-list";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -692,6 +693,9 @@ const READ_ONLY_TOOLS = new Set([
   "get_goal",
   "create_goal",
   "update_goal",
+  // La lista de progreso no cambia la página: escribirla no es «actuar» (la
+  // insistencia del «listo» sin cambio sigue) ni gasta una vuelta de trabajo.
+  TODO_WRITE,
   // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
   "session_search",
   "session_event_search",

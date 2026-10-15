@@ -286,7 +286,8 @@ describe("los nombres que usa el modo app", () => {
     // valor, un identificador de Postgres o un campo del estado del proyecto
     // (`env_vars`). Si una herramienta se renombra, su
     // nombre viejo cae aquí y la prueba lo dice.
-    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars"]);
+    // `in_progress`: un estado de `todo_write` (la lista de progreso).
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress"]);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
       (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
     );

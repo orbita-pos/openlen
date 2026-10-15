@@ -186,6 +186,9 @@ export const KNOWN_TOOLS = new Set([
   "get_goal",
   "create_goal",
   "update_goal",
+  // La lista de progreso (spec local 2026-10-15). Su tarjeta no se pinta entre
+  // los pasos (`visibleSteps`), pero la barra de «qué hace Len» sí la nombra.
+  "todo_write",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",
