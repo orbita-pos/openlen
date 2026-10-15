@@ -458,7 +458,8 @@
       "users": "Usuarios",
       "storage": "Storage",
       "functions": "Funciones",
-      "secrets": "Secretos"
+      "secrets": "Secretos",
+      "ai": "IA"
     },
     "unavailable": {
       "title": "La base de datos no está disponible aquí",
@@ -560,6 +561,22 @@
       "confirmDelete": "¿Borrar?",
       "loadError": "No se pudieron cargar los secretos.",
       "deleteFailed": "No se pudo borrar. Inténtalo otra vez."
+    },
+    "ai": {
+      "account": "Tus apps este mes: {spent} de {cap} créditos",
+      "accountLabel": "Créditos de IA que usaron tus apps este mes",
+      "accountNote": "Este tope es de todas las apps de tu cuenta juntas.",
+      "off": "La IA de tus apps está apagada (tope 0).",
+      "thisProject": "Este proyecto este mes",
+      "usage": "{credits} créditos · {calls} llamadas",
+      "draft": "Borrador",
+      "live": "Producción",
+      "capLabel": "Tope al mes, en créditos",
+      "capHint": "Por defecto, el 25 % de tu plan: {credits} créditos. Hasta {max}.",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "useDefault": "Usar el de por defecto",
+      "saveError": "No se pudo guardar el tope."
     }
   }
 }

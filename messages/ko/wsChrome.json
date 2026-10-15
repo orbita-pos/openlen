@@ -458,7 +458,8 @@
       "users": "사용자",
       "storage": "Storage",
       "functions": "함수",
-      "secrets": "시크릿"
+      "secrets": "시크릿",
+      "ai": "AI"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -560,6 +561,22 @@
       "confirmDelete": "삭제할까요?",
       "loadError": "시크릿을 불러오지 못했습니다.",
       "deleteFailed": "삭제하지 못했습니다. 다시 시도해 주세요."
+    },
+    "ai": {
+      "account": "이번 달 앱 사용량: {cap} 크레딧 중 {spent}",
+      "accountLabel": "이번 달 앱이 사용한 AI 크레딧",
+      "accountNote": "이 한도는 계정의 모든 앱을 합친 것입니다.",
+      "off": "앱의 AI가 꺼져 있습니다(한도 0).",
+      "thisProject": "이 프로젝트의 이번 달",
+      "usage": "{credits} 크레딧 · {calls}회 호출",
+      "draft": "초안",
+      "live": "프로덕션",
+      "capLabel": "월 한도(크레딧)",
+      "capHint": "기본값은 플랜의 25%: {credits} 크레딧. 최대 {max}.",
+      "save": "저장",
+      "saving": "저장 중…",
+      "useDefault": "기본값 사용",
+      "saveError": "한도를 저장하지 못했습니다."
     }
   }
 }

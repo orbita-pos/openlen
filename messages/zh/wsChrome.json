@@ -458,7 +458,8 @@
       "users": "用户",
       "storage": "Storage",
       "functions": "函数",
-      "secrets": "密钥"
+      "secrets": "密钥",
+      "ai": "AI"
     },
     "unavailable": {
       "title": "此处无法使用数据库",
@@ -560,6 +561,22 @@
       "confirmDelete": "确定删除？",
       "loadError": "无法加载密钥。",
       "deleteFailed": "无法删除，请重试。"
+    },
+    "ai": {
+      "account": "本月你的应用：{spent} / {cap} 积分",
+      "accountLabel": "本月应用使用的 AI 积分",
+      "accountNote": "此上限是你账户中所有应用的合计。",
+      "off": "你的应用的 AI 已关闭（上限为 0）。",
+      "thisProject": "本项目本月",
+      "usage": "{credits} 积分 · {calls} 次调用",
+      "draft": "草稿",
+      "live": "正式环境",
+      "capLabel": "每月上限（积分）",
+      "capHint": "默认为你套餐的 25%：{credits} 积分。最多 {max}。",
+      "save": "保存",
+      "saving": "正在保存…",
+      "useDefault": "使用默认值",
+      "saveError": "无法保存上限。"
     }
   }
 }
