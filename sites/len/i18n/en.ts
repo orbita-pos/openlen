@@ -114,7 +114,7 @@ export const en: Diccionario = {
     },
     tarjeta: {
       antetitulo: "Len 2.5 · October 2026",
-      titulo: "Twenty-six tools, one developer",
+      titulo: "Twenty-nine tools, one developer",
       texto:
         "It works on your site the way a programmer works on code: every page is a file, and it has its own terminal to search and change things precisely. If you ask, it proposes a plan before touching anything. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",
       como: "How it works →",
@@ -151,7 +151,7 @@ export const en: Diccionario = {
         planear: {
           titulo: "Plans and long jobs",
           texto:
-            "If you ask, it proposes a plan and touches nothing until you approve it. A long job it works through on its own, round after round.",
+            "On a long job it shows you the list of steps and where it is. If you ask, it proposes a plan and touches nothing until you approve it. A long job it works through on its own, round after round.",
         },
         recordar: {
           titulo: "Memory",

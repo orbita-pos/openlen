@@ -6,6 +6,6 @@
   { "id": "datos",      "herramientas": ["activar_modulo"] },
   { "id": "resultados", "herramientas": ["ver_visitas", "ver_formularios", "ver_mensajes", "preparar_respuesta"] },
   { "id": "contigo",    "herramientas": ["ask_user_question", "publicar"] },
-  { "id": "planear",    "herramientas": ["enter_plan_mode", "exit_plan_mode", "get_goal", "create_goal", "update_goal"] },
+  { "id": "planear",    "herramientas": ["todo_write", "enter_plan_mode", "exit_plan_mode", "get_goal", "create_goal", "update_goal"] },
   { "id": "recordar",   "herramientas": ["session_search", "session_event_search", "session_event_read"] }
 ]
