@@ -37,6 +37,9 @@ export class RealRepo {
     // OpenLen's git doesn't detect renames (a deliberate difference, ledgered): compare like for like.
     this.git(["config", "diff.renames", "false"]);
     this.git(["config", "status.renames", "false"]);
+    // In OpenLen the "Git user" always exists (the person who asks): configure it as theirs.
+    this.git(["config", "user.name", AUTHOR.name]);
+    this.git(["config", "user.email", AUTHOR.email]);
   }
 
   private env(): NodeJS.ProcessEnv {
