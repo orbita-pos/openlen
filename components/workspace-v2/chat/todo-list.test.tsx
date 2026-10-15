@@ -57,6 +57,11 @@ describe("continueStep — the four conditions", () => {
     expect(continueStep({ ...ok, cortado: true })).toBeNull();
     expect(continueStep({ ...ok, goalRunsOn: true })).toBeNull();
   });
+  // Seen on the first real turn (15/10): Len closed with the list AND an
+  // ask_user_question card asking the same thing — two ways to say yes.
+  it("no button when the turn ended asking the owner a question: the question card answers it", () => {
+    expect(continueStep({ ...ok, endedOnQuestion: true })).toBeNull();
+  });
   it("no button when everything is done or the list is empty", () => {
     expect(continueStep({ ...ok, todos: [{ content: "a", status: "completed" }] })).toBeNull();
     expect(continueStep({ ...ok, todos: [] })).toBeNull();
@@ -137,6 +142,14 @@ describe("the list in Len's turn", () => {
 
   it("no button while a goal runs on its own", () => {
     const host = render(turn({ actions }), { goalRunsOn: true, onContinue: nothing });
+    expect(host.textContent).not.toContain("newChat.todos.continue ");
+  });
+
+  it("a turn that ended on a question keeps the list but offers no second button", () => {
+    const ask = { tool: "ask_user_question", status: "done", summary: "Shall I go on?", pregunta: "Shall I check the six pages on a phone?" };
+    const host = render(turn({ actions: [...actions!, ask] as DesignTurn["actions"] }), { onContinue: nothing });
+    expect(host.querySelectorAll('[data-testid="todo-list"] li')).toHaveLength(3);
+    expect(host.textContent).toContain("Shall I check the six pages on a phone?");
     expect(host.textContent).not.toContain("newChat.todos.continue ");
   });
 

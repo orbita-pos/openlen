@@ -20,15 +20,18 @@ export function rowState(item: TodoItem, streaming: boolean): TodoRowState {
 }
 
 /** The step the button offers, or null — spec §4.4: the last turn, closed well
- *  (`applied` and not cut), something left to do, and no goal running on. */
+ *  (`applied` and not cut), something left to do, and no goal running on. And
+ *  not when the turn ended asking the owner a question: its card already asks
+ *  (seen on the first real turn, 15/10 — two ways to say yes to one thing). */
 export function continueStep(o: {
   readonly todos: readonly TodoItem[] | null;
   readonly isLast: boolean;
   readonly status: string;
   readonly cortado?: boolean;
   readonly goalRunsOn: boolean;
+  readonly endedOnQuestion?: boolean;
 }): TodoItem | null {
-  if (!o.todos || !o.isLast || o.status !== "applied" || o.cortado || o.goalRunsOn) return null;
+  if (!o.todos || !o.isLast || o.status !== "applied" || o.cortado || o.goalRunsOn || o.endedOnQuestion) return null;
   return nextTodo(o.todos);
 }
 
