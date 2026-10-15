@@ -3,15 +3,15 @@
 import "server-only";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { ObjectCache } from "./object-cache";
 import type { GitObject, ObjectType } from "./objects";
 import type { GitStore, Index, RepoState } from "./store";
 
-const CACHE_MAX = 5000;
-const cache = new Map<string, GitObject>();
+/** 64 MB for the whole process: a page can weigh half a megabyte, and the box has 3.8 GB. */
+const cache = new ObjectCache(64 * 1024 * 1024);
 const key = (projectId: string, oid: string) => `${projectId}\0${oid}`;
 
 function remember(projectId: string, o: GitObject): void {
-  if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!);
   cache.set(key(projectId, o.oid), o);
 }
 
