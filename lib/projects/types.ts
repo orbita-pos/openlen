@@ -417,6 +417,9 @@ export interface StoredChatTurn {
     /** El dueño descartó la pregunta («Pedir cambios»): se pinta «cancelada»,
      *  como el `ASK_CANCELLED` de DeepSeek. */
     dismissed?: true;
+    /** La lista de progreso que escribió `todo_write` (spec local 2026-10-15).
+     *  Sólo en tarjetas de `todo_write`; la última del turno es su lista. */
+    todos?: ReadonlyArray<{ readonly content: string; readonly status: "pending" | "in_progress" | "completed" }>;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

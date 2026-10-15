@@ -46,6 +46,7 @@ import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
+import { todosFrom } from "@/lib/agent/todo-list";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { withServerStatus } from "./server-status";
 import { publishNoteId } from "./publish-note";
@@ -1618,6 +1619,8 @@ export function useAgentChat({
                 const respuesta = (payload as { respuesta?: unknown } | null)?.respuesta;
                 // Alinear con DeepSeek: la pregunta descartada, «cancelada».
                 const descartada = (payload as { dismissed?: unknown } | null)?.dismissed === true;
+                // La lista de progreso (spec local 2026-10-15), limpia.
+                const todos = todosFrom((payload as { todos?: unknown } | null)?.todos);
                 // Su tarjeta llegó: ya no espera.
                 if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
@@ -1650,6 +1653,7 @@ export function useAgentChat({
                       ? { respuesta: respuesta.slice(0, 200) }
                       : {}),
                     ...(descartada ? { dismissed: true as const } : {}),
+                    ...(todos ? { todos } : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
                       : {}),
@@ -2347,6 +2351,17 @@ export function useAgentChat({
     void send(draft, undefined, { comentarios });
   }, [comentarios, draft, reenganche, send, sending]);
 
+  /** LA LISTA DE PROGRESO (spec local 2026-10-15): «Sí, sigue con…» manda ese
+   *  texto como un mensaje normal del dueño. Con un turno en vuelo no hace nada:
+   *  el botón sólo sale con el turno cerrado. */
+  const continueWith = useCallback(
+    (text: string) => {
+      if (sending || reenganche) return;
+      void send(text);
+    },
+    [reenganche, send, sending],
+  );
+
   /**
    * PIEZA 3 · CONTESTAR A LEN DESDE LA TARJETA. Si el turno sigue esperando la
    * respuesta (`ask_user_question`), vuelve a ESE turno y Len sigue. Si ya nadie
@@ -2486,6 +2501,8 @@ export function useAgentChat({
     reenganche,
     /** Hay un turno trabajando, propio o reenganchado: ■ y corregir valen. */
     busy: sending || reenganche !== null,
+    /** «Sí, sigue con…» de la lista de progreso. */
+    continueWith,
     latest,
     showThinkingDots: Boolean(showThinkingDots),
     taRef,

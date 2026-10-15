@@ -32,6 +32,8 @@ import type { DesignTurn } from "./use-agent-chat";
 import { roundOfTurn } from "./goal-state";
 import { TextoConMenciones } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+import { latestTodosOfActions } from "@/lib/agent/todo-list";
+import { TodoListView, continueStep } from "./todo-list";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -198,6 +200,8 @@ export function LenTurn({
   onRate,
   onClearRate,
   esApp = false,
+  goalRunsOn = false,
+  onContinue,
 }: {
   turn: DesignTurn;
   /** El turno siguiente, si lo hay: su mensaje es la respuesta a una pregunta. */
@@ -222,6 +226,10 @@ export function LenTurn({
   onClearRate: () => Promise<boolean>;
   /** El proyecto es una app (ver `ChangesCard`). */
   esApp?: boolean;
+  /** Hay un encargo armado y activo: Len sigue solo, sin botón de seguir. */
+  goalRunsOn?: boolean;
+  /** «Sí, sigue con…» de la lista de progreso: manda ese mensaje. Sin él, no hay botón. */
+  onContinue?: (text: string) => void;
 }) {
   const t = useTranslations("panelsChat");
   // LAS RUTAS DE ESTE TURNO ABREN SU FICHERO (la #9): las de sus pasos y las que
@@ -258,11 +266,14 @@ export function LenTurn({
   const samePage = mismaPagina(turn.page, currentPage);
   const hasSteps = visibleSteps(turn.actions).length > 0;
   const showChanges = turn.status === "applied" || turn.status === "reverted";
+  // LA LISTA DE PROGRESO (spec local 2026-10-15): la última del turno.
+  const todos = latestTodosOfActions(turn.actions);
+  const offer = continueStep({ todos, isLast, status: turn.status, cortado: turn.cortado, goalRunsOn, endedOnQuestion: question !== null });
 
   // Nada que enseñar todavía: la barra viva dice «Pensando». Una pregunta que
   // espera SÍ es algo (va fuera de los pasos, en su tarjeta): si Len empieza
   // preguntando, sin texto ni pasos antes, sin esto no se pintaba nada.
-  if (streaming && !hasSteps && text.length === 0 && !liveQuestions) return null;
+  if (streaming && !hasSteps && text.length === 0 && !liveQuestions && !(todos && todos.length > 0)) return null;
 
   return (
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast}>
@@ -282,6 +293,9 @@ export function LenTurn({
           <TextoDeLen texto={text} rutas={paths} onAbrir={openFile} />
           {streaming && <span className="nc-caret" />}
         </p>
+      )}
+      {todos && todos.length > 0 && (
+        <TodoListView todos={todos} streaming={streaming} continueWith={offer} {...(onContinue ? { onContinue } : {})} />
       )}
       {liveQuestions && (
         <QuestionCard

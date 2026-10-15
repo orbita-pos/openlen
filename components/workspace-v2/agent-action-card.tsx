@@ -11,6 +11,7 @@ import { currentToolName } from "@/lib/agent/tool-renames";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
+import type { TodoItem } from "@/lib/agent/todo-list";
 
 export interface AgentAction {
   tool: string;
@@ -96,6 +97,8 @@ export interface AgentAction {
   /** El dueño DESCARTÓ la pregunta («Pedir cambios»): se pinta «cancelada»,
    *  asentada, como el `ASK_CANCELLED` de DeepSeek. Tampoco es «te toca». */
   dismissed?: true;
+  /** La lista de progreso de `todo_write` (spec local 2026-10-15). */
+  todos?: readonly TodoItem[];
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**
@@ -186,6 +189,9 @@ export const KNOWN_TOOLS = new Set([
   "get_goal",
   "create_goal",
   "update_goal",
+  // La lista de progreso (spec local 2026-10-15). Su tarjeta no se pinta entre
+  // los pasos (`visibleSteps`), pero la barra de «qué hace Len» sí la nombra.
+  "todo_write",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",
