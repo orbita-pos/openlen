@@ -20,7 +20,8 @@ export interface Usage {
 }
 
 export function worstCaseCenticredits(o: { readonly inputBytes: number; readonly maxTokens: number; readonly rate: CreditRate }): number {
-  return creditsForUsage(estimateTokens(o.inputBytes), o.maxTokens, o.rate);
+  // 0 cached ON PURPOSE: the worst case assumes no cache hit.
+  return creditsForUsage(estimateTokens(o.inputBytes), o.maxTokens, o.rate, 0);
 }
 
 export function actualCenticredits(u: Usage, rate: CreditRate): number {
@@ -28,5 +29,6 @@ export function actualCenticredits(u: Usage, rate: CreditRate): number {
 }
 
 export function streamedCenticredits(o: { readonly inputBytes: number; readonly outputChars: number; readonly rate: CreditRate }): number {
-  return creditsForUsage(estimateTokens(o.inputBytes), estimateTokens(o.outputChars), o.rate);
+  // 0 cached ON PURPOSE: without the provider's usage, the cache hit is unknown.
+  return creditsForUsage(estimateTokens(o.inputBytes), estimateTokens(o.outputChars), o.rate, 0);
 }
