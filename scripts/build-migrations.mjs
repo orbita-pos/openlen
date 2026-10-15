@@ -180,6 +180,10 @@ const targets = [
   // GIT FOR LEN (spec local 2026-10-15): projectGitObjects and projectGitRepos. New tables with IF
   // NOT EXISTS. 🔴 MANDATORY before the code: the terminal's git and the turn's status block use them.
   "git-migrate",
+  // La IA de las apps: la columna appAiCap de users y las tablas appAiSpend y
+  // appAiAlerts. Aditiva e idempotente. OBLIGATORIA antes que el código: Drizzle
+  // selecciona las columnas declaradas de users.
+  "app-ai-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

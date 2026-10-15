@@ -374,6 +374,22 @@ export async function debitCredits(
 }
 
 /**
+ * LA IA DE LAS APPS (lib/app-ai): cobrar el peor caso SÓLO si el saldo lo
+ * cubre. `debitCredits` corta en 0 porque ahí el trabajo ya se hizo; aquí
+ * todavía no se ha llamado al modelo, y sin saldo la respuesta es un 402. UNA
+ * sentencia con la condición en el WHERE: dos llamadas a la vez no pasan las dos.
+ */
+export async function debitCreditsIfEnough(userId: string, amount: number): Promise<boolean> {
+  if (amount <= 0) return true;
+  const rows = await db
+    .update(schema.users)
+    .set({ credits: sqlOp`${schema.users.credits} - ${amount}` })
+    .where(and(eq(schema.users.id, userId), sqlOp`${schema.users.credits} >= ${amount}`))
+    .returning({ id: schema.users.id });
+  return rows.length > 0;
+}
+
+/**
  * DEVOLVER LO COBRADO POR ALGO QUE NO SE ENTREGÓ.
  *
  * 🔴 POR QUÉ HACE FALTA. El cargo de una generación se hace DENTRO del stream,

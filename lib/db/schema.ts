@@ -87,6 +87,10 @@ export const users = pgTable("users", {
   // on the first balance read.
   credits: integer("credits").notNull().default(0),
   creditsRefreshedAt: timestamp("creditsRefreshedAt", { mode: "date" }),
+  // LA IA DE LAS APPS (lib/app-ai, spec local 2026-10-15): el tope al mes que
+  // el dueño pone a lo que gastan sus apps, en centicréditos. Nulo = el 25 %
+  // de su plan. `npm run app-ai:migrate`.
+  appAiCap: integer("appAiCap"),
   // Polar (Merchant-of-Record) billing linkage. Set by the billing webhook
   // from the subscription it receives; userId is passed to Polar as the
   // checkout's customer_external_id + metadata so the webhook maps back here.
@@ -2300,6 +2304,38 @@ export const functionInvocations = pgTable(
     startedAt: timestamp("startedAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [index("functionInvocations_project_idx").on(t.projectId, t.environment, t.startedAt)],
+);
+
+// La IA de las apps (lib/app-ai, spec local 2026-10-15): lo que gastó cada
+// proyecto de una cuenta, por mes y entorno. El tope es de la cuenta: la suma.
+// Sin FK a projects: borrar un proyecto no le devuelve el gasto a la cuenta.
+export const appAiSpend = pgTable(
+  "appAiSpend",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** `AAAA-MM` en UTC. */
+    month: text("month").notNull(),
+    projectId: text("projectId").notNull(),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    centicredits: integer("centicredits").notNull().default(0),
+    calls: integer("calls").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.month, t.projectId, t.environment] }), index("appAiSpend_project_idx").on(t.projectId, t.month)],
+);
+
+// El aviso más alto ya dado de la IA de las apps, por cuenta y mes: 80 o 100.
+export const appAiAlerts = pgTable(
+  "appAiAlerts",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    month: text("month").notNull(),
+    percent: integer("percent").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.month] })],
 );
 
 /** Los secretos de las funciones (`supabase secrets set`, la tarjeta de Len): el
