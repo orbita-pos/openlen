@@ -14,7 +14,8 @@ import type { Index } from "../store";
 import { REWRITE } from "./reset";
 import { longStatus, readStatus } from "./status";
 
-export async function commitSummary(ctx: CommandContext, before: ReadonlyMap<string, string>, after: Index, oid: string, message: string): Promise<string> {
+/** `authorDate`: git's sequencer (revert) adds " Date: <author date>" under the subject. */
+export async function commitSummary(ctx: CommandContext, before: ReadonlyMap<string, string>, after: Index, oid: string, message: string, authorDate?: string): Promise<string> {
   const text = (_p: string, o: string) => ctx.repo.text(o);
   const files = await changedFiles({ files: before, text }, { files: new Map(Object.entries(after)), text });
   const entries = files.map((f) => {
@@ -22,6 +23,7 @@ export async function commitSummary(ctx: CommandContext, before: ReadonlyMap<str
     return { path: f.path, added: d.added, deleted: d.deleted };
   });
   let out = `[main ${abbrev(oid)}] ${subjectOf(message)}\n`;
+  if (authorDate !== undefined) out += ` Date: ${authorDate}\n`;
   if (entries.length > 0) out += `${summaryLine(entries)}\n`;
   for (const f of files) {
     if (f.from.oid === null) out += ` create mode 100644 ${quotePath(f.path)}\n`;

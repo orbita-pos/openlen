@@ -35,6 +35,11 @@ export class Pair {
     return { real: this.real.git(["rev-parse", "HEAD"]).stdout.trim(), ours: (await this.ours.store.readRepo())!.head };
   }
 
+  /** Both working trees, as repository paths. */
+  snapshots(): { real: Record<string, string>; ours: Record<string, string> } {
+    return { real: this.real.snapshot(), ours: Object.fromEntries(Object.entries(this.ours.files).map(([p, c]) => [p.slice(1), c])) };
+  }
+
   dispose(): void {
     this.real.dispose();
   }
