@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import nextConfig from "@/next.config";
 import { etiquetaDelHost } from "./prefijo";
 import { resolveRewrites } from "./resolve-rewrites";
-import { LIENZO_REWRITES } from "./site-rewrite";
+import { LIENZO_REWRITES, VISUALS_REWRITES, VISUAL_FRAME_ROUTE } from "./site-rewrite";
 
 const H = `lienzo-${"a".repeat(32)}.openlen.app`;
 const ruta = (host: string, url: string) => resolveRewrites(LIENZO_REWRITES, host, url).pathname;
@@ -55,5 +55,26 @@ describe("🔴 en un host lienzo sólo responde el lienzo", () => {
   it("🔴 next.config las pone en beforeFiles (antes que `public/`)", async () => {
     const config = nextConfig as { rewrites?: () => Promise<{ beforeFiles?: unknown[] }> };
     expect((await config.rewrites!()).beforeFiles).toEqual(expect.arrayContaining(LIENZO_REWRITES));
+  });
+});
+
+describe("LOS VISUALES: en el host lienzo-visuals sólo responde el marco", () => {
+  const visual = (host: string, url: string) => resolveRewrites(VISUALS_REWRITES, host, url).pathname;
+
+  it("todo va al documento del marco", () => {
+    expect(visual("lienzo-visuals.openlen.app", "/")).toBe(VISUAL_FRAME_ROUTE);
+    expect(visual("lienzo-visuals.openlen.app", "/x/y.js")).toBe(VISUAL_FRAME_ROUTE);
+    expect(visual("lienzo-visuals.localhost:3000", "/en/login")).toBe(VISUAL_FRAME_ROUTE);
+  });
+
+  it("fuera de ese host no se toca nada, y el lienzo no lo captura", () => {
+    expect(visual("openlen.com", "/")).toBe("/");
+    expect(visual(H, "/")).toBe("/");
+    expect(ruta("lienzo-visuals.openlen.app", "/")).toBe("/");
+  });
+
+  it("next.config la pone en beforeFiles", async () => {
+    const config = nextConfig as { rewrites?: () => Promise<{ beforeFiles?: unknown[] }> };
+    expect((await config.rewrites!()).beforeFiles).toEqual(expect.arrayContaining(VISUALS_REWRITES));
   });
 });
