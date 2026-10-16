@@ -78,7 +78,8 @@ export function SecurityPanelView({ view, busy, onPublishAnyway, onFixWithLen, o
     );
   }
   const note = view.status === "done" ? null : t(`rulesOnly.${view.status}`);
-  const clean = view.status === "done" && view.blocking.length === 0 && view.medium.length === 0;
+  // Accepted problems are still problems: «no problems» only when there is nothing at all.
+  const clean = view.status === "done" && view.blocking.length === 0 && view.medium.length === 0 && view.accepted.length === 0;
   return (
     <div className="flex flex-col gap-2 text-[11.5px]">
       {view.blocking.length > 0 && (
@@ -87,7 +88,8 @@ export function SecurityPanelView({ view, busy, onPublishAnyway, onFixWithLen, o
             <ShieldAlert size={12} />
             {t("blockingTitle", { count: view.blocking.length })}
           </div>
-          <ul className="m-0 mt-1.5 list-none p-0">
+          {/* Its own scroll: with several long findings the buttons stay in reach. */}
+          <ul className="m-0 mt-1.5 max-h-64 list-none overflow-y-auto p-0 pr-1">
             {view.blocking.map((f) => <FindingItem key={f.key} f={f} t={t} />)}
           </ul>
           {(onFixWithLen || onPublishAnyway || onCancel) && (

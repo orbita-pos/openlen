@@ -74,6 +74,12 @@ describe("SecurityPanel", () => {
     expect(button("Publicar igual")).toBeUndefined();
   });
 
+  it("🔴 after accepting problems it never says there are none: the accepted ones stay listed", async () => {
+    await render({ view: v({ accepted: [rls] }), busy: false });
+    expect(host.textContent).toContain("Aceptados antes");
+    expect(host.textContent).not.toContain("Sin problemas de seguridad");
+  });
+
   it("clean when done with nothing; a grey line when only the rules ran", async () => {
     await render({ view: v({}), busy: false });
     expect(host.textContent).toContain("Sin problemas de seguridad");
