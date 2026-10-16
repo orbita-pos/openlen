@@ -15,3 +15,14 @@ export function etiquetaDelHost(host: string | null | undefined): string | null 
   const primera = nombre.split(".")[0] ?? "";
   return /^lienzo-[0-9a-f]{32}$/.test(primera) ? primera : null;
 }
+
+/** LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): la etiqueta
+ *  del host donde corre el marco de los visuales del chat. Un solo host, que no
+ *  guarda nada de nadie; queda reservado por el prefijo `lienzo-`. */
+export const VISUALS_LABEL = "lienzo-visuals";
+
+/** ¿Es el host del marco de los visuales? (con o sin puerto, en minúsculas). */
+export function isVisualsHost(host: string | null | undefined): boolean {
+  const nombre = String(host ?? "").trim().toLowerCase().replace(/:\d+$/, "");
+  return nombre.includes(".") && nombre.split(".")[0] === VISUALS_LABEL;
+}

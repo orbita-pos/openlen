@@ -111,7 +111,7 @@ export function urlDelDocumento(
 
 /** ¿El Host de la petición es de esta máquina? (`localhost`, `127.0.0.1`,
  *  `[::1]`, `*.localhost`). En la caja llega el público: Caddy lo pasa tal cual. */
-function esPeticionLocal(host: string | null): boolean {
+export function esPeticionLocal(host: string | null): boolean {
   const h = String(host ?? "").trim().toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
   return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
 }
