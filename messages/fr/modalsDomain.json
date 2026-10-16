@@ -169,5 +169,49 @@
     "cancel": "Annuler",
     "migrationFailed": "Non publié : la migration {migration} a échoué : {message}",
     "diverged": "Non publié : la production a des migrations que vos données de test n'ont pas ({versions})."
+  },
+  "security": {
+    "title": "Sécurité",
+    "running": "Vérification de la sécurité…",
+    "clean": "Aucun problème de sécurité",
+    "slow": "La vérification de sécurité prend du temps. Réessayez de publier dans un instant.",
+    "rulesOnly": {
+      "skipped_scope": "Vérifications de base faites (ce projet n'a ni base de données ni fonctions).",
+      "skipped_budget": "Vérifications de base faites ; la vérification complète n'est pas disponible pour le moment.",
+      "failed": "Vérifications de base faites ; la vérification complète n'a pas pu se terminer."
+    },
+    "blockingTitle": "{count, plural, one {Un problème de sécurité bloque la publication} other {# problèmes de sécurité bloquent la publication}}",
+    "mediumTitle": "Avertissements de sécurité",
+    "acceptedTitle": "Acceptés auparavant",
+    "scenario": "Ce qui peut arriver : {text}",
+    "fix": "Comment corriger : {text}",
+    "inVariable": "dans la variable {name}",
+    "fixWithLen": "Corriger avec Len",
+    "publishAnyway": "Publier quand même",
+    "cancel": "Annuler",
+    "fixRequest": "Corrige ces problèmes de sécurité avant de publier :",
+    "rules": {
+      "rls_disabled": {
+        "title": "La table {table} n'a pas de RLS",
+        "scenario": "N'importe qui avec la clé publique de la page peut lire, modifier et supprimer toutes ses lignes.",
+        "fix": "Activez le RLS sur la table et ajoutez des politiques pour ce que chacun peut faire."
+      },
+      "policy_open_write": {
+        "title": "La politique « {policy} » permet à n'importe qui de modifier {table}",
+        "scenario": "N'importe quel visiteur, sans se connecter, peut modifier ou supprimer des lignes de {table}.",
+        "fix": "Limitez la politique au propriétaire de chaque ligne (par exemple, auth.uid() = user_id)."
+      },
+      "secret_in_client": {
+        "title": "Une clé secrète {provider} arrive dans le navigateur",
+        "titlePrivateKey": "Une clé privée arrive dans le navigateur",
+        "scenario": "N'importe qui ouvrant la page peut la copier et l'utiliser à votre place.",
+        "fix": "Retirez-la du code du navigateur, remplacez-la par une nouvelle et utilisez-la seulement dans une Edge Function, comme secret."
+      },
+      "test_secret_in_client": {
+        "title": "Une clé de test {provider} arrive dans le navigateur",
+        "scenario": "Elle ne déplace pas d'argent réel, mais n'importe qui peut utiliser votre compte de test avec.",
+        "fix": "Placez-la dans un secret d'une Edge Function."
+      }
+    }
   }
 }

@@ -169,5 +169,49 @@
     "cancel": "Annuleren",
     "migrationFailed": "Niet gepubliceerd: migratie {migration} is mislukt: {message}",
     "diverged": "Niet gepubliceerd: productie heeft migraties die je testgegevens niet hebben ({versions})."
+  },
+  "security": {
+    "title": "Beveiliging",
+    "running": "Beveiliging wordt gecontroleerd…",
+    "clean": "Geen beveiligingsproblemen gevonden",
+    "slow": "De beveiligingscontrole duurt even. Probeer zo opnieuw te publiceren.",
+    "rulesOnly": {
+      "skipped_scope": "Basiscontroles gedaan (dit project heeft geen database of functies).",
+      "skipped_budget": "Basiscontroles gedaan; de volledige controle is nu niet beschikbaar.",
+      "failed": "Basiscontroles gedaan; de volledige controle kon niet afronden."
+    },
+    "blockingTitle": "{count, plural, one {Een beveiligingsprobleem houdt de publicatie tegen} other {# beveiligingsproblemen houden de publicatie tegen}}",
+    "mediumTitle": "Beveiligingswaarschuwingen",
+    "acceptedTitle": "Eerder geaccepteerd",
+    "scenario": "Wat er kan gebeuren: {text}",
+    "fix": "Zo los je het op: {text}",
+    "inVariable": "in de variabele {name}",
+    "fixWithLen": "Oplossen met Len",
+    "publishAnyway": "Toch publiceren",
+    "cancel": "Annuleren",
+    "fixRequest": "Los deze beveiligingsproblemen op voordat je publiceert:",
+    "rules": {
+      "rls_disabled": {
+        "title": "De tabel {table} heeft geen RLS",
+        "scenario": "Iedereen met de publieke sleutel van de pagina kan alle rijen lezen, wijzigen en verwijderen.",
+        "fix": "Zet RLS aan voor de tabel en voeg policies toe voor wat iedereen mag doen."
+      },
+      "policy_open_write": {
+        "title": "De policy ‘{policy}’ laat iedereen {table} wijzigen",
+        "scenario": "Elke bezoeker kan zonder in te loggen rijen in {table} wijzigen of verwijderen.",
+        "fix": "Beperk de policy tot de eigenaar van elke rij (bijvoorbeeld auth.uid() = user_id)."
+      },
+      "secret_in_client": {
+        "title": "Een geheime {provider}-sleutel komt in de browser terecht",
+        "titlePrivateKey": "Een privésleutel komt in de browser terecht",
+        "scenario": "Iedereen die de pagina opent, kan hem kopiëren en namens jou gebruiken.",
+        "fix": "Haal hem uit de browsercode, vervang hem door een nieuwe en gebruik hem alleen binnen een Edge Function, als secret."
+      },
+      "test_secret_in_client": {
+        "title": "Een {provider}-testsleutel komt in de browser terecht",
+        "scenario": "Er gaat geen echt geld mee om, maar iedereen kan er je testaccount mee gebruiken.",
+        "fix": "Zet hem in een secret van een Edge Function."
+      }
+    }
   }
 }

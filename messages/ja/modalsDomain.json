@@ -169,5 +169,49 @@
     "cancel": "キャンセル",
     "migrationFailed": "公開されませんでした：マイグレーション {migration} が失敗しました：{message}",
     "diverged": "公開されませんでした：本番にはテストデータにないマイグレーションがあります（{versions}）。"
+  },
+  "security": {
+    "title": "セキュリティ",
+    "running": "セキュリティを確認中…",
+    "clean": "セキュリティの問題は見つかりませんでした",
+    "slow": "セキュリティの確認に時間がかかっています。少ししてからもう一度公開してください。",
+    "rulesOnly": {
+      "skipped_scope": "基本チェックは完了しました（このプロジェクトにはデータベースも関数もありません）。",
+      "skipped_budget": "基本チェックは完了しました。完全な確認は今は利用できません。",
+      "failed": "基本チェックは完了しました。完全な確認は終わりませんでした。"
+    },
+    "blockingTitle": "{count, plural, other {# 件のセキュリティの問題が公開を止めています}}",
+    "mediumTitle": "セキュリティの注意",
+    "acceptedTitle": "以前に承認済み",
+    "scenario": "起こりうること: {text}",
+    "fix": "直し方: {text}",
+    "inVariable": "変数 {name} 内",
+    "fixWithLen": "Len で直す",
+    "publishAnyway": "このまま公開",
+    "cancel": "キャンセル",
+    "fixRequest": "公開する前に、次のセキュリティの問題を直してください:",
+    "rules": {
+      "rls_disabled": {
+        "title": "テーブル {table} に RLS がありません",
+        "scenario": "ページの公開キーを持つ人なら誰でも、すべての行を読んだり変更・削除したりできます。",
+        "fix": "テーブルの RLS を有効にし、誰が何をできるかのポリシーを追加してください。"
+      },
+      "policy_open_write": {
+        "title": "ポリシー「{policy}」により誰でも {table} を変更できます",
+        "scenario": "ログインしていない訪問者でも {table} の行を変更・削除できます。",
+        "fix": "ポリシーを各行の所有者に限定してください（例: auth.uid() = user_id）。"
+      },
+      "secret_in_client": {
+        "title": "{provider} の秘密キーがブラウザに届いています",
+        "titlePrivateKey": "秘密鍵がブラウザに届いています",
+        "scenario": "ページを開いた人なら誰でもコピーして、あなたになりすまして使えます。",
+        "fix": "ブラウザのコードから取り除き、新しいキーに替えて、Edge Function の中でシークレットとしてだけ使ってください。"
+      },
+      "test_secret_in_client": {
+        "title": "{provider} のテストキーがブラウザに届いています",
+        "scenario": "実際のお金は動きませんが、誰でもあなたのテストアカウントを使えます。",
+        "fix": "Edge Function のシークレットに移してください。"
+      }
+    }
   }
 }

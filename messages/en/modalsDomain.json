@@ -169,5 +169,49 @@
     "cancel": "Cancel",
     "migrationFailed": "Not published: migration {migration} failed: {message}",
     "diverged": "Not published: production has migrations your test data doesn't ({versions})."
+  },
+  "security": {
+    "title": "Security",
+    "running": "Checking security…",
+    "clean": "No security problems found",
+    "slow": "The security review is taking a while. Try publishing again in a moment.",
+    "rulesOnly": {
+      "skipped_scope": "Basic checks done (this project has no database or functions).",
+      "skipped_budget": "Basic checks done; the full review isn't available right now.",
+      "failed": "Basic checks done; the full review couldn't finish."
+    },
+    "blockingTitle": "{count, plural, one {A security problem is holding back this publish} other {# security problems are holding back this publish}}",
+    "mediumTitle": "Security warnings",
+    "acceptedTitle": "Accepted before",
+    "scenario": "What could happen: {text}",
+    "fix": "How to fix it: {text}",
+    "inVariable": "in the variable {name}",
+    "fixWithLen": "Fix with Len",
+    "publishAnyway": "Publish anyway",
+    "cancel": "Cancel",
+    "fixRequest": "Fix these security problems before publishing:",
+    "rules": {
+      "rls_disabled": {
+        "title": "The table {table} has no RLS",
+        "scenario": "Anyone with the page's public key can read, change and delete all of its rows.",
+        "fix": "Turn on RLS for the table and add policies for what each person may do."
+      },
+      "policy_open_write": {
+        "title": "The policy “{policy}” lets anyone change {table}",
+        "scenario": "Any visitor, without signing in, can change or delete rows in {table}.",
+        "fix": "Limit the policy to each row's owner (for example, auth.uid() = user_id)."
+      },
+      "secret_in_client": {
+        "title": "A {provider} secret key reaches the browser",
+        "titlePrivateKey": "A private key reaches the browser",
+        "scenario": "Anyone who opens the page can copy it and use it as you.",
+        "fix": "Take it out of the browser code, replace it with a new one, and use it only inside an Edge Function, as a secret."
+      },
+      "test_secret_in_client": {
+        "title": "A {provider} test key reaches the browser",
+        "scenario": "It doesn't move real money, but anyone can use your test account with it.",
+        "fix": "Move it to an Edge Function secret."
+      }
+    }
   }
 }
