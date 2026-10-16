@@ -88,6 +88,9 @@ describe("buildFunctionDeclarations", () => {
       "ask_user_question",
       // Edge Functions (fase 2): la tarjeta segura de los secretos.
       "request_secrets",
+      // Los visuales de Len (spec local 2026-10-16): las dos de Claude.
+      "read_me",
+      "show_widget",
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",
@@ -112,6 +115,12 @@ describe("buildFunctionDeclarations", () => {
       // La terminal (F1), encendida por defecto (N45).
       "bash",
     ]);
+  });
+
+  it("LOS VISUALES: en una app también se declaran read_me y show_widget", () => {
+    const names = buildFunctionDeclarations(undefined, {}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" }).map((d) => d.name);
+    expect(names).toContain("read_me");
+    expect(names).toContain("show_widget");
   });
 
   // LA LÁPIDA DE H2 (Len 2.1, 2026-09-30). Las diferidas y ToolSearch se
