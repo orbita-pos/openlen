@@ -98,6 +98,7 @@ describe("webDelServidor — de dónde sale la web", () => {
     delete process.env.OPENLEN_WEB_DE_PRUEBA_DIR;
     const debit = vi.fn(async () => undefined);
     await webDelServidor(debit).cobrar("u1", 3);
-    expect(debit).toHaveBeenCalledWith("u1", 450);
+    // Con su uso, para el libro de gasto: Exa, tres consultas.
+    expect(debit).toHaveBeenCalledWith("u1", 450, { provider: "exa", model: "search", queries: 3 });
   });
 });

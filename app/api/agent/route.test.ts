@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // El tipo REAL del bucle, no una copia a mano. Es `import type`, así que se
 // borra al compilar y no despierta al módulo mockeado.
 import type { AgentLoopArgs } from "@/lib/agent/loop";
+import type { LedgerUse } from "@/lib/credit-ledger";
 import type { Message } from "@/lib/ai-gateway";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
@@ -33,7 +34,8 @@ const mocks = vi.hoisted(() => ({
   noCreditsMessage: vi.fn(),
   runAgentLoop: vi.fn(),
   runAgentTool: vi.fn(),
-  debitCredits: vi.fn(),
+  chargeCredits: vi.fn(async () => 0),
+  recordUncharged: vi.fn(async () => {}),
   creditsForUsage: vi.fn(),
   // Len 2.1: el techo del turno. Por defecto, uno que ninguna prueba alcanza.
   techoDelTurno: vi.fn(() => 1_000_000),
@@ -97,7 +99,7 @@ const mocks = vi.hoisted(() => ({
   projectFiles: vi.fn(),
   // N42: el cobro que la ruta le pasa a `realDeps` — el que usan las
   // herramientas que cobran aparte del modelo (búsquedas, editar una imagen).
-  cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number) => Promise<unknown>),
+  cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>),
   // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
   nacerComoApp: vi.fn(async (_p: unknown) => true),
 }));
@@ -136,7 +138,8 @@ vi.mock("@/lib/agent/herramientas-de-ficheros", async (real) => ({
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
-  debitCredits: mocks.debitCredits,
+  chargeCredits: mocks.chargeCredits,
+  recordUncharged: mocks.recordUncharged,
   creditsForUsage: mocks.creditsForUsage,
   techoDelTurno: mocks.techoDelTurno,
 }));
@@ -205,7 +208,7 @@ vi.mock("@/lib/agent/loop", async (real) => ({
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
-  realDeps: (cobro?: (userId: string, centicreditos: number) => Promise<unknown>) => {
+  realDeps: (cobro?: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>) => {
     mocks.cobroDeLasHerramientas = cobro;
     return {
       loadProject: mocks.loadProject,
@@ -1035,7 +1038,7 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     expect(done, "sin `done` el cliente se queda con el rojo").toBeDefined();
     expect(done!.data.mutoDurable).toBe(true);
     // La regla de facturación (Jesús, 2026-07-07) NO cambia aquí: terminal = 0.
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
   });
 
   // DECISIÓN de Jesús (2026-08-25): medir el cargo perdido antes de tocar la
@@ -1091,14 +1094,14 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
     };
     try {
       for (const sinCobro of ["rechazos", "conflicto"] as const) {
-        mocks.debitCredits.mockClear();
+        mocks.chargeCredits.mockClear();
         log.mockClear();
         error.mockClear();
         mocks.runAgentLoop.mockResolvedValue({ ...resultado, sinCobro });
 
         await readEvents(await pedir());
 
-        expect(mocks.debitCredits, `se cobró un turno cerrado por ${sinCobro}`).not.toHaveBeenCalled();
+        expect(mocks.chargeCredits, `se cobró un turno cerrado por ${sinCobro}`).not.toHaveBeenCalled();
         const linea = [...log.mock.calls, ...error.mock.calls]
           .map((c) => String(c[0]))
           .find((l) => l.includes(`motivo=${sinCobro}`));
@@ -1106,10 +1109,10 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
         expect(linea).toContain("cargo perdido");
       }
       // BRAZO DE CONTROL: el mismo turno sin la marca se cobra como siempre.
-      mocks.debitCredits.mockClear();
+      mocks.chargeCredits.mockClear();
       mocks.runAgentLoop.mockResolvedValue(resultado);
       await readEvents(await pedir());
-      expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+      expect(mocks.chargeCredits).toHaveBeenCalledTimes(1);
     } finally {
       log.mockRestore();
       error.mockRestore();
@@ -1771,7 +1774,7 @@ describe("POST /api/agent — el turno no muere con el cliente", () => {
 
     await bucle.soltar();
     await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 7);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 7, expect.anything());
     expect(senalDelModelo().aborted).toBe(false);
   });
 
@@ -1889,7 +1892,7 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
     mocks.creditsForUsage.mockReturnValue(3_140);
     const eventos = await pedir();
 
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 3_000);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 3_000, expect.anything());
     // Y el cliente se entera de por qué paró.
     expect(eventos.find((e) => e.event === "done")!.data.topeAlcanzado).toBe("budget_limit");
   });
@@ -1899,14 +1902,72 @@ describe("POST /api/agent — el techo de dinero del turno", () => {
     mocks.runAgentLoop.mockResolvedValue(alTecho);
     mocks.creditsForUsage.mockReturnValue(650);
     await pedir();
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 650);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 650, expect.anything());
   });
 
   it("BRAZO DE CONTROL: el tope de PASOS sigue sin cobrarse", async () => {
     mocks.runAgentLoop.mockResolvedValue({ ...alTecho, topeAlcanzado: "turn_limit" });
     mocks.creditsForUsage.mockReturnValue(3_140);
     await pedir();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
+  });
+
+  // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): cada cierre deja su fila.
+  it("ledger: a normal turn writes one agent_turn row with its tokens", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      ...alTecho,
+      terminalError: false,
+      topeAlcanzado: null,
+      usage: { inputTokens: 1_000, outputTokens: 50, cachedTokens: 900, thinkingTokens: 20 },
+    });
+    mocks.creditsForUsage.mockReturnValue(7);
+    await pedir();
+    expect(mocks.chargeCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      7,
+      expect.objectContaining({
+        surface: "agent_turn",
+        outcome: "ok",
+        projectId: "p1",
+        actorId: null,
+        refId: expect.any(String),
+        listCenticredits: 7,
+        uses: [
+          expect.objectContaining({ provider: "fireworks", model: "test", inputTokens: 1_000, cachedTokens: 900, outputTokens: 50, reasoningTokens: 20 }),
+        ],
+      }),
+    );
+  });
+
+  it("ledger: budget_limit charges up to the cap and keeps what it was worth", async () => {
+    mocks.runAgentLoop.mockResolvedValue(alTecho);
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    await pedir();
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      3_000,
+      expect.objectContaining({ surface: "agent_turn", outcome: "budget_limit", listCenticredits: 3_140 }),
+    );
+  });
+
+  it("ledger: terminal-error and sin-cobro turns record their cost with 0 charged", async () => {
+    mocks.creditsForUsage.mockReturnValue(3_140);
+    for (const fin of [{ ...alTecho, topeAlcanzado: "turn_limit" }, { ...alTecho, terminalError: false, topeAlcanzado: null, sinCobro: "conflicto" }]) {
+      mocks.recordUncharged.mockClear();
+      mocks.runAgentLoop.mockResolvedValue(fin);
+      await pedir();
+      expect(mocks.recordUncharged).toHaveBeenCalledWith(
+        "u1",
+        expect.objectContaining({
+          surface: "agent_turn",
+          outcome: "error",
+          listCenticredits: 3_140,
+          uses: [expect.objectContaining({ provider: "fireworks", inputTokens: 900_000, outputTokens: 60_000 })],
+        }),
+      );
+    }
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
   });
 });
 
@@ -1961,7 +2022,11 @@ describe("POST /api/agent — el ■ cobra lo que se usó, hasta el techo", () =
   it("🔴 el ■ cobra lo que el modelo llegó a gastar, y el cierre lo dice", async () => {
     mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
     const eventos = await pedir();
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      146,
+      expect.objectContaining({ surface: "agent_turn", outcome: "cancelled", listCenticredits: 146 }),
+    );
     expect(cierre(eventos).centicredits).toBe(146);
   });
 
@@ -1969,26 +2034,28 @@ describe("POST /api/agent — el ■ cobra lo que se usó, hasta el techo", () =
     mocks.creditsForUsage.mockReturnValue(3_140);
     mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10));
     await pedir();
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 3_000);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 3_000, expect.anything());
   });
 
   it("un ■ antes de que el modelo gastara nada no cobra nada", async () => {
     mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 0));
     const eventos = await pedir();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
+    // Sin tokens no hay nada que anotar: ni cobro ni costo.
+    expect(mocks.recordUncharged).not.toHaveBeenCalled();
     expect(cierre(eventos).centicredits).toBe(0);
   });
 
   it("BRAZO DE CONTROL: una cancelación que NO es el ■ (el perro del silencio) sigue sin cobrarse", async () => {
     mocks.runAgentLoop.mockImplementation(turnoCancelado(false, 10));
     await pedir();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
   });
 
   it("BRAZO DE CONTROL: el proveedor caído sigue sin cobrarse aunque llegue el ■ a la vez", async () => {
     mocks.runAgentLoop.mockImplementation(turnoCancelado(true, 10, { errorCode: "upstream" }));
     await pedir();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
   });
 });
 
@@ -2026,7 +2093,7 @@ describe("POST /api/agent — lo que cobran las herramientas entra en el cierre"
   /** Un turno en el que una herramienta cobra `aparte` centicréditos —dos
    *  consultas de `web_search` son 300— por el cobro que la ruta le dio. */
   const turnoQueCobra = (aparte: number, fin: Record<string, unknown> = {}) => async (args: AgentLoopArgs) => {
-    if (aparte > 0) await mocks.cobroDeLasHerramientas!("u1", aparte);
+    if (aparte > 0) await mocks.cobroDeLasHerramientas!("u1", aparte, { provider: "exa", model: "search", queries: 2 });
     // Con texto, para que el turno merezca fila.
     args.emit({ type: "text", text: "Listo." });
     return {
@@ -2047,8 +2114,19 @@ describe("POST /api/agent — lo que cobran las herramientas entra en el cierre"
     const eventos = await pedir();
 
     // Lo de la herramienta se cobra de verdad, por la misma puerta que el modelo.
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 146);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 300, expect.anything());
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 146, expect.anything());
+    // LIBRO DE GASTO: la búsqueda es su propia fila, `agent_tool`, con su proveedor.
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      300,
+      expect.objectContaining({
+        surface: "agent_tool",
+        projectId: "p1",
+        listCenticredits: 300,
+        uses: [{ provider: "exa", model: "search", queries: 2 }],
+      }),
+    );
     expect(centicreditosDelCierre(eventos)).toBe(446);
     expect(centicreditosDeLaFila()).toBe(446);
   });
@@ -2059,14 +2137,14 @@ describe("POST /api/agent — lo que cobran las herramientas entra en el cierre"
     );
     const eventos = await pedir();
 
-    expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 300);
+    expect(mocks.chargeCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 300, expect.anything());
     expect(centicreditosDelCierre(eventos)).toBe(300);
   });
 
   it("si el bucle revienta después de cobrar una búsqueda, la fila lo dice", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-      await mocks.cobroDeLasHerramientas!("u1", 150);
+      await mocks.cobroDeLasHerramientas!("u1", 150, { provider: "exa", model: "search", queries: 1 });
       args.emit({ type: "text", text: "Busco…" });
       throw new Error("el proveedor se cayó");
     });
@@ -2594,7 +2672,8 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     await readEvents(await pedir());
     expect(mocks.loadProject).toHaveBeenCalledWith("p1", "dueno-1");
     expect(mocks.getCreditState).toHaveBeenCalledWith("dueno-1");
-    expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 42);
+    // LIBRO DE GASTO: la fila es del dueño y dice quién lo pidió.
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 42, expect.objectContaining({ surface: "agent_turn", actorId: "ana" }));
     expect(mocks.sumarGasto).toHaveBeenCalledWith("p1", "ana", 42);
   });
 
@@ -2654,7 +2733,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(filaAbierta).toMatchObject({ userText: "@Len pon el título en azul", origen: { hiloId: "h1", ruta: "/src/App.jsx", linea: 3 } });
     expect(mocks.respuestaDeLen).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: fila }));
     // Y sigue siendo un turno de un miembro: lo paga el dueño.
-    expect(mocks.debitCredits).toHaveBeenCalledWith("dueno-1", 5);
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 5, expect.anything());
   });
 
   it("🔴 con miembros, Len recibe lo que el equipo se dijo desde el último turno, quién pide y la regla; sin miembros, el prompt de siempre", async () => {

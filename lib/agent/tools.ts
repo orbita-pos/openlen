@@ -20,6 +20,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import {
   editImage,
+  OPENAI_IMAGE_EDIT_MODEL_ID,
   realImageEditTransport,
   type ImageEditInput,
   type ImageEditResult,
@@ -36,7 +37,8 @@ import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { InstallOutcome, InstallRequest } from "@/lib/apps/npm/install";
 import type { TypesAndLintState } from "@/lib/agent/types-and-lint";
 import type { EnvTarget } from "@/lib/apps/env/rules";
-import { debitCredits } from "@/lib/credits";
+import { chargeCredits } from "@/lib/credits";
+import type { LedgerUse } from "@/lib/credit-ledger";
 import { deshacerSobreLoActual, ultimaEscrituraDeLen } from "@/lib/agent/deshacer-lo-de-len";
 import { pantallaDe, vistaConCarpeta, vistaParaMedir, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { newBrowserTabHolder, validarPasos, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
@@ -534,9 +536,16 @@ async function archivarAntes(projectId: string, path: string, version: FileVersi
   }
 }
 
-export function realDeps(
-  debit: (userId: string, centicreditos: number) => Promise<unknown> = debitCredits,
-): AgentDeps {
+/** Lo que cobra una herramienta aparte del modelo, con su uso para el libro de
+ *  gasto (lib/credit-ledger.ts): qué proveedor y cuántas unidades. */
+export type ToolCharge = (userId: string, centicredits: number, use: LedgerUse) => Promise<unknown>;
+
+/** Sin cobro propio (p. ej. la revisión de seguridad, que sólo lee), una fila
+ *  `agent_tool` sin proyecto: quien lo sepa, que pase el suyo. */
+const chargeToolToLedger: ToolCharge = (userId, centicredits, use) =>
+  chargeCredits(userId, centicredits, { surface: "agent_tool", outcome: "ok", listCenticredits: centicredits, uses: [use] });
+
+export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
   return {
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
@@ -843,7 +852,7 @@ export function realDeps(
       return editImage(input, {
         callProvider: realImageEditTransport(),
         debit: async (cost) => {
-          await debit(userId, cost);
+          await debit(userId, cost, { provider: "openai", model: OPENAI_IMAGE_EDIT_MODEL_ID, images: 1 });
         },
       });
     },
