@@ -33,6 +33,9 @@ import {
   isPublishLocale,
   LOCALE_ENGLISH_NAMES,
 } from "@/lib/publish/publish-locales";
+import type { LedgerEntry } from "@/lib/credit-ledger";
+import { recordUncharged } from "@/lib/credits";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 
 const TRANSLATE_TIMEOUT_MS = 90_000;
 const MAX_OUTPUT_TOKENS = 32_768;
@@ -55,11 +58,32 @@ const MAX_TARGETS = 9;
 // sujeta por un esquema — que es la creencia que costó esta avería. El contrato
 // vive en el prompt y lo hace cumplir el `JSON.parse` de abajo.
 
+/** Lo que gastó una llamada de traducción, para el libro de gasto. */
+export interface TranslationUsage {
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+}
+
 export type TranslateFn = (
   texts: string[],
   targetLocale: string,
   sourceLang: string,
+  onUsage?: (usage: TranslationUsage) => void,
 ) => Promise<string[] | null>;
+
+/** EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la fila de un idioma
+ *  traducido. La paga OpenLen (traducir no se cobra), así que va con 0 cobrado a
+ *  nombre del dueño; `refId` es el idioma. */
+export function translationLedgerEntry(projectId: string, locale: string, usage: TranslationUsage): LedgerEntry {
+  return {
+    surface: "publish_translation",
+    outcome: "ok",
+    projectId,
+    refId: locale,
+    uses: [{ provider: "fireworks", model: modelIdForRole(roleForOperation("copy")), ...usage, at: new Date() }],
+  };
+}
 
 export interface LocaleDoc {
   locale: string;
@@ -68,6 +92,8 @@ export interface LocaleDoc {
 
 export interface LocalizeParams {
   projectId: string;
+  /** Quien paga el proyecto: las filas del libro de gasto van a su nombre. */
+  ownerId: string;
   /** Final baked HTML — extraction and reinjection both run on this. */
   html: string;
   /** Target locale codes (validated against PUBLISH_LOCALES). */
@@ -129,6 +155,7 @@ async function translateStrings(
   texts: string[],
   targetLocale: string,
   sourceLang: string,
+  onUsage?: (usage: TranslationUsage) => void,
 ): Promise<string[] | null> {
 
   const prompt = buildTranslatePrompt(texts, targetLocale, sourceLang);
@@ -164,6 +191,8 @@ async function translateStrings(
     )) {
       if (ev.type === "text_delta") {
         raw += ev.text;
+      } else if (ev.type === "usage") {
+        onUsage?.({ inputTokens: ev.inputTokens, cachedTokens: ev.cachedTokens ?? 0, outputTokens: ev.outputTokens });
       } else if (ev.type === "done" && ev.stopReason.kind === "error") {
         // eslint-disable-next-line no-console
         console.warn(`[localize] model error (${targetLocale}):`, ev.stopReason.error);
@@ -269,7 +298,11 @@ export async function localizeForPublish(
       });
 
       if (missing.length > 0) {
-        const translated = await translate(missing, locale, sourceLang);
+        // EL LIBRO DE GASTO: lo que costó este idioma, a nombre del dueño. No se
+        // espera: anotar no puede frenar ni tumbar la publicación.
+        const translated = await translate(missing, locale, sourceLang, (usage) => {
+          void recordUncharged(params.ownerId, translationLedgerEntry(projectId, locale, usage)).catch(() => undefined);
+        });
         if (!translated) continue; // soft-fail: skip this locale
         missing.forEach((text, i) => {
           merged[hashText(text)] = translated[i];

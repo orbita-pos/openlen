@@ -1067,6 +1067,7 @@ export async function publishProject(
           ? (finalHtml) =>
               localizeForPublish({
                 projectId: params.projectId,
+                ownerId: params.userId,
                 html: finalHtml,
                 targets,
                 sourceLang,

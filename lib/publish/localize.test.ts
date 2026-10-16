@@ -25,7 +25,7 @@
 // ningún idioma. Sólo un console.warn que nadie lee.
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
-import { buildTranslatePrompt } from "./localize";
+import { buildTranslatePrompt, translationLedgerEntry } from "./localize";
 
 const TEXTOS = ["Cómo funciona", "Solicitar acceso", "Precios"];
 
@@ -67,4 +67,18 @@ test("las cadenas viajan como JSON, no concatenadas", () => {
   // página con los textos cambiados de sitio.
   const p = buildTranslatePrompt(['Dice "hola"', "línea\nrota"], "en", "es");
   assert.ok(p.includes(JSON.stringify(['Dice "hola"', "línea\nrota"])));
+});
+
+// EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): cada idioma traducido
+// deja una fila a nombre del dueño, con 0 cobrado (lo paga OpenLen).
+test("ledger: each translated locale is one publish_translation row", () => {
+  const entry = translationLedgerEntry("p1", "en", { inputTokens: 1_200, cachedTokens: 0, outputTokens: 300 });
+  assert.equal(entry.surface, "publish_translation");
+  assert.equal(entry.outcome, "ok");
+  assert.equal(entry.projectId, "p1");
+  assert.equal(entry.refId, "en");
+  assert.equal(entry.uses?.length, 1);
+  assert.equal(entry.uses?.[0]?.provider, "fireworks");
+  assert.equal(entry.uses?.[0]?.inputTokens, 1_200);
+  assert.equal(entry.uses?.[0]?.outputTokens, 300);
 });

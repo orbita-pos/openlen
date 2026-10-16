@@ -17,6 +17,7 @@ import { creditsForUsage } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 
 import { loadReviewInputs } from "./inputs";
+import { recordReviewCost } from "./ledger";
 import { reviewWithModel, type Run } from "./model-review";
 import { createSecurityReviewer, type ReviewDeps, type SecurityReviewer } from "./review";
 import { pgSecurityReviewStore } from "./store-pg";
@@ -54,7 +55,10 @@ const modelReview: ReviewDeps["modelReview"] = async ({ inputs, context, focus, 
   const r = await reviewWithModel(run, { context, focus, signal });
   const used = r.usage.inputTokens + r.usage.outputTokens > 0;
   const rate = creditRateForRole(roleForOperation("security_review"));
-  return { ...r, costCentiCredits: used ? creditsForUsage(r.usage.inputTokens, r.usage.outputTokens, rate, r.usage.cachedTokens) : 0 };
+  const costCentiCredits = used ? creditsForUsage(r.usage.inputTokens, r.usage.outputTokens, rate, r.usage.cachedTokens) : 0;
+  // OpenLen pays the review: a ledger row with 0 charged, for the project owner.
+  await recordReviewCost({ ownerId: inputs.ownerId, projectId: inputs.projectId, usage: r.usage, costCentiCredits });
+  return { ...r, costCentiCredits };
 };
 
 let reviewer: SecurityReviewer | null = null;
