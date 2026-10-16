@@ -8,9 +8,9 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { esDuenoDelProyecto } from "@/lib/voz/dueno";
 import { abrirSesionDeVoz } from "@/lib/voz/sesion";
 import { topeDeLlamadas } from "@/lib/voz/tope";
-import { vozParaIdioma } from "@/lib/voz/voces";
-import { SESSION_OPEN_SECONDS, voiceCenticredits, watchVoiceCall } from "@/lib/voz/billing";
-import { debitCredits, getCreditState } from "@/lib/credits";
+import { MODELO_DE_VOZ, vozParaIdioma } from "@/lib/voz/voces";
+import { SESSION_OPEN_SECONDS, VOICE_CENTICREDITS_PER_MINUTE, voiceCenticredits, watchVoiceCall } from "@/lib/voz/billing";
+import { chargeCredits, getCreditState } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,11 +52,21 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // El servidor se engancha a ESA sesión y la cobra con los segundos que le dice
   // OpenAI; no se espera: vive lo que dure la llamada, fuera de esta petición.
   if (r.sesionId) {
+    const sesionId = r.sesionId;
     watchVoiceCall({
-      sessionId: r.sesionId,
+      sessionId: sesionId,
       apiKey,
       userId,
-      charge: debitCredits,
+      // EL LIBRO DE GASTO: una fila por tramo cobrado, todas con el id de la sesión.
+      charge: (u, centicredits) =>
+        chargeCredits(u, centicredits, {
+          surface: "voice",
+          outcome: "ok",
+          projectId,
+          refId: sesionId,
+          listCenticredits: centicredits,
+          uses: [{ provider: "openai", model: MODELO_DE_VOZ, seconds: (centicredits * 60) / VOICE_CENTICREDITS_PER_MINUTE }],
+        }),
       balance: async (u) => (await getCreditState(u)).balance,
     });
   } else {

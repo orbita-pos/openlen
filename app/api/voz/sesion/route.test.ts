@@ -14,7 +14,7 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/voz/dueno", () => ({ esDuenoDelProyecto: mocks.dueno }));
 vi.mock("@/lib/voz/sesion", () => ({ abrirSesionDeVoz: mocks.abrir }));
 vi.mock("@/lib/voz/tope", () => ({ topeDeLlamadas: { intentar: mocks.intentar } }));
-vi.mock("@/lib/credits", () => ({ getCreditState: mocks.saldo, debitCredits: mocks.debitar }));
+vi.mock("@/lib/credits", () => ({ getCreditState: mocks.saldo, chargeCredits: mocks.debitar }));
 vi.mock("@/lib/voz/billing", async (real) => ({
   ...(await real<typeof import("@/lib/voz/billing")>()),
   watchVoiceCall: mocks.vigilar,
@@ -47,6 +47,20 @@ describe("POST /api/voz/sesion", () => {
     expect((await POST(pide(bueno))).status).toBe(200);
     expect(mocks.vigilar).toHaveBeenCalledTimes(1);
     expect(mocks.vigilar.mock.calls[0]![0]).toMatchObject({ sessionId: "live_1", apiKey: "sk-test", userId: "u1" });
+  });
+
+  it("ledger: each charged stretch of a call is one voice row", async () => {
+    await POST(pide(bueno));
+    const { charge } = mocks.vigilar.mock.calls[0]![0] as { charge: (u: string, cc: number) => Promise<unknown> };
+    await charge("u1", 250);
+    expect(mocks.debitar).toHaveBeenCalledWith("u1", 250, {
+      surface: "voice",
+      outcome: "ok",
+      projectId: "p1",
+      refId: "live_1",
+      listCenticredits: 250,
+      uses: [{ provider: "openai", model: "gpt-live-1", seconds: 30 }],
+    });
   });
 
   it("sin saldo para abrirla: 402, sin gastar tope ni llamar a OpenAI", async () => {
