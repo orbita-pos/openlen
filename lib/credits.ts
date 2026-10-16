@@ -1,6 +1,12 @@
 import { and, eq, isNull, sql as sqlOp } from "drizzle-orm";
 import { TARIFAS_POR_MILLON, tarifaDe, type CreditRate } from "@/lib/ai/tarifas";
 import { db, schema } from "@/lib/db";
+import {
+  serverErrorCode,
+  writeLedgerMovement,
+  writeLedgerUncharged,
+  type LedgerEntry,
+} from "@/lib/credit-ledger";
 import { planFromDb, type Plan } from "@/lib/plan";
 import { MAX_CREDITS, PRO_CREDITS, ULTRA_CREDITS } from "@/lib/marketing/plan-price";
 // La unidad y su formateo viven en el módulo CLIENT-SAFE: los pintan
@@ -419,6 +425,76 @@ export async function refundCredits(
     .update(schema.users)
     .set({ credits: sqlOp`${schema.users.credits} + ${amount}` })
     .where(eq(schema.users.id, userId));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger). Cobrar, cobrar si
+// alcanza, devolver y anotar lo no cobrado, cada uno con su fila en
+// `creditLedger` EN LA MISMA SENTENCIA que mueve el saldo (lib/credit-ledger.ts).
+//
+// 🔴 SI EL LIBRO FALLA, SE COBRA IGUAL. Un error que devuelve Postgres con su
+// código (la tabla sin migrar, `42P01`) cae a la sentencia de siempre y se dice
+// con `[ledger]`: el saldo es la fuente de verdad y un fallo del libro no regala
+// ni bloquea turnos. Un error SIN código (la red) se relanza como hasta hoy y NO
+// se reintenta: la sentencia pudo guardarse antes del corte, y reintentar
+// cobraría dos veces.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ledgerFailed(what: string, userId: string, err: unknown, code: string | null): void {
+  console.error(
+    `[ledger] ${code ?? "error"}: ${what} for user=${userId} without a ledger row — ${err instanceof Error ? err.message : String(err)}`,
+  );
+}
+
+/** Cobra, recortado en 0 (el trabajo ya se hizo), y anota la fila. Devuelve lo
+ *  que de verdad bajó el saldo. */
+export async function chargeCredits(userId: string, centicredits: number, entry: LedgerEntry): Promise<number> {
+  if (centicredits <= 0) return 0;
+  try {
+    return (await writeLedgerMovement("clamp", userId, centicredits, entry))?.moved ?? 0;
+  } catch (err) {
+    const code = serverErrorCode(err);
+    if (!code) throw err;
+    ledgerFailed(`charge of ${centicredits}`, userId, err, code);
+    await debitCredits(userId, centicredits);
+    return centicredits;
+  }
+}
+
+/** Cobra SÓLO si el saldo lo cubre (la IA de las apps reserva el peor caso). */
+export async function chargeCreditsIfEnough(userId: string, centicredits: number, entry: LedgerEntry): Promise<boolean> {
+  if (centicredits <= 0) return true;
+  try {
+    return (await writeLedgerMovement("if_enough", userId, centicredits, entry)) !== null;
+  } catch (err) {
+    const code = serverErrorCode(err);
+    if (!code) throw err;
+    ledgerFailed(`conditional charge of ${centicredits}`, userId, err, code);
+    return debitCreditsIfEnough(userId, centicredits);
+  }
+}
+
+/** Devuelve créditos (la fila lleva el importe en negativo). */
+export async function returnCredits(userId: string, centicredits: number, entry: LedgerEntry): Promise<void> {
+  if (centicredits <= 0) return;
+  try {
+    await writeLedgerMovement("return", userId, centicredits, entry);
+  } catch (err) {
+    const code = serverErrorCode(err);
+    if (!code) throw err;
+    ledgerFailed(`return of ${centicredits}`, userId, err, code);
+    await refundCredits(userId, centicredits);
+  }
+}
+
+/** Anota trabajo que no movió el saldo (lo paga OpenLen, o el turno cobra 0),
+ *  con su costo. Nunca lanza: anotar no puede tumbar a quien llama. */
+export async function recordUncharged(userId: string, entry: LedgerEntry): Promise<void> {
+  try {
+    await writeLedgerUncharged(userId, entry);
+  } catch (err) {
+    ledgerFailed(`uncharged ${entry.surface}`, userId, err, serverErrorCode(err));
+  }
 }
 
 /** Token usage as reported by an OpenAI-compatible streaming API. */
