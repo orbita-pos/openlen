@@ -214,7 +214,11 @@ export type ModelOperation =
   /** LA IA DE LAS APPS (`lib/app-ai/`, spec local 2026-10-15): la Edge Function
    *  de una app pidió `openlen-fast` u `openlen-smart`. Se cobra al dueño. */
   | "app_ai_fast"
-  | "app_ai_smart";
+  | "app_ai_smart"
+  /** LA REVISIÓN DE SEGURIDAD AL PUBLICAR (`lib/security-review/`, spec local
+   *  2026-10-15): subagentes de solo lectura sobre el cerebro de Len. La paga
+   *  OpenLen, no el dueño. */
+  | "security_review";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -281,13 +285,18 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // razonador admite además de `none` (`reasoningEffortAllowed`).
   app_ai_fast: { role: "reasoner", effort: "none" },
   app_ai_smart: { role: "reasoner", effort: "high" },
+  // La revisión de seguridad corre en el cerebro de Len (`createAgentBrain`),
+  // que es el que llama a herramientas: su esfuerzo lo fija la revisión en la
+  // capa de POSTURA (`high`, `lib/security-review/real.ts`), como `agent_turn`.
+  security_review: { role: "agent", effort: null },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
   const policy = OPERATION_POLICY[operation];
   if (policy.role !== role) throw new Error("operation is not allowed for model role");
-  // FALLA RUIDOSO, no un valor colado en silencio: hoy sólo `agent_turn`
-  // trae `effort: null` en la tabla, a propósito (ver su comentario arriba).
+  // FALLA RUIDOSO, no un valor colado en silencio: hoy `agent_turn` y
+  // `security_review` traen `effort: null` en la tabla, a propósito (ver sus
+  // comentarios arriba).
   // Un llamador que llega aquí pidiéndolo es un bug — el esfuerzo de esa
   // operación vive en la capa de POSTURA (`lib/agent/esfuerzo.ts`) y lo
   // resuelve `brain.ts` directamente, sin pasar por esta función. `null` es
