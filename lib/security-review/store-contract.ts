@@ -85,6 +85,29 @@ export function describeStoreContract(name: string, setup: () => Promise<Contrac
       expect((await store.get(projectA, "d"))?.status).toBe("done");
     });
 
+    it("markPublished keeps the published copy on a done review, and latestPublished is the newest one", async () => {
+      const { store, projectA } = await setup();
+      for (const fp of ["old", "new"]) {
+        await store.insert({ projectId: projectA, fingerprint: fp, status: "running", phase0: [], fileHashes: {}, startedAt: T0 });
+        await store.finish(projectA, fp, { status: "done", findings: [], costCentiCredits: 0, failReason: null, finishedAt: T0 });
+      }
+      expect(await store.latestPublished(projectA)).toBeNull();
+      await store.markPublished(projectA, "old", { "/index.html": "<h1>uno</h1>" }, new Date("1999-03-01T11:00:00Z"));
+      await store.markPublished(projectA, "new", { "/index.html": "<h1>dos</h1>" }, new Date("1999-03-01T12:00:00Z"));
+      expect(await store.latestPublished(projectA)).toEqual({ fingerprint: "new", files: { "/index.html": "<h1>dos</h1>" } });
+      expect((await store.get(projectA, "new"))?.publishedAt).toEqual(new Date("1999-03-01T12:00:00Z"));
+    });
+
+    it("markPublished does nothing on a review the model didn't finish: it can't be the base of the next one", async () => {
+      const { store, projectA } = await setup();
+      await store.insert({ projectId: projectA, fingerprint: "skip", status: "skipped_budget", phase0: [], fileHashes: {}, startedAt: T0 });
+      await store.insert({ projectId: projectA, fingerprint: "fail", status: "running", phase0: [], fileHashes: {}, startedAt: T0 });
+      await store.finish(projectA, "fail", { status: "failed", findings: [], costCentiCredits: 0, failReason: "timeout", finishedAt: T0 });
+      await store.markPublished(projectA, "skip", { "/index.html": "x" }, T0);
+      await store.markPublished(projectA, "fail", { "/index.html": "x" }, T0);
+      expect(await store.latestPublished(projectA)).toBeNull();
+    });
+
     it("claimShownToAgent is true only the first time", async () => {
       const { store, projectA } = await setup();
       await store.insert({ projectId: projectA, fingerprint: "f", status: "done", phase0: [], fileHashes: {}, startedAt: T0 });

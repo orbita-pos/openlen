@@ -90,6 +90,8 @@ export interface ReviewRecord {
   readonly shownToAgentAt: Date | null;
   readonly acceptedBy: string | null;
   readonly acceptedAt: Date | null;
+  /** The project was published with this review: its copy of the files is the base of the next one. */
+  readonly publishedAt: Date | null;
 }
 
 /** What the owner and Len see of a review. */

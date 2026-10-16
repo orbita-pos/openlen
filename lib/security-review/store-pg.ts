@@ -5,40 +5,40 @@
 
 import "server-only";
 
-import { and, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
 import type { SecurityReviewStore } from "./store";
-import type { ReviewRecord } from "./types";
 
 const T = schema.securityReviews;
 const A = schema.securityAcceptances;
 
-function toRecord(r: typeof T.$inferSelect): ReviewRecord {
-  return {
-    projectId: r.projectId,
-    fingerprint: r.fingerprint,
-    status: r.status,
-    phase0: r.phase0,
-    findings: r.findings,
-    fileHashes: r.fileHashes,
-    costCentiCredits: r.costCentiCredits,
-    failReason: r.failReason,
-    startedAt: r.startedAt,
-    finishedAt: r.finishedAt,
-    shownToAgentAt: r.shownToAgentAt,
-    acceptedBy: r.acceptedBy,
-    acceptedAt: r.acceptedAt,
-  };
-}
+// Every column but `baseFiles`: the copy of a published version can be big, and only latestPublished reads it.
+const RECORD = {
+  projectId: T.projectId,
+  fingerprint: T.fingerprint,
+  status: T.status,
+  phase0: T.phase0,
+  findings: T.findings,
+  fileHashes: T.fileHashes,
+  costCentiCredits: T.costCentiCredits,
+  failReason: T.failReason,
+  startedAt: T.startedAt,
+  finishedAt: T.finishedAt,
+  shownToAgentAt: T.shownToAgentAt,
+  acceptedBy: T.acceptedBy,
+  acceptedAt: T.acceptedAt,
+  publishedAt: T.publishedAt,
+};
+
 
 const one = (projectId: string, fingerprint: string) => and(eq(T.projectId, projectId), eq(T.fingerprint, fingerprint));
 
 export const pgSecurityReviewStore: SecurityReviewStore = {
   async get(projectId, fingerprint) {
-    const [r] = await db.select().from(T).where(one(projectId, fingerprint)).limit(1);
-    return r ? toRecord(r) : null;
+    const [r] = await db.select(RECORD).from(T).where(one(projectId, fingerprint)).limit(1);
+    return r ?? null;
   },
   async insert(r) {
     const out = await db
@@ -63,8 +63,8 @@ export const pgSecurityReviewStore: SecurityReviewStore = {
     return out.length > 0;
   },
   async latestDone(projectId) {
-    const [r] = await db.select().from(T).where(and(eq(T.projectId, projectId), eq(T.status, "done"))).orderBy(desc(T.startedAt)).limit(1);
-    return r ? toRecord(r) : null;
+    const [r] = await db.select(RECORD).from(T).where(and(eq(T.projectId, projectId), eq(T.status, "done"))).orderBy(desc(T.startedAt)).limit(1);
+    return r ?? null;
   },
   async usageBetween(projectId, from, to) {
     const [r] = await db
@@ -91,5 +91,27 @@ export const pgSecurityReviewStore: SecurityReviewStore = {
   async acceptedFindings(projectId) {
     const rows = await db.select({ key: A.key, finding: A.finding }).from(A).where(eq(A.projectId, projectId));
     return new Map(rows.map((r) => [r.key, r.finding]));
+  },
+  async markPublished(projectId, fingerprint, files, at) {
+    const set = await db
+      .update(T)
+      .set({ publishedAt: at, baseFiles: { ...files } })
+      .where(and(one(projectId, fingerprint), eq(T.status, "done")))
+      .returning({ fingerprint: T.fingerprint });
+    if (set.length === 0) return;
+    // Only the newest copy is a base: the older ones are dropped.
+    await db
+      .update(T)
+      .set({ baseFiles: null })
+      .where(and(eq(T.projectId, projectId), ne(T.fingerprint, fingerprint), isNotNull(T.baseFiles)));
+  },
+  async latestPublished(projectId) {
+    const [r] = await db
+      .select({ fingerprint: T.fingerprint, files: T.baseFiles })
+      .from(T)
+      .where(and(eq(T.projectId, projectId), isNotNull(T.baseFiles)))
+      .orderBy(desc(T.publishedAt))
+      .limit(1);
+    return r?.files ? { fingerprint: r.fingerprint, files: r.files } : null;
   },
 };
