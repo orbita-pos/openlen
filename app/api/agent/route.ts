@@ -1079,6 +1079,8 @@ async function correrTurno(
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
+    // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
+    ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
