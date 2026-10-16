@@ -1381,6 +1381,9 @@ export function useAgentChat({
               // salga de este turno (el chat del equipo), y el `lang` de una app
               // que nace (`camposDeNacer` lo pisa con el suyo si viene).
               idioma: locale,
+              // LOS VISUALES (spec local 2026-10-16): si lee en un teléfono, para
+              // que Len pida a `read_me` la guía de ese ancho.
+              dispositivo: typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches ? "mobile" : "desktop",
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,
