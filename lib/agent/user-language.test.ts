@@ -29,6 +29,10 @@ describe("userWritingLanguage", () => {
     expect(userWritingLanguage("please change the price on the page and add a contact form", [HOLI_T1])).toBe("en");
   });
 
+  it("🔴 una frase en español con «de» y «en» no es neerlandés (ensayo de caja, 16/10)", () => {
+    expect(userWritingLanguage("Publica la app en su dirección de siempre. No cambies nada, sólo publícala.", [])).toBe("es");
+  });
+
   it("sin ninguna señal: null, y el contexto usa el de la interfaz", () => {
     expect(userWritingLanguage("ok", [])).toBeNull();
     expect(userWritingLanguage("ok", ["👍", "https://holi.mx"])).toBeNull();
