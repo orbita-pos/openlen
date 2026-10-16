@@ -31,6 +31,8 @@ const deps: AppAiDeps = {
     debitIfEnough: async (_u, n) => (balance >= n ? ((balance -= n), true) : false),
     debit: async (_u, n) => void (balance = Math.max(0, balance - n)),
     refund: async (_u, n) => void (balance += n),
+    // The smoke run has no ledger: the settlement row is dropped.
+    record: async () => undefined,
   },
   store,
   reservations: new CapReservations(),

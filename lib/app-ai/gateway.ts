@@ -16,7 +16,9 @@
 
 import type { FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { hashSecretKey } from "@/lib/backend/keys";
+import type { LedgerEntry } from "@/lib/credit-ledger";
 import type { CreditRate } from "@/lib/credits";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { ConcurrencyLimiter } from "@/lib/functions/concurrency";
 import { monthKey } from "@/lib/functions/meter";
 import type { WindowLimiter } from "@/lib/functions/window-limiter";
@@ -41,11 +43,15 @@ export interface ResolvedProject {
 export interface Wallet {
   /** The owner's plan and monthly allotment, after the lazy refill. */
   state(userId: string): Promise<{ readonly plan: Plan; readonly allotment: number }>;
-  /** Takes the amount only if the balance covers it. */
-  debitIfEnough(userId: string, centicredits: number): Promise<boolean>;
+  /** Takes the amount only if the balance covers it. Each movement carries its
+   *  spend-ledger row (lib/credit-ledger.ts). */
+  debitIfEnough(userId: string, centicredits: number, entry: LedgerEntry): Promise<boolean>;
   /** Takes an overrun, clamped at zero. */
-  debit(userId: string, centicredits: number): Promise<void>;
-  refund(userId: string, centicredits: number): Promise<void>;
+  debit(userId: string, centicredits: number, entry: LedgerEntry): Promise<unknown>;
+  refund(userId: string, centicredits: number, entry: LedgerEntry): Promise<void>;
+  /** A ledger row that moves nothing: the settlement when the call cost exactly
+   *  what was reserved, so its tokens and cost are still on record. */
+  record(userId: string, entry: LedgerEntry): Promise<void>;
 }
 
 export interface UpstreamCall {
@@ -150,7 +156,11 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
       releaseCap();
       return appAiError("app_ai_busy");
     }
-    if (!(await deps.wallet.debitIfEnough(ownerId, worst))) {
+    // The id is minted before the reservation so the reservation and its
+    // settlement share one `refId` in the spend ledger.
+    const requestId = completionId();
+    const ledgerBase = { surface: "app_ai" as const, projectId: project.projectId, refId: requestId };
+    if (!(await deps.wallet.debitIfEnough(ownerId, worst, { ...ledgerBase, outcome: "reserve", listCenticredits: worst }))) {
       releaseCap();
       if (free) deps.freePool.settle(worst, 0);
       return appAiError("insufficient_credits");
@@ -166,8 +176,26 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
           : o.streamedChars > 0
             ? streamedCenticredits({ inputBytes: body.length, outputChars: o.streamedChars, rate })
             : 0;
-        if (actual > worst) await deps.wallet.debit(ownerId, actual - worst);
-        else if (actual < worst) await deps.wallet.refund(ownerId, worst - actual);
+        const settlement: LedgerEntry = {
+          ...ledgerBase,
+          outcome: "settle",
+          listCenticredits: actual,
+          uses: o.usage
+            ? [
+                {
+                  provider: "fireworks",
+                  model: modelIdForRole(roleForOperation(request.model.operation)),
+                  inputTokens: o.usage.inputTokens,
+                  cachedTokens: o.usage.cachedTokens,
+                  outputTokens: o.usage.outputTokens,
+                  at: deps.now(),
+                },
+              ]
+            : [],
+        };
+        if (actual > worst) await deps.wallet.debit(ownerId, actual - worst, settlement);
+        else if (actual < worst) await deps.wallet.refund(ownerId, worst - actual, settlement);
+        else await deps.wallet.record(ownerId, settlement);
         // Added to the month BEFORE the reservation is released: a check in
         // between counts it twice (safe), never zero times.
         if (actual > 0) await deps.store.add({ userId: ownerId, month, projectId: project.projectId, environment: project.environment, centicredits: actual });
@@ -188,7 +216,6 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
 
     const controller = new AbortController();
     req.signal.addEventListener("abort", () => controller.abort(), { once: true });
-    const requestId = completionId();
     const head: WireHead = { id: requestId, created: Math.floor(deps.now().getTime() / 1000), model: request.model.id };
     const events = deps.upstream({ request, requestId, signal: controller.signal })[Symbol.asyncIterator]();
     const next = async (): Promise<FireworksStreamEvent | null> => {

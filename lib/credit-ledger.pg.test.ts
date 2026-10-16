@@ -105,6 +105,14 @@ describe("creditLedger", () => {
     expect((await ledger())[0]).toMatchObject({ centicredits: 10, balanceAfter: 0 });
   });
 
+  it("ten conditional charges at once with room for three: exactly three pass, three rows, never below zero", async () => {
+    await setBalance(30);
+    const r = await Promise.all(Array.from({ length: 10 }, () => chargeCreditsIfEnough(OWNER, 10, { surface: "app_ai", outcome: "reserve" })));
+    expect(r.filter(Boolean)).toHaveLength(3);
+    expect(await balance()).toBe(0);
+    expect(await ledger()).toHaveLength(3);
+  });
+
   it("recordUncharged leaves the balance alone", async () => {
     await setBalance(200);
     await recordUncharged(OWNER, { ...ENTRY, surface: "security_review", outcome: "ok" });

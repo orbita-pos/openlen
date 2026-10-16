@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
 import { hashSecretKey } from "@/lib/backend/keys";
+import type { LedgerEntry } from "@/lib/credit-ledger";
 import type { CreditRate } from "@/lib/credits";
 import { ConcurrencyLimiter } from "@/lib/functions/concurrency";
 import { WindowLimiter } from "@/lib/functions/window-limiter";
@@ -30,21 +31,30 @@ const answer = (text: string, usage: FireworksStreamEvent = USAGE): FireworksStr
 ];
 
 function fakeWallet(balance: number, plan: Plan = "pro", allotment = 30_000) {
+  /** What each movement told the ledger, with its signed amount. */
+  const ledger: { centicredits: number; entry: LedgerEntry }[] = [];
   const w = {
     balance,
+    ledger,
     async state() {
       return { plan, allotment };
     },
-    async debitIfEnough(_u: string, n: number) {
+    async debitIfEnough(_u: string, n: number, entry: LedgerEntry) {
       if (w.balance < n) return false;
       w.balance -= n;
+      ledger.push({ centicredits: n, entry });
       return true;
     },
-    async debit(_u: string, n: number) {
+    async debit(_u: string, n: number, entry: LedgerEntry) {
       w.balance = Math.max(0, w.balance - n);
+      ledger.push({ centicredits: n, entry });
     },
-    async refund(_u: string, n: number) {
+    async refund(_u: string, n: number, entry: LedgerEntry) {
       w.balance += n;
+      ledger.push({ centicredits: -n, entry });
+    },
+    async record(_u: string, entry: LedgerEntry) {
+      ledger.push({ centicredits: 0, entry });
     },
   };
   return w;
@@ -313,6 +323,29 @@ describe("the AI gateway: streaming", () => {
     expect(parsed.at(-1).usage).toEqual({ prompt_tokens: 600, completion_tokens: 80, total_tokens: 680 });
     expect(JSON.stringify(parsed)).not.toContain("hmm");
     expect(wallet.balance).toBe(10_000 - 2);
+  });
+
+  it("ledger: the reservation and the settlement share one refId and add up to what was charged", async () => {
+    const { deps, wallet } = mount();
+    const r = await send(deps, BODY);
+    const { id } = (await r.json()) as { id: string };
+    expect(wallet.ledger.map((m) => m.entry.outcome)).toEqual(["reserve", "settle"]);
+    const [reserve, settle] = wallet.ledger;
+    expect(reserve!.entry).toMatchObject({ surface: "app_ai", projectId: "p1", refId: id, listCenticredits: reserve!.centicredits });
+    expect(settle!.entry).toMatchObject({
+      surface: "app_ai",
+      refId: id,
+      uses: [expect.objectContaining({ provider: "fireworks", model: expect.any(String), inputTokens: 600, outputTokens: 80 })],
+    });
+    expect(reserve!.centicredits + settle!.centicredits).toBe(2);
+  });
+
+  it("ledger: an aborted request nets to zero", async () => {
+    const { deps, wallet } = mount(() => [{ type: "done", stopReason: { kind: "error", error: "x" } }]);
+    await send(deps, BODY);
+    expect(wallet.ledger.map((m) => m.entry.outcome)).toEqual(["reserve", "settle"]);
+    expect(wallet.ledger.reduce((s, m) => s + m.centicredits, 0)).toBe(0);
+    expect(wallet.balance).toBe(10_000);
   });
 
   it("an error before the first token is a plain 502, not a stream", async () => {

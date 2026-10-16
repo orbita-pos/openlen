@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 
-import { debitCreditsIfEnough } from "@/lib/credits";
+import { chargeCreditsIfEnough } from "@/lib/credits";
 import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
 
@@ -62,10 +62,10 @@ describe("pgAppAiStore", () => {
   });
 });
 
-describe("debitCreditsIfEnough", () => {
+describe("chargeCreditsIfEnough", () => {
   it("🔴 ten debits at once with room for three: exactly three pass, never below zero", async () => {
     await db.update(schema.users).set({ credits: 30 }).where(eq(schema.users.id, OWNER));
-    const r = await Promise.all(Array.from({ length: 10 }, () => debitCreditsIfEnough(OWNER, 10)));
+    const r = await Promise.all(Array.from({ length: 10 }, () => chargeCreditsIfEnough(OWNER, 10, { surface: "app_ai", outcome: "reserve" })));
     expect(r.filter(Boolean)).toHaveLength(3);
     const [u] = await db.select({ credits: schema.users.credits }).from(schema.users).where(eq(schema.users.id, OWNER));
     expect(u!.credits).toBe(0);
