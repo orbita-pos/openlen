@@ -49,6 +49,12 @@ describe("Caddy y el lienzo", () => {
       // lib/backend/realtime); en el host de la página dan 404 también
       // PUBLICADA, así que avisar «sólo funciona publicada» sería mentir.
       if (ruta === "/storage/v1/*" || ruta === "/realtime/v1/*") continue;
+      // La IA de las apps (lib/app-ai, spec local 2026-10-15): /ai/v1 la llaman
+      // las Edge Functions de servidor a servidor, con la llave SECRETA del
+      // proyecto. Una página nunca la llama desde el navegador (la llave no
+      // puede estar en ella), así que el aviso del lienzo, que mira las
+      // llamadas de la página, no tiene nada que avisar.
+      if (ruta === "/ai/v1/*") continue;
       expect(RUTAS_SOLO_PUBLICADA, `${ruta} pasa a Next y el aviso del lienzo no lo conoce`).toContain(ruta.replace(/\*$/, ""));
     }
   });
