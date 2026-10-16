@@ -656,6 +656,8 @@ export default defineConfig({
       "app/api/projects/[id]/chat/mensajes/route.test.ts",
       // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
       "app/api/projects/[id]/publish/route.test.ts",
+      // La revisión de seguridad al publicar (spec local 2026-10-15). LISTA BLANCA.
+      "app/api/projects/[id]/security-review/route.test.ts",
       // F2 de las apps web: deshacer un turno entero.
       "app/api/projects/[id]/turnos/[turnId]/deshacer/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).
