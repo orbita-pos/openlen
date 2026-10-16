@@ -53,6 +53,10 @@ describe("buildVisualFrameDocument", () => {
     expect(doc).toContain('href="https://cdn.jsdelivr.net/npm/lucide-static@1.16.0/font/lucide.css"');
   });
 
+  it("the root contains its children's margins, so the measured height doesn't cut the bottom", () => {
+    expect(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: false })).toMatch(/#root \{[^}]*display: flow-root/);
+  });
+
   it("embeds the parent origins it accepts", () => {
     expect(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false })).toContain('["https://openlen.com"]');
   });

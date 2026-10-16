@@ -48,6 +48,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
+import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { withServerStatus } from "./server-status";
 import { publishNoteId } from "./publish-note";
@@ -1269,11 +1270,9 @@ export function useAgentChat({
          *  el stream se cortó por el camino y el turno sigue en el servidor. */
         let llegoElDone = false;
         let accumulatedReasoning = "";
-        /** LOS VISUALES: el punto del texto donde empezó cada `show_widget` que se
-         *  está escribiendo (por `callIndex`), y los que aún esperan su tarjeta,
-         *  en orden. La tarjeta se lleva el primero. */
-        const widgetStarts = new Map<number, number>();
-        const pendingWidgetOffsets: number[] = [];
+        /** LOS VISUALES: en qué punto del texto va cada `show_widget` del turno
+         *  (`lib/visuals/widget-offsets.ts`). */
+        const widgetOffsets = createWidgetOffsets();
         /** Hay un `retry` en curso: el siguiente texto o tarjeta lo borra de la barra. */
         let reintentando = false;
         /** Len está ordenando lo que lleva (`compaction_start`): igual. */
@@ -1637,7 +1636,7 @@ export function useAgentChat({
                 // LOS VISUALES: el visual de `show_widget`, limpio, en el punto
                 // donde empezó a escribirse (o en el que va el texto ahora).
                 const widget = tool === SHOW_WIDGET && status !== "running" ? widgetFrom((payload as { widget?: unknown } | null)?.widget) : null;
-                const textOffset = tool === SHOW_WIDGET && status !== "running" ? (pendingWidgetOffsets.shift() ?? accumulatedReasoning.length) : null;
+                const textOffset = tool === SHOW_WIDGET && status !== "running" ? widgetOffsets.card(accumulatedReasoning.length) : null;
                 if (tool === SHOW_WIDGET && status !== "running") updateTurn(turnId, { liveWidget: undefined });
                 // Su tarjeta llegó: ya no espera.
                 if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
@@ -1734,10 +1733,7 @@ export function useAgentChat({
                 const code = typeof p?.code === "string" ? p.code : "";
                 if (code) {
                   const callIndex = typeof p?.callIndex === "number" ? p.callIndex : 0;
-                  if (!widgetStarts.has(callIndex)) {
-                    widgetStarts.set(callIndex, accumulatedReasoning.length);
-                    pendingWidgetOffsets.push(accumulatedReasoning.length);
-                  }
+                  const textOffset = widgetOffsets.preview(callIndex, accumulatedReasoning.length);
                   updateTurn(turnId, {
                     liveWidget: {
                       title: typeof p?.title === "string" ? p.title : null,
@@ -1745,7 +1741,7 @@ export function useAgentChat({
                         ? p.loadingMessages.filter((m): m is string => typeof m === "string")
                         : [],
                       code,
-                      textOffset: widgetStarts.get(callIndex)!,
+                      textOffset,
                     },
                   });
                 }

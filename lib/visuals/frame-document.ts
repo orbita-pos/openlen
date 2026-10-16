@@ -100,7 +100,7 @@ const STYLE = `
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: transparent; }
 body { color: var(--fg); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; overflow: hidden; }
-#root { overflow-wrap: anywhere; }
+#root { display: flow-root; overflow-wrap: anywhere; }
 a { color: var(--accent); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 button { font: inherit; font-size: 13px; color: var(--fg); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; }
