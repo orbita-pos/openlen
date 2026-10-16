@@ -137,6 +137,8 @@ import type { AppDeProyecto, SitePage } from "@/lib/projects/types";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { AddressBar } from "@/components/workspace-v2/address-bar";
 import { abrirDesdeElTaller } from "@/components/workspace-v2/abrir-fuera";
+import { useAppBirth } from "@/components/workspace-v2/use-app-birth";
+import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 
 // ⚰️ Aquí vivía `LLAVE_ARREGLO`, el traspaso del «Arréglalo» de la medida de
 // Crear a su primer turno de chat por `sessionStorage`. Crear es Len desde el
@@ -646,6 +648,9 @@ function NewV2Inner() {
     null,
   );
   const [chatRedesigning, setChatRedesigning] = useState(false);
+  // Len's latest turn, as the chat tells it: an app being born shows his
+  // workshop on the canvas (`useAppBirth`, below).
+  const [latestTurn, setLatestTurn] = useState<LatestTurn | null>(null);
   // True mientras el chat dripea HTML crudo del modelo (ai-design Modo B, aún
   // sin sanitizar). Ver buildUntrustedSrcDoc en preview-prelude.ts.
   const [chatUntrustedDoc, setChatUntrustedDoc] = useState(false);
@@ -1458,6 +1463,10 @@ function NewV2Inner() {
   // ni elegir un elemento para el chat; se cambia hablando con Len o en la
   // lente Código.
   const esApp = !!loadedProject?.app;
+  // AN APP BEING BORN: the first turn of a project that is (or was just asked to
+  // be, before the reload that brings the skeleton) an app. Meanwhile the
+  // canvas shows Len's workshop instead of the skeleton's blank «App» page.
+  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app");
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
   // Sólo en una app, para quien edita, y no con el taller en su vista de móvil (como v0).
@@ -3578,6 +3587,7 @@ function NewV2Inner() {
             }
           }}
           onRedesigningChange={setChatRedesigning}
+          onLatestTurnChange={setLatestTurn}
           onDesignSettled={(ok) => {
             if (!ok) return;
             dispatchDesign({ type: "resetAll" });
@@ -3809,6 +3819,8 @@ function NewV2Inner() {
                     : null
                 }
                 redesigning={chatRedesigning}
+                appBirth={appBirth}
+                appName={loadedProject.title}
                 untrustedDoc={chatUntrustedDoc}
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}

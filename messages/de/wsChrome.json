@@ -578,5 +578,35 @@
       "useDefault": "Standard verwenden",
       "saveError": "Das Limit konnte nicht gespeichert werden."
     }
+  },
+  "appBirth": {
+    "working": "Len arbeitet an deiner App",
+    "station": {
+      "board": "Len plant die Arbeit",
+      "files": "Len liest das Projekt",
+      "desk": "Len schreibt den Code",
+      "terminal": "Len führt einen Befehl aus",
+      "bench": "Len probiert die App aus"
+    },
+    "label": {
+      "board": "Tafel",
+      "files": "Archiv",
+      "desk": "Schreibtisch",
+      "terminal": "Terminal",
+      "bench": "Prüfstand"
+    },
+    "doneWho": "Len ist fertig",
+    "done": "Deine App ist fertig",
+    "drawing": "Schnitt durch Lens Werkstatt: eine Tafel, ein Aktenschrank, ein Schreibtisch, ein Terminal und ein Prüfstand. Len steht an dem Platz, an dem er arbeitet, unter der eingeschalteten Lampe.",
+    "block": {
+      "label": "Werkstattdaten",
+      "workshop": "Werkstatt",
+      "app": "App",
+      "progress": "Fortschritt",
+      "time": "Zeit",
+      "step": "Schritt {current} von {total}",
+      "noSteps": "—",
+      "finished": "Fertig"
+    }
   }
 }

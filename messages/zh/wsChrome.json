@@ -578,5 +578,35 @@
       "useDefault": "使用默认值",
       "saveError": "无法保存上限。"
     }
+  },
+  "appBirth": {
+    "working": "Len 正在制作你的应用",
+    "station": {
+      "board": "Len 正在安排工作",
+      "files": "Len 正在阅读项目",
+      "desk": "Len 正在编写代码",
+      "terminal": "Len 正在运行命令",
+      "bench": "Len 正在试用应用"
+    },
+    "label": {
+      "board": "白板",
+      "files": "档案柜",
+      "desk": "书桌",
+      "terminal": "终端",
+      "bench": "测试台"
+    },
+    "doneWho": "Len 完成了",
+    "done": "你的应用已就绪",
+    "drawing": "Len 工作室的剖面图：白板、档案柜、书桌、终端和测试台。Len 站在他正在工作的位置，头顶的灯亮着。",
+    "block": {
+      "label": "工作室信息",
+      "workshop": "工作室",
+      "app": "应用",
+      "progress": "进度",
+      "time": "时间",
+      "step": "第 {current} 步，共 {total} 步",
+      "noSteps": "—",
+      "finished": "完成"
+    }
   }
 }

@@ -578,5 +578,35 @@
       "useDefault": "Utiliser la valeur par défaut",
       "saveError": "Impossible d'enregistrer la limite."
     }
+  },
+  "appBirth": {
+    "working": "Len travaille sur votre app",
+    "station": {
+      "board": "Len organise le travail",
+      "files": "Len lit le projet",
+      "desk": "Len écrit le code",
+      "terminal": "Len lance une commande",
+      "bench": "Len teste l’app"
+    },
+    "label": {
+      "board": "tableau",
+      "files": "classeur",
+      "desk": "bureau",
+      "terminal": "terminal",
+      "bench": "banc d’essai"
+    },
+    "doneWho": "Len a terminé",
+    "done": "Votre app est prête",
+    "drawing": "Coupe de l’atelier de Len : un tableau, un classeur, un bureau, un terminal et un banc d’essai. Len est au poste où il travaille, sous sa lampe allumée.",
+    "block": {
+      "label": "Détails de l’atelier",
+      "workshop": "Atelier",
+      "app": "App",
+      "progress": "Avancement",
+      "time": "Temps",
+      "step": "Étape {current} sur {total}",
+      "noSteps": "—",
+      "finished": "Terminé"
+    }
   }
 }

@@ -578,5 +578,35 @@
       "useDefault": "Standaard gebruiken",
       "saveError": "De limiet kon niet worden opgeslagen."
     }
+  },
+  "appBirth": {
+    "working": "Len werkt aan je app",
+    "station": {
+      "board": "Len plant het werk",
+      "files": "Len leest het project",
+      "desk": "Len schrijft de code",
+      "terminal": "Len voert een opdracht uit",
+      "bench": "Len probeert de app uit"
+    },
+    "label": {
+      "board": "bord",
+      "files": "archief",
+      "desk": "bureau",
+      "terminal": "terminal",
+      "bench": "testbank"
+    },
+    "doneWho": "Len is klaar",
+    "done": "Je app is klaar",
+    "drawing": "Doorsnede van Lens werkplaats: een bord, een archiefkast, een bureau, een terminal en een testbank. Len staat bij de plek waar hij werkt, onder zijn brandende lamp.",
+    "block": {
+      "label": "Gegevens van de werkplaats",
+      "workshop": "Werkplaats",
+      "app": "App",
+      "progress": "Voortgang",
+      "time": "Tijd",
+      "step": "Stap {current} van {total}",
+      "noSteps": "—",
+      "finished": "Klaar"
+    }
   }
 }

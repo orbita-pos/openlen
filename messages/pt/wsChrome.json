@@ -578,5 +578,35 @@
       "useDefault": "Usar o padrão",
       "saveError": "Não foi possível salvar o limite."
     }
+  },
+  "appBirth": {
+    "working": "Len está trabalhando no seu app",
+    "station": {
+      "board": "Len está organizando o trabalho",
+      "files": "Len está lendo o projeto",
+      "desk": "Len está escrevendo o código",
+      "terminal": "Len está rodando um comando",
+      "bench": "Len está testando o app"
+    },
+    "label": {
+      "board": "quadro",
+      "files": "arquivo",
+      "desk": "mesa",
+      "terminal": "terminal",
+      "bench": "bancada de testes"
+    },
+    "doneWho": "Len terminou",
+    "done": "Seu app está pronto",
+    "drawing": "Corte da oficina do Len: um quadro, um arquivo, uma mesa, um terminal e uma bancada de testes. Len está no posto onde trabalha, sob a luminária acesa.",
+    "block": {
+      "label": "Dados da oficina",
+      "workshop": "Oficina",
+      "app": "App",
+      "progress": "Progresso",
+      "time": "Tempo",
+      "step": "Passo {current} de {total}",
+      "noSteps": "—",
+      "finished": "Pronto"
+    }
   }
 }

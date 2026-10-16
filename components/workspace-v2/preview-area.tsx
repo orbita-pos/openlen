@@ -45,6 +45,8 @@ import { injectSectionReorder } from "./use-section-reorder";
 import { injectSectionSelect } from "./use-section-select";
 import { buildUntrustedSrcDoc } from "./preview-prelude";
 import { PageBuildingLoader } from "./page-building-loader";
+import { AppBirthWorkshop } from "./app-birth-workshop";
+import type { AppBirthView } from "./use-app-birth";
 import { ScanOverlay } from "./scan-overlay";
 import { resaltarController } from "@/lib/workspace-v2/resaltar-controller";
 import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
@@ -114,6 +116,11 @@ interface PreviewAreaProps {
    *  corriendo, sin edición visual; la lente Código va la primera, y si el
    *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
   esApp?: boolean;
+  /** AN APP BEING BORN (`useAppBirth`): Len's workshop covers the «App» lens
+   *  until the first turn ends, instead of the skeleton's blank page. */
+  appBirth?: AppBirthView | null;
+  /** The project's name, for the workshop's title block. */
+  appName?: string;
   /** EL MODO DISEÑO (sólo apps, spec local 2026-10-11): el script del lienzo elige y pinta la vista previa. */
   designMode?: boolean;
   onToggleDesign?: () => void;
@@ -279,6 +286,8 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   esApp = false,
+  appBirth = null,
+  appName = "",
   designMode = false,
   onToggleDesign,
   reservaDerecha = 0,
@@ -1193,6 +1202,19 @@ export function PreviewArea({
         ref={containerRef}
         className="relative flex-1 min-h-0 overflow-auto nice-scroll p-3 sm:p-4"
       >
+        {lente === "pagina" && appBirth && (
+          <div
+            className="absolute inset-0 z-30 transition-opacity duration-[400ms]"
+            style={{ opacity: appBirth.leaving ? 0 : 1 }}
+          >
+            <AppBirthWorkshop
+              view={appBirth.view}
+              finished={appBirth.finished}
+              appName={appName}
+              startedAt={appBirth.startedAt}
+            />
+          </div>
+        )}
         {lente === "terminal" && hayTerminal && (
           <TerminalView
             terminal={terminal}
@@ -1413,7 +1435,7 @@ export function PreviewArea({
           </div>
         </div>
       </div>
-      {redesigning && (
+      {redesigning && !appBirth && (
         <div className="absolute inset-0 z-40">
           <PageBuildingLoader caption={t("preview.redesigning")} />
         </div>
