@@ -3437,16 +3437,18 @@ function NewV2Inner() {
     }
   };
 
+  // Mientras el título sea el de relleno, el proyecto se llama «Proyecto
+  // nuevo» en el idioma del dueño: lo deja en cuanto Len guarda una portada con
+  // `<title>` (`adoptPlaceholderTitle`). No sólo el blanco: un primer turno que
+  // no llegó a escribir la portada (una pregunta, un ■) dejaba «Untitled page»
+  // crudo en la barra (ensayo de caja, 07/10). El taller de una app que nace
+  // lo dice igual.
+  const shownProjectName = projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName;
   return (
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
         esApp={esApp}
-        // Mientras el título sea el de relleno, el proyecto se llama «Proyecto
-        // nuevo» en el idioma del dueño: lo deja en cuanto Len guarda una
-        // portada con `<title>` (`adoptPlaceholderTitle`). No sólo el blanco:
-        // un primer turno que no llegó a escribir la portada (una pregunta, un
-        // ■) dejaba «Untitled page» crudo en la barra (ensayo de caja, 07/10).
-        projectName={projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName}
+        projectName={shownProjectName}
         onRename={persistRename}
         projectLogoUrl={loadedProject?.logoUrl ?? null}
         projectLoading={projectLoadingFromUrl}
@@ -3820,7 +3822,7 @@ function NewV2Inner() {
                 }
                 redesigning={chatRedesigning}
                 appBirth={appBirth}
-                appName={loadedProject.title}
+                appName={shownProjectName}
                 untrustedDoc={chatUntrustedDoc}
                 editableInjection={editableInjection}
                 sectionSelectMode={sectionSelectMode}

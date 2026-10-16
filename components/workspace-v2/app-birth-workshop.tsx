@@ -250,7 +250,7 @@ export function AppBirthWorkshop({ view, finished, appName, startedAt }: AppBirt
   const lit = (s: WorkshopStation) => finished || s === station;
 
   return (
-    <div className={`ab-root ${headFont.variable} ${noteFont.variable}`} data-testid="app-birth-workshop">
+    <div className={`ab-root${finished ? " ab-done" : ""} ${headFont.variable} ${noteFont.variable}`} data-testid="app-birth-workshop">
       <div className="ab-sheet">
         <header className="ab-head">
           <p className="ab-who">{who}</p>
@@ -520,6 +520,7 @@ export function AppBirthWorkshop({ view, finished, appName, startedAt }: AppBirt
           min-height: 0;
           display: flex;
           flex-direction: column;
+          justify-content: center;
           gap: 14px;
         }
         .ab-head {
@@ -552,13 +553,14 @@ export function AppBirthWorkshop({ view, finished, appName, startedAt }: AppBirt
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+        /* As tall as the drawing and no taller: the sheet stays one group in
+           the middle, and shrinks with the drawing when the canvas is low. */
         .ab-figure {
-          flex: 1 1 auto;
+          flex: 0 1 auto;
           min-height: 0;
+          width: 100%;
+          aspect-ratio: 1600 / 860;
           margin: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
         .ab-figure svg {
           display: block;
@@ -608,6 +610,18 @@ export function AppBirthWorkshop({ view, finished, appName, startedAt }: AppBirt
           }
           .ab-block div:nth-child(n + 3) {
             border-top: 1px solid var(--ab-ink);
+          }
+          /* Five labels at this width would be a few pixels tall: only the lit
+             station keeps its name, big enough to read. */
+          .ab-root .ab-label {
+            display: none;
+          }
+          .ab-root .ab-label.ab-on {
+            display: inline;
+            font-size: 40px;
+          }
+          .ab-root.ab-done .ab-label {
+            display: none;
           }
         }
 
