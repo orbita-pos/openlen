@@ -2360,6 +2360,10 @@ export const securityReviews = pgTable(
     shownToAgentAt: timestamp("shownToAgentAt", { mode: "date" }),
     acceptedBy: text("acceptedBy"),
     acceptedAt: timestamp("acceptedAt", { mode: "date" }),
+    // Se publicó con esta revisión. `baseFiles`, la copia de lo que revisó, es la
+    // base de la siguiente (como la rama base de un PR): sólo la última la guarda.
+    publishedAt: timestamp("publishedAt", { mode: "date" }),
+    baseFiles: jsonb("baseFiles").$type<Record<string, string>>(),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.fingerprint] }), index("securityReviews_started_idx").on(t.startedAt)],
 );

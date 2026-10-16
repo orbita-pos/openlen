@@ -24,9 +24,14 @@ async function main() {
       "shownToAgentAt" timestamp,
       "acceptedBy" text,
       "acceptedAt" timestamp,
+      "publishedAt" timestamp,
+      "baseFiles" jsonb,
       PRIMARY KEY ("projectId", "fingerprint")
     );
   `);
+  // For a database where the table already existed without them.
+  await db.execute(sql`ALTER TABLE "securityReviews" ADD COLUMN IF NOT EXISTS "publishedAt" timestamp;`);
+  await db.execute(sql`ALTER TABLE "securityReviews" ADD COLUMN IF NOT EXISTS "baseFiles" jsonb;`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "securityReviews_started_idx" ON "securityReviews" ("startedAt");`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS "securityAcceptances" (

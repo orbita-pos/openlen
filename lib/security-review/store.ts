@@ -38,6 +38,12 @@ export interface SecurityReviewStore {
   /** «Publicar igual»: who, on the review; and each finding by its key (the first acceptance of a key stays). */
   accept(projectId: string, fingerprint: string, userId: string, findings: readonly Finding[], at: Date): Promise<void>;
   acceptedFindings(projectId: string): Promise<ReadonlyMap<string, Finding>>;
+  /** The project was published with this review: keep a copy of the files it reviewed, as the base the next review is
+   *  a diff against (like a branch's base in a pull request). Only a `done` review can be a base — a review the model
+   *  didn't finish never looked at those files. Earlier copies of the project are dropped. */
+  markPublished(projectId: string, fingerprint: string, files: Readonly<Record<string, string>>, at: Date): Promise<void>;
+  /** The newest review the project was published with that still holds its copy. */
+  latestPublished(projectId: string): Promise<{ readonly fingerprint: string; readonly files: Readonly<Record<string, string>> } | null>;
 }
 
 const MODEL_STATUSES: ReadonlySet<ReviewStatus> = new Set(["running", "done", "failed"]);
@@ -45,6 +51,7 @@ const MODEL_STATUSES: ReadonlySet<ReviewStatus> = new Set(["running", "done", "f
 export function memorySecurityReviewStore(): SecurityReviewStore & { readonly reviews: ReviewRecord[] } {
   const reviews: ReviewRecord[] = [];
   const accepted = new Map<string, Map<string, Finding>>();
+  const bases = new Map<string, { fingerprint: string; files: Readonly<Record<string, string>>; at: Date }>();
   const at = (projectId: string, fingerprint: string) => reviews.findIndex((r) => r.projectId === projectId && r.fingerprint === fingerprint);
   return {
     reviews,
@@ -54,7 +61,7 @@ export function memorySecurityReviewStore(): SecurityReviewStore & { readonly re
     },
     async insert(r) {
       if (at(r.projectId, r.fingerprint) >= 0) return false;
-      reviews.push({ ...r, findings: [], costCentiCredits: 0, failReason: null, finishedAt: null, shownToAgentAt: null, acceptedBy: null, acceptedAt: null });
+      reviews.push({ ...r, findings: [], costCentiCredits: 0, failReason: null, finishedAt: null, shownToAgentAt: null, acceptedBy: null, acceptedAt: null, publishedAt: null });
       return true;
     },
     async finish(projectId, fingerprint, f) {
@@ -92,6 +99,16 @@ export function memorySecurityReviewStore(): SecurityReviewStore & { readonly re
     },
     async acceptedFindings(projectId) {
       return new Map(accepted.get(projectId) ?? []);
+    },
+    async markPublished(projectId, fingerprint, files, when) {
+      const i = at(projectId, fingerprint);
+      if (i < 0 || reviews[i]!.status !== "done") return;
+      reviews[i] = { ...reviews[i]!, publishedAt: when };
+      bases.set(projectId, { fingerprint, files: { ...files }, at: when });
+    },
+    async latestPublished(projectId) {
+      const b = bases.get(projectId);
+      return b ? { fingerprint: b.fingerprint, files: b.files } : null;
     },
   };
 }

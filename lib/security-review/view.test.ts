@@ -9,7 +9,7 @@ const model = (key: string, severity: "HIGH" | "MEDIUM"): Finding =>
   ({ key, source: "model", severity, category: "missing_webhook_signature", file: "/supabase/functions/w/index.ts", line: 12, description: "No comprueba la firma", exploitScenario: "e", recommendation: "Verifica la firma" });
 const record = (over: Partial<ReviewRecord>): ReviewRecord => ({
   projectId: "p", fingerprint: "f".repeat(64), status: "done", phase0: [], findings: [], fileHashes: {}, costCentiCredits: 0, failReason: null,
-  startedAt: new Date(), finishedAt: null, shownToAgentAt: null, acceptedBy: null, acceptedAt: null, ...over,
+  startedAt: new Date(), finishedAt: null, shownToAgentAt: null, acceptedBy: null, acceptedAt: null, publishedAt: null, ...over,
 });
 
 const rls = rule("rls_disabled:public.productos", "HIGH", "rls_disabled", { table: "productos" });
