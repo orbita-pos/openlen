@@ -47,7 +47,13 @@ export async function loadReviewInputs(projectId: string): Promise<ReviewInputs 
       return { hasBackend: false, project: null };
     }),
   ]);
-  const schemaDump = draft.project ? await dumpSchema(draft.project).catch(() => null) : null;
+  const schemaDump = draft.project
+    ? await dumpSchema(draft.project).catch((err: unknown) => {
+        // Said out loud: without the schema, the database rules don't run.
+        console.warn("[security-review] could not read the draft database's schema; reviewing without it", err);
+        return null;
+      })
+    : null;
   return {
     projectId,
     ownerId: row.userId,

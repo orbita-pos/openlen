@@ -4,6 +4,8 @@
 // (PGlite) with the same roles and grants as a project's.
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { BackendProject } from "@/lib/backend/router";
+import { newStorageTestProject } from "@/lib/backend/storage/testing";
 import { newTestProject, type TestProject } from "@/lib/backend/testing/project";
 
 import { dumpSchema } from "./schema-dump";
@@ -63,5 +65,29 @@ describe("dumpSchema", () => {
   it("answers the buckets as a list even when Storage was never set up", async () => {
     const d = await dumpSchema(t.project);
     expect(Array.isArray(d.buckets)).toBe(true);
+  });
+
+});
+
+describe("dumpSchema, read the way production reads it", () => {
+  it("🔴 as `authenticator`: the storage schema it can't see doesn't sink the dump, and the buckets come through service_role", async () => {
+    const s = await newStorageTestProject(`${MIGRATION}\ninsert into storage.buckets (id, name, public) values ('fotos', 'fotos', true);`);
+    // Production's project database opens its connections as `authenticator`
+    // (lib/backend/pg.ts → projectDatabase), not as a superuser like PGlite here.
+    const asProduction: BackendProject = {
+      ...s.project,
+      db: {
+        ...s.project.db,
+        transaction: (fn) =>
+          s.project.db.transaction(async (q) => {
+            await q("set local role authenticator");
+            return fn(q);
+          }),
+      },
+    };
+    const d = await dumpSchema(asProduction);
+    expect(d.tables.map((x) => x.name)).toEqual(["notas", "pedidos", "productos"]);
+    expect(d.policies.some((p) => p.name === "cualquiera edita")).toBe(true);
+    expect(d.buckets).toEqual([{ id: "fotos", public: true }]);
   });
 });
