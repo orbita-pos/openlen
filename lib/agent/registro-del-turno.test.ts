@@ -10,6 +10,22 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[1]).toMatchObject({ tool: "todo_write", todos: [] });
   });
 
+  it("LOS VISUALES: guarda el visual de show_widget y en qué punto del texto lo puso Len", () => {
+    const r = crearRegistroDelTurno();
+    const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };
+    r.observar({ type: "text", text: "Mira:" });
+    r.observar({ type: "action", tool: "show_widget", status: "done", summary: "", widget });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "show_widget", widget, textOffset: 5 });
+  });
+
+  it("LOS VISUALES: tras un reintento que descarta texto, el punto cuenta el texto ya recortado", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "Hola, mira esto" });
+    r.observar({ type: "retry", attempt: 1, maxAttempts: 3, delayMs: 0, discardChars: 10 });
+    r.observar({ type: "action", tool: "show_widget", status: "done", summary: "", widget: { title: "", loadingMessages: [], code: "<p>" } });
+    expect(r.tarjetas[0]).toMatchObject({ textOffset: 5 });
+  });
+
   const base ={ terminalError: true, topeAlcanzado: null, errorCode: "cancelled" as const, mutoDurable: true };
 
   it("🔴 H05 · cortado a medias habiendo escrito: se guarda como cortado", () => {

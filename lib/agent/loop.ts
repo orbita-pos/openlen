@@ -35,6 +35,8 @@ import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
 import { createWritePreview } from "./write-preview";
+import { createWidgetPreview } from "./visuals/widget-preview";
+import type { VisualWidget } from "./visuals/widget";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -144,6 +146,9 @@ export type AgentStreamEvent =
        *  `todo_write`. Sólo de pantalla y de la tarjeta guardada; el modelo lee
        *  su propia llamada en el historial. */
       todos?: readonly TodoItem[];
+      /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): el visual que
+       *  dibujó `show_widget`. Sólo de pantalla y de la tarjeta guardada. */
+      widget?: VisualWidget;
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -168,6 +173,9 @@ export type AgentStreamEvent =
   // LA PÁGINA A MEDIAS (los «live tool deltas» de DeepSeek): lo que un Write
   // de una página lleva escrito. Sólo se pinta; lo que cuenta es `html`.
   | { type: "page_preview"; html: string; page: string | null }
+  // EL VISUAL A MEDIAS: lo que lleva escrito un `show_widget`, para el chat.
+  // Sólo se pinta; lo que cuenta es el `widget` de su tarjeta.
+  | { type: "widget_preview"; callIndex: number; title: string | null; loadingMessages: readonly string[]; code: string }
   // F6a · UN COMANDO DE LA TERMINAL y su salida, la misma que leyó el modelo,
   // para la lente «Terminal» del lienzo. Sólo lo emite `bash`; sin la palanca
   // (`OPENLEN_TERMINAL`) no sale nunca y el cable es el de antes.
@@ -1355,6 +1363,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messagesAtLastCall = messages.length;
       // Una por intento: un reintento vuelve a escribir desde cero.
       const writePreview = createWritePreview(undefined, args.activePage);
+      // LOS VISUALES (spec local 2026-10-16-len-inline-visuals): el gemelo de
+      // `writePreview` para `show_widget`, que el chat pinta a medio escribir.
+      const widgetPreview = createWidgetPreview();
       // LO QUE ESTE INTENTO GENERÓ, por si el proveedor no manda su uso (llega al
       // FINAL del stream, y un ■ o un corte a mitad no lo trae). Ver abajo.
       let usoDelProveedor = false;
@@ -1392,6 +1403,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         } else if (ev.type === "function_call_delta") {
           const preview = writePreview.push(ev);
           if (preview) args.emit({ type: "page_preview", html: preview.html, page: preview.page });
+          const visual = widgetPreview.push(ev);
+          if (visual) args.emit({ type: "widget_preview", ...visual });
         } else if (ev.type === "function_call") {
           calls.push({
             name: ev.name,
@@ -1855,6 +1868,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.dismissed ? { dismissed: true as const } : {}),
           // La lista de progreso, entera (también vacía: Len puede vaciarla).
           ...(outcome.todos ? { todos: outcome.todos } : {}),
+          // Y el visual de `show_widget`, entero: la tarjeta guardada es su única copia.
+          ...(outcome.widget ? { widget: outcome.widget } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
