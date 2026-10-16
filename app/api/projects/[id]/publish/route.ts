@@ -9,6 +9,7 @@ import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { securityReviewer } from "@/lib/security-review/real";
 import {
   ProjectNotFoundError,
   publishProject,
@@ -48,6 +49,12 @@ export const dynamic = "force-dynamic";
 //   503 functions_bundler_unavailable — the functions bundler didn't answer
 //   428 confirmation_required — the publish would delete real data; `destructive`
 //                      lists it and the client resends with `confirmFingerprint`
+//   428 security_findings — the security review found HIGH problems nobody
+//                      accepted: `blocking`, `medium`, `accepted`, `fingerprint`
+//                      and `status`; resend with `acceptSecurityFingerprint`
+//                      («Publicar igual», spec local 2026-10-15)
+//   428 security_review_pending — the review is still running: `fingerprint`;
+//                      wait for it (GET …/security-review) and resend
 //   500 error         — disk write or DB error after validation passed
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -62,6 +69,10 @@ const PublishBodySchema = z.object({
   copyDraftData: z.boolean().optional(),
   /** «Publicar igual» aunque falten secretos de las funciones (428). */
   skipMissingSecrets: z.boolean().optional(),
+  /** «Publicar igual» con hallazgos de seguridad (428): la huella de la revisión aceptada. */
+  acceptSecurityFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
+  /** El idioma de quien publica: el de los textos de la revisión si arranca aquí. */
+  locale: z.string().min(2).max(10).optional(),
 });
 
 export const POST = paraLaApp(async (
@@ -94,6 +105,18 @@ export const POST = paraLaApp(async (
     const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, id)).limit(1);
     if (!p?.subdomain || p.subdomain !== parsed.data.subdomain) return json({ error: "solo_dueno_direccion" }, 403);
   }
+
+  // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que
+  // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
+  // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).
+  const seguridad = await securityReviewer()
+    .gate({ projectId: id, accept: parsed.data.acceptSecurityFingerprint, actorId: userId, locale: parsed.data.locale ?? "en" })
+    .catch((err: unknown) => {
+      console.warn("[publish] security review failed; publishing without it", err);
+      return { kind: "open" as const, view: null };
+    });
+  if (seguridad.kind === "pending") return json({ error: "security_review_pending", fingerprint: seguridad.view.fingerprint }, 428);
+  if (seguridad.kind === "blocked") return json({ error: "security_findings", ...seguridad.view }, 428);
 
   try {
     // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).

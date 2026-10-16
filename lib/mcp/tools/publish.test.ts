@@ -10,7 +10,9 @@ const m = vi.hoisted(() => ({
   hasTrustedPublish: vi.fn(),
   publishProject: vi.fn(),
   unpublishProject: vi.fn(),
+  securityGate: vi.fn(),
 }));
+vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: m.securityGate }) }));
 vi.mock("../access", () => ({ openProject: m.openProject }));
 vi.mock("../quota", () => ({ consumeQuota: m.consumeQuota }));
 vi.mock("../approvals", () => ({
@@ -48,6 +50,7 @@ const parse = (r: ToolResult) => JSON.parse(text(r));
 
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockReset());
+  m.securityGate.mockResolvedValue({ kind: "open", view: null });
   m.consumeQuota.mockResolvedValue(null);
   m.hasTrustedPublish.mockResolvedValue(false);
   m.createApproval.mockResolvedValue({ id: "AP1", expiresAt: new Date("2026-10-13T00:00:00Z") });
@@ -146,5 +149,42 @@ describe("unpublish", () => {
   it("lo que no está publicado no se despublica", async () => {
     m.openProject.mockResolvedValue(owner(null));
     expect(text(await unpublishTool.run({ project_id: "p1" }, caller))).toContain("not_published");
+  });
+});
+
+describe("publish — la revisión de seguridad (spec local 2026-10-15)", () => {
+  const rls = { key: "rls_disabled:public.productos", source: "rule", severity: "HIGH", category: "rls_disabled", file: null, line: null, description: "", exploitScenario: "", recommendation: "", params: { table: "productos" } };
+  const blocked = { kind: "blocked", view: { fingerprint: "c".repeat(64), status: "done", blocking: [rls], medium: [], accepted: [] } };
+
+  function trustedRepublish() {
+    m.openProject.mockResolvedValue(owner("cafe"));
+    m.hasTrustedPublish.mockResolvedValue(true);
+    m.consumeQuota.mockResolvedValue(null);
+  }
+
+  it("🔴 lo grave frena: security_findings con los hallazgos, sin publicar ni gastar cuota", async () => {
+    trustedRepublish();
+    m.securityGate.mockResolvedValue(blocked);
+    const r = await publishTool.run({ project_id: "p1" }, caller);
+    expect(text(r)).toContain("security_findings");
+    expect(text(r)).toContain("public.productos");
+    expect(text(r)).toContain("publish anyway from the publish dialog in OpenLen");
+    expect(m.publishProject).not.toHaveBeenCalled();
+    expect(m.consumeQuota).not.toHaveBeenCalled();
+  });
+
+  it("con la revisión corriendo: security_review_pending", async () => {
+    trustedRepublish();
+    m.securityGate.mockResolvedValue({ kind: "pending", view: { ...blocked.view, status: "running" } });
+    const r = await publishTool.run({ project_id: "p1" }, caller);
+    expect(text(r)).toContain("security_review_pending");
+    expect(m.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("si la revisión revienta, se publica", async () => {
+    trustedRepublish();
+    m.securityGate.mockRejectedValue(new Error("db down"));
+    await publishTool.run({ project_id: "p1" }, caller);
+    expect(m.publishProject).toHaveBeenCalled();
   });
 });
