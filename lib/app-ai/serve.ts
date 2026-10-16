@@ -8,7 +8,7 @@ import "server-only";
 
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { backendForHost } from "@/lib/backend/registry";
-import { debitCredits, debitCreditsIfEnough, getCreditState, refundCredits } from "@/lib/credits";
+import { chargeCredits, chargeCreditsIfEnough, getCreditState, recordUncharged, returnCredits } from "@/lib/credits";
 import { functionsBlocked } from "@/lib/functions/blocks-pg";
 import { ConcurrencyLimiter } from "@/lib/functions/concurrency";
 import { ownerOf as projectOwner } from "@/lib/functions/deploy";
@@ -48,9 +48,10 @@ function realDeps(): AppAiDeps {
         const s = await getCreditState(userId);
         return { plan: s.plan, allotment: s.allotment };
       },
-      debitIfEnough: debitCreditsIfEnough,
-      debit: debitCredits,
-      refund: refundCredits,
+      debitIfEnough: chargeCreditsIfEnough,
+      debit: chargeCredits,
+      refund: returnCredits,
+      record: recordUncharged,
     },
     store: pgAppAiStore,
     reservations,
