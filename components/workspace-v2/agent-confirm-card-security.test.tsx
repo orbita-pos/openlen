@@ -12,6 +12,8 @@ import modalsDomain from "@/messages/es/modalsDomain.json";
 import panelsChat from "@/messages/es/panelsChat.json";
 import type { Finding } from "@/lib/security-review/types";
 
+import { tarjetaDeConfirmacion } from "@/components/llamada/puente-a-len";
+
 import { AgentConfirmCard, type AgentConfirm } from "./agent-confirm-card";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -73,6 +75,18 @@ describe("Len's publish card with the security review", () => {
     await act(async () => { button("Publicar igual")!.click(); });
     await settle();
     expect(calls.find((c) => c.url.endsWith("/publish"))?.body).toMatchObject({ acceptSecurityFingerprint: FP, locale: "es" });
+  });
+
+  it("🔴 through the `confirm` event reader, as the chat gets it, the owner sees it before any tap", async () => {
+    stubFetch(() => ({ status: 200, body: { url: "https://tienda.openlen.app" } }));
+    const event = { ...BASE, seguridad: { fingerprint: FP, blocking: [rls], medium: [] } };
+    const tarjeta = tarjetaDeConfirmacion(JSON.parse(JSON.stringify(event)) as Record<string, unknown>);
+    if (tarjeta?.tipo !== "publicar") throw new Error("no publish card");
+    await render(tarjeta.confirm);
+    expect(host.textContent).toContain("La tabla productos no tiene RLS");
+    expect(button("Publicar")).toBeUndefined();
+    expect(button("Publicar igual")).toBeDefined();
+    expect(calls).toHaveLength(0);
   });
 
   it("a 428 security_findings from the route turns the card into the findings", async () => {
