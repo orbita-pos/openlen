@@ -367,5 +367,10 @@
     "publishAnyway": "Publicar mesmo assim",
     "functionsDoNotCompile": "As funções não compilam, então nada foi publicado:\n{errors}",
     "functionsFailed": "Não foi possível iniciar as funções. A página não mudou."
-  }
+  },
+  "visualLabel": "Visual do Len: {title}",
+  "visualLoading": "Preparando o visual…",
+  "visualLinkTitle": "Abrir este link?",
+  "visualLinkOpen": "Abrir",
+  "visualLinkCancel": "Cancelar"
 }

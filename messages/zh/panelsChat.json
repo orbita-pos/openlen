@@ -367,5 +367,10 @@
     "publishAnyway": "仍然发布",
     "functionsDoNotCompile": "函数无法编译，所以没有发布任何内容：\n{errors}",
     "functionsFailed": "函数无法启动。页面没有改变。"
-  }
+  },
+  "visualLabel": "Len 的图示：{title}",
+  "visualLoading": "正在准备图示…",
+  "visualLinkTitle": "打开这个链接？",
+  "visualLinkOpen": "打开",
+  "visualLinkCancel": "取消"
 }

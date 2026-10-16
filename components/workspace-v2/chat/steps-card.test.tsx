@@ -11,7 +11,7 @@ vi.mock("next-intl", () => ({
 }));
 
 import type { AgentAction } from "../agent-action-card";
-import { StepsCard } from "./steps-card";
+import { StepsCard, visibleSteps } from "./steps-card";
 import type { DesignTurn } from "./use-agent-chat";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -87,6 +87,15 @@ describe("la tarjeta de los pasos", () => {
     ]);
     expect(host.textContent).not.toContain("agent.tool.enter_plan_mode");
     expect(host.textContent).toContain("agent.tool.find_photo");
+  });
+
+  it("LOS VISUALES: read_me y show_widget no son pasos (el visual va en la respuesta)", () => {
+    const steps = visibleSteps([
+      { tool: "read_me", status: "done", summary: "" },
+      { tool: "show_widget", status: "done", summary: "", widget: { title: "t", loadingMessages: [], code: "<p>" } },
+      { tool: "Write", status: "done", summary: "/index.html" },
+    ] as AgentAction[]);
+    expect(steps.map((a) => a.tool)).toEqual(["Write"]);
   });
 
   it("las demás herramientas que fallan siguen como estaban: «falló» y su motivo para el dueño (N41)", () => {
