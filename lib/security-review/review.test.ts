@@ -104,17 +104,75 @@ describe("start", () => {
     expect((await reviewer.view("p", second!.fingerprint))?.status).toBe("running");
   });
 
-  it("the second review is told what changed since the last one that finished", async () => {
+  it("until the project is published with a review, every review covers everything", async () => {
     let html = "<h1>uno</h1>";
-    const { reviewer, calls } = setup({ inputs: () => withBackend({ homeHtml: html, files: { "/js/a.js": "a" } }) });
+    const { reviewer, calls } = setup({ inputs: () => withBackend({ homeHtml: html }) });
     const first = await reviewer.start("p", "es");
     await settle();
+    expect(calls[0]!.focus).toContain("FIRST REVIEW");
     calls[0]!.answer.resolve({ ok: true, findings: [], usage: NO_USAGE, costCentiCredits: 1 });
     await reviewer.wait("p", first!.fingerprint, 1_000);
     html = "<h1>dos</h1>";
     await reviewer.start("p", "es");
     await settle();
-    expect(calls[1]!.focus).toContain("CHANGED SINCE THE LAST REVIEW (look here first):\n/index.html");
+    expect(calls[1]!.focus).toContain("FIRST REVIEW");
+  });
+
+  it("🔴 after a publish, the next review is the diff since the published version, like Claude Code on a pull request", async () => {
+    let html = "<h1>uno</h1>";
+    let files: Record<string, string> = { "/js/a.js": "const a = 1;\n" };
+    const { reviewer, calls } = setup({ inputs: () => withBackend({ homeHtml: html, files }) });
+    const published = await reviewer.start("p", "es");
+    await settle();
+    calls[0]!.answer.resolve({ ok: true, findings: [], usage: NO_USAGE, costCentiCredits: 1 });
+    await reviewer.wait("p", published!.fingerprint, 1_000);
+    await reviewer.markPublished("p", published!.fingerprint);
+    html = "<h1>dos</h1>";
+    files = { ...files, "/js/nuevo.js": "export const k = 2;\n" };
+    await reviewer.start("p", "es");
+    await settle();
+    const focus = calls[1]!.focus;
+    expect(focus).not.toContain("FIRST REVIEW");
+    expect(focus).toContain("FILES MODIFIED:\n/index.html\n/js/nuevo.js");
+    expect(focus).toContain("-<h1>uno</h1>");
+    expect(focus).toContain("+export const k = 2;");
+    expect(focus).not.toContain("const a = 1;");
+    expect(focus).toContain("Do not comment on existing security concerns");
+  });
+
+  it("markPublished ignores a fingerprint that is no longer the project's (it changed between the gate and the publish)", async () => {
+    let html = "<h1>uno</h1>";
+    const { reviewer, store, calls } = setup({ inputs: () => withBackend({ homeHtml: html }) });
+    const v = await reviewer.start("p", "es");
+    await settle();
+    calls[0]!.answer.resolve({ ok: true, findings: [], usage: NO_USAGE, costCentiCredits: 1 });
+    await reviewer.wait("p", v!.fingerprint, 1_000);
+    html = "<h1>otra</h1>";
+    await reviewer.markPublished("p", v!.fingerprint);
+    expect(await store.latestPublished("p")).toBeNull();
+  });
+
+  it("a publish whose review the model didn't finish doesn't become the base: the next review still covers everything", async () => {
+    let env: Record<string, string> = { OPENLEN_SECURITY_REVIEW_DAILY_USD: "0" };
+    let html = "<h1>uno</h1>";
+    const store = memorySecurityReviewStore();
+    const focuses: string[] = [];
+    const reviewer = createSecurityReviewer({
+      store,
+      loadInputs: async () => withBackend({ homeHtml: html }),
+      modelReview: async (x) => { focuses.push(x.focus); return { ok: true, findings: [], usage: NO_USAGE, costCentiCredits: 1 }; },
+      now: () => new Date("2026-10-16T12:00:00Z"),
+      get env() { return env; },
+    });
+    const skipped = await reviewer.start("p", "es");
+    expect(skipped?.status).toBe("skipped_budget");
+    await reviewer.markPublished("p", skipped!.fingerprint);
+    expect(await store.latestPublished("p")).toBeNull();
+    env = {};
+    html = "<h1>dos</h1>";
+    const next = await reviewer.start("p", "es");
+    await reviewer.wait("p", next!.fingerprint, 1_000);
+    expect(focuses[0]).toContain("FIRST REVIEW");
   });
 
   it("a failed or crashed model review is failed, with its reason, and never blocks on its own", async () => {

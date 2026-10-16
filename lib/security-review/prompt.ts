@@ -32,7 +32,7 @@ const OPENLEN_FACTS = `OPENLEN PLATFORM FACTS (treat these as true):
 export const SCAN_SYSTEM = `You are a senior security engineer conducting a focused security review of a web project that is about to be published on OpenLen, a platform where people who don't code build pages and apps with an AI agent.
 
 OBJECTIVE:
-Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential once the project is public. This is not a general code review - focus ONLY on security implications. Issues the owner already accepted are out of scope. The files that changed since the last review are where to look first, but a vulnerability anywhere in what gets published counts.
+Perform a security-focused code review to identify HIGH-CONFIDENCE security vulnerabilities that could have real exploitation potential once the project is public. This is not a general code review - focus ONLY on security implications. The user message gives the SCOPE: on a first review, everything that gets published; after the project has been published, the changes since the published version, reviewed like a pull request against its base branch. Issues the owner already accepted are always out of scope.
 
 CRITICAL INSTRUCTIONS:
 1. MINIMIZE FALSE POSITIVES: Only flag issues where you're >80% confident of actual exploitability
@@ -288,13 +288,37 @@ export function projectContextMessage(o: { readonly inputs: ReviewInputs; readon
   ].join("\n");
 }
 
-/** The identifying pass's own message: language, what changed, what was accepted. */
-export function scanFocusMessage(o: { readonly changed: readonly string[]; readonly accepted: readonly Finding[]; readonly language: string }): string {
+/** What a review covers: everything the first time; after a publish, the changes since the published version. */
+export type ReviewScope =
+  | { readonly kind: "whole" }
+  /** `diff` null: too big for the prompt, only the files are listed. */
+  | { readonly kind: "changes"; readonly changed: readonly string[]; readonly diff: string | null };
+
+function scopeLines(s: ReviewScope): string[] {
+  if (s.kind === "whole") return ["SCOPE: FIRST REVIEW of this project (nothing was published with a review before): review everything that gets published."];
+  return [
+    "SCOPE: the changes since the published version. Everything in the published version was already reviewed, and every serious problem in it was fixed or accepted by the owner before it could be published.",
+    "",
+    "FILES MODIFIED:",
+    s.changed.length ? s.changed.join("\n") : "(no file changed since the published version)",
+    "",
+    ...(s.diff === null
+      ? ["NOTE: the diff was omitted due to size constraints. Please use the file exploration tools to examine the files modified above."]
+      : s.diff
+        ? ["DIFF CONTENT:", "```diff", s.diff.trimEnd(), "```"]
+        : []),
+    "",
+    // Claude Code's /security-review, on a pull request:
+    "Focus ONLY on security implications newly added by these changes. Do not comment on existing security concerns.",
+  ];
+}
+
+/** The identifying pass's own message: language, scope, what was accepted. */
+export function scanFocusMessage(o: { readonly scope: ReviewScope; readonly accepted: readonly Finding[]; readonly language: string }): string {
   return [
     `LANGUAGE: write "description", "exploit_scenario" and "recommendation" in ${o.language}.`,
     "",
-    "CHANGED SINCE THE LAST REVIEW (look here first):",
-    o.changed.length ? o.changed.join("\n") : "(none listed: review everything)",
+    ...scopeLines(o.scope),
     "",
     "ACCEPTED BY THE OWNER (out of scope unless it got worse):",
     o.accepted.length ? o.accepted.map(findingLine).join("\n") : "(none)",

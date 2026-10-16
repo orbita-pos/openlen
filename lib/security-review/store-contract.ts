@@ -41,16 +41,6 @@ export function describeStoreContract(name: string, setup: () => Promise<Contrac
       expect(await store.get(projectA, "skip")).toMatchObject({ status: "skipped_scope", costCentiCredits: 0 });
     });
 
-    it("latestDone is the newest done review of the project", async () => {
-      const { store, projectA } = await setup();
-      for (const [fp, at] of [["old", "1999-03-01T08:00:00Z"], ["new", "1999-03-01T09:00:00Z"], ["running", "1999-03-01T09:30:00Z"]] as const) {
-        await store.insert({ projectId: projectA, fingerprint: fp, status: "running", phase0: [], fileHashes: {}, startedAt: new Date(at) });
-      }
-      await store.finish(projectA, "old", { status: "done", findings: [], costCentiCredits: 0, failReason: null, finishedAt: T0 });
-      await store.finish(projectA, "new", { status: "done", findings: [], costCentiCredits: 0, failReason: null, finishedAt: T0 });
-      expect((await store.latestDone(projectA))?.fingerprint).toBe("new");
-    });
-
     it("usageBetween counts this project's model runs and everyone's spend in the window", async () => {
       const { store, projectA, projectB } = await setup();
       await store.insert({ projectId: projectA, fingerprint: "a1", status: "running", phase0: [], fileHashes: {}, startedAt: T0 });

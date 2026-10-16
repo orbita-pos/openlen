@@ -62,10 +62,6 @@ export const pgSecurityReviewStore: SecurityReviewStore = {
       .returning({ fingerprint: T.fingerprint });
     return out.length > 0;
   },
-  async latestDone(projectId) {
-    const [r] = await db.select(RECORD).from(T).where(and(eq(T.projectId, projectId), eq(T.status, "done"))).orderBy(desc(T.startedAt)).limit(1);
-    return r ?? null;
-  },
   async usageBetween(projectId, from, to) {
     const [r] = await db
       .select({

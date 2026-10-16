@@ -29,8 +29,6 @@ export interface SecurityReviewStore {
   finish(projectId: string, fingerprint: string, f: FinishedReview): Promise<void>;
   /** A `failed` or `skipped_budget` review runs again: `running` from `at`, keeping its cost. false for any other. */
   restart(projectId: string, fingerprint: string, at: Date): Promise<boolean>;
-  /** The project's newest `done` review. */
-  latestDone(projectId: string): Promise<ReviewRecord | null>;
   /** Started in [from, to): this project's reviews that used the model, and what ALL reviews cost. */
   usageBetween(projectId: string, from: Date, to: Date): Promise<{ readonly projectModelRuns: number; readonly spentCentiCredits: number }>;
   /** true only the first time: Len is shown a review's findings once. */
@@ -73,9 +71,6 @@ export function memorySecurityReviewStore(): SecurityReviewStore & { readonly re
       if (i < 0 || (reviews[i]!.status !== "failed" && reviews[i]!.status !== "skipped_budget")) return false;
       reviews[i] = { ...reviews[i]!, status: "running", findings: [], failReason: null, finishedAt: null, startedAt: when };
       return true;
-    },
-    async latestDone(projectId) {
-      return reviews.filter((r) => r.projectId === projectId && r.status === "done").sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0] ?? null;
     },
     async usageBetween(projectId, from, to) {
       const inWindow = reviews.filter((r) => r.startedAt >= from && r.startedAt < to);
