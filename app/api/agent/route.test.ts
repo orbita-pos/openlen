@@ -190,6 +190,9 @@ vi.mock("@/lib/projects/chat", () => ({
   abrirFilaDelTurno: mocks.abrirFilaDelTurno,
   avanceDelTurno: mocks.avanceDelTurno,
   quitarFilaDelTurno: mocks.quitarFilaDelTurno,
+  // La lista de progreso (spec local 2026-10-15): la ruta lee la última del
+  // proyecto al empezar el turno. Sin lista, como un proyecto nuevo.
+  latestTodoListForChat: vi.fn(async () => null),
 }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
