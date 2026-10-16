@@ -648,6 +648,8 @@ export default defineConfig({
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
       "app/api/projects/[id]/chat/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",
+      // El libro de gasto: la edición de imagen desde el editor (spec local 2026-10-16-credit-ledger).
+      "app/api/projects/[id]/ai-edit-image/route.test.ts",
       // La terminal del usuario (la #17 de plans/len-agente-2026/notas/fase-5-taller.md).
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).

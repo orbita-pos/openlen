@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { cabeEnElTope, sumarGasto } from "@/lib/projects/miembros";
-import { AI_IMAGE_EDIT_CREDIT_COST, debitCredits, getCreditState } from "@/lib/credits";
-import { editImage, realImageEditTransport } from "@/lib/ai/image-edit-core";
+import { AI_IMAGE_EDIT_CREDIT_COST, chargeCredits, getCreditState } from "@/lib/credits";
+import { OPENAI_IMAGE_EDIT_MODEL_ID, editImage, realImageEditTransport } from "@/lib/ai/image-edit-core";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/projects/[id]/ai-edit-image — instruction-based AI image edit.
@@ -93,7 +93,15 @@ export async function POST(
     {
       callProvider: realImageEditTransport(),
       debit: async (cost) => {
-        await debitCredits(pagador, cost);
+        // EL LIBRO DE GASTO: la fila es del dueño (paga él) y dice quién lo pidió.
+        await chargeCredits(pagador, cost, {
+          surface: "image_edit",
+          outcome: "ok",
+          projectId: id,
+          actorId: esMiembro ? userId : null,
+          listCenticredits: cost,
+          uses: [{ provider: "openai", model: OPENAI_IMAGE_EDIT_MODEL_ID, images: 1 }],
+        });
         if (esMiembro) await sumarGasto(id, userId, cost);
       },
     },
