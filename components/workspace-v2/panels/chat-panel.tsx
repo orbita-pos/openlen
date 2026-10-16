@@ -59,6 +59,7 @@ import { FicherosDelTurnoEnVivo } from "../ficheros-del-turno";
 import { agruparCambios, MAX_SECCIONES } from "@/lib/workspace-v2/diff-de-turno";
 import { editsOfTurn, turnChanges } from "../chat/turn-changes";
 import { isPublishNote } from "../chat/publish-note";
+import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 import {
   useAgentChat,
   type AttachedImage,
@@ -98,6 +99,8 @@ interface ChatPanelProps {
   /** Mirrors the chat's streaming state to the parent so the preview can
    *  overlay the page-building loader while the model redesigns. */
   onRedesigningChange?: (active: boolean) => void;
+  /** Ver `AgentChatOptions.onLatestTurnChange`. */
+  onLatestTurnChange?: (turn: LatestTurn | null) => void;
   /** True while the parent is still fetching `/api/projects/<id>` — render
    *  a skeleton so a brief flash of the empty/fallback state doesn't appear
    *  during reload. */
@@ -138,6 +141,7 @@ export function ChatPanel({
   flatProjectChat,
   onChatChange,
   onRedesigningChange,
+  onLatestTurnChange,
   projectLoading = false,
   sectionSelectMode = false,
   onToggleSectionSelect,
@@ -165,6 +169,7 @@ export function ChatPanel({
         initialChat={flatProjectChat?.filter((t) => t.tipo !== "persona")}
         onChatChange={onChatChange}
         onRedesigningChange={onRedesigningChange}
+        onLatestTurnChange={onLatestTurnChange}
         sectionSelectMode={sectionSelectMode}
         onToggleSectionSelect={onToggleSectionSelect}
         scopedSelection={scopedSelection}
@@ -248,6 +253,7 @@ function AIDesignChat({
   initialChat,
   onChatChange,
   onRedesigningChange,
+  onLatestTurnChange,
   sectionSelectMode = false,
   onToggleSectionSelect,
   scopedSelection = null,
@@ -275,6 +281,7 @@ function AIDesignChat({
   initialChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
+  onLatestTurnChange?: (turn: LatestTurn | null) => void;
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
   scopedSelection?: ScopedSelection | null;
@@ -330,6 +337,7 @@ function AIDesignChat({
     initialChat,
     onChatChange,
     onRedesigningChange,
+    onLatestTurnChange,
     scopedSelection,
     onClearScope,
     pendingDraft,

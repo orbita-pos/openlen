@@ -578,5 +578,35 @@
       "useDefault": "Usa il predefinito",
       "saveError": "Impossibile salvare il limite."
     }
+  },
+  "appBirth": {
+    "working": "Len sta lavorando alla tua app",
+    "station": {
+      "board": "Len sta organizzando il lavoro",
+      "files": "Len sta leggendo il progetto",
+      "desk": "Len sta scrivendo il codice",
+      "terminal": "Len sta eseguendo un comando",
+      "bench": "Len sta provando l’app"
+    },
+    "label": {
+      "board": "lavagna",
+      "files": "archivio",
+      "desk": "scrivania",
+      "terminal": "terminale",
+      "bench": "banco di prova"
+    },
+    "doneWho": "Len ha finito",
+    "done": "La tua app è pronta",
+    "drawing": "Sezione del laboratorio di Len: una lavagna, uno schedario, una scrivania, un terminale e un banco di prova. Len è alla postazione dove lavora, sotto la sua lampada accesa.",
+    "block": {
+      "label": "Dati del laboratorio",
+      "workshop": "Laboratorio",
+      "app": "App",
+      "progress": "Avanzamento",
+      "time": "Tempo",
+      "step": "Passo {current} di {total}",
+      "noSteps": "—",
+      "finished": "Fatto"
+    }
   }
 }

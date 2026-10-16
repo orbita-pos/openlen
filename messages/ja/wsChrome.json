@@ -578,5 +578,35 @@
       "useDefault": "初期値に戻す",
       "saveError": "上限を保存できませんでした。"
     }
+  },
+  "appBirth": {
+    "working": "Len があなたのアプリを作っています",
+    "station": {
+      "board": "Len が作業を整理しています",
+      "files": "Len がプロジェクトを読んでいます",
+      "desk": "Len がコードを書いています",
+      "terminal": "Len がコマンドを実行しています",
+      "bench": "Len がアプリを試しています"
+    },
+    "label": {
+      "board": "ボード",
+      "files": "書庫",
+      "desk": "机",
+      "terminal": "ターミナル",
+      "bench": "テスト台"
+    },
+    "doneWho": "Len の作業が終わりました",
+    "done": "アプリができました",
+    "drawing": "Len の工房の断面図：ボード、書類棚、机、ターミナル、テスト台。Len は作業中の持ち場にいて、その上のランプが灯っています。",
+    "block": {
+      "label": "工房の情報",
+      "workshop": "工房",
+      "app": "アプリ",
+      "progress": "進み具合",
+      "time": "時間",
+      "step": "ステップ {current} / {total}",
+      "noSteps": "—",
+      "finished": "完了"
+    }
   }
 }

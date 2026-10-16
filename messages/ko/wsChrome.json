@@ -578,5 +578,35 @@
       "useDefault": "기본값 사용",
       "saveError": "한도를 저장하지 못했습니다."
     }
+  },
+  "appBirth": {
+    "working": "Len이 앱을 만들고 있어요",
+    "station": {
+      "board": "Len이 작업을 정리하고 있어요",
+      "files": "Len이 프로젝트를 읽고 있어요",
+      "desk": "Len이 코드를 쓰고 있어요",
+      "terminal": "Len이 명령을 실행하고 있어요",
+      "bench": "Len이 앱을 써 보고 있어요"
+    },
+    "label": {
+      "board": "보드",
+      "files": "자료함",
+      "desk": "책상",
+      "terminal": "터미널",
+      "bench": "테스트대"
+    },
+    "doneWho": "Len이 작업을 마쳤어요",
+    "done": "앱이 준비됐어요",
+    "drawing": "Len 작업실의 단면도: 보드, 서류함, 책상, 터미널, 테스트대. Len은 지금 일하는 자리에 있고, 그 위의 램프가 켜져 있어요.",
+    "block": {
+      "label": "작업실 정보",
+      "workshop": "작업실",
+      "app": "앱",
+      "progress": "진행",
+      "time": "시간",
+      "step": "{total}단계 중 {current}단계",
+      "noSteps": "—",
+      "finished": "완료"
+    }
   }
 }

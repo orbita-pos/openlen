@@ -578,5 +578,35 @@
       "useDefault": "Use the default",
       "saveError": "The limit couldn't be saved."
     }
+  },
+  "appBirth": {
+    "working": "Len is working on your app",
+    "station": {
+      "board": "Len is planning the work",
+      "files": "Len is reading the project",
+      "desk": "Len is writing the code",
+      "terminal": "Len is running a command",
+      "bench": "Len is trying the app"
+    },
+    "label": {
+      "board": "board",
+      "files": "files",
+      "desk": "desk",
+      "terminal": "terminal",
+      "bench": "test bench"
+    },
+    "doneWho": "Len is done",
+    "done": "Your app is ready",
+    "drawing": "Section of Len's workshop: a board, a filing cabinet, a desk, a terminal and a test bench. Len is at the station he is working at, under its lit lamp.",
+    "block": {
+      "label": "Workshop details",
+      "workshop": "Workshop",
+      "app": "App",
+      "progress": "Progress",
+      "time": "Time",
+      "step": "Step {current} of {total}",
+      "noSteps": "—",
+      "finished": "Done"
+    }
   }
 }

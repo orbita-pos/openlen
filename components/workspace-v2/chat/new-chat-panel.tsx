@@ -49,6 +49,7 @@ import { GenteDelChat } from "./gente-del-chat";
 import { LineaDeDestino } from "./linea-de-destino";
 import { destinoDe, permitido } from "@/lib/workspace-v2/destino-del-mensaje";
 import { colorDePersona } from "@/lib/workspace-v2/menciones";
+import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -58,6 +59,8 @@ export interface NewChatPanelProps {
   flatProjectChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
+  /** Ver `AgentChatOptions.onLatestTurnChange`. */
+  onLatestTurnChange?: (turn: LatestTurn | null) => void;
   /** El turno de un «Aplicar» del modo Diseño acabó (`useAgentChat`). */
   onDesignSettled?: (ok: boolean) => void;
   projectLoading?: boolean;
@@ -128,6 +131,7 @@ function AgentChatView({
   flatProjectChat,
   onChatChange,
   onRedesigningChange,
+  onLatestTurnChange,
   onDesignSettled,
   sectionSelectMode = false,
   onToggleSectionSelect,
@@ -162,6 +166,7 @@ function AgentChatView({
     initialChat: flatProjectChat,
     onChatChange,
     onRedesigningChange,
+    onLatestTurnChange,
     onDesignSettled,
     scopedSelection,
     onClearScope,

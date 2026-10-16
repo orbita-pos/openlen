@@ -34,6 +34,7 @@ import { VersionsPanel } from "./panels/versions-panel";
 import { Tooltip } from "./ui";
 import { useInboxBadge } from "@/components/inbox/use-inbox-badge";
 import { formatBadge } from "@/components/inbox/badge-format";
+import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 // SectionView/SidebarMode are declared once in rail-model.ts (avoids a
 // circular import between the rail and this sidebar). `export type {...}`
 // only re-exports for other modules — it doesn't bind a local name — so we
@@ -219,6 +220,8 @@ interface LeftSidebarProps {
   /** Forwarded to ChatPanel — fires with the chat's streaming state so the
    *  parent can overlay the page-building loader on the preview. */
   onRedesigningChange?: (active: boolean) => void;
+  /** Forwarded to the chat: how Len's latest turn is going (the app-birth workshop). */
+  onLatestTurnChange?: (turn: LatestTurn | null) => void;
   /** El turno de un «Aplicar» del modo Diseño acabó (`NewChatPanel` → `useAgentChat`). */
   onDesignSettled?: (ok: boolean) => void;
   /** True while the parent is mid-fetch on /api/projects/<id>. Forwarded
@@ -309,6 +312,7 @@ export function LeftSidebar({
   flatProjectChat,
   onChatChange,
   onRedesigningChange,
+  onLatestTurnChange,
   onDesignSettled,
   projectLoading = false,
   savingStatus = null,
@@ -541,6 +545,7 @@ export function LeftSidebar({
                 flatProjectChat={flatProjectChat}
                 onChatChange={onChatChange}
                 onRedesigningChange={onRedesigningChange}
+                onLatestTurnChange={onLatestTurnChange}
                 onDesignSettled={onDesignSettled}
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
@@ -564,6 +569,7 @@ export function LeftSidebar({
                 flatProjectChat={flatProjectChat}
                 onChatChange={onChatChange}
                 onRedesigningChange={onRedesigningChange}
+                onLatestTurnChange={onLatestTurnChange}
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
                 onToggleSectionSelect={onToggleSectionSelect}

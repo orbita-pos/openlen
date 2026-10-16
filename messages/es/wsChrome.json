@@ -578,5 +578,35 @@
       "useDefault": "Usar el de por defecto",
       "saveError": "No se pudo guardar el tope."
     }
+  },
+  "appBirth": {
+    "working": "Len está trabajando en tu app",
+    "station": {
+      "board": "Len está organizando el trabajo",
+      "files": "Len está leyendo el proyecto",
+      "desk": "Len está escribiendo el código",
+      "terminal": "Len está corriendo un comando",
+      "bench": "Len está probando la app"
+    },
+    "label": {
+      "board": "pizarra",
+      "files": "archivo",
+      "desk": "escritorio",
+      "terminal": "terminal",
+      "bench": "banco de pruebas"
+    },
+    "doneWho": "Len terminó",
+    "done": "Tu app está lista",
+    "drawing": "Corte del taller de Len: una pizarra, un archivador, un escritorio, una terminal y un banco de pruebas. Len está en el puesto donde trabaja, bajo su lámpara encendida.",
+    "block": {
+      "label": "Datos del taller",
+      "workshop": "Taller",
+      "app": "App",
+      "progress": "Avance",
+      "time": "Tiempo",
+      "step": "Paso {current} de {total}",
+      "noSteps": "—",
+      "finished": "Hecho"
+    }
   }
 }

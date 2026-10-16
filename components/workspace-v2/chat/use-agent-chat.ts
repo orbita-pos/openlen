@@ -65,6 +65,7 @@ import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { httpErrorText } from "./http-error";
 import { camposDeNacer, type PideNacer } from "./nace-como";
+import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
  *  leer el payload para que un renombrado allí rompa aquí la compilación en vez
@@ -262,6 +263,9 @@ export interface AgentChatOptions {
   initialChat?: StoredChatTurn[];
   onChatChange?: () => void;
   onRedesigningChange?: (active: boolean) => void;
+  /** How Len's latest turn is going, every time it changes (its status and
+   *  cards): the canvas shows the app-birth workshop from it. */
+  onLatestTurnChange?: (turn: LatestTurn | null) => void;
   scopedSelection?: ScopedSelection | null;
   onClearScope?: () => void;
   pendingDraft?: string | null;
@@ -300,6 +304,7 @@ export function useAgentChat({
   initialChat,
   onChatChange,
   onRedesigningChange,
+  onLatestTurnChange,
   scopedSelection = null,
   onClearScope,
   pendingDraft = null,
@@ -558,6 +563,29 @@ export function useAgentChat({
     onRedesigningChangeRef.current?.(sending && scanFxUnavailable());
     return () => onRedesigningChangeRef.current?.(false);
   }, [sending]);
+
+  // LEN'S LATEST TURN, for the canvas (the app-birth workshop). Team messages
+  // between people aren't Len's turns. Unmounting mid-turn says "nothing": this
+  // view stops following it, and the workshop goes with it.
+  const onLatestTurnChangeRef = useRef(onLatestTurnChange);
+  onLatestTurnChangeRef.current = onLatestTurnChange;
+  // Field by field: the turn object changes with every chunk of text, and the
+  // workspace only needs to hear when one of these does.
+  const lenTurns = turns.filter((x) => x.tipo !== "persona");
+  const latestTurn = lenTurns[lenTurns.length - 1];
+  const latestId = latestTurn?.id;
+  const latestStatus = latestTurn?.status;
+  const latestCut = latestTurn?.cortado === true;
+  const latestActions = latestTurn?.actions;
+  const latestIsFirst = lenTurns.length === 1;
+  useEffect(() => {
+    onLatestTurnChangeRef.current?.(
+      latestId && latestStatus
+        ? { id: latestId, status: latestStatus, cut: latestCut, isFirst: latestIsFirst, actions: latestActions ?? [] }
+        : null,
+    );
+  }, [latestId, latestStatus, latestCut, latestActions, latestIsFirst]);
+  useEffect(() => () => onLatestTurnChangeRef.current?.(null), []);
 
   // Convergence — reconcile the server transcript into local turns. When
   // another tab (or device) appends a turn, a refetch lands it in `initialChat`
