@@ -29,7 +29,21 @@ describe("stationOfTool", () => {
 
 describe("workshopOf", () => {
   it("starts at the board before Len has done anything", () => {
-    expect(workshopOf([])).toEqual({ station: "board", note: null, todos: null });
+    expect(workshopOf([])).toEqual({ station: "board", note: null, todos: null, waiting: false });
+  });
+
+  it("a question to the owner, still unanswered, means Len is waiting for them", () => {
+    const w = workshopOf([done("Read", "src/App.tsx"), run("ask_user_question", "¿Qué productos vendes?")]);
+    expect(w.waiting).toBe(true);
+    expect(w.station).toBe("files");
+  });
+
+  it("so does a plan waiting for approval", () => {
+    expect(workshopOf([run("exit_plan_mode")]).waiting).toBe(true);
+  });
+
+  it("an answered question is no longer waiting", () => {
+    expect(workshopOf([done("ask_user_question", "¿Qué productos vendes?"), run("Write", "src/App.tsx")]).waiting).toBe(false);
   });
 
   it("lights the station of what is running, with its file as the note", () => {
@@ -135,17 +149,25 @@ describe("nextAppBirth", () => {
     expect(nextAppBirth(null, turn({ isFirst: false }), true, 1000)).toBeNull();
   });
 
-  it("a turn that ended well finishes the birth, once", () => {
+  const wrote = [{ tool: "Write", status: "done", summary: "src/screens/Home.tsx" }];
+
+  it("a turn that ended well, having written the app, finishes the birth, once", () => {
     const b = nextAppBirth(null, turn(), true, 1000);
-    const done = nextAppBirth(b, turn({ status: "applied" }), true, 9000);
+    const done = nextAppBirth(b, turn({ status: "applied", actions: wrote }), true, 9000);
     expect(done).toEqual({ turnId: "t1", startedAt: 1000, finishedAt: 9000 });
-    expect(nextAppBirth(done, turn({ status: "applied" }), true, 9500)).toBe(done);
+    expect(nextAppBirth(done, turn({ status: "applied", actions: wrote }), true, 9500)).toBe(done);
+  });
+
+  it("a first turn that only asked something has no app to call ready", () => {
+    const b = nextAppBirth(null, turn(), true, 1000);
+    const asked = [{ tool: "ask_user_question", status: "done", summary: "¿Qué vendes?" }];
+    expect(nextAppBirth(b, turn({ status: "applied", actions: asked }), true, 2000)).toBeNull();
   });
 
   it("a turn that failed, was cut or undone leaves no «ready»", () => {
     const b = nextAppBirth(null, turn(), true, 1000);
     expect(nextAppBirth(b, turn({ status: "error" }), true, 2000)).toBeNull();
-    expect(nextAppBirth(b, turn({ status: "applied", cut: true }), true, 2000)).toBeNull();
+    expect(nextAppBirth(b, turn({ status: "applied", cut: true, actions: wrote }), true, 2000)).toBeNull();
     expect(nextAppBirth(b, turn({ status: "reverted" }), true, 2000)).toBeNull();
     expect(nextAppBirth(b, null, true, 2000)).toBeNull();
   });

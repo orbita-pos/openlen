@@ -23,6 +23,7 @@ const DEMO: readonly (readonly WorkshopAction[])[] = [
   [],
   [list("in_progress", "pending", "pending", "pending", "pending")],
   [list("in_progress", "pending", "pending", "pending", "pending"), running("Read", "src/App.tsx")],
+  [list("in_progress", "pending", "pending", "pending", "pending"), running("ask_user_question", "¿Qué productos vendes?")],
   [list("in_progress", "pending", "pending", "pending", "pending"), running("Write", "src/lib/inventory.ts")],
   [list("completed", "in_progress", "pending", "pending", "pending"), running("bash", "npm run build")],
   [list("completed", "in_progress", "pending", "pending", "pending"), running("Write", "src/screens/Home.tsx")],

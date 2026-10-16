@@ -40,7 +40,7 @@ describe("useAppBirth", () => {
 
   it("says ready when the turn ends well, fades, and then goes", () => {
     show(turn());
-    show(turn({ status: "applied" }));
+    show(turn({ status: "applied", actions: [{ tool: "Write", status: "done", summary: "src/App.tsx" }] }));
     expect(seen?.finished).toBe(true);
     act(() => vi.advanceTimersByTime(READY_MS - LEAVE_MS));
     expect(seen?.leaving).toBe(true);

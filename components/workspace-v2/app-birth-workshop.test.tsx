@@ -111,6 +111,13 @@ describe("the app-birth workshop", () => {
     }
   });
 
+  it("while Len waits for an answer, it sends the owner to the chat", () => {
+    show([{ tool: "todo_write", status: "done", summary: "", todos }, { tool: "ask_user_question", status: "running", summary: "¿Qué productos vendes?" }]);
+    expect(who()).toBe("Len está esperando tu respuesta");
+    expect(headline()).toBe("Len te preguntó algo en el chat");
+    expect(note()).toBe("");
+  });
+
   it("the board ticks the steps he finished", () => {
     show([{ tool: "todo_write", status: "done", summary: "", todos }]);
     expect(host.querySelectorAll(".ab-tick.ab-on")).toHaveLength(1);

@@ -581,6 +581,8 @@
   },
   "appBirth": {
     "working": "Len is working on your app",
+    "waitingWho": "Len is waiting for your answer",
+    "waiting": "Len asked you something in the chat",
     "station": {
       "board": "Len is planning the work",
       "files": "Len is reading the project",

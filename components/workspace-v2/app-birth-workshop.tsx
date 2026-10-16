@@ -237,9 +237,11 @@ export function AppBirthWorkshop({ view, finished, appName, startedAt }: AppBirt
   // ── The words.
   const step = finished ? null : view.todos ? nextTodo(view.todos) : null;
   const stationSentence = t(`station.${station}`);
-  const who = finished ? t("doneWho") : step ? stationSentence : t("working");
-  const headline = finished ? t("done") : (step?.content ?? stationSentence);
-  const note = finished ? null : view.note;
+  const waiting = !finished && view.waiting;
+  const who = finished ? t("doneWho") : waiting ? t("waitingWho") : step ? stationSentence : t("working");
+  const headline = finished ? t("done") : waiting ? t("waiting") : (step?.content ?? stationSentence);
+  // A question's text belongs in the chat, where it is answered.
+  const note = finished || waiting ? null : view.note;
   const progress = progressOf(view.todos);
   const progressText = finished
     ? t("block.finished")
