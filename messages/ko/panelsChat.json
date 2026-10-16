@@ -367,5 +367,10 @@
     "publishAnyway": "그대로 게시",
     "functionsDoNotCompile": "함수를 컴파일할 수 없어 아무것도 게시되지 않았습니다:\n{errors}",
     "functionsFailed": "함수를 시작할 수 없었습니다. 페이지는 바뀌지 않았습니다."
-  }
+  },
+  "visualLabel": "Len의 시각 자료: {title}",
+  "visualLoading": "시각 자료 준비 중…",
+  "visualLinkTitle": "이 링크를 여시겠어요?",
+  "visualLinkOpen": "열기",
+  "visualLinkCancel": "취소"
 }

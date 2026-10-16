@@ -367,5 +367,10 @@
     "publishAnyway": "Toch publiceren",
     "functionsDoNotCompile": "De functies compileren niet, dus er is niets gepubliceerd:\n{errors}",
     "functionsFailed": "De functies konden niet worden gestart. De pagina is niet veranderd."
-  }
+  },
+  "visualLabel": "Visual van Len: {title}",
+  "visualLoading": "Visual wordt voorbereid…",
+  "visualLinkTitle": "Deze link openen?",
+  "visualLinkOpen": "Openen",
+  "visualLinkCancel": "Annuleren"
 }

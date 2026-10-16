@@ -12,6 +12,7 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 import type { TodoItem } from "@/lib/agent/todo-list";
+import type { VisualWidget } from "@/lib/agent/visuals/widget";
 
 export interface AgentAction {
   tool: string;
@@ -99,6 +100,11 @@ export interface AgentAction {
   dismissed?: true;
   /** La lista de progreso de `todo_write` (spec local 2026-10-15). */
   todos?: readonly TodoItem[];
+  /** El visual de `show_widget` (spec local 2026-10-16-len-inline-visuals): se
+   *  pinta en la respuesta de Len, no como paso. */
+  widget?: VisualWidget;
+  /** En qué punto del texto de Len va ese visual (`StoredChatTurn`). */
+  textOffset?: number;
   /** Cuántas ediciones aplicó esta llamada. */
   edits?: number;
   /**

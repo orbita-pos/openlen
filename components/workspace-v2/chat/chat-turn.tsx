@@ -13,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { AtSign, Crosshair, CornerDownRight, Flag } from "lucide-react";
 
 import { AvatarContent } from "../avatar-content";
-import { TextoDeLen } from "../texto-de-len";
+import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
@@ -273,7 +273,7 @@ export function LenTurn({
   // Nada que enseñar todavía: la barra viva dice «Pensando». Una pregunta que
   // espera SÍ es algo (va fuera de los pasos, en su tarjeta): si Len empieza
   // preguntando, sin texto ni pasos antes, sin esto no se pintaba nada.
-  if (streaming && !hasSteps && text.length === 0 && !liveQuestions && !(todos && todos.length > 0)) return null;
+  if (streaming && !hasSteps && text.length === 0 && !liveQuestions && !(todos && todos.length > 0) && !turn.liveWidget) return null;
 
   return (
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast}>
@@ -288,12 +288,8 @@ export function LenTurn({
         )}
       </div>
       {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} />}
-      {text.length > 0 && (
-        <p className="m-0 whitespace-pre-wrap break-words text-[14px] leading-[1.62] fg [text-wrap:pretty]">
-          <TextoDeLen texto={text} rutas={paths} onAbrir={openFile} />
-          {streaming && <span className="nc-caret" />}
-        </p>
-      )}
+      {/* LOS VISUALES (spec local 2026-10-16): el texto con sus visuales donde los puso Len. */}
+      <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
       {todos && todos.length > 0 && (
         <TodoListView todos={todos} streaming={streaming} continueWith={offer} {...(onContinue ? { onContinue } : {})} />
       )}
