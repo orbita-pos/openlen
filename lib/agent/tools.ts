@@ -131,6 +131,9 @@ import {
   type RespuestaPreparada,
   type ResultadosDeps,
 } from "@/lib/agent/resultados";
+import type { AgentReview } from "@/lib/security-review/review";
+import type { Finding } from "@/lib/security-review/types";
+import { agentBlockedText, ENDING_FOR_LEN, findingLineForAgent } from "@/lib/security-review/view";
 
 // edit_image: the source image must decode as one of the formats Gemini's
 // image edit accepts, and stays under the same 6MB cap the ai-edit-image route
@@ -381,6 +384,9 @@ export interface AgentDeps {
    *  funciones —compilarlas para producción, y los secretos que les faltan
    *  allí—, sin hacerlo. null = sin funciones (o sin motor). */
   previewFunctionsRelease?(projectId: string): Promise<FunctionsReleasePreview | null>;
+  /** LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): la del proyecto tal como
+   *  está, esperada hasta 155 s. `null` = apagada o sin proyecto. */
+  securityReview?(projectId: string, locale: string): Promise<AgentReview | null>;
   /** Download an on-page image as base64 — SSRF-guarded (validateUrl, same as
    *  the proxy-image route) + capped + MIME-allowlisted. edit_image only
    *  ever passes a URL it already found verbatim in the current document. */
@@ -651,6 +657,10 @@ export function realDeps(
     async previewFunctionsRelease(projectId) {
       const { previewFunctionsForPublish } = await import("@/lib/functions/publish");
       return previewFunctionsForPublish(projectId);
+    },
+    async securityReview(projectId, locale) {
+      const { securityReviewer } = await import("@/lib/security-review/real");
+      return securityReviewer().forAgent(projectId, locale);
     },
     async signInForVisit(projectId, who) {
       const { backendConfigured } = await import("@/lib/backend/pg");
@@ -968,6 +978,12 @@ export interface AgentSession {
    *  inventó — ver su comentario. Opcional: sin él la comprobación no se aplica,
    *  así que un llamador que no lo pase no bloquea nada por sorpresa. */
   mensajeDelUsuario?: string;
+  /**
+   * EL IDIOMA DE LA INTERFAZ del dueño (`idioma` del panel). Lo usa la revisión
+   * de seguridad de `publish` para escribir sus hallazgos en ese idioma.
+   * Ausente = inglés.
+   */
+  uiLocale?: string;
   /** Búsquedas de foto SEGUIDAS que no devolvieron nada. Se reinicia con la
    *  primera que sí encuentra: lo que delata un callejón sin salida son las
    *  vacías CONSECUTIVAS, no el total. */
@@ -1165,7 +1181,16 @@ export interface ToolOutcome {
    *  herramienta JAMÁS publica: el tap del usuario en la tarjeta es la única
    *  vía que llama al endpoint real (spec §4.4). */
   confirm?:
-    | { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview; secretosQueFaltan?: string[] }
+    | {
+        action: "publish";
+        subdominio: string;
+        idiomas: string[];
+        republicar: boolean;
+        cambiosDeDatos?: DataChangesPreview;
+        secretosQueFaltan?: string[];
+        /** La revisión de seguridad (spec local 2026-10-15): lo que Len ya vio. */
+        seguridad?: { fingerprint: string; blocking: Finding[]; medium: Finding[] };
+      }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -2185,6 +2210,16 @@ async function toolPublicar(
     ...validos.slice(MAX_PUBLISH_LOCALES),
   ];
 
+  // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave se le dice a Len
+  // PRIMERO, sin tarjeta, para que lo arregle. Si vuelve a llamar sin cambiar
+  // nada, la tarjeta se lo enseña al dueño, que decide (Len no puede aceptarlo:
+  // la herramienta no tiene con qué). Si la revisión misma falla, como antes.
+  const seguridad = deps.securityReview ? await deps.securityReview(session.projectId, session.uiLocale ?? "en").catch(() => null) : null;
+  if (seguridad?.firstTimeForAgent) {
+    return { response: { ok: false, error: agentBlockedText(seguridad.view, ENDING_FOR_LEN) } };
+  }
+  const hallazgos = seguridad && (seguridad.view.blocking.length > 0 || seguridad.view.medium.length > 0) ? seguridad.view : null;
+
   // LOS DATOS (spec local 2026-10-09): una migración que fallaría en producción
   // se dice ANTES, a Len, como una app que no compila; lo destructivo va a la
   // tarjeta, que lo confirma el dueño (Len no puede).
@@ -2222,11 +2257,26 @@ async function toolPublicar(
             secrets_note: "These have no value in production yet: the publish card asks the user for them, or to publish anyway. You can't set production secrets.",
           }
         : {}),
+      ...(hallazgos?.blocking.length
+        ? {
+            security_findings: hallazgos.blocking.map(findingLineForAgent),
+            security_note: "The publish card shows these to the owner, who decides whether to publish anyway. You can't accept them.",
+          }
+        : {}),
+      ...(hallazgos?.medium.length ? { security_warnings: hallazgos.medium.map(findingLineForAgent) } : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
     // siempre; sólo la acción tiene el nombre de la herramienta.
-    confirm: { action: "publish", subdominio, idiomas, republicar, ...(conDatos ? { cambiosDeDatos: conDatos } : {}), ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}) },
+    confirm: {
+      action: "publish",
+      subdominio,
+      idiomas,
+      republicar,
+      ...(conDatos ? { cambiosDeDatos: conDatos } : {}),
+      ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}),
+      ...(hallazgos ? { seguridad: { fingerprint: hallazgos.fingerprint, blocking: [...hallazgos.blocking], medium: [...hallazgos.medium] } } : {}),
+    },
   };
 }
 

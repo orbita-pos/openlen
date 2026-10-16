@@ -3,7 +3,8 @@
 // la respuesta dice qué fichero y qué línea (spec local 2026-10-07-apps).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ publishProject: vi.fn() }));
+const mocks = vi.hoisted(() => ({ publishProject: vi.fn(), gate: vi.fn(), markPublished: vi.fn() }));
+vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate, markPublished: mocks.markPublished }) }));
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
@@ -36,6 +37,10 @@ const pide = (extra: Record<string, unknown> = {}) =>
 
 beforeEach(() => {
   mocks.publishProject.mockReset();
+  mocks.gate.mockReset();
+  mocks.gate.mockResolvedValue({ kind: "open", view: null });
+  mocks.markPublished.mockReset();
+  mocks.markPublished.mockResolvedValue(undefined);
 });
 
 describe("POST /publish — una app web", () => {
@@ -74,5 +79,68 @@ describe("POST /publish — las Edge Functions (spec local 2026-10-11)", () => {
     expect(await a.json()).toEqual({ error: "functions_do_not_compile", errors: ["/supabase/functions/checkout/index.ts:3:5 — x"] });
     mocks.publishProject.mockRejectedValueOnce(new FunctionsDeployFailedError(new Error("motor")));
     expect((await pide()).status).toBe(502);
+  });
+});
+
+describe("POST /publish — la revisión de seguridad (spec local 2026-10-15)", () => {
+  const FP = "c".repeat(64);
+  const rls = { key: "rls_disabled:public.productos", source: "rule", severity: "HIGH", category: "rls_disabled", file: null, line: null, description: "", exploitScenario: "", recommendation: "", params: { table: "productos" } };
+  const view = { fingerprint: FP, status: "done", blocking: [rls], medium: [], accepted: [] };
+
+  it("🔴 lo grave frena: 428 security_findings con la vista, y no se publica", async () => {
+    mocks.gate.mockResolvedValue({ kind: "blocked", view });
+    const res = await pide();
+    expect(res.status).toBe(428);
+    expect(await res.json()).toEqual({ error: "security_findings", ...view });
+    expect(mocks.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("con la revisión corriendo: 428 security_review_pending con su huella", async () => {
+    mocks.gate.mockResolvedValue({ kind: "pending", view: { ...view, status: "running", blocking: [] } });
+    const res = await pide();
+    expect(res.status).toBe(428);
+    expect(await res.json()).toEqual({ error: "security_review_pending", fingerprint: FP });
+  });
+
+  it("«Publicar igual» viaja hasta la puerta con quién lo pide y su idioma", async () => {
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    const res = await pide({ acceptSecurityFingerprint: FP, locale: "es" });
+    expect(res.status).toBe(200);
+    expect(mocks.gate).toHaveBeenCalledWith({ projectId: "p1", accept: FP, actorId: "u1", locale: "es" });
+  });
+
+  it("una huella que no es una: 400 antes de mirar nada", async () => {
+    const res = await pide({ acceptSecurityFingerprint: "nope" });
+    expect(res.status).toBe(400);
+    expect(mocks.gate).not.toHaveBeenCalled();
+  });
+
+  it("si la revisión misma revienta, se publica (nunca frena por un fallo nuestro)", async () => {
+    mocks.gate.mockRejectedValue(new Error("db down"));
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    expect((await pide()).status).toBe(200);
+  });
+
+  it("🔴 tras publicar, la revisión con la que pasó queda como base de la siguiente (como la rama base de un PR)", async () => {
+    mocks.gate.mockResolvedValue({ kind: "open", view: { ...view, blocking: [] } });
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    expect((await pide()).status).toBe(200);
+    expect(mocks.markPublished).toHaveBeenCalledWith("p1", FP);
+  });
+
+  it("si publicar falla, no hay base nueva; y si marcarla falla, la publicación sigue bien", async () => {
+    mocks.gate.mockResolvedValue({ kind: "open", view: { ...view, blocking: [] } });
+    mocks.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
+    expect((await pide()).status).toBe(500);
+    expect(mocks.markPublished).not.toHaveBeenCalled();
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    mocks.markPublished.mockRejectedValue(new Error("db down"));
+    expect((await pide()).status).toBe(200);
+  });
+
+  it("con la revisión apagada no hay nada que marcar", async () => {
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    expect((await pide()).status).toBe(200);
+    expect(mocks.markPublished).not.toHaveBeenCalled();
   });
 });

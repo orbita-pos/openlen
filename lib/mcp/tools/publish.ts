@@ -13,6 +13,8 @@ import {
   unpublishProject,
 } from "@/lib/projects";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
+import { securityReviewer } from "@/lib/security-review/real";
+import { agentBlockedText, ENDING_FOR_MCP } from "@/lib/security-review/view";
 import { validateSubdomain } from "@/lib/subdomain/validate";
 import { openProject } from "../access";
 import { approvalUrl, checkApproval, createApproval, hasTrustedPublish, markApprovalUsed, type ApprovalRequest } from "../approvals";
@@ -120,6 +122,13 @@ export const publishTool = defineTool({
     const trusted = row.subdomain === valid.value && (await hasTrustedPublish(req));
     const stop = await gate(req, approval_id, trusted);
     if (stop) return stop;
+    // La revisión de seguridad (spec local 2026-10-15): lo grave frena, y
+    // aceptarlo es del dueño en el diálogo de publicar, no de un agente de fuera.
+    const security = await securityReviewer()
+      .gate({ projectId: project_id, actorId: caller.userId, locale: "en" })
+      .catch(() => ({ kind: "open" as const, view: null }));
+    if (security.kind === "pending") return toolError("security_review_pending", "A security review of this project is still running. Call publish again in a minute.");
+    if (security.kind === "blocked") return toolError("security_findings", agentBlockedText(security.view, ENDING_FOR_MCP));
     const denied = await consumeQuota(caller, "publish");
     if (denied) return denied;
     try {
@@ -127,6 +136,8 @@ export const publishTool = defineTool({
         publishProject({ projectId: project_id, userId: acceso.duenoId, subdomain: valid.value, dataChanges: { mode: "system" } }),
       );
       if (approval_id) await markApprovalUsed(approval_id);
+      // Lo publicado es la base de la siguiente revisión de seguridad (como la rama base de un PR).
+      if (security.view) await securityReviewer().markPublished(project_id, security.view.fingerprint).catch(() => undefined);
       return jsonResult({ status: "published", published_url: r.url, subdomain: r.subdomain, published_at: r.publishedAt.toISOString() });
     } catch (err) {
       return publishError(err, project_id);

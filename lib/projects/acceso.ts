@@ -29,7 +29,9 @@
  *     …/proxy-image, …/settings, …/env (PUT), …/preview (POST/DELETE), …/terminal (POST,
  *     en SU terminal), …/function-secrets (POST/DELETE; GET en «ver», el lector sin
  *     huellas), …/chat, …/rollback, /api/export/zip,
- *     …/publish (sólo a la dirección que ya tiene: elegir otra es del dueño),
+ *     …/publish (sólo a la dirección que ya tiene: elegir otra es del dueño; y
+ *     «Publicar igual» con hallazgos de seguridad, que queda apuntado con su nombre),
+ *     …/security-review (POST/GET: la revisión que el diálogo de publicar enseña),
  *     /api/agent (sin encargos, sin los datos de los visitantes, y contra el
  *     tope del proyecto: `lib/projects/miembros.ts`)
  *   SÓLO EL DUEÑO (sin cambios)
