@@ -43,6 +43,9 @@ const STATION_OF: Readonly<Record<string, WorkshopStation>> = {
   use_page: "bench",
 };
 
+/** Tools that, while they run, wait for the owner: a question, a plan to approve. */
+const WAITS_FOR_OWNER: ReadonlySet<string> = new Set(["ask_user_question", "exit_plan_mode"]);
+
 /** The station a tool works at; `null` for one that isn't work on the app (a question, publishing). */
 export function stationOfTool(tool: string): WorkshopStation | null {
   return Object.hasOwn(STATION_OF, tool) ? STATION_OF[tool]! : null;
@@ -61,10 +64,13 @@ export interface WorkshopView {
   readonly note: string | null;
   /** Len's latest step list, for the board. */
   readonly todos: TodoItem[] | null;
+  /** Len asked the owner something in the chat and is waiting for the answer. */
+  readonly waiting: boolean;
 }
 
 export function workshopOf(actions: readonly WorkshopAction[]): WorkshopView {
   const todos = latestTodosOfActions(actions);
+  const waiting = actions.some((a) => a.status === "running" && WAITS_FOR_OWNER.has(a.tool));
   const placed = (a: WorkshopAction) => stationOfTool(a.tool) !== null;
   let current: WorkshopAction | undefined;
   for (let i = actions.length - 1; i >= 0 && !current; i--) {
@@ -73,9 +79,9 @@ export function workshopOf(actions: readonly WorkshopAction[]): WorkshopView {
   for (let i = actions.length - 1; i >= 0 && !current; i--) {
     if (placed(actions[i]!)) current = actions[i];
   }
-  if (!current) return { station: "board", note: null, todos };
+  if (!current) return { station: "board", note: null, todos, waiting };
   const note = current.summary.trim();
-  return { station: stationOfTool(current.tool)!, note: note || null, todos };
+  return { station: stationOfTool(current.tool)!, note: note || null, todos, waiting };
 }
 
 /** How many of Len's steps the board has room for. */
@@ -118,15 +124,17 @@ export interface AppBirth {
 
 /**
  * Whether an app is being born now. It is the first turn of a project born as
- * an app, while it runs; and if that turn ends well, the same birth, finished.
- * A turn that fails, is cut or undone leaves nothing to celebrate: the canvas
- * goes back to showing what there is.
+ * an app, while it runs; and if that turn ends well having written the app,
+ * the same birth, finished. A turn that fails, is cut or undone, or only asked
+ * something, leaves nothing to call ready: the canvas goes back to showing
+ * what there is.
  */
 export function nextAppBirth(prev: AppBirth | null, turn: LatestTurn | null, bornAsApp: boolean, now: number): AppBirth | null {
   if (turn && bornAsApp && turn.isFirst && turn.status === "streaming") {
     return prev?.turnId === turn.id && prev.finishedAt === null ? prev : { turnId: turn.id, startedAt: now, finishedAt: null };
   }
-  if (prev && turn?.id === prev.turnId && turn.status === "applied" && !turn.cut) {
+  const wrote = turn?.actions.some((a) => a.status === "done" && stationOfTool(a.tool) === "desk") ?? false;
+  if (prev && turn?.id === prev.turnId && turn.status === "applied" && !turn.cut && wrote) {
     return prev.finishedAt === null ? { ...prev, finishedAt: now } : prev;
   }
   return null;

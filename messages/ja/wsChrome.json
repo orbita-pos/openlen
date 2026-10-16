@@ -581,6 +581,8 @@
   },
   "appBirth": {
     "working": "Len があなたのアプリを作っています",
+    "waitingWho": "Len があなたの返事を待っています",
+    "waiting": "Len がチャットで質問しています",
     "station": {
       "board": "Len が作業を整理しています",
       "files": "Len がプロジェクトを読んでいます",
