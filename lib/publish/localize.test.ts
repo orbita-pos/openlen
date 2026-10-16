@@ -25,6 +25,8 @@
 // ningún idioma. Sólo un console.warn que nadie lee.
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
+import { creditsForUsage } from "@/lib/credits";
+import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { buildTranslatePrompt, translationLedgerEntry } from "./localize";
 
 const TEXTOS = ["Cómo funciona", "Solicitar acceso", "Precios"];
@@ -81,4 +83,6 @@ test("ledger: each translated locale is one publish_translation row", () => {
   assert.equal(entry.uses?.[0]?.provider, "fireworks");
   assert.equal(entry.uses?.[0]?.inputTokens, 1_200);
   assert.equal(entry.uses?.[0]?.outputTokens, 300);
+  // Lo que valía a la tarifa de cobro: es lo que OpenLen regala.
+  assert.equal(entry.listCenticredits, creditsForUsage(1_200, 300, creditRateForRole(roleForOperation("copy")), 0));
 });

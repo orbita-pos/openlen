@@ -34,8 +34,8 @@ import {
   LOCALE_ENGLISH_NAMES,
 } from "@/lib/publish/publish-locales";
 import type { LedgerEntry } from "@/lib/credit-ledger";
-import { recordUncharged } from "@/lib/credits";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { creditsForUsage, recordUncharged } from "@/lib/credits";
+import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 
 const TRANSLATE_TIMEOUT_MS = 90_000;
 const MAX_OUTPUT_TOKENS = 32_768;
@@ -81,6 +81,13 @@ export function translationLedgerEntry(projectId: string, locale: string, usage:
     outcome: "ok",
     projectId,
     refId: locale,
+    // Lo que valía a la tarifa de cobro: lo que OpenLen regala al no cobrarlo.
+    listCenticredits: creditsForUsage(
+      usage.inputTokens,
+      usage.outputTokens,
+      creditRateForRole(roleForOperation("copy")),
+      usage.cachedTokens,
+    ),
     uses: [{ provider: "fireworks", model: modelIdForRole(roleForOperation("copy")), ...usage, at: new Date() }],
   };
 }

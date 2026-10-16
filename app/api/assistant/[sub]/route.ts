@@ -12,8 +12,8 @@ import {
 } from "@/lib/site-assistant/prompt";
 import { siteToText, detectPageLang } from "@/lib/site-assistant/extract-text";
 import { consumeAssistantMessage } from "@/lib/site-assistant/quota";
-import { recordUncharged } from "@/lib/credits";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { creditsForUsage, recordUncharged } from "@/lib/credits";
+import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public site-assistant endpoint. The chat widget on a published page POSTs
@@ -234,6 +234,13 @@ export async function POST(
         surface: "page_assistant",
         outcome: "ok",
         projectId: owner.projectId,
+        // Lo que valía a la tarifa de cobro: lo que OpenLen regala al no cobrarlo.
+        listCenticredits: creditsForUsage(
+          usage.inputTokens,
+          usage.outputTokens,
+          creditRateForRole(roleForOperation("copy")),
+          usage.cachedTokens,
+        ),
         uses: [
           {
             provider: "fireworks",
