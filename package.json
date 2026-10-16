@@ -75,6 +75,7 @@
     "functions:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/functions-migrate.ts",
     "git:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/git-migrate.ts",
     "app-ai:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/app-ai-migrate.ts",
+    "security-review:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/security-review-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",

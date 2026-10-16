@@ -169,5 +169,49 @@
     "cancel": "Cancelar",
     "migrationFailed": "Não publicado: a migração {migration} falhou: {message}",
     "diverged": "Não publicado: a produção tem migrações que seus dados de teste não têm ({versions})."
+  },
+  "security": {
+    "title": "Segurança",
+    "running": "Verificando a segurança…",
+    "clean": "Nenhum problema de segurança",
+    "slow": "A revisão de segurança está demorando. Tente publicar de novo em instantes.",
+    "rulesOnly": {
+      "skipped_scope": "Verificações básicas feitas (este projeto não tem banco de dados nem funções).",
+      "skipped_budget": "Verificações básicas feitas; a revisão completa não está disponível agora.",
+      "failed": "Verificações básicas feitas; a revisão completa não pôde terminar."
+    },
+    "blockingTitle": "{count, plural, one {Um problema de segurança está impedindo a publicação} other {# problemas de segurança estão impedindo a publicação}}",
+    "mediumTitle": "Avisos de segurança",
+    "acceptedTitle": "Aceitos antes",
+    "scenario": "O que pode acontecer: {text}",
+    "fix": "Como corrigir: {text}",
+    "inVariable": "na variável {name}",
+    "fixWithLen": "Corrigir com o Len",
+    "publishAnyway": "Publicar mesmo assim",
+    "cancel": "Cancelar",
+    "fixRequest": "Corrija estes problemas de segurança antes de publicar:",
+    "rules": {
+      "rls_disabled": {
+        "title": "A tabela {table} não tem RLS",
+        "scenario": "Qualquer pessoa com a chave pública da página pode ler, alterar e apagar todas as linhas.",
+        "fix": "Ative o RLS na tabela e adicione políticas para o que cada pessoa pode fazer."
+      },
+      "policy_open_write": {
+        "title": "A política “{policy}” deixa qualquer pessoa alterar {table}",
+        "scenario": "Qualquer visitante, sem entrar, pode alterar ou apagar linhas de {table}.",
+        "fix": "Limite a política ao dono de cada linha (por exemplo, auth.uid() = user_id)."
+      },
+      "secret_in_client": {
+        "title": "Uma chave secreta do {provider} chega ao navegador",
+        "titlePrivateKey": "Uma chave privada chega ao navegador",
+        "scenario": "Qualquer pessoa que abrir a página pode copiá-la e usá-la em seu nome.",
+        "fix": "Tire-a do código do navegador, troque-a por uma nova e use-a só dentro de uma Edge Function, como segredo."
+      },
+      "test_secret_in_client": {
+        "title": "Uma chave de teste do {provider} chega ao navegador",
+        "scenario": "Não movimenta dinheiro real, mas qualquer pessoa pode usar sua conta de teste com ela.",
+        "fix": "Passe-a para um segredo de uma Edge Function."
+      }
+    }
   }
 }

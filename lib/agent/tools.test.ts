@@ -1186,6 +1186,54 @@ describe("publish", () => {
     assert.deepEqual((pub(out) as { secretosQueFaltan?: string[] }).secretosQueFaltan, ["STRIPE_SECRET_KEY"]);
   });
 
+  // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave se le dice a Len
+  // primero, sin tarjeta; la segunda vez la tarjeta se lo enseña al dueño.
+  const rlsFinding = { key: "rls_disabled:public.productos", source: "rule" as const, severity: "HIGH" as const, category: "rls_disabled", file: null, line: null, description: "", exploitScenario: "", recommendation: "", params: { table: "productos" } };
+  const testKey = { key: "test_secret_in_client:/js/p.js:stripe", source: "rule" as const, severity: "MEDIUM" as const, category: "test_secret_in_client", file: "/js/p.js", line: 4, description: "", exploitScenario: "", recommendation: "", params: { provider: "Stripe" } };
+  const securityView = (blocking: unknown[], medium: unknown[] = []) => ({ fingerprint: "f".repeat(64), status: "done" as const, blocking, medium, accepted: [] });
+
+  it("🔴 SEGURIDAD: lo grave se le dice a Len la primera vez, sin tarjeta", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), { ...deps, securityReview: async () => ({ view: securityView([rlsFinding]) as never, firstTimeForAgent: true }) }, "publish", {});
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /^Security review found 1 high-severity issue \(nothing was published\):/);
+    assert.match(String(out.response.error), /public\.productos/);
+    assert.equal(out.confirm, undefined);
+  });
+
+  it("🔴 SEGURIDAD: la segunda vez, la tarjeta lleva los hallazgos y Len sabe que decide el dueño", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), { ...deps, securityReview: async () => ({ view: securityView([rlsFinding]) as never, firstTimeForAgent: false }) }, "publish", {});
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response.security_findings as string[]).length, 1);
+    assert.match(String(out.response.security_note), /You can't accept them/);
+    const card = pub(out) as { seguridad?: { fingerprint: string; blocking: unknown[]; medium: unknown[] } };
+    assert.equal(card.seguridad?.fingerprint, "f".repeat(64));
+    assert.equal(card.seguridad?.blocking.length, 1);
+  });
+
+  it("SEGURIDAD: sólo avisos (MEDIUM) — la tarjeta de siempre, con los avisos", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), { ...deps, securityReview: async () => ({ view: securityView([], [testKey]) as never, firstTimeForAgent: false }) }, "publish", {});
+    assert.equal(out.response.ok, true);
+    assert.equal((out.response.security_warnings as string[]).length, 1);
+    assert.equal(out.response.security_findings, undefined);
+    assert.equal((pub(out) as { seguridad?: { medium: unknown[] } }).seguridad?.medium.length, 1);
+  });
+
+  it("SEGURIDAD: si la revisión revienta, la tarjeta sale como antes", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), { ...deps, securityReview: async () => { throw new Error("boom"); } }, "publish", {});
+    assert.equal(out.response.ok, true);
+    assert.equal((pub(out) as { seguridad?: unknown }).seguridad, undefined);
+  });
+
+  it("🔴 SEGURIDAD: Len no tiene cómo aceptar — publish no declara nada parecido", () => {
+    const d = buildFunctionDeclarations().find((x) => x.name === "publish");
+    assert.ok(d);
+    assert.doesNotMatch(JSON.stringify(d), /accept|fingerprint/i);
+  });
+
   // Borrador y producción de datos (spec local 2026-10-09): lo que publicar
   // haría con las tablas, ensayado ANTES de la tarjeta.
   it("🔴 publish le dice a Len qué migración fallaría en producción, y no enseña la tarjeta", async () => {

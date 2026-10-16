@@ -18,6 +18,8 @@ vi.mock("next-intl", () => ({
     if (typeof v !== "string") return clave;
     return v.replace(/\{(\w+)\}/g, (_m, k: string) => String(valores?.[k] ?? ""));
   },
+  // La tarjeta de publicar manda el idioma a la revisión de seguridad (spec local 2026-10-15).
+  useLocale: () => "es",
 }));
 
 import { TarjetasDeLaLlamada } from "./tarjetas";

@@ -11,6 +11,8 @@ import { createRoot, type Root } from "react-dom/client";
 // La clave y, si los lleva, sus parámetros: así se ve con qué números se pinta el límite.
 vi.mock("next-intl", () => ({
   useTranslations: () => (clave: string, valores?: Record<string, unknown>) => (valores ? `${clave}${JSON.stringify(valores)}` : clave),
+  // La revisión de seguridad (spec local 2026-10-15) manda el idioma de quien publica.
+  useLocale: () => "es",
 }));
 
 import { PublishModal } from "./publish-modal";
@@ -69,7 +71,7 @@ describe("el diálogo de publicar", () => {
   it("🔴 en una app no ofrece idiomas ni los manda", async () => {
     const { texto, cuerpos } = await publicar(true);
     expect(texto).not.toContain("publish.languages.title");
-    expect(cuerpos).toEqual([{ subdomain: "caja", copyDraftData: false }]);
+    expect(cuerpos).toEqual([{ subdomain: "caja", copyDraftData: false, locale: "es" }]);
     // Y lo demás que se ve al publicarla habla de la app.
     expect(texto).toContain("publish.status.currentPageApp");
     expect(texto).toContain("publish.speedCard.measuringApp");
@@ -78,7 +80,7 @@ describe("el diálogo de publicar", () => {
   it("en una página, como siempre: los idiomas, y los que estaban guardados viajan", async () => {
     const { texto, cuerpos } = await publicar(false);
     expect(texto).toContain("publish.languages.title");
-    expect(cuerpos).toEqual([{ subdomain: "caja", languages: ["en"], copyDraftData: false }]);
+    expect(cuerpos).toEqual([{ subdomain: "caja", languages: ["en"], copyDraftData: false, locale: "es" }]);
     expect(texto).not.toMatch(/currentPageApp|measuringApp/);
   });
 });

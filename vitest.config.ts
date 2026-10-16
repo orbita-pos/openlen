@@ -121,6 +121,8 @@ export default defineConfig({
       "lib/functions/**/*.test.ts",
       // La IA de las apps (spec local 2026-10-15). `include` es LISTA BLANCA.
       "lib/app-ai/**/*.test.ts",
+      // La revisión de seguridad al publicar (spec local 2026-10-15). `include` es LISTA BLANCA.
+      "lib/security-review/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
@@ -152,6 +154,8 @@ export default defineConfig({
       "components/app/credit-pill.test.tsx",
       // En una app, el diálogo de publicar no ofrece traducción automática (invariante 6).
       "components/workspace/publish-modal.test.tsx",
+      // El modal de publicar con la revisión de seguridad (spec local 2026-10-15). LISTA BLANCA.
+      "components/workspace/publish-modal-security.test.tsx",
       // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con
       // `/api/generate` el 2026-10-06 (plans/crear-es-len, tarea 12).
       // Counter arithmetic of sanitizeForPublish. Lives at lib/ root beside the
@@ -654,6 +658,8 @@ export default defineConfig({
       "app/api/projects/[id]/chat/mensajes/route.test.ts",
       // Una app web que no compila: 422 con fichero y línea (spec local 2026-10-07-apps).
       "app/api/projects/[id]/publish/route.test.ts",
+      // La revisión de seguridad al publicar (spec local 2026-10-15). LISTA BLANCA.
+      "app/api/projects/[id]/security-review/route.test.ts",
       // F2 de las apps web: deshacer un turno entero.
       "app/api/projects/[id]/turnos/[turnId]/deshacer/route.test.ts",
       // Deshacer un fichero de la carpeta (pieza 9 de Len 2.5).

@@ -169,5 +169,49 @@
     "cancel": "取消",
     "migrationFailed": "未发布：迁移 {migration} 失败：{message}",
     "diverged": "未发布：生产环境有测试数据中没有的迁移（{versions}）。"
+  },
+  "security": {
+    "title": "安全",
+    "running": "正在检查安全…",
+    "clean": "没有发现安全问题",
+    "slow": "安全检查花的时间较长，请稍后再试着发布。",
+    "rulesOnly": {
+      "skipped_scope": "已完成基本检查（此项目没有数据库或函数）。",
+      "skipped_budget": "已完成基本检查；完整检查现在不可用。",
+      "failed": "已完成基本检查；完整检查没能完成。"
+    },
+    "blockingTitle": "{count, plural, other {# 个安全问题阻止了发布}}",
+    "mediumTitle": "安全提醒",
+    "acceptedTitle": "之前已接受",
+    "scenario": "可能发生：{text}",
+    "fix": "如何修复：{text}",
+    "inVariable": "在变量 {name} 中",
+    "fixWithLen": "让 Len 修复",
+    "publishAnyway": "仍然发布",
+    "cancel": "取消",
+    "fixRequest": "发布前请修复这些安全问题：",
+    "rules": {
+      "rls_disabled": {
+        "title": "表 {table} 没有 RLS",
+        "scenario": "任何拿到页面公开密钥的人都能读取、修改和删除它的所有行。",
+        "fix": "为该表开启 RLS，并添加规定每个人能做什么的策略。"
+      },
+      "policy_open_write": {
+        "title": "策略“{policy}”让任何人都能修改 {table}",
+        "scenario": "任何访客无需登录就能修改或删除 {table} 的行。",
+        "fix": "把策略限制为每行的所有者（例如 auth.uid() = user_id）。"
+      },
+      "secret_in_client": {
+        "title": "{provider} 的秘密密钥会到达浏览器",
+        "titlePrivateKey": "一个私钥会到达浏览器",
+        "scenario": "任何打开页面的人都能复制它，并以你的名义使用。",
+        "fix": "把它从浏览器代码中移除，换一个新的，并只在 Edge Function 里作为密钥使用。"
+      },
+      "test_secret_in_client": {
+        "title": "{provider} 的测试密钥会到达浏览器",
+        "scenario": "它不会动用真钱，但任何人都能用它使用你的测试账户。",
+        "fix": "把它移到 Edge Function 的密钥里。"
+      }
+    }
   }
 }

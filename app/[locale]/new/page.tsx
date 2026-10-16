@@ -4269,6 +4269,15 @@ function NewV2Inner() {
           onClose={() => setPublishModalOpen(false)}
           onOpenCustomDomain={() => setCustomDomainOpen(true)}
           onAntesDePublicar={flushPendingSave}
+          // «Arreglar con Len» (revisión de seguridad): la lista va al chat y se
+          // manda sola, como el «Arréglalo» de los controles rotos.
+          onFixWithLen={(text) => {
+            setPublishModalOpen(false);
+            setPendingChatDraft(text);
+            setPendingChatAutoSend(true);
+            setMode("chat");
+            setLeftCollapsed(false);
+          }}
           project={{
             id: loadedProject.id,
             subdomain: loadedProject.subdomain,

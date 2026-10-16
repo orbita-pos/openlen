@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, Check, ExternalLink, Globe, Loader } from "./icons";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import type { DataChangesPreview, DestructiveChange } from "@/lib/backend/data-changes-types";
-import { postPublish } from "@/lib/workspace-v2/publish-request";
+import type { Finding, ReviewView } from "@/lib/security-review/types";
+import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 import { MissingSecrets } from "./missing-secrets";
+import { SecurityPanel } from "./security-findings";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -25,6 +27,9 @@ export type AgentConfirm = {
   cambiosDeDatos?: DataChangesPreview;
   /** Edge Functions: los secretos que Len vio que faltan en producción. */
   secretosQueFaltan?: string[];
+  /** La revisión de seguridad (spec local 2026-10-15): lo que Len ya vio. Con
+   *  `blocking`, la tarjeta se lo enseña al dueño y sólo «Publicar igual» publica. */
+  seguridad?: { fingerprint: string; blocking: Finding[]; medium: Finding[] };
 };
 
 type CardState =
@@ -41,6 +46,8 @@ type CardState =
   | { kind: "confirm_destructive"; list: DestructiveChange[]; fingerprint: string }
   // Edge Functions (spec local 2026-10-11): secretos sin valor en producción.
   | { kind: "secrets_required"; missing: string[] }
+  // La revisión de seguridad: lo grave, y el dueño decide.
+  | { kind: "security_findings"; view: ReviewView }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -67,11 +74,18 @@ export function AgentConfirmCard({
   const tSecretos = useTranslations("panelsChat");
   // Los secretos que Len ya vio que faltan salen desde el principio.
   const [state, setState] = useState<CardState>(
-    confirm.secretosQueFaltan?.length ? { kind: "secrets_required", missing: confirm.secretosQueFaltan } : { kind: "idle" },
+    confirm.seguridad?.blocking.length
+      ? { kind: "security_findings", view: { fingerprint: confirm.seguridad.fingerprint, status: "done", blocking: confirm.seguridad.blocking, medium: confirm.seguridad.medium, accepted: [] } }
+      : confirm.secretosQueFaltan?.length
+        ? { kind: "secrets_required", missing: confirm.secretosQueFaltan }
+        : { kind: "idle" },
   );
   // Elegido «Publicar igual», vale para las peticiones siguientes (también la
   // de confirmar lo destructivo).
   const saltarSecretos = useRef(false);
+  const aceptarSeguridad = useRef<string | null>(null);
+  const locale = useLocale();
+  const tSecurity = useTranslations("modalsDomain.security");
   // Primera publicación con base de datos: la casilla de copiar los de prueba.
   const [copyDraftData, setCopyDraftData] = useState(false);
 
@@ -79,7 +93,7 @@ export function AgentConfirmCard({
 
   const inert = state.kind === "published" || state.kind === "cancelled";
 
-  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean } = {}) => {
+  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string } = {}) => {
     if (busy || inert) return;
     const { subdominio, idiomas, republicar } = confirm;
 
@@ -119,6 +133,7 @@ export function AgentConfirmCard({
     }
 
     if (o.skipMissingSecrets) saltarSecretos.current = true;
+    if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
     setState({ kind: "publishing" });
     try {
       // `languages` is only sent when the agent actually chose some: the
@@ -127,13 +142,27 @@ export function AgentConfirmCard({
       // OMITTED key keeps the stored setting. Consequence: the agent can
       // add/set languages but never clear them — clearing is the publish
       // modal's job.
-      const outcome = await postPublish(projectId, {
-        subdomain: subdominio,
-        ...(idiomas.length > 0 ? { languages: idiomas } : {}),
-        copyDraftData,
-        ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
-        ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
-      });
+      const outcome = await postPublishAfterSecurity(
+        projectId,
+        {
+          subdomain: subdominio,
+          ...(idiomas.length > 0 ? { languages: idiomas } : {}),
+          copyDraftData,
+          ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
+          ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
+          locale,
+          ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
+        },
+        () => setState({ kind: "publishing" }),
+      );
+      if (outcome.kind === "security_findings") {
+        setState({ kind: "security_findings", view: outcome.view });
+        return;
+      }
+      if (outcome.kind === "security_review_pending") {
+        setState({ kind: "error", text: tSecurity("slow") });
+        return;
+      }
       if (outcome.kind === "needs_confirmation") {
         setState({ kind: "confirm_destructive", list: outcome.destructive, fingerprint: outcome.fingerprint });
         return;
@@ -181,7 +210,7 @@ export function AgentConfirmCard({
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
     }
-  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, copyDraftData, onPublished]);
+  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, copyDraftData, onPublished, locale, tSecurity]);
 
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
@@ -288,13 +317,29 @@ export function AgentConfirmCard({
         </div>
       )}
 
+      {state.kind === "security_findings" && (
+        <div className="mt-2">
+          <SecurityPanel
+            view={state.view}
+            busy={busy}
+            onPublishAnyway={() => void handlePublish({ acceptSecurityFingerprint: state.view.fingerprint })}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+      {state.kind !== "security_findings" && confirm.seguridad && confirm.seguridad.medium.length > 0 && (
+        <div className="mt-2">
+          <SecurityPanel view={{ fingerprint: confirm.seguridad.fingerprint, status: "done", blocking: [], medium: confirm.seguridad.medium, accepted: [] }} busy={busy} />
+        </div>
+      )}
+
       {state.kind === "error" && (
         <div className="mt-2 whitespace-pre-line text-[11px] text-red-600 dark:text-red-400">
           {state.text}
         </div>
       )}
 
-      {state.kind !== "cancelled" && state.kind !== "confirm_destructive" && state.kind !== "secrets_required" && (
+      {state.kind !== "cancelled" && state.kind !== "confirm_destructive" && state.kind !== "secrets_required" && state.kind !== "security_findings" && (
         <div className="mt-2.5 flex items-center gap-2">
           <button
             type="button"
