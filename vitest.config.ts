@@ -476,6 +476,8 @@ export default defineConfig({
       // La lista de progreso del usuario (spec local 2026-10-15).
       "lib/agent/todo-list.test.ts",
       "lib/agent/todo-write.test.ts",
+      // Los visuales de Len en el chat (spec local 2026-10-16-len-inline-visuals).
+      "lib/agent/visuals/**/*.test.ts",
       "lib/projects/chat-row.test.ts",
       // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
       "lib/projects/chat-estado.pglite.test.ts",
