@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DestructiveChange } from "@/lib/backend/data-changes-types";
-import { postPublish } from "@/lib/workspace-v2/publish-request";
+import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
+import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
+import { useSecurityReview } from "@/components/workspace-v2/use-security-review";
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,7 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/cn";
 import { SpeedCard } from "@/components/workspace/speed-card";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
@@ -84,6 +86,9 @@ export interface PublishModalProps {
    *  flow. Keeps the *.openlen.com path discoverable without making it
    *  feel mandatory for users who already have their own domain. */
   onOpenCustomDomain?: () => void;
+  /** «Arreglar con Len» (revisión de seguridad, spec local 2026-10-15): el texto
+   *  que se le manda a Len. Sin ella, el botón no sale. */
+  onFixWithLen?: (text: string) => void;
 }
 
 type CheckState =
@@ -109,6 +114,7 @@ export function PublishModal({
   onSuccess,
   onOpenCustomDomain,
   onAntesDePublicar,
+  onFixWithLen,
 }: PublishModalProps) {
   const t = useTranslations("modalsDomain");
   const tSecretos = useTranslations("panelsChat");
@@ -134,6 +140,13 @@ export function PublishModal({
   const [missingSecrets, setMissingSecrets] = useState<string[] | null>(null);
   const saltarSecretos = useRef(false);
   const dataPreview = useDataChangesPreview(project.id, open);
+  // La revisión de seguridad (spec local 2026-10-15): arranca al abrir y se
+  // sigue mientras corre; un 428 de la ruta la sustituye. «Publicar igual»
+  // vale para las peticiones siguientes (también la de los secretos o los datos).
+  const locale = useLocale();
+  const tSecurity = useTranslations("modalsDomain.security");
+  const [security, setSecurity] = useSecurityReview(project.id, open, locale);
+  const aceptarSeguridad = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -152,6 +165,7 @@ export function PublishModal({
     setDestructive(null);
     setMissingSecrets(null);
     saltarSecretos.current = false;
+    aceptarSeguridad.current = null;
     // Focus input after the modal mount animation settles.
     const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => clearTimeout(t);
@@ -234,26 +248,48 @@ export function PublishModal({
     };
   }, [normalized, isCurrent]);
 
-  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean } = {}) => {
+  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string } = {}) => {
     if (submitting) return;
     // Allow the existing subdomain through even when the availability check
     // hasn't settled yet — same precedence as `canPublish` below.
     if (check.kind !== "available" && !isCurrent) return;
     if (o.skipMissingSecrets) saltarSecretos.current = true;
+    if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
     setSubmitting("publishing");
     setError(null);
     try {
       // Lo que el usuario tenga sin aplicar, aplicado — y esperado. Es lo que
       // hace que «Publicar» publique lo que se ve.
       await onAntesDePublicar?.();
-      const outcome = await postPublish(project.id, {
-        subdomain: normalized,
-        // En una app no hay traducción automática (invariante 6): no se mandan idiomas.
-        ...(project.esApp ? {} : { languages: langs }),
-        copyDraftData,
-        ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
-        ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
-      });
+      const outcome = await postPublishAfterSecurity(
+        project.id,
+        {
+          subdomain: normalized,
+          // En una app no hay traducción automática (invariante 6): no se mandan idiomas.
+          ...(project.esApp ? {} : { languages: langs }),
+          copyDraftData,
+          ...(o.confirmFingerprint ? { confirmFingerprint: o.confirmFingerprint } : {}),
+          ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
+          locale,
+          ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
+        },
+        setSecurity,
+      );
+      if (outcome.kind === "security_findings") {
+        setSecurity(outcome.view);
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "security_review_pending") {
+        setError(tSecurity("slow"));
+        setSubmitting(null);
+        return;
+      }
+      // Aceptado: lo que frenaba pasa a «Aceptados antes».
+      if (aceptarSeguridad.current) {
+        const accepted = aceptarSeguridad.current;
+        setSecurity((v) => (v && v.fingerprint === accepted ? { ...v, blocking: [], accepted: [...v.accepted, ...v.blocking] } : v));
+      }
       // Lo destructivo (428): la confirmación roja sustituye al botón.
       if (outcome.kind === "needs_confirmation") {
         setDestructive({ list: outcome.destructive, fingerprint: outcome.fingerprint });
@@ -339,6 +375,9 @@ export function PublishModal({
     onAntesDePublicar,
     t,
     tSecretos,
+    locale,
+    tSecurity,
+    setSecurity,
   ]);
 
   const doUnpublish = useCallback(async () => {
@@ -385,7 +424,8 @@ export function PublishModal({
   const canPublish = !submitting && (check.kind === "available" || isCurrent);
   // Mientras se pide confirmar lo destructivo, publicar va por «Publicar igual»:
   // el botón de siempre está apagado y se VE apagado.
-  const publishEnabled = canPublish && destructive === null;
+  // Lo grave de la revisión de seguridad frena el botón: se decide en su panel.
+  const publishEnabled = canPublish && destructive === null && !(security && security.blocking.length > 0);
   const wouldChangeName =
     isPublished && !isCurrent && check.kind === "available";
 
@@ -566,6 +606,24 @@ export function PublishModal({
           )}
 
           <DataChangesNotice preview={dataPreview} copyDraftData={copyDraftData} onCopyDraftData={setCopyDraftData} />
+
+          <SecurityPanel
+            view={security}
+            busy={submitting !== null}
+            {...(security && security.blocking.length > 0
+              ? {
+                  onPublishAnyway: () => void doPublish({ acceptSecurityFingerprint: security.fingerprint }),
+                  ...(onFixWithLen
+                    ? {
+                        onFixWithLen: () => {
+                          onFixWithLen(fixRequestText(security, (k, v) => tSecurity(k as never, v as never)));
+                          onClose();
+                        },
+                      }
+                    : {}),
+                }
+              : {})}
+          />
 
           {destructive && (
             <DestructiveConfirm
