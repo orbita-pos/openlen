@@ -40,3 +40,56 @@ describe("tarjetaDeConfirmacion y los datos", () => {
     }
   });
 });
+
+// Lo mismo, con la revisión de seguridad (spec local 2026-10-15): la tarjeta sabe
+// pintar lo grave con «Publicar igual», pero esta lectura tiraba `seguridad` y
+// la tarjeta salía como un «Publicar» de siempre (ensayo de caja del 2026-10-16).
+// Y `secretosQueFaltan` (las Edge Functions), igual.
+const FP = "c".repeat(64);
+const secreto = {
+  key: "secret_in_client:/src/panel-key.ts:supabase_secret",
+  source: "rule",
+  severity: "HIGH",
+  category: "secret_in_client",
+  file: "/src/panel-key.ts",
+  line: 1,
+  description: "",
+  exploitScenario: "",
+  recommendation: "",
+  params: { provider: "Supabase" },
+};
+const medio = { ...secreto, key: "k-medio", severity: "MEDIUM", category: "test_secret_in_client", params: { provider: "Stripe" } };
+
+describe("tarjetaDeConfirmacion y la revisión de seguridad", () => {
+  it("🔴 lo grave llega a la tarjeta", () => {
+    const seguridad = { fingerprint: FP, blocking: [secreto], medium: [medio] };
+    expect(tarjetaDeConfirmacion({ ...BASE, seguridad })).toEqual({
+      tipo: "publicar",
+      confirm: { action: "publish", subdominio: "tiendita", idiomas: [], republicar: true, seguridad },
+    });
+  });
+
+  it("🔴 y los secretos de producción que faltan", () => {
+    const t = tarjetaDeConfirmacion({ ...BASE, secretosQueFaltan: ["STRIPE_SECRET_KEY", 7] });
+    expect(t?.tipo === "publicar" && t.confirm.secretosQueFaltan).toEqual(["STRIPE_SECRET_KEY"]);
+  });
+
+  it("CONTRA-PRUEBA: algo que no tiene la forma no se pinta", () => {
+    for (const seguridad of [
+      { blocking: [secreto], medium: [] },
+      { fingerprint: FP, blocking: "no es lista", medium: [] },
+      { fingerprint: FP, blocking: [{ ...secreto, severity: "LOW" }], medium: [] },
+      { fingerprint: FP, blocking: [{ ...secreto, key: 3 }], medium: [] },
+      { fingerprint: FP, blocking: [secreto], medium: [{ ...medio, category: null }] },
+      "seguridad",
+      null,
+    ]) {
+      const t = tarjetaDeConfirmacion({ ...BASE, seguridad });
+      expect(t?.tipo === "publicar" && "seguridad" in t.confirm).toBe(false);
+    }
+    for (const secretosQueFaltan of [[], "STRIPE_SECRET_KEY", [3], null]) {
+      const t = tarjetaDeConfirmacion({ ...BASE, secretosQueFaltan });
+      expect(t?.tipo === "publicar" && "secretosQueFaltan" in t.confirm).toBe(false);
+    }
+  });
+});
