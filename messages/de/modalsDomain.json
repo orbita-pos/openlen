@@ -169,5 +169,49 @@
     "cancel": "Abbrechen",
     "migrationFailed": "Nicht veröffentlicht: Migration {migration} ist fehlgeschlagen: {message}",
     "diverged": "Nicht veröffentlicht: Die Produktion hat Migrationen, die deine Testdaten nicht haben ({versions})."
+  },
+  "security": {
+    "title": "Sicherheit",
+    "running": "Sicherheit wird geprüft…",
+    "clean": "Keine Sicherheitsprobleme gefunden",
+    "slow": "Die Sicherheitsprüfung dauert etwas. Versuch es gleich noch einmal.",
+    "rulesOnly": {
+      "skipped_scope": "Grundprüfungen erledigt (dieses Projekt hat keine Datenbank und keine Funktionen).",
+      "skipped_budget": "Grundprüfungen erledigt; die vollständige Prüfung ist gerade nicht verfügbar.",
+      "failed": "Grundprüfungen erledigt; die vollständige Prüfung konnte nicht abgeschlossen werden."
+    },
+    "blockingTitle": "{count, plural, one {Ein Sicherheitsproblem hält die Veröffentlichung auf} other {# Sicherheitsprobleme halten die Veröffentlichung auf}}",
+    "mediumTitle": "Sicherheitshinweise",
+    "acceptedTitle": "Bereits akzeptiert",
+    "scenario": "Was passieren kann: {text}",
+    "fix": "So behebst du es: {text}",
+    "inVariable": "in der Variable {name}",
+    "fixWithLen": "Mit Len beheben",
+    "publishAnyway": "Trotzdem veröffentlichen",
+    "cancel": "Abbrechen",
+    "fixRequest": "Behebe diese Sicherheitsprobleme vor dem Veröffentlichen:",
+    "rules": {
+      "rls_disabled": {
+        "title": "Die Tabelle {table} hat kein RLS",
+        "scenario": "Jeder mit dem öffentlichen Schlüssel der Seite kann alle Zeilen lesen, ändern und löschen.",
+        "fix": "Aktiviere RLS für die Tabelle und füge Richtlinien hinzu, was wer tun darf."
+      },
+      "policy_open_write": {
+        "title": "Die Richtlinie „{policy}“ lässt jeden {table} ändern",
+        "scenario": "Jeder Besucher kann ohne Anmeldung Zeilen in {table} ändern oder löschen.",
+        "fix": "Beschränke die Richtlinie auf den Besitzer jeder Zeile (zum Beispiel auth.uid() = user_id)."
+      },
+      "secret_in_client": {
+        "title": "Ein geheimer {provider}-Schlüssel gelangt in den Browser",
+        "titlePrivateKey": "Ein privater Schlüssel gelangt in den Browser",
+        "scenario": "Jeder, der die Seite öffnet, kann ihn kopieren und in deinem Namen verwenden.",
+        "fix": "Entferne ihn aus dem Browser-Code, ersetze ihn durch einen neuen und nutze ihn nur in einer Edge Function als Secret."
+      },
+      "test_secret_in_client": {
+        "title": "Ein {provider}-Testschlüssel gelangt in den Browser",
+        "scenario": "Er bewegt kein echtes Geld, aber jeder kann damit dein Testkonto nutzen.",
+        "fix": "Verschiebe ihn in ein Secret einer Edge Function."
+      }
+    }
   }
 }
