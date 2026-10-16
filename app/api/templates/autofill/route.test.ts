@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   updateWhere: vi.fn(),
   createVersion: vi.fn(),
   getCreditState: vi.fn(),
-  debitCredits: vi.fn(),
+  chargeCredits: vi.fn(),
   consumeToken: vi.fn(),
   fillTemplate: vi.fn(),
   extractFromText: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
-  debitCredits: mocks.debitCredits,
+  chargeCredits: mocks.chargeCredits,
   AUTOFILL_CREDIT_COST: 2,
 }));
 vi.mock("@/lib/rate-limit", () => ({
@@ -106,11 +106,40 @@ describe("POST /api/templates/autofill", () => {
     mocks.update.mockReturnValue({ set: mocks.set });
     mocks.createVersion.mockResolvedValue("v1");
     mocks.getCreditState.mockResolvedValue({ balance: 10 });
-    mocks.debitCredits.mockResolvedValue(undefined);
+    mocks.chargeCredits.mockResolvedValue(undefined);
     mocks.extractFromText.mockResolvedValue({
       ok: true,
       data: { business_name: "Tacos Doña Mari" },
     });
+  });
+
+  it("ledger: autofill charges its flat cost and records the extraction cost", async () => {
+    mocks.extractFromText.mockResolvedValue({
+      ok: true,
+      data: { business_name: "Tacos Doña Mari" },
+      usage: { inputTokens: 500, outputTokens: 80 },
+    });
+    mocks.fillTemplate.mockResolvedValue({ ok: true, filledHtml: filled("<h1>Tacos Doña Mari</h1>"), appliedOps: 6, totalOps: 6 });
+
+    await readEvents(await call());
+
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      2,
+      expect.objectContaining({
+        surface: "autofill",
+        outcome: "ok",
+        projectId: `p${projectCounter}`,
+        listCenticredits: 2,
+        uses: [expect.objectContaining({ provider: "fireworks", model: expect.any(String), inputTokens: 500, cachedTokens: 0, outputTokens: 80 })],
+      }),
+    );
+  });
+
+  it("ledger: without usage the autofill cost stays unknown", async () => {
+    mocks.fillTemplate.mockResolvedValue({ ok: true, filledHtml: filled("<h1>Tacos Doña Mari</h1>"), appliedOps: 6, totalOps: 6 });
+    await readEvents(await call());
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 2, expect.objectContaining({ surface: "autofill", uses: [] }));
   });
 
   it("gives the filled page the passes it was never given, then saves it", async () => {
@@ -126,7 +155,7 @@ describe("POST /api/templates/autofill", () => {
     const done = events.find((e) => e.event === "done");
     expect(done).toBeDefined();
     expect(mocks.update).toHaveBeenCalledTimes(1);
-    expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.chargeCredits).toHaveBeenCalledTimes(1);
 
     // The point of the migration: what is stored is the CANONICAL document,
     // not the model's raw fill. ensurePageMeta completes the head, and
