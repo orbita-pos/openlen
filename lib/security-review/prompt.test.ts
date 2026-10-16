@@ -88,11 +88,36 @@ describe("the messages", () => {
   });
 
   it("the focus names the language, what changed and what the owner accepted", () => {
-    const m = scanFocusMessage({ changed: ["/src/App.tsx"], accepted: [rls], language: "Spanish" });
+    const m = scanFocusMessage({ scope: { kind: "changes", changed: ["/src/App.tsx"], diff: "diff --git a/src/App.tsx b/src/App.tsx\n+const k = 1;\n" }, accepted: [rls], language: "Spanish" });
     expect(m).toContain("in Spanish");
-    expect(m).toContain("/src/App.tsx");
     expect(m).toContain("public.productos");
-    expect(scanFocusMessage({ changed: [], accepted: [], language: "English" })).toContain("review everything");
+  });
+
+  it("🔴 after a publish it scopes the review like Claude Code: the diff, only what it newly adds, nothing that already existed", () => {
+    const m = scanFocusMessage({ scope: { kind: "changes", changed: ["/src/App.tsx"], diff: "diff --git a/src/App.tsx b/src/App.tsx\n+const k = 1;\n" }, accepted: [], language: "English" });
+    expect(m).toContain("FILES MODIFIED:\n/src/App.tsx");
+    expect(m).toContain("DIFF CONTENT:");
+    expect(m).toContain("+const k = 1;");
+    expect(m).toContain("Focus ONLY on security implications newly added by these changes");
+    expect(m).toContain("Do not comment on existing security concerns");
+  });
+
+  it("the first review, with nothing published before, covers everything", () => {
+    const m = scanFocusMessage({ scope: { kind: "whole" }, accepted: [], language: "English" });
+    expect(m).toContain("FIRST REVIEW");
+    expect(m).toContain("review everything");
+    expect(m).not.toContain("Do not comment on existing security concerns");
+  });
+
+  it("a diff too big is left out, as Claude Code does: the files are listed to read", () => {
+    const m = scanFocusMessage({ scope: { kind: "changes", changed: ["/src/a.ts", "/src/b.ts"], diff: null }, accepted: [], language: "English" });
+    expect(m).toContain("FILES MODIFIED:\n/src/a.ts\n/src/b.ts");
+    expect(m).toContain("the diff was omitted due to size constraints");
+  });
+
+  it("no file changed since the published version: it says so", () => {
+    const m = scanFocusMessage({ scope: { kind: "changes", changed: [], diff: "" }, accepted: [], language: "English" });
+    expect(m).toContain("(no file changed since the published version)");
   });
 
   it("languageName maps the interface locales and falls back to English", () => {

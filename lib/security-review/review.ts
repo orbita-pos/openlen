@@ -15,9 +15,10 @@
 
 import { checkBudget, utcDayStart } from "./budget";
 import { securityReviewEnabled } from "./enabled";
-import { changedPaths, fileHashes, fingerprintOf } from "./fingerprint";
+import { changesSince } from "./diff";
+import { fileHashes, fingerprintOf, reviewedTexts } from "./fingerprint";
 import type { ModelReviewResult } from "./model-review";
-import { languageName, MAX_FILES_IN_PROMPT, projectContextMessage, scanFocusMessage } from "./prompt";
+import { languageName, projectContextMessage, scanFocusMessage, type ReviewScope } from "./prompt";
 import { runRules } from "./rules";
 import type { SecurityReviewStore } from "./store";
 import type { Finding, ReviewInputs, ReviewRecord, ReviewStatus, ReviewView } from "./types";
@@ -52,6 +53,9 @@ export interface SecurityReviewer {
   wait(projectId: string, fingerprint: string, timeoutMs: number): Promise<ReviewView | null>;
   gate(o: { readonly projectId: string; readonly accept?: string; readonly actorId: string; readonly locale: string }): Promise<Gate>;
   forAgent(projectId: string, locale: string, waitMs?: number): Promise<AgentReview | null>;
+  /** The project was just published with the review of this fingerprint: what it reviewed becomes the base the next
+   *  review is a diff against. Nothing happens if the project changed since, or if that review isn't `done`. */
+  markPublished(projectId: string, fingerprint: string): Promise<void>;
 }
 
 /** Shorter than the agent route's silence clock (180 s). A review still running then reaches the owner through the
@@ -89,7 +93,7 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     return (await deps.store.get(r.projectId, r.fingerprint)) ?? r;
   }
 
-  function launch(inputs: ReviewInputs, fingerprint: string, phase0: readonly Finding[], hashes: Record<string, string>, locale: string): void {
+  function launch(inputs: ReviewInputs, fingerprint: string, phase0: readonly Finding[], locale: string): void {
     const { projectId } = inputs;
     // A newer state of the project replaces the review of an older one.
     inFlight.get(projectId)?.controller.abort();
@@ -97,13 +101,15 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     const done = (async () => {
       let costCentiCredits = 0;
       try {
-        const previous = await deps.store.latestDone(projectId);
+        // Like Claude Code on a pull request: once the project was published with a review, the next one is the diff
+        // against that published version, and what already existed there is not commented on again.
+        const base = await deps.store.latestPublished(projectId);
+        const scope: ReviewScope = base ? { kind: "changes", ...changesSince(base.files, reviewedTexts(inputs)) } : { kind: "whole" };
         const accepted = [...(await deps.store.acceptedFindings(projectId)).values()];
-        const changed = previous ? changedPaths(previous.fileHashes, hashes).slice(0, MAX_FILES_IN_PROMPT) : [];
         const r = await deps.modelReview({
           inputs,
           context: projectContextMessage({ inputs, phase0 }),
-          focus: scanFocusMessage({ changed, accepted, language: languageName(locale) }),
+          focus: scanFocusMessage({ scope, accepted, language: languageName(locale) }),
           signal: controller.signal,
         });
         costCentiCredits = r.costCentiCredits;
@@ -136,7 +142,7 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
       const settled = await settleOrphan(existing);
       const now = deps.now();
       if (!inScope || !retryable(settled, now) || !(await checkBudget(deps.store, projectId, now, deps.env)).ok) return settled;
-      if (await deps.store.restart(projectId, fingerprint, now)) launch(inputs, fingerprint, settled.phase0, fileHashes(inputs), locale);
+      if (await deps.store.restart(projectId, fingerprint, now)) launch(inputs, fingerprint, settled.phase0, locale);
       return deps.store.get(projectId, fingerprint);
     }
     const phase0 = runRules(inputs);
@@ -148,7 +154,7 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
         ? "running"
         : "skipped_budget";
     const inserted = await deps.store.insert({ projectId, fingerprint, status, phase0, fileHashes: hashes, startedAt: now });
-    if (inserted && status === "running") launch(inputs, fingerprint, phase0, hashes, locale);
+    if (inserted && status === "running") launch(inputs, fingerprint, phase0, locale);
     return deps.store.get(projectId, fingerprint);
   }
 
@@ -193,6 +199,12 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
       if (!v) return null;
       const firstTimeForAgent = v.status !== "running" && v.blocking.length > 0 ? await deps.store.claimShownToAgent(projectId, v.fingerprint, deps.now()) : false;
       return { view: v, firstTimeForAgent };
+    },
+    async markPublished(projectId, fingerprint) {
+      const inputs = await deps.loadInputs(projectId);
+      // Changed between the gate and the publish: what was published isn't what was reviewed.
+      if (!inputs || fingerprintOf(inputs) !== fingerprint) return;
+      await deps.store.markPublished(projectId, fingerprint, reviewedTexts(inputs), deps.now());
     },
   };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { changedPaths, fileHashes, fingerprintOf, REVIEW_VERSION } from "./fingerprint";
+import { fileHashes, fingerprintOf, REVIEW_VERSION, reviewedTexts } from "./fingerprint";
 import type { ReviewInputs } from "./types";
 
 const inputs = (over: Partial<ReviewInputs> = {}): ReviewInputs => ({
@@ -41,15 +41,21 @@ describe("fingerprintOf", () => {
   });
 });
 
-describe("fileHashes and changedPaths", () => {
+describe("reviewedTexts", () => {
+  it("is what a published copy keeps: the pages under their published paths and the reviewed files, not the tests", () => {
+    const t = reviewedTexts(inputs({ files: { ...inputs().files, "/tests/flujo.spec.ts": "x" } }));
+    expect(t).toEqual({
+      "/index.html": "<h1>Hola</h1>",
+      "/menu/index.html": "<p>menú</p>",
+      "/src/App.tsx": "a",
+      "/supabase/functions/x/index.ts": "b",
+      "/.env": "VITE_X=1",
+    });
+  });
+});
+
+describe("fileHashes", () => {
   it("hash the pages under their published paths and the reviewed files", () => {
     expect(Object.keys(fileHashes(inputs())).sort()).toEqual(["/.env", "/index.html", "/menu/index.html", "/src/App.tsx", "/supabase/functions/x/index.ts"]);
-  });
-
-  it("changedPaths lists new paths and paths whose content changed, sorted", () => {
-    const before = fileHashes(inputs());
-    const after = fileHashes(inputs({ homeHtml: "<h1>Adiós</h1>", files: { ...inputs().files, "/src/nuevo.ts": "n" } }));
-    expect(changedPaths(before, after)).toEqual(["/index.html", "/src/nuevo.ts"]);
-    expect(changedPaths(before, before)).toEqual([]);
   });
 });
