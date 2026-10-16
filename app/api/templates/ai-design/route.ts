@@ -8,7 +8,7 @@ import { createVersion } from "@/lib/projects/versions";
 import {
   getCreditState,
   noCreditsMessage,
-  debitCredits,
+  chargeCredits,
   estimateCredits,
   creditsForUsage,
 } from "@/lib/credits";
@@ -52,9 +52,11 @@ import type { TurnWriter } from "@/lib/ai/provider-switch";
 import {
   capturaRuntimeDelPapel,
   creditRateForRole,
+  modelIdForRole,
   roleForOperation,
   type ModelOperation,
 } from "@/lib/generation/model-policy";
+import type { LedgerUse } from "@/lib/credit-ledger";
 import { necesitaOjos } from "@/lib/ai/needs-image-eyes";
 import { fetchImageAsInlineData } from "@/lib/ai/inline-image";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
@@ -515,6 +517,8 @@ export async function POST(req: Request): Promise<Response> {
   // turno ciego y honesto, que es exactamente el comportamiento de ayer.
   let veLaImagen = false;
   let imagenAdjuntaPixeles: InlineImage | undefined;
+  // EL LIBRO DE GASTO: lo que costó esta pregunta va en la fila del turno.
+  let usoDeLosOjos: LedgerUse | null = null;
   if (attachedImage) {
     veLaImagen = await necesitaOjos(prompt, attachedImage.alt ?? null, async ({ system, user, signal }) => {
       const provider = fireworksStreamProvider({
@@ -533,6 +537,16 @@ export async function POST(req: Request): Promise<Response> {
         { signal },
       )) {
         if (ev.type === "text_delta") out += ev.text;
+        else if (ev.type === "usage") {
+          usoDeLosOjos = {
+            provider: "fireworks",
+            model: modelIdForRole(roleForOperation("simple_extraction")),
+            inputTokens: ev.inputTokens,
+            cachedTokens: ev.cachedTokens ?? 0,
+            outputTokens: ev.outputTokens,
+            at: new Date(),
+          };
+        }
       }
       return out;
     });
@@ -1474,7 +1488,28 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
         // falló: no se enseña un número que no se cobró.
         let cobrado: number | null = null;
         try {
-          await debitCredits(userId, credits);
+          await chargeCredits(userId, credits, {
+            surface: "chat",
+            outcome: "ok",
+            projectId,
+            listCenticredits: credits,
+            uses: [
+              ...(usoDeLosOjos ? [usoDeLosOjos] : []),
+              ...(usage
+                ? [
+                    {
+                      provider: "fireworks" as const,
+                      model: modelIdForRole(writer),
+                      inputTokens: usage.inputTokens,
+                      cachedTokens: usage.cachedTokens,
+                      outputTokens: usage.outputTokens,
+                      reasoningTokens: usage.thinkingTokens,
+                      at: new Date(),
+                    },
+                  ]
+                : []),
+            ],
+          });
           cobrado = credits;
         } catch (debitErr) {
           // eslint-disable-next-line no-console

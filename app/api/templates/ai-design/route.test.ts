@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   createVersion: vi.fn(),
   getCreditState: vi.fn(),
   noCreditsMessage: vi.fn(),
-  debitCredits: vi.fn(),
+  chargeCredits: vi.fn(),
   estimateCredits: vi.fn(),
   creditsForUsage: vi.fn(),
   stream: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
   noCreditsMessage: mocks.noCreditsMessage,
-  debitCredits: mocks.debitCredits,
+  chargeCredits: mocks.chargeCredits,
   estimateCredits: mocks.estimateCredits,
   creditsForUsage: mocks.creditsForUsage,
 }));
@@ -207,7 +207,7 @@ describe("POST /api/templates/ai-design", () => {
     mocks.noCreditsMessage.mockReturnValue("MENSAJE-COMPARTIDO-EDICION");
     mocks.estimateCredits.mockReturnValue(1);
     mocks.creditsForUsage.mockReturnValue(1);
-    mocks.debitCredits.mockResolvedValue(undefined);
+    mocks.chargeCredits.mockResolvedValue(undefined);
 
     mocks.renderReference.mockResolvedValue(null);
     delete process.env.OPENLEN_CHAT_PROVIDER;
@@ -450,10 +450,10 @@ describe("POST /api/templates/ai-design", () => {
 
     expect(mocks.getCreditState).toHaveBeenCalledTimes(1);
     expect(mocks.update).toHaveBeenCalledTimes(1);
-    expect(mocks.debitCredits).toHaveBeenCalledOnce();
-    expect(mocks.debitCredits).toHaveBeenCalledWith("u1", 2);
+    expect(mocks.chargeCredits).toHaveBeenCalledOnce();
+    expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 2, expect.anything());
     expect(mocks.update.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.debitCredits.mock.invocationCallOrder[0]!,
+      mocks.chargeCredits.mock.invocationCallOrder[0]!,
     );
     expect(events.some((event) => event.event === "error")).toBe(false);
     expect(String(done?.data.html)).toContain("Con botón nuevo");
@@ -474,7 +474,7 @@ describe("POST /api/templates/ai-design", () => {
 
   it("si el cargo falla, el done no enseña un número que no se cobró", async () => {
     mocks.creditsForUsage.mockReturnValue(44);
-    mocks.debitCredits.mockRejectedValueOnce(new Error("la base rechazó el UPDATE"));
+    mocks.chargeCredits.mockRejectedValueOnce(new Error("la base rechazó el UPDATE"));
     mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Llámanos</h1>")));
 
     const done = (await readEvents(await call())).find((event) => event.event === "done");
@@ -522,6 +522,36 @@ describe("POST /api/templates/ai-design", () => {
         .filter((p) => p.operation !== "simple_extraction")[0]!;
       return req.messages.map((m) => m.content).join("\n");
     }
+
+    it("ledger: one chat row whose cost includes the image pre-pass", async () => {
+      mocks.fetchImage.mockResolvedValue(JPEG);
+      mocks.fireworksStream.mockReturnValueOnce(
+        (async function* () {
+          yield { type: "text_delta" as const, text: "NO" };
+          yield { type: "usage" as const, inputTokens: 300, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 };
+          yield { type: "done" as const, stopReason: { kind: "end_turn" as const } };
+        })(),
+      );
+      mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con foto</h1>")));
+      mocks.creditsForUsage.mockReturnValue(2);
+
+      await readEvents(await callConImagen());
+
+      expect(mocks.chargeCredits).toHaveBeenCalledWith(
+        "u1",
+        2,
+        expect.objectContaining({
+          surface: "chat",
+          outcome: "ok",
+          projectId: "p1",
+          listCenticredits: 2,
+          uses: [
+            expect.objectContaining({ provider: "fireworks", inputTokens: 300, outputTokens: 1 }),
+            expect.objectContaining({ provider: "fireworks", inputTokens: 1000, outputTokens: 1000 }),
+          ],
+        }),
+      );
+    });
 
     it("le dice al modelo que NO la está viendo, en vez de dejarlo adivinar", async () => {
       // Los píxeles ESTÁN disponibles a propósito: así lo único que mantiene el
@@ -774,7 +804,7 @@ ${inner}` };
   // El control de que esto no es vacío está justo debajo: un turno que NO llegó
   // a guardar tiene que seguir siendo un error de verdad.
   it("si el cobro falla DESPUÉS de guardar, el turno cierra en done — la página ya cambió", async () => {
-    mocks.debitCredits.mockRejectedValue(new Error("db down"));
+    mocks.chargeCredits.mockRejectedValue(new Error("db down"));
     mocks.fireworksStream.mockReturnValue(modelSays(rewrite("<h1>Con botón nuevo</h1>")));
 
     const events = await readEvents(await call());
