@@ -448,7 +448,9 @@ export function PublishModal({
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-2xl overflow-hidden">
+      {/* Se desplaza dentro de la pantalla: con hallazgos de seguridad largos el
+          diálogo pasaba de la altura de la ventana y sus botones quedaban fuera. */}
+      <div className="w-full max-w-lg max-h-full rounded-2xl bg-white dark:bg-[#0a0a0a] ring-1 ring-zinc-200 dark:ring-zinc-800 shadow-2xl overflow-y-auto">
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-900">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-coral-50 dark:bg-coral-500/10 text-coral-600 dark:text-coral-400">
