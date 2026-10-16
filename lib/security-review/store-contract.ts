@@ -62,6 +62,29 @@ export function describeStoreContract(name: string, setup: () => Promise<Contrac
       expect(await store.usageBetween(projectA, DAY_FROM, DAY_TO)).toEqual({ projectModelRuns: 1, spentCentiCredits: 150 });
     });
 
+    it("restart turns a failed or budget-skipped review back to running, keeps what it cost, and finishing adds the new run's cost", async () => {
+      const { store, projectA } = await setup();
+      await store.insert({ projectId: projectA, fingerprint: "f", status: "running", phase0: [], fileHashes: {}, startedAt: T0 });
+      await store.finish(projectA, "f", { status: "failed", findings: [], costCentiCredits: 40, failReason: "timeout", finishedAt: T0 });
+      await store.insert({ projectId: projectA, fingerprint: "b", status: "skipped_budget", phase0: [], fileHashes: {}, startedAt: T0 });
+      const later = new Date("1999-03-01T11:00:00Z");
+      expect(await store.restart(projectA, "f", later)).toBe(true);
+      expect(await store.restart(projectA, "b", later)).toBe(true);
+      expect(await store.get(projectA, "f")).toMatchObject({ status: "running", failReason: null, finishedAt: null, costCentiCredits: 40, startedAt: later });
+      await store.finish(projectA, "f", { status: "done", findings: [], costCentiCredits: 60, failReason: null, finishedAt: later });
+      expect(await store.get(projectA, "f")).toMatchObject({ status: "done", costCentiCredits: 100 });
+    });
+
+    it("restart leaves a done or running review alone", async () => {
+      const { store, projectA } = await setup();
+      await store.insert({ projectId: projectA, fingerprint: "r", status: "running", phase0: [], fileHashes: {}, startedAt: T0 });
+      await store.insert({ projectId: projectA, fingerprint: "d", status: "running", phase0: [], fileHashes: {}, startedAt: T0 });
+      await store.finish(projectA, "d", { status: "done", findings: [], costCentiCredits: 5, failReason: null, finishedAt: T0 });
+      expect(await store.restart(projectA, "r", T0)).toBe(false);
+      expect(await store.restart(projectA, "d", T0)).toBe(false);
+      expect((await store.get(projectA, "d"))?.status).toBe("done");
+    });
+
     it("claimShownToAgent is true only the first time", async () => {
       const { store, projectA } = await setup();
       await store.insert({ projectId: projectA, fingerprint: "f", status: "done", phase0: [], fileHashes: {}, startedAt: T0 });

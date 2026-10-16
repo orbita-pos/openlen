@@ -5,7 +5,7 @@
 
 import "server-only";
 
-import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -51,8 +51,16 @@ export const pgSecurityReviewStore: SecurityReviewStore = {
   async finish(projectId, fingerprint, f) {
     await db
       .update(T)
-      .set({ status: f.status, findings: [...f.findings], costCentiCredits: f.costCentiCredits, failReason: f.failReason, finishedAt: f.finishedAt })
+      .set({ status: f.status, findings: [...f.findings], costCentiCredits: sql`${T.costCentiCredits} + ${f.costCentiCredits}`, failReason: f.failReason, finishedAt: f.finishedAt })
       .where(and(one(projectId, fingerprint), eq(T.status, "running")));
+  },
+  async restart(projectId, fingerprint, at) {
+    const out = await db
+      .update(T)
+      .set({ status: "running", findings: [], failReason: null, finishedAt: null, startedAt: at })
+      .where(and(one(projectId, fingerprint), inArray(T.status, ["failed", "skipped_budget"])))
+      .returning({ fingerprint: T.fingerprint });
+    return out.length > 0;
   },
   async latestDone(projectId) {
     const [r] = await db.select().from(T).where(and(eq(T.projectId, projectId), eq(T.status, "done"))).orderBy(desc(T.startedAt)).limit(1);

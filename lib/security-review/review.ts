@@ -13,7 +13,7 @@
 // than any real run can be, was cut by a restart: it is closed as failed when
 // someone asks for it.
 
-import { checkBudget } from "./budget";
+import { checkBudget, utcDayStart } from "./budget";
 import { securityReviewEnabled } from "./enabled";
 import { changedPaths, fileHashes, fingerprintOf } from "./fingerprint";
 import type { ModelReviewResult } from "./model-review";
@@ -58,8 +58,20 @@ export interface SecurityReviewer {
 export const AGENT_WAIT_MS = 155_000;
 /** Older than any real run (150 s): a `running` row nobody here runs was cut by a restart. */
 export const ORPHAN_AFTER_MS = 160_000;
+/** A review whose model run failed is tried again when asked, once this long has passed. */
+export const RETRY_FAILED_AFTER_MS = 10 * 60_000;
 
 const hasFunctions = (files: Readonly<Record<string, string>>) => Object.keys(files).some((p) => p.startsWith("/supabase/functions/"));
+
+/** A review that didn't get its model run is not final: a budget skip from an earlier UTC day, a run cut by a newer
+ *  state of the project, or a run that failed long enough ago. Otherwise the same content would be published without
+ *  the model's review forever. */
+function retryable(r: ReviewRecord, now: Date): boolean {
+  if (r.status === "skipped_budget") return r.startedAt < utcDayStart(now);
+  if (r.status !== "failed") return false;
+  if (r.failReason === "superseded") return true;
+  return now.getTime() - (r.finishedAt ?? r.startedAt).getTime() >= RETRY_FAILED_AFTER_MS;
+}
 
 export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
   const inFlight = new Map<string, { readonly fingerprint: string; readonly controller: AbortController; readonly done: Promise<void> }>();
@@ -117,12 +129,18 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     const inputs = await deps.loadInputs(projectId);
     if (!inputs) return null;
     const fingerprint = fingerprintOf(inputs);
+    const inScope = inputs.hasBackend || hasFunctions(inputs.files);
     const existing = await deps.store.get(projectId, fingerprint);
-    if (existing) return settleOrphan(existing);
+    if (existing) {
+      const settled = await settleOrphan(existing);
+      const now = deps.now();
+      if (!inScope || !retryable(settled, now) || !(await checkBudget(deps.store, projectId, now, deps.env)).ok) return settled;
+      if (await deps.store.restart(projectId, fingerprint, now)) launch(inputs, fingerprint, settled.phase0, fileHashes(inputs), locale);
+      return deps.store.get(projectId, fingerprint);
+    }
     const phase0 = runRules(inputs);
     const hashes = fileHashes(inputs);
     const now = deps.now();
-    const inScope = inputs.hasBackend || hasFunctions(inputs.files);
     const status: ReviewStatus = !inScope
       ? "skipped_scope"
       : (await checkBudget(deps.store, projectId, now, deps.env)).ok

@@ -118,6 +118,55 @@ describe("start", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("a review skipped for budget on an earlier day runs the model when asked again today", async () => {
+    let now = new Date("2026-10-16T23:00:00Z");
+    let env: Record<string, string> = { OPENLEN_SECURITY_REVIEW_DAILY_USD: "0" };
+    const store = memorySecurityReviewStore();
+    const calls: unknown[] = [];
+    const reviewer = createSecurityReviewer({
+      store,
+      loadInputs: async () => withBackend(),
+      modelReview: async () => { calls.push(1); return { ok: true, findings: [], usage: NO_USAGE, costCentiCredits: 1 }; },
+      now: () => now,
+      get env() { return env; },
+    });
+    expect((await reviewer.start("p", "es"))?.status).toBe("skipped_budget");
+    // Same day, same project: still skipped, no model.
+    env = {};
+    expect((await reviewer.start("p", "es"))?.status).toBe("skipped_budget");
+    // Next UTC day: the budget is back, and the same fingerprint gets the model.
+    now = new Date("2026-10-17T01:00:00Z");
+    const again = await reviewer.start("p", "es");
+    expect(again?.status).toBe("running");
+    expect(await reviewer.wait("p", again!.fingerprint, 1_000)).toMatchObject({ status: "done" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("a failed review is retried after 10 minutes, a superseded one at once, and not sooner", async () => {
+    let now = new Date("2026-10-16T12:00:00Z");
+    const { reviewer, store, calls } = setup({ inputs: () => withBackend(), now: () => now });
+    const v = await reviewer.start("p", "es");
+    await settle();
+    calls[0]!.answer.resolve({ ok: false, reason: "scan: fireworks_5xx", usage: NO_USAGE, costCentiCredits: 3 });
+    await reviewer.wait("p", v!.fingerprint, 1_000);
+    now = new Date(now.getTime() + 60_000);
+    expect((await reviewer.start("p", "es"))?.status).toBe("failed");
+    now = new Date(now.getTime() + 10 * 60_000);
+    expect((await reviewer.start("p", "es"))?.status).toBe("running");
+    await settle();
+    expect(calls).toHaveLength(2);
+    // A superseded review of this same content comes back at once.
+    calls[1]!.answer.resolve({ ok: false, reason: "aborted", usage: NO_USAGE, costCentiCredits: 0 });
+    await reviewer.wait("p", v!.fingerprint, 1_000);
+    await store.finish("p", v!.fingerprint, { status: "failed", findings: [], costCentiCredits: 0, failReason: "superseded", finishedAt: now });
+    const row = await store.get("p", v!.fingerprint);
+    if (row?.status === "failed" && row.failReason !== "superseded") {
+      // Mark it superseded the way a newer state of the project would.
+      store.reviews[store.reviews.findIndex((r) => r.fingerprint === v!.fingerprint)] = { ...row, failReason: "superseded" };
+    }
+    expect((await reviewer.start("p", "es"))?.status).toBe("running");
+  });
+
   it("a running row nobody here is running is closed as failed once it is old enough", async () => {
     let now = new Date("2026-10-16T12:00:00Z");
     const { reviewer, store } = setup({ inputs: () => withBackend(), now: () => now });

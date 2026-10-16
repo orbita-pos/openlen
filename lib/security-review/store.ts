@@ -24,8 +24,11 @@ export interface SecurityReviewStore {
   get(projectId: string, fingerprint: string): Promise<ReviewRecord | null>;
   /** false when this project already has a review of this fingerprint (another request won). */
   insert(r: NewReview): Promise<boolean>;
-  /** Only a `running` review is finished; any other is left as it is. */
+  /** Only a `running` review is finished; any other is left as it is. The run's cost is ADDED to what the review
+   *  already cost (a retried review keeps what its earlier runs spent). */
   finish(projectId: string, fingerprint: string, f: FinishedReview): Promise<void>;
+  /** A `failed` or `skipped_budget` review runs again: `running` from `at`, keeping its cost. false for any other. */
+  restart(projectId: string, fingerprint: string, at: Date): Promise<boolean>;
   /** The project's newest `done` review. */
   latestDone(projectId: string): Promise<ReviewRecord | null>;
   /** Started in [from, to): this project's reviews that used the model, and what ALL reviews cost. */
@@ -56,7 +59,13 @@ export function memorySecurityReviewStore(): SecurityReviewStore & { readonly re
     },
     async finish(projectId, fingerprint, f) {
       const i = at(projectId, fingerprint);
-      if (i >= 0 && reviews[i]!.status === "running") reviews[i] = { ...reviews[i]!, ...f };
+      if (i >= 0 && reviews[i]!.status === "running") reviews[i] = { ...reviews[i]!, ...f, costCentiCredits: reviews[i]!.costCentiCredits + f.costCentiCredits };
+    },
+    async restart(projectId, fingerprint, when) {
+      const i = at(projectId, fingerprint);
+      if (i < 0 || (reviews[i]!.status !== "failed" && reviews[i]!.status !== "skipped_budget")) return false;
+      reviews[i] = { ...reviews[i]!, status: "running", findings: [], failReason: null, finishedAt: null, startedAt: when };
+      return true;
     },
     async latestDone(projectId) {
       return reviews.filter((r) => r.projectId === projectId && r.status === "done").sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0] ?? null;
