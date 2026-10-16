@@ -11,8 +11,9 @@ const m = vi.hoisted(() => ({
   publishProject: vi.fn(),
   unpublishProject: vi.fn(),
   securityGate: vi.fn(),
+  markPublished: vi.fn(),
 }));
-vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: m.securityGate }) }));
+vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: m.securityGate, markPublished: m.markPublished }) }));
 vi.mock("../access", () => ({ openProject: m.openProject }));
 vi.mock("../quota", () => ({ consumeQuota: m.consumeQuota }));
 vi.mock("../approvals", () => ({
@@ -51,6 +52,7 @@ const parse = (r: ToolResult) => JSON.parse(text(r));
 beforeEach(() => {
   Object.values(m).forEach((f) => f.mockReset());
   m.securityGate.mockResolvedValue({ kind: "open", view: null });
+  m.markPublished.mockResolvedValue(undefined);
   m.consumeQuota.mockResolvedValue(null);
   m.hasTrustedPublish.mockResolvedValue(false);
   m.createApproval.mockResolvedValue({ id: "AP1", expiresAt: new Date("2026-10-13T00:00:00Z") });
@@ -186,5 +188,13 @@ describe("publish — la revisión de seguridad (spec local 2026-10-15)", () => 
     m.securityGate.mockRejectedValue(new Error("db down"));
     await publishTool.run({ project_id: "p1" }, caller);
     expect(m.publishProject).toHaveBeenCalled();
+  });
+
+  it("🔴 tras publicar, la revisión con la que pasó queda como base de la siguiente", async () => {
+    trustedRepublish();
+    m.securityGate.mockResolvedValue({ kind: "open", view: { ...blocked.view, blocking: [] } });
+    m.publishProject.mockResolvedValue({ url: "https://cafe.openlen.app", subdomain: "cafe", publishedAt: new Date() });
+    await publishTool.run({ project_id: "p1" }, caller);
+    expect(m.markPublished).toHaveBeenCalledWith("p1", "c".repeat(64));
   });
 });
