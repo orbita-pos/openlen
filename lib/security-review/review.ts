@@ -54,10 +54,11 @@ export interface SecurityReviewer {
   forAgent(projectId: string, locale: string, waitMs?: number): Promise<AgentReview | null>;
 }
 
-/** Longer than phases 1–3 together (150 s), shorter than the agent route's silence clock (180 s). */
+/** Shorter than the agent route's silence clock (180 s). A review still running then reaches the owner through the
+ *  card: the publish route waits for it. */
 export const AGENT_WAIT_MS = 155_000;
-/** Older than any real run (150 s): a `running` row nobody here runs was cut by a restart. */
-export const ORPHAN_AFTER_MS = 160_000;
+/** Older than any real run (240 s at most): a `running` row nobody here runs was cut by a restart. */
+export const ORPHAN_AFTER_MS = 250_000;
 /** A review whose model run failed is tried again when asked, once this long has passed. */
 export const RETRY_FAILED_AFTER_MS = 10 * 60_000;
 
