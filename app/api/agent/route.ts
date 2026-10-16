@@ -15,11 +15,13 @@ import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
   getCreditState,
   noCreditsMessage,
-  debitCredits,
+  chargeCredits,
+  recordUncharged,
   creditsForUsage,
   techoDelTurno,
   NEAR_TURN_CAP_RATIO,
 } from "@/lib/credits";
+import type { LedgerEntry, LedgerOutcome } from "@/lib/credit-ledger";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
@@ -520,9 +522,20 @@ async function correrTurno(
   // además se cuenta, porque el cierre del turno tiene que decir lo que de
   // verdad se cobró — un turno con búsquedas decía «1,46 créditos» y costó 5,96.
   let chargedByTools = 0;
+  // EL LIBRO DE GASTO: la fila de cada cargo de herramienta apunta al turno. El
+  // id del turno se fija más abajo (`filaId`); hasta entonces vale el del cliente.
+  let ledgerRefId: string | null = turnIdDelCliente;
   const deps = {
-    ...realDeps(async (uid, centicreditos) => {
-      await debitCredits(uid, centicreditos);
+    ...realDeps(async (uid, centicreditos, use) => {
+      await chargeCredits(uid, centicreditos, {
+        surface: "agent_tool",
+        outcome: "ok",
+        projectId,
+        actorId: miembro ? quien : null,
+        refId: ledgerRefId,
+        listCenticredits: centicreditos,
+        uses: [use],
+      });
       chargedByTools += centicreditos;
       if (miembro) await sumarGasto(projectId, quien, centicreditos);
     }),
@@ -1201,6 +1214,7 @@ async function correrTurno(
       // ANTES del `done` (`cerrarFila`), para que la fila ya esté completa
       // cuando el cliente se entera de que acabó.
       const filaId = turnIdDelCliente ?? turnoId;
+      ledgerRefId = filaId;
       /** Lo que el usuario escribió a media faena, con la misma forma que el
        *  panel (`↳`): si no está el panel, la fila la escribe el servidor. */
       const correcciones: string[] = [];
@@ -1693,6 +1707,31 @@ async function correrTurno(
           1,
           creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
         );
+        // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la fila del
+        // turno, con sus tokens. El costo sale del TOTAL del turno: hoy hay un solo
+        // proveedor y sin franja, así que da lo mismo que llamada a llamada. 🔴 El
+        // paso del segundo proveedor tiene que acumularlo POR LLAMADA en
+        // lib/agent/loop.ts, donde se suma `usage`.
+        const turnoDelLibro = (outcome: LedgerOutcome): LedgerEntry => ({
+          surface: "agent_turn",
+          outcome,
+          projectId,
+          actorId: miembro ? quien : null,
+          refId: filaId,
+          listCenticredits: credits,
+          uses: [
+            {
+              provider: "fireworks",
+              model: brain.modelId,
+              inputTokens,
+              cachedTokens,
+              outputTokens,
+              reasoningTokens: thinkingTokens,
+              at: new Date(),
+            },
+          ],
+        });
+        const gastoTokens = inputTokens + outputTokens > 0;
         if (!result.terminalError && !result.sinCobro) {
           // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:
           // `creditsForUsage` recibe `cachedTokens` y les aplica la tarifa
@@ -1733,7 +1772,7 @@ async function correrTurno(
               // que el `motivo=` de la rama de abajo.
               ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
           );
-          await debitCredits(userId, credits);
+          await chargeCredits(userId, credits, turnoDelLibro("ok"));
           if (miembro) await sumarGasto(projectId, quien, credits);
           cobrado = credits;
         } else if (result.topeAlcanzado === "budget_limit") {
@@ -1749,7 +1788,7 @@ async function correrTurno(
             `[agent] tope de gasto — ${alTecho} credits (gastado ${credits}, techo ${techo})` +
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
-          await debitCredits(userId, alTecho);
+          await chargeCredits(userId, alTecho, turnoDelLibro("budget_limit"));
           if (miembro) await sumarGasto(projectId, quien, alTecho);
           cobrado = alTecho;
         } else if (canceladoAProposito && result.errorCode === "cancelled") {
@@ -1772,7 +1811,7 @@ async function correrTurno(
             `[agent] ■ del dueño — ${usado} credits (gastado ${credits}, techo ${techo})` +
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=cancelled`,
           );
-          if (usado > 0) await debitCredits(userId, usado);
+          if (usado > 0) await chargeCredits(userId, usado, turnoDelLibro("cancelled"));
           if (miembro) await sumarGasto(projectId, quien, usado);
           cobrado = usado;
         } else if (!result.terminalError && result.sinCobro) {
@@ -1791,6 +1830,8 @@ async function correrTurno(
           } motivo=${result.sinCobro}`;
           if (result.sinCobro === "conflicto") console.error(`${linea} proyecto=${projectId}`);
           else console.log(linea);
+          // No se cobra, pero costó: el libro lo anota con 0 cobrado.
+          if (gastoTokens) await recordUncharged(userId, turnoDelLibro("error"));
         } else {
           // 🔴 EL CARGO PERDIDO, dicho en voz alta. La regla de facturación
           // (Jesús, 2026-07-07) es 0 créditos en terminal — pero cuando el
@@ -1816,6 +1857,7 @@ async function correrTurno(
               mutoDurable ? ` (MUTÓ: cargo perdido de ${credits})` : ""
             } motivo=${motivo}`,
           );
+          if (gastoTokens) await recordUncharged(userId, turnoDelLibro("error"));
         }
         // `mutoDurable` viaja en el terminal: el cliente lo necesita para NO
         // pintar en rojo un turno cuyo cambio ya vive en la base. Sin esto el

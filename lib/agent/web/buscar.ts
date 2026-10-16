@@ -16,6 +16,7 @@
  */
 import fs from "node:fs";
 
+import type { LedgerUse } from "@/lib/credit-ledger";
 import { fetchRaw } from "@/lib/style-match/scrape/fetch-raw";
 import { buscarEnLaWeb, ficheroDeLaWeb, leerDeLaWeb, webDeSerializable } from "@/lib/len-bench/web-sustituta";
 import type { WebDelCaso } from "@/lib/len-bench/tipos";
@@ -153,7 +154,8 @@ export function webDePrueba(dir: string, projectId: string): WebDelCaso {
  */
 export const CENTICREDITOS_POR_CONSULTA = 150;
 
-export function webDelServidor(debit: (userId: string, centicreditos: number) => Promise<unknown>): WebDeps {
+/** El cobro de la búsqueda, con su uso para el libro de gasto (lib/credit-ledger.ts). */
+export function webDelServidor(debit: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>): WebDeps {
   const dirDePrueba = process.env.OPENLEN_WEB_DE_PRUEBA_DIR?.trim();
   if (dirDePrueba) {
     return {
@@ -177,7 +179,7 @@ export function webDelServidor(debit: (userId: string, centicreditos: number) =>
     },
     leer: (_projectId, url) => leerPaginaDeVerdad(url),
     async cobrar(userId, consultas) {
-      if (consultas > 0) await debit(userId, consultas * CENTICREDITOS_POR_CONSULTA);
+      if (consultas > 0) await debit(userId, consultas * CENTICREDITOS_POR_CONSULTA, { provider: "exa", model: "search", queries: consultas });
     },
   };
 }
