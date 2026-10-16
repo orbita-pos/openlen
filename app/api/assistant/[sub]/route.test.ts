@@ -30,7 +30,7 @@ vi.mock("@/lib/ai/fireworks-as-stream-provider", () => ({
   }),
 }));
 vi.mock("@/lib/site-assistant/quota", () => ({ consumeAssistantMessage: async () => ({ ok: true }) }));
-vi.mock("@/lib/credits", () => ({ recordUncharged: mocks.recordUncharged }));
+vi.mock("@/lib/credits", () => ({ recordUncharged: mocks.recordUncharged, creditsForUsage: () => 7 }));
 
 vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
 vi.mock("@/lib/db", () => ({
@@ -187,6 +187,8 @@ describe("POST /api/assistant/[sub] — el libro de gasto", () => {
         surface: "page_assistant",
         outcome: "ok",
         projectId: "p1",
+        // Lo que valía a la tarifa de cobro: es lo que OpenLen regala.
+        listCenticredits: 7,
         uses: [expect.objectContaining({ provider: "fireworks", inputTokens: 900, outputTokens: 40 })],
       }),
     );

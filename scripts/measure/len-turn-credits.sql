@@ -300,8 +300,8 @@ where m.tipo is null
 --               OpenLen pays without charging (security review, a visitor's chat,
 --               publish translations). The app AI's reserve/settle pair is left
 --               out: it nets to what was charged;
---   * margin  = charged − cost, over the rows whose cost is KNOWN (plus the app
---               AI reservations, whose cost rides on their settlement row).
+--   * margin  = charged − cost, over the rows whose cost is KNOWN, plus every app
+--               AI row: a reservation and its settlement net to what was charged.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 \echo
@@ -314,7 +314,7 @@ select l.plan,
        round(coalesce(sum(l."listCenticredits") filter (where l.outcome <> 'reserve'), 0) / 100.0, 1) as worth_cr,
        round(coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as cost_usd,
        round(coalesce(sum(l."listCenticredits" - l.centicredits) filter (where l.outcome not in ('reserve', 'settle')), 0) / 100.0, 1) as given_away_cr,
-       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.outcome = 'reserve'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
+       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.surface = 'app_ai'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
 from "creditLedger" l
 join users u on u.id = l."userId"
 where u.email <> all (string_to_array(:'exclude', ','))
@@ -328,7 +328,7 @@ select count(*) as rows,
        max(l."createdAt")::date as last_day,
        round(sum(l.centicredits) / 100.0, 1) as charged_cr,
        round(coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as cost_usd,
-       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.outcome = 'reserve'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
+       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.surface = 'app_ai'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
 from "creditLedger" l
 join users u on u.id = l."userId"
 where u.email <> all (string_to_array(:'exclude', ','));
@@ -340,7 +340,7 @@ select left(split_part(u.email, '@', 1), 3) || '...@' || split_part(u.email, '@'
        count(*) as rows,
        round(sum(l.centicredits) / 100.0, 1) as charged_cr,
        round(coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as cost_usd,
-       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.outcome = 'reserve'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
+       round(coalesce(sum(l.centicredits) filter (where l."costMicroUsd" is not null or l.surface = 'app_ai'), 0) / 10000.0 - coalesce(sum(l."costMicroUsd"), 0) / 1e6, 4) as margin_usd
 from "creditLedger" l
 join users u on u.id = l."userId"
 where u.email <> all (string_to_array(:'exclude', ','))
