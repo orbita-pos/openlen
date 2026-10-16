@@ -122,6 +122,27 @@ describe("the frame runtime", () => {
     expect(html.style.getPropertyValue("color")).toBe("");
   });
 
+  it("a theme change after the final render runs the visual again, so a canvas picks up the new colors", async () => {
+    const f = frame();
+    f.send({ kind: "ol-visual:theme", theme: "dark", tokens: { "--fg": "#fff" } });
+    const code =
+      '<p id="p">x</p><script>(window.seen = window.seen || []).push(getComputedStyle(document.documentElement).getPropertyValue("--fg").trim())</script>';
+    f.send({ kind: "ol-visual:render", code, final: true });
+    await f.tick();
+    f.send({ kind: "ol-visual:theme", theme: "light", tokens: { "--fg": "#111" } });
+    await f.tick();
+    expect((f.win as unknown as { seen?: string[] }).seen).toEqual(["#fff", "#111"]);
+    expect(f.root().querySelectorAll("#p")).toHaveLength(1);
+  });
+
+  it("a theme change before the final render only sets the variables", async () => {
+    const f = frame();
+    f.send({ kind: "ol-visual:render", code: "<p>x</p><script>window.runs = (window.runs || 0) + 1</script>", final: false });
+    f.send({ kind: "ol-visual:theme", theme: "light", tokens: { "--fg": "#111" } });
+    await f.tick();
+    expect((f.win as unknown as { runs?: number }).runs).toBeUndefined();
+  });
+
   it("tells the chat it is ready", async () => {
     const f = frame();
     await f.tick();

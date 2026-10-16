@@ -14,12 +14,19 @@
  * - renderFinal(container, code): the whole code once, then its scripts in
  *   document order, each as a new element; one with `src` is awaited (load or
  *   error) before the next; one that throws doesn't stop the others.
+ *
+ * A theme change after the final render paints the whole visual again (and runs
+ * its scripts again): a CSS variable flips by itself, but what a script drew
+ * with it — a Chart.js canvas — keeps the old colors otherwise.
  */
 export const FRAME_RUNTIME_JS = `(function () {
   "use strict";
   var PARENTS = __PARENT_ORIGINS__;
   var root = document.getElementById("root");
   var finalDone = false;
+  /* The finished code: a theme change runs it again, so what a script drew
+     with the old colors (a canvas) is drawn with the new ones. */
+  var finalCode = null;
 
   function post(message) {
     try { window.parent.postMessage(message, "*"); } catch (e) {}
@@ -99,9 +106,14 @@ export const FRAME_RUNTIME_JS = `(function () {
     if (!d || typeof d !== "object") return;
     if (d.kind === "ol-visual:theme") {
       applyTheme(d.theme, d.tokens || {});
+      if (finalCode !== null) {
+        while (root.firstChild) root.removeChild(root.firstChild);
+        renderFinal(root, finalCode);
+      }
     } else if (d.kind === "ol-visual:render" && typeof d.code === "string" && !finalDone) {
       if (d.final) {
         finalDone = true;
+        finalCode = d.code;
         renderFinal(root, d.code);
       } else {
         applyPartialHtml(root, d.code);
