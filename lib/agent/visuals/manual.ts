@@ -24,7 +24,7 @@ export const VISUAL_TOKENS: readonly { readonly name: string; readonly role: str
   { name: "--border-strong", role: "a border that must stand out, or a hovered one" },
   { name: "--accent", role: "OpenLen's accent: links, the selected option, the one series that matters" },
   { name: "--accent-soft", role: "a light tint of the accent, as a background" },
-  { name: "--accent-strong", role: "accent-colored text on --accent-soft" },
+  { name: "--accent-strong", role: "a deeper accent for a solid fill with white text on it (a badge, a main button)" },
   { name: "--hover", role: "the background of a hovered row or button" },
   { name: "--success", role: "good news (always with a word or an icon, never color alone)" },
   { name: "--warning", role: "something to watch" },
@@ -104,7 +104,7 @@ Chart.js: load the UMD build from https://cdnjs.cloudflare.com/ajax/libs/Chart.j
   diagram: `## diagram
 For a flow, a structure or how something works. Use one <svg width="100%" viewBox="0 0 W H" role="img"> with <title> and <desc> first; set W to the width you have and H to just below the last element. Boxes: <rect> with fill var(--bg-elev), stroke var(--border-strong), stroke-width 0.5 to 1, rx 6. Text: 13px in var(--fg), 12px in var(--fg-muted), centered with text-anchor="middle" and dominant-baseline="central". SVG text never wraps: if a label doesn't fit, shorten it. Arrows: lines or paths with fill="none" and stroke var(--fg-faint), stopping at the edge of the box, never crossing another box or label. At most four or five boxes; if there are more, show the overview first and the detail in a second visual with a sentence between them. Use --accent only for the part the person asked about.`,
   mockup: `## mockup
-For a card, a screen, a list, a comparison of options. Cards: background var(--bg-elev), border 1px solid var(--border), border-radius calc(var(--radius) * 1.5), padding 12–16px. Lists: rows separated by a --border line, not a card each. Options side by side in a grid that wraps; mark the recommended one with a 2px --accent border and a small label (background --accent-soft, text --accent-strong). Buttons, inputs and selects already have the chat's style: write the bare elements.`,
+For a card, a screen, a list, a comparison of options. Cards: background var(--bg-elev), border 1px solid var(--border), border-radius calc(var(--radius) * 1.5), padding 12–16px. Lists: rows separated by a --border line, not a card each. Options side by side in a grid that wraps; mark the recommended one with a 2px --accent border and a small label (background --accent-strong, white text). Buttons, inputs and selects already have the chat's style: write the bare elements.`,
   interactive: `## interactive
 For a small tool the person can play with: a slider that recalculates, buttons that switch a view, a calculator. Do the work in the visual's own JavaScript: it runs on every change without calling you. Show the result next to the control that changed it, rounded. Check what the person typed before using it and show a short message next to the field if it's empty or wrong. Use sendPrompt only for what needs you to think, and make it clear on the button (end its label with ↗).`,
 };
