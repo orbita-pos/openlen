@@ -3,8 +3,8 @@
 // la respuesta dice qué fichero y qué línea (spec local 2026-10-07-apps).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ publishProject: vi.fn(), gate: vi.fn() }));
-vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate }) }));
+const mocks = vi.hoisted(() => ({ publishProject: vi.fn(), gate: vi.fn(), markPublished: vi.fn() }));
+vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate, markPublished: mocks.markPublished }) }));
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
@@ -39,6 +39,8 @@ beforeEach(() => {
   mocks.publishProject.mockReset();
   mocks.gate.mockReset();
   mocks.gate.mockResolvedValue({ kind: "open", view: null });
+  mocks.markPublished.mockReset();
+  mocks.markPublished.mockResolvedValue(undefined);
 });
 
 describe("POST /publish — una app web", () => {
@@ -117,5 +119,28 @@ describe("POST /publish — la revisión de seguridad (spec local 2026-10-15)", 
     mocks.gate.mockRejectedValue(new Error("db down"));
     mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
     expect((await pide()).status).toBe(200);
+  });
+
+  it("🔴 tras publicar, la revisión con la que pasó queda como base de la siguiente (como la rama base de un PR)", async () => {
+    mocks.gate.mockResolvedValue({ kind: "open", view: { ...view, blocking: [] } });
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    expect((await pide()).status).toBe(200);
+    expect(mocks.markPublished).toHaveBeenCalledWith("p1", FP);
+  });
+
+  it("si publicar falla, no hay base nueva; y si marcarla falla, la publicación sigue bien", async () => {
+    mocks.gate.mockResolvedValue({ kind: "open", view: { ...view, blocking: [] } });
+    mocks.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
+    expect((await pide()).status).toBe(500);
+    expect(mocks.markPublished).not.toHaveBeenCalled();
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    mocks.markPublished.mockRejectedValue(new Error("db down"));
+    expect((await pide()).status).toBe(200);
+  });
+
+  it("con la revisión apagada no hay nada que marcar", async () => {
+    mocks.publishProject.mockResolvedValue({ url: "https://mi-pos.openlen.app" });
+    expect((await pide()).status).toBe(200);
+    expect(mocks.markPublished).not.toHaveBeenCalled();
   });
 });

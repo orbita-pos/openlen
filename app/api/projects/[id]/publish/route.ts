@@ -128,6 +128,13 @@ export const POST = paraLaApp(async (
       dataChanges: { mode: "owner", confirmFingerprint: parsed.data.confirmFingerprint, copyDraftData: parsed.data.copyDraftData },
       functions: { skipMissingSecrets: parsed.data.skipMissingSecrets === true },
     }));
+    // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
+    // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
+    if (seguridad.view) {
+      await securityReviewer()
+        .markPublished(id, seguridad.view.fingerprint)
+        .catch((err: unknown) => console.warn("[publish] could not keep the published version as the security review's base", err));
+    }
     return json(result, 200);
   } catch (err) {
     if (err instanceof SubdomainInvalidError) {

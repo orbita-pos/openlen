@@ -136,6 +136,8 @@ export const publishTool = defineTool({
         publishProject({ projectId: project_id, userId: acceso.duenoId, subdomain: valid.value, dataChanges: { mode: "system" } }),
       );
       if (approval_id) await markApprovalUsed(approval_id);
+      // Lo publicado es la base de la siguiente revisión de seguridad (como la rama base de un PR).
+      if (security.view) await securityReviewer().markPublished(project_id, security.view.fingerprint).catch(() => undefined);
       return jsonResult({ status: "published", published_url: r.url, subdomain: r.subdomain, published_at: r.publishedAt.toISOString() });
     } catch (err) {
       return publishError(err, project_id);
