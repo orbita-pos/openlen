@@ -12,7 +12,8 @@ import { db, schema } from "@/lib/db";
 import { getProject } from "@/lib/projects";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
+import { getCreditState, chargeCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { getTemplateHtml } from "@/lib/templates/store";
@@ -132,7 +133,25 @@ export async function POST(
     page: pageSlug,
   }).catch((err: unknown) => console.error("[apply-template] post snapshot failed", err));
 
-  await debitCredits(userId, AUTOFILL_CREDIT_COST);
+  // EL LIBRO DE GASTO: el cargo plano, con lo que costó el relleno de verdad.
+  await chargeCredits(userId, AUTOFILL_CREDIT_COST, {
+    surface: "autofill",
+    outcome: "ok",
+    projectId: id,
+    listCenticredits: AUTOFILL_CREDIT_COST,
+    uses: res.usage
+      ? [
+          {
+            provider: "fireworks",
+            model: modelIdForRole(roleForOperation("template_autofill")),
+            inputTokens: res.usage.in,
+            cachedTokens: 0,
+            outputTokens: res.usage.out,
+            at: new Date(),
+          },
+        ]
+      : [],
+  });
   console.log(
     `[apply-template] ${templateId} → ${id}${pageSlug ? `/${pageSlug}` : ""} · ${res.appliedOps} ops · ${AUTOFILL_CREDIT_COST} cr`,
   );

@@ -5,7 +5,9 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
-import { getCreditState, debitCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
+import { getCreditState, chargeCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
+import type { LedgerUse } from "@/lib/credit-ledger";
+import { modelIdForRole, roleForOperation, type ModelOperation } from "@/lib/generation/model-policy";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -187,6 +189,11 @@ export async function POST(req: Request) {
         }
 
         let businessData: ExtractedBusinessData;
+        // EL LIBRO DE GASTO: lo que costó leer los datos va en la fila del cobro.
+        const usosDelLibro: LedgerUse[] = [];
+        const anotarUso = (operation: ModelOperation, usage: { inputTokens: number; outputTokens: number } | undefined) => {
+          if (usage) usosDelLibro.push({ provider: "fireworks", model: modelIdForRole(roleForOperation(operation)), inputTokens: usage.inputTokens, cachedTokens: 0, outputTokens: usage.outputTokens, at: new Date() });
+        };
 
         if (source === "image" && imageBuffer) {
           emit("progress", { stage: "extracting" });
@@ -200,6 +207,7 @@ export async function POST(req: Request) {
             return;
           }
           businessData = extracted.data;
+          anotarUso("candidate_scouting", extracted.usage);
           emit("extracted", { data: businessData });
         } else if (source === "text") {
           emit("progress", { stage: "extracting" });
@@ -210,6 +218,7 @@ export async function POST(req: Request) {
             return;
           }
           businessData = extracted.data;
+          anotarUso("simple_extraction", extracted.usage);
           emit("extracted", { data: businessData });
         } else {
           emit("error", { kind: "bug", message: "Unreachable input branch" });
@@ -332,7 +341,13 @@ export async function POST(req: Request) {
           return null;
         });
 
-        await debitCredits(userId, AUTOFILL_CREDIT_COST);
+        await chargeCredits(userId, AUTOFILL_CREDIT_COST, {
+          surface: "autofill",
+          outcome: "ok",
+          projectId,
+          listCenticredits: AUTOFILL_CREDIT_COST,
+          uses: usosDelLibro,
+        });
 
         emit("done", {
           source,

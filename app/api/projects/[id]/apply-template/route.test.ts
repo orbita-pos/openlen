@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateHtml: vi.fn(),
   fillTemplateFromPage: vi.fn(),
   getCreditState: vi.fn(),
-  debitCredits: vi.fn(),
+  chargeCredits: vi.fn(),
   createVersion: vi.fn(),
   update: vi.fn(),
   select: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@/lib/projects", () => ({ getProject: mocks.getProject }));
 vi.mock("@/lib/projects/versions", () => ({ createVersion: mocks.createVersion }));
 vi.mock("@/lib/credits", () => ({
   getCreditState: mocks.getCreditState,
-  debitCredits: mocks.debitCredits,
+  chargeCredits: mocks.chargeCredits,
   AUTOFILL_CREDIT_COST: 2,
 }));
 vi.mock("@/lib/templates/store", () => ({ getTemplateHtml: mocks.getTemplateHtml }));
@@ -63,7 +63,7 @@ describe("POST /api/projects/[id]/apply-template", () => {
     mocks.getTemplateHtml.mockResolvedValue("<html><body>plantilla</body></html>");
     mocks.getCreditState.mockResolvedValue({ balance: 10 });
     mocks.createVersion.mockResolvedValue(undefined);
-    mocks.debitCredits.mockResolvedValue(undefined);
+    mocks.chargeCredits.mockResolvedValue(undefined);
     // I4 — la escritura pasa por `actualizarData`, que hace un
     // compare-and-swap: lee la fila (con su `updatedAt`) y escribe con
     // `.returning()` para saber si ganó. El doble tiene que ofrecer las dos
@@ -90,7 +90,25 @@ describe("POST /api/projects/[id]/apply-template", () => {
 
     expect(res.status).toBe(200);
     expect(mocks.update).toHaveBeenCalledTimes(1);
-    expect(mocks.debitCredits).toHaveBeenCalledTimes(1);
+    expect(mocks.chargeCredits).toHaveBeenCalledTimes(1);
+  });
+
+  it("ledger: the restyle row records the fill's tokens", async () => {
+    mocks.fillTemplateFromPage.mockResolvedValue({ ok: true, html: CLEAN_RESTYLE, appliedOps: 4, usage: { in: 700, out: 90 } });
+
+    await call({ templateId: "mirror" });
+
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      2,
+      expect.objectContaining({
+        surface: "autofill",
+        outcome: "ok",
+        projectId: "p1",
+        listCenticredits: 2,
+        uses: [expect.objectContaining({ provider: "fireworks", model: expect.any(String), inputTokens: 700, cachedTokens: 0, outputTokens: 90 })],
+      }),
+    );
   });
 
   // ⚰️ «refuses a restyle whose behaviours would be born dead»: con
@@ -116,6 +134,6 @@ describe("POST /api/projects/[id]/apply-template", () => {
     // version snapshot, and — because the model already ran — no charge either.
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.createVersion).not.toHaveBeenCalled();
-    expect(mocks.debitCredits).not.toHaveBeenCalled();
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
   });
 });
