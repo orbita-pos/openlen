@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import type { ModelReviewResult } from "./model-review";
-import { createSecurityReviewer, ORPHAN_AFTER_MS, type ReviewDeps } from "./review";
+import { DEFAULT_TIMEOUTS, type ModelReviewResult } from "./model-review";
+import { AGENT_WAIT_MS, createSecurityReviewer, ORPHAN_AFTER_MS, type ReviewDeps } from "./review";
 import { memorySecurityReviewStore } from "./store";
 import type { Finding, ReviewInputs } from "./types";
 
@@ -38,6 +38,20 @@ function setup(o: { inputs: () => ReviewInputs; env?: Record<string, string>; no
   return { reviewer: createSecurityReviewer(deps), store, calls };
 }
 const settle = () => new Promise((r) => setTimeout(r, 0));
+
+describe("the time limits", () => {
+  it("🔴 the identifying pass gets room for a real review: measured 96 s on a small app (15/10), most of it the final answer", () => {
+    expect(DEFAULT_TIMEOUTS.scanMs).toBeGreaterThanOrEqual(150_000);
+  });
+
+  it("a running row is only taken for an orphan after any real run would have ended", () => {
+    expect(ORPHAN_AFTER_MS).toBeGreaterThan(DEFAULT_TIMEOUTS.totalMs);
+  });
+
+  it("Len waits less than the agent route's 180 s silence clock, whatever the review takes", () => {
+    expect(AGENT_WAIT_MS).toBeLessThan(180_000);
+  });
+});
 
 describe("start", () => {
   it("is null when the review is switched off", async () => {

@@ -30,8 +30,9 @@ export const MAX_FINDINGS_TO_FILTER = 10;
 export const SCAN_MIN_CONFIDENCE = 0.7;
 /** The filter's scale (1..10): 8 or more stays. */
 export const KEEP_SCORE = 8;
-/** Under the agent route's 180 s silence clock: Len's publish waits for this. */
-export const DEFAULT_TIMEOUTS = { scanMs: 90_000, totalMs: 150_000 } as const;
+/** Measured on a small app (15/10): the identifying pass took 96 s, 64 of them on its final answer, and the filters
+ *  19 s more. Len doesn't wait for these (it waits AGENT_WAIT_MS, then the publish route waits for the rest). */
+export const DEFAULT_TIMEOUTS = { scanMs: 180_000, totalMs: 240_000 } as const;
 
 const RANK: Readonly<Record<RawFinding["severity"], number>> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 
