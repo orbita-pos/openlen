@@ -26,6 +26,18 @@ describe("languageSignal", () => {
     expect(languageSignal("")).toBeNull();
   });
 
+  it("🔴 «de» y «en» no hacen neerlandés una frase en español (ensayo de caja, 16/10: Len contestó en neerlandés)", () => {
+    expect(languageSignal("Publica la app en su dirección de siempre. No cambies nada, sólo publícala.")?.language).toBe("es");
+    expect(languageSignal("Sube el menú de comida en dos columnas")?.language).toBe("es");
+    expect(languageSignal("agrega fotos de tacos en el menú")?.language).toBe("es");
+  });
+
+  it("CONTRA-PRUEBA: el neerlandés sigue siendo neerlandés, y sin más señal que «de» y «en» no se inventa nada", () => {
+    expect(languageSignal("Verander de kleur van de knop en maak het groter")?.language).toBe("nl");
+    expect(languageSignal("maak de tekst groter en zet een foto erbij")?.language).toBe("nl");
+    expect(languageSignal("de knop en de tekst")?.language).not.toBe("es");
+  });
+
   it("detectLanguage, el de Len por correo, sigue diciendo inglés sin señal", () => {
     expect(detectLanguage("ok")).toBe("en");
     expect(detectLanguage("cambia el precio de la página por favor")).toBe("es");

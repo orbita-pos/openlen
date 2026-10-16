@@ -6,6 +6,7 @@
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { dataChangesForCard, type DataChangesPreview } from "@/lib/backend/data-changes-types";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { securityForCard, type SecurityForCard } from "@/lib/security-review/card";
 import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EventoParaLaVoz = {
@@ -18,7 +19,18 @@ export type TarjetaDeLlamada =
   | { tipo: "visitas" }
   | { tipo: "texto"; texto: string }
   | { tipo: "respuesta"; respuesta: RespuestaPreparada }
-  | { tipo: "publicar"; confirm: { action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean; cambiosDeDatos?: DataChangesPreview } };
+  | {
+      tipo: "publicar";
+      confirm: {
+        action: "publish";
+        subdominio: string;
+        idiomas: string[];
+        republicar: boolean;
+        cambiosDeDatos?: DataChangesPreview;
+        secretosQueFaltan?: string[];
+        seguridad?: SecurityForCard;
+      };
+    };
 
 export interface DepsDelPuente {
   pedirALen(prompt: string, alEvento: (e: EventoSse) => void): Promise<void>;
@@ -77,6 +89,10 @@ export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlam
   if (d.action === "responder") return { tipo: "respuesta", respuesta: d as unknown as RespuestaPreparada };
   if (d.action === "publish" && typeof d.subdominio === "string") {
     const cambiosDeDatos = dataChangesForCard(d.cambiosDeDatos);
+    // Lo que falta en producción (las Edge Functions) y lo grave de la revisión
+    // de seguridad: la tarjeta los pinta, pero sólo si esta lectura los deja pasar.
+    const secretosQueFaltan = Array.isArray(d.secretosQueFaltan) ? d.secretosQueFaltan.filter((x): x is string => typeof x === "string") : [];
+    const seguridad = securityForCard(d.seguridad);
     return {
       tipo: "publicar",
       confirm: {
@@ -85,6 +101,8 @@ export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlam
         idiomas: Array.isArray(d.idiomas) ? d.idiomas.filter((x): x is string => typeof x === "string") : [],
         republicar: d.republicar === true,
         ...(cambiosDeDatos ? { cambiosDeDatos } : {}),
+        ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}),
+        ...(seguridad ? { seguridad } : {}),
       },
     };
   }

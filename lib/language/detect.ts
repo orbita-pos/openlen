@@ -5,14 +5,21 @@
 // usuario (`lib/agent/user-language.ts`), y por eso dice también cuánta señal hay.
 import type { IdiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 
+// Sólo palabras que delatan a UN idioma. «de» y «en» estaban en el neerlandés y
+// son de las más corrientes del español: «Publica la app en su dirección de
+// siempre…» salía neerlandés y Len contestó en neerlandés (ensayo de caja del
+// 2026-10-16). Se quitaron, y cada uno ganó palabras suyas.
 const STOPWORDS: Readonly<Record<Exclude<IdiomaDelCorreo, "ja" | "ko" | "zh">, readonly string[]>> = {
-  es: ["que", "el", "la", "los", "las", "por", "para", "con", "una", "del", "pon", "cambia", "quita", "también", "página", "precio", "gracias"],
+  es: [
+    "que", "el", "la", "los", "las", "por", "para", "con", "una", "del", "pon", "cambia", "quita", "también", "página", "precio", "gracias",
+    "y", "su", "sus", "más", "sólo", "muy", "pero", "agrega", "añade", "sube", "quiero", "botón", "dirección",
+  ],
   pt: ["que", "não", "uma", "com", "para", "você", "mais", "também", "página", "obrigado", "coloca", "muda", "do", "da"],
   en: ["the", "and", "please", "with", "change", "add", "remove", "page", "price", "can", "you", "thanks", "make", "to"],
   fr: ["le", "les", "des", "une", "avec", "pour", "est", "pas", "merci", "change", "ajoute", "dans", "sur"],
   de: ["der", "die", "das", "und", "bitte", "mit", "nicht", "ist", "ein", "eine", "auf", "danke", "ändere"],
   it: ["il", "che", "per", "con", "una", "non", "della", "grazie", "cambia", "aggiungi", "anche", "sono"],
-  nl: ["de", "het", "een", "en", "van", "niet", "met", "voor", "bedankt", "graag", "verander", "ook"],
+  nl: ["het", "een", "van", "niet", "met", "voor", "bedankt", "graag", "verander", "ook", "maak", "zet", "kun", "wil", "deze", "maar", "naar", "zijn", "op"],
 };
 
 /** Lo que vale una señal que no deja dudas (la escritura, ¿¡ñ). */
