@@ -184,6 +184,10 @@ const targets = [
   // appAiAlerts. Aditiva e idempotente. OBLIGATORIA antes que el código: Drizzle
   // selecciona las columnas declaradas de users.
   "app-ai-migrate",
+  // LA REVISIÓN DE SEGURIDAD AL PUBLICAR (spec local 2026-10-15): las tablas
+  // securityReviews y securityAcceptances. Nuevas, con IF NOT EXISTS. 🔴
+  // OBLIGATORIA antes que el código: la ruta de publicar las lee.
+  "security-review-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

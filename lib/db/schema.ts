@@ -21,6 +21,7 @@ import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
+import type { Finding, ReviewStatus } from "@/lib/security-review/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -2336,6 +2337,47 @@ export const appAiAlerts = pgTable(
     percent: integer("percent").notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.userId, t.month] })],
+);
+
+// La revisión de seguridad al publicar (lib/security-review, spec local
+// 2026-10-15-security-review-design): una fila por proyecto y huella — lo que
+// encontraron las reglas y el modelo, y lo que costó (lo paga OpenLen).
+export const securityReviews = pgTable(
+  "securityReviews",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    fingerprint: text("fingerprint").notNull(),
+    status: text("status").$type<ReviewStatus>().notNull(),
+    phase0: jsonb("phase0").$type<Finding[]>().notNull().default([]),
+    findings: jsonb("findings").$type<Finding[]>().notNull().default([]),
+    fileHashes: jsonb("fileHashes").$type<Record<string, string>>().notNull().default({}),
+    costCentiCredits: integer("costCentiCredits").notNull().default(0),
+    failReason: text("failReason"),
+    startedAt: timestamp("startedAt", { mode: "date" }).notNull().defaultNow(),
+    finishedAt: timestamp("finishedAt", { mode: "date" }),
+    shownToAgentAt: timestamp("shownToAgentAt", { mode: "date" }),
+    acceptedBy: text("acceptedBy"),
+    acceptedAt: timestamp("acceptedAt", { mode: "date" }),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.fingerprint] }), index("securityReviews_started_idx").on(t.startedAt)],
+);
+
+// Lo que el dueño o un editor aceptó con «Publicar igual», por la clave estable
+// del hallazgo: no vuelve a frenar aunque cambie el código.
+export const securityAcceptances = pgTable(
+  "securityAcceptances",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    finding: jsonb("finding").$type<Finding>().notNull(),
+    acceptedBy: text("acceptedBy").notNull(),
+    acceptedAt: timestamp("acceptedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.key] })],
 );
 
 /** Los secretos de las funciones (`supabase secrets set`, la tarjeta de Len): el
