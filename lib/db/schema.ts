@@ -2339,6 +2339,46 @@ export const appAiAlerts = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.month] })],
 );
 
+// EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): una fila por cada
+// movimiento de `users.credits` y por cada gasto que paga OpenLen sin cobrarlo.
+// Guarda lo cobrado (`centicredits`, negativo si se devolvió), lo que valía a la
+// tarifa de cobro antes de topes (`listCenticredits`) y lo que costó de verdad a
+// la tarifa de costo (`costMicroUsd`, NULL = no se sabe, nunca 0). Se escribe
+// SÓLO desde lib/credit-ledger.ts, en la misma sentencia que mueve el saldo.
+// `npm run credit-ledger:migrate`.
+export const creditLedger = pgTable(
+  "creditLedger",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** El plan de quien paga EN EL MOMENTO del movimiento. */
+    plan: text("plan").notNull(),
+    actorId: text("actorId"),
+    /** Sin FK, como appAiSpend: borrar un proyecto no borra lo gastado. */
+    projectId: text("projectId"),
+    surface: text("surface").notNull(),
+    refId: text("refId"),
+    centicredits: integer("centicredits").notNull(),
+    listCenticredits: integer("listCenticredits"),
+    costMicroUsd: bigint("costMicroUsd", { mode: "number" }),
+    provider: text("provider"),
+    model: text("model"),
+    inputTokens: integer("inputTokens"),
+    cachedTokens: integer("cachedTokens"),
+    outputTokens: integer("outputTokens"),
+    reasoningTokens: integer("reasoningTokens"),
+    balanceAfter: integer("balanceAfter"),
+    outcome: text("outcome"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("creditLedger_userId_createdAt_idx").on(t.userId, t.createdAt),
+    index("creditLedger_createdAt_idx").on(t.createdAt),
+  ],
+);
+
 // La revisión de seguridad al publicar (lib/security-review, spec local
 // 2026-10-15-security-review-design): una fila por proyecto y huella — lo que
 // encontraron las reglas y el modelo, y lo que costó (lo paga OpenLen).

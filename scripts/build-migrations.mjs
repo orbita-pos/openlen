@@ -188,6 +188,10 @@ const targets = [
   // securityReviews y securityAcceptances. Nuevas, con IF NOT EXISTS. 🔴
   // OBLIGATORIA antes que el código: la ruta de publicar las lee.
   "security-review-migrate",
+  // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la tabla
+  // creditLedger. Nueva, con IF NOT EXISTS. Antes que el código: si faltara, el
+  // cobro seguiría (vuelta atrás con [ledger] en el diario), pero sin libro.
+  "credit-ledger-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
