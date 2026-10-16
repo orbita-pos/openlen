@@ -12,6 +12,8 @@ import {
 } from "@/lib/site-assistant/prompt";
 import { siteToText, detectPageLang } from "@/lib/site-assistant/extract-text";
 import { consumeAssistantMessage } from "@/lib/site-assistant/quota";
+import { recordUncharged } from "@/lib/credits";
+import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public site-assistant endpoint. The chat widget on a published page POSTs
@@ -218,8 +220,29 @@ export async function POST(
     );
 
     let raw = "";
+    let usage: { inputTokens: number; cachedTokens: number; outputTokens: number } | null = null;
     for await (const event of events) {
       if (event.type === "text_delta") raw += event.text;
+      else if (event.type === "usage") {
+        usage = { inputTokens: event.inputTokens, cachedTokens: event.cachedTokens ?? 0, outputTokens: event.outputTokens };
+      }
+    }
+    // EL LIBRO DE GASTO: lo paga OpenLen, a nombre del dueño de la página. No
+    // se espera: anotar no puede retrasar ni tumbar la respuesta al visitante.
+    if (usage) {
+      void recordUncharged(owner.userId, {
+        surface: "page_assistant",
+        outcome: "ok",
+        projectId: owner.projectId,
+        uses: [
+          {
+            provider: "fireworks",
+            model: modelIdForRole(roleForOperation("copy")),
+            ...usage,
+            at: new Date(),
+          },
+        ],
+      }).catch(() => undefined);
     }
 
     const out = parseReply(raw);

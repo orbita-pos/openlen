@@ -16,7 +16,21 @@ const mocks = vi.hoisted(() => ({
   duenyo: vi.fn(),
   limit: vi.fn(),
   tope: vi.fn(async () => ({ ok: true })),
+  recordUncharged: vi.fn(async () => undefined),
 }));
+
+// EL LIBRO DE GASTO del POST: el modelo contesta con su uso, y lo paga OpenLen.
+vi.mock("@/lib/ai/fireworks-as-stream-provider", () => ({
+  fireworksStreamProvider: () => ({
+    stream: async function* () {
+      yield { type: "text_delta", text: JSON.stringify({ respuesta: "Abrimos de lunes a viernes.", intent: "answer" }) };
+      yield { type: "usage", inputTokens: 900, outputTokens: 40, cachedTokens: 0, thinkingTokens: 0 };
+      yield { type: "done", stopReason: { kind: "end_turn" } };
+    },
+  }),
+}));
+vi.mock("@/lib/site-assistant/quota", () => ({ consumeAssistantMessage: async () => ({ ok: true }) }));
+vi.mock("@/lib/credits", () => ({ recordUncharged: mocks.recordUncharged }));
 
 vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
 vi.mock("@/lib/db", () => ({
@@ -34,7 +48,7 @@ vi.mock("@/lib/limits", () => ({
   ipLimitKey: (ip: string, k: string) => `${k}:${ip}`,
 }));
 
-import { GET } from "./route";
+import { GET, POST } from "./route";
 
 const pide = (sub = "taller") =>
   GET(new Request(`https://openlen.com/api/assistant/${sub}`), {
@@ -149,5 +163,40 @@ describe("GET /api/assistant/[sub] — lo que no es un proyecto normal", () => {
     // Lo que importa del 429 no es el número: es que no lleva `asistente`, así
     // que ninguna burbuja se retira por haber pasado un tope.
     expect(await res.json()).toEqual({ error: "rate_limited" });
+  });
+});
+
+describe("POST /api/assistant/[sub] — el libro de gasto", () => {
+  const pregunta = () =>
+    POST(
+      new Request("https://openlen.com/api/assistant/taller", {
+        method: "POST",
+        body: JSON.stringify({ message: "¿Qué días abren?", history: [] }),
+      }),
+      { params: Promise.resolve({ sub: "taller" }) },
+    );
+
+  it("ledger: a visitor's answer records its cost for the page owner", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    const res = await pregunta();
+    expect(res.status).toBe(200);
+    await vi.waitFor(() => expect(mocks.recordUncharged).toHaveBeenCalled());
+    expect(mocks.recordUncharged).toHaveBeenCalledWith(
+      "u1",
+      expect.objectContaining({
+        surface: "page_assistant",
+        outcome: "ok",
+        projectId: "p1",
+        uses: [expect.objectContaining({ provider: "fireworks", inputTokens: 900, outputTokens: 40 })],
+      }),
+    );
+  });
+
+  it("ledger: the visitor gets the answer even if the ledger fails", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    mocks.recordUncharged.mockRejectedValueOnce(new Error("ledger down"));
+    const res = await pregunta();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ respuesta: "Abrimos de lunes a viernes." });
   });
 });
