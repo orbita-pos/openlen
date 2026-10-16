@@ -1,6 +1,12 @@
 /**
  * LOS PRECIOS DE LISTA DE FIREWORKS. La única copia.
  *
+ * 🔴 ES LA TARIFA DE COBRO (16/10, spec local 2026-10-16-credit-ledger): lo que
+ * se le descuenta al usuario en créditos, siempre a precio de lista. Lo que
+ * OpenLen PAGA de verdad —por proveedor, modelo y franja— vive aparte, en
+ * `lib/ai/cost-rates.ts`, y es lo que anota el libro de gasto (`creditLedger`).
+ * Hoy las dos dicen lo mismo; cuando entre otro proveedor, cambia sólo aquélla.
+ *
  * POR QUÉ EXISTE, y es una corrección medida el 2026-09-20. Estos números
  * vivían escritos a mano en `lib/credits.ts` y OTRA VEZ a mano en
  * `lib/generation/page-generation-budget.ts`, atados por una prueba que

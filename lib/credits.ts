@@ -18,7 +18,8 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // Credit accounting for AI operations.
 //
 // Every AI call (page generation, chat edit, autofill) debits credits. One
-// credit ≈ $0.01 of raw model cost — the charge is computed from the real
+// credit ≈ $0.01 at the billing (list) rate, `lib/ai/tarifas.ts` — what OpenLen
+// actually pays is the cost rate, `lib/ai/cost-rates.ts` — and the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
 // PRICE embeds the markup: Pro is $9.99/mo for 300 credits (≈$3 of raw cost if
 // fully spent, ~150 pages at the rates below), Max $19.99 for 800 (≈$8) and
