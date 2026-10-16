@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateSet: vi.fn(),
   updateWhere: vi.fn(),
   updateReturning: vi.fn(),
+  execute: vi.fn(),
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -41,7 +42,7 @@ vi.mock("@/lib/db", () => {
       };
     },
   }));
-  return { db: { select: mocks.select, update: mocks.update }, schema: { users } };
+  return { db: { select: mocks.select, update: mocks.update, execute: mocks.execute }, schema: { users } };
 });
 
 import {
@@ -55,7 +56,7 @@ import {
   creditsForUsage,
   getCreditState,
   noCreditsMessage,
-  refundCredits,
+  returnCredits,
   type CreditState,
 } from "./credits";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
@@ -465,13 +466,18 @@ describe("todos los llamadores pasan los tokens cacheados", () => {
 // en el evento `usage`, y la puerta del documento (`preparePage`) corre DESPUÉS,
 // en la ruta. Una página que la puerta rechaza ya está cobrada cuando se decide
 // no guardarla: el usuario paga y no recibe nada.
-describe("refundCredits", () => {
+describe("returnCredits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("SUMA al saldo — no resta con signo", async () => {
-    await refundCredits("u1", 3);
+  // La sentencia del libro (`creditLedger`) se prueba contra Postgres en
+  // lib/credit-ledger.pg.test.ts. Aquí, la VUELTA ATRÁS: si el libro falla con
+  // un código de Postgres, se devuelve con la sentencia de siempre.
+  it("SUMA al saldo — no resta con signo (vuelta atrás sin libro)", async () => {
+    vi.spyOn(console, "error").mockImplementationOnce(() => {});
+    mocks.execute.mockRejectedValueOnce(Object.assign(new Error("Failed query"), { cause: { code: "42P01", severity: "ERROR" } }));
+    await returnCredits("u1", 3, { surface: "app_ai", outcome: "settle" });
     expect(mocks.update).toHaveBeenCalledTimes(1);
     // Lo que importa es el sentido de la operación: `debitCredits` corta en
     // `amount <= 0`, así que «devolver» pasándole un negativo habría sido un
@@ -481,8 +487,9 @@ describe("refundCredits", () => {
   });
 
   it("cero o negativo no toca la base", async () => {
-    await refundCredits("u1", 0);
-    await refundCredits("u1", -5);
+    await returnCredits("u1", 0, { surface: "app_ai", outcome: "settle" });
+    await returnCredits("u1", -5, { surface: "app_ai", outcome: "settle" });
+    expect(mocks.execute).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
   });
 });

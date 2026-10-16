@@ -93,7 +93,7 @@ export async function POST(
     seal: false,
   });
   if (!gated.ok) {
-    // No charge: `debitCredits` is below, and the refusal returns before it.
+    // No charge: `chargeCredits` is below, and the refusal returns before it.
     return json({ error: gated.code, detail: gated.detail }, 422);
   }
   const finalHtml = gated.html;

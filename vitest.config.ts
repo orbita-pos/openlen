@@ -153,6 +153,7 @@ export default defineConfig({
       // la base LOCAL con `credit-ledger:migrate`.
       "lib/credit-ledger.test.ts",
       "lib/credit-ledger.pg.test.ts",
+      "lib/credits-no-old-debits.test.ts",
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",
       "components/app/credit-pill.test.tsx",

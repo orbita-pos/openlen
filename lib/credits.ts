@@ -369,7 +369,7 @@ export async function getCreditState(userId: string): Promise<CreditState> {
  * credit (the real cost isn't known until the call finishes), so a single
  * operation can legitimately spend a balance down to 0.
  */
-export async function debitCredits(
+async function debitCredits(
   userId: string,
   amount: number,
 ): Promise<void> {
@@ -386,7 +386,7 @@ export async function debitCredits(
  * todavía no se ha llamado al modelo, y sin saldo la respuesta es un 402. UNA
  * sentencia con la condición en el WHERE: dos llamadas a la vez no pasan las dos.
  */
-export async function debitCreditsIfEnough(userId: string, amount: number): Promise<boolean> {
+async function debitCreditsIfEnough(userId: string, amount: number): Promise<boolean> {
   if (amount <= 0) return true;
   const rows = await db
     .update(schema.users)
@@ -416,7 +416,7 @@ export async function debitCreditsIfEnough(userId: string, amount: number): Prom
  * (una página entera vale 1 crédito). Poner un `LEAST` exigiría leer el plan
  * aquí, y un cobro indebido que no se devuelve es peor que un céntimo de más.
  */
-export async function refundCredits(
+async function refundCredits(
   userId: string,
   amount: number,
 ): Promise<void> {
