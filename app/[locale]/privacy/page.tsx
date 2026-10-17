@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
+      updated={es ? "Última actualización: 16 de octubre de 2026" : "Last updated: October 16, 2026"}
     >
       {es ? (
         <>
@@ -199,10 +199,15 @@ export default async function PrivacyPage({
             condicionaría la prestación del servicio.
           </p>
           <p>
-            <strong>Generación con IA.</strong> Para generar tus páginas, enviamos
-            el texto de tu brief y el HTML de la página a <strong>Fireworks AI</strong>,
-            que los utiliza únicamente para producir el resultado solicitado conforme
-            a sus términos de API. Si editas una imagen con IA, esa imagen y tu
+            <strong>Generación con IA.</strong> Para crear y editar tus páginas,
+            Len envía a <strong>DeepInfra</strong> y, si DeepInfra no contesta, a{" "}
+            <strong>Fireworks AI</strong> (proveedores de modelos, en Estados
+            Unidos) lo que necesita para trabajar: tus mensajes, los ficheros del
+            proyecto, la salida de la terminal y de git, lo que lee de la base de
+            datos del proyecto, capturas de la página y, si eres el dueño y le
+            pides revisarlos, los envíos de formularios y los mensajes de tus
+            visitantes. Los utilizan únicamente para producir el resultado
+            solicitado conforme a sus términos de API. Si editas una imagen con IA, esa imagen y tu
             instrucción se envían a <strong>OpenAI</strong> con la misma finalidad.
             Si hablas con Len por voz desde la app, el audio también va a OpenAI,
             para la llamada o para transcribir la nota; no guardamos el audio. No
@@ -378,7 +383,8 @@ export default async function PrivacyPage({
               <strong>Encargados</strong> (tratan datos por cuenta de OpenLen, sin
               que se requiera tu consentimiento adicional): Cloudflare (CDN),
               Hetzner (alojamiento del servidor de aplicación y de las bases de
-              datos), Fireworks AI (generación con IA), OpenAI (edición de
+              datos), DeepInfra (generación con IA), Fireworks AI (generación con
+              IA de respaldo y revisión por visión), OpenAI (edición de
               imágenes con IA y la voz de la app), Exa (búsqueda en internet cuando Len busca algo),
               Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
@@ -414,7 +420,8 @@ export default async function PrivacyPage({
             Algunos de nuestros proveedores tratan datos fuera de tu país. Nuestro
             servidor (Hetzner), donde viven la aplicación y sus bases de datos,
             está en <strong>Ashburn, Virginia, Estados Unidos</strong>. La
-            generación de páginas con IA usa Fireworks AI, la edición de imágenes
+            generación de páginas con IA usa DeepInfra y, de respaldo, Fireworks
+            AI, la edición de imágenes
             con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa,
             los correos usan Resend y el cobro de suscripciones usa Polar, todos
             también en <strong>Estados Unidos</strong>. Para los destinatarios en Estados
@@ -422,8 +429,12 @@ export default async function PrivacyPage({
             <strong>Cláusulas Contractuales Tipo</strong> de la Comisión Europea
             y/o en el <strong>Marco de Privacidad de Datos UE-EE. UU.</strong>{" "}
             (EU-US Data Privacy Framework); puedes solicitar copia de estas
-            garantías al correo de contacto. Al usar OpenLen, estas transferencias
-            se realizan para prestarte el servicio.
+            garantías al correo de contacto. DeepInfra es la excepción: no publica
+            un acuerdo de tratamiento de datos ni nombra un mecanismo de
+            transferencia, y lo usamos con sus términos públicos, según los cuales
+            no guarda en disco lo que recibe, no registra su contenido y no
+            entrena con él. Al usar OpenLen, estas transferencias se realizan para
+            prestarte el servicio.
           </p>
 
           <h2>Lo que no hacemos</h2>
@@ -598,9 +609,15 @@ export default async function PrivacyPage({
             condition the provision of the service.
           </p>
           <p>
-            <strong>AI generation.</strong> To generate your pages, we send your
-            brief text and the page HTML to <strong>Fireworks AI</strong>, which
-            uses them solely to produce the requested output under its API terms.
+            <strong>AI generation.</strong> To create and edit your pages, Len
+            sends <strong>DeepInfra</strong> and, if DeepInfra does not answer,{" "}
+            <strong>Fireworks AI</strong> (model providers, in the United States)
+            what it needs to work: your messages, the project&apos;s files, the
+            output of the terminal and of git, what it reads from the
+            project&apos;s database, screenshots of the page and, if you are the
+            owner and ask it to review them, your visitors&apos; form submissions
+            and messages. They use them solely to produce the requested output
+            under their API terms.
             If you edit an image with AI, that image and your instruction are sent
             to <strong>OpenAI</strong> for the same purpose. If you talk to Len by
             voice from the app, the audio also goes to OpenAI, for the call or to
@@ -765,8 +782,9 @@ export default async function PrivacyPage({
             <li>
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
               additional consent required): Cloudflare (CDN), Hetzner
-              (hosting of the application server and databases), Fireworks AI (AI
-              generation), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
+              (hosting of the application server and databases), DeepInfra (AI
+              generation), Fireworks AI (fallback AI generation and vision
+              review), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
               looks something up), Resend (transactional email), and{" "}
               <strong>InariWatch</strong> (
               <code>@inariwatch/capture</code>, error monitoring). InariWatch is a
@@ -799,14 +817,18 @@ export default async function PrivacyPage({
             Some of our providers process data outside your country. Our server
             (Hetzner), where the application and its databases live, is in{" "}
             <strong>Ashburn, Virginia, United States</strong>. AI page generation
-            uses Fireworks AI, AI image editing and the app&apos;s voice use
+            uses DeepInfra and, as a fallback, Fireworks AI, AI image editing and the app&apos;s voice use
             OpenAI, web search uses Exa, email uses Resend, and subscription
             billing uses Polar, all also in the <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
             European Commission&apos;s <strong>Standard Contractual Clauses</strong>{" "}
             and/or the <strong>EU-US Data Privacy Framework</strong>; you can
-            request a copy of these safeguards at the contact email. By using
-            OpenLen, these transfers take place to deliver the service to you.
+            request a copy of these safeguards at the contact email. DeepInfra is
+            the exception: it publishes no data processing agreement and names no
+            transfer mechanism, and we use it under its public terms, under which
+            it does not store what it receives on disk, does not log its content
+            and does not train on it. By using OpenLen, these transfers take place
+            to deliver the service to you.
           </p>
 
           <h2>What we don&apos;t do</h2>

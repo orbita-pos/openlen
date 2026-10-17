@@ -33,7 +33,7 @@ export default async function SubprocessorsPage({
   return (
     <LegalPage
       title={es ? "Subprocesadores" : "Subprocessors"}
-      updated={es ? "Última actualización: 4 de octubre de 2026" : "Last updated: October 4, 2026"}
+      updated={es ? "Última actualización: 16 de octubre de 2026" : "Last updated: October 16, 2026"}
     >
       {es ? (
         <>
@@ -101,12 +101,22 @@ export default async function SubprocessorsPage({
           <h2>IA</h2>
           <ul>
             <li>
-              <strong>Fireworks AI</strong> (api.fireworks.ai) — generación y
-              edición de páginas con IA, y revisión por visión. Datos: el texto
-              del brief del usuario, el HTML de la página, capturas e imágenes
-              de referencia y, cuando el usuario le pide a Len revisarlos, los
-              mensajes del chat y los envíos de formularios de su página (sin la
-              IP ni el navegador del visitante). También las preguntas que los
+              <strong>DeepInfra</strong> (api.deepinfra.com) — escribe y edita
+              las páginas con Len. Datos: lo que Len necesita para trabajar — los
+              mensajes del chat, los ficheros del proyecto, la salida de la
+              terminal y de git, lo que lee de la base de datos del proyecto,
+              capturas de la página y, cuando el usuario le pide a Len
+              revisarlos, los envíos de formularios y los mensajes de los
+              visitantes de su página (sin la IP ni el navegador del visitante).
+              Región: Estados Unidos. No guarda en disco lo que recibe, no
+              registra su contenido y no entrena con él.
+            </li>
+            <li>
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — el respaldo de
+              Len (recibe lo mismo que DeepInfra cuando éste no contesta) y el
+              resto de la IA: revisión por visión, la revisión de seguridad al
+              publicar y el asistente de una página. Datos: además de lo de Len,
+              capturas e imágenes de referencia y las preguntas que los
               visitantes le hacen al asistente de una página. Fireworks no guarda
               lo que recibe con modelos abiertos. Región: Estados Unidos.
             </li>
@@ -249,14 +259,24 @@ export default async function SubprocessorsPage({
           <h2>AI</h2>
           <ul>
             <li>
-              <strong>Fireworks AI</strong> (api.fireworks.ai) — AI page
-              generation and editing, and vision review. Data: the user&apos;s
-              brief text, page HTML, reference screenshots and images and, when
-              the user asks Len to review them, the chat messages and form
-              submissions of their page (without the visitor&apos;s IP or
-              browser). Also the questions visitors ask a page&apos;s assistant.
-              Fireworks does not store what it receives for open models. Region:
-              United States.
+              <strong>DeepInfra</strong> (api.deepinfra.com) — writes and edits
+              pages with Len. Data: what Len needs to work — the chat messages,
+              the project&apos;s files, the output of the terminal and of git,
+              what it reads from the project&apos;s database, screenshots of the
+              page and, when the user asks Len to review them, the form
+              submissions and messages from their page&apos;s visitors (without
+              the visitor&apos;s IP or browser). Region: United States. It does
+              not store what it receives on disk, does not log its content and
+              does not train on it.
+            </li>
+            <li>
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — Len&apos;s
+              fallback (it receives the same as DeepInfra when DeepInfra does not
+              answer) and the rest of the AI: vision review, the security review
+              on publish and a page&apos;s assistant. Data: besides Len&apos;s,
+              reference screenshots and images and the questions visitors ask a
+              page&apos;s assistant. Fireworks does not store what it receives for
+              open models. Region: United States.
             </li>
             <li>
               <strong>OpenAI</strong> (api.openai.com) — AI image editing. Data:
