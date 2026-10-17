@@ -352,9 +352,10 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
                   // tenerlo. Tampoco se omite: sin campo el proveedor piensa por
                   // su cuenta. Se manda `"none"`, que es apagarlo A PROPÓSITO.
                   if (request.esfuerzo == null) return { reasoning_effort: "none" };
-                  // En DeepInfra la palabra sólo enciende el pensamiento: no lo
-                  // recorta (medido: `low` 624/1006 tokens, `high` 898/658). Por
-                  // eso los turnos `low`/`medium` prefieren Fireworks (el cerebro).
+                  // En DeepInfra el nivel va como PALABRA (un número da 422). Sí
+                  // recorta: medido el 17/10 con un encargo que pide pensar,
+                  // `low` ~2.900 tokens frente a ~4.900 de `high` (lo del 16/10,
+                  // una llamada por nivel, era ruido).
                   if (effortStyle === "word") return { reasoning_effort: resolverEsfuerzo(request.esfuerzo) };
                   const presupuesto = presupuestoDeEsfuerzo(request.esfuerzo, request.maxOutputTokens);
                   return presupuesto === undefined ? {} : { reasoning_effort: presupuesto };
