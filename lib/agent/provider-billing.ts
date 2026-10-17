@@ -21,6 +21,19 @@ export function preferredProviderFrom(t: TranscripcionGuardada | null | undefine
   return now - at < PROVIDER_STICKY_MS ? served.id : null;
 }
 
+/** The brain's `minus` plus what the loop estimated for failed attempts that
+ *  sent no usage (`AgentLoopResult.forgivenUsage`): together, everything that
+ *  failed on the provider OpenLen left. */
+export function withForgiven(minus: UsageTotals, estimated?: UsageTotals): UsageTotals {
+  if (!estimated) return minus;
+  return {
+    inputTokens: minus.inputTokens + estimated.inputTokens,
+    outputTokens: minus.outputTokens + estimated.outputTokens,
+    cachedTokens: minus.cachedTokens + estimated.cachedTokens,
+    thinkingTokens: minus.thinkingTokens + estimated.thinkingTokens,
+  };
+}
+
 /** What the user is charged for: the real usage minus what failed on the
  *  provider OpenLen left, with the fallback's first re-read billed as cached. */
 export function billedUsage(real: UsageTotals, adj: { minus: UsageTotals; extraCached: number }): UsageTotals {

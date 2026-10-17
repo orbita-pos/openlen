@@ -10,7 +10,7 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
-import { billedUsage, preferredProviderFrom } from "@/lib/agent/provider-billing";
+import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
 import { noteTurn } from "@/lib/agent/provider-health";
 import { resolveAgentProviders } from "@/lib/ai/providers";
 import { takeTypesAndLint } from "@/lib/agent/types-and-lint";
@@ -1166,9 +1166,14 @@ async function correrTurno(
     // sigue caliente (spec §3.4).
     preferredProvider: preferredProviderFrom(filasDelHistorial.at(-1)?.transcript, Date.now()),
   });
-  /** Los créditos de un uso, CON el ajuste del respaldo: lo que el turno cobra. */
-  const creditosCobrables = (g: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number }): number => {
-    const b = billedUsage(g, brain.billingAdjustment());
+  /** Los créditos de un uso, CON el ajuste del respaldo: lo que el turno cobra.
+   *  `perdonadoPorElBucle`: lo que el bucle estimó de los intentos fallidos sin
+   *  uso del proveedor que se dejó (`AgentLoopResult.forgivenUsage`), que el
+   *  `minus` del cerebro no ve. */
+  type Uso = { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number };
+  const creditosCobrables = (g: Uso, perdonadoPorElBucle?: Uso): number => {
+    const ajuste = brain.billingAdjustment();
+    const b = billedUsage(g, { ...ajuste, minus: withForgiven(ajuste.minus, perdonadoPorElBucle) });
     return creditsForUsage(b.inputTokens, b.outputTokens, brain.creditRate(), b.cachedTokens);
   };
 
@@ -1589,10 +1594,11 @@ async function correrTurno(
           // cerraría el turno antes de empezar.
           // Y con lo COBRABLE: lo que un respaldo no le cobra al usuario tampoco
           // le acerca el techo (spec local 2026-10-16-second-provider §3.4b).
-          excedePresupuesto: (g) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g) >= techo,
+          excedePresupuesto: (g, perdonado) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g, perdonado) >= techo,
           // La lista de progreso (spec local 2026-10-15): el aviso al 70 %, con
           // la MISMA cuenta; si sigue solo un encargo, y la lista heredada.
-          nearBudget: (g) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g) >= techo * NEAR_TURN_CAP_RATIO,
+          nearBudget: (g, perdonado) =>
+            g.inputTokens + g.outputTokens > 0 && creditosCobrables(g, perdonado) >= techo * NEAR_TURN_CAP_RATIO,
           goalContinues: () => goalArmado && goalActual?.phase === "active",
           initialTodos: listaDelTurno.initialTodos,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
@@ -1727,7 +1733,7 @@ async function correrTurno(
         // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider §3.4b): se
         // COBRA lo cobrable —un respaldo no lo paga el usuario— y el libro guarda
         // lo que el turno VALÍA (`listCenticredits`). Sin respaldo, lo mismo.
-        const credits = Math.max(1, creditosCobrables(result.usage));
+        const credits = Math.max(1, creditosCobrables(result.usage, result.forgivenUsage));
         const valia = Math.max(1, creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens));
         // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la fila del
         // turno, con sus tokens, un `use` por proveedor que corrió (§3.5). Con

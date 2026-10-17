@@ -3005,6 +3005,37 @@ describe("POST /api/agent — el segundo proveedor", () => {
     expect(excede!({ inputTokens: 1_000, outputTokens: 100, cachedTokens: 300, thinkingTokens: 0 })).toBe(false);
   });
 
+  it("the loop's forgiven estimate comes off the charge and the ceiling too", async () => {
+    mocks.techoDelTurno.mockReturnValue(500);
+    let excede: AgentLoopArgs["excedePresupuesto"];
+    const perdonado = { inputTokens: 200, outputTokens: 20, cachedTokens: 0, thinkingTokens: 0 };
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      excede = args.excedePresupuesto;
+      return { ...cierre(), forgivenUsage: perdonado };
+    });
+    mocks.createAgentBrain.mockReturnValue(
+      conRespaldo({
+        providersUsed: () => [{ provider: "fireworks", model: FW_MODEL, inputTokens: 800, cachedTokens: 300, outputTokens: 80, thinkingTokens: 0 }],
+        billingAdjustment: () => ({ minus: { inputTokens: 100, outputTokens: 10, cachedTokens: 0, thinkingTokens: 0 }, extraCached: 0 }),
+      }),
+    );
+    await pedir();
+    // Cobrado: (1000 − 100 − 200) − min(700, 300) + (100 − 10 − 20) = 470. Lo que valía: 800.
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      470,
+      expect.objectContaining({
+        listCenticredits: 800,
+        // Una sola fila: los totales del bucle (Ruling T5-2), con lo estimado dentro.
+        uses: [expect.objectContaining({ provider: "fireworks", inputTokens: 1_000, cachedTokens: 300, outputTokens: 100 })],
+      }),
+    );
+    const gastado = { inputTokens: 1_000, outputTokens: 100, cachedTokens: 300, thinkingTokens: 0 };
+    // Sin lo perdonado por el bucle: 900 − 300 + 90 = 690 ≥ 500. Con él: 470 < 500.
+    expect(excede!(gastado)).toBe(true);
+    expect(excede!(gastado, perdonado)).toBe(false);
+  });
+
   it("a turn on one provider writes that provider in the ledger", async () => {
     mocks.createAgentBrain.mockReturnValue(
       mocks.brainStub({

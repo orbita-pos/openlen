@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, sobreQue, type AgentStreamEvent } from "./loop";
+import { runAgentLoop, sobreQue, type AgentLoopResult, type AgentStreamEvent } from "./loop";
+import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 
 // Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
 // al tope sin escribir doce vueltas. Desde H1 (2026-09-25) el bucle no topa por
@@ -3382,6 +3383,181 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
     expect(events.filter((e) => e.type === "retry")).toHaveLength(0);
     expect(events.some((e) => e.type === "error")).toBe(false);
     expect(events.find((e) => e.type === "text")).toEqual({ type: "text", text: "Hola." });
+  });
+
+  // Lo que el bucle ESTIMA de un intento fallido sin uso (el prompt entero sin
+  // caché) es del proveedor que se deja: tras un cambio, como el `minus` del
+  // cerebro, no se cobra. Sale aparte para que la ruta lo reste.
+  describe("estimated failed attempts before a provider switch", () => {
+    const switched: StreamEvent = {
+      type: "done",
+      stopReason: { kind: "error", error: "http_503", code: "server", switchedProvider: true },
+    };
+    const pedido: Message[] = [{ role: "user", content: "hola" }];
+
+    it("are reported as forgiven usage, every failed attempt on the provider left", async () => {
+      const r = await runAgentLoop({
+        messages: pedido, tools: [{ name: "Read" }],
+        openStream: scripted(
+          [{ type: "text_delta", text: "Voy" }, fallo("server")],
+          [{ type: "reasoning", text: "pienso" }, { type: "text_delta", text: "Voy a mir" }, switched],
+          [{ type: "text_delta", text: "Listo." }, usage(5), done],
+        ),
+        runTool: async () => { throw new Error("must not run"); },
+        emit: () => {},
+        sleep: async () => {},
+      });
+      const prompt = estimateTokens(pedido);
+      const tok = (chars: number) => Math.ceil(chars / CHARS_PER_TOKEN);
+      expect(r.forgivenUsage).toEqual({
+        inputTokens: 2 * prompt,
+        outputTokens: tok("Voy".length) + tok("Voy a mir".length + "pienso".length),
+        cachedTokens: 0,
+        thinkingTokens: tok("pienso".length),
+      });
+      // Lo REAL no cambia: el turno sigue contando lo que estimó.
+      expect(r.usage.inputTokens).toBe(100 + 2 * prompt);
+    });
+
+    it("BRAZO DE CONTROL: a failed attempt retried on the same provider is billed as before", async () => {
+      const r = await runAgentLoop({
+        messages: pedido, tools: [{ name: "Read" }],
+        openStream: scripted(
+          [{ type: "text_delta", text: "Voy a mir" }, fallo("server")],
+          [{ type: "text_delta", text: "Listo." }, usage(5), done],
+        ),
+        runTool: async () => { throw new Error("must not run"); },
+        emit: () => {},
+        sleep: async () => {},
+      });
+      expect(r.forgivenUsage).toBeUndefined();
+      expect(r.usage.inputTokens).toBe(100 + estimateTokens(pedido));
+    });
+
+    it("reach the ceiling question as its second argument", async () => {
+      const preguntas: (AgentLoopResult["usage"] | undefined)[] = [];
+      await runAgentLoop({
+        messages: pedido, tools: [{ name: "Read" }],
+        openStream: scripted(
+          [{ type: "text_delta", text: "Voy a mir" }, switched],
+          [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, usage(5), done],
+          [{ type: "text_delta", text: "Listo." }, usage(5), done],
+        ),
+        runTool: async () => ({ response: { ok: true, tool_result: "1\t<h1>" }, action: { tool: "Read", ok: true, summary: "/index.html" } }),
+        excedePresupuesto: (_g, forgiven) => { preguntas.push(forgiven); return false; },
+        emit: () => {},
+        sleep: async () => {},
+      });
+      expect(preguntas.at(-1)).toEqual({
+        inputTokens: estimateTokens(pedido),
+        outputTokens: Math.ceil("Voy a mir".length / CHARS_PER_TOKEN),
+        cachedTokens: 0,
+        thinkingTokens: 0,
+      });
+    });
+  });
+
+  // Las llamadas FUERA del bucle de reintentos —el resumen y los cierres— no
+  // tienen intento que repetir: si el cerebro las corta para pasar al
+  // respaldo, se vuelven a abrir (ya en el respaldo) y lo recogido se tira.
+  describe("calls outside the retry loop reopen after a provider switch", () => {
+    const switched: StreamEvent = {
+      type: "done",
+      stopReason: { kind: "error", error: "http_503", code: "server", switchedProvider: true },
+    };
+    const seen = (events: AgentStreamEvent[]): string => {
+      let visto = "";
+      for (const e of events) {
+        if (e.type === "text") visto += e.text;
+        if (e.type === "retry") visto = visto.slice(0, Math.max(0, visto.length - e.discardChars));
+      }
+      return visto;
+    };
+
+    it("the cap close-out reopens and keeps only the fallback's text", async () => {
+      const events: AgentStreamEvent[] = [];
+      let closeOuts = 0;
+      const closeOut = scripted(
+        [{ type: "text_delta", text: "Me qued" }, switched],
+        [{ type: "text_delta", text: "Cambié el titular." }, usage(4), done],
+      );
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "cambia dos cosas" }],
+        tools: [{ name: "editar_texto" }, { name: "editar_html" }] as unknown as Parameters<typeof runAgentLoop>[0]["tools"],
+        maxToolCalls: 1,
+        openStream: scripted([
+          { type: "function_call", name: "editar_texto", args: { resumen: "titular" } },
+          { type: "function_call", name: "editar_html", args: { resumen: "seccion" } },
+          usage(10),
+          done,
+        ]),
+        runTool: async () => ({ response: { ok: true, edits_aplicados: 1, cambio: "cambio" } }),
+        closeOut: (m) => { closeOuts += 1; return closeOut(m); },
+        emit: (e) => events.push(e),
+      });
+      expect(closeOuts).toBe(2);
+      expect(r.finalText).toBe("Cambié el titular.");
+      expect(seen(events)).toBe("Cambié el titular.");
+    });
+
+    it("the no-way-out close-out reopens and keeps only the fallback's text", async () => {
+      const falla: StreamEvent[] = [
+        { type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: "carro", new_string: "x" } },
+        done,
+      ];
+      const hecho: StreamEvent[] = [
+        { type: "function_call", name: "Edit", args: { file_path: "/index.html", old_string: "a", new_string: "b" } },
+        done,
+      ];
+      const events: AgentStreamEvent[] = [];
+      let closeOuts = 0;
+      const closeOut = scripted(
+        [{ type: "text_delta", text: "Quedó el c" }, switched],
+        [{ type: "text_delta", text: "Quedó el carrito; no pude más." }, done],
+      );
+      const r = await runAgentLoop({
+        messages: [{ role: "user", content: "x" }], tools: [],
+        openStream: scripted(hecho, falla),
+        runTool: async (_n, a) =>
+          a.old_string === "a"
+            ? { response: { ok: true, cambio: "cambio" }, action: { tool: "Edit", ok: true, summary: "carrito" }, updatedHtml: "<p/>", page: null }
+            : { response: { ok: false, error: "old_string is not in the file." } },
+        closeOut: (m) => { closeOuts += 1; return closeOut(m); },
+        emit: (e) => events.push(e),
+      });
+      expect(closeOuts).toBe(2);
+      expect(r.finalText).toBe("Quedó el carrito; no pude más.");
+      expect(r.sinCobro).toBe("rechazos");
+      expect(seen(events).endsWith("Quedó el carrito; no pude más.")).toBe(true);
+      expect(seen(events)).not.toContain("Quedó el cQuedó");
+    });
+
+    it("the compaction summary reopens instead of dropping the summary", async () => {
+      const vistos: Message[][] = [];
+      const guion = scripted(
+        [{ type: "text_delta", text: "## Primary Req" }, switched],
+        [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, usage(10), done],
+        [{ type: "text_delta", text: "Hecho." }, usage(5), done],
+      );
+      const historial: Message[] = [
+        { role: "system", content: "s" }, { role: "user", content: "manual" },
+        ...Array.from({ length: 10 }, (_, i): Message => ({ role: i % 2 ? "assistant" : "user", content: "x".repeat(70) })),
+        { role: "user", content: "ahora haz esto" },
+      ];
+      const r = await runAgentLoop({
+        messages: historial, tools: [{ name: "Read" }],
+        compaction: { policy: { thresholdTokens: 100, retainTokens: 20 }, firstIndex: 2 },
+        openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+        runTool: async () => { throw new Error("must not run"); },
+        emit: () => {},
+      });
+      const esResumen = (m: Message[]) => m.at(-1)?.content.includes("You are now acting as a compaction engine") === true;
+      expect(esResumen(vistos[0]!)).toBe(true);
+      expect(esResumen(vistos[1]!)).toBe(true);
+      expect(JSON.stringify(vistos[2])).toContain("<compacted-summary>");
+      expect(JSON.stringify(vistos[2])).not.toContain("## Primary Req\n");
+      expect(r.finalText).toBe("Hecho.");
+    });
   });
 
   it("tras 5 reintentos fallidos, el turno termina con el error de siempre", async () => {
