@@ -44,6 +44,17 @@ describe("🔴 el middleware en un host lienzo", () => {
     }
   });
 
+  it("LOS VISUALES: el host lienzo-visuals también pasa sin idioma ni login", async () => {
+    for (const host of ["lienzo-visuals.openlen.app", "lienzo-visuals.localhost:3000"]) {
+      for (const ruta of ["/", "/new", "/es/projects"]) {
+        const res = await pide(host, ruta);
+        expect(res.headers.get("x-middleware-next"), `${host}${ruta}`).toBe("1");
+        expect(res.headers.get("x-prueba-intl"), `${host}${ruta}`).toBeNull();
+        expect(res.headers.get("location"), `${host}${ruta}`).toBeNull();
+      }
+    }
+  });
+
   it("BRAZO DE CONTROL: fuera de un host lienzo, la app sigue igual (va al de idiomas)", async () => {
     const res = await pide("openlen.com", "/");
     expect(res.headers.get("x-prueba-intl")).toBe("1");

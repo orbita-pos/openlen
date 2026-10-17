@@ -134,6 +134,23 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     ]);
   });
 
+  it("LOS VISUALES: el visual de show_widget y su punto del texto LLEGAN a guardarse", async () => {
+    const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };
+    const res = await guardar(turno([{ tool: "show_widget", status: "done", summary: "", widget, textOffset: 5 }]));
+    expect(res.status).toBe(200);
+    expect(guardada().widget).toEqual(widget);
+    expect(guardada().textOffset).toBe(5);
+  });
+
+  it("LOS VISUALES: un visual demasiado largo se guarda SIN visual, y el turno no da 400", async () => {
+    const res = await guardar(
+      turno([{ tool: "show_widget", status: "done", summary: "", widget: { title: "x", loadingMessages: [], code: "a".repeat(60_001) }, textOffset: -3 }]),
+    );
+    expect(res.status).toBe(200);
+    expect(guardada().widget).toBeUndefined();
+    expect(guardada().textOffset).toBeUndefined();
+  });
+
   it("una observación larga se RECORTA y el turno se guarda igual", async () => {
     const res = await guardar(
       turno([{ tool: "verificar_diseno", status: "done", summary: "ok", observacion: "x".repeat(5000) }]),

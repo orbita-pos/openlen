@@ -35,7 +35,7 @@ const ESCAPES: Readonly<Record<string, string>> = {
 /** El valor de una clave de cadena en un JSON que puede estar cortado.
  *  `complete` dice si llegó la comilla de cierre. Un escape a medias al final
  *  se deja fuera: se completará con el trozo siguiente. */
-function readStringField(src: string, key: string): { value: string; complete: boolean } | null {
+export function readStringField(src: string, key: string): { value: string; complete: boolean } | null {
   // Dentro de una cadena JSON una comilla va escapada (`\"`), así que
   // `"clave":"` sin barra delante sólo puede ser una clave de verdad.
   const match = new RegExp(`"${key}"\\s*:\\s*"`).exec(src);

@@ -83,7 +83,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
       .flatMap((l) => l.slice(prefijo.length).trim().split(/\s+/));
 
   it("🔴 un host lienzo-* va ENTERO a Next, sin X-Frame-Options", () => {
-    expect(matcher("lienzo")).toMatch(/^\s*@lienzo header_regexp Host \^lienzo-\[0-9a-f\]\{32\}\\.$/);
+    expect(matcher("lienzo")).toMatch(/^\s*@lienzo header_regexp Host \^lienzo-\(\[0-9a-f\]\{32\}\|visuals\)\\.$/);
     const h = bloque(PAGINAS, "handle @lienzo {");
     expect(h).toContain("header -X-Frame-Options");
     expect(h).toContain("reverse_proxy 127.0.0.1:3000");
@@ -94,6 +94,14 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     expect(re.test(`lienzo-${"a".repeat(32)}.openlen.app`)).toBe(true);
     expect(re.test("marea.openlen.app")).toBe(false);
     expect(re.test("lienzo-abc.openlen.app")).toBe(false);
+  });
+
+  it("LOS VISUALES: el host del marco, lienzo-visuals, también va a Next; otra etiqueta lienzo-, no", () => {
+    const re = new RegExp(/header_regexp Host (\S+)/.exec(matcher("lienzo"))![1]!);
+    expect(re.test("lienzo-visuals.openlen.app")).toBe(true);
+    expect(re.test(`lienzo-${"a".repeat(32)}.openlen.app`)).toBe(true);
+    expect(re.test("lienzo-otro.openlen.app")).toBe(false);
+    expect(re.test("lienzo-visualsx.openlen.app")).toBe(false);
   });
 
   it("🔴 nota 4: ni las cabeceras de caché ni los tipos se estampan en un host lienzo (Next pone los suyos; Caddy los duplicaría)", () => {

@@ -212,6 +212,21 @@ describe("buildAgentContext", () => {
     expect(sin).not.toContain("LANGUAGE:");
     expect(buildAgentContext({ state: {}, now: new Date("2026-10-01T12:00:00Z"), idioma: "xx" })).toBe(sin);
   });
+  // LOS VISUALES (spec local 2026-10-16-len-inline-visuals): `read_me` pide la
+  // plataforma, y Len sólo puede decir «mobile» si sabe que lee en un teléfono.
+  it("LOS VISUALES: en un teléfono, el contexto lo dice justo después del idioma", () => {
+    const c = buildAgentContext({ state: {}, idioma: "es", dispositivo: "mobile" });
+    expect(c).toContain("Code, file names and identifiers stay as they are.\n\nDEVICE: the user is reading on a phone (about 360px wide).\n\n");
+  });
+  it("LOS VISUALES: en un ordenador, o sin saberlo, el contexto es byte a byte el de siempre", () => {
+    const sin = buildAgentContext({ state: {}, now: new Date("2026-10-01T12:00:00Z"), idioma: "es" });
+    expect(buildAgentContext({ state: {}, now: new Date("2026-10-01T12:00:00Z"), idioma: "es", dispositivo: "desktop" })).toBe(sin);
+    expect(sin).not.toContain("DEVICE:");
+  });
+  it("LOS VISUALES: buildAgentMessages hace llegar el dispositivo hasta el contexto", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, dispositivo: "mobile" });
+    expect(JSON.stringify(r)).toContain("DEVICE: the user is reading on a phone");
+  });
   it("buildAgentMessages hace llegar el idioma hasta el contexto", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, idioma: "pt" });
     expect(JSON.stringify(r)).toContain("the user's interface is in Portuguese");

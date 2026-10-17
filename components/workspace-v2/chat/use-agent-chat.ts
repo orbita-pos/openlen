@@ -47,6 +47,8 @@ import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
+import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
+import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { withServerStatus } from "./server-status";
 import { publishNoteId } from "./publish-note";
@@ -197,6 +199,10 @@ export interface DesignTurn {
    *  so a reload rehydrates the same cards the live turn had — see the
    *  `persistTurn` comment in `send()` for the upsert-on-persist rule. */
   actions?: AgentAction[];
+  /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): el visual que Len
+   *  está escribiendo AHORA (`widget_preview`), con el punto del texto donde
+   *  empezó. Se va cuando llega su tarjeta, que lo trae entero. Nunca se guarda. */
+  liveWidget?: { title: string | null; loadingMessages: readonly string[]; code: string; textOffset: number };
   /** Agent-mode publish gate (Task 7) — a `confirm` SSE event lands here and
    *  renders an interactive AgentConfirmCard. The card survives the turn's
    *  `done` (it finalizes to applied but the card stays tappable). Local-only,
@@ -1292,6 +1298,9 @@ export function useAgentChat({
          *  el stream se cortó por el camino y el turno sigue en el servidor. */
         let llegoElDone = false;
         let accumulatedReasoning = "";
+        /** LOS VISUALES: en qué punto del texto va cada `show_widget` del turno
+         *  (`lib/visuals/widget-offsets.ts`). */
+        const widgetOffsets = createWidgetOffsets();
         /** Hay un `retry` en curso: el siguiente texto o tarjeta lo borra de la barra. */
         let reintentando = false;
         /** Len está ordenando lo que lleva (`compaction_start`): igual. */
@@ -1399,6 +1408,9 @@ export function useAgentChat({
               // salga de este turno (el chat del equipo), y el `lang` de una app
               // que nace (`camposDeNacer` lo pisa con el suyo si viene).
               idioma: locale,
+              // LOS VISUALES (spec local 2026-10-16): si lee en un teléfono, para
+              // que Len pida a `read_me` la guía de ese ancho.
+              dispositivo: typeof window !== "undefined" && window.matchMedia?.("(max-width: 640px)").matches ? "mobile" : "desktop",
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,
@@ -1649,6 +1661,11 @@ export function useAgentChat({
                 const descartada = (payload as { dismissed?: unknown } | null)?.dismissed === true;
                 // La lista de progreso (spec local 2026-10-15), limpia.
                 const todos = todosFrom((payload as { todos?: unknown } | null)?.todos);
+                // LOS VISUALES: el visual de `show_widget`, limpio, en el punto
+                // donde empezó a escribirse (o en el que va el texto ahora).
+                const widget = tool === SHOW_WIDGET && status !== "running" ? widgetFrom((payload as { widget?: unknown } | null)?.widget) : null;
+                const textOffset = tool === SHOW_WIDGET && status !== "running" ? widgetOffsets.card(accumulatedReasoning.length) : null;
+                if (tool === SHOW_WIDGET && status !== "running") updateTurn(turnId, { liveWidget: undefined });
                 // Su tarjeta llegó: ya no espera.
                 if (asksTheOwner(tool) && status !== "running") updateTurn(turnId, { pendingQuestions: undefined, answeredLive: undefined });
                 if (tool) {
@@ -1682,6 +1699,7 @@ export function useAgentChat({
                       : {}),
                     ...(descartada ? { dismissed: true as const } : {}),
                     ...(todos ? { todos } : {}),
+                    ...(widget && textOffset !== null ? { widget, textOffset } : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }
                       : {}),
@@ -1735,6 +1753,25 @@ export function useAgentChat({
                 if (html && evPage === turnPage) {
                   previewPainted = true;
                   onLocalUpdate(html, evPage, true);
+                }
+              } else if (evName === "widget_preview") {
+                // LOS VISUALES: lo que lleva escrito un `show_widget`. El punto
+                // del texto es el de su PRIMER trozo, y se conserva.
+                const p = payload as { callIndex?: unknown; title?: unknown; loadingMessages?: unknown; code?: unknown } | null;
+                const code = typeof p?.code === "string" ? p.code : "";
+                if (code) {
+                  const callIndex = typeof p?.callIndex === "number" ? p.callIndex : 0;
+                  const textOffset = widgetOffsets.preview(callIndex, accumulatedReasoning.length);
+                  updateTurn(turnId, {
+                    liveWidget: {
+                      title: typeof p?.title === "string" ? p.title : null,
+                      loadingMessages: Array.isArray(p?.loadingMessages)
+                        ? p.loadingMessages.filter((m): m is string => typeof m === "string")
+                        : [],
+                      code,
+                      textOffset,
+                    },
+                  });
                 }
               } else if (evName === "html") {
                 const html = strField(payload, "html");
@@ -1947,6 +1984,9 @@ export function useAgentChat({
             mutoDurable,
             hayDocumentoNuevo: latestAgentHtml !== null,
           });
+          // LOS VISUALES: un visual que se quedó a medias (el turno se cortó
+          // antes de su tarjeta) no se queda pintado: no llegó a existir.
+          updateTurn(turnId, { liveWidget: undefined });
           if (cierre.kind === "error") {
             scanController.cancel();
             updateTurn(turnId, { status: "error", errorText: cierre.texto });

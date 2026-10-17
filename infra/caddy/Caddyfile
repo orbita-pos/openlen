@@ -256,7 +256,9 @@ openlen.com, www.openlen.com {
 	# /uploads/*: al disco o a Next (→ 404). Son carpetas RESERVADAS de la
 	# carpeta, así que ningún fichero del dueño vive ahí. Lo fija
 	# lib/lienzo/caddy-lienzo.test.ts.
-	@lienzo header_regexp Host ^lienzo-[0-9a-f]{32}\.
+	# `lienzo-visuals` es el host del marco de los visuales de Len en el chat
+	# (spec local 2026-10-16-len-inline-visuals): también va entero a Next.
+	@lienzo header_regexp Host ^lienzo-([0-9a-f]{32}|visuals)\.
 	handle @lienzo {
 		header -X-Frame-Options
 		reverse_proxy 127.0.0.1:3000
