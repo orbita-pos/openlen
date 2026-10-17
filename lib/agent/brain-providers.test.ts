@@ -109,7 +109,7 @@ describe("Len's brain and its providers", () => {
     expect(f.calls.map((c) => c.provider)).toEqual(["fireworks"]);
   });
 
-  it("the providers option restricts the list (the security review stays on Fireworks)", async () => {
+  it("the providers option restricts the list (an operation pinned to one provider)", async () => {
     const f = fakes({});
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, providers: ["fireworks"], streamClientFor: f.streamClientFor });
     await drain(brain.openStream([USER]));
