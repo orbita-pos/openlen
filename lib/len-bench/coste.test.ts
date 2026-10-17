@@ -35,6 +35,12 @@ describe("tarifaDelModelo", () => {
   });
   it("un modelo sin tarifa se DENUNCIA: un informe no puede cobrar al más caro en silencio", () => {
     expect(() => tarifaDelModelo("accounts/fireworks/models/otro")).toThrow(/no tiene tarifa/);
+    expect(() => tarifaDelModelo("deepseek-ai/otro")).toThrow(/no tiene tarifa/);
+  });
+  // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider §3.5): el brazo
+  // de DeepInfra dice lo que costó de verdad, a su tarifa de costo.
+  it("a DeepInfra recording is priced at its cost rate", () => {
+    expect(tarifaDelModelo("deepseek-ai/DeepSeek-V4.1-Flash")).toEqual({ input: 0.14, cached: 0.004, output: 0.42 });
   });
 });
 

@@ -14,8 +14,15 @@
 # 2026-10-16) to get r = real cost / Fireworks list:
 #   Fireworks serverless   0.30 in / 0.006 cached / 1.20 out
 #   DeepSeek direct        same at peak (01-04, 06-10 UTC Mon-Fri), half off-peak
-#   DeepInfra (promo)      0.14 / 0.0042 / 0.42
+#   DeepInfra (promo)      0.14 / 0.004 / 0.42   (lib/ai/cost-rates.ts)
 #   DeepInfra (list)       0.20 / 0.006 / 0.60
+#
+# Since the second provider (spec local 2026-10-16-second-provider) a line's
+# <model> is the provider that served the turn: `deepseek-ai/...` is DeepInfra,
+# `accounts/fireworks/...` is Fireworks. "Real cost" prices each line at its own
+# provider (DeepInfra at the promo rate). A turn that fell back ends in
+# ` / proveedores=deepinfra,fireworks` and is priced at its FIRST provider's
+# rate: an approximation, and those turns are counted.
 #
 # Usage on the box (it only reads the journal):
 #   bash /tmp/len-cache-from-journal.sh                         # since the fix: 2026-10-11 22:38 UTC
@@ -63,7 +70,7 @@ printf '%s\n' "$journal" | grep -F '[agent] turno sin cobro' | wc -l | sed 's/^ 
 echo
 printf '%s\n' "$journal" \
   | grep -F '[agent] ' | grep -F ' (cached ' \
-  | sed -nE 's/^([0-9T:+-]+) .* in ([0-9]+) \(cached ([0-9]+), [0-9]+%\) \/ out ([0-9]+)( \/ pensados ([0-9]+))? \/ vueltas=([0-9]+) llamadas=([0-9]+).*$/\1;\2;\3;\4;\6;\7;\8/p' \
+  | sed -nE 's/^([0-9T:+-]+) .*\[agent\] ([^ ]+) [^ ]+ in ([0-9]+) \(cached ([0-9]+), [0-9]+%\) \/ out ([0-9]+)( \/ pensados ([0-9]+))? \/ vueltas=([0-9]+) llamadas=[0-9]+(.*)$/\1;\3;\4;\5;\7;\8;\2;\9/p' \
   | awk -F';' '
     BEGIN { split("0 3 2 5 0 3 5 1 4 6 2 4", SAKAMOTO, " ") }
     # Day of week, 0 = Sunday (Sakamoto). POSIX awk has no strftime.
@@ -72,6 +79,7 @@ printf '%s\n' "$journal" \
     function pct(a, b) { return b > 0 ? 100 * a / b : 0 }
     {
       ts = $1; inp = $2 + 0; cached = $3 + 0; out = $4 + 0; thought = ($5 == "" ? 0 : $5 + 0); rounds = $6 + 0
+      model = $7; rest = $8
       if (cached > inp) cached = inp
       uncached = inp - cached
       n++; IN += inp; CACHED += cached; OUT += out; THOUGHT += thought
@@ -88,8 +96,12 @@ printf '%s\n' "$journal" \
       FW += fw
       DS += peak ? fw : fw / 2
       if (peak) { npeak++; FWPEAK += fw }
-      DIPROMO += cost(uncached, cached, out, 0.14, 0.0042, 0.42)
+      DIPROMO += cost(uncached, cached, out, 0.14, 0.004, 0.42)
       DILIST += cost(uncached, cached, out, 0.20, 0.006, 0.60)
+      # What it really cost, at the provider of the line (lib/ai/cost-rates.ts).
+      if (model ~ /^deepseek-ai\//) { ndi++; REAL += cost(uncached, cached, out, 0.14, 0.004, 0.42) }
+      else { nfw++; REAL += fw }
+      if (rest ~ /proveedores=/) nswitch++
     }
     END {
       if (n == 0) { print "== No charged-turn lines in this window =="; exit }
@@ -109,6 +121,10 @@ printf '%s\n' "$journal" \
       printf "   input  %.1fM (cached %.1fM)   output %.2fM   thinking %.2fM (%.0f%% of output)\n", IN / 1e6, CACHED / 1e6, OUT / 1e6, THOUGHT / 1e6, pct(THOUGHT, OUT)
       printf "   input per output token      %.1f\n", (OUT > 0 ? IN / OUT : 0)
       printf "   avg tokens per turn         %.0f in / %.0f out\n", IN / n, OUT / n
+      print ""
+      print "== Real cost, each line at its own provider =="
+      printf "   turns on DeepInfra %d, on Fireworks %d, with a fallback %d (priced at their first provider)\n", ndi, nfw, nswitch
+      printf "   real cost              $%.2f   r = %.2f   ($%.4f per turn)\n", REAL, REAL / FW, REAL / n
       print ""
       print "== The same tokens at other prices (r = cost / Fireworks list) =="
       printf "   Fireworks serverless   $%.2f   r = 1.00   ($%.4f per turn)\n", FW, FW / n
