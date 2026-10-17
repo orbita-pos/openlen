@@ -200,7 +200,7 @@ export default async function PrivacyPage({
           </p>
           <p>
             <strong>Generación con IA.</strong> Para crear y editar tus páginas,
-            Len envía a <strong>DeepInfra</strong> y, si DeepInfra no contesta, a{" "}
+            Len envía a <strong>DeepInfra</strong> y, en parte de sus turnos, a{" "}
             <strong>Fireworks AI</strong> (proveedores de modelos, en Estados
             Unidos) lo que necesita para trabajar: tus mensajes, los ficheros del
             proyecto, la salida de la terminal y de git, lo que lee de la base de
@@ -384,7 +384,7 @@ export default async function PrivacyPage({
               que se requiera tu consentimiento adicional): Cloudflare (CDN),
               Hetzner (alojamiento del servidor de aplicación y de las bases de
               datos), DeepInfra (generación con IA), Fireworks AI (generación con
-              IA de respaldo y revisión por visión), OpenAI (edición de
+              IA en parte de los turnos y revisión por visión), OpenAI (edición de
               imágenes con IA y la voz de la app), Exa (búsqueda en internet cuando Len busca algo),
               Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
@@ -420,8 +420,8 @@ export default async function PrivacyPage({
             Algunos de nuestros proveedores tratan datos fuera de tu país. Nuestro
             servidor (Hetzner), donde viven la aplicación y sus bases de datos,
             está en <strong>Ashburn, Virginia, Estados Unidos</strong>. La
-            generación de páginas con IA usa DeepInfra y, de respaldo, Fireworks
-            AI, la edición de imágenes
+            generación de páginas con IA usa DeepInfra y Fireworks AI, la
+            edición de imágenes
             con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa,
             los correos usan Resend y el cobro de suscripciones usa Polar, todos
             también en <strong>Estados Unidos</strong>. Para los destinatarios en Estados
@@ -610,7 +610,7 @@ export default async function PrivacyPage({
           </p>
           <p>
             <strong>AI generation.</strong> To create and edit your pages, Len
-            sends <strong>DeepInfra</strong> and, if DeepInfra does not answer,{" "}
+            sends <strong>DeepInfra</strong> and, in some of its turns,{" "}
             <strong>Fireworks AI</strong> (model providers, in the United States)
             what it needs to work: your messages, the project&apos;s files, the
             output of the terminal and of git, what it reads from the
@@ -783,7 +783,7 @@ export default async function PrivacyPage({
               <strong>Processors</strong> (process data on OpenLen&apos;s behalf, no
               additional consent required): Cloudflare (CDN), Hetzner
               (hosting of the application server and databases), DeepInfra (AI
-              generation), Fireworks AI (fallback AI generation and vision
+              generation), Fireworks AI (AI generation in some turns and vision
               review), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
               looks something up), Resend (transactional email), and{" "}
               <strong>InariWatch</strong> (
@@ -817,7 +817,7 @@ export default async function PrivacyPage({
             Some of our providers process data outside your country. Our server
             (Hetzner), where the application and its databases live, is in{" "}
             <strong>Ashburn, Virginia, United States</strong>. AI page generation
-            uses DeepInfra and, as a fallback, Fireworks AI, AI image editing and the app&apos;s voice use
+            uses DeepInfra and Fireworks AI, AI image editing and the app&apos;s voice use
             OpenAI, web search uses Exa, email uses Resend, and subscription
             billing uses Polar, all also in the <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
