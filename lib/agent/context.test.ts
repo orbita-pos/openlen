@@ -640,15 +640,13 @@ describe("los avisos del turno van al final, no enterrados", () => {
     return r.messages[r.messages.length - 1].content;
   };
 
-  it("el aviso de turno mudo va DESPUÉS de la petición del usuario", () => {
-    const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
-    expect(c).toContain("your previous turn did NOT call any tool");
-    expect(c.indexOf("Ponme el titular en azul")).toBeLessThan(
-      c.indexOf("your previous turn did NOT call"),
-    );
-  });
+  // ⚰️ El aviso de turno mudo («your previous turn did NOT call any tool») se
+  // retiró el 2026-10-17; los avisos que quedan son lo ya sabido roto y la lista.
+  const roto = {
+    degradaciones: [{ code: "broken_controls", detail: ["el botón de reservar no hace nada"] }],
+  };
 
-  it("lo que ya se sabe roto, también", () => {
+  it("lo que ya se sabe roto va DESPUÉS de la petición del usuario", () => {
     const c = ultimo(buildAgentMessages({
       ...base,
       degradaciones: [
@@ -661,9 +659,9 @@ describe("los avisos del turno van al final, no enterrados", () => {
   });
 
   it("y se devuelven aparte, para guardarlos con el turno (el historial los repone)", () => {
-    const r = buildAgentMessages({ ...base, turnoAnteriorMudo: true });
+    const r = buildAgentMessages({ ...base, ...roto });
     if (!r.ok) throw new Error("el fixture no debe exceder el presupuesto");
-    expect(r.avisos).toContain("your previous turn did NOT call any tool");
+    expect(r.avisos).toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
     expect(ultimo(r).endsWith(r.avisos)).toBe(true);
     const sin = buildAgentMessages(base);
     expect(sin.ok && sin.avisos).toBe("");
@@ -671,8 +669,8 @@ describe("los avisos del turno van al final, no enterrados", () => {
 
   it("van MARCADOS: el usuario no escribió eso", () => {
     // Sin la marca, el modelo los lee como parte de la petición y contesta al
-    // aviso en vez de al usuario. Es la misma marca que ya usa loop.ts.
-    const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
+    // aviso en vez de al usuario.
+    const c = ultimo(buildAgentMessages({ ...base, ...roto }));
     expect(c).toContain("SYSTEM (the user did NOT write this)");
     expect(c.indexOf("SYSTEM (the user did NOT write this)")).toBeGreaterThan(
       c.indexOf("Ponme el titular en azul"),
@@ -680,9 +678,9 @@ describe("los avisos del turno van al final, no enterrados", () => {
   });
 
   it("y ya no viajan enterrados delante del contexto", () => {
-    const c = ultimo(buildAgentMessages({ ...base, turnoAnteriorMudo: true }));
+    const c = ultimo(buildAgentMessages({ ...base, ...roto }));
     // Si el aviso está antes que el ESTADO, es que sigue donde estaba.
-    expect(c.indexOf("PROJECT STATE")).toBeLessThan(c.indexOf("your previous turn did NOT call"));
+    expect(c.indexOf("PROJECT STATE")).toBeLessThan(c.indexOf("WHAT IS ALREADY KNOWN TO BE BROKEN"));
   });
 
   it("sin avisos, el mensaje sigue acabando en las palabras del usuario", () => {
@@ -696,11 +694,9 @@ describe("los avisos del turno van al final, no enterrados", () => {
   it("el contexto ya no los lleva dentro", () => {
     const ctx = buildAgentContext({
       state: {},
-      turnoAnteriorMudo: true,
       degradaciones: [{ code: "broken_controls", detail: ["algo"] }],
       now: new Date("2026-09-03T12:00:00Z"),
     });
-    expect(ctx).not.toContain("your previous turn did NOT call");
     expect(ctx).not.toContain("WHAT IS ALREADY KNOWN TO BE BROKEN");
   });
 });

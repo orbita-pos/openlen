@@ -149,10 +149,16 @@ ${lineas.join("\n")}
 /**
  * LOS AVISOS POR TURNO, y por qué NO viven en el bloque de contexto.
  *
- * Son dos: que el turno anterior no llamó a ninguna herramienta (hecho, no
- * juicio: no se mira lo que el modelo DIJO, sino si llamó a algo), y lo que la
- * ingestión ya sabe roto en esta página. Los dos hablan del turno que está
- * pasando AHORA.
+ * Son dos: lo que la ingestión ya sabe roto en esta página y la lista de
+ * progreso que salió del historial. Los dos hablan del turno que está pasando
+ * AHORA.
+ *
+ * ⚰️ Había un tercero, el aviso de turno mudo («NOTICE: your previous turn did
+ * NOT call any tool… apply it NOW»), retirado el 2026-10-17 con la insistencia
+ * de `loop.ts`. MEDIDO con DeepSeek V4.1 Flash y un historial cuyo último turno
+ * fue una pregunta contestada con palabras: no evitó ningún «Listo» falso (sin
+ * él, 10 de 10 editaron) y sí hizo que Len desconfiara de su propio historial y
+ * releyera la página (8 de 10 contra 1 de 10). Claude Code no tiene nada así.
  *
  * Vivían al principio del bloque de contexto — por delante del documento, del
  * estado y del brief —, o sea a unos 35.000 caracteres del punto donde el
@@ -172,23 +178,17 @@ ${lineas.join("\n")}
  * cuesta un byte, y el turno limpio queda byte a byte como estaba.
  */
 export function avisosDelTurno(args: {
-  turnoAnteriorMudo?: boolean;
   degradaciones?: readonly DegradacionConocida[];
   /** La lista de progreso que salió del historial (`todosForTurn`). */
   todoRestore?: string | null;
 }): string {
-  const mudo = args.turnoAnteriorMudo
-    ? `NOTICE: your previous turn did NOT call any tool, so the page did NOT change — whatever you do now, don't take for granted what you said you had done. If the user asked you for a change and it still isn't applied, apply it NOW with the editing tool that fits.
-
-`
-    : "";
   const roto = degradacionesBlock(args.degradaciones ?? []);
   const lista = args.todoRestore ? `${args.todoRestore}\n\n` : "";
-  if (!mudo && !roto && !lista) return "";
+  if (!roto && !lista) return "";
   return `
 
 SYSTEM (the user did NOT write this):
-${mudo}${roto}${lista}`;
+${roto}${lista}`;
 }
 
 /**
@@ -275,10 +275,6 @@ export function buildAgentContext(args: {
    *  éste y no el de la interfaz. */
   writingLanguage?: string | null;
   state: Record<string, unknown>;
-  /** El turno ANTERIOR no llamó a ninguna herramienta: la pagina quedo
-   *  intacta. Medido el 2026-08-22 — el Agente responde «Listo, ya lo
-   *  anadi» sin haber tocado nada, y sin esto no se entera nunca. */
-  turnoAnteriorMudo?: boolean;
   /** Lo que el Agente sabe de la PERSONA — sobrevive a cambiar de proyecto.
    *  Ausente/vacio ⇒ contexto BYTE-identico al de antes de que existiera. */
   userMemory?: string | null;
@@ -446,8 +442,6 @@ export interface BuildAgentMessagesArgs {
   dispositivo?: "mobile" | "desktop";
   /** Ver buildAgentContext.writingLanguage. */
   writingLanguage?: string | null;
-  /** Ver buildAgentContext.turnoAnteriorMudo. */
-  turnoAnteriorMudo?: boolean;
   /** Ver `avisosDelTurno.todoRestore`. */
   todoRestore?: string | null;
   /** Ver buildAgentContext.userMemory. */
@@ -539,7 +533,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     dispositivo: args.dispositivo,
     writingLanguage: args.writingLanguage,
     state: args.state,
-    turnoAnteriorMudo: args.turnoAnteriorMudo,
     userMemory: args.userMemory,
     cambios: args.cambios,
     cambiosDelDueno: args.cambiosDelDueno,
@@ -553,7 +546,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     design: args.design,
   });
   const avisos = avisosDelTurno({
-    turnoAnteriorMudo: args.turnoAnteriorMudo,
     degradaciones: args.degradaciones,
     todoRestore: args.todoRestore,
   });

@@ -42,7 +42,6 @@ export interface EntradaDeForma {
   readonly userMemory?: string | null;
   readonly cambios?: readonly unknown[];
   readonly degradaciones?: readonly unknown[];
-  readonly turnoAnteriorMudo?: boolean;
   readonly conPin?: boolean;
   readonly conImagen?: boolean;
   readonly activePage?: string | null;
@@ -62,7 +61,6 @@ export interface FormaDelTurno {
   readonly conBrief: boolean;
   readonly cambios: number;
   readonly degradaciones: number;
-  readonly mudo: boolean;
   readonly conPin: boolean;
   readonly conImagen: boolean;
   /** El fichero que el dueño tiene abierto en el editor. */
@@ -93,7 +91,6 @@ export function formaDelTurno(e: EntradaDeForma): FormaDelTurno {
     conBrief: Boolean(e.userBrief?.trim()),
     cambios: e.cambios?.length ?? 0,
     degradaciones: e.degradaciones?.length ?? 0,
-    mudo: e.turnoAnteriorMudo === true,
     conPin: e.conPin === true,
     conImagen: e.conImagen === true,
     fichero: rutaDePagina(e.activePage ?? null),
@@ -126,7 +123,6 @@ export function lineaDeForma(f: FormaDelTurno): string {
     `brief=${b(f.conBrief)}`,
     `cambios=${f.cambios}`,
     `degr=${f.degradaciones}`,
-    `mudo=${b(f.mudo)}`,
     `pin=${b(f.conPin)}`,
     `img=${b(f.conImagen)}`,
   ].join(" ");

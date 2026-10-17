@@ -7,10 +7,10 @@
  * `lib/resultados/` y entran por `deps.resultados`, para poder probar esto con
  * dobles.
  *
- * NO van en `READ_ONLY_TOOLS` (`loop.ts`) a propósito: una lectura de ahí no
- * cuenta como «actuó», y un turno que contesta «¿cómo van mis visitas?» con
- * `get_visits` se llevaría la insistencia («no hiciste nada») y una vuelta de
- * más empujando a editar. Contestar con el número ES el trabajo de ese turno.
+ * NO van en `READ_ONLY_TOOLS` (`loop.ts`): hasta el 2026-10-17 era para que un
+ * turno que contesta «¿cómo van mis visitas?» con `get_visits` no se llevara la
+ * insistencia («no hiciste nada»), retirada ese día. Hoy esa lista sólo decide
+ * qué no gasta vueltas de trabajo: contestar con el número ES el trabajo.
  *
  * EN INGLÉS desde el 2026-10-06 (plans/crear-es-len/plan-herramientas.md): los
  * nombres, los parámetros y las RESPUESTAS, como las herramientas de DeepSeek.

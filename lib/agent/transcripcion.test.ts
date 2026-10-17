@@ -13,7 +13,7 @@ import {
   transcripcionParaGuardar,
   type FilaDelHistorial,
 } from "./transcripcion";
-import { turnoAnteriorMudoDe, ventanaVisibleDe } from "./historial-saneado";
+import { ventanaVisibleDe } from "./historial-saneado";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 
@@ -316,32 +316,13 @@ describe("H15 fase 2 · lo pensado en los turnos siguientes", () => {
   });
 });
 
-// El aviso de «el turno anterior fue mudo» miraba el ÚLTIMO mensaje del
-// asistente. En el historial del navegador las llamadas iban en ese mensaje; en
-// la transcripción, el último es el texto final y las llamadas van antes. Mirado
-// igual, TODOS los turnos habrían salido mudos.
-describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la base", () => {
-  // Ensayo de caja (06/10): tras parar con ■ una reescritura a mitad del
-  // Write, el aviso de «turno mudo» («If the user asked you for a change and it
-  // still isn't applied, apply it NOW») hacía que el turno siguiente —una
-  // pregunta por las visitas— rehiciera lo que el dueño acababa de parar.
-  it("🔴 un turno que el dueño paró con ■ NO es mudo: no se le empuja a rehacerlo", () => {
-    const h = historialDesdeLaBase([
-      { userText: "reescribe la portada", assistantReasoning: "La escribo entera.", transcript: { mensajes: [], leidos: [], detenido: true } },
-    ]);
-    expect(turnoAnteriorMudoDe(h)).toBe(false);
-  });
-
-  it("🔴 un turno de la base que llamó a herramientas NO es mudo aunque cierre con texto", () => {
-    const h = historialDesdeLaBase([fila("cambia el título", [...leer("/index.html", PAGINA), { role: "assistant", content: "Listo." }])]);
-    expect(turnoAnteriorMudoDe(h)).toBe(false);
-  });
-
+// ⚰️ Aquí vivían las pruebas de `turnoAnteriorMudoDe`, el aviso de turno mudo
+// retirado el 2026-10-17 (`lib/agent/context.ts`). Se quedan las de la ventana:
+// cuántos turnos del DUEÑO ve Len, que es una cuenta aparte y sigue viva.
+describe("ventanaVisibleDe — los turnos del dueño, no lo que el servidor metió en ellos", () => {
   // E del 26/09: la respuesta de herramientas viaja con lo medido tras editar
   // al lado (`<medido-tras-editar>`, `aviso-medido.ts`), así que su `content` NO
-  // está vacío. Se tomaba por la petición del dueño, el «Listo.» de después
-  // quedaba sin llamadas y el turno salía mudo: 122 de 282 peticiones de la rama
-  // recibieron «tu turno anterior NO llamó a ninguna herramienta… aplícalo AHORA».
+  // está vacío, y se tomaba por la petición del dueño.
   it("🔴 la respuesta de herramientas con lo medido al lado no es la petición del dueño", () => {
     const h = historialDesdeLaBase([
       fila("cambia el título", [
@@ -355,21 +336,14 @@ describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la 
         { role: "assistant", content: "Listo." },
       ]),
     ]);
-    expect(turnoAnteriorMudoDe(h)).toBe(false);
-    // …y por la misma razón la ventana cuenta UN turno del dueño, no dos.
     expect(ventanaVisibleDe(h)).toBe(1);
   });
 
-  it("uno de la base que sólo habló, sí", () => {
-    expect(turnoAnteriorMudoDe(historialDesdeLaBase([fila("hola", [{ role: "assistant", content: "¡Hola!" }])]))).toBe(true);
-  });
-
   // 🔴 N39 (03/10). Lo que el SERVIDOR mete en el turno con papel de usuario —la
-  // insistencia «SYSTEM (the user did NOT write this)…», lo medido al cerrar, la
+  // insistencia de los turnos de antes del 2026-10-17, lo medido al cerrar, la
   // corrección que el dueño escribió a media faena— no es una petición que abra
   // turno. Se contaba como tal: «Len ve N de M» salía con N > M (Pizarrón: 18
-  // visibles de 14) y nunca avisaba, y el aviso de «turno mudo» saltaba tras un
-  // turno que sí editó. Como en el arnés de DeepSeek, quién abrió el turno es un
+  // visibles de 14). Como en el arnés de DeepSeek, quién abrió el turno es un
   // hecho de la estructura (la fila), no del texto.
   const insistencia = {
     role: "user" as const,
@@ -388,33 +362,9 @@ describe("turnoAnteriorMudoDe — con el historial del navegador y con el de la 
     expect(ventanaVisibleDe(h)).toBe(2);
   });
 
-  it("🔴 N39: un turno que editó y recibió una corrección después NO es mudo", () => {
-    const h = historialDesdeLaBase([
-      fila("cambia el título", [
-        { role: "assistant", content: "", functionCalls: [{ name: "Edit", args: { file_path: "/index.html", old_string: "Taquería", new_string: "El Farol" } }] },
-        { role: "user", content: "", functionResponses: [{ name: "Edit", response: { ok: true, tool_result: "Edited /index.html." } }] },
-        correccion,
-        { role: "assistant", content: "Listo, en azul." },
-      ]),
-    ]);
-    expect(turnoAnteriorMudoDe(h)).toBe(false);
-  });
-
-  it("BRAZO DE CONTROL N39: un turno de la base que sólo habló sigue siendo mudo aunque el servidor insistiera", () => {
+  it("BRAZO DE CONTROL N39: un turno con la insistencia de antes dentro sigue siendo UN turno", () => {
     const h = historialDesdeLaBase([fila("hola", [{ role: "assistant", content: "¡Hola!" }, insistencia, { role: "assistant", content: "OK" }])]);
-    expect(turnoAnteriorMudoDe(h)).toBe(true);
     expect(ventanaVisibleDe(h)).toBe(1);
-  });
-
-  it("CONTRA-PRUEBA: el formato del navegador se lee como antes", () => {
-    const conLlamada = [
-      { role: "user" as const, content: "cambia" },
-      { role: "assistant" as const, content: "Listo.", functionCalls: [{ name: "Edit", args: {} }] },
-      { role: "user" as const, content: "", functionResponses: [{ name: "Edit", response: { ok: true, resumen: "index.html" } }] },
-    ];
-    expect(turnoAnteriorMudoDe(conLlamada)).toBe(false);
-    expect(turnoAnteriorMudoDe([{ role: "user", content: "hola" }, { role: "assistant", content: "¡Hola!" }])).toBe(true);
-    expect(turnoAnteriorMudoDe([])).toBe(false);
   });
 });
 

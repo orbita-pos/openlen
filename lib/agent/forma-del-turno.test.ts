@@ -31,7 +31,6 @@ describe("formaDelTurno", () => {
       userBrief: "el tono es formal",
       cambios: [1, 2, 3],
       degradaciones: [1],
-      turnoAnteriorMudo: true,
       conPin: true,
     });
     // Una memoria de sólo espacios NO es memoria: el bloque sale vacío del
@@ -40,7 +39,6 @@ describe("formaDelTurno", () => {
     expect(f.conBrief).toBe(true);
     expect(f.cambios).toBe(3);
     expect(f.degradaciones).toBe(1);
-    expect(f.mudo).toBe(true);
     expect(f.conPin).toBe(true);
     expect(f.conImagen).toBe(false);
   });
@@ -58,14 +56,14 @@ describe("lineaDeForma", () => {
     const linea = lineaDeForma(formaDelTurno(BASE));
     expect(linea).not.toContain("\n");
     expect(linea.startsWith("[agent] forma ")).toBe(true);
-    for (const clave of ["proj", "fichero", "sys", "ctx", "hist", "tok~", "mem", "brief", "cambios", "degr", "mudo", "pin", "img"]) {
+    for (const clave of ["proj", "fichero", "sys", "ctx", "hist", "tok~", "mem", "brief", "cambios", "degr", "pin", "img"]) {
       expect(linea).toMatch(new RegExp(`(^| )${clave.replace("~", "\\~")}=`));
     }
   });
 
-  it("los booleanos son 1/0: catorce campos en una línea y hay que poder leerla de un vistazo", () => {
-    expect(lineaDeForma(formaDelTurno({ ...BASE, turnoAnteriorMudo: true }))).toContain("mudo=1");
-    expect(lineaDeForma(formaDelTurno(BASE))).toContain("mudo=0");
+  it("los booleanos son 1/0: es una línea larga y hay que poder leerla de un vistazo", () => {
+    expect(lineaDeForma(formaDelTurno({ ...BASE, conPin: true }))).toContain("pin=1");
+    expect(lineaDeForma(formaDelTurno(BASE))).toContain("pin=0");
   });
 
   // 🔴 EL INVARIANTE, y es la razón entera de que esto vaya siempre encendido en
