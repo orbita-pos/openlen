@@ -77,7 +77,7 @@ function hasTokens(u: LedgerUse): boolean {
   return u.inputTokens !== undefined || u.outputTokens !== undefined || u.cachedTokens !== undefined;
 }
 
-function useCost(u: LedgerUse): number | null {
+function costOfUse(u: LedgerUse): number | null {
   if (hasTokens(u)) {
     return tokenCostMicroUsd({
       provider: u.provider,
@@ -108,7 +108,7 @@ export function ledgerFields(entry: LedgerEntry): LedgerFields {
   const uses = entry.uses ?? [];
   let cost: number | null = uses.length > 0 ? 0 : null;
   for (const u of uses) {
-    const c = useCost(u);
+    const c = costOfUse(u);
     cost = cost === null || c === null ? null : cost + c;
   }
   return {
