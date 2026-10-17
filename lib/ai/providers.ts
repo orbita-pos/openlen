@@ -21,6 +21,8 @@ export interface ProviderDialect {
   readonly apiKeyEnv: "FIREWORKS_API_KEY" | "DEEPINFRA_API_KEY";
   /** The request field that keeps a conversation on a warm prompt cache. */
   readonly affinityField: "user" | "prompt_cache_key";
+  /** How the effort travels: a token budget, or the level as a word. */
+  readonly effortStyle: "budget" | "word";
 }
 
 export const PROVIDER_DIALECTS: Readonly<Record<ProviderId, ProviderDialect>> = Object.freeze({
@@ -29,6 +31,7 @@ export const PROVIDER_DIALECTS: Readonly<Record<ProviderId, ProviderDialect>> = 
     endpoint: "https://api.fireworks.ai/inference/v1/chat/completions",
     apiKeyEnv: "FIREWORKS_API_KEY",
     affinityField: "user",
+    effortStyle: "budget",
   }),
   deepinfra: Object.freeze({
     id: "deepinfra",
@@ -37,6 +40,10 @@ export const PROVIDER_DIALECTS: Readonly<Record<ProviderId, ProviderDialect>> = 
     // docs.deepinfra.com/chat/prompt-caching, read 2026-10-16: requests with the
     // same `prompt_cache_key` and model share a KV cache.
     affinityField: "prompt_cache_key",
+    // Measured 2026-10-16 (scripts/provider-probe.ts): a number gets a 422, and
+    // without the field V4.1 Flash does not think at all. The word only turns
+    // thinking on — `low` thinks as much as `high` here.
+    effortStyle: "word",
   }),
 });
 

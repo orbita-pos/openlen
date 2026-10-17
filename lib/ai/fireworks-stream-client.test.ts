@@ -698,6 +698,36 @@ describe("provider dialect", () => {
     expect(body).not.toHaveProperty("prompt_cache_key");
   });
 
+  // Measured 2026-10-16 (plan task 3): DeepInfra answers a number with 422,
+  // and WITHOUT the field V4.1 Flash does not think at all.
+  it("a word dialect sends the level as a word: auto → high, low → low, null → none", async () => {
+    const sent: unknown[] = [];
+    for (const esfuerzo of ["auto", "low", null] as const) {
+      const fetchImpl = vi.fn(async () => new Response(chunk({ content: "x" }, "stop"), { status: 200 }));
+      const c = createFireworksStreamClient({
+        apiKey: "di",
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        ...DEEPINFRA,
+        effortStyle: "word",
+      });
+      await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo }));
+      const [, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string }];
+      sent.push(JSON.parse(init.body).reasoning_effort);
+    }
+    expect(sent).toEqual(["high", "low", "none"]);
+  });
+
+  it("the budget dialect is still the default: auto omits the field, low sends 25", async () => {
+    const sent: unknown[] = [];
+    for (const esfuerzo of ["auto", "low"] as const) {
+      const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+      await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo }));
+      const [, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string }];
+      sent.push(JSON.parse(init.body).reasoning_effort ?? "omitted");
+    }
+    expect(sent).toEqual(["omitted", 25]);
+  });
+
   it("an HTTP error carries its status", async () => {
     const fetchImpl = vi.fn(async () => new Response('{"message":"You need positive balance"}', { status: 402 }));
     const c = createFireworksStreamClient({ apiKey: "di", fetchImpl: fetchImpl as unknown as typeof fetch, ...DEEPINFRA });
