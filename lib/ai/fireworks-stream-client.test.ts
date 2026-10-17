@@ -728,6 +728,32 @@ describe("provider dialect", () => {
     expect(sent).toEqual(["omitted", 25]);
   });
 
+  // Without the field DeepInfra does not think: re-sending without it would
+  // leave Len thinking-less for the whole process. The error goes back to the
+  // brain, which moves the turn to Fireworks.
+  it("a word dialect never drops the effort: a rejection is an error with its status", async () => {
+    olvidarModelosSinEsfuerzo();
+    const rejection = '{"error":{"message":"Extra inputs are not permitted, field: \'reasoning_effort\', value: \'high\'"}}';
+    const fetchImpl = vi.fn(async () => new Response(rejection, { status: 422 }));
+    const c = createFireworksStreamClient({
+      apiKey: "di",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      ...DEEPINFRA,
+      effortStyle: "word",
+    });
+    const events = await drain(c.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "error", httpStatus: 422 } });
+
+    // And the model is not marked: the next call still sends the word.
+    const ok = vi.fn(async () => new Response(chunk({ content: "x" }, "stop"), { status: 200 }));
+    const again = createFireworksStreamClient({ apiKey: "di", fetchImpl: ok as unknown as typeof fetch, ...DEEPINFRA, effortStyle: "word" });
+    await drain(again.stream({ ...REQUEST, operation: "agent_turn", esfuerzo: "auto" }));
+    const [, init] = ok.mock.calls[0] as unknown as [string, { body: string }];
+    expect(JSON.parse(init.body).reasoning_effort).toBe("high");
+    olvidarModelosSinEsfuerzo();
+  });
+
   it("an HTTP error carries its status", async () => {
     const fetchImpl = vi.fn(async () => new Response('{"message":"You need positive balance"}', { status: 402 }));
     const c = createFireworksStreamClient({ apiKey: "di", fetchImpl: fetchImpl as unknown as typeof fetch, ...DEEPINFRA });

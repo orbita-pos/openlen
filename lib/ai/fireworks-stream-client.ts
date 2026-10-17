@@ -301,8 +301,6 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       }
       const role = roleForOperation(request.operation);
 
-      // El esfuerzo no cambia de proveedor: los números que manda (25, 60; `high`
-      // = omitir) valen igual en la escala 1–100 de DeepInfra (spec §3.3).
       const modelId = options.modelId ?? modelIdForRole(role);
       // El cuerpo se construye en una funcion porque puede mandarse DOS VECES:
       // si el proveedor rechaza `reasoning_effort`, se repite sin el en vez de
@@ -407,7 +405,12 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
         // rechazo es por `reasoning_effort`, se repite la petición SIN el campo
         // antes de darse por vencido: el turno del usuario no puede morir
         // porque un modelo no acepte un parámetro de afinado.
-        const clase = rechazoDeEsfuerzo(crudo);
+        //
+        // 🔴 SALVO EN EL DIALECTO DE LA PALABRA (DeepInfra): sin el campo, ese
+        // modelo NO PIENSA (medido el 2026-10-16), y marcarlo dejaría a Len sin
+        // pensar el resto del proceso. El rechazo sale como error, con su
+        // estado, y el cerebro pasa el turno al respaldo.
+        const clase = effortStyle === "word" ? null : rechazoDeEsfuerzo(crudo);
         if (clase && admiteEsfuerzo(modelId)) {
           // Sólo se marca el modelo cuando el rechazo es de CAPACIDAD. Si el
           // valor era inválido el defecto es NUESTRO, y marcarlo lo escondería

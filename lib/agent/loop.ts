@@ -9,7 +9,7 @@
 // A runtime (value) import of either would transitively load the native
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
-import type { Message, StreamEvent } from "@/lib/ai-gateway";
+import type { Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
 import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
@@ -292,7 +292,7 @@ export interface AgentLoopArgs {
    * La cuenta en créditos la hace quien llama (la tarifa es del cerebro, no del
    * bucle). Ausente ⇒ sin techo, como las evals y las pruebas.
    */
-  excedePresupuesto?(gastado: AgentLoopResult["usage"]): boolean;
+  excedePresupuesto?(gastado: AgentLoopResult["usage"], forgiven?: AgentLoopResult["usage"]): boolean;
   /**
    * LA LISTA DE PROGRESO (spec local 2026-10-15): ¿el turno ya gastó lo
    * bastante de su techo como para ir cerrando entre pasos? La MISMA cuenta que
@@ -301,7 +301,7 @@ export interface AgentLoopArgs {
    * añade UN aviso (`nearCapNotice`). Ausente ⇒ sin aviso, como hoy (evals,
    * pruebas, subagentes).
    */
-  nearBudget?(spent: AgentLoopResult["usage"]): boolean;
+  nearBudget?(spent: AgentLoopResult["usage"], forgiven?: AgentLoopResult["usage"]): boolean;
   /** Hay un encargo armado y activo: tras este turno la ronda siguiente arranca
    *  sola, así que el aviso no manda preguntar. */
   goalContinues?(): boolean;
@@ -398,6 +398,14 @@ export interface AgentLoopResult {
    * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
    */
   sinCobro?: "rechazos" | "conflicto";
+  /**
+   * LO QUE EL BUCLE ESTIMÓ DE LOS INTENTOS FALLIDOS SIN USO del proveedor que
+   * el cerebro dejó (spec local 2026-10-16-second-provider §3.4b). Va DENTRO de
+   * `usage` —el turno lo valía— y la ruta lo resta del cobro junto al `minus`
+   * del cerebro, que sólo cuenta los eventos de uso. `excedePresupuesto` y
+   * `nearBudget` reciben lo mismo en su segundo argumento. Ausente sin cambio.
+   */
+  forgivenUsage?: AgentLoopResult["usage"];
 }
 
 // ⚰️ LA PODA DE DOCUMENTOS VIEJOS (`podarDocumentosViejos`, `FIN_DEL_DOCUMENTO`,
@@ -877,6 +885,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let outputTokens = 0;
   let cachedTokens = 0;
   let thinkingTokens = 0;
+  /** Ver `AgentLoopResult.forgivenUsage`. */
+  const forgivenUsage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
   /** COMPACTACIÓN · los tokens de entrada REALES de la última llamada (DeepSeek
    *  mide así) y cuántos mensajes había entonces: la presión es eso + lo
    *  añadido después, estimado. */
@@ -885,6 +895,63 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Un solo reintento tras desborde por turno (`maxOverflowRetries` 1 de DeepSeek). */
   let overflowRecovered = false;
 
+  /**
+   * UNA LLAMADA FUERA DEL BUCLE DE REINTENTOS —el resumen y los cierres—, que
+   * no tienen un intento que repetir. Si el cerebro la corta para pasar al
+   * respaldo (`switchedProvider`, spec local 2026-10-16-second-provider), lo
+   * recogido se tira —y lo que ya vio el dueño se le retira, como en un
+   * reintento— y se vuelve a abrir, ya en el respaldo. El cerebro cambia una
+   * sola vez por proveedor, así que esto acaba.
+   *
+   * `emitText`: el texto va al dueño mientras llega. `separated`: y, como en
+   * las vueltas, con el separador si alguna anterior ya habló.
+   */
+  const streamOutsideRetries = async (
+    open: () => AsyncIterable<StreamEvent>,
+    show: { emitText: boolean; separated: boolean },
+  ): Promise<{ text: string; calledTool: boolean; stop: StopReason | null }> => {
+    for (;;) {
+      const spokeBefore = algunaVueltaYaDijoAlgo;
+      let text = "";
+      let shown = 0;
+      let calledTool = false;
+      let stop: StopReason | null = null;
+      // Se sigue leyendo hasta el final aunque ya no valga: el `usage` llega
+      // detrás y esa llamada también se paga.
+      for await (const ev of open()) {
+        if (ev.type === "text_delta") {
+          if (show.emitText) {
+            if (show.separated && algunaVueltaYaDijoAlgo && text.length === 0) {
+              args.emit({ type: "text", text: "\n\n" });
+              shown += 2;
+            }
+            if (show.separated) algunaVueltaYaDijoAlgo = true;
+            args.emit({ type: "text", text: ev.text });
+            shown += ev.text.length;
+          }
+          text += ev.text;
+        } else if (ev.type === "function_call") {
+          calledTool = true;
+        } else if (ev.type === "usage") {
+          inputTokens += ev.inputTokens;
+          outputTokens += ev.outputTokens;
+          cachedTokens += ev.cachedTokens;
+          thinkingTokens += ev.thinkingTokens;
+        } else if (ev.type === "done") {
+          stop = ev.stopReason;
+        }
+      }
+      if (stop?.kind === "error" && stop.switchedProvider && !args.signal?.aborted) {
+        if (shown > 0) {
+          args.emit({ type: "retry", attempt: 1, maxAttempts: MAX_PROVIDER_RETRIES, delayMs: 0, discardChars: shown });
+        }
+        algunaVueltaYaDijoAlgo = spokeBefore;
+        continue;
+      }
+      return { text, calledTool, stop };
+    }
+  };
+
   /** El resumen lo escribe el MISMO modelo con la MISMA petición más la
    *  instrucción al final (`buildSummaryRequest`): el prefijo sale de la caché.
    *  Se cobra como cualquier llamada. Un resumen que llama herramientas, que se
@@ -892,20 +959,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const summarizeWithModel = async (request: Message[]): Promise<string | null> => {
     if (args.signal?.aborted) return null;
     args.emit({ type: "compaction_start" });
-    let text = "";
-    let valid = true;
-    for await (const ev of args.openStream(request)) {
-      if (ev.type === "text_delta") text += ev.text;
-      // Se sigue leyendo hasta el final aunque ya no valga: el `usage` llega
-      // detrás y esa llamada también se paga.
-      else if (ev.type === "function_call") valid = false;
-      else if (ev.type === "usage") {
-        inputTokens += ev.inputTokens;
-        outputTokens += ev.outputTokens;
-        cachedTokens += ev.cachedTokens;
-        thinkingTokens += ev.thinkingTokens;
-      } else if (ev.type === "done" && ev.stopReason.kind !== "end_turn") valid = false;
-    }
+    const { text, calledTool, stop } = await streamOutsideRetries(() => args.openStream(request), {
+      emitText: false,
+      separated: false,
+    });
+    const valid = !calledTool && (stop === null || stop.kind === "end_turn");
     return valid && text.trim() !== "" ? text : null;
   };
 
@@ -1069,6 +1127,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     aplicado: [...aplicado],
     rechazos: [...rechazos],
     ...(endedOnQuestion ? { endedOnQuestion: true as const } : {}),
+    ...(forgivenUsage.inputTokens + forgivenUsage.outputTokens > 0 ? { forgivenUsage: { ...forgivenUsage } } : {}),
   });
 
   /**
@@ -1157,20 +1216,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const cerrarSinSalida = async (motivo: "rechazos" | "conflicto"): Promise<AgentLoopResult> => {
     if (!args.closeOut) return await finishOnCap("turn_limit");
     const instruccion = motivo === "conflicto" ? CONFLICTO_SIN_SALIDA : SIN_SALIDA;
-    let texto = "";
-    for await (const ev of args.closeOut([...messages, { role: "user", content: instruccion + hechosAplicados() }])) {
-      if (ev.type === "text_delta") {
-        if (algunaVueltaYaDijoAlgo && texto.length === 0) args.emit({ type: "text", text: "\n\n" });
-        texto += ev.text;
-        algunaVueltaYaDijoAlgo = true;
-        args.emit({ type: "text", text: ev.text });
-      } else if (ev.type === "usage") {
-        inputTokens += ev.inputTokens;
-        outputTokens += ev.outputTokens;
-        cachedTokens += ev.cachedTokens;
-        thinkingTokens += ev.thinkingTokens;
-      }
-    }
+    const closeOut = args.closeOut;
+    const { text: texto } = await streamOutsideRetries(
+      () => closeOut([...messages, { role: "user", content: instruccion + hechosAplicados() }]),
+      { emitText: true, separated: true },
+    );
     if (!texto.trim()) return await finishOnCap("turn_limit");
     finalText = texto;
     return { ...buildResult(false), sinCobro: motivo };
@@ -1182,7 +1232,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // obligatoria el 2026-10-06 (plans/crear-es-len): como en DeepSeek, mirar la
     // página lo decide Len (`view_page`); el arnés no lo promete.
     if (args.closeOut) {
-      let wrapText = "";
+      const closeOut = args.closeOut;
       // 🔴 LOS HECHOS, NO LA MEMORIA — medido el 2026-09-11 con `tope-no-miente`.
       //
       // `WRAP_UP_INSTRUCTION` ya pedía «qué quedó pendiente», así que el fallo no
@@ -1214,28 +1264,22 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         rotoPorLaUltima.length > 0
           ? `\n\n🔴 AND THE PAGE IS LEFT BROKEN, measured by us: its JavaScript looks for ${rotoPorLaUltima.length} element(s) that no longer exist (${rotoPorLaUltima.join(", ")}). When that happens the whole script stops running, so the page lost ALL its interactivity, not just that part. TELL the user clearly and tell them you will fix it in the next message. DON'T close saying it is done.`
           : "";
-      for await (const ev of args.closeOut([
-        ...messages,
-        {
-          role: "user",
-          content:
-            (code === "budget_limit" ? WRAP_UP_PRESUPUESTO : WRAP_UP_INSTRUCTION) +
-            hechosDelTurno + estadoDeLaPagina +
-            // La lista como hechos, en el cierre del dinero (spec local 2026-10-15).
-            (code === "budget_limit" && currentTodos && currentTodos.length > 0 ? todoCapFacts(currentTodos) : ""),
-        },
-      ])) {
-        if (ev.type === "text_delta") {
-          wrapText += ev.text;
-          args.emit({ type: "text", text: ev.text });
-        } else if (ev.type === "usage") {
-          inputTokens += ev.inputTokens;
-          outputTokens += ev.outputTokens;
-          cachedTokens += ev.cachedTokens;
-          thinkingTokens += ev.thinkingTokens;
-        }
-        // function_call / done ignored — tools are off on this stream.
-      }
+      // function_call / done ignored — tools are off on this stream.
+      const { text: wrapText } = await streamOutsideRetries(
+        () =>
+          closeOut([
+            ...messages,
+            {
+              role: "user",
+              content:
+                (code === "budget_limit" ? WRAP_UP_PRESUPUESTO : WRAP_UP_INSTRUCTION) +
+                hechosDelTurno + estadoDeLaPagina +
+                // La lista como hechos, en el cierre del dinero (spec local 2026-10-15).
+                (code === "budget_limit" && currentTodos && currentTodos.length > 0 ? todoCapFacts(currentTodos) : ""),
+            },
+          ]),
+        { emitText: true, separated: false },
+      );
       if (wrapText.trim().length > 0) {
         finalText = wrapText;
         return buildResult(true, code);
@@ -1270,14 +1314,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // LEN 2.1 · EL TECHO DE DINERO, antes de cada llamada al modelo: es el
     // único momento en que parar no deja una herramienta a medias. Lo que ya
     // se hizo queda guardado y el cierre lo cuenta.
-    if (args.excedePresupuesto?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens })) {
+    if (args.excedePresupuesto?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens }, { ...forgivenUsage })) {
       return await finishOnCap("budget_limit");
     }
     // LA LISTA DE PROGRESO (spec local 2026-10-15): cerca del techo, UN aviso
     // para que Len cierre ENTRE pasos —termina el que lleva y pregunta— en vez
     // de que el techo lo corte a media tarea. Aquí, antes de llamar al modelo,
     // por lo mismo que el techo: nunca a media herramienta.
-    if (!nearCapNotified && args.nearBudget?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens })) {
+    if (!nearCapNotified && args.nearBudget?.({ inputTokens, outputTokens, cachedTokens, thinkingTokens }, { ...forgivenUsage })) {
       nearCapNotified = true;
       messages.push({
         role: "user",
@@ -1346,6 +1390,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // fallo sin código (un 400) es nuestro y sale como siempre. El ■ durante la
     // espera corta sin otro intento. `turns` no se vuelve a sumar.
     const yaHablabaAntesDelIntento: boolean = algunaVueltaYaDijoAlgo;
+    /** Lo estimado de los intentos fallidos de este paso en el proveedor
+     *  actual: si el cerebro lo deja, se perdona (`forgivenUsage`). */
+    const estimadoSinUso = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
     for (let intento = 1; ; intento++) {
       let emitidoEnElIntento = 0;
       let falloReintentable: ProviderErrorCode | undefined;
@@ -1448,9 +1495,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // mismo estimador de la compactación. Si no llegó ni un trozo, nada.
       const generado = generadoEnElIntento + argumentosEnVivo + pensadoEnElIntento;
       if (!usoDelProveedor && generado > 0) {
-        inputTokens += peticionDelIntento;
-        outputTokens += Math.ceil(generado / CHARS_PER_TOKEN);
-        thinkingTokens += Math.ceil(pensadoEnElIntento / CHARS_PER_TOKEN);
+        const estimado = {
+          inputTokens: peticionDelIntento,
+          outputTokens: Math.ceil(generado / CHARS_PER_TOKEN),
+          thinkingTokens: Math.ceil(pensadoEnElIntento / CHARS_PER_TOKEN),
+        };
+        inputTokens += estimado.inputTokens;
+        outputTokens += estimado.outputTokens;
+        thinkingTokens += estimado.thinkingTokens;
+        if (falloReintentable) {
+          estimadoSinUso.inputTokens += estimado.inputTokens;
+          estimadoSinUso.outputTokens += estimado.outputTokens;
+          estimadoSinUso.thinkingTokens += estimado.thinkingTokens;
+        }
       }
 
       // ─── NO CABE: se compacta sin mirar el umbral y se repite UNA vez ────
@@ -1485,6 +1542,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (emitidoEnElIntento > 0) {
           args.emit({ type: "retry", attempt: 1, maxAttempts: MAX_PROVIDER_RETRIES, delayMs: 0, discardChars: emitidoEnElIntento });
         }
+        // Lo estimado en el proveedor que se deja no se cobra, como su uso.
+        forgivenUsage.inputTokens += estimadoSinUso.inputTokens;
+        forgivenUsage.outputTokens += estimadoSinUso.outputTokens;
+        forgivenUsage.thinkingTokens += estimadoSinUso.thinkingTokens;
+        estimadoSinUso.inputTokens = 0;
+        estimadoSinUso.outputTokens = 0;
+        estimadoSinUso.thinkingTokens = 0;
         intento = 0;
       } else {
         const delayMs = retryDelayMs(intento);
