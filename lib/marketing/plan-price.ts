@@ -23,14 +23,22 @@
 // 09/10, con sólo 12 turnos): Pro son ~75-100 turnos al mes. El crédito sale
 // más barato en cada plan (3,3¢ → 2,5¢ → 2¢), y aun quemado entero ninguno
 // pierde dinero: la cuenta, con la comisión de Polar, en lib/credits.ts.
+//
+// 17/10: ~60 % más por el mismo precio (Pro 300 → 500, Max 800 → 1.300, Ultra
+// 5.000 → 8.000), con el ahorro de DeepInfra (spec local
+// 2026-10-16-second-provider): un turno de Len le cuesta a OpenLen ~45 % de la
+// lista con su promoción y ~65 % sin ella. Jesús eligió esta subida y no la
+// que no gana menos ni sin promoción (450 / 1.200 / 7.500): «vende más». El
+// crédito sigue bajando en cada plan (2¢ → 1,5¢ → 1,25¢), y aun quemado entero
+// y todo en Fireworks ninguno pierde dinero (lib/credits.ts).
 export const PRO_PRICE = 9.99;
-export const PRO_CREDITS = 300;
+export const PRO_CREDITS = 500;
 
 export const MAX_PRICE = 19.99;
-export const MAX_CREDITS = 800;
+export const MAX_CREDITS = 1_300;
 
 export const ULTRA_PRICE = 99.99;
-export const ULTRA_CREDITS = 5000;
+export const ULTRA_CREDITS = 8_000;
 
 /** El precio anterior, para tacharlo.
  *
@@ -51,6 +59,6 @@ export const PRO_SAVE_PERCENT =
 export const centsPerCredit = (price: number, credits: number) =>
   Math.round((price / credits) * 1000) / 10;
 
-/** Cuántas veces los créditos de Pro, con un decimal: 800/300 es «2,7», no
- *  «2,667». */
+/** Cuántas veces los créditos de Pro, con un decimal: con los de antes,
+ *  800/300 era «2,7», no «2,667». */
 export const timesPro = (credits: number) => Math.round((credits / PRO_CREDITS) * 10) / 10;

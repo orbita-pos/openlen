@@ -27,9 +27,9 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // credit ≈ $0.01 at the billing (list) rate, `lib/ai/tarifas.ts` — what OpenLen
 // actually pays is the cost rate, `lib/ai/cost-rates.ts` — and the charge is computed from the real
 // token volume, so a big page costs more credits than a small one. The plan
-// PRICE embeds the markup: Pro is $9.99/mo for 300 credits (≈$3 of raw cost if
-// fully spent, ~150 pages at the rates below), Max $19.99 for 800 (≈$8) and
-// Ultra $99.99 for 5,000 (≈$50) — the figures live in
+// PRICE embeds the markup: Pro is $9.99/mo for 500 credits (≈$5 at the list
+// rate if fully spent), Max $19.99 for 1,300 (≈$13) and Ultra $99.99 for 8,000
+// (≈$80) — the figures live in
 // lib/marketing/plan-price.ts; a free user is capped at 20
 // credits (~$0.20) — about 10 pages, the "try-it" funnel before the upgrade.
 //
@@ -41,7 +41,18 @@ export { CENTICREDITOS_POR_CREDITO, USD_PER_CREDIT, formatCredits, usdDeCenticre
 // $10.19 (el 44%); Ultra $99.99 deja $92.99, y con sus 5.000 quemados $42.99
 // (el 54%). Con $3.99 por 150 el modelo se llevaba el 46%. Es el PEOR caso —la
 // prueba que importa; casi nadie quema el plan entero—: subir un
-// allotment sin rehacer esta cuenta es lo que lo rompe. Los 50¢ fijos son el 5%
+// allotment sin rehacer esta cuenta es lo que lo rompe (y ahora la vigila una
+// prueba: «ningún plan de pago pierde dinero…», lib/credits.test.ts).
+//
+// Rehecho el 2026-10-17 con Pro 500, Max 1.300 y Ultra 8.000 (lib/marketing/
+// plan-price.ts). A la tarifa de LISTA —todo en Fireworks— quemados enteros
+// dejan $3.84 (el modelo se lleva el 57%), $5.19 (71%) y $12.99 (86%): ajustado,
+// pero ninguno pierde. Lo normal ya no es eso: el turno de Len va a DeepInfra
+// (spec local 2026-10-16-second-provider), que cuesta ~45% de la lista con su
+// promoción —dejan $6.59, $12.34 y $56.99, más que con los créditos de antes en
+// Fireworks— y ~65% sin ella —$5.59, $9.74 y $40.99, casi lo de antes—. Las
+// imágenes, la voz y la búsqueda no se abaratan: un plan quemado sólo en eso
+// es el caso de lista. Los 50¢ fijos son el 5%
 // de Pro: por eso el plan ANUAL, cuando exista, no es sólo un descuento, es la
 // misma venta pagando el fijo una vez.
 //
