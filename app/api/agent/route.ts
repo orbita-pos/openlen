@@ -10,6 +10,9 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { billedUsage, preferredProviderFrom } from "@/lib/agent/provider-billing";
+import { noteTurn } from "@/lib/agent/provider-health";
+import { resolveAgentProviders } from "@/lib/ai/providers";
 import { takeTypesAndLint } from "@/lib/agent/types-and-lint";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
 import {
@@ -727,7 +730,16 @@ async function correrTurno(
   // ver lib/ai/turn-credentials.ts. Aqui vivia tambien un `PROVIDER` de Gemini
   // que solo alimentaba a los ojos; los ojos van por Fireworks y se lo resuelven
   // solos desde la politica de modelos.
-  const faltaKey = faltaCredencial(credencialDelTurno());
+  //
+  // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider §3.2): el turno
+  // corre si ALGÚN proveedor encendido del papel `agent` tiene su clave —con
+  // sólo `DEEPINFRA_API_KEY` también—. El mensaje de cuando no hay ninguno es
+  // el de siempre.
+  const faltaKey =
+    resolveAgentProviders(process.env).length > 0
+      ? null
+      : faltaCredencial(credencialDelTurno()) ??
+        `Len has no provider with a key — OPENLEN_AGENT_PROVIDERS=${process.env.OPENLEN_AGENT_PROVIDERS ?? "(default)"}`;
   if (faltaKey) return errorJson(500, faltaKey);
 
   // The ACTIVE document — home's data.html or the validated subpage's html —
@@ -1150,7 +1162,15 @@ async function correrTurno(
     esfuerzoDelTurno,
     esfuerzoDelUsuario,
     mode,
+    // El proveedor del turno anterior, si cerró hace menos de 10 min: su caché
+    // sigue caliente (spec §3.4).
+    preferredProvider: preferredProviderFrom(filasDelHistorial.at(-1)?.transcript, Date.now()),
   });
+  /** Los créditos de un uso, CON el ajuste del respaldo: lo que el turno cobra. */
+  const creditosCobrables = (g: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number }): number => {
+    const b = billedUsage(g, brain.billingAdjustment());
+    return creditsForUsage(b.inputTokens, b.outputTokens, brain.creditRate(), b.cachedTokens);
+  };
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -1274,6 +1294,9 @@ async function correrTurno(
               transcript: transcripcionDelTurno
                 ? {
                     ...transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map()),
+                    // Quién atendió el final del turno y cuándo: el siguiente lo
+                    // prefiere mientras su caché siga caliente (spec §3.4).
+                    provider: { id: brain.lastProvider(), at: new Date().toISOString() },
                     ...(planActivo ? { planMode: true as const } : {}),
                     // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
                     ...(goalActual ? { goal: goalActual } : {}),
@@ -1564,14 +1587,12 @@ async function correrTurno(
           // Con la MISMA cuenta que el cobro de abajo. Sin gasto todavía no se
           // pregunta: `creditsForUsage` tiene un suelo de 1 y un saldo mínimo
           // cerraría el turno antes de empezar.
-          excedePresupuesto: (g) =>
-            g.inputTokens + g.outputTokens > 0 &&
-            creditsForUsage(g.inputTokens, g.outputTokens, brain.creditRate(), g.cachedTokens) >= techo,
+          // Y con lo COBRABLE: lo que un respaldo no le cobra al usuario tampoco
+          // le acerca el techo (spec local 2026-10-16-second-provider §3.4b).
+          excedePresupuesto: (g) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g) >= techo,
           // La lista de progreso (spec local 2026-10-15): el aviso al 70 %, con
           // la MISMA cuenta; si sigue solo un encargo, y la lista heredada.
-          nearBudget: (g) =>
-            g.inputTokens + g.outputTokens > 0 &&
-            creditsForUsage(g.inputTokens, g.outputTokens, brain.creditRate(), g.cachedTokens) >= techo * NEAR_TURN_CAP_RATIO,
+          nearBudget: (g) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g) >= techo * NEAR_TURN_CAP_RATIO,
           goalContinues: () => goalArmado && goalActual?.phase === "active",
           initialTodos: listaDelTurno.initialTodos,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
@@ -1703,34 +1724,50 @@ async function correrTurno(
         // registraba el hecho y no el dinero: se podían contar los casos pero no
         // sumarlos, que es justo la pregunta que hay que responder.
         const { inputTokens, outputTokens, cachedTokens, thinkingTokens } = result.usage;
-        const credits = Math.max(
-          1,
-          creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens),
-        );
+        // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider §3.4b): se
+        // COBRA lo cobrable —un respaldo no lo paga el usuario— y el libro guarda
+        // lo que el turno VALÍA (`listCenticredits`). Sin respaldo, lo mismo.
+        const credits = Math.max(1, creditosCobrables(result.usage));
+        const valia = Math.max(1, creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens));
         // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la fila del
-        // turno, con sus tokens. El costo sale del TOTAL del turno: hoy hay un solo
-        // proveedor y sin franja, así que da lo mismo que llamada a llamada. 🔴 El
-        // paso del segundo proveedor tiene que acumularlo POR LLAMADA en
-        // lib/agent/loop.ts, donde se suma `usage`.
+        // turno, con sus tokens, un `use` por proveedor que corrió (§3.5). Con
+        // uno solo, los totales del bucle, que cuentan también lo que estimó
+        // de un intento sin uso del proveedor.
+        const filasDeUso = brain.providersUsed();
+        const usosDelTurno: LedgerEntry["uses"] =
+          filasDeUso.length > 1
+            ? filasDeUso.map((u) => ({
+                provider: u.provider,
+                model: u.model,
+                inputTokens: u.inputTokens,
+                cachedTokens: u.cachedTokens,
+                outputTokens: u.outputTokens,
+                reasoningTokens: u.thinkingTokens,
+                at: new Date(),
+              }))
+            : [
+                {
+                  provider: filasDeUso[0]?.provider ?? brain.lastProvider(),
+                  model: filasDeUso[0]?.model ?? brain.modelId,
+                  inputTokens,
+                  cachedTokens,
+                  outputTokens,
+                  reasoningTokens: thinkingTokens,
+                  at: new Date(),
+                },
+              ];
         const turnoDelLibro = (outcome: LedgerOutcome): LedgerEntry => ({
           surface: "agent_turn",
           outcome,
           projectId,
           actorId: miembro ? quien : null,
           refId: filaId,
-          listCenticredits: credits,
-          uses: [
-            {
-              provider: "fireworks",
-              model: brain.modelId,
-              inputTokens,
-              cachedTokens,
-              outputTokens,
-              reasoningTokens: thinkingTokens,
-              at: new Date(),
-            },
-          ],
+          listCenticredits: valia,
+          uses: usosDelTurno,
         });
+        // Para el enfriamiento: 3 turnos seguidos con respaldo saltan al
+        // principal 5 min (`lib/agent/provider-health.ts`).
+        noteTurn({ primary: brain.firstProvider(), fellBack: brain.fellBack(), now: Date.now() });
         const gastoTokens = inputTokens + outputTokens > 0;
         if (!result.terminalError && !result.sinCobro) {
           // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:
@@ -1770,7 +1807,10 @@ async function correrTurno(
               // siendo un prefijo exacto y los greps que ya existen no se
               // enteren; con `=` porque esto nace para contarse a maquina, igual
               // que el `motivo=` de la rama de abajo.
-              ` / vueltas=${result.turns} llamadas=${result.toolCalls}`,
+              ` / vueltas=${result.turns} llamadas=${result.toolCalls}` +
+              // Y SI HUBO RESPALDO, quiénes (spec §3.5): al final, para que lo
+              // de antes siga siendo un prefijo exacto.
+              (brain.fellBack() ? ` / proveedores=${brain.firstProvider()},${brain.lastProvider()}` : ""),
           );
           await chargeCredits(userId, credits, turnoDelLibro("ok"));
           if (miembro) await sumarGasto(projectId, quien, credits);

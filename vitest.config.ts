@@ -438,6 +438,7 @@ export default defineConfig({
       "lib/agent/brain.test.ts",
       "lib/agent/brain-providers.test.ts",
       "lib/agent/provider-health.test.ts",
+      "lib/agent/provider-billing.test.ts",
       // Len Dynamis (lib/agent/dynamis.ts): del cuerpo del turno a lo que lee el
       // modelo. `include` es LISTA BLANCA: sin esta línea no correría nunca.
       "lib/agent/dynamis.test.ts",
