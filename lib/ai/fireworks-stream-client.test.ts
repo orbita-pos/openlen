@@ -665,3 +665,45 @@ describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
     expect(events.at(-1)).toEqual({ type: "done", stopReason: { kind: "end_turn" } });
   });
 });
+
+// EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): el mismo cliente
+// habla con DeepInfra por opciones, sin tocar a quien llama.
+describe("provider dialect", () => {
+  const DEEPINFRA = {
+    endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
+    modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    affinityField: "prompt_cache_key" as const,
+  };
+
+  it("a DeepInfra dialect sends its URL, its model and prompt_cache_key", async () => {
+    const fetchImpl = vi.fn(async () => new Response(chunk({ content: "x" }, "stop"), { status: 200 }));
+    const c = createFireworksStreamClient({ apiKey: "di", fetchImpl: fetchImpl as unknown as typeof fetch, ...DEEPINFRA });
+    await drain(c.stream(REQUEST));
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string; headers: Record<string, string> }];
+    const body = JSON.parse(init.body);
+    expect(url).toBe(DEEPINFRA.endpoint);
+    expect(body.model).toBe("deepseek-ai/DeepSeek-V4.1-Flash");
+    expect(body.prompt_cache_key).toBe("project-1");
+    expect(body).not.toHaveProperty("user");
+    expect(init.headers.authorization).toBe("Bearer di");
+  });
+
+  it("the default is still Fireworks with user", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
+    await drain(c.stream(REQUEST));
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string }];
+    const body = JSON.parse(init.body);
+    expect(url).toBe("https://api.fireworks.ai/inference/v1/chat/completions");
+    expect(body.user).toBe("project-1");
+    expect(body).not.toHaveProperty("prompt_cache_key");
+  });
+
+  it("an HTTP error carries its status", async () => {
+    const fetchImpl = vi.fn(async () => new Response('{"message":"You need positive balance"}', { status: 402 }));
+    const c = createFireworksStreamClient({ apiKey: "di", fetchImpl: fetchImpl as unknown as typeof fetch, ...DEEPINFRA });
+    const events = await drain(c.stream(REQUEST));
+    const done = events.at(-1) as { stopReason: { kind: string; httpStatus?: number; code?: string } };
+    expect(done.stopReason).toMatchObject({ kind: "error", httpStatus: 402 });
+    expect(done.stopReason.code).toBeUndefined();
+  });
+});

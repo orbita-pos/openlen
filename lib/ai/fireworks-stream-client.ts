@@ -55,7 +55,17 @@ export type FireworksStopReason =
   | { readonly kind: "cancelled" }
   // `code`: los fallos que el BUCLE del agente sabe reintentar
   // (`lib/agent/retry-policy.ts`, como DeepSeek). Sin código = defecto nuestro.
-  | { readonly kind: "error"; readonly error: string; readonly code?: ProviderErrorCode };
+  | {
+      readonly kind: "error";
+      readonly error: string;
+      readonly code?: ProviderErrorCode;
+      /** El estado HTTP cuando el proveedor rechazó la petición (p. ej. 402 = sin
+       *  saldo en DeepInfra). Lo lee el cerebro para decidir el respaldo. */
+      readonly httpStatus?: number;
+      /** El cerebro cambió de proveedor: el bucle reintenta el paso con todos sus
+       *  reintentos (spec local 2026-10-16-second-provider §3.4). */
+      readonly switchedProvider?: true;
+    };
 
 export interface FireworksStreamToolCall {
   readonly id: string;
@@ -155,6 +165,12 @@ export interface FireworksStreamClientOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly fetchImpl?: typeof fetch;
   readonly endpoint?: string;
+  /** EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): el modelo con
+   *  el id de ESE proveedor. Sin él, el de la política para el papel (Fireworks). */
+  readonly modelId?: string;
+  /** El campo que pega una charla a su caché: `user` en Fireworks,
+   *  `prompt_cache_key` en DeepInfra. Por defecto `user`. */
+  readonly affinityField?: "user" | "prompt_cache_key";
 }
 
 export interface FireworksStreamClient {
@@ -268,6 +284,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
   const apiKey = (options.apiKey ?? env.FIREWORKS_API_KEY)?.trim();
   const fetchImpl = options.fetchImpl ?? fetch;
   const endpoint = options.endpoint ?? FIREWORKS_ENDPOINT;
+  const affinityField = options.affinityField ?? "user";
 
   return {
     modelId: modelIdForRole("reasoner"),
@@ -279,7 +296,9 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       }
       const role = roleForOperation(request.operation);
 
-      const modelId = modelIdForRole(role);
+      // El esfuerzo no cambia de proveedor: los números que manda (25, 60; `high`
+      // = omitir) valen igual en la escala 1–100 de DeepInfra (spec §3.3).
+      const modelId = options.modelId ?? modelIdForRole(role);
       // El cuerpo se construye en una funcion porque puede mandarse DOS VECES:
       // si el proveedor rechaza `reasoning_effort`, se repite sin el en vez de
       // tirarle el turno al usuario. Ver `esfuerzo-no-admitido.ts`.
@@ -340,7 +359,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             // "standard"` explícito es ruido en el cable y una diferencia más
             // que puede desviar la caché de prompt.
             ...(request.serviceTier === "priority" ? { service_tier: "priority" } : {}),
-            user: request.requestId,
+            [affinityField]: request.requestId,
             stream: true,
             stream_options: { include_usage: true },
         });
@@ -400,14 +419,19 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             try { cuerpo = await response.text(); } catch { /* sin cuerpo */ }
             const reintento = `http_${response.status}${cuerpo ? `: ${cuerpo.slice(0, 300)}` : ""}`;
             const code = codeForProviderError(response.status, cuerpo);
-            yield { type: "done", stopReason: { kind: "error", error: reintento, ...(code ? { code } : {}) } };
+            yield { type: "done", stopReason: { kind: "error", error: reintento, httpStatus: response.status, ...(code ? { code } : {}) } };
             return;
           }
         } else {
           const code = codeForProviderError(response.status, crudo);
           yield {
             type: "done",
-            stopReason: { kind: "error", error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`, ...(code ? { code } : {}) },
+            stopReason: {
+              kind: "error",
+              error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`,
+              httpStatus: response.status,
+              ...(code ? { code } : {}),
+            },
           };
           return;
         }
