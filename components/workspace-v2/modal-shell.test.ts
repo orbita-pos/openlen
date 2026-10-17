@@ -32,6 +32,9 @@ const PENDIENTES: readonly string[] = [
   // distinto: puede que no necesite caparazón propio, sino ninguno.
   "image-editor.tsx",
   "original-restore-modal.tsx",
+  // El de «Guardar como secreto» del chat (12/10): un diálogo pequeño, de
+  // 420 px, y `ModalShell` sólo tiene lg/xl/page. Migrarlo pide su tamaño.
+  "secret-dialog.tsx",
   "site-pages-panel.tsx",
   "versions-panel.tsx",
   // Un desplegable, no un modal: lleva velo pero no trampa de foco. Habrá que

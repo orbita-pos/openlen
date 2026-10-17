@@ -731,6 +731,66 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "read_me",
+    "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "modules": {
+          "type": "ARRAY",
+          "description": "Which module guides to include. Pick the ones that fit the visual you're about to make.",
+          "items": {
+            "type": "STRING",
+            "enum": [
+              "chart",
+              "diagram",
+              "mockup",
+              "interactive"
+            ]
+          }
+        },
+        "platform": {
+          "type": "STRING",
+          "enum": [
+            "mobile",
+            "desktop",
+            "unknown"
+          ],
+          "description": "Where the user is reading: mobile (a phone) or desktop. Use unknown if you can't tell."
+        }
+      }
+    }
+  },
+  {
+    "name": "show_widget",
+    "description": "Show a visual inside your reply in the chat — a chart, a diagram, a mockup or a small interactive tool — when seeing it helps more than reading; when plain text is clearer, answer in text. Explain in your reply and put only the visual here. Show only figures that came from your tools, never made-up ones.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "title": {
+          "type": "STRING",
+          "description": "A short snake_case name for this visual, specific enough to tell it apart from the others in the conversation."
+        },
+        "loading_messages": {
+          "type": "ARRAY",
+          "description": "One to four short phrases (about five words each) shown while the visual loads, in the user's language. Keep them plain when the topic is serious.",
+          "items": {
+            "type": "STRING"
+          }
+        },
+        "widget_code": {
+          "type": "STRING",
+          "description": "An HTML fragment (no <html>, <head> or <body>) or an SVG that starts with <svg. Put a short <style> first, then the content, and any <script> last: it is shown while you write it, and its scripts run when you finish."
+        }
+      },
+      "required": [
+        "title",
+        "loading_messages",
+        "widget_code"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -1517,6 +1577,66 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "read_me",
+    "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "modules": {
+          "type": "ARRAY",
+          "description": "Which module guides to include. Pick the ones that fit the visual you're about to make.",
+          "items": {
+            "type": "STRING",
+            "enum": [
+              "chart",
+              "diagram",
+              "mockup",
+              "interactive"
+            ]
+          }
+        },
+        "platform": {
+          "type": "STRING",
+          "enum": [
+            "mobile",
+            "desktop",
+            "unknown"
+          ],
+          "description": "Where the user is reading: mobile (a phone) or desktop. Use unknown if you can't tell."
+        }
+      }
+    }
+  },
+  {
+    "name": "show_widget",
+    "description": "Show a visual inside your reply in the chat — a chart, a diagram, a mockup or a small interactive tool — when seeing it helps more than reading; when plain text is clearer, answer in text. Explain in your reply and put only the visual here. Show only figures that came from your tools, never made-up ones.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "title": {
+          "type": "STRING",
+          "description": "A short snake_case name for this visual, specific enough to tell it apart from the others in the conversation."
+        },
+        "loading_messages": {
+          "type": "ARRAY",
+          "description": "One to four short phrases (about five words each) shown while the visual loads, in the user's language. Keep them plain when the topic is serious.",
+          "items": {
+            "type": "STRING"
+          }
+        },
+        "widget_code": {
+          "type": "STRING",
+          "description": "An HTML fragment (no <html>, <head> or <body>) or an SVG that starts with <svg. Put a short <style> first, then the content, and any <script> last: it is shown while you write it, and its scripts run when you finish."
+        }
+      },
+      "required": [
+        "title",
+        "loading_messages",
+        "widget_code"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -2297,6 +2417,66 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "read_me",
+    "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "modules": {
+          "type": "ARRAY",
+          "description": "Which module guides to include. Pick the ones that fit the visual you're about to make.",
+          "items": {
+            "type": "STRING",
+            "enum": [
+              "chart",
+              "diagram",
+              "mockup",
+              "interactive"
+            ]
+          }
+        },
+        "platform": {
+          "type": "STRING",
+          "enum": [
+            "mobile",
+            "desktop",
+            "unknown"
+          ],
+          "description": "Where the user is reading: mobile (a phone) or desktop. Use unknown if you can't tell."
+        }
+      }
+    }
+  },
+  {
+    "name": "show_widget",
+    "description": "Show a visual inside your reply in the chat — a chart, a diagram, a mockup or a small interactive tool — when seeing it helps more than reading; when plain text is clearer, answer in text. Explain in your reply and put only the visual here. Show only figures that came from your tools, never made-up ones.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "title": {
+          "type": "STRING",
+          "description": "A short snake_case name for this visual, specific enough to tell it apart from the others in the conversation."
+        },
+        "loading_messages": {
+          "type": "ARRAY",
+          "description": "One to four short phrases (about five words each) shown while the visual loads, in the user's language. Keep them plain when the topic is serious.",
+          "items": {
+            "type": "STRING"
+          }
+        },
+        "widget_code": {
+          "type": "STRING",
+          "description": "An HTML fragment (no <html>, <head> or <body>) or an SVG that starts with <svg. Put a short <style> first, then the content, and any <script> last: it is shown while you write it, and its scripts run when you finish."
+        }
+      },
+      "required": [
+        "title",
+        "loading_messages",
+        "widget_code"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -2740,7 +2920,7 @@ When the user adjusts elements in the canvas's Design panel and applies them, a 
 - Then check the result with view_page on that screen.
 
 THE PROJECT'S FOLDER:
-Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
+Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /ai, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at /src/main.tsx. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
 Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; view_page mode="screenshot" shows it to you as an image; use_page tries it like a user, screen by screen, and can take a screenshot after a step or inspect it with eval. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.
@@ -2840,7 +3020,7 @@ LINKS (<a href>):
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
 THE PROJECT'S FOLDER:
-Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
+Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /ai, /openlen). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests, which are not run here (there is no Playwright in the terminal): they are kept, never published, and they go with the project when it is exported. Checking the page here is view_page and use_page. /supabase holds the backend's migrations.
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
@@ -2897,7 +3077,7 @@ LINKS (<a href>):
 - ANCHORS ("#pricing"): only if that id EXISTS on the target page; if not, create it in the same edit.
 
 THE PROJECT'S FOLDER:
-Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
+Besides its pages, the project is a folder like any Vercel + Supabase project: /js, /css, /data/*.json, /sw.js, /manifest.json and any other text file (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md), anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /ai, /openlen). They are read and changed like the pages, every change can be undone with the turn, and publishing ships them as they are, next to the pages — except .jsx, .tsx and .ts, which are served and published compiled to JavaScript at the same path. Reference them by path: \`<script src="/js/app.js" type="module">\`, \`fetch("/data/menu.json")\`.
 - /tests holds Playwright tests, which are not run here (there is no Playwright in the terminal): they are kept, never published, and they go with the project when it is exported. Checking the page here is view_page and use_page. /supabase holds the backend's migrations.
 - view_page and use_page load these files the way the published site does. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - An installable app is a /manifest.json plus a service worker at /sw.js; if the site stops using one, the platform publishes a /sw.js that removes itself, so no visitor stays on an old version.
@@ -2986,7 +3166,7 @@ When the user adjusts elements in the canvas's Design panel and applies them, a 
 - Then check the result with view_page on that screen.
 
 THE PROJECT'S FOLDER:
-Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
+Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (/api, /c, /assets, /uploads, /rest, /auth, /storage, /functions, /realtime, /ai, /openlen), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at /src/main.jsx. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
 - Up to 500 files and 10 MB; 1 MB per file (256 KB per test file).
 Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; view_page mode="screenshot" shows it to you as an image; use_page tries it like a user, screen by screen, and can take a screenshot after a step or inspect it with eval. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.

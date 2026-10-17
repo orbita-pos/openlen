@@ -51,7 +51,7 @@ const MAX_DEPTH = 8;
  *  la plataforma sirve las dependencias de las apps (`lib/apps/dependencias.ts`);
  *  las de la segunda, las carpetas de Len y de su terminal. */
 export const RESERVED_ROOTS: readonly string[] = [
-  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "openlen",
+  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "ai", "openlen",
   "memoria", "ajustes", "tmp", "bin", "usr", "dev", "proc", "home",
 ];
 /** Ficheros sueltos que no son de la carpeta: el manual de Len y el LEN.md
