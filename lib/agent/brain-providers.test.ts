@@ -116,12 +116,22 @@ describe("Len's brain and its providers", () => {
     expect(f.calls.map((c) => c.provider)).toEqual(["fireworks"]);
   });
 
-  it("a low or medium turn starts where the effort dial works (Fireworks)", async () => {
+  // Medido el 17/10 (35 + 21 llamadas, .superpowers/spikes/effort-probe.ts): con un
+  // encargo que pide pensar, `low` en DeepInfra piensa ~40 % menos que su auto
+  // (2.916 frente a 4.916 tokens), lo mismo o menos que `low` en Fireworks (3.889),
+  // y cuesta ~3 veces menos. La medición del 16/10 (una llamada por nivel) decía
+  // que la palabra no recortaba: era ruido. Jesús: low y medium, a DeepInfra.
+  it("a low or medium turn starts on DeepInfra like any other", async () => {
     const f = fakes({});
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, esfuerzoDelTurno: "low", streamClientFor: f.streamClientFor });
     await drain(brain.openStream([USER]));
-    expect(f.calls.map((c) => c.provider)).toEqual(["fireworks"]);
+    expect(f.calls.map((c) => c.provider)).toEqual(["deepinfra"]);
     expect(f.calls[0]!.request.esfuerzo).toBe("low");
+
+    const m = fakes({});
+    const medium = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, esfuerzoDelTurno: "medium", streamClientFor: m.streamClientFor });
+    await drain(medium.openStream([USER]));
+    expect(m.calls.map((c) => c.provider)).toEqual(["deepinfra"]);
 
     const only = fakes({});
     const deepinfraOnly = createAgentBrain({

@@ -11,7 +11,7 @@ import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-b
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 import { esfuerzoEfectivo, operatorEffort } from "./esfuerzo-efectivo";
-import { caparEsfuerzo, capacidadDeEsfuerzo, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
+import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
 import { coolDown, isCooling } from "./provider-health";
 import { isRetryable } from "./retry-policy";
 import {
@@ -130,20 +130,21 @@ function addUsage(into: UsageTotals, u: UsageTotals): void {
   into.thinkingTokens += u.thinkingTokens;
 }
 
-/** El orden del turno: el preferido delante; con un esfuerzo que es un NÚMERO
- *  (low, medium), los proveedores donde el dial recorta delante (en DeepInfra la
- *  palabra sólo enciende el pensamiento — medido el 16/10); y los que están en
- *  enfriamiento fuera, salvo que lo estén todos. */
+/** El orden del turno: el preferido delante, y los que están en enfriamiento
+ *  fuera, salvo que lo estén todos.
+ *
+ *  ⚰️ Aquí los turnos `low`/`medium` ponían delante a Fireworks, porque una
+ *  medición del 16/10 (una llamada por nivel) decía que en DeepInfra la palabra
+ *  no recortaba el pensamiento. Medido otra vez el 17/10 con un encargo que pide
+ *  pensar (3 llamadas por nivel): `low` recorta ~40 % allí también, piensa lo
+ *  mismo o menos que en Fireworks y cuesta ~3 veces menos. Jesús: a DeepInfra. */
 function providerOrder(
   resolved: readonly ResolvedProvider[],
-  o: { preferred: ProviderId | null; numericEffort: boolean; now: number },
+  o: { preferred: ProviderId | null; now: number },
 ): ResolvedProvider[] {
   let list = [...resolved];
   const preferred = o.preferred ? list.find((p) => p.id === o.preferred) : undefined;
   if (preferred) list = [preferred, ...list.filter((p) => p !== preferred)];
-  if (o.numericEffort) {
-    list = [...list.filter((p) => p.dialect.effortStyle === "budget"), ...list.filter((p) => p.dialect.effortStyle !== "budget")];
-  }
   const healthy = list.filter((p) => !isCooling(p.id, o.now));
   return healthy.length > 0 ? healthy : list;
 }
@@ -303,11 +304,8 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
   // proveedor —también el cierre— salvo que tenga que pasar al respaldo. Cada
   // proveedor, una sola vez por turno: no hay vaivén. Sin ningún proveedor con
   // clave, el cliente de siempre, que lo dice con `missing_key`.
-  const numericEffort =
-    esfuerzo !== null && effortWord === undefined && presupuestoDeEsfuerzo(esfuerzo, loopCeiling) !== undefined;
   const order = providerOrder(resolveAgentProviders(env, options.providers), {
     preferred: options.preferredProvider ?? null,
-    numericEffort,
     now: Date.now(),
   });
   const legacy = order.length === 0;
