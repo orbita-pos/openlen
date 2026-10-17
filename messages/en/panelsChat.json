@@ -367,5 +367,10 @@
     "publishAnyway": "Publish anyway",
     "functionsDoNotCompile": "The functions don't compile, so nothing was published:\n{errors}",
     "functionsFailed": "The functions couldn't be started. The page didn't change."
-  }
+  },
+  "visualLabel": "Len's visual: {title}",
+  "visualLoading": "Preparing the visual…",
+  "visualLinkTitle": "Open this link?",
+  "visualLinkOpen": "Open",
+  "visualLinkCancel": "Cancel"
 }

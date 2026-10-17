@@ -43,6 +43,7 @@ import { activityOf, openQuestionIndex, type Activity } from "./live-status";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { TODO_WRITE } from "@/lib/agent/todo-list";
+import { READ_ME, SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import type { DesignTurn } from "./use-agent-chat";
 
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
@@ -72,7 +73,12 @@ export function visibleSteps(actions: readonly AgentAction[] | undefined): Agent
   // que espera, también: aunque otras llamadas de su tanda vayan detrás.
   // La lista de progreso tampoco es un paso: se pinta ella (`TodoListView`).
   const abierta = openQuestionIndex(list);
-  return list.filter((a, i) => !(asksTheOwner(a.tool) && a.dismissed) && i !== abierta && a.tool !== TODO_WRITE);
+  // Los visuales tampoco (spec local 2026-10-16-len-inline-visuals): el manual
+  // no se narra, como en Claude, y el visual va en la respuesta (`LenReply`).
+  return list.filter(
+    (a, i) =>
+      !(asksTheOwner(a.tool) && a.dismissed) && i !== abierta && a.tool !== TODO_WRITE && a.tool !== READ_ME && a.tool !== SHOW_WIDGET,
+  );
 }
 
 /** Cuántas tarjetas de la terminal van antes de la `i`-ésima: su posición entre ellas. */

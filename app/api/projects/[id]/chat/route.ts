@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { todosFrom } from "@/lib/agent/todo-list";
+import { widgetFrom } from "@/lib/agent/visuals/widget";
 import {
   appendChatMessage,
   updateChatMessageStatus,
@@ -142,6 +143,15 @@ const ActionSchema = z.object({
     .unknown()
     .transform((v) => todosFrom(v) ?? undefined)
     .optional(),
+  /** El visual de `show_widget` (spec local 2026-10-16-len-inline-visuals) y su
+   *  punto del texto. Aquí por lo mismo que `todos`. Un código de más o mal
+   *  formado se QUITA (`widgetFrom` da null): recortarlo lo rompería, y
+   *  rechazarlo haría 400 al turno entero. */
+  widget: z
+    .unknown()
+    .transform((v) => widgetFrom(v) ?? undefined)
+    .optional(),
+  textOffset: z.number().int().min(0).max(1_000_000).optional().catch(undefined),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

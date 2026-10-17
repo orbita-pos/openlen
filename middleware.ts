@@ -4,7 +4,7 @@ import NextAuth from "next-auth";
 import authConfig from "@/auth.config";
 import { routing } from "@/i18n/routing";
 import { destinoDelLogin } from "@/lib/login/destino";
-import { etiquetaDelHost } from "@/lib/lienzo/prefijo";
+import { etiquetaDelHost, isVisualsHost } from "@/lib/lienzo/prefijo";
 import { isMcpHost, mcpHostAllows } from "@/lib/mcp/host-rewrite";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -159,6 +159,9 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
   // middleware). Aquí sólo se deja pasar: el resto de esta función le pondría
   // un idioma delante o lo mandaría al login.
   if (etiquetaDelHost(req.headers.get("host"))) return NextResponse.next();
+  // LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): lo mismo en
+  // el host del marco, `lienzo-visuals`; lo manda a su documento `rewrites()`.
+  if (isVisualsHost(req.headers.get("host"))) return NextResponse.next();
   // EL SERVIDOR MCP (plans/mcp-de-openlen): `rewrites()` manda /mcp a /api/mcp
   // y aquí sólo se deja pasar, como el lienzo; lo demás de ese host es 404 —la
   // app no se sirve en ese origen ni se salta así el login—.

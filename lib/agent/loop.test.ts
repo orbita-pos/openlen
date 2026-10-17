@@ -50,6 +50,35 @@ describe("runAgentLoop", () => {
     expect(tarjeta.todos).toEqual(lista);
   });
 
+  // LOS VISUALES (spec local 2026-10-16-len-inline-visuals): el visual se enseña
+  // a medio escribir y viaja entero en el evento de su tarjeta.
+  it("show_widget emits widget_preview while written, then its action carries the widget", async () => {
+    const events: AgentStreamEvent[] = [];
+    const widget = { title: "visits_week", loadingMessages: ["Contando visitas"], code: "<p>" + "a".repeat(500) + "</p>" };
+    const args = { title: widget.title, loading_messages: widget.loadingMessages, widget_code: widget.code };
+    const json = JSON.stringify(args);
+    await runAgentLoop({
+      messages: [{ role: "user", content: "¿cómo va?" }], tools: [],
+      openStream: scripted(
+        [
+          { type: "function_call_delta", index: 0, name: "show_widget", argsDelta: json.slice(0, 300) },
+          { type: "function_call_delta", index: 0, argsDelta: json.slice(300) },
+          { type: "function_call", name: "show_widget", args },
+          done,
+        ],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true }, widget }),
+      emit: (e) => events.push(e),
+    });
+    const preview = events.findIndex((e) => e.type === "widget_preview");
+    const card = events.findIndex((e) => e.type === "action" && e.status !== "running");
+    expect(preview).toBeGreaterThan(-1);
+    expect(card).toBeGreaterThan(preview);
+    expect(events[preview]).toMatchObject({ type: "widget_preview", callIndex: 0, title: "visits_week" });
+    expect((events[card] as { widget?: unknown }).widget).toEqual(widget);
+  });
+
   it("text-only turn finishes without tools", async () => {
     const events: AgentStreamEvent[] = [];
     const r = await runAgentLoop({

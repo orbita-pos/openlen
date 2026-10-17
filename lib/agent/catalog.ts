@@ -47,6 +47,7 @@ import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
+import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
@@ -417,6 +418,11 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): la tarjeta segura de
     // los secretos, por el canal de la pregunta (`lib/agent/request-secrets.ts`).
     REQUEST_SECRETS_DECLARATION,
+    // LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): las dos
+    // de las herramientas visualize de Claude, con sus nombres y su forma, y
+    // palabras nuestras (`lib/agent/visuals/tools.ts`).
+    READ_ME_DECLARATION,
+    SHOW_WIDGET_DECLARATION,
     // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
     // acepta) y la salida de DeepSeek (el plan se revisa) en
     // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:

@@ -327,6 +327,8 @@ type CuerpoDelTurno = {
   design?: unknown;
   /** El idioma de la interfaz, para el `lang` del cascarón de una app que nace. */
   idioma?: unknown;
+  /** LOS VISUALES: si la persona lee en un teléfono (`mobile`) o no (`desktop`). */
+  dispositivo?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -953,6 +955,9 @@ async function correrTurno(
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
+    // LOS VISUALES (spec local 2026-10-16): si lee en un teléfono, para la
+    // plataforma de `read_me`. Sólo esos dos literales; otro valor no cuenta.
+    ...(body?.dispositivo === "mobile" ? { dispositivo: "mobile" as const } : body?.dispositivo === "desktop" ? { dispositivo: "desktop" as const } : {}),
     // Y el que ESCRIBE, que manda sobre el de la interfaz (Holi, 10/10): de sus
     // palabras de ahora y de las de antes en esta charla, no del historial del
     // modelo, donde van pegadas a avisos en inglés.

@@ -36,3 +36,11 @@ export const LIENZO_REWRITES = [
     destination: `${LIENZO_SITE_ROUTE}/:ruta`,
   },
 ];
+
+// LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): en el host
+// `lienzo-visuals` sólo responde el documento del marco, sea cual sea la ruta.
+// Va en `rewrites()` por lo mismo que el lienzo (arriba).
+export const VISUAL_FRAME_ROUTE = "/api/visual-frame";
+export const VISUALS_REWRITES = [
+  { source: "/:path*", has: [{ type: "host" as const, value: "lienzo-visuals\\..*" }], destination: VISUAL_FRAME_ROUTE },
+];

@@ -367,5 +367,10 @@
     "publishAnyway": "このまま公開",
     "functionsDoNotCompile": "関数をコンパイルできないため、何も公開されていません:\n{errors}",
     "functionsFailed": "関数を起動できませんでした。ページは変更されていません。"
-  }
+  },
+  "visualLabel": "Len のビジュアル: {title}",
+  "visualLoading": "ビジュアルを準備中…",
+  "visualLinkTitle": "このリンクを開きますか?",
+  "visualLinkOpen": "開く",
+  "visualLinkCancel": "キャンセル"
 }

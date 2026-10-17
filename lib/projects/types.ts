@@ -420,6 +420,13 @@ export interface StoredChatTurn {
     /** La lista de progreso que escribió `todo_write` (spec local 2026-10-15).
      *  Sólo en tarjetas de `todo_write`; la última del turno es su lista. */
     todos?: ReadonlyArray<{ readonly content: string; readonly status: "pending" | "in_progress" | "completed" }>;
+    /** El visual que dibujó `show_widget` (spec local 2026-10-16-len-inline-visuals).
+     *  Sólo en sus tarjetas, y es su única copia: el código nunca se sanea ni
+     *  llega a los ficheros del proyecto (lo protege el marco aislado). */
+    widget?: { readonly title: string; readonly loadingMessages: readonly string[]; readonly code: string };
+    /** En qué punto del texto de Len va ese visual: los caracteres que llevaba
+     *  escritos cuando lo dibujó. Sin él (filas de antes), al final. */
+    textOffset?: number;
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

@@ -268,6 +268,9 @@ export function buildAgentContext(args: {
   zona?: string;
   /** El idioma de la interfaz del usuario (`es`, `pt`…), el que manda el panel. */
   idioma?: string;
+  /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): si la persona lee
+   *  en un teléfono, lo que manda el panel. Sin él, o `desktop`, nada cambia. */
+  dispositivo?: "mobile" | "desktop";
   /** El idioma en que ESCRIBE (`userWritingLanguage`). Si lo hay, se nombra
    *  éste y no el de la interfaz. */
   writingLanguage?: string | null;
@@ -363,6 +366,8 @@ export function buildAgentContext(args: {
     : nombreDelIdioma
       ? `LANGUAGE: the user's interface is in ${nombreDelIdioma}. Everything they read goes in the language of their message —${nombreDelIdioma} unless they write in another—: the notes between your steps as much as your final answer. Code, file names and identifiers stay as they are.\n\n`
       : "";
+  // LOS VISUALES: `read_me` pide la plataforma; en un teléfono, Len lo sabe.
+  const dispositivoBlock = args.dispositivo === "mobile" ? "DEVICE: the user is reading on a phone (about 360px wide).\n\n" : "";
 
   // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
   // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
@@ -401,7 +406,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -437,6 +442,8 @@ export interface BuildAgentMessagesArgs {
   zona?: string;
   /** El idioma de la interfaz (ver buildAgentContext.idioma). */
   idioma?: string;
+  /** Si lee en un teléfono (ver buildAgentContext.dispositivo). */
+  dispositivo?: "mobile" | "desktop";
   /** Ver buildAgentContext.writingLanguage. */
   writingLanguage?: string | null;
   /** Ver buildAgentContext.turnoAnteriorMudo. */
@@ -529,6 +536,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     equipo: args.equipo,
     zona: args.zona,
     idioma: args.idioma,
+    dispositivo: args.dispositivo,
     writingLanguage: args.writingLanguage,
     state: args.state,
     turnoAnteriorMudo: args.turnoAnteriorMudo,
