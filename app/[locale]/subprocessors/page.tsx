@@ -112,9 +112,8 @@ export default async function SubprocessorsPage({
               registra su contenido y no entrena con él.
             </li>
             <li>
-              <strong>Fireworks AI</strong> (api.fireworks.ai) — el respaldo de
-              Len (recibe lo mismo que DeepInfra cuando éste no contesta) y el
-              resto de la IA: revisión por visión, la revisión de seguridad al
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — parte de los
+              turnos de Len (recibe lo mismo que DeepInfra) y el resto de la IA: revisión por visión, la revisión de seguridad al
               publicar y el asistente de una página. Datos: además de lo de Len,
               capturas e imágenes de referencia y las preguntas que los
               visitantes le hacen al asistente de una página. Fireworks no guarda
@@ -270,9 +269,9 @@ export default async function SubprocessorsPage({
               does not train on it.
             </li>
             <li>
-              <strong>Fireworks AI</strong> (api.fireworks.ai) — Len&apos;s
-              fallback (it receives the same as DeepInfra when DeepInfra does not
-              answer) and the rest of the AI: vision review, the security review
+              <strong>Fireworks AI</strong> (api.fireworks.ai) — some of
+              Len&apos;s turns (it receives the same as DeepInfra) and the rest of
+              the AI: vision review, the security review
               on publish and a page&apos;s assistant. Data: besides Len&apos;s,
               reference screenshots and images and the questions visitors ask a
               page&apos;s assistant. Fireworks does not store what it receives for
