@@ -169,7 +169,10 @@ export type StopReason =
   | { kind: "cancelled" }
   // `code`: lo pone el cliente de Fireworks; el bucle del agente reintenta los
   // que sabe (`lib/agent/retry-policy.ts`). Ver `lib/ai/provider-error-code.ts`.
-  | { kind: "error"; error: string; code?: ProviderErrorCode };
+  // `switchedProvider`: el cerebro pasó al proveedor de respaldo y el bucle
+  // repite el paso allí, con sus reintentos completos (spec local
+  // 2026-10-16-second-provider). `httpStatus`: el del proveedor, si lo hubo.
+  | { kind: "error"; error: string; code?: ProviderErrorCode; httpStatus?: number; switchedProvider?: true };
 
 export type GatewayErrorKind =
   | "api"

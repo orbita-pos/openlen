@@ -3327,6 +3327,63 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
     expect(retry.discardChars).toBe("\n\n".length + "Ya v".length);
   });
 
+  // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): cuando el
+  // cerebro cambia de proveedor, el paso se repite en el nuevo con sus propios
+  // reintentos completos, sin espera, y lo escrito por el intento no se repite.
+  it("a switchedProvider done retries the step with a fresh attempt count and no repeated text", async () => {
+    const switched: StreamEvent = {
+      type: "done",
+      stopReason: { kind: "error", error: "http_400", code: "server", switchedProvider: true },
+    };
+    const events: AgentStreamEvent[] = [];
+    const esperas: number[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted(
+        [fallo("server")], [fallo("server")], [fallo("server")],
+        [{ type: "text_delta", text: "Voy a mir" }, switched],
+        [fallo("server")], [fallo("server")], [fallo("server")], [fallo("server")], [fallo("server")],
+        [{ type: "text_delta", text: "Listo." }, usage(5), done],
+      ),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async (ms) => { esperas.push(ms); },
+    });
+    expect(r.finalText).toBe("Listo.");
+    expect(r.terminalError).toBe(false);
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    // Lo que ve el dueño: el texto se pinta y cada `retry` retira su parte.
+    let visto = "";
+    for (const e of events) {
+      if (e.type === "text") visto += e.text;
+      if (e.type === "retry") visto = visto.slice(0, Math.max(0, visto.length - e.discardChars));
+    }
+    // (Un turno sólo de texto recibe la insistencia de siempre y el guion
+    // repite «Listo.»: eso no es del cambio.)
+    expect(visto.startsWith("Listo.")).toBe(true);
+    expect(visto).not.toContain("Voy a mir");
+    // 3 esperas en el principal + 5 en el respaldo; el cambio no espera.
+    expect(esperas).toHaveLength(8);
+  });
+
+  it("a switch with nothing written says nothing to the owner", async () => {
+    const switched: StreamEvent = {
+      type: "done",
+      stopReason: { kind: "error", error: "http_402", code: "server", switchedProvider: true },
+    };
+    const events: AgentStreamEvent[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hola" }], tools: [],
+      openStream: scripted([switched], [{ type: "text_delta", text: "Hola." }, usage(5), done]),
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+      sleep: async () => { throw new Error("a switch must not wait"); },
+    });
+    expect(events.filter((e) => e.type === "retry")).toHaveLength(0);
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events.find((e) => e.type === "text")).toEqual({ type: "text", text: "Hola." });
+  });
+
   it("tras 5 reintentos fallidos, el turno termina con el error de siempre", async () => {
     const events: AgentStreamEvent[] = [];
     const r = await runAgentLoop({

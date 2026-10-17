@@ -436,6 +436,8 @@ export default defineConfig({
       // ⚰️ El selector de modelo de Crear (`selector-de-modelo.test.tsx`) se fue
       // con Crear el 2026-10-06.
       "lib/agent/brain.test.ts",
+      "lib/agent/brain-providers.test.ts",
+      "lib/agent/provider-health.test.ts",
       // Len Dynamis (lib/agent/dynamis.ts): del cuerpo del turno a lo que lee el
       // modelo. `include` es LISTA BLANCA: sin esta línea no correría nunca.
       "lib/agent/dynamis.test.ts",

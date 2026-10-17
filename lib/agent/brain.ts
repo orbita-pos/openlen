@@ -1,10 +1,19 @@
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { createFireworksStreamClient, type FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
+import {
+  createFireworksStreamClient,
+  type FireworksStopReason,
+  type FireworksStreamClient,
+  type FireworksStreamEvent,
+  type FireworksStreamRequest,
+} from "@/lib/ai/fireworks-stream-client";
+import { resolveAgentProviders, type ProviderId, type ResolvedProvider } from "@/lib/ai/providers";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
 import { esfuerzoEfectivo, operatorEffort } from "./esfuerzo-efectivo";
-import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
+import { caparEsfuerzo, capacidadDeEsfuerzo, presupuestoDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
+import { coolDown, isCooling } from "./provider-health";
+import { isRetryable } from "./retry-policy";
 import {
   DYNAMIS_MAX_OUTPUT_TOKENS,
   DYNAMIS_REASONING_EFFORT,
@@ -33,9 +42,20 @@ export interface AgentBrainOptions {
   /** Identifica la corrida ante el transporte de Fireworks (presupuesto y bitácora). */
   readonly requestId: string;
   readonly signal?: AbortSignal;
+  /** EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): restringe los
+   *  proveedores del papel a éstos, sin reordenarlos. La revisión de seguridad
+   *  pasa `["fireworks"]`. Ausente = los de `OPENLEN_AGENT_PROVIDERS`. */
+  readonly providers?: readonly ProviderId[];
+  /** El proveedor del turno anterior de esta charla, si acabó hace menos de
+   *  10 min (lo decide la ruta): su caché sigue caliente. */
+  readonly preferredProvider?: ProviderId | null;
+  /** Sólo para pruebas: el cliente de cada proveedor. */
+  readonly streamClientFor?: (provider: ResolvedProvider) => FireworksStreamClient;
   // ⚰️ Aquí iba `attachedImage` (los píxeles y el mensaje al que se anclaban
   // en la PRIMERA vuelta). Con A (2026-10-01) la foto va pegada a tu mensaje
   // (`Message.images`) y viaja en todas las vueltas: la pega la ruta.
+  /** `OPENLEN_AGENT_EFFORT`, `OPENLEN_AGENT_PROVIDERS` y las claves de los
+   *  proveedores. Ausente = `process.env`. */
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** Lo que el usuario eligió PARA ESTE TURNO (el equivalente de `/effort`). */
   readonly esfuerzoDelTurno?: EsfuerzoAgente | null;
@@ -66,6 +86,66 @@ export interface AgentBrain {
    *  ruta porque cobrar a la tarifa del proveedor que NO corrió es justo el
    *  error que este archivo hace imposible. */
   readonly creditRate: () => CreditRate;
+  /** Lo que gastó cada proveedor que corrió, con su modelo: el costo real, para
+   *  el libro de gasto. Normalmente una fila; dos si hubo respaldo. */
+  readonly providersUsed: () => readonly ProviderUse[];
+  /** Lo que el usuario NO paga de un respaldo (spec §3.4b): `minus` es el uso
+   *  de los intentos fallidos del proveedor que se dejó, y `extraCached` la
+   *  entrada sin caché de la primera llamada en el respaldo, que se cobra como
+   *  si hubiera estado en caché. Sin respaldo, ceros. */
+  readonly billingAdjustment: () => { minus: UsageTotals; extraCached: number };
+  readonly fellBack: () => boolean;
+  readonly firstProvider: () => ProviderId;
+  readonly lastProvider: () => ProviderId;
+}
+
+/** La forma de `AgentLoopResult["usage"]`. */
+export interface UsageTotals {
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  thinkingTokens: number;
+}
+
+export interface ProviderUse extends UsageTotals {
+  provider: ProviderId;
+  model: string;
+}
+
+/** Una llamada que no da NINGÚN evento en este tiempo pasa al respaldo. Sólo
+ *  con respaldo: sin él, nada corta una llamada sola, como antes. */
+export const FIRST_EVENT_TIMEOUT_MS = 60_000;
+/** Los reintentables pasan al respaldo en este fallo del principal (el bucle
+ *  reintenta 5 veces; el respaldo tiene luego sus reintentos completos). */
+export const RETRIES_BEFORE_FALLBACK = 4;
+
+const PROVIDER_LABEL: Readonly<Record<ProviderId, string>> = { fireworks: "Fireworks", deepinfra: "DeepInfra" };
+
+const zeroUsage = (): UsageTotals => ({ inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 });
+
+function addUsage(into: UsageTotals, u: UsageTotals): void {
+  into.inputTokens += u.inputTokens;
+  into.outputTokens += u.outputTokens;
+  into.cachedTokens += u.cachedTokens;
+  into.thinkingTokens += u.thinkingTokens;
+}
+
+/** El orden del turno: el preferido delante; con un esfuerzo que es un NÚMERO
+ *  (low, medium), los proveedores donde el dial recorta delante (en DeepInfra la
+ *  palabra sólo enciende el pensamiento — medido el 16/10); y los que están en
+ *  enfriamiento fuera, salvo que lo estén todos. */
+function providerOrder(
+  resolved: readonly ResolvedProvider[],
+  o: { preferred: ProviderId | null; numericEffort: boolean; now: number },
+): ResolvedProvider[] {
+  let list = [...resolved];
+  const preferred = o.preferred ? list.find((p) => p.id === o.preferred) : undefined;
+  if (preferred) list = [preferred, ...list.filter((p) => p !== preferred)];
+  if (o.numericEffort) {
+    list = [...list.filter((p) => p.dialect.effortStyle === "budget"), ...list.filter((p) => p.dialect.effortStyle !== "budget")];
+  }
+  const healthy = list.filter((p) => !isCooling(p.id, o.now));
+  return healthy.length > 0 ? healthy : list;
 }
 
 /**
@@ -140,9 +220,7 @@ export function operacionDeLaVuelta(
 }
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
-  const fireworks = createFireworksStreamClient();
   const wireTools = toolsForFireworks(options.tools);
-  const streamOpts = options.signal ? { signal: options.signal } : {};
   // Una vuelta con fotos y un agente que NO ve la corre el PAPEL CON VISION
   // (`operacionDeLaVuelta`), y cada papel trae su tarifa. Sin esta bandera se
   // cobraria al precio del que no corrio — la misma clase de error que
@@ -219,6 +297,155 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       ? DYNAMIS_REASONING_EFFORT
       : undefined;
 
+  // ─── QUIÉN ATIENDE EL TURNO (spec local 2026-10-16-second-provider §3.4) ───
+  //
+  // El orden se decide UNA vez, al empezar, y el turno se queda en su
+  // proveedor —también el cierre— salvo que tenga que pasar al respaldo. Cada
+  // proveedor, una sola vez por turno: no hay vaivén. Sin ningún proveedor con
+  // clave, el cliente de siempre, que lo dice con `missing_key`.
+  const numericEffort =
+    esfuerzo !== null && effortWord === undefined && presupuestoDeEsfuerzo(esfuerzo, loopCeiling) !== undefined;
+  const order = providerOrder(resolveAgentProviders(env, options.providers), {
+    preferred: options.preferredProvider ?? null,
+    numericEffort,
+    now: Date.now(),
+  });
+  const legacy = order.length === 0;
+  const clients = new Map<ProviderId, FireworksStreamClient>();
+  const clientFor = (provider: ResolvedProvider | null): FireworksStreamClient => {
+    if (!provider) return (clients.get("fireworks") ?? clients.set("fireworks", createFireworksStreamClient()).get("fireworks"))!;
+    const made =
+      clients.get(provider.id) ??
+      options.streamClientFor?.(provider) ??
+      createFireworksStreamClient({
+        apiKey: provider.apiKey,
+        endpoint: provider.dialect.endpoint,
+        modelId: provider.modelId,
+        affinityField: provider.dialect.affinityField,
+        effortStyle: provider.dialect.effortStyle,
+      });
+    clients.set(provider.id, made);
+    return made;
+  };
+  let current = 0;
+  /** Los reintentables seguidos del proveedor actual, desde su último éxito. */
+  let failuresOnCurrent = 0;
+  /** El uso que llegó en esos intentos fallidos: no se cobra si se cambia. */
+  let failedUsageOnCurrent = zeroUsage();
+  let awaitingFirstUsageAfterSwitch = false;
+  const uses = new Map<ProviderId, ProviderUse>();
+  const forgiven = zeroUsage();
+  let extraCached = 0;
+
+  const noteUsage = (provider: ResolvedProvider | null, u: UsageTotals): void => {
+    const id = provider?.id ?? "fireworks";
+    const row = uses.get(id) ?? { provider: id, model: provider?.modelId ?? modelIdForRole("agent"), ...zeroUsage() };
+    addUsage(row, u);
+    uses.set(id, row);
+    if (awaitingFirstUsageAfterSwitch) {
+      awaitingFirstUsageAfterSwitch = false;
+      extraCached += Math.max(0, u.inputTokens - u.cachedTokens);
+    }
+  };
+
+  /** El `done` de una llamada, ya decidido: tal cual, o un cambio de proveedor. */
+  function settle(
+    provider: ResolvedProvider | null,
+    stop: FireworksStopReason,
+    timedOut: boolean,
+    callUsage: UsageTotals | null,
+  ): FireworksStreamEvent {
+    const next = legacy ? undefined : order[current + 1];
+    const ownerStopped = options.signal?.aborted === true;
+    if (stop.kind !== "error" && !(timedOut && !ownerStopped)) {
+      if (stop.kind === "end_turn" || stop.kind === "max_tokens") {
+        failuresOnCurrent = 0;
+        failedUsageOnCurrent = zeroUsage();
+      }
+      return { type: "done", stopReason: stop };
+    }
+    if (callUsage) addUsage(failedUsageOnCurrent, callUsage);
+    let reason: Extract<FireworksStopReason, { kind: "error" }>;
+    let switching: boolean;
+    if (stop.kind !== "error") {
+      // Llegó al reloj de 60 s sin ningún evento (sólo se arma con respaldo).
+      reason = { kind: "error", error: `sin ningún evento en ${FIRST_EVENT_TIMEOUT_MS / 1000} s`, code: "transport" };
+      switching = next !== undefined;
+    } else {
+      reason = stop;
+      if (stop.httpStatus === 402 && provider && coolDown(provider.id, Date.now())) {
+        console.error(`[agent] ${provider.id} sin saldo (402): ${next ? `turnos a ${PROVIDER_LABEL[next.id]}` : "sin respaldo"}`);
+      }
+      const trigger = stop.code === "context_window_exceeded" ? "never" : isRetryable(stop.code) ? "retryable" : "now";
+      if (trigger === "retryable") failuresOnCurrent += 1;
+      switching =
+        next !== undefined &&
+        !ownerStopped &&
+        (trigger === "now" || (trigger === "retryable" && failuresOnCurrent >= RETRIES_BEFORE_FALLBACK));
+    }
+    if (!switching || !next || !provider) return { type: "done", stopReason: reason };
+
+    addUsage(forgiven, failedUsageOnCurrent);
+    failedUsageOnCurrent = zeroUsage();
+    failuresOnCurrent = 0;
+    current += 1;
+    awaitingFirstUsageAfterSwitch = true;
+    console.warn(`[agent] ${provider.id} falló (${reason.error.slice(0, 120)}): el turno sigue en ${next.id}`);
+    return {
+      type: "done",
+      stopReason: {
+        kind: "error",
+        error: reason.error,
+        code: "server",
+        ...(reason.httpStatus !== undefined ? { httpStatus: reason.httpStatus } : {}),
+        switchedProvider: true,
+      },
+    };
+  }
+
+  /** Una llamada en el proveedor actual, con su propio corte (el ■ del dueño,
+   *  o el reloj del primer evento cuando hay respaldo). */
+  async function* routed(request: FireworksStreamRequest): AsyncIterable<FireworksStreamEvent> {
+    const provider = legacy ? null : order[current]!;
+    const hasNext = !legacy && current + 1 < order.length;
+    const callAbort = new AbortController();
+    const outer = options.signal;
+    const onOuterAbort = () => callAbort.abort();
+    if (outer?.aborted) callAbort.abort();
+    else outer?.addEventListener("abort", onOuterAbort, { once: true });
+    let sawEvent = false;
+    let timedOut = false;
+    const timer = hasNext
+      ? setTimeout(() => {
+          if (sawEvent) return;
+          timedOut = true;
+          callAbort.abort();
+        }, FIRST_EVENT_TIMEOUT_MS)
+      : undefined;
+    let callUsage: UsageTotals | null = null;
+    try {
+      for await (const event of clientFor(provider).stream(request, { signal: callAbort.signal })) {
+        if (!sawEvent) {
+          sawEvent = true;
+          clearTimeout(timer);
+        }
+        if (event.type === "usage") {
+          callUsage = callUsage ?? zeroUsage();
+          addUsage(callUsage, event);
+          noteUsage(provider, event);
+        }
+        if (event.type === "done") {
+          yield settle(provider, event.stopReason, timedOut, callUsage);
+          return;
+        }
+        yield event;
+      }
+    } finally {
+      clearTimeout(timer);
+      outer?.removeEventListener("abort", onOuterAbort);
+    }
+  }
+
   const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number) =>
     ((): ReturnType<typeof asAgentStream> => {
       // LAS FOTOS VAN DENTRO DE SU MENSAJE (`Message.images`) y viajan en todas
@@ -227,7 +454,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       const operation = operacionDeLaVuelta(messages.some((m) => m.images?.length));
       if (operation !== "agent_turn") mirado = true;
       return asAgentStream(
-      fireworks.stream(
+      routed(
         {
           messages: messagesForFireworks(messages),
           ...(withTools ? { tools: wireTools } : {}),
@@ -245,14 +472,14 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
             ? { esfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
             : {}),
         },
-        streamOpts,
       ),
       options.alPensar,
       );
     })();
 
   return {
-    modelId: modelIdForRole(roleForOperation("agent_turn")),
+    // El del PRIMER proveedor elegido: la línea del diario y el libro lo leen.
+    modelId: legacy ? modelIdForRole(roleForOperation("agent_turn")) : order[0]!.modelId,
     // El proveedor que corrió el turno es el que lo paga. Dos papeles, dos
     // tarifas: si MIRO, la del papel con vision; si no, la del Agente. Aqui
     // habia un tercero —Gemini, con `ranOnGemini`— que salio el 2026-08-28.
@@ -268,5 +495,10 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // dentro de tu mensaje y ese problema no existe.
     openStream: (messages) => viaFireworks(messages, true, loopCeiling),
     closeOut: (messages) => viaFireworks(messages, false, closeOutCeiling),
+    providersUsed: () => [...uses.values()].map((row) => ({ ...row })),
+    billingAdjustment: () => ({ minus: { ...forgiven }, extraCached }),
+    fellBack: () => current > 0,
+    firstProvider: () => (legacy ? "fireworks" : order[0]!.id),
+    lastProvider: () => (legacy ? "fireworks" : order[current]!.id),
   };
 }
