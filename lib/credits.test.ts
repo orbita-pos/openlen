@@ -513,6 +513,30 @@ describe("los créditos de los planes de pago, contra la portada", () => {
     expect((CREDITS_BY_PLAN as Record<string, number>).ultra).toBe(ULTRA_CREDITS * CENTICREDITOS_POR_CREDITO);
   });
 
+  // Jesús, 17/10/2026: con el ahorro de DeepInfra (spec local
+  // 2026-10-16-second-provider) los planes dan ~60 % más al mismo precio.
+  it("🔴 Pro 500, Max 1.300, Ultra 8.000", async () => {
+    const pp = await import("@/lib/marketing/plan-price");
+    expect([pp.PRO_CREDITS, pp.MAX_CREDITS, pp.ULTRA_CREDITS]).toEqual([500, 1_300, 8_000]);
+  });
+
+  // EL PEOR CASO (el comentario de márgenes de lib/credits.ts): quien se gasta el
+  // plan entero, a la tarifa de LISTA —todo en Fireworks, sin el ahorro de
+  // DeepInfra— y con la comisión de Polar (5 % + 50¢, +1,5 % tarjeta no de EE. UU.).
+  // Subir un plan sin rehacer esta cuenta es lo que lo rompe.
+  it("🔴 ningún plan de pago pierde dinero aunque todo vaya a Fireworks y se gaste entero", async () => {
+    const pp = await import("@/lib/marketing/plan-price");
+    const { USD_PER_CREDIT } = await import("@/lib/credits-client");
+    for (const [price, credits] of [
+      [pp.PRO_PRICE, pp.PRO_CREDITS],
+      [pp.MAX_PRICE, pp.MAX_CREDITS],
+      [pp.ULTRA_PRICE, pp.ULTRA_CREDITS],
+    ] as const) {
+      const net = price * (1 - 0.05 - 0.015) - 0.5;
+      expect(net - credits * USD_PER_CREDIT, `$${price} con ${credits} créditos`).toBeGreaterThan(0);
+    }
+  });
+
   it("🔴 cada plan da más créditos que el de abajo, y cada crédito sale más barato", async () => {
     const pp = await import("@/lib/marketing/plan-price");
     const planes = [

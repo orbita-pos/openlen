@@ -132,8 +132,8 @@ export async function createCheckout(opts: {
   const locale = (routing.locales as readonly string[]).includes(opts.locale ?? "")
     ? (opts.locale as string)
     : routing.defaultLocale;
-  // La vuelta lleva el plan: el aviso de /projects dice «Max, 800 créditos» o
-  // «Pro, 300». Con `?upgraded=1` quien pagaba Max leía «Pro, 150».
+  // La vuelta lleva el plan: el aviso de /projects dice «Max, 1.300 créditos» o
+  // «Pro, 500». Con `?upgraded=1` quien pagaba Max leía «Pro, 150».
   const successUrl = `${publicOrigin()}/${locale}/projects?upgraded=${plan}`;
   const data = (await polarPost("/v1/checkouts/", {
     products: [productId],
