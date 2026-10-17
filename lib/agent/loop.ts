@@ -36,7 +36,7 @@ import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import type { CompactionPolicy } from "./compaction/policy";
 import { createWritePreview } from "./write-preview";
 import { createWidgetPreview } from "./visuals/widget-preview";
-import type { VisualWidget } from "./visuals/widget";
+import { READ_ME, type VisualWidget } from "./visuals/widget";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -216,10 +216,8 @@ export interface AgentLoopArgs {
    *  (`compaction/spill.ts`): un resultado de más de `maxInlineTokens` llega
    *  recortado y su texto entero queda donde `save` lo deje. Sin esto, enteros. */
   spill?: { maxInlineTokens: number; save(path: string, text: string): Promise<boolean> };
-  /** Pieza 7: ¿está el turno en modo plan AHORA? (cambia a media vuelta al
-   *  aprobar el plan). En modo plan no cambiar nada es lo que se pide, así que
-   *  el empujón de «anunciaste un cambio y no lo hiciste» no salta. */
-  planModeActive?: () => boolean;
+  // ⚰️ `planModeActive` (pieza 7) sólo apagaba la insistencia en modo plan; se
+  // fue con ella el 2026-10-17. El modo plan lo sigue llevando la ruta.
   /** La página en la que trabaja el turno ahora (`session.page`), para pintar
    *  un `Write` que todavía no ha dicho su ruta (`write-preview.ts`). */
   activePage?: () => string | null;
@@ -451,25 +449,17 @@ const FAIL_REPEAT_LIMIT = 2;
 
 // Injected as a final user turn when a cap is hit and a closeOut stream exists —
 // asks the (tools-disabled) model to close gracefully in the user's language.
-// Lo que se le dice cuando cierra el turno sin haber llamado a ninguna
-// herramienta y sin haber tocado nada. Mismo contenido que el aviso de
-// `turnoAnteriorMudo` en context.ts —que es el que ya se sabe que funciona—
-// pero entregado DENTRO del turno en vez de en el siguiente.
-const INSISTE_SIN_HERRAMIENTAS =
-  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT calling any tool, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I'll do\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until you have called it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —the user never sees it— and nothing else.";
-
-/** La misma insistencia cuando SÍ hubo llamadas pero ninguna hizo nada: sólo
- *  lecturas, ediciones que dejaron la página byte a byte igual, o llamadas que
- *  fallaron. Decirle «sin llamar a ninguna herramienta» sería falso, y un aviso
- *  que miente sobre lo que pasó enseña a no leerlos. */
-/** ¿Es sólo el testigo «OK» que piden las dos insistencias? Con o sin
- *  comillas, puntos o mayúsculas; nada más. Ver `retener` en el bucle. */
-function esTestigo(texto: string): boolean {
-  return /^[^\p{L}\p{N}]*ok[^\p{L}\p{N}]*$/iu.test(texto.trim());
-}
-
-const INSISTE_SIN_EFECTO =
-  "SYSTEM (the user did NOT write this): you ended the turn WITHOUT any call changing anything —only reads, edits that left the page exactly the same, or calls that failed—, so the page has NOT changed. If your reply announced a change —\"I'm adding\", \"I changed\", \"done\"— that change does NOT exist: apply it NOW with the right tool, and don't say again that you did it until a call has done it. If instead your reply was an explanation, a question or an honest refusal, it was fine and has ALREADY reached the user: don't repeat it or summarize it. Answer only \"OK\" —the user never sees it— and nothing else.";
+// ⚰️ LA INSISTENCIA «APLÍCALO AHORA» (`INSISTE_SIN_HERRAMIENTAS`,
+// `INSISTE_SIN_EFECTO`, el testigo «OK» y la vuelta retenida), retirada el
+// 2026-10-17. Se puso el 2026-08-31 porque el modelo de entonces contestaba
+// «Listo, agregué el enlace» sin llamar a nada. Claude Code no tiene nada así:
+// una respuesta sin herramientas cierra el turno (binario 2.1.296). MEDIDO con
+// DeepSeek V4.1 Flash en DeepInfra, con un historial de tres turnos cuyos dos
+// últimos se contestaron con palabras —el peor caso de agosto—: «cambia el
+// título de la portada» editó 10 de 10 SIN la insistencia, 0 «Listo» falsos; en
+// preguntas, la insistencia saltaba en 8 de 12 para que contestara «OK»: una
+// llamada oculta más por pregunta a cambio de nada. Las pruebas, en
+// `.superpowers/spikes/platica-probe.ts` y `empujones-probe.ts` (fuera de git).
 
 /**
  * SE CORTÓ A MEDIA FRASE. Se le devuelve SU propio texto y se le pide que siga.
@@ -609,8 +599,8 @@ const WRAP_UP_PRESUPUESTO =
 // nombraban y se le devolvía una vuelta. Se fue con TodoWrite (F4 de
 // plans/len-agente-2026, como Claude Code con los modelos nuevos): sin la
 // herramienta no hay lista que reclamar. Lo que la lista sujetaba lo dice el
-// prompt («Termina todo lo pedido», «di qué dejaste fuera») y la insistencia
-// de abajo sigue cazando el «listo» sin cambio.
+// prompt («Termina todo lo pedido», «di qué dejaste fuera»). La insistencia
+// que cazaba el «listo» sin cambio también se fue (2026-10-17, ver arriba).
 
 /**
  * SOBRE QUÉ VA UNA LLAMADA, para su tarjeta: el argumento principal, como
@@ -775,13 +765,17 @@ const READ_ONLY_TOOLS = new Set([
   "get_goal",
   "create_goal",
   "update_goal",
-  // La lista de progreso no cambia la página: escribirla no es «actuar» (la
-  // insistencia del «listo» sin cambio sigue) ni gasta una vuelta de trabajo.
+  // La lista de progreso no cambia la página: escribirla no gasta una vuelta de
+  // trabajo.
   TODO_WRITE,
   // Pieza 5: buscar y leer en las charlas pasadas no cambia nada.
   "session_search",
   "session_event_search",
   "session_event_read",
+  // LOS VISUALES: leer el manual es una lectura, como `Read`. Hasta el
+  // 2026-10-17 le gastaba a Len una vuelta de trabajo como si editara; Claude
+  // Code no cuenta las lecturas. `show_widget` sigue contando: dibuja.
+  READ_ME,
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
@@ -1076,30 +1070,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let vueltasSoloRechazadas = 0;
   /** Ver `CONFLICTO_SIN_SALIDA`. */
   let guardarSinSalida = false;
-  // ¿Ya se le insistió una vez por cerrar sin llamar a nada? Ver el bloque de
-  // `calls.length === 0`.
-  let yaSeInsistio = false;
-  /** Lo que el modelo dijo en la vuelta a la que se le devolvió la
-   *  insistencia, y en qué vuelta. Ese texto YA le llegó
-   *  al dueño; si la vuelta INMEDIATAMENTE siguiente cierra sin escribir nada,
-   *  es lo que queda como cierre. Más tarde ya no: entre medias pudo pasar de
-   *  todo, y resucitarlo sería devolver un «listo» anterior al trabajo. */
-  let dichoAntesDelAviso: {
-    readonly vuelta: number;
-    readonly texto: string;
-  } | null = null;
-  /** ¿ALGUNA LLAMADA HIZO ALGO? Una que no es de lectura, que salió bien y que
-   *  no fue una edición nula. Es lo que decide la insistencia de abajo: hasta
-   *  el 2026-09-22 bastaba con haber llamado a CUALQUIER herramienta, así que
-   *  un `leer_estado` seguido de «Listo, cambié el titular» salía limpio y
-   *  cobrado (G4 de la auditoría). */
-  let actuo = false;
-  /** ¿PUEDE actuar? Si todo lo que se le declaró es de lectura —un subagente
-   *  de sólo lectura: Read, Grep y Glob—, no hay cambio que «aplicar AHORA», y
-   *  la insistencia le pediría lo imposible. Sin declaraciones el bucle no
-   *  limita los nombres (las pruebas), así que ahí sí puede. */
-  const puedeActuar =
-    args.tools.length === 0 || args.tools.some((t) => !READ_ONLY_TOOLS.has(String((t as { name?: unknown }).name ?? "")));
 
   /** ¿Escribió algo en la base este request? Ver `AgentLoopResult.mutoDurable`. */
   let mutoDurable = false;
@@ -1373,22 +1343,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
      *  llamador. Se pone junto a cada `emit`, no después, para que no puedan
      *  discrepar. */
     let errorCode: AgentErrorCode | null = null;
-    /**
-     * 🔴 LA VUELTA QUE SIGUE A LA INSISTENCIA SE RETIENE hasta saber qué trae.
-     *
-     * Si lo del modelo era una explicación, ya le llegó al dueño, y el aviso le
-     * pide contestar sólo el testigo «OK» (`esTestigo`). MEDIDO con el modelo
-     * real (C13, 2 de 2, 2026-09-22): a «cierra sin escribir nada» no se calló
-     * —escribió «Ya está respondido: …», una línea que le habla al aviso y no
-     * al dueño—; a «repítela tal cual», antes, repetía la respuesta entera.
-     * Retener es lo que deja no enseñarle ninguna de las dos cosas.
-     *
-     * Sólo se oculta EL TESTIGO. Cualquier otro texto —una rectificación
-     * honesta, lo que dice al por fin actuar— se le enseña entero al cerrar la
-     * vuelta: ocultar una rectificación dejaría en pie el «listo» que corrige.
-     */
-    const retener = dichoAntesDelAviso !== null && dichoAntesDelAviso.vuelta === turns - 1;
-    let retenido = "";
 
     // ─── REINTENTOS DEL PROVEEDOR (como el arnés de DeepSeek) ────────────
     //
@@ -1428,10 +1382,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         else if (ev.type === "function_call_delta") argumentosEnVivo += ev.argsDelta.length;
         else if (ev.type === "function_call" && argumentosEnVivo === 0) generadoEnElIntento += JSON.stringify(ev.args).length;
         else if (ev.type === "usage") usoDelProveedor = true;
-        if (ev.type === "text_delta" && retener) {
-          turnText += ev.text;
-          retenido += ev.text;
-        } else if (ev.type === "text_delta") {
+        if (ev.type === "text_delta") {
           // EL SEPARADOR ENTRE VUELTAS, y sólo aquí: `turnText.length === 0`
           // identifica el PRIMER trozo de ESTA vuelta —se reinicia arriba— y la
           // bandera dice si alguna anterior habló. Una sola vuelta no gana nada.
@@ -1536,7 +1487,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           calls.length = 0;
           truncado = false;
           cutCall = null;
-          retenido = "";
           algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
           continue;
         }
@@ -1569,14 +1519,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
       }
       // El intento fallido no existió: se vacía lo que dejó ANTES de mirar el ■.
-      // Si no, en una vuelta retenida lo retenido del intento descartado salía
-      // al dueño detrás del «cancelado» (lo cazó la revisión de la pieza).
       turnText = "";
       turnReasoning = "";
       calls.length = 0;
       truncado = false;
       cutCall = null;
-      retenido = "";
       algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
       if (args.signal?.aborted) {
         args.emit({ type: "error", message: "El agente fue cancelado.", code: "cancelled" });
@@ -1586,19 +1533,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
     }
 
-    // Lo retenido, ahora que se sabe qué trae la vuelta: el testigo solo, sin
-    // llamadas, no se enseña —y el cierre vuelve a ser lo que el dueño ya leyó,
-    // ver el bloque de `calls.length === 0`—; todo lo demás sale como habría
-    // salido, con su separador, y antes de las tarjetas de sus llamadas.
-    if (retenido) {
-      if (calls.length === 0 && esTestigo(retenido)) {
-        turnText = "";
-      } else {
-        if (algunaVueltaYaDijoAlgo) args.emit({ type: "text", text: "\n\n" });
-        algunaVueltaYaDijoAlgo = true;
-        args.emit({ type: "text", text: retenido });
-      }
-    }
 
     // ─── SE CORTÓ: A MEDIA LLAMADA, A MEDIA FRASE O PENSANDO ─────────────
     //
@@ -1676,71 +1610,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         continue;
       }
 
-      // 🔴 CERRÓ CALLADO TRAS UN AVISO. La insistencia le dice que, si lo suyo
-      // era una explicación, ya le llegó al dueño y no la repita (revisión
-      // pre-deploy del 2026-09-22: antes se le pedía «repítela tal cual» y el
-      // dueño la leía dos veces). Si obedece y no escribe nada, lo que queda
-      // como cierre —y lo que miran los ojos y la redacción de H04— es lo que
-      // el dueño ya leyó. No se emite otra vez: ya salió.
-      if (!turnText.trim() && dichoAntesDelAviso && dichoAntesDelAviso.vuelta === turns - 1) {
-        turnText = dichoAntesDelAviso.texto;
-      }
-
-      // 🔴 ANUNCIÓ LA EDICIÓN Y NO LA HIZO. Se le pide UNA vez, aquí mismo.
-      //
-      // MEDIDO en producción el 2026-08-31, dos veces en tres minutos: a
-      // «agregame en el menu un link para ir a la page de nosotros» el modelo
-      // contestó «¡Claro! Agrego un enlace "Nosotros"… El nav está en
-      // data-op-id="9"… Listo, agregué el enlace» —con el id CORRECTO— y no
-      // llamó a nada. 203 tokens de salida: sólo la prosa. El usuario vio
-      // «Listo» junto a «Nothing on the page changed», tuvo que escribir «no
-      // agregaste el nosotros», y el reintento funcionó a la primera.
-      //
-      // El aviso que lo arregla YA EXISTE (`turnoAnteriorMudo`, en
-      // context.ts): dice «tu turno anterior NO llamó a ninguna herramienta…
-      // aplícalo AHORA». Lo único que le faltaba era llegar a tiempo — sólo se
-      // monta en el turno SIGUIENTE, o sea después de que el usuario se queje.
-      //
-      // POR QUÉ ES BARATO, que es lo que lo hace viable: esta segunda vuelta
-      // reusa el prefijo entero (sistema + herramientas + contexto + el mensaje
-      // del usuario), así que es un acierto de caché. Medido sobre los turnos
-      // reales: ~40k de entrada casi toda cacheada ≈ 0,4 créditos, contra los
-      // ~4 que costó el turno fantasma y los ~30 del reintento que el usuario
-      // acabó pagando al quejarse.
-      //
-      // UNA sola vez por petición, y sólo si NADA se tocó: un turno que ya mutó
-      // y cierra está bien cerrado, y una pregunta legítima («¿qué modelo
-      // uso?») se contesta igual en la segunda vuelta — el modelo repite su
-      // respuesta y se acabó. No se intenta adivinar si el texto «promete» algo:
-      // eso sería una heurística sobre prosa en diez idiomas.
-      // `toolCalls === 0` —ninguna llamada en TODO el request—, no
-      // `!mutoDurable`: son cosas distintas y la diferencia la cazó una prueba
-      // que ya existía. Un turno que llamó a una herramienta ACTUÓ, aunque esa
-      // herramienta no marque mutación durable (toggle_module, publish…);
-      // empujarlo sería pagar una vuelta de más por un turno que hizo su
-      // trabajo. Lo que se corrige es cerrar sin haber llamado a NADA.
-      //
-      // 🔴 Y DESDE EL 2026-09-22, «NADA» INCLUYE LO QUE NO HIZO NADA. La guarda
-      // miraba `toolCalls === 0`, así que bastaba una lectura —`leer_estado`,
-      // un `Read`— para que «Listo, cambié X» saliera limpio y
-      // cobrado sobre una página intacta (G4 de
-      // `plans/auditoria-len-vs-claude-code-2026-09-22.md`). Ahora se mira
-      // `actuo`: alguna llamada que no es de lectura, que salió bien y que no
-      // dejó la página byte a byte igual. Un `toggle_module` o una tarjeta de
-      // publicar SÍ actuaron —el brazo de control de su prueba lo sujeta— y
-      // una lectura o una edición nula no.
-      //
-      // ⚰️ Iba DESPUÉS DEL RECLAMO DE TAREAS y no se sumaba a él; el reclamo se
-      // fue con TodoWrite (F4 de plans/len-agente-2026).
-      // Pieza 7: en modo plan, no. Mandarle «aplícalo AHORA» a media
-      // exploración sería empujarle a editar lo que aún no se ha aprobado.
-      if (puedeActuar && !actuo && !yaSeInsistio && !args.planModeActive?.() && turnText.trim().length > 0) {
-        yaSeInsistio = true;
-        dichoAntesDelAviso = { vuelta: turns, texto: turnText };
-        messages.push(delAsistente(turnText));
-        messages.push({ role: "user", content: toolCalls === 0 ? INSISTE_SIN_HERRAMIENTAS : INSISTE_SIN_EFECTO });
-        continue;
-      }
+      // ⚰️ LA INSISTENCIA AL CERRAR SIN ACTUAR (el «aplícalo AHORA», una vez por
+      // petición) se retiró el 2026-10-17: ver la nota de arriba, junto a donde
+      // vivían sus textos. Como en Claude Code, una vuelta sin llamadas cierra el
+      // turno.
 
       // ⚰️ F5 — LOS OJOS AL CERRAR (`verifyTurn`): antes de dejar ir un turno
       // que mutó el documento, se miraba UNA vez y se emitía la tarjeta
@@ -1916,8 +1789,6 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
         // `no_se`); el resto no lo dice y se juzga por si escribió.
         const cambioDeclarado = outcome.response.cambio;
-        const nula = cambioDeclarado === "sin_cambio";
-        if (ok && !nula && !READ_ONLY_TOOLS.has(call.name)) actuo = true;
         // El ámbar y su aviso: `avisoParaElDueno` sólo habla sin `ok:false`.
         // 🔴 N41: la ROJA ya no lleva lo que leyó el modelo (`motivoDelFallo`
         // pintaba «falló · the user has never said… you made that name up»): lleva

@@ -433,6 +433,44 @@ describe("runAgentLoop", () => {
     expect(r.terminalError).toBe(false);
   });
 
+  // LOS VISUALES (2026-10-17): leer el manual de los visuales es una lectura,
+  // como Read; hasta hoy gastaba una acción del turno como si editara.
+  it("read_me no cuenta: leer el manual y dibujar cabe en un presupuesto de 1", async () => {
+    const seen: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    const fc = (name: string, args: Record<string, unknown> = {}): StreamEvent => ({ type: "function_call", name, args });
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "explícamelo con un dibujo" }], tools: [], maxToolCalls: 1,
+      openStream: scripted(
+        [fc("read_me", { modules: ["diagram"] }), done],
+        [fc("show_widget", { title: "como_llega_la_gente", widget_code: "<svg></svg>" }), done],
+        [{ type: "text_delta", text: "Así llega la gente." }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: (e) => events.push(e),
+    });
+    expect(seen).toEqual(["read_me", "show_widget"]);
+    expect(r.finalText).toBe("Así llega la gente.");
+    expect(r.terminalError).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: show_widget sí cuenta — dibujar dos con presupuesto de 1 topa", async () => {
+    const seen: string[] = [];
+    const fc = (name: string, args: Record<string, unknown> = {}): StreamEvent => ({ type: "function_call", name, args });
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "dos dibujos" }], tools: [], maxToolCalls: 1,
+      openStream: scripted(
+        [fc("show_widget", { title: "uno", widget_code: "<svg></svg>" }), done],
+        [fc("show_widget", { title: "dos", widget_code: "<svg></svg>" }), done],
+        [{ type: "text_delta", text: "no debería llegar aquí" }, done],
+      ),
+      runTool: async (name) => { seen.push(name); return { response: { ok: true } }; },
+      emit: () => {},
+    });
+    expect(seen).toEqual(["show_widget"]);
+    expect(r.terminalError).toBe(true);
+  });
+
   // LA TARJETA DICE SOBRE QUÉ, como Claude Code pinta `Read(index.html)` o
   // `Grep(pattern)`: el argumento principal de la llamada. Sin `resumen` en
   // ninguna herramienta (Len 2.0), la tarjeta en marcha enseñaba el nombre
@@ -630,10 +668,9 @@ describe("runAgentLoop", () => {
       runTool: async () => { throw new Error("must not run"); },
       emit: (e) => events.push(e),
     });
-    // UNA continuación, contada por el aviso y no por `opened`: este guion
-    // cierra sin llamar a ninguna herramienta, así que además salta el empujón
-    // preexistente (INSISTE_SIN_HERRAMIENTAS) y abre una vuelta más. Contar
-    // aperturas mediría los dos mecanismos a la vez.
+    // UNA continuación, contada por el aviso y no por `opened` (hasta el
+    // 2026-10-17 la insistencia abría además una vuelta más en este guion, y
+    // contar aperturas medía los dos mecanismos a la vez).
     // Se cuenta en el ÚLTIMO historial, no cuántos historiales lo mencionan:
     // el mensaje se queda dentro de `messages` y aparece en todas las vueltas
     // posteriores. Una apertura de valla = una continuación inyectada.
@@ -1619,68 +1656,58 @@ describe("runAgentLoop: la mutación durable sobrevive al fallo terminal", () =>
   });
 });
 
-// ── ANUNCIÓ LA EDICIÓN Y NO LA HIZO ──────────────────────────────────────────
+// ── UNA VUELTA SIN LLAMADAS CIERRA EL TURNO ─────────────────────────────────
 //
-// 🔴 MEDIDO en producción el 2026-08-31, dos veces en tres minutos. A «agregame
-// en el menu un link para ir a la page de nosotros» el modelo contestó «¡Claro!
-// Agrego un enlace… El nav está en data-op-id="9"… Listo, agregué el enlace» —
-// con el id CORRECTO— y no llamó a nada. 203 tokens de salida: sólo la prosa.
-// El usuario vio «Listo» junto a «Nothing on the page changed» y tuvo que
-// escribir «no agregaste el nosotros» para que funcionara.
-describe("cierra sin llamar a nada", () => {
-  it("🔴 se le insiste UNA vez, y entonces sí edita", async () => {
+// ⚰️ Aquí vivía «cierra sin llamar a nada»: la insistencia «aplícalo AHORA» que
+// se le mandaba UNA vez a un turno que cerraba sin actuar (puesta el
+// 2026-08-31 por los «Listo, agregué…» sin editar del modelo de entonces).
+// Retirada el 2026-10-17, como en Claude Code: medido con DeepSeek V4.1 Flash y
+// un historial cuyos dos últimos turnos se contestaron con palabras, «cambia el
+// título» editó 10 de 10 sin ella. Lo que queda que sujetar es lo contrario: que
+// una respuesta con palabras cierre el turno y no le cueste al dueño una vuelta
+// oculta más.
+describe("una vuelta sin llamadas cierra el turno", () => {
+  it("🔴 una respuesta con palabras es el cierre: una sola llamada al modelo, sin mensaje oculto", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "Me gustan: el azul con la arena se siente de mar." }, done],
+      [{ type: "text_delta", text: "no debería llegar aquí" }, done],
+    );
     const r = await runAgentLoop({
-      messages: [{ role: "user", content: "agregame un link a nosotros" }],
+      messages: [{ role: "user", content: "¿qué opinas de mis colores?" }],
       tools: [], maxTurns: 6,
-      openStream: scripted(
-        // Primera vuelta: sólo prosa, como en producción.
-        [{ type: "text_delta", text: "¡Claro! Agrego el enlace. Listo." }, done],
-        // Segunda: tras el empujón, la llamada de verdad.
-        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
-        [{ type: "text_delta", text: "Ahora sí." }, done],
-      ),
-      runTool: async () => ({ response: { ok: true }, mutoDurable: true }),
-      emit: () => {},
-    });
-    expect(r.toolCalls).toBe(1);
-    expect(r.terminalError).toBe(false);
-  });
-
-  it("y sólo UNA: si vuelve a cerrar de vacío, el turno acaba", async () => {
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
-      openStream: scripted(
-        [{ type: "text_delta", text: "¡Claro! Lo hago." }, done],
-        [{ type: "text_delta", text: "Insisto en que ya está." }, done],
-        [{ type: "text_delta", text: "no debería llegar aquí" }, done],
-      ),
+      openStream: (m) => {
+        vistos.push(m);
+        return guion(m);
+      },
       runTool: async () => ({ response: { ok: true } }),
       emit: () => {},
     });
-    expect(r.finalText).toBe("Insisto en que ya está.");
+    expect(vistos).toHaveLength(1);
+    expect(r.finalText).toBe("Me gustan: el azul con la arena se siente de mar.");
+    expect(r.toolCalls).toBe(0);
     expect(r.terminalError).toBe(false);
   });
 
-  // 🔴 BRAZO DE CONTROL, y no es teórico: la primera versión de esto miraba
-  // `mutoDurable` en vez de `toolCalls`, y una prueba que YA existía lo cazó.
-  // Son cosas distintas — `toggle_module` y `publicar` llaman a una
-  // herramienta sin marcar mutación durable— así que con aquella guarda se
-  // pagaba una vuelta de más al final de turnos que habían hecho su trabajo.
-  it("pero a un turno que ya llamó a una herramienta no se le insiste", async () => {
+  it("BRAZO DE CONTROL: leer y contestar también cierra tras la respuesta", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
+      [{ type: "text_delta", text: "Tu portada dice «El mar entra por las celosías»." }, done],
+      [{ type: "text_delta", text: "no debería llegar aquí" }, done],
+    );
     const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [], maxTurns: 6,
-      openStream: scripted(
-        [{ type: "function_call", name: "editar_pagina", args: {} }, done],
-        [{ type: "text_delta", text: "Hecho." }, done],
-        [{ type: "text_delta", text: "no debería llegar aquí" }, done],
-      ),
-      // SIN `mutoDurable`: llamó a una herramienta y con eso basta. Si la
-      // guarda vuelve a mirar la mutación en vez de la llamada, esto se pone
-      // rojo — que es justo lo que tiene que pasar.
+      messages: [{ role: "user", content: "¿qué dice mi portada?" }],
+      tools: [], maxTurns: 6,
+      openStream: (m) => {
+        vistos.push(m);
+        return guion(m);
+      },
       runTool: async () => ({ response: { ok: true } }),
       emit: () => {},
     });
-    expect(r.finalText).toBe("Hecho.");
+    expect(vistos).toHaveLength(2);
+    expect(r.finalText).toBe("Tu portada dice «El mar entra por las celosías».");
   });
 });
 
@@ -2469,42 +2496,9 @@ describe("H01 · H03 — una edición nula no es un hecho, y leer no es actuar",
     updatedHtml: "<p>igual</p>",
     page: null,
   };
-  const insistencia = (m: Message[]) =>
-    m.some((x) => x.role === "user" && typeof x.content === "string" && x.content.includes("you ended the turn WITHOUT"));
-
-  it("una edición NULA seguida de «Listo» recibe la insistencia", async () => {
-    const vistos: Message[][] = [];
-    const stream = scripted(
-      [{ type: "function_call", name: "editar_texto", args: { resumen: "teléfono" } }, done],
-      [{ type: "text_delta", text: "Listo, cambié el teléfono." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: (m) => { vistos.push([...m]); return stream(m); },
-      runTool: async () => nula,
-      emit: () => {},
-    });
-    expect(vistos.some(insistencia)).toBe(true);
-    // Y no le dice «sin llamar a ninguna herramienta»: sí llamó.
-    const texto = vistos.flat().map((m) => (typeof m.content === "string" ? m.content : "")).join(" | ");
-    expect(texto).not.toContain("SIN llamar a ninguna herramienta");
-  });
-
-  it("BRAZO DE CONTROL: una herramienta que actúa sin tocar la página no recibe insistencia", async () => {
-    const vistos: Message[][] = [];
-    const stream = scripted(
-      [{ type: "function_call", name: "Edit", args: { file_path: "/home/user/.len/LEN.md", old_string: "", new_string: "• Tutéame" } }, done],
-      [{ type: "text_delta", text: "Anotado." }, done],
-    );
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: (m) => { vistos.push([...m]); return stream(m); },
-      runTool: async () => ({ response: { ok: true } }),
-      emit: () => {},
-    });
-    expect(vistos.some(insistencia)).toBe(false);
-    expect(r.finalText).toBe("Anotado.");
-  });
+  // ⚰️ «una edición NULA seguida de «Listo» recibe la insistencia» y su brazo de
+  // control se fueron con la insistencia (2026-10-17). Lo que H01 sigue
+  // sujetando es el hecho: una edición nula no cuenta como aplicada.
 
   it("…y `aplicado` sólo lleva lo que se movió", async () => {
     let i = 0;
@@ -2616,12 +2610,11 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
   // edición nula no la daba por hecha; no nombraba la que sí se hizo; la que
   // hizo la misma llamada se confirmaba leyendo). Se fueron con TodoWrite (F4).
 
-  // 🔴 Revisión pre-deploy del 2026-09-22. Desde G4 la insistencia salta también
-  // tras una simple lectura, y el aviso le pedía al modelo «repítela tal cual»
-  // cuando su respuesta era una explicación. Esa respuesta YA le había llegado
-  // al dueño, así que la veía dos veces. Claude Code, cuando algo le impide
-  // cerrar, le da el motivo al modelo y éste sigue; no le hace repetir lo dicho.
-  it("🔴 leer y contestar: la insistencia no hace repetir la respuesta", async () => {
+  // ⚰️ La insistencia «aplícalo AHORA» se retiró el 2026-10-17 (ver «una vuelta
+  // sin llamadas cierra el turno»), y con ella sus pruebas de aquí: que no
+  // hiciera repetir la respuesta, el testigo «OK» y la vuelta retenida. Queda lo
+  // que el dueño tiene que recibir, que es lo mismo que en Claude Code.
+  it("🔴 leer y contestar: la respuesta llega una vez y es el cierre del turno", async () => {
     const events: AgentStreamEvent[] = [];
     const vistos: Message[][] = [];
     const r = await runAgentLoop({
@@ -2629,79 +2622,15 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
       openStream: grabando(scripted(
         llama("Read", { file_path: "/index.html" }),
         dice("Sí: el pie dice 33 1234 5678."),
-        // Tras la insistencia, cierra sin escribir nada más.
-        [usage(3), done],
+        dice("no debería llegar aquí"),
       ), vistos),
       runTool: async () => ({ response: { ok: true } }),
       emit: (e) => events.push(e),
     });
-    const insistencia = vistos.map(ultimoDelUsuario).find((t) => t.includes("you ended the turn WITHOUT"));
-    expect(insistencia, "tras una lectura ya no se insistía").toBeDefined();
-    expect(insistencia, "le seguía pidiendo repetir lo que el dueño ya leyó").not.toMatch(/repeat it to them/);
-    expect(insistencia).toMatch(/don't repeat it/i);
+    expect(vistos).toHaveLength(2);
     const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
-    expect(visto, "el dueño vio la respuesta dos veces").toBe("Sí: el pie dice 33 1234 5678.");
-    // Y lo que queda como cierre del turno es lo que el dueño leyó, no un vacío.
+    expect(visto).toBe("Sí: el pie dice 33 1234 5678.");
     expect(r.finalText).toBe("Sí: el pie dice 33 1234 5678.");
-  });
-
-  // 🔴 MEDIDO con el modelo real (C13, 2 de 2, 2026-09-22): a «no la repitas;
-  // cierra sin escribir nada» no se calló — escribió «Ya está respondido: …»,
-  // una línea que le habla al aviso y no al dueño, y que además quedaba como
-  // cierre del turno. Callarse del todo no lo hace; contestar una sola palabra,
-  // sí. Así que se le pide el testigo «OK», y esa vuelta se RETIENE hasta
-  // saber qué trae: sólo el testigo no se le enseña al dueño.
-  it("🔴 tras la insistencia, contestar sólo «OK» no llega al dueño", async () => {
-    const events: AgentStreamEvent[] = [];
-    const vistos: Message[][] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "¿qué cambió desde tu último mensaje?" }], tools,
-      openStream: grabando(scripted(
-        dice("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h»."),
-        dice("OK"),
-      ), vistos),
-      runTool: async () => ({ response: { ok: true } }),
-      emit: (e) => events.push(e),
-    });
-    expect(vistos.map(ultimoDelUsuario).find((t) => t.includes("you ended the turn WITHOUT"))).toMatch(/"OK"/);
-    const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
-    expect(visto, "el testigo le llegó al dueño").toBe("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h».");
-    expect(r.finalText).toBe("Cambiaste tú el titular a mano: ahora dice «Vitalvet · Urgencias 24h».");
-  });
-
-  it("BRAZO DE CONTROL: lo que NO es el testigo —una rectificación— sí llega al dueño", async () => {
-    const events: AgentStreamEvent[] = [];
-    const r = await runAgentLoop({
-      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
-      openStream: scripted(
-        dice("Listo, cambié el titular."),
-        dice("Perdona: no lo cambié, no llegué a llamar a ninguna herramienta."),
-      ),
-      runTool: async () => ({ response: { ok: true } }),
-      emit: (e) => events.push(e),
-    });
-    const visto = events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join("");
-    expect(visto).toBe("Listo, cambié el titular.\n\nPerdona: no lo cambié, no llegué a llamar a ninguna herramienta.");
-    expect(r.finalText).toBe("Perdona: no lo cambié, no llegué a llamar a ninguna herramienta.");
-  });
-
-  it("BRAZO DE CONTROL: si tras la insistencia ACTÚA, lo que dice se ve antes de la tarjeta", async () => {
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
-      openStream: scripted(
-        dice("Listo, cambié el titular."),
-        [{ type: "text_delta", text: "Ahora sí lo aplico." }, { type: "function_call", name: "editar_texto", args: { resumen: "titular" } }, usage(10), done],
-        dice("Hecho."),
-      ),
-      runTool: async () => real("titular"),
-      emit: (e) => events.push(e),
-    });
-    const orden = events.flatMap((e) =>
-      e.type === "text" ? [`t:${e.text}`] : e.type === "action" && e.status === "running" ? [`a:${e.tool}`] : [],
-    );
-    expect(orden.indexOf("t:Ahora sí lo aplico."), "lo que dijo al actuar se perdió").toBeGreaterThan(-1);
-    expect(orden.indexOf("t:Ahora sí lo aplico.")).toBeLessThan(orden.indexOf("a:editar_texto"));
   });
 
   // ⚰️ G3 decía también «al topar se mira la página» (la tarjeta de los ojos
@@ -2730,20 +2659,8 @@ describe("auditoría 2026-09-22 · G1–G6", () => {
     expect(cierre).toContain("«titular»");
   });
 
-  it("G4 · leer y luego decir «Listo, cambié…» no escapa a la insistencia", async () => {
-    const vistos: Message[][] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "pon el titular Vitalvet" }], tools,
-      openStream: grabando(scripted(
-        llama("Read", { file_path: "/index.html" }),
-        dice("Listo, cambié el titular a Vitalvet."),
-      ), vistos),
-      runTool: async () => ({ response: { ok: true } }),
-      emit: () => {},
-    });
-    const insistio = vistos.map(ultimoDelUsuario).some((t) => t.includes("you ended the turn WITHOUT"));
-    expect(insistio, "tras una lectura, «Listo, cambié…» salía limpio y cobrado").toBe(true);
-  });
+  // ⚰️ G4 («leer y luego decir «Listo, cambié…» no escapa a la insistencia») se
+  // fue con la insistencia el 2026-10-17: medido, el modelo de hoy no lo hace.
 
   it("G5 · las llamadas rechazadas no se comen las vueltas del turno", async () => {
     let reales = 0;
@@ -3061,21 +2978,8 @@ describe("H15 · el razonamiento vuelve al modelo dentro del turno", () => {
     expect(razonamientos(vistos[2]!)).toEqual(["busco la marca", "ahora el pie"]);
   });
 
-  it("🔴 también el paso de sólo texto al que se le insiste", async () => {
-    const vistos: Message[][] = [];
-    const guion = scripted(
-      [pensado("creo que ya está"), { type: "text_delta", text: "¡Claro! Lo agrego. Listo." }, done],
-      [{ type: "function_call", name: "editar_pagina", args: {} }, done],
-      [{ type: "text_delta", text: "Ahora sí." }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "agregame un link" }], tools: [], maxTurns: 6,
-      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
-      runTool: async () => ({ response: { ok: true }, mutoDurable: true }),
-      emit: () => {},
-    });
-    expect(razonamientos(vistos[1]!)).toEqual(["creo que ya está"]);
-  });
+  // ⚰️ «también el paso de sólo texto al que se le insiste»: no queda vuelta
+  // insistida que lleve razonamiento (insistencia retirada el 2026-10-17).
 
   it("🔴 se cortó pensando: lo que pensó vuelve con el aviso, para seguir donde iba", async () => {
     const vistos: Message[][] = [];
@@ -3617,26 +3521,8 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
     expect(r.finalText).not.toContain("no debe llegar");
   });
 
-  it("🔴 el ■ durante la espera, en una vuelta RETENIDA (tras la insistencia), no enseña el texto descartado", async () => {
-    const ctrl = new AbortController();
-    const events: AgentStreamEvent[] = [];
-    await runAgentLoop({
-      messages: [{ role: "user", content: "cambia el título" }], tools: [], maxTurns: 6,
-      openStream: scripted(
-        // Vuelta 1: sólo prosa → insistencia; la vuelta 2 se RETIENE.
-        [{ type: "text_delta", text: "¡Claro! Lo cambio." }, done],
-        [{ type: "text_delta", text: "Ya está respondido: el tit" }, fallo("server")],
-        [{ type: "text_delta", text: "no debe llegar" }, done],
-      ),
-      runTool: async () => ({ response: { ok: true } }),
-      emit: (e) => events.push(e),
-      signal: ctrl.signal,
-      sleep: async () => { ctrl.abort(); },
-    });
-    const textos = events.filter((e) => e.type === "text").map((e) => (e as { text: string }).text).join("");
-    expect(textos).not.toContain("Ya está respondido");
-    expect(events.some((e) => e.type === "error" && e.code === "cancelled")).toBe(true);
-  });
+  // ⚰️ «el ■ durante la espera, en una vuelta RETENIDA»: ya no hay vuelta retenida
+  // (insistencia retirada el 2026-10-17).
 
   it("el ■ durante la espera corta sin lanzar otro intento", async () => {
     const ctrl = new AbortController();
@@ -3658,8 +3544,7 @@ describe("reintentos ante fallos del proveedor (como el arnés de DeepSeek)", ()
 });
 
 describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
-  // Sólo herramientas de lectura: un cierre sin acción no recibe la insistencia
-  // (ver `puedeActuar`), así que cada guion es UNA llamada. Y 1 token de entrada
+  // Cada guion es UNA llamada: una vuelta sin llamadas cierra el turno. Y 1 token de entrada
   // por llamada: la presión que se mide después es la de la conversación, no la
   // cifra fija de `usage`.
   const leer = [{ name: "Read" }];
@@ -3882,38 +3767,8 @@ describe("la retención de resultados grandes (spill-policy de DeepSeek)", () =>
   });
 });
 
-// ─── PIEZA 7 · EL MODO PLAN ─────────────────────────────────────────────────
-// En modo plan no cambiar nada es lo que se pide: el empujón de «anunciaste un
-// cambio y no lo hiciste» no puede mandarle a editar a media exploración.
-describe("el modo plan no recibe la insistencia", () => {
-  const insistencia = (m: Message[]) =>
-    m.some((x) => x.role === "user" && typeof x.content === "string" && x.content.includes("you ended the turn WITHOUT"));
-  const leerYContar = async (planModeActive: (() => boolean) | undefined) => {
-    const vistos: Message[][] = [];
-    const stream = scripted(
-      [{ type: "function_call", name: "Read", args: { file_path: "/index.html" } }, done],
-      [{ type: "text_delta", text: "Ya miré la página; ahora te propongo el plan." }, done],
-      [{ type: "text_delta", text: "OK" }, done],
-    );
-    await runAgentLoop({
-      messages: [{ role: "user", content: "añade reseñas" }], tools: [],
-      openStream: (m) => { vistos.push([...m]); return stream(m); },
-      runTool: async () => ({ response: { ok: true } }),
-      emit: () => {},
-      ...(planModeActive ? { planModeActive } : {}),
-    });
-    return vistos;
-  };
-
-  it("🔴 en modo plan, leer y contar cierra sin empujón", async () => {
-    expect((await leerYContar(() => true)).some(insistencia)).toBe(false);
-  });
-
-  it("BRAZO DE CONTROL: fuera del modo plan, el mismo turno lo recibe", async () => {
-    expect((await leerYContar(() => false)).some(insistencia)).toBe(true);
-    expect((await leerYContar(undefined)).some(insistencia)).toBe(true);
-  });
-});
+// ⚰️ PIEZA 7 · «el modo plan no recibe la insistencia»: sin insistencia no hay
+// nada que apagar en modo plan (retirada el 2026-10-17, y `planModeActive` con ella).
 
 // ─── PIEZA 8 · EL ENCARGO ───────────────────────────────────────────────────
 // El `deferContext` de DeepSeek: lo que una herramienta deja para el paso

@@ -132,8 +132,8 @@ describe("ninguna superficie manda gusto nuestro", () => {
   // Se comprueba la ficha en INGLÉS que los presenta como maquinaria
   // disponible. El prompt del Agente ya no los nombra ni en español
   // (auditoría del 2026-09-29: Claude Code no enumera lo que no existe); que
-  // no finja haber activado uno lo sujetan dos puertas de código, el enum de
-  // `toggle_module` y `INSISTE_SIN_EFECTO`.
+  // no finja haber activado uno lo sujeta el enum de `toggle_module` (la otra
+  // puerta, `INSISTE_SIN_EFECTO`, se retiró el 2026-10-17).
   const RETIRADOS = [
     "Members module", "Bookings module", "Orders module",
     "Comments module", "Broadcast module",

@@ -198,37 +198,7 @@ export function ventanaVisibleDe(history: readonly MensajeContado[]): number {
 export const MARCA_DE_TURNO_DETENIDO =
   "[Request interrupted by the owner (■): this turn did not finish, and only what is above got done.]";
 
-/** ¿El turno anterior fue MUDO? Mudo = el asistente respondió a la última
- *  petición del dueño sin llamar a ninguna herramienta. Es un hecho
- *  estructural, no una lectura de su prosa. Un historial vacío (primer turno)
- *  no dispara nada.
- *
- *  Mira TODO lo que el asistente hizo desde esa petición, no sólo su último
- *  mensaje: en el historial del navegador las llamadas iban en ese mensaje,
- *  pero en la transcripción de la base (H4) el último es el texto final y las
- *  llamadas van antes.
- *
- *  La petición del dueño es un mensaje de usuario SIN respuestas de
- *  herramienta: las respuestas viajan con lo medido tras editar al lado, y su
- *  texto no es del dueño (E del 26/09: 122 de 282 peticiones recibieron el
- *  aviso de mudo tras un turno que sí editó). */
-export function turnoAnteriorMudoDe(history: readonly MensajeContado[]): boolean {
-  const esPeticion = peticionDelDueno(history);
-  let desde = -1;
-  for (let i = history.length - 1; i >= 0; i--) {
-    const h = history[i]!;
-    if (esPeticion(h)) {
-      desde = i;
-      break;
-    }
-  }
-  const tras = history.slice(desde + 1);
-  // 🔴 PARADO NO ES MUDO. Lo paró el dueño con ■ antes de llegar a la primera
-  // herramienta: el aviso de mudo («If the user asked you for a change and it
-  // still isn't applied, apply it NOW») hacía que el turno siguiente rehiciera
-  // lo que el dueño acababa de parar (ensayo de caja de crear-es-len, 06/10).
-  if (tras.some((h) => h.role === "user" && h.content === MARCA_DE_TURNO_DETENIDO)) return false;
-  const delTurno = tras.filter((h) => h.role === "assistant");
-  if (delTurno.length === 0) return false;
-  return !delTurno.some((h) => (h.functionCalls?.length ?? 0) > 0);
-}
+/** ⚰️ `turnoAnteriorMudoDe` decidía el aviso de turno mudo de `context.ts`,
+ *  retirado el 2026-10-17 (ver allí). Ya había fallado dos veces: avisaba tras
+ *  turnos que sí editaron (122 de 282 peticiones, 26/09) y hacía rehacer lo que
+ *  el dueño acababa de parar (06/10). */

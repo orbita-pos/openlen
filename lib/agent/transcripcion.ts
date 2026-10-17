@@ -148,7 +148,7 @@ export interface TranscripcionGuardada {
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
-// `historial-saneado.ts`, que es puro: la lee también `turnoAnteriorMudoDe`.
+// `historial-saneado.ts`, que es puro.
 export { MARCA_DE_TURNO_DETENIDO };
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */

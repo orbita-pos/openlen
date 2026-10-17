@@ -56,10 +56,11 @@ describe("el subagente de solo lectura", () => {
     ]);
   });
 
-  it("🔴 a quien sólo puede leer NO se le insiste en «aplicar el cambio»", async () => {
-    // Sin la guarda de `puedeActuar`, el bucle vería «cerró sin que nada
-    // cambiara» y le pediría aplicar un cambio que no puede hacer: una vuelta
-    // de más, pagada, en cada revisor.
+  it("🔴 quien sólo puede leer cierra en cuanto contesta: ninguna vuelta de más", async () => {
+    // Hasta el 2026-10-17 lo sujetaba la guarda `puedeActuar` de la insistencia
+    // «aplica el cambio»; con la insistencia retirada, una vuelta sin llamadas
+    // cierra el turno para todos. Sigue siendo lo que cada revisor no debe
+    // pagar: una vuelta de más.
     const g = guion(llama("Grep", { pattern: "precio" }), dice("[]"));
     await correrSubagente({
       sistema: "s",

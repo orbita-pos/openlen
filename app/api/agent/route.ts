@@ -130,7 +130,6 @@ import {
 import {
   sanearDichoAntes,
   sanearHistorial,
-  turnoAnteriorMudoDe,
   turnosTotalesDe,
   ventanaVisibleDe,
 } from "@/lib/agent/historial-saneado";
@@ -1000,11 +999,6 @@ async function correrTurno(
     prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     equipo: compartido,
     history,
-    // ¿El turno anterior fue MUDO? Se deriva del historial que acaba de
-    // sanearse: el último mensaje del asistente sin `functionCalls` significa
-    // que no tocó nada. Es un hecho estructural, no una lectura de su prosa.
-    // Un historial vacío (primer turno) no dispara nada.
-    turnoAnteriorMudo: turnoAnteriorMudoDe(history),
     todoRestore: listaDelTurno.restoreLine,
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     // LA REFERENCIA POR URL (plans/crear-es-len): el mismo bloque que Crear
@@ -1056,7 +1050,6 @@ async function correrTurno(
           userMemory: argsDelTurno.userMemory,
           cambios: argsDelTurno.cambios,
           degradaciones: argsDelTurno.degradaciones,
-          turnoAnteriorMudo: argsDelTurno.turnoAnteriorMudo,
           conPin: seleccion !== null,
           conImagen: attachedImages.length > 0,
           activePage: pageSlug,
@@ -1550,8 +1543,6 @@ async function correrTurno(
         const result = await runAgentLoop({
           messages,
           tools,
-          // Pieza 7: en modo plan el bucle no empuja a editar.
-          planModeActive: () => planActivo,
           // La página a medias de un `Write` que aún no dijo su ruta se pinta
           // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
           activePage: () => agentSession.page,

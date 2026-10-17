@@ -856,23 +856,19 @@ describe("POST /api/agent — el modo plan", () => {
 
   it("🔴 aprobado a media vuelta: la petición SIGUIENTE sale sin la sección, se avisa al chat y se guarda apagado", async () => {
     mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
-    const visto: boolean[] = [];
     mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
       (deps.planMode as { set(v: boolean): void }).set(false);
       return { response: { ok: true, approved: true } };
     });
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.openStream(args.messages);
-      visto.push(args.planModeActive!());
       await args.runTool("exit_plan_mode", { plan: "# Reseñas" });
-      visto.push(args.planModeActive!());
       args.openStream(args.messages);
       return cierre;
     });
     const eventos = await turno();
     expect(conSeccion(enviados[0]!)).toBe(true);
     expect(sinSeccion(enviados[1]!)).toBe(true);
-    expect(visto).toEqual([true, false]);
     // El estado al empezar y el cambio.
     expect(eventos.filter((e) => e.event === "plan").map((e) => e.data)).toEqual([{ active: true }, { active: false }]);
     expect(filaGuardada()?.planMode).toBeUndefined();
