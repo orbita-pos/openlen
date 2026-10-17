@@ -204,6 +204,8 @@ export default defineConfig({
       "lib/ai/image-edit-core.test.ts",
       // La tarifa de COSTO, aparte de la de cobro (spec local 2026-10-16-credit-ledger).
       "lib/ai/cost-rates.test.ts",
+      // El segundo proveedor (spec local 2026-10-16-second-provider).
+      "lib/ai/providers.test.ts",
       "lib/ai/fireworks-client.test.ts",
       // La carpeta (pieza 9 de Len 2.5): los ojos de Len cargan sus ficheros.
       "lib/ai/origen-de-medida-carpeta.test.ts",
