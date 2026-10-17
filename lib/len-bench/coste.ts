@@ -17,6 +17,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { TOKEN_COST_RATES } from "@/lib/ai/cost-rates";
 import { MODELOS_TARIFADOS, rateFor, usdDeTurno, type TarifaPorMillon } from "@/lib/ai/tarifas-eval";
 import type { TurnoGrabado } from "@/lib/agent/grabacion";
 
@@ -30,6 +31,13 @@ import type { TurnoGrabado } from "@/lib/agent/grabacion";
  */
 export function tarifaDelModelo(modelId: string): TarifaPorMillon {
   if (!MODELOS_TARIFADOS.includes(modelId)) {
+    // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider §3.5): un
+    // modelo que sólo sirve otro proveedor (DeepInfra) no tiene tarifa de cobro
+    // propia, pero sí de COSTO, que es lo que el brazo tiene que decir. La
+    // clave es `<proveedor>/<modelo>`; se compara el modelo entero.
+    const key = Object.keys(TOKEN_COST_RATES).find((k) => k.slice(k.indexOf("/") + 1) === modelId);
+    const costo = key ? TOKEN_COST_RATES[key] : undefined;
+    if (costo) return { input: costo.input, cached: costo.cached, output: costo.output };
     throw new Error(
       `el modelo «${modelId}» grabó un turno y no tiene tarifa en lib/ai/tarifas-eval.ts, que la deriva de ` +
         `MODEL_POLICY: sin ella no se puede decir cuánto costó. Añade su papel y su fila en lib/ai/tarifas.ts.`,
