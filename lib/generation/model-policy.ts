@@ -1,6 +1,7 @@
 import { TARIFAS_POR_MILLON } from "../ai/tarifas";
 import type { ModelRole, FireworksReasoningEffort } from "../ai/fireworks-contracts";
 import type { CreditRate } from "../credits";
+import type { ProviderId } from "../ai/providers";
 import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 // 🔴 EL MODELO Y SU TARIFA VIAJAN JUNTOS, y es una corrección medida el
@@ -175,6 +176,15 @@ export const MODEL_POLICY = Object.freeze({
     // papel pasa a un modelo SIN visión, esto va a `false` y esas vueltas
     // vuelven al papel con visión (`operacionDeLaVuelta`, `lib/agent/brain.ts`).
     veImagenes: true,
+    // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): el MISMO
+    // modelo servido por DeepInfra, de principal, con Fireworks de respaldo. El
+    // orden lo manda `OPENLEN_AGENT_PROVIDERS` (lib/ai/providers.ts); `modelId`
+    // de arriba sigue siendo el de Fireworks, que es el que leen el esfuerzo y
+    // su interfaz (mismo modelo, mismo tope). La tarifa de COBRO no cambia.
+    providers: Object.freeze([
+      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash" }),
+      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" }),
+    ]),
   }),
 });
 

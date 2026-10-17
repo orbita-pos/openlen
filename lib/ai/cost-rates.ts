@@ -15,7 +15,7 @@
  * unit is `null`, never 0 — a cost of 0 would read as "free".
  */
 
-export type CostProvider = "fireworks" | "openai" | "exa";
+export type CostProvider = "fireworks" | "deepinfra" | "openai" | "exa";
 
 export interface TokenPrices {
   readonly input: number;
@@ -35,6 +35,10 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // docs.fireworks.ai/serverless/pricing, Standard column, read 2026-10-16:
   // the same list price the billing rate uses (`V4P1_FLASH` in tarifas.ts).
   "fireworks/accounts/fireworks/models/deepseek-v4p1-flash": { input: 0.3, cached: 0.006, output: 1.2 },
+  // deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash, read 2026-10-16: the price
+  // paid TODAY, a 30 % promotion with no end date. Without it, 0.20 / 0.006 /
+  // 0.60 — change this row the day the promotion ends.
+  "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash": { input: 0.14, cached: 0.004, output: 0.42 },
 };
 
 export const UNIT_COSTS_USD = {
