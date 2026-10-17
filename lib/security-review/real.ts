@@ -26,8 +26,11 @@ import { pgSecurityReviewStore } from "./store-pg";
 const modelReview: ReviewDeps["modelReview"] = async ({ inputs, context, focus, signal }) => {
   const declarations = declaracionesDeSoloLectura(buildFunctionDeclarations(process.env, {}, "len", inputs.app));
   const deps = realDeps();
+  // Every subagent has its brain; together they say which provider served what.
+  const brains: ReturnType<typeof createAgentBrain>[] = [];
   const run: Run = (o) => {
     const brain = createAgentBrain(reviewerBrainOptions({ tools: declarations, projectId: inputs.projectId, signal: o.signal }));
+    brains.push(brain);
     // Each subagent starts with nothing read and remembers only what it reads.
     const session: AgentSession = {
       projectId: inputs.projectId,
@@ -55,7 +58,13 @@ const modelReview: ReviewDeps["modelReview"] = async ({ inputs, context, focus, 
   const rate = creditRateForRole(roleForOperation("security_review"));
   const costCentiCredits = used ? creditsForUsage(r.usage.inputTokens, r.usage.outputTokens, rate, r.usage.cachedTokens) : 0;
   // OpenLen pays the review: a ledger row with 0 charged, for the project owner.
-  await recordReviewCost({ ownerId: inputs.ownerId, projectId: inputs.projectId, usage: r.usage, costCentiCredits });
+  await recordReviewCost({
+    ownerId: inputs.ownerId,
+    projectId: inputs.projectId,
+    usage: r.usage,
+    costCentiCredits,
+    providers: brains.flatMap((b) => b.providersUsed()),
+  });
   return { ...r, costCentiCredits };
 };
 

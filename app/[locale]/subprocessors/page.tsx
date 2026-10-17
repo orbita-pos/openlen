@@ -102,7 +102,8 @@ export default async function SubprocessorsPage({
           <ul>
             <li>
               <strong>DeepInfra</strong> (api.deepinfra.com) — escribe y edita
-              las páginas con Len. Datos: lo que Len necesita para trabajar — los
+              las páginas con Len y hace la revisión de seguridad al publicar,
+              que lee el código del proyecto. Datos: lo que Len necesita para trabajar — los
               mensajes del chat, los ficheros del proyecto, la salida de la
               terminal y de git, lo que lee de la base de datos del proyecto,
               capturas de la página y, cuando el usuario le pide a Len
@@ -113,8 +114,9 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>Fireworks AI</strong> (api.fireworks.ai) — parte de los
-              turnos de Len (recibe lo mismo que DeepInfra) y el resto de la IA: revisión por visión, la revisión de seguridad al
-              publicar y el asistente de una página. Datos: además de lo de Len,
+              turnos de Len y de las revisiones de seguridad (recibe lo mismo que
+              DeepInfra) y el resto de la IA: revisión por visión y el asistente
+              de una página. Datos: además de lo de Len,
               capturas e imágenes de referencia y las preguntas que los
               visitantes le hacen al asistente de una página. Fireworks no guarda
               lo que recibe con modelos abiertos. Región: Estados Unidos.
@@ -259,7 +261,8 @@ export default async function SubprocessorsPage({
           <ul>
             <li>
               <strong>DeepInfra</strong> (api.deepinfra.com) — writes and edits
-              pages with Len. Data: what Len needs to work — the chat messages,
+              pages with Len and runs the security review on publish, which reads
+              the project&apos;s code. Data: what Len needs to work — the chat messages,
               the project&apos;s files, the output of the terminal and of git,
               what it reads from the project&apos;s database, screenshots of the
               page and, when the user asks Len to review them, the form
@@ -270,9 +273,9 @@ export default async function SubprocessorsPage({
             </li>
             <li>
               <strong>Fireworks AI</strong> (api.fireworks.ai) — some of
-              Len&apos;s turns (it receives the same as DeepInfra) and the rest of
-              the AI: vision review, the security review
-              on publish and a page&apos;s assistant. Data: besides Len&apos;s,
+              Len&apos;s turns and security reviews (it receives the same as
+              DeepInfra) and the rest of the AI: vision review and a page&apos;s
+              assistant. Data: besides Len&apos;s,
               reference screenshots and images and the questions visitors ask a
               page&apos;s assistant. Fireworks does not store what it receives for
               open models. Region: United States.
