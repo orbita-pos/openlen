@@ -20,16 +20,14 @@ import { loadReviewInputs } from "./inputs";
 import { recordReviewCost } from "./ledger";
 import { reviewWithModel, type Run } from "./model-review";
 import { createSecurityReviewer, type ReviewDeps, type SecurityReviewer } from "./review";
+import { reviewerBrainOptions } from "./reviewer-brain";
 import { pgSecurityReviewStore } from "./store-pg";
-
-/** How hard the reviewer thinks, in the agent's posture layer. */
-const REVIEW_EFFORT = "high" as const;
 
 const modelReview: ReviewDeps["modelReview"] = async ({ inputs, context, focus, signal }) => {
   const declarations = declaracionesDeSoloLectura(buildFunctionDeclarations(process.env, {}, "len", inputs.app));
   const deps = realDeps();
   const run: Run = (o) => {
-    const brain = createAgentBrain({ tools: declarations, requestId: `security-review:${inputs.projectId}`, signal: o.signal, esfuerzoDelTurno: REVIEW_EFFORT });
+    const brain = createAgentBrain(reviewerBrainOptions({ tools: declarations, projectId: inputs.projectId, signal: o.signal }));
     // Each subagent starts with nothing read and remembers only what it reads.
     const session: AgentSession = {
       projectId: inputs.projectId,

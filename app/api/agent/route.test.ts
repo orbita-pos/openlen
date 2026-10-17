@@ -9,12 +9,27 @@ import { streamWithRetry } from "@/lib/agent/retry";
 import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-mode";
 import { createGoal, goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
 import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
+import { _resetProviderHealth, isCooling } from "@/lib/agent/provider-health";
 
 // ⚰️ Aquí vivía `veredicto()`, la factoría tipada de los veredictos de los ojos
 // al cerrar (`verifyEditedPage`), que se fueron con `verifyTurn` el 2026-10-06
 // (plans/crear-es-len).
 
-const mocks = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => {
+  // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): lo que la ruta
+  // le lee al cerebro al cerrar. Por defecto, un turno en Fireworks sin respaldo.
+  const brainStub = (over: Record<string, unknown> = {}) => ({
+    modelId: "test",
+    creditRate: () => "deepseek-flash",
+    providersUsed: () => [],
+    billingAdjustment: () => ({ minus: { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 }, extraCached: 0 }),
+    fellBack: () => false,
+    firstProvider: () => "fireworks",
+    lastProvider: () => "fireworks",
+    ...over,
+  });
+  return {
+  brainStub,
   // LEN.md (plans/len-md): las notas de /.len/memory que lee la ruta para el índice.
   memoryNotes: { list: vi.fn(async (): Promise<unknown[]> => []), upsert: vi.fn(), remove: vi.fn() },
   // Compartir el proyecto: lo que un miembro gasta y le queda (lib/projects/miembros.ts).
@@ -52,7 +67,7 @@ const mocks = vi.hoisted(() => ({
   // await getEsfuerzoGuardado(userId)` de la ruta no habría roto ni una
   // prueba de este fichero. Subida a `vi.fn()` para que la costura
   // ruta→cerebro tenga dónde afirmarse.
-  createAgentBrain: vi.fn(() => ({ modelId: "test", creditRate: () => "deepseek-flash" })),
+  createAgentBrain: vi.fn((_o?: unknown): Record<string, unknown> => brainStub()),
   listVersions: vi.fn(),
   verifyCapsule: vi.fn(),
   // Lo que mira Len cuando lo pide (`view_page`). El doble no mira nada
@@ -102,7 +117,8 @@ const mocks = vi.hoisted(() => ({
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>),
   // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
   nacerComoApp: vi.fn(async (_p: unknown) => true),
-}));
+  };
+});
 
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
@@ -786,14 +802,14 @@ describe("POST /api/agent — el modo plan", () => {
       contextBlock: "",
     } as never);
     enviados = [];
-    mocks.createAgentBrain.mockReturnValue({
-      modelId: "test",
-      creditRate: () => "deepseek-flash",
-      openStream: (m: Message[]) => {
-        enviados.push(m);
-        return (async function* () {})();
-      },
-    } as never);
+    mocks.createAgentBrain.mockReturnValue(
+      mocks.brainStub({
+        openStream: (m: Message[]) => {
+          enviados.push(m);
+          return (async function* () {})();
+        },
+      }),
+    );
     vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.openStream(args.messages);
@@ -806,7 +822,7 @@ describe("POST /api/agent — el modo plan", () => {
     mocks.buildAgentMessages.mockReset();
     mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
     mocks.createAgentBrain.mockReset();
-    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub());
     mocks.turnosParaElHistorial.mockReset();
     mocks.turnosParaElHistorial.mockResolvedValue([]);
     vi.mocked(streamWithRetry).mockReset();
@@ -2417,7 +2433,7 @@ describe("POST /api/agent — el encargo", () => {
       systemPrompt: SYS,
       contextBlock: "",
     })) as never);
-    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash", openStream: () => (async function* () {})() } as never);
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub({ openStream: () => (async function* () {})() }));
     vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
     historialInicial = [];
     mocks.turnosParaElHistorial.mockImplementation(async () => [
@@ -2432,7 +2448,7 @@ describe("POST /api/agent — el encargo", () => {
     mocks.buildAgentMessages.mockReset();
     mocks.buildAgentMessages.mockReturnValue({ ok: true as const, messages: [{ role: "user", content: "cambia el título" }] });
     mocks.createAgentBrain.mockReset();
-    mocks.createAgentBrain.mockReturnValue({ modelId: "test", creditRate: () => "deepseek-flash" });
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub());
     mocks.turnosParaElHistorial.mockReset();
     mocks.turnosParaElHistorial.mockResolvedValue([]);
     mocks.getCreditState.mockReset();
@@ -2871,5 +2887,181 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     await readEvents(await pedir({ hiloId: "h1" }));
     expect(mocks.hiloDelProyecto).not.toHaveBeenCalled();
     expect(mocks.respuestaDeLen).not.toHaveBeenCalled();
+  });
+});
+
+// EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): la puerta, el
+// pegado a la charla, el cobro de un respaldo, el libro y el diario.
+describe("POST /api/agent — el segundo proveedor", () => {
+  const DI_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash";
+  const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash";
+  const cierre = () => ({
+    finalText: "Listo.", turns: 1, toolCalls: 0,
+    usage: { inputTokens: 1_000, outputTokens: 100, cachedTokens: 300, thinkingTokens: 0 },
+    terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    transcripcion: [{ role: "assistant", content: "Listo." }],
+  });
+  const peticion = () =>
+    new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }) });
+  const pedir = async () => readEvents(await POST(peticion()));
+  const conRespaldo = (over: Record<string, unknown> = {}) =>
+    mocks.brainStub({
+      modelId: DI_MODEL,
+      fellBack: () => true,
+      firstProvider: () => "deepinfra",
+      lastProvider: () => "fireworks",
+      ...over,
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    _resetProviderHealth();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    // La caché a tarifa 0 y todo lo demás a 1: el cobro ajustado se ve en el número.
+    mocks.creditsForUsage.mockImplementation((i: number, o: number, _r: unknown, c = 0) => i - c + o);
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub());
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    mocks.runAgentLoop.mockImplementation(async () => cierre());
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    mocks.techoDelTurno.mockReturnValue(1_000_000);
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub());
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+  });
+
+  it("the gate refuses only when no agent provider has a key", async () => {
+    vi.stubEnv("FIREWORKS_API_KEY", "");
+    vi.stubEnv("DEEPINFRA_API_KEY", "");
+    const sinNinguna = await POST(peticion());
+    expect(sinNinguna.status).toBe(500);
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+
+    vi.stubEnv("DEEPINFRA_API_KEY", "di-key");
+    await pedir();
+    expect(mocks.runAgentLoop).toHaveBeenCalledTimes(1);
+  });
+
+  it("the brain gets the last turn's provider when it was under 10 minutes ago", async () => {
+    const fila = (minutos: number) => ({
+      userText: "antes",
+      assistantReasoning: "",
+      transcript: {
+        mensajes: [{ role: "assistant", content: "hecho" }],
+        leidos: [],
+        provider: { id: "fireworks", at: new Date(Date.now() - minutos * 60_000).toISOString() },
+      },
+    });
+    mocks.turnosParaElHistorial.mockResolvedValue([fila(3)]);
+    await pedir();
+    expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ preferredProvider: "fireworks" }));
+
+    mocks.turnosParaElHistorial.mockResolvedValue([fila(12)]);
+    await pedir();
+    expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ preferredProvider: null }));
+  });
+
+  it("a fallback turn charges the adjusted usage and keeps what it was worth", async () => {
+    mocks.techoDelTurno.mockReturnValue(500);
+    let excede: AgentLoopArgs["excedePresupuesto"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      excede = args.excedePresupuesto;
+      return cierre();
+    });
+    mocks.createAgentBrain.mockReturnValue(
+      conRespaldo({
+        providersUsed: () => [
+          { provider: "deepinfra", model: DI_MODEL, inputTokens: 100, cachedTokens: 0, outputTokens: 10, thinkingTokens: 0 },
+          { provider: "fireworks", model: FW_MODEL, inputTokens: 900, cachedTokens: 300, outputTokens: 90, thinkingTokens: 0 },
+        ],
+        billingAdjustment: () => ({ minus: { inputTokens: 100, outputTokens: 10, cachedTokens: 0, thinkingTokens: 0 }, extraCached: 500 }),
+      }),
+    );
+    await pedir();
+    // Real: 1000 − 300 + 100 = 800. Cobrado: (1000 − 100) − min(900, 300 + 500) + (100 − 10) = 190.
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      190,
+      expect.objectContaining({
+        outcome: "ok",
+        listCenticredits: 800,
+        uses: [
+          expect.objectContaining({ provider: "deepinfra", model: DI_MODEL, inputTokens: 100, cachedTokens: 0, outputTokens: 10 }),
+          expect.objectContaining({ provider: "fireworks", model: FW_MODEL, inputTokens: 900, cachedTokens: 300, outputTokens: 90 }),
+        ],
+      }),
+    );
+    // El techo cuenta lo cobrado, no lo regalado: 190 < 500 aunque lo real (800) pase.
+    expect(excede!({ inputTokens: 1_000, outputTokens: 100, cachedTokens: 300, thinkingTokens: 0 })).toBe(false);
+  });
+
+  it("a turn on one provider writes that provider in the ledger", async () => {
+    mocks.createAgentBrain.mockReturnValue(
+      mocks.brainStub({
+        modelId: DI_MODEL,
+        firstProvider: () => "deepinfra",
+        lastProvider: () => "deepinfra",
+        providersUsed: () => [{ provider: "deepinfra", model: DI_MODEL, inputTokens: 999, cachedTokens: 300, outputTokens: 100, thinkingTokens: 0 }],
+      }),
+    );
+    await pedir();
+    // Una sola fila: los totales del bucle, que también cuentan lo estimado.
+    expect(mocks.chargeCredits).toHaveBeenCalledWith(
+      "u1",
+      800,
+      expect.objectContaining({
+        listCenticredits: 800,
+        uses: [expect.objectContaining({ provider: "deepinfra", model: DI_MODEL, inputTokens: 1_000, cachedTokens: 300, outputTokens: 100 })],
+      }),
+    );
+  });
+
+  it("the transcript saves who served and when", async () => {
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub({ lastProvider: () => "deepinfra" }));
+    // La fila sólo se escribe si el turno hizo algo: aquí, hablar.
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "Listo." });
+      return cierre();
+    });
+    const antes = Date.now();
+    await pedir();
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { provider?: { id: string; at: string } } | null }])[1];
+    expect(fila.transcript?.provider?.id).toBe("deepinfra");
+    expect(Date.parse(fila.transcript!.provider!.at)).toBeGreaterThanOrEqual(antes);
+  });
+
+  it("the journal line names the provider and the switch", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    mocks.createAgentBrain.mockReturnValue(conRespaldo());
+    await pedir();
+    const lineas = () => log.mock.calls.map((c) => String(c[0])).filter((l) => l.startsWith("[agent] deepseek-ai/DeepSeek-V4.1-Flash — in "));
+    expect(lineas()).toHaveLength(1);
+    expect(lineas()[0]).toMatch(/ \/ proveedores=deepinfra,fireworks$/);
+
+    log.mockClear();
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub({ modelId: DI_MODEL, firstProvider: () => "deepinfra", lastProvider: () => "deepinfra" }));
+    await pedir();
+    expect(lineas()).toHaveLength(1);
+    expect(lineas()[0]).not.toContain("proveedores=");
+    log.mockRestore();
+  });
+
+  it("three fallback turns in a row cool DeepInfra (the route tells the health)", async () => {
+    mocks.createAgentBrain.mockReturnValue(conRespaldo());
+    await pedir();
+    await pedir();
+    expect(isCooling("deepinfra", Date.now())).toBe(false);
+    await pedir();
+    expect(isCooling("deepinfra", Date.now())).toBe(true);
   });
 });

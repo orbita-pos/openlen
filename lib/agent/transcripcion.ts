@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 
 import type { InlineImage, Message } from "@/lib/ai-gateway";
+import type { ProviderId } from "@/lib/ai/providers";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
@@ -111,6 +112,10 @@ export interface LecturaGuardada {
 export interface TranscripcionGuardada {
   readonly mensajes: Message[];
   readonly leidos: LecturaGuardada[];
+  /** EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): quién atendió
+   *  el final de este turno y cuándo cerró (ISO). El turno siguiente lo prefiere
+   *  mientras su caché siga caliente (`preferredProviderFrom`). */
+  readonly provider?: { readonly id: ProviderId; readonly at: string };
   /** PIEZA 7 · el turno cerró en modo plan: la foto de la que se pliega el
    *  estado al empezar el siguiente (`planModeFromRows`). Ausente = no. */
   readonly planMode?: true;
