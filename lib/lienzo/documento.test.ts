@@ -196,7 +196,9 @@ describe("las superficies que miden hornean el documento de vista", () => {
   it("🔴 view_page le pasa la vista a observarPagina", () => {
     const src = readFileSync(join(process.cwd(), "lib/agent/tools.ts"), "utf8");
     expect(
-      /observarPagina\(\{[\s\S]{0,600}?vista:/.test(src),
+      // `deps.observarPagina!({ …, vista })` desde los ojos de Claude Code (13/10):
+      // con `!` y la vista abreviada, que la forma vieja (`vista:`) no veía.
+      /observarPagina!?\(\{[\s\S]{0,600}?\bvista\b/.test(src),
       "toolMirarPagina llama a observarPagina sin vista: mide el documento pelado",
     ).toBe(true);
   });

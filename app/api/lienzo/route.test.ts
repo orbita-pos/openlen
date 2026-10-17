@@ -75,7 +75,10 @@ describe("POST /api/lienzo", () => {
   });
 
   it("503 sin_host si no hay secreto con el que firmar la etiqueta", async () => {
+    // Los dos nombres del secreto de Auth.js (`lib/lienzo/host.ts`): con sólo
+    // AUTH_SECRET vacío, el NEXTAUTH_SECRET del .env.local firmaba igual.
     vi.stubEnv("AUTH_SECRET", "");
+    vi.stubEnv("NEXTAUTH_SECRET", "");
     const res = await POST(pide({ projectId: ID, html: "x" }));
     expect(res.status).toBe(503);
     expect(mocks.guardar).not.toHaveBeenCalled();

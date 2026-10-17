@@ -42,7 +42,7 @@ export const SHOW_WIDGET_DECLARATION: Record<string, unknown> = {
   name: SHOW_WIDGET,
   description:
     "Show a visual inside your reply in the chat — a chart, a diagram, a mockup or a small interactive tool — when seeing it helps more than reading; " +
-    "when plain text is clearer, answer in text. Write the explanation in your reply and put only the visual here. " +
+    "when plain text is clearer, answer in text. Explain in your reply and put only the visual here. " +
     "Show only figures that came from your tools, never made-up ones.",
   parameters: {
     type: "OBJECT",

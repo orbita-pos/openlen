@@ -34,6 +34,8 @@ export const PREFIJOS_A_NEXT: readonly string[] = [
   // Su Realtime (carril D): en producción va a su servicio (:4100), que en el host de la
   // página contesta 404 como aquí Next; supabase-js lo llama por la URL del proyecto.
   "/realtime/v1/",
+  // Sus Edge Functions (lib/functions) y la IA de las apps (lib/app-ai): las atiende Next.
+  "/functions/v1/", "/ai/v1/",
 ];
 
 const MIME: Record<string, string> = {

@@ -51,6 +51,10 @@ function primerControl(texto: string): number {
 const RAICES = ["lib", "app", "components", "scripts", "tools", "messages"];
 const EXTENSIONES = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".md"];
 const SALTAR = new Set(["node_modules", ".next", "dist", "target", "coverage", ".git"]);
+/** Bytes de terceros CONGELADOS con su sha256 en `manifest.json` (`npm run
+ *  functions:vendor`): no son fuente nuestro, y escaparlos rompería sus huellas.
+ *  Como `public/app-vendor`, que esta guarda tampoco mira. */
+const CONGELADOS = new Set([join("lib", "functions", "vendor")]);
 
 function ficherosDeFuente(raiz: string): string[] {
   let dentro: string[];
@@ -63,6 +67,7 @@ function ficherosDeFuente(raiz: string): string[] {
   for (const nombre of dentro) {
     if (SALTAR.has(nombre)) continue;
     const ruta = join(raiz, nombre);
+    if (CONGELADOS.has(ruta)) continue;
     let esDir = false;
     try {
       esDir = statSync(ruta).isDirectory();

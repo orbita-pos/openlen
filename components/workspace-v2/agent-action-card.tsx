@@ -198,6 +198,11 @@ export const KNOWN_TOOLS = new Set([
   // La lista de progreso (spec local 2026-10-15). Su tarjeta no se pinta entre
   // los pasos (`visibleSteps`), pero la barra de «qué hace Len» sí la nombra.
   "todo_write",
+  // Los visuales (spec local 2026-10-16-len-inline-visuals): igual que
+  // todo_write, no son pasos —el visual va en la respuesta—, pero la barra de
+  // «qué hace Len» los nombra mientras corren.
+  "read_me",
+  "show_widget",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",
