@@ -1349,6 +1349,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     for (let intento = 1; ; intento++) {
       let emitidoEnElIntento = 0;
       let falloReintentable: ProviderErrorCode | undefined;
+      /** El cerebro pasó al proveedor de respaldo (`switchedProvider`). */
+      let cambioDeProveedor = false;
       /** El proveedor dijo que no cabe (`context_window_exceeded`). */
       let desbordado = false;
 
@@ -1415,6 +1417,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           if (ev.stopReason.kind === "error") {
             if (ev.stopReason.code === "context_window_exceeded" && args.compaction && !overflowRecovered && !args.signal?.aborted) {
               desbordado = true;
+            } else if (ev.stopReason.switchedProvider && !args.signal?.aborted) {
+              falloReintentable = ev.stopReason.code ?? "server";
+              cambioDeProveedor = true;
             } else if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
               falloReintentable = ev.stopReason.code;
             } else {
@@ -1472,9 +1477,20 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       }
       if (!falloReintentable) break;
 
-      const delayMs = retryDelayMs(intento);
-      args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
-      await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
+      if (cambioDeProveedor) {
+        // EL CAMBIO DE PROVEEDOR (spec local 2026-10-16-second-provider): el paso
+        // se repite en el respaldo YA, sin espera, y con sus reintentos completos
+        // —el contador vuelve a empezar—. El dueño no ve el cambio: si el
+        // intento llegó a escribir, se le retira; si no, ni el aviso.
+        if (emitidoEnElIntento > 0) {
+          args.emit({ type: "retry", attempt: 1, maxAttempts: MAX_PROVIDER_RETRIES, delayMs: 0, discardChars: emitidoEnElIntento });
+        }
+        intento = 0;
+      } else {
+        const delayMs = retryDelayMs(intento);
+        args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
+        await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
+      }
       // El intento fallido no existió: se vacía lo que dejó ANTES de mirar el ■.
       // Si no, en una vuelta retenida lo retenido del intento descartado salía
       // al dueño detrás del «cancelado» (lo cazó la revisión de la pieza).
