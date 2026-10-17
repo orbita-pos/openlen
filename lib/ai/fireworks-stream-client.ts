@@ -22,7 +22,7 @@ import { providerUsage } from "./fireworks-client";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
 import { codeForInBandError, codeForProviderError, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
-import { presupuestoDeEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
+import { presupuestoDeEsfuerzo, resolverEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
 
@@ -171,6 +171,10 @@ export interface FireworksStreamClientOptions {
   /** El campo que pega una charla a su caché: `user` en Fireworks,
    *  `prompt_cache_key` en DeepInfra. Por defecto `user`. */
   readonly affinityField?: "user" | "prompt_cache_key";
+  /** Cómo viaja la postura. `budget` (Fireworks, por defecto): un número, o
+   *  nada en `high`. `word` (DeepInfra): el nivel como palabra — un número le
+   *  da 422 y SIN el campo V4.1 Flash no piensa nada (medido el 2026-10-16). */
+  readonly effortStyle?: "budget" | "word";
 }
 
 export interface FireworksStreamClient {
@@ -285,6 +289,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
   const fetchImpl = options.fetchImpl ?? fetch;
   const endpoint = options.endpoint ?? FIREWORKS_ENDPOINT;
   const affinityField = options.affinityField ?? "user";
+  const effortStyle = options.effortStyle ?? "budget";
 
   return {
     modelId: modelIdForRole("reasoner"),
@@ -349,6 +354,10 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
                   // tenerlo. Tampoco se omite: sin campo el proveedor piensa por
                   // su cuenta. Se manda `"none"`, que es apagarlo A PROPÓSITO.
                   if (request.esfuerzo == null) return { reasoning_effort: "none" };
+                  // En DeepInfra la palabra sólo enciende el pensamiento: no lo
+                  // recorta (medido: `low` 624/1006 tokens, `high` 898/658). Por
+                  // eso los turnos `low`/`medium` prefieren Fireworks (el cerebro).
+                  if (effortStyle === "word") return { reasoning_effort: resolverEsfuerzo(request.esfuerzo) };
                   const presupuesto = presupuestoDeEsfuerzo(request.esfuerzo, request.maxOutputTokens);
                   return presupuesto === undefined ? {} : { reasoning_effort: presupuesto };
                 })()

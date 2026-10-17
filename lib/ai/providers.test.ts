@@ -24,8 +24,9 @@ describe("resolveAgentProviders", () => {
       endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
       apiKeyEnv: "DEEPINFRA_API_KEY",
       affinityField: "prompt_cache_key",
+      effortStyle: "word",
     });
-    expect(PROVIDER_DIALECTS.fireworks.affinityField).toBe("user");
+    expect(PROVIDER_DIALECTS.fireworks).toMatchObject({ affinityField: "user", effortStyle: "budget" });
   });
 
   it("OPENLEN_AGENT_PROVIDERS=fireworks turns DeepInfra off", () => {
