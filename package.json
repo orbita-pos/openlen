@@ -45,6 +45,7 @@
     "bench:len:servidor": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-servidor.ts",
     "bench:len:repartir": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-repartir.ts",
     "bench:len:ver": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-ver.ts",
+    "provider:probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/provider-probe.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "collections:drop": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-drop.ts",
