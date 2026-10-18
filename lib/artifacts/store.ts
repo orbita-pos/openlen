@@ -83,7 +83,9 @@ export function createArtifactStore(database: ArtifactDatabase) {
       if (job.status === "completed") return getArtifact(context, String(job.artifactId), tx);
       const [active] = await tx.query(`update "artifactJobs" set "status"='completed',"updatedAt"=now() where "id"=$1 and "fencingToken"=$2 and "leaseUntil">now() and not "cancelRequested" and "status"='storing' returning *`, [job.id, claim.fencingToken]);
       if (!active) throw new ArtifactError("lease_lost");
-      const [sealed] = await tx.query(`update "artifactRevisions" set "outputs"=$3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2 and "sealedAt" is not null returning "artifactId"`, [job.artifactId, job.revision, JSON.stringify(result.outputs), JSON.stringify(result.evidence)]);
+      // Append verified exports atomically. Existing download indexes remain
+      // stable when another format of the same sealed revision is exported.
+      const [sealed] = await tx.query(`update "artifactRevisions" set "outputs"="outputs" || $3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2 and "sealedAt" is not null returning "artifactId"`, [job.artifactId, job.revision, JSON.stringify(result.outputs), JSON.stringify(result.evidence)]);
       if (!sealed) throw new ArtifactError("revision_not_sealed");
       const [artifact] = await tx.query(`update "artifacts" set "lastReadyRevision"=greatest(coalesce("lastReadyRevision",-1),$2),"status"=case when "currentRevision"=$2 then 'ready' else "status" end,"updatedAt"=now() where "id"=$1 returning *`, [job.artifactId, job.revision]);
       await tx.query(`insert into "artifactEvents" ("projectId","requestId","artifactId","revision","type","jobId") values ($1,$2,$3,$4,'ready',$5) on conflict do nothing`, [artifact!.projectId, artifact!.requestId, job.artifactId, job.revision, job.id]);

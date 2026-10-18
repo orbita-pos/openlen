@@ -62,6 +62,7 @@ export interface ArtifactRevision {
 export interface ArtifactJob {
   readonly id: string;
   readonly artifactId: string;
+  readonly actorId: string | null;
   readonly revision: number;
   readonly operation: string;
   readonly optionsHash: string;
@@ -108,7 +109,8 @@ export interface SealedArtifactInput {
 }
 export interface ProducedArtifactFile { readonly name: string; readonly format: string; readonly mime: string; readonly bytes: Uint8Array }
 export interface AdapterResult { readonly outputs: readonly ProducedArtifactFile[]; readonly evidence: ArtifactEvidence }
-export type ArtifactAdapter = (input: SealedArtifactInput, signal: AbortSignal) => Promise<AdapterResult>;
+export interface ArtifactAdapterHooks { beforeExternalCall(): Promise<void> }
+export type ArtifactAdapter = (input: SealedArtifactInput, signal: AbortSignal, hooks: ArtifactAdapterHooks) => Promise<AdapterResult>;
 export interface ArtifactChargePolicy { readonly imageCenticredits: number; readonly renderCenticredits: number }
 export interface Settlement { readonly jobId: string; readonly attemptId: string; readonly ledgerId: string; readonly chargedCenticredits: number }
 export interface JobOutcome { readonly jobId: string; readonly status: "completed" | "failed" | "cancelled" | "needs_attention"; readonly code?: string }

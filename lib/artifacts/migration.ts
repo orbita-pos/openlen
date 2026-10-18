@@ -24,7 +24,7 @@ create table if not exists "artifactRevisions" (
 );
 create table if not exists "artifactJobs" (
  "id" text primary key, "artifactId" text not null references "artifacts"("id") on delete cascade,
- "revision" integer not null, "operation" text not null, "optionsHash" text not null, "options" jsonb not null default '{}',
+ "revision" integer not null, "actorId" text references "users"("id"), "operation" text not null, "optionsHash" text not null, "options" jsonb not null default '{}',
  "status" text not null default 'queued' check ("status" in ('queued','running','validating','storing','completed','failed','cancelled','needs_attention')),
  "attempt" integer not null default 0, "workerId" text, "fencingToken" text, "leaseUntil" timestamptz,
  "cancelRequested" boolean not null default false, "externalStartedAt" timestamptz, "errorCode" text,
@@ -44,7 +44,15 @@ create table if not exists "artifactEventReads" (
  "userId" text not null references "users"("id") on delete cascade, "cursor" bigint not null default 0,
  primary key ("projectId","userId")
 );
+-- No FK: object cleanup must survive deletion of its project/job/revision.
+create table if not exists "artifactObjectGarbage" (
+ "key" text primary key, "artifactId" text not null, "revision" integer not null,
+ "jobId" text not null, "fencingToken" text not null,
+ "notBefore" timestamptz not null default (now()+interval '1 hour')
+);
+create index if not exists "artifactObjectGarbage_due_idx" on "artifactObjectGarbage" ("notBefore");
 create index if not exists "artifacts_project_created_idx" on "artifacts" ("projectId","createdAt","id");
+alter table "artifactJobs" add column if not exists "actorId" text references "users"("id");
 create index if not exists "artifactJobs_claim_idx" on "artifactJobs" ("status","createdAt");
 create index if not exists "artifactEvents_project_cursor_idx" on "artifactEvents" ("projectId","cursor");
 create unique index if not exists "artifactEvents_job_type_idx" on "artifactEvents" ("jobId","type") where "jobId" is not null;

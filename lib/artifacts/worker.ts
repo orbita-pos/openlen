@@ -1,0 +1,74 @@
+import { createHash } from "node:crypto";
+import { requireArtifactAccess } from "./access";
+import { validateAdapterResult } from "./contracts";
+import type { ArtifactJobs } from "./jobs";
+import type { ArtifactStorage } from "./private-storage";
+import type { ArtifactStore } from "./store";
+import { ArtifactError, type ArtifactAdapter, type ArtifactDatabase, type ArtifactKind, type ArtifactOutput, type JobClaim, type JobOutcome } from "./types";
+
+export interface ArtifactWorkerDeps {
+  readonly database: ArtifactDatabase;
+  readonly store: ArtifactStore;
+  readonly jobs: ArtifactJobs;
+  readonly storage: ArtifactStorage;
+  readonly adapters: Partial<Record<ArtifactKind, ArtifactAdapter>>;
+}
+
+export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, signal: AbortSignal): Promise<JobOutcome> {
+  const controller = new AbortController();
+  const cancel = () => controller.abort(signal.reason);
+  signal.addEventListener("abort", cancel, { once: true });
+  if (signal.aborted) cancel();
+  let externalStarted = false;
+  let commitStarted = false;
+  const stored: string[] = [];
+  const timer = setInterval(() => { void deps.jobs.heartbeat(claim).then((ok) => { if (!ok) controller.abort(new ArtifactError("lease_lost")); }, () => controller.abort(new ArtifactError("heartbeat_failed"))); }, 10_000);
+  timer.unref();
+  try {
+    controller.signal.throwIfAborted();
+    const ctx = await deps.jobs.contextForJob(claim.job);
+    const artifact = await requireArtifactAccess(deps.database, ctx, claim.job.artifactId, "write");
+    const revision = await deps.store.getRevision(ctx, artifact.id, claim.job.revision);
+    if (!revision.sealedAt) throw new ArtifactError("revision_not_sealed");
+    const adapter = deps.adapters[artifact.kind];
+    if (!adapter) throw new ArtifactError("format_unavailable");
+    const result = await adapter({ artifact, revision, assets: [], datasets: [] }, controller.signal, {
+      beforeExternalCall: async () => { await deps.jobs.startExternalCall(claim); externalStarted = true; },
+    });
+    controller.signal.throwIfAborted();
+    await deps.jobs.advance(claim, "validating");
+    validateAdapterResult(result);
+    await deps.jobs.advance(claim, "storing");
+    const outputs: ArtifactOutput[] = result.outputs.map((file) => {
+      const hash = createHash("sha256").update(file.bytes).digest("hex");
+      return { key: `${artifact.projectId}/${artifact.id}/${revision.revision}/${claim.job.id}/${claim.fencingToken}/${hash}/${file.name}`, hash, bytes: file.bytes.length, mime: file.mime, format: file.format };
+    });
+    // Register cleanup before the first write, including uncertain uploads and
+    // objects whose project is deleted while this renderer is still running.
+    await deps.jobs.trackOutputObjects(claim, outputs);
+    for (const [index, file] of result.outputs.entries()) {
+      controller.signal.throwIfAborted();
+      const { key, hash } = outputs[index]!;
+      await deps.storage.put(key, file.bytes); stored.push(key);
+      const actual = await deps.storage.get(key);
+      if (actual.length !== file.bytes.length || createHash("sha256").update(actual).digest("hex") !== hash) throw new ArtifactError("stored_output_corrupt");
+    }
+    controller.signal.throwIfAborted();
+    commitStarted = true;
+    await deps.store.recordArtifactResult(claim, { outputs, evidence: result.evidence });
+    return { jobId: claim.job.id, status: "completed" };
+  } catch (error) {
+    if (commitStarted) {
+      const [committed] = await deps.database.query(`select "status" from "artifactJobs" where "id"=$1`, [claim.job.id]).catch(() => []);
+      if (committed?.status === "completed") return { jobId: claim.job.id, status: "completed" };
+      // A failed COMMIT response does not prove rollback. Leave the objects for
+      // reconciliation rather than deleting bytes that may already be visible.
+    } else for (const key of stored) await deps.storage.delete(key).catch(() => undefined);
+    const [latest] = await deps.database.query(`select "cancelRequested" from "artifactJobs" where "id"=$1`, [claim.job.id]).catch(() => []);
+    const cancelled = signal.aborted || latest?.cancelRequested === true;
+    const status = externalStarted || commitStarted ? "needs_attention" : cancelled ? "cancelled" : "failed";
+    const code = commitStarted ? "result_commit_unknown" : externalStarted ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
+    if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code).catch(() => undefined);
+    return { jobId: claim.job.id, status, code };
+  } finally { clearInterval(timer); signal.removeEventListener("abort", cancel); }
+}
