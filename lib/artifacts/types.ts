@@ -22,6 +22,7 @@ export interface Artifact {
   readonly projectId: string;
   readonly requestId: string;
   readonly kind: ArtifactKind;
+  readonly itemKey: string | null;
   readonly title: string;
   readonly brief: string;
   readonly createdBy: string;

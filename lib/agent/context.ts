@@ -287,6 +287,7 @@ export function buildAgentContext(args: {
   /** GIT (spec local 2026-10-15-git-for-len, §5): Claude Code's git status block for this turn
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
+  artifactIndex?: string | null;
   /** Lo que el dueño dijo en los turnos que ya no caben en la ventana (H08-a).
    *  Ausente/vacío ⇒ salida byte-idéntica. */
   dichoAntes?: readonly string[];
@@ -402,7 +403,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -453,6 +454,7 @@ export interface BuildAgentMessagesArgs {
   /** GIT (spec local 2026-10-15-git-for-len, §5): Claude Code's git status block for this turn
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
+  artifactIndex?: string | null;
   /** Ver buildAgentContext.dichoAntes. */
   dichoAntes?: readonly string[];
   /** Ver buildAgentContext.degradaciones. */
@@ -537,6 +539,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     cambios: args.cambios,
     cambiosDelDueno: args.cambiosDelDueno,
     gitStatus: args.gitStatus,
+    artifactIndex: args.artifactIndex,
     dichoAntes: args.dichoAntes,
     degradaciones: args.degradaciones,
     conversacionRecortada: args.conversacionRecortada,

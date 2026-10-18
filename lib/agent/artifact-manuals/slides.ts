@@ -1,0 +1,4 @@
+export const slidesManual = `# Slide deck deliverables
+Author deck.json in /.len/artifacts/<id>/ with stable slide and element ids. A title correction keeps the other ids and slides; do not recreate the whole deck. Use the installed renderer's descriptor contract for dimensions/coordinates, text, shapes, images and charts.
+Use the project's actual branding and features. Reference a generated image through its pinned artifactId/revision dependency; "second image" means the saved item identity, not a new paid generation. Keep private resources private.
+HTML preview, PDF and PPTX are exports of the same deck.json. Supported text and charts must remain editable objects in PPTX, not a screenshot masquerading as an editable slide. Keep text inside the canvas and fix overflow diagnostics. Render/inspect actual files before saying the presentation is ready.`;

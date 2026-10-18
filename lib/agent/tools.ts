@@ -162,6 +162,7 @@ export interface FileVersionNote {
 export interface AgentDeps {
   /** Len 3.0: isolated deliverable sources. Absent while the feature is off. */
   artifacts?: import("@/lib/artifacts/workspace").ArtifactWorkspace;
+  artifactAgent?: import("@/lib/artifacts/tools").ArtifactAgent;
   /** Pieza 3 de Len 2.5: quien CONTESTA las preguntas de `ask_user_question`
    *  dentro del turno (lo pone la ruta cuando el chat lo pide). Devuelve las
    *  respuestas, el descarte del dueño (`QUESTION_DISMISSED`, lote 7-8) o
@@ -2581,6 +2582,9 @@ async function ejecutarHerramienta(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  if (["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data"].includes(name)) {
+    return deps.artifactAgent ? deps.artifactAgent.execute(name, args) : { response: { ok: false, error: "feature_disabled" } };
+  }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
   if (esHerramientaDeFicheros(name)) {
     const out = await {

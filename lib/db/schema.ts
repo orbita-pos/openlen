@@ -2506,6 +2506,7 @@ export const artifacts = pgTable("artifacts", {
   brief: text("brief").notNull(),
   createdBy: text("createdBy").notNull().references(() => users.id),
   visibility: text("visibility").$type<ArtifactVisibility>().notNull(),
+  itemKey: text("itemKey"),
   currentRevision: integer("currentRevision").notNull().default(0),
   lastReadyRevision: integer("lastReadyRevision"),
   status: text("status").$type<ArtifactStatus>().notNull().default("draft"),
@@ -2516,6 +2517,7 @@ export const artifacts = pgTable("artifacts", {
   index("artifacts_project_created_idx").on(t.projectId, t.createdAt, t.id),
   check("artifacts_kind_check", sqlOp`${t.kind} in ('dashboard','slides','image','motion')`),
   check("artifacts_visibility_check", sqlOp`${t.visibility} in ('owner','project')`),
+  uniqueIndex("artifacts_request_item_idx").on(t.requestId, t.itemKey),
   check("artifacts_currentRevision_check", sqlOp`${t.currentRevision} >= 0`),
   check("artifacts_status_check", sqlOp`${t.status} in ('draft','queued','running','validating','storing','ready','failed','cancelled','needs_attention')`),
 ]);

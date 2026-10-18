@@ -1,0 +1,4 @@
+export const motionManual = `# Motion and explainer video deliverables
+The first release is without voice: explain with text, animation and frozen screenshots of the app. Do not promise narration, TTS or an audio track. Keep customer sessions/data out of product screenshots unless explicitly requested and authorized.
+Author an editable independent composition in /.len/artifacts/<id>/, using the installed motion renderer's descriptor/runtime contract. Its paused deterministic timeline must seek directly to any time, not rely on real-time timers, random values or network fetches. Freeze image/screenshot dependencies at explicit revisions.
+Maximum 120 seconds; plan legible scenes at 1280x720 and 30fps. Use concise text and clear transitions. The actual renderer validates duration, frames, H.264 MP4 and decoding. Retain editable sources after a failed export; revise/re-render only this piece and its affected dependencies. Do not call queued work a finished video.`;

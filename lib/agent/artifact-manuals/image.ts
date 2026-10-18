@@ -1,0 +1,4 @@
+export const imageManual = `# Promotional image deliverables
+Each requested image gets its own create_artifact identity and stable item_key. Write image.json with its prompt, dimensions, output format and allowed references according to the installed image renderer. Use actual product features and branding, without exposing private customer data.
+Generation uses OpenLen's image provider, not HTML screenshot tricks. The paid worker requires an explicit configured commercial policy; missing pricing/provider configuration is a concrete unavailable capability, never a free generation. Do not work around it with the legacy edit_image tool.
+An ambiguous provider timeout needs attention, not another paid generation. A saved image can be reused by slides or motion through a pinned dependency, without generating or charging again. Inspect saved MIME/dimensions/bytes and status before claiming it is ready.`;

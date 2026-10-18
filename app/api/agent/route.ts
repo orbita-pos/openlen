@@ -79,6 +79,9 @@ import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
 import { randomUUID } from "node:crypto";
+import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
+import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
+import { createArtifactAgent } from "@/lib/artifacts/tools";
 
 import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
@@ -331,7 +334,7 @@ type CuerpoDelTurno = {
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
-type RondaDelEncargo = { goalId: string; revision: number; round: number };
+type RondaDelEncargo = { goalId: string; revision: number; round: number; artifactMessageId?: string };
 
 /**
  * EL TURNO, sin la puerta HTTP (pieza 8 de Len 2.5). Lo llama `POST` con el
@@ -389,6 +392,8 @@ async function correrTurno(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(turnIdRaw)
       ? turnIdRaw
       : null;
+  const turnoId = randomUUID();
+  const artifactMessageId = opts.round?.artifactMessageId ?? turnIdDelCliente ?? turnoId;
   if (!projectId) return errorJson(400, "projectId is required");
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
@@ -529,6 +534,10 @@ async function correrTurno(
   // EL LIBRO DE GASTO: la fila de cada cargo de herramienta apunta al turno. El
   // id del turno se fija más abajo (`filaId`); hasta entonces vale el del cliente.
   let ledgerRefId: string | null = turnIdDelCliente;
+  const artifactKinds = artifactsEnabled() ? availableArtifactKinds() : [];
+  const artifactAgent = artifactsEnabled() ? createArtifactAgent(getArtifactRuntime(), {
+    actorId: quien, ownerId: userId, projectId, requestId: "", role: miembro ? "editor" : "dueno",
+  }, () => artifactMessageId, artifactKinds) : undefined;
   const deps = {
     ...realDeps(async (uid, centicreditos, use) => {
       await chargeCredits(uid, centicreditos, {
@@ -543,6 +552,7 @@ async function correrTurno(
       chargedByTools += centicreditos;
       if (miembro) await sumarGasto(projectId, quien, centicreditos);
     }),
+    ...(artifactAgent ? { artifactAgent, artifacts: artifactAgent.workspace } : {}),
     // Un miembro no ve `/.openlen/resultados` ni `/.openlen/bandeja`, ni las
     // herramientas de resultados: son datos de los visitantes, del dueño.
     ...(miembro ? { resultados: undefined } : {}),
@@ -593,7 +603,7 @@ async function correrTurno(
   const bloqueDeDiseno = disenoDelTurno && ficherosDelDiseno ? designBlock(disenoDelTurno, ficherosDelDiseno) : "";
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
   // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
-  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled() }, mode, appDelTurno);
+  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds }, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -978,6 +988,7 @@ async function correrTurno(
     cambiosDelDueno,
     // GIT: Claude Code's status block for this turn (null without git).
     gitStatus,
+    artifactIndex: artifactAgent ? await artifactAgent.contextIndex().catch(() => "PROJECT DELIVERABLES: status unavailable; inspect saved state before claiming completion.\n") : null,
     // Lo que la ingestión ya sabe que se perdió en esta página. El Chat lo
     // recibe desde hace tiempo (`KNOWN ISSUES ON THIS PAGE`); el Agente no lo
     // veía por ningún lado, así que empezaba a ciegas una conversación sobre
@@ -1085,7 +1096,6 @@ async function correrTurno(
   // LA DIRECCION A LA QUE SE LE PUEDE CORREGIR EL RUMBO. El SSE es de una sola
   // via, asi que la correccion del usuario entra por otra peticion
   // (POST /api/agent/dirigir) y necesita saber a que turno va.
-  const turnoId = randomUUID();
   const upstreamAbort = new AbortController();
   /** El cliente cerró la conexión a media faena. Desde 2.1 eso NO para el
    *  turno (ver `cancel()` abajo): sólo se apunta, para el registro y para
@@ -1979,7 +1989,7 @@ async function correrTurno(
                 ...(body?.zonaHoraria !== undefined ? { zonaHoraria: body.zonaHoraria } : {}),
               },
               { url: req.url, signal: new AbortController().signal },
-              { round: { goalId: siguiente.id, revision: siguiente.revision, round: siguiente.roundsStarted + 1 } },
+              { round: { goalId: siguiente.id, revision: siguiente.revision, round: siguiente.roundsStarted + 1, artifactMessageId } },
             );
             if (res.ok && res.headers.get("content-type")?.startsWith("text/event-stream")) {
               void res.body?.cancel().catch(() => undefined);

@@ -26,16 +26,19 @@ export function createArtifactStore(database: ArtifactDatabase) {
     const [row] = await database.query(`insert into "artifactRequests" ("id","projectId","sourceMessageId","createdBy") values ($1,$2,$3,$4) on conflict ("projectId","sourceMessageId") do update set "sourceMessageId"=excluded."sourceMessageId" returning *`, [randomUUID(), ctx.projectId, messageId, ctx.actorId]);
     return row as unknown as ArtifactRequest;
   }
-  async function createArtifact(ctx: ArtifactContext, input: { kind: ArtifactKind; title: string; brief: string; visibility: ArtifactVisibility }): Promise<Artifact> {
+  async function createArtifact(ctx: ArtifactContext, input: { kind: ArtifactKind; title: string; brief: string; visibility: ArtifactVisibility; itemKey?: string }): Promise<Artifact> {
     if (!["dashboard", "slides", "image", "motion"].includes(input.kind) || !["owner", "project"].includes(input.visibility)
-      || !input.title?.trim() || input.title.length > 200 || typeof input.brief !== "string" || input.brief.length > 20_000) throw new ArtifactError("invalid_artifact");
+      || !input.title?.trim() || input.title.length > 200 || typeof input.brief !== "string" || input.brief.length > 20_000
+      || (input.itemKey !== undefined && !/^[a-zA-Z0-9_-]{1,80}$/.test(input.itemKey))) throw new ArtifactError("invalid_artifact");
     return database.transaction(async (tx) => {
       await requireProjectAccess(tx, ctx, "write");
       const [request] = await tx.query(`select "id" from "artifactRequests" where "id"=$1 and "projectId"=$2`, [ctx.requestId, ctx.projectId]);
       if (!request) throw new ArtifactError("request_not_found");
       const id = randomUUID();
-      const [row] = await tx.query(`insert into "artifacts" ("id","projectId","requestId","kind","title","brief","createdBy","visibility") values ($1,$2,$3,$4,$5,$6,$7,$8) returning *`, [id, ctx.projectId, ctx.requestId, input.kind, input.title.trim(), input.brief, ctx.actorId, input.visibility]);
-      await tx.query(`insert into "artifactRevisions" ("artifactId","revision") values ($1,0)`, [id]);
+      const [row] = await tx.query(`insert into "artifacts" ("id","projectId","requestId","kind","title","brief","createdBy","visibility","itemKey") values ($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict ("requestId","itemKey") do update set "itemKey"=excluded."itemKey" returning *`, [id, ctx.projectId, ctx.requestId, input.kind, input.title.trim(), input.brief, ctx.actorId, input.visibility, input.itemKey ?? null]);
+      if (row!.kind !== input.kind) throw new ArtifactError("artifact_item_conflict");
+      await requireArtifactAccess(tx, ctx, String(row!.id), "write");
+      await tx.query(`insert into "artifactRevisions" ("artifactId","revision") values ($1,0) on conflict do nothing`, [row!.id]);
       return artifactRow(row!);
     });
   }

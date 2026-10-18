@@ -1,0 +1,4 @@
+export const dashboardManual = `# Dashboard deliverables
+Author the dashboard's independent sources in /.len/artifacts/<id>/; keep the source app untouched. Use the dataset id/path returned by query_artifact_data. Read its columns, rows, date, mode, environment and provenance; never fill missing real numbers with invented values.
+Make the requested filters and charts work with the same saved rows that its CSV exports. Labels and explanatory text follow the user's language. Show "Escenario hipotético" for a Spanish scenario; real snapshots show capture date and environment. A live refresh saves new input instead of changing a sealed revision. Downloads are frozen snapshots.
+Use only the descriptor/source contract exposed by the installed renderer. render_artifact accepts html, png and csv for dashboard when supported by this deployment. Inspect compilation/runtime diagnostics and revise sources; do not report a usable dashboard from an invalid export.`;
