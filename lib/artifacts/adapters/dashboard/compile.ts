@@ -23,10 +23,8 @@ export function datasetCsv(d: ArtifactDataset): string {
 
 /** One compiler and bundler path: only independent in-memory sources. No
  * project env, credential substitution, npm install or network resolution. */
-export async function buildDashboard(input: SealedArtifactInput) {
-  const manifest = dashboardManifest(input);
-  const datasets = manifest.datasetIds.map((id) => input.datasets.find((d) => d.id === id)!);
-  const tree = parse(input.revision.files[manifest.entry]!);
+export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml: string, datasets: readonly ArtifactDataset[], trustedRuntime = "") {
+  const tree = parse(input.revision.files[entryHtml]!);
   const head = tree.querySelector("head"), body = tree.querySelector("body");
   if (!head || !body || tree.querySelector("base,iframe,object,embed,meta[http-equiv=refresh]")) throw new ArtifactError("invalid_artifact_html");
   const files = Object.fromEntries(Object.entries(input.revision.files).map(([p, code]) => [`/${p}`, code]));
@@ -39,7 +37,7 @@ export async function buildDashboard(input: SealedArtifactInput) {
     let entry: string;
     if (src) {
       if (/^[a-z]+:|^\/\//i.test(src) || src.includes("?") || src.includes("#")) throw new ArtifactError("artifact_resource_missing");
-      entry = path.posix.resolve("/", path.posix.dirname(manifest.entry), src);
+      entry = path.posix.resolve("/", path.posix.dirname(entryHtml), src);
       if (!Object.hasOwn(files, entry)) throw new ArtifactError("artifact_resource_missing");
     } else { entry = `/artifact-inline-${index}.ts`; files[entry] = element.textContent; }
     // A unique synthetic entry also prevents same-basename module collisions.
@@ -64,7 +62,7 @@ export async function buildDashboard(input: SealedArtifactInput) {
   for (const element of tree.querySelectorAll("link[rel=stylesheet]")) {
     const href = element.getAttribute("href") ?? "";
     if (/^[a-z]+:|^\/\//i.test(href)) throw new ArtifactError("artifact_resource_missing");
-    const css = files[path.posix.resolve("/", path.posix.dirname(manifest.entry), href)];
+    const css = files[path.posix.resolve("/", path.posix.dirname(entryHtml), href)];
     if (css === undefined || /@import\b|url\s*\(\s*(?!["']?data:)/i.test(css)) throw new ArtifactError("artifact_resource_missing");
     element.replaceWith(`<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`);
   }
@@ -75,9 +73,15 @@ export async function buildDashboard(input: SealedArtifactInput) {
     if (!asset || !/^image\/(png|jpeg|webp|gif|svg\+xml|avif)$/.test(asset.mime) || element.tagName !== "IMG") throw new ArtifactError("artifact_resource_missing");
     element.setAttribute("src", `data:${asset.mime};base64,${Buffer.from(asset.bytes).toString("base64")}`);
   }
-  head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><script>window.lenData=Object.freeze(${safeJson({ datasets })});</script>`);
+  head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><script>window.lenData=Object.freeze(${safeJson({ datasets })});${scriptText(trustedRuntime)}</script>`);
   const labels = datasets.map((d) => datasetLabel(d) + (d.truncated ? " · Datos recortados" : ""));
   // Text escapes through JSON into textContent, never interpolated as HTML.
-  body.insertAdjacentHTML("beforeend", `<aside id="len-data-provenance" style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:#111;color:#fff;font:12px system-ui;z-index:2147483647"></aside><script>document.getElementById('len-data-provenance').textContent=${safeJson(labels.join(" | "))};</script>`);
-  return { html: tree.toString(), manifest, csv: datasets.map((d) => ({ id: d.id, text: datasetCsv(d) })) };
+  if(datasets.length)body.insertAdjacentHTML("beforeend", `<aside id="len-data-provenance" style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:#111;color:#fff;font:12px system-ui;z-index:2147483647"></aside><script>document.getElementById('len-data-provenance').textContent=${safeJson(labels.join(" | "))};</script>`);
+  return tree.toString();
+}
+export async function buildDashboard(input: SealedArtifactInput) {
+  const manifest=dashboardManifest(input);
+  const datasets=manifest.datasetIds.map(id=>input.datasets.find(d=>d.id===id)!);
+  const html=await compileArtifactHtml(input,manifest.entry,datasets);
+  return {html,manifest,csv:datasets.map(d=>({id:d.id,text:datasetCsv(d)}))};
 }

@@ -8,6 +8,7 @@ export const ARTIFACT_FORMATS: Readonly<Record<ArtifactKind, readonly string[]>>
 export function availableArtifactKinds(_env: Readonly<Record<string, string | undefined>> = process.env): ArtifactKind[] {
   if (_env.OPENLEN_ARTIFACTS !== "1") return [];
   const kinds:ArtifactKind[]=_env.OPENLEN_ARTIFACT_RENDERER_IMAGE?["dashboard","slides"]:[];
+  if(_env.OPENLEN_ARTIFACT_RENDERER_IMAGE&&_env.OPENLEN_ARTIFACT_MOTION_VERIFIED==="1")kinds.push("motion");
   if (_env.OPENAI_API_KEY && artifactChargePolicy(_env)) kinds.push("image");
   return kinds;
 }
