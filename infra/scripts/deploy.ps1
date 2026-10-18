@@ -109,7 +109,13 @@ function Sh($cmd) { $cmd -replace "`r`n", "`n" }
 #   < 9 GB  avisa  — cabe, pero sin holgura si `.next` vuelve a crecer a 4 GB
 # Abortar por encima de eso sería bloquear deploys que sí caben, y un guard que
 # estorba se acaba desactivando — que es peor que no tenerlo.
-$libreGB = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
+# Windows PowerShell can leave Free/Used unset even though DriveInfo can read
+# the volume. An unavailable metric must not become a false zero-space result.
+$bytesLibres = (Get-PSDrive C).Free
+if ($null -eq $bytesLibres) {
+  $bytesLibres = [System.IO.DriveInfo]::new("C:\").AvailableFreeSpace
+}
+$libreGB = [math]::Round($bytesLibres / 1GB, 1)
 $minimoGB = 5
 $comodoGB = 9
 if ($libreGB -lt $minimoGB) {
