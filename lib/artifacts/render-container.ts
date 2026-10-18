@@ -33,7 +33,7 @@ export function containerArtifactRenderer(image: string): ArtifactRender {
     const controller = new AbortController();
     const abort = () => controller.abort(signal.reason);
     signal.addEventListener("abort", abort, { once: true });
-    const timeout = setTimeout(() => controller.abort(new ArtifactError("render_timeout")), 60_000);
+    const timeout = setTimeout(() => controller.abort(new ArtifactError("render_timeout")), packet.kind === "slides" ? 180_000 : 60_000);
     try {
       const code = await docker(rendererContainerArgs(image, name, output, process.getuid!(), process.getgid!()), JSON.stringify(packet), controller.signal);
       signal.throwIfAborted();
@@ -44,7 +44,20 @@ export function containerArtifactRenderer(image: string): ArtifactRender {
       if (code !== 0 || result.ok !== true) throw new ArtifactError(result.code === "artifact_resource_missing" ? result.code : "artifact_render_failed", JSON.stringify(result.diagnostics?.slice(0, 8) ?? []));
       const file = join(output, "render.png"); const fileStat = await lstat(file);
       if (!fileStat.isFile() || fileStat.isSymbolicLink() || fileStat.size > 16 * 1024 * 1024 || !Array.isArray(result.checks) || result.checks.some((c) => typeof c !== "string" || c.length > 200)) throw new ArtifactError("invalid_render_result");
-      return { png: new Uint8Array(await readFile(file)), checks: result.checks };
+      const png = new Uint8Array(await readFile(file));
+      if (packet.kind === "slides") {
+        let total = 0;
+        const readBounded = async (name: string, max: number) => {
+          const path = join(output, name); const stat = await lstat(path);
+          if (!stat.isFile() || stat.isSymbolicLink() || stat.size <= 0 || stat.size > max || (total += stat.size) > 240 * 1024 * 1024) throw new ArtifactError("invalid_render_result");
+          return new Uint8Array(await readFile(path));
+        };
+        const pdf = await readBounded("render.pdf", 64 * 1024 * 1024);
+        const pages = [];
+        for (let i = 1; i <= packet.pageCount; i++) pages.push(await readBounded(`page-${i}.png`, 16 * 1024 * 1024));
+        return { png, pdf, pages, checks: result.checks };
+      }
+      return { png, checks: result.checks };
     } finally {
       clearTimeout(timeout); signal.removeEventListener("abort", abort);
       // Killing docker's client does not kill the container. Always remove
