@@ -55,6 +55,7 @@ create table if not exists "artifactObjectGarbage" (
 create index if not exists "artifactObjectGarbage_due_idx" on "artifactObjectGarbage" ("notBefore");
 create index if not exists "artifacts_project_created_idx" on "artifacts" ("projectId","createdAt","id");
 alter table "artifactJobs" add column if not exists "actorId" text references "users"("id");
+alter table "artifactJobs" add column if not exists "diagnostics" jsonb not null default '[]';
 create index if not exists "artifactJobs_claim_idx" on "artifactJobs" ("status","createdAt");
 create index if not exists "artifactEvents_project_cursor_idx" on "artifactEvents" ("projectId","cursor");
 create unique index if not exists "artifactEvents_job_type_idx" on "artifactEvents" ("jobId","type") where "jobId" is not null;

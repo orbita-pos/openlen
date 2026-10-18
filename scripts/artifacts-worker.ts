@@ -5,6 +5,7 @@ import { artifactsEnabled, getArtifactRuntime } from "../lib/artifacts/runtime";
 import { runArtifactJob } from "../lib/artifacts/worker";
 import { collectArtifactGarbage } from "../lib/artifacts/garbage";
 import { ArtifactError } from "../lib/artifacts/types";
+import { createArtifactAdapters } from "../lib/artifacts/adapters";
 
 async function main() {
   if (!artifactsEnabled()) { console.log("artifact worker: disabled"); return; }
@@ -16,10 +17,11 @@ async function main() {
   try {
     const storage = await runtime.storage();
     const workerId = `worker-${randomUUID()}`;
+    const adapters = createArtifactAdapters(process.env);
     do {
       const claim = await runtime.jobs.claimArtifactJob(workerId);
       if (claim) {
-        const result = await runArtifactJob(claim, { ...runtime, storage, adapters: {} }, controller.signal);
+        const result = await runArtifactJob(claim, { ...runtime, storage, adapters }, controller.signal);
         // No prompt, query, dataset, private path, or provider error body here.
         console.log(JSON.stringify({ jobId: result.jobId, status: result.status, code: result.code }));
       } else {

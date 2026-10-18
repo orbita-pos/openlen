@@ -70,7 +70,7 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
         const artifact = await requireArtifactAccess(database, ctx, id, "read");
         if (name === "inspect_artifact") {
           const revision = await store.getRevision(ctx, id, artifact.currentRevision);
-          const jobRows = await database.query(`select "id","revision","status","errorCode" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [id]);
+          const jobRows = await database.query(`select "id","revision","status","errorCode","diagnostics" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [id]);
           // Register sources in this turn's virtual tree; the next Bash sees
           // the same bytes as Read without copying them into the app's folder.
           if (Object.keys(revision.files)[0]) await workspace.read(`/.len/artifacts/${id}/${Object.keys(revision.files)[0]}`);

@@ -98,9 +98,9 @@ export function createArtifactJobs(database: ArtifactDatabase, store: ArtifactSt
       for (const output of outputs) await tx.query(`insert into "artifactObjectGarbage" ("key","artifactId","revision","jobId","fencingToken") values ($1,$2,$3,$4,$5) on conflict do nothing`, [output.key, claim.job.artifactId, claim.job.revision, claim.job.id, claim.fencingToken]);
     });
   }
-  async function finish(claim: JobClaim, status: "failed" | "cancelled" | "needs_attention", code: string): Promise<void> {
+  async function finish(claim: JobClaim, status: "failed" | "cancelled" | "needs_attention", code: string, diagnostics: readonly string[] = []): Promise<void> {
     await database.transaction(async (tx) => {
-      const [row] = await tx.query(`update "artifactJobs" set "status"=$4,"errorCode"=$5,"updatedAt"=now() where "id"=$1 and "workerId"=$2 and "fencingToken"=$3 and "leaseUntil">now() and "status" in ('running','validating','storing') returning *`, [claim.job.id, claim.workerId, claim.fencingToken, status, code]);
+      const [row] = await tx.query(`update "artifactJobs" set "status"=$4,"errorCode"=$5,"diagnostics"=$6::jsonb,"updatedAt"=now() where "id"=$1 and "workerId"=$2 and "fencingToken"=$3 and "leaseUntil">now() and "status" in ('running','validating','storing') returning *`, [claim.job.id, claim.workerId, claim.fencingToken, status, code, JSON.stringify(diagnostics.slice(0, 8).map((d) => String(d).slice(0, 2000)))]);
       if (!row) throw new ArtifactError("lease_lost");
       const job = jobRow(row); await markArtifact(tx, job, status); await writeJobEvent(tx, job, status);
     });

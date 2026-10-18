@@ -51,7 +51,7 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
     }
     if (path.action === "inspect") {
       const revision = await services.store.getRevision(ctx, artifact.id, artifact.currentRevision);
-      const jobs = await services.database.query(`select "id","revision","status","attempt","errorCode","createdAt" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [artifact.id]);
+      const jobs = await services.database.query(`select "id","revision","status","attempt","errorCode","diagnostics","createdAt" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [artifact.id]);
       // Fencing tokens are write capabilities; they never leave server services.
       return json({ artifact, revision: { ...revision, outputs: revision.outputs.map((o, index) => ({ index, format: o.format, mime: o.mime, bytes: o.bytes, hash: o.hash, name: o.key.split("/").at(-1) })) }, jobs });
     }
