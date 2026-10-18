@@ -116,6 +116,19 @@ de compilación se guardan acotados para inspect autorizado, no en esos logs.
 - `window.lenLive.refresh(id)` reemplaza las filas de `window.lenData`, actualiza
   la procedencia y emite `len:data`. El dashboard debe volver a leer las filas al
   manejar ese evento. Descargar HTML conserva el snapshot, sin este puente.
+- Una captura de proyecto parte de archivos públicos seleccionados, guardados
+  con sus hashes en `project-source/`. El render comprueba esa copia, sin leer
+  la app actual. La fuente se ejecuta en un navegador limpio y sin red, datasets,
+  env ni sesión. No equivale a capturar una pantalla autenticada de un cliente.
+- Para motion, `create_artifact` admite `freeze_source:true` y `source_paths`;
+  `motion.json` admite hasta cuatro `captures:[{id,entry}]`. Sus imágenes se usan
+  como `asset:capture:<id>` y se guardan como PNG reutilizables, con un máximo
+  conjunto de 4 MiB. La fuente y composición comparten el límite de 5 MiB de la
+  revisión. Los módulos locales se compilan por la misma ruta existente.
+- Una corrección del origen usa `render_artifact` sobre el mismo ID, revisión
+  actual y `refresh_source_paths` explícito. Crea otra revisión antes de encolar;
+  no sustituye una fuente sellada ni genera una sexta identidad. Los reintentos
+  ordinarios omiten ese argumento; un conflicto requiere inspect.
 
 ## Ensayos preparados y límites de la evidencia
 
@@ -140,6 +153,19 @@ y datos sintéticos. No equivale al ensayo HTTP de la sesión Next del producto.
 El fixture repetible es `scripts/artifact-live-preview-fixture.ts`; iniciarlo con
 el mismo preload de captura automática que el worker. No hace llamadas pagadas.
 
+La captura de origen se probó con un proyecto de inventario funcional en PGlite:
+el loader real congeló HTML/TS/CSS, la app cambió a v2 y la captura conservó v1.
+Su botón funcionó (21 -> 24). El adaptador `renderMotion` incorporó ese PNG real
+en una composición de un segundo: 30 cuadros, seek reproducible, H.264, sin
+audio y decodificación completa. Se usó el navegador disponible y el encoder
+del producto; esto no verifica la imagen Docker ni los límites Linux. El fixture
+repetible de fuentes es `scripts/artifact-project-capture-fixture.ts`.
+
+La primera composición de este fixture fue rechazada por no fijar el estado
+visual inicial de GSAP. Se corrigió el fixture con estado inicial explícito y
+ticker dormido; la comprobación de determinismo se mantuvo estricta. No se
+publicó el resultado fallido ni se relajó la comparación.
+
 Pendientes antes de la aceptación completa:
 
 1. Host Linux elegido; build/ejecución de la imagen Docker, aislamiento,
@@ -147,9 +173,11 @@ Pendientes antes de la aceptación completa:
 2. LibreOffice: abrir/renderizar el PPTX nativo, PDF, todas sus páginas y revisar
    fuentes, overflow y fidelidad. No basta con el ZIP ni el HTML de slides.
 3. Motion: prueba Linux reproducible, peor caso de 120 segundos, tiempos y memoria.
-4. Congelar capturas reales de la app/página, sin sesión/datos de clientes por
-   defecto. Hoy se reutilizan imágenes de entregables guardados; no se afirma
-   captura automática del proyecto original.
+4. Ampliar/verificar capturas con proyectos reales que usan paquetes del catálogo
+   y recursos remotos. La ruta inicial de fuente congelada y módulos locales ya
+   existe y se probó, pero hoy rechaza paquetes externos no preparados, recursos
+   remotos y archivos ausentes. No prometer captura universal ni una app basada
+   en API que pueda funcionar sin su red/datos.
 5. Integrar el puente live en la futura UI y probarlo con la sesión Next real.
    El endpoint owner-only y el transporte opaco ya están implementados y probados
    por separado, incluida otra revisión sin alterar los snapshots anteriores.

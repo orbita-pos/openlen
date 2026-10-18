@@ -1,6 +1,6 @@
 import "@inariwatch/capture/auto";
 import { writeFile } from "node:fs/promises";
-import { renderDashboardPacket, renderSlidesPacket, renderMotionPacket } from "./browser.mjs";
+import { renderDashboardPacket, renderSlidesPacket, renderMotionPacket,renderProjectCapturePacket } from "./browser.mjs";
 import { openNativeSlides } from "./office.mjs";
 import { createMotionEncoder } from "./video.mjs";
 
@@ -9,7 +9,8 @@ let input = "";
 try {
   for await (const chunk of process.stdin) { input += chunk; if (Buffer.byteLength(input) > 20 * 1024 * 1024) throw new Error("render_input_too_large"); }
   const packet = JSON.parse(input);
-  if (packet.version !== 1 || !["dashboard", "slides", "motion"].includes(packet.kind) || typeof packet.html !== "string" || !Number.isInteger(packet.width) || packet.width < 320 || packet.width > 1920 || !Number.isInteger(packet.height) || packet.height < 240 || packet.height > 1080 || !Array.isArray(packet.probes) || packet.probes.length > 20) throw new Error("invalid_render_packet");
+  if (packet.version !== 1 || !["dashboard", "slides", "motion","capture"].includes(packet.kind) || typeof packet.html !== "string" || !Number.isInteger(packet.width) || packet.width < 320 || packet.width > 1920 || !Number.isInteger(packet.height) || packet.height < 240 || packet.height > 1080 || !Array.isArray(packet.probes) || packet.probes.length > 20) throw new Error("invalid_render_packet");
+  if(packet.kind==="capture"&&(packet.width!==1280||packet.height!==720||packet.probes.length))throw new Error("invalid_render_packet");
   if (packet.kind === "slides" && (!Number.isInteger(packet.pageCount) || packet.pageCount < 1 || packet.pageCount > 50 || typeof packet.nativePptxBase64 !== "string" || packet.nativePptxBase64.length > 10 * 1024 * 1024)) throw new Error("invalid_render_packet");
   const options = { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH };
   let result;
@@ -21,7 +22,7 @@ try {
       result.video=await encoder.finish();
       result.checks.push("video:h264","video:no-audio","video:decoded","video:frame-count-checked");
     }finally{encoder.abort();}
-  }else result=await(packet.kind==="slides"?renderSlidesPacket(packet,options):renderDashboardPacket(packet,options));
+  }else result=await(packet.kind==="slides"?renderSlidesPacket(packet,options):packet.kind==="capture"?renderProjectCapturePacket(packet,options):renderDashboardPacket(packet,options));
   if (packet.kind === "slides") {
     const native = await openNativeSlides(packet);
     result.pages = native.pages; result.png = native.pages[0];

@@ -52,6 +52,12 @@ export async function renderDashboardPacket(packet, options = {}) {
     return { png, checks };
   });
 }
+export async function renderProjectCapturePacket(packet,options={}){
+  return withArtifactPage(packet,options,captureProjectPage);
+}
+export async function captureProjectPage(page){
+  return {png:new Uint8Array(await page.screenshot({type:"png"})),checks:["browser:rendered","source-capture:offline"]};
+}
 export async function renderSlidesPacket(packet, options = {}) {
   return withArtifactPage(packet, options, async (page) => {
     const overflow = await page.$$eval(".slide-text", (els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).map((e) => e.dataset.elementId));

@@ -12,6 +12,9 @@ it("bounds video duration and fps, including the exact last sampled frame",()=>{
   expect(motionManifest(input)).toMatchObject({frameCount:180});
   const bad=(patch:object)=>({...input,revision:{...input.revision,files:{...input.revision.files,"motion.json":JSON.stringify({...spec,...patch})}}});
   expect(()=>motionManifest(bad({durationSeconds:121}))).toThrow();expect(()=>motionManifest(bad({fps:60}))).toThrow();expect(()=>motionManifest(bad({durationSeconds:1.01}))).toThrow();
+  expect(()=>motionManifest(bad({captures:[{id:"home",entry:"/../.env"}]}))).toThrow();
+  expect(()=>motionManifest(bad({captures:[{id:"home",entry:"/index.html"},{id:"home",entry:"/other.html"}]}))).toThrow();
+  expect(()=>motionManifest(bad({captures:Array.from({length:5},(_,i)=>({id:`screen${i}`,entry:"/index.html"}))}))).toThrow();
 });
 it("uses the existing app compiler, freezes runtime/resources and never evaluates authored code in Node",async()=>{
   const built=await buildMotion(input);
