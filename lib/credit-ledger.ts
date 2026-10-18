@@ -26,6 +26,8 @@ export type LedgerSurface =
   | "chat"
   | "autofill"
   | "image_edit"
+  | "artifact_image"
+  | "artifact_render"
   | "voice"
   | "app_ai"
   | "security_review"
