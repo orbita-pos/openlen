@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { requireArtifactAccess } from "./access";
 import { validateAdapterResult } from "./contracts";
 import { datasetsFromRevision } from "./data";
+import { resolveArtifactAssets } from "./assets";
+import type { ArtifactBilling } from "./billing";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStorage } from "./private-storage";
 import type { ArtifactStore } from "./store";
@@ -13,6 +15,7 @@ export interface ArtifactWorkerDeps {
   readonly jobs: ArtifactJobs;
   readonly storage: ArtifactStorage;
   readonly adapters: Partial<Record<ArtifactKind, ArtifactAdapter>>;
+  readonly billing?: ArtifactBilling;
 }
 
 export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, signal: AbortSignal): Promise<JobOutcome> {
@@ -21,6 +24,7 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
   signal.addEventListener("abort", cancel, { once: true });
   if (signal.aborted) cancel();
   let externalStarted = false;
+  let externalOutcomeKnown = false;
   let commitStarted = false;
   const stored: string[] = [];
   const timer = setInterval(() => { void deps.jobs.heartbeat(claim).then((ok) => { if (!ok) controller.abort(new ArtifactError("lease_lost")); }, () => controller.abort(new ArtifactError("heartbeat_failed"))); }, 10_000);
@@ -33,8 +37,16 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     if (!revision.sealedAt) throw new ArtifactError("revision_not_sealed");
     const adapter = deps.adapters[artifact.kind];
     if (!adapter) throw new ArtifactError("format_unavailable");
-    const result = await adapter({ artifact, revision, assets: [], datasets: datasetsFromRevision(revision) }, controller.signal, {
-      beforeExternalCall: async () => { await deps.jobs.startExternalCall(claim); externalStarted = true; },
+    const assets = await resolveArtifactAssets(ctx, revision, deps.store, deps.storage);
+    const result = await adapter({ artifact, revision, assets, datasets: datasetsFromRevision(revision), jobOptions: claim.job.options }, controller.signal, {
+      beforeExternalCall: async (model) => {
+        if (!deps.billing || !model) throw new ArtifactError("charge_policy_unavailable");
+        await deps.billing.startAttempt(claim, ctx, artifact.kind, model); externalStarted = true;
+      },
+      recordExternalOutcome: async (outcome) => {
+        if (!externalStarted || !deps.billing) throw new ArtifactError("external_attempt_missing");
+        await deps.billing.recordOutcome(claim, outcome); externalOutcomeKnown = outcome.outcome !== "unknown";
+      },
     });
     controller.signal.throwIfAborted();
     await deps.jobs.advance(claim, "validating");
@@ -56,7 +68,7 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     }
     controller.signal.throwIfAborted();
     commitStarted = true;
-    await deps.store.recordArtifactResult(claim, { outputs, evidence: result.evidence });
+    await deps.store.recordArtifactResult(claim, { outputs, evidence: result.evidence, ...(externalStarted ? { settle: async (tx) => { await deps.billing!.settleArtifactAttempt(tx, claim); } } : {}) });
     return { jobId: claim.job.id, status: "completed" };
   } catch (error) {
     if (commitStarted) {
@@ -67,8 +79,11 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     } else for (const key of stored) await deps.storage.delete(key).catch(() => undefined);
     const [latest] = await deps.database.query(`select "cancelRequested" from "artifactJobs" where "id"=$1`, [claim.job.id]).catch(() => []);
     const cancelled = signal.aborted || latest?.cancelRequested === true;
-    const status = externalStarted || commitStarted ? "needs_attention" : cancelled ? "cancelled" : "failed";
-    const code = commitStarted ? "result_commit_unknown" : externalStarted ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
+    let auditFailed = false;
+    if (externalStarted && !commitStarted) await deps.billing?.recordFailure(claim).catch(() => { auditFailed = true; });
+    const unknownExternal = externalStarted && !externalOutcomeKnown;
+    const status = unknownExternal || commitStarted || auditFailed ? "needs_attention" : cancelled ? "cancelled" : "failed";
+    const code = commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
     const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
     if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
     return { jobId: claim.job.id, status, code };

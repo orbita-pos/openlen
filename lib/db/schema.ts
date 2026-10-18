@@ -2578,6 +2578,18 @@ export const artifactEventReads = pgTable("artifactEventReads", {
   cursor: bigint("cursor", { mode: "bigint" }).notNull().default(sqlOp`0`),
 }, (t) => [primaryKey({ columns: [t.projectId, t.userId] })]);
 
+// No project/job FK: spend audit must survive deleting authored content.
+export const artifactAttempts = pgTable("artifactAttempts", {
+  attemptId: text("attemptId").primaryKey(), jobId: text("jobId").notNull(),
+  payerId: text("payerId").notNull(), actorId: text("actorId").notNull(), projectId: text("projectId").notNull(),
+  kind: text("kind").notNull(), model: text("model").notNull(), centicredits: integer("centicredits").notNull(),
+  receipt: jsonb("receipt"), ledgerId: text("ledgerId"), createdAt: timestamp("createdAt", {withTimezone:true}).notNull().defaultNow(),
+}, (t) => [index("artifactAttempts_job_idx").on(t.jobId), check("artifactAttempts_price_check",sqlOp`${t.centicredits} >= 0`)]);
+export const artifactSettlements = pgTable("artifactSettlements", {
+  jobId: text("jobId").primaryKey(), attemptId: text("attemptId").notNull().unique(), ledgerId: text("ledgerId").notNull().unique(),
+  chargedCenticredits: integer("chargedCenticredits").notNull(), createdAt: timestamp("createdAt", {withTimezone:true}).notNull().defaultNow(),
+}, (t) => [check("artifactSettlements_price_check",sqlOp`${t.chargedCenticredits} >= 0`)]);
+
 // Intentionally no FK: delete private blobs even after project cascade.
 export const artifactObjectGarbage = pgTable("artifactObjectGarbage", {
   key: text("key").primaryKey(),

@@ -52,6 +52,19 @@ create table if not exists "artifactObjectGarbage" (
  "jobId" text not null, "fencingToken" text not null,
  "notBefore" timestamptz not null default (now()+interval '1 hour')
 );
+-- Spend audit survives deletion of projects/jobs. No prompts or image bytes.
+create table if not exists "artifactAttempts" (
+ "attemptId" text primary key, "jobId" text not null, "payerId" text not null,
+ "actorId" text not null, "projectId" text not null, "kind" text not null,
+ "model" text not null, "centicredits" integer not null check ("centicredits">=0),
+ "receipt" jsonb, "ledgerId" text, "createdAt" timestamptz not null default now()
+);
+create index if not exists "artifactAttempts_job_idx" on "artifactAttempts" ("jobId");
+create table if not exists "artifactSettlements" (
+ "jobId" text primary key, "attemptId" text not null unique,
+ "ledgerId" text not null unique, "chargedCenticredits" integer not null check ("chargedCenticredits">=0),
+ "createdAt" timestamptz not null default now()
+);
 create index if not exists "artifactObjectGarbage_due_idx" on "artifactObjectGarbage" ("notBefore");
 create index if not exists "artifacts_project_created_idx" on "artifacts" ("projectId","createdAt","id");
 alter table "artifactJobs" add column if not exists "actorId" text references "users"("id");

@@ -109,10 +109,21 @@ export interface SealedArtifactInput {
   readonly revision: ArtifactRevision;
   readonly assets: readonly ResolvedAsset[];
   readonly datasets: readonly ArtifactDataset[];
+  readonly jobOptions?: Readonly<Record<string, unknown>>;
 }
 export interface ProducedArtifactFile { readonly name: string; readonly format: string; readonly mime: string; readonly bytes: Uint8Array }
 export interface AdapterResult { readonly outputs: readonly ProducedArtifactFile[]; readonly evidence: ArtifactEvidence }
-export interface ArtifactAdapterHooks { beforeExternalCall(): Promise<void> }
+export interface ArtifactExternalOutcome {
+  readonly outcome: "succeeded" | "rejected" | "failed" | "unknown";
+  readonly model: string;
+  readonly requestId: string | null;
+  readonly usage: Readonly<Record<string, unknown>> | null;
+  readonly costMicroUsd: number | null;
+}
+export interface ArtifactAdapterHooks {
+  beforeExternalCall(model?: string): Promise<void>;
+  recordExternalOutcome(outcome: ArtifactExternalOutcome): Promise<void>;
+}
 export type ArtifactAdapter = (input: SealedArtifactInput, signal: AbortSignal, hooks: ArtifactAdapterHooks) => Promise<AdapterResult>;
 export interface ArtifactChargePolicy { readonly imageCenticredits: number; readonly renderCenticredits: number }
 export interface Settlement { readonly jobId: string; readonly attemptId: string; readonly ledgerId: string; readonly chargedCenticredits: number }

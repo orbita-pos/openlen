@@ -76,7 +76,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
       return revisionRow(row!);
     });
   }
-  async function recordArtifactResult(claim: JobClaim, result: { outputs: readonly ArtifactOutput[]; evidence: ArtifactEvidence }): Promise<Artifact> {
+  async function recordArtifactResult(claim: JobClaim, result: { outputs: readonly ArtifactOutput[]; evidence: ArtifactEvidence; settle?: (tx: ArtifactSql) => Promise<void> }): Promise<Artifact> {
     validateArtifactOutputs(result.outputs);
     if (result.evidence?.valid !== true || !result.evidence.checks?.length || !Number.isFinite(Date.parse(result.evidence.checkedAt))) throw new ArtifactError("invalid_evidence");
     return database.transaction(async (tx) => {
@@ -87,6 +87,9 @@ export function createArtifactStore(database: ArtifactDatabase) {
       if (job.status === "completed") return getArtifact(context, String(job.artifactId), tx);
       const [active] = await tx.query(`update "artifactJobs" set "status"='completed',"updatedAt"=now() where "id"=$1 and "fencingToken"=$2 and "leaseUntil">now() and not "cancelRequested" and "status"='storing' returning *`, [job.id, claim.fencingToken]);
       if (!active) throw new ArtifactError("lease_lost");
+      // Paid settlement and publication share this exact transaction. A crash
+      // cannot publish uncharged work or debit an unavailable result.
+      await result.settle?.(tx);
       // Append verified exports atomically. Existing download indexes remain
       // stable when another format of the same sealed revision is exported.
       const [sealed] = await tx.query(`update "artifactRevisions" set "outputs"="outputs" || $3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2 and "sealedAt" is not null returning "artifactId"`, [job.artifactId, job.revision, JSON.stringify(result.outputs), JSON.stringify(result.evidence)]);

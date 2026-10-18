@@ -57,6 +57,23 @@ export const UNIT_COSTS_USD = {
   webSearchQuery: { "exa/search": 0.015 } as Readonly<Record<string, number>>,
 } as const;
 
+/** Direct Images API, Standard (not Batch/Flex). Official pricing.md read
+ * 2026-10-18: gpt-image-2 input text $5/M, image $8/M, output image $30/M.
+ * https://developers.openai.com/api/docs/pricing
+ * Cached-input prices do not apply to direct Images calls. Keep legacy
+ * imageEdit's established flat accounting separate. Incomplete usage is null.
+ */
+export function imageGenerationCostMicroUsd(model:string,usage:Readonly<Record<string,unknown>>|null):number|null {
+  if(model!=="gpt-image-2"||!usage)return null;
+  const details=usage.input_tokens_details as Record<string,unknown>|undefined;
+  const outputDetails=usage.output_tokens_details as Record<string,unknown>|undefined;
+  const text=details?.text_tokens,image=details?.image_tokens,output=usage.output_tokens,total=usage.input_tokens;
+  if(![text,image,output,total].every(n=>typeof n==="number"&&Number.isSafeInteger(n)&&n>=0)
+    ||Number(text)+Number(image)!==total|| (outputDetails?.text_tokens!==undefined&&outputDetails.text_tokens!==0)
+    ||(outputDetails?.image_tokens!==undefined&&outputDetails.image_tokens!==output))return null;
+  return Math.round(Number(text)*5+Number(image)*8+Number(output)*30);
+}
+
 /** The prices in force at `at`. */
 export function peakAwareRate(rate: TokenCostRate, at: Date): TokenPrices {
   const peak = rate.peak;
