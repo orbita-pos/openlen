@@ -1,14 +1,13 @@
 // Backfill card thumbnails for existing user projects.
 //
-// New projects render a thumbnail at create time (and refresh on publish) via
-// lib/projects/thumbnail.ts. This script fills in every project created BEFORE
-// that pipeline existed — the ones that show a placeholder icon in /projects.
+// Recover missing images using the full draft preview for pages/apps and the
+// release artifact for published projects. Also callable with --force.
 //
 //   npm run projects:thumbnails            # only projects missing a thumbnail
 //   npm run projects:thumbnails -- --force # re-render every project
 //   npm run projects:thumbnails -- --user=<userId>   # scope to one owner
 //
-// Render path matches the runtime: page.setContent(data.html) → AVIF → upload
+// Render path matches the runtime: document + compiled folder → AVIF → upload
 // → projects.thumbnailUrl. Concurrency is capped inside renderProjectThumbnail
 // (the shared module), so firing them all at once is safe.
 //
@@ -19,11 +18,16 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { refreshDraftThumbnail } from "@/lib/projects/thumbnail-refresh";
 
 interface Row {
   id: string;
   title: string;
   data: { html?: string } | null;
+  subdomain: string | null;
+  publishedReleaseSha: string | null;
+  publishedAt: Date | null;
+  status: string;
 }
 
 async function listTargets(force: boolean, userId?: string): Promise<Row[]> {
@@ -36,12 +40,16 @@ async function listTargets(force: boolean, userId?: string): Promise<Row[]> {
       id: schema.projects.id,
       title: schema.projects.title,
       data: schema.projects.data,
+      subdomain: schema.projects.subdomain,
+      publishedReleaseSha: schema.projects.publishedReleaseSha,
+      publishedAt: schema.projects.publishedAt,
+      status: schema.projects.status,
     })
     .from(schema.projects)
     .where(filters.length ? and(...filters) : undefined);
 
   // Skip projects with no HTML to render.
-  return rows.filter((r) => Boolean(r.data?.html?.trim())) as Row[];
+  return rows.filter((r) => r.status !== "archived" && Boolean(r.data?.html?.trim())) as Row[];
 }
 
 function parseArg(name: string): string | undefined {
@@ -71,10 +79,16 @@ async function main(): Promise<void> {
   await Promise.all(
     targets.map(async (row) => {
       const started = Date.now();
-      const url = await renderProjectThumbnail({
-        projectId: row.id,
-        html: row.data!.html!,
-      });
+      let url: string | boolean | null = null;
+      try {
+        url = row.subdomain
+          ? row.publishedReleaseSha
+            ? await renderProjectThumbnail({ projectId: row.id, html: row.data!.html!, release: { subdomain: row.subdomain, sha: row.publishedReleaseSha } })
+            : null
+          : row.publishedAt ? null : await refreshDraftThumbnail(row.id, force);
+      } catch (error) {
+        console.warn(`[thumbnail] ${row.id}: ${error instanceof Error ? error.message : String(error)}`);
+      }
       const ms = Date.now() - started;
       if (url) {
         ok++;

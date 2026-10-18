@@ -3,23 +3,18 @@
 // `projects.thumbnailUrl`. The /projects grid + list cards read that column
 // (falling back to a placeholder icon when it's null).
 //
-// Mirrors the curated-template thumbnail pipeline (scripts/templates/
-// generate-thumbnails.ts) but with two differences that matter:
-//   1. A project's HTML lives in the DB (`data.html`), not at a public URL,
-//      so we render via page.setContent() — deterministic, no CDN/DNS
-//      staleness, and works without the page being published.
-//   2. This runs inside the Next.js server (publish + create paths), not a
-//      standalone script. Puppeteer is dynamically imported so it never
-//      enters the bundle of routes that merely touch lib/projects.ts, and is
-//      externalised in next.config.ts so webpack hands the require to Node.
+// Drafts use the editor's document + compiled folder, served in the eyes'
+// isolated origin. Published thumbnails use the immutable release. Both use
+// the same Chromium launcher and AVIF/storage pipeline.
 //
 // Triggers (all fire-and-forget, all soft-fail — a thumbnail is never worth
 // failing a publish/create over): project create (generate + paste) and
-// publish (refresh to the latest bytes). Template clones inherit the
+// publish (refresh to the latest bytes), completed Len turns and list recovery.
+// Template clones inherit the
 // template's own thumbnail at create time instead (see from-template route).
 // Existing projects are backfilled by `npm run projects:thumbnails`.
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { captureException } from "@inariwatch/capture";
 import { thumbnailsEnabled } from "@/lib/publish/kill-switches";
@@ -32,6 +27,17 @@ import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { allowEgressOrigin } from "@/lib/security/egress-proxy";
 import { getPublishRoot } from "@/lib/publish/filesystem";
 import { serveRelease } from "@/lib/publish/serve-release";
+import { origenDeMedida } from "@/lib/ai/origen-de-medida";
+import type { ContextoDeVista } from "@/lib/lienzo/documento";
+import { draftEnvVersionSql } from "./thumbnail-state";
+
+export interface DraftThumbnailGuard {
+  readonly revision: string;
+  readonly updatedAt: string;
+  readonly filesHash: string | null;
+  readonly envHash: string | null;
+  readonly draftEnvVersion?: string | null;
+}
 
 // 16:10 — matches the card's `aspect-[16/10]` frame and the template
 // thumbnail viewport, so previews are framed identically across the app.
@@ -87,11 +93,14 @@ export async function renderProjectThumbnail(opts: {
   html: string;
   /** THE PUBLISHED RELEASE (14/10): when the thumbnail comes from a publish, it
    *  is taken from the release served the way Caddy serves it — what a visitor
-   *  sees, an app's bundle included. Without it, the bare HTML (an app's shell
-   *  alone paints nothing). */
+   *  sees, an app's bundle included. Draft callers pass `view` instead. */
   release?: { readonly subdomain: string; readonly sha: string };
+  /** The draft uses exactly the editor's document and compiled folder. */
+  view?: ContextoDeVista;
+  /** An old capture must not overwrite a later edit or publication. */
+  draft?: DraftThumbnailGuard;
 }): Promise<string | null> {
-  const { projectId, html, release } = opts;
+  const { projectId, html, release, view, draft } = opts;
   // EL INTERRUPTOR DE LA MINIATURA — vive con los demás, en
   // `lib/publish/kill-switches.ts`, que es donde está su porqué entero.
   if (!thumbnailsEnabled()) return null;
@@ -108,7 +117,7 @@ export async function renderProjectThumbnail(opts: {
   // `miniatura-en-vuelo.ts`.
   const vuelo = tomarVuelo(projectId);
   try {
-    return await withSlot(() => doRender(projectId, html, vuelo, release));
+    return await withSlot(() => doRender(projectId, html, vuelo, release, view, draft));
   } catch (err) {
     // Cancelado a proposito no es un fallo: el navegador se cerro por debajo y
     // la promesa pendiente revienta con «Target closed». Registrarlo como
@@ -139,10 +148,16 @@ async function doRender(
   html: string,
   vuelo: Vuelo,
   release?: { readonly subdomain: string; readonly sha: string },
+  view?: ContextoDeVista,
+  draft?: DraftThumbnailGuard,
 ): Promise<string | null> {
   // PUNTO DE CONTROL 1 — al salir de la cola, y es donde MAS se ahorra: con
   // `MAX_CONCURRENT` en 1 un render puede pasarse un buen rato esperando turno,
   // y rendirse aqui no cuesta ni un Chromium.
+  if (vuelo.cancelado) return null;
+  const preview = view ? await import("@/lib/lienzo/documento") : null;
+  const htmlDeVista = preview && view ? preview.documentoDeVista(html, view) : html;
+  const folder = preview && view ? await preview.carpetaDeLaVista(view) : undefined;
   if (vuelo.cancelado) return null;
   // ONE BROWSER (14/10): the eyes' launcher (`lanzarChromium`), with the
   // writable HOME the box needs, the filtering proxy and WebGL in software —
@@ -166,23 +181,27 @@ async function doRender(
     clearTimeout(watchdog);
     return null;
   }
-  const page = await browser.newPage();
+  let page: import("puppeteer").Page | undefined;
+  let served: Awaited<ReturnType<typeof serveRelease>> | null = null;
+  let doc: ReturnType<Awaited<ReturnType<typeof origenDeMedida>>["publicar"]> | null = null;
+  let releaseEgressOrigin = () => {};
   // The published release, served like Caddy (lib/publish/serve-release.ts):
   // our ephemeral server is the only loopback the egress proxy lets through.
-  const served = release ? await serveRelease(path.join(getPublishRoot(), release.subdomain), release.sha).catch(() => null) : null;
-  const releaseEgressOrigin = served ? allowEgressOrigin(served.origin) : () => {};
   try {
+    page = await browser.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => { if (errors.length < 3) errors.push(String(error)); });
+    served = release ? await serveRelease(path.join(getPublishRoot(), release.subdomain), release.sha) : null;
+    const origin = served ? null : await origenDeMedida();
+    if (origin) doc = origin.publicar(htmlDeVista, folder);
+    releaseEgressOrigin = served ? allowEgressOrigin(served.origin) : () => {};
     // Block subresource fetches to internal/loopback/metadata hosts before any
     // of this user-controlled HTML's assets load. (SSRF guard.)
-    await installSubresourceSsrfGuard(page, served ? { allowOrigins: [served.origin] } : {});
+    await installSubresourceSsrfGuard(page, { allowOrigins: [served?.origin ?? origin!.origin] });
     await page.setViewport(VIEWPORT);
-    // setContent's waitUntil only takes load/domcontentloaded — neither waits
-    // for the Tailwind Play CDN to fetch + generate styles (it scans classes
-    // AFTER load). So wait for load, then for the network to go idle, which is
-    // the equivalent of goto's networkidle0 (best-effort — a dead CDN tab just
-    // settles on the timeout and we capture whatever rendered).
-    if (served) await page.goto(served.url, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
-    else await page.setContent(html, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
+    // App effects and the Tailwind Play CDN run after load: wait for their
+    // requests to settle, with a bound for polling apps and unavailable CDNs.
+    await page.goto(served?.url ?? doc!.url, { waitUntil: "load", timeout: PAGE_TIMEOUT_MS });
     await page
       .waitForNetworkIdle({ idleTime: 500, timeout: PAGE_TIMEOUT_MS })
       .catch(() => {});
@@ -191,6 +210,7 @@ async function doRender(
       "fonts" in document ? document.fonts.ready : Promise.resolve(),
     );
     await new Promise((resolve) => setTimeout(resolve, POST_LOAD_SETTLE_MS));
+    if (errors.length > 0) throw new Error(`Preview failed: ${errors.slice(0, 3).join("; ")}`);
 
     const png = (await page.screenshot({
       type: "png",
@@ -213,7 +233,7 @@ async function doRender(
     // with zero purge. (Superseded objects are tiny ~50 KB AVIFs; left to a
     // future sweep rather than deleted inline.)
     const hash = createHash("sha1").update(avif).digest("hex").slice(0, 12);
-    const key = `project-thumbnails/${projectId}-${hash}.avif`;
+    const key = `project-thumbnails/${projectId}-${draft ? `draft-${draft.revision}-` : ""}${hash}.avif`;
     const { url } = await getStorage().upload({
       key,
       contentType: "image/avif",
@@ -226,16 +246,27 @@ async function doRender(
     // se quedaria retratando bytes que ya no existen. Perder la carrera aqui
     // seria peor que no haber cancelado.
     if (vuelo.cancelado) return null;
-    await db
+    const saved = await db
       .update(schema.projects)
       .set({ thumbnailUrl: url })
-      .where(eq(schema.projects.id, projectId));
-    return url;
+      .where(and(
+        eq(schema.projects.id, projectId),
+        ...(draft ? [
+          isNull(schema.projects.subdomain), isNull(schema.projects.publishedAt),
+          sql`${schema.projects.updatedAt}::text = ${draft.updatedAt}`,
+          sql`${schema.projects.filesHash} is not distinct from ${draft.filesHash}`,
+          sql`${schema.projects.envHash} is not distinct from ${draft.envHash}`,
+          ...(draft.draftEnvVersion ? [sql`${draftEnvVersionSql(sql`${schema.projects}."id"`)} = ${draft.draftEnvVersion}`] : []),
+        ] : []),
+      ))
+      .returning({ id: schema.projects.id });
+    return saved.length > 0 ? url : null;
   } finally {
     clearTimeout(watchdog);
     releaseEgressOrigin();
+    doc?.soltar();
     served?.server.close();
-    await page.close().catch(() => {});
+    await page?.close().catch(() => {});
     await browser.close().catch(() => {});
   }
 }

@@ -269,6 +269,7 @@ vi.mock("@/lib/agent/verify", () => ({
 }));
 
 import { POST } from "./route";
+vi.mock("@/lib/projects/thumbnail-jobs", () => ({ scheduleDraftThumbnail: vi.fn() }));
 import { fijarAccesoDePrueba } from "@/lib/projects/acceso-de-prueba";
 
 async function readEvents(res: Response): Promise<Array<{ event: string; data: Record<string, unknown> }>> {
