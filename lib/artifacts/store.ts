@@ -40,11 +40,12 @@ export function createArtifactStore(database: ArtifactDatabase) {
     });
   }
   async function writeArtifactFiles(ctx: ArtifactContext, id: string, expectedRevision: number, files: Readonly<Record<string, string>>,
-    metadata: Partial<Pick<ArtifactRevision, "manifest" | "dependencies" | "sourceRef">> & { removePaths?: readonly string[] } = {}): Promise<ArtifactRevision> {
+    metadata: Partial<Pick<ArtifactRevision, "manifest" | "dependencies" | "sourceRef">> & { removePaths?: readonly string[]; ownerOnly?: boolean } = {}): Promise<ArtifactRevision> {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new ArtifactError("invalid_revision");
     const validated = validateArtifactFiles(files);
     return database.transaction(async (tx) => {
       await requireArtifactAccess(tx, ctx, id, "write");
+      if (metadata.ownerOnly) await requireProjectAccess(tx, ctx, "data");
       const artifact = await getArtifact(ctx, id, tx, true);
       if (artifact.currentRevision !== expectedRevision) throw new ArtifactError("revision_conflict");
       const before = await getRevision(ctx, id, expectedRevision, tx);
@@ -56,7 +57,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
       }
       const [row] = await tx.query(`insert into "artifactRevisions" ("artifactId","revision","files","manifest","dependencies","sourceRef") values ($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,$6::jsonb) returning *`,
         [id, expectedRevision + 1, JSON.stringify(combined), JSON.stringify(metadata.manifest ?? before.manifest), JSON.stringify(metadata.dependencies ?? before.dependencies), JSON.stringify(metadata.sourceRef === undefined ? before.sourceRef : metadata.sourceRef)]);
-      await tx.query(`update "artifacts" set "currentRevision"=$2,"status"='draft',"visibility"=case when $3 then 'owner' else "visibility" end,"updatedAt"=now() where "id"=$1`, [id, expectedRevision + 1, privateDependency]);
+      await tx.query(`update "artifacts" set "currentRevision"=$2,"status"='draft',"visibility"=case when $3 then 'owner' else "visibility" end,"updatedAt"=now() where "id"=$1`, [id, expectedRevision + 1, privateDependency || metadata.ownerOnly === true]);
       return revisionRow(row!);
     });
   }

@@ -127,13 +127,13 @@ export async function deleteEnvironment(projectId: string, env: Environment): Pr
 
 /** Guarda la contraseña del rol de lectura SÓLO si aún no hay una, y devuelve
  *  la que quedó: dos lecturas a la vez acaban usando la misma. */
-export async function claimReadOnlyPassword(projectId: string, encrypted: string): Promise<string> {
+export async function claimReadOnlyPassword(projectId: string, encrypted: string, env: Environment = "live"): Promise<string> {
   await db
     .update(T)
     .set({ readOnlyPasswordEncrypted: encrypted })
-    .where(and(eq(T.projectId, projectId), eq(T.environment, "live"), isNull(T.readOnlyPasswordEncrypted)));
-  const e = await getEnvironment(projectId, "live");
-  if (!e?.readOnlyPasswordEncrypted) throw new Error("producción sin contraseña de lectura");
+    .where(and(eq(T.projectId, projectId), eq(T.environment, env), isNull(T.readOnlyPasswordEncrypted)));
+  const e = await getEnvironment(projectId, env);
+  if (!e?.readOnlyPasswordEncrypted) throw new Error("entorno sin contraseña de lectura");
   return e.readOnlyPasswordEncrypted;
 }
 

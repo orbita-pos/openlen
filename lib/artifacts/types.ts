@@ -97,6 +97,7 @@ export interface ArtifactDataset {
   readonly rows: readonly (readonly unknown[])[];
   readonly query: string | null;
   readonly source: string;
+  readonly parameters?: { readonly zone: string; readonly from?: string; readonly to?: string };
   readonly capturedAt: string;
   readonly truncated: boolean;
 }

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { requireArtifactAccess } from "./access";
 import { validateAdapterResult } from "./contracts";
+import { datasetsFromRevision } from "./data";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStorage } from "./private-storage";
 import type { ArtifactStore } from "./store";
@@ -32,7 +33,7 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     if (!revision.sealedAt) throw new ArtifactError("revision_not_sealed");
     const adapter = deps.adapters[artifact.kind];
     if (!adapter) throw new ArtifactError("format_unavailable");
-    const result = await adapter({ artifact, revision, assets: [], datasets: [] }, controller.signal, {
+    const result = await adapter({ artifact, revision, assets: [], datasets: datasetsFromRevision(revision) }, controller.signal, {
       beforeExternalCall: async () => { await deps.jobs.startExternalCall(claim); externalStarted = true; },
     });
     controller.signal.throwIfAborted();
