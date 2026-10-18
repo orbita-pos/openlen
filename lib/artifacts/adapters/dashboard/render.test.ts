@@ -16,6 +16,14 @@ it("packages independent compiled sources and exports the same labeled scenario 
   expect(input.revision.files["main.ts"]).toContain("unknown[][]");
 });
 
+it("exports display rows and provenance without the saved backend SQL or refresh parameters",async()=>{
+  const result=await buildDashboard({...input,datasets:[{...dataset,mode:"live",visibility:"owner",environment:"live",source:"backend",query:"select 'private-query-marker'",parameters:{zone:"private-filter-marker"}}]});
+  expect(result.html).toContain("Datos actualizados");
+  expect(result.html).not.toContain("private-query-marker");
+  expect(result.html).not.toContain("private-filter-marker");
+  expect(result.html).toContain('"Norte",120');
+});
+
 it("rejects a real compile error, missing resource and an unbound dataset", async () => {
   for (const files of [ { ...input.revision.files, "main.ts": "const invalid: =" }, { ...input.revision.files, "index.html": '<img src="https://private.example/x.png">' } ]) {
     await expect(buildDashboard({ ...input, revision: { ...input.revision, files } })).rejects.toBeDefined();
