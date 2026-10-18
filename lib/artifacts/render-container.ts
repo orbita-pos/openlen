@@ -5,10 +5,11 @@ import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { ArtifactError } from "./types";
 import { validateRenderPacket, type ArtifactRender } from "./render-protocol";
+import {removeArtifactContainer} from "./container-supervisor";
 
 export function rendererContainerArgs(image: string, name: string, output: string, uid: number, gid: number): string[] {
   if (!/^[a-z0-9][a-z0-9._/:@-]{0,200}$/.test(image) || !/^openlen-artifact-[a-f0-9-]{36}$/.test(name) || !Number.isSafeInteger(uid) || !Number.isSafeInteger(gid)) throw new ArtifactError("invalid_renderer_config");
-  return ["run", "--rm", "--pull", "never", "-i", "--init", "--name", name, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "128", "--cpus", "2", "--memory", "2g", "--memory-swap", "2g", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--mount", `type=bind,source=${output},target=/output`, "--user", `${uid}:${gid}`, image];
+  return ["run", "--rm", "--pull", "never", "-i", "--init", "--name", name, "--label","openlen.artifact-renderer=1", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "128", "--cpus", "2", "--memory", "2g", "--memory-swap", "2g", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--mount", `type=bind,source=${output},target=/output`, "--user", `${uid}:${gid}`, image];
 }
 function docker(args: string[], input: string, signal?: AbortSignal): Promise<number> {
   return new Promise((done, reject) => {
@@ -24,17 +25,18 @@ function docker(args: string[], input: string, signal?: AbortSignal): Promise<nu
 /** Worker-only entry point. Never call from Next request code. Each job gets
  * an offline, read-only container with no env, credentials or DB/socket mount.
  * Only the trusted renderer writes to one empty output directory. */
-export function containerArtifactRenderer(image: string): ArtifactRender {
+export function containerArtifactRenderer(image: string, fencingToken?:string, admit?:()=>Promise<void>): ArtifactRender {
   return async (packet, signal) => {
     if (process.platform !== "linux") throw new ArtifactError("renderer_requires_linux");
     validateRenderPacket(packet); signal.throwIfAborted();
     const output = await mkdtemp(join(tmpdir(), "openlen-artifact-"));
-    const name = `openlen-artifact-${randomUUID()}`;
+    const name = `openlen-artifact-${fencingToken??randomUUID()}`;
     const controller = new AbortController();
     const abort = () => controller.abort(signal.reason);
     signal.addEventListener("abort", abort, { once: true });
     const timeout = setTimeout(() => controller.abort(new ArtifactError("render_timeout")), packet.kind === "motion" ? 900_000 : packet.kind === "slides" ? 180_000 : 60_000);
     try {
+      await admit?.();controller.signal.throwIfAborted();
       const code = await docker(rendererContainerArgs(image, name, output, process.getuid!(), process.getgid!()), JSON.stringify(packet), controller.signal);
       signal.throwIfAborted();
       const metaPath = join(output, "result.json");
@@ -70,7 +72,7 @@ export function containerArtifactRenderer(image: string): ArtifactRender {
       clearTimeout(timeout); signal.removeEventListener("abort", abort);
       // Killing docker's client does not kill the container. Always remove
       // this exact generated name before releasing its lease/temporary files.
-      await docker(["rm", "-f", name], "", AbortSignal.timeout(10_000)).catch(() => undefined);
+      await removeArtifactContainer(name);
       const target = resolve(output), prefix = resolve(tmpdir()) + "/openlen-artifact-";
       if (!target.startsWith(prefix)) throw new ArtifactError("invalid_render_directory");
       await rm(target, { recursive: true, force: true });

@@ -67,4 +67,14 @@ describe("worker confirms persisted results", () => {
     const result = await run(async () => { throw new ArtifactError("artifact_compile_failed", "/main.ts:3: expected expression"); });
     expect(await jobs.getJob(result.ctx, result.job.id)).toMatchObject({ status: "failed", errorCode: "artifact_compile_failed", diagnostics: ["/main.ts:3: expected expression"] });
   });
+
+  it("keeps uncertain renderer cleanup actionable even when cancellation arrives at the same time", async () => {
+    const result = await run(async () => {
+      await f.pg.query(`update "artifactJobs" set "cancelRequested"=true where "status"='running'`);
+      throw new ArtifactError("renderer_cleanup_unknown");
+    });
+    expect(result.result).toMatchObject({status:"needs_attention",code:"renderer_cleanup_unknown"});
+    expect(await jobs.getJob(result.ctx,result.job.id)).toMatchObject({status:"needs_attention",errorCode:"renderer_cleanup_unknown"});
+    expect((await f.pg.query(`select * from "artifactEvents" where "type"='ready'`)).rows).toHaveLength(0);
+  });
 });

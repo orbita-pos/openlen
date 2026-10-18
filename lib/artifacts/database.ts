@@ -3,7 +3,7 @@ import type { ArtifactDatabase, ArtifactSql } from "./types";
 
 /** Lazy: importing tools must not connect to a DB or start workers. */
 export function createArtifactDatabase(connectionString: string): ArtifactDatabase & { close(): Promise<void> } {
-  const pool = new Pool({ connectionString, max: 2 });
+  const pool = new Pool({ connectionString, max: 2,connectionTimeoutMillis:5_000,query_timeout:10_000 });
   return {
     query: async (text, values = []) => (await pool.query(text, [...values])).rows,
     transaction: async (fn) => {

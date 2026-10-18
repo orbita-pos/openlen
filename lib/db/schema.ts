@@ -2585,6 +2585,18 @@ export const artifactAttempts = pgTable("artifactAttempts", {
   kind: text("kind").notNull(), model: text("model").notNull(), centicredits: integer("centicredits").notNull(),
   receipt: jsonb("receipt"), ledgerId: text("ledgerId"), createdAt: timestamp("createdAt", {withTimezone:true}).notNull().defaultNow(),
 }, (t) => [index("artifactAttempts_job_idx").on(t.jobId), check("artifactAttempts_price_check",sqlOp`${t.centicredits} >= 0`)]);
+export const artifactProjectControls=pgTable("artifactProjectControls",{
+  projectId:text("projectId").primaryKey().references(()=>projects.id,{onDelete:"cascade"}),
+  paused:boolean("paused").notNull().default(false),
+  liveRefreshNotBefore:timestamp("liveRefreshNotBefore",{withTimezone:true}).notNull().defaultNow(),
+});
+export const artifactPreviewTickets=pgTable("artifactPreviewTickets",{
+  hash:text("hash").primaryKey(),publicId:text("publicId").notNull(),kind:text("kind").notNull(),
+  actorId:text("actorId").notNull().references(()=>users.id,{onDelete:"cascade"}),ownerId:text("ownerId").notNull(),
+  projectId:text("projectId").notNull().references(()=>projects.id,{onDelete:"cascade"}),artifactId:text("artifactId").notNull(),
+  revision:integer("revision").notNull(),outputIndex:integer("outputIndex").notNull(),outputHash:text("outputHash").notNull(),
+  expiresAt:timestamp("expiresAt",{withTimezone:true}).notNull(),
+},t=>[foreignKey({columns:[t.artifactId,t.revision],foreignColumns:[artifactRevisions.artifactId,artifactRevisions.revision]}).onDelete("cascade"),index("artifactPreviewTickets_expiry_idx").on(t.expiresAt),check("artifactPreviewTickets_kind_check",sqlOp`${t.kind} in ('grant','session')`)]);
 export const artifactSettlements = pgTable("artifactSettlements", {
   jobId: text("jobId").primaryKey(), attemptId: text("attemptId").notNull().unique(), ledgerId: text("ledgerId").notNull().unique(),
   chargedCenticredits: integer("chargedCenticredits").notNull(), createdAt: timestamp("createdAt", {withTimezone:true}).notNull().defaultNow(),

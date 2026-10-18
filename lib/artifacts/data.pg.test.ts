@@ -68,6 +68,21 @@ it("applies the 10s statement limit and caps a real SQL result at 500 rows", asy
   expect((await readSql("commit; delete from sales")).kind).toBe("error");
 });
 
+it("refreshes only the bound owner's live dataset into a new revision, preserving ids and sealed snapshots",async()=>{
+  const {ctx,artifact}=await f.create("project","dashboard");
+  let calls=0;const data=createArtifactData(f.database,f.store,async(_ctx,input)=>{calls++;return input.source==="backend"?readSql(input.query):null;});
+  const first=await data.queryArtifactData(ctx,artifact.id,{source:"backend",mode:"live",environment:"draft",query:"select sum(total)::int as total from sales"});
+  const before=Number(first.rows[0]![0]);await f.store.sealArtifactRevision(ctx,artifact.id,1);
+  await f.pg.exec("insert into sales values (9)");
+  const next=await data.refreshArtifactDataset(ctx,artifact.id,1,first.id);
+  expect(next.revision).toBe(2);expect(next.dataset.id).toBe(first.id);expect(next.dataset.rows).toEqual([[before+9]]);
+  expect(datasetsFromRevision(await f.store.getRevision(ctx,artifact.id,1))[0]!.rows).toEqual([[before]]);
+  await expect(data.refreshArtifactDataset({...ctx,actorId:"editor"},artifact.id,2,first.id)).rejects.toMatchObject({code:"artifact_not_found"});
+  await expect(data.refreshArtifactDataset(ctx,artifact.id,1,first.id)).rejects.toMatchObject({code:"revision_conflict"});
+  await f.database.query(`update "artifactProjectControls" set "liveRefreshNotBefore"=now()+interval '1 hour' where "projectId"=$1`,[ctx.projectId]);
+  await expect(data.refreshArtifactDataset(ctx,artifact.id,2,first.id)).rejects.toMatchObject({code:"data_refresh_busy"});expect(calls).toBe(2);
+});
+
 it("caps rows and rejects oversized or nonrectangular datasets", async () => {
   const { ctx, artifact } = await f.create();
   const data = createArtifactData(f.database, f.store, async () => ({ kind: "rows", columns: ["n"], rows: Array.from({ length: 600 }, (_, n) => [n]), truncated: false }));

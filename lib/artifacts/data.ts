@@ -39,11 +39,12 @@ export function datasetsFromRevision(revision: ArtifactRevision): ArtifactDatase
 }
 
 export function createArtifactData(database: ArtifactDatabase, store: ArtifactStore, query: ArtifactDataQuery) {
-  async function queryArtifactData(ctx: ArtifactContext, id: string, input: ArtifactDataRequest): Promise<ArtifactDataset> {
+  async function saveDataset(ctx: ArtifactContext, id: string, input: ArtifactDataRequest, binding?:{id:string;revision:number}): Promise<ArtifactDataset> {
     if (!input || typeof input !== "object") throw new ArtifactError("invalid_data_request");
     const scenario = input.source === "scenario";
     const artifact = await requireArtifactAccess(database, ctx, id, scenario ? "write" : "data");
     const before = await store.getRevision(ctx, id, artifact.currentRevision);
+    if(binding&&artifact.currentRevision!==binding.revision)throw new ArtifactError("revision_conflict");
     let values: ReturnType<typeof table>;
     let truncated = false;
     if (scenario) { values = table(input.columns, input.rows); truncated = input.rows.length > 500; }
@@ -61,9 +62,25 @@ export function createArtifactData(database: ArtifactDatabase, store: ArtifactSt
       if (result.kind !== "rows") throw new ArtifactError(result.kind === "error" && result.code === "57014" ? "data_query_timeout" : "data_query_failed");
       values = table(result.columns, result.rows); truncated = result.truncated || result.rows.length > 500;
     }
-    const dataset: ArtifactDataset = { id: randomUUID(), mode: scenario ? "scenario" : input.mode, environment: !scenario && input.source === "backend" ? input.environment : null, visibility: scenario ? artifact.visibility : "owner", ...values, query: !scenario && input.source === "backend" ? input.query : null, source: input.source, ...(!scenario && input.source !== "backend" ? { parameters: { zone: input.zone, ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) } } : {}), capturedAt: new Date().toISOString(), truncated };
+    const dataset: ArtifactDataset = { id: binding?.id??randomUUID(), mode: scenario ? "scenario" : input.mode, environment: !scenario && input.source === "backend" ? input.environment : null, visibility: scenario ? artifact.visibility : "owner", ...values, query: !scenario && input.source === "backend" ? input.query : null, source: input.source, ...(!scenario && input.source !== "backend" ? { parameters: { zone: input.zone, ...(input.from ? { from: input.from } : {}), ...(input.to ? { to: input.to } : {}) } } : {}), capturedAt: new Date().toISOString(), truncated };
     await store.writeArtifactFiles(ctx, id, artifact.currentRevision, { [`datasets/${dataset.id}.json`]: JSON.stringify(dataset) }, { ownerOnly: !scenario, manifest: { ...before.manifest, ...(!scenario ? { ownerData: true } : {}) } });
     return dataset;
   }
-  return { queryArtifactData };
+  const queryArtifactData=(ctx:ArtifactContext,id:string,input:ArtifactDataRequest)=>saveDataset(ctx,id,input);
+  async function refreshArtifactDataset(ctx:ArtifactContext,id:string,revision:number,datasetId:string){
+    const artifact=await requireArtifactAccess(database,ctx,id,"data");
+    if(artifact.kind!=="dashboard")throw new ArtifactError("live_dashboard_required");
+    if(!Number.isSafeInteger(revision)||artifact.currentRevision!==revision)throw new ArtifactError("revision_conflict");
+    const source=await store.getRevision(ctx,id,revision),saved=datasetsFromRevision(source).find(d=>d.id===datasetId);
+    if(!saved||saved.mode!=="live")throw new ArtifactError("live_dataset_not_found");
+    let input:RealArtifactDataRequest;
+    if(saved.source==="backend"&&saved.environment&&saved.query)input={source:"backend",mode:"live",environment:saved.environment,query:saved.query};
+    else if((saved.source==="visits"||saved.source==="forms")&&saved.parameters)input={source:saved.source,mode:"live",...saved.parameters};
+    else throw new ArtifactError("live_dataset_not_found");
+    const admitted=await database.query(`insert into "artifactProjectControls" ("projectId","liveRefreshNotBefore") values ($1,now()+interval '1 second') on conflict ("projectId") do update set "liveRefreshNotBefore"=excluded."liveRefreshNotBefore" where "artifactProjectControls"."liveRefreshNotBefore"<=now() returning "projectId"`,[ctx.projectId]);
+    if(!admitted.length)throw new ArtifactError("data_refresh_busy");
+    const dataset=await saveDataset(ctx,id,input,{id:saved.id,revision});
+    return {dataset,revision:revision+1};
+  }
+  return { queryArtifactData,refreshArtifactDataset };
 }

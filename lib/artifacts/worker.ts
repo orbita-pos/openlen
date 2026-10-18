@@ -38,7 +38,8 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     const adapter = deps.adapters[artifact.kind];
     if (!adapter) throw new ArtifactError("format_unavailable");
     const assets = await resolveArtifactAssets(ctx, revision, deps.store, deps.storage);
-    const result = await adapter({ artifact, revision, assets, datasets: datasetsFromRevision(revision), jobOptions: claim.job.options }, controller.signal, {
+    const result = await adapter({ artifact, revision, assets, datasets: datasetsFromRevision(revision), jobOptions: claim.job.options,jobIdentity:{id:claim.job.id,fencingToken:claim.fencingToken} }, controller.signal, {
+      beforeIsolatedRender:async()=>{controller.signal.throwIfAborted();if(!await deps.jobs.heartbeat(claim))throw new ArtifactError("lease_lost");},
       beforeExternalCall: async (model) => {
         if (!deps.billing || !model) throw new ArtifactError("charge_policy_unavailable");
         await deps.billing.startAttempt(claim, ctx, artifact.kind, model); externalStarted = true;
@@ -82,8 +83,9 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     let auditFailed = false;
     if (externalStarted && !commitStarted) await deps.billing?.recordFailure(claim).catch(() => { auditFailed = true; });
     const unknownExternal = externalStarted && !externalOutcomeKnown;
-    const status = unknownExternal || commitStarted || auditFailed ? "needs_attention" : cancelled ? "cancelled" : "failed";
-    const code = commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
+    const cleanupUnknown=error instanceof ArtifactError&&error.code==="renderer_cleanup_unknown";
+    const status = unknownExternal || commitStarted || auditFailed || cleanupUnknown ? "needs_attention" : cancelled ? "cancelled" : "failed";
+    const code = cleanupUnknown ? "renderer_cleanup_unknown" : commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
     const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
     if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
     return { jobId: claim.job.id, status, code };

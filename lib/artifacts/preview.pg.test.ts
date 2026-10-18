@@ -1,0 +1,46 @@
+// @vitest-environment node
+import {afterAll,beforeAll,expect,it} from "vitest";
+import {createHash} from "node:crypto";
+import {artifactFixture} from "./testing/fixture";
+import {createArtifactPreview,previewConfig} from "./preview";
+let f:Awaited<ReturnType<typeof artifactFixture>>;
+beforeAll(async()=>{f=await artifactFixture();},30_000);afterAll(async()=>{await f.pg.close();});
+const config={origin:"https://preview.example.test",appOrigin:"https://app.example.test"};
+it("requires a distinct configured preview origin",()=>{
+  expect(previewConfig({})).toBeNull();
+  expect(previewConfig({OPENLEN_ARTIFACT_PREVIEW_ORIGIN:config.origin,NEXT_PUBLIC_SITE_URL:config.appOrigin})).toEqual(config);
+  expect(()=>previewConfig({OPENLEN_ARTIFACT_PREVIEW_ORIGIN:config.appOrigin,NEXT_PUBLIC_SITE_URL:config.appOrigin})).toThrow();
+});
+it("uses a single-use bootstrap, HttpOnly viewer cookie and sandboxed HTML with no application credentials",async()=>{
+  const {ctx,artifact}=await f.create();const html=new TextEncoder().encode('<!doctype html><html><head></head><body><h1>Private deck</h1></body></html>');
+  const hash=createHash("sha256").update(html).digest("hex"),output={key:"private/deck.html",hash,bytes:html.length,mime:"text/html",format:"html"};
+  await f.store.writeArtifactFiles(ctx,artifact.id,0,{"deck.json":"{}"});await f.store.sealArtifactRevision(ctx,artifact.id,1);
+  await f.database.query(`update "artifactRevisions" set "outputs"=$3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2`,[artifact.id,1,JSON.stringify([output]),JSON.stringify({valid:true})]);
+  const storage={get:async()=>html,put:async()=>{},delete:async()=>{}};
+  const preview=createArtifactPreview(f.database,f.store,storage,config);
+  const reader={...ctx,actorId:"reader",role:"lector" as const};
+  const grant=await preview.mint(reader,artifact.id,1,0);
+  expect(new URL(grant.url).origin).toBe(config.origin);
+  const open=await preview.handle(new Request(grant.url));expect(open.status).toBe(303);
+  const cookie=open.headers.get("set-cookie")!;expect(cookie).toContain("HttpOnly");expect(cookie).toContain("Secure");expect(cookie).toContain("SameSite=Strict");
+  expect((await preview.handle(new Request(grant.url))).status).toBe(404);
+  const url=config.origin+open.headers.get("location");
+  expect((await preview.handle(new Request(url))).status).toBe(404);
+  const response=await preview.handle(new Request(url,{headers:{cookie:cookie.split(";")[0]!}}));
+  expect(response.status).toBe(200);expect(await response.text()).toContain("Private deck");
+  expect(response.headers.get("content-security-policy")).toContain("sandbox allow-scripts;");
+  expect(response.headers.get("content-security-policy")).not.toContain("allow-same-origin");
+  expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
+  expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  await f.database.query(`delete from "projectMembers" where "projectId"=$1 and "userId"='reader'`,[ctx.projectId]);
+  expect((await preview.handle(new Request(url,{headers:{cookie:cookie.split(";")[0]!}}))).status).toBe(404);
+  await f.database.query(`insert into "projectMembers" values ($1,'reader','lector')`,[ctx.projectId]);
+  await f.database.query(`update "artifacts" set "visibility"='owner' where "id"=$1`,[artifact.id]);
+  await expect(preview.mint(reader,artifact.id,1,0)).rejects.toMatchObject({code:"artifact_not_found"});
+  const expired=await preview.mint(ctx,artifact.id,1,0);
+  await f.database.query(`update "artifactPreviewTickets" set "expiresAt"=now()-interval '1 second' where "hash"=$1`,[createHash("sha256").update(new URL(expired.url).pathname.slice(7)).digest("hex")]);
+  expect((await preview.handle(new Request(expired.url))).status).toBe(404);
+  const ownerGrant=await preview.mint(ctx,artifact.id,1,0),ownerOpen=await preview.handle(new Request(ownerGrant.url));
+  html[0]=html[0]!^1;
+  expect((await preview.handle(new Request(config.origin+ownerOpen.headers.get("location"),{headers:{cookie:ownerOpen.headers.get("set-cookie")!.split(";")[0]!}}))).status).toBe(404);
+});
