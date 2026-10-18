@@ -108,6 +108,14 @@ de compilación se guardan acotados para inspect autorizado, no en esos logs.
 - `artifactProjectControls.paused` es persistente. El ensayo de selección pausa
   sus proyectos antes de hablar con el modelo; no quitar esas pausas al reiniciar
   o desplegar.
+- El refresh live va por un MessagePort del documento opaco al padre autenticado.
+  El padre fija artefacto, revisión y datasets permitidos; el iframe no recibe
+  cookies, consultas SQL ni parámetros de consulta. Una navegación del iframe no
+  recibe respuestas anteriores mediante su WindowProxy. Al desmontar, cerrar el
+  puente. La UI deberá conectar `connectArtifactLivePreview` al abrir una vista.
+- `window.lenLive.refresh(id)` reemplaza las filas de `window.lenData`, actualiza
+  la procedencia y emite `len:data`. El dashboard debe volver a leer las filas al
+  manejar ese evento. Descargar HTML conserva el snapshot, sin este puente.
 
 ## Ensayos preparados y límites de la evidencia
 
@@ -124,6 +132,14 @@ de imagen fijada, cancelación parcial, fallo/corrección de video, reconexión 
 servicios y conservación de archivos listos. Sus adaptadores son fixtures:
 **no es evidencia de selección del modelo ni de cinco formatos reales.**
 
+El puente live se probó en navegador con servicios HTTP y SQL de fixture: total
+200 -> 400 y filtro Norte -> 240, procedencia actualizada, cero errores de consola,
+origen opaco y acceso a cookies/documento padre bloqueado. La prueba usa la
+implementación real del puente y refresh, pero un contexto de autorización fijo
+y datos sintéticos. No equivale al ensayo HTTP de la sesión Next del producto.
+El fixture repetible es `scripts/artifact-live-preview-fixture.ts`; iniciarlo con
+el mismo preload de captura automática que el worker. No hace llamadas pagadas.
+
 Pendientes antes de la aceptación completa:
 
 1. Host Linux elegido; build/ejecución de la imagen Docker, aislamiento,
@@ -134,8 +150,9 @@ Pendientes antes de la aceptación completa:
 4. Congelar capturas reales de la app/página, sin sesión/datos de clientes por
    defecto. Hoy se reutilizan imágenes de entregables guardados; no se afirma
    captura automática del proyecto original.
-5. Mediación del refresh live entre iframe y padre autenticado. El endpoint
-   owner-only ya crea otra revisión, pero el puente y su aceptación faltan.
+5. Integrar el puente live en la futura UI y probarlo con la sesión Next real.
+   El endpoint owner-only y el transporte opaco ya están implementados y probados
+   por separado, incluida otra revisión sin alterar los snapshots anteriores.
 6. Precio comercial y presupuesto pagado aprobados; imágenes reales, reconciliación
    del coste y selección/corrección con el modelo real en app y página.
 7. Build standalone general en el host de destino. En Windows se compiló y se

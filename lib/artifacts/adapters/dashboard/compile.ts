@@ -5,6 +5,7 @@ import { CATALOGO_ACTUAL } from "../../../apps/dependencias";
 import { runBundler } from "../../../apps/bundler/bundle-app";
 import { ArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
 import { dashboardManifest } from "./manifest";
+import {artifactDatasetForDisplay} from "../../dataset-display";
 
 import { ARTIFACT_CSP } from "../../html-policy";
 export { ARTIFACT_CSP } from "../../html-policy";
@@ -74,7 +75,7 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
     if (!asset || !/^image\/(png|jpeg|webp|gif|svg\+xml|avif)$/.test(asset.mime) || element.tagName !== "IMG") throw new ArtifactError("artifact_resource_missing");
     element.setAttribute("src", `data:${asset.mime};base64,${Buffer.from(asset.bytes).toString("base64")}`);
   }
-  head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><script>window.lenData=Object.freeze(${safeJson({ datasets })});${scriptText(trustedRuntime)}</script>`);
+  head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><script>window.lenData=Object.freeze(${safeJson({ datasets:datasets.map(artifactDatasetForDisplay) })});${scriptText(trustedRuntime)}</script>`);
   const labels = datasets.map((d) => datasetLabel(d) + (d.truncated ? " · Datos recortados" : ""));
   // Text escapes through JSON into textContent, never interpolated as HTML.
   if(datasets.length)body.insertAdjacentHTML("beforeend", `<aside id="len-data-provenance" style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:#111;color:#fff;font:12px system-ui;z-index:2147483647"></aside><script>document.getElementById('len-data-provenance').textContent=${safeJson(labels.join(" | "))};</script>`);

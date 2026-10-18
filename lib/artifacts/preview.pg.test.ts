@@ -44,3 +44,24 @@ it("uses a single-use bootstrap, HttpOnly viewer cookie and sandboxed HTML with 
   html[0]=html[0]!^1;
   expect((await preview.handle(new Request(config.origin+ownerOpen.headers.get("location"),{headers:{cookie:ownerOpen.headers.get("set-cookie")!.split(";")[0]!}}))).status).toBe(404);
 });
+
+it("advertises and injects live mediation only in authorized private dashboard previews",async()=>{
+  const {ctx,artifact}=await f.create("owner","dashboard"),id=crypto.randomUUID();
+  const html=new TextEncoder().encode('<!doctype html><html><head></head><body><h1>Live dashboard</h1></body></html>');
+  const data={id,mode:"live",environment:"live",visibility:"owner",columns:["Total"],rows:[[12]],query:"select 'private-query-marker'",source:"backend",capturedAt:new Date().toISOString(),truncated:false};
+  await f.store.writeArtifactFiles(ctx,artifact.id,0,{"index.html":"<html></html>",[`datasets/${id}.json`]:JSON.stringify(data)},{ownerOnly:true,manifest:{ownerData:true}});
+  await f.store.sealArtifactRevision(ctx,artifact.id,1);
+  const output={key:"private/live.html",hash:createHash("sha256").update(html).digest("hex"),mime:"text/html",format:"html",bytes:html.length};
+  await f.database.query(`update "artifactRevisions" set "outputs"=$3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2`,[artifact.id,1,JSON.stringify([output]),JSON.stringify({valid:true})]);
+  const preview=createArtifactPreview(f.database,f.store,{get:async()=>html,put:async()=>{},delete:async()=>{}},config);
+  const grant=await preview.mint(ctx,artifact.id,1,0);
+  expect(grant.view).toMatchObject({artifactId:artifact.id,revision:1,liveDatasetIds:[id]});
+  const open=await preview.handle(new Request(grant.url));
+  const response=await preview.handle(new Request(config.origin+open.headers.get("location"),{headers:{cookie:open.headers.get("set-cookie")!.split(";")[0]!}}));
+  const text=await response.text();
+  expect(text).toContain("openlen.artifact.live.request");
+  expect(text).toContain(config.appOrigin);
+  expect(text).not.toContain("private-query-marker");
+  expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
+  expect(response.headers.get("content-security-policy")).not.toContain("allow-same-origin");
+});

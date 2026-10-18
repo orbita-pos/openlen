@@ -4,6 +4,8 @@ import type {ArtifactStore} from "./store";
 import type {ArtifactStorage} from "./private-storage";
 import {ArtifactError,type ArtifactContext,type ArtifactDatabase} from "./types";
 import {ARTIFACT_CSP} from "./html-policy";
+import {datasetsFromRevision} from "./data";
+import {livePreviewScript} from "./live-preview-runtime";
 export interface ArtifactPreviewConfig {readonly origin:string;readonly appOrigin:string}
 export function previewConfig(env:Readonly<Record<string,string|undefined>>):ArtifactPreviewConfig|null{
   if(!env.OPENLEN_ARTIFACT_PREVIEW_ORIGIN)return null;
@@ -36,7 +38,9 @@ export function createArtifactPreview(database:ArtifactDatabase,store:ArtifactSt
       if(Number(count!.n)>=50)throw new ArtifactError("preview_limit");
       await tx.query(`insert into "artifactPreviewTickets" ("hash","publicId","kind","actorId","ownerId","projectId","artifactId","revision","outputIndex","outputHash","expiresAt") values ($1,$2,'grant',$3,$4,$5,$6,$7,$8,$9,now()+interval '5 minutes')`,[hash(token),publicId,ctx.actorId,ctx.ownerId,ctx.projectId,artifactId,revision,outputIndex,output.hash]);
     });
-    return {url:`${config.origin}/grant/${token}`,expiresInSeconds:ttlSeconds};
+    const artifact=await store.getArtifact(ctx,artifactId);
+    const liveDatasetIds=artifact.kind==="dashboard"?datasetsFromRevision(source).filter(d=>d.mode==="live").map(d=>d.id):[];
+    return {url:`${config.origin}/grant/${token}`,expiresInSeconds:ttlSeconds,view:{id:publicId,artifactId,revision,liveDatasetIds}};
   }
   async function handle(request:Request):Promise<Response>{
     try{
@@ -67,7 +71,12 @@ export function createArtifactPreview(database:ArtifactDatabase,store:ArtifactSt
       if(!output||output.hash!==ticket.outputHash||source.evidence?.valid!==true||output.mime!=="text/html"||output.bytes>8*1024*1024)return notFound();
       const bytes=await storage.get(output.key);
       if(bytes.length!==output.bytes||createHash("sha256").update(bytes).digest("hex")!==output.hash)return notFound();
-      return new Response(new Uint8Array(bytes),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"private, no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":`sandbox allow-scripts; ${ARTIFACT_CSP}; frame-ancestors ${config.appOrigin}`,"permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()"}});
+      const artifact=await store.getArtifact(context(ticket),String(ticket.artifactId));
+      const liveIds=artifact.kind==="dashboard"?datasetsFromRevision(source).filter(d=>d.mode==="live").map(d=>d.id):[];
+      // Add trusted mediation after verifying the original saved bytes. The
+      // downloaded export remains an immutable snapshot with no live bridge.
+      const html=liveIds.length?`${new TextDecoder("utf-8",{fatal:true}).decode(bytes)}<script>${livePreviewScript({appOrigin:config.appOrigin,channel:publicId,datasetIds:liveIds})}</script>`:new Uint8Array(bytes);
+      return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"private, no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":`sandbox allow-scripts; ${ARTIFACT_CSP}; frame-ancestors ${config.appOrigin}`,"permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()"}});
     }catch{return notFound();}
   }
   return {mint,handle};
