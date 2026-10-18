@@ -56,6 +56,7 @@ import { appFileNames } from "@/lib/apps/esqueleto";
 import { installPackagesAfterSave } from "@/lib/agent/npm-after-save";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { NODE_MODULES, nodeModulesOf } from "@/lib/apps/npm/node-modules";
+import { ARTIFACT_WORKSPACE, parseArtifactPath } from "@/lib/artifacts/workspace";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -90,6 +91,7 @@ function leidosDe(session: AgentSession): Leidos {
 /** Los ficheros que no son páginas: la memoria y la CARPETA del proyecto
  *  (pieza 9 de Len 2.5: `/supabase/`, `/tests/`, `js/`, `css/`, `data/`…). */
 interface Virtuales {
+  readonly artifacts: ReadonlyMap<string, string>;
   /** La memoria (plans/len-md): `~/.len/LEN.md` (de quien habla), `/LEN.md`
    *  y, si hay notas, `/.len/memory/MEMORY.md` (generado) y cada nota. */
   readonly memoria: ReadonlyMap<string, string>;
@@ -134,6 +136,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
   }
   const indice = buildMemoryIndex(notas, MEMORY_INDEX_MAX);
   return {
+    artifacts: new Map(Object.entries(await deps.artifacts?.files() ?? {})),
     memoria: new Map([
       [PERSONAL_LEN_MD, dueno],
       [PROJECT_LEN_MD, userBrief ?? ""],
@@ -145,7 +148,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { memoria: new Map(), folder: new Map(), esmLock: null };
+const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), folder: new Map(), esmLock: null };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -160,6 +163,8 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       // por su ruta, con terminal o sin ella, pero no está en `ficheros`, así que
       // Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
       if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode, session.app ?? null);
+      const artifact = v.artifacts.get(ruta);
+      if (artifact !== undefined) return artifact;
       const memoria = v.memoria.get(ruta);
       if (memoria !== undefined) return memoria;
       const fichero = v.folder.get(ruta);
@@ -170,7 +175,7 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
     // De la memoria, Grep y Glob ven sólo el /LEN.md del proyecto, que está en
     // su raíz como un CLAUDE.md; lo personal y las notas, como /.openlen, se
     // abren por su ruta (plans/len-md).
-    ficheros: [...ficherosDelSitio(data), ...(v.memoria.has(PROJECT_LEN_MD) ? [PROJECT_LEN_MD] : []), ...v.folder.keys()],
+    ficheros: [...ficherosDelSitio(data), ...(v.memoria.has(PROJECT_LEN_MD) ? [PROJECT_LEN_MD] : []), ...v.folder.keys(), ...v.artifacts.keys()],
     recientes: session.escritos ?? [],
   };
 }
@@ -199,6 +204,8 @@ function booleano(v: unknown): boolean | undefined {
 }
 
 export async function toolRead(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const artifactError = await loadArtifactSource(deps, args.file_path ?? args.path);
+  if (artifactError) return artifactError;
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
@@ -267,6 +274,8 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const entrada = coercerEntradaEdit(args);
+  const artifactError = await loadArtifactSource(deps, entrada.file_path);
+  if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
@@ -281,6 +290,8 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const { entrada, nota } = coercerEntradaWrite(args);
+  const artifactError = await loadArtifactSource(deps, entrada.file_path);
+  if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
@@ -293,6 +304,18 @@ export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Re
 function recorte(s: string): string {
   const una = s.replace(/\s+/g, " ").trim();
   return una.length > 40 ? `${una.slice(0, 40)}…` : una;
+}
+
+async function loadArtifactSource(deps: AgentDeps, raw: unknown): Promise<ToolOutcome | null> {
+  if (typeof raw !== "string") return null;
+  const path = resolverRuta(raw);
+  if (!path.startsWith(ARTIFACT_WORKSPACE)) return null;
+  try {
+    if (raw.startsWith(ARTIFACT_WORKSPACE)) parseArtifactPath(raw);
+    if (!deps.artifacts) return { response: respuesta(fallo("Artifact sources are unavailable in this session.")) };
+    await deps.artifacts.read(path);
+    return null;
+  } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact access failed")) }; }
 }
 
 async function aplicarPlan(
@@ -310,6 +333,16 @@ async function aplicarPlan(
   edit?: { old_string: string; new_string: string },
 ): Promise<ToolOutcome> {
   if (!plan.ok) return { response: respuesta(plan.resultado) };
+  if (plan.ruta.startsWith(ARTIFACT_WORKSPACE)) {
+    if (!deps.artifacts) return { response: respuesta(fallo("Artifact sources are unavailable in this session.")) };
+    const before = v.artifacts.get(plan.ruta) ?? null;
+    try {
+      const changed = before !== plan.contenido;
+      if (changed) await deps.artifacts.write(plan.ruta, plan.contenido, before);
+      leidosDe(session).set(plan.ruta, { instantanea: plan.contenido, offset: undefined, limit: undefined });
+      return { response: { ok: true, cambio: changed ? "cambio" : "sin_cambio", tool_result: plan.respuesta({ guardadoIgual: true }) }, action: { tool: herramienta, ok: true, summary: detalle }, ...(changed ? { mutoDurable: true } : {}) };
+    } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact save failed")) }; }
+  }
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   if (memoryLayerOf(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
@@ -581,6 +614,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
+  for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
   ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
@@ -641,6 +675,17 @@ export async function guardarLoDeLaTerminal(
     notas.push(`${rutaRelativa(ruta)}: not saved — ${motivo} ${previo === null ? "It was removed." : "It is back as it was."}`);
   };
   for (const c of cambios) {
+    if (c.ruta.startsWith(ARTIFACT_WORKSPACE)) {
+      if (!deps.artifacts) { deshacer(c.ruta, "Artifact sources are unavailable in this session."); continue; }
+      try {
+        if (c.tipo === "borrado") await deps.artifacts.remove(c.ruta, antes[c.ruta] ?? null);
+        else await deps.artifacts.write(c.ruta, c.contenido, antes[c.ruta] ?? null);
+        enLaTerminal[c.ruta] = c.tipo === "borrado" ? null : c.contenido;
+        escrituras.push({ response: { ok: true, cambio: "cambio" }, action: { tool: "bash", ok: true, summary: rutaRelativa(c.ruta), cambio: "cambio" }, mutoDurable: true });
+        notas.push(`${rutaRelativa(c.ruta)}: ${c.tipo === "borrado" ? "removed" : "saved"}.`);
+      } catch (error) { deshacer(c.ruta, error instanceof Error ? error.message : "artifact save failed"); }
+      continue;
+    }
     if (c.tipo === "borrado") {
       // LA MEMORIA (plans/len-md): `rm` de una nota la borra, como en Claude
       // Code; ~/.len/LEN.md, /LEN.md y el índice no se borran (se vacían).

@@ -8,7 +8,7 @@ import type { Index } from "./store";
 /** Never seen by git, as if in .git/info/exclude: the terminal's scratch and system folders, the
  *  read-only /.openlen and /node_modules, and ~ (/home/user: the PERSON's memory, not the
  *  project's — as ~/.claude never goes in a repository). */
-const EXCLUDED = /^\/(?:tmp|bin|usr|dev|proc|\.openlen|node_modules|home\/user)(?:\/|$)/;
+const EXCLUDED = /^\/(?:tmp|bin|usr|dev|proc|\.openlen|node_modules|home\/user|\.len\/artifacts)(?:\/|$)/;
 /** The platform manual (`RUTA_MANUAL` in lib/agent/ficheros/manual.ts). */
 const PLATFORM_MANUAL = "/AGENTS.md";
 
