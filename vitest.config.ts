@@ -249,6 +249,12 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/projects/miniatura-en-vuelo.test.ts",
+      "lib/projects/thumbnail-state.test.ts",
+      "lib/projects/thumbnail-queue.test.ts",
+      "lib/projects/thumbnail-refresh.test.ts",
+      "lib/projects/thumbnail-guard.test.ts",
+      "lib/projects/thumbnail.test.ts",
+      "lib/projects/thumbnail.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5): su huella publicable.
       "lib/projects/files-hash.test.ts",
       // F2 de las apps web: deshacer un turno entero, todo o nada (el plan, puro;

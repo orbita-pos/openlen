@@ -2065,6 +2065,13 @@ async function correrTurno(
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
+        // One image after the complete turn, including cancelled turns that
+        // saved work. The queue waits if another turn already owns the project.
+        if (mutoDurable) {
+          void import("@/lib/projects/thumbnail-jobs")
+            .then(({ scheduleDraftThumbnail }) => scheduleDraftThumbnail(projectId))
+            .catch((error) => console.warn("[thumbnail] could not schedule draft", error));
+        }
         // CUÁNTOS TURNOS TERMINAN SIN NADIE MIRANDO, contado desde el día uno.
         if (clienteSeFue) console.log(`[agent] turno terminado sin cliente turno=${turnoId}`);
         // 🔴 LEN 2.1 · Y SE LE AVISA (diagnóstico §4.4 punto 5). Es la otra mitad

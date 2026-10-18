@@ -41,6 +41,8 @@ import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
 import { renderProjectThumbnail } from "@/lib/projects/thumbnail";
+import { scheduleDraftThumbnail } from "@/lib/projects/thumbnail-jobs";
+import { needsDraftThumbnail, draftEnvVersionSql } from "@/lib/projects/thumbnail-state";
 import { runFlightCheck } from "@/lib/publish/flight-check";
 import { localizeForPublish } from "@/lib/publish/localize";
 import { detectHtmlLang } from "@/lib/publish/language-cluster";
@@ -220,6 +222,8 @@ export interface ProjectSummary {
   tags: string[];
   deployUrl: string | null;
   thumbnailUrl: string | null;
+  /** A background draft capture is pending; the list refreshes only its image. */
+  thumbnailPending?: boolean;
   /** Per-project favicon / brand mark. Null when the user hasn't set one
    *  and no <link rel="icon"> was auto-extracted from the HTML at publish. */
   logoUrl: string | null;
@@ -422,6 +426,7 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
       // la subconsulta `"id"` es el de la fila del chat. Medido: salía siempre
       // «sin conversación».
       hasChat: sqlOp<boolean>`exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${schema.projects}."id")`,
+      draftEnvVersion: draftEnvVersionSql(sqlOp`${schema.projects}."id"`),
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
     })
@@ -435,6 +440,7 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
     // any rows pre-Session-11.
     const derivedDeploy = deployUrlFor(row.subdomain);
     const currentHtml = row.data?.html ?? "";
+    const thumbnailPending = needsDraftThumbnail(row) && scheduleDraftThumbnail(row.id);
     return {
       id: row.id,
       title: row.title,
@@ -443,6 +449,7 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
       tags: row.tags,
       deployUrl: derivedDeploy ?? row.deployUrl,
       thumbnailUrl: row.thumbnailUrl,
+      thumbnailPending,
       logoUrl: row.logoUrl,
       subdomain: row.subdomain,
       publishedAt: row.publishedAt,

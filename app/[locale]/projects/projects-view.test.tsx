@@ -10,6 +10,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 
 import messages from "@/messages/es/projects.json";
+import type { ProjectSummary } from "@/lib/projects";
 
 // Estables entre renders, como los de Next: el efecto depende de ellos.
 const nav = vi.hoisted(() => {
@@ -50,9 +51,10 @@ afterEach(() => {
   for (const r of roots.splice(0)) act(() => r.unmount());
   document.body.innerHTML = "";
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
-function render(query: string): HTMLElement {
+function render(query: string, projects: ProjectSummary[] = []): HTMLElement {
   nav.params = new URLSearchParams(query);
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -61,7 +63,7 @@ function render(query: string): HTMLElement {
   act(() =>
     root.render(
       <NextIntlClientProvider locale="es" messages={{ projects: messages }}>
-        <ProjectsView projects={[]} />
+        <ProjectsView projects={projects} />
       </NextIntlClientProvider>,
     ),
   );
@@ -88,4 +90,16 @@ describe("la vuelta del cobro en la lista del taller", () => {
     expect(host.querySelector('[role="alert"]')).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });
+});
+
+it("updates a completed thumbnail in the open list and stops polling", async () => {
+  vi.useFakeTimers();
+  const project: ProjectSummary = { id: "p1", title: "My app", status: "draft", visibility: "private", tags: [], deployUrl: null, thumbnailUrl: null, thumbnailPending: true, logoUrl: null, subdomain: null, publishedAt: null, hasUnpublishedChanges: true, sectionCount: 0, isBlank: false, createdAt: new Date(), updatedAt: new Date() };
+  const fetcher = vi.fn(async (url: string) => url === "/api/projects" ? new Response(JSON.stringify({ projects: [{ ...project, thumbnailUrl: "https://image.test/new.avif", thumbnailPending: false }], shared: [] })) : new Response("null", { status: 404 }));
+  vi.stubGlobal("fetch", fetcher);
+  const host = render("view=projects", [project]);
+  await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+  expect(host.querySelector('img[src="https://image.test/new.avif"]')).not.toBeNull();
+  await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+  expect(fetcher.mock.calls.filter(([url]) => url === "/api/projects")).toHaveLength(1);
 });

@@ -116,7 +116,7 @@ export type SharedProjectSummary = ProjectSummary & {
 
 export function ProjectsView({
   projects: initial,
-  shared = [],
+  shared: initialShared = [],
   onOpenExplore,
 }: {
   projects: ProjectSummary[];
@@ -131,6 +131,36 @@ export function ProjectsView({
   // Los proyectos en blanco no salen (plans/crear-es-len, como las sesiones en
   // blanco de DeepSeek): aquí no hay ninguno abierto.
   const [projects, setProjects] = useState(() => visibleProjects(initial, null));
+  const [shared, setShared] = useState(initialShared);
+  const thumbnailPending = projects.some((p) => p.thumbnailPending) || shared.some((p) => p.thumbnailPending);
+  useEffect(() => {
+    if (!thumbnailPending) return;
+    const abort = new AbortController();
+    const deadline = setTimeout(() => abort.abort(), 180_000);
+    let timer: ReturnType<typeof setTimeout>;
+    let attempts = 0;
+    const poll = async () => {
+      try {
+        const response = await fetch("/api/projects", { signal: abort.signal, cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json() as { projects: ProjectSummary[]; shared?: SharedProjectSummary[] };
+          if (abort.signal.aborted) return;
+          // Only images: a refresh must not undo a rename, visibility toggle,
+          // deletion or other local action while a capture was running.
+          const fresh = new Map([...data.projects, ...(data.shared ?? [])].map((p) => [p.id, p]));
+          const update = <T extends ProjectSummary,>(previous: T[]): T[] => previous.map((p) => {
+            const image = fresh.get(p.id);
+            return image ? { ...p, thumbnailUrl: image.thumbnailUrl, thumbnailPending: image.thumbnailPending } : p;
+          });
+          setProjects(update);
+          setShared(update);
+        }
+      } catch { /* Keep the last image if the connection is interrupted. */ }
+      if (!abort.signal.aborted && ++attempts < 90) timer = setTimeout(poll, 2_000);
+    };
+    timer = setTimeout(poll, 2_000);
+    return () => { abort.abort(); clearTimeout(timer); clearTimeout(deadline); };
+  }, [thumbnailPending]);
   const [view, setView] = useState<ViewMode>("grid");
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterId>("all");
