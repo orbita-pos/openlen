@@ -69,7 +69,8 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     const cancelled = signal.aborted || latest?.cancelRequested === true;
     const status = externalStarted || commitStarted ? "needs_attention" : cancelled ? "cancelled" : "failed";
     const code = commitStarted ? "result_commit_unknown" : externalStarted ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
-    if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code).catch(() => undefined);
+    const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
+    if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
     return { jobId: claim.job.id, status, code };
   } finally { clearInterval(timer); signal.removeEventListener("abort", cancel); }
 }

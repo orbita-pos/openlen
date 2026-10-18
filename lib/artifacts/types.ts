@@ -76,6 +76,7 @@ export interface ArtifactJob {
   readonly cancelRequested: boolean;
   readonly externalStartedAt: Date | null;
   readonly errorCode: string | null;
+  readonly diagnostics: readonly string[];
   readonly createdAt: Date;
 }
 export interface JobClaim { readonly job: ArtifactJob; readonly workerId: string; readonly fencingToken: string; readonly leaseUntil: Date }

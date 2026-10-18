@@ -1,0 +1,13 @@
+{
+  "name": "openlen-artifact-renderer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import @inariwatch/capture/auto render.mjs"
+  },
+  "dependencies": {
+    "@inariwatch/capture": "0.14.0",
+    "openlen": "file:../..",
+    "puppeteer": "25.0.2"
+  }
+}

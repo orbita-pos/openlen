@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { artifactFixture } from "./testing/fixture";
 import { createArtifactJobs } from "./jobs";
 import { runArtifactJob } from "./worker";
-import type { ArtifactAdapter } from "./types";
+import { ArtifactError, type ArtifactAdapter } from "./types";
 
 let f: Awaited<ReturnType<typeof artifactFixture>>;
 let jobs: ReturnType<typeof createArtifactJobs>;
@@ -61,5 +61,10 @@ describe("worker confirms persisted results", () => {
     });
     expect(result.result.status).toBe("cancelled");
     expect((await jobs.getJob(result.ctx, result.job.id)).status).toBe("cancelled");
+  });
+
+  it("keeps bounded compiler diagnostics with the failed job for a later inspect", async () => {
+    const result = await run(async () => { throw new ArtifactError("artifact_compile_failed", "/main.ts:3: expected expression"); });
+    expect(await jobs.getJob(result.ctx, result.job.id)).toMatchObject({ status: "failed", errorCode: "artifact_compile_failed", diagnostics: ["/main.ts:3: expected expression"] });
   });
 });

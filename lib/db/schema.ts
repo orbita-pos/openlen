@@ -2551,6 +2551,7 @@ export const artifactJobs = pgTable("artifactJobs", {
   cancelRequested: boolean("cancelRequested").notNull().default(false),
   externalStartedAt: timestamp("externalStartedAt", { withTimezone: true }),
   errorCode: text("errorCode"),
+  diagnostics: jsonb("diagnostics").$type<readonly string[]>().notNull().default([]),
   createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
