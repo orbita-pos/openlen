@@ -45,6 +45,7 @@ import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
+import { ARTIFACT_MANUAL_INDEX, artifactManuals } from "./artifact-manuals";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -311,7 +312,8 @@ export function buildManualDeLaPlataforma(
 ): string {
   const base = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
   const agents = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
-  return terminalOnly(mode, env) ? paraSoloLaTerminal(agents) : agents;
+  const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${ARTIFACT_MANUAL_INDEX}` : agents;
+  return terminalOnly(mode, env) ? paraSoloLaTerminal(withArtifacts) : withArtifacts;
 }
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
@@ -323,9 +325,10 @@ export function documentosDeLaPlataforma(
   app: AppDeProyecto | null = null,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Readonly<Record<string, string>> {
-  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP };
+  const artifacts = env.OPENLEN_ARTIFACTS === "1" ? artifactManuals : {};
+  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP, ...artifacts };
   const convertir = manualParaConvertir();
-  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir };
+  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir, ...artifacts };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */

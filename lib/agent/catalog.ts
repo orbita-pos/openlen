@@ -50,6 +50,8 @@ import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
+import { artifactToolDeclarations } from "@/lib/artifacts/tools";
+import type { ArtifactKind } from "@/lib/artifacts/types";
 
 export const AGENT_MODULES = [
   // SÓLO CHAT desde el 2026-08-29. `collections` murió con el hub de Módulos:
@@ -126,6 +128,7 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
  *  defecto que apagara herramientas en el producto sería mucho peor que el que
  *  esto arregla. Quien NO puede, lo dice. */
 export interface CapacidadesDelEntorno {
+  readonly artifactKinds?: readonly ArtifactKind[];
   /** `false` cuando el llamador no cablea `observarPagina`. */
   readonly mirarPagina?: boolean;
   /** `false` cuando el llamador no cablea `usarPagina`. */
@@ -145,7 +148,8 @@ export function buildFunctionDeclarations(
   app: AppDeProyecto | null = null,
 ): Record<string, unknown>[] {
   const declaraciones = declaracionesDelModo(_env, capacidades, mode);
-  return app ? declaracionesDeLaApp(declaraciones) : declaraciones;
+  const withArtifacts = _env.OPENLEN_ARTIFACTS === "1" ? [...declaraciones, ...artifactToolDeclarations(capacidades.artifactKinds ?? [])] : declaraciones;
+  return app ? declaracionesDeLaApp(withArtifacts) : withArtifacts;
 }
 
 function declaracionesDelModo(

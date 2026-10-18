@@ -22,6 +22,8 @@ create table if not exists "artifactRevisions" (
  "sealedAt" timestamptz, "createdAt" timestamptz not null default now(),
  "outputs" jsonb not null default '[]', "evidence" jsonb, primary key ("artifactId","revision")
 );
+alter table "artifacts" add column if not exists "itemKey" text;
+create unique index if not exists "artifacts_request_item_idx" on "artifacts" ("requestId","itemKey");
 create table if not exists "artifactJobs" (
  "id" text primary key, "artifactId" text not null references "artifacts"("id") on delete cascade,
  "revision" integer not null, "actorId" text references "users"("id"), "operation" text not null, "optionsHash" text not null, "options" jsonb not null default '{}',
