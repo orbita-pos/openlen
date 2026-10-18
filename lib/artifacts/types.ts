@@ -39,6 +39,7 @@ export interface ArtifactSourceRef {
   readonly settingsHash: string;
   readonly capturedAt: string;
   readonly resourceRefs: readonly string[];
+  readonly frozenSourcePrefix?:"project-source/";
 }
 export interface ArtifactOutput {
   readonly key: string;

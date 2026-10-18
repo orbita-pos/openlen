@@ -4,6 +4,7 @@ import { artifactFixture } from "./testing/fixture";
 import { createArtifactJobs } from "./jobs";
 import { createArtifactData } from "./data";
 import { createArtifactAgent, artifactToolDeclarations } from "./tools";
+import {createArtifactContextCapture,createArtifactSourceFreeze} from "./context";
 import { buildFunctionDeclarations } from "../agent/catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "../agent/manual-de-la-plataforma";
 import { isConcurrencySafe } from "../agent/tool-concurrency";
@@ -69,4 +70,24 @@ it("retains durable-mutation evidence if later metadata validation fails", async
   const out = await agent().execute("create_artifact", { ...piece("broken-dependency"), dependencies: [{ artifactId: "missing", revision: 1 }] });
   expect(out.response.ok).toBe(false);
   expect(out.mutoDurable).toBe(true);
+});
+
+it("freezes selected project source once for a motion item and keeps it on request retries",async()=>{
+  const source={files:{"/index.html":"<html><head></head><body>My original app</body></html>"},settings:{}};
+  const load=async()=>source;
+  const a=createArtifactAgent({database:f.database,store:f.store,jobs:createArtifactJobs(f.database,f.store),data:createArtifactData(f.database,f.store,async()=>null),captureContext:createArtifactContextCapture(f.database,load),freezeSource:createArtifactSourceFreeze(f.database,load)},f.owner,()=>"freeze-message",["motion"]);
+  const args={kind:"motion",item_key:"app-video",title:"Video",brief:"Show my app",source_paths:["/index.html"],freeze_source:true};
+  const created=await a.execute("create_artifact",args);expect(created.response.ok).toBe(true);
+  const id=String(created.response.artifactId),saved=await f.store.getRevision(f.owner,id,1);
+  expect(saved.files["project-source/index.html"]).toContain("My original app");
+  expect(saved.sourceRef?.frozenSourcePrefix).toBe("project-source/");
+  source.files["/index.html"]="The app changed later";
+  const retry=await a.execute("create_artifact",args);expect(retry.response.artifactId).toBe(id);
+  expect((await f.store.getRevision(f.owner,id,1)).files).toEqual(saved.files);
+  const refreshed=await a.execute("render_artifact",{artifact_id:id,revision:1,formats:["html"],refresh_source_paths:["/index.html"]});
+  expect(refreshed.response).toMatchObject({ok:true,artifactId:id,revision:2,status:"queued"});
+  expect((await f.store.getRevision(f.owner,id,2)).files["project-source/index.html"]).toBe("The app changed later");
+  expect((await f.store.getRevision(f.owner,id,1)).files).toEqual(saved.files);
+  expect((await a.execute("render_artifact",{artifact_id:id,revision:1,formats:["html"],refresh_source_paths:["/index.html"]})).response).toMatchObject({ok:false,error:"revision_conflict"});
+  expect((await f.store.getArtifact(f.owner,id)).currentRevision).toBe(2);
 });

@@ -29,7 +29,7 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
   const tree = parse(input.revision.files[entryHtml]!);
   const head = tree.querySelector("head"), body = tree.querySelector("body");
   if (!head || !body || tree.querySelector("base,iframe,object,embed,meta[http-equiv=refresh]")) throw new ArtifactError("invalid_artifact_html");
-  const files = Object.fromEntries(Object.entries(input.revision.files).map(([p, code]) => [`/${p}`, code]));
+  const files = Object.fromEntries(Object.entries(input.revision.files).filter(([p])=>!(input.revision.sourceRef?.frozenSourcePrefix&&p.startsWith(input.revision.sourceRef.frozenSourcePrefix))).map(([p, code]) => [`/${p}`, code]));
   const entryPaths: string[] = [];
   for (const [index, element] of tree.querySelectorAll("script").entries()) {
     const type = element.getAttribute("type");

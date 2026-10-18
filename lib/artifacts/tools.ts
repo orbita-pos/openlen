@@ -1,7 +1,7 @@
 import { requireArtifactAccess, requireProjectAccess } from "./access";
 import { ARTIFACT_FORMATS } from "./capabilities";
 import { createArtifactWorkspace } from "./workspace";
-import type { createArtifactContextCapture } from "./context";
+import type { createArtifactContextCapture,createArtifactSourceFreeze } from "./context";
 import type { createArtifactData, ArtifactDataRequest } from "./data";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStore } from "./store";
@@ -13,10 +13,15 @@ const idParameter = { type: "STRING", description: "Exact artifact id returned b
 export function artifactToolDeclarations(kinds: readonly ArtifactKind[]): Record<string, unknown>[] {
   if (!kinds.length) return [];
   return [
-    { name: "create_artifact", description: "Create a persistent project deliverable when the user asks for it in normal conversation. One identity per piece, including each promotional image. Read /.openlen/docs/artifacts/<kind>.md before authoring; edit its private source files with your file tools. This does not change the original app. Reuse a stable item_key for retries of the same piece in this request.", parameters: { type: "OBJECT", properties: { kind: { type: "STRING", enum: [...kinds] }, item_key: { type: "STRING", description: "Stable request-local name, e.g. promo_image_2; letters, digits, - and _." }, title: { type: "STRING" }, brief: { type: "STRING" }, source_paths: { type: "ARRAY", items: { type: "STRING" } }, dependencies: { type: "ARRAY", items: { type: "OBJECT", properties: { artifactId: { type: "STRING" }, revision: { type: "NUMBER" } }, required: ["artifactId", "revision"] } } }, required: ["kind", "item_key", "title", "brief"] } },
+    {name:"create_artifact",description:"Create a persistent project deliverable when the user asks for it in normal conversation. One identity per piece, including each promotional image. Read /.openlen/docs/artifacts/<kind>.md before authoring; edit its private source files with your file tools. This does not change the original app. Reuse a stable item_key for retries of the same piece in this request.",parameters:{type:"OBJECT",properties:{
+      kind:{type:"STRING",enum:[...kinds]},item_key:{type:"STRING",description:"Stable request-local name, e.g. promo_image_2; letters, digits, - and _."},title:{type:"STRING"},brief:{type:"STRING"},
+      source_paths:{type:"ARRAY",items:{type:"STRING"}},
+      freeze_source:{type:"BOOLEAN",description:"For motion only: freeze selected public source_paths into project-source/ for hash-verified offline screenshots. Include its HTML entry and every local module/style it imports. No customer session, env or network is captured; missing/remote resources fail explicitly."},
+      dependencies:{type:"ARRAY",items:{type:"OBJECT",properties:{artifactId:{type:"STRING"},revision:{type:"NUMBER"}},required:["artifactId","revision"]}},
+    },required:["kind","item_key","title","brief"]}},
     { name: "list_artifacts", description: "List the project's saved deliverables and their actual revisions/status. Use after compaction or when returning to existing work; conversation text is not completion evidence.", parameters: { type: "OBJECT", properties: {} } },
     { name: "inspect_artifact", description: "Read a deliverable's saved status, source paths, dependencies, verified exports and jobs. Read source files separately. Queued/running is not completed.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter }, required: ["artifact_id"] } },
-    { name: "render_artifact", description: "Seal an exact source revision and queue an export. Returns a durable job id and queued status; inspect later for actual completion. Export failures preserve editable sources and earlier ready versions.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, revision: { type: "NUMBER" }, formats: { type: "ARRAY", items: { type: "STRING" } } }, required: ["artifact_id", "revision", "formats"] } },
+    { name: "render_artifact", description: "Seal an exact source revision and queue an export. Returns a durable job id and queued status; inspect later for actual completion. Export failures preserve editable sources and earlier ready versions.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, revision: { type: "NUMBER" }, formats: { type: "ARRAY", items: { type: "STRING" } },refresh_source_paths:{type:"ARRAY",items:{type:"STRING"},description:"Optional motion-only deliberate source refresh: freeze these current public project files into one NEW revision of the same deliverable before export. Pass its current revision. Omit on normal retries; inspect after any conflict/lost response."} }, required: ["artifact_id", "revision", "formats"] } },
     { name: "cancel_artifact_job", description: "Cancel one export job without cancelling other pieces of the request.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, job_id: { type: "STRING" } }, required: ["artifact_id", "job_id"] } },
     { name: "query_artifact_data", description: "Save a labeled dataset to a deliverable. scenario uses explicitly hypothetical rows; backend/visits/forms read only owner-authorized project data and make the deliverable private. Real data source unavailable is an error, never permission to invent metrics. A refresh saves a new dataset/revision.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, source: { type: "STRING", enum: ["scenario", "backend", "visits", "forms"] }, mode: { type: "STRING", enum: ["snapshot", "live"] }, environment: { type: "STRING", enum: ["draft", "live"] }, query: { type: "STRING", description: "Backend SQL, SELECT-only even in draft." }, zone: { type: "STRING" }, from: { type: "STRING" }, to: { type: "STRING" }, columns: { type: "ARRAY", items: { type: "STRING" } }, rows_json: { type: "STRING", description: "For scenario only: a JSON array of rows in columns order. Hypothetical values requested by the user, not claimed real data." } }, required: ["artifact_id", "source"] } },
   ];
@@ -28,6 +33,7 @@ export interface ArtifactAgentServices {
   readonly jobs: ArtifactJobs;
   readonly data: ReturnType<typeof createArtifactData>;
   readonly captureContext: ReturnType<typeof createArtifactContextCapture>;
+  readonly freezeSource?:ReturnType<typeof createArtifactSourceFreeze>;
 }
 const text = (args: Record<string, unknown>, key: string) => { const v = args[key]; if (typeof v !== "string" || !v || v.length > 20_000) throw new ArtifactError("invalid_artifact_arguments"); return v; };
 export function createArtifactAgent(services: ArtifactAgentServices, ctx: ArtifactContext, messageId: () => string, kinds: readonly ArtifactKind[]) {
@@ -58,11 +64,15 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
         const request = await store.ensureArtifactRequest(ctx, messageId());
         const context = { ...ctx, requestId: request.id };
         // Validate before creating so a malformed context request leaves no stub.
-        const sourceRef = args.source_paths === undefined ? null : await services.captureContext(context, args.source_paths as string[]);
+        if(args.freeze_source!==undefined&&typeof args.freeze_source!=="boolean")throw new ArtifactError("invalid_artifact_arguments");
+        if(args.freeze_source&&(kind!=="motion"||!args.source_paths))throw new ArtifactError("invalid_artifact_arguments");
+        if(args.freeze_source&&!services.freezeSource)throw new ArtifactError("source_capture_unavailable");
+        const frozen=args.freeze_source?await services.freezeSource!(context,args.source_paths as string[]):null;
+        const sourceRef=frozen?.sourceRef??(args.source_paths===undefined?null:await services.captureContext(context,args.source_paths as string[]));
         const dependencies = args.dependencies as readonly ArtifactDependency[] | undefined;
         const artifact = await store.createArtifact(context, { kind, itemKey: text(args, "item_key"), title: text(args, "title"), brief: text(args, "brief"), visibility: "project" });
         mutated = true;
-        if (artifact.currentRevision === 0 && (sourceRef || dependencies?.length)) await store.writeArtifactFiles(context, artifact.id, 0, {}, { sourceRef, dependencies });
+        if (artifact.currentRevision === 0 && (sourceRef || dependencies?.length)) await store.writeArtifactFiles(context, artifact.id, 0, frozen?.files??{}, { sourceRef, dependencies });
         const current = await store.getArtifact(context, artifact.id);
         response = { ok: true, artifactId: artifact.id, requestId: request.id, revision: current.currentRevision, status: current.status, sourcePath: `/.len/artifacts/${artifact.id}/`, manual: `/.openlen/docs/artifacts/${kind}.md` }; mutated = true;
       } else {
@@ -79,7 +89,17 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
         if (name === "render_artifact") {
           if (!kinds.includes(artifact.kind) || !Array.isArray(args.formats) || !args.formats.length || args.formats.some((f) => typeof f !== "string" || !ARTIFACT_FORMATS[artifact.kind].includes(f))) throw new ArtifactError("format_unavailable");
           if (!Number.isSafeInteger(args.revision) || Number(args.revision) < 0) throw new ArtifactError("invalid_revision");
-          const job = await jobs.enqueueArtifactJob(ctx, id, Number(args.revision), "export", { formats: [...new Set(args.formats as string[])].sort() });
+          let revision=Number(args.revision);
+          if(args.refresh_source_paths!==undefined){
+            if(artifact.kind!=="motion")throw new ArtifactError("invalid_artifact_arguments");
+            if(!services.freezeSource)throw new ArtifactError("source_capture_unavailable");
+            if(artifact.currentRevision!==revision)throw new ArtifactError("revision_conflict");
+            const before=await store.getRevision(ctx,id,revision),frozen=await services.freezeSource(ctx,args.refresh_source_paths as string[]);
+            const prefix=before.sourceRef?.frozenSourcePrefix;
+            const removePaths=prefix?Object.keys(before.files).filter(path=>path.startsWith(prefix)&&!Object.hasOwn(frozen.files,path)):[];
+            revision=(await store.writeArtifactFiles(ctx,id,revision,frozen.files,{sourceRef:frozen.sourceRef,removePaths})).revision;mutated=true;
+          }
+          const job = await jobs.enqueueArtifactJob(ctx, id, revision, "export", { formats: [...new Set(args.formats as string[])].sort() });
           response = { ok: true, artifactId: id, revision: job.revision, jobId: job.id, status: job.status }; mutated = true;
         } else if (name === "cancel_artifact_job") {
           const jobId = text(args, "job_id");
