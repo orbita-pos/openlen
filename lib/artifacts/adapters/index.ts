@@ -5,6 +5,7 @@ import { renderSlides } from "./slides/render";
 import { openaiArtifactImageTransport } from "./image/openai";
 import { generateArtifactImage } from "./image/render";
 import { artifactChargePolicy } from "../billing";
+import { renderMotion } from "./motion/render";
 
 /** Loaded only by the standalone worker. The app only queues sealed jobs. */
 export function createArtifactAdapters(env: Readonly<Record<string, string | undefined>>): Partial<Record<ArtifactKind, ArtifactAdapter>> {
@@ -13,6 +14,8 @@ export function createArtifactAdapters(env: Readonly<Record<string, string | und
     const render = containerArtifactRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE);
     adapters.dashboard=(input,signal)=>renderDashboard(input,render,signal);
     adapters.slides=(input,signal)=>renderSlides(input,render,signal);
+    // Explicit spike gate until Linux resource/isolation acceptance passes.
+    if(env.OPENLEN_ARTIFACT_MOTION_VERIFIED==="1")adapters.motion=(input,signal)=>renderMotion(input,render,signal);
   }
   if (env.OPENAI_API_KEY && artifactChargePolicy(env)) {
     const model=env.OPENLEN_ARTIFACT_IMAGE_MODEL??"gpt-image-2";

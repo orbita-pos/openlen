@@ -63,3 +63,30 @@ export async function renderSlidesPacket(packet, options = {}) {
     return { png: pages[0], pages, checks: ["browser:rendered", "text:no-overflow"] };
   });
 }
+
+export async function renderMotionPacket(packet, onFrame, options = {}) {
+  return withArtifactPage(packet,{...options,timeoutMs:options.timeoutMs??900_000},page=>captureMotionPage(page,packet,onFrame));
+}
+export async function captureMotionPage(page,packet,onFrame){
+    await page.evaluate(async expected=>{
+      const motion=window.lenMotion;
+      if(!motion||typeof motion.ready!=="function"||typeof motion.seek!=="function"||motion.durationSeconds!==expected)throw new Error("motion_contract_missing");
+      await motion.ready();
+    },packet.durationSeconds);
+    const seek=async t=>page.evaluate(async time=>{
+      await window.lenMotion.seek(time);
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    },t);
+    const times=[0,Math.floor(packet.frameCount/2)/packet.fps,(packet.frameCount-1)/packet.fps];
+    const samples=[];
+    for(const time of times){await seek(time);samples.push(await page.screenshot({type:"png"}));}
+    for(const index of [2,0,1]){
+      await seek(times[index]);const actual=await page.screenshot({type:"png"});
+      if(!Buffer.from(actual).equals(Buffer.from(samples[index])))throw new Error("motion_nondeterministic");
+    }
+    for(let frame=0;frame<packet.frameCount;frame++){
+      await seek(frame/packet.fps);
+      await onFrame(new Uint8Array(await page.screenshot({type:"png"})),frame);
+    }
+    return {png:new Uint8Array(samples[0]),checks:["browser:rendered","motion:seek-deterministic","motion:seek-samples:3:tolerance:0"]};
+}
