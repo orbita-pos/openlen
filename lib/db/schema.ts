@@ -2535,6 +2535,7 @@ export const artifactRevisions = pgTable("artifactRevisions", {
 
 export const artifactJobs = pgTable("artifactJobs", {
   id: text("id").primaryKey(),
+  actorId: text("actorId").references(() => users.id),
   artifactId: text("artifactId").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
   revision: integer("revision").notNull(),
   operation: text("operation").notNull(),
@@ -2573,3 +2574,13 @@ export const artifactEventReads = pgTable("artifactEventReads", {
   userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   cursor: bigint("cursor", { mode: "bigint" }).notNull().default(sqlOp`0`),
 }, (t) => [primaryKey({ columns: [t.projectId, t.userId] })]);
+
+// Intentionally no FK: delete private blobs even after project cascade.
+export const artifactObjectGarbage = pgTable("artifactObjectGarbage", {
+  key: text("key").primaryKey(),
+  artifactId: text("artifactId").notNull(),
+  revision: integer("revision").notNull(),
+  jobId: text("jobId").notNull(),
+  fencingToken: text("fencingToken").notNull(),
+  notBefore: timestamp("notBefore", { withTimezone: true }).notNull().default(sqlOp`now()+interval '1 hour'`),
+}, (t) => [index("artifactObjectGarbage_due_idx").on(t.notBefore)]);

@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "artifacts:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/artifacts-migrate.ts",
+    "artifacts:worker": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/artifacts-worker.ts",
     "status:typecheck": "tsc -p infra/status-worker --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
