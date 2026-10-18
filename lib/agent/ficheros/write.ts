@@ -17,6 +17,7 @@ import { normalizarFinales, type Leidos, type SitioLegible } from "./read";
 import { CAMBIADO_DESDE_LA_LECTURA, NO_LEIDO, NOTA_ESTADO_AL_DIA, type PlanDeEdit } from "./edit";
 import { fallo } from "./resultado";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA } from "./manual";
+import { isArtifactSourcePath } from "@/lib/artifacts/paths";
 
 export interface EntradaWrite {
   readonly file_path: string;
@@ -72,7 +73,7 @@ export function planearWrite(entrada: EntradaWrite, sitio: SitioLegible, leidos:
     // demás se dice con su motivo, y se sugiere la página que se quiso crear.
     // La memoria (plans/len-md) tampoco es de la carpeta: una nota nueva de
     // /.len/memory se crea; quien la guarda decide si vale (`guardarMemoria`).
-    const carpeta = paginaDeRuta(ruta) || memoryLayerOf(ruta) ? null : classifyFolderPath(ruta);
+    const carpeta = paginaDeRuta(ruta) || memoryLayerOf(ruta) || isArtifactSourcePath(ruta) ? null : classifyFolderPath(ruta);
     if (carpeta && !carpeta.ok) {
       const parecida = paginaQueQuisoCrear(ruta);
       return {

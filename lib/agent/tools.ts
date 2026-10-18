@@ -160,6 +160,8 @@ export interface FileVersionNote {
 }
 
 export interface AgentDeps {
+  /** Len 3.0: isolated deliverable sources. Absent while the feature is off. */
+  artifacts?: import("@/lib/artifacts/workspace").ArtifactWorkspace;
   /** Pieza 3 de Len 2.5: quien CONTESTA las preguntas de `ask_user_question`
    *  dentro del turno (lo pone la ruta cuando el chat lo pide). Devuelve las
    *  respuestas, el descarte del dueño (`QUESTION_DISMISSED`, lote 7-8) o

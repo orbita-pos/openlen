@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { validateArtifactFiles, validateArtifactOutputs } from "./state";
+import { safeArtifactPath, validateArtifactFiles, validateArtifactOutputs } from "./state";
+import { requireArtifactAccess, requireProjectAccess, validateDependencies } from "./access";
 import {
   ArtifactError, type Artifact, type ArtifactContext, type ArtifactDatabase, type ArtifactEvidence,
   type ArtifactKind, type ArtifactOutput, type ArtifactRequest, type ArtifactRevision,
@@ -8,12 +9,10 @@ import {
 
 export const artifactRow = (r: Record<string, unknown>) => r as unknown as Artifact;
 export const revisionRow = (r: Record<string, unknown>) => r as unknown as ArtifactRevision;
-const notFound = () => { throw new ArtifactError("artifact_not_found"); };
 
 export function createArtifactStore(database: ArtifactDatabase) {
   async function getArtifact(ctx: ArtifactContext, id: string, tx: ArtifactSql = database, lock = false): Promise<Artifact> {
-    const [row] = await tx.query(`select * from "artifacts" where "id"=$1 and "projectId"=$2${lock ? " for update" : ""}`, [id, ctx.projectId]);
-    return row ? artifactRow(row) : notFound();
+    return requireArtifactAccess(tx, ctx, id, "read", new Set(), lock);
   }
   async function getRevision(ctx: ArtifactContext, id: string, revision: number, tx: ArtifactSql = database): Promise<ArtifactRevision> {
     await getArtifact(ctx, id, tx);
@@ -23,6 +22,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
   }
   async function ensureArtifactRequest(ctx: Omit<ArtifactContext, "requestId">, messageId: string): Promise<ArtifactRequest> {
     if (!messageId || messageId.length > 256) throw new ArtifactError("invalid_message_id");
+    await requireProjectAccess(database, ctx, "write");
     const [row] = await database.query(`insert into "artifactRequests" ("id","projectId","sourceMessageId","createdBy") values ($1,$2,$3,$4) on conflict ("projectId","sourceMessageId") do update set "sourceMessageId"=excluded."sourceMessageId" returning *`, [randomUUID(), ctx.projectId, messageId, ctx.actorId]);
     return row as unknown as ArtifactRequest;
   }
@@ -30,6 +30,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
     if (!["dashboard", "slides", "image", "motion"].includes(input.kind) || !["owner", "project"].includes(input.visibility)
       || !input.title?.trim() || input.title.length > 200 || typeof input.brief !== "string" || input.brief.length > 20_000) throw new ArtifactError("invalid_artifact");
     return database.transaction(async (tx) => {
+      await requireProjectAccess(tx, ctx, "write");
       const [request] = await tx.query(`select "id" from "artifactRequests" where "id"=$1 and "projectId"=$2`, [ctx.requestId, ctx.projectId]);
       if (!request) throw new ArtifactError("request_not_found");
       const id = randomUUID();
@@ -39,22 +40,29 @@ export function createArtifactStore(database: ArtifactDatabase) {
     });
   }
   async function writeArtifactFiles(ctx: ArtifactContext, id: string, expectedRevision: number, files: Readonly<Record<string, string>>,
-    metadata: Partial<Pick<ArtifactRevision, "manifest" | "dependencies" | "sourceRef">> = {}): Promise<ArtifactRevision> {
+    metadata: Partial<Pick<ArtifactRevision, "manifest" | "dependencies" | "sourceRef">> & { removePaths?: readonly string[] } = {}): Promise<ArtifactRevision> {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new ArtifactError("invalid_revision");
     const validated = validateArtifactFiles(files);
     return database.transaction(async (tx) => {
+      await requireArtifactAccess(tx, ctx, id, "write");
       const artifact = await getArtifact(ctx, id, tx, true);
       if (artifact.currentRevision !== expectedRevision) throw new ArtifactError("revision_conflict");
       const before = await getRevision(ctx, id, expectedRevision, tx);
+      const privateDependency = await validateDependencies(tx, ctx, id, metadata.dependencies ?? before.dependencies);
       const combined = validateArtifactFiles({ ...before.files, ...validated });
+      for (const path of metadata.removePaths ?? []) {
+        if (!safeArtifactPath(path)) throw new ArtifactError("invalid_source_path");
+        delete combined[path];
+      }
       const [row] = await tx.query(`insert into "artifactRevisions" ("artifactId","revision","files","manifest","dependencies","sourceRef") values ($1,$2,$3::jsonb,$4::jsonb,$5::jsonb,$6::jsonb) returning *`,
         [id, expectedRevision + 1, JSON.stringify(combined), JSON.stringify(metadata.manifest ?? before.manifest), JSON.stringify(metadata.dependencies ?? before.dependencies), JSON.stringify(metadata.sourceRef === undefined ? before.sourceRef : metadata.sourceRef)]);
-      await tx.query(`update "artifacts" set "currentRevision"=$2,"status"='draft',"updatedAt"=now() where "id"=$1`, [id, expectedRevision + 1]);
+      await tx.query(`update "artifacts" set "currentRevision"=$2,"status"='draft',"visibility"=case when $3 then 'owner' else "visibility" end,"updatedAt"=now() where "id"=$1`, [id, expectedRevision + 1, privateDependency]);
       return revisionRow(row!);
     });
   }
   async function sealArtifactRevision(ctx: ArtifactContext, id: string, expectedRevision: number): Promise<ArtifactRevision> {
     return database.transaction(async (tx) => {
+      await requireArtifactAccess(tx, ctx, id, "write");
       const artifact = await getArtifact(ctx, id, tx, true);
       if (artifact.currentRevision !== expectedRevision) throw new ArtifactError("revision_conflict");
       const before = await getRevision(ctx, id, expectedRevision, tx);
@@ -68,9 +76,10 @@ export function createArtifactStore(database: ArtifactDatabase) {
     validateArtifactOutputs(result.outputs);
     if (result.evidence?.valid !== true || !result.evidence.checks?.length || !Number.isFinite(Date.parse(result.evidence.checkedAt))) throw new ArtifactError("invalid_evidence");
     return database.transaction(async (tx) => {
-      const [job] = await tx.query(`select j.*, a."projectId" from "artifactJobs" j join "artifacts" a on a."id"=j."artifactId" where j."id"=$1 for update of j`, [claim.job.id]);
+      const [job] = await tx.query(`select j.*, a."projectId",a."createdBy",p."userId" as "ownerId" from "artifactJobs" j join "artifacts" a on a."id"=j."artifactId" join "projects" p on p."id"=a."projectId" where j."id"=$1 for update of j`, [claim.job.id]);
       if (!job || job.fencingToken !== claim.fencingToken || job.workerId !== claim.workerId) throw new ArtifactError("lease_lost");
-      const context = { projectId: job.projectId } as ArtifactContext;
+      const context = { projectId: job.projectId, actorId: job.actorId ?? job.createdBy, ownerId: job.ownerId, requestId: "", role: "dueno" } as ArtifactContext;
+      await requireArtifactAccess(tx, context, String(job.artifactId), "write");
       if (job.status === "completed") return getArtifact(context, String(job.artifactId), tx);
       const [active] = await tx.query(`update "artifactJobs" set "status"='completed',"updatedAt"=now() where "id"=$1 and "fencingToken"=$2 and "leaseUntil">now() and not "cancelRequested" and "status"='storing' returning *`, [job.id, claim.fencingToken]);
       if (!active) throw new ArtifactError("lease_lost");
