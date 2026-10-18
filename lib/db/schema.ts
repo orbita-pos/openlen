@@ -2,10 +2,12 @@ import { sql as sqlOp } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  bigserial,
   boolean,
   check,
   customType,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -22,6 +24,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { Finding, ReviewStatus } from "@/lib/security-review/types";
+import type { ArtifactDependency, ArtifactEvidence, ArtifactKind, ArtifactOutput, ArtifactSourceRef, ArtifactStatus, ArtifactVisibility, ArtifactJobStatus } from "@/lib/artifacts/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle schema for auth.
@@ -2483,3 +2486,90 @@ export const projectGitRepos = pgTable("projectGitRepos", {
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+// Len 3.0 deliverables. Sources never enter projectFiles or the app's release.
+// SQL migration/immutable-source trigger: lib/artifacts/migration.ts.
+export const artifactRequests = pgTable("artifactRequests", {
+  id: text("id").primaryKey(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sourceMessageId: text("sourceMessageId").notNull(),
+  createdBy: text("createdBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [unique().on(t.projectId, t.sourceMessageId), unique().on(t.id, t.projectId)]);
+
+export const artifacts = pgTable("artifacts", {
+  id: text("id").primaryKey(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  requestId: text("requestId").notNull(),
+  kind: text("kind").$type<ArtifactKind>().notNull(),
+  title: text("title").notNull(),
+  brief: text("brief").notNull(),
+  createdBy: text("createdBy").notNull().references(() => users.id),
+  visibility: text("visibility").$type<ArtifactVisibility>().notNull(),
+  currentRevision: integer("currentRevision").notNull().default(0),
+  lastReadyRevision: integer("lastReadyRevision"),
+  status: text("status").$type<ArtifactStatus>().notNull().default("draft"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  foreignKey({ columns: [t.requestId, t.projectId], foreignColumns: [artifactRequests.id, artifactRequests.projectId] }).onDelete("cascade"),
+  index("artifacts_project_created_idx").on(t.projectId, t.createdAt, t.id),
+  check("artifacts_kind_check", sqlOp`${t.kind} in ('dashboard','slides','image','motion')`),
+  check("artifacts_visibility_check", sqlOp`${t.visibility} in ('owner','project')`),
+  check("artifacts_currentRevision_check", sqlOp`${t.currentRevision} >= 0`),
+  check("artifacts_status_check", sqlOp`${t.status} in ('draft','queued','running','validating','storing','ready','failed','cancelled','needs_attention')`),
+]);
+
+export const artifactRevisions = pgTable("artifactRevisions", {
+  artifactId: text("artifactId").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  files: jsonb("files").$type<Record<string, string>>().notNull().default({}),
+  manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull().default({}),
+  dependencies: jsonb("dependencies").$type<ArtifactDependency[]>().notNull().default([]),
+  sourceRef: jsonb("sourceRef").$type<ArtifactSourceRef>(),
+  sealedAt: timestamp("sealedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  outputs: jsonb("outputs").$type<ArtifactOutput[]>().notNull().default([]),
+  evidence: jsonb("evidence").$type<ArtifactEvidence>(),
+}, (t) => [primaryKey({ columns: [t.artifactId, t.revision] }), check("artifactRevisions_revision_check", sqlOp`${t.revision} >= 0`)]);
+
+export const artifactJobs = pgTable("artifactJobs", {
+  id: text("id").primaryKey(),
+  artifactId: text("artifactId").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  operation: text("operation").notNull(),
+  optionsHash: text("optionsHash").notNull(),
+  options: jsonb("options").$type<Record<string, unknown>>().notNull().default({}),
+  status: text("status").$type<ArtifactJobStatus>().notNull().default("queued"),
+  attempt: integer("attempt").notNull().default(0),
+  workerId: text("workerId"),
+  fencingToken: text("fencingToken"),
+  leaseUntil: timestamp("leaseUntil", { withTimezone: true }),
+  cancelRequested: boolean("cancelRequested").notNull().default(false),
+  externalStartedAt: timestamp("externalStartedAt", { withTimezone: true }),
+  errorCode: text("errorCode"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  foreignKey({ columns: [t.artifactId, t.revision], foreignColumns: [artifactRevisions.artifactId, artifactRevisions.revision] }).onDelete("cascade"),
+  unique().on(t.artifactId, t.revision, t.operation, t.optionsHash),
+  index("artifactJobs_claim_idx").on(t.status, t.createdAt),
+  check("artifactJobs_status_check", sqlOp`${t.status} in ('queued','running','validating','storing','completed','failed','cancelled','needs_attention')`),
+]);
+
+export const artifactEvents = pgTable("artifactEvents", {
+  cursor: bigserial("cursor", { mode: "bigint" }).primaryKey(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  requestId: text("requestId").notNull().references(() => artifactRequests.id, { onDelete: "cascade" }),
+  artifactId: text("artifactId").notNull().references(() => artifacts.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  type: text("type").notNull(),
+  jobId: text("jobId").references(() => artifactJobs.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("artifactEvents_project_cursor_idx").on(t.projectId, t.cursor), uniqueIndex("artifactEvents_job_type_idx").on(t.jobId, t.type).where(sqlOp`${t.jobId} is not null`)]);
+
+export const artifactEventReads = pgTable("artifactEventReads", {
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  cursor: bigint("cursor", { mode: "bigint" }).notNull().default(sqlOp`0`),
+}, (t) => [primaryKey({ columns: [t.projectId, t.userId] })]);

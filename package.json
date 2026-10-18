@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "artifacts:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/artifacts-migrate.ts",
     "status:typecheck": "tsc -p infra/status-worker --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
