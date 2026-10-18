@@ -176,13 +176,13 @@ export const MODEL_POLICY = Object.freeze({
     // papel pasa a un modelo SIN visión, esto va a `false` y esas vueltas
     // vuelven al papel con visión (`operacionDeLaVuelta`, `lib/agent/brain.ts`).
     veImagenes: true,
-    // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): el MISMO
-    // modelo servido por DeepInfra, de principal, con Fireworks de respaldo. El
+    // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): DeepInfra
+    // sirve la actualización 1017, con Fireworks en V4.1 como respaldo. El
     // orden lo manda `OPENLEN_AGENT_PROVIDERS` (lib/ai/providers.ts); `modelId`
     // de arriba sigue siendo el de Fireworks, que es el que leen el esfuerzo y
-    // su interfaz (mismo modelo, mismo tope). La tarifa de COBRO no cambia.
+    // su interfaz (misma familia y tope). La tarifa de COBRO no cambia.
     providers: Object.freeze([
-      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash" }),
+      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
       Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" }),
     ]),
   }),

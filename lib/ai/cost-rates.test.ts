@@ -14,6 +14,12 @@ describe("tokenCostMicroUsd", () => {
     ).toBe(59_400);
   });
 
+  it("prices DeepInfra 1017 at Standard promotional rates and retains the earlier model's rate", () => {
+    const usage = { provider: "deepinfra" as const, inputTokens: 1_000_000, cachedTokens: 900_000, outputTokens: 20_000, at: AT };
+    expect(tokenCostMicroUsd({ ...usage, model: "deepseek-ai/DeepSeek-V4.1-Flash-1017" })).toBe(18_380);
+    expect(tokenCostMicroUsd({ ...usage, model: "deepseek-ai/DeepSeek-V4.1-Flash" })).toBe(26_000);
+  });
+
   it("uses the peak prices inside the peak hours", () => {
     const rate: TokenCostRate = {
       input: 0.15,

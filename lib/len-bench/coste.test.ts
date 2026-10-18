@@ -41,6 +41,7 @@ describe("tarifaDelModelo", () => {
   // de DeepInfra dice lo que costó de verdad, a su tarifa de costo.
   it("a DeepInfra recording is priced at its cost rate", () => {
     expect(tarifaDelModelo("deepseek-ai/DeepSeek-V4.1-Flash")).toEqual({ input: 0.14, cached: 0.004, output: 0.42 });
+    expect(tarifaDelModelo("deepseek-ai/DeepSeek-V4.1-Flash-1017")).toEqual({ input: 0.098, cached: 0.003, output: 0.294 });
   });
 });
 

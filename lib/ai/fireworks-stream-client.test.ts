@@ -671,7 +671,7 @@ describe("cortes a mitad del stream (revisión de la pieza 1)", () => {
 describe("provider dialect", () => {
   const DEEPINFRA = {
     endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
-    modelId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
     affinityField: "prompt_cache_key" as const,
   };
 
@@ -682,7 +682,7 @@ describe("provider dialect", () => {
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, { body: string; headers: Record<string, string> }];
     const body = JSON.parse(init.body);
     expect(url).toBe(DEEPINFRA.endpoint);
-    expect(body.model).toBe("deepseek-ai/DeepSeek-V4.1-Flash");
+    expect(body.model).toBe("deepseek-ai/DeepSeek-V4.1-Flash-1017");
     expect(body.prompt_cache_key).toBe("project-1");
     expect(body).not.toHaveProperty("user");
     expect(init.headers.authorization).toBe("Bearer di");

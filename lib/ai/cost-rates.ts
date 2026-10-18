@@ -39,6 +39,10 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // paid TODAY, a 30 % promotion with no end date. Without it, 0.20 / 0.006 /
   // 0.60 — change this row the day the promotion ends.
   "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash": { input: 0.14, cached: 0.004, output: 0.42 },
+  // deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017, read 2026-10-17:
+  // Standard, 51 % promotion; cached price rounded as displayed. Without the
+  // promotion, 0.20 / 0.006 / 0.60. Keep the previous id for historical usage.
+  "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017": { input: 0.098, cached: 0.003, output: 0.294 },
 };
 
 export const UNIT_COSTS_USD = {
