@@ -6,6 +6,9 @@ import { createArtifactJobs } from "./jobs";
 import { createArtifactStore } from "./store";
 import { createR2ArtifactStorage, FilesystemArtifactStorage, type ArtifactStorage } from "./private-storage";
 import { ArtifactError } from "./types";
+import { createArtifactData } from "./data";
+import { createArtifactContextCapture } from "./context";
+import { projectSourceLoader, queryProjectArtifactData } from "./project-data";
 
 export const artifactsEnabled = (env: Readonly<Record<string, string | undefined>> = process.env) => env.OPENLEN_ARTIFACTS === "1";
 export function createArtifactRuntime(env: Readonly<Record<string, string | undefined>>) {
@@ -20,7 +23,7 @@ export function createArtifactRuntime(env: Readonly<Record<string, string | unde
     if (root.replace(/\\/g, "/").toLowerCase().split("/").includes("public")) throw new ArtifactError("private_storage_unavailable");
     return new FilesystemArtifactStorage(root);
   };
-  return { database, store, jobs: createArtifactJobs(database, store), events: createArtifactEvents(database), storage: () => storage ??= loadStorage().catch((error) => { storage = null; throw error; }), close: () => database.close() };
+  return { database, store, data: createArtifactData(database, store, queryProjectArtifactData), captureContext: createArtifactContextCapture(database, projectSourceLoader(database)), jobs: createArtifactJobs(database, store), events: createArtifactEvents(database), storage: () => storage ??= loadStorage().catch((error) => { storage = null; throw error; }), close: () => database.close() };
 }
 type Runtime = ReturnType<typeof createArtifactRuntime>;
 const KEY = Symbol.for("openlen.artifacts.runtime");

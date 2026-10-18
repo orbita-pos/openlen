@@ -75,7 +75,12 @@ export async function runDraftQuery(creds: ScopeCreds, sql: string): Promise<Que
 }
 
 export async function runLiveQuery(o: { scope: string; roPassword: string }, sql: string): Promise<QueryOutcome> {
-  return withLogin(dbNameOf(o.scope), readOnlyRoleOf(o.scope), o.roPassword, async (c) => {
+  return withLogin(dbNameOf(o.scope), readOnlyRoleOf(o.scope), o.roPassword, (c) => queryReadOnlyTransaction(c, sql));
+}
+
+/** Shared transaction for both draft and live artifact datasets. The caller
+ * must connect with the scope's SELECT-only role; it never uses the developer. */
+export async function queryReadOnlyTransaction(c: { query(q: string | ReturnType<typeof single>): Promise<unknown> }, sql: string): Promise<QueryOutcome> {
     try {
       await c.query("BEGIN READ ONLY");
       await c.query("set local statement_timeout = '10s'");
@@ -83,11 +88,10 @@ export async function runLiveQuery(o: { scope: string; roPassword: string }, sql
       // pasar la transacción a lectura-escritura («must be set before any
       // query»). Es la segunda capa; la primera es que el rol sólo puede SELECT.
       await c.query("select 1");
-      return outcome((await c.query(single(sql))) as unknown as PgResult);
+      return outcome((await c.query(single(sql))) as PgResult);
     } catch (e) {
       return failure(e);
     } finally {
       await c.query("ROLLBACK").catch(() => {});
     }
-  });
 }
