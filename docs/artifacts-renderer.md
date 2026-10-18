@@ -23,3 +23,13 @@ npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-dash
 Its packet.json can be passed on stdin to the renderer container. The HTML and CSV are independent local fixtures for browser review. They are not a generation template or proof of the model's tool selection; use Len-Bench/the real brain and recorder for that later acceptance stage.
 
 Current downloads are attachments. No authored HTML is served inline on the authenticated product origin. A separately authorized preview origin remains required before enabling interactive artifact previews.
+
+Slides use one `deck.json` descriptor with stable slide/element ids. The worker creates native editable text, shapes and charts in PPTX using pinned PptxGenJS, then the offline renderer opens that PPTX in LibreOffice and rasterizes its PDF with Poppler. It refuses completion without actual PDF/page-count and native-open evidence. HTML text overflow is checked in Chromium before conversion. The initial font set is Arial (substituted by Liberation Sans on Linux), Liberation Sans and DejaVu Sans; native export fidelity and font substitution still require Linux review.
+
+The synthetic slides fixture exports HTML/PPTX without provider calls:
+
+```sh
+npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-slides-fixture.ts /explicit/private/test-directory
+```
+
+Evidence so far: actual PPTX ZIP/native-object tests and both HTML slides reviewed in the available browser, including induced text overflow detection. LibreOffice/PDF/container execution is pending; a ZIP check does not establish native rendering fidelity.

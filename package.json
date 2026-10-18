@@ -198,6 +198,7 @@
     "node-html-parser": "^9.0.0",
     "node-vibrant": "^4.0.4",
     "pg": "^8.21.0",
+    "pptxgenjs": "4.0.1",
     "puppeteer": "^25.0.2",
     "qrcode.react": "^4.2.0",
     "re2js": "^2.8.6",
@@ -253,5 +254,10 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "8.59.3",
     "vitest": "^2.1.9"
+  },
+  "overrides": {
+    "pptxgenjs": {
+      "image-size": "2.0.4"
+    }
   }
 }

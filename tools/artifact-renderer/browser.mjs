@@ -3,7 +3,7 @@ import puppeteer from "puppeteer";
 /** Trusted renderer code. Authored HTML runs only in Chromium; it is never
  * imported, evaluated, or given a Node binding. Production calls this inside
  * the per-job offline container. Tests use only committed trusted fixtures. */
-export async function renderDashboardPacket(packet, options = {}) {
+async function withArtifactPage(packet, options, run) {
   const browser = await puppeteer.launch({ headless: true, ...(options.executablePath ? { executablePath: options.executablePath } : {}), timeout: 20_000,
     args: ["--disable-dev-shm-usage", "--disable-background-networking", "--disable-sync", "--disable-component-update", ...(process.env.OPENLEN_RENDER_CONTAINER === "1" ? ["--no-sandbox"] : [])],
   });
@@ -30,6 +30,15 @@ export async function renderDashboardPacket(packet, options = {}) {
       await Promise.all([...document.images].map((img) => img.decode()));
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
+    const result = await run(page);
+    if (missing.size) throw new Error("artifact_resource_missing");
+    if (errors.length) throw new Error("artifact_runtime_error", { cause: errors });
+    result.checks.push("resources:complete", "runtime:no-errors");
+    return result;
+  } finally { clearTimeout(watchdog); await browser.close().catch(() => undefined); }
+}
+export async function renderDashboardPacket(packet, options = {}) {
+  return withArtifactPage(packet, options, async (page) => {
     const provenance = await page.$eval("#len-data-provenance", (e) => e.textContent);
     if (!provenance?.trim()) throw new Error("dataset_provenance_missing");
     const png = new Uint8Array(await page.screenshot({ type: "png" }));
@@ -40,9 +49,17 @@ export async function renderDashboardPacket(packet, options = {}) {
       await page.waitForFunction((selector, text) => document.querySelector(selector)?.textContent?.trim() === text, {}, probe.expect.selector, probe.expect.text);
       checks.push(`interaction:${index}:passed`);
     }
-    if (missing.size) throw new Error("artifact_resource_missing");
-    if (errors.length) throw new Error("artifact_runtime_error", { cause: errors });
-    checks.push("resources:complete", "runtime:no-errors");
     return { png, checks };
-  } finally { clearTimeout(watchdog); await browser.close().catch(() => undefined); }
+  });
+}
+export async function renderSlidesPacket(packet, options = {}) {
+  return withArtifactPage(packet, options, async (page) => {
+    const overflow = await page.$$eval(".slide-text", (els) => els.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).map((e) => e.dataset.elementId));
+    if (overflow.length) throw new Error("slide_text_overflow", { cause: overflow.slice(0, 8) });
+    const slides = await page.$$(".slide");
+    if (slides.length !== packet.pageCount) throw new Error("slide_count_mismatch");
+    const pages = [];
+    for (const slide of slides) pages.push(new Uint8Array(await slide.screenshot({ type: "png" })));
+    return { png: pages[0], pages, checks: ["browser:rendered", "text:no-overflow"] };
+  });
 }
