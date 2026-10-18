@@ -40,6 +40,7 @@ export default defineConfig({
     globalSetup: ["./vitest.global-setup.ts"],
     environment: "jsdom",
     include: [
+      "lib/artifacts/**/*.test.ts",
       // Barre app/ y components/ enteros, así que vive en la raíz de components
       // y hay que nombrarlo aquí: `include` es LISTA BLANCA y un .test.ts que
       // no esté listado NO CORRE NUNCA.
