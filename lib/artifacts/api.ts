@@ -5,6 +5,9 @@ import type { ArtifactStore } from "./store";
 import type { createArtifactEvents } from "./events";
 import type { ArtifactStorage } from "./private-storage";
 import { ArtifactError, type ArtifactContext, type ArtifactDatabase } from "./types";
+import { availableArtifactKinds } from "./capabilities";
+import type { ArtifactPreview } from "./preview";
+import type { createArtifactData } from "./data";
 
 export interface ArtifactServices {
   readonly database: ArtifactDatabase;
@@ -12,12 +15,14 @@ export interface ArtifactServices {
   readonly jobs: ArtifactJobs;
   readonly events: ReturnType<typeof createArtifactEvents>;
   storage(): Promise<ArtifactStorage>;
+  preview?():Promise<ArtifactPreview>;
+  readonly data?:Pick<ReturnType<typeof createArtifactData>,"refreshArtifactDataset">;
 }
-export type ArtifactApiPath = { action: "list" | "inspect" | "events" | "ack" | "cancel" | "download"; artifactId?: string; jobId?: string; index?: string };
+export type ArtifactApiPath = { action: "list" | "inspect" | "events" | "ack" | "cancel" | "download" | "preview" | "refresh"; artifactId?: string; jobId?: string; index?: string };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "cache-control": "private, no-store" } });
 export function artifactErrorResponse(error: unknown): Response {
   const code = error instanceof ArtifactError ? error.code : "artifact_unavailable";
-  const status = code === "forbidden" ? 403 : code.endsWith("_not_found") || code === "feature_disabled" ? 404 : code === "revision_conflict" ? 409 : code.startsWith("invalid_") ? 400 : 503;
+  const status = code === "forbidden" ? 403 : code.endsWith("_not_found") || code === "feature_disabled" ? 404 : code === "revision_conflict" ? 409 : code==="preview_limit"||code==="data_refresh_busy"?429:code.startsWith("invalid_") ? 400 : 503;
   return json({ error: code }, status);
 }
 const integer = (s: string | null): number | null => s !== null && /^\d{1,9}$/.test(s) ? Number(s) : null;
@@ -33,9 +38,9 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
         try { artifacts.push(await services.store.getArtifact(ctx, String(row.id))); }
         catch (error) { if (!(error instanceof ArtifactError)) throw error; }
       }
-      return json({ artifacts });
+      return json({ artifacts, kinds:availableArtifactKinds() });
     }
-    if (path.action === "events") return json({ events: await services.events.listArtifactEvents(ctx, url.searchParams.get("after") ?? "0"), lastRead: await services.events.lastRead(ctx) });
+    if (path.action === "events") return json({ ...await services.events.readArtifactEventPage(ctx, url.searchParams.get("after") ?? "0"), lastRead: await services.events.lastRead(ctx) });
     if (path.action === "ack") {
       const body = await request.json().catch(() => null) as { cursor?: unknown } | null;
       if (typeof body?.cursor !== "string") throw new ArtifactError("invalid_cursor");
@@ -44,6 +49,24 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
     }
     if (!path.artifactId) throw new ArtifactError("artifact_not_found");
     const artifact = await services.store.getArtifact(ctx, path.artifactId);
+    if(path.action==="refresh"){
+      if(request.method!=="POST")throw new ArtifactError("invalid_data_request");
+      const body=await request.json().catch(()=>null) as {revision?:unknown;datasetId?:unknown}|null;
+      if(!body||Object.keys(body).some(key=>key!=="revision"&&key!=="datasetId")||typeof body.revision!=="number"||!Number.isSafeInteger(body.revision)||typeof body.datasetId!=="string"||body.datasetId.length>100)throw new ArtifactError("invalid_data_request");
+      if(!services.data)throw new ArtifactError("data_source_unavailable");
+      return json(await services.data.refreshArtifactDataset(ctx,artifact.id,body.revision,body.datasetId));
+    }
+    if(path.action==="preview"){
+      if(request.method!=="POST")throw new ArtifactError("invalid_preview_request");
+      const body=await request.json().catch(()=>null) as {revision?:unknown;index?:unknown}|null;
+      const selected=body?.revision===undefined?artifact.lastReadyRevision:body.revision;
+      if(typeof selected!=="number"||!Number.isSafeInteger(selected)||selected<0)throw new ArtifactError("invalid_preview_reference");
+      const revision=await services.store.getRevision(ctx,artifact.id,selected);
+      const index=body?.index===undefined?revision.outputs.findIndex(o=>o.format==="html"):body.index;
+      if(typeof index!=="number"||!Number.isSafeInteger(index)||index<0)throw new ArtifactError("invalid_preview_reference");
+      if(!services.preview)throw new ArtifactError("preview_unavailable");
+      return json(await(await services.preview()).mint(ctx,artifact.id,selected,index));
+    }
     if (path.action === "cancel") {
       if (!path.jobId || (await services.jobs.getJob(ctx, path.jobId)).artifactId !== artifact.id) throw new ArtifactError("job_not_found");
       await services.jobs.cancelArtifactJob(ctx, path.jobId);

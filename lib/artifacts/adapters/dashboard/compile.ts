@@ -6,7 +6,8 @@ import { runBundler } from "../../../apps/bundler/bundle-app";
 import { ArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
 import { dashboardManifest } from "./manifest";
 
-export const ARTIFACT_CSP = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'";
+import { ARTIFACT_CSP } from "../../html-policy";
+export { ARTIFACT_CSP } from "../../html-policy";
 const safeJson = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 const scriptText = (s: string) => s.replace(/<\/script/gi, "<\\/script");
 export function datasetLabel(d: ArtifactDataset): string { return d.mode === "scenario" ? "Escenario hipotético" : `Datos ${d.mode === "live" ? "actualizados" : "capturados"} · ${d.environment ?? d.source} · ${d.capturedAt}`; }

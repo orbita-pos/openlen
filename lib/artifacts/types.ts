@@ -110,6 +110,7 @@ export interface SealedArtifactInput {
   readonly assets: readonly ResolvedAsset[];
   readonly datasets: readonly ArtifactDataset[];
   readonly jobOptions?: Readonly<Record<string, unknown>>;
+  readonly jobIdentity?:{readonly id:string;readonly fencingToken:string};
 }
 export interface ProducedArtifactFile { readonly name: string; readonly format: string; readonly mime: string; readonly bytes: Uint8Array }
 export interface AdapterResult { readonly outputs: readonly ProducedArtifactFile[]; readonly evidence: ArtifactEvidence }
@@ -121,6 +122,7 @@ export interface ArtifactExternalOutcome {
   readonly costMicroUsd: number | null;
 }
 export interface ArtifactAdapterHooks {
+  beforeIsolatedRender?():Promise<void>;
   beforeExternalCall(model?: string): Promise<void>;
   recordExternalOutcome(outcome: ArtifactExternalOutcome): Promise<void>;
 }

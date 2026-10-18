@@ -1,0 +1,32 @@
+// @vitest-environment node
+import {afterAll,beforeAll,expect,it} from "vitest";
+import {artifactFixture} from "./testing/fixture";
+import {createArtifactJobs} from "./jobs";
+import {readArtifactOperations} from "./operations";
+let f:Awaited<ReturnType<typeof artifactFixture>>;
+beforeAll(async()=>{f=await artifactFixture();},30_000);
+afterAll(async()=>{await f.pg.close();});
+it("reports queue, terminal latency and unknown costs without private sources, queries or worker capabilities",async()=>{
+  const jobs=createArtifactJobs(f.database,f.store);
+  const {ctx,artifact}=await f.create("owner","motion");
+  await f.store.writeArtifactFiles(ctx,artifact.id,0,{"motion.json":"private-source-secret"});
+  const queued=await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{});
+  await f.database.query(`update "artifactJobs" set "createdAt"=now()-interval '60 seconds' where "id"=$1`,[queued.id]);
+  let result=await readArtifactOperations(f.database);
+  expect(result.jobs).toEqual([{kind:"motion",status:"queued",count:1}]);
+  expect(result.queue.oldestWaitSeconds).toBeGreaterThanOrEqual(59);
+  expect(result.latency).toEqual([]);
+  expect(result.externalCost).toEqual({attempts:0,knownMicroUsd:0,unknown:0});
+  const claim=(await jobs.claimArtifactJob("worker-private-token"))!;
+  await jobs.finish(claim,"failed","motion_nondeterministic");
+  await f.database.query(`insert into "artifactAttempts" ("attemptId","jobId","payerId","actorId","projectId","kind","model","centicredits","receipt") values ($1,$2,'owner','owner','project','image','model',10,$3::jsonb)`,[claim.fencingToken,queued.id,JSON.stringify({outcome:"unknown",costMicroUsd:null})]);
+  await f.database.query(`insert into "artifactAttempts" ("attemptId","jobId","payerId","actorId","projectId","kind","model","centicredits","receipt") values ('known',$1,'owner','owner','project','image','model',10,$2::jsonb)`,[queued.id,JSON.stringify({outcome:"failed",costMicroUsd:42})]);
+  result=await readArtifactOperations(f.database);
+  expect(result.queue.oldestWaitSeconds).toBeNull();
+  expect(result.latency[0]).toMatchObject({kind:"motion",samples:1});
+  expect(result.latency[0]!.endToEndSeconds.p50).toBeGreaterThanOrEqual(59);
+  expect(result.failures).toEqual([{kind:"motion",code:"motion_nondeterministic",count:1}]);
+  expect(result.externalCost).toEqual({attempts:2,knownMicroUsd:42,unknown:1});
+  const serialized=JSON.stringify(result);
+  for(const secret of [artifact.id,queued.id,claim.fencingToken,"private-source-secret","owner","worker-private-token"])expect(serialized).not.toContain(secret);
+});

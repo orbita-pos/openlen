@@ -114,4 +114,13 @@ describe("durable job ownership", () => {
     expect(await events.lastRead({ ...ctx, actorId: "reader", role: "lector" })).toBe("0");
     expect(await events.listArtifactEvents(ctx, cursor)).toEqual([]);
   });
+
+  it("keeps a selection-only benchmark project's jobs paused across worker restarts",async()=>{
+    const {ctx,job}=await queued();
+    await f.database.query(`insert into "artifactProjectControls" ("projectId","paused") values ($1,true)`,[ctx.projectId]);
+    expect(await jobs.claimArtifactJob("worker")).toBeNull();
+    expect(await createArtifactJobs(f.database,f.store).claimArtifactJob("restarted")).toBeNull();
+    expect((await jobs.getJob(ctx,job.id)).status).toBe("queued");
+    await f.database.query(`delete from "artifactProjectControls" where "projectId"=$1`,[ctx.projectId]);
+  });
 });

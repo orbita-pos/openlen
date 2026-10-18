@@ -10,6 +10,11 @@ export async function runArtifactRoute(request: Request, params: { id: string; a
   try {
     const session = await auth();
     if (!session?.user?.id) return Response.json({ error: "unauthorized" }, { status: 401 });
+    if(request.method==="POST"){
+      const origin=request.headers.get("origin");
+      const expected=new URL(process.env.NEXT_PUBLIC_SITE_URL??request.url).origin;
+      if(origin&&origin!==expected)throw new ArtifactError("forbidden");
+    }
     const access = await accesoAlProyecto(params.id, session.user.id);
     if (!access) throw new ArtifactError("project_not_found");
     return handleArtifactApi(getArtifactRuntime(), { actorId: session.user.id, ownerId: access.duenoId, projectId: params.id, requestId: "", role: access.rol }, request, { action, artifactId: params.artifactId, jobId: params.jobId, index: params.index }, true);

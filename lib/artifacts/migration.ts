@@ -5,6 +5,12 @@ create table if not exists "artifactRequests" (
  "sourceMessageId" text not null, "createdBy" text not null references "users"("id"),
  "createdAt" timestamptz not null default now(), unique ("projectId","sourceMessageId"), unique ("id","projectId")
 );
+-- Trusted operational pause, outside authored project files/settings.
+create table if not exists "artifactProjectControls" (
+ "projectId" text primary key references "projects"("id") on delete cascade,
+ "paused" boolean not null default false
+);
+alter table "artifactProjectControls" add column if not exists "liveRefreshNotBefore" timestamptz not null default now();
 create table if not exists "artifacts" (
  "id" text primary key, "projectId" text not null references "projects"("id") on delete cascade,
  "requestId" text not null, "kind" text not null check ("kind" in ('dashboard','slides','image','motion')),
@@ -65,6 +71,15 @@ create table if not exists "artifactSettlements" (
  "ledgerId" text not null unique, "chargedCenticredits" integer not null check ("chargedCenticredits">=0),
  "createdAt" timestamptz not null default now()
 );
+create table if not exists "artifactPreviewTickets" (
+ "hash" text primary key, "publicId" text not null, "kind" text not null check ("kind" in ('grant','session')),
+ "actorId" text not null references "users"("id") on delete cascade,
+ "ownerId" text not null, "projectId" text not null references "projects"("id") on delete cascade,
+ "artifactId" text not null, "revision" integer not null, "outputIndex" integer not null,
+ "outputHash" text not null, "expiresAt" timestamptz not null,
+ foreign key ("artifactId","revision") references "artifactRevisions"("artifactId","revision") on delete cascade
+);
+create index if not exists "artifactPreviewTickets_expiry_idx" on "artifactPreviewTickets" ("expiresAt");
 create index if not exists "artifactObjectGarbage_due_idx" on "artifactObjectGarbage" ("notBefore");
 create index if not exists "artifacts_project_created_idx" on "artifacts" ("projectId","createdAt","id");
 alter table "artifactJobs" add column if not exists "actorId" text references "users"("id");
