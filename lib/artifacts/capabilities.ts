@@ -1,7 +1,7 @@
 import type { ArtifactKind } from "./types";
 import { artifactChargePolicy } from "./billing";
 export const ARTIFACT_FORMATS: Readonly<Record<ArtifactKind, readonly string[]>> = {
-  dashboard: ["html", "png", "csv"], slides: ["html", "pdf", "pptx"], image: ["png", "jpeg", "webp"], motion: ["html", "mp4"],
+  dashboard: ["html", "png", "csv"], slides: ["html", "pdf", "pptx"], image: ["png", "jpeg", "webp"], motion: ["html", "mp4"], audio:["mp3","wav"],
 };
 /** Filled by each verified adapter as it becomes available. A feature switch
  * alone must never advertise a renderer that this deployment cannot run. */

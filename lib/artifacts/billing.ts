@@ -5,7 +5,8 @@ import { ArtifactError, type ArtifactChargePolicy, type ArtifactContext, type Ar
 export function artifactChargePolicy(env:Readonly<Record<string,string|undefined>>):ArtifactChargePolicy|null {
   const image=env.OPENLEN_ARTIFACT_IMAGE_CENTICREDITS, render=env.OPENLEN_ARTIFACT_RENDER_CENTICREDITS;
   const valid=(n:string|undefined):n is string=>n!==undefined&&/^(0|[1-9]\d{0,8})$/.test(n)&&Number(n)<=100_000_000;
-  return valid(image)&&valid(render)?{imageCenticredits:Number(image),renderCenticredits:Number(render)}:null;
+  const audio=env.OPENLEN_ARTIFACT_AUDIO_CENTICREDITS;
+  return valid(image)&&valid(render)?{imageCenticredits:Number(image),renderCenticredits:Number(render),...(valid(audio)?{audioCenticredits:Number(audio)}:{})}:null;
 }
 function validateReceipt(value:ArtifactExternalOutcome):void {
   if(!["succeeded","rejected","failed","unknown"].includes(value.outcome)||typeof value.model!=="string"||value.model.length>200
@@ -13,14 +14,15 @@ function validateReceipt(value:ArtifactExternalOutcome):void {
     ||(value.costMicroUsd!==null&&(!Number.isSafeInteger(value.costMicroUsd)||value.costMicroUsd<0))||Buffer.byteLength(JSON.stringify(value))>16*1024)throw new ArtifactError("invalid_external_receipt");
 }
 export function createArtifactBilling(database:ArtifactDatabase,policy:ArtifactChargePolicy) {
-  if(![policy.imageCenticredits,policy.renderCenticredits].every(n=>Number.isSafeInteger(n)&&n>=0&&n<=100_000_000))throw new ArtifactError("charge_policy_unavailable");
+  if(![policy.imageCenticredits,policy.renderCenticredits,...policy.audioCenticredits===undefined?[]:[policy.audioCenticredits]].every(n=>Number.isSafeInteger(n)&&n>=0&&n<=100_000_000))throw new ArtifactError("charge_policy_unavailable");
   async function startAttempt(claim:JobClaim,ctx:ArtifactContext,kind:ArtifactKind,model:string):Promise<void> {
+    if(kind==="audio"&&policy.audioCenticredits===undefined)throw new ArtifactError("charge_policy_unavailable");
     if(!model||model.length>200)throw new ArtifactError("invalid_image_model");
     await database.transaction(async tx=>{
       const [job]=await tx.query(`select "id" from "artifactJobs" where "id"=$1 and "fencingToken"=$2 and "workerId"=$3 and "leaseUntil">now() and "status"='running' and not "cancelRequested" and "externalStartedAt" is null for update`,[claim.job.id,claim.fencingToken,claim.workerId]);
       if(!job)throw new ArtifactError("lease_lost");
       await requireArtifactAccess(tx,ctx,claim.job.artifactId,"write");
-      const price=kind==="image"?policy.imageCenticredits:policy.renderCenticredits;
+      const price=kind==="image"?policy.imageCenticredits:kind==="audio"?policy.audioCenticredits!:policy.renderCenticredits;
       const [payer]=await tx.query(`select "credits" from "users" where "id"=$1 for update`,[ctx.ownerId]);
       if(!payer||Number(payer.credits)<price)throw new ArtifactError("insufficient_credits");
       await tx.query(`insert into "artifactAttempts" ("attemptId","jobId","payerId","actorId","projectId","kind","model","centicredits") values ($1,$2,$3,$4,$5,$6,$7,$8)`,[claim.fencingToken,claim.job.id,ctx.ownerId,ctx.actorId,ctx.projectId,kind,model,price]);
@@ -46,7 +48,7 @@ export function createArtifactBilling(database:ArtifactDatabase,policy:ArtifactC
     const balance=Number(payer.credits)-price,id=randomUUID();
     await tx.query(`update "users" set "credits"=$2 where "id"=$1`,[attempt.payerId,balance]);
     const integer=(key:string)=>{const n=receipt?.usage?.[key];return typeof n==="number"&&Number.isSafeInteger(n)&&n>=0&&n<=2147483647?n:null;};
-    await tx.query(`insert into "creditLedger" ("id","userId","plan","actorId","projectId","surface","refId","centicredits","listCenticredits","costMicroUsd","provider","model","inputTokens","outputTokens","balanceAfter","outcome") values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'openai',$11,$12,$13,$14,$15)`,[id,attempt.payerId,payer.plan,attempt.actorId,attempt.projectId,attempt.kind==="image"?"artifact_image":"artifact_render",attempt.jobId,price,attempt.centicredits,receipt?.costMicroUsd??null,attempt.model,integer("input_tokens"),integer("output_tokens"),balance,charge?"settle":"error"]);
+    await tx.query(`insert into "creditLedger" ("id","userId","plan","actorId","projectId","surface","refId","centicredits","listCenticredits","costMicroUsd","provider","model","inputTokens","outputTokens","balanceAfter","outcome") values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'openai',$11,$12,$13,$14,$15)`,[id,attempt.payerId,payer.plan,attempt.actorId,attempt.projectId,attempt.kind==="image"?"artifact_image":attempt.kind==="audio"?"artifact_audio":"artifact_render",attempt.jobId,price,attempt.centicredits,receipt?.costMicroUsd??null,attempt.model,integer("input_tokens"),integer("output_tokens"),balance,charge?"settle":"error"]);
     await tx.query(`update "artifactAttempts" set "ledgerId"=$2 where "attemptId"=$1`,[attempt.attemptId,id]);
     return {ledgerId:id,charged:price};
   }

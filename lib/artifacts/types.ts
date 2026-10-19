@@ -1,5 +1,5 @@
 /** Shared, JSON-safe contracts. No model/provider or server imports here. */
-export type ArtifactKind = "dashboard" | "slides" | "image" | "motion";
+export type ArtifactKind = "dashboard" | "slides" | "image" | "motion" | "audio";
 export type ArtifactVisibility = "owner" | "project";
 export type ArtifactStatus = "draft" | "queued" | "running" | "validating" | "storing" | "ready" | "failed" | "cancelled" | "needs_attention";
 export type ArtifactJobStatus = Exclude<ArtifactStatus, "draft" | "ready"> | "completed";
@@ -129,7 +129,7 @@ export interface ArtifactAdapterHooks {
   recordExternalOutcome(outcome: ArtifactExternalOutcome): Promise<void>;
 }
 export type ArtifactAdapter = (input: SealedArtifactInput, signal: AbortSignal, hooks: ArtifactAdapterHooks) => Promise<AdapterResult>;
-export interface ArtifactChargePolicy { readonly imageCenticredits: number; readonly renderCenticredits: number }
+export interface ArtifactChargePolicy { readonly imageCenticredits: number; readonly renderCenticredits: number; readonly audioCenticredits?:number }
 export interface Settlement { readonly jobId: string; readonly attemptId: string; readonly ledgerId: string; readonly chargedCenticredits: number }
 export interface JobOutcome { readonly jobId: string; readonly status: "completed" | "failed" | "cancelled" | "needs_attention"; readonly code?: string }
 

@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { runArtifactJob } from "./worker";
 import { generateArtifactImage } from "./adapters/image/render";
+import { ARTIFACT_MIGRATION_SQL } from "./migration";
 let f: Awaited<ReturnType<typeof artifactFixture>>;
 beforeAll(async()=>{
   f=await artifactFixture();
@@ -15,6 +16,19 @@ beforeAll(async()=>{
 beforeEach(async()=>{await f.pg.exec(`truncate "artifactSettlements","artifactAttempts","creditLedger";truncate "artifactRequests" cascade;update "users" set "credits"=1000;`);});
 afterAll(async()=>{await f.pg.close();});
 const policy={imageCenticredits:500,renderCenticredits:0};
+it("adds audio idempotently and requires an independent explicit speech price before a paid attempt",async()=>{
+  const {ctx,artifact}=await f.create("project","audio");
+  await f.pg.exec(ARTIFACT_MIGRATION_SQL);
+  expect((await f.store.getArtifact(ctx,artifact.id)).kind).toBe("audio");
+  await f.store.writeArtifactFiles(ctx,artifact.id,0,{"audio.json":"{}"});
+  const jobs=createArtifactJobs(f.database,f.store);await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{});
+  const claim=(await jobs.claimArtifactJob("voice-worker"))!;
+  await expect(createArtifactBilling(f.database,policy).startAttempt(claim,ctx,"audio","gpt-4o-mini-tts-2025-12-15")).rejects.toMatchObject({code:"charge_policy_unavailable"});
+  const billing=createArtifactBilling(f.database,{...policy,audioCenticredits:25});
+  await billing.startAttempt(claim,ctx,"audio","gpt-4o-mini-tts-2025-12-15");
+  expect((await f.database.query(`select "centicredits","kind" from "artifactAttempts" where "jobId"=$1`,[claim.job.id]))[0]).toMatchObject({kind:"audio",centicredits:25});
+  expect(artifactChargePolicy({OPENLEN_ARTIFACT_IMAGE_CENTICREDITS:"500",OPENLEN_ARTIFACT_RENDER_CENTICREDITS:"0",OPENLEN_ARTIFACT_AUDIO_CENTICREDITS:"25"})).toMatchObject({audioCenticredits:25});
+});
 async function ready(){const {ctx,artifact}=await f.create("project","image");await f.store.writeArtifactFiles(ctx,artifact.id,0,{"image.json":"{}"});const jobs=createArtifactJobs(f.database,f.store);await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{});return {ctx,artifact,jobs,claim:(await jobs.claimArtifactJob("worker"))!};}
 const receipt={outcome:"succeeded" as const,model:"gpt-image-2",requestId:"req_test",usage:{input_tokens:10,output_tokens:100},costMicroUsd:12345};
 const result={outputs:[{key:"private/output.png",hash:"a".repeat(64),bytes:10,mime:"image/png",format:"png"}],evidence:{valid:true as const,checkedAt:new Date().toISOString(),checks:["image decoded"]}};

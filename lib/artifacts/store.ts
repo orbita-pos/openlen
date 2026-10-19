@@ -27,7 +27,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
     return row as unknown as ArtifactRequest;
   }
   async function createArtifact(ctx: ArtifactContext, input: { kind: ArtifactKind; title: string; brief: string; visibility: ArtifactVisibility; itemKey?: string }): Promise<Artifact> {
-    if (!["dashboard", "slides", "image", "motion"].includes(input.kind) || !["owner", "project"].includes(input.visibility)
+    if (!["dashboard", "slides", "image", "motion", "audio"].includes(input.kind) || !["owner", "project"].includes(input.visibility)
       || !input.title?.trim() || input.title.length > 200 || typeof input.brief !== "string" || input.brief.length > 20_000
       || (input.itemKey !== undefined && !/^[a-zA-Z0-9_-]{1,80}$/.test(input.itemKey))) throw new ArtifactError("invalid_artifact");
     return database.transaction(async (tx) => {
