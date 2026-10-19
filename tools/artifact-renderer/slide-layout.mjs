@@ -54,10 +54,12 @@ export function measureSlideDocument({width,height,id}){
    add({id:next(),type:"image",...b,assetId:key,fit:"contain"});return;
   }
   for(const pseudo of ["::before","::after"]){const p=getComputedStyle(el,pseudo);if(!["none","normal","\"\""].includes(p.content)&&p.display!=="none")fail(el,"pseudo-element");}
+  if(s.display==="list-item"&&(s.listStyleType!=="none"||s.listStyleImage!=="none"))fail(el,"list marker");
   if(s.transform!=="none"||s.filter!=="none"||s.boxShadow!=="none"||s.textShadow!=="none"||s.clipPath!=="none"||s.backgroundImage!=="none"||Number(s.opacity)!==1||s.mixBlendMode!=="normal"||s.writingMode!=="horizontal-tb"||s.textDecorationLine!=="none")fail(el,"CSS effect");
   if(el.getAnimations().some(a=>a.playState==="running"))fail(el,"running animation");
   if(["SVG","CANVAS","VIDEO","IFRAME"].includes(el.tagName.toUpperCase()))fail(el,"complex visual");
   if(s.overflow!=="visible"&&(el.scrollWidth>el.clientWidth+1||el.scrollHeight>el.clientHeight+1))throw new Error(`slide_text_overflow: ${id}/${el.id||el.tagName}`);
+  if(el.childElementCount>0&&[s.overflowX,s.overflowY].some(v=>v!=="visible")&&[s.borderTopLeftRadius,s.borderTopRightRadius,s.borderBottomLeftRadius,s.borderBottomRightRadius].some(v=>parseFloat(v)>0))fail(el,"rounded clipping of descendants");
   if(r.width>.01&&r.height>.01){
    const fill=color(s.backgroundColor),border=color(s.borderTopColor),borderWidth=parseFloat(s.borderTopWidth);
    if(el.tagName==="IMG"){
@@ -70,6 +72,7 @@ export function measureSlideDocument({width,height,id}){
    }
    if(fill.alpha>0||borderWidth>0){
     if([s.borderTopWidth,s.borderRightWidth,s.borderBottomWidth,s.borderLeftWidth].some(v=>v!==s.borderTopWidth)||borderWidth>0&&[s.borderTopStyle,s.borderRightStyle,s.borderBottomStyle,s.borderLeftStyle].some(v=>v!=="solid"))fail(el,"nonuniform border");
+    if(borderWidth>0&&[s.borderTopColor,s.borderRightColor,s.borderBottomColor,s.borderLeftColor].some(v=>v!==s.borderTopColor))fail(el,"nonuniform border color");
     if(borderWidth>0&&border.alpha!==1)fail(el,"translucent border");
     if(borderWidth>0&&fill.alpha!==1&&fill.alpha!==0)fail(el,"mixed fill/border alpha");
     const radius=parseFloat(s.borderTopLeftRadius)*(s.borderTopLeftRadius.includes("%")?Math.min(r.width,r.height)/100:1);

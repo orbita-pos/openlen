@@ -67,6 +67,11 @@ describe("worker confirms persisted results", () => {
     const result = await run(async () => { throw new ArtifactError("artifact_compile_failed", "/main.ts:3: expected expression"); });
     expect(await jobs.getJob(result.ctx, result.job.id)).toMatchObject({ status: "failed", errorCode: "artifact_compile_failed", diagnostics: ["/main.ts:3: expected expression"] });
   });
+  it("preserves actionable HTML slide layout diagnostics for inspect and correction",async()=>{
+    const message="cover/card: rounded clipping; isolate that visual with data-len-raster";
+    const result=await run(async()=>{throw new ArtifactError("slide_layout_unsupported",message);});
+    expect(await jobs.getJob(result.ctx,result.job.id)).toMatchObject({status:"failed",errorCode:"slide_layout_unsupported",diagnostics:[message]});
+  });
 
   it("keeps uncertain renderer cleanup actionable even when cancellation arrives at the same time", async () => {
     const result = await run(async () => {

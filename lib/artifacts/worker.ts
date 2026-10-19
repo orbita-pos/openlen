@@ -86,7 +86,7 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     const cleanupUnknown=error instanceof ArtifactError&&error.code==="renderer_cleanup_unknown";
     const status = unknownExternal || commitStarted || auditFailed || cleanupUnknown ? "needs_attention" : cancelled ? "cancelled" : "failed";
     const code = cleanupUnknown ? "renderer_cleanup_unknown" : commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
-    const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
+    const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow|slide_layout_unsupported|slide_layout_too_large)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
     if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
     return { jobId: claim.job.id, status, code };
   } finally { clearInterval(timer); signal.removeEventListener("abort", cancel); }
