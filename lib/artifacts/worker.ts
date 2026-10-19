@@ -3,6 +3,7 @@ import { requireArtifactAccess } from "./access";
 import { validateAdapterResult } from "./contracts";
 import { datasetsFromRevision } from "./data";
 import { resolveArtifactAssets } from "./assets";
+import type {ArtifactAudioUploads} from "./assets";
 import type { ArtifactBilling } from "./billing";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStorage } from "./private-storage";
@@ -16,6 +17,7 @@ export interface ArtifactWorkerDeps {
   readonly storage: ArtifactStorage;
   readonly adapters: Partial<Record<ArtifactKind, ArtifactAdapter>>;
   readonly billing?: ArtifactBilling;
+  readonly audioUploads?:ArtifactAudioUploads;
 }
 
 export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, signal: AbortSignal): Promise<JobOutcome> {
@@ -37,7 +39,7 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     if (!revision.sealedAt) throw new ArtifactError("revision_not_sealed");
     const adapter = deps.adapters[artifact.kind];
     if (!adapter) throw new ArtifactError("format_unavailable");
-    const assets = await resolveArtifactAssets(ctx, revision, deps.store, deps.storage);
+    const assets = await resolveArtifactAssets(ctx, revision, deps.store, deps.storage,deps.audioUploads,deps.database);
     const result = await adapter({ artifact, revision, assets, datasets: datasetsFromRevision(revision), jobOptions: claim.job.options,jobIdentity:{id:claim.job.id,fencingToken:claim.fencingToken} }, controller.signal, {
       beforeIsolatedRender:async()=>{controller.signal.throwIfAborted();if(!await deps.jobs.heartbeat(claim))throw new ArtifactError("lease_lost");},
       beforeExternalCall: async (model) => {

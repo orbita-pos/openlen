@@ -44,7 +44,7 @@ export function containerArtifactRenderer(image: string, fencingToken?:string, a
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024) throw new ArtifactError("invalid_render_result");
       const result = JSON.parse(await readFile(metaPath, "utf8")) as { ok?: boolean; code?: string; checks?: string[]; diagnostics?: string[];audio?:{durationSeconds:number;sampleRate:number;channels:number}; video?:{frameCount:number;fps:number;durationSeconds:number} };
       if (code !== 0 || result.ok !== true) {
-        const codes=["artifact_resource_missing","slide_text_overflow","slide_layout_unsupported","slide_layout_too_large","slide_element_outside_canvas","motion_contract_missing","motion_nondeterministic","motion_video_invalid","motion_frame_count_mismatch"];
+        const codes=["invalid_audio_packet","audio_media_invalid","audio_track_timing_invalid","audio_narration_overflow","audio_export_invalid","motion_audio_invalid","artifact_resource_missing","slide_text_overflow","slide_layout_unsupported","slide_layout_too_large","slide_element_outside_canvas","motion_contract_missing","motion_nondeterministic","motion_video_invalid","motion_frame_count_mismatch"];
         throw new ArtifactError(result.code&&codes.includes(result.code)?result.code:"artifact_render_failed",JSON.stringify(result.diagnostics?.slice(0,8)??[]));
       }
       if(packet.kind==="audio"){

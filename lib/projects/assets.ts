@@ -64,7 +64,7 @@ export interface AssetStorage {
     ext: string,
     contentType: string,
   ): Promise<AssetMetadata>;
-  get(projectId: string, filename: string): Promise<AssetGetResult | null>;
+  get(projectId: string, filename: string, maxBytes?:number): Promise<AssetGetResult | null>;
   /** The project's uploaded IMAGE assets (audio excluded), newest first. */
   list(projectId: string): Promise<AssetListItem[]>;
   /** The project's uploaded AUDIO assets (images excluded), newest first.
@@ -195,6 +195,7 @@ export class LocalFsAssetStorage implements AssetStorage {
   async get(
     projectId: string,
     filename: string,
+    maxBytes?:number,
   ): Promise<AssetGetResult | null> {
     const id = safeProjectId(projectId);
     if (!/^[a-zA-Z0-9._-]+$/.test(filename) || filename.includes("..")) {
@@ -202,7 +203,19 @@ export class LocalFsAssetStorage implements AssetStorage {
     }
     const filePath = path.join(this.rootDir, id, filename);
     try {
-      const contents = await fs.readFile(filePath);
+      let contents:Buffer;
+      if(maxBytes!==undefined){
+        if(!Number.isSafeInteger(maxBytes)||maxBytes<1)return null;
+        const file=await fs.open(filePath,"r");
+        try{
+          const info=await file.stat();if(!info.isFile()||info.size>maxBytes)return null;
+          const chunks:Buffer[]=[];let count=0;
+          for await(const chunk of file.createReadStream({highWaterMark:64*1024,autoClose:false})){
+            count+=chunk.length;if(count>maxBytes)return null;chunks.push(Buffer.from(chunk));
+          }
+          contents=Buffer.concat(chunks);
+        }finally{await file.close();}
+      }else contents=await fs.readFile(filePath);
       const ext = filename.split(".").pop() ?? "";
       return { contents, contentType: mimeForExt(ext) };
     } catch {
@@ -309,6 +322,7 @@ export class S3AssetStorage implements AssetStorage {
   async get(
     projectId: string,
     filename: string,
+    maxBytes?:number,
   ): Promise<AssetGetResult | null> {
     const id = safeProjectId(projectId);
     if (!/^[a-zA-Z0-9._-]+$/.test(filename)) return null;
@@ -318,10 +332,13 @@ export class S3AssetStorage implements AssetStorage {
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       );
       if (!res.Body) return null;
+      if(maxBytes!==undefined&&(!Number.isSafeInteger(maxBytes)||maxBytes<1||Number(res.ContentLength)>maxBytes)){(res.Body as unknown as {destroy?:()=>void}).destroy?.();return null;}
+      let byteCount=0;
       const chunks: Buffer[] = [];
       // The SDK's Body type is loose — in Node it's an AsyncIterable of
       // byte chunks.
       for await (const chunk of res.Body as unknown as AsyncIterable<Uint8Array>) {
+        byteCount+=chunk.length;if(maxBytes!==undefined&&byteCount>maxBytes)return null;
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
       const contents = Buffer.concat(chunks);

@@ -7,12 +7,15 @@ import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStore } from "./store";
 import { ArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactDependency, type ArtifactKind } from "./types";
 import type { ToolOutcome } from "../agent/tools";
+import type {ArtifactAudioUploads} from "./assets";
+import {AUDIO_MIMES} from "./audio-protocol";
 
-export const ARTIFACT_TOOLS = ["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data"] as const;
+export const ARTIFACT_TOOLS = ["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data","list_artifact_audio"] as const;
 const idParameter = { type: "STRING", description: "Exact artifact id returned by create_artifact or list_artifacts." };
 export function artifactToolDeclarations(kinds: readonly ArtifactKind[]): Record<string, unknown>[] {
   if (!kinds.length) return [];
   return [
+    ...kinds.some(k=>k==="audio"||k==="motion")?[{name:"list_artifact_audio",description:"List this project's uploaded music/effects/audio. Returns immutable upload IDs for audio.json or motion.json tracks. Use returned IDs, never external URLs. This does not generate music or effects.",parameters:{type:"OBJECT",properties:{}}}]:[],
     {name:"create_artifact",description:"Create a persistent project deliverable when the user asks for it in normal conversation. One identity per piece, including each promotional image. Read /.openlen/docs/artifacts/<kind>.md before authoring; edit its private source files with your file tools. This does not change the original app. Reuse a stable item_key for retries of the same piece in this request.",parameters:{type:"OBJECT",properties:{
       kind:{type:"STRING",enum:[...kinds]},item_key:{type:"STRING",description:"Stable request-local name, e.g. promo_image_2; letters, digits, - and _."},title:{type:"STRING"},brief:{type:"STRING"},
       source_paths:{type:"ARRAY",items:{type:"STRING"}},
@@ -34,6 +37,7 @@ export interface ArtifactAgentServices {
   readonly data: ReturnType<typeof createArtifactData>;
   readonly captureContext: ReturnType<typeof createArtifactContextCapture>;
   readonly freezeSource?:ReturnType<typeof createArtifactSourceFreeze>;
+  readonly audioUploads?:ArtifactAudioUploads;
 }
 const text = (args: Record<string, unknown>, key: string) => { const v = args[key]; if (typeof v !== "string" || !v || v.length > 20_000) throw new ArtifactError("invalid_artifact_arguments"); return v; };
 export function createArtifactAgent(services: ArtifactAgentServices, ctx: ArtifactContext, messageId: () => string, kinds: readonly ArtifactKind[]) {
@@ -58,6 +62,12 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
     try {
       let response: Record<string, unknown>;
       if (name === "list_artifacts") return { response: { ok: true, artifacts: await list() } };
+      if(name==="list_artifact_audio"){
+        if(!services.audioUploads||!kinds.some(k=>k==="audio"||k==="motion"))throw new ArtifactError("audio_uploads_unavailable");
+        await requireProjectAccess(database,ctx);
+        const assets=(await services.audioUploads.listAudio(ctx.projectId)).filter(a=>/^[a-f0-9]{64}\.(mp3|m4a|ogg|wav)$/.test(a.filename)&&AUDIO_MIMES.includes(a.contentType as typeof AUDIO_MIMES[number])&&a.size>0&&a.size<=20*1024*1024).slice(0,200).map(a=>({id:`upload:${a.filename}`,filename:a.filename,mime:a.contentType,bytes:a.size}));
+        return {response:{ok:true,assets}};
+      }
       if (name === "create_artifact") {
         const kind = text(args, "kind") as ArtifactKind;
         if (!kinds.includes(kind)) throw new ArtifactError("format_unavailable");
@@ -84,7 +94,7 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
           // Register sources in this turn's virtual tree; the next Bash sees
           // the same bytes as Read without copying them into the app's folder.
           if (Object.keys(revision.files)[0]) await workspace.read(`/.len/artifacts/${id}/${Object.keys(revision.files)[0]}`);
-          return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobRows } };
+          return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, evidence:revision.evidence, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobRows } };
         }
         if (name === "render_artifact") {
           if (!kinds.includes(artifact.kind) || !Array.isArray(args.formats) || !args.formats.length || args.formats.some((f) => typeof f !== "string" || !ARTIFACT_FORMATS[artifact.kind].includes(f))) throw new ArtifactError("format_unavailable");

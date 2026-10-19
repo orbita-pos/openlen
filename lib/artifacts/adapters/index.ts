@@ -8,6 +8,10 @@ import { artifactChargePolicy } from "../billing";
 import { renderMotion } from "./motion/render";
 import {ArtifactError,type SealedArtifactInput,type AdapterResult} from "../types";
 import type {ArtifactRender} from "../render-protocol";
+import {audioCapabilityAvailable} from "../capabilities";
+import {openaiArtifactSpeechTransport} from "./audio/openai";
+import {renderAudio} from "./audio/render";
+import {motionManifest} from "./motion/manifest";
 
 /** Loaded only by the standalone worker. The app only queues sealed jobs. */
 export function createArtifactAdapters(env: Readonly<Record<string, string | undefined>>): Partial<Record<ArtifactKind, ArtifactAdapter>> {
@@ -20,7 +24,19 @@ export function createArtifactAdapters(env: Readonly<Record<string, string | und
     adapters.dashboard=isolate(renderDashboard);
     adapters.slides=isolate(renderSlides);
     // Explicit spike gate until Linux resource/isolation acceptance passes.
-    if(env.OPENLEN_ARTIFACT_MOTION_VERIFIED==="1")adapters.motion=isolate(renderMotion);
+    if(env.OPENLEN_ARTIFACT_MOTION_VERIFIED==="1")adapters.motion=isolate(async(input,render,signal)=>{
+      if(motionManifest(input).audio&&env.OPENLEN_ARTIFACT_AUDIO_VERIFIED!=="1")throw new ArtifactError("audio_unavailable");
+      return renderMotion(input,render,signal);
+    });
+    if(audioCapabilityAvailable(env)){
+      const model=env.OPENLEN_ARTIFACT_AUDIO_MODEL??"gpt-4o-mini-tts-2025-12-15";
+      const transport=openaiArtifactSpeechTransport({apiKey:env.OPENAI_API_KEY!,model});
+      adapters.audio=async(input,signal,hooks)=>{
+        if(process.platform!=="linux")throw new ArtifactError("renderer_requires_linux");
+        if(!input.jobIdentity||!hooks.beforeIsolatedRender)throw new ArtifactError("renderer_admission_missing");
+        return renderAudio(input,{transport,model},containerArtifactRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE!,input.jobIdentity.fencingToken,hooks.beforeIsolatedRender),signal,hooks);
+      };
+    }
   }
   if (env.OPENAI_API_KEY && artifactChargePolicy(env)) {
     const model=env.OPENLEN_ARTIFACT_IMAGE_MODEL??"gpt-image-2";

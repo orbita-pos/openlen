@@ -4,6 +4,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends chromium libreo
 WORKDIR /renderer
 COPY tools/artifact-renderer/package.json tools/artifact-renderer/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
-COPY tools/artifact-renderer/browser.mjs tools/artifact-renderer/render.mjs tools/artifact-renderer/office.mjs tools/artifact-renderer/video.mjs ./
+COPY tools/artifact-renderer/browser.mjs tools/artifact-renderer/render.mjs tools/artifact-renderer/office.mjs tools/artifact-renderer/video.mjs tools/artifact-renderer/slide-layout.mjs tools/artifact-renderer/audio.mjs ./
 USER 10001:10001
 ENTRYPOINT ["node", "render.mjs"]
