@@ -16,7 +16,7 @@ export function projectSourceLoader(database: ArtifactDatabase) {
     for (const [slug, page] of Object.entries(data?.pages ?? {})) if (paths.includes(`/${slug}/index.html`)) files[`/${slug}/index.html`] = page.html;
     const rows = await database.query(`select "path","content" from "projectFiles" where "projectId"=$1 and "path"=any($2::text[])`, [projectId, paths]);
     for (const file of rows) files[String(file.path)] = String(file.content);
-    return { files, settings: { ...data?.settings } };
+    return { files,...data?.app?.catalogo&&{catalogo:data.app.catalogo}, settings: { ...data?.settings } };
   };
 }
 

@@ -23,7 +23,7 @@ export async function buildProjectCaptures(input:SealedArtifactInput){
   for(const capture of manifest.captures){
     const entry=capture.entry.slice(1);
     if(!Object.hasOwn(files,entry))throw new ArtifactError("frozen_source_missing");
-    result.push({id:capture.id,width:1280,height:720,html:await compileArtifactHtml(snapshot,entry,[])});
+    result.push({id:capture.id,width:1280,height:720,html:await compileArtifactHtml(snapshot,entry,[],"",ref.catalogo)});
   }
   return result;
 }

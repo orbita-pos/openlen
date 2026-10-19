@@ -1,6 +1,6 @@
 import {build} from "esbuild";
 import {createRequire} from "node:module";
-import {mkdir,writeFile,copyFile,lstat,realpath,unlink,rmdir,readdir} from "node:fs/promises";
+import {mkdir,writeFile,copyFile,readFile,lstat,realpath,unlink,rmdir,readdir} from "node:fs/promises";
 import path from "node:path";
 const require=createRequire(import.meta.url);
 async function main(){
@@ -15,9 +15,22 @@ for(const source of sources){
   entries.push(outfile);
 }
 const assets=["lib/apps/bundler/bundler-worker.mjs","lib/functions/bundler/resolve.mjs","lib/backend/sql-split-worker.mjs","lib/backend/sql-split.mjs","node_modules/esbuild-wasm/lib/browser.js","node_modules/esbuild-wasm/esbuild.wasm","node_modules/gsap/dist/gsap.min.js","node_modules/gsap/package.json"];
+// The artifact compiler bundles only locally installed production catalogs.
+// Trace intentionally excludes public/, so materialize their manifests/files.
+for(const id of await readdir(path.join(root,"public/app-vendor"))){
+  if(!/^\d{4}-\d{2}$/.test(id))continue;
+  const manifestPath=`public/app-vendor/${id}/manifest.json`;
+  const manifest=JSON.parse(await readFile(path.join(root,manifestPath),"utf8"));
+  if(manifest.catalogo!==id||!manifest.ficheros?.produccion)throw new Error("Invalid artifact catalog manifest");
+  assets.push(manifestPath);
+  for(const name of Object.keys(manifest.ficheros.produccion)){
+    if(!/^[\w.-]+\.js$/.test(name))throw new Error("Invalid artifact catalog path");
+    assets.push(`public/app-vendor/${id}/produccion/${name}`);
+  }
+}
 const imageNativeRoot=await realpath(path.dirname(require.resolve("@openlen/images")));
 for(const name of await readdir(imageNativeRoot))if(name==="index.js"||name==="package.json"||name.endsWith(".node"))assets.push(path.relative(root,path.join(imageNativeRoot,name)));
-const trace=await nodeFileTrace([...entries,...assets.filter(p=>/\.m?js$/.test(p)).map(p=>path.join(root,p))],{base:root,processCwd:root,ignore:["**/.git/**","**/.env*","**/.claude/**","**/.superpowers/**","**/plans/**","**/reports/**","**/research_notes/**","**/.artifacts-private/**","**/public/**","**/.next/standalone/**"]});
+const trace=await nodeFileTrace([...entries,...assets.filter(p=>/\.m?js$/.test(p)&&!p.startsWith("public/")).map(p=>path.join(root,p))],{base:root,processCwd:root,ignore:["**/.git/**","**/.env*","**/.claude/**","**/.superpowers/**","**/plans/**","**/reports/**","**/research_notes/**","**/.artifacts-private/**","**/public/**","**/.next/standalone/**"]});
 const unsupportedWarnings=[];
 for(const warning of trace.warnings){
   const message=String(warning.message);
@@ -25,8 +38,9 @@ for(const warning of trace.warnings){
   // and framework integrations dynamically, each behind its own try/catch.
   // Missing external integrations are fine; missing relative SDK files aren't.
   const optionalCaptureIntegration=/Cannot find module '[^./][^']*' loaded from .*node_modules[\\/]@inariwatch[\\/]capture[\\/]dist[\\/]/.test(message);
+  const unusedCatalogDevProbe=/Cannot find module '(?:react|react-dom(?:\/client)?)' loaded from .*public[\\/]app-vendor[\\/]test-kit-[^\\/]+[\\/]desarrollo[\\/]/.test(message);
   const otherNativePlatform=/crates[\\/]images[\\/]openlen-images\.[^'\s]+\.node/.test(message);
-  if(!optionalCaptureIntegration&&!otherNativePlatform&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
+  if(!optionalCaptureIntegration&&!unusedCatalogDevProbe&&!otherNativePlatform&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
 }
 if(unsupportedWarnings.length)throw new Error(unsupportedWarnings.join("\n"));
 const files=new Set([...trace.fileList,...assets]);const links=[{relative:"node_modules/@openlen/images",actual:imageNativeRoot}],copiedPaths=new Set();let copied=0;

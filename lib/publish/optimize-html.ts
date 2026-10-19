@@ -44,13 +44,11 @@
 // throwing here keeps the marker off disk.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import postcss from "postcss";
-import tailwindcss from "tailwindcss";
+import {generateTailwindCss} from "./tailwind-css";
 
 import { optimizeForPublish as rustOptimizeForPublish } from "@/lib/html-engine";
-import { CDN_TAG_RE, extractTwConfig, readTwCarrier, readTwDarkMode, stripTwCarrier, type TwDarkMode } from "./tw-config";
+import { CDN_TAG_RE, extractTwConfig, readTwCarrier, readTwDarkMode, stripTwCarrier } from "./tw-config";
 
-const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
 // ─── Extends del normalizador born-canonical (bug 2026-07-29) ────────────────
 // Los <style data-ol-{radius,space,type}> sobreviven al sanitizer y llevan los
@@ -292,35 +290,4 @@ export async function bakeTailwind(
         .replace(THEME_SCRIPT_RE, "")
         .replace(CDN_TAG_RE, () => styleTag); // no </head>: fall back in-place
   return { html: out, baked: true, cssBytes: css.length };
-}
-
-/** Las hojas de la app traen su `@tailwind base` (lo copian de Vite); el horneado
- *  ya lo pone una vez en `TAILWIND_INPUT`, y dos veces duplicaría el preflight. */
-function sinDirectivasTailwind(css: string): string {
-  return css.replace(/@tailwind\s+[\w-]+\s*;?/g, "");
-}
-
-async function generateTailwindCss(
-  html: string,
-  extend: Record<string, unknown> = {},
-  fuentes: readonly FuenteDeClases[] = [],
-  stylesheets: readonly string[] = [],
-  darkMode: TwDarkMode | null = null,
-): Promise<string> {
-  const entrada = [TAILWIND_INPUT, ...stylesheets.map(sinDirectivasTailwind)].join("\n");
-  const result = await postcss([
-    tailwindcss({
-      content: [{ raw: html, extension: "html" }, ...fuentes.map((f) => ({ raw: f.raw, extension: f.extension }))],
-      theme: { extend },
-      ...(darkMode ? { darkMode } : {}),
-      plugins: [],
-      corePlugins: { preflight: true },
-    } as Parameters<typeof tailwindcss>[0]),
-  ]).process(entrada, { from: undefined });
-
-  // El CSS va dentro de un `<style>` del documento: un `</style>` de la hoja
-  // (en un comentario, en un `content:`) lo cerraría y el resto saldría como
-  // HTML. En el lienzo no pasa (va por `textContent`). `<\/style` es el mismo
-  // texto para CSS —en un comentario o en una cadena, `\/` es `/`—.
-  return result.css.replace(/<\/(style)/gi, "<\\/$1");
 }
