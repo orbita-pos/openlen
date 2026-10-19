@@ -15,6 +15,7 @@
 // loop mid-conversation.
 
 import { readFile } from "node:fs/promises";
+import {ARTIFACT_TOOLS} from "@/lib/artifacts/tools";
 import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -2582,7 +2583,7 @@ async function ejecutarHerramienta(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
-  if (["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data"].includes(name)) {
+  if (ARTIFACT_TOOLS.some(tool=>tool===name)) {
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args) : { response: { ok: false, error: "feature_disabled" } };
   }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);

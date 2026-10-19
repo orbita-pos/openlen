@@ -6,9 +6,14 @@ import {exportSlideDeckPptx,validateSlideDeckPptx} from "./adapters/slides/pptx"
 import {dashboardFixture} from "./testing/dashboard";
 import {stopBundlerWorker} from "../apps/bundler/bundle-app";
 import type {SealedArtifactInput} from "./types";
+import {pcmToWav} from "./adapters/audio/pcm";
+import {validateAudioMix} from "./audio-protocol";
 /** Install smoke only: trusted fixtures, no DB/provider call or authored Node. */
 export async function verifyArtifactInstallation(){
   try{
+    const voice=pcmToWav(new Uint8Array(48000));
+    if(voice.durationSeconds!==1||voice.wav.length!==48044)throw new Error("speech PCM install check failed");
+    validateAudioMix({durationSeconds:1,duckMusic:true,tracks:[{mime:"audio/wav",dataBase64:Buffer.from(voice.wav).toString("base64"),role:"narration",startSeconds:0,trimSeconds:0,gain:1,fadeInSeconds:0,fadeOutSeconds:0}]});
     const dashboard=await buildDashboard(dashboardFixture());
     if(!dashboard.html.includes("Norte")||!dashboard.csv[0]?.text.includes("120"))throw new Error("dashboard install check failed");
     const {compileArtifactHtml}=await import("./adapters/dashboard/compile");
@@ -20,6 +25,6 @@ export async function verifyArtifactInstallation(){
     if(!(await buildMotion(motion)).html.includes("GSAP 3.15.0"))throw new Error("motion runtime missing");
     const native=createRequire(import.meta.url)("@openlen/images") as typeof import("@openlen/images");
     if(typeof native.processImage!=="function")throw new Error("image binding missing");
-    return {sourceCompiler:true,reactRechartsCatalog:true,tailwindStyles:true,pptxNativeObjects:true,gsapRuntime:"3.15.0",imageNativeBinding:true,renderContainerVerified:false};
+    return {sourceCompiler:true,reactRechartsCatalog:true,tailwindStyles:true,pptxNativeObjects:true,gsapRuntime:"3.15.0",imageNativeBinding:true,speechPcm:true,audioProtocol:true,renderContainerVerified:false};
   }finally{stopBundlerWorker();}
 }
