@@ -11,10 +11,13 @@ const sources=[{entry:"scripts/artifacts-worker.ts",name:"worker.mjs"},{entry:"s
 const entries=[];
 for(const source of sources){
   const outfile=path.join(staging,source.name);
-  await build({entryPoints:[source.entry],outfile,bundle:true,platform:"node",format:"esm",target:"node22",tsconfig:"tsconfig.json",alias:{"server-only":path.join(root,"node_modules/server-only/empty.js")},external:["@openlen/*","@inariwatch/capture/auto","pg-native"],banner:{js:"import '@inariwatch/capture/auto'; import { createRequire as __artifactRequire } from 'node:module'; const require = __artifactRequire(import.meta.url);"},logLevel:"warning"});
+  await build({entryPoints:[source.entry],outfile,bundle:true,platform:"node",format:"esm",target:"node22",tsconfig:"tsconfig.json",alias:{"server-only":path.join(root,"node_modules/server-only/empty.js")},external:["@openlen/*","@inariwatch/capture/auto","pg-native","tailwindcss","postcss"],banner:{js:"import '@inariwatch/capture/auto'; import { createRequire as __artifactRequire } from 'node:module'; const require = __artifactRequire(import.meta.url);"},logLevel:"warning"});
   entries.push(outfile);
 }
 const assets=["lib/apps/bundler/bundler-worker.mjs","lib/functions/bundler/resolve.mjs","lib/backend/sql-split-worker.mjs","lib/backend/sql-split.mjs","node_modules/esbuild-wasm/lib/browser.js","node_modules/esbuild-wasm/esbuild.wasm","node_modules/gsap/dist/gsap.min.js","node_modules/gsap/package.json"];
+// Tailwind reads this relative to its own CJS module. Bundling it into ESM
+// would lose __dirname; externalize the package and trace its runtime instead.
+assets.push(path.relative(root,require.resolve("tailwindcss/lib/css/preflight.css")));
 // The artifact compiler bundles only locally installed production catalogs.
 // Trace intentionally excludes public/, so materialize their manifests/files.
 for(const id of await readdir(path.join(root,"public/app-vendor"))){
@@ -39,8 +42,11 @@ for(const warning of trace.warnings){
   // Missing external integrations are fine; missing relative SDK files aren't.
   const optionalCaptureIntegration=/Cannot find module '[^./][^']*' loaded from .*node_modules[\\/]@inariwatch[\\/]capture[\\/]dist[\\/]/.test(message);
   const unusedCatalogDevProbe=/Cannot find module '(?:react|react-dom(?:\/client)?)' loaded from .*public[\\/]app-vendor[\\/]test-kit-[^\\/]+[\\/]desarrollo[\\/]/.test(message);
+  // Tailwind probes the obsolete plugin inside try/catch only to warn that
+  // line-clamp is built into core. This compiler always passes plugins: [].
+  const optionalTailwindProbe=/Cannot find module '@tailwindcss\/line-clamp' loaded from .*node_modules[\\/]tailwindcss[\\/]lib[\\/]util[\\/]validateConfig\.js/.test(message);
   const otherNativePlatform=/crates[\\/]images[\\/]openlen-images\.[^'\s]+\.node/.test(message);
-  if(!optionalCaptureIntegration&&!unusedCatalogDevProbe&&!otherNativePlatform&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
+  if(!optionalCaptureIntegration&&!unusedCatalogDevProbe&&!optionalTailwindProbe&&!otherNativePlatform&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
 }
 if(unsupportedWarnings.length)throw new Error(unsupportedWarnings.join("\n"));
 const files=new Set([...trace.fileList,...assets]);const links=[{relative:"node_modules/@openlen/images",actual:imageNativeRoot}],copiedPaths=new Set();let copied=0;
