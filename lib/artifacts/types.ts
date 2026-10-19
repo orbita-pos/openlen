@@ -35,6 +35,7 @@ export interface Artifact {
 }
 export interface ArtifactDependency { readonly artifactId: string; readonly revision: number }
 export interface ArtifactSourceRef {
+  readonly catalogo?:string;
   readonly files: Readonly<Record<string, string>>;
   readonly settingsHash: string;
   readonly capturedAt: string;

@@ -5,6 +5,7 @@ import { classifyFolderPath } from "../agent/ficheros/folder";
 import { ArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactSourceRef } from "./types";
 
 export interface ArtifactProjectSources {
+  readonly catalogo?:string;
   readonly files: Readonly<Record<string, string>>;
   readonly settings: Readonly<Record<string, unknown>>;
 }
@@ -40,7 +41,7 @@ function createCaptureSample(database: ArtifactDatabase, load: (projectId: strin
     // Allowlist public settings. Do not even hash assistant facts, recipient
     // emails, preview tokens or integration credentials into this descriptor.
     const languages = Array.isArray(source.settings.languages) ? source.settings.languages.filter((s) => typeof s === "string").sort() : [];
-    const sourceRef:ArtifactSourceRef={ files, settingsHash: hash(JSON.stringify({ languages, analyticsDisabled: source.settings.analyticsDisabled === true })), resourceRefs: [...resources].sort(), capturedAt: new Date().toISOString() };
+    const sourceRef:ArtifactSourceRef={ files,...source.catalogo!==undefined&&{catalogo:source.catalogo}, settingsHash: hash(JSON.stringify({ languages, analyticsDisabled: source.settings.analyticsDisabled === true })), resourceRefs: [...resources].sort(), capturedAt: new Date().toISOString() };
     return {sourceRef,files:frozen};
   };
 }

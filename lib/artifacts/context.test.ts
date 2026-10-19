@@ -49,5 +49,6 @@ it("loads only the selected project's sources and never writes to its app", asyn
   const capture = createArtifactContextCapture(f.database, projectSourceLoader(f.database));
   const ref = await capture(f.owner, ["/index.html", "/src/main.tsx"]);
   expect(Object.keys(ref.files)).toHaveLength(2);
+  expect(ref.catalogo).toBe("1");
   expect((await f.pg.query(`select "data" from "projects" where "id"='project'`)).rows[0]).toEqual({ data: original });
 });

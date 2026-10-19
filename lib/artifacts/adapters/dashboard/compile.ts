@@ -1,11 +1,13 @@
 import path from "node:path";
-import { parse } from "node-html-parser";
+import { parse,TextNode } from "node-html-parser";
 import { compilarCarpeta, textoDeDiagnostico } from "../../../apps/compilador";
 import { CATALOGO_ACTUAL } from "../../../apps/dependencias";
 import { runBundler } from "../../../apps/bundler/bundle-app";
 import { ArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
 import { dashboardManifest } from "./manifest";
 import {artifactDatasetForDisplay} from "../../dataset-display";
+import {artifactCatalog} from "./catalog";
+import {artifactCss} from "./styles";
 
 import { ARTIFACT_CSP } from "../../html-policy";
 export { ARTIFACT_CSP } from "../../html-policy";
@@ -25,7 +27,7 @@ export function datasetCsv(d: ArtifactDataset): string {
 
 /** One compiler and bundler path: only independent in-memory sources. No
  * project env, credential substitution, npm install or network resolution. */
-export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml: string, datasets: readonly ArtifactDataset[], trustedRuntime = "") {
+export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml: string, datasets: readonly ArtifactDataset[], trustedRuntime = "", catalogId = CATALOGO_ACTUAL) {
   const tree = parse(input.revision.files[entryHtml]!);
   const head = tree.querySelector("head"), body = tree.querySelector("body");
   if (!head || !body || tree.querySelector("base,iframe,object,embed,meta[http-equiv=refresh]")) throw new ArtifactError("invalid_artifact_html");
@@ -48,25 +50,27 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
     entryPaths.push(wrapper);
     element.removeAttribute("src"); element.setAttribute("type", "module"); element.setAttribute("data-artifact-entry", String(index));
   }
-  const compiled = compilarCarpeta({ carpeta: files, catalogo: CATALOGO_ACTUAL, entorno: {} });
+  for(const [name,css] of Object.entries(files).filter(([p])=>p.endsWith(".css")))files[name]=await artifactCss(css,files);
+  const compiled = compilarCarpeta({ carpeta: files, catalogo: catalogId, entorno: {},inlineStyles:true });
   if (compiled.errores.length) throw new ArtifactError("artifact_compile_failed", compiled.errores.slice(0, 8).map(textoDeDiagnostico).join("\n"));
-  if (compiled.paquetes.length) throw new ArtifactError("artifact_package_unavailable", "This renderer currently accepts local modules and browser APIs only; external packages must be vendored and verified first.");
+  const libraries = compiled.paquetes.length ? await artifactCatalog(catalogId) : {catalogFiles:{},vendorRoots:{}};
+  const modules=compiled.ficheros;
   if (entryPaths.length) {
-    const bundle = await runBundler({ entries: entryPaths, modules: compiled.ficheros, virtual: {}, mocked: [], empty: [], catalogFiles: {}, vendorRoots: {}, minify: false, nodeEnv: "production", sourcemap: false }, 30_000);
+    const bundle = await runBundler({ entries: entryPaths, modules, virtual: {}, mocked: [], empty: [], ...libraries, minify: true, nodeEnv: "production", sourcemap: false }, 30_000);
     if (!bundle || bundle.errors.length) throw new ArtifactError("artifact_compile_failed", bundle?.errors.slice(0, 8).map((e) => `${e.file}:${e.line}: ${e.text}`).join("\n") ?? "Compiler timed out");
     for (const element of tree.querySelectorAll("script[data-artifact-entry]")) {
       const index = Number(element.getAttribute("data-artifact-entry"));
       const js = bundle.outputs[`artifact-entry-${index}.js`];
       if (!js) throw new ArtifactError("artifact_compile_failed");
-      element.set_content(scriptText(js)); element.removeAttribute("data-artifact-entry");
+      element.set_content(new TextNode(scriptText(js))); element.removeAttribute("data-artifact-entry");
     }
   }
   for (const element of tree.querySelectorAll("link[rel=stylesheet]")) {
     const href = element.getAttribute("href") ?? "";
     if (/^[a-z]+:|^\/\//i.test(href)) throw new ArtifactError("artifact_resource_missing");
     const css = files[path.posix.resolve("/", path.posix.dirname(entryHtml), href)];
-    if (css === undefined || /@import\b|url\s*\(\s*(?!["']?data:)/i.test(css)) throw new ArtifactError("artifact_resource_missing");
-    element.replaceWith(`<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`);
+    if (css === undefined) throw new ArtifactError("artifact_resource_missing");
+    element.replaceWith(`<style>${css}</style>`);
   }
   for (const element of tree.querySelectorAll("[src]")) {
     const src = element.getAttribute("src")!;
@@ -84,6 +88,6 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
 export async function buildDashboard(input: SealedArtifactInput) {
   const manifest=dashboardManifest(input);
   const datasets=manifest.datasetIds.map(id=>input.datasets.find(d=>d.id===id)!);
-  const html=await compileArtifactHtml(input,manifest.entry,datasets);
+  const html=await compileArtifactHtml(input,manifest.entry,datasets,"",manifest.catalogo);
   return {html,manifest,csv:datasets.map(d=>({id:d.id,text:datasetCsv(d)}))};
 }

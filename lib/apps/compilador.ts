@@ -92,6 +92,8 @@ export interface ContextoDeCompilacion {
    *  el empaquetador da `react/jsx-dev-runtime` (`lib/apps/design/jsx-dev-runtime.ts`),
    *  que apunta de dónde sale cada elemento. Publicar no lo pone NUNCA. */
   readonly development?: boolean;
+  /** Artifact exports supply already baked CSS and cannot request local URLs. */
+  readonly inlineStyles?: boolean;
 }
 
 /** El runtime de JSX de desarrollo: no está en ningún catálogo; en modo
@@ -390,6 +392,7 @@ function claveDeCache(ruta: string, codigo: string, ctx: ContextoDeCompilacion):
     .update(packagesFingerprint(ctx.carpeta))
     .update("\0")
     .update(ctx.development ? "development" : "production")
+    .update(ctx.inlineStyles ? "\0inline-css" : "\0linked-css")
     .digest("hex");
 }
 
@@ -540,7 +543,7 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
         continue;
       }
       const hoja = ctx.carpeta[resuelto] ?? "";
-      const sustituto = usesTailwindDirectives(hoja) ? tailwindStyle(resuelto, hoja) : enlaceCss(resuelto);
+      const sustituto = ctx.inlineStyles ? tailwindStyle(resuelto,hoja).replace('s.type="text/tailwindcss";',"") : usesTailwindDirectives(hoja) ? tailwindStyle(resuelto, hoja) : enlaceCss(resuelto);
       js = js.slice(0, imp.importStart) + conSusLineas(sustituto, sentencia) + js.slice(imp.importEnd);
       continue;
     }
