@@ -15,12 +15,12 @@ export async function exportSlideDeckPptx(deck: SlideDeck, input: SealedArtifact
     const labels = new Set<string>();
     for (const e of s.elements) {
       const box = { x: inch(e.x), y: inch(e.y), w: inch(e.w), h: inch(e.h), objectName: `${s.id}/${e.id}` };
-      if (e.type === "text") slide.addText(e.text, { ...box, fontFace: deck.fontFamily, fontSize: e.fontSize * .75, color: e.color ?? deck.color, bold: e.bold, align: e.align, valign: "top", margin: 0, breakLine: false, fit: "none", lineSpacingMultiple: 1.15, paraSpaceAfter: 0 });
-      else if (e.type === "shape") slide.addShape(e.shape === "ellipse" ? pptx.ShapeType.ellipse : e.shape === "line" ? pptx.ShapeType.line : pptx.ShapeType.rect, { ...box, ...(e.shape === "line" ? { h: 0 } : {}), line: { color: e.stroke ?? deck.color, width: e.strokeWidth * .75, transparency: e.stroke ? 0 : 100 }, fill: { color: e.fill ?? deck.background, transparency: e.fill ? 0 : 100 } });
+      if (e.type === "text") slide.addText(e.text, { ...box, fontFace: e.fontFamily??deck.fontFamily, fontSize: e.fontSize * .75,charSpacing:e.letterSpacing*.75, color: e.color ?? deck.color, bold: e.bold,italic:e.italic, align: e.align, valign: "top", margin: 0, breakLine: false, fit: "none", lineSpacingMultiple: 1.15, paraSpaceAfter: 0 });
+      else if (e.type === "shape") slide.addShape(e.shape === "ellipse" ? pptx.ShapeType.ellipse : e.shape === "line" ? pptx.ShapeType.line : e.radius>0?pptx.ShapeType.roundRect:pptx.ShapeType.rect, { ...box,...e.radius>0&&{rectRadius:inch(e.radius)}, ...(e.shape === "line" ? { h: 0 } : {}), line: { color: e.stroke ?? deck.color, width: e.strokeWidth * .75, transparency: e.stroke ? (1-e.opacity)*100 : 100 }, fill: { color: e.fill ?? deck.background, transparency: e.fill ? (1-e.opacity)*100 : 100 } });
       else if (e.type === "image") {
         const a = input.assets.find((a) => a.id === e.assetId)!;
         const data = `data:${a.mime};base64,${Buffer.from(a.bytes).toString("base64")}`;
-        slide.addImage({ ...box, sizing: { type: e.fit, w: box.w, h: box.h }, data });
+        slide.addImage({ ...box,...e.fit!=="stretch"&&{sizing: { type: e.fit, w: box.w, h: box.h }}, data });
       } else {
         const d = chartData(e, input); labels.add(datasetLabel(d.dataset));
         slide.addChart(e.chartType === "bar" ? pptx.ChartType.bar : pptx.ChartType.line, d.series.map((s) => ({ name: s.name, labels: d.labels, values: s.values })), {

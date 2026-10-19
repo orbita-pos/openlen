@@ -3,7 +3,7 @@ import {requireArtifactAccess} from "./access";
 import type {ArtifactStore} from "./store";
 import type {ArtifactStorage} from "./private-storage";
 import {ArtifactError,type ArtifactContext,type ArtifactDatabase} from "./types";
-import {ARTIFACT_CSP} from "./html-policy";
+import {ARTIFACT_CSP,SLIDES_CSP} from "./html-policy";
 import {datasetsFromRevision} from "./data";
 import {livePreviewScript} from "./live-preview-runtime";
 export interface ArtifactPreviewConfig {readonly origin:string;readonly appOrigin:string}
@@ -76,7 +76,7 @@ export function createArtifactPreview(database:ArtifactDatabase,store:ArtifactSt
       // Add trusted mediation after verifying the original saved bytes. The
       // downloaded export remains an immutable snapshot with no live bridge.
       const html=liveIds.length?`${new TextDecoder("utf-8",{fatal:true}).decode(bytes)}<script>${livePreviewScript({appOrigin:config.appOrigin,channel:publicId,datasetIds:liveIds})}</script>`:new Uint8Array(bytes);
-      return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"private, no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":`sandbox allow-scripts; ${ARTIFACT_CSP}; frame-ancestors ${config.appOrigin}`,"permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()"}});
+      return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"private, no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":`sandbox allow-scripts; ${artifact.kind==="slides"?SLIDES_CSP:ARTIFACT_CSP}; frame-ancestors ${config.appOrigin}`,"permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()"}});
     }catch{return notFound();}
   }
   return {mint,handle};

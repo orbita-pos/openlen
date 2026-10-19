@@ -173,10 +173,11 @@ Pendientes antes de la aceptación completa:
 2. LibreOffice: abrir/renderizar el PPTX nativo, PDF, todas sus páginas y revisar
    fuentes, overflow y fidelidad. No basta con el ZIP ni el HTML de slides.
 3. Motion: prueba Linux reproducible, peor caso de 120 segundos, tiempos y memoria.
-4. Ampliar/verificar capturas con proyectos reales que usan paquetes del catálogo
-   y recursos remotos. La ruta inicial de fuente congelada y módulos locales ya
-   existe y se probó, pero hoy rechaza paquetes externos no preparados, recursos
-   remotos y archivos ausentes. No prometer captura universal ni una app basada
+4. Verificar capturas con proyectos reales que usan el catálogo y recursos
+   remotos. El compilador ya empaqueta React/Recharts y las librerías del catálogo
+   local con hashes verificados, y conserva el catálogo de la fuente congelada.
+   Rechaza npm arbitrario no preparado, recursos remotos y archivos ausentes.
+   No prometer captura universal ni una app basada
    en API que pueda funcionar sin su red/datos.
 5. Integrar el puente live en la futura UI y probarlo con la sesión Next real.
    El endpoint owner-only y el transporte opaco ya están implementados y probados
@@ -190,3 +191,35 @@ Pendientes antes de la aceptación completa:
 
 No se ejecutaron migraciones sobre la base real, llamadas pagadas, instalación
 Docker, push ni deploy como parte de estas verificaciones locales.
+
+## Ampliación de autoría visual (18/10/2026)
+
+Los entregables comparten el catálogo de apps existente y verificado, sin red ni
+instalación npm durante el render. `dashboard.json.catalogo` fija su versión
+(2026-11 por defecto); las capturas conservan la de su app. El bundle incluye
+manifiestos y módulos de producción, sin catálogo de desarrollo ni test-kit.
+El instalador comprueba React/Recharts fuera del checkout. El CSS local importado
+y Tailwind 3 se hornean mediante el compilador compartido con publicación;
+no se ejecuta una configuración Tailwind del usuario. Las apps normales mantienen
+su comportamiento; el modo inline tiene su propia clave de caché.
+
+Slides conserva `deck.json` v1. Para nuevos decks, v2 permite `slides:[{id,source,
+notes?}]`, cada source es un HTML completo, y `datasetIds` vincula datos guardados.
+Los slides se aíslan en iframes srcdoc opacos con políticas sin red y sin acceso
+al padre/cookies. El encabezado del preview de slides permite sólo frames about:
+y conserva sandbox, connect-src none y el control de permisos actual.
+
+El paquete interno `slides-layout` mide texto por líneas/fragmentos y geometría
+CSS en navegador. Texto, estilos compatibles, fondos y bordes pasan a objetos
+PPTX nativos. SVG/canvas/efectos requieren `data-len-raster` sobre el componente;
+ese componente es imagen en PowerPoint, editable en su HTML fuente. No hay
+fallback a imagen de la diapositiva completa. Un efecto no soportado se rechaza
+con diagnóstico. La fase posterior sigue exigiendo apertura LibreOffice/PDF.
+
+Prueba local real: dashboard React/Recharts200->120 con filtro, CSS/Tailwind
+compilado48px, cero errores JS. Deck HTML de2slides con estilos distintos,
+21objetos medidos, un componente degradado raster, texto/negritas/cursivas/notas
+y formas nativas verificadas en el ZIP; origen null, cookies/padre bloqueados.
+Esto no prueba fidelidad Office ni ejecución Docker. Fixture repetible:
+`scripts/artifact-breadth-fixture.ts`, con el preload de captura automática y
+directorio de salida explícito. No llama al modelo ni a proveedores.
