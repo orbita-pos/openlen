@@ -1,5 +1,5 @@
 // @vitest-environment node
-import {afterAll,beforeAll,expect,it} from "vitest";
+import {afterAll,beforeAll,beforeEach,expect,it} from "vitest";
 import {createHash} from "node:crypto";
 import {mkdtemp,readFile,rm} from "node:fs/promises";
 import {join} from "node:path";
@@ -19,6 +19,7 @@ import type {ArtifactAdapter} from "./types";
 let f:Awaited<ReturnType<typeof artifactFixture>>;
 beforeAll(async()=>{f=await artifactFixture();await f.pg.exec(`alter table "users" add column "credits" integer not null default 1000;alter table "users" add column "plan" text not null default 'pro';create table "creditLedger"("id" text primary key,"userId" text,"plan" text,"actorId" text,"projectId" text,"surface" text,"refId" text,"centicredits" integer,"listCenticredits" integer,"costMicroUsd" bigint,"provider" text,"model" text,"inputTokens" integer,"outputTokens" integer,"balanceAfter" integer,"outcome" text);`);},30_000);
 afterAll(async()=>{await f.pg.close();});
+beforeEach(async()=>{await f.pg.exec(`truncate "artifactRequests" cascade;truncate "artifactAttempts","artifactSettlements","creditLedger";update "users" set "credits"=1000;`);});
 it("advertises/wires audio only with explicit renderer verification, key and independent price",()=>{
   const env={OPENLEN_ARTIFACTS:"1",OPENAI_API_KEY:"test",OPENLEN_ARTIFACT_RENDERER_IMAGE:"openlen/renderer:1",OPENLEN_ARTIFACT_IMAGE_CENTICREDITS:"500",OPENLEN_ARTIFACT_RENDER_CENTICREDITS:"0",OPENLEN_ARTIFACT_AUDIO_CENTICREDITS:"25",OPENLEN_ARTIFACT_AUDIO_VERIFIED:"1"};
   expect(availableArtifactKinds(env)).toContain("audio");expect(createArtifactAdapters(env).audio).toBeTypeOf("function");
@@ -40,7 +41,7 @@ it("lists only project-authorized upload identities and checks their hash before
 it("saves real mixed outputs, settles once, and reuses exact narration in a video job without another provider call",async()=>{
   const {ctx,artifact}=await f.create("project","audio"),jobs=createArtifactJobs(f.database,f.store),billing=createArtifactBilling(f.database,{imageCenticredits:500,renderCenticredits:0,audioCenticredits:25});
   await f.store.writeArtifactFiles(ctx,artifact.id,0,{"audio.json":JSON.stringify({version:1,speech:{text:"Mi app",voice:"coral"}})});
-  await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3","wav"]});
+  await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3"]});
   let calls=0;const objects=new Map<string,Uint8Array>(),storage={put:async(k:string,v:Uint8Array)=>{objects.set(k,v);},get:async(k:string)=>objects.get(k)!,delete:async(k:string)=>{objects.delete(k);}};
   const dir=await mkdtemp(join(tmpdir(),"len-audio-worker-"));
   try{
@@ -54,7 +55,8 @@ it("saves real mixed outputs, settles once, and reuses exact narration in a vide
     const agent=createArtifactAgent({database:f.database,store:f.store,jobs,data:createArtifactData(f.database,f.store,async()=>null),captureContext:async()=>{throw Error("not requested");}},ctx,()=>"inspect-audio",["audio"]);
     expect((await agent.execute("inspect_artifact",{artifact_id:artifact.id})).response).toMatchObject({ok:true,evidence:{checks:expect.arrayContaining(["audio:durationSeconds:1","voice:ai-generated"])}});
     expect((await f.database.query(`select "surface","centicredits","costMicroUsd" from "creditLedger" where "refId"=$1`,[claim.job.id]))[0]).toMatchObject({surface:"artifact_audio",centicredits:25,costMicroUsd:null});
-    await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3","wav"]});expect(await jobs.claimArtifactJob("again")).toBeNull();
+    const wavExport=await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["wav"]});expect(wavExport.id).toBe(claim.job.id);expect(await jobs.claimArtifactJob("again")).toBeNull();
+    await expect(jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3"],nonce:"bypass"})).rejects.toMatchObject({code:"invalid_job_options"});
     const video=await f.store.createArtifact(ctx,{kind:"motion",title:"Narrated video",brief:"Reuse voice",visibility:"project"});
     await f.store.writeArtifactFiles(ctx,video.id,0,{"motion.json":JSON.stringify({audio:{tracks:[{asset:`${artifact.id}@1/2`,role:"narration"}]}})},{dependencies:[{artifactId:artifact.id,revision:1}]});
     await jobs.enqueueArtifactJob(ctx,video.id,1,"export",{});
@@ -73,7 +75,7 @@ it.each(["timeout","cancel"])("does not replay or charge successful speech after
   const controller=new AbortController();let calls=0;
   const audio:ArtifactAdapter=(input,signal,hooks)=>renderAudio(input,{model:"gpt-4o-mini-tts-2025-12-15",transport:async()=>{calls++;if(mode==="cancel")controller.abort();return {model:"gpt-4o-mini-tts-2025-12-15",outcome:"unknown",requestId:null,usage:null,costMicroUsd:null,code:"audio_outcome_unknown"};}},async()=>{throw Error("no mix");},signal,hooks);
   expect(await runArtifactJob(claim,{database:f.database,store:f.store,jobs,storage:{} as never,billing,adapters:{audio}},controller.signal)).toMatchObject({status:"needs_attention",code:"external_outcome_unknown"});
-  await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3"]});expect(await jobs.claimArtifactJob("replacement")).toBeNull();expect(calls).toBe(1);
+  const otherFormat=await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["wav"]});expect(otherFormat.id).toBe(claim.job.id);expect(await jobs.claimArtifactJob("replacement")).toBeNull();expect(calls).toBe(1);
   expect((await f.database.query(`select "centicredits","outcome" from "creditLedger" where "refId"=$1`,[claim.job.id]))[0]).toMatchObject({centicredits:0,outcome:"error"});
 });
 it("does not reclaim an expired audio lease after speech admission survived a worker crash",async()=>{

@@ -29,7 +29,15 @@ export function createArtifactJobs(database: ArtifactDatabase, store: ArtifactSt
   }
   async function enqueueArtifactJob(ctx: ArtifactContext, id: string, revision: number, operation: string, options: Readonly<Record<string, unknown>>): Promise<ArtifactJob> {
     if (operation !== "export") throw new ArtifactError("invalid_operation");
-    const serialized = JSON.stringify(canonical(options));
+    const artifact=await requireArtifactAccess(database,ctx,id,"write");
+    let normalizedOptions=options;
+    if(artifact.kind==="audio"){
+      // Audio always exports both encodings from the same paid take. A format
+      // selection must never create a second paid attempt for this revision.
+      if(!options||Array.isArray(options)||Object.keys(options).some(k=>k!=="formats")||(options.formats!==undefined&&(!Array.isArray(options.formats)||!options.formats.length||options.formats.some(f=>f!=="mp3"&&f!=="wav"))))throw new ArtifactError("invalid_job_options");
+      normalizedOptions={formats:["mp3","wav"]};
+    }
+    const serialized = JSON.stringify(canonical(normalizedOptions));
     if (Buffer.byteLength(serialized) > 64 * 1024) throw new ArtifactError("invalid_job_options");
     const hash = createHash("sha256").update(serialized).digest("hex");
     await store.sealArtifactRevision(ctx, id, revision);

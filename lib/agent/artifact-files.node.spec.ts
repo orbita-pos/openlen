@@ -10,6 +10,17 @@ import { createArtifactAgent } from "@/lib/artifacts/tools";
 import { createArtifactJobs } from "@/lib/artifacts/jobs";
 import { createArtifactData } from "@/lib/artifacts/data";
 import { textoDeLaPlataforma } from "./manual-de-la-plataforma";
+test("native agent dispatch lists project audio without changing app files",async()=>{
+  const f=await artifactFixture();
+  try{
+    const filename=`${"a".repeat(64)}.mp3`;
+    const artifactAgent=createArtifactAgent({database:f.database,store:f.store,jobs:createArtifactJobs(f.database,f.store),data:createArtifactData(f.database,f.store,async()=>null),captureContext:async()=>{throw Error("not requested");},audioUploads:{listAudio:async id=>{assert.equal(id,"project");return [{filename,contentType:"audio/mpeg",size:100,url:"not exposed",uploadedAt:0}];},get:async()=>{throw Error("listing must not read bytes");}}},f.owner,()=>"audio-message",["audio"]);
+    const deps={artifactAgent,loadProject:async()=>({data:{html:"original"},userBrief:null}),projectFiles:async()=>({}),saveProjectData:async()=>{throw Error("must not change app");}} as unknown as AgentDeps;
+    const session={projectId:"project",userId:"owner",page:null,ownerEmail:null,imageEditsThisTurn:0,photoSearchesThisTurn:0,busquedasVaciasSeguidas:0} as AgentSession;
+    const result=await runAgentTool(session,deps,"list_artifact_audio",{projectId:"other"});
+    assert.equal(result.response.ok,true,JSON.stringify(result.response));assert.deepEqual(result.response.assets,[{id:`upload:${filename}`,filename,mime:"audio/mpeg",bytes:100}]);assert.equal(result.mutoDurable,undefined);
+  }finally{await f.pg.close();}
+});
 
 test("Read/Write/Edit and terminal saves share private artifact sources without changing the app", async () => {
   const f = await artifactFixture();
