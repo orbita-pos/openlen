@@ -11,6 +11,8 @@ afterAll(()=>stopBundlerWorker());
 it("bounds video duration and fps, including the exact last sampled frame",()=>{
   expect(motionManifest(input)).toMatchObject({frameCount:180});
   const bad=(patch:object)=>({...input,revision:{...input.revision,files:{...input.revision.files,"motion.json":JSON.stringify({...spec,...patch})}}});
+  expect(()=>motionManifest(bad({audio:{tracks:[{asset:"voice@1/0",role:"narration"}]}}))).not.toThrow();
+  expect(()=>motionManifest(bad({audio:{tracks:[{asset:"https://evil/audio.wav"}]}}))).toThrow();
   expect(()=>motionManifest(bad({durationSeconds:121}))).toThrow();expect(()=>motionManifest(bad({fps:60}))).toThrow();expect(()=>motionManifest(bad({durationSeconds:1.01}))).toThrow();
   expect(()=>motionManifest(bad({captures:[{id:"home",entry:"/../.env"}]}))).toThrow();
   expect(()=>motionManifest(bad({captures:[{id:"home",entry:"/index.html"},{id:"home",entry:"/other.html"}]}))).toThrow();

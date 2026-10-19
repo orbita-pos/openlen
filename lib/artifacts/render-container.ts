@@ -34,7 +34,7 @@ export function containerArtifactRenderer(image: string, fencingToken?:string, a
     const controller = new AbortController();
     const abort = () => controller.abort(signal.reason);
     signal.addEventListener("abort", abort, { once: true });
-    const timeout = setTimeout(() => controller.abort(new ArtifactError("render_timeout")), packet.kind === "motion" ? 900_000 : ["slides","slides-layout"].includes(packet.kind) ? 180_000 : 60_000);
+    const timeout = setTimeout(() => controller.abort(new ArtifactError("render_timeout")), packet.kind === "motion" ? 900_000 : ["slides","slides-layout","audio"].includes(packet.kind) ? 180_000 : 60_000);
     try {
       await admit?.();controller.signal.throwIfAborted();
       const code = await docker(rendererContainerArgs(image, name, output, process.getuid!(), process.getgid!()), JSON.stringify(packet), controller.signal);
@@ -42,10 +42,16 @@ export function containerArtifactRenderer(image: string, fencingToken?:string, a
       const metaPath = join(output, "result.json");
       const stat = await lstat(metaPath);
       if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024) throw new ArtifactError("invalid_render_result");
-      const result = JSON.parse(await readFile(metaPath, "utf8")) as { ok?: boolean; code?: string; checks?: string[]; diagnostics?: string[]; video?:{frameCount:number;fps:number;durationSeconds:number} };
+      const result = JSON.parse(await readFile(metaPath, "utf8")) as { ok?: boolean; code?: string; checks?: string[]; diagnostics?: string[];audio?:{durationSeconds:number;sampleRate:number;channels:number}; video?:{frameCount:number;fps:number;durationSeconds:number} };
       if (code !== 0 || result.ok !== true) {
         const codes=["artifact_resource_missing","slide_text_overflow","slide_layout_unsupported","slide_layout_too_large","slide_element_outside_canvas","motion_contract_missing","motion_nondeterministic","motion_video_invalid","motion_frame_count_mismatch"];
         throw new ArtifactError(result.code&&codes.includes(result.code)?result.code:"artifact_render_failed",JSON.stringify(result.diagnostics?.slice(0,8)??[]));
+      }
+      if(packet.kind==="audio"){
+        if(!Array.isArray(result.checks)||result.checks.some(c=>typeof c!=="string"||c.length>200)||!result.audio||!Number.isFinite(result.audio.durationSeconds)||Math.abs(result.audio.durationSeconds-packet.audio.durationSeconds)>1/48000||result.audio.sampleRate!==48000||result.audio.channels!==2)throw new ArtifactError("invalid_render_result");
+        const bytes:Record<string,Uint8Array>={};
+        for(const name of ["mp3","wav"]){const path=join(output,`audio.${name}`),stat=await lstat(path);if(!stat.isFile()||stat.isSymbolicLink()||stat.size<44||stat.size>25_000_000)throw new ArtifactError("invalid_render_result");bytes[name]=new Uint8Array(await readFile(path));}
+        return {png:new Uint8Array(),mp3:bytes.mp3!,wav:bytes.wav!,audio:result.audio,checks:result.checks};
       }
       const file = join(output, "render.png"); const fileStat = await lstat(file);
       if (!fileStat.isFile() || fileStat.isSymbolicLink() || fileStat.size > 16 * 1024 * 1024 || !Array.isArray(result.checks) || result.checks.some((c) => typeof c !== "string" || c.length > 200)) throw new ArtifactError("invalid_render_result");
