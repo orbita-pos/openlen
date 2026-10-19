@@ -27,6 +27,7 @@ export type LedgerSurface =
   | "autofill"
   | "image_edit"
   | "artifact_image"
+  | "artifact_audio"
   | "artifact_render"
   | "voice"
   | "app_ai"

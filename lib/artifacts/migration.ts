@@ -13,7 +13,7 @@ create table if not exists "artifactProjectControls" (
 alter table "artifactProjectControls" add column if not exists "liveRefreshNotBefore" timestamptz not null default now();
 create table if not exists "artifacts" (
  "id" text primary key, "projectId" text not null references "projects"("id") on delete cascade,
- "requestId" text not null, "kind" text not null check ("kind" in ('dashboard','slides','image','motion')),
+ "requestId" text not null, "kind" text not null check ("kind" in ('dashboard','slides','image','motion','audio')),
  "title" text not null, "brief" text not null, "createdBy" text not null references "users"("id"),
  "visibility" text not null check ("visibility" in ('owner','project')),
  "currentRevision" integer not null default 0 check ("currentRevision">=0),
@@ -28,6 +28,8 @@ create table if not exists "artifactRevisions" (
  "sealedAt" timestamptz, "createdAt" timestamptz not null default now(),
  "outputs" jsonb not null default '[]', "evidence" jsonb, primary key ("artifactId","revision")
 );
+alter table "artifacts" drop constraint if exists "artifacts_kind_check";
+alter table "artifacts" add constraint "artifacts_kind_check" check ("kind" in ('dashboard','slides','image','motion','audio'));
 alter table "artifacts" add column if not exists "itemKey" text;
 create unique index if not exists "artifacts_request_item_idx" on "artifacts" ("requestId","itemKey");
 create table if not exists "artifactJobs" (
