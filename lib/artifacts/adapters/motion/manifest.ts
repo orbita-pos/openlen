@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { safeArtifactPath } from "../../state";
 import { ArtifactError, type SealedArtifactInput } from "../../types";
-const schema=z.object({version:z.literal(1),entry:z.string(),runtime:z.literal("gsap-3.15.0"),width:z.literal(1280),height:z.literal(720),fps:z.literal(30),durationSeconds:z.number().finite().min(1).max(120),datasetIds:z.array(z.string().min(1)).max(20).default([]),captures:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,40}$/),entry:z.string()}).strict()).max(4).default([])}).strict();
+import {audioTrackSchema} from "../audio/manifest";
+const schema=z.object({version:z.literal(1),entry:z.string(),runtime:z.literal("gsap-3.15.0"),width:z.literal(1280),height:z.literal(720),fps:z.literal(30),durationSeconds:z.number().finite().min(1).max(120),audio:z.object({tracks:z.array(audioTrackSchema).min(1).max(8),duckMusic:z.boolean().default(true)}).strict().optional(),datasetIds:z.array(z.string().min(1)).max(20).default([]),captures:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,40}$/),entry:z.string()}).strict()).max(4).default([])}).strict();
 export function motionManifest(input:SealedArtifactInput){
   try{
     const value=schema.parse(JSON.parse(input.revision.files["motion.json"]??""));
