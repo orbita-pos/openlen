@@ -1,4 +1,5 @@
 import puppeteer from "puppeteer";
+import {captureSlideLayout} from "./slide-layout.mjs";
 
 /** Trusted renderer code. Authored HTML runs only in Chromium; it is never
  * imported, evaluated, or given a Node binding. Production calls this inside
@@ -24,7 +25,7 @@ async function withArtifactPage(packet, options, run) {
       else { missing.add(r.url().slice(0, 500)); void r.abort("blockedbyclient"); }
     });
     await page.goto("https://artifact.invalid/", { waitUntil: "load" });
-    await page.evaluate(async () => {
+    for(const frame of page.frames())await frame.evaluate(async () => {
       await document.fonts.ready;
       if (window.lenReady && typeof window.lenReady.then === "function") await window.lenReady;
       await Promise.all([...document.images].map((img) => img.decode()));
@@ -68,6 +69,9 @@ export async function renderSlidesPacket(packet, options = {}) {
     for (const slide of slides) pages.push(new Uint8Array(await slide.screenshot({ type: "png" })));
     return { png: pages[0], pages, checks: ["browser:rendered", "text:no-overflow"] };
   });
+}
+export async function renderSlideLayoutPacket(packet,options={}){
+  return withArtifactPage(packet,options,page=>captureSlideLayout(page,packet));
 }
 
 export async function renderMotionPacket(packet, onFrame, options = {}) {

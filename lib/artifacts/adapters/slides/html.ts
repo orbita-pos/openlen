@@ -34,7 +34,7 @@ export function slideDeckHtml(deck: SlideDeck, input: SealedArtifactInput): stri
     const labels = new Set<string>();
     const elements = s.elements.map((e) => {
       const base = `position:absolute;left:${e.x}px;top:${e.y}px;width:${e.w}px;height:${e.h}px;box-sizing:border-box;`;
-      if (e.type === "text") return `<div class="slide-text" data-element-id="${e.id}" style="${base}font-size:${e.fontSize}px;font-weight:${e.bold ? 700 : 400};color:#${e.color ?? deck.color};text-align:${e.align};white-space:pre-wrap;line-height:1.15">${esc(e.text)}</div>`;
+      if (e.type === "text") return `<div class="slide-text" data-element-id="${e.id}" style="${base}font-family:'${e.fontFamily??deck.fontFamily}',sans-serif;font-size:${e.fontSize}px;font-style:${e.italic?"italic":"normal"};letter-spacing:${e.letterSpacing}px;font-weight:${e.bold ? 700 : 400};color:#${e.color ?? deck.color};text-align:${e.align};white-space:pre-wrap;line-height:1.15">${esc(e.text)}</div>`;
       if (e.type === "image") { const a = input.assets.find((a) => a.id === e.assetId)!; return `<img data-element-id="${e.id}" style="${base}object-fit:${e.fit}" src="data:${a.mime};base64,${Buffer.from(a.bytes).toString("base64")}" alt="">`; }
       if (e.type === "shape") return `<div data-element-id="${e.id}" style="${base}background:${e.fill ? `#${e.fill}` : "transparent"};border:${e.strokeWidth}px solid ${e.stroke ? `#${e.stroke}` : "transparent"};${e.shape === "ellipse" ? "border-radius:50%;" : ""}${e.shape === "line" ? `height:0;border:0;border-top:${e.strokeWidth}px solid #${e.stroke ?? deck.color};` : ""}"></div>`;
       labels.add(datasetLabel(chartData(e, input).dataset));
