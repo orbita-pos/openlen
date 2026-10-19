@@ -9,6 +9,7 @@ import { artifactChargePolicy, createArtifactBilling } from "../lib/artifacts/bi
 import { verifyArtifactInstallation } from "../lib/artifacts/install-check";
 import {reconcileArtifactContainers} from "../lib/artifacts/container-supervisor";
 import {readArtifactOperations} from "../lib/artifacts/operations";
+import {getAssetStorage} from "../lib/projects/assets";
 
 async function main() {
   if(process.argv.includes("--verify-install")){console.log(JSON.stringify(await verifyArtifactInstallation()));return;}
@@ -35,7 +36,7 @@ async function main() {
       }
       const claim = await runtime.jobs.claimArtifactJob(workerId);
       if (claim) {
-        const result = await runArtifactJob(claim, { ...runtime, storage, adapters, billing }, controller.signal);
+        const result = await runArtifactJob(claim, { ...runtime, storage, adapters, billing,audioUploads:getAssetStorage() }, controller.signal);
         // No prompt, query, dataset, private path, or provider error body here.
         console.log(JSON.stringify({ jobId: result.jobId, status: result.status, code: result.code }));
         if(result.code==="renderer_cleanup_unknown")throw new ArtifactError("renderer_cleanup_unknown");

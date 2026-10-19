@@ -42,7 +42,7 @@ try {
   if(packet.kind!=="audio")await writeFile("/output/render.png", result.png, { flag: "wx" });
   await writeFile("/output/result.json", JSON.stringify({ ok: true, checks: result.checks, ...(result.video?{video:result.video}:{}),...result.audio?{audio:result.audio}:{} }), { flag: "wx" });
 } catch (error) {
-  const allowed = ["render_input_too_large", "invalid_render_packet", "dataset_provenance_missing", "artifact_resource_missing", "artifact_runtime_error", "slide_text_overflow", "slide_count_mismatch","slide_layout_unsupported","slide_layout_too_large","slide_element_outside_canvas", "motion_contract_missing", "motion_nondeterministic", "motion_video_invalid", "motion_frame_count_mismatch"];
+  const allowed = ["invalid_audio_packet","audio_media_invalid","audio_track_timing_invalid","audio_narration_overflow","audio_export_invalid","motion_audio_invalid","render_input_too_large", "invalid_render_packet", "dataset_provenance_missing", "artifact_resource_missing", "artifact_runtime_error", "slide_text_overflow", "slide_count_mismatch","slide_layout_unsupported","slide_layout_too_large","slide_element_outside_canvas", "motion_contract_missing", "motion_nondeterministic", "motion_video_invalid", "motion_frame_count_mismatch"];
   const reason=String(error?.message??"").split(":")[0],code = allowed.includes(reason) ? reason : "render_failed";
   await writeFile("/output/result.json", JSON.stringify({ ok: false, code, diagnostics: Array.isArray(error?.cause) ? error.cause.slice(0, 8) : [String(error?.message??"").slice(0,1000)] }), { flag: "wx" }).catch(() => undefined);
   process.exitCode = 1;

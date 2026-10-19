@@ -40,6 +40,7 @@ const visitWithoutClicks: Classifier = (args) => {
 const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   Read: always,
   list_artifacts: always,
+  list_artifact_audio: always,
   inspect_artifact: always,
   Grep: always,
   Glob: always,
