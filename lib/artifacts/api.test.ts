@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { artifactFixture } from "./testing/fixture";
 import { createArtifactJobs } from "./jobs";
 import { createArtifactEvents } from "./events";
 import { handleArtifactApi } from "./api";
+import { createArtifactStore } from "./store";
+import type { ArtifactDatabase } from "./types";
 
 let f: Awaited<ReturnType<typeof artifactFixture>>;
 beforeAll(async () => { f = await artifactFixture(); }, 30_000);
@@ -75,5 +77,28 @@ describe("private artifact API", () => {
     expect(metadata).not.toContain(claim.fencingToken);
     expect(metadata).toContain(job.id);
     expect((await handleArtifactApi(services, ctx, request, { action: "download", artifactId: artifact.id, index: "../secret" }, true)).status).toBe(400);
+  });
+
+  it("answers the bell's polling in a handful of queries however many deliverables exist", async () => {
+    vi.stubEnv("AUTH_SECRET", "api-fixture-secret-not-a-real-credential");
+    try {
+      for (let i = 0; i < 40; i++) {
+        const { ctx, artifact } = await f.create();
+        await f.database.query(`insert into "artifactEvents" ("projectId","requestId","artifactId","revision","type") values ($1,$2,$3,0,'ready')`, [ctx.projectId, ctx.requestId, artifact.id]);
+      }
+      let queries = 0;
+      const counted: ArtifactDatabase = { query: (text, values) => { queries++; return f.database.query(text, values); }, transaction: f.database.transaction };
+      const store = createArtifactStore(counted);
+      const services = { database: counted, store, jobs: createArtifactJobs(counted, store), events: createArtifactEvents(counted), storage: async () => { throw new Error("not needed for metadata"); } };
+      const editor = { ...f.owner, actorId: "editor", role: "editor" as const };
+      for (const url of ["https://openlen.test/api/artifacts", "https://openlen.test/api/artifacts?history=1&limit=24"]) {
+        queries = 0;
+        expect((await handleArtifactApi(services, editor, new Request(url), { action: "list" }, true)).status).toBe(200);
+        expect(queries, url).toBeLessThanOrEqual(10);
+      }
+      queries = 0;
+      expect((await handleArtifactApi(services, editor, new Request("https://openlen.test/api/artifacts/events?after=0"), { action: "events" }, true)).status).toBe(200);
+      expect(queries, "events").toBeLessThanOrEqual(10);
+    } finally { vi.unstubAllEnvs(); }
   });
 });

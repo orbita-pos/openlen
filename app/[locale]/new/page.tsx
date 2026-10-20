@@ -212,6 +212,9 @@ interface LoadedProject {
    *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
    *  esto sólo esconde lo que no podría hacer. */
   rol: "dueno" | "editor" | "lector";
+  /** LEN 3.0: este servidor tiene los entregables encendidos (`OPENLEN_ARTIFACTS`).
+   *  Apagados, la campana ni se monta: no pregunta a una API que sólo diría 404. */
+  artifacts: boolean;
 }
 
 /** Las frases concretas de un código de degradación, sin repetir.
@@ -1298,6 +1301,7 @@ function NewV2Inner() {
                 app?: AppDeProyecto;
               };
               rol?: "dueno" | "editor" | "lector";
+              artifacts?: boolean;
             };
           }
         | null;
@@ -1339,6 +1343,7 @@ function NewV2Inner() {
         degradationsDismissed: p.data?.degradationsDismissed,
         app: p.data?.app ?? null,
         rol: p.rol ?? "dueno",
+        artifacts: p.artifacts === true,
       });
       setProjectName(p.title);
       setProjectLoadFailure(null);
@@ -3460,6 +3465,7 @@ function NewV2Inner() {
         onPublish={soloLector || pantallaDeInicio ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
         onMiembros={loadedProject && !pantallaDeInicio ? () => setMiembrosOpen(true) : undefined}
         onEnvVars={abrirVariables}

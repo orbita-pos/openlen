@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { requireProjectAccess } from "./access";
+import { readableArtifacts, requireProjectAccess } from "./access";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStore } from "./store";
 import type { createArtifactEvents } from "./events";
@@ -38,11 +38,7 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
         return json({...await listArtifactHistory(services,ctx,url),kinds:availableArtifactKinds()});
       }
       const rows = await services.database.query(`select "id" from "artifacts" where "projectId"=$1 and ("visibility"='project' or $2=$3) order by "createdAt" desc,"id" desc limit 200`, [ctx.projectId, ctx.actorId, ctx.ownerId]);
-      const artifacts = [];
-      for (const row of rows) {
-        try { artifacts.push(await services.store.getArtifact(ctx, String(row.id))); }
-        catch (error) { if (!(error instanceof ArtifactError)) throw error; }
-      }
+      const artifacts = await readableArtifacts(services.database, ctx, rows.map((row) => String(row.id)));
       return json({ artifacts, kinds:availableArtifactKinds() });
     }
     if (path.action === "events") return json({ ...await services.events.readArtifactEventPage(ctx, url.searchParams.get("after") ?? "0"), lastRead: await services.events.lastRead(ctx) });

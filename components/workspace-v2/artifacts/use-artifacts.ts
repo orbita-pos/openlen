@@ -67,7 +67,8 @@ export function useArtifacts(projectId:string,fetcher:ArtifactFetch=artifactFetc
       }catch(error){if(!disposed&&!revoke(error)){failures++;patch({loading:false,disconnected:true});}}
       finally{
         busy=false;
-        if(!disposed&&!stopped)timer=setTimeout(()=>{void refresh();},failures?Math.min(30000,3000*2**Math.min(failures,4)):items.some(a=>activeStatus(a.status))?3000:10000);
+        // A hidden tab stops polling; becoming visible again catches up at once.
+        if(!disposed&&!stopped)timer=setTimeout(()=>{if(document.visibilityState!=="hidden")void refresh();},failures?Math.min(30000,3000*2**Math.min(failures,4)):items.some(a=>activeStatus(a.status))?3000:10000);
       }
     };
     const acknowledge=async()=>{
@@ -109,8 +110,9 @@ export function useArtifacts(projectId:string,fetcher:ArtifactFetch=artifactFetc
     };
     const current={refresh,acknowledge,cancel};controller.current=current;
     const reconnect=()=>{void refresh();};window.addEventListener("online",reconnect);
+    const visible=()=>{if(document.visibilityState!=="hidden")void refresh();};document.addEventListener("visibilitychange",visible);
     void refresh();
-    return()=>{disposed=true;abort.abort();clearTimeout(timer);window.removeEventListener("online",reconnect);if(controller.current===current)controller.current=null;};
+    return()=>{disposed=true;abort.abort();clearTimeout(timer);window.removeEventListener("online",reconnect);document.removeEventListener("visibilitychange",visible);if(controller.current===current)controller.current=null;};
   },[projectId,fetcher]);
   const refresh=useCallback(async()=>{await controller.current?.refresh();},[]);
   const acknowledge=useCallback(async()=>{await controller.current?.acknowledge();},[]);

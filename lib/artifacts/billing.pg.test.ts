@@ -12,8 +12,11 @@ let f: Awaited<ReturnType<typeof artifactFixture>>;
 beforeAll(async()=>{
   f=await artifactFixture();
   await f.pg.exec(`alter table "users" add column "credits" integer not null default 1000; alter table "users" add column "plan" text not null default 'pro'; create table "creditLedger"("id" text primary key,"userId" text,"plan" text,"actorId" text,"projectId" text,"surface" text,"refId" text,"centicredits" integer,"listCenticredits" integer,"costMicroUsd" bigint,"provider" text,"model" text,"inputTokens" integer,"outputTokens" integer,"balanceAfter" integer,"outcome" text);`);
+  // The member limit's columns, as `npm run miembros:migrate` creates them.
+  await f.pg.exec(`alter table "projects" add column "topeMensualMiembros" integer; create table "projectMemberSpend"("projectId" text not null,"userId" text not null,"mes" text not null,"creditos" integer not null default 0,primary key("projectId","userId","mes"));`);
 },30_000);
-beforeEach(async()=>{await f.pg.exec(`truncate "artifactSettlements","artifactAttempts","creditLedger";truncate "artifactRequests" cascade;update "users" set "credits"=1000;`);});
+beforeEach(async()=>{await f.pg.exec(`truncate "artifactSettlements","artifactAttempts","creditLedger","projectMemberSpend";truncate "artifactRequests" cascade;update "users" set "credits"=1000;update "projects" set "topeMensualMiembros"=null;`);});
+const month=()=>new Date().toISOString().slice(0,7);
 afterAll(async()=>{await f.pg.close();});
 const policy={imageCenticredits:500,renderCenticredits:0};
 it("adds audio idempotently and requires an independent explicit speech price before a paid attempt",async()=>{
@@ -101,3 +104,37 @@ it("stores two independent image identities, preserves the first on a partial fa
   const outcome=await runArtifactJob(slideClaim,{database:f.database,store:f.store,jobs,storage,adapters:{slides:async input=>{expect(input.assets).toHaveLength(1);expect(input.assets[0]!.id).toBe(`${first.id}@1/0`);expect(Buffer.from(input.assets[0]!.bytes).equals(bytes)).toBe(true);return {outputs:[{name:"proof.txt",format:"txt",mime:"text/plain",bytes:new TextEncoder().encode("Reused") }],evidence:result.evidence};}}},new AbortController().signal);
   expect(outcome.status).toBe("completed");expect(calls).toBe(2);
 },30_000);
+
+it("keeps a member inside the project's monthly member limit, counting attempts that were never settled", async () => {
+  await f.pg.exec(`update "projects" set "topeMensualMiembros"=1200 where "id"='project'`);
+  await f.database.query(`insert into "projectMemberSpend" values ('project','editor',$1,300)`, [month()]);
+  const billing = createArtifactBilling(f.database, policy);
+  const first = await ready();
+  const member = { ...first.ctx, actorId: "editor", role: "editor" as const };
+  await billing.startAttempt(first.claim, member, "image", "gpt-image-2");
+  // The worker dies after the provider call: the attempt stays unsettled (needs_attention).
+  await f.database.query(`update "artifactJobs" set "leaseUntil"=now()-interval '1 minute' where "id"=$1`, [first.claim.job.id]);
+  const second = await ready();
+  await expect(billing.startAttempt(second.claim, { ...second.ctx, actorId: "editor", role: "editor" }, "image", "gpt-image-2")).rejects.toMatchObject({ code: "member_limit_reached" });
+  expect((await f.database.query(`select "externalStartedAt" from "artifactJobs" where "id"=$1`, [second.claim.job.id]))[0]!.externalStartedAt).toBeNull();
+  // The limit is for members only: the owner pays for their own work.
+  await billing.startAttempt(second.claim, second.ctx, "image", "gpt-image-2");
+});
+
+it("adds a member's settled charge to the month's member spend in the same transaction", async () => {
+  const { ctx, claim, jobs } = await ready();
+  const member = { ...ctx, actorId: "editor", role: "editor" as const };
+  const billing = createArtifactBilling(f.database, policy);
+  await billing.startAttempt(claim, member, "image", "gpt-image-2"); await billing.recordOutcome(claim, receipt);
+  await jobs.advance(claim, "validating"); await jobs.advance(claim, "storing");
+  await expect(f.store.recordArtifactResult(claim, { ...result, settle: async (tx) => { await billing.settleArtifactAttempt(tx, claim); throw new Error("crash"); } })).rejects.toThrow("crash");
+  expect(await f.database.query(`select * from "projectMemberSpend"`)).toHaveLength(0);
+  await f.store.recordArtifactResult(claim, { ...result, settle: async (tx) => { await billing.settleArtifactAttempt(tx, claim); } });
+  expect(await f.database.query(`select "projectId","userId","mes","creditos" from "projectMemberSpend"`)).toEqual([{ projectId: "project", userId: "editor", mes: month(), creditos: 500 }]);
+  // The owner's own charge is not member spend.
+  const own = await ready();
+  await billing.startAttempt(own.claim, own.ctx, "image", "gpt-image-2"); await billing.recordOutcome(own.claim, receipt);
+  await own.jobs.advance(own.claim, "validating"); await own.jobs.advance(own.claim, "storing");
+  await f.store.recordArtifactResult(own.claim, { ...result, settle: async (tx) => { await billing.settleArtifactAttempt(tx, own.claim); } });
+  expect(await f.database.query(`select "userId","creditos" from "projectMemberSpend"`)).toEqual([{ userId: "editor", creditos: 500 }]);
+});

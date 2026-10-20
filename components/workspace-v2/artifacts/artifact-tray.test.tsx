@@ -52,3 +52,9 @@ it("links to the complete project history from the notification panel",async()=>
   const link=[...document.querySelectorAll("a")].find(a=>a.textContent?.includes("Ver todos los entregables"));
   expect(link?.getAttribute("href")).toContain("/projects/p/artifacts");
 });
+
+it("asks nothing and shows nothing when deliverables are off on this server",async()=>{
+  await act(async()=>{root.render(<NextIntlClientProvider locale="es" messages={{topbar:messages}}><ArtifactTray projectId="p" enabled={false} fetcher={fetcher}/></NextIntlClientProvider>);});
+  expect(calls).toEqual([]);
+  expect(document.querySelector('[aria-label="Entregables"]')).toBeNull();
+});
