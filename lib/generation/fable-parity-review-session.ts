@@ -208,12 +208,6 @@ function sideDescriptor(comparisonId: string, side: "A" | "B", input: BlindSideA
   };
 }
 
-async function writeArtifact(root: string, item: ArtifactDescriptor, bytes: Uint8Array): Promise<void> {
-  const path = resolve(root, item.path);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, bytes, { flag: "wx" });
-}
-
 function randomSideA(): boolean {
   const byte = new Uint8Array(1);
   globalThis.crypto.getRandomValues(byte);
@@ -248,17 +242,23 @@ export async function writeBlindArtifactBundle(input: {
     }));
     const assignment = descriptor(`private/${row.comparisonId}/assignment.json`, assignmentBytes);
     const result = descriptor(`private/${row.comparisonId}/result.json`, row.resultBytes);
-    await Promise.all([
-      writeArtifact(bundleRoot, promptManifest, row.promptManifestBytes),
-      writeArtifact(bundleRoot, sides.A.html, sideA.htmlBytes),
-      writeArtifact(bundleRoot, sides.A.desktop, sideA.desktop.bytes),
-      writeArtifact(bundleRoot, sides.A.mobile, sideA.mobile.bytes),
-      writeArtifact(bundleRoot, sides.B.html, sideB.htmlBytes),
-      writeArtifact(bundleRoot, sides.B.desktop, sideB.desktop.bytes),
-      writeArtifact(bundleRoot, sides.B.mobile, sideB.mobile.bytes),
-      writeArtifact(bundleRoot, assignment, assignmentBytes),
-      writeArtifact(bundleRoot, result, row.resultBytes),
-    ]);
+    const artifacts: readonly (readonly [ArtifactDescriptor, Uint8Array])[] = [
+      [promptManifest, row.promptManifestBytes],
+      [sides.A.html, sideA.htmlBytes],
+      [sides.A.desktop, sideA.desktop.bytes],
+      [sides.A.mobile, sideA.mobile.bytes],
+      [sides.B.html, sideB.htmlBytes],
+      [sides.B.desktop, sideB.desktop.bytes],
+      [sides.B.mobile, sideB.mobile.bytes],
+      [assignment, assignmentBytes],
+      [result, row.resultBytes],
+    ];
+    // Concurrent recursive mkdir calls can race on shared parents on Windows.
+    // Prepare each directory once before writing the immutable files in parallel.
+    for (const dir of new Set(artifacts.map(([item]) => dirname(resolve(bundleRoot, item.path))))) {
+      await mkdir(dir, { recursive: true });
+    }
+    await Promise.all(artifacts.map(([item, bytes]) => writeFile(resolve(bundleRoot, item.path), bytes, { flag: "wx" })));
     comparisons.push({ comparisonId: row.comparisonId, promptManifest, sides, assignment, result });
   }
   const manifest: BlindArtifactManifest = {

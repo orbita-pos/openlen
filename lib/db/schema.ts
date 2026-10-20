@@ -1946,7 +1946,13 @@ export const notificationJobs = pgTable("notificationJobs", {
   lastError: text("lastError"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
-}, (t) => [index("notificationJobs_status_runAfter_idx").on(t.status, t.runAfter)]);
+}, (t) => [
+  index("notificationJobs_status_runAfter_idx").on(t.status, t.runAfter),
+  // Keep the queue's ON CONFLICT target in sync with notifications-migrate.ts.
+  uniqueIndex("notificationJobs_dedupe_pending_uq")
+    .on(t.dedupeKey)
+    .where(sqlOp`status = 'pending' AND "dedupeKey" IS NOT NULL`),
+]);
 
 // Reactive moderation for the community feed. A visitor reports a public page →
 // one row here → admin reviews at /admin/reports and may set the project's
