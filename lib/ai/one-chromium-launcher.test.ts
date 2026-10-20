@@ -64,7 +64,7 @@ describe("one Chromium launcher", () => {
 
   it("🔴 every launcher that runs HTML nobody here wrote hands Chromium chromiumEnv(), not process.env", () => {
     // Without `env` Puppeteer passes all of process.env: DATABASE_URL, AUTH_SECRET,
-    // every provider key, to a browser running with --no-sandbox (lib/security/chromium-env.ts).
+    // every provider key, to a browser whose GPU process, at least, has no sandbox (lib/security/chromium-env.ts).
     for (const [file, { runsUntrustedHtml }] of Object.entries(ALLOWED)) {
       if (runsUntrustedHtml) expect(readFileSync(path.join(process.cwd(), file), "utf8"), file).toContain("env: chromiumEnv()");
     }
