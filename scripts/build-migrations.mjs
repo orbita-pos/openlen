@@ -192,6 +192,12 @@ const targets = [
   // creditLedger. Nueva, con IF NOT EXISTS. Antes que el código: si faltara, el
   // cobro seguiría (vuelta atrás con [ledger] en el diario), pero sin libro.
   "credit-ledger-migrate",
+  // LEN 3.0 DELIVERABLES (lib/artifacts): the artifact* tables, their indexes and
+  // the trigger that keeps a sealed revision immutable. New, with IF NOT EXISTS,
+  // in one transaction. After credit-ledger-migrate: a paid deliverable writes
+  // creditLedger. Inert while OPENLEN_ARTIFACTS is off (nothing reads them);
+  // 🔴 MANDATORY before turning it on: every artifact route queries them.
+  "artifacts-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

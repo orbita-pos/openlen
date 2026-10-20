@@ -106,3 +106,19 @@ it("marks a newer visible event read when it arrives during an older acknowledge
   expect(acknowledged).toEqual(["1","2"]);
   expect(state.unread).toEqual([]);
 });
+it("does not poll while the page is hidden and catches up as soon as it is visible again",async()=>{
+  vi.useFakeTimers();
+  let state:DocumentVisibilityState="visible",calls=0;
+  Object.defineProperty(document,"visibilityState",{configurable:true,get:()=>state});
+  try{
+    const fetcher:ArtifactFetch=async(url)=>{calls++;return json(url.includes("/events")?{events:[],cursor:"0",lastRead:"0"}:{artifacts:[item]});};
+    await render(fetcher);
+    state="hidden";document.dispatchEvent(new Event("visibilitychange"));
+    const before=calls;
+    await act(async()=>{await vi.advanceTimersByTimeAsync(60000);});
+    expect(calls).toBe(before);
+    state="visible";
+    await act(async()=>{document.dispatchEvent(new Event("visibilitychange"));await vi.advanceTimersByTimeAsync(0);});
+    expect(calls).toBeGreaterThan(before);
+  }finally{delete (document as unknown as {visibilityState?:unknown}).visibilityState;}
+});

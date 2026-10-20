@@ -117,6 +117,8 @@ interface TopBarProps {
    *  "Previous deploys" section. Optional: the section just hides if
    *  unset, so V1 callers and pre-Editing entry modes still render. */
   projectId?: string;
+  /** Len 3.0's deliverables are on on this server (`GET /api/projects/[id]`). */
+  artifactsEnabled?: boolean;
   artifactsReadOnly?: boolean;
   /** Invoked after a successful rollback. Parent typically re-fetches
    *  the project so publishedAt + drift flag stay accurate. */
@@ -159,6 +161,7 @@ export function TopBar({
   onPublish,
   published,
   projectId,
+  artifactsEnabled = false,
   artifactsReadOnly = false,
   onRolledBack,
   onCustomDomain,
@@ -746,7 +749,7 @@ export function TopBar({
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
         {projectId && !inicio && !projectLoading && !projectUnavailable && (
-          <ArtifactTray projectId={projectId} readOnly={artifactsReadOnly} />
+          <ArtifactTray projectId={projectId} enabled={artifactsEnabled} readOnly={artifactsReadOnly} />
         )}
         {/* LOS MIEMBROS (compartir el proyecto): invitar a trabajar en él. */}
         {onMiembros && (

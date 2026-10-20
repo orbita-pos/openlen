@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { artifactsEnabled } from "@/lib/artifacts/enabled";
 import {
   deleteProject,
   getProject,
@@ -18,7 +19,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/projects/[id] — load one full project (404 when you can't open it:
-// the owner and its members can, lib/projects/acceso.ts). `rol` says which.
+// the owner and its members can, lib/projects/acceso.ts). `rol` says which, and
+// `artifacts` whether this server has Len 3.0's deliverables on (the bell).
 export const GET = paraLaApp(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -30,7 +32,7 @@ export const GET = paraLaApp(async (
   if (acceso instanceof Response) return acceso;
   const project = await getProject(id, acceso.duenoId);
   if (!project) return json({ error: "not_found" }, 404);
-  return json({ project: { ...project, rol: acceso.rol } }, 200);
+  return json({ project: { ...project, rol: acceso.rol, artifacts: artifactsEnabled() } }, 200);
 });
 
 // PATCH /api/projects/[id] — accepts title, status, and/or userBrief. Apply

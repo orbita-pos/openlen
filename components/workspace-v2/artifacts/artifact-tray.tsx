@@ -11,7 +11,9 @@ import {Link} from "@/i18n/navigation";
 const icons={dashboard:LayoutDashboard,slides:Presentation,image:ImageIcon,motion:Video,audio:Volume2};
 interface Props {projectId:string;readOnly?:boolean;fetcher?:ArtifactFetch;historyHref?:string}
 // The key fences the entire panel/viewer when the workspace changes projects.
-export function ArtifactTray(props:Props){return <ProjectArtifactTray key={props.projectId} {...props}/>;}
+// `enabled` is the server's switch: when it is off the bell never mounts, so it
+// never asks an API that would only answer 404.
+export function ArtifactTray({enabled=true,...props}:Props&{enabled?:boolean}){return enabled?<ProjectArtifactTray key={props.projectId} {...props}/>:null;}
 function ProjectArtifactTray({projectId,readOnly=false,fetcher=artifactFetch,historyHref}:Props){
   const t=useTranslations("topbar.artifacts"),id=useId(),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null);
   const data=useArtifacts(projectId,fetcher);

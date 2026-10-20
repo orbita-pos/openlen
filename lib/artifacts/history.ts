@@ -1,6 +1,6 @@
 import {createCipheriv,createDecipheriv,createHash,randomBytes} from "node:crypto";
 import {ArtifactError,type ArtifactContext,type ArtifactDatabase,type Artifact} from "./types";
-import type {ArtifactStore} from "./store";
+import {readableArtifacts} from "./access";
 
 const kinds=["dashboard","slides","image","motion","audio"];
 const states:Record<string,readonly string[]>={ready:["ready"],active:["queued","running","validating","storing"],failed:["failed","needs_attention"],draft:["draft"],cancelled:["cancelled"]};
@@ -37,7 +37,7 @@ function cursorCodec(ctx:ArtifactContext,filters:Filters){
   };
 }
 
-export async function listArtifactHistory(services:{database:ArtifactDatabase;store:ArtifactStore},ctx:ArtifactContext,url:URL):Promise<{artifacts:Artifact[];nextCursor:string|null}>{
+export async function listArtifactHistory(services:{database:ArtifactDatabase},ctx:ArtifactContext,url:URL):Promise<{artifacts:Artifact[];nextCursor:string|null}>{
   const filters=parseFilters(url),rawLimit=url.searchParams.get("limit")??"24";
   if(!/^\d{1,2}$/.test(rawLimit)||Number(rawLimit)<1||Number(rawLimit)>50)throw new ArtifactError("invalid_history_limit");
   const limit=Number(rawLimit),codec=cursorCodec(ctx,filters),before=url.searchParams.get("before");
@@ -54,10 +54,11 @@ export async function listArtifactHistory(services:{database:ArtifactDatabase;st
     if(position)where.push(`("createdAt","id")<(${bind(position.at)}::timestamptz,${bind(position.id)}::text)`);
     const take=Math.min(64,400-scanned);
     const rows=await services.database.query(`select "id",to_char("createdAt" at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt" from "artifacts" where ${where.join(" and ")} order by "createdAt" desc,"id" desc limit ${bind(take)}`,params);
+    const readable=new Map((await readableArtifacts(services.database,ctx,rows.map(row=>String(row.id)))).map(artifact=>[artifact.id,artifact]));
     for(let index=0;index<rows.length;index++){
       const row=rows[index]!;position={id:String(row.id),at:String(row.cursorAt)};scanned++;
-      try{artifacts.push(await services.store.getArtifact(ctx,position.id));}
-      catch(error){if(!(error instanceof ArtifactError))throw error;}
+      const artifact=readable.get(position.id);
+      if(artifact)artifacts.push(artifact);
       if(artifacts.length===limit)return {artifacts,nextCursor:index<rows.length-1||rows.length===take?codec.encode(position):null};
     }
     if(rows.length<take)return {artifacts,nextCursor:null};

@@ -1,4 +1,4 @@
-import { requireArtifactAccess, requireProjectAccess } from "./access";
+import { readableArtifacts, requireProjectAccess } from "./access";
 import { ArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactEvent } from "./types";
 
 const cursorValue = (v: string) => { if (!/^\d{1,19}$/.test(v) || BigInt(v) > 9223372036854775807n) throw new ArtifactError("invalid_cursor"); return v; };
@@ -7,12 +7,8 @@ export function createArtifactEvents(database: ArtifactDatabase) {
     await requireProjectAccess(database, ctx);
     if(!Number.isFinite(limit))throw new ArtifactError("invalid_event_limit");
     const rows = await database.query(`select e.* from "artifactEvents" e where e."projectId"=$1 and e."cursor">$2::bigint order by e."cursor" limit $3`, [ctx.projectId, cursorValue(after), Math.min(100, Math.max(1, Math.floor(limit)))]);
-    const result: ArtifactEvent[] = [];
-    for (const row of rows) {
-      try { await requireArtifactAccess(database, ctx, String(row.artifactId), "read"); }
-      catch (error) { if (error instanceof ArtifactError) continue; throw error; }
-      result.push({ ...row, cursor: String(row.cursor) } as unknown as ArtifactEvent);
-    }
+    const readable = new Set((await readableArtifacts(database, ctx, rows.map((row) => String(row.artifactId)))).map((artifact) => artifact.id));
+    const result = rows.filter((row) => readable.has(String(row.artifactId))).map((row) => ({ ...row, cursor: String(row.cursor) }) as unknown as ArtifactEvent);
     // Scanning is not acknowledging. Advance across hidden rows while keeping
     // per-person read state untouched and never exposing their artifact ids.
     return {events:result,cursor:rows.length?String(rows.at(-1)!.cursor):after};

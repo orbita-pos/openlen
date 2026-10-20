@@ -6,7 +6,7 @@ import {createArtifactStore} from "./store";
 import {createR2ArtifactStorage,FilesystemArtifactStorage,type ArtifactStorage} from "./private-storage";
 import {createArtifactPreview,previewConfig} from "./preview";
 import {ArtifactError} from "./types";
-export const artifactsEnabled=(env:Readonly<Record<string,string|undefined>>=process.env)=>env.OPENLEN_ARTIFACTS==="1";
+export {artifactsEnabled} from "./enabled";
 /** Worker/preview processes need no auth, provider, app-query or chat runtime. */
 export function createArtifactCoreRuntime(env:Readonly<Record<string,string|undefined>>){
   if(!env.DATABASE_URL)throw new ArtifactError("database_unavailable");
