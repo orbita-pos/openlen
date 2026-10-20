@@ -3460,6 +3460,7 @@ function NewV2Inner() {
         onPublish={soloLector || pantallaDeInicio ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        artifactsReadOnly={soloLector}
         onMiembros={loadedProject && !pantallaDeInicio ? () => setMiembrosOpen(true) : undefined}
         onEnvVars={abrirVariables}
         onRolledBack={() => {

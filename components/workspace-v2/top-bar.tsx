@@ -45,6 +45,7 @@ import { OpenLenMark } from "@/components/openlen-logo";
 import { AccountMenu } from "./account-menu";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import { visibleProjects } from "@/lib/projects/blank";
+import { ArtifactTray } from "./artifacts/artifact-tray";
 
 interface ReleaseEntry {
   sha: string;
@@ -116,6 +117,7 @@ interface TopBarProps {
    *  "Previous deploys" section. Optional: the section just hides if
    *  unset, so V1 callers and pre-Editing entry modes still render. */
   projectId?: string;
+  artifactsReadOnly?: boolean;
   /** Invoked after a successful rollback. Parent typically re-fetches
    *  the project so publishedAt + drift flag stay accurate. */
   onRolledBack?: () => void;
@@ -157,6 +159,7 @@ export function TopBar({
   onPublish,
   published,
   projectId,
+  artifactsReadOnly = false,
   onRolledBack,
   onCustomDomain,
   onDeployVercel,
@@ -742,6 +745,9 @@ export function TopBar({
       </div>
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
+        {projectId && !inicio && !projectLoading && !projectUnavailable && (
+          <ArtifactTray projectId={projectId} readOnly={artifactsReadOnly} />
+        )}
         {/* LOS MIEMBROS (compartir el proyecto): invitar a trabajar en él. */}
         {onMiembros && (
           <button
