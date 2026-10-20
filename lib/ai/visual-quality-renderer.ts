@@ -585,15 +585,18 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     // (sin GPU) `getContext("webgl")` da null y Len ve negra una escena de
     // three.js, un mapa 3D o un juego — medido el 2026-10-13, Chrome 148
     // (`eyes-see-webgl.browser.test.ts`). Chrome la llama «unsafe» porque
-    // SwiftShader es más superficie para contenido ajeno; este Chromium ya
-    // corre sin sandbox y con la red filtrada.
+    // SwiftShader es más superficie para contenido ajeno, y corre en el proceso
+    // de GPU, que va SIN sandbox aun con el de Chrome puesto (medido abajo).
     args: [
-      // Sin sandbox TODAVÍA (revisado el 2026-10-20, sin medir en la caja): el
-      // ayudante setuid no puede ir nunca (NoNewPrivileges en la unidad), y el de
-      // espacios de nombres depende de que el perfil AppArmor `chrome` de Ubuntu
-      // 24.04 cubra /opt/google/chrome/chrome bajo esa unidad. Quitar esta línea
-      // sin medirlo allí deja sin ojos, miniaturas ni Flight Check si falla.
-      "--no-sandbox",
+      // CON el sandbox de Chrome (2026-10-20). Medido en la caja con systemd-run
+      // como openlen-deploy y el endurecimiento de la unidad: sin `--no-sandbox`
+      // arranca, el perfil AppArmor `chrome` de Ubuntu 24.04 se pega a
+      // /opt/google/chrome/chrome bajo NoNewPrivileges, cada renderer corre con
+      // seccomp-bpf en su propio espacio de usuario y de PID, y WebGL sigue
+      // pintando. El ayudante setuid no puede ir nunca bajo NoNewPrivileges:
+      // esta bandera impide que Chrome caiga a él. Si un Chrome sin ese perfil
+      // (otra ruta, otra distro) dice «No usable sandbox!», es esto.
+      // Ver `eyes-run-sandboxed.browser.test.ts`.
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       ...WEBGL_ARGS,
@@ -602,8 +605,9 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
       "--disable-crash-reporter",
       ...(await isolatedNetworkArgs()),
     ],
-    // Ni un secreto del servidor: sin sandbox, lo que hereda está al alcance
-    // de la página (lib/security/chromium-env.ts). Lleva HOME=/tmp.
+    // Ni un secreto del servidor: el proceso de GPU va sin sandbox y lo que
+    // hereda queda al alcance de un fallo suyo (lib/security/chromium-env.ts).
+    // Lleva HOME=/tmp.
     env: chromiumEnv(),
   });
   // Antes de que dibuje nada: en la caja, cede la CPU a la app (medido: una

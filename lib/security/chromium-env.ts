@@ -2,10 +2,12 @@
 //
 // Every Chromium the server launches runs JavaScript nobody here wrote: the
 // pages and apps the model writes (Len's eyes, an app's `npm test`, thumbnails,
-// the og-card, the Flight Check) and, for style-match, another site's. It runs
-// it with `--no-sandbox`. Puppeteer's default `env` is all of `process.env`,
-// and the server's holds DATABASE_URL, AUTH_SECRET and every provider key: a
-// renderer exploit would find them one read of /proc/self/environ away.
+// the og-card, the Flight Check) and, for style-match, another site's. Some
+// launchers still pass `--no-sandbox`, and even with Chrome's sandbox on (the
+// eyes', since 2026-10-20) the GPU process that runs WebGL is not sandboxed.
+// Puppeteer's default `env` is all of `process.env`, and the server's holds
+// DATABASE_URL, AUTH_SECRET and every provider key: an exploit in an
+// unsandboxed process would find them one read of /proc/<pid>/environ away.
 //
 // Chromium needs none of them, so it gets an ALLOWLIST: where its binaries,
 // fonts and temp files are, the locale and the time zone. Not a denylist of

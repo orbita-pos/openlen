@@ -3,11 +3,12 @@
 // THE EYES' CHROMIUM INHERITS NO SERVER SECRET (2026-10-20).
 //
 // `lanzarChromium` runs pages and apps the model wrote (`view_page`,
-// `use_page`, an app's `npm test`, thumbnails, the og-card, the Flight Check)
-// with `--no-sandbox`. It used to launch with `env: { ...process.env, HOME }`,
+// `use_page`, an app's `npm test`, thumbnails, the og-card, the Flight Check).
+// It used to launch with `--no-sandbox` and `env: { ...process.env, HOME }`,
 // so a renderer exploit would land in a process whose environment held
 // DATABASE_URL, AUTH_SECRET and every provider key, one read of
-// /proc/self/environ away. This plants fake secrets in process.env, launches
+// /proc/self/environ away. The renderers are sandboxed now, the GPU process
+// that runs WebGL is not. This plants fake secrets in process.env, launches
 // the real browser, and checks what Chromium was handed and, on Linux, what its
 // process actually holds.
 import { readFileSync } from "node:fs";

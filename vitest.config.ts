@@ -220,6 +220,8 @@ export default defineConfig({
       "lib/ai/eyes-see-webgl.browser.test.ts",
       // The eyes' Chromium inherits no server secret (2026-10-20). WHITELIST.
       "lib/ai/eyes-inherit-no-secrets.browser.test.ts",
+      // And it runs with Chrome's sandbox (2026-10-20, measured on the box). WHITELIST.
+      "lib/ai/eyes-run-sandboxed.browser.test.ts",
       // Un solo lanzador de Chromium (14/10): ninguno nuevo sin WebGL. LISTA BLANCA.
       "lib/ai/one-chromium-launcher.test.ts",
       "lib/ai/chromium-nice.test.ts",
