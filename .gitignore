@@ -19,6 +19,8 @@
 
 # next.js
 /.next/
+/.next-artifacts-ui/
+/.next-artifacts-ui-build/
 /out/
 
 # production

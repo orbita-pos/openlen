@@ -8,6 +8,7 @@ import { ArtifactError, type ArtifactContext, type ArtifactDatabase } from "./ty
 import { availableArtifactKinds } from "./capabilities";
 import type { ArtifactPreview } from "./preview";
 import type { createArtifactData } from "./data";
+import { listArtifactHistory } from "./history";
 
 export interface ArtifactServices {
   readonly database: ArtifactDatabase;
@@ -32,7 +33,11 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
     await requireProjectAccess(services.database, ctx);
     const url = new URL(request.url);
     if (path.action === "list") {
-      const rows = await services.database.query(`select "id" from "artifacts" where "projectId"=$1 and ("visibility"='project' or $2=$3) order by "createdAt","id" limit 200`, [ctx.projectId, ctx.actorId, ctx.ownerId]);
+      if(url.searchParams.has("history")){
+        if(url.searchParams.get("history")!=="1")throw new ArtifactError("invalid_history_filter");
+        return json({...await listArtifactHistory(services,ctx,url),kinds:availableArtifactKinds()});
+      }
+      const rows = await services.database.query(`select "id" from "artifacts" where "projectId"=$1 and ("visibility"='project' or $2=$3) order by "createdAt" desc,"id" desc limit 200`, [ctx.projectId, ctx.actorId, ctx.ownerId]);
       const artifacts = [];
       for (const row of rows) {
         try { artifacts.push(await services.store.getArtifact(ctx, String(row.id))); }
@@ -73,8 +78,11 @@ export async function handleArtifactApi(services: ArtifactServices, ctx: Artifac
       return json({ ok: true });
     }
     if (path.action === "inspect") {
-      const revision = await services.store.getRevision(ctx, artifact.id, artifact.currentRevision);
-      const jobs = await services.database.query(`select "id","revision","status","attempt","errorCode","diagnostics","createdAt" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [artifact.id]);
+      const wanted = url.searchParams.get("revision");
+      const selected = wanted === null ? artifact.currentRevision : integer(wanted);
+      if (selected === null) throw new ArtifactError("invalid_revision");
+      const revision = await services.store.getRevision(ctx, artifact.id, selected);
+      const jobs = await services.database.query(`select "id","revision","status","attempt","errorCode","diagnostics","createdAt" from "artifactJobs" where "artifactId"=$1 order by "createdAt" desc,"id" desc limit 100`, [artifact.id]);
       // Fencing tokens are write capabilities; they never leave server services.
       return json({ artifact, revision: { ...revision, outputs: revision.outputs.map((o, index) => ({ index, format: o.format, mime: o.mime, bytes: o.bytes, hash: o.hash, name: o.key.split("/").at(-1) })) }, jobs });
     }
