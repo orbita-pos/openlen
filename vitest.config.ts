@@ -218,6 +218,8 @@ export default defineConfig({
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // Len's eyes see WebGL (three.js, maps, games) in the screenshot. WHITELIST.
       "lib/ai/eyes-see-webgl.browser.test.ts",
+      // The eyes' Chromium inherits no server secret (2026-10-20). WHITELIST.
+      "lib/ai/eyes-inherit-no-secrets.browser.test.ts",
       // Un solo lanzador de Chromium (14/10): ninguno nuevo sin WebGL. LISTA BLANCA.
       "lib/ai/one-chromium-launcher.test.ts",
       "lib/ai/chromium-nice.test.ts",
@@ -610,6 +612,8 @@ export default defineConfig({
       // rebinding y ventanas con clic real. `include` es LISTA BLANCA.
       "lib/security/egress-proxy.test.ts",
       "lib/security/egress-proxy.browser.test.ts",
+      // And what Chromium inherits from the server: an allowlist, no secrets. WHITELIST.
+      "lib/security/chromium-env.test.ts",
       "lib/publish/model-runtime-e2e.test.ts",
       "lib/publish/request-origin.test.ts",
       "lib/publish/cloudflare-email.test.ts",

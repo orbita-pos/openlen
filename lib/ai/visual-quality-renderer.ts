@@ -1,6 +1,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import { chromiumEnv } from "@/lib/security/chromium-env";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas } from "@/lib/ai/sitio-del-error";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
@@ -587,6 +588,11 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     // SwiftShader es más superficie para contenido ajeno; este Chromium ya
     // corre sin sandbox y con la red filtrada.
     args: [
+      // Sin sandbox TODAVÍA (revisado el 2026-10-20, sin medir en la caja): el
+      // ayudante setuid no puede ir nunca (NoNewPrivileges en la unidad), y el de
+      // espacios de nombres depende de que el perfil AppArmor `chrome` de Ubuntu
+      // 24.04 cubra /opt/google/chrome/chrome bajo esa unidad. Quitar esta línea
+      // sin medirlo allí deja sin ojos, miniaturas ni Flight Check si falla.
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
@@ -596,7 +602,9 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
       "--disable-crash-reporter",
       ...(await isolatedNetworkArgs()),
     ],
-    env: { ...process.env, HOME: "/tmp" },
+    // Ni un secreto del servidor: sin sandbox, lo que hereda está al alcance
+    // de la página (lib/security/chromium-env.ts). Lleva HOME=/tmp.
+    env: chromiumEnv(),
   });
   // Antes de que dibuje nada: en la caja, cede la CPU a la app (medido: una
   // escena 3D se comía 2,56 de sus 3 núcleos). Ver `lib/ai/chromium-nice.ts`.

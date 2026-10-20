@@ -18,6 +18,7 @@
 import puppeteer, { type Browser, type Page } from "puppeteer";
 import { SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { WEBGL_ARGS } from "@/lib/ai/visual-quality-renderer";
+import { chromiumEnv } from "@/lib/security/chromium-env";
 import { OPENLEN_PAGE_HOSTS, OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 
 /** `--host-resolver-rules` de Chromium: cada dominio de OpenLen y todos sus
@@ -61,5 +62,7 @@ export async function lanzarNavegador(): Promise<Browser> {
       ...WEBGL_ARGS,
       `--host-resolver-rules=${REGLAS_SIN_PRODUCCION}`,
     ],
+    // Corre las páginas de Len sin sandbox: ni un secreto del entorno (lib/security/chromium-env.ts).
+    env: chromiumEnv(),
   });
 }
