@@ -22,8 +22,13 @@ export const MODEL_POLICY = Object.freeze({
   // BLANDO `copy`, `simple_extraction`, `template_autofill` y el evaluador de
   // objetivos. Pasa a V4.1 Flash, que ya llevaban la visión y el agente, con SU
   // tarifa (salida 1,82x la de V4). Jesús lo decidió ese mismo día.
+  //
+  // Los tres papeles van en la ACTUALIZACIÓN 1017 desde el 2026-10-21 (Jesús):
+  // mismo modelo base, misma ventana (1.048.576) y misma tarifa en Fireworks
+  // (0,30/0,006/1,20, fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash-1017,
+  // leído ese día). El agente ya la corría en DeepInfra desde el 17/10.
   reasoner: Object.freeze({
-    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
     creditRate: "deepseek-flash-4p1" as CreditRate,
     // Ver `capturaRuntimeDelPapel` abajo: la capacidad se DECLARA aquí, no se
     // deduce de quién es este papel.
@@ -87,7 +92,7 @@ export const MODEL_POLICY = Object.freeze({
   // Sigue siendo más barato que `qwen-vision` en salida (1.20 contra 1.60) y
   // sigue teniendo ojos; lo que no es, es gratis.
   visualCritic: Object.freeze({
-    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
     creditRate: "deepseek-flash-4p1" as CreditRate,
     displayName: "DeepSeek V4.1 Flash",
     capturaRuntime: true,
@@ -156,7 +161,7 @@ export const MODEL_POLICY = Object.freeze({
   // el 26/09, con V4 Flash 0731 y otros cuatro. Un modelo de esta tabla se
   // comprueba preguntándole al proveedor, no leyendo su página de precios.
   agent: Object.freeze({
-    modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+    modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
     creditRate: "deepseek-flash-4p1" as CreditRate,
     displayName: "DeepSeek V4.1 Flash",
     capturaRuntime: true,
@@ -177,13 +182,14 @@ export const MODEL_POLICY = Object.freeze({
     // vuelven al papel con visión (`operacionDeLaVuelta`, `lib/agent/brain.ts`).
     veImagenes: true,
     // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): DeepInfra
-    // sirve la actualización 1017, con Fireworks en V4.1 como respaldo. El
+    // sirve la actualización 1017, con Fireworks de respaldo en la misma 1017
+    // desde el 21/10 (antes, en la V4.1 de septiembre). El
     // orden lo manda `OPENLEN_AGENT_PROVIDERS` (lib/ai/providers.ts); `modelId`
     // de arriba sigue siendo el de Fireworks, que es el que leen el esfuerzo y
     // su interfaz (misma familia y tope). La tarifa de COBRO no cambia.
     providers: Object.freeze([
       Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
-      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" }),
+      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" }),
     ]),
   }),
 });

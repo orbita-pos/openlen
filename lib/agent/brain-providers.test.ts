@@ -10,7 +10,7 @@ const TOOLS = [{ name: "Read", parameters: { type: "OBJECT", properties: {} } }]
 const USER: Message = { role: "user", content: "haz el hero azul" };
 const ENV = { DEEPINFRA_API_KEY: "di", FIREWORKS_API_KEY: "fw" };
 const DI_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
-const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash";
+const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
 
 type Script = FireworksStreamEvent[] | "hang";
 

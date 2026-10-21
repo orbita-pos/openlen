@@ -74,7 +74,7 @@ describe("Fireworks JSON client", () => {
     };
 
     await expect(createClient({ apiKey: "key", fetchImpl }).request(visualRequest as never))
-      .resolves.toMatchObject({ ok: true, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" });
+      .resolves.toMatchObject({ ok: true, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" });
     expect(JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)).messages).toEqual(visualRequest.messages);
   });
 
@@ -176,7 +176,7 @@ describe("Fireworks JSON client", () => {
     expect(result).toEqual({
       ok: true,
       value: { title: "Launch", score: 8 },
-      modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
       usage: { inputTokens: 100, cachedTokens: 30, outputTokens: 40, thinkingTokens: 12 },
       durationMs: 0,
       attempts: 1,
@@ -187,7 +187,7 @@ describe("Fireworks JSON client", () => {
     expect(init?.headers).toEqual({ authorization: "Bearer secret", "content-type": "application/json" });
     const body = JSON.parse(String(init?.body));
     expect(body).toMatchObject({
-      model: "accounts/fireworks/models/deepseek-v4p1-flash",
+      model: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
       messages: REQUEST.messages,
       max_tokens: 256,
       reasoning_effort: "high",
@@ -213,7 +213,7 @@ describe("Fireworks JSON client", () => {
     expect(JSON.parse(String(priorityFetch.mock.calls[0]?.[1]?.body))).toMatchObject({ service_tier: "priority" });
     expect(reserve).toHaveBeenCalledWith(expect.objectContaining({
       kind: "model",
-      modelId: "accounts/fireworks/models/deepseek-v4p1-flash",
+      modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017",
       serviceTier: "priority",
     }));
 
@@ -258,13 +258,13 @@ describe("Fireworks JSON client", () => {
     await expect(createClient({ env: {}, fetchImpl }).request(REQUEST))
       .resolves.toMatchObject({ ok: false, code: "missing_key", attempts: 0 });
     await expect(createClient({ apiKey: "key", fetchImpl }).request({ ...REQUEST, role: "visual_critic", reasoningEffort: "high" }))
-      .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0, modelId: "accounts/fireworks/models/deepseek-v4p1-flash" });
+      .resolves.toMatchObject({ ok: false, code: "provider", attempts: 0, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["reasoner", "accounts/fireworks/models/deepseek-v4p1-flash", "high"],
-    ["visual_critic", "accounts/fireworks/models/deepseek-v4p1-flash", "none"],
+    ["reasoner", "accounts/fireworks/models/deepseek-v4p1-flash-1017", "high"],
+    ["visual_critic", "accounts/fireworks/models/deepseek-v4p1-flash-1017", "none"],
   ] as const)("trims and allowlists routing for %s", async (role, modelId, reasoningEffort) => {
     const fetchImpl = vi.fn<typeof fetch>(async () => jsonResponse(successEnvelope()));
     await createClient({

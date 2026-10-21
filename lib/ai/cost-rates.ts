@@ -35,6 +35,9 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // docs.fireworks.ai/serverless/pricing, Standard column, read 2026-10-16:
   // the same list price the billing rate uses (`V4P1_FLASH` in tarifas.ts).
   "fireworks/accounts/fireworks/models/deepseek-v4p1-flash": { input: 0.3, cached: 0.006, output: 1.2 },
+  // fireworks.ai/models/deepseek-ai/deepseek-v4p1-flash-1017, read 2026-10-21:
+  // the same list price. Keep the previous id for historical usage.
+  "fireworks/accounts/fireworks/models/deepseek-v4p1-flash-1017": { input: 0.3, cached: 0.006, output: 1.2 },
   // deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash, read 2026-10-16: the price
   // paid TODAY, a 30 % promotion with no end date. Without it, 0.20 / 0.006 /
   // 0.60 — change this row the day the promotion ends.
