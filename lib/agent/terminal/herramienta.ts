@@ -31,6 +31,7 @@ import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
 import { closeTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
 import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
 import { whileWorking } from "./still-working";
 import { longSleep, longSleepRefusal } from "./sleep-rule";
@@ -305,6 +306,12 @@ async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promis
         }
       : {}),
     ...(appTools ? { appTools } : {}),
-    ...(curl ? { functionsUrls: curl.prefixes } : {}),
+    // EDGE FUNCTIONS: the box's `curl` to them runs in today's terminal over the box's files, through the same door.
+    ...(curl
+      ? {
+          functionsUrls: curl.prefixes,
+          functionsCurl: functionsCurlThrough((ficheros) => new TerminalDeLen({ cargarFicheros: async () => ficheros, functionsCurl: async () => curl })),
+        }
+      : {}),
   };
 }

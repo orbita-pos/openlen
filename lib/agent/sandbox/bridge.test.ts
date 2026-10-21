@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { FUNCTIONS_FROM_THE_BOX, answerBridgeRequest, routeBoxCommand, type BridgeHandlers } from "./bridge";
+import { answerBridgeRequest, routeBoxCommand, type BridgeHandlers } from "./bridge";
 
 const FN = "https://x.openlen.app/functions/v1";
 
@@ -62,13 +62,19 @@ describe("answerBridgeRequest", () => {
     expect(await answerBridgeRequest({ id: "1", program: "npm", args: ["run", "dev"], cwd: "/" }, {}, files)).toEqual({ passthrough: true });
   });
 
-  it("calling the project's Edge Functions from the box says it isn't there yet", async () => {
-    const r = await answerBridgeRequest(
-      { id: "1", program: "curl", args: [`${FN}/hola`], cwd: "/" },
-      { functionsUrls: [FN] },
-      files,
-    );
-    expect(r).toEqual({ stdout: "", stderr: FUNCTIONS_FROM_THE_BOX, exitCode: 1, files: {} });
+  it("curl to the project's Edge Functions goes through OpenLen's door, with the box's files and cwd", async () => {
+    const functionsCurl = vi.fn(async () => ({ stdout: '{"ok":true}', stderr: "", exitCode: 0, files: { "/out.json": '{"ok":true}' } }));
+    const args = ["-s", "-X", "POST", `${FN}/hola`, "-d", "@body.json", "-o", "/out.json"];
+    const r = await answerBridgeRequest({ id: "1", program: "curl", args, cwd: "/data" }, { functionsUrls: [FN], functionsCurl }, files);
+    expect(functionsCurl).toHaveBeenCalledWith(args, "/data", files, { signal: undefined });
+    expect(r).toEqual({ stdout: '{"ok":true}', stderr: "", exitCode: 0, files: { "/out.json": '{"ok":true}' } });
+  });
+
+  it("curl to anything else is the box's real curl", async () => {
+    const functionsCurl = vi.fn();
+    const r = await answerBridgeRequest({ id: "1", program: "curl", args: ["https://registry.npmjs.org/"], cwd: "/" }, { functionsUrls: [FN], functionsCurl }, files);
+    expect(r).toEqual({ passthrough: true });
+    expect(functionsCurl).not.toHaveBeenCalled();
   });
 
   it("an aborted turn stops waiting for a handler", async () => {

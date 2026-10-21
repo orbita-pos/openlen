@@ -9,6 +9,8 @@
 
 import type { AppProgram } from "@/lib/agent/terminal/terminal";
 
+import type { FunctionsCurlHandler } from "./functions-curl";
+
 export interface BridgeRequest {
   readonly id: string;
   readonly program: string;
@@ -97,11 +99,9 @@ export interface BridgeHandlers {
   };
   /** The project's Edge Functions' URLs (FunctionsCurl.prefixes). */
   readonly functionsUrls?: readonly string[];
+  /** `curl` to one of them, through OpenLen's door (./functions-curl.ts). */
+  readonly functionsCurl?: FunctionsCurlHandler;
 }
-
-/** Today's `curl` goes to the functions through `just-bash`'s own parser; the box's is the real one. */
-export const FUNCTIONS_FROM_THE_BOX =
-  "curl: this project's Edge Functions can't be called from this terminal yet; publish and call them at their public URL, or test their code with npm test.\n";
 
 export type BridgeAnswer =
   | { readonly passthrough: true }
@@ -141,8 +141,11 @@ export async function answerBridgeRequest(
       for (const p of r.borrar ?? []) out[p] = null;
       return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: out };
     }
-    case "functions-curl":
-      return { stdout: "", stderr: FUNCTIONS_FROM_THE_BOX, exitCode: 1, files: {} };
+    case "functions-curl": {
+      if (!handlers.functionsCurl) return { passthrough: true };
+      const r = await abortable(handlers.functionsCurl(req.args, req.cwd, files, { signal: o.signal }), o.signal);
+      return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: { ...r.files } };
+    }
     case "app": {
       if (!handlers.appTools) return { passthrough: true };
       const r = await abortable(handlers.appTools.run(route.program, route.args, files, o.timeLeftMs, o.signal), o.signal);
