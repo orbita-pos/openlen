@@ -200,6 +200,9 @@ interface LeftSidebarProps {
   soloLectura?: boolean;
   /** El chat del equipo: menciones del chat sin ver (`useChatSinVer`). */
   chatSinVer?: number;
+  /** The project has nothing to look at yet (no page, no app, no deliverable): the chat takes the whole center,
+   *  as Claude keeps the conversation in the middle until an artifact exists. */
+  fillWidth?: boolean;
   /** Multi-page: slug of the site page the canvas is editing (null = home).
    *  Forwarded to ChatPanel so chat edits land in the right document. */
   flatProjectPage?: string | null;
@@ -330,6 +333,7 @@ export function LeftSidebar({
   esApp = false,
   sitePages = [],
   activeSitePage = null,
+  fillWidth = false,
 }: LeftSidebarProps) {
   const t = useTranslations("wsChrome");
   const { counts: inboxCounts } = useInboxBadge();
@@ -348,7 +352,9 @@ export function LeftSidebar({
   // con él. Por eso, mientras flota, la barra se pinta abierta aunque esté
   // plegada: plegarla desmontaría el chat.
   const chatLayout = useChatLayout();
-  const chatOut = newChat && chatLayout !== "docked" && !isMobileLayout;
+  // The chat is the whole center while the project has nothing to look at (`fillWidth`): docked, never out.
+  const chatOut = newChat && chatLayout !== "docked" && !isMobileLayout && !fillWidth;
+  const filling = Boolean(fillWidth) && newChat && !isMobileLayout;
   const [chatWidth, setChatWidth] = useChatWidth();
   const [dragging, setDragging] = useState(false);
   const dragFrom = useRef<{ x: number; w: number } | null>(null);
@@ -434,7 +440,7 @@ export function LeftSidebar({
     // On mobile (< md) the expanded panel can't share the row with the canvas
     // (272px of a 390px screen leaves nothing) — it overlays the whole row
     // instead, rail included, and the header grows a close button.
-    <aside className="h-full shrink-0 flex bg-side border-r bd max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-r-0">
+    <aside className={`h-full ${filling ? "min-w-0 flex-1" : "shrink-0"} flex bg-side border-r bd max-md:absolute max-md:inset-0 max-md:z-40 max-md:border-r-0`}>
       {/* The icon rail stays vertical + fixed — identical to collapsed; the
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
@@ -465,10 +471,10 @@ export function LeftSidebar({
         />
       </div>
       <div
-        className={`${newChat ? "relative" : "w-[272px]"} max-md:w-auto max-md:flex-1 shrink-0 flex flex-col min-w-0`}
-        style={chatOut ? { width: 0 } : newChat && !isMobileLayout ? { width: chatWidth } : undefined}
+        className={`${newChat ? "relative" : "w-[272px]"} max-md:w-auto max-md:flex-1 ${filling ? "flex-1" : "shrink-0"} flex flex-col min-w-0`}
+        style={chatOut ? { width: 0 } : newChat && !isMobileLayout && !filling ? { width: chatWidth } : undefined}
       >
-      {newChat && !isMobileLayout && !chatOut && (
+      {newChat && !isMobileLayout && !chatOut && !filling && (
         // El borde del chat se estira: invisible hasta que pasas por encima.
         // Doble clic, al ancho de siempre.
         <div
@@ -558,6 +564,7 @@ export function LeftSidebar({
                 pendingAttachments={pendingAttachments}
                 esApp={esApp}
                 onClose={onToggleCollapse}
+                centered={filling}
               />
             )}
             {mode === "chat" && !newChat && (

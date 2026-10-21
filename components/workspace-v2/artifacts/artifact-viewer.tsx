@@ -7,7 +7,10 @@ import {ModalShell} from "../modal-shell";
 import {artifactLiveRefreshClient,connectArtifactLivePreview,type ArtifactLiveView} from "@/lib/artifacts/live-preview";
 import {artifactFetch,artifactFileUrl,artifactJson,artifactUrl,ArtifactClientError,inspectArtifact,validatePreviewUrl,type ArtifactFetch,type ArtifactOutputInfo,type ArtifactSummary} from "./client";
 
-interface Props {projectId:string;item:ArtifactSummary;revision:number;onClose:()=>void;onAccessLost:()=>void;fetcher?:ArtifactFetch}
+interface Props {projectId:string;item:ArtifactSummary;revision:number;onClose:()=>void;onAccessLost:()=>void;fetcher?:ArtifactFetch;
+  /** In the workspace center (a project with no page shows its piece there, as Claude opens an artifact): the same
+   *  preview and files, in the page instead of a dialog. */
+  inline?:boolean}
 type Preview={url:string;view:ArtifactLiveView};
 const kindIcons={dashboard:LayoutDashboard,slides:Presentation,image:ImageIcon,motion:Video,audio:Volume2};
 const preferredFormats={dashboard:"html",slides:"pptx",image:"png",motion:"mp4",audio:"mp3"};
@@ -15,7 +18,7 @@ function fileSize(bytes:number,locale:string){
   const format=new Intl.NumberFormat(locale,{maximumFractionDigits:1});
   return bytes<1024?`${format.format(bytes)} B`:bytes<1024*1024?`${format.format(bytes/1024)} KB`:`${format.format(bytes/(1024*1024))} MB`;
 }
-export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fetcher=artifactFetch}:Props){
+export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fetcher=artifactFetch,inline=false}:Props){
   const t=useTranslations("topbar.artifacts"),titleId=useId(),frame=useRef<HTMLIFrameElement>(null);
   const locale=useLocale();
   const callbacks=useRef({onAccessLost});callbacks.current={onAccessLost};
@@ -103,11 +106,9 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
   const fallbackTitle=downloadOnly?"viewer.downloadOnlyTitle":shown.outputs.length?"viewer.previewTitle":"viewer.unavailableTitle";
   const fallbackBody=downloadOnly?"viewer.downloadOnlyBody":shown.outputs.length?"viewer.previewBody":"viewer.unavailableBody";
   const primaryFormat=shown.outputs.some(o=>o.format===preferredFormats[item.kind])?preferredFormats[item.kind]:shown.outputs[0]?.format;
-  return <ModalShell open onClose={onClose} titleId={titleId}
-    title={<span className="flex items-center gap-3"><span aria-hidden="true" className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bd bg-elev fg-muted"><KindIcon size={19}/></span><span className="break-words leading-snug">{item.title}</span></span>}
-    subtitle={<span className="sm:pl-[52px]">{t(`kind.${item.kind}`)} <span aria-hidden="true" className="px-1">·</span> {t("revision",{number:revision})}</span>}
-    size={hasPreview||shown.loading?"page":"xl"} closeLabel={t("close")}>
-    <div className="artifact-scroll nice-scroll max-h-[80dvh] overflow-y-auto">
+  const title=<span className="flex items-center gap-3"><span aria-hidden="true" className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bd bg-elev fg-muted"><KindIcon size={19}/></span><span className="break-words leading-snug">{item.title}</span></span>;
+  const subtitle=<span className="sm:pl-[52px]">{t(`kind.${item.kind}`)} <span aria-hidden="true" className="px-1">·</span> {t("revision",{number:revision})}</span>;
+  const body=<div className={`artifact-scroll nice-scroll overflow-y-auto ${inline?"min-h-0 flex-1":"max-h-[80dvh]"}`}>
       <div className={`flex items-center justify-center relative ${hasPreview?"min-h-52 bg-side":"bg-elev"}`}>
         {shown.loading?<div role="status" className="flex min-h-64 flex-col items-center justify-center gap-4 p-10 text-sm fg-muted"><span className="flex h-14 w-14 items-center justify-center rounded-2xl border bd bg-side"><Loader2 size={23} className="motion-safe:animate-spin"/></span>{t("loading")}</div>
           :shown.preview?<iframe ref={frame} title={t("preview")} src={shown.preview.url} sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-[min(64dvh,680px)] border-0 bg-white"/>
@@ -138,6 +139,10 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
           </a>
         </li>)}</ul>
       </section>}
-    </div>
-  </ModalShell>;
+    </div>;
+  if(inline)return <section aria-labelledby={titleId} className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bd bg-elev">
+    <header className="shrink-0 border-b bd px-5 py-4"><h2 id={titleId} className="text-[15px] font-semibold fg">{title}</h2><p className="mt-1 text-xs fg-faint">{subtitle}</p></header>
+    {body}
+  </section>;
+  return <ModalShell open onClose={onClose} titleId={titleId} title={title} subtitle={subtitle} size={hasPreview||shown.loading?"page":"xl"} closeLabel={t("close")}>{body}</ModalShell>;
 }

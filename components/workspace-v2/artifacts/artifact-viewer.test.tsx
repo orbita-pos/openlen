@@ -85,3 +85,10 @@ it("offers a metadata-only reload when nothing loaded, without promising unavail
   expect(document.querySelector('a[download]')?.getAttribute("href")).toContain("?revision=1");
   expect(urls.every(url=>url.endsWith("/a?revision=1"))).toBe(true);
 });
+
+it("shows the piece inside the page instead of a dialog when the workspace center hosts it",async()=>{
+  await act(async()=>{root.render(<NextIntlClientProvider locale="es" messages={{topbar:messages}}><ArtifactViewer inline projectId="p" item={item} revision={1} fetcher={async(url)=>response(url.endsWith("/preview")?{url:`https://preview.openlen.test/grant/${"a".repeat(43)}`,view:{id:"view",artifactId:"a",revision:1,liveDatasetIds:[]}}:inspection)} onClose={()=>{}} onAccessLost={()=>{}}/></NextIntlClientProvider>);});
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.querySelector("iframe")).not.toBeNull();
+  expect(document.body.textContent).toContain("Dashboard");
+});

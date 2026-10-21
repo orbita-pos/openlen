@@ -3,8 +3,9 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 import {activeStatus,artifactBase,artifactFetch,artifactJson,artifactUrl,ArtifactClientError,cursorAfter,inspectArtifact,parseArtifactList,type ArtifactFetch,type ArtifactSummary} from "./client";
 
-type State={projectId:string;enabled:boolean|null;items:ArtifactSummary[];unread:string[];loading:boolean;disconnected:boolean;actionError:boolean;cancelling:string[]};
-const initial=(projectId:string):State=>({projectId,enabled:null,items:[],unread:[],loading:true,disconnected:false,actionError:false,cancelling:[]});
+type State={projectId:string|null;enabled:boolean|null;items:ArtifactSummary[];unread:string[];loading:boolean;disconnected:boolean;actionError:boolean;cancelling:string[]};
+// No project yet (the workspace calls this before one opens): off, and nothing is asked.
+const initial=(projectId:string|null):State=>({projectId,enabled:projectId?null:false,items:[],unread:[],loading:!!projectId,disconnected:false,actionError:false,cancelling:[]});
 type Controller={refresh:()=>Promise<void>;acknowledge:()=>Promise<void>;cancel:(item:ArtifactSummary)=>Promise<void>};
 type EventPage={events:{cursor:string;artifactId:string;type:string}[];cursor:string;lastRead:string};
 function eventPage(value:unknown):EventPage{
@@ -18,10 +19,11 @@ function eventPage(value:unknown):EventPage{
 }
 
 /** The scan cursor can cross hidden rows. Only a visible event may be marked read. */
-export function useArtifacts(projectId:string,fetcher:ArtifactFetch=artifactFetch){
+export function useArtifacts(projectId:string|null,fetcher:ArtifactFetch=artifactFetch){
   const [state,setState]=useState(()=>initial(projectId));
   const controller=useRef<Controller|null>(null);
   useEffect(()=>{
+    if(!projectId){setState(initial(null));controller.current=null;return;}
     const abort=new AbortController();
     let disposed=false,stopped=false,busy=false,acknowledging=false,timer:ReturnType<typeof setTimeout>|undefined;
     let scan="0",read="0",items:ArtifactSummary[]=[],failures=0;

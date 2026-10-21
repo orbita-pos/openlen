@@ -79,9 +79,15 @@ export interface NewChatPanelProps {
   onClose?: () => void;
   /** Un lector del proyecto compartido: lee la conversación, no escribe. */
   soloLectura?: boolean;
+  /** The conversation takes the workspace center: the project has nothing to look at yet (no page, no app, no
+   *  deliverable), as Claude keeps the chat in the middle until an artifact exists. Docked, centered at a reading
+   *  width, and with no way to float it off an empty screen. */
+  centered?: boolean;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
+/** In the center, the conversation keeps a reading width (760 px) and the rest is margin. */
+const CENTERED_PADDING = "px-[max(1rem,calc((100%_-_760px)/2))]";
 // En una app no hay portada ni formulario de contacto: sus datos y su login.
 const APP_SUGGESTIONS = ["data", "login", "mobile", "publish"] as const;
 
@@ -125,6 +131,7 @@ function NoProject({ loading }: { loading: boolean }) {
 
 function AgentChatView({
   projectId,
+  centered = false,
   flatProjectHtml = "",
   flatProjectPage = null,
   onLocalUpdate,
@@ -246,7 +253,7 @@ function AgentChatView({
   // ocupa la pantalla entera.
   const isMobile = useIsMobile();
   const storedLayout = useChatLayout();
-  const layout = isMobile ? "docked" : storedLayout;
+  const layout = isMobile || centered ? "docked" : storedLayout;
   // EL FLOTANTE SE PLIEGA AL INPUT (2026-10-20, Jesús): una barra fina con el
   // compositor; el historial sale al enfocar la caja y se vuelve a plegar al
   // hacer clic en la página (`ChatFrame`). Mientras está plegado, lo que dice
@@ -377,6 +384,7 @@ function AgentChatView({
         closeLabel={tSidebar("sidebar.collapsePanel")}
         relativeTime={relativeTime}
         esApp={esApp}
+        noFloat={centered}
       />
       {equipo.compartido && !plegado && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
@@ -394,7 +402,7 @@ function AgentChatView({
       )}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
-      <div ref={chat.scrollRef} className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3 pt-5 ${plegado ? "hidden" : "flex"}`}>
+      <div ref={chat.scrollRef} className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
         {chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
@@ -444,7 +452,7 @@ function AgentChatView({
           )
         )}
       </div>
-      <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : "px-3 pb-3 pt-1"}`}>
+      <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : centered ? `${CENTERED_PADDING} pb-4 pt-1` : "px-3 pb-3 pt-1"}`}>
         {(!plegado || avisoPendiente) && (
           <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} />
         )}

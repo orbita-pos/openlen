@@ -9,14 +9,26 @@ import {ArtifactViewer} from "./artifact-viewer";
 import {Link} from "@/i18n/navigation";
 
 const icons={dashboard:LayoutDashboard,slides:Presentation,image:ImageIcon,motion:Video,audio:Volume2};
-interface Props {projectId:string;readOnly?:boolean;fetcher?:ArtifactFetch;historyHref?:string}
+type ArtifactsData=ReturnType<typeof useArtifacts>;
+interface Props {projectId:string;readOnly?:boolean;fetcher?:ArtifactFetch;historyHref?:string;
+  /** The workspace's list (`/new` reads it once for the bell, the center and the chat); without it the bell reads its own. */
+  data?:ArtifactsData;
+  /** Where «Abrir» shows a piece (the center, when the project has no page); without it, the bell's own viewer. */
+  onOpen?:(item:ArtifactSummary)=>void}
 // The key fences the entire panel/viewer when the workspace changes projects.
 // `enabled` is the server's switch: when it is off the bell never mounts, so it
 // never asks an API that would only answer 404.
-export function ArtifactTray({enabled=true,...props}:Props&{enabled?:boolean}){return enabled?<ProjectArtifactTray key={props.projectId} {...props}/>:null;}
-function ProjectArtifactTray({projectId,readOnly=false,fetcher=artifactFetch,historyHref}:Props){
+export function ArtifactTray({enabled=true,...props}:Props&{enabled?:boolean}){
+  if(!enabled)return null;
+  const {data,...rest}=props;
+  return data?<ArtifactTrayView key={props.projectId} {...rest} data={data}/>:<ProjectArtifactTray key={props.projectId} {...rest}/>;
+}
+function ProjectArtifactTray(props:Omit<Props,"data">){
+  const data=useArtifacts(props.projectId,props.fetcher??artifactFetch);
+  return <ArtifactTrayView {...props} data={data}/>;
+}
+function ArtifactTrayView({projectId,readOnly=false,fetcher=artifactFetch,historyHref,data,onOpen}:Props&{data:ArtifactsData}){
   const t=useTranslations("topbar.artifacts"),id=useId(),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null);
-  const data=useArtifacts(projectId,fetcher);
   const {acknowledge,unread,disconnected}=data;
   const [open,setOpen]=useState(false),[selected,setSelected]=useState<{item:ArtifactSummary;revision:number}|null>(null);
   useEffect(()=>{if(open&&unread.length&&!disconnected)void acknowledge();},[open,unread,disconnected,acknowledge]);
@@ -64,7 +76,7 @@ function ProjectArtifactTray({projectId,readOnly=false,fetcher=artifactFetch,his
                   </div>
                   {failed&&<p className="text-[11px] fg-faint mt-1 leading-relaxed">{t("failedHint")}</p>}
                   {(item.lastReadyRevision!==null||working&&!readOnly)&&<div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-2">
-                    {item.lastReadyRevision!==null&&<button type="button" data-artifact-open onClick={()=>setSelected({item,revision:item.lastReadyRevision!})} className="inline-flex min-h-7 items-center gap-1 text-[11px] font-medium fg hover:underline underline-offset-2">{t(previous?"previous":"open")}<ChevronRight size={12}/></button>}
+                    {item.lastReadyRevision!==null&&<button type="button" data-artifact-open onClick={()=>{if(onOpen){setOpen(false);onOpen(item);}else setSelected({item,revision:item.lastReadyRevision!});}} className="inline-flex min-h-7 items-center gap-1 text-[11px] font-medium fg hover:underline underline-offset-2">{t(previous?"previous":"open")}<ChevronRight size={12}/></button>}
                     {working&&!readOnly&&<button type="button" data-artifact-cancel disabled={data.cancelling.includes(item.id)} onClick={()=>void data.cancel(item)} className="min-h-7 text-[11px] fg-faint hover:fg disabled:opacity-50">{t(data.cancelling.includes(item.id)?"cancelling":"cancel")}</button>}
                   </div>}
                 </div>
