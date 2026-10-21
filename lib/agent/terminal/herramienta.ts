@@ -30,7 +30,7 @@ import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
-import { closeTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
 import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
 import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
 import { whileWorking } from "./still-working";
@@ -249,23 +249,32 @@ async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<boolea
  * guardó (un proceso en segundo plano), se pausa, se suelta y se cobra (`closeTurnTerminal`).
  */
 export async function cerrarTerminalDeLaSesion(session: AgentSession, deps?: AgentDeps): Promise<void> {
+  await closeTurnTerminal(session, deps ? { save: savePendingThroughGuards(session, deps) } : {});
+}
+
+/**
+ * LA TERMINAL REAL: antes de la última foto del turno (la de sus cambios y su «Deshacer»), la caja
+ * para lo de segundo plano y guarda lo pendiente, para que sea del turno. Con la terminal de siempre
+ * no hace nada. El cierre de después ya no lo repite.
+ */
+export async function settleSessionTerminal(session: AgentSession, deps: AgentDeps): Promise<void> {
+  await settleTurnTerminal(session, { save: savePendingThroughGuards(session, deps) });
+}
+
+/** What the box changed and nobody saved yet, saved through Write's guards against the terminal's
+ *  photo — taken NOW: `closeTurnTerminal` forgets it before saving. */
+function savePendingThroughGuards(session: AgentSession, deps: AgentDeps) {
   const antes = { ...(session.fotoDeLaTerminal ?? {}) };
-  await closeTurnTerminal(
-    session,
-    deps
-      ? {
-          save: async (pendiente) => {
-            const despues = { ...antes };
-            for (const [ruta, contenido] of Object.entries(pendiente)) {
-              if (contenido === null) delete despues[ruta];
-              else despues[ruta] = contenido;
-            }
-            const cambios = cambiosDeLaTerminal(antes, despues);
-            if (cambios.length > 0) await guardarLoDeLaTerminal(session, deps, cambios, antes);
-          },
-        }
-      : {},
-  );
+  return async (pendiente: Readonly<Record<string, string | null>>): Promise<void> => {
+    const despues = { ...antes };
+    for (const [ruta, contenido] of Object.entries(pendiente)) {
+      if (contenido === null) delete despues[ruta];
+      else despues[ruta] = contenido;
+    }
+    const cambios = cambiosDeLaTerminal(antes, despues);
+    if (cambios.length > 0) await guardarLoDeLaTerminal(session, deps, cambios, antes);
+    if (session.fotoDeLaTerminal) session.fotoDeLaTerminal = despues;
+  };
 }
 
 /** Lo de /.openlen que va a la caja: nunca lo de los visitantes, y como mucho 20 MB (las versiones, al final). */
