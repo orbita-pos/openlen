@@ -18,9 +18,20 @@
 // blast radius for one marker package). This is that same scoped fix,
 // ported to Node's CJS loader since `tsx --test` has no resolve.alias knob.
 const Module = require("node:module");
+const fs = require("node:fs");
 const path = require("node:path");
 
-const EMPTY_SERVER_ONLY = path.join(__dirname, "..", "node_modules", "server-only", "empty.js");
+// The nearest node_modules/server-only up from here, as Node looks for packages: in a git worktree
+// the repo's own node_modules may not have it (or not exist), and the main checkout's does.
+function findEmptyServerOnly(dir) {
+  for (let d = dir; ; d = path.dirname(d)) {
+    const candidate = path.join(d, "node_modules", "server-only", "empty.js");
+    if (fs.existsSync(candidate)) return candidate;
+    if (path.dirname(d) === d) return path.join(__dirname, "..", "node_modules", "server-only", "empty.js");
+  }
+}
+
+const EMPTY_SERVER_ONLY = findEmptyServerOnly(path.join(__dirname, ".."));
 
 const originalResolveFilename = Module._resolveFilename;
 Module._resolveFilename = function (request, ...rest) {
