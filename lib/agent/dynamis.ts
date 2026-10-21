@@ -86,7 +86,7 @@ export function modeOfTurn(raw: unknown, env: Readonly<Record<string, string | u
   return raw === "dynamis" && dynamisAvailable(env) ? "dynamis" : "len";
 }
 
-/** La temperatura de la ficha de V4.1. La de Len, 0,2, está en `brain.ts` con su porqué. */
+/** La temperatura de la ficha de V4.1. Len usa la misma desde el 21/10 (`brain.ts`, con su porqué). */
 export const DYNAMIS_TEMPERATURE = 1.0;
 
 /** La palabra, no un presupuesto: ver la cabecera. */
