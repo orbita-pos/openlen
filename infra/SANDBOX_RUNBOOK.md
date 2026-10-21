@@ -24,7 +24,7 @@ Cambiar una: `systemctl restart openlen-app`.
 
 ## 2. Encender por primera vez
 
-1. Cuenta de E2B y su clave (`https://e2b.dev/dashboard?tab=keys`).
+1. Cuenta de E2B y su clave (`https://console.e2b.dev (pestaña Keys)`).
 2. El paquete `e2b`, a versión exacta, y `loadE2bSdk` (`lib/agent/sandbox/e2b-driver.ts`) pasado a `import("e2b")`
    literal, para que el empaquetado lo lleve.
 3. La plantilla (§6).
