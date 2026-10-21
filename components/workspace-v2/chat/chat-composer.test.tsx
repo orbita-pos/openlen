@@ -17,7 +17,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Compositor({ busy = false, conPlan = true, esApp = false }: { busy?: boolean; conPlan?: boolean; esApp?: boolean }) {
+function Compositor({ busy = false, conPlan = true, esApp = false, compacta = false }: { busy?: boolean; conPlan?: boolean; esApp?: boolean; compacta?: boolean }) {
   const [plan, setPlan] = useState(false);
   const ta = useRef<HTMLTextAreaElement | null>(null);
   return (
@@ -43,6 +43,7 @@ function Compositor({ busy = false, conPlan = true, esApp = false }: { busy?: bo
       planMode={plan || (busy && conPlan)}
       {...(conPlan ? { onTogglePlan: () => setPlan((p) => !p) } : {})}
       esApp={esApp}
+      compacta={compacta}
     />
   );
 }
@@ -173,5 +174,26 @@ describe("la caja vacía en una app", () => {
     const aviso = (host: HTMLElement) => [...host.querySelectorAll("p")].map((p) => p.textContent).find((x) => x?.startsWith("newChat.composer.disclaimer"));
     expect(aviso(montar({ esApp: true }))).toBe("newChat.composer.disclaimerApp");
     expect(aviso(montar())).toBe("newChat.composer.disclaimer");
+  });
+});
+
+// EL CHAT FLOTANTE (2026-10-20): una sola fila, en el orden de la barra.
+describe("el compositor compacto", () => {
+  it("pone «+», la caja, las pastillas y enviar en una fila, sin el aviso de abajo", () => {
+    const host = montar({ compacta: true });
+    expect(host.textContent).not.toContain("newChat.composer.disclaimer");
+    const fila = host.querySelector(".nc-composer-compacta");
+    expect(fila).not.toBeNull();
+    const plus = host.querySelector('[aria-label="newChat.composer.plus"]')!.parentElement!;
+    const caja = host.querySelector("textarea")!.closest(".flex-1")!;
+    const enviar = host.querySelector('[aria-label="composer.send"]')!;
+    expect(plus.className).toContain("order-1");
+    expect(caja.className).toContain("order-2");
+    expect(enviar.className).toContain("order-4");
+  });
+
+  it("el de siempre conserva el aviso", () => {
+    const host = montar();
+    expect(host.textContent).toContain("newChat.composer.disclaimer");
   });
 });

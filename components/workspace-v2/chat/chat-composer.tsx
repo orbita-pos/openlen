@@ -62,6 +62,7 @@ export function ChatComposer({
   mencionables,
   bloqueado = false,
   secretGuard,
+  compacta = false,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -115,6 +116,10 @@ export function ChatComposer({
    *  secreta no sale hacia Len sin preguntar. `available` dice si este
    *  servidor guarda secretos (sin funciones, se manda como siempre). */
   secretGuard?: { available(): Promise<boolean>; onSaveAsSecret(found: FoundSecret): void };
+  /** EL CHAT FLOTANTE (2026-10-20): una sola fila fina —«+», la caja, la mira,
+   *  las pastillas y enviar—, sin marco propio (lo pone la barra) ni el aviso
+   *  de abajo. Los mismos botones, sólo otro orden. */
+  compacta?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -143,9 +148,15 @@ export function ChatComposer({
 
   return (
     <div>
-      <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
+      <div
+        className={
+          compacta
+            ? "nc-composer nc-composer-compacta relative flex flex-wrap items-center gap-x-[3px] px-1.5 py-1.5"
+            : "nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition"
+        }
+      >
         {secretoPendiente && secretGuard && (
-          <div role="alert" className="mb-1.5 flex flex-wrap items-center gap-2 rounded-[10px] border bd bg-app px-2.5 py-1.5 text-[12px] fg">
+          <div role="alert" className="mb-1.5 flex basis-full flex-wrap items-center gap-2 rounded-[10px] border bd bg-app px-2.5 py-1.5 text-[12px] fg">
             <KeyRound size={13} className="shrink-0 text-amber-600" />
             <span className="min-w-0 flex-1">{t("functionSecrets.composerFound")}</span>
             <button
@@ -171,7 +182,7 @@ export function ChatComposer({
           </div>
         )}
         {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
-          <div className="mb-1 flex flex-wrap gap-1.5">
+          <div className="mb-1 flex basis-full flex-wrap gap-1.5">
             {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
                 modo plan y su ✕ lo apaga. Mientras Len trabaja no se toca (se
                 elige al mandar, como el modo y el esfuerzo). */}
@@ -241,12 +252,12 @@ export function ChatComposer({
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
                 : (placeholder ?? t(esApp ? "composer.placeholderApp" : "composer.placeholder")),
-            style: { minHeight: 44 },
+            style: { minHeight: compacta ? 36 : 44 },
           };
           // UNA sola caja, con o sin gente: si la gente llega mientras se
           // escribe, se encienden los colores sin desmontarla ni quitarle el foco.
           return (
-            <div className="mt-0.5">
+            <div className={compacta ? "order-2 min-w-0 flex-1 pt-[7px]" : "mt-0.5"}>
               {arroba.menu && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu}</div>}
               <CajaConMenciones
                 {...caja}
@@ -260,8 +271,8 @@ export function ChatComposer({
             </div>
           );
         })()}
-        <div className="mt-0.5 flex items-center gap-[3px]">
-          <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
+        <div className={compacta ? "contents" : "mt-0.5 flex items-center gap-[3px]"}>
+          <div className="relative order-1" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
             <button
               type="button"
               ref={plus.refDisparador}
@@ -345,14 +356,14 @@ export function ChatComposer({
               aria-pressed={sectionSelectMode}
               onClick={() => onToggleSectionSelect(!sectionSelectMode)}
               disabled={busy}
-              className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
+              className={`order-3 grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
                 sectionSelectMode ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"
               }`}
             >
               <Crosshair size={16} />
             </button>
           )}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="order-3 ml-auto flex items-center gap-1.5">
             {onModeChange && (
               <ModePicker
                 mode={mode}
@@ -389,7 +400,7 @@ export function ChatComposer({
             disabled={(!busy && !hasContent) || (bloqueado && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
-            className={`ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
+            className={`order-4 ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
               bloqueado && typed
                 ? "bg-[var(--border-strong)]"
                 : busy && typed && !etiquetaEnviar
@@ -413,7 +424,7 @@ export function ChatComposer({
         </div>
       </div>
       {debajo}
-      <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>
+      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
     </div>
   );
 }
