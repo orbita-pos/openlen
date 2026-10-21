@@ -3,7 +3,7 @@
 // copy when it paused, and which turn holds it. One turn at a time: holding is a compare-and-set,
 // and a project without a box yet is held by creating its row.
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -76,6 +76,8 @@ export async function pausedBefore(cutoff: Date): Promise<{ projectId: string; s
   return (Array.isArray(rows) ? rows : (rows.rows ?? [])).map((r) => ({ projectId: r.projectId, sandboxId: r.sandboxId }));
 }
 
-export async function forgetProjectSandbox(projectId: string): Promise<void> {
-  await db.delete(schema.projectSandboxes).where(eq(schema.projectSandboxes.projectId, projectId));
+/** Deletes the project's row; with `heldBy`, only while that one holds it (the reaper). */
+export async function forgetProjectSandbox(projectId: string, heldBy?: string): Promise<void> {
+  const byProject = eq(schema.projectSandboxes.projectId, projectId);
+  await db.delete(schema.projectSandboxes).where(heldBy === undefined ? byProject : and(byProject, eq(schema.projectSandboxes.heldBy, heldBy)));
 }

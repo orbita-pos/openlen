@@ -93,6 +93,17 @@ describe("the sandbox row", () => {
     await forgetProjectSandbox(PROJECT);
     expect(await getProjectSandbox(PROJECT)).toBeNull();
   });
+
+  it("with heldBy, forgets the row only while that one holds it", async () => {
+    await saveProjectSandbox(row(PROJECT, { pausedAt: new Date("2026-10-10T00:00:00Z") }));
+    expect(await holdProjectSandbox(PROJECT, "turn-1")).toBe(true);
+    await forgetProjectSandbox(PROJECT, "reaper-1");
+    expect(await getProjectSandbox(PROJECT)).toMatchObject({ heldBy: "turn-1" });
+    await releaseProjectSandbox(PROJECT, "turn-1");
+    expect(await holdProjectSandbox(PROJECT, "reaper-1")).toBe(true);
+    await forgetProjectSandbox(PROJECT, "reaper-1");
+    expect(await getProjectSandbox(PROJECT)).toBeNull();
+  });
 });
 
 describe("spentTodayMicroUsd", () => {

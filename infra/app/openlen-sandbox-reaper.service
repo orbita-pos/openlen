@@ -1,0 +1,24 @@
+[Unit]
+Description=OpenLen — mata las cajas de la terminal real (E2B) pausadas hace una semana
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openlen-deploy
+Group=www-data
+
+# El MISMO fichero de secretos que openlen-app.service: usa DATABASE_URL y E2B_API_KEY.
+WorkingDirectory=/opt/openlen-app
+EnvironmentFile=/etc/openlen/openlen.env
+
+ExecStart=/usr/bin/node /opt/openlen-app/cron/sandbox-reaper.mjs
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-sandbox-reaper
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
