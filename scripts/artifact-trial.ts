@@ -38,6 +38,7 @@ import { TRIAL_ANSWER, TRIAL_PROJECT_BRIEF, TRIAL_PROJECT_TITLE, trialApp } from
 import { createArtifactCoreRuntime } from "../lib/artifacts/runtime-core";
 import { bundleBridge, createBridge, wsl } from "../lib/artifacts/acceptance/bridge-client";
 import { requireTrialDatabase, trialSpend, type PaidKind, type TrialAttempt, type TrialLimits } from "../lib/artifacts/acceptance/trial-budget";
+import { stopWhenParentGone } from "../lib/artifacts/acceptance/parent-watch";
 import type { DatosDelCaso } from "../lib/len-bench/tipos";
 
 const arg = (name: string) => {
@@ -240,6 +241,10 @@ async function main(): Promise<number> {
 
   const results: StepResult[] = [];
   let stopped: string | null = null;
+  // A paid trial never goes on alone: if the shell that launched it is gone (a closed session leaves orphans alive
+  // on Windows), the worker stops at once and no further step starts.
+  let orphaned = false;
+  stopWhenParentGone(() => { orphaned = true; console.error("the shell that launched this trial is gone: stopping"); worker.stdin!.end(); });
   try {
     if (preflight) {
       const started = Date.now();
@@ -252,6 +257,7 @@ async function main(): Promise<number> {
       return 0;
     }
     for (const step of steps) {
+      if (orphaned) { stopped = `${step.id}: the shell that launched the trial is gone`; break; }
       const before = await snapshot(runtime, projectId);
       const projected = trialSpend(lenUsd, before.attempts, { ...LIMITS, capUsd }) + step.reserveUsd;
       if (projected > capUsd) { stopped = `${step.id}: ${usd(projected)} with its reserve would pass the ${usd(capUsd)} cap`; break; }

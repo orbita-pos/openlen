@@ -12,6 +12,8 @@ function canonical(value: unknown): unknown {
   throw new ArtifactError("invalid_job_options");
 }
 const jobRow = (row: Record<string, unknown>) => row as unknown as ArtifactJob;
+/** How many times one revision may run before a failure is taken as the sources' doing, not the machine's. */
+export const MAX_RENDER_RUNS = 5;
 
 export async function writeJobEvent(tx: ArtifactSql, job: ArtifactJob, type: string): Promise<void> {
   await tx.query(`insert into "artifactEvents" ("projectId","requestId","artifactId","revision","type","jobId") select "projectId","requestId","id",$2,$3,$4 from "artifacts" where "id"=$1 on conflict do nothing`, [job.artifactId, job.revision, type, job.id]);
@@ -44,7 +46,18 @@ export function createArtifactJobs(database: ArtifactDatabase, store: ArtifactSt
     return database.transaction(async (tx) => {
       await requireArtifactAccess(tx, ctx, id, "write");
       const [row] = await tx.query(`insert into "artifactJobs" ("id","artifactId","revision","actorId","operation","optionsHash","options") values ($1,$2,$3,$4,$5,$6,$7::jsonb) on conflict ("artifactId","revision","operation","optionsHash") do update set "optionsHash"=excluded."optionsHash" returning *`, [randomUUID(), id, revision, ctx.actorId, operation, hash, serialized]);
-      const job = jobRow(row!);
+      let job = jobRow(row!);
+      // ASKING AGAIN FOR A RENDER THAT FAILED (trial with a loaded laptop, 21/10: Chromium took over 20 s to start,
+      // and the same revision could only give back its failed job). A free render goes back in the queue, with its
+      // runs counted; a paid take (image, voice) is never repeated on its own, and an unknown paid outcome is left
+      // for reconciliation (`needs_attention` is not touched).
+      if (job.status === "failed" || job.status === "cancelled") {
+        const why = job.errorCode ?? job.status;
+        if (artifact.kind === "image" || artifact.kind === "audio") throw new ArtifactError("render_already_failed", `revision ${revision} of this piece already failed (${why}); a paid take is not repeated on its own: write a new revision and render it if the user wants another try`);
+        if (job.attempt >= MAX_RENDER_RUNS) throw new ArtifactError("render_already_failed", `revision ${revision} of this piece failed ${job.attempt} times (${why}); change its sources and render the new revision, or tell the user why it fails`);
+        const [requeued] = await tx.query(`update "artifactJobs" set "status"='queued',"errorCode"=null,"diagnostics"='[]'::jsonb,"cancelRequested"=false,"workerId"=null,"fencingToken"=null,"leaseUntil"=null,"updatedAt"=now() where "id"=$1 and "status" in ('failed','cancelled') returning *`, [job.id]);
+        if (requeued) job = jobRow(requeued);
+      }
       if (job.status === "queued") await markArtifact(tx, job, "queued");
       await writeJobEvent(tx, job, "queued");
       return job;

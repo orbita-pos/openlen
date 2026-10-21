@@ -101,6 +101,7 @@ it("declares the wait on inspect_artifact and points render_artifact to it", () 
   const tools = artifactToolDeclarations(["slides"]);
   expect(tools.find((t) => t.name === "inspect_artifact")).toMatchObject({ parameters: { properties: { wait_ms: { type: "NUMBER", description: expect.stringMatching(/600000/) } } } });
   expect(String(tools.find((t) => t.name === "render_artifact")!.description)).toMatch(/inspect_artifact with wait_ms/);
+  expect(String(tools.find((t) => t.name === "render_artifact")!.description)).toMatch(/asked for again on the same revision.*paid image or voice is not repeated/);
 });
 
 it("render returns queued with persisted ids and refuses an unavailable format", async () => {
