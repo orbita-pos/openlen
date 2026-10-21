@@ -18,5 +18,6 @@ Build (needs the `e2b` package and `E2B_API_KEY`; costs E2B build time):
 npm run sandbox:template
 ```
 
-A changed template gets a NEW name in `SANDBOX_TEMPLATE` (`lib/agent/sandbox/config.ts`), so boxes
-already paused keep the one they were born with.
+A changed template gets a NEW name in `SANDBOX_TEMPLATE` (`lib/agent/sandbox/config.ts`): a box born
+from the old one is killed and replaced at its project's next turn (`choose.ts`), and the reaper kills
+those never used again. More in `infra/SANDBOX_RUNBOOK.md`.
