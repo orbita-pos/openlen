@@ -11,6 +11,11 @@ describe("the sandbox price", () => {
     expect(sandboxCenticredits(60)).toBe(28);
   });
 
+  it("an exact number of centicredits is not rounded up by floating point", () => {
+    expect(sandboxCenticredits(750)).toBe(345);
+    expect(sandboxCenticredits(1_500)).toBe(690);
+  });
+
   it("no time, no charge; a fraction of a centicredit rounds up", () => {
     expect(sandboxCenticredits(0)).toBe(0);
     expect(sandboxCenticredits(1)).toBe(1);
