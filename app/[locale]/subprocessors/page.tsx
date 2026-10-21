@@ -33,7 +33,7 @@ export default async function SubprocessorsPage({
   return (
     <LegalPage
       title={es ? "Subprocesadores" : "Subprocessors"}
-      updated={es ? "Última actualización: 16 de octubre de 2026" : "Last updated: October 16, 2026"}
+      updated={es ? "Última actualización: 21 de octubre de 2026" : "Last updated: October 21, 2026"}
     >
       {es ? (
         <>
@@ -81,6 +81,17 @@ export default async function SubprocessorsPage({
               datos y cuentas de las bases de datos de las páginas, analítica, y
               todos los datos en tránsito y en procesamiento del servicio. Región:
               Estados Unidos (Ashburn, Virginia).
+            </li>
+            <li>
+              <strong>E2B</strong> (e2b.dev) — el ordenador aislado donde corre la
+              terminal de Len cuando ejecuta programas de verdad. Cada proyecto
+              tiene el suyo: se pausa al terminar cada turno de Len y se borra tras
+              una semana sin uso o al borrar el proyecto. Datos: los ficheros del
+              proyecto, los comandos que escribe Len y su salida (incluida la de
+              git y, si Len consulta la base de datos del proyecto desde la
+              terminal, lo que lee de ella). Nunca recibe los envíos de
+              formularios, los mensajes del chat ni las visitas que guarda OpenLen.
+              Región: Estados Unidos.
             </li>
           </ul>
 
@@ -241,6 +252,17 @@ export default async function SubprocessorsPage({
               submissions, page chat messages, page database data and accounts,
               analytics, and all service data in transit and in processing.
               Region: United States (Ashburn, Virginia).
+            </li>
+            <li>
+              <strong>E2B</strong> (e2b.dev) — the isolated computer where
+              Len&apos;s terminal runs when it runs real programs. Each project has
+              its own: it is paused at the end of each of Len&apos;s turns and
+              deleted after a week unused or when the project is deleted. Data: the
+              project&apos;s files, the commands Len writes and their output
+              (including git&apos;s and, if Len queries the project&apos;s database
+              from the terminal, what it reads from it). It never receives the form
+              submissions, chat messages or visits OpenLen stores. Region: United
+              States.
             </li>
           </ul>
 
