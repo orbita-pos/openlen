@@ -238,19 +238,30 @@ export class SandboxTerminal implements TerminalBackend {
     }
   }
 
-  /** One pass over the mailbox: answers what is waiting. */
+  /** One pass over the mailbox: answers what is waiting. A request that can't be read or answered
+   *  gets its error as its own command's output, like a tool that fails; the next ones are still served. */
   private async serveOnce(): Promise<void> {
     const box = this.o.handle;
-    {
-      for (const name of await box.list(REQUESTS)) {
-        if (!name.endsWith(".json") || this.answered.has(name)) continue;
-        this.answered.add(name);
+    for (const name of await box.list(REQUESTS)) {
+      if (!name.endsWith(".json") || this.answered.has(name)) continue;
+      this.answered.add(name);
+      // The bridge script names the file after its id, so even an unreadable one can be answered.
+      let id = name.slice(0, -".json".length);
+      let program = "openlen-bridge";
+      let response: Record<string, unknown>;
+      try {
         const raw = (await box.read([`${REQUESTS}/${name}`]))[`${REQUESTS}/${name}`];
-        if (!raw || "binary" in raw) continue;
-        const req = JSON.parse(raw.text) as BridgeRequest;
+        let req: BridgeRequest;
+        try {
+          req = JSON.parse(raw && "text" in raw ? raw.text : "") as BridgeRequest;
+        } catch {
+          throw new Error("unreadable request");
+        }
+        id = req.id;
+        program = req.program;
         const { tree } = await this.look();
         const answer = await answerBridgeRequest(req, this.o.bridge, tree, { signal: this.o.signal });
-        let response: Record<string, unknown> = { passthrough: true };
+        response = { passthrough: true };
         if (!("passthrough" in answer)) {
           const writes: Record<string, string> = {};
           const removes: string[] = [];
@@ -259,9 +270,12 @@ export class SandboxTerminal implements TerminalBackend {
           await box.remove(removes);
           response = { stdout: answer.stdout, stderr: answer.stderr, exitCode: answer.exitCode };
         }
-        await box.write({ [`${RESPONSES}/${req.id}.json`]: JSON.stringify(response) });
-        await box.remove([`${REQUESTS}/${name}`]);
+      } catch (e) {
+        if ((e as { name?: string })?.name === "AbortError") throw e;
+        response = { stdout: "", stderr: `${program}: ${e instanceof Error ? e.message : String(e)}\n`, exitCode: 1 };
       }
+      await box.write({ [`${RESPONSES}/${id}.json`]: JSON.stringify(response) });
+      await box.remove([`${REQUESTS}/${name}`]);
     }
   }
 
