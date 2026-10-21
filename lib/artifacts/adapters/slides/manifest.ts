@@ -26,8 +26,13 @@ export function chartData(chart: SlideChart, input: SealedArtifactInput): { data
 }
 export function parseSlideDeck(input: SealedArtifactInput): SlideDeck {
   let deck: SlideDeck;
-  try { deck = schema.parse(JSON.parse(input.revision.files["deck.json"] ?? "")); }
-  catch { throw new ArtifactError("invalid_slide_deck"); }
+  let raw: unknown;
+  try { raw = JSON.parse(input.revision.files["deck.json"] ?? ""); } catch { throw new ArtifactError("invalid_slide_deck", "deck.json is not JSON"); }
+  // A retired format says what to write instead, as a deprecated option does.
+  if ((raw as { version?: unknown })?.version === 2) throw new ArtifactError("invalid_slide_deck", 'deck.json version 2 (a full HTML document per slide) is retired; write version 3: deck.json {"version":3,"title":"…","order":["cover",…]} and slides/<id>.html, one <section> each (/.openlen/docs/artifacts/slides.md)');
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) { const issue = parsed.error.issues[0]!; throw new ArtifactError("invalid_slide_deck", `deck.json ${issue.path.join(".") || "(root)"}: ${issue.message}; new decks are version 3 (/.openlen/docs/artifacts/slides.md)`); }
+  deck = parsed.data;
   const slides = new Set<string>();
   for (const slide of deck.slides) {
     if (slides.has(slide.id)) throw new ArtifactError("duplicate_slide_id"); slides.add(slide.id);

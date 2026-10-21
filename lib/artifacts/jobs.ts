@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { requireArtifactAccess } from "./access";
 import type { ArtifactStore } from "./store";
-import { ArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactJob, type ArtifactOutput, type ArtifactSql, type JobClaim } from "./types";
+import { ArtifactError, isArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactJob, type ArtifactOutput, type ArtifactSql, type JobClaim } from "./types";
 import { validateArtifactOutputs } from "./state";
 
 export const ACTIVE_JOB_STATES = ["running", "validating", "storing"] as const;
@@ -71,7 +71,7 @@ export function createArtifactJobs(database: ArtifactDatabase, store: ArtifactSt
         const candidate = jobRow(row);
         try { await requireArtifactAccess(tx, await contextForJob(candidate, tx), candidate.artifactId, "write"); }
         catch (error) {
-          if (!(error instanceof ArtifactError)) throw error;
+          if (!isArtifactError(error)) throw error;
           await tx.query(`update "artifactJobs" set "status"='failed',"errorCode"='access_revoked' where "id"=$1`, [candidate.id]);
           await markArtifact(tx, candidate, "failed"); await writeJobEvent(tx, candidate, "failed"); continue;
         }

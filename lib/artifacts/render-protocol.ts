@@ -8,7 +8,7 @@ interface RenderPacketBase {
   readonly height: number;
   readonly probes: readonly RenderProbe[];
 }
-export type ArtifactRenderPacket = RenderPacketBase & ({ readonly kind: "dashboard" } | {readonly kind:"capture"} | {readonly kind:"slides-layout";readonly pageCount:number} | { readonly kind: "slides"; readonly pageCount: number; readonly nativePptxBase64: string } | {readonly kind:"audio";readonly audio:AudioMix} | { readonly kind:"motion"; readonly fps:30; readonly durationSeconds:number; readonly frameCount:number;readonly audio?:AudioMix });
+export type ArtifactRenderPacket = RenderPacketBase & ({ readonly kind: "dashboard" } | {readonly kind:"capture";readonly route?:string} | {readonly kind:"slides-layout";readonly pageCount:number} | { readonly kind: "slides"; readonly pageCount: number; readonly nativePptxBase64: string } | {readonly kind:"audio";readonly audio:AudioMix} | { readonly kind:"motion"; readonly fps:30; readonly durationSeconds:number; readonly frameCount:number;readonly audio?:AudioMix });
 export interface ArtifactRenderResult { readonly png: Uint8Array; readonly checks: readonly string[]; readonly layout?:unknown;readonly pages?: readonly Uint8Array[]; readonly pdf?: Uint8Array; readonly mp4?:Uint8Array;readonly mp3?:Uint8Array;readonly wav?:Uint8Array;readonly audio?:{readonly durationSeconds:number;readonly sampleRate:number;readonly channels:number}; readonly video?:{readonly frameCount:number;readonly fps:number;readonly durationSeconds:number} }
 export type ArtifactRender = (packet: ArtifactRenderPacket, signal: AbortSignal) => Promise<ArtifactRenderResult>;
 export function validateRenderPacket(packet: ArtifactRenderPacket): void {
@@ -18,7 +18,7 @@ export function validateRenderPacket(packet: ArtifactRenderPacket): void {
   if (packet.kind === "slides" && (!Number.isSafeInteger(packet.pageCount) || packet.pageCount < 1 || packet.pageCount > 50 || typeof packet.nativePptxBase64 !== "string" || packet.nativePptxBase64.length > 10 * 1024 * 1024 || !/^[A-Za-z0-9+/]+={0,2}$/.test(packet.nativePptxBase64))) throw new ArtifactError("invalid_render_packet");
   if(packet.kind==="slides-layout"&&(!Number.isSafeInteger(packet.pageCount)||packet.pageCount<1||packet.pageCount>50||packet.probes.length))throw new ArtifactError("invalid_render_packet");
   if(packet.kind==="motion"&&(packet.fps!==30||packet.width!==1280||packet.height!==720||!Number.isFinite(packet.durationSeconds)||packet.durationSeconds<1||packet.durationSeconds>120||!Number.isSafeInteger(packet.frameCount)||packet.frameCount!==Math.round(packet.durationSeconds*30)||Math.abs(packet.frameCount-packet.durationSeconds*30)>1e-6))throw new ArtifactError("invalid_render_packet");
-  if(packet.kind==="capture"&&(packet.width!==1280||packet.height!==720||packet.probes.length!==0))throw new ArtifactError("invalid_render_packet");
+  if(packet.kind==="capture"&&(packet.width!==1280||packet.height!==720||packet.probes.length!==0||(packet.route!==undefined&&(typeof packet.route!=="string"||!/^#\/[A-Za-z0-9\/_.~%-]{0,200}$/.test(packet.route)))))throw new ArtifactError("invalid_render_packet");
   if(packet.kind==="audio"||(packet.kind==="motion"&&packet.audio)){
     const mix=validateAudioMix(packet.audio);
     if(packet.kind==="audio"&&(packet.html!==""||packet.probes.length>0)||packet.kind==="motion"&&Math.abs(mix.durationSeconds-packet.durationSeconds)>1e-6)throw new ArtifactError("invalid_audio_packet");

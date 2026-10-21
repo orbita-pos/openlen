@@ -8,7 +8,7 @@ import type { ArtifactBilling } from "./billing";
 import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStorage } from "./private-storage";
 import type { ArtifactStore } from "./store";
-import { ArtifactError, type ArtifactAdapter, type ArtifactDatabase, type ArtifactKind, type ArtifactOutput, type JobClaim, type JobOutcome } from "./types";
+import { ArtifactError, isArtifactError, type ArtifactAdapter, type ArtifactDatabase, type ArtifactKind, type ArtifactOutput, type JobClaim, type JobOutcome } from "./types";
 
 export interface ArtifactWorkerDeps {
   readonly database: ArtifactDatabase;
@@ -85,11 +85,11 @@ export async function runArtifactJob(claim: JobClaim, deps: ArtifactWorkerDeps, 
     let auditFailed = false;
     if (externalStarted && !commitStarted) await deps.billing?.recordFailure(claim).catch(() => { auditFailed = true; });
     const unknownExternal = externalStarted && !externalOutcomeKnown;
-    const cleanupUnknown=error instanceof ArtifactError&&error.code==="renderer_cleanup_unknown";
+    const cleanupUnknown=isArtifactError(error)&&error.code==="renderer_cleanup_unknown";
     const status = unknownExternal || commitStarted || auditFailed || cleanupUnknown ? "needs_attention" : cancelled ? "cancelled" : "failed";
-    const code = cleanupUnknown ? "renderer_cleanup_unknown" : commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : error instanceof ArtifactError ? error.code : "export_failed";
-    const diagnostics = error instanceof ArtifactError && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow|slide_layout_unsupported|slide_layout_too_large)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
-    if (!(signal.reason instanceof ArtifactError && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
+    const code = cleanupUnknown ? "renderer_cleanup_unknown" : commitStarted ? "result_commit_unknown" : auditFailed ? "external_audit_incomplete" : unknownExternal ? "external_outcome_unknown" : cancelled ? "user_cancelled" : isArtifactError(error) ? error.code : "export_failed";
+    const diagnostics = isArtifactError(error) && !externalStarted && /^(artifact_compile_failed|artifact_render_failed|artifact_package_unavailable|slide_element_outside_canvas|slide_text_overflow|slide_layout_unsupported|slide_layout_too_large|slide_format_invalid|invalid_slide_deck|invalid_slide_layout|slide_image_missing|pptx_object_missing|html_slide_deck_too_large|invalid_dependency|dashboard_output_invalid|dashboard_dataset_missing|invalid_dataset|invalid_dashboard_manifest|invalid_motion_manifest|artifact_resource_missing|frozen_source_missing|frozen_source_changed|sources_too_large|audio_asset_missing|audio_asset_invalid)$/.test(error.code) && error.message !== error.code ? [error.message] : [];
+    if (!(isArtifactError(signal.reason) && signal.reason.code === "worker_shutdown")) await deps.jobs.finish(claim, status, code, diagnostics).catch(() => undefined);
     return { jobId: claim.job.id, status, code };
   } finally { clearInterval(timer); signal.removeEventListener("abort", cancel); }
 }

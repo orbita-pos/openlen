@@ -4,7 +4,7 @@ import type { ArtifactJobs } from "./jobs";
 import type { ArtifactStore } from "./store";
 import type { createArtifactEvents } from "./events";
 import type { ArtifactStorage } from "./private-storage";
-import { ArtifactError, type ArtifactContext, type ArtifactDatabase } from "./types";
+import { ArtifactError, isArtifactError, type ArtifactContext, type ArtifactDatabase } from "./types";
 import { availableArtifactKinds } from "./capabilities";
 import type { ArtifactPreview } from "./preview";
 import type { createArtifactData } from "./data";
@@ -22,7 +22,7 @@ export interface ArtifactServices {
 export type ArtifactApiPath = { action: "list" | "inspect" | "events" | "ack" | "cancel" | "download" | "preview" | "refresh"; artifactId?: string; jobId?: string; index?: string };
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "cache-control": "private, no-store" } });
 export function artifactErrorResponse(error: unknown): Response {
-  const code = error instanceof ArtifactError ? error.code : "artifact_unavailable";
+  const code = isArtifactError(error) ? error.code : "artifact_unavailable";
   const status = code === "forbidden" ? 403 : code.endsWith("_not_found") || code === "feature_disabled" ? 404 : code === "revision_conflict" ? 409 : code==="preview_limit"||code==="data_refresh_busy"?429:code.startsWith("invalid_") ? 400 : 503;
   return json({ error: code }, status);
 }
