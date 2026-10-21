@@ -18,7 +18,8 @@ import { defineTemplate, type TemplateBuilderLike } from "../infra/e2b/openlen-t
 async function main() {
   const apiKey = process.env.E2B_API_KEY?.trim();
   if (!apiKey) throw new Error("E2B_API_KEY is not set");
-  const filesDir = join("infra", "e2b", "openlen-terminal", ".build");
+  // With forward slashes, also on Windows: it travels to E2B as the copy's source.
+  const filesDir = "infra/e2b/openlen-terminal/.build";
   mkdirSync(filesDir, { recursive: true });
   for (const [boxPath, f] of Object.entries(templateFiles())) {
     const local = join(filesDir, basename(boxPath));
@@ -41,7 +42,8 @@ async function main() {
 main().then(
   () => process.exit(0),
   (e) => {
-    console.error(e);
+    // E2B's build errors carry the stack of the step that failed, not the message: say both.
+    console.error(e instanceof Error ? `${e.name}: ${e.message}\n${e.stack ?? ""}` : e);
     process.exit(1);
   },
 );
