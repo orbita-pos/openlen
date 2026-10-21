@@ -143,6 +143,11 @@
       "image_edit_limit": "每轮只能编辑一张图片",
       "site_page_limit": "你的网站已达到 {limit} 个页面的上限",
       "memory_full": "Len 的记忆已满"
+    },
+    "toolArtifact": {
+      "Read": "正在读取交付物",
+      "Edit": "正在编辑交付物",
+      "Write": "正在编写交付物"
     }
   },
   "defaultProjectName": "价格页面",

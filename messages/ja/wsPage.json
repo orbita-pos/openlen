@@ -143,6 +143,11 @@
       "image_edit_limit": "画像の編集はターンごとに1枚までです",
       "site_page_limit": "サイトはすでに上限の{limit}ページに達しています",
       "memory_full": "Lenのメモリがいっぱいです"
+    },
+    "toolArtifact": {
+      "Read": "成果物を読み込み中",
+      "Edit": "成果物を編集中",
+      "Write": "成果物を作成中"
     }
   },
   "defaultProjectName": "料金ページ",

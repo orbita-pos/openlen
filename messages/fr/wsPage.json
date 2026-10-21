@@ -143,6 +143,11 @@
       "image_edit_limit": "une seule image peut être modifiée par tour",
       "site_page_limit": "votre site a déjà le maximum de {limit} pages",
       "memory_full": "la mémoire de Len est pleine"
+    },
+    "toolArtifact": {
+      "Read": "Lecture d’un livrable",
+      "Edit": "Modification d’un livrable",
+      "Write": "Rédaction d’un livrable"
     }
   },
   "defaultProjectName": "Page de tarifs",

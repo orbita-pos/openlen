@@ -143,6 +143,11 @@
       "image_edit_limit": "pro Zug kann nur ein Bild bearbeitet werden",
       "site_page_limit": "deine Website hat bereits die maximale Anzahl von {limit} Seiten",
       "memory_full": "Lens Gedächtnis ist voll"
+    },
+    "toolArtifact": {
+      "Read": "Liest ein Ergebnis",
+      "Edit": "Bearbeitet ein Ergebnis",
+      "Write": "Schreibt ein Ergebnis"
     }
   },
   "defaultProjectName": "Preisseite",

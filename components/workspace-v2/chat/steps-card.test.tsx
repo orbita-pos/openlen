@@ -52,6 +52,22 @@ describe("la tarjeta de los pasos", () => {
   });
 
 
+  // Prueba real del 21/10: los ficheros de una presentación salían como «Escribiendo la página .len/artifacts/…».
+  it("los ficheros de un entregable hablan del entregable, en una página y en una app", () => {
+    const pasos = [
+      { tool: "Read", status: "done", summary: "/.len/artifacts/ac521cd9/deck.json" },
+      { tool: "Edit", status: "done", summary: "/.len/artifacts/ac521cd9/slides/cover.html" },
+      { tool: "Write", status: "done", summary: ".len/artifacts/ac521cd9/slides/precios.html" },
+    ] as AgentAction[];
+    for (const esApp of [false, true]) {
+      const texto = pintar(pasos, esApp).textContent ?? "";
+      expect(texto).toContain("agent.toolArtifact.Read");
+      expect(texto).toContain("agent.toolArtifact.Edit");
+      expect(texto).toContain("agent.toolArtifact.Write");
+      expect(texto).not.toMatch(/agent\.tool(App)?\.(Read|Edit|Write)/);
+    }
+  });
+
   it("🔴 un comando de la terminal que falla enseña el comando y «falló»", () => {
     const host = pintar([{ tool: "bash", status: "error", summary: "ls /supabase" } as AgentAction]);
     expect(host.textContent).toContain("ls /supabase");

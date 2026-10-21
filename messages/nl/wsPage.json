@@ -143,6 +143,11 @@
       "image_edit_limit": "er kan maar één afbeelding per beurt worden bewerkt",
       "site_page_limit": "je site heeft al het maximum van {limit} pagina's",
       "memory_full": "het geheugen van Len is vol"
+    },
+    "toolArtifact": {
+      "Read": "Leest een oplevering",
+      "Edit": "Bewerkt een oplevering",
+      "Write": "Schrijft een oplevering"
     }
   },
   "defaultProjectName": "Prijzenpagina",
