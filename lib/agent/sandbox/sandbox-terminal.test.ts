@@ -56,6 +56,31 @@ describe("SandboxTerminal — opening fast", () => {
     expect(d.files(handle.id).get("/index.html")).toBe("a");
   });
 
+  it("a large read-only set (an app's types) goes up as one compressed bundle, unpacked in the box", async () => {
+    const ro: Record<string, string> = {};
+    for (let i = 0; i < 120; i++) ro[`/node_modules/pkg${i}/index.d.ts`] = `export declare const v${i}: number;\n`;
+    const { terminal, handle, box } = await open({ projectFiles: { "/index.html": "a" }, readOnly: ro });
+    const write = vi.spyOn(handle, "write");
+    await terminal.ejecutar("true");
+    const readOnlyWrites = write.mock.calls.flatMap((c) => Object.keys(c[0])).filter((p) => p.includes("/node_modules/"));
+    expect(readOnlyWrites).toEqual([]);
+    expect(box().get(readOnlySource("/node_modules/pkg7/index.d.ts"))).toBe("export declare const v7: number;\n");
+  });
+
+  it("a resumed box only gets what changed in the read-only folder since the last turn", async () => {
+    const d = fakeDriver();
+    const handle = await d.create({ template: "t", metadata: {} });
+    const ro = { "/.openlen/docs/a.md": "a", "/.openlen/docs/b.md": "b" };
+    const opts = { handle, projectFiles: { "/index.html": "a" }, bridge: {}, readOnly: async () => ro, startedAt: Date.now() };
+    const first = new SandboxTerminal({ ...opts, syncedManifest: {}, fresh: true });
+    await first.ejecutar("true");
+    const next = new SandboxTerminal({ ...opts, syncedManifest: first.syncedManifest() });
+    const write = vi.spyOn(handle, "write");
+    await next.ejecutar("true");
+    const written = write.mock.calls.flatMap((c) => Object.keys(c[0])).filter((p) => p.includes("/.openlen/"));
+    expect(written).toEqual([]);
+  });
+
   it("a resumed box prepares the mailbox and reads its manifest in one command", async () => {
     const { terminal, d, handle } = await open({ projectFiles: { "/index.html": "a" }, boxFiles: { "/index.html": "a" } });
     await terminal.ejecutar("true");
@@ -148,7 +173,8 @@ describe("SandboxTerminal", () => {
     await terminal.ejecutar("true");
     expect(box().get(readOnlySource("/.openlen/versiones/v1/index.html"))).toBe("v1");
     const write = vi.spyOn(handle, "write");
-    const written = () => write.mock.calls.flatMap((c) => Object.keys(c[0]));
+    // The box's own list of what it has (.uploaded.json) is written with each change; not a read-only file.
+    const written = () => write.mock.calls.flatMap((c) => Object.keys(c[0])).filter((p) => !p.endsWith("/.uploaded.json"));
     await terminal.refrescarPerezosos();
     expect(written()).toEqual([]);
     ro = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v2/index.html": "v2" };

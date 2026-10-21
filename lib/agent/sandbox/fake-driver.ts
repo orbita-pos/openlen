@@ -2,6 +2,7 @@
 // answered like the template's script does (the hashes of the project's files, ./paths.ts).
 
 import { createHash } from "node:crypto";
+import { gunzipSync } from "node:zlib";
 
 import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 
@@ -46,6 +47,16 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       async run(command, opts) {
         const b = box();
         ran.get(id)!.push(command);
+        // Like sandbox-terminal's unbundle.py: the base64 gzipped JSON bundle becomes files.
+        const unbundle = /unbundle\.py (\S+)$/.exec(command);
+        if (unbundle) {
+          const bundle = b.files.get(unbundle[1]!);
+          if (bundle === undefined) return { stdout: "", stderr: "no bundle\n", exitCode: 1, timedOut: false };
+          const files = JSON.parse(gunzipSync(Buffer.from(bundle, "base64")).toString("utf8")) as Record<string, string>;
+          for (const [path, text] of Object.entries(files)) b.files.set(path, text);
+          b.files.delete(unbundle[1]!);
+          return { stdout: "", stderr: "", exitCode: 0, timedOut: false };
+        }
         if (command === "openlen-manifest" || command.endsWith("/openlen-manifest")) {
           const manifest: Record<string, string> = {};
           for (const [path, text] of b.files) {
