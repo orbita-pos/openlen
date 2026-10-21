@@ -34,6 +34,7 @@ import { TextoConMenciones } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { latestTodosOfActions } from "@/lib/agent/todo-list";
 import { TodoListView, continueStep } from "./todo-list";
+import { ArtifactTurnCards } from "../artifacts/artifact-turn-cards";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -290,6 +291,8 @@ export function LenTurn({
       {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} />}
       {/* LOS VISUALES (spec local 2026-10-16): el texto con sus visuales donde los puso Len. */}
       <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+      {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
+      <ArtifactTurnCards actions={turn.actions} />
       {todos && todos.length > 0 && (
         <TodoListView todos={todos} streaming={streaming} continueWith={offer} {...(onContinue ? { onContinue } : {})} />
       )}

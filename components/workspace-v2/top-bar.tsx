@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
@@ -120,6 +120,9 @@ interface TopBarProps {
   /** Len 3.0's deliverables are on on this server (`GET /api/projects/[id]`). */
   artifactsEnabled?: boolean;
   artifactsReadOnly?: boolean;
+  /** The workspace's deliverables list (read once in `/new`) and where «Abrir» shows a piece. */
+  artifactsData?: ComponentProps<typeof ArtifactTray>["data"];
+  onOpenArtifact?: ComponentProps<typeof ArtifactTray>["onOpen"];
   /** Invoked after a successful rollback. Parent typically re-fetches
    *  the project so publishedAt + drift flag stay accurate. */
   onRolledBack?: () => void;
@@ -163,6 +166,8 @@ export function TopBar({
   projectId,
   artifactsEnabled = false,
   artifactsReadOnly = false,
+  artifactsData,
+  onOpenArtifact,
   onRolledBack,
   onCustomDomain,
   onDeployVercel,
@@ -749,7 +754,7 @@ export function TopBar({
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
         {projectId && !inicio && !projectLoading && !projectUnavailable && (
-          <ArtifactTray projectId={projectId} enabled={artifactsEnabled} readOnly={artifactsReadOnly} />
+          <ArtifactTray projectId={projectId} enabled={artifactsEnabled} readOnly={artifactsReadOnly} data={artifactsData} onOpen={onOpenArtifact} />
         )}
         {/* LOS MIEMBROS (compartir el proyecto): invitar a trabajar en él. */}
         {onMiembros && (

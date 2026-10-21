@@ -122,3 +122,12 @@ it("does not poll while the page is hidden and catches up as soon as it is visib
     expect(calls).toBeGreaterThan(before);
   }finally{delete (document as unknown as {visibilityState?:unknown}).visibilityState;}
 });
+
+it("asks nothing while there is no project to ask about (the workspace calls it before one opens)",async()=>{
+  let calls=0;
+  const fetcher:ArtifactFetch=async()=>{calls++;return json({artifacts:[]});};
+  function Off(){state=useArtifacts(null,fetcher);return null;}
+  await act(async()=>{root.render(<Off/>);});
+  expect(calls).toBe(0);
+  expect(state).toMatchObject({enabled:false,items:[],loading:false});
+});

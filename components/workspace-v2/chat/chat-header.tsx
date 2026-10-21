@@ -25,10 +25,13 @@ export function ChatHeader({
   closeLabel,
   relativeTime,
   esApp = false,
+  noFloat = false,
 }: {
   /** Anclado, flotante o minimizado (del mock). */
   layout: ChatLayout;
   onLayout: (l: ChatLayout) => void;
+  /** The chat is the whole center (nothing to look at yet): floating it would leave an empty screen. */
+  noFloat?: boolean;
   conversations: ReturnType<typeof useConversations>;
   busy: boolean;
   /** En el móvil el chat tapa la pantalla: la ✕ es la única salida. */
@@ -136,7 +139,7 @@ export function ChatHeader({
       {/* Sacar, minimizar y volver a anclar: en el móvil no (el panel ya
           ocupa la pantalla). */}
       {layout === "docked" ? (
-        <button
+        !noFloat && <button
           type="button"
           onClick={() => onLayout("floating")}
           aria-label={t("newChat.layout.float")}

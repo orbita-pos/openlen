@@ -112,6 +112,12 @@ import {
 } from "@/components/workspace-v2/replace-asset-modal";
 import { OriginalRestoreModal } from "@/components/workspace-v2/original-restore-modal";
 import { TopBar } from "@/components/workspace-v2/top-bar";
+import { useArtifacts } from "@/components/workspace-v2/artifacts/use-artifacts";
+import { ArtifactStage } from "@/components/workspace-v2/artifacts/artifact-stage";
+import { ArtifactViewer } from "@/components/workspace-v2/artifacts/artifact-viewer";
+import { WorkspaceArtifactsContext, type WorkspaceArtifacts } from "@/components/workspace-v2/artifacts/workspace-artifacts";
+import type { ArtifactSummary } from "@/components/workspace-v2/artifacts/client";
+import { centerContent } from "@/lib/workspace-v2/center-content";
 import { useToast } from "@/components/workspace-v2/toast";
 import { stripEditorInstrumentation } from "@/components/workspace-v2/strip-editor-instrumentation";
 import { useDarkMode } from "@/lib/use-dark-mode";
@@ -1472,6 +1478,36 @@ function NewV2Inner() {
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
   const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app");
+  // LO QUE ENSEÑA EL CENTRO, como Claude con un artefacto (21/10): la conversación ocupa el medio mientras no hay
+  // nada que ver; una pieza (presentación, dashboard, imagen, video, voz) se abre ahí si el proyecto no tiene
+  // página; con página o app, el lienzo de siempre. La lista de piezas se lee UNA vez y la comparten la campana,
+  // el centro y las tarjetas del chat (`WorkspaceArtifactsContext`).
+  const artifactsOn = loadedProject?.artifacts === true && !pantallaDeInicio;
+  const artifacts = useArtifacts(artifactsOn && loadedProject ? loadedProject.id : null);
+  const [centerArtifactId, setCenterArtifactId] = useState<string | null>(null);
+  const [viewerArtifact, setViewerArtifact] = useState<ArtifactSummary | null>(null);
+  useEffect(() => {
+    setCenterArtifactId(null);
+    setViewerArtifact(null);
+  }, [loadedProject?.id]);
+  const centro = centerContent({
+    hasPage: activeDoc.trim() !== "" || Object.keys(loadedProject?.pages ?? {}).length > 0,
+    isApp: esApp || naceComo === "app",
+    deliverables: artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
+  });
+  const openArtifact = useCallback(
+    (item: ArtifactSummary) => {
+      if (centro === "deliverable") {
+        setCenterArtifactId(item.id);
+        setCenterView("page");
+      } else if (item.lastReadyRevision !== null) setViewerArtifact(item);
+    },
+    [centro, setCenterView],
+  );
+  const workspaceArtifacts = useMemo<WorkspaceArtifacts | null>(
+    () => (artifactsOn && artifacts.enabled ? { items: artifacts.items, open: openArtifact } : null),
+    [artifactsOn, artifacts.enabled, artifacts.items, openArtifact],
+  );
   // Un lector de un proyecto compartido sólo mira.
   const soloLector = loadedProject?.rol === "lector";
   // Sólo en una app, para quien edita, y no con el taller en su vista de móvil (como v0).
@@ -3449,7 +3485,18 @@ function NewV2Inner() {
   // crudo en la barra (ensayo de caja, 07/10). El taller de una app que nace
   // lo dice igual.
   const shownProjectName = projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName;
+  // Nada que ver todavía y el chat abierto: la conversación ocupa el centro (como Claude antes de un artefacto).
+  const chatEnElCentro =
+    entryMode === "editing" &&
+    !pantallaDeInicio &&
+    !!loadedProject &&
+    centro === "conversation" &&
+    normalizedCenterView === "page" &&
+    mode === "chat" &&
+    !leftCollapsed &&
+    !previewingTemplate;
   return (
+    <WorkspaceArtifactsContext.Provider value={workspaceArtifacts}>
     <div className="workspace-v2 h-full flex flex-col">
       <TopBar
         esApp={esApp}
@@ -3467,6 +3514,8 @@ function NewV2Inner() {
         projectId={loadedProject?.id}
         artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
+        artifactsData={artifactsOn ? artifacts : undefined}
+        onOpenArtifact={workspaceArtifacts ? openArtifact : undefined}
         onMiembros={loadedProject && !pantallaDeInicio ? () => setMiembrosOpen(true) : undefined}
         onEnvVars={abrirVariables}
         onRolledBack={() => {
@@ -3532,6 +3581,7 @@ function NewV2Inner() {
           onSoundVolume={setSoundVolume}
           onToggleSoundMute={toggleSoundMute}
           collapsed={leftCollapsed}
+          fillWidth={chatEnElCentro}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           activeSection={normalizedCenterView}
           onSelectSection={setCenterView}
@@ -3786,6 +3836,15 @@ function NewV2Inner() {
           // Con el primer mensaje mandado, el lienzo aparece VACÍO y se va
           // llenando con la página a medias que Len escribe (`page_preview`).
           (loadedProject && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
+            centro === "deliverable" && workspaceArtifacts ? (
+              <ArtifactStage
+                projectId={loadedProject.id}
+                items={workspaceArtifacts.items}
+                selectedId={centerArtifactId}
+                onSelect={setCenterArtifactId}
+                onAccessLost={() => void artifacts.refresh()}
+              />
+            ) : chatEnElCentro ? null : (
             <>
               <PreviewArea
                 onEnvVars={abrirVariables}
@@ -4176,6 +4235,7 @@ function NewV2Inner() {
                 </div>
               )}
             </>
+            )
           ) : projectUnavailable && projectParam && projectLoadFailure ? (
             <ProjectUnavailable
               failure={projectLoadFailure}
@@ -4380,7 +4440,22 @@ function NewV2Inner() {
           setAssetModal(null);
         }}
       />
+      {/* Una pieza abierta cuando hay página: el visor de siempre, encima del lienzo. */}
+      {viewerArtifact && viewerArtifact.lastReadyRevision !== null && loadedProject && (
+        <ArtifactViewer
+          key={`${viewerArtifact.id}/${viewerArtifact.lastReadyRevision}`}
+          projectId={loadedProject.id}
+          item={viewerArtifact}
+          revision={viewerArtifact.lastReadyRevision}
+          onClose={() => setViewerArtifact(null)}
+          onAccessLost={() => {
+            setViewerArtifact(null);
+            void artifacts.refresh();
+          }}
+        />
+      )}
     </div>
+    </WorkspaceArtifactsContext.Provider>
   );
 }
 

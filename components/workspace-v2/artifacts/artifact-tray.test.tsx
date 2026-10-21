@@ -58,3 +58,14 @@ it("asks nothing and shows nothing when deliverables are off on this server",asy
   expect(calls).toEqual([]);
   expect(document.querySelector('[aria-label="Entregables"]')).toBeNull();
 });
+
+it("uses the workspace's list and opener when it is given them, asking nothing itself",async()=>{
+  const opened:string[]=[];
+  const data={projectId:"p",enabled:true,items:items as never,unread:[],loading:false,disconnected:false,actionError:false,cancelling:[],refresh:async()=>{},acknowledge:async()=>{},cancel:async()=>{}};
+  await act(async()=>{root.render(<NextIntlClientProvider locale="es" messages={{topbar:messages}}><ArtifactTray projectId="p" fetcher={fetcher} data={data} onOpen={(item)=>opened.push(item.id)}/></NextIntlClientProvider>);});
+  await click(document.querySelector('[aria-label="Entregables"]'));
+  expect(document.querySelectorAll("[data-artifact]")).toHaveLength(3);
+  await click(document.querySelector('[data-artifact="image1"] [data-artifact-open]'));
+  expect(opened).toEqual(["image1"]);
+  expect(calls).toEqual([]);
+});
