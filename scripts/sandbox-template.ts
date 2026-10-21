@@ -3,7 +3,7 @@
 // in SANDBOX_TEMPLATE, 2 vCPU and 4 GiB (lib/agent/sandbox/size.ts). Writes OpenLen's box scripts
 // to infra/e2b/openlen-terminal/.build/ first (git-ignored): E2B's `copy` takes local files.
 //
-// Needs the `e2b` package (Jesús installs it) and E2B_API_KEY. Costs E2B build time (cents).
+// Needs the `e2b` package and E2B_API_KEY. Costs E2B build time (cents).
 //
 // Run: npm run sandbox:template
 
@@ -25,18 +25,15 @@ async function main() {
     writeFileSync(local, f.content);
     chmodSync(local, f.mode);
   }
-  const name = "e2b";
-  const e2b = (await import(/* @vite-ignore */ name)) as {
-    Template: (() => TemplateBuilderLike) & {
-      build(t: TemplateBuilderLike, name: string, o: Record<string, unknown>): Promise<{ name: string; templateId: string; buildId: string }>;
-    };
-    defaultBuildLogger?: () => unknown;
-  };
-  const info = await e2b.Template.build(defineTemplate(e2b.Template, filesDir), SANDBOX_TEMPLATE, {
+  const { Template, defaultBuildLogger } = await import("e2b");
+  // `copy` resolves its source from `fileContextPath`, by default the folder of the file that calls
+  // Template(): here, the repo root, where `filesDir` starts.
+  const template = defineTemplate(() => Template({ fileContextPath: process.cwd() }) as unknown as TemplateBuilderLike, filesDir);
+  const info = await Template.build(template as unknown as Parameters<typeof Template.build>[0], SANDBOX_TEMPLATE, {
     apiKey,
     cpuCount: SANDBOX_VCPU,
     memoryMB: SANDBOX_MEMORY_GIB * 1024,
-    ...(e2b.defaultBuildLogger ? { onBuildLogs: e2b.defaultBuildLogger() } : {}),
+    onBuildLogs: defaultBuildLogger(),
   });
   console.log(`template ${info.name} built: id=${info.templateId} build=${info.buildId}`);
 }
