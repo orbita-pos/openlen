@@ -10,7 +10,7 @@ import {
   forgetProjectSandbox,
   getProjectSandbox,
   holdProjectSandbox,
-  pausedBefore,
+  idleBefore,
   releaseProjectSandbox,
   saveProjectSandbox,
 } from "./store";
@@ -88,10 +88,29 @@ describe("the sandbox row", () => {
   it("lists only the boxes paused before a cutoff, and forgets one", async () => {
     await saveProjectSandbox(row(PROJECT, { pausedAt: new Date("2026-10-10T00:00:00Z") }));
     await saveProjectSandbox(row(OTHER, { pausedAt: new Date("2026-10-20T00:00:00Z") }));
-    const old = await pausedBefore(new Date("2026-10-14T00:00:00Z"));
-    expect(old.filter((b) => b.projectId.startsWith("test-sandbox"))).toEqual([{ projectId: PROJECT, sandboxId: `sbx-${PROJECT}` }]);
+    const old = await idleBefore(new Date("2026-10-14T00:00:00Z"));
+    expect(old.filter((b) => b.projectId.startsWith("test-sandbox"))).toEqual([{ projectId: PROJECT, sandboxId: `sbx-${PROJECT}`, pausedAt: new Date("2026-10-10T00:00:00Z") }]);
     await forgetProjectSandbox(PROJECT);
     expect(await getProjectSandbox(PROJECT)).toBeNull();
+  });
+
+  it("a hold older than 2 hours is taken: its turn died with the app (a deploy, a crash)", async () => {
+    await saveProjectSandbox(row(PROJECT));
+    expect(await holdProjectSandbox(PROJECT, "dead-turn")).toBe(true);
+    expect(await holdProjectSandbox(PROJECT, "turn-2")).toBe(false);
+    await db.execute(sql`update "projectSandboxes" set "updatedAt" = now() - interval '3 hours' where "projectId" = ${PROJECT}`);
+    expect(await holdProjectSandbox(PROJECT, "turn-2")).toBe(true);
+    expect(await getProjectSandbox(PROJECT)).toMatchObject({ heldBy: "turn-2" });
+  });
+
+  it("the reaper's list also has the boxes a dead turn left running, once they are old", async () => {
+    await saveProjectSandbox(row(PROJECT, { state: "running", pausedAt: null }));
+    await holdProjectSandbox(PROJECT, "dead-turn");
+    await db.execute(sql`update "projectSandboxes" set "updatedAt" = now() - interval '10 days' where "projectId" = ${PROJECT}`);
+    await saveProjectSandbox(row(OTHER, { state: "running", pausedAt: null }));
+    await holdProjectSandbox(OTHER, "live-turn");
+    const old = await idleBefore(new Date(Date.now() - 7 * 86_400_000));
+    expect(old.filter((b) => b.projectId.startsWith("test-sandbox"))).toEqual([{ projectId: PROJECT, sandboxId: `sbx-${PROJECT}`, pausedAt: null }]);
   });
 
   it("with heldBy, forgets the row only while that one holds it", async () => {

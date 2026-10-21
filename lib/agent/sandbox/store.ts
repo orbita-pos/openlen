@@ -24,12 +24,16 @@ export async function getProjectSandbox(projectId: string): Promise<ProjectSandb
   return row ?? null;
 }
 
-/** Takes the project's box for `turnId`; `false` if another turn has it. */
+/** A hold this old belongs to a turn that died with the app (a deploy, a crash): its `finally` never ran.
+ *  No turn lasts this long, and E2B paused its box long before (15 minutes without an extension). */
+const STALE_HOLD = sql`interval '2 hours'`;
+
+/** Takes the project's box for `turnId`; `false` if another (living) turn has it. */
 export async function holdProjectSandbox(projectId: string, turnId: string): Promise<boolean> {
   const r = (await db.execute(sql`
     INSERT INTO "projectSandboxes" ("projectId", "heldBy") VALUES (${projectId}, ${turnId})
     ON CONFLICT ("projectId") DO UPDATE SET "heldBy" = EXCLUDED."heldBy", "updatedAt" = now()
-      WHERE "projectSandboxes"."heldBy" IS NULL
+      WHERE "projectSandboxes"."heldBy" IS NULL OR "projectSandboxes"."updatedAt" < now() - ${STALE_HOLD}
     RETURNING "projectId"
   `)) as unknown as { rows?: unknown[] } | unknown[];
   return (Array.isArray(r) ? r : (r.rows ?? [])).length > 0;
@@ -66,14 +70,28 @@ export async function releaseProjectSandbox(projectId: string, turnId: string): 
   `);
 }
 
-/** Boxes paused before `cutoff` and held by nobody: the reaper's list. */
-export async function pausedBefore(cutoff: Date): Promise<{ projectId: string; sandboxId: string }[]> {
+export interface IdleSandbox {
+  readonly projectId: string;
+  readonly sandboxId: string;
+  readonly pausedAt: Date | null;
+}
+
+/** The reaper's list: boxes unused since before `cutoff` — paused then, or left running by a turn that
+ *  died — that no living turn holds. */
+export async function idleBefore(cutoff: Date): Promise<IdleSandbox[]> {
+  type Row = { projectId: string; sandboxId: string; pausedAt: Date | string | null };
   const rows = (await db.execute(sql`
-    SELECT "projectId", "sandboxId" FROM "projectSandboxes"
-    WHERE "state" = 'paused' AND "sandboxId" IS NOT NULL AND "heldBy" IS NULL AND "pausedAt" < ${cutoff}
-    ORDER BY "pausedAt"
-  `)) as unknown as { rows?: { projectId: string; sandboxId: string }[] } | { projectId: string; sandboxId: string }[];
-  return (Array.isArray(rows) ? rows : (rows.rows ?? [])).map((r) => ({ projectId: r.projectId, sandboxId: r.sandboxId }));
+    SELECT "projectId", "sandboxId", "pausedAt" FROM "projectSandboxes"
+    WHERE "sandboxId" IS NOT NULL
+      AND COALESCE("pausedAt", "updatedAt") < ${cutoff}
+      AND ("heldBy" IS NULL OR "updatedAt" < now() - ${STALE_HOLD})
+    ORDER BY COALESCE("pausedAt", "updatedAt")
+  `)) as unknown as { rows?: Row[] } | Row[];
+  return (Array.isArray(rows) ? rows : (rows.rows ?? [])).map((r) => ({
+    projectId: r.projectId,
+    sandboxId: r.sandboxId,
+    pausedAt: r.pausedAt === null ? null : new Date(r.pausedAt),
+  }));
 }
 
 /** Deletes the project's row; with `heldBy`, only while that one holds it (the reaper). */
