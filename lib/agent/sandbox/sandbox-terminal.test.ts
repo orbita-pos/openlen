@@ -17,9 +17,10 @@ async function open(o: {
   syncedManifest?: Record<string, string>;
   onRun?: FakeRun;
   bridge?: BridgeHandlers;
-  readOnly?: Record<string, string>;
+  readOnly?: Record<string, string> | (() => Record<string, string>);
   signal?: AbortSignal;
 }) {
+  const readOnly = o.readOnly;
   const d = fakeDriver({ onRun: o.onRun });
   const handle: SandboxHandle = await d.create({ template: "t", metadata: {} });
   for (const [p, t] of Object.entries(o.boxFiles ?? {})) d.files(handle.id).set(p, t);
@@ -28,7 +29,7 @@ async function open(o: {
     projectFiles: o.projectFiles,
     syncedManifest: o.syncedManifest ?? {},
     bridge: o.bridge ?? {},
-    readOnly: async () => o.readOnly ?? {},
+    readOnly: async () => (typeof readOnly === "function" ? readOnly() : (readOnly ?? {})),
     startedAt: Date.now(),
     signal: o.signal,
   });
@@ -107,6 +108,21 @@ describe("SandboxTerminal", () => {
     ]);
     // A file over the cap is never downloaded into the app's process: one of gigabytes would take it down.
     expect(d.reads(handle.id)).not.toContain("/data/big.csv");
+  });
+
+  it("the read-only folder goes up once; after that only what changed, and what is gone is removed", async () => {
+    let ro: Record<string, string> = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v1/index.html": "v1" };
+    const { terminal, handle, box } = await open({ projectFiles: { "/index.html": "x" }, readOnly: () => ro });
+    await terminal.ejecutar("true");
+    expect(box().get("/.openlen/versiones/v1/index.html")).toBe("v1");
+    const write = vi.spyOn(handle, "write");
+    const written = () => write.mock.calls.flatMap((c) => Object.keys(c[0]));
+    await terminal.refrescarPerezosos();
+    expect(written()).toEqual([]);
+    ro = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v2/index.html": "v2" };
+    await terminal.refrescarPerezosos();
+    expect(written()).toEqual(["/.openlen/versiones/v2/index.html"]);
+    expect(box().has("/.openlen/versiones/v1/index.html")).toBe(false);
   });
 
   it("visitor data is never written to the box; its folders say how to read it", async () => {

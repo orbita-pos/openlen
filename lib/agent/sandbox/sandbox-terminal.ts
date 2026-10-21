@@ -78,6 +78,8 @@ type NotSaved = { readonly ruta: string; readonly motivo: "binary" | "too_large"
 export class SandboxTerminal implements TerminalBackend {
   private tree: Record<string, string>;
   private synced: Record<string, string> = {};
+  /** The read-only files this turn put in the box, by hash. */
+  private uploaded: Record<string, string> = {};
   private cwd = "/";
   private opened: Promise<void> | null = null;
   private notes: string[] = [];
@@ -122,10 +124,19 @@ export class SandboxTerminal implements TerminalBackend {
     this.synced = saved;
   }
 
+  /** /.openlen in the box: the first time all of it, then only what changed (in an app it carries hundreds of .d.ts). */
   private async uploadReadOnly(): Promise<void> {
-    const files: Record<string, string> = {};
+    const files: Record<string, string> = { ...VISITOR_DATA_READMES };
     for (const [path, text] of Object.entries(await this.o.readOnly())) if (!NEVER_IN_BOX.test(path)) files[path] = text;
-    await this.o.handle.write({ ...files, ...VISITOR_DATA_READMES });
+    const hashes: Record<string, string> = {};
+    const writes: Record<string, string> = {};
+    for (const [path, text] of Object.entries(files)) {
+      hashes[path] = sha256(text);
+      if (this.uploaded[path] !== hashes[path]) writes[path] = text;
+    }
+    await this.o.handle.write(writes);
+    await this.o.handle.remove(Object.keys(this.uploaded).filter((path) => !(path in hashes)));
+    this.uploaded = hashes;
   }
 
   private async boxManifest(): Promise<Record<string, string>> {
