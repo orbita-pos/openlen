@@ -129,6 +129,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(guardado ? { guardado: guardado.notas, rechazado: guardado.rechazado } : {}),
     ...(r.reiniciada ? { reiniciada: r.reiniciada } : {}),
     ...(persistida ? { persistida } : {}),
+    ...(r.noGuardados ? { noGuardados: r.noGuardados } : {}),
   });
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
