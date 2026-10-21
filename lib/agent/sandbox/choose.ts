@@ -63,11 +63,13 @@ export interface TurnTerminalOptions {
 }
 
 type Charge = typeof chargeSandbox;
+type Save = (pending: Readonly<Record<string, string | null>>) => Promise<void>;
 
 /** The turn's real terminal: the box, and today's terminal behind it if the box dies. */
 export class TurnSandbox implements TerminalBackend {
   private current: TerminalBackend;
   private diedAt: number | null = null;
+  private settled = false;
 
   constructor(
     readonly inner: SandboxTerminal,
@@ -137,7 +139,22 @@ export class TurnSandbox implements TerminalBackend {
     return this.diedAt === null ? this.inner.runningSeconds() : Math.max(0, (this.diedAt - this.ctx.startedAt) / 1000);
   }
 
-  async close(o: { readonly save?: (pending: Readonly<Record<string, string | null>>) => Promise<void>; readonly store?: SandboxStore; readonly charge?: Charge; readonly now?: () => number }): Promise<void> {
+  /** The turn is ending: what still runs in the background is stopped (Claude Code's Bash in a session
+   *  nobody wakes up later), and what the box changed since the last command is saved like any other
+   *  write. Before the turn's last photo, so it belongs to the turn (its changes, its undo). Once. */
+  async settle(save?: Save): Promise<void> {
+    if (this.settled || this.diedAt !== null) return;
+    this.settled = true;
+    await this.inner.killBackground().catch(() => undefined);
+    try {
+      const pending = await this.inner.pendingChanges();
+      if (Object.keys(pending).length > 0 && save) await save(pending);
+    } catch (e) {
+      this.ctx.log(`[sandbox] could not save the box's last changes project=${this.ctx.session.projectId}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  async close(o: { readonly save?: Save; readonly store?: SandboxStore; readonly charge?: Charge; readonly now?: () => number }): Promise<void> {
     const { session, turnId } = this.ctx;
     const store = o.store ?? this.ctx.store;
     const now = o.now ?? this.ctx.now;
@@ -146,15 +163,7 @@ export class TurnSandbox implements TerminalBackend {
         await this.current.cerrar().catch(() => undefined);
         return;
       }
-      // What still runs in the background is stopped when the turn ends (Claude Code's Bash in a
-      // session nobody wakes up later); its last writes are then saved like any other.
-      await this.inner.killBackground().catch(() => undefined);
-      try {
-        const pending = await this.inner.pendingChanges();
-        if (Object.keys(pending).length > 0 && o.save) await o.save(pending);
-      } catch (e) {
-        this.ctx.log(`[sandbox] could not save the box's last changes project=${session.projectId}: ${e instanceof Error ? e.message : String(e)}`);
-      }
+      await this.settle(o.save);
       await this.inner.cerrar().catch((e: unknown) => this.ctx.log(`[sandbox] pause failed project=${session.projectId}: ${String(e)}`));
       await store.save({
         projectId: session.projectId,
@@ -239,10 +248,15 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
   }
 }
 
-/** Closes the turn's terminal: the box saves what is pending, pauses, is let go and charged. */
+/** Before the turn's last photo: the box stops its background work and saves what is pending. */
+export async function settleTurnTerminal(session: AgentSession, o: { readonly save?: Save }): Promise<void> {
+  if (session.terminal instanceof TurnSandbox) await session.terminal.settle(o.save);
+}
+
+/** Closes the turn's terminal: the box saves what is pending (if not settled yet), pauses, is let go and charged. */
 export async function closeTurnTerminal(
   session: AgentSession,
-  o: { readonly save?: (pending: Readonly<Record<string, string | null>>) => Promise<void>; readonly store?: SandboxStore; readonly charge?: Charge; readonly now?: () => number },
+  o: { readonly save?: Save; readonly store?: SandboxStore; readonly charge?: Charge; readonly now?: () => number },
 ): Promise<void> {
   const t = session.terminal;
   session.terminal = undefined;

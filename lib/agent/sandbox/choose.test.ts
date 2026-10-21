@@ -5,7 +5,7 @@ import type { AgentSession } from "@/lib/agent/tools";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
-import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
+import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, settleTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
 import { fakeDriver } from "./fake-driver";
 import { SandboxTerminal } from "./sandbox-terminal";
 import type { ProjectSandboxRow } from "./store";
@@ -231,6 +231,30 @@ describe("closeTurnTerminal", () => {
     const kill = ran.findIndex((c) => c.includes("kill -TERM") && c.includes("77"));
     expect(kill).toBeGreaterThan(-1);
     expect(driver.paused(id)).toBe(true);
+  });
+
+  it("settling before the turn's last photo saves what is pending and stops the background; closing after doesn't save it again", async () => {
+    const driver = fakeDriver({ onRun: (_cmd, _files, o) => (o.background ? { pid: 77 } : undefined) });
+    const { s, o, store, charge } = setup({ driver });
+    const t = (s.terminal = await terminalForTurn(s, o)) as TurnSandbox;
+    await t.ejecutar("python3 gen.py", { background: true });
+    const id = store.rows.p!.sandboxId!;
+    driver.files(id).set("/data/out.json", "{}");
+    const save = vi.fn(async () => {});
+    await settleTurnTerminal(s, { save });
+    expect(save).toHaveBeenCalledWith({ "/data/out.json": "{}" });
+    expect(driver.commands(id).some((c) => c.includes("kill -TERM") && c.includes("77"))).toBe(true);
+    expect(driver.paused(id)).toBe(false);
+    await closeTurnTerminal(s, { save, store, charge });
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(driver.paused(id)).toBe(true);
+  });
+
+  it("settling today's terminal does nothing", async () => {
+    const { s, local } = setup();
+    s.terminal = local;
+    await settleTurnTerminal(s, { save: async () => {} });
+    expect(local.closed).toBe(false);
   });
 
   it("today's terminal just closes", async () => {

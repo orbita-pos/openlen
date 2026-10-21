@@ -111,7 +111,7 @@ import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
-import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
+import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
 import { TurnSandbox } from "@/lib/agent/sandbox/choose";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
@@ -1432,6 +1432,11 @@ async function correrTurno(
         // `done`, sólo con lo que cambió. Nunca tumba el cierre del turno.
         emitirCambios = async () => {
           try {
+            // LA TERMINAL REAL: lo que la caja dejó sin guardar (segundo plano) entra ANTES de la
+            // foto de después, para que sea de este turno y de su «Deshacer».
+            await settleSessionTerminal(agentSession, deps).catch((err: unknown) => {
+              console.warn("[agent] no se pudo guardar lo pendiente de la caja", err);
+            });
             const antes = await fotoAntes;
             if (!antes) return;
             const despues = await cargarFicherosDeLaTerminal(agentSession, deps);
