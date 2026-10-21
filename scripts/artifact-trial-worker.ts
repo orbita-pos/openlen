@@ -25,6 +25,7 @@ import { artifactChargePolicy, createArtifactBilling } from "../lib/artifacts/bi
 import { getAssetStorage } from "../lib/projects/assets";
 import { createBridge } from "../lib/artifacts/acceptance/bridge-client";
 import { requireTrialDatabase, trialAllows, type PaidKind, type TrialAttempt, type TrialLimits } from "../lib/artifacts/acceptance/trial-budget";
+import { stopWhenParentGone } from "../lib/artifacts/acceptance/parent-watch";
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -45,6 +46,8 @@ async function main() {
   process.once("SIGTERM", stop); process.once("SIGINT", stop);
   // The runner closes our stdin when it is done; that is the stop signal on Windows.
   process.stdin.on("end", stop); process.stdin.resume();
+  // And when the runner itself is gone without closing it (Windows keeps orphans alive): no paid call after that.
+  stopWhenParentGone(stop);
   try {
     const storage = await runtime.storage();
     const bridge = createBridge({ distro, node, bridgeFile, image });

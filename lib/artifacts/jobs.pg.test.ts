@@ -124,3 +124,43 @@ describe("durable job ownership", () => {
     await f.database.query(`delete from "artifactProjectControls" where "projectId"=$1`,[ctx.projectId]);
   });
 });
+
+// Trial with the laptop loaded (21/10): Chromium took over 20 s to start in the container, the deck failed twice,
+// and render_artifact on the same revision only gave back the failed job — Len could only get out by changing its
+// sources. A free render that failed is queued again when it is asked for again; a paid take is never repeated.
+describe("asking again for a render that failed", () => {
+  async function failed(kind: "slides" | "image" = "slides", files: Record<string, string> = { "deck.json": "{}" }) {
+    const { ctx, artifact } = await f.create("project", kind);
+    await f.store.writeArtifactFiles(ctx, artifact.id, 0, files);
+    const job = await jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: [kind === "image" ? "png" : "pdf"] });
+    const claim = (await jobs.claimArtifactJob("one"))!;
+    await jobs.finish(claim, "failed", "artifact_render_failed", ["Timed out after 20000 ms while waiting for the WS endpoint URL to appear in stdout!"]);
+    return { ctx, artifact, job };
+  }
+
+  it("queues the same job again on the same revision, and the next run counts as another attempt", async () => {
+    const { ctx, artifact, job } = await failed();
+    const again = await jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["pdf"] });
+    expect(again).toMatchObject({ id: job.id, status: "queued", errorCode: null });
+    expect((await f.store.getArtifact(ctx, artifact.id)).status).toBe("queued");
+    const second = (await jobs.claimArtifactJob("two"))!;
+    expect(second.job).toMatchObject({ id: job.id, attempt: 2 });
+  });
+
+  it("stops after five runs of one revision and says to change the sources instead", async () => {
+    const { ctx, artifact, job } = await failed();
+    await f.pg.query(`update "artifactJobs" set "attempt"=5 where "id"=$1`, [job.id]);
+    await expect(jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["pdf"] })).rejects.toMatchObject({ code: "render_already_failed", message: expect.stringMatching(/5 times.*new revision/) });
+  });
+
+  it("never repeats a paid take on its own: a failed image asks for a new revision", async () => {
+    const { ctx, artifact } = await failed("image", { "image.json": "{}" });
+    await expect(jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["png"] })).rejects.toMatchObject({ code: "render_already_failed", message: expect.stringMatching(/paid.*new revision/) });
+  });
+
+  it("leaves alone a job whose paid outcome is unknown", async () => {
+    const { ctx, artifact, job } = await failed();
+    await f.pg.query(`update "artifactJobs" set "status"='needs_attention',"errorCode"='external_outcome_unknown' where "id"=$1`, [job.id]);
+    expect(await jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["pdf"] })).toMatchObject({ id: job.id, status: "needs_attention" });
+  });
+});
