@@ -20,7 +20,7 @@ const USD_PER_CENTICREDIT = 0.0001;
 /** Centicredits for `seconds` of box, rounded up: a box that ran is never free. */
 export function sandboxCenticredits(seconds: number): number {
   if (!(seconds > 0)) return 0;
-  // Rounded to a micro-dollar first, so floating point (60 × 0.000046 = 0.0027600000000000003) doesn't round a whole centicredit up.
+  // Rounded to a micro-dollar first: the floating-point tail otherwise charges a centicredit too many at 750, 1500 and 3000 s.
   const microUsd = Math.round(seconds * SANDBOX_USD_PER_SECOND * 1_000_000);
   return Math.ceil(microUsd / (USD_PER_CENTICREDIT * 1_000_000));
 }
