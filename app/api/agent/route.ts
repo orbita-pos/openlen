@@ -1109,6 +1109,8 @@ async function correrTurno(
   const agentSession: AgentSession = {
     projectId,
     userId,
+    // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
+    turnId: turnoId,
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
@@ -2071,7 +2073,8 @@ async function correrTurno(
         // muere con el turno. Nunca tumba el cierre, y no se ESPERA: con el
         // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
         // route.test.ts, «el navegador del turno se cierra al acabar»).
-        void cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
+        // Con la caja (LA TERMINAL REAL), además guarda lo pendiente, la pausa y la cobra: por eso los deps.
+        void cerrarTerminalDeLaSesion(agentSession, deps).catch(() => undefined);
         // Y LA PESTAÑA DEL TURNO (`use_page`, 14/10): su Chromium muere con él.
         void closeBrowserTab(agentSession.browserTab).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
