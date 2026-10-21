@@ -10,6 +10,15 @@ it("builds a bounded offline container with no host secrets/socket and no shell 
   expect(() => rendererContainerArgs("image;sh", "bad", "/tmp/output", 1, 1)).toThrow();
 });
 
+it("bounds tasks with room for Chromium plus the x264 encoder", () => {
+  // Linux acceptance (2026-10-20): a 6 s video peaked at 157 tasks (processes and
+  // threads), so the old 128 failed every video. The bound still stops a fork bomb.
+  const args = rendererContainerArgs("openlen/artifact-renderer:1", "openlen-artifact-11111111-1111-1111-1111-111111111111", "/tmp/output", 1001, 1001);
+  const limit = Number(args[args.indexOf("--pids-limit") + 1]);
+  expect(limit).toBeGreaterThanOrEqual(3 * 157);
+  expect(limit).toBeLessThanOrEqual(1024);
+});
+
 it("keeps the renderer install independent of the host application checkout",async()=>{
   const manifest=JSON.parse(await readFile(new URL("../../tools/artifact-renderer/package.json",import.meta.url),"utf8"));
   const lock=JSON.parse(await readFile(new URL("../../tools/artifact-renderer/package-lock.json",import.meta.url),"utf8"));

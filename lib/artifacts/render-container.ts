@@ -9,7 +9,9 @@ import {removeArtifactContainer} from "./container-supervisor";
 
 export function rendererContainerArgs(image: string, name: string, output: string, uid: number, gid: number): string[] {
   if (!/^[a-z0-9][a-z0-9._/:@-]{0,200}$/.test(image) || !/^openlen-artifact-[a-f0-9-]{36}$/.test(name) || !Number.isSafeInteger(uid) || !Number.isSafeInteger(gid)) throw new ArtifactError("invalid_renderer_config");
-  return ["run", "--rm", "--pull", "never", "-i", "--init", "--name", name, "--label","openlen.artifact-renderer=1", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "128", "--cpus", "2", "--memory", "2g", "--memory-swap", "2g", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--mount", `type=bind,source=${output},target=/output`, "--user", `${uid}:${gid}`, image];
+  // 512 tasks: Chromium plus x264 peaked at 157 for a 6 s video in the Linux
+  // acceptance, and 128 failed every video. Still a hard stop for a fork bomb.
+  return ["run", "--rm", "--pull", "never", "-i", "--init", "--name", name, "--label","openlen.artifact-renderer=1", "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512", "--cpus", "2", "--memory", "2g", "--memory-swap", "2g", "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--mount", `type=bind,source=${output},target=/output`, "--user", `${uid}:${gid}`, image];
 }
 function docker(args: string[], input: string, signal?: AbortSignal): Promise<number> {
   return new Promise((done, reject) => {

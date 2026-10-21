@@ -24,14 +24,48 @@ async function withArtifactPage(packet, options, run) {
       else if (r.url().startsWith("data:") || r.url().startsWith("blob:")) void r.continue();
       else { missing.add(r.url().slice(0, 500)); void r.abort("blockedbyclient"); }
     });
-    await page.goto("https://artifact.invalid/", { waitUntil: "load" });
-    for(const frame of page.frames())await frame.evaluate(async () => {
-      await document.fonts.ready;
-      if (window.lenReady && typeof window.lenReady.then === "function") await window.lenReady;
-      await Promise.all([...document.images].map((img) => img.decode()));
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    // A Content-Security-Policy refusal never reaches request interception:
+    // Chromium blocks it before the network (Linux acceptance: an image built at
+    // runtime with a remote URL came back as "cannot be decoded"). Record those
+    // in every document and frame; only real URLs, not inline/eval refusals.
+    await page.evaluateOnNewDocument(() => {
+      const blocked = [];
+      Object.defineProperty(window, "__lenBlocked", { value: blocked });
+      document.addEventListener("securitypolicyviolation", (event) => {
+        const uri = String(event.blockedURI);
+        if (blocked.length < 50 && /^[a-z][a-z0-9+.-]*:/i.test(uri) && !/^(data|blob):/i.test(uri)) blocked.push(uri.slice(0, 500));
+      });
     });
-    const result = await run(page);
+    const collectBlocked = async () => {
+      for (const frame of page.frames()) for (const uri of await frame.evaluate(() => window.__lenBlocked ?? []).catch(() => [])) missing.add(uri);
+    };
+    let result;
+    try {
+      await page.goto("https://artifact.invalid/", { waitUntil: "load" });
+      // Chromium does not paint a cross-origin iframe outside the viewport, so
+      // its requestAnimationFrame never fires: every slide below the first one
+      // hung here until the watchdog (Linux acceptance, Chromium 155). Bring
+      // each frame into view before waiting on it, then go back to the top.
+      for (const frame of page.frames()) {
+        const element = frame === page.mainFrame() ? null : await frame.frameElement();
+        await element?.evaluate((el) => el.scrollIntoView({ block: "start" }));
+        await frame.evaluate(async () => {
+          await document.fonts.ready;
+          if (window.lenReady && typeof window.lenReady.then === "function") await window.lenReady;
+          await Promise.all([...document.images].map((img) => img.decode()));
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        });
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
+      result = await run(page);
+    } catch (error) {
+      // A blocked request is the cause, whatever it broke on the way (an image
+      // that cannot decode, a script that never ran): name it, not the symptom.
+      await collectBlocked();
+      if (missing.size) throw new Error("artifact_resource_missing");
+      throw error;
+    }
+    await collectBlocked();
     if (missing.size) throw new Error("artifact_resource_missing");
     if (errors.length) throw new Error("artifact_runtime_error", { cause: errors });
     result.checks.push("resources:complete", "runtime:no-errors");
