@@ -80,8 +80,9 @@ DELETE FROM "projectSandboxes" WHERE "projectId" = '<id>' AND "heldBy" IS NULL;
 ```
 
 El siguiente turno del proyecto crea una nueva desde los ficheros de Postgres. Si `heldBy` no es nulo y no hay
-ningún turno de ese proyecto en marcha (la app se cayó a media vuelta), la reserva quedó colgada y cada turno cae
-a la terminal de siempre con `reason=held`. Soltarla:
+ningún turno de ese proyecto en marcha (la app se cayó a media vuelta, p. ej. en un deploy), la reserva quedó
+colgada: se suelta sola a las 2 horas (el siguiente turno la toma) y mientras tanto cada turno de ese proyecto cae
+a la terminal de siempre con `reason=held`. Para no esperar:
 
 ```sql
 UPDATE "projectSandboxes" SET "heldBy" = NULL WHERE "projectId" = '<id>';
@@ -101,7 +102,7 @@ siguiente turno; las que no vuelven a usarse, las mata el reaper.
 
 ## 7. El temporizador de las cajas viejas
 
-`openlen-sandbox-reaper.timer` corre a diario (10:00 UTC) y mata las cajas pausadas hace más de 7 días. Instalarlo
+`openlen-sandbox-reaper.timer` corre a diario (10:00 UTC) y mata las cajas sin usar desde hace más de 7 días (pausadas, o que un turno caído dejó «running»). Instalarlo
 (una vez):
 
 ```bash

@@ -15,7 +15,7 @@ import * as rows from "./store";
 export const REAP_AFTER_DAYS = 7;
 
 export interface ReaperStore {
-  pausedBefore(cutoff: Date): Promise<{ projectId: string; sandboxId: string }[]>;
+  idleBefore(cutoff: Date): Promise<rows.IdleSandbox[]>;
   get(projectId: string): Promise<rows.ProjectSandboxRow | null>;
   hold(projectId: string, turnId: string): Promise<boolean>;
   release(projectId: string, turnId: string): Promise<void>;
@@ -24,7 +24,7 @@ export interface ReaperStore {
 }
 
 const postgresStore: ReaperStore = {
-  pausedBefore: rows.pausedBefore,
+  idleBefore: rows.idleBefore,
   get: rows.getProjectSandbox,
   hold: rows.holdProjectSandbox,
   release: rows.releaseProjectSandbox,
@@ -57,12 +57,13 @@ export async function reapSandboxes(o: {
   const cutoff = new Date(o.now.getTime() - (o.days ?? REAP_AFTER_DAYS) * 86_400_000);
   let killed = 0;
   let failed = 0;
-  for (const { projectId, sandboxId } of await store.pausedBefore(cutoff)) {
+  for (const { projectId, sandboxId, pausedAt } of await store.idleBefore(cutoff)) {
     // Held like a turn holds it, so no turn resumes the box while it is being killed.
     const reaperId = `reaper-${randomUUID()}`;
     if (!(await store.hold(projectId, reaperId))) continue;
+    // A turn that used it between the list and the hold paused it again: a newer pausedAt.
     const now = await store.get(projectId);
-    if (now?.sandboxId !== sandboxId || !now.pausedAt || now.pausedAt >= cutoff) {
+    if (now?.sandboxId !== sandboxId || (now.pausedAt?.getTime() ?? null) !== (pausedAt?.getTime() ?? null)) {
       await store.release(projectId, reaperId);
       continue;
     }

@@ -16,10 +16,10 @@ function memoryStore(rows: ProjectSandboxRow[]): ReaperStore & { rows: Map<strin
   const m = new Map(rows.map((r) => [r.projectId, r]));
   return {
     rows: m,
-    pausedBefore: async (cutoff) =>
+    idleBefore: async (cutoff) =>
       [...m.values()]
         .filter((r) => r.state === "paused" && r.sandboxId && !r.heldBy && r.pausedAt && r.pausedAt < cutoff)
-        .map((r) => ({ projectId: r.projectId, sandboxId: r.sandboxId! })),
+        .map((r) => ({ projectId: r.projectId, sandboxId: r.sandboxId!, pausedAt: r.pausedAt })),
     get: async (p) => m.get(p) ?? null,
     hold: async (p, t) => {
       const r = m.get(p);
@@ -78,11 +78,25 @@ describe("reapSandboxes", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("sbx-a"));
   });
 
+  it("a box a dead turn left running (never paused, still held) is killed too once it is old", async () => {
+    const store = memoryStore([{ ...row("crashed", "sbx-crashed", daysAgo(0)), state: "running", pausedAt: null, heldBy: "dead-turn" }]);
+    // What Postgres does for an old row: it is on the list, and its stale hold can be taken.
+    store.idleBefore = async () => [{ projectId: "crashed", sandboxId: "sbx-crashed", pausedAt: null }];
+    store.hold = async (p, t) => {
+      store.rows.set(p, { ...store.rows.get(p)!, heldBy: t });
+      return true;
+    };
+    const driver = driverKilling(async () => {});
+    expect(await reapSandboxes({ driver, now: NOW, store })).toEqual({ killed: 1, failed: 0 });
+    expect(driver.killed).toEqual(["sbx-crashed"]);
+    expect(store.rows.has("crashed")).toBe(false);
+  });
+
   it("a box a turn took in the meantime is left alone", async () => {
     const store = memoryStore([row("busy", "sbx-busy", daysAgo(10))]);
-    const pausedBefore = store.pausedBefore;
-    store.pausedBefore = async (cutoff) => {
-      const list = await pausedBefore(cutoff);
+    const idleBefore = store.idleBefore;
+    store.idleBefore = async (cutoff) => {
+      const list = await idleBefore(cutoff);
       await store.hold("busy", "turn-1");
       return list;
     };
@@ -94,9 +108,9 @@ describe("reapSandboxes", () => {
 
   it("a box used and paused again since the list is left alone, and let go", async () => {
     const store = memoryStore([row("again", "sbx-again", daysAgo(10))]);
-    const pausedBefore = store.pausedBefore;
-    store.pausedBefore = async (cutoff) => {
-      const list = await pausedBefore(cutoff);
+    const idleBefore = store.idleBefore;
+    store.idleBefore = async (cutoff) => {
+      const list = await idleBefore(cutoff);
       store.rows.set("again", row("again", "sbx-again", daysAgo(0)));
       return list;
     };
