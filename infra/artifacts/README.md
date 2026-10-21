@@ -227,6 +227,13 @@ La imagen `openlen/artifact-renderer:2` añade fuentes para las diapositivas: In
 Roboto, Open Sans, Lato, EB Garamond, JetBrains Mono, y Carlito/Caladea, que miden
 igual que Calibri/Cambria (el PPTX las nombra como Calibri/Cambria).
 
+La base del Dockerfile va fijada por digest (`node:22-bookworm-slim@sha256:c3de60bf…`, 21/10/2026): reconstruir
+con ella da la misma imagen verificada (`af974bbb102a`). Los paquetes de Debian NO se fijan a propósito: este
+Chromium dibuja HTML que no es nuestro y tiene que recibir las actualizaciones de seguridad, y snapshot.debian.org
+no sirve de forma fiable el archivo de seguridad (503 al probarlo). Lo reproducible es la imagen: producción usa
+una imagen local verificada (`--pull never`) y una reconstrucción sólo se usa tras pasar la aceptación Linux. Las
+versiones de la imagen verificada están anotadas en el propio Dockerfile.
+
 Dashboards (20/10/2026): d3 7.9.0 es el global `d3` de cada dashboard
 (`public/artifact-vendor/d3-7.9.0/`, del `dist/d3.min.js` del paquete npm, ISC; su
 sha256 está fijado en `lib/artifacts/adapters/dashboard/d3.ts`). Un CSV/TSV/JSON del

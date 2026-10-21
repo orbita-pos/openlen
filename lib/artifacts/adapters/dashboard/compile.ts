@@ -105,8 +105,9 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
   }
   head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}">${globals ? `<script>${scriptText(globals)}</script>` : ""}<script>window.lenData=Object.freeze(${safeJson({ datasets:datasets.map(artifactDatasetForDisplay) })});${scriptText(trustedRuntime)}</script>`);
   const labels = datasets.map((d) => datasetLabel(d) + (d.truncated ? " · Datos recortados" : ""));
-  // Text escapes through JSON into textContent, never interpolated as HTML.
-  if(datasets.length)body.insertAdjacentHTML("beforeend", `<aside id="len-data-provenance" style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:#111;color:#fff;font:12px system-ui;z-index:2147483647"></aside><script>document.getElementById('len-data-provenance').textContent=${safeJson(labels.join(" | "))};</script>`);
+  // Text escapes through JSON into textContent, never interpolated as HTML. A compact note in a corner (it wraps
+  // rather than hiding part of the label): the dashboard stays readable and its source is still always on show.
+  if(datasets.length)body.insertAdjacentHTML("beforeend", `<aside id="len-data-provenance" style="position:fixed;right:12px;bottom:12px;max-width:min(520px,calc(100% - 24px));padding:5px 10px;border-radius:8px;background:rgba(17,17,17,.78);color:#fff;font:500 11px/1.45 system-ui,-apple-system,sans-serif;letter-spacing:.01em;z-index:2147483647"></aside><script>document.getElementById('len-data-provenance').textContent=${safeJson(labels.join(" | "))};</script>`);
   return tree.toString();
 }
 export async function buildDashboard(input: SealedArtifactInput) {

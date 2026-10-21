@@ -297,7 +297,9 @@
       "previewTitle": "L’anteprima non è disponibile",
       "previewBody": "I file di questa versione sono ancora disponibili. Scaricali o ricarica l’anteprima.",
       "files": "File di questa versione",
-      "reload": "Ricarica"
+      "reload": "Ricarica",
+      "previous": "Precedente",
+      "next": "Successiva"
     },
     "library": {
       "subtitle": "Tutto ciò che Len ha creato per {project}, in un unico posto.",

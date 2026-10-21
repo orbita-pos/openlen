@@ -2,7 +2,7 @@
 
 import {useEffect,useId,useRef,useState,type MouseEvent} from "react";
 import {useLocale,useTranslations} from "next-intl";
-import {Check,Download,FileQuestion,ImageIcon,LayoutDashboard,Loader2,Presentation,RefreshCw,Video,Volume2} from "lucide-react";
+import {Check,ChevronLeft,ChevronRight,Download,FileQuestion,ImageIcon,LayoutDashboard,Loader2,Presentation,RefreshCw,Video,Volume2} from "lucide-react";
 import {ModalShell} from "../modal-shell";
 import {artifactLiveRefreshClient,connectArtifactLivePreview,type ArtifactLiveView} from "@/lib/artifacts/live-preview";
 import {artifactFetch,artifactFileUrl,artifactJson,artifactUrl,ArtifactClientError,inspectArtifact,validatePreviewUrl,type ArtifactFetch,type ArtifactOutputInfo,type ArtifactSummary} from "./client";
@@ -101,7 +101,11 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
     }finally{transfers.current.delete(controller);if(!controller.signal.aborted)setDownloading(null);}
   };
   const KindIcon=kindIcons[item.kind];
-  const hasPreview=!!(shown.preview||shown.imageUrl||!shown.error&&(video||audio));
+  // No live preview (its server unreachable, a grant refused): a deck or a dashboard still has its verified
+  // pictures, so they are shown instead of only saying the preview is unavailable.
+  const pictures=shown.outputs.filter(o=>o.mime==="image/png").sort((a,b)=>a.name.localeCompare(b.name));
+  const pictureFallback=shown.error&&!shown.preview&&!shown.imageUrl&&pictures.length>0&&(item.kind==="slides"||item.kind==="dashboard");
+  const hasPreview=!!(shown.preview||shown.imageUrl||pictureFallback||!shown.error&&(video||audio));
   const downloadOnly=!shown.loading&&!shown.error&&!hasPreview&&shown.outputs.length>0;
   const fallbackTitle=downloadOnly?"viewer.downloadOnlyTitle":shown.outputs.length?"viewer.previewTitle":"viewer.unavailableTitle";
   const fallbackBody=downloadOnly?"viewer.downloadOnlyBody":shown.outputs.length?"viewer.previewBody":"viewer.unavailableBody";
@@ -116,6 +120,7 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
           // eslint-disable-next-line @next/next/no-img-element
           :image&&shown.imageUrl?<img src={shown.imageUrl} alt={item.title} className="block max-h-[64dvh] w-auto max-w-full object-contain p-3 sm:p-5"/>
           :video&&!shown.error?<video key={source} src={source} controls preload="metadata" onError={()=>setState(s=>({...s,error:true}))} className="max-h-[64dvh] w-full"/>
+          :pictureFallback?<PictureFallback key={identity} projectId={projectId} itemId={item.id} title={item.title} revision={revision} pictures={pictures} fetcher={fetcher}/>
           :audio&&!shown.error?<div className="w-full max-w-xl p-8 sm:py-12"><div aria-hidden="true" className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border bd bg-elev fg-muted"><Volume2 size={26}/></div><audio key={source} src={source} controls preload="metadata" onError={()=>setState(s=>({...s,error:true}))} className="w-full"/></div>
           :<div role="status" className="flex w-full flex-col items-center px-6 py-10 sm:px-12 sm:py-12 text-center">
             <div aria-hidden="true" className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border bd bg-side fg-muted">
@@ -145,4 +150,35 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
     {body}
   </section>;
   return <ModalShell open onClose={onClose} titleId={titleId} title={title} subtitle={subtitle} size={hasPreview||shown.loading?"page":"xl"} closeLabel={t("close")}>{body}</ModalShell>;
+}
+
+/** A deck's or a dashboard's verified pictures, one at a time, read as private bytes like any output. */
+function PictureFallback({projectId,itemId,title,revision,pictures,fetcher}:{projectId:string;itemId:string;title:string;revision:number;pictures:ArtifactOutputInfo[];fetcher:ArtifactFetch}){
+  const t=useTranslations("topbar.artifacts");
+  const [index,setIndex]=useState(0),[url,setUrl]=useState<string|null>(null);
+  const current=pictures[Math.min(index,pictures.length-1)]!;
+  useEffect(()=>{
+    const controller=new AbortController();let disposed=false,objectUrl:string|undefined;
+    setUrl(null);
+    void(async()=>{
+      try{
+        const response=await fetcher(artifactFileUrl(projectId,itemId,revision,current.index),{signal:controller.signal,credentials:"same-origin",cache:"no-store"});
+        if(!response.ok)return;
+        const blob=await response.blob();
+        if(disposed||blob.size!==current.bytes||blob.type!==current.mime)return;
+        objectUrl=URL.createObjectURL(blob);setUrl(objectUrl);
+      }catch{/* the files list below still offers the download */}
+    })();
+    return()=>{disposed=true;controller.abort();if(objectUrl)URL.revokeObjectURL(objectUrl);};
+  },[projectId,itemId,revision,current.index,current.bytes,current.mime,fetcher]);
+  return <div className="flex w-full flex-col items-center gap-3 p-3 sm:p-5">
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {url?<img src={url} alt={`${title} · ${index+1}`} className="block max-h-[60dvh] w-auto max-w-full rounded-lg border bd object-contain"/>
+      :<div role="status" className="flex h-64 items-center justify-center fg-muted"><Loader2 size={22} className="motion-safe:animate-spin"/></div>}
+    {pictures.length>1&&<div className="flex items-center gap-3 text-xs fg-muted">
+      <button type="button" aria-label={t("viewer.previous")} disabled={index===0} onClick={()=>setIndex(i=>Math.max(0,i-1))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border bd hover:bg-hover disabled:opacity-40"><ChevronLeft size={15}/></button>
+      <span className="tabular-nums">{index+1} / {pictures.length}</span>
+      <button type="button" aria-label={t("viewer.next")} disabled={index===pictures.length-1} onClick={()=>setIndex(i=>Math.min(pictures.length-1,i+1))} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border bd hover:bg-hover disabled:opacity-40"><ChevronRight size={15}/></button>
+    </div>}
+  </div>;
 }

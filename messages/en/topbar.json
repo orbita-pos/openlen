@@ -297,7 +297,9 @@
       "previewTitle": "Preview is unavailable",
       "previewBody": "The files for this version are still available. Download them or try loading the preview again.",
       "files": "Files for this version",
-      "reload": "Reload"
+      "reload": "Reload",
+      "previous": "Previous",
+      "next": "Next"
     },
     "library": {
       "subtitle": "Everything Len has created for {project}, in one place.",

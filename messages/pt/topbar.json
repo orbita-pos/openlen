@@ -297,7 +297,9 @@
       "previewTitle": "A prévia não está disponível",
       "previewBody": "Os arquivos desta versão continuam disponíveis. Baixe-os ou carregue a prévia novamente.",
       "files": "Arquivos desta versão",
-      "reload": "Carregar novamente"
+      "reload": "Carregar novamente",
+      "previous": "Anterior",
+      "next": "Próxima"
     },
     "library": {
       "subtitle": "Tudo o que o Len criou para {project}, em um só lugar.",
