@@ -92,7 +92,8 @@ export const FABLE_PRODUCTION_RATES = Object.freeze({
 // `"priority"` fuera de los clientes y de este fichero: cero), y NO está
 // comprobado que V4.1 Flash tenga esa vía. Quien la vuelva a pedir, que lo mire
 // antes en la tabla del proveedor.
-const CON_VIA_PRIORITY: readonly string[] = ["accounts/fireworks/models/deepseek-v4p1-flash"];
+// Sigue al modelo de los papeles: la 1017 desde el 2026-10-21.
+const CON_VIA_PRIORITY: readonly string[] = ["accounts/fireworks/models/deepseek-v4p1-flash-1017"];
 const FACTOR_PRIORITY = 1.25;
 
 /** .66 x 1.25 da 0.8250000000000001 en coma flotante, y una tarifa con cola de

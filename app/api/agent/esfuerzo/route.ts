@@ -71,8 +71,9 @@ export async function GET() {
     //
     // La idea era que el taller pudiera decir «este modelo no está medido» en
     // vez de dejar que el usuario dedujera de una lista corta que su modelo es
-    // peor. Sigue siendo buena idea, y sigue sin ocurrir: hoy el modelo del
-    // papel SÍ está medido, así que la lista nunca sale corta. El día que haga
+    // peor. Sigue siendo buena idea, y sigue sin ocurrir: la lista no sale
+    // corta (desde el 21/10 la 1017 corre con la reserva, que da los mismos
+    // tres niveles que el tope medido de la V4.1). El día que haga
     // falta, entra CON su lector. `capacidadDeEsfuerzo().medido` lo sigue
     // diciendo para quien lo necesite.
   });

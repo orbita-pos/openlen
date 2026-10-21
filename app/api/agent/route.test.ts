@@ -2891,7 +2891,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
 // pegado a la charla, el cobro de un respaldo, el libro y el diario.
 describe("POST /api/agent — el segundo proveedor", () => {
   const DI_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash";
-  const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash";
+  const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
   const cierre = () => ({
     finalText: "Listo.", turns: 1, toolCalls: 0,
     usage: { inputTokens: 1_000, outputTokens: 100, cachedTokens: 300, thinkingTokens: 0 },

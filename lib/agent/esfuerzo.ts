@@ -147,7 +147,11 @@ export function presupuestoDeEsfuerzo(
  *  MENOS que `high` en uno de cada diez pasos, y `max` (sin techo útil) era
  *  `high` con otro nombre. Ofrecerlos era prometer «más» con un nivel que da
  *  igual o menos. Que el campo se ACEPTE no es que el nivel HAGA algo: lo único
- *  medido que hace el dial en este modelo es pensar menos (`low`, `medium`). */
+ *  medido que hace el dial en este modelo es pensar menos (`low`, `medium`).
+ *
+ *  La 1017 (el papel `agent` desde el 2026-10-21) NO tiene sonda propia, así
+ *  que corre con la reserva de abajo: los mismos tres niveles, con `high` por
+ *  defecto, sólo que `medido: false`. Entra aquí cuando alguien se la pase. */
 const DIAL_MEDIDO: Readonly<
   Record<string, { readonly defecto: NivelEsfuerzo; readonly tope: NivelEsfuerzo }>
 > = {

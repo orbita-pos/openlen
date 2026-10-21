@@ -21,9 +21,9 @@ const GLM = "accounts/fireworks/models/glm-5p2";
 // salio del repo el 2026-09-13 (nadie lo corria desde que la vision paso a v4.1
 // Flash), y un modelo muerto como sujeto de prueba es un sujeto que ya no dice
 // nada del sistema. Se nombra el PAPEL, no el proveedor.
-const VISION = "accounts/fireworks/models/deepseek-v4p1-flash";
+const VISION = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
 // El razonador. Era V4 Flash (`accounts/fireworks/models/deepseek-v4-flash-0731`), fuera de serverless desde el 2026-09-26.
-const DEEPSEEK = "accounts/fireworks/models/deepseek-v4p1-flash";
+const DEEPSEEK = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
 
 describe("page generation budget", () => {
   it("exposes the conservative multi-model and image rate card", () => {
@@ -33,11 +33,11 @@ describe("page generation budget", () => {
     // la tabla en vivo del proveedor el 2026-09-20.
     expect(FABLE_PRODUCTION_RATES).toEqual({
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
-      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .30, cached: .006, output: 1.20 },
+      "accounts/fireworks/models/deepseek-v4p1-flash-1017": { input: .30, cached: .006, output: 1.20 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
-      "accounts/fireworks/models/deepseek-v4p1-flash": { input: .375, cached: .0075, output: 1.5 },
+      "accounts/fireworks/models/deepseek-v4p1-flash-1017": { input: .375, cached: .0075, output: 1.5 },
     });
   });
 
@@ -326,7 +326,7 @@ describe("la tarjeta se deriva de la politica, no se escribe", () => {
   // el factor, que sigue siendo un numero elegido: lo que ya no puede pasar es
   // que la base se mueva y esta no.
   it("priority es exactamente 1,25x la estandar del mismo modelo", () => {
-    const M = "accounts/fireworks/models/deepseek-v4p1-flash";
+    const M = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
     const e = FABLE_PRODUCTION_RATES[M as keyof typeof FABLE_PRODUCTION_RATES] as {
       input: number;
       cached: number;

@@ -18,7 +18,7 @@ describe("resolveAgentProviders", () => {
     expect(DEFAULT_AGENT_PROVIDERS).toBe("deepinfra,fireworks");
     const [deepinfra, fireworks] = resolveAgentProviders(BOTH);
     expect(deepinfra).toMatchObject({ id: "deepinfra", modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017", apiKey: "di-key", dialect: PROVIDER_DIALECTS.deepinfra });
-    expect(fireworks).toMatchObject({ id: "fireworks", modelId: "accounts/fireworks/models/deepseek-v4p1-flash", apiKey: "fw-key" });
+    expect(fireworks).toMatchObject({ id: "fireworks", modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017", apiKey: "fw-key" });
     expect(PROVIDER_DIALECTS.deepinfra).toEqual({
       id: "deepinfra",
       endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
