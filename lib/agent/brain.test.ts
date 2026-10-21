@@ -175,13 +175,13 @@ describe("Len Dynamis en el cable", () => {
     expect(pedido().temperature).toBe(1);
   });
 
-  it("BRAZO DE CONTROL: sin el modo (o con \"len\"), 0,2, sin palabra y los techos de siempre", async () => {
+  it("BRAZO DE CONTROL: sin el modo (o con \"len\"), 1,0, sin palabra y los techos de siempre", async () => {
     for (const mode of [undefined, "len"] as const) {
       fireworksStream.mockClear();
       const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, ...(mode ? { mode } : {}) });
       await drain(brain.openStream([USER]));
       await drain(brain.closeOut([USER]));
-      expect(pedido(0).temperature).toBe(0.2);
+      expect(pedido(0).temperature).toBe(1);
       expect(pedido(0).maxOutputTokens).toBe(32_768);
       expect(pedido(1).maxOutputTokens).toBe(2_048);
       expect("reasoningEffortWord" in pedido(0)).toBe(false);

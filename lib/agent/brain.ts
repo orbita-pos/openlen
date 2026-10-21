@@ -192,22 +192,25 @@ export async function* asAgentStream(
 // el doble de aire sin acercarse. Sólo se paga lo que se usa.
 const LOOP_MAX_OUTPUT_TOKENS = 32_768;
 const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
-// LA LÍNEA NO ES «el Agente contra el resto», es ESCRIBIR contra DECIDIR.
-// Medido el 03/09 sobre todo el repo: las seis superficies por encima de 0,3
-// escriben prosa o HTML (crear 0,8 · redesign 0,8 · autofill 0,5/0,5/0,4), y
-// todas las que deciden o llaman herramientas están en 0,2 o menos — incluido
-// nuestro propio cliente de tool-calling (`fireworks-tool-client.ts`, 0,2),
-// `verify.ts` a 0,1 y `analyze-intent` a 0. Este bucle DECIDE: elige la
-// herramienta y redacta sus argumentos. Estaba en el grupo equivocado.
+// 1,0, LA DEL MODELO (2026-10-21). La ficha de V4.1 mide todo a 1,0 y la de la
+// 1017 lo recomienda; la API de DeepSeek ignora la temperatura cuando piensa
+// (su arnés, `llm-deepseek/README.md`), así que su producto corre a la suya; y
+// OpenCode a DeepSeek no le manda NINGUNA (`transform.ts:527-544`,
+// `request.ts:124`). DeepInfra y Fireworks SÍ aplican la nuestra: a 0,2 Len
+// corría lejos de donde se midió el modelo.
 //
-// Y no le quita creatividad al Agente: su camino creativo —`redesign.ts`—
-// tiene su PROPIO TEMPERATURE a 0,8 y no lo toca este cambio.
+// Un turno real de cada (`texto-sobre-la-foto`, 1017 en DeepInfra, n=1, SIN
+// más medición a propósito: arreglo pequeño copiado de DeepSeek): 0,2 → 15
+// vueltas, $0,011, 288 s, reforzando el velo tres veces; 1,0 → 6 vueltas,
+// $0,002, 71 s. Los dos al 1,00 (`plans/len-2/corridas/2026-10-21-temp-*`).
 //
-// OpenCode cura la temperatura modelo a modelo (1,0 glm-4.6 · 0,6 kimi-k2) y a
-// DeepSeek no le manda NINGUNA (`transform.ts:527-544`, `request.ts:124`).
+// ⚰️ AQUÍ DECÍA que la línea era ESCRIBIR contra DECIDIR —todo lo que llama
+// herramientas en el repo estaba a 0,2 o menos (03/09)— y que este bucle, por
+// decidir, iba en ese grupo. Era una regla de nuestras superficies, no del
+// modelo. El camino creativo —`redesign.ts`, 0,8— no cambia.
 //
-// Len Dynamis corre a 1,0, la de la ficha de V4.1 (`lib/agent/dynamis.ts`).
-const TEMPERATURE = 0.2;
+// Len Dynamis ya corría a 1,0 (`lib/agent/dynamis.ts`).
+const TEMPERATURE = 1.0;
 
 /** Qué operación corre una vuelta: la del agente, salvo que la conversación
  *  traiga fotos y el modelo del agente NO las vea — entonces, el papel con
