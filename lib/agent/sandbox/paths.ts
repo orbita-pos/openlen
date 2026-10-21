@@ -14,7 +14,11 @@ export const SYSTEM_TOP_LEVEL: readonly string[] = [
 /** Visitor data: never in the box (Jesús, 21/10); Len reads it with its tools. */
 export const NEVER_IN_BOX = /^\/\.openlen\/(bandeja|resultados)(\/|$)/;
 
+/** Folders that are never a project's, at any depth: what an install, a clone or Python leaves. */
+export const NEVER_SYNCED_ANYWHERE: readonly string[] = ["node_modules", ".git", "__pycache__"];
+
 const SYSTEM = new Set(SYSTEM_TOP_LEVEL);
+const ANYWHERE = new Set(NEVER_SYNCED_ANYWHERE);
 const PERSONAL_MEMORY = `${HOME_DIR}/.len/`;
 
 function topLevel(path: string): string {
@@ -22,12 +26,13 @@ function topLevel(path: string): string {
 }
 
 export function isSyncedPath(path: string): boolean {
+  if (path.split("/").slice(1, -1).some((folder) => ANYWHERE.has(folder))) return false;
   if (path.startsWith(PERSONAL_MEMORY)) return true;
   const top = topLevel(path);
   return top !== "" && top !== ".openlen" && !SYSTEM.has(top);
 }
 
-/** The project's paths that would land in a system folder of the box: any of them, and the turn uses today's terminal. */
+/** The project's paths the box would never sync (a system folder, a nested node_modules…): any of them, and the turn uses today's terminal. */
 export function conflictingTopLevel(projectPaths: readonly string[]): string[] {
-  return projectPaths.filter((p) => !p.startsWith(PERSONAL_MEMORY) && SYSTEM.has(topLevel(p)));
+  return projectPaths.filter((p) => !isSyncedPath(p));
 }

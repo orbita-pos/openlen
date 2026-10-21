@@ -6,8 +6,10 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
+
 import { SYSTEM_TOP_LEVEL } from "./paths";
-import { BRIDGED_PROGRAMS, bridgeScript, manifestScript, templateFiles, wrapperScript } from "./template-files";
+import { BIG_FILE_PREFIX, BRIDGED_PROGRAMS, bridgeScript, manifestScript, templateFiles, wrapperScript } from "./template-files";
 
 // The scripts run in the box with python3; here, with whatever Python this machine has.
 const PYTHON = ["python3", "python"].find((p) => spawnSync(p, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" }).stdout?.trim() === "3");
@@ -68,6 +70,28 @@ describe("the box's scripts", () => {
     expect(r.status, r.stderr).toBe(0);
     const manifest = JSON.parse(r.stdout) as Record<string, string>;
     expect(Object.keys(manifest).sort()).toEqual(["/home/user/.len/LEN.md", "/index.html", "/src/main.tsx"]);
+    expect(manifest["/index.html"]).toBe("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
+  });
+
+  it.skipIf(!PYTHON)("the manifest skips node_modules, .git and __pycache__ at any depth", () => {
+    const root = tempRoot({
+      "/scripts/gen.js": "a",
+      "/scripts/node_modules/sharp/index.js": "b",
+      "/vendor/lib/.git/config": "c",
+      "/tools/__pycache__/x.pyc": "d",
+    });
+    const r = spawnSync(PYTHON!, ["-c", manifestScript()], { encoding: "utf8", env: { ...process.env, OPENLEN_ROOT: root } });
+    expect(r.status, r.stderr).toBe(0);
+    expect(Object.keys(JSON.parse(r.stdout) as Record<string, string>)).toEqual(["/scripts/gen.js"]);
+  });
+
+  it.skipIf(!PYTHON)("a file over the cap is not read: its entry says so, with its size", () => {
+    const big = "x".repeat(MAX_FOLDER_FILE_BYTES + 1);
+    const root = tempRoot({ "/data/big.csv": big, "/index.html": "a" });
+    const r = spawnSync(PYTHON!, ["-c", manifestScript()], { encoding: "utf8", env: { ...process.env, OPENLEN_ROOT: root } });
+    expect(r.status, r.stderr).toBe(0);
+    const manifest = JSON.parse(r.stdout) as Record<string, string>;
+    expect(manifest["/data/big.csv"]).toMatch(new RegExp(`^${BIG_FILE_PREFIX}${MAX_FOLDER_FILE_BYTES + 1}:`));
     expect(manifest["/index.html"]).toBe("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
   });
 

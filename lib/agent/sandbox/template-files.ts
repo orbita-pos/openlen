@@ -12,17 +12,24 @@
 // Python 3 because the box has it and it writes JSON without surprises. `OPENLEN_ROOT` and
 // `OPENLEN_BRIDGE_DIR` exist for the tests; in the box they are unset.
 
-import { SYSTEM_TOP_LEVEL } from "./paths";
+import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
+
+import { NEVER_SYNCED_ANYWHERE, SYSTEM_TOP_LEVEL } from "./paths";
 
 export const BOX_BIN = "/opt/openlen/bin";
 export const BRIDGE_DIR = "/run/openlen";
 
 export const BRIDGED_PROGRAMS: readonly string[] = ["git", "supabase", "tsc", "eslint", "vitest", "npm", "npx", "curl"];
 
+/** A manifest entry for a file over the cap: `big:<bytes>:<mtime ns>`, without reading it (it can't be saved anyway). */
+export const BIG_FILE_PREFIX = "big:";
+
 export function manifestScript(): string {
   return `import hashlib, json, os, sys
 
 EXCLUDED = set(${JSON.stringify([...SYSTEM_TOP_LEVEL, ".openlen"])})
+ANYWHERE = set(${JSON.stringify(NEVER_SYNCED_ANYWHERE)})
+MAX_BYTES = ${MAX_FOLDER_FILE_BYTES}
 ROOT = os.environ.get("OPENLEN_ROOT", "/")
 MEMORY = os.path.join(ROOT, "home", "user", ".len")
 out = {}
@@ -30,23 +37,28 @@ out = {}
 def add(path):
     if os.path.islink(path) or not os.path.isfile(path):
         return
-    h = hashlib.sha256()
+    key = "/" + os.path.relpath(path, ROOT).replace(os.sep, "/")
     try:
+        st = os.stat(path)
+        if st.st_size > MAX_BYTES:
+            out[key] = "${BIG_FILE_PREFIX}%d:%d" % (st.st_size, st.st_mtime_ns)
+            return
+        h = hashlib.sha256()
         with open(path, "rb") as f:
             for chunk in iter(lambda: f.read(65536), b""):
                 h.update(chunk)
     except OSError:
         return
-    out["/" + os.path.relpath(path, ROOT).replace(os.sep, "/")] = h.hexdigest()
+    out[key] = h.hexdigest()
 
 def walk(top):
     for dirpath, dirnames, filenames in os.walk(top):
-        dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(dirpath, d))]
+        dirnames[:] = [d for d in dirnames if d not in ANYWHERE and not os.path.islink(os.path.join(dirpath, d))]
         for name in filenames:
             add(os.path.join(dirpath, name))
 
 for name in sorted(os.listdir(ROOT)):
-    if name in EXCLUDED:
+    if name in EXCLUDED or name in ANYWHERE:
         continue
     path = os.path.join(ROOT, name)
     if os.path.isdir(path) and not os.path.islink(path):

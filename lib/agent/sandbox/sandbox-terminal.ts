@@ -23,7 +23,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
-import { BOX_BIN, BRIDGE_DIR } from "./template-files";
+import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR } from "./template-files";
 
 const REQUESTS = `${BRIDGE_DIR}/requests`;
 const RESPONSES = `${BRIDGE_DIR}/responses`;
@@ -141,7 +141,9 @@ export class SandboxTerminal implements TerminalBackend {
   private async look(): Promise<{ tree: Record<string, string>; box: Record<string, string>; notSaved: NotSaved[]; changed: Record<string, string | null> }> {
     const box = await this.boxManifest();
     const changes = diffManifests(this.synced, box);
-    const read = await this.o.handle.read(changes.filter((c) => c.kind !== "deleted").map((c) => c.path));
+    // A file over the cap is never downloaded into this process (one of gigabytes would take it down): the manifest says its size.
+    const isBig = (path: string) => box[path]?.startsWith(BIG_FILE_PREFIX) ?? false;
+    const read = await this.o.handle.read(changes.filter((c) => c.kind !== "deleted" && !isBig(c.path)).map((c) => c.path));
     const tree = { ...this.tree };
     const notSaved: NotSaved[] = [];
     const changed: Record<string, string | null> = {};
@@ -149,6 +151,10 @@ export class SandboxTerminal implements TerminalBackend {
       if (c.kind === "deleted") {
         delete tree[c.path];
         changed[c.path] = null;
+        continue;
+      }
+      if (isBig(c.path)) {
+        notSaved.push({ ruta: c.path, motivo: "too_large" });
         continue;
       }
       const f = read[c.path];

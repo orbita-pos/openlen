@@ -3,8 +3,11 @@
 
 import { createHash } from "node:crypto";
 
+import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
+
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 import { isSyncedPath } from "./paths";
+import { BIG_FILE_PREFIX } from "./template-files";
 
 export type FakeRun = (
   command: string,
@@ -24,9 +27,12 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
   paused(id: string): boolean;
   /** Every command a box ran, in order. */
   commands(id: string): string[];
+  /** Every path a box was asked to read, in order. */
+  reads(id: string): string[];
 } {
   const boxes = new Map<string, FakeBox>();
   const ran = new Map<string, string[]>();
+  const read = new Map<string, string[]>();
   let next = 0;
 
   const handle = (id: string): SandboxHandle => {
@@ -42,7 +48,12 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
         ran.get(id)!.push(command);
         if (command === "openlen-manifest" || command.endsWith("/openlen-manifest")) {
           const manifest: Record<string, string> = {};
-          for (const [path, text] of b.files) if (isSyncedPath(path)) manifest[path] = createHash("sha256").update(text).digest("hex");
+          for (const [path, text] of b.files) {
+            if (!isSyncedPath(path)) continue;
+            const size = Buffer.byteLength(text, "utf8");
+            // Like the template's script: a file over the cap is listed by its size, never read.
+            manifest[path] = size > MAX_FOLDER_FILE_BYTES ? `${BIG_FILE_PREFIX}${size}:0` : createHash("sha256").update(text).digest("hex");
+          }
           return { stdout: JSON.stringify(manifest), stderr: "", exitCode: 0, timedOut: false };
         }
         const work = Promise.resolve(o.onRun?.(command, b.files, { timeoutMs: opts.timeoutMs, background: opts.background })).then(
@@ -73,6 +84,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       },
       async read(paths) {
         const b = box();
+        read.get(id)!.push(...paths);
         const out: Record<string, { text: string } | { binary: true; size: number }> = {};
         for (const p of paths) {
           const size = b.binaries.get(p);
@@ -99,6 +111,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       const id = `fake-${++next}`;
       boxes.set(id, { files: new Map(), binaries: new Map(), paused: false });
       ran.set(id, []);
+      read.set(id, []);
       return handle(id);
     },
     async resume(sandboxId) {
@@ -114,5 +127,6 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
     binary: (id, path, size) => void boxes.get(id)!.binaries.set(path, size),
     paused: (id) => boxes.get(id)?.paused ?? false,
     commands: (id) => ran.get(id) ?? [],
+    reads: (id) => read.get(id) ?? [],
   };
 }
