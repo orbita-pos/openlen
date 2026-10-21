@@ -104,6 +104,9 @@ export interface ArtifactDataset {
   readonly parameters?: { readonly zone: string; readonly from?: string; readonly to?: string };
   readonly capturedAt: string;
   readonly truncated: boolean;
+  /** What a dataset the dashboard carries as a file is, and how its rows were made (dashboard.json "datasets"). */
+  readonly title?: string;
+  readonly description?: string;
 }
 export interface ResolvedAsset { readonly id: string; readonly mime: string; readonly bytes: Uint8Array }
 export interface SealedArtifactInput {
@@ -141,4 +144,12 @@ export interface ArtifactDatabase extends ArtifactSql {
 }
 export class ArtifactError extends Error {
   constructor(readonly code: string, message = code) { super(message); this.name = "ArtifactError"; }
+}
+/**
+ * `instanceof ArtifactError` is not enough: in Next dev every route bundles its own copy of this file, and
+ * the runtime is shared through globalThis, so an error may come from another copy of the class. Recognise it
+ * by its name and code instead.
+ */
+export function isArtifactError(error: unknown): error is ArtifactError {
+  return error instanceof ArtifactError || (error instanceof Error && error.name === "ArtifactError" && typeof (error as { code?: unknown }).code === "string");
 }

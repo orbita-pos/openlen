@@ -51,4 +51,16 @@ it("loads only the selected project's sources and never writes to its app", asyn
   expect(Object.keys(ref.files)).toHaveLength(2);
   expect(ref.catalogo).toBe("1");
   expect((await f.pg.query(`select "data" from "projects" where "id"='project'`)).rows[0]).toEqual({ data: original });
+  // Freezing the app takes all of it from the real loader, and still nothing private or another project's.
+  const frozen = await createArtifactSourceFreeze(f.database, projectSourceLoader(f.database))(f.owner, ["/index.html"]);
+  expect(Object.keys(frozen.files).sort()).toEqual(["project-source/index.html", "project-source/src/main.tsx"]);
+  expect(frozen.files["project-source/src/main.tsx"]).toBe("app code");
+});
+
+it("freezes a whole app, not only the files named: its sources, package.json and lock, never its secrets", async () => {
+  const source = { catalogo: "2026-11", settings: {}, files: { "/index.html": "<html><head></head><body><div id=\"root\"></div></body></html>", "/src/main.tsx": "import App from './App'", "/src/App.tsx": "export default () => null", "/src/screens/Reservar.tsx": "export default () => null", "/src/index.css": "body{}", "/package.json": "{\"dependencies\":{}}", "/.openlen/esm-lock.json": "{\"lockfileVersion\":1,\"packages\":{}}", "/.env": "SECRET=x", "/LEN.md": "private", "/supabase/functions/send/index.ts": "credential" } };
+  const freeze = createArtifactSourceFreeze(f.database, async () => source);
+  const saved = await freeze(f.owner, ["/index.html"]);
+  expect(Object.keys(saved.files).sort()).toEqual(["project-source/.openlen/esm-lock.json", "project-source/index.html", "project-source/package.json", "project-source/src/App.tsx", "project-source/src/index.css", "project-source/src/main.tsx", "project-source/src/screens/Reservar.tsx"]);
+  expect(JSON.stringify(saved)).not.toMatch(/SECRET|private|credential/);
 });

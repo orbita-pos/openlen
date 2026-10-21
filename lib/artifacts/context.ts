@@ -3,6 +3,7 @@ import { requireProjectAccess } from "./access";
 import { safeArtifactPath,validateArtifactFiles } from "./state";
 import { classifyFolderPath } from "../agent/ficheros/folder";
 import { ArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactSourceRef } from "./types";
+import { ESM_LOCK_PATH } from "../apps/npm/paths";
 
 export interface ArtifactProjectSources {
   readonly catalogo?:string;
@@ -17,14 +18,19 @@ function allowed(path: string): boolean {
   return kind.ok && (kind.kind === "web" || kind.kind === "manifest");
 }
 
-function createCaptureSample(database: ArtifactDatabase, load: (projectId: string, paths: readonly string[]) => Promise<ArtifactProjectSources>) {
-  return async function captureSample(ctx: ArtifactContext, paths: readonly string[]) {
+function createCaptureSample(database: ArtifactDatabase, load: (projectId: string, paths: readonly string[]) => Promise<ArtifactProjectSources>, wholeApp = false) {
+  return async function captureSample(ctx: ArtifactContext, requested: readonly string[]) {
+    let paths = requested;
     await requireProjectAccess(database, ctx);
     if (!Array.isArray(paths) || paths.length === 0 || paths.length > 100 || paths.some((p) => typeof p !== "string" || !allowed(p))) throw new ArtifactError("context_source_forbidden");
     const source = await load(ctx.projectId, paths);
+    // A frozen app is the whole app: every public source, its package.json and its lock, whatever was named.
+    // A capture then never misses a module, and Len has no list to get wrong.
+    if (wholeApp && source.catalogo !== undefined) paths = [...new Set([...paths, ...Object.keys(source.files).filter((p) => allowed(p) || p === ESM_LOCK_PATH)])];
     const files: Record<string, string> = Object.create(null);
     const frozen:Record<string,string>=Object.create(null);
     const resources = new Set<string>();
+    if (paths.length > 200) throw new ArtifactError("sources_too_large", `${paths.length} files to freeze; 200 at most`);
     for (const path of [...new Set(paths)].sort()) {
       const text = source.files[path];
       if (typeof text !== "string") throw new ArtifactError("context_source_not_found");
@@ -51,7 +57,7 @@ export function createArtifactContextCapture(database:ArtifactDatabase,load:Proj
   return async(ctx:ArtifactContext,paths:readonly string[])=> (await sample(ctx,paths)).sourceRef;
 }
 export function createArtifactSourceFreeze(database:ArtifactDatabase,load:ProjectSourceLoader){
-  const sample=createCaptureSample(database,load);
+  const sample=createCaptureSample(database,load,true);
   return async(ctx:ArtifactContext,paths:readonly string[])=>{
     const result=await sample(ctx,paths);
     return {sourceRef:{...result.sourceRef,frozenSourcePrefix:"project-source/" as const},files:validateArtifactFiles(result.files)};

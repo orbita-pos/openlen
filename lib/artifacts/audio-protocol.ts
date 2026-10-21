@@ -18,8 +18,8 @@ export function validateAudioMix(value:unknown):AudioMix{
 export function prepareAudioTracks(input:SealedArtifactInput,tracks:readonly AudioTrack[]):AudioMix["tracks"]{
   return tracks.map(t=>{
     const asset=input.assets.find(a=>a.id===t.asset);
-    if(!asset)throw new ArtifactError("audio_asset_missing");
-    if(!AUDIO_MIMES.includes(asset.mime as typeof AUDIO_MIMES[number])||asset.bytes.length>20*1024*1024||!asset.bytes.length)throw new ArtifactError("audio_asset_invalid");
+    if(!asset)throw new ArtifactError("audio_asset_missing",`track "${t.asset}" is not a ready audio output of this revision: name an audio item's exact output (inspect_artifact) after it is ready, or an upload: id from list_artifact_audio`);
+    if(!AUDIO_MIMES.includes(asset.mime as typeof AUDIO_MIMES[number])||asset.bytes.length>20*1024*1024||!asset.bytes.length)throw new ArtifactError("audio_asset_invalid",`track "${t.asset}" is ${asset.mime}, ${asset.bytes.length} bytes: a track is an MP3, WAV, M4A or OGG of up to 20 MB`);
     const {asset:_,...settings}=t;void _;
     return {...settings,mime:asset.mime as typeof AUDIO_MIMES[number],dataBase64:Buffer.from(asset.bytes).toString("base64")};
   });

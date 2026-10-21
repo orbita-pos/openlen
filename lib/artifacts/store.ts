@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { safeArtifactPath, validateArtifactFiles, validateArtifactOutputs } from "./state";
 import { requireArtifactAccess, requireProjectAccess, validateDependencies } from "./access";
+import { withReferencedDependencies } from "./references";
 import {
-  ArtifactError, type Artifact, type ArtifactContext, type ArtifactDatabase, type ArtifactEvidence,
+  ArtifactError, isArtifactError, type Artifact, type ArtifactContext, type ArtifactDatabase, type ArtifactEvidence,
   type ArtifactKind, type ArtifactOutput, type ArtifactRequest, type ArtifactRevision,
   type ArtifactSql, type ArtifactVisibility, type JobClaim,
 } from "./types";
@@ -72,7 +73,16 @@ export function createArtifactStore(database: ArtifactDatabase) {
       const before = await getRevision(ctx, id, expectedRevision, tx);
       if (before.sealedAt) return before;
       if (Object.keys(before.files).length === 0) throw new ArtifactError("empty_sources");
-      const [row] = await tx.query(`update "artifactRevisions" set "sealedAt"=now() where "artifactId"=$1 and "revision"=$2 returning *`, [id, expectedRevision]);
+      const dependencies = withReferencedDependencies(before.dependencies, before.files);
+      let privateDependency = false;
+      try { privateDependency = await validateDependencies(tx, ctx, id, dependencies); }
+      catch (error) {
+        const named = dependencies.filter((d) => !before.dependencies.some((b) => b.artifactId === d.artifactId)).map((d) => `${d.artifactId}@${d.revision}`);
+        if (isArtifactError(error) && named.length && error.message === error.code) throw new ArtifactError(error.code, `the sources name ${named.join(", ")}; check those ids with list_artifacts/inspect_artifact`);
+        throw error;
+      }
+      const [row] = await tx.query(`update "artifactRevisions" set "sealedAt"=now(),"dependencies"=$3::jsonb where "artifactId"=$1 and "revision"=$2 returning *`, [id, expectedRevision, JSON.stringify(dependencies)]);
+      if (privateDependency) await tx.query(`update "artifacts" set "visibility"='owner',"updatedAt"=now() where "id"=$1`, [id]);
       return revisionRow(row!);
     });
   }

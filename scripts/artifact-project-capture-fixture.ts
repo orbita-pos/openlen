@@ -7,6 +7,7 @@ import {projectSourceLoader} from "../lib/artifacts/project-data";
 import {buildProjectCaptures} from "../lib/artifacts/adapters/motion/captures";
 import {stopBundlerWorker} from "../lib/apps/bundler/bundle-app";
 import type {SealedArtifactInput} from "../lib/artifacts/types";
+import {trialApp} from "../lib/artifacts/acceptance/trial-project";
 
 /** A real functional but synthetic source project in an isolated PGlite DB.
  * Exercises the product source loader/freeze/compiler. No customer data,
@@ -20,6 +21,26 @@ async function main(){
     const html='<!doctype html><html lang="es"><head><title>Inventario — proyecto sintético</title><link rel="stylesheet" href="/styles.css"><link rel="icon" href="data:,"></head><body><header><span>PROYECTO DE PRUEBA / CAPTURA REAL</span><h1>Mi inventario</h1><p id="version">Versión original 1</p></header><main><section><p>Productos disponibles</p><strong id="stock">21</strong><button id="add">Agregar 3 unidades</button></section><section><h2>Catálogo de demostración</h2><p>Taza · 12 unidades</p><p>Libreta · 9 unidades</p><small>Datos sintéticos locales. Sin sesión ni base de clientes.</small></section></main><script src="/src/main.ts" type="module"></script></body></html>';
     const css='*{box-sizing:border-box}body{margin:0;padding:64px;background:#121b23;color:#f3f4ee;font:22px Arial}header{border-bottom:1px solid #38505c;padding-bottom:24px}header span{font-size:14px;color:#8ad7af;letter-spacing:2px}h1{font-size:56px;margin:18px 0}#version,small{color:#a2b4bf;font-size:16px}main{display:grid;grid-template-columns:1fr 1.4fr;gap:80px;padding-top:42px}strong{display:block;color:#8ad7af;font-size:104px}button{margin-top:20px;padding:14px 20px;font:18px Arial;background:#8ad7af;border:0;color:#12201a;border-radius:6px}h2{font-size:28px}';
     const source='let stock:number=21;document.querySelector("#add").addEventListener("click",()=>{stock+=3;document.querySelector("#stock").textContent=String(stock);});';
+    // --app turnia: the trial's real app — the real shell (Tailwind CDN, Google Fonts), React screens on a
+    // HashRouter — frozen by naming only /index.html, and captured at two hash routes.
+    if(process.argv.includes("--app")){
+      const app=trialApp();
+      await f.database.query(`update "projects" set "data"=$1::jsonb where "id"='project'`,[JSON.stringify({html:app.html,app:app.app,settings:{languages:["es"]}})]);
+      for(const [path,content] of Object.entries(app.ficheros))await f.database.query(`insert into "projectFiles" values ('project',$1,$2)`,[path,content]);
+      const frozen=await createArtifactSourceFreeze(f.database,projectSourceLoader(f.database))(f.owner,["/index.html"]);
+      const {ctx,artifact}=await f.create("project","motion");
+      const manifest={version:1,entry:"index.html",runtime:"gsap-3.15.0",width:1280,height:720,fps:30,durationSeconds:2,datasetIds:[],captures:[{id:"agenda",entry:"/index.html#/"},{id:"reservar",entry:"/index.html#/reservar"}]};
+      const composition='<html><head></head><body style="margin:0;background:#0f172a"><img id="a" src="asset:capture:agenda" width="1280" height="720" style="position:absolute;inset:0"><img id="b" src="asset:capture:reservar" width="1280" height="720" style="position:absolute;inset:0;opacity:0"><script src="main.ts"></script></body></html>';
+      const motion='const tl=gsap.timeline({paused:true});tl.to("#b",{opacity:1,duration:1},1);tl.pause(0);gsap.ticker.sleep();window.lenMotion={durationSeconds:2,ready:async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.decode()));},seek:async(t:number)=>{tl.totalTime(t,true);}};';
+      const revision=await f.store.writeArtifactFiles(ctx,artifact.id,0,{...frozen.files,"motion.json":JSON.stringify(manifest),"index.html":composition,"main.ts":motion},{sourceRef:frozen.sourceRef});
+      const input:SealedArtifactInput={artifact,revision,assets:[],datasets:[]},captures=await buildProjectCaptures(input);
+      await mkdir(directory,{recursive:true});
+      for(const c of captures)await writeFile(join(directory,`capture-${c.id}.html`),c.html);
+      await writeFile(join(directory,"input.json"),JSON.stringify(input));
+      await writeFile(join(directory,"proof.json"),JSON.stringify({projectType:"app",app:"turnia",frozenFiles:Object.keys(frozen.files).length,routes:captures.map(c=>c.route??""),customerData:false},null,2));
+      console.log(`Real app frozen whole (${Object.keys(frozen.files).length} files) and compiled offline for ${captures.length} hash routes.`);
+      return;
+    }
     const project={html,app:{entrada:"/src/main.ts",catalogo:"2026-11"},settings:{languages:["es"]}};
     await f.database.query(`update "projects" set "data"=$1::jsonb where "id"='project'`,[JSON.stringify(project)]);
     await f.database.query(`insert into "projectFiles" values ('project','/src/main.ts',$1),('project','/styles.css',$2)`,[source,css]);

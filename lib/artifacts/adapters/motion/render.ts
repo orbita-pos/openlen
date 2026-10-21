@@ -10,7 +10,7 @@ export async function renderMotion(input:SealedArtifactInput,render:ArtifactRend
   let capturedBytes=0;
   for(const capture of captures){
     signal.throwIfAborted();
-    const image=await render({version:1,kind:"capture",html:capture.html,width:capture.width,height:capture.height,probes:[]},signal);
+    const image=await render({version:1,kind:"capture",html:capture.html,width:capture.width,height:capture.height,probes:[],...(capture.route?{route:capture.route}:{})},signal);
     if(!image.checks.includes("runtime:no-errors")||!image.checks.includes("resources:complete")||!image.checks.includes("source-capture:offline"))throw new ArtifactError("invalid_capture_render");
     if((capturedBytes+=image.png.length)>4*1024*1024)throw new ArtifactError("capture_assets_too_large");
     await validateArtifactImage(image.png,"png",capture.width,capture.height);

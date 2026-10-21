@@ -8,7 +8,7 @@ export type RealArtifactDataRequest = { readonly mode: "snapshot" | "live" } & (
   | { readonly source: "backend"; readonly environment: "draft" | "live"; readonly query: string }
   | { readonly source: "visits" | "forms"; readonly zone: string; readonly from?: string; readonly to?: string }
 );
-export type ArtifactDataRequest = RealArtifactDataRequest | { readonly source: "scenario"; readonly columns: readonly string[]; readonly rows: readonly (readonly unknown[])[] };
+export type ArtifactDataRequest = RealArtifactDataRequest | { readonly source: "scenario"; readonly columns?: readonly string[]; readonly rows: readonly (readonly unknown[] | Readonly<Record<string, unknown>>)[] };
 export type ArtifactDataQuery = (ctx: ArtifactContext, input: RealArtifactDataRequest) => Promise<QueryOutcome | null>;
 const DATASET_PATH = /^datasets\/([a-f0-9-]{36})\.json$/;
 
@@ -25,6 +25,22 @@ function table(columns: readonly string[], rows: readonly (readonly unknown[])[]
   const result = { columns: [...columns], rows: limited };
   if (Buffer.byteLength(JSON.stringify(result)) > 2 * 1024 * 1024) throw new ArtifactError("dataset_too_large");
   return result;
+}
+/**
+ * Scenario rows as the model writes them: arrays in the columns' order, or row objects — the usual JSON shape,
+ * and the one Claude's dashboards take. Objects are laid out in the columns' order (the first row's keys when no
+ * columns are given); a key that no column names is reported, never dropped.
+ */
+function scenarioTable(columns: readonly string[] | undefined, rows: unknown) {
+  if (!Array.isArray(rows) || !rows.some((row) => row && typeof row === "object" && !Array.isArray(row))) return table(columns ?? [], rows as readonly (readonly unknown[])[]);
+  const names = columns ?? Object.keys(rows[0] ?? {});
+  const known = new Set(names);
+  return table(names, rows.map((row, index) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) throw new ArtifactError("invalid_dataset", `row ${index} is not an object like the others`);
+    const extra = Object.keys(row).find((key) => !known.has(key));
+    if (extra !== undefined) throw new ArtifactError("invalid_dataset", `row ${index} has "${extra}", which is not one of the columns (${names.join(", ")})`);
+    return names.map((name) => (row as Record<string, unknown>)[name] ?? null);
+  }));
 }
 export function datasetsFromRevision(revision: ArtifactRevision): ArtifactDataset[] {
   return Object.entries(revision.files).filter(([p]) => DATASET_PATH.test(p)).map(([path, text]) => {
@@ -47,7 +63,7 @@ export function createArtifactData(database: ArtifactDatabase, store: ArtifactSt
     if(binding&&artifact.currentRevision!==binding.revision)throw new ArtifactError("revision_conflict");
     let values: ReturnType<typeof table>;
     let truncated = false;
-    if (scenario) { values = table(input.columns, input.rows); truncated = input.rows.length > 500; }
+    if (scenario) { values = scenarioTable(input.columns, input.rows); truncated = input.rows.length > 500; }
     else {
       if (input.mode !== "snapshot" && input.mode !== "live") throw new ArtifactError("invalid_data_request");
       if (input.source === "backend") {

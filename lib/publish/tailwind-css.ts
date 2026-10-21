@@ -1,7 +1,7 @@
 import postcss from "postcss";
 import tailwindcss from "tailwindcss";
 import type {TwDarkMode} from "./tw-config";
-import type {FuenteDeClases} from "./optimize-html";
+import type {FuenteDeClases} from "./bake-tailwind";
 const TAILWIND_INPUT = "@tailwind base;\n@tailwind components;\n@tailwind utilities;\n";
 
 /** Las hojas de la app traen su `@tailwind base` (lo copian de Vite); el horneado

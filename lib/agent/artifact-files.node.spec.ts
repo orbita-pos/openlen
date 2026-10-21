@@ -51,6 +51,25 @@ test("Read/Write/Edit and terminal saves share private artifact sources without 
   } finally { await f.pg.close(); }
 });
 
+test("saving a slide answers with what is outside the slide format, anchored to its line", async () => {
+  const f = await artifactFixture();
+  try {
+    const { ctx, artifact } = await f.create();
+    const deps = { artifacts: createArtifactWorkspace(f.store, ctx), loadProject: async () => ({ data: { html: "" }, userBrief: null, title: "App", subdomain: null, publishedAt: null }), projectFiles: async () => ({}) } as unknown as AgentDeps;
+    const session: AgentSession = { projectId: "project", userId: "owner", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 };
+    const path = `/.len/artifacts/${artifact.id}/slides/cover.html`;
+    const saved = await toolWrite(session, deps, { file_path: path, content: '<section id="cover" style="background:#fff">\n<h1>Hola</h1>\n<button>Reservar</button>\n</section>' });
+    assert.equal(saved.response.ok, true, JSON.stringify(saved.response));
+    assert.deepEqual(saved.diagnosticos, [{ ruta: path, linea: 3, columna: 1, gravedad: "Error", mensaje: "<button>: not in the slide format — a <p> with background, padding and border-radius is a pill", fuente: "slides" }]);
+    const clean = await toolWrite(session, deps, { file_path: path, content: '<section id="cover" style="background:#fff">\n<h1>Hola</h1>\n</section>' });
+    assert.equal(clean.diagnosticos, undefined);
+    // A manifest answers its save too: a retired deck format says what to write instead.
+    const index = `/.len/artifacts/${artifact.id}/deck.json`;
+    const old = await toolWrite(session, deps, { file_path: index, content: JSON.stringify({ version: 2, title: "x", slides: [] }) });
+    assert.match(old.diagnosticos?.[0]?.mensaje ?? "", /version 2.*retired.*version 3/);
+  } finally { await f.pg.close(); }
+});
+
 test("agent dispatch creates and queues sources without saving or compiling the app", async () => {
   const f = await artifactFixture();
   try {
@@ -60,8 +79,9 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     const result = await runAgentTool(session, deps, "create_artifact", { kind: "slides", item_key: "deck", title: "Deck", brief: "App" });
     assert.equal(result.response.ok, true);
     const id = result.response.artifactId;
-    assert.equal((await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/deck.json`, content: "{}" })).response.ok, true);
-    const queued = await runAgentTool(session, deps, "render_artifact", { artifact_id: id, revision: 1, formats: ["pdf"] });
+    assert.equal((await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/deck.json`, content: JSON.stringify({ version: 3, title: "Deck", order: ["cover"] }) })).response.ok, true);
+    assert.equal((await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' })).response.ok, true);
+    const queued = await runAgentTool(session, deps, "render_artifact", { artifact_id: id, revision: 2, formats: ["pdf"] });
     assert.equal(queued.response.status, "queued");
     assert.equal(queued.updatedHtml, undefined);
     assert.equal(queued.appCambiada, undefined);

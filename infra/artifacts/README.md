@@ -203,18 +203,39 @@ y Tailwind 3 se hornean mediante el compilador compartido con publicación;
 no se ejecuta una configuración Tailwind del usuario. Las apps normales mantienen
 su comportamiento; el modo inline tiene su propia clave de caché.
 
-Slides conserva `deck.json` v1. Para nuevos decks, v2 permite `slides:[{id,source,
-notes?}]`, cada source es un HTML completo, y `datasetIds` vincula datos guardados.
-Los slides se aíslan en iframes srcdoc opacos con políticas sin red y sin acceso
-al padre/cookies. El encabezado del preview de slides permite sólo frames about:
-y conserva sandbox, connect-src none y el control de permisos actual.
+Slides conserva `deck.json` v1. Los decks nuevos son v3 (20/10/2026), el formato
+de Claude Slides: `deck.json` es el índice (`title`, `order`, `sections`) y cada
+diapositiva es `slides/<id>.html`, una sola `<section>` de 1920×1080 con estilos en
+línea y notas en `<aside>`. El vocabulario que se vuelve objeto de PowerPoint está
+CERRADO (`lib/artifacts/adapters/slides/subset.ts`): etiquetas de texto, listas,
+tablas, cajas pintadas (color, degradado, borde de un estilo y un color, radio,
+sombra, opacidad, rotación), imágenes guardadas y `<svg>`. Lo de fuera se rechaza al
+GUARDAR la diapositiva con línea:columna y el cambio permitido más cercano. La
+maquetación (flex, grid, margin, z-index, em, calc, variables CSS) es libre: la
+resuelve el navegador. La v2 (HTML libre + `data-len-raster`) se retiró.
 
-El paquete interno `slides-layout` mide texto por líneas/fragmentos y geometría
-CSS en navegador. Texto, estilos compatibles, fondos y bordes pasan a objetos
-PPTX nativos. SVG/canvas/efectos requieren `data-len-raster` sobre el componente;
-ese componente es imagen en PowerPoint, editable en su HTML fuente. No hay
-fallback a imagen de la diapositiva completa. Un efecto no soportado se rechaza
-con diagnóstico. La fase posterior sigue exigiendo apertura LibreOffice/PDF.
+El paquete `slides-layout` mide cada diapositiva en el orden de pintado de CSS
+(`tools/artifact-renderer/slide-layout.mjs`): una caja de texto por bloque con sus
+tramos, formas, una franja por lado cuando los grosores difieren, tablas y listas
+nativas, imágenes con su recorte de `object-fit`, y cada `<svg>` como imagen a 2×
+sobre fondo transparente. El texto que no cabe encoge hasta el 60 % y queda en la
+evidencia. `lib/artifacts/adapters/slides/native.ts` lo escribe con PptxGenJS y
+añade al XML lo que PptxGenJS no tiene: degradados, recorte/radio/contorno de
+imágenes y transiciones. La diapositiva mide 13,33×7,5 in (1 pt = 2 px).
+
+La imagen `openlen/artifact-renderer:2` añade fuentes para las diapositivas: Inter,
+Roboto, Open Sans, Lato, EB Garamond, JetBrains Mono, y Carlito/Caladea, que miden
+igual que Calibri/Cambria (el PPTX las nombra como Calibri/Cambria).
+
+Dashboards (20/10/2026): d3 7.9.0 es el global `d3` de cada dashboard
+(`public/artifact-vendor/d3-7.9.0/`, del `dist/d3.min.js` del paquete npm, ISC; su
+sha256 está fijado en `lib/artifacts/adapters/dashboard/d3.ts`). Un CSV/TSV/JSON del
+propio dashboard nombrado en `datasetIds` es un conjunto de datos de escenario, con
+`title`/`description` en `dashboard.json.datasets`. Tras pintar, el renderer revisa
+la salida: un `NaN`/`undefined`/`Infinity` visible detiene la exportación
+(`dashboard_output_invalid`); una gráfica vacía, etiquetas encimadas o cortadas y una
+marca `data-source`/`data-field` que no es su dato quedan como `output:*` en la
+evidencia.
 
 Prueba local real: dashboard React/Recharts200->120 con filtro, CSS/Tailwind
 compilado48px, cero errores JS. Deck HTML de2slides con estilos distintos,

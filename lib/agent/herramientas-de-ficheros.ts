@@ -57,6 +57,8 @@ import { installPackagesAfterSave } from "@/lib/agent/npm-after-save";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { NODE_MODULES, nodeModulesOf } from "@/lib/apps/npm/node-modules";
 import { ARTIFACT_WORKSPACE, parseArtifactPath } from "@/lib/artifacts/workspace";
+import { checkSlideSource } from "@/lib/artifacts/adapters/slides/subset";
+import { checkManifestSource } from "@/lib/artifacts/manifest-check";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
@@ -340,7 +342,12 @@ async function aplicarPlan(
       const changed = before !== plan.contenido;
       if (changed) await deps.artifacts.write(plan.ruta, plan.contenido, before);
       leidosDe(session).set(plan.ruta, { instantanea: plan.contenido, offset: undefined, limit: undefined });
-      return { response: { ok: true, cambio: changed ? "cambio" : "sin_cambio", tool_result: plan.respuesta({ guardadoIgual: true }) }, action: { tool: herramienta, ok: true, summary: detalle }, ...(changed ? { mutoDurable: true } : {}) };
+      // A slide answers at once with what is outside the slide format, as a compiler does after a save.
+      const slide = changed ? /\/slides\/([A-Za-z0-9_-]{1,64})\.html$/.exec(plan.ruta)?.[1] : undefined;
+      const diagnosticos: Diagnostico[] = slide ? checkSlideSource(slide, plan.contenido).diagnostics.map((d) => ({ ruta: plan.ruta, linea: d.line, columna: d.column, gravedad: d.severity, mensaje: d.message, fuente: "slides" }))
+        // And a piece's manifest (deck.json, dashboard.json, motion.json, audio.json), the same way.
+        : changed ? checkManifestSource(plan.ruta, plan.contenido).map((d) => ({ ruta: plan.ruta, linea: d.line, columna: d.column, gravedad: "Error" as const, mensaje: d.message, fuente: "artifacts" })) : [];
+      return { response: { ok: true, cambio: changed ? "cambio" : "sin_cambio", tool_result: plan.respuesta({ guardadoIgual: true }) }, action: { tool: herramienta, ok: true, summary: detalle }, ...(changed ? { mutoDurable: true } : {}), ...conDiagnosticos(diagnosticos) };
     } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact save failed")) }; }
   }
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };

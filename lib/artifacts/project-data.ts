@@ -14,7 +14,10 @@ export function projectSourceLoader(database: ArtifactDatabase) {
     const files: Record<string, string> = Object.create(null);
     if (typeof data?.html === "string" && paths.includes("/index.html")) files["/index.html"] = data.html;
     for (const [slug, page] of Object.entries(data?.pages ?? {})) if (paths.includes(`/${slug}/index.html`)) files[`/${slug}/index.html`] = page.html;
-    const rows = await database.query(`select "path","content" from "projectFiles" where "projectId"=$1 and "path"=any($2::text[])`, [projectId, paths]);
+    // An app's files all come: freezing it takes the whole app (context.ts filters what is public).
+    const rows = data?.app
+      ? await database.query(`select "path","content" from "projectFiles" where "projectId"=$1`, [projectId])
+      : await database.query(`select "path","content" from "projectFiles" where "projectId"=$1 and "path"=any($2::text[])`, [projectId, paths]);
     for (const file of rows) files[String(file.path)] = String(file.content);
     return { files,...data?.app?.catalogo&&{catalogo:data.app.catalogo}, settings: { ...data?.settings } };
   };

@@ -17,11 +17,11 @@
  *     --evidence <new directory> [--distro Ubuntu-24.04] [--image openlen/artifact-renderer:1] \
  *     [--node <linux path to node 22>] [--only id,id] [--skip-long]
  */
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import sharp from "sharp";
 import { join, resolve } from "node:path";
-import { build } from "esbuild";
 import { renderDashboard } from "../lib/artifacts/adapters/dashboard/render";
 import { renderSlides } from "../lib/artifacts/adapters/slides/render";
 import { renderMotion } from "../lib/artifacts/adapters/motion/render";
@@ -29,19 +29,13 @@ import { renderAudio } from "../lib/artifacts/adapters/audio/render";
 import { pcmToWav } from "../lib/artifacts/adapters/audio/pcm";
 import { dashboardFixture } from "../lib/artifacts/testing/dashboard";
 import { slidesFixture } from "../lib/artifacts/testing/slides";
+import { slidesV3Fixture } from "../lib/artifacts/testing/slides-v3";
 import { motionFixture } from "../lib/artifacts/testing/motion";
 import { stopBundlerWorker } from "../lib/apps/bundler/bundle-app";
 import type { ArtifactRender, ArtifactRenderPacket } from "../lib/artifacts/render-protocol";
 import { ArtifactError, type AdapterResult, type SealedArtifactInput } from "../lib/artifacts/types";
 import { rendererContainerArgs } from "../lib/artifacts/render-container";
-import {
-  decodeRenderResult,
-  parseBridgeResponse,
-  type BridgeLeftovers,
-  type BridgeMetrics,
-  type BridgeRequest,
-  type BridgeResponse,
-} from "../lib/artifacts/acceptance/bridge-protocol";
+import { bundleBridge, createBridge, wsl as wslIn, type Bridge, type BridgeCall } from "../lib/artifacts/acceptance/bridge-client";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -57,84 +51,29 @@ const skipLong = process.argv.includes("--skip-long");
 
 const sha256 = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-function wsl(args: readonly string[]): { code: number; stdout: string; stderr: string } {
-  // --exec: the program runs as given, with no Linux shell re-reading the line.
-  const out = spawnSync("wsl.exe", ["-d", distro, "--exec", ...args], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024, windowsHide: true });
-  return { code: out.status ?? -1, stdout: out.stdout ?? "", stderr: out.stderr ?? "" };
-}
-
-function linuxPath(windowsPath: string): string {
-  const full = resolve(windowsPath);
-  const match = /^([A-Za-z]):[\\/](.*)$/.exec(full);
-  if (!match) throw new Error(`not a drive path: ${full}`);
-  return `/mnt/${match[1]!.toLowerCase()}/${match[2]!.replace(/\\/g, "/")}`;
-}
+const wsl = (args: readonly string[]) => wslIn(distro, args);
 
 // ── The bridge ───────────────────────────────────────────────────────────────
 
-let node = "";
-let bridgeLinux = "";
+let bridge: Bridge;
 
-function callBridge(request: BridgeRequest, signal?: AbortSignal): Promise<BridgeResponse> {
-  return new Promise((done, fail) => {
-    const child = spawn("wsl.exe", ["-d", distro, "--exec", node, bridgeLinux], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
-    const chunks: Buffer[] = [];
-    let stderr = "";
-    child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
-    child.stderr.on("data", (chunk: Buffer) => { if (stderr.length < 16 * 1024) stderr += chunk.toString("utf8"); });
-    // A worker's job signal, carried across: the bridge aborts the real supervisor.
-    const cancel = () => { child.stdin.write("cancel\n"); };
-    signal?.addEventListener("abort", cancel, { once: true });
-    child.stdin.on("error", () => undefined);
-    child.once("error", fail);
-    child.once("close", () => {
-      signal?.removeEventListener("abort", cancel);
-      const last = Buffer.concat(chunks).toString("utf8").trim().split("\n").pop() ?? "";
-      try { done(parseBridgeResponse(last)); }
-      catch { fail(new Error(`the bridge gave no answer: ${stderr.slice(0, 2000)}`)); }
-    });
-    child.stdin.write(`${JSON.stringify(request)}\n`);
-    if (signal?.aborted) cancel();
-  });
-}
-
-interface CallLog {
-  readonly kind: string;
+interface CallLog extends BridgeCall {
   readonly packetSha256: string;
   /** The packet as sent, under evidence/packets/, to reproduce the call exactly. */
   readonly packetFile: string;
-  readonly ok: boolean;
-  readonly code?: string;
-  readonly metrics: BridgeMetrics;
-  readonly leftovers: BridgeLeftovers;
 }
 
 function bridgeRender(calls: CallLog[], packets: { directory: string; prefix: string }): ArtifactRender {
   return async (packet, signal) => {
     const json = JSON.stringify(packet);
     const packetFile = `${packets.prefix}-${calls.length + 1}-${packet.kind}.json`;
+    // Written before the call, so a crash still leaves what was sent.
     await writeFile(join(packets.directory, packetFile), json);
-    const response = await callBridge({ type: "render", image, token: randomUUID(), packet }, signal);
-    calls.push({
-      kind: packet.kind,
-      packetSha256: sha256(json),
-      packetFile,
-      ok: response.ok,
-      ...(response.ok ? {} : { code: response.error.code }),
-      metrics: response.metrics,
-      leftovers: response.leftovers,
-    });
-    if (!response.ok) throw new ArtifactError(response.error.code, response.error.message);
-    if (!response.result) throw new ArtifactError("bridge_result_missing");
-    return decodeRenderResult(response.result);
+    return bridge.render(() => randomUUID(), (_p, outcome) => { calls.push({ ...outcome, packetSha256: sha256(json), packetFile }); })(packet, signal);
   };
 }
 
-async function inspect(tool: "ffprobe" | "pdfinfo", name: string, bytes: Uint8Array): Promise<string> {
-  const response = await callBridge({ type: "inspect", image, tool, file: { name, base64: Buffer.from(bytes).toString("base64") } });
-  if (!response.ok) throw new ArtifactError(response.error.code, response.error.message);
-  return response.output ?? "";
-}
+const inspect = (tool: "ffprobe" | "pdfinfo", name: string, bytes: Uint8Array) => bridge.inspect(tool, name, bytes);
 
 // ── Synthetic inputs ─────────────────────────────────────────────────────────
 
@@ -172,24 +111,6 @@ function reactDashboard(): SealedArtifactInput {
       },
     },
     datasets: [{ id: "sales", mode: "scenario", environment: null, visibility: "project", columns: ["Zona", "Ventas"], rows: [["Norte", 120], ["Sur", 80]], query: null, source: "scenario", capturedAt: "2026-10-20T00:00:00Z", truncated: false }],
-    assets: [],
-  } as unknown as SealedArtifactInput;
-}
-
-/** The two-slide HTML (v2) deck of scripts/artifact-breadth-fixture.ts. */
-function htmlDeck(): SealedArtifactInput {
-  const head = '<style>*{box-sizing:border-box}body{margin:0;width:1280px;height:720px;padding:64px;font-family:Arial;color:#162b40;background:#f3f2eb}h1{font-size:64px;line-height:1.08;margin:24px 0}h2{font-size:42px;margin:0 0 24px}p{font-size:24px;line-height:1.4;margin:16px 0}.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:52px}.card{background:#dae8df;border:2px solid #bed4c7;border-radius:24px;padding:36px}.eyebrow{font-size:16px;font-weight:bold;color:#3c6c5e;letter-spacing:2px}</style>';
-  const spec = { version: 2, title: "OpenLen · prueba de composición HTML", width: 1280, height: 720, slides: [{ id: "cover", source: "slides/cover.html", notes: "Fuente HTML editable; texto y tarjetas nativos en PowerPoint." }, { id: "details", source: "slides/details.html", notes: "Segunda diapositiva independiente." }] };
-  return {
-    artifact: { kind: "slides" },
-    revision: {
-      files: {
-        "deck.json": JSON.stringify(spec),
-        "slides/cover.html": `<html><head>${head}</head><body><div class="eyebrow">OPENLEN · PRUEBA TÉCNICA</div><h1>Tu app, lista<br>para presentarla.</h1><div class="grid"><div><p>Un solo proyecto, varios entregables.</p><p>Texto con <strong>énfasis editable</strong> y <em>otro estilo.</em></p></div><div class="card"><h2>De la idea al equipo</h2><p>Slides con CSS grid, tipografía y componentes.</p><div data-len-raster style="width:320px;height:70px;background:linear-gradient(90deg,#3c6c5e,#85d8be);border-radius:12px"></div></div></div></body></html>`,
-        "slides/details.html": `<html><head>${head}<style>body{background:#142c3a;color:#fff}.eyebrow{color:#85d8be}.grid{grid-template-columns:1fr 1fr}.card{color:#142c3a;border:0}</style></head><body><div class="eyebrow">02 / ARCHIVOS EDITABLES</div><h1>Una fuente por slide.</h1><div class="grid"><div class="card"><h2>Editar</h2><p>Cambiar esta página conserva la otra.</p></div><div><h2>Exportar</h2><p>Texto y formas como objetos nativos.</p><p>Efectos complejos por componente.</p></div></div></body></html>`,
-      },
-    },
-    datasets: [],
     assets: [],
   } as unknown as SealedArtifactInput;
 }
@@ -278,7 +199,7 @@ async function verifyAudio(result: AdapterResult | undefined, record: CaseResult
     must(Math.abs(Number(probe.format.duration) - seconds) < 0.1, `${name} lasts ${probe.format.duration}s, expected ${seconds}s`);
   }
 }
-async function verifySlides(result: AdapterResult | undefined, record: CaseResult, slides: number) {
+async function verifySlides(result: AdapterResult | undefined, record: CaseResult, slides: number, width = 1280) {
   must(result, "no result");
   const info = await inspect("pdfinfo", "deck.pdf", output(result, "deck.pdf"));
   const pages = Number(/^Pages:\s+(\d+)/m.exec(info)?.[1]);
@@ -286,7 +207,7 @@ async function verifySlides(result: AdapterResult | undefined, record: CaseResul
   must(pages === slides, `PDF has ${pages} pages, expected ${slides}`);
   must(Buffer.from(output(result, "deck.pptx")).subarray(0, 2).toString() === "PK", "PPTX is not a zip");
   const pngs = result.outputs.filter((o) => /^slide-\d{3}\.png$/.test(o.name));
-  must(pngs.length === slides && pngs.every((p) => pngSize(p.bytes).width === 1280), "slide PNGs do not match the deck");
+  must(pngs.length === slides && pngs.every((p) => pngSize(p.bytes).width === width), "slide PNGs do not match the deck");
   must(result.evidence.checks.includes("pptx:libreoffice-opened"), "LibreOffice did not open the PPTX");
 }
 async function verifyDashboard(result: AdapterResult | undefined, record: CaseResult, probes: number) {
@@ -302,9 +223,9 @@ const cancelCodes = ["aborted", "acceptance_cancelled"];
 let dashboardPng: Uint8Array | null = null;
 const capturePng = () => dashboardPng ?? (() => { throw new Error("needs the dashboard-v1 render first"); })();
 
-async function captureFixtureInput(directory: string): Promise<SealedArtifactInput> {
+async function captureFixtureInput(directory: string, extra: string[] = []): Promise<SealedArtifactInput> {
   const tsx = resolve("node_modules/tsx/dist/cli.mjs");
-  const out = spawnSync(process.execPath, [tsx, "--require", "./scripts/test-node-server-only-shim.cjs", "scripts/artifact-project-capture-fixture.ts", directory], { encoding: "utf8", windowsHide: true, timeout: 180_000 });
+  const out = spawnSync(process.execPath, [tsx, "--require", "./scripts/test-node-server-only-shim.cjs", "scripts/artifact-project-capture-fixture.ts", directory, ...extra], { encoding: "utf8", windowsHide: true, timeout: 180_000 });
   must(out.status === 0, `capture fixture failed: ${(out.stderr || out.stdout).slice(0, 500)}`);
   return JSON.parse(await readFile(join(directory, "input.json"), "utf8")) as SealedArtifactInput;
 }
@@ -319,11 +240,26 @@ function cases(work: string): CaseDef[] {
       run: (render, signal) => renderDashboard(reactDashboard(), render, signal), verify: (r, rec) => verifyDashboard(r, rec, 1) },
     { id: "slides-v1", title: "Presentación v1: PPTX nativo abierto en LibreOffice → PDF", group: "format", expected: "ok",
       run: async (render, signal) => renderSlides(slidesFixture(new Uint8Array(await readFile("public/icon-512.png"))), render, signal), verify: (r, rec) => verifySlides(r, rec, 2) },
-    { id: "slides-v2", title: "Presentación HTML v2: layout medido en Linux → PPTX → LibreOffice → PDF", group: "format", expected: "ok",
-      run: (render, signal) => renderSlides(htmlDeck(), render, signal), verify: (r, rec) => verifySlides(r, rec, 2) },
+    { id: "slides-v3", title: "Presentación en el formato de diapositivas (v3): medida en Linux → objetos nativos de PPTX → LibreOffice → PDF", group: "format", expected: "ok",
+      run: async (render, signal) => renderSlides(slidesV3Fixture(new Uint8Array(await readFile("public/icon-512.png"))), render, signal), verify: (r, rec) => verifySlides(r, rec, 3, 1920) },
     { id: "capture-motion", title: "Captura congelada de una app (fuente v1 tras cambiar a v2) dentro de un video", group: "format", expected: "ok",
       run: async (render, signal) => renderMotion(await captureFixtureInput(join(work, "capture-fixture")), render, signal),
       verify: async (r, rec) => { await verifyVideo(r, rec, 30, false); must(r!.outputs.some((o) => o.name.startsWith("capture-")), "no frozen capture output"); } },
+    { id: "capture-real-app", title: "La app Turnia real (Tailwind por CDN, Google Fonts, HashRouter) congelada entera y capturada en #/ y #/reservar", group: "format", expected: "ok",
+      run: async (render, signal) => renderMotion(await captureFixtureInput(join(work, "capture-real-app"), ["--app"]), render, signal),
+      verify: async (r, rec) => {
+        await verifyVideo(r, rec, 60, false);
+        const shots = r!.outputs.filter((o) => /^capture-(agenda|reservar)\.png$/.test(o.name));
+        must(shots.length === 2, `expected the agenda and reservar captures, got ${r!.outputs.map((o) => o.name).join(", ")}`);
+        // A styled screen, not an unstyled page: Tailwind's amber and slate must be in the picture.
+        for (const shot of shots) {
+          const { data, info } = await sharp(Buffer.from(shot.bytes)).raw().toBuffer({ resolveWithObject: true });
+          let amber = 0;
+          for (let i = 0; i < data.length; i += info.channels) if (data[i]! > 220 && data[i + 1]! > 140 && data[i + 1]! < 180 && data[i + 2]! < 60) amber++;
+          rec.verification[shot.name] = { amberPixels: amber };
+          must(amber > 200, `${shot.name} has no Tailwind amber: the app's styles did not load`);
+        }
+      } },
     { id: "motion-6s", title: "Video de 6 s sin audio (H.264)", group: "format", expected: "ok",
       run: (render, signal) => renderMotion(motionFixture(png()), render, signal), verify: (r, rec) => verifyVideo(r, rec, 180, false) },
     { id: "motion-audio", title: "Video de 6 s con música (H.264 + AAC)", group: "format", expected: "ok",
@@ -531,20 +467,15 @@ async function main() {
   must(cgroup === "2", `cgroup v${cgroup}: the CPU/memory limits need cgroup v2`);
   const imageId = wsl(["docker", "image", "inspect", image, "--format", "{{.Id}}"]);
   must(imageId.code === 0, `image ${image} is not built locally (the supervisor never pulls)`);
-  node = arg("--node") ?? wsl(["sh", "-c", 'command -v node || echo "$HOME/.local/bin/node"']).stdout.trim();
+  const node = arg("--node") ?? wsl(["sh", "-c", 'command -v node || echo "$HOME/.local/bin/node"']).stdout.trim();
   const nodeVersion = wsl([node, "--version"]);
   must(nodeVersion.code === 0, `no node at ${node} inside ${distro}`);
 
   // The bridge: the real supervisor, bundled with nothing else.
   const bridgeFile = join(evidence, "package", "renderer-bridge.mjs");
-  await build({
-    entryPoints: ["scripts/artifact-renderer-bridge.ts"], bundle: true, platform: "node", format: "esm", target: "node22",
-    tsconfig: "tsconfig.json", outfile: bridgeFile, logLevel: "warning",
-    banner: { js: "import { createRequire as ___cr } from 'module'; const require = ___cr(import.meta.url);" },
-  });
-  bridgeLinux = linuxPath(bridgeFile);
-  const bridgeSha256 = sha256(await readFile(bridgeFile));
-  const versions = await callBridge({ type: "inspect", image, tool: "versions" });
+  const bridgeSha256 = await bundleBridge(bridgeFile);
+  bridge = createBridge({ distro, node, bridgeFile, image });
+  const versions = await bridge.call({ type: "inspect", image, tool: "versions" });
   must(versions.ok, `the bridge could not inspect the image: ${versions.ok ? "" : versions.error.message}`);
 
   const environment = {

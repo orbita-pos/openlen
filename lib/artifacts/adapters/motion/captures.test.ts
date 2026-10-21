@@ -22,7 +22,7 @@ it("compiles only hash-verified frozen source for offline capture, without runti
 });
 it("rejects edited/missing frozen files, missing capture provenance and external resources",async()=>{
   const patch=(files:Record<string,string>)=>({...input,revision:{...input.revision,files:{...input.revision.files,...files}}});
-  await expect(buildProjectCaptures(patch({"project-source/main.ts":"changed by model"}))).rejects.toMatchObject({code:"frozen_source_changed"});
+  await expect(buildProjectCaptures(patch({"project-source/main.ts":"changed by model"}))).rejects.toMatchObject({code:"frozen_source_changed",message:expect.stringMatching(/project-source\/main\.ts changed after it was frozen.*never edit project-source\/ or the app.*refresh_source_paths/)});
   await expect(buildProjectCaptures({...input,revision:{...input.revision,sourceRef:null}})).rejects.toMatchObject({code:"frozen_source_missing"});
   const external=html.replace('<script src="./main.ts"></script>','<img src="https://customer.example/private.png">');
   const remote={...patch({"project-source/index.html":external}),revision:{...input.revision,files:{...input.revision.files,"project-source/index.html":external},sourceRef:{...input.revision.sourceRef!,files:{...input.revision.sourceRef!.files,"/index.html":hash(external)}}}};
@@ -50,4 +50,11 @@ it("renders a frozen screen before encoding, embeds its exact bytes, and saves a
 
 it("uses a dedicated offline capture packet, with no dataset/probe requirement",()=>{
   expect(()=>validateRenderPacket({version:1,kind:"capture",html,width:1280,height:720,probes:[]})).not.toThrow();
+});
+
+it("sends a hash route with the capture, and only a route",async()=>{
+  const routed={...input,revision:{...input.revision,files:{...input.revision.files,"motion.json":input.revision.files["motion.json"]!.replace('"entry":"/index.html"}','"entry":"/index.html#/reservar"}')}}};
+  expect((await buildProjectCaptures(routed))[0]).toMatchObject({id:"home",route:"#/reservar"});
+  expect(()=>validateRenderPacket({version:1,kind:"capture",html,width:1280,height:720,probes:[],route:"#/reservar"} as never)).not.toThrow();
+  expect(()=>validateRenderPacket({version:1,kind:"capture",html,width:1280,height:720,probes:[],route:"javascript:alert(1)"} as never)).toThrow();
 });

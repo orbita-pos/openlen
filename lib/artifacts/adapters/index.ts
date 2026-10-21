@@ -13,13 +13,18 @@ import {openaiArtifactSpeechTransport} from "./audio/openai";
 import {renderAudio} from "./audio/render";
 import {motionManifest} from "./motion/manifest";
 
+/** Builds the isolated renderer for one job. Production uses the offline
+ * container (`containerArtifactRenderer`, Linux only); the Windows trial worker
+ * injects one that reaches the same supervisor through the WSL bridge. */
+export type IsolatedRendererFactory = (image: string, fencingToken: string, admit: () => Promise<void>) => ArtifactRender;
+
 /** Loaded only by the standalone worker. The app only queues sealed jobs. */
-export function createArtifactAdapters(env: Readonly<Record<string, string | undefined>>): Partial<Record<ArtifactKind, ArtifactAdapter>> {
+export function createArtifactAdapters(env: Readonly<Record<string, string | undefined>>, isolatedRenderer: IsolatedRendererFactory = containerArtifactRenderer): Partial<Record<ArtifactKind, ArtifactAdapter>> {
   const adapters:Partial<Record<ArtifactKind,ArtifactAdapter>>={};
   if (env.OPENLEN_ARTIFACT_RENDERER_IMAGE) {
     const isolate=(run:(input:SealedArtifactInput,render:ArtifactRender,signal:AbortSignal)=>Promise<AdapterResult>):ArtifactAdapter=>async(input,signal,hooks)=>{
       if(!input.jobIdentity||!hooks.beforeIsolatedRender)throw new ArtifactError("renderer_admission_missing");
-      return run(input,containerArtifactRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE!,input.jobIdentity.fencingToken,hooks.beforeIsolatedRender),signal);
+      return run(input,isolatedRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE!,input.jobIdentity.fencingToken,hooks.beforeIsolatedRender),signal);
     };
     adapters.dashboard=isolate(renderDashboard);
     adapters.slides=isolate(renderSlides);
@@ -32,9 +37,9 @@ export function createArtifactAdapters(env: Readonly<Record<string, string | und
       const model=env.OPENLEN_ARTIFACT_AUDIO_MODEL??"gpt-4o-mini-tts-2025-12-15";
       const transport=openaiArtifactSpeechTransport({apiKey:env.OPENAI_API_KEY!,model});
       adapters.audio=async(input,signal,hooks)=>{
-        if(process.platform!=="linux")throw new ArtifactError("renderer_requires_linux");
+        // The platform belongs to the renderer: the container one refuses anything but Linux itself.
         if(!input.jobIdentity||!hooks.beforeIsolatedRender)throw new ArtifactError("renderer_admission_missing");
-        return renderAudio(input,{transport,model},containerArtifactRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE!,input.jobIdentity.fencingToken,hooks.beforeIsolatedRender),signal,hooks);
+        return renderAudio(input,{transport,model},isolatedRenderer(env.OPENLEN_ARTIFACT_RENDERER_IMAGE!,input.jobIdentity.fencingToken,hooks.beforeIsolatedRender),signal,hooks);
       };
     }
   }

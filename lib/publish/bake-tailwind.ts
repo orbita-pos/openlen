@@ -1,0 +1,232 @@
+/**
+ * The Tailwind bake, moved out of optimize-html.ts so it loads without the Rust binding: the deliverables'
+ * compiler (lib/artifacts/adapters/dashboard/compile.ts) bakes an app's CDN Tailwind with it too. Publishing
+ * still reaches it through optimize-html.ts, unchanged.
+ */
+import {generateTailwindCss} from "./tailwind-css";
+import { CDN_TAG_RE, extractTwConfig, readTwCarrier, readTwDarkMode, stripTwCarrier } from "./tw-config";
+
+
+// ─── Extends del normalizador born-canonical (bug 2026-07-29) ────────────────
+// Los <style data-ol-{radius,space,type}> sobreviven al sanitizer y llevan los
+// tokens --ol-*; los <script data-ol-*> que mapean utilities→tokens existen
+// solo para el Play CDN del editor (y el sanitizer los mata en cada
+// round-trip). Al hornear, ese mapeo se compila AQUÍ, derivado de los vars
+// realmente presentes en los styles — no hay tabla TS que pueda driftear del
+// crate de Rust, y una página sin marcadores compila valores stock (jamás
+// referencias a vars indefinidas). Sin esto, los sliders Tier-3
+// (radius/densidad/tipografía) no afectaban la página publicada.
+// `[^>]*>` y no `>`: una pasada por el editor re-serializa los atributos
+// booleanos como data-ol-radius="" (visto en prod) y la forma exacta dejaría
+// de matchear. Solo se usa para RETIRAR — sobre-matchear un tag forjado con
+// más atributos solo significa retirar más, nunca ejecutar nada.
+const THEME_SCRIPT_RE =
+  /<script data-ol-(?:radius|space|type)\b[^>]*>[\s\S]*?<\/script>/gi;
+
+function themeStyleBody(html: string, name: string): string | null {
+  const m = new RegExp(
+    `<style data-ol-${name}\\b[^>]*>([\\s\\S]*?)</style>`,
+    "i",
+  ).exec(html);
+  return m?.[1] ?? null;
+}
+
+function normalizerExtends(html: string): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {};
+  const radius = themeStyleBody(html, "radius");
+  if (radius) {
+    const borderRadius: Record<string, string> = {};
+    for (const m of radius.matchAll(/--ol-r(?:-(\w+))?\s*:/g)) {
+      const key = m[1];
+      if (key === "scale") continue;
+      borderRadius[key ?? "DEFAULT"] = key ? `var(--ol-r-${key})` : "var(--ol-r)";
+    }
+    if (Object.keys(borderRadius).length > 0) out.borderRadius = borderRadius;
+  }
+  const space = themeStyleBody(html, "space");
+  if (space) {
+    const map: Record<string, string> = {};
+    for (const m of space.matchAll(/--ol-space-(\w+)\s*:/g)) {
+      const raw = m[1];
+      if (raw === "scale") continue;
+      // var_name() de Rust codifica "0.5" como "0_5" (CSS no permite "." en
+      // nombres de custom property) — el REVERSO va aquí.
+      map[raw.replace(/_/g, ".")] = `var(--ol-space-${raw})`;
+    }
+    if (Object.keys(map).length > 0) {
+      out.padding = map;
+      out.margin = map;
+      out.gap = map;
+    }
+  }
+  const type = themeStyleBody(html, "type");
+  if (type) {
+    const fontSize: Record<string, [string, string]> = {};
+    for (const m of type.matchAll(/--ol-text-(\w+)\s*:/g)) {
+      const key = m[1];
+      if (key === "scale") continue;
+      fontSize[key] = [`var(--ol-text-${key})`, `var(--ol-lh-${key})`];
+    }
+    if (Object.keys(fontSize).length > 0) out.fontSize = fontSize;
+  }
+  return out;
+}
+
+/** Misma semántica que los scripts del editor (`Object.assign({}, template,
+ *  normalizador)`): el normalizador gana en SUS claves, el resto del extend
+ *  del template (via carrier) sobrevive intacto. */
+function mergeThemeExtends(
+  carrier: Record<string, unknown>,
+  html: string,
+): Record<string, unknown> {
+  const norm = normalizerExtends(html);
+  const merged: Record<string, unknown> = { ...carrier };
+  for (const [section, map] of Object.entries(norm)) {
+    const prior = merged[section];
+    merged[section] = {
+      ...(typeof prior === "object" && prior !== null ? (prior as object) : {}),
+      ...map,
+    };
+  }
+  return merged;
+}
+
+// La expresion que encuentra la etiqueta del CDN vive en ./tw-config junto al
+// carrier que se le engancha detras: eran DOS, distintas entre si y distintas
+// de la puerta de Rust, y la que faltaba aqui era la que publicaba paginas sin
+// paleta. Ver el comentario de CDN_TAG_RE alli.
+
+export interface OptimizeResult {
+  html: string;
+  /** True when the Tailwind CDN <script> was replaced with inline baked CSS. */
+  baked: boolean;
+  /** Bytes of generated CSS before the Rust minify (0 when not baked). */
+  cssBytes: number;
+}
+
+/**
+ * Lo que el horneado lee ADEMÁS del documento: el código de la carpeta que
+ * pinta clases (`el.className = "bg-red-500"`). Ver `bakeTailwind`.
+ */
+export interface FuenteDeClases {
+  readonly raw: string;
+  /** Sin punto: `js`, `mjs`. Tailwind elige el extractor por ella. */
+  readonly extension: string;
+}
+
+/**
+ * Strip the Tailwind CDN runtime and inline the minimal CSS the page needs.
+ * Pure (no Rust, no env) so it's unit-testable on its own. Returns the HTML
+ * unchanged + `baked:false` on every safe-skip path (no CDN script, `?plugins=`
+ * variant, or compile failure) so it can never break a publish.
+ *
+ * 🔴 `fuentes`: EL CÓDIGO DE LA CARPETA TAMBIÉN PINTA CLASES (2026-10-07).
+ * Hasta hoy se compilaba leyendo sólo el documento, así que una clase que
+ * únicamente escribía `/js/app.js` —una tarjeta que el script construye, un
+ * `classList.add("bg-red-500")`— se quedaba sin CSS en la publicada. En el
+ * lienzo no se notaba: el CDN de Tailwind mira el DOM vivo, y el horneado sólo
+ * corre en producción. Con las apps web (spec 2026-10-07-apps, H1) casi todas
+ * las clases viven en el código, así que sin esto saldrían sin estilos. Leer de
+ * más sólo puede añadir CSS, nunca quitarlo.
+ *
+ * 🔴 `stylesheets`: LAS HOJAS DE UNA APP QUE USAN TAILWIND (2026-10-08). El
+ * compilador mete una hoja con `@layer`/`@apply` DENTRO del módulo que la
+ * importa, como `<style type="text/tailwindcss">` (lib/apps/compilador.ts): el
+ * CDN la procesa en el lienzo, pero en la publicada no hay CDN y ese `<style>`
+ * es inerte. Sin hornearlas aquí, sus `@apply` no existirían publicada. Si una
+ * no compila (`@apply bg-nope`), el `catch` de abajo deja el CDN: la publicada
+ * se ve como el lienzo.
+ */
+export async function bakeTailwind(
+  html: string,
+  fuentes: readonly FuenteDeClases[] = [],
+  stylesheets: readonly string[] = [],
+): Promise<OptimizeResult> {
+  const m = CDN_TAG_RE.exec(html);
+  if (!m) {
+    // Sin CDN, ni el carrier ni los scripts de tema tienen quién los lea (en
+    // runtime serían inertes). Retirarlos (invariante #3: no shippear scripts
+    // inertes). Solo ocurre con input malformado o ya horneado — un template
+    // legítimo empareja config con el CDN.
+    return {
+      html: stripTwCarrier(html).replace(THEME_SCRIPT_RE, ""),
+      baked: false,
+      cssBytes: 0,
+    };
+  }
+  // The `?plugins=forms,typography,…` variant pulls in official plugins whose
+  // utilities we don't have installed — baking would silently drop them, so
+  // keep the CDN for those pages.
+  if (/\bplugins=/i.test(m[1] ?? "")) {
+    return { html, baked: false, cssBytes: 0 };
+  }
+
+  // 🔴 EL `tailwind.config` DE LA PROPIA PÁGINA (2026-10-04). Desde la entrada
+  // como Vercel, pegar, clonar y sembrar no pasan `sanitizeForPublish`, que era
+  // quien lo convertía en carrier: la página llega con su
+  // `<script>tailwind.config=…</script>` tal cual. Se lee aquí con el MISMO
+  // extractor y validador, y se retira con el CDN — sin el CDN no hay
+  // `tailwind` global y ese script lanzaría ReferenceError en la publicada.
+  // El carrier, si lo hay, sigue mandando (es la paleta ya validada).
+  const carrier = readTwCarrier(html);
+  // El `darkMode`, antes de quitar el carrier y la config (2026-10-08): sin él,
+  // `dark:` se horneaba como `prefers-color-scheme` aunque la página cambiara
+  // de modo por clase, como shadcn.
+  const darkMode = readTwDarkMode(html);
+  const sinCarrier = stripTwCarrier(html);
+  const conConfig = extractTwConfig(sinCarrier);
+  // Y SI HAY CONFIG PERO NO SE PUEDE LEER —lógica en el mismo script, valores
+  // que se calculan al cargar—, NO SE HORNEA: se queda el CDN y el script, como
+  // con `?plugins=`. Hornear la quitaba entera, paleta y lógica (medido por el
+  // revisor de publicación). La página se publica como se ve en el lienzo.
+  if (carrier === null && conConfig.extend === null && darkMode === null && conConfig.html !== sinCarrier) {
+    // eslint-disable-next-line no-console
+    console.warn("[optimize-html] tailwind.config que no se puede leer: se publica con el CDN, sin hornear");
+    return { html, baked: false, cssBytes: 0 };
+  }
+
+  let css: string;
+  try {
+    // El carrier data-ol-tw (lib/publish/tw-config.ts) trae el theme.extend
+    // validado del tailwind.config original del template — sin él, bg-ink /
+    // text-lime y compañía compilan a NADA (el bug lume/hovers). Encima va el
+    // mapeo utilities→tokens del normalizador (derivado de los <style
+    // data-ol-*>), para que los sliders Tier-3 vivan en la publicada.
+    css = await generateTailwindCss(
+      html,
+      mergeThemeExtends(carrier ?? conConfig.extend ?? {}, html),
+      fuentes,
+      stylesheets,
+      darkMode,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[optimize-html] Tailwind bake failed; serving CDN HTML:",
+      err instanceof Error ? err.message : err,
+    );
+    return { html, baked: false, cssBytes: 0 };
+  }
+
+  // Strip the CDN <script>, then inject the baked <style> at the END of
+  // <head> (after the page's own static <style> blocks). The Tailwind Play
+  // CDN appends its generated <style> to document.head at runtime, so its
+  // utilities win specificity TIES against the page's custom classes (e.g.
+  // `class="display tracking-tight"` — both single-class, source order
+  // decides). Injecting in-place where the script was would flip those ties
+  // and diverge from what the author saw. Function-form replacements so `$`
+  // sequences in the CSS aren't read as regex backreferences.
+  const styleTag = `<style data-tw-baked>\n${css}\n</style>`;
+  // El carrier y los scripts de tema ya cumplieron (su extend está compilado
+  // en el CSS) — fuera del HTML final, igual que el CDN. Los <style data-ol-*>
+  // se quedan: definen los tokens que el CSS horneado referencia.
+  // `conConfig.html` ya viene sin los `<script>` de config ni el carrier.
+  const withoutCdn = conConfig.html.replace(CDN_TAG_RE, "").replace(THEME_SCRIPT_RE, "");
+  const headClose = /<\/head\s*>/i;
+  const out = headClose.test(withoutCdn)
+    ? withoutCdn.replace(headClose, (close) => `${styleTag}${close}`)
+    : conConfig.html
+        .replace(THEME_SCRIPT_RE, "")
+        .replace(CDN_TAG_RE, () => styleTag); // no </head>: fall back in-place
+  return { html: out, baked: true, cssBytes: css.length };
+}

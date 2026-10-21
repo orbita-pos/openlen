@@ -59,6 +59,24 @@ describe("durable artifact store", () => {
     expect((await store.getRevision(context, artifact.id, 1)).files).toEqual({ "deck.json": '{"title":"Original"}' });
   });
 
+  it("a revision depends on what its files name: naming a saved output is enough, as an uploaded blob is in Claude", async () => {
+    const { context, artifact: deck } = await makeArtifact();
+    const image = await store.createArtifact(context, { kind: "image", title: "Promo", brief: "App", itemKey: "promo", visibility: "project" });
+    const voice = await store.createArtifact(context, { kind: "audio", title: "Voz", brief: "App", itemKey: "voice", visibility: "project" });
+    await store.writeArtifactFiles(context, image.id, 0, { "image.json": "{}" });
+    await store.writeArtifactFiles(context, voice.id, 0, { "audio.json": "{}" });
+    const revision = await store.writeArtifactFiles(context, deck.id, 0, {
+      "slides/cover.html": `<section id="cover"><img src="asset:${image.id}@1/0" alt=""></section>`,
+      "motion.json": JSON.stringify({ audio: { tracks: [{ asset: `${voice.id}@1/2`, role: "narration" }, { asset: `upload:${"a".repeat(64)}.mp3`, role: "music" }] } }),
+    });
+    expect(revision.dependencies).toEqual([]);
+    const sealed = await store.sealArtifactRevision(context, deck.id, revision.revision);
+    expect([...sealed.dependencies].sort((a, b) => a.artifactId.localeCompare(b.artifactId))).toEqual([{ artifactId: image.id, revision: 1 }, { artifactId: voice.id, revision: 1 }].sort((a, b) => a.artifactId.localeCompare(b.artifactId)));
+    // Two revisions of one piece cannot both be in a revision: say which.
+    const twice = await store.writeArtifactFiles(context, deck.id, 1, { "slides/cover.html": `<img src="asset:${image.id}@1/0"><img src="asset:${image.id}@2/0">` });
+    await expect(store.sealArtifactRevision(context, deck.id, twice.revision)).rejects.toMatchObject({ code: "invalid_dependency", message: expect.stringContaining(`${image.id}@1 and @2`) });
+  });
+
   it("one of two concurrent writers wins and the loser cannot silently overwrite", async () => {
     const { context, artifact } = await makeArtifact();
     const outcomes = await Promise.allSettled([

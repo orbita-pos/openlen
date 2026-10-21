@@ -24,6 +24,17 @@ it("creates a labeled scenario without touching a project database", async () =>
   expect((await f.store.getArtifact(ctx, artifact.id)).visibility).toBe("project");
 });
 
+it("accepts scenario rows as row objects, the usual JSON shape, in the columns' order", async () => {
+  const { ctx, artifact } = await f.create();
+  const data = createArtifactData(f.database, f.store, noSource);
+  const rows = [{ mes: "Mes 1", clientes: 40 }, { clientes: 55, mes: "Mes 2" }];
+  expect(await data.queryArtifactData(ctx, artifact.id, { source: "scenario", columns: ["mes", "clientes"], rows })).toMatchObject({ columns: ["mes", "clientes"], rows: [["Mes 1", 40], ["Mes 2", 55]] });
+  // Without columns, they are the first row's keys.
+  expect(await data.queryArtifactData(ctx, artifact.id, { source: "scenario", rows } as never)).toMatchObject({ columns: ["mes", "clientes"], rows: [["Mes 1", 40], ["Mes 2", 55]] });
+  // A key no column names is a mistake to report, not a value to drop.
+  await expect(data.queryArtifactData(ctx, artifact.id, { source: "scenario", columns: ["mes"], rows })).rejects.toMatchObject({ code: "invalid_dataset", message: expect.stringContaining("clientes") });
+});
+
 it("denies editors before reading real data, even if they claim to be owner", async () => {
   const { ctx, artifact } = await f.create();
   const data = createArtifactData(f.database, f.store, async () => { throw new Error("data leaked"); });
