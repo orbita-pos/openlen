@@ -829,6 +829,37 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
 describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas mínimas de F1)", () => {
   const CONTACTO = MENU.replace("<h1>Menú</h1>", "<h1>Contacto</h1>");
 
+  // Ensayo F de Len 3.0 (21/10): `sleep 180` esperando un render y el reloj de silencio de la ruta
+  // (180 s) cortó el turno a mitad del comando. Un comando dentro de su tope es trabajo, no un cuelgue.
+  it("a command running inside its own timeout tells the turn's watchdog it is still working", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    let alive = 0;
+    try {
+      const out = await conTerminal(() => runAgentTool(session, { ...deps, stillWorking: () => { alive++; } }, "bash", { command: "echo hola" }));
+      assert.equal(out.response.ok, true, texto(out));
+      assert.ok(alive >= 1, `stillWorking was called ${alive} times`);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
+  // Como el Bash de Claude Code: un `sleep` largo al principio se rechaza ANTES de correr, diciendo cómo esperar.
+  it("refuses a long sleep before running it and says how to wait instead", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const started = Date.now();
+      const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "sleep 30; echo hola" }));
+      assert.equal(out.response.ok, false, texto(out));
+      assert.match(texto(out), /^Not run: sleep 30 followed by: echo hola\./);
+      assert.equal(session.terminal, undefined, "the terminal never started");
+      assert.ok(Date.now() - started < 5_000);
+    } finally {
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
   it("un `sed -i` sobre 3 páginas da 3 versiones, y las 3 páginas llegan al bucle", async () => {
     const { deps, store } = makeDeps({ html: HOME, pages: { menu: { html: MENU }, contacto: { html: CONTACTO } } });
     const session = makeSession();

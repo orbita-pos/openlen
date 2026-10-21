@@ -1539,17 +1539,24 @@ async function correrTurno(
             rondaDelTurno && correcciones.length === 0 ? { kind: "goal-round", ...rondaDelTurno } : { kind: "direct-human" },
           newId: () => `goal-${randomUUID()}`,
         };
+        // A `bash` command running inside its own timeout (up to 10 min) is work: it keeps the silence watchdog
+        // armed instead of tripping it (Len 3.0 trial F, 21/10: `sleep 180` waiting for a render cut the turn).
+        const stillWorking = reloj.vivo;
+        // A tool that waits (inspect_artifact's wait_ms) stops waiting when the turn is stopped.
+        const turnSignal = upstreamAbort.signal;
         const depsDelTurno = answersQuestions
           ? {
               ...deps,
               planMode,
               goal,
+              stillWorking,
+              turnSignal,
               askUser: async (questions: UserQuestion[]) => {
                 emit("question", { questions });
                 return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal, preguntas: questions });
               },
             }
-          : { ...deps, planMode, goal };
+          : { ...deps, planMode, goal, stillWorking, turnSignal };
         const result = await runAgentLoop({
           messages,
           tools,
