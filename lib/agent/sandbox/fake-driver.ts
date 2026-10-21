@@ -10,7 +10,7 @@ export type FakeRun = (
   command: string,
   files: Map<string, string>,
   o: { readonly timeoutMs: number; readonly background?: boolean },
-) => Partial<RunResult> | Promise<Partial<RunResult>> | void;
+) => Partial<RunResult> | void | Promise<Partial<RunResult> | void>;
 
 interface FakeBox {
   readonly files: Map<string, string>;
@@ -40,13 +40,22 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       async run(command, opts) {
         const b = box();
         ran.get(id)!.push(command);
-        if (command === "openlen-manifest") {
+        if (command === "openlen-manifest" || command.endsWith("/openlen-manifest")) {
           const manifest: Record<string, string> = {};
           for (const [path, text] of b.files) if (isSyncedPath(path)) manifest[path] = createHash("sha256").update(text).digest("hex");
           return { stdout: JSON.stringify(manifest), stderr: "", exitCode: 0, timedOut: false };
         }
-        const r = (await o.onRun?.(command, b.files, { timeoutMs: opts.timeoutMs, background: opts.background })) ?? {};
-        return { stdout: "", stderr: "", exitCode: 0, timedOut: false, ...r };
+        const work = Promise.resolve(o.onRun?.(command, b.files, { timeoutMs: opts.timeoutMs, background: opts.background })).then(
+          (r): RunResult => ({ stdout: "", stderr: "", exitCode: 0, timedOut: false, ...(r ?? {}) }),
+        );
+        if (!opts.signal) return work;
+        // Like the E2B driver: a stopped turn kills the process and comes back at once.
+        const aborted = new Promise<RunResult>((resolve) => {
+          const stop = () => resolve({ stdout: "", stderr: "", exitCode: 130, timedOut: false, aborted: true });
+          if (opts.signal!.aborted) stop();
+          else opts.signal!.addEventListener("abort", stop, { once: true });
+        });
+        return Promise.race([work, aborted]);
       },
       async write(files) {
         const b = box();
