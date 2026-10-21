@@ -56,6 +56,24 @@ describe("the box's scripts", () => {
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("/run/openlen/requests"))).toBe(true);
   });
 
+  it("the box's user can work at / (the project's root), pip installs and npm -g goes to its home", async () => {
+    const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
+    const ran: string[] = [];
+    const builder: Record<string, (...a: unknown[]) => unknown> = {};
+    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
+    defineTemplate(() => builder as never, "x");
+    const all = ran.join("\n");
+    // Measured in a real box on 21/10: / was root's 755, so `printf x > /nota.txt` and `rm` failed; with
+    // 1777 (sticky) E2B's file service, as root, could no longer reopen the user's files there
+    // (protected_regular). The user owns /, without the sticky bit.
+    expect(all).toContain("chown user:user /");
+    expect(all).not.toContain("1777");
+    // Ubuntu 24.04 refuses pip outside a venv (PEP 668).
+    expect(all).toContain("break-system-packages");
+    expect(all).toContain("/home/user/.npm-global");
+  });
+
   it.skipIf(!PYTHON)("the manifest hashes the project's files and the person's memory, nothing else", () => {
     const root = tempRoot({
       "/index.html": "a",

@@ -79,6 +79,10 @@ export interface SandboxTerminalOptions {
   /** The turn's: the owner's ■. */
   readonly signal?: AbortSignal;
   readonly now?: () => number;
+  /** How long the first sync took, phase by phase (the spec's latency goal, §5). */
+  readonly logFirstSync?: (timings: string) => void;
+  /** The box was just created from the template: nothing of the project is in it yet. */
+  readonly fresh?: boolean;
 }
 
 type NotSaved = { readonly ruta: string; readonly motivo: "binary" | "too_large" };
@@ -116,8 +120,14 @@ export class SandboxTerminal implements TerminalBackend {
 
   private async firstSync(): Promise<void> {
     const box = this.o.handle;
-    await box.run(`sudo mkdir -p ${REQUESTS} ${RESPONSES} && sudo chown -R "$(id -u)" ${BRIDGE_DIR}`, { timeoutMs: 30_000 });
-    const inBox = await this.boxManifest();
+    const prepare = `sudo mkdir -p ${REQUESTS} ${RESPONSES} && sudo chown -R "$(id -u)" ${BRIDGE_DIR}`;
+    const t0 = this.now();
+    // A box just created from the template has nothing of the project: its manifest would be empty,
+    // and reading it is the slowest thing a cold box does (measured 1.4 s, 21/10). A resumed one
+    // prepares the mailbox and reads its manifest in one command.
+    const preparing = this.o.fresh ? box.run(prepare, { timeoutMs: 30_000 }) : null;
+    const inBox = this.o.fresh ? {} : await this.boxManifest(prepare);
+    const t1 = this.now();
     const saved = manifestOf(this.tree);
     const base = this.o.syncedManifest;
     const boxChanged = new Set(diffManifests(base, inBox).map((c) => c.path));
@@ -128,10 +138,23 @@ export class SandboxTerminal implements TerminalBackend {
       if (c.kind === "deleted") removes.push(c.path);
       else writes[c.path] = this.tree[c.path]!;
     }
-    await box.write(writes);
-    await box.remove(removes);
-    await this.uploadReadOnly();
+    // The project's files and /.openlen go up at the same time.
+    let uploaded = t1;
+    let readOnly = t1;
+    await Promise.all([
+      (async () => {
+        await box.write(writes);
+        await box.remove(removes);
+        uploaded = this.now();
+      })(),
+      this.uploadReadOnly().then(() => void (readOnly = this.now())),
+      preparing,
+    ]);
+    const t2 = this.now();
     this.synced = saved;
+    this.o.logFirstSync?.(
+      `ms=${t2 - t0} (prepare ${this.o.fresh ? t2 - t0 : 0} · manifest ${this.o.fresh ? 0 : t1 - t0} · upload ${uploaded - t1} · read-only ${readOnly - t1})`,
+    );
   }
 
   /** /.openlen in the box: the first time all of it, then only what changed (in an app it carries hundreds of .d.ts). */
@@ -159,14 +182,16 @@ export class SandboxTerminal implements TerminalBackend {
     if (this.mounted.has(root)) return;
     const source = readOnlySource(root);
     const r = await this.o.handle.run(
-      `mkdir -p ${source} && sudo mkdir -p ${root} && (mountpoint -q ${root} || (sudo mount --bind ${source} ${root} && sudo mount -o remount,bind,ro ${root}))`,
+      // Its own sudo mkdir/chown: it runs alongside the mailbox's preparation, not after it.
+      `sudo mkdir -p ${source} ${root} && sudo chown -R "$(id -u)" ${source} && (mountpoint -q ${root} || (sudo mount --bind ${source} ${root} && sudo mount -o remount,bind,ro ${root}))`,
       { timeoutMs: 30_000 },
     );
     this.mounted.set(root, r.exitCode === 0);
   }
 
-  private async boxManifest(): Promise<Record<string, string>> {
-    const r = await this.o.handle.run(`${BOX_BIN}/openlen-manifest`, { timeoutMs: 60_000 });
+  /** `before`: a command to run first, in the same round trip. */
+  private async boxManifest(before?: string): Promise<Record<string, string>> {
+    const r = await this.o.handle.run(`${before ? `${before} && ` : ""}${BOX_BIN}/openlen-manifest`, { timeoutMs: 60_000 });
     if (r.exitCode !== 0) throw new Error(`openlen-manifest failed (${r.exitCode}): ${r.stderr.slice(0, 300)}`);
     const all = JSON.parse(r.stdout) as Record<string, string>;
     const out: Record<string, string> = {};
@@ -210,7 +235,8 @@ export class SandboxTerminal implements TerminalBackend {
     return [
       `mkdir -p ${JOBS_DIR}`,
       "{",
-      `export PATH=${BOX_BIN}:$PATH`,
+      // OpenLen's wrappers first; then what pip and npm -g install for the box's user (the template).
+      `export PATH=${BOX_BIN}:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH`,
       `[ -f ${ENV_FILE} ] && . ${ENV_FILE}`,
       `cd ${quote(this.cwd)} 2>/dev/null || cd /`,
       command,

@@ -36,6 +36,38 @@ async function open(o: {
   return { d, handle, terminal, box: () => d.files(handle.id) };
 }
 
+describe("SandboxTerminal — opening fast", () => {
+  it("a box just created from the template has nothing of the project: no manifest before the first command", async () => {
+    const d = fakeDriver();
+    const handle = await d.create({ template: "t", metadata: {} });
+    const terminal = new SandboxTerminal({
+      handle,
+      projectFiles: { "/index.html": "a" },
+      syncedManifest: {},
+      bridge: {},
+      readOnly: async () => ({ "/.openlen/docs/a.md": "a" }),
+      startedAt: Date.now(),
+      fresh: true,
+    });
+    await terminal.ejecutar("true");
+    const ran = d.commands(handle.id);
+    const firstRun = ran.findIndex((c) => c.includes("bash-tasks"));
+    expect(ran.slice(0, firstRun).some((c) => c.endsWith("openlen-manifest"))).toBe(false);
+    expect(d.files(handle.id).get("/index.html")).toBe("a");
+  });
+
+  it("a resumed box prepares the mailbox and reads its manifest in one command", async () => {
+    const { terminal, d, handle } = await open({ projectFiles: { "/index.html": "a" }, boxFiles: { "/index.html": "a" } });
+    await terminal.ejecutar("true");
+    const ran = d.commands(handle.id);
+    const firstRun = ran.findIndex((c) => c.includes("bash-tasks"));
+    const before = ran.slice(0, firstRun).filter((c) => !c.includes("mount --bind"));
+    expect(before).toHaveLength(1);
+    expect(before[0]).toContain("mkdir -p /run/openlen/requests");
+    expect(before[0]).toContain("openlen-manifest");
+  });
+});
+
 describe("SandboxTerminal", () => {
   it("a new box gets the project's files before the first command", async () => {
     const { terminal, box } = await open({ projectFiles: { "/index.html": "<h1>a</h1>", "/home/user/.len/LEN.md": "yo" } });

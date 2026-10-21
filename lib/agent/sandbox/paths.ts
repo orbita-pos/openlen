@@ -9,6 +9,8 @@ import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 export const SYSTEM_TOP_LEVEL: readonly string[] = [
   "bin", "boot", "dev", "etc", "home", "lib", "lib32", "lib64", "libx32", "media", "mnt", "opt", "proc", "root", "run",
   "sbin", "srv", "sys", "tmp", "usr", "var", "node_modules",
+  // E2B's own file at the root (seen in a real box, 21/10).
+  ".e2b",
 ];
 
 /** Visitor data: never in the box (Jesús, 21/10); Len reads it with its tools. */
