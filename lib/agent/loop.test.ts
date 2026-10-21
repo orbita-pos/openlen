@@ -2166,6 +2166,24 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
       "<new-diagnostics>Problems that appeared with this change:\n\n/src/App.tsx:\n  ✘ [Line 5:17] Type 'number' is not assignable to type 'string'. [TS2322] (typescript)</new-diagnostics>",
     );
   });
+
+  // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): un comando de la caja que
+  // termina en segundo plano se dice antes de la siguiente llamada al modelo, como los tipos.
+  it("lo que terminó en segundo plano (lateNotices) va con las respuestas de la tanda siguiente, una vez", async () => {
+    const vistos: Message[][] = [];
+    const aviso = "background job b1 (bash: npm run build-docs) finished [status: completed, exit code 0]. Read its output with cat /tmp/bash-tasks/b1.output.";
+    const avisos: string[][] = [[], [aviso]];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
+      runTool: async () => herramientaQueEdita(),
+      lateNotices: async () => avisos.shift() ?? [],
+      emit: () => {},
+    });
+    const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
+    expect(sobres).toEqual(["", aviso]);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

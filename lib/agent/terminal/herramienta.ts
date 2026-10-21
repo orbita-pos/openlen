@@ -94,7 +94,14 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
-  const r = await whileWorking(terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined }), deps.stillWorking);
+  const r = await whileWorking(
+    terminal.ejecutar(command, {
+      timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined,
+      // LA TERMINAL REAL: arrancar y volver al momento (la de siempre no tiene procesos y lo corre igual).
+      ...(args.run_in_background === true ? { background: true } : {}),
+    }),
+    deps.stillWorking,
+  );
   // La salida que no cabe, ENTERA a /tmp (no es del proyecto), como Claude Code.
   let persistida: string | undefined;
   if (r.stdout.length + r.stderr.length > MAX_SALIDA) {
