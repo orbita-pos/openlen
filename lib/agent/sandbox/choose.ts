@@ -95,11 +95,23 @@ export class TurnSandbox implements TerminalBackend {
     try {
       return await this.inner.ejecutar(command, o);
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // Like a shell that lost its state: if the box still answers, the error was this command's and
+      // the box stays; the next command syncs again. Only a box that doesn't answer is given up.
+      if (await this.answers()) return { stdout: "", stderr: `${message}\n`, exitCode: 1, ficheros: null };
       this.diedAt = this.ctx.now();
       this.current = this.ctx.local();
       this.ctx.session.sandboxNotice = BOX_STOPPED_NOTICE;
       this.ctx.log(`[sandbox] fallback project=${this.ctx.session.projectId} reason=died`);
-      return { stdout: "", stderr: `The box stopped: ${e instanceof Error ? e.message : String(e)}\n`, exitCode: 1, ficheros: null };
+      return { stdout: "", stderr: `The box stopped: ${message}\n`, exitCode: 1, ficheros: null };
+    }
+  }
+
+  private async answers(): Promise<boolean> {
+    try {
+      return (await this.ctx.handle.run("true", { timeoutMs: 15_000 })).exitCode === 0;
+    } catch {
+      return false;
     }
   }
 
