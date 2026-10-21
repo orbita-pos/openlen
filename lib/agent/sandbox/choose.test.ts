@@ -127,6 +127,15 @@ describe("terminalForTurn", () => {
     expect((await t.ejecutar("true")).ficheros).toEqual({ "/index.html": "a" });
   });
 
+  it("logs how long opening the box and its first sync took, phase by phase", async () => {
+    const { s, o, log } = setup();
+    const t = await terminalForTurn(s, o);
+    await t.ejecutar("true");
+    const lines = log.mock.calls.map((c) => String(c[0]));
+    expect(lines.some((l) => /^\[sandbox\] open project=p (created|resumed) ms=\d+/.test(l))).toBe(true);
+    expect(lines.some((l) => /^\[sandbox\] first sync project=p ms=\d+ \(prepare \d+ · manifest \d+ · upload \d+ · read-only \d+\)/.test(l))).toBe(true);
+  });
+
   it("resumes the project's paused box with its manifest", async () => {
     const a = setup();
     a.s.terminal = await terminalForTurn(a.s, a.o);

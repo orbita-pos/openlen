@@ -204,6 +204,7 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
 
   const turnId = (session.turnId ??= randomUUID());
   const store = o.store ?? postgresStore;
+  const openingAt = now();
   if (!(await store.hold(session.projectId, turnId))) return fallback("held");
   try {
     const budgetOk = o.budgetOk ?? (() => sandboxBudgetOk({ now: new Date(now()), dailyUsd: config.dailyUsd, spentTodayMicroUsd }));
@@ -223,11 +224,13 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
         handle = undefined; // gone (reclaimed, killed): a new one below
       }
     }
+    const resumed = handle !== undefined;
     if (!handle) {
       if (row?.sandboxId) void driver.kill(row.sandboxId).catch(() => undefined);
       handle = await driver.create({ template: config.template, metadata: { projectId: session.projectId } });
     }
     const startedAt = now();
+    log(`[sandbox] open project=${session.projectId} ${resumed ? "resumed" : "created"} ms=${startedAt - openingAt}`);
     await store.save({ projectId: session.projectId, sandboxId: handle.id, template: config.template, state: "running", syncedManifest: synced, pausedAt: null });
     session.fotoDeLaTerminal = { ...projectFiles };
     const inner = new SandboxTerminal({
@@ -239,6 +242,8 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
       startedAt,
       signal: o.signal,
       now,
+      logFirstSync: (timings) => log(`[sandbox] first sync project=${session.projectId} ${timings}`),
+      fresh: !resumed,
     });
     return new TurnSandbox(inner, { session, turnId, local: o.local, store, template: config.template, handle, startedAt, now, log });
   } catch (e) {

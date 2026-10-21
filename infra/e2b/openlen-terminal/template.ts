@@ -22,5 +22,15 @@ export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: st
     .copy(filesDir, "/opt/openlen/bin")
     .runCmd("chmod 755 /opt/openlen/bin/* && mkdir -p /run/openlen/requests /run/openlen/responses && chown -R user /run/openlen", {
       user: "root",
+    })
+    // Measured in a real box (21/10): commands run as `user`, and / was root's 755, so nothing could be
+    // created or removed at the project's root. Not 1777: with the sticky bit, E2B's file service
+    // (root) can't reopen the user's files there (protected_regular). The user has sudo anyway.
+    .runCmd("chown user:user /", { user: "root" })
+    // Ubuntu 24.04 refuses pip outside a venv (PEP 668); with this, `pip install` goes to ~/.local.
+    .runCmd("printf '[global]\\nbreak-system-packages = true\\n' > /etc/pip.conf", { user: "root" })
+    // `npm install -g` in the user's home (the box's PATH has its bin, lib/agent/sandbox/sandbox-terminal.ts).
+    .runCmd("mkdir -p /home/user/.npm-global && printf 'prefix=/home/user/.npm-global\\n' > /home/user/.npmrc && chown -R user:user /home/user/.npm-global /home/user/.npmrc", {
+      user: "root",
     });
 }

@@ -28,6 +28,12 @@ describe("isSyncedPath", () => {
   });
 });
 
+describe("what E2B leaves at the box's root", () => {
+  it("/.e2b (its metadata, measured in a real box) never syncs", () => {
+    expect(isSyncedPath("/.e2b")).toBe(false);
+  });
+});
+
 describe("folders that are never the project's, at any depth", () => {
   it("node_modules, .git and __pycache__ never sync, wherever they are", () => {
     for (const p of ["/scripts/node_modules/sharp/index.js", "/vendor/lib/.git/config", "/tools/__pycache__/x.pyc"]) expect(isSyncedPath(p), p).toBe(false);
