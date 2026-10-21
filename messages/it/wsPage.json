@@ -143,6 +143,11 @@
       "image_edit_limit": "si può modificare una sola immagine per turno",
       "site_page_limit": "il tuo sito ha già il massimo di {limit} pagine",
       "memory_full": "la memoria di Len è piena"
+    },
+    "toolArtifact": {
+      "Read": "Lettura di un elaborato",
+      "Edit": "Modifica di un elaborato",
+      "Write": "Scrittura di un elaborato"
     }
   },
   "defaultProjectName": "Pagina prezzi",

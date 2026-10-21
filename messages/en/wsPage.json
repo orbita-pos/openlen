@@ -143,6 +143,11 @@
       "image_edit_limit": "only one image can be edited per turn",
       "site_page_limit": "your site already has the maximum of {limit} pages",
       "memory_full": "Len's memory is full"
+    },
+    "toolArtifact": {
+      "Read": "Reading a deliverable",
+      "Edit": "Editing a deliverable",
+      "Write": "Writing a deliverable"
     }
   },
   "defaultProjectName": "Pricing Page",

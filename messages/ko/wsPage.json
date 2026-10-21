@@ -143,6 +143,11 @@
       "image_edit_limit": "턴당 이미지는 하나만 편집할 수 있습니다",
       "site_page_limit": "사이트에 이미 최대 페이지 수({limit}개)가 있습니다",
       "memory_full": "Len의 메모리가 가득 찼습니다"
+    },
+    "toolArtifact": {
+      "Read": "결과물 읽는 중",
+      "Edit": "결과물 편집 중",
+      "Write": "결과물 작성 중"
     }
   },
   "defaultProjectName": "가격 페이지",

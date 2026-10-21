@@ -143,6 +143,11 @@
       "image_edit_limit": "só é possível editar uma imagem por turno",
       "site_page_limit": "seu site já tem o máximo de {limit} páginas",
       "memory_full": "a memória de Len está cheia"
+    },
+    "toolArtifact": {
+      "Read": "Lendo um entregável",
+      "Edit": "Editando um entregável",
+      "Write": "Escrevendo um entregável"
     }
   },
   "defaultProjectName": "Página de Preços",

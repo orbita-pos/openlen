@@ -186,6 +186,11 @@ export function StepsCard({
 // Los que en una página dicen «la página» (ensayo de caja del 09/10).
 const APP_TOOL_LABELS = new Set(["Read", "Edit", "Write", "Glob", "view_page", "use_page"] as const);
 type AppToolLabel = typeof APP_TOOL_LABELS extends Set<infer T> ? T : never;
+/** A deliverable's own files (a deck, a dashboard, a video…) live in /.len/artifacts/<id>/: they are not the page
+ *  nor the app's code, and the step says so (real trial, 21/10: «Escribiendo la página .len/artifacts/…»). */
+const ARTIFACT_FILE_TOOLS = new Set(["Read", "Edit", "Write"] as const);
+type ArtifactToolLabel = typeof ARTIFACT_FILE_TOOLS extends Set<infer T> ? T : never;
+const isArtifactFile = (path: string) => /^\/?\.len\/artifacts\//.test(path);
 
 function StepRow({
   action,
@@ -205,6 +210,8 @@ function StepRow({
   const tool = currentToolName(action.tool);
   const label = !KNOWN_TOOLS.has(tool)
     ? action.tool
+    : ARTIFACT_FILE_TOOLS.has(tool as ArtifactToolLabel) && isArtifactFile(action.summary)
+      ? t(`agent.toolArtifact.${tool as ArtifactToolLabel}`)
     : esApp && APP_TOOL_LABELS.has(tool as AppToolLabel)
       ? t(`agent.toolApp.${tool as AppToolLabel}`)
       : t(`agent.tool.${tool}`);
