@@ -193,6 +193,44 @@ describe("SandboxTerminal", () => {
     expect(r.ficheros).toEqual({ "/index.html": "<h1>vieja</h1>" });
   });
 
+  it("an unreadable request is answered with an error, and the bridge keeps serving the next one", async () => {
+    const git = vi.fn(async () => ({ stdout: "On branch main\n", stderr: "", exitCode: 0 }));
+    const answers: Record<string, { stderr?: string; stdout?: string; exitCode: number }> = {};
+    const { terminal } = await open({
+      projectFiles: { "/index.html": "a" },
+      bridge: { git },
+      onRun: async (cmd, files) => {
+        if (!cmd.includes("two")) return;
+        files.set("/run/openlen/requests/bad.json", "{not json");
+        files.set("/run/openlen/requests/r2.json", JSON.stringify({ id: "r2", program: "git", args: ["status"], cwd: "/" }));
+        for (let i = 0; i < 200 && !(files.has("/run/openlen/responses/bad.json") && files.has("/run/openlen/responses/r2.json")); i++)
+          await new Promise((r) => setTimeout(r, 10));
+        for (const id of ["bad", "r2"]) answers[id] = JSON.parse(files.get(`/run/openlen/responses/${id}.json`)!);
+      },
+    });
+    await terminal.ejecutar("two requests");
+    expect(answers.bad).toMatchObject({ exitCode: 1 });
+    expect(answers.bad!.stderr).toMatch(/unreadable/);
+    expect(answers.r2).toMatchObject({ stdout: "On branch main\n", exitCode: 0 });
+  });
+
+  it("a handler that fails answers its own command with the error; the bridge goes on", async () => {
+    const answers: Record<string, { stderr?: string; exitCode: number }> = {};
+    const { terminal } = await open({
+      projectFiles: { "/index.html": "a" },
+      bridge: { git: async () => Promise.reject(new Error("repository locked")) },
+      onRun: async (cmd, files) => {
+        if (!cmd.includes("git log")) return;
+        files.set("/run/openlen/requests/r1.json", JSON.stringify({ id: "r1", program: "git", args: ["log"], cwd: "/" }));
+        for (let i = 0; i < 200 && !files.has("/run/openlen/responses/r1.json"); i++) await new Promise((r) => setTimeout(r, 10));
+        answers.r1 = JSON.parse(files.get("/run/openlen/responses/r1.json")!);
+      },
+    });
+    await terminal.ejecutar("git log");
+    expect(answers.r1).toMatchObject({ exitCode: 1 });
+    expect(answers.r1!.stderr).toContain("repository locked");
+  });
+
   it("aborting the turn ends a command that waits on the bridge, without hanging", async () => {
     const ctrl = new AbortController();
     const { terminal } = await open({
