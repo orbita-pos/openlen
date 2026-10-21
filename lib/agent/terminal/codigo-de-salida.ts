@@ -33,7 +33,7 @@ export function esFalloDeLaTerminal(command: string, exitCode: number): boolean 
   return !RESPONDEN_CON_1.has(ultimo.palabra);
 }
 
-interface Trozo {
+export interface Trozo {
   readonly texto: string;
   /** El separador que lo precede: `;`, `&`, salto de línea, `&&`, `||` o `|`. */
   readonly antes: string | null;
@@ -65,7 +65,7 @@ function ultimoComando(linea: string): { palabra: string; subGit: string | null;
  * La línea partida por sus separadores de arriba: fuera de comillas, de
  * `$(…)`, `(…)`, `${…}` y de comentarios. `null` si algo no cierra.
  */
-function trozos(linea: string): Trozo[] | null {
+export function trozos(linea: string): Trozo[] | null {
   const out: Trozo[] = [];
   const pila: string[] = [];
   let texto = "";

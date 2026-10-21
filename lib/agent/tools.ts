@@ -170,6 +170,11 @@ export interface AgentDeps {
    *  `null` si no llegaron a tiempo (o el ■). Sin él, la pregunta cierra el
    *  turno, como siempre: así siguen la voz y Len-Bench. */
   askUser?(questions: UserQuestion[]): Promise<AskUserResult>;
+  /** The turn's sign of life (the route's silence watchdog): `bash` calls it while a command runs inside its own
+   *  timeout, so a long command is not taken for a hang (`lib/agent/terminal/still-working.ts`). */
+  stillWorking?(): void;
+  /** The turn's stop (the owner's ■, or the silence watchdog): a tool that waits stops waiting. */
+  turnSignal?: AbortSignal;
   /** Pieza 7: el modo plan del turno (`lib/agent/plan-mode.ts`). Lo guarda la
    *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
    *  modo plan no existe y las dos lo dicen. */
@@ -2584,7 +2589,7 @@ async function ejecutarHerramienta(
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
   if (ARTIFACT_TOOLS.some(tool=>tool===name)) {
-    return deps.artifactAgent ? deps.artifactAgent.execute(name, args) : { response: { ok: false, error: "feature_disabled" } };
+    return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
   if (esHerramientaDeFicheros(name)) {

@@ -29,6 +29,8 @@ import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
+import { whileWorking } from "./still-working";
+import { longSleep, longSleepRefusal } from "./sleep-rule";
 
 export async function toolBash(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (!terminalEncendida()) {
@@ -37,6 +39,12 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   const command = typeof args.command === "string" ? args.command : "";
   if (command.trim() === "") {
     const error = "The bash tool needs a command.";
+    return { response: { ok: false, error, [CLAVE_TOOL_RESULT]: error } };
+  }
+  // Checked before anything starts, as Claude Code's Bash does (`sleep-rule.ts`).
+  const sleep = longSleep(command);
+  if (sleep) {
+    const error = longSleepRefusal(sleep, Boolean(deps.artifactAgent));
     return { response: { ok: false, error, [CLAVE_TOOL_RESULT]: error } };
   }
 
@@ -74,7 +82,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
-  const r = await terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined });
+  const r = await whileWorking(terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined }), deps.stillWorking);
   // La salida que no cabe, ENTERA a /tmp (no es del proyecto), como Claude Code.
   let persistida: string | undefined;
   if (r.stdout.length + r.stderr.length > MAX_SALIDA) {
