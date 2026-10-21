@@ -13,6 +13,7 @@
 // whatever the answer changed into the box, and only then the response.
 
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 
 import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
@@ -56,6 +57,28 @@ export function readOnlySource(path: string): string {
 /** "/.openlen/docs/a.md" → "/.openlen". */
 const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
 
+/** What the box already has of the read-only files, across turns; outside what Len sees. */
+const UPLOADED_FILE = `${BRIDGE_DIR}/ro/.uploaded.json`;
+const UNBUNDLE_SCRIPT = `${BRIDGE_DIR}/unbundle.py`;
+const BUNDLE_FILE = `${BRIDGE_DIR}/bundle.b64`;
+/** Over this many files or bytes, the read-only files go up in one compressed bundle. */
+const BUNDLE_OVER_FILES = 20;
+const BUNDLE_OVER_BYTES = 256 * 1024;
+/** Run with sudo (an unmounted root is root's); what it writes is given to the user who ran it. */
+export const UNBUNDLE_PY = `import base64, gzip, json, os, sys
+uid = int(os.environ.get("SUDO_UID", os.getuid()))
+gid = int(os.environ.get("SUDO_GID", os.getgid()))
+files = json.loads(gzip.decompress(base64.b64decode(open(sys.argv[1], "rb").read())).decode("utf-8"))
+for path, text in files.items():
+    folder = os.path.dirname(path)
+    os.makedirs(folder, exist_ok=True)
+    os.chown(folder, uid, gid)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.chown(path, uid, gid)
+os.remove(sys.argv[1])
+`;
+
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
@@ -90,8 +113,9 @@ type NotSaved = { readonly ruta: string; readonly motivo: "binary" | "too_large"
 export class SandboxTerminal implements TerminalBackend {
   private tree: Record<string, string>;
   private synced: Record<string, string> = {};
-  /** The read-only files this turn put in the box, by hash. */
+  /** The read-only files the box has, by where they are in it → hash (kept in the box, UPLOADED_FILE). */
   private uploaded: Record<string, string> = {};
+  private uploadedRead = false;
   /** Read-only roots (/.openlen, an app's /node_modules): whether the read-only mount took. */
   private readonly mounted = new Map<string, boolean>();
   private cwd = "/";
@@ -157,21 +181,49 @@ export class SandboxTerminal implements TerminalBackend {
     );
   }
 
-  /** /.openlen in the box: the first time all of it, then only what changed (in an app it carries hundreds of .d.ts). */
+  /** /.openlen in the box, and an app's /node_modules (1,268 files and 7.8 MB of types, measured 21/10):
+   *  only what the box doesn't have yet — what went up is remembered IN the box, across turns — and
+   *  a large set in one compressed bundle. */
   private async uploadReadOnly(): Promise<void> {
     const files: Record<string, string> = { ...VISITOR_DATA_READMES };
     for (const [path, text] of Object.entries(await this.o.readOnly())) if (!NEVER_IN_BOX.test(path)) files[path] = text;
     for (const root of new Set(Object.keys(files).map(readOnlyRoot))) await this.mountReadOnly(root);
+    if (!this.uploadedRead) {
+      this.uploadedRead = true;
+      // Keyed by where each file is in the box, so a mount that took or didn't changes the keys.
+      const kept = this.o.fresh ? null : await this.readText(UPLOADED_FILE).catch(() => null);
+      try {
+        if (kept) this.uploaded = JSON.parse(kept) as Record<string, string>;
+      } catch {
+        this.uploaded = {};
+      }
+    }
     const inBox = (path: string) => (this.mounted.get(readOnlyRoot(path)) ? readOnlySource(path) : path);
     const hashes: Record<string, string> = {};
     const writes: Record<string, string> = {};
+    let bytes = 0;
     for (const [path, text] of Object.entries(files)) {
-      hashes[path] = sha256(text);
-      if (this.uploaded[path] !== hashes[path]) writes[inBox(path)] = text;
+      const at = inBox(path);
+      hashes[at] = sha256(text);
+      if (this.uploaded[at] !== hashes[at]) {
+        writes[at] = text;
+        bytes += text.length;
+      }
     }
-    await this.o.handle.write(writes);
-    await this.o.handle.remove(Object.keys(this.uploaded).filter((path) => !(path in hashes)).map(inBox));
+    const removes = Object.keys(this.uploaded).filter((at) => !(at in hashes));
+    if (Object.keys(writes).length > BUNDLE_OVER_FILES || bytes > BUNDLE_OVER_BYTES) await this.unbundle(writes);
+    else await this.o.handle.write(writes);
+    await this.o.handle.remove(removes);
+    if (Object.keys(writes).length > 0 || removes.length > 0) await this.o.handle.write({ [UPLOADED_FILE]: JSON.stringify(hashes) });
     this.uploaded = hashes;
+  }
+
+  /** Many files in one round trip: gzipped JSON, unpacked by Python in the box. */
+  private async unbundle(writes: Record<string, string>): Promise<void> {
+    const bundle = gzipSync(Buffer.from(JSON.stringify(writes), "utf8")).toString("base64");
+    await this.o.handle.write({ [UNBUNDLE_SCRIPT]: UNBUNDLE_PY, [BUNDLE_FILE]: bundle });
+    const r = await this.o.handle.run(`sudo python3 ${UNBUNDLE_SCRIPT} ${BUNDLE_FILE}`, { timeoutMs: 60_000 });
+    if (r.exitCode !== 0) throw new Error(`unpacking the read-only files failed (${r.exitCode}): ${r.stderr.slice(0, 300)}`);
   }
 
   /** What Len only reads is a read-only bind of where it is uploaded, as Claude Code's sandbox does
