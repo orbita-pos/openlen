@@ -29,6 +29,9 @@ import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
+import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
+import { closeTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
 import { whileWorking } from "./still-working";
 import { longSleep, longSleepRefusal } from "./sleep-rule";
 
@@ -51,7 +54,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // F5 · lo de sólo lectura se lista de nuevo cada vez que arranca una
   // terminal (también tras un corte duro) y se calcula al leerlo.
   let soloLectura: Promise<SoloLectura> | null = null;
-  const terminal = (session.terminal ??= new TerminalDeLen({
+  // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B del proyecto
+  // cuando está encendida y se puede; si no, ésta de siempre (`local`).
+  const local = () => new TerminalDeLen({
     cargarFicheros: async () => {
       const ficheros = await cargarFicherosDeLaTerminal(session, deps);
       session.fotoDeLaTerminal = { ...ficheros };
@@ -76,6 +81,13 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     appTools: appToolsFor(session, deps),
     // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).
     ...(deps.functionsCurl ? { functionsCurl: () => deps.functionsCurl!(session.projectId) } : {}),
+  });
+  const terminal = (session.terminal ??= await terminalForTurn(session, {
+    local,
+    projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
+    readOnly: () => readOnlyForBox(session, deps),
+    bridge: () => bridgeHandlersFor(session, deps),
+    signal: deps.turnSignal,
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
@@ -135,10 +147,13 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
   // (`jq -r .datos.mensaje`): lo de ahí lo escribió siempre un visitante.
   const tocoLaBandeja = command.includes("bandeja") || (r.cargados ?? []).some((c) => c.startsWith(CARPETA_BANDEJA));
-  const texto =
+  const delComandoYa =
     /"_origen":\s*"visitante"/.test(salida.texto) || tocoLaBandeja
       ? salida.texto + AVISO_DE_VISITANTES_EN_LA_TERMINAL
       : salida.texto;
+  // LA TERMINAL REAL: si este turno va con la limitada (o la caja se paró), una línea delante, una vez.
+  const texto = session.sandboxNotice ? `${session.sandboxNotice}\n${delComandoYa}` : delComandoYa;
+  session.sandboxNotice = undefined;
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);
@@ -220,10 +235,69 @@ async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<boolea
   return true;
 }
 
-/** Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. */
-export async function cerrarTerminalDeLaSesion(session: AgentSession): Promise<void> {
-  const t = session.terminal;
-  session.terminal = undefined;
-  session.fotoDeLaTerminal = undefined;
-  await t?.cerrar();
+/**
+ * Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. Si era la caja
+ * (LA TERMINAL REAL), antes se guarda por las guardas de Write lo que la caja cambió y aún no se
+ * guardó (un proceso en segundo plano), se pausa, se suelta y se cobra (`closeTurnTerminal`).
+ */
+export async function cerrarTerminalDeLaSesion(session: AgentSession, deps?: AgentDeps): Promise<void> {
+  const antes = { ...(session.fotoDeLaTerminal ?? {}) };
+  await closeTurnTerminal(
+    session,
+    deps
+      ? {
+          save: async (pendiente) => {
+            const despues = { ...antes };
+            for (const [ruta, contenido] of Object.entries(pendiente)) {
+              if (contenido === null) delete despues[ruta];
+              else despues[ruta] = contenido;
+            }
+            const cambios = cambiosDeLaTerminal(antes, despues);
+            if (cambios.length > 0) await guardarLoDeLaTerminal(session, deps, cambios, antes);
+          },
+        }
+      : {},
+  );
+}
+
+/** Lo de /.openlen que va a la caja: nunca lo de los visitantes, y como mucho 20 MB (las versiones, al final). */
+const MAX_SOLO_LECTURA_EN_LA_CAJA = 20 * 1024 * 1024;
+
+async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+  const sl = await soloLecturaDeLaTerminal(session, deps);
+  const rutas = sl.rutas.filter((r) => !NEVER_IN_BOX.test(r));
+  const esVersion = (r: string) => r.startsWith("/.openlen/versiones/");
+  const out: Record<string, string> = {};
+  let total = 0;
+  for (const ruta of [...rutas.filter((r) => !esVersion(r)), ...rutas.filter(esVersion)]) {
+    let texto: string;
+    try {
+      texto = await sl.leer(ruta);
+    } catch {
+      continue;
+    }
+    const peso = Buffer.byteLength(texto, "utf8");
+    if (total + peso > MAX_SOLO_LECTURA_EN_LA_CAJA) continue;
+    total += peso;
+    out[ruta] = texto;
+  }
+  return out;
+}
+
+/** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */
+async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promise<BridgeHandlers> {
+  const git = gitForTerminal(session, deps);
+  const appTools = appToolsFor(session, deps);
+  const curl = deps.functionsCurl ? await deps.functionsCurl(session.projectId).catch(() => null) : null;
+  return {
+    ...(git ? { git } : {}),
+    ...(deps.supabaseCli
+      ? {
+          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o),
+        }
+      : {}),
+    ...(appTools ? { appTools } : {}),
+    ...(curl ? { functionsUrls: curl.prefixes } : {}),
+  };
 }

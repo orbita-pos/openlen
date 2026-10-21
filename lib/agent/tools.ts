@@ -93,7 +93,7 @@ import { isLegacyMemoryPath, memoryLayerOf } from "@/lib/agent/ficheros/len-md";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
 import { toolBash } from "@/lib/agent/terminal/herramienta";
-import type { TerminalDeLen } from "@/lib/agent/terminal/terminal";
+import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
@@ -1056,8 +1056,14 @@ export interface AgentSession {
   /** F1 · la terminal de este turno (`lib/agent/terminal/`), si Len la usó, y
    *  cómo estaban sus ficheros tras el último comando: contra eso se decide
    *  qué cambió en el siguiente. Se cierra al acabar el turno. */
-  terminal?: TerminalDeLen;
+  terminal?: TerminalBackend;
   fotoDeLaTerminal?: Record<string, string>;
+  /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): el turno, para la
+   *  caja del proyecto (quién la tiene) y su fila en el libro. */
+  turnId?: string;
+  /** Una línea que va delante de la salida del siguiente comando: la terminal de
+   *  este turno es la limitada (o la caja se paró). Se dice una vez. */
+  sandboxNotice?: string;
   /** Cuántas salidas largas de la terminal se guardaron en /tmp/tool-results. */
   salidasGuardadas?: number;
   /** La zona del usuario (IANA). La manda el panel con cada turno; sin ella,

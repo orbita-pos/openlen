@@ -77,6 +77,10 @@ export class SandboxTerminal implements TerminalBackend {
     this.tree = { ...o.projectFiles };
   }
 
+  get arrancada(): boolean {
+    return this.opened !== null;
+  }
+
   private now(): number {
     return this.o.now?.() ?? Date.now();
   }
