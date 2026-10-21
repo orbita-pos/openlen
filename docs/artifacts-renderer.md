@@ -2,17 +2,27 @@
 
 The Next app only saves sources and queues jobs. The standalone worker builds a sealed input with the existing app compiler/bundler, then runs the trusted browser renderer in a separate offline container. Generated source is never evaluated in Node.
 
-Build the image from the repository root when a Linux test host is selected:
+Build the image on the Linux host from a minimal context: only the renderer sources and its Dockerfile, never the repository root (which would hand `.env.local` and `node_modules` to Docker):
 
 ```sh
-docker build -f infra/artifact-renderer/Dockerfile -t openlen/artifact-renderer:1 .
+tar -c --exclude=node_modules tools/artifact-renderer infra/artifact-renderer/Dockerfile | docker build -f infra/artifact-renderer/Dockerfile -t openlen/artifact-renderer:1 -
 ```
 
-The worker requires an explicit local image (`OPENLEN_ARTIFACT_RENDERER_IMAGE`); it never pulls images during a job. The per-job runner sets 2 CPUs, 2 GiB RAM/no swap, 128 processes, a read-only filesystem, no network/capabilities, and a bounded temporary filesystem. It mounts only a fresh output directory, passes the source envelope through stdin, and force-removes its generated container name on cancellation/timeout before removing that directory. No DB URL, provider key, Docker socket or host project directory enters the renderer.
+The worker requires an explicit local image (`OPENLEN_ARTIFACT_RENDERER_IMAGE`); it never pulls images during a job. The per-job runner sets 2 CPUs, 2 GiB RAM/no swap, 512 tasks (processes and threads: Chromium plus x264 peaked at 157 for a 6 s video, and 128 failed every video), a read-only filesystem, no network/capabilities, and a bounded temporary filesystem. It mounts only a fresh output directory, passes the source envelope through stdin, and force-removes its generated container name on cancellation/timeout before removing that directory. No DB URL, provider key, Docker socket or host project directory enters the renderer.
 
 Do not activate `OPENLEN_ARTIFACTS=1` until all format acceptance, pricing, isolated-preview access, recovery and operational checks have passed. This document does not authorize deployment or installation.
 
-Current evidence: compiler/SQL/domain regression tests, and a committed synthetic dashboard viewed/filtered in the available Windows browser. The dedicated Puppeteer launch fails on this Windows execution surface before loading authored content. Its opt-in browser test remains pending here; this is not a successful Linux/container isolation test. Docker is not currently installed on this PC or the OpenLen host. The user deferred selecting a test host until the code is ready.
+Current evidence (2026-10-20): the Linux acceptance below passed on WSL 2 (Ubuntu 24.04, Docker 29.1.3, cgroup v2) with the image built from this branch: every format, the 120 s worst case within the limits, the negative cases with their own codes, and a real cancellation, with no container or temporary directory left behind. It found and fixed four renderer defects that the Windows runs could not show: the 128-task limit broke every video and intermittently Chromium; offscreen slide iframes never painted, so every HTML deck with two or more slides hung until the watchdog; a CSP-blocked or intercepted resource surfaced as an image decode error instead of `artifact_resource_missing`; and an unreadable audio upload surfaced as a generic failure instead of `audio_media_invalid`. It runs on a laptop, not the production host, and makes no provider call.
+
+## Linux acceptance
+
+`scripts/artifact-linux-acceptance.ts` runs the REAL adapters (compile, validation, the PPTX built from the layout Chromium measured, every post-check) with the repository toolchain, and sends each container call through `scripts/artifact-renderer-bridge.ts` — bundled into one `.mjs` and run with plain `node` next to Docker — to the REAL `containerArtifactRenderer`. In production one worker process holds both halves; the bridge (protocol in `lib/artifacts/acceptance/bridge-protocol.ts`) is the only test glue. Inputs are synthetic; the narration case uses a fixture voice (a tone), not OpenAI. Every case must match its expected outcome and leave no container or temporary directory; produced files are checked again with ffprobe/pdfinfo in a separate offline container of the same image.
+
+```sh
+npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-linux-acceptance.ts --evidence /new/empty/directory
+```
+
+Options: `--distro` (default `Ubuntu-24.04`), `--image`, `--node` (a Linux Node 22; by default `node` on the PATH or `~/.local/bin/node`, which can be copied out of the local `node:22-bookworm-slim` image without downloading anything), `--only id,id` and `--skip-long` (skips the 120 s video and the cancellation). It writes `REPORT.md`, `report.json`, every packet sent (`packets/`), every produced file (`outputs/`) and the bundled bridge with its hash (`package/`).
 
 Generate the synthetic fixture (no provider calls or customer data):
 
