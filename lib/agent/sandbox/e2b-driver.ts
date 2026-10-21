@@ -50,7 +50,12 @@ export interface E2bSandboxLike {
   };
   pause(): Promise<unknown>;
   kill(): Promise<unknown>;
+  /** From now, how long until E2B pauses the box by itself. */
+  setTimeout(timeoutMs: number): Promise<unknown>;
 }
+
+/** E2B's timeout counts from create/connect, not from the last use: a command this long after the last extension gives it back in full. */
+const EXTEND_AFTER_MS = 5 * 60_000;
 
 export interface E2bSdkLike {
   readonly Sandbox: {
@@ -68,10 +73,16 @@ async function loadE2bSdk(): Promise<E2bSdkLike> {
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
 
-function wrap(sbx: E2bSandboxLike): SandboxHandle {
+function wrap(sbx: E2bSandboxLike, now: () => number): SandboxHandle {
+  let extendedAt = now();
   return {
     id: sbx.sandboxId,
     async run(command, o) {
+      // A long turn (past the 15 minutes) keeps its box; a failed extension only shortens the net.
+      if (now() - extendedAt >= EXTEND_AFTER_MS) {
+        extendedAt = now();
+        await sbx.setTimeout(BOX_SAFETY_TIMEOUT_MS).catch(() => undefined);
+      }
       let stdout = "";
       let stderr = "";
       const proc = await sbx.commands.run(command, {
@@ -164,7 +175,7 @@ function wrap(sbx: E2bSandboxLike): SandboxHandle {
   };
 }
 
-export function e2bDriver(config: SandboxConfig, loadSdk: () => Promise<E2bSdkLike> = loadE2bSdk): SandboxDriver {
+export function e2bDriver(config: SandboxConfig, loadSdk: () => Promise<E2bSdkLike> = loadE2bSdk, now: () => number = Date.now): SandboxDriver {
   return {
     async create(o) {
       const { Sandbox } = await loadSdk();
@@ -176,11 +187,12 @@ export function e2bDriver(config: SandboxConfig, loadSdk: () => Promise<E2bSdkLi
           lifecycle: { onTimeout: "pause", autoResume: false },
           network: { denyOut: ["0.0.0.0/0"], allowOut: [...BOX_ALLOW_OUT], allowPublicTraffic: false },
         }),
+        now,
       );
     },
     async resume(sandboxId) {
       const { Sandbox } = await loadSdk();
-      return wrap(await Sandbox.connect(sandboxId, { apiKey: config.apiKey, timeoutMs: BOX_SAFETY_TIMEOUT_MS }));
+      return wrap(await Sandbox.connect(sandboxId, { apiKey: config.apiKey, timeoutMs: BOX_SAFETY_TIMEOUT_MS }), now);
     },
     async kill(sandboxId) {
       const { Sandbox } = await loadSdk();
