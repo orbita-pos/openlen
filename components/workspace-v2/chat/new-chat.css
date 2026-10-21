@@ -218,3 +218,30 @@
   .nc .nc-shimmer { -webkit-text-fill-color: currentColor; background: none; }
   .nc .nc-fold { transition: none; }
 }
+
+/* EL CHAT FLOTANTE ES UNA BARRA OSCURA (2026-10-20), en claro y en oscuro: se
+   lee como una herramienta encima de la página, no como otra hoja de ella.
+   Redefine los tokens en la caja; `.nc-float-dark .nc` gana al `.nc` del
+   cuerpo, que volvería a poner los del modo claro. */
+.nc-float-dark,
+.nc-float-dark .nc {
+  --bg:            #1f1f1f;
+  --bg-sidebar:    #262626;
+  --bg-elev:       #303030;
+  --hover:         #363636;
+  --fg:            oklch(96% 0.004 12);
+  --fg-muted:      oklch(74% 0.006 12);
+  --fg-faint:      oklch(70% 0.006 12);
+  --border:        oklch(100% 0 0 / 0.08);
+  --border-strong: oklch(100% 0 0 / 0.14);
+  --accent-soft:   oklch(30% 0.07 30);
+  --accent-ring:   oklch(72% 0.18 30);
+  --nc-accent-text: var(--accent);
+  --nc-warn: #e0a43a;
+  --nc-bad: #ff6b5e;
+  color: var(--fg);
+}
+/* En la barra el compositor no lleva marco: no hay borde que encender. */
+.nc .nc-composer-compacta:focus-within {
+  box-shadow: none;
+}

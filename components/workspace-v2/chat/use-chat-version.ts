@@ -138,12 +138,15 @@ export interface FloatBox {
   readonly h: number;
 }
 
-const FLOAT_KEY = "ol:chat-float";
+// `-v2` desde el 2026-10-20: el flotante pasó a ser una barra fina y larga,
+// centrada abajo (plegada, sólo el input). Las cajas de 400 px guardadas con
+// la clave vieja se habrían quedado estrechas para siempre.
+const FLOAT_KEY = "ol:chat-float-v2";
 
 export function defaultFloatBox(vw: number, vh: number): FloatBox {
-  const w = Math.min(400, vw - 32);
-  const h = Math.min(640, vh - 96);
-  return { x: Math.max(16, vw - w - 24), y: Math.max(64, vh - h - 24), w, h };
+  const w = Math.min(760, vw - 32);
+  const h = Math.min(620, vh - 96);
+  return { x: Math.max(16, Math.round((vw - w) / 2)), y: Math.max(64, vh - h - 20), w, h };
 }
 
 /** Que la caja quepa en la ventana: nunca fuera, nunca diminuta. */

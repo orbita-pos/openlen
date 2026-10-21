@@ -33,7 +33,7 @@ import { ChatHeader } from "./chat-header";
 import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
-import { liveStatus } from "./live-status";
+import { isRunning, liveStatus } from "./live-status";
 import { useAgentChat, type PendingAttachments, type ScopedSelection } from "./use-agent-chat";
 import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
@@ -247,6 +247,27 @@ function AgentChatView({
   const isMobile = useIsMobile();
   const storedLayout = useChatLayout();
   const layout = isMobile ? "docked" : storedLayout;
+  // EL FLOTANTE SE PLIEGA AL INPUT (2026-10-20, Jesús): una barra fina con el
+  // compositor; el historial sale al enfocar la caja y se vuelve a plegar al
+  // hacer clic en la página (`ChatFrame`). Mientras está plegado, lo que dice
+  // la barra viva al terminar un turno se queda hasta que lo ves: al abrir el
+  // historial ese turno cuenta como visto y la barra vuelve a ser sólo el input.
+  const flotante = layout === "floating";
+  const [historiaAbierta, setHistoriaAbierta] = useState(false);
+  const plegado = flotante && !historiaAbierta;
+  // Sólo avisa de un turno que se vio correr en esta pestaña: el último de una
+  // charla vieja, al recargar, no es noticia.
+  const [vistoHasta, setVistoHasta] = useState<string | null>(null);
+  const [corrioAqui, setCorrioAqui] = useState<string | null>(null);
+  const ultimoId = chat.latest?.id ?? null;
+  const corriendo = isRunning(status);
+  useEffect(() => {
+    if (corriendo) setCorrioAqui(ultimoId);
+  }, [corriendo, ultimoId]);
+  useEffect(() => {
+    if (historiaAbierta) setVistoHasta(ultimoId);
+  }, [historiaAbierta, ultimoId]);
+  const avisoPendiente = corriendo || status.kind === "waiting" || (corrioAqui === ultimoId && ultimoId !== vistoHasta);
   const settle = useCallback((turnId: string) => {
     setSettledConfirms((s) => new Set(s).add(turnId));
   }, []);
@@ -346,7 +367,7 @@ function AgentChatView({
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
   const body = (
-    <div className="nc flex h-full min-h-0 flex-col bg-side">
+    <div className={`nc flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`}>
       <ChatHeader
         layout={layout}
         onLayout={setChatLayout}
@@ -357,7 +378,7 @@ function AgentChatView({
         relativeTime={relativeTime}
         esApp={esApp}
       />
-      {equipo.compartido && (
+      {equipo.compartido && !plegado && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
           <GenteDelChat
             gente={equipo.gente}
@@ -371,7 +392,9 @@ function AgentChatView({
           />
         </div>
       )}
-      <div ref={chat.scrollRef} className="nice-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3 pt-5">
+      {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
+          tarjetas (el Deshacer y el «comparar» viven en memoria). */}
+      <div ref={chat.scrollRef} className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-3 pt-5 ${plegado ? "hidden" : "flex"}`}>
         {chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
@@ -421,8 +444,10 @@ function AgentChatView({
           )
         )}
       </div>
-      <div className="relative z-[2] shrink-0 px-3 pb-3 pt-1">
-        <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} />
+      <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : "px-3 pb-3 pt-1"}`}>
+        {(!plegado || avisoPendiente) && (
+          <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} />
+        )}
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
         {chat.goalOffered && (
           <GoalCardView
@@ -467,6 +492,7 @@ function AgentChatView({
             esApp={esApp}
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(secretGuard ? { secretGuard } : {})}
+            compacta={flotante}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),
@@ -512,7 +538,11 @@ function AgentChatView({
     </div>
   );
 
-  return <ChatFrame layout={layout} status={status}>{body}</ChatFrame>;
+  return (
+    <ChatFrame layout={layout} status={status} expanded={historiaAbierta} onExpandedChange={setHistoriaAbierta}>
+      {body}
+    </ChatFrame>
+  );
 }
 
 /** Estirar la caja flotante con las flechas: [ancho, alto] por pulsación. */
@@ -536,14 +566,20 @@ const RESIZE_KEYS: Partial<Record<string, readonly [number, number]>> = {
 function ChatFrame({
   layout,
   status,
+  expanded,
+  onExpandedChange,
   children,
 }: {
   layout: "docked" | "floating" | "minimized";
   status: LiveStatus;
+  /** Flotando: con el historial a la vista (si no, sólo la barra del input). */
+  expanded: boolean;
+  onExpandedChange: (open: boolean) => void;
   children: ReactNode;
 }) {
   const t = useTranslations("panelsChat");
   const [box, setBox] = useFloatBox();
+  const frameRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; from: FloatBox; kind: "move" | "resize" } | null>(null);
   const start = (kind: "move" | "resize") => (e: ReactPointerEvent<HTMLElement>) => {
     if (!box) return;
@@ -570,17 +606,64 @@ function ChatFrame({
   // oculto un instante, pero montado.
   const floating = layout === "floating" && box !== null;
   const waiting = status.kind === "waiting";
+
+  // SE PLIEGA AL HACER CLIC EN LA PÁGINA. Un clic dentro del lienzo no llega a
+  // este documento (es otro, en su iframe): lo delata que la ventana pierde el
+  // foco y el foco queda en un IFRAME. Lo que se abre encima en un diálogo
+  // (la imagen, el secreto) no cuenta como «fuera».
+  const onExpandedChangeRef = useRef(onExpandedChange);
+  onExpandedChangeRef.current = onExpandedChange;
+  useEffect(() => {
+    if (!floating) return;
+    const fuera = (e: PointerEvent) => {
+      const target = e.target;
+      if (!(target instanceof Node) || frameRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('[role="dialog"]')) return;
+      onExpandedChangeRef.current(false);
+    };
+    const alLienzo = () => {
+      window.setTimeout(() => {
+        if (document.activeElement?.tagName === "IFRAME") onExpandedChangeRef.current(false);
+      }, 0);
+    };
+    document.addEventListener("pointerdown", fuera, true);
+    window.addEventListener("blur", alLienzo);
+    return () => {
+      document.removeEventListener("pointerdown", fuera, true);
+      window.removeEventListener("blur", alLienzo);
+    };
+  }, [floating]);
+  // La barra se ancla por ABAJO: plegada mide lo que su contenido y, al
+  // abrirse, crece hacia arriba hasta el alto de la caja.
+  const floatStyle =
+    floating && box
+      ? {
+          left: box.x,
+          bottom: Math.max(8, window.innerHeight - (box.y + box.h)),
+          width: box.w,
+          ...(expanded ? { height: box.h } : {}),
+        }
+      : undefined;
   return (
     <>
       <div
+        ref={frameRef}
         className={
           docked
             ? "h-full"
             : floating
-              ? "nc nc-card-in fixed z-[45] flex flex-col overflow-hidden rounded-2xl border bd-strong shadow-[0_24px_64px_-16px_rgba(20,10,5,0.45)]"
+              ? "nc nc-float-dark nc-card-in fixed z-[45] flex flex-col rounded-[22px] border bd-strong shadow-[0_24px_64px_-16px_rgba(0,0,0,0.55)]"
               : "hidden"
         }
-        style={floating && box ? { left: box.x, top: box.y, width: box.w, height: box.h } : undefined}
+        style={floatStyle}
+        // Enfocar la caja de escribir abre el historial.
+        onFocusCapture={
+          floating
+            ? (e) => {
+                if (e.target instanceof HTMLTextAreaElement) onExpandedChange(true);
+              }
+            : undefined
+        }
         onPointerMove={docked ? undefined : move}
         onPointerUp={docked ? undefined : end}
         onPointerCancel={docked ? undefined : end}
@@ -596,7 +679,7 @@ function ChatFrame({
           />
         )}
         <div className="h-full min-h-0 flex-1">{children}</div>
-        {!docked && (
+        {!docked && expanded && (
           <div
             role="separator"
             aria-label={t("newChat.layout.resize")}
