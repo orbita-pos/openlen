@@ -48,6 +48,14 @@ export const VISITOR_DATA_READMES: Readonly<Record<string, string>> = {
   "/.openlen/resultados/README.txt": "The site's visits are not in this terminal: read them with get_visits.\n",
 };
 
+/** Where a read-only file is uploaded; the path Len reads is a read-only bind of it. */
+export function readOnlySource(path: string): string {
+  return `${BRIDGE_DIR}/ro${path}`;
+}
+
+/** "/.openlen/docs/a.md" → "/.openlen". */
+const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
+
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
@@ -80,6 +88,8 @@ export class SandboxTerminal implements TerminalBackend {
   private synced: Record<string, string> = {};
   /** The read-only files this turn put in the box, by hash. */
   private uploaded: Record<string, string> = {};
+  /** Read-only roots (/.openlen, an app's /node_modules): whether the read-only mount took. */
+  private readonly mounted = new Map<string, boolean>();
   private cwd = "/";
   private opened: Promise<void> | null = null;
   private notes: string[] = [];
@@ -128,15 +138,31 @@ export class SandboxTerminal implements TerminalBackend {
   private async uploadReadOnly(): Promise<void> {
     const files: Record<string, string> = { ...VISITOR_DATA_READMES };
     for (const [path, text] of Object.entries(await this.o.readOnly())) if (!NEVER_IN_BOX.test(path)) files[path] = text;
+    for (const root of new Set(Object.keys(files).map(readOnlyRoot))) await this.mountReadOnly(root);
+    const inBox = (path: string) => (this.mounted.get(readOnlyRoot(path)) ? readOnlySource(path) : path);
     const hashes: Record<string, string> = {};
     const writes: Record<string, string> = {};
     for (const [path, text] of Object.entries(files)) {
       hashes[path] = sha256(text);
-      if (this.uploaded[path] !== hashes[path]) writes[path] = text;
+      if (this.uploaded[path] !== hashes[path]) writes[inBox(path)] = text;
     }
     await this.o.handle.write(writes);
-    await this.o.handle.remove(Object.keys(this.uploaded).filter((path) => !(path in hashes)));
+    await this.o.handle.remove(Object.keys(this.uploaded).filter((path) => !(path in hashes)).map(inBox));
     this.uploaded = hashes;
+  }
+
+  /** What Len only reads is a read-only bind of where it is uploaded, as Claude Code's sandbox does
+   *  with its ro-bind: a write there fails with the system's own "Read-only file system", like today's
+   *  EROFS. Once per root and turn; the mount outlives the pause. A box that refuses it gets the files
+   *  where Len reads them, as before. */
+  private async mountReadOnly(root: string): Promise<void> {
+    if (this.mounted.has(root)) return;
+    const source = readOnlySource(root);
+    const r = await this.o.handle.run(
+      `mkdir -p ${source} && sudo mkdir -p ${root} && (mountpoint -q ${root} || (sudo mount --bind ${source} ${root} && sudo mount -o remount,bind,ro ${root}))`,
+      { timeoutMs: 30_000 },
+    );
+    this.mounted.set(root, r.exitCode === 0);
   }
 
   private async boxManifest(): Promise<Record<string, string>> {

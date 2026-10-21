@@ -7,7 +7,7 @@ import type { BridgeHandlers } from "./bridge";
 import type { SandboxHandle } from "./driver";
 import { fakeDriver, type FakeRun } from "./fake-driver";
 import { NEVER_IN_BOX } from "./paths";
-import { SandboxTerminal } from "./sandbox-terminal";
+import { SandboxTerminal, readOnlySource } from "./sandbox-terminal";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -114,15 +114,15 @@ describe("SandboxTerminal", () => {
     let ro: Record<string, string> = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v1/index.html": "v1" };
     const { terminal, handle, box } = await open({ projectFiles: { "/index.html": "x" }, readOnly: () => ro });
     await terminal.ejecutar("true");
-    expect(box().get("/.openlen/versiones/v1/index.html")).toBe("v1");
+    expect(box().get(readOnlySource("/.openlen/versiones/v1/index.html"))).toBe("v1");
     const write = vi.spyOn(handle, "write");
     const written = () => write.mock.calls.flatMap((c) => Object.keys(c[0]));
     await terminal.refrescarPerezosos();
     expect(written()).toEqual([]);
     ro = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v2/index.html": "v2" };
     await terminal.refrescarPerezosos();
-    expect(written()).toEqual(["/.openlen/versiones/v2/index.html"]);
-    expect(box().has("/.openlen/versiones/v1/index.html")).toBe(false);
+    expect(written()).toEqual([readOnlySource("/.openlen/versiones/v2/index.html")]);
+    expect(box().has(readOnlySource("/.openlen/versiones/v1/index.html"))).toBe(false);
   });
 
   it("visitor data is never written to the box; its folders say how to read it", async () => {
@@ -135,10 +135,41 @@ describe("SandboxTerminal", () => {
       },
     });
     await terminal.ejecutar("ls");
-    const visitor = [...box().keys()].filter((p) => NEVER_IN_BOX.test(p));
-    expect(visitor.sort()).toEqual(["/.openlen/bandeja/README.txt", "/.openlen/resultados/README.txt"]);
-    expect(box().get("/.openlen/docs/apps.md")).toBe("docs");
-    expect(box().get("/.openlen/bandeja/README.txt")).toContain("list_form_submissions");
+    const source = readOnlySource("");
+    const visitor = [...box().keys()].filter((p) => p.startsWith(source) && NEVER_IN_BOX.test(p.slice(source.length)));
+    expect(visitor.sort()).toEqual([readOnlySource("/.openlen/bandeja/README.txt"), readOnlySource("/.openlen/resultados/README.txt")]);
+    expect(box().get(readOnlySource("/.openlen/docs/apps.md"))).toBe("docs");
+    expect(box().get(readOnlySource("/.openlen/bandeja/README.txt"))).toContain("list_form_submissions");
+  });
+
+  it("/.openlen is a read-only mount of what goes up, like the sandbox's ro-bind: writing there fails with EROFS", async () => {
+    const { terminal, d, handle, box } = await open({ projectFiles: { "/index.html": "a" }, readOnly: { "/.openlen/docs/a.md": "a" } });
+    await terminal.ejecutar("true");
+    await terminal.refrescarPerezosos();
+    const mounts = d.commands(handle.id).filter((c) => c.includes("mount --bind"));
+    expect(mounts).toHaveLength(1);
+    expect(mounts[0]).toContain(`mount --bind ${readOnlySource("/.openlen")} /.openlen`);
+    expect(mounts[0]).toContain("remount,bind,ro /.openlen");
+    expect([...box().keys()].some((p) => p.startsWith("/.openlen/"))).toBe(false);
+  });
+
+  it("in an app, /node_modules (its types, read-only today) is mounted the same way", async () => {
+    const { terminal, d, handle } = await open({
+      projectFiles: { "/index.html": "a" },
+      readOnly: { "/.openlen/docs/a.md": "a", "/node_modules/react/package.json": "{}" },
+    });
+    await terminal.ejecutar("true");
+    expect(d.commands(handle.id).some((c) => c.includes("remount,bind,ro /node_modules"))).toBe(true);
+  });
+
+  it("if the box refuses the mount, the files go where Len reads them, as before", async () => {
+    const { terminal, box } = await open({
+      projectFiles: { "/index.html": "a" },
+      readOnly: { "/.openlen/docs/a.md": "a" },
+      onRun: (cmd) => (cmd.includes("mount --bind") ? { exitCode: 32, stderr: "mount: permission denied" } : undefined),
+    });
+    await terminal.ejecutar("true");
+    expect(box().get("/.openlen/docs/a.md")).toBe("a");
   });
 
   it("a bridge request is answered while the command runs, and its files are in the box before the response", async () => {
