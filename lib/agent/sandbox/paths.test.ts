@@ -28,6 +28,17 @@ describe("isSyncedPath", () => {
   });
 });
 
+describe("folders that are never the project's, at any depth", () => {
+  it("node_modules, .git and __pycache__ never sync, wherever they are", () => {
+    for (const p of ["/scripts/node_modules/sharp/index.js", "/vendor/lib/.git/config", "/tools/__pycache__/x.pyc"]) expect(isSyncedPath(p), p).toBe(false);
+    for (const p of ["/scripts/gen.js", "/node-modules-guide.md", "/src/git.ts"]) expect(isSyncedPath(p), p).toBe(true);
+  });
+
+  it("a project with files in one of them uses today's terminal", () => {
+    expect(conflictingTopLevel(["/index.html", "/vendor/node_modules/a.js"])).toEqual(["/vendor/node_modules/a.js"]);
+  });
+});
+
 describe("conflictingTopLevel", () => {
   it("a project with a top-level folder named like a system one is not compatible", () => {
     expect(conflictingTopLevel(["/index.html", "/home/index.html", "/media/a.png"])).toEqual(["/home/index.html", "/media/a.png"]);

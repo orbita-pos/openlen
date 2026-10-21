@@ -105,6 +105,8 @@ describe("SandboxTerminal", () => {
       { ruta: "/data/big.csv", motivo: "too_large" },
       { ruta: "/data/x.zip", motivo: "binary" },
     ]);
+    // A file over the cap is never downloaded into the app's process: one of gigabytes would take it down.
+    expect(d.reads(handle.id)).not.toContain("/data/big.csv");
   });
 
   it("visitor data is never written to the box; its folders say how to read it", async () => {
