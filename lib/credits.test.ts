@@ -537,6 +537,18 @@ describe("los créditos de los planes de pago, contra la portada", () => {
     }
   });
 
+  // LA CAJA (spec local 2026-10-21-real-terminal-e2b, §8): un crédito gastado en la
+  // caja tiene que valer al menos lo que cuesta en E2B. Con eso y la prueba de
+  // arriba, ningún plan pierde aunque se gaste entero en caja.
+  it("🔴 lo que se cobra de caja cubre lo que cuesta en E2B", async () => {
+    const { USD_PER_CREDIT, CENTICREDITOS_POR_CREDITO } = await import("@/lib/credits-client");
+    const { SANDBOX_USD_PER_SECOND, sandboxCenticredits } = await import("@/lib/agent/sandbox/billing");
+    for (const seconds of [1, 59, 60, 3_600]) {
+      const cobrado = (sandboxCenticredits(seconds) / CENTICREDITOS_POR_CREDITO) * USD_PER_CREDIT;
+      expect(cobrado, `${seconds} s`).toBeGreaterThanOrEqual(seconds * SANDBOX_USD_PER_SECOND);
+    }
+  });
+
   it("🔴 cada plan da más créditos que el de abajo, y cada crédito sale más barato", async () => {
     const pp = await import("@/lib/marketing/plan-price");
     const planes = [
