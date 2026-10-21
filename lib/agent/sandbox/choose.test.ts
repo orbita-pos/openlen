@@ -140,11 +140,29 @@ describe("terminalForTurn", () => {
     expect(a.driver.paused(id)).toBe(false);
   });
 
-  it("the box dies mid-command: that command reports it, the next ones run in today's terminal, and only the seconds it ran are charged", async () => {
-    let now = 1_000_000;
+  it("an error of one command, with the box still answering, is that command's error: the box stays", async () => {
     const driver = fakeDriver({
       onRun: (cmd) => {
-        if (cmd.includes("boom")) throw new Error("sandbox not found");
+        if (cmd.includes("weird")) throw new Error("manifest unreadable");
+      },
+    });
+    const { s, local, o } = setup({ driver });
+    s.terminal = await terminalForTurn(s, o);
+    const r = await s.terminal.ejecutar("weird");
+    expect(r).toMatchObject({ exitCode: 1, ficheros: null });
+    expect(r.stderr).toContain("manifest unreadable");
+    expect(s.sandboxNotice).toBeUndefined();
+    await s.terminal.ejecutar("ls");
+    expect(local.ran).toEqual([]);
+  });
+
+  it("the box dies mid-command: that command reports it, the next ones run in today's terminal, and only the seconds it ran are charged", async () => {
+    let now = 1_000_000;
+    let gone = false;
+    const driver = fakeDriver({
+      onRun: (cmd) => {
+        if (cmd.includes("boom")) gone = true;
+        if (gone) throw new Error("sandbox not found");
       },
     });
     const { s, local, o, store, charge } = setup({ driver, now: () => now });
