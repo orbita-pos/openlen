@@ -297,7 +297,9 @@
       "previewTitle": "L’aperçu est indisponible",
       "previewBody": "Les fichiers de cette version restent disponibles. Téléchargez-les ou rechargez l’aperçu.",
       "files": "Fichiers de cette version",
-      "reload": "Recharger"
+      "reload": "Recharger",
+      "previous": "Précédente",
+      "next": "Suivante"
     },
     "library": {
       "subtitle": "Tout ce que Len a créé pour {project}, au même endroit.",

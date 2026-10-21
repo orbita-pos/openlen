@@ -92,3 +92,27 @@ it("shows the piece inside the page instead of a dialog when the workspace cente
   expect(document.querySelector("iframe")).not.toBeNull();
   expect(document.body.textContent).toContain("Dashboard");
 });
+
+it("falls back to the slide pictures when the live preview is unavailable, one at a time",async()=>{
+  const png=new Uint8Array([137,80,78,71]);
+  const slides={...item,kind:"slides" as const,title:"Presentación"};
+  const outputs=[{index:0,name:"deck.html",mime:"text/html",format:"html",bytes:100},{index:1,name:"deck.pdf",mime:"application/pdf",format:"pdf",bytes:9},{index:2,name:"slide-002.png",mime:"image/png",format:"png",bytes:4},{index:3,name:"slide-001.png",mime:"image/png",format:"png",bytes:4}];
+  const fetched:string[]=[];
+  const fetcher:ArtifactFetch=async(url)=>{
+    if(url.endsWith("/preview"))return new Response(JSON.stringify({error:"preview_unavailable"}),{status:503});
+    if(url.includes("/files/")){fetched.push(url);return new Response(png,{headers:{"content-type":"image/png"}});}
+    return response({...inspection,artifact:slides,revision:{...inspection.revision,outputs}});
+  };
+  Object.defineProperty(URL,"createObjectURL",{configurable:true,value:()=>"blob:slide"});
+  Object.defineProperty(URL,"revokeObjectURL",{configurable:true,value:()=>{}});
+  const settle=async(done:()=>boolean)=>{for(let i=0;i<50&&!done();i++)await act(async()=>{await new Promise(r=>setTimeout(r,10));});};
+  await render(fetcher,undefined,slides);
+  await settle(()=>!!document.querySelector("img"));
+  expect(document.querySelector("img")?.getAttribute("src")).toBe("blob:slide");
+  expect(fetched.at(-1)).toContain("/files/3?");
+  expect(document.body.textContent).toContain("1 / 2");
+  await act(async()=>{document.querySelector<HTMLButtonElement>('[aria-label="Siguiente"]')!.click();});
+  await settle(()=>fetched.at(-1)!.includes("/files/2?")&&!!document.querySelector("img"));
+  expect(fetched.at(-1)).toContain("/files/2?");
+  expect(document.body.textContent).toContain("2 / 2");
+});

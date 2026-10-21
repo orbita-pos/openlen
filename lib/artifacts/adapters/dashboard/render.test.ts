@@ -106,3 +106,12 @@ it("bundles an app's open npm packages from its lock, as the canvas and publishi
     expect(result.html).toContain("tiny-from-esm");
   } finally { __setModuleStoreForTest(null); }
 });
+
+it("labels where the data comes from in a compact corner note, not a black bar across the dashboard", async () => {
+  const result = await buildDashboard(input);
+  const aside = /<aside id="len-data-provenance" style="([^"]*)"/.exec(result.html)?.[1] ?? "";
+  expect(aside).toMatch(/right:\s*12px/);
+  expect(aside).toMatch(/border-radius/);
+  expect(aside).not.toMatch(/left:\s*0/);
+  expect(aside).not.toMatch(/text-overflow/); // the label wraps instead of hiding part of it
+});

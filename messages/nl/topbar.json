@@ -297,7 +297,9 @@
       "previewTitle": "Het voorbeeld is niet beschikbaar",
       "previewBody": "De bestanden van deze versie zijn nog beschikbaar. Download ze of laad het voorbeeld opnieuw.",
       "files": "Bestanden van deze versie",
-      "reload": "Opnieuw laden"
+      "reload": "Opnieuw laden",
+      "previous": "Vorige",
+      "next": "Volgende"
     },
     "library": {
       "subtitle": "Alles wat Len voor {project} heeft gemaakt, op één plek.",

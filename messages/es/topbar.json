@@ -297,7 +297,9 @@
       "previewTitle": "La vista previa no está disponible",
       "previewBody": "Los archivos de esta versión siguen disponibles. Puedes descargarlos o volver a cargar la vista.",
       "files": "Archivos de esta versión",
-      "reload": "Volver a cargar"
+      "reload": "Volver a cargar",
+      "previous": "Anterior",
+      "next": "Siguiente"
     },
     "library": {
       "subtitle": "Todo lo que Len ha creado para {project}, en un solo lugar.",

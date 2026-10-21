@@ -297,7 +297,9 @@
       "previewTitle": "Die Vorschau ist nicht verfügbar",
       "previewBody": "Die Dateien dieser Version sind weiterhin verfügbar. Lade sie herunter oder lade die Vorschau erneut.",
       "files": "Dateien dieser Version",
-      "reload": "Erneut laden"
+      "reload": "Erneut laden",
+      "previous": "Zurück",
+      "next": "Weiter"
     },
     "library": {
       "subtitle": "Alles, was Len für {project} erstellt hat, an einem Ort.",

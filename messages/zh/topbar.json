@@ -297,7 +297,9 @@
       "previewTitle": "预览不可用",
       "previewBody": "此版本的文件仍然可用。你可以下载文件或重新加载预览。",
       "files": "此版本的文件",
-      "reload": "重新加载"
+      "reload": "重新加载",
+      "previous": "上一张",
+      "next": "下一张"
     },
     "library": {
       "subtitle": "Len 为 {project} 创建的所有内容，尽在一处。",

@@ -10,12 +10,14 @@ export async function buildProjectCaptures(input:SealedArtifactInput){
   const manifest=motionManifest(input);
   if(!manifest.captures.length)return [];
   const ref=input.revision.sourceRef;
-  if(ref?.frozenSourcePrefix!=="project-source/"||!Object.keys(ref.files).length)throw new ArtifactError("frozen_source_missing","captures need the app frozen first: create the video with freeze_source:true and source_paths [\"/index.html\"], or render_artifact with refresh_source_paths");
+  if(ref?.frozenSourcePrefix!=="project-source/"||!Object.keys(ref.files).length)throw new ArtifactError("frozen_source_missing","captures need the project frozen first: create the video with freeze_source:true and source_paths listing the pages it shows (in an app, \"/index.html\" freezes the whole app), or render_artifact with refresh_source_paths");
+  // An app is frozen whole from its entry; a site, page by page with what each one loads. What to refresh says so.
+  const isApp=ref.catalogo!==undefined,frozen=isApp?["/index.html"]:Object.keys(ref.files),what=isApp?"the app":"the project's pages";
   const files:Record<string,string>=Object.create(null);
   for(const [path,expected] of Object.entries(ref.files)){
     if(!path.startsWith("/")||!safeArtifactPath(path.slice(1)))throw new ArtifactError("frozen_source_changed");
     const content=input.revision.files[`project-source${path}`];
-    if(typeof content!=="string"||createHash("sha256").update(content).digest("hex")!==expected)throw new ArtifactError("frozen_source_changed",`project-source${path} changed after it was frozen; a capture shows the app as it was frozen, so never edit project-source/ or the app to make one. To take the app as it is now, render_artifact with refresh_source_paths ["/index.html"]`);
+    if(typeof content!=="string"||createHash("sha256").update(content).digest("hex")!==expected)throw new ArtifactError("frozen_source_changed",`project-source${path} changed after it was frozen; a capture shows ${what} as frozen, so never edit project-source/ or ${what} to make one. To take ${what} as ${isApp?"it is":"they are"} now, render_artifact with refresh_source_paths ${JSON.stringify(frozen)}`);
     files[path.slice(1)]=content;
   }
   const snapshot:SealedArtifactInput={...input,revision:{...input.revision,files,sourceRef:null},datasets:[],assets:[]};
