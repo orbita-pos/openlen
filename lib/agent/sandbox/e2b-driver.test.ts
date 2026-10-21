@@ -16,6 +16,7 @@ function fakeSdk() {
     },
     pause: vi.fn(async () => true),
     kill: vi.fn(async () => true),
+    setTimeout: vi.fn(async () => undefined),
   };
   const sdk: E2bSdkLike = {
     Sandbox: {
@@ -47,6 +48,29 @@ describe("e2bDriver", () => {
       lifecycle: { onTimeout: "pause", autoResume: false },
     });
     expect(opts.envs).toBeUndefined();
+  });
+
+  it("a long turn keeps its box: a command 5 minutes after the last extension gives E2B's timeout back in full", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    let now = 1_000_000;
+    const box = await e2bDriver(config, async () => sdk, () => now).create({ template: "t", metadata: {} });
+    await box.run("a", { timeoutMs: 5_000 });
+    now += 4 * 60_000;
+    await box.run("b", { timeoutMs: 5_000 });
+    expect(raw.setTimeout).not.toHaveBeenCalled();
+    now += 2 * 60_000;
+    await box.run("c", { timeoutMs: 5_000 });
+    expect(raw.setTimeout).toHaveBeenCalledTimes(1);
+    expect(raw.setTimeout).toHaveBeenCalledWith(15 * 60_000);
+  });
+
+  it("a failed extension doesn't fail the command", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    (raw.setTimeout as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("E2B busy"));
+    let now = 0;
+    const box = await e2bDriver(config, async () => sdk, () => now).create({ template: "t", metadata: {} });
+    now += 10 * 60_000;
+    expect((await box.run("echo hola", { timeoutMs: 5_000 })).stdout).toBe("hola\n");
   });
 
   it("runs a command and gives back its output and exit code", async () => {
