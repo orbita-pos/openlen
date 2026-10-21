@@ -83,6 +83,7 @@
     "app-ai:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/app-ai-migrate.ts",
     "credit-ledger:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/credit-ledger-migrate.ts",
     "sandbox:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sandbox-migrate.ts",
+    "sandbox:template": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/sandbox-template.ts",
     "security-review:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/security-review-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
