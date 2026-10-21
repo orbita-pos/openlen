@@ -189,6 +189,7 @@
     "culori": "^4.0.2",
     "diff": "8.0.4",
     "drizzle-orm": "^0.45.2",
+    "e2b": "2.56.0",
     "es-module-lexer": "3.0.3",
     "esbuild-wasm": "0.28.0",
     "gsap": "3.15.0",

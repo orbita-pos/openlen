@@ -65,10 +65,10 @@ export interface E2bSdkLike {
   };
 }
 
-/** Loads the `e2b` package at run time, so nothing breaks while it isn't installed and the box is off. */
+/** Loads the `e2b` package when a box is first needed: with the box off, it is never loaded. A literal
+ *  import, so the standalone build traces it (it is a `serverExternalPackages` in next.config.ts). */
 async function loadE2bSdk(): Promise<E2bSdkLike> {
-  const name = "e2b";
-  return (await import(/* webpackIgnore: true */ /* @vite-ignore */ name)) as E2bSdkLike;
+  return (await import("e2b")) as unknown as E2bSdkLike;
 }
 
 const utf8 = new TextDecoder("utf-8", { fatal: true });
