@@ -28,7 +28,9 @@ import { DECLARACION_WEB_FETCH, DECLARACION_WEB_SEARCH } from "@/lib/agent/web/h
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { DECLARACIONES_DE_FICHEROS } from "@/lib/agent/ficheros/declaraciones";
 import {
+  bashWithSandbox,
   DECLARACION_BASH,
+  NOMBRE_BASH,
   segunLasPalancas,
   SUSTITUIDAS_EN_SOLO_TERMINAL,
   SUSTITUIDAS_POR_LA_TERMINAL,
@@ -37,6 +39,7 @@ import {
   withGit,
 } from "@/lib/agent/terminal/declaracion";
 import { gitEnabled } from "@/lib/git/enabled";
+import { sandboxConfig } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
@@ -149,7 +152,9 @@ export function buildFunctionDeclarations(
 ): Record<string, unknown>[] {
   const declaraciones = declaracionesDelModo(_env, capacidades, mode);
   const withArtifacts = _env.OPENLEN_ARTIFACTS === "1" ? [...declaraciones, ...artifactToolDeclarations(capacidades.artifactKinds ?? [])] : declaraciones;
-  return app ? declaracionesDeLaApp(withArtifacts) : withArtifacts;
+  const forTheProject = app ? declaracionesDeLaApp(withArtifacts) : withArtifacts;
+  // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b, §11): last, over the page's or the app's bash.
+  return sandboxConfig(_env) ? forTheProject.map((d) => (d.name === NOMBRE_BASH ? bashWithSandbox(d) : d)) : forTheProject;
 }
 
 function declaracionesDelModo(
