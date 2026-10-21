@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { exigirBaseLocal } from "@/lib/len-bench/entorno";
 
 import { spentTodayMicroUsd } from "./budget";
+import { SANDBOX_USD_PER_SECOND } from "./size";
 import {
   forgetProjectSandbox,
   getProjectSandbox,
@@ -133,5 +134,19 @@ describe("spentTodayMicroUsd", () => {
       ('l2', ${OWNER}, 'pro', 'sandbox', 28, 2760, ${new Date(Date.UTC(2029, 11, 31, 23))}),
       ('l3', ${OWNER}, 'pro', 'agent_turn', 300, 9000, ${new Date(Date.UTC(2030, 0, 1, 6))})`);
     expect(await spentTodayMicroUsd(from)).toBe(2760);
+  });
+
+  it("adds what the boxes running right now have spent since their turn took them (a dead turn's doesn't count)", async () => {
+    const from = new Date(Date.now() - 3_600_000);
+    const ledgerOnly = await spentTodayMicroUsd(from);
+    await saveProjectSandbox(row(PROJECT, { state: "running", pausedAt: null }));
+    await holdProjectSandbox(PROJECT, "live-turn");
+    await db.execute(sql`update "projectSandboxes" set "updatedAt" = now() - interval '100 seconds' where "projectId" = ${PROJECT}`);
+    await saveProjectSandbox(row(OTHER, { state: "running", pausedAt: null }));
+    await holdProjectSandbox(OTHER, "dead-turn");
+    await db.execute(sql`update "projectSandboxes" set "updatedAt" = now() - interval '3 hours' where "projectId" = ${OTHER}`);
+    const spent = (await spentTodayMicroUsd(from)) - ledgerOnly;
+    expect(spent).toBeGreaterThanOrEqual(Math.floor(100 * SANDBOX_USD_PER_SECOND * 1e6));
+    expect(spent).toBeLessThan(Math.ceil(110 * SANDBOX_USD_PER_SECOND * 1e6));
   });
 });

@@ -46,7 +46,7 @@ matarlas a mano (§5).
 
 ## 4. Ver cómo va (psql de la base de la app)
 
-Lo gastado hoy (día UTC), en dólares y créditos:
+Lo cobrado hoy (día UTC), en dólares y créditos. El tope (`OPENLEN_SANDBOX_DAILY_USD`) suma además lo que llevan las cajas que corren ahora, que se cobra al cerrar su turno:
 
 ```sql
 SELECT count(*) AS cobros, sum("costMicroUsd") / 1e6 AS usd, sum("centicredits") / 100.0 AS creditos
