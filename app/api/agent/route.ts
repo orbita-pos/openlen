@@ -112,6 +112,7 @@ import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
+import { TurnSandbox } from "@/lib/agent/sandbox/choose";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
@@ -1568,6 +1569,8 @@ async function correrTurno(
           // UNA APP (plan 03): los tipos y el lint que llegaron tras escribir,
           // antes de cada llamada al modelo, como el LSP de Claude Code.
           lateDiagnostics: () => takeTypesAndLint(agentSession),
+          // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
+          lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground() : []),
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,

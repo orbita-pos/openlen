@@ -5,7 +5,7 @@ import type { AgentSession } from "@/lib/agent/tools";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
-import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, closeTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
+import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
 import { fakeDriver } from "./fake-driver";
 import { SandboxTerminal } from "./sandbox-terminal";
 import type { ProjectSandboxRow } from "./store";
@@ -199,6 +199,20 @@ describe("closeTurnTerminal", () => {
     await closeTurnTerminal(s, { save: async () => Promise.reject(new Error("db down")), store, charge });
     expect(driver.paused(id)).toBe(true);
     expect(store.rows.p?.heldBy).toBeNull();
+  });
+
+  it("closing the turn kills what runs in the background before pausing, and what finished is told before that", async () => {
+    const driver = fakeDriver({ onRun: (_cmd, _files, o) => (o.background ? { pid: 77 } : undefined) });
+    const { s, o, store, charge } = setup({ driver });
+    const t = (s.terminal = await terminalForTurn(s, o)) as TurnSandbox;
+    await t.ejecutar("python3 -m http.server", { background: true });
+    expect(await t.finishedBackground()).toEqual([]);
+    const id = store.rows.p!.sandboxId!;
+    await closeTurnTerminal(s, { save: async () => {}, store, charge });
+    const ran = driver.commands(id);
+    const kill = ran.findIndex((c) => c.includes("kill -TERM") && c.includes("77"));
+    expect(kill).toBeGreaterThan(-1);
+    expect(driver.paused(id)).toBe(true);
   });
 
   it("today's terminal just closes", async () => {

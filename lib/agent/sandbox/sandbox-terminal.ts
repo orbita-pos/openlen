@@ -18,6 +18,7 @@ import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import { DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, type SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
+import { backgroundFinished, backgroundStarted, movedToBackground } from "./background-text";
 import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./bridge";
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
@@ -29,6 +30,16 @@ const RESPONSES = `${BRIDGE_DIR}/responses`;
 const ENV_FILE = `${BRIDGE_DIR}/env`;
 const CWD_FILE = `${BRIDGE_DIR}/cwd`;
 const POLL_MS = 200;
+/** Every command's combined output and exit code go here, so one that moves to the background already has its file. */
+const JOBS_DIR = "/tmp/bash-tasks";
+
+interface Job {
+  readonly command: string;
+  readonly pid?: number;
+  readonly outputPath: string;
+  readonly exitPath: string;
+  done: boolean;
+}
 
 /** In place of the visitor data, which never enters the box (Jesús, 21/10). */
 export const VISITOR_DATA_READMES: Readonly<Record<string, string>> = {
@@ -72,6 +83,8 @@ export class SandboxTerminal implements TerminalBackend {
   private notes: string[] = [];
   private pausedAt: number | null = null;
   private readonly answered = new Set<string>();
+  private nextJob = 0;
+  private readonly jobs = new Map<string, Job>();
 
   constructor(private readonly o: SandboxTerminalOptions) {
     this.tree = { ...o.projectFiles };
@@ -150,22 +163,42 @@ export class SandboxTerminal implements TerminalBackend {
     return { tree, box, notSaved, changed };
   }
 
-  private wrap(command: string): string {
+  private wrap(command: string, job: { readonly outputPath: string; readonly exitPath: string }): string {
     return [
+      `mkdir -p ${JOBS_DIR}`,
+      "{",
       `export PATH=${BOX_BIN}:$PATH`,
       `[ -f ${ENV_FILE} ] && . ${ENV_FILE}`,
       `cd ${quote(this.cwd)} 2>/dev/null || cd /`,
       command,
       `__openlen_rc=$?`,
       `export -p > ${ENV_FILE} 2>/dev/null; pwd > ${CWD_FILE} 2>/dev/null`,
+      `echo $__openlen_rc > ${job.exitPath}`,
       `exit $__openlen_rc`,
+      `} > ${job.outputPath} 2>&1`,
     ].join("\n");
+  }
+
+  private async readText(path: string): Promise<string | null> {
+    const f = (await this.o.handle.read([path]))[path];
+    return f && "text" in f ? f.text : null;
   }
 
   /** Answers the box's requests until `stop` fires. */
   private async serveBridge(stop: AbortSignal): Promise<void> {
-    const box = this.o.handle;
     while (!stop.aborted) {
+      await this.serveOnce();
+      await new Promise<void>((resolve) => {
+        const t = setTimeout(resolve, POLL_MS);
+        stop.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
+      });
+    }
+  }
+
+  /** One pass over the mailbox: answers what is waiting. */
+  private async serveOnce(): Promise<void> {
+    const box = this.o.handle;
+    {
       for (const name of await box.list(REQUESTS)) {
         if (!name.endsWith(".json") || this.answered.has(name)) continue;
         this.answered.add(name);
@@ -186,40 +219,92 @@ export class SandboxTerminal implements TerminalBackend {
         await box.write({ [`${RESPONSES}/${req.id}.json`]: JSON.stringify(response) });
         await box.remove([`${REQUESTS}/${name}`]);
       }
-      await new Promise<void>((resolve) => {
-        const t = setTimeout(resolve, POLL_MS);
-        stop.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
-      });
     }
   }
 
   async ejecutar(command: string, o: { readonly timeoutMs?: number; readonly background?: boolean } = {}): Promise<SalidaDeUnComando> {
     await this.open();
     const timeoutMs = Math.min(Math.max(o.timeoutMs ?? DEFAULT_TIMEOUT_MS, 1), MAX_TIMEOUT_MS);
+    const id = `b${++this.nextJob}`;
+    const job = { command, outputPath: `${JOBS_DIR}/${id}.output`, exitPath: `${JOBS_DIR}/${id}.exit` };
+    const script = this.wrap(command, job);
+    const notes = () => this.notes.splice(0).map((n) => `${n}\n`).join("");
+
+    if (o.background) {
+      const r = await this.o.handle.run(script, { timeoutMs, signal: this.o.signal, background: true });
+      this.jobs.set(id, { ...job, pid: r.pid, done: false });
+      return { stdout: backgroundStarted(id, job.outputPath), stderr: notes(), exitCode: 0, ficheros: await this.syncBack() };
+    }
+
     const stop = new AbortController();
     const serving = this.serveBridge(stop.signal).catch(() => undefined);
     let r: RunResult;
     try {
-      r = await this.o.handle.run(this.wrap(command), { timeoutMs, signal: this.o.signal });
+      r = await this.o.handle.run(script, { timeoutMs, signal: this.o.signal });
     } finally {
       stop.abort();
       await serving;
     }
-    const notes = this.notes.splice(0).map((n) => `${n}\n`).join("");
-    const stderr = r.stderr + notes;
-    if (r.aborted) return { stdout: r.stdout, stderr, exitCode: r.exitCode, ficheros: null };
-    const cwd = (await this.o.handle.read([CWD_FILE]))[CWD_FILE];
-    if (cwd && "text" in cwd && cwd.text.trim().startsWith("/")) this.cwd = cwd.text.trim();
+    // The box's combined output is in the job's file; a driver that doesn't redirect (the tests') gives it directly.
+    const written = await this.readText(job.outputPath);
+    const stdout = written ?? r.stdout;
+    const stderr = (written === null ? r.stderr : "") + notes();
+    if (r.aborted) return { stdout, stderr, exitCode: r.exitCode, ficheros: null };
+    const cwd = await this.readText(CWD_FILE);
+    if (cwd?.trim().startsWith("/")) this.cwd = cwd.trim();
+    let moved = "";
+    if (r.timedOut) {
+      this.jobs.set(id, { ...job, pid: r.pid, done: false });
+      moved = `${stdout === "" || stdout.endsWith("\n") ? "" : "\n"}${movedToBackground(timeoutMs, id, job.outputPath)}`;
+    }
     const seen = await this.look();
     this.tree = seen.tree;
     this.synced = seen.box;
     return {
-      stdout: r.stdout,
+      stdout: stdout + moved,
       stderr,
-      exitCode: r.timedOut ? 143 : r.exitCode,
+      exitCode: r.timedOut ? 0 : r.exitCode,
       ficheros: { ...seen.tree },
       ...(seen.notSaved.length > 0 ? { noGuardados: seen.notSaved } : {}),
     };
+  }
+
+  private async syncBack(): Promise<Record<string, string>> {
+    const seen = await this.look();
+    this.tree = seen.tree;
+    this.synced = seen.box;
+    return { ...seen.tree };
+  }
+
+  /** What finished in the background since the last look, said once each; answers its bridge requests too. */
+  async finishedBackground(): Promise<string[]> {
+    const running = [...this.jobs.entries()].filter(([, j]) => !j.done);
+    if (running.length === 0) return [];
+    await this.serveOnce().catch(() => undefined);
+    const notices: string[] = [];
+    for (const [id, job] of running) {
+      const exit = await this.readText(job.exitPath);
+      let exitCode: number | null;
+      if (exit !== null) exitCode = Number.parseInt(exit.trim(), 10);
+      else if (job.pid !== undefined && (await this.o.handle.run(`kill -0 ${job.pid} 2>/dev/null`, { timeoutMs: 10_000 })).exitCode !== 0) exitCode = null;
+      else continue;
+      job.done = true;
+      notices.push(backgroundFinished({ id, command: job.command, exitCode: Number.isFinite(exitCode) ? exitCode : null, outputPath: job.outputPath }));
+    }
+    return notices;
+  }
+
+  /** Stops what still runs in the background (the turn is closing); killed jobs are not announced. */
+  async killBackground(): Promise<void> {
+    for (const job of this.jobs.values()) {
+      if (job.done) continue;
+      job.done = true;
+      if (job.pid !== undefined) {
+        await this.o.handle
+          .run(`kill -TERM -- -${job.pid} 2>/dev/null; kill -TERM ${job.pid} 2>/dev/null; true`, { timeoutMs: 10_000 })
+          .catch(() => undefined);
+      }
+    }
   }
 
   async poner(ficheros: Readonly<Record<string, string | null>>): Promise<void> {

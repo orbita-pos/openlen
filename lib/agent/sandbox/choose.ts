@@ -115,6 +115,11 @@ export class TurnSandbox implements TerminalBackend {
     return this.current.cerrar();
   }
 
+  /** What finished in the box's background since the last look (loop.ts `lateNotices`). */
+  async finishedBackground(): Promise<string[]> {
+    return this.diedAt === null ? this.inner.finishedBackground() : [];
+  }
+
   /** Box seconds this turn: until the pause, or until it died. */
   seconds(): number {
     return this.diedAt === null ? this.inner.runningSeconds() : Math.max(0, (this.diedAt - this.ctx.startedAt) / 1000);
@@ -129,6 +134,9 @@ export class TurnSandbox implements TerminalBackend {
         await this.current.cerrar().catch(() => undefined);
         return;
       }
+      // What still runs in the background is stopped when the turn ends (Claude Code's Bash in a
+      // session nobody wakes up later); its last writes are then saved like any other.
+      await this.inner.killBackground().catch(() => undefined);
       try {
         const pending = await this.inner.pendingChanges();
         if (Object.keys(pending).length > 0 && o.save) await o.save(pending);
