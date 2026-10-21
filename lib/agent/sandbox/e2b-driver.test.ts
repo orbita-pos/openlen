@@ -1,0 +1,96 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { BOX_ALLOW_OUT, e2bDriver, type E2bSandboxLike, type E2bSdkLike } from "./e2b-driver";
+
+function fakeSdk() {
+  const box: E2bSandboxLike = {
+    sandboxId: "sbx-1",
+    commands: {
+      run: vi.fn(async () => ({ pid: 7, wait: async () => ({ stdout: "hola\n", stderr: "", exitCode: 0 }), kill: async () => true })),
+    },
+    files: {
+      write: vi.fn(async () => undefined),
+      read: vi.fn(async (path: string) => (path === "/foto.png" ? new Uint8Array([0xff, 0xfe, 0x00]) : new TextEncoder().encode("ñandú"))),
+      remove: vi.fn(async () => undefined),
+      list: vi.fn(async () => [{ name: "1.json" }]),
+    },
+    pause: vi.fn(async () => true),
+    kill: vi.fn(async () => true),
+  };
+  const sdk: E2bSdkLike = {
+    Sandbox: {
+      create: vi.fn(async () => box),
+      connect: vi.fn(async () => box),
+      kill: vi.fn(async () => true),
+    },
+  };
+  return { sdk, box };
+}
+
+const config = { apiKey: "k", template: "openlen-terminal-v1", dailyUsd: 5, onlyUsers: null };
+
+describe("e2bDriver", () => {
+  it("the network allows at most 10 domains", () => {
+    expect(BOX_ALLOW_OUT.length).toBeLessThanOrEqual(10);
+    expect(BOX_ALLOW_OUT).toContain("registry.npmjs.org");
+  });
+
+  it("creates the box closed: everything out denied but the allow list, nothing in, no secrets", async () => {
+    const { sdk } = fakeSdk();
+    await e2bDriver(config, async () => sdk).create({ template: "openlen-terminal-v1", metadata: { projectId: "p" } });
+    const [template, opts] = (sdk.Sandbox.create as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(template).toBe("openlen-terminal-v1");
+    expect(opts).toMatchObject({
+      apiKey: "k",
+      metadata: { projectId: "p" },
+      network: { denyOut: ["0.0.0.0/0"], allowOut: BOX_ALLOW_OUT, allowPublicTraffic: false },
+      lifecycle: { onTimeout: "pause", autoResume: false },
+    });
+    expect(opts.envs).toBeUndefined();
+  });
+
+  it("runs a command and gives back its output and exit code", async () => {
+    const { sdk } = fakeSdk();
+    const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
+    expect(await box.run("echo hola", { timeoutMs: 5_000 })).toEqual({ stdout: "hola\n", stderr: "", exitCode: 0, timedOut: false, pid: 7 });
+  });
+
+  it("a command that exits non-zero is an answer, not an exception", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    (raw.commands.run as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      pid: 8,
+      wait: async () => {
+        throw Object.assign(new Error("exit 2"), { exitCode: 2, stdout: "", stderr: "no\n" });
+      },
+      kill: async () => true,
+    });
+    const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
+    expect(await box.run("grep x /nada", { timeoutMs: 5_000 })).toMatchObject({ exitCode: 2, stderr: "no\n", timedOut: false });
+  });
+
+  it("a command over its time comes back timed out and keeps running", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    const kill = vi.fn(async () => true);
+    (raw.commands.run as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ pid: 9, wait: () => new Promise(() => {}), kill });
+    const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
+    expect(await box.run("sleep 100", { timeoutMs: 20 })).toMatchObject({ timedOut: true, pid: 9 });
+    expect(kill).not.toHaveBeenCalled();
+  });
+
+  it("reads text as text and anything that is not UTF-8 as binary", async () => {
+    const { sdk } = fakeSdk();
+    const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
+    expect(await box.read(["/a.txt", "/foto.png"])).toEqual({ "/a.txt": { text: "ñandú" }, "/foto.png": { binary: true, size: 3 } });
+  });
+
+  it("writes many files in one call, resumes by id and pauses", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    const d = e2bDriver(config, async () => sdk);
+    const box = await d.resume("sbx-1");
+    await box.write({ "/a": "1", "/b": "2" });
+    expect(raw.files.write).toHaveBeenCalledWith([{ path: "/a", data: "1" }, { path: "/b", data: "2" }]);
+    await box.pause();
+    expect(raw.pause).toHaveBeenCalled();
+    expect(sdk.Sandbox.connect).toHaveBeenCalledWith("sbx-1", expect.objectContaining({ apiKey: "k" }));
+  });
+});
