@@ -567,6 +567,12 @@ async function correrTurno(
     // su propio preludio.
     usarPagina,
   };
+  // Stripe (spec local 2026-10-21-stripe-integration): live mode is the owner's payments and
+  // customers, which a member doesn't see (lib/projects/acceso.ts); test mode works the same.
+  if (miembro && deps.stripeCli) {
+    const stripeCli = deps.stripeCli;
+    deps.stripeCli = (projectId, args, o) => stripeCli(projectId, args, { ...o, readLive: false });
+  }
   // UNA APP NACE (H10): crear es el primer mensaje a Len en un proyecto en
   // blanco, y si ese mensaje pide una app, el proyecto recibe aquí el esqueleto
   // (`lib/projects/nacer-como-app.ts`) — antes de leerlo, para que el turno

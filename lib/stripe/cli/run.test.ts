@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { StripeRequest, StripeResponse } from "../api";
 import { runStripeCli, type StripeCliDeps } from "./run";
-import { CREDENTIALS_ANSWER, LIVE_WRITE_REFUSAL, listenText, noKeyText } from "./texts";
+import { CREDENTIALS_ANSWER, LIVE_WRITE_REFUSAL, MEMBER_LIVE_REFUSAL, listenText, noKeyText } from "./texts";
 
 const DRAFT_FN = "https://draftrefdraftrefdraf.openlen.app/functions/v1/";
 const res = (status: number, body: unknown): StripeResponse => ({ status, text: JSON.stringify(body, null, 2), json: body, requestId: "req_1" });
@@ -43,6 +43,17 @@ describe("runStripeCli", () => {
       expect(await runStripeCli(args, d)).toEqual({ stdout: "", stderr: LIVE_WRITE_REFUSAL, exitCode: 1 });
     }
     expect(d.request).not.toHaveBeenCalled();
+  });
+
+  it("Final review: a member's turn doesn't read live mode (the owner's payments and customers); test mode still works", async () => {
+    const d = deps();
+    for (const args of [["customers", "list", "--live"], ["get", "/v1/charges", "--live"]]) {
+      expect(await runStripeCli(args, d, { readLive: false })).toEqual({ stdout: "", stderr: MEMBER_LIVE_REFUSAL, exitCode: 1 });
+    }
+    expect(d.keyFor).not.toHaveBeenCalledWith("live");
+    expect(d.request).not.toHaveBeenCalled();
+    await runStripeCli(["products", "list"], d, { readLive: false });
+    expect(d.request).toHaveBeenCalledTimes(1);
   });
 
   it("no key → the way out", async () => {

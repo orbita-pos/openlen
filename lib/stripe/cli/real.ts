@@ -12,7 +12,7 @@ import type { SecretStore } from "@/lib/functions/secret-store";
 
 import { stripeRequest, type StripeFetch } from "../api";
 import type { StripeStore } from "../store";
-import { runStripeCli, type StripeCliDeps, type StripeCliOutput } from "./run";
+import { runStripeCli, type StripeCliDeps, type StripeCliOptions, type StripeCliOutput } from "./run";
 import { runTrigger } from "./trigger";
 
 export const WEBHOOK_SECRET = "STRIPE_WEBHOOK_SECRET";
@@ -57,7 +57,7 @@ export async function stripeCliDepsFor(projectId: string, d: RealStripeCliDeps):
 }
 
 /** What Len's two terminals call: the real stores, the draft's function URL, the secrets door. */
-export async function runStripeCliFor(projectId: string, args: readonly string[], o: { readonly signal?: AbortSignal } = {}): Promise<StripeCliOutput> {
+export async function runStripeCliFor(projectId: string, args: readonly string[], o: StripeCliOptions = {}): Promise<StripeCliOutput> {
   const [{ pgSecretStore }, { pgStripeStore }, { realSecretsDeps }, { setFunctionSecrets }, { draftProjectUrl, ensureBackend }] = await Promise.all([
     import("@/lib/functions/secret-store-pg"),
     import("../store-pg"),
