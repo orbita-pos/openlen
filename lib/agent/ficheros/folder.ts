@@ -6,7 +6,9 @@
  *
  * Esto decide, en un solo sitio, qué ruta vale, de qué CLASE es y cuánto cabe:
  *   · `web`      se publica tal cual junto a las páginas y la sirve el lienzo;
- *   · `tests`    las pruebas de Playwright (pieza 10): se guardan y viajan al exportar, no se publican ni se corren aquí;
+ *   · `tests`    las pruebas de Playwright (pieza 10): se guardan y viajan al exportar, no se publican; con la
+ *                terminal real, `npx playwright test` las corre en la caja contra el borrador (plan local
+ *                2026-10-21-playwright-in-the-box); sin ella, no se corren;
  *   · `supabase` las migraciones y funciones del backend, con sus reglas de
  *                siempre (`supabase.ts`): se guardan, no se publican;
  *   · `env`      `/.env`, sólo en la raíz (spec local 2026-10-10): lo lee el

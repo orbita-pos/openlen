@@ -244,3 +244,6 @@ designs/fotografo/**/*.png
 # La compilación de los crates nativos (cargo, `npm run build` en crates/*): 1,3 GB que se rehacen.
 /target/
 /.artifacts-private/
+
+# The real terminal: box scripts generated for the E2B template build (scripts/sandbox-template.ts).
+/infra/e2b/openlen-terminal/.build/

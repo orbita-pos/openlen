@@ -14,6 +14,7 @@ import path from "node:path";
 import { Worker } from "node:worker_threads";
 import type { CurlRequest, FunctionsCurl } from "@/lib/functions/curl-types";
 
+import type { TerminalBackend } from "./backend";
 import { formatDuration } from "./formato";
 
 /** El tiempo de un comando, el del `Bash` de Claude Code (leído en su binario
@@ -44,13 +45,15 @@ export interface SalidaDeUnComando {
   readonly cargados?: readonly string[];
   /** F5 · los que no se pudieron calcular, con el porqué (`just-bash` sólo dice «No such file»). */
   readonly fallidos?: readonly { readonly ruta: string; readonly error: string }[];
+  /** LA TERMINAL REAL: lo que la caja escribió y no se puede guardar (binario o más de 1 MB). */
+  readonly noGuardados?: readonly { readonly ruta: string; readonly motivo: "binary" | "too_large" }[];
 }
 
 class CorteDuro extends Error {}
 
 type Respuesta = { id: number; ok: boolean; error?: string } & Record<string, unknown>;
 
-export class TerminalDeLen {
+export class TerminalDeLen implements TerminalBackend {
   private hilo: Worker | null = null;
 
   /** ¿Ya arrancó? `poner` sin arrancar no hace nada: quien quiera dejar un

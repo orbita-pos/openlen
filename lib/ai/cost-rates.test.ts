@@ -67,6 +67,10 @@ describe("unitCostMicroUsd", () => {
     expect(unitCostMicroUsd({ provider: "exa", model: "search", queries: 2 })).toBe(30_000);
   });
 
+  it("prices the sandbox per second", () => {
+    expect(unitCostMicroUsd({ provider: "e2b", model: "openlen-terminal", seconds: 60 })).toBe(2_760);
+  });
+
   it("returns null when the unit has no known price", () => {
     expect(unitCostMicroUsd({ provider: "openai", model: "gpt-image-9", images: 1 })).toBeNull();
     expect(unitCostMicroUsd({ provider: "exa", model: "search" })).toBeNull();

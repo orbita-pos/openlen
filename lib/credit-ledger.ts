@@ -32,6 +32,7 @@ export type LedgerSurface =
   | "voice"
   | "app_ai"
   | "security_review"
+  | "sandbox"
   | "page_assistant"
   | "publish_translation";
 

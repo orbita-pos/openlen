@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   dropDeveloperRole: vi.fn(async (_ref: string) => {}),
   purgeProjectStorage: vi.fn(async (_scope: string) => {}),
   backendConfigured: vi.fn(() => true),
+  sandboxOfProject: vi.fn(async (_projectId: string): Promise<string | null> => null),
+  killSandboxOfDeletedProject: vi.fn(async (_sandboxId: string) => {}),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -44,6 +46,10 @@ vi.mock("@/lib/backend/provision", () => ({ dropProjectDatabase: mocks.dropProje
 vi.mock("@/lib/backend/environments", () => ({ listEnvironments: async () => mocks.envs }));
 vi.mock("@/lib/backend/storage/purge", () => ({ purgeProjectStorage: mocks.purgeProjectStorage }));
 vi.mock("@/lib/backend/pg", () => ({ backendConfigured: mocks.backendConfigured }));
+vi.mock("@/lib/agent/sandbox/reaper", () => ({
+  sandboxOfProject: mocks.sandboxOfProject,
+  killSandboxOfDeletedProject: mocks.killSandboxOfDeletedProject,
+}));
 
 import { deleteProject } from "@/lib/projects";
 
@@ -108,5 +114,38 @@ describe("deleteProject y la base de la página", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+// LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b, §9): la fila de la caja se va en
+// cascada con el proyecto, así que su id se lee ANTES; la caja se mata sin que E2B pueda impedir
+// el borrado.
+describe("deleteProject y la caja de la terminal", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.owned = [{ subdomain: null }];
+    mocks.backend = [];
+    mocks.deleted = [{ id: "p1" }];
+    mocks.sandboxOfProject.mockResolvedValue("sbx-1");
+  });
+
+  it("mata la caja del proyecto borrado, leída antes de borrar", async () => {
+    expect(await deleteProject("p1", "u1")).toBe(true);
+    expect(mocks.sandboxOfProject).toHaveBeenCalledWith("p1");
+    expect(mocks.killSandboxOfDeletedProject).toHaveBeenCalledWith("sbx-1");
+  });
+
+  it("un proyecto sin caja no mata nada", async () => {
+    mocks.sandboxOfProject.mockResolvedValue(null);
+    await deleteProject("p1", "u1");
+    expect(mocks.killSandboxOfDeletedProject).not.toHaveBeenCalled();
+  });
+
+  it("si el proyecto no es tuyo, ni la mira", async () => {
+    mocks.owned = [];
+    mocks.deleted = [];
+    expect(await deleteProject("p1", "otro")).toBe(false);
+    expect(mocks.sandboxOfProject).not.toHaveBeenCalled();
+    expect(mocks.killSandboxOfDeletedProject).not.toHaveBeenCalled();
   });
 });

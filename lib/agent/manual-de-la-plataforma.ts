@@ -26,6 +26,7 @@ import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
+import { sandboxConfig } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
@@ -305,12 +306,19 @@ export function conEdgeFunctions(manual: string, env: Readonly<Record<string, st
   return conLineas.replace(SIN_FUNCIONES, CON_FUNCIONES);
 }
 
+// LA TERMINAL REAL (plan local 2026-10-21-playwright-in-the-box): with the box, a page's /tests run.
+const TESTS_NOT_RUN =
+  "- /tests holds Playwright tests, which are not run here (there is no Playwright in the terminal): they are kept, never published, and they go with the project when it is exported. Checking the page here is view_page and use_page.";
+const TESTS_RUN =
+  '- /tests holds Playwright tests, and `npx playwright test` runs them in this computer\'s Chromium (Playwright is installed: import from "@playwright/test", don\'t install it) against the saved draft, whose address is in `$BASE_URL`: put `use: { baseURL: process.env.BASE_URL }` in /playwright.config.ts. A test works with the draft\'s data; it can read the published page but never writes to it. Screenshot comparisons (toHaveScreenshot) can\'t be kept: only text files are saved. The tests are kept, never published, and they go with the project when it is exported. Looking at the page is still view_page and use_page.';
+
 export function buildManualDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
   mode: AgentMode = "len",
   app: AppDeProyecto | null = null,
 ): string {
-  const base = app ? manualDeLaApp(manualSinPartir(), app) : partirElManual().agents;
+  const page = partirElManual().agents;
+  const base = app ? manualDeLaApp(manualSinPartir(), app) : sandboxConfig(env) ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
   const agents = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${ARTIFACT_MANUAL_INDEX}` : agents;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(withArtifacts) : withArtifacts;

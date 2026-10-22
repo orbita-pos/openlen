@@ -101,6 +101,9 @@ export default defineConfig({
       "lib/git/**/*.test.ts",
       // Buscar y leer en internet (plans/len-agente-2026, F2).
       "lib/agent/web/**/*.test.ts",
+      // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B, su
+      // sincronización, su puente y su cobro. WHITELIST: sin esta línea no corren.
+      "lib/agent/sandbox/**/*.test.ts",
       // Len por correo (infra/len-email-worker/README.md).
       "lib/len-email/**/*.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).

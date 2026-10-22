@@ -2493,6 +2493,21 @@ export const projectGitRepos = pgTable("projectGitRepos", {
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
 
+// LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B de cada
+// proyecto. La fila nace al reservarla (sin caja todavía) y sólo un turno la tiene a la
+// vez; `syncedManifest` es lo que la caja y la copia buena tenían en común al pausarla.
+// SQL en scripts/sandbox-migrate.ts.
+export const projectSandboxes = pgTable("projectSandboxes", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  sandboxId: text("sandboxId"),
+  template: text("template"),
+  state: text("state").$type<"none" | "running" | "paused">().notNull().default("none"),
+  syncedManifest: jsonb("syncedManifest").$type<Record<string, string>>().notNull().default({}),
+  heldBy: text("heldBy"),
+  pausedAt: timestamp("pausedAt", { withTimezone: true }),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("projectSandboxes_pausedAt_idx").on(t.pausedAt)]);
+
 // Len 3.0 deliverables. Sources never enter projectFiles or the app's release.
 // SQL migration/immutable-source trigger: lib/artifacts/migration.ts.
 export const artifactRequests = pgTable("artifactRequests", {

@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 16 de octubre de 2026" : "Last updated: October 16, 2026"}
+      updated={es ? "Última actualización: 21 de octubre de 2026" : "Last updated: October 21, 2026"}
     >
       {es ? (
         <>
@@ -210,7 +210,13 @@ export default async function PrivacyPage({
             solicitado conforme a sus términos de API. Si editas una imagen con IA, esa imagen y tu
             instrucción se envían a <strong>OpenAI</strong> con la misma finalidad.
             Si hablas con Len por voz desde la app, el audio también va a OpenAI,
-            para la llamada o para transcribir la nota; no guardamos el audio. No
+            para la llamada o para transcribir la nota; no guardamos el audio.
+            Cuando Len ejecuta programas en su terminal, lo hace en un ordenador
+            aislado de <strong>E2B</strong> (Estados Unidos), uno por proyecto, que
+            recibe los ficheros del proyecto y lo que leen y escriben esos comandos
+            (también lo que Len lea de la base de datos del proyecto desde la
+            terminal), nunca los envíos de formularios, los mensajes ni las visitas
+            que guarda OpenLen; se borra tras una semana sin uso. No
             tomamos ninguna decisión automatizada con efectos jurídicos sobre ti.
           </p>
           <p>
@@ -386,6 +392,7 @@ export default async function PrivacyPage({
               datos), DeepInfra (generación con IA), Fireworks AI (generación con
               IA en parte de los turnos y revisión por visión), OpenAI (edición de
               imágenes con IA y la voz de la app), Exa (búsqueda en internet cuando Len busca algo),
+              E2B (el ordenador aislado de la terminal de Len),
               Resend (correo transaccional) e{" "}
               <strong>InariWatch</strong> (<code>@inariwatch/capture</code>,
               monitoreo de errores). InariWatch es un producto hermano del mismo
@@ -423,7 +430,7 @@ export default async function PrivacyPage({
             generación de páginas con IA usa DeepInfra y Fireworks AI, la
             edición de imágenes
             con IA y la voz de la app usan OpenAI, la búsqueda en internet usa Exa,
-            los correos usan Resend y el cobro de suscripciones usa Polar, todos
+            la terminal de Len usa E2B, los correos usan Resend y el cobro de suscripciones usa Polar, todos
             también en <strong>Estados Unidos</strong>. Para los destinatarios en Estados
             Unidos, estas transferencias se amparan en las{" "}
             <strong>Cláusulas Contractuales Tipo</strong> de la Comisión Europea
@@ -621,7 +628,13 @@ export default async function PrivacyPage({
             If you edit an image with AI, that image and your instruction are sent
             to <strong>OpenAI</strong> for the same purpose. If you talk to Len by
             voice from the app, the audio also goes to OpenAI, for the call or to
-            transcribe the note; we don&apos;t store the audio. We make no
+            transcribe the note; we don&apos;t store the audio. When Len runs
+            programs in its terminal, it does so on an isolated computer at{" "}
+            <strong>E2B</strong> (United States), one per project, which receives
+            the project&apos;s files and what those commands read and write (also
+            what Len reads from the project&apos;s database from the terminal),
+            never the form submissions, messages or visits OpenLen stores; it is
+            deleted after a week unused. We make no
             automated decision producing legal effects concerning you.
           </p>
           <p>
@@ -785,7 +798,8 @@ export default async function PrivacyPage({
               (hosting of the application server and databases), DeepInfra (AI
               generation), Fireworks AI (AI generation in some turns and vision
               review), OpenAI (AI image editing and the app&apos;s voice), Exa (web search when Len
-              looks something up), Resend (transactional email), and{" "}
+              looks something up), E2B (the isolated computer of Len&apos;s
+              terminal), Resend (transactional email), and{" "}
               <strong>InariWatch</strong> (
               <code>@inariwatch/capture</code>, error monitoring). InariWatch is a
               sister product of the same operator, so error capture is first-party,
@@ -818,7 +832,8 @@ export default async function PrivacyPage({
             (Hetzner), where the application and its databases live, is in{" "}
             <strong>Ashburn, Virginia, United States</strong>. AI page generation
             uses DeepInfra and Fireworks AI, AI image editing and the app&apos;s voice use
-            OpenAI, web search uses Exa, email uses Resend, and subscription
+            OpenAI, web search uses Exa, Len&apos;s terminal uses E2B, email uses
+            Resend, and subscription
             billing uses Polar, all also in the <strong>United States</strong>. For
             recipients in the United States, these transfers are covered by the
             European Commission&apos;s <strong>Standard Contractual Clauses</strong>{" "}

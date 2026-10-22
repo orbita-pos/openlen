@@ -105,12 +105,19 @@ export function salidaDeLaTerminal(r: {
   readonly reiniciada?: string;
   /** Dónde se guardó la salida entera, si no cabía (`/tmp/tool-results/N.txt`). */
   readonly persistida?: string;
+  /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b, §5): lo que la caja
+   *  escribió y no cabe en la copia buena (binario, o más de 1 MB). */
+  readonly noGuardados?: readonly { readonly ruta: string; readonly motivo: "binary" | "too_large" }[];
 }): { texto: string; exitCode: number } {
   const exitCode = r.rechazado && r.exitCode === 0 ? 1 : r.exitCode;
   const fallo = r.rechazado === true || (r.fallo ?? exitCode !== 0);
   const partes = [r.stdout, r.stderr].filter((p) => p !== "");
   const cuerpo = partes.join(partes[0]?.endsWith("\n") ? "" : "\n");
-  const notas = [...(r.guardado ?? []), ...(r.reiniciada ? [r.reiniciada] : [])];
+  const notas = [
+    ...(r.guardado ?? []),
+    ...(r.noGuardados ?? []).map((n) => `${n.ruta}: not saved — ${n.motivo === "binary" ? "binary file" : "larger than 1 MB"}`),
+    ...(r.reiniciada ? [r.reiniciada] : []),
+  ];
   if (fallo) {
     const texto = [`Exit code ${exitCode}`, cuerpo.trim(), ...notas].filter((p) => p !== "").join("\n").trim();
     return { texto: recortarFallo(texto), exitCode };
