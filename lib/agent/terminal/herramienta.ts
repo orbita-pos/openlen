@@ -91,6 +91,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     readOnly: () => readOnlyForBox(session, deps),
     bridge: () => bridgeHandlersFor(session, deps),
     network: () => boxNetworkOf(session),
+    baseEnv: () => boxBaseEnvOf(session),
     signal: deps.turnSignal,
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
@@ -324,6 +325,15 @@ async function boxNetworkOf(session: AgentSession): Promise<BoxNetwork | null> {
     publishedHost: saved?.subdomain ? publishedHost(saved.subdomain) : null,
     marker: boxMarker(session.projectId),
   });
+}
+
+/** LA TERMINAL REAL: `BASE_URL` = the project's canvas, where the box's tests see the saved draft (only
+ *  on a real deploy, as its network: locally the canvas is out of the box's reach). */
+async function boxBaseEnvOf(session: AgentSession): Promise<Record<string, string>> {
+  const { etiquetaDeLienzo, lienzoBaseHost, esProduccion } = await import("@/lib/lienzo/host");
+  const label = etiquetaDeLienzo(session.projectId);
+  const base = lienzoBaseHost();
+  return esProduccion() && label && base ? { BASE_URL: `https://${label}.${base}` } : {};
 }
 
 /** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */

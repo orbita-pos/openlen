@@ -56,6 +56,8 @@ export interface TurnTerminalOptions {
   readonly bridge: () => Promise<BridgeHandlers>;
   /** The project's OpenLen hosts the box may reach, with its marker (./box-network.ts); `null` = none. */
   readonly network?: () => Promise<BoxNetwork | null>;
+  /** This turn's variables for every command of the box (BASE_URL: the draft, for the tests). */
+  readonly baseEnv?: () => Promise<Readonly<Record<string, string>>>;
   readonly signal?: AbortSignal;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly driver?: SandboxDriver;
@@ -248,6 +250,7 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
       now,
       logFirstSync: (timings) => log(`[sandbox] first sync project=${session.projectId} ${timings}`),
       fresh: !resumed,
+      baseEnv: (await o.baseEnv?.().catch(() => ({}))) ?? {},
     });
     return new TurnSandbox(inner, { session, turnId, local: o.local, store, template: config.template, handle, startedAt, now, log });
   } catch (e) {
