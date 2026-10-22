@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { parseStripeArgs } from "./parse";
 
 describe("parseStripeArgs", () => {
+  it("Real test: --version, -v and version print the CLI's version line, like the release the port comes from", () => {
+    for (const args of [["--version"], ["-v"], ["version"]]) {
+      expect(parseStripeArgs(args)).toEqual({ kind: "help", text: "stripe version 1.55.0\n" });
+    }
+  });
+
   it("maps a resource command's flags to Stripe params like the CLI", () => {
     const c = parseStripeArgs(["prices", "create", "--product=curso", "--unit-amount=2900", "--currency", "usd", "--recurring.interval=month", "--lookup-key=curso"]);
     expect(c).toMatchObject({

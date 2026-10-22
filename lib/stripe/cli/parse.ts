@@ -7,7 +7,7 @@
 // with where the key comes from.
 
 import { operationHelp, resourceHelp, ROOT_HELP } from "./help";
-import { findResource, type StripeOperationSpec } from "./specs";
+import { findResource, STRIPE_CLI_VERSION, type StripeOperationSpec } from "./specs";
 
 export type FormPair = readonly [string, string];
 
@@ -120,6 +120,8 @@ export function parseStripeArgs(args: readonly string[]): StripeCommand {
   const [first, ...rest] = args;
   if (first === undefined || HELP.has(first)) return { kind: "help", text: ROOT_HELP };
   if (first === "resources") return { kind: "help", text: ROOT_HELP };
+  // pkg/cmd/root.go (`--version`, `-v`) and pkg/cmd/version.go print version.Template.
+  if (first === "--version" || first === "-v" || first === "version") return { kind: "help", text: `stripe version ${STRIPE_CLI_VERSION}\n` };
   if (CREDENTIALS.has(first)) return { kind: "credentials", command: first };
   if (first === "listen") return { kind: "listen" };
   if (first === "trigger") {
