@@ -222,7 +222,7 @@
     "tailwind-merge": "^3.6.0",
     "three": "^0.171.0",
     "web-push": "^3.6.7",
-    "ws": "^8.20.1",
+    "ws": "^8.22.0",
     "zod": "^3.24.1",
     "zod4": "npm:zod@^4.6.6"
   },
@@ -257,7 +257,7 @@
     "lighthouse": "^13.3.0",
     "meshoptimizer": "^1.2.0",
     "playwright": "^1.60.0",
-    "postcss": "^8.5.0",
+    "postcss": "^8.5.31",
     "react-router": "7.18.4",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.22.0",

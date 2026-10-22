@@ -622,6 +622,8 @@ export default defineConfig({
       "lib/security/chromium-env.test.ts",
       // Next's image optimizer stays closed (GHSA-2xp9-vwfh-vxw4, 2026-10-21). WHITELIST.
       "lib/security/next-image-optimizer.test.ts",
+      // Baking Tailwind never opens a source map a stylesheet names (2026-10-21). WHITELIST.
+      "lib/publish/tailwind-css.test.ts",
       "lib/publish/model-runtime-e2e.test.ts",
       "lib/publish/request-origin.test.ts",
       "lib/publish/cloudflare-email.test.ts",
