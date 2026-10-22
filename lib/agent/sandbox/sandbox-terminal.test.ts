@@ -248,6 +248,28 @@ describe("SandboxTerminal", () => {
     expect(box().has(readOnlySource("/.openlen/versiones/v1/index.html"))).toBe(false);
   });
 
+  // Measured 21/10 in a real box: the files of a version that rolled off went, its folders stayed, and
+  // `ls /.openlen/versiones` listed a v1 that no longer exists.
+  it("🔴 a folder none of whose files stays goes whole: no empty v1 for Len to list, and never a tree's root", async () => {
+    let ro: Record<string, string> = {
+      "/.openlen/docs/a.md": "a",
+      "/.openlen/versiones/v1/index.html": "v1",
+      "/.openlen/versiones/v1/sobre/index.html": "v1s",
+      "/.openlen/versiones/v2/index.html": "v2",
+      "/.openlen/versiones/v2/a.css": "c",
+      "/node_modules/react/index.d.ts": "d",
+    };
+    const { terminal, handle, box } = await open({ projectFiles: { "/index.html": "x" }, readOnly: () => ro });
+    await terminal.ejecutar("true");
+    const remove = vi.spyOn(handle, "remove");
+    ro = { "/.openlen/docs/a.md": "a", "/.openlen/versiones/v2/index.html": "v2", "/.openlen/versiones/v3/index.html": "v3" };
+    await terminal.refrescarPerezosos();
+    expect(remove.mock.calls.flatMap((c) => c[0]).sort()).toEqual(
+      [readOnlySource("/.openlen/versiones/v1"), readOnlySource("/.openlen/versiones/v2/a.css"), readOnlySource("/node_modules/react")].sort(),
+    );
+    expect([...box().keys()].filter((p) => p.includes("/versiones/v1"))).toEqual([]);
+  });
+
   it("visitor data is never written to the box; its folders say how to read it", async () => {
     const { terminal, box } = await open({
       projectFiles: { "/index.html": "a" },

@@ -93,8 +93,12 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       async remove(paths) {
         const b = box();
         for (const p of paths) {
-          b.files.delete(p);
-          b.binaries.delete(p);
+          // A folder goes with all it holds, as E2B's.
+          for (const f of [...b.files.keys(), ...b.binaries.keys()]) {
+            if (f !== p && !f.startsWith(`${p}/`)) continue;
+            b.files.delete(f);
+            b.binaries.delete(f);
+          }
         }
       },
       async read(paths) {

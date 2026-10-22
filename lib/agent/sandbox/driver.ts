@@ -28,6 +28,7 @@ export interface SandboxHandle {
     },
   ): Promise<RunResult>;
   write(files: Readonly<Record<string, string>>): Promise<void>;
+  /** Each path a file, or a folder with all it holds (E2B's `files.remove`). */
   remove(paths: readonly string[]): Promise<void>;
   /** Files that don't exist are left out; a file that is not UTF-8 is `{ binary, size }`. */
   read(paths: readonly string[]): Promise<Record<string, { readonly text: string } | { readonly binary: true; readonly size: number }>>;

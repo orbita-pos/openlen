@@ -57,6 +57,30 @@ export function readOnlySource(path: string): string {
 /** "/.openlen/docs/a.md" → "/.openlen". */
 const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
 
+const parentOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
+
+/** The tree a read-only file is in, where it is in the box: /.openlen, or where it is uploaded. */
+function treeOf(at: string): string {
+  const uploads = readOnlySource("");
+  return at.startsWith(`${uploads}/`) ? readOnlySource(readOnlyRoot(at.slice(uploads.length))) : readOnlyRoot(at);
+}
+
+/** What is gone, in as few paths as cover it: a folder none of whose files stays goes whole —a version
+ *  that rolled off, with its pages—, so no empty folder is left for Len to list (measured 21/10 in a
+ *  real box); a tree's root never (it is a mount, or its source). */
+export function pathsToRemove(gone: readonly string[], kept: readonly string[]): string[] {
+  const keptFolders = new Set<string>();
+  for (const k of kept) for (let d = parentOf(k); d; d = parentOf(d)) keptFolders.add(d);
+  const tops = new Set<string>();
+  for (const g of gone) {
+    const tree = treeOf(g);
+    let top = g;
+    for (let d = parentOf(g); d.length > tree.length && !keptFolders.has(d); d = parentOf(d)) top = d;
+    tops.add(top);
+  }
+  return [...tops].filter((p) => ![...tops].some((q) => p.startsWith(`${q}/`)));
+}
+
 /** The platform's variables for every command (plan local 2026-10-21-playwright-in-the-box). In the user's
  *  home, never synced (only ~/.len is). */
 export const BASE_ENV_FILE = "/home/user/.openlen-base.env";
@@ -254,7 +278,7 @@ export class SandboxTerminal implements TerminalBackend {
     const removes = Object.keys(this.uploaded).filter((at) => !(at in hashes));
     if (Object.keys(writes).length > BUNDLE_OVER_FILES || bytes > BUNDLE_OVER_BYTES) await this.unbundle(writes);
     else await this.o.handle.write(writes);
-    await this.o.handle.remove(removes);
+    await this.o.handle.remove(pathsToRemove(removes, Object.keys(hashes)));
     if (Object.keys(writes).length > 0 || removes.length > 0) await this.o.handle.write({ [UPLOADED_FILE]: JSON.stringify(hashes) });
     this.uploaded = hashes;
   }
