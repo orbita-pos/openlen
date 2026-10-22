@@ -113,6 +113,7 @@ import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
 import { TurnSandbox } from "@/lib/agent/sandbox/choose";
+import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
@@ -604,7 +605,10 @@ async function correrTurno(
   const bloqueDeDiseno = disenoDelTurno && ficherosDelDiseno ? designBlock(disenoDelTurno, ficherosDelDiseno) : "";
   // Todas cargadas: las diferidas y ToolSearch (H2) se retiraron en Len 2.1.
   // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
-  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds }, mode, appDelTurno);
+  // LA TERMINAL REAL: lo que bash y el manual dicen de la terminal sigue a la caja del dueño (en un
+  // despliegue por fases, quien no está en la lista tiene la de siempre: terminalForTurn).
+  const realTerminal = realTerminalFor(userId);
+  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal }, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -961,6 +965,7 @@ async function correrTurno(
   const argsDelTurno = {
     mode,
     app: appDelTurno,
+    realTerminal,
     zona: zonaDelTurno,
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
