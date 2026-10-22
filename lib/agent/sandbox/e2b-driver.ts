@@ -1,16 +1,19 @@
 // The real terminal's box on E2B (spec local 2026-10-21-real-terminal-e2b, §4 and §7). Closed by
-// default: every outbound address denied but a short allow list (E2B allows at most 10 domains),
-// no inbound traffic, no environment variables (nothing secret enters the box), and a box that
-// times out pauses instead of dying.
+// default: every outbound address denied but an allow list, no inbound traffic, no environment
+// variables (nothing secret enters the box), and a box that times out pauses instead of dying. Its
+// project's OpenLen hosts (./box-network.ts) are allowed with a header rule that adds the box's marker:
+// E2B's egress proxy adds it, the box never sees it.
 //
 // The SDK comes in through `loadSdk` and is described by the small `E2b*Like` types below — only
-// what this file uses, from E2B's docs (read 2026-10-21). Jesús installs `e2b` (Task 0 of the plan);
-// the real-box acceptance (scripts/sandbox-acceptance.ts) checks these shapes against it.
+// what this file uses, checked against e2b 2.56.0 (21/10).
 
+import type { BoxNetwork } from "./box-network";
+import { PAGE_CDNS } from "./box-network";
 import type { SandboxConfig } from "./config";
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 
-/** Package registries and code hosts: Claude Code's "Trusted" level, within E2B's 10 domains. */
+/** Package registries and code hosts (Claude Code's "Trusted" level) and the CDNs pages load from.
+ *  E2B doesn't cap allowOut; its cap of 10 is for header rules (docs.e2b.dev, 21/10). */
 export const BOX_ALLOW_OUT: readonly string[] = [
   "registry.npmjs.org",
   "pypi.org",
@@ -18,7 +21,18 @@ export const BOX_ALLOW_OUT: readonly string[] = [
   "github.com",
   "*.githubusercontent.com",
   "esm.sh",
+  ...PAGE_CDNS,
 ];
+
+/** E2B's network for a box: closed but the allow list and the project's hosts, each with its rule. */
+function networkOf(project: BoxNetwork | null | undefined) {
+  const hosts = project?.hosts ?? [];
+  return {
+    denyOut: ["0.0.0.0/0"],
+    allowOut: [...BOX_ALLOW_OUT, ...hosts],
+    ...(hosts.length > 0 ? { rules: Object.fromEntries(hosts.map((h) => [h, [{ transform: { headers: { ...project!.headers } } }]])) } : {}),
+  };
+}
 
 /** A safety net only: the turn pauses the box itself when it closes. */
 const BOX_SAFETY_TIMEOUT_MS = 15 * 60_000;
@@ -52,6 +66,8 @@ export interface E2bSandboxLike {
   kill(): Promise<unknown>;
   /** From now, how long until E2B pauses the box by itself. */
   setTimeout(timeoutMs: number): Promise<unknown>;
+  /** Replaces the box's egress configuration (allow and deny lists, rules). */
+  updateNetwork(network: Record<string, unknown>): Promise<unknown>;
 }
 
 /** E2B's timeout counts from create/connect, not from the last use: a command this long after the last extension gives it back in full. */
@@ -185,14 +201,17 @@ export function e2bDriver(config: SandboxConfig, loadSdk: () => Promise<E2bSdkLi
           timeoutMs: BOX_SAFETY_TIMEOUT_MS,
           metadata: { ...o.metadata },
           lifecycle: { onTimeout: "pause", autoResume: false },
-          network: { denyOut: ["0.0.0.0/0"], allowOut: [...BOX_ALLOW_OUT], allowPublicTraffic: false },
+          network: { ...networkOf(o.network), allowPublicTraffic: false },
         }),
         now,
       );
     },
-    async resume(sandboxId) {
+    async resume(sandboxId, network) {
       const { Sandbox } = await loadSdk();
-      return wrap(await Sandbox.connect(sandboxId, { apiKey: config.apiKey, timeoutMs: BOX_SAFETY_TIMEOUT_MS }), now);
+      const sbx = await Sandbox.connect(sandboxId, { apiKey: config.apiKey, timeoutMs: BOX_SAFETY_TIMEOUT_MS });
+      // Since the box paused, the project may have gained a backend or a published page.
+      if (network) await sbx.updateNetwork(networkOf(network));
+      return wrap(sbx, now);
     },
     async kill(sandboxId) {
       const { Sandbox } = await loadSdk();

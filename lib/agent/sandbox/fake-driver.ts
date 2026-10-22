@@ -6,6 +6,7 @@ import { gunzipSync } from "node:zlib";
 
 import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 
+import type { BoxNetwork } from "./box-network";
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 import { isSyncedPath } from "./paths";
 import { BIG_FILE_PREFIX } from "./template-files";
@@ -30,10 +31,13 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
   commands(id: string): string[];
   /** Every path a box was asked to read, in order. */
   reads(id: string): string[];
+  /** The network a box was created or last resumed with. */
+  networkOf(id: string): BoxNetwork | null;
 } {
   const boxes = new Map<string, FakeBox>();
   const ran = new Map<string, string[]>();
   const read = new Map<string, string[]>();
+  const networks = new Map<string, BoxNetwork | null>();
   let next = 0;
 
   const handle = (id: string): SandboxHandle => {
@@ -118,17 +122,19 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
   };
 
   return {
-    async create() {
+    async create(c) {
       const id = `fake-${++next}`;
       boxes.set(id, { files: new Map(), binaries: new Map(), paused: false });
       ran.set(id, []);
       read.set(id, []);
+      networks.set(id, c.network ?? null);
       return handle(id);
     },
-    async resume(sandboxId) {
+    async resume(sandboxId, network) {
       const b = boxes.get(sandboxId);
       if (!b) throw new Error(`sandbox ${sandboxId} not found`);
       b.paused = false;
+      if (network !== undefined) networks.set(sandboxId, network);
       return handle(sandboxId);
     },
     async kill(sandboxId) {
@@ -139,5 +145,6 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
     paused: (id) => boxes.get(id)?.paused ?? false,
     commands: (id) => ran.get(id) ?? [],
     reads: (id) => read.get(id) ?? [],
+    networkOf: (id) => networks.get(id) ?? null,
   };
 }

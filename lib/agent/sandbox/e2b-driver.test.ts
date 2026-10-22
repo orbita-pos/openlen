@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { PAGE_CDNS } from "./box-network";
 import { BOX_ALLOW_OUT, e2bDriver, type E2bSandboxLike, type E2bSdkLike } from "./e2b-driver";
 
 function fakeSdk() {
@@ -17,6 +18,7 @@ function fakeSdk() {
     pause: vi.fn(async () => true),
     kill: vi.fn(async () => true),
     setTimeout: vi.fn(async () => undefined),
+    updateNetwork: vi.fn(async () => undefined),
   };
   const sdk: E2bSdkLike = {
     Sandbox: {
@@ -31,9 +33,35 @@ function fakeSdk() {
 const config = { apiKey: "k", template: "openlen-terminal-v1", dailyUsd: 5, onlyUsers: null };
 
 describe("e2bDriver", () => {
-  it("the network allows at most 10 domains", () => {
-    expect(BOX_ALLOW_OUT.length).toBeLessThanOrEqual(10);
-    expect(BOX_ALLOW_OUT).toContain("registry.npmjs.org");
+  it("the network's allow list: package registries, GitHub and the CDNs pages use", () => {
+    // E2B doesn't cap allowOut (docs.e2b.dev, 21/10); the cap of 10 is for header rules.
+    for (const h of ["registry.npmjs.org", "pypi.org", "github.com", "esm.sh", ...PAGE_CDNS]) expect(BOX_ALLOW_OUT).toContain(h);
+  });
+
+  it("with the project's network: its hosts allowed, each with the marker header rule", async () => {
+    const { sdk } = fakeSdk();
+    const network = { hosts: ["lienzo-x.openlen.app", "abc.openlen.app"], headers: { "x-openlen-caja": "p.mac" } };
+    await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {}, network });
+    const opts = (sdk.Sandbox.create as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(opts.network.allowOut).toEqual([...BOX_ALLOW_OUT, "lienzo-x.openlen.app", "abc.openlen.app"]);
+    expect(opts.network.rules).toEqual({
+      "lienzo-x.openlen.app": [{ transform: { headers: { "x-openlen-caja": "p.mac" } } }],
+      "abc.openlen.app": [{ transform: { headers: { "x-openlen-caja": "p.mac" } } }],
+    });
+  });
+
+  it("resuming sets the network again (a backend or a publish may be new); without one, it is left as it was", async () => {
+    const { sdk, box: raw } = fakeSdk();
+    const network = { hosts: ["abc.openlen.app"], headers: { "x-openlen-caja": "p.mac" } };
+    await e2bDriver(config, async () => sdk).resume("sbx-1", network);
+    expect(raw.updateNetwork).toHaveBeenCalledWith({
+      denyOut: ["0.0.0.0/0"],
+      allowOut: [...BOX_ALLOW_OUT, "abc.openlen.app"],
+      rules: { "abc.openlen.app": [{ transform: { headers: { "x-openlen-caja": "p.mac" } } }] },
+    });
+    (raw.updateNetwork as ReturnType<typeof vi.fn>).mockClear();
+    await e2bDriver(config, async () => sdk).resume("sbx-1");
+    expect(raw.updateNetwork).not.toHaveBeenCalled();
   });
 
   it("creates the box closed: everything out denied but the allow list, nothing in, no secrets", async () => {
