@@ -133,6 +133,31 @@ export async function sendPasswordResetEmail(
   });
 }
 
+export interface VerificationEmail {
+  to: string;
+  verifyUrl: string;
+}
+
+/** Confirming the address after signing up (lib/auth/verify-email.ts). The account already works: this
+ *  only proves the address is theirs. */
+export async function sendVerificationEmail(input: VerificationEmail): Promise<void> {
+  const live = liveClientOrWarn("verification email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] Verification email to ${input.to}\n     ${input.verifyUrl}\n`);
+    }
+    return;
+  }
+  await enviar(live, "verification email", {
+    from,
+    to: input.to,
+    subject: "Confirm your OpenLen email",
+    html: buildVerificationHtml(input),
+    text: buildVerificationText(input),
+  });
+}
+
 /** El recordatorio de renovación (lib/billing/renewal-reminder.ts arma el
  *  correo). Devuelve si salió: si no, la tarea no lo apunta y lo reintenta al
  *  día siguiente. En desarrollo sólo se imprime. */
@@ -476,6 +501,46 @@ function buildPasswordResetHtml({ name, resetUrl }: PasswordResetEmail): string 
       <p style="font-size:12px; color:#737373; margin:0 0 8px;">Or paste this link into your browser:</p>
       <p style="font-size:12px; color:#525252; word-break:break-all; margin:0 0 24px;">${escape(resetUrl)}</p>
       <p style="font-size:12px; color:#a3a3a3; margin:0;">If you didn't request this, ignore this email — your password won't change.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildVerificationText({ verifyUrl }: VerificationEmail): string {
+  return [
+    "Hi,",
+    "",
+    "Confirm this is your email for OpenLen. Your account already works; this just proves the address is yours. The link expires in 24 hours.",
+    "",
+    verifyUrl,
+    "",
+    "If you didn't sign up for OpenLen, ignore this email.",
+    "",
+    "— OpenLen",
+  ].join("\n");
+}
+
+function buildVerificationHtml({ verifyUrl }: VerificationEmail): string {
+  return `<!doctype html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif; background:#fafafa; margin:0; padding:32px; color:#0a0a0a;">
+  <table align="center" style="max-width:480px; width:100%; background:#fff; border-radius:16px; padding:32px; border:1px solid #e5e5e5;">
+    <tr><td>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:24px;">
+        <span style="display:inline-block; width:24px; height:24px; background:#FF5A36; border-radius:6px; color:#fff; font-weight:700; text-align:center; line-height:24px; font-size:15px;">O</span>
+        <span style="font-weight:600; font-size:14px;">OpenLen</span>
+      </div>
+      <h1 style="font-size:22px; margin:0 0 12px; letter-spacing:-0.02em;">Confirm your email</h1>
+      <p style="font-size:14px; line-height:1.5; color:#525252; margin:0 0 24px;">
+        Your account already works. This just proves the address is yours. The link expires in 24 hours.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${escape(verifyUrl)}" style="display:inline-block; background:#FF5A36; color:#fff; padding:11px 18px; border-radius:8px; text-decoration:none; font-weight:500; font-size:14px;">Confirm email</a>
+      </p>
+      <p style="font-size:12px; color:#737373; margin:0 0 8px;">Or paste this link into your browser:</p>
+      <p style="font-size:12px; color:#525252; word-break:break-all; margin:0 0 24px;">${escape(verifyUrl)}</p>
+      <p style="font-size:12px; color:#a3a3a3; margin:0;">If you didn't sign up for OpenLen, ignore this email.</p>
     </td></tr>
   </table>
 </body>

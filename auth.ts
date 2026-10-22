@@ -10,6 +10,7 @@ import authConfig from "@/auth.config";
 import { sessionIdentity } from "@/lib/profile/identity";
 import { refreshTokenIdentity } from "@/lib/profile/session";
 import { passwordCutoff } from "@/lib/auth/session-cutoff";
+import { cederAGoogle } from "@/lib/auth/google-takeover";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth.js v5 — full (Node-runtime) configuration.
@@ -99,6 +100,17 @@ export const config: NextAuthConfig = {
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
+    // An unverified sign-up gives way to the address's owner signing in with Google
+    // (lib/auth/google-takeover.ts). Here, before Auth.js decides about linking. If it can't, the
+    // sign-in goes on as Auth.js decides (which refuses to link, as before).
+    async signIn({ account, profile }) {
+      if (account?.provider === "google" && profile?.email_verified === true && typeof profile.email === "string") {
+        await cederAGoogle({ email: profile.email, providerAccountId: account.providerAccountId, type: account.type }).catch((err: unknown) =>
+          console.warn("[auth] no se pudo ceder la cuenta sin verificar a Google", err),
+        );
+      }
+      return true;
+    },
     // EL NOMBRE Y LA FOTO del token salen de la base al entrar y con
     // `update({ refresh: true })` (lib/profile/session.ts). Aquí y no en
     // auth.config.ts: aquél es el del middleware, sin base.
