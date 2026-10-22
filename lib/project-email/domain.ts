@@ -116,7 +116,8 @@ export async function checkDomain(projectId: string, d: DomainDeps): Promise<Ema
     await d.applyFunctionEnv(projectId);
     const owner = await d.ownerOf(projectId);
     if (owner && (status === "ready" || status === "offline")) {
-      await d.notify({ type: "email_domain", projectId, recipientUserId: owner.userId, domain: row.domain, status });
+      // A notice that can't be scheduled never undoes the check: the status is already stored.
+      await d.notify({ type: "email_domain", projectId, recipientUserId: owner.userId, domain: row.domain, status }).catch((e: unknown) => console.warn("[email] domain notice failed", projectId, e));
     }
   }
   return status;

@@ -156,6 +156,17 @@ describe("checkDomain", () => {
     expect(notices).toHaveLength(before);
   });
 
+  it("a notice that fails doesn't fail the check: the domain is ready all the same", async () => {
+    const { d, setResend } = world({ resendStatus: "verified" });
+    await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
+    d.notify = async () => {
+      throw new Error("notifications down");
+    };
+    setResend("verified");
+    await expect(checkDomain("p1", d)).resolves.toBe("ready");
+    expect((await d.store.getDomain("p1"))?.status).toBe("ready");
+  });
+
   it("ready → offline notifies the owner and reapplies the env", async () => {
     const { d, notices, applied, setResend } = world({ resendStatus: "verified" });
     await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
