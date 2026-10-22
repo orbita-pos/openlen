@@ -127,6 +127,8 @@ export default defineConfig({
       "lib/app-ai/**/*.test.ts",
       // La revisión de seguridad al publicar (spec local 2026-10-15). `include` es LISTA BLANCA.
       "lib/security-review/**/*.test.ts",
+      // Stripe (spec local 2026-10-21-stripe-integration).
+      "lib/stripe/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
