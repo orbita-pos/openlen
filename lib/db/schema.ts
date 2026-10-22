@@ -24,6 +24,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { Finding, ReviewStatus } from "@/lib/security-review/types";
+import type { DnsRecord, EmailDomainStatus, EmailKind, EmailMessageStatus } from "@/lib/project-email/types";
 import type { ArtifactDependency, ArtifactEvidence, ArtifactKind, ArtifactOutput, ArtifactSourceRef, ArtifactStatus, ArtifactVisibility, ArtifactJobStatus } from "@/lib/artifacts/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1536,6 +1537,9 @@ export const broadcastRecipients = pgTable(
 // Per-project suppression list. v1: reason 'unsubscribed' only; phase 2 adds
 // 'bounced'/'complained' from a Resend webhook (the enum already fits, so no
 // later migration). Enforced at audience-resolution time.
+// Project email (spec local 2026-10-22-email-integration, §6.7) is that phase 2:
+// lib/project-email/store-pg.ts reads and writes it; scripts/email-migrate.ts
+// creates it, in this same shape, where it doesn't exist.
 export const emailSuppressions = pgTable(
   "emailSuppressions",
   {
@@ -2497,6 +2501,77 @@ export const stripeObjects = pgTable(
     syncedAt: timestamp("syncedAt", { mode: "date" }),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.testId] })],
+);
+
+/** A project's sending domain in OpenLen's customers' Resend account (spec local
+ *  2026-10-22-email-integration, §6.1). One per project; a host belongs to one
+ *  project. Created by scripts/email-migrate.ts. */
+export const emailDomains = pgTable("emailDomains", {
+  projectId: text("projectId")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  domain: text("domain").notNull(),
+  sendingHost: text("sendingHost").notNull().unique(),
+  showAsRoot: boolean("showAsRoot").notNull().default(false),
+  resendDomainId: text("resendDomainId").notNull(),
+  records: jsonb("records").$type<DnsRecord[]>().notNull(),
+  status: text("status").$type<EmailDomainStatus>().notNull(),
+  lastCheckedAt: timestamp("lastCheckedAt", { mode: "date" }),
+  verifiedAt: timestamp("verifiedAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+});
+
+/** One recipient of one email from a project (never the body); kept 30 days. */
+export const emailMessages = pgTable(
+  "emailMessages",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    ownerId: text("ownerId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    kind: text("kind").$type<EmailKind>().notNull(),
+    toAddress: text("toAddress").notNull(),
+    subject: text("subject").notNull(),
+    status: text("status").$type<EmailMessageStatus>().notNull(),
+    reason: text("reason"),
+    resendId: text("resendId"),
+    tag: text("tag"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("emailMessages_project_idx").on(t.projectId, t.createdAt),
+    index("emailMessages_owner_idx").on(t.ownerId, t.kind, t.createdAt),
+    index("emailMessages_resend_idx").on(t.resendId),
+  ],
+);
+
+/** The emails an account sent from its domains in a calendar month (UTC), against its plan's allowance. */
+export const emailUsage = pgTable(
+  "emailUsage",
+  {
+    ownerId: text("ownerId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    month: text("month").notNull(),
+    sent: integer("sent").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.ownerId, t.month] })],
+);
+
+/** OpenLen's switch: a project or an account that may not send (abuse; spec 6.10). Set with scripts/email-block.ts. */
+export const emailBlocks = pgTable(
+  "emailBlocks",
+  {
+    scope: text("scope").$type<"project" | "owner">().notNull(),
+    id: text("id").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.scope, t.id] })],
 );
 
 /** Las Edge Functions APAGADAS de un proyecto (abuso; spec local 2026-10-11,

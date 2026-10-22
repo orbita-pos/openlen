@@ -129,6 +129,8 @@ export default defineConfig({
       "lib/security-review/**/*.test.ts",
       // Stripe (spec local 2026-10-21-stripe-integration).
       "lib/stripe/**/*.test.ts",
+      // Project email (spec local 2026-10-22-email-integration).
+      "lib/project-email/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
