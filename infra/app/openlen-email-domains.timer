@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenLen — project email domains check timer
+Requires=openlen-email-domains.service
+
+[Timer]
+# Every 15 minutes: domains waiting for their DNS are checked every run, the
+# ready ones once a day (lib/project-email/check-job.ts). Persistent=true
+# catches up a missed window after a reboot.
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=60s
+
+[Install]
+WantedBy=timers.target

@@ -460,7 +460,8 @@
       "functions": "Fonctions",
       "secrets": "Secrets",
       "ai": "IA",
-      "payments": "Paiements"
+      "payments": "Paiements",
+      "email": "E-mails"
     },
     "unavailable": {
       "title": "La base de données n'est pas disponible ici",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Tapez {word} pour confirmer",
       "disconnectConfirm": "Déconnecter",
       "cancel": "Annuler"
+    },
+    "email": {
+      "loading": "Chargement…",
+      "loadError": "Impossible de lire les réglages e-mail. Réessayez dans un instant.",
+      "free": {
+        "title": "L'e-mail depuis votre domaine fait partie des forfaits payants",
+        "body": "Votre app, les e-mails de connexion et vos formulaires peuvent envoyer depuis votre domaine, avec des e-mails inclus chaque mois dans les forfaits payants.",
+        "cta": "Passer à Pro"
+      },
+      "connectTitle": "Envoyez des e-mails depuis votre domaine",
+      "connectBody": "Votre app, les e-mails de connexion et vos formulaires enverront depuis une adresse de votre domaine. Vous ajouterez quelques lignes à son DNS, ou les approuverez en un clic si votre fournisseur le permet.",
+      "domainLabel": "Votre domaine",
+      "domainPlaceholder": "votreentreprise.com",
+      "showAsRoot": "Afficher comme @{domain} (par défaut, envoi depuis notify.{domain})",
+      "connect": "Connecter",
+      "connecting": "Connexion…",
+      "errors": {
+        "free_plan": "L'e-mail depuis votre domaine fait partie des forfaits payants.",
+        "invalid_domain": "Cela ne ressemble pas à un domaine (comme votreentreprise.com).",
+        "host_taken": "Un autre projet envoie déjà depuis ce domaine.",
+        "provider_error": "Le fournisseur d'e-mail n'a pas répondu. Réessayez dans un instant.",
+        "generic": "Une erreur s'est produite. Réessayez dans un instant."
+      },
+      "status": {
+        "pending": "En attente des lignes DNS",
+        "verifying": "Vérification des lignes DNS",
+        "ready": "Prêt",
+        "failed": "Lignes DNS introuvables",
+        "offline": "Les lignes DNS ne répondent plus"
+      },
+      "check": "Vérifier maintenant",
+      "checking": "Vérification…",
+      "checkHint": "Nous vérifions toutes les 15 minutes et à chaque publication. Les changements DNS peuvent prendre quelques heures.",
+      "oneClick": "Configurer en un clic",
+      "oneClickHint": "Votre fournisseur DNS vous demandera d'approuver les lignes pour OpenLen.",
+      "manualTitle": "Ajoutez ces lignes à votre DNS",
+      "manualTitleOr": "Ou ajoutez ces lignes à votre DNS à la main",
+      "recordName": "Nom",
+      "recordValue": "Valeur",
+      "priority": "priorité {n}",
+      "copy": "Copier",
+      "copied": "Copié",
+      "optional": "Facultatif",
+      "dmarcHint": "La ligne facultative aide à ce que moins d'e-mails finissent en spam.",
+      "instructions": "Comment les ajouter chez votre fournisseur",
+      "usageTitle": "Ce mois-ci",
+      "usage": "{sent} sur {included} e-mails inclus",
+      "extra": "Au-delà de l'inclus : {credits} crédits",
+      "recentTitle": "Derniers e-mails",
+      "noRecent": "Aucun e-mail pour l'instant.",
+      "kinds": {
+        "app": "App",
+        "auth": "Connexion",
+        "form": "Formulaire"
+      },
+      "statuses": {
+        "sent": "Envoyé",
+        "delivered": "Distribué",
+        "bounced": "Rejeté",
+        "complained": "Signalé comme spam",
+        "rejected": "Non envoyé",
+        "not_sent_draft": "Non envoyé (test)"
+      },
+      "listTitle": "Désabonnements et rejets",
+      "listHint": "Personne sur cette liste ne reçoit les e-mails de votre app. Retirez quelqu'un seulement à sa demande : écrire de nouveau à qui vous a signalé comme spam nuit à votre domaine.",
+      "noList": "Personne pour l'instant.",
+      "reasons": {
+        "unsubscribed": "Désabonné",
+        "bounced": "Rejeté",
+        "complained": "Signalé comme spam"
+      },
+      "unsuppress": "Retirer de la liste",
+      "dnsLines": "Lignes DNS",
+      "disconnect": "Déconnecter le domaine",
+      "disconnectWarning": "Votre app, les e-mails de connexion et vos formulaires enverront de nouveau depuis OpenLen. Rien n'est perdu.",
+      "disconnectTypeHint": "Tapez {domain} pour confirmer",
+      "disconnectConfirm": "Déconnecter",
+      "cancel": "Annuler",
+      "cleanupDns": "Déconnecté. Vous pouvez maintenant retirer de votre DNS les lignes ajoutées pour l'e-mail d'OpenLen."
     }
   },
   "appBirth": {

@@ -384,5 +384,26 @@
   "visualLoading": "Visual wordt voorbereid…",
   "visualLinkTitle": "Deze link openen?",
   "visualLinkOpen": "Openen",
-  "visualLinkCancel": "Annuleren"
+  "visualLinkCancel": "Annuleren",
+  "emailDomain": {
+    "cardLabel": "E-maildomein",
+    "cardHint": "De e-mails van het project gaan vanaf een adres op dit domein. De DNS-regels die je moet toevoegen staan in de tab E-mails.",
+    "placeholder": "jouwbedrijf.nl",
+    "showAsRoot": "Tonen als @{domain}",
+    "connect": "Verbinden",
+    "connecting": "Verbinden…",
+    "skip": "Nu niet",
+    "connected": "Verbonden: {host}",
+    "skipped": "Niet verbonden",
+    "answerMessage": "Ik heb het e-maildomein verbonden: {host}",
+    "answerSkipped": "Ik heb voorlopig geen e-maildomein verbonden.",
+    "errors": {
+      "free_plan": "E-mail vanaf je domein zit in de betaalde abonnementen.",
+      "invalid_domain": "Dat lijkt geen domein (zoals jouwbedrijf.nl).",
+      "host_taken": "Een ander project verstuurt al vanaf dat domein.",
+      "provider_error": "De e-mailprovider antwoordde niet. Probeer het zo opnieuw.",
+      "generic": "Er ging iets mis. Probeer het zo opnieuw."
+    },
+    "liveWaiting": "Len wacht tot je het e-maildomein verbindt"
+  }
 }

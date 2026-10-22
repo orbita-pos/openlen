@@ -1,0 +1,21 @@
+{
+  "providerId": "openlen.app",
+  "providerName": "OpenLen",
+  "serviceId": "email-cname",
+  "serviceName": "OpenLen Email",
+  "version": 1,
+  "logoUrl": "https://openlen.com/icon-512.png",
+  "description": "Lets OpenLen send your site's emails from your own domain.",
+  "variableDescription": "dkim: the DKIM public key of your sending domain; mxhost: the bounce server of your sending domain; rsend: the sending server your domain's return path points to.",
+  "syncBlock": false,
+  "syncPubKeyDomain": "openlen.app",
+  "syncRedirectDomain": "openlen.app,openlen.com",
+  "warnPhishing": true,
+  "hostRequired": false,
+  "records": [
+    { "type": "TXT", "host": "resend._domainkey", "data": "%dkim%", "ttl": 3600 },
+    { "type": "MX", "host": "send", "pointsTo": "%mxhost%", "priority": 10, "ttl": 3600 },
+    { "type": "TXT", "host": "send", "data": "v=spf1 include:amazonses.com ~all", "ttl": 3600 },
+    { "type": "CNAME", "host": "rsend", "pointsTo": "%rsend%", "ttl": 3600 }
+  ]
+}

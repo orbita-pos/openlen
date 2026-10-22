@@ -44,6 +44,7 @@ import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/cat
 import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { stripeEnabledIn } from "@/lib/stripe/enabled";
+import { emailEnabledIn } from "@/lib/project-email/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
@@ -291,6 +292,16 @@ const LINEA_DE_STRIPE =
   " Publishing copies to live mode the products, prices, payment links, shipping rates, portal configurations and webhook endpoints the project uses, and the published site gets their live ids and links: in code, a price by its lookup key or by its id both work." +
   " Checkout and payment links open outside the canvas, in a new tab. The customer portal needs a configuration created with `stripe billing_portal configurations create`, passed as `configuration`, or turned on once in the owner's Stripe dashboard.";
 
+// PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): only with the email on, inside the
+// functions' lines like Stripe's (an app's emails go from a function). OpenLen's contract —the
+// gateway behind Resend's own SDK, the domain's card, the rules—, which the model can't guess.
+const LINEA_DEL_CORREO =
+  "- Email from the project's own domain, on paid plans (PROJECT STATE's `email`): if `email.status` is `none`, call connect_email_domain and the owner connects it in a card; until it is `ready`, emails go from OpenLen." +
+  " From a function, use Resend's SDK exactly as Resend documents it —`new Resend(Deno.env.get(\"RESEND_API_KEY\"))` and `resend.emails.send({ from: Deno.env.get(\"OPENLEN_EMAIL_FROM\"), to, subject, html })`—: the functions already have RESEND_API_KEY and RESEND_BASE_URL, which go through OpenLen, and OPENLEN_EMAIL_FROM once the domain is ready; don't ask the user for a Resend key. For a designed email, write the function as index.tsx with a React Email template (`import { Html, Body, Heading, Text, Button } from \"npm:react-email\"`) and send it with `react: <Template … />` instead of `html`." +
+  " Only service emails someone asked for or expects (an order, a booking, a reminder), never promotions; clear subjects; links only to the project's own sites; no attachments, cc or bcc. In the draft they only reach the project's team (the owner and the members), so test with their addresses. Refusals come back as Resend's errors (a 429 is the hourly limit, or the month without credits: explain it, don't retry)." +
+  " The sign-in emails use the project's Supabase templates: `[auth.email.template.<confirmation|recovery|invite|magic_link>]` with `subject` and `content_path` in /supabase/config.toml, an HTML file with {{ .ConfirmationURL }} or {{ .Token }}." +
+  " A form's automatic reply to whoever filled it is set with set_form_auto_reply.";
+
 function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): string {
   const catalogo = functionsCatalog(FUNCTIONS_CATALOG_CURRENT)!
     .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
@@ -306,6 +317,7 @@ function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): s
     `- Limits: ${FUNCTION_MEMORY_MB} MB of memory; per call, ${FUNCTION_LIMITS.free.cpuMs} ms of CPU and ${FUNCTION_LIMITS.free.timeoutSec} s in total on the Free plan, ${FUNCTION_LIMITS.pro.cpuMs} ms of CPU and ${FUNCTION_LIMITS.pro.timeoutSec} s on paid plans (waiting for another service doesn't count as CPU; going over it ends the call with a 546 WORKER_RESOURCE_LIMIT); ${MAX_REQUEST_BYTES / 1024 / 1024} MB per request body. Publishing compiles them for production, and if they don't compile nothing is published. A 429 means the project used its calls for the month, has too many at once, or too many from one visitor: explain it to the user; don't retry.`,
     ...(appAiEnabledIn(env) ? [LINEA_DE_IA] : []),
     ...(stripeEnabledIn(env) ? [LINEA_DE_STRIPE] : []),
+    ...(emailEnabledIn(env) ? [LINEA_DEL_CORREO] : []),
   ].join("\n");
 }
 

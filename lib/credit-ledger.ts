@@ -34,7 +34,9 @@ export type LedgerSurface =
   | "security_review"
   | "sandbox"
   | "page_assistant"
-  | "publish_translation";
+  | "publish_translation"
+  /** Emails past the month's allowance (spec local 2026-10-22-email-integration, 6.6). */
+  | "project_email";
 
 export type LedgerOutcome = "ok" | "budget_limit" | "cancelled" | "error" | "refund" | "reserve" | "settle";
 

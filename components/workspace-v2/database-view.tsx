@@ -21,6 +21,7 @@ import {
   HardDrive,
   KeyRound,
   LogOut,
+  Mail,
   Plus,
   RefreshCw,
   ShieldAlert,
@@ -39,6 +40,7 @@ import type { FunctionsOverview } from "@/lib/functions/overview";
 import { ConfirmButton } from "./confirm-button";
 import { AppAiTab } from "./database-app-ai";
 import { PaymentsTab } from "./database-payments";
+import { EmailTab } from "./database-email";
 import { FunctionsTab } from "./database-functions";
 import { SecretsTab } from "./database-secrets";
 
@@ -78,7 +80,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai" | "payments">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai" | "payments" | "email">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
   // El entorno que pide el selector; el que se ve es el que contestó el servidor.
   const [wanted, setWanted] = useState<PanelEnv | null>(null);
@@ -170,6 +172,26 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     void loadPayments();
   }, [loadPayments]);
 
+  // PROJECT EMAIL (spec local 2026-10-22-email-integration, 4): its tab shows with the email on
+  // and only for the owner, EVEN on a page with no backend nor functions — sending from the
+  // domain also serves the forms and the sign-in emails.
+  const [emailState, setEmailState] = useState<{ readonly projectId: string; readonly available: boolean } | null>(null);
+  const loadEmail = useCallback(async () => {
+    if (!projectId) return;
+    let available = false;
+    try {
+      available = (await call<{ available?: unknown }>(`/api/projects/${projectId}/email`)).available === true;
+    } catch {
+      available = false;
+    }
+    if (currentProject.current === projectId) setEmailState({ projectId, available });
+  }, [projectId]);
+  const email = emailState?.projectId === projectId && emailState.available;
+
+  useEffect(() => {
+    void loadEmail();
+  }, [loadEmail]);
+
   const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
   const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
 
@@ -189,9 +211,15 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
 
   // La pestaña que se ve: sin tablas pero con funciones, Funciones (no hay otra
   // que enseñar); si las funciones ya no están, Tablas.
-  const tableTab = tab === "tables" || tab === "users" || tab === "storage";
+  // Correos has no data of its own to wait for: it is the tab when chosen, or when, once
+  // the backend answered, there is no other.
+  const otherTabs = overview.status === "ready" || (overview.status === "empty" && fn !== null);
+  const baseTab = tab === "email" ? "tables" : tab;
+  const tableTab = baseTab === "tables" || baseTab === "users" || baseTab === "storage";
   const activeTab =
-    !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : (tab === "ai" && !ai) || (tab === "payments" && !payments) ? "functions" : tab;
+    email && (tab === "email" || (!otherTabs && overview.status !== "loading"))
+      ? "email"
+      : !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : (baseTab === "ai" && !ai) || (baseTab === "payments" && !payments) ? "functions" : baseTab;
   const fnTab =
     fn !== null &&
     projectId !== null &&
@@ -212,6 +240,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             onClick={() => {
               void load();
               void loadFn();
+              void loadEmail();
             }}
             aria-label={t("refresh")}
             title={t("refresh")}
@@ -252,8 +281,8 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             )}
           </div>
         )}
-        {overview.status === "ready" || (overview.status === "empty" && fn) ? (
-          <div role="tablist" aria-label={t("title")} className="flex gap-1 px-3 sm:px-5">
+        {otherTabs || email ? (
+          <div role="tablist" aria-label={t("title")} className="flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
             {overview.status === "ready" && (
               <>
                 <TabButton active={activeTab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
@@ -269,6 +298,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
                 {payments && <TabButton active={activeTab === "payments"} onClick={() => setTab("payments")} icon={<CreditCard size={14} />} label={t("tabs.payments")} />}
               </>
             )}
+            {email && <TabButton active={activeTab === "email"} onClick={() => setTab("email")} icon={<Mail size={14} />} label={t("tabs.email")} />}
           </div>
         ) : (
           <div className="h-3" />
@@ -276,61 +306,67 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
       </header>
 
       <div className="flex-1 min-h-0 flex">
-        {overview.status === "loading" && <Centered>{t("loading")}</Centered>}
-        {overview.status === "error" && (
-          <Centered>
-            <p>{t("loadError")}</p>
-            <p className="mt-1 text-[12px] text-zinc-500">{overview.message}</p>
-            <button type="button" onClick={() => void load()} className="mt-3 text-[13px] font-medium text-coral-600 hover:underline">
-              {t("retry")}
-            </button>
-          </Centered>
-        )}
-        {overview.status === "unavailable" && (
-          <Centered>
-            <p className="text-[14px] font-medium">{t("unavailable.title")}</p>
-            <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("unavailable.body")}</p>
-          </Centered>
-        )}
-        {!fnTab && overview.status === "empty" && shown === "live" && hasLive === false && (
-          <Centered>
-            <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
-              <Database size={20} />
-            </span>
-            <p className="max-w-sm text-[13px] text-zinc-500">{t("env.noLive")}</p>
-          </Centered>
-        )}
-        {!fnTab && (overview.status === "none" || (overview.status === "empty" && !(shown === "live" && hasLive === false))) && (
-          <Centered>
-            <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
-              <Database size={20} />
-            </span>
-            <p className="text-[14px] font-medium">{t("noData.title")}</p>
-            <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("noData.body")}</p>
-          </Centered>
-        )}
-        {overview.status === "ready" && projectId && !fnTab && (
-          // Un entorno nuevo vuelve a montar las pestañas: piden sus datos otra vez.
-          <PanelEnvContext.Provider key={shown ?? "default"} value={shown}>
-            {activeTab === "tables" ? (
-              <TablesTab projectId={projectId} tables={overview.tables} />
-            ) : activeTab === "users" ? (
-              <UsersTab projectId={projectId} />
+        {activeTab === "email" && projectId ? (
+          <EmailTab key={projectId} projectId={projectId} />
+        ) : (
+          <>
+          {overview.status === "loading" && <Centered>{t("loading")}</Centered>}
+          {overview.status === "error" && (
+            <Centered>
+              <p>{t("loadError")}</p>
+              <p className="mt-1 text-[12px] text-zinc-500">{overview.message}</p>
+              <button type="button" onClick={() => void load()} className="mt-3 text-[13px] font-medium text-coral-600 hover:underline">
+                {t("retry")}
+              </button>
+            </Centered>
+          )}
+          {overview.status === "unavailable" && (
+            <Centered>
+              <p className="text-[14px] font-medium">{t("unavailable.title")}</p>
+              <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("unavailable.body")}</p>
+            </Centered>
+          )}
+          {!fnTab && overview.status === "empty" && shown === "live" && hasLive === false && (
+            <Centered>
+              <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
+                <Database size={20} />
+              </span>
+              <p className="max-w-sm text-[13px] text-zinc-500">{t("env.noLive")}</p>
+            </Centered>
+          )}
+          {!fnTab && (overview.status === "none" || (overview.status === "empty" && !(shown === "live" && hasLive === false))) && (
+            <Centered>
+              <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500 dark:bg-zinc-900">
+                <Database size={20} />
+              </span>
+              <p className="text-[14px] font-medium">{t("noData.title")}</p>
+              <p className="mt-1 max-w-sm text-[13px] text-zinc-500">{t("noData.body")}</p>
+            </Centered>
+          )}
+          {overview.status === "ready" && projectId && !fnTab && (
+            // Un entorno nuevo vuelve a montar las pestañas: piden sus datos otra vez.
+            <PanelEnvContext.Provider key={shown ?? "default"} value={shown}>
+              {activeTab === "tables" ? (
+                <TablesTab projectId={projectId} tables={overview.tables} />
+              ) : activeTab === "users" ? (
+                <UsersTab projectId={projectId} />
+              ) : (
+                <StorageTab projectId={projectId} />
+              )}
+            </PanelEnvContext.Provider>
+          )}
+          {fnTab && fn && projectId && (
+            activeTab === "functions" ? (
+              <FunctionsTab overview={fn} />
+            ) : activeTab === "payments" && payments ? (
+              <PaymentsTab key={projectId} projectId={projectId} />
+            ) : activeTab === "ai" && ai ? (
+              <AppAiTab key={projectId} projectId={projectId} overview={ai} onChange={(next) => setAiState({ projectId, overview: next })} />
             ) : (
-              <StorageTab projectId={projectId} />
-            )}
-          </PanelEnvContext.Provider>
-        )}
-        {fnTab && fn && projectId && (
-          activeTab === "functions" ? (
-            <FunctionsTab overview={fn} />
-          ) : activeTab === "payments" && payments ? (
-            <PaymentsTab key={projectId} projectId={projectId} />
-          ) : activeTab === "ai" && ai ? (
-            <AppAiTab key={projectId} projectId={projectId} overview={ai} onChange={(next) => setAiState({ projectId, overview: next })} />
-          ) : (
-            <SecretsTab projectId={projectId} />
-          )
+              <SecretsTab projectId={projectId} />
+            )
+          )}
+          </>
         )}
       </div>
     </section>

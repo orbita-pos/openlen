@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/thank-you  (optional)",
     "invalidEmail": "Enter a valid email address.",
     "invalidUrl": "Enter a full URL starting with http:// or https://.",
+    "autoReplySubject": "Automatic reply: subject",
+    "autoReplySubjectPlaceholder": "Thanks, {open}name{close}",
+    "autoReplyBody": "Automatic reply: text",
+    "autoReplyBodyPlaceholder": "Hi {open}name{close}, we got your message and will write back soon.",
+    "autoReplyNote": "Goes to whoever fills the form, from your project's email domain (Emails tab), on paid plans. {open}field{close} puts in what they wrote in that field. Leave both empty to turn it off.",
     "applyNote": "Form changes apply on your next deploy."
   },
   "testEmail": {

@@ -66,7 +66,29 @@ export interface AppAiCapEvent {
   cap: number;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent;
+/** PROJECT EMAIL: a project's sending domain became ready, or stopped verifying
+ *  (spec local 2026-10-22-email-integration, 6.1). Push and email. */
+export interface EmailDomainEvent {
+  type: "email_domain";
+  projectId: string;
+  recipientUserId: string;
+  domain: string;
+  status: "ready" | "offline";
+}
+
+/** PROJECT EMAIL: an account's emails reached 80 % or 100 % of the month's
+ *  allowance, or one was refused for lack of credits (spec 6.6). Push and email. */
+export interface EmailQuotaEvent {
+  type: "email_quota";
+  projectId: string;
+  recipientUserId: string;
+  percent: 80 | 100;
+  sent: number;
+  included: number;
+  noCredits: boolean;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

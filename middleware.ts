@@ -238,7 +238,8 @@ export const config = {
   // en producción va a su servicio, no a Next; en local, que no lo redirija.
   // Y `functions/v1/`: las Edge Functions (lib/functions), igual.
   // Y `ai/v1/`: la IA de las apps (lib/app-ai), igual.
+  // And `email/v1/`: project email (lib/project-email), the same.
   matcher: [
-    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|functions/v1/|ai/v1/|.*\\..*).*)",
+    "/((?!api|_next|_vercel|served|c|p/|rest/v1/|auth/v1/|storage/v1/|realtime/v1/|functions/v1/|ai/v1/|email/v1/|u/|.*\\..*).*)",
   ],
 };

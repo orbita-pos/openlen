@@ -29,7 +29,7 @@ import { noCreditsText, notifyCreditBalanceChanged } from "@/lib/credits-client"
 import type { AgentAction } from "../agent-action-card";
 import { upsertActionInto } from "./action-cards";
 import { answerSummary, asksTheOwner, questionsFrom, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { composeAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder, secretsAnswerMessage } from "./question-answer";
+import { composeAnswerMessage, emailDomainAnswerMessage, fallbackDelivery, liveQuestionTurno, outcomeOfResponder, secretsAnswerMessage } from "./question-answer";
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
@@ -2466,7 +2466,9 @@ export function useAgentChat({
       const mensaje =
         intencion?.kind === "secrets"
           ? secretsAnswerMessage(intencion.secrets, answers, (k, v) => t(k as never, v as never))
-          : composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
+          : intencion?.kind === "email-domain"
+            ? emailDomainAnswerMessage(answers, (k, v) => t(k as never, v as never))
+            : composeAnswerMessage(questions, planAnswersForMessage(questions, answers, (k) => t(k as never)));
       if (!mensaje.trim()) return;
       // PIEZA 7: contestar después la tarjeta del modo plan es la puerta del
       // dueño: aceptar entrar lo enciende, aprobar el plan lo apaga.

@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/thank-you （可选）",
     "invalidEmail": "请输入有效的邮箱地址。",
     "invalidUrl": "请输入以 http:// 或 https:// 开头的完整网址。",
+    "autoReplySubject": "自动回复：主题",
+    "autoReplySubjectPlaceholder": "谢谢，{open}name{close}",
+    "autoReplyBody": "自动回复：正文",
+    "autoReplyBodyPlaceholder": "{open}name{close}，你好，我们已收到你的留言，会尽快回复。",
+    "autoReplyNote": "发给填写表单的人，从项目的邮件域名发出（邮件标签页），仅限付费方案。{open}field{close} 会替换为该字段中填写的内容。两项都留空即可关闭。",
     "applyNote": "表单更改将在你下次部署时生效。"
   },
   "testEmail": {

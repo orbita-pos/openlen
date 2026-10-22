@@ -208,6 +208,10 @@ const targets = [
   // stripeObjects. New, with IF NOT EXISTS. 🔴 Before the code: saving a project's
   // secrets and publishing read them.
   "stripe-migrate",
+  // PROJECT EMAIL (spec local 2026-10-22-email-integration): emailDomains, emailMessages,
+  // emailSuppressions, emailUsage and emailBlocks. New, with IF NOT EXISTS. 🔴 Before the
+  // code: sending, the Correos tab and the sign-in emails read them.
+  "email-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
