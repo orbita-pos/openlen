@@ -30,7 +30,7 @@ import { pcmToWav } from "../lib/artifacts/adapters/audio/pcm";
 import { dashboardFixture } from "../lib/artifacts/testing/dashboard";
 import { slidesFixture } from "../lib/artifacts/testing/slides";
 import { slidesV3Fixture } from "../lib/artifacts/testing/slides-v3";
-import { motionFixture } from "../lib/artifacts/testing/motion";
+import { midTweenMotionFixture, motionFixture } from "../lib/artifacts/testing/motion";
 import { stopBundlerWorker } from "../lib/apps/bundler/bundle-app";
 import type { ArtifactRender, ArtifactRenderPacket } from "../lib/artifacts/render-protocol";
 import { ArtifactError, type AdapterResult, type SealedArtifactInput } from "../lib/artifacts/types";
@@ -262,6 +262,8 @@ function cases(work: string): CaseDef[] {
       } },
     { id: "motion-6s", title: "Video de 6 s sin audio (H.264)", group: "format", expected: "ok",
       run: (render, signal) => renderMotion(motionFixture(png()), render, signal), verify: (r, rec) => verifyVideo(r, rec, 180, false) },
+    { id: "motion-mid-tween", title: "Video con un zoom en curso en la muestra del medio (ensayo G2)", group: "format", expected: "ok",
+      run: (render, signal) => renderMotion(midTweenMotionFixture(png()), render, signal), verify: (r, rec) => verifyVideo(r, rec, 180, false) },
     { id: "motion-audio", title: "Video de 6 s con música (H.264 + AAC)", group: "format", expected: "ok",
       run: (render, signal) => {
         const music = wavUpload(220, 6);
