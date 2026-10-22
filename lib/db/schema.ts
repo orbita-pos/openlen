@@ -79,6 +79,9 @@ export const users = pgTable("users", {
   crearWriter: text("crearWriter"),
   image: text("image"),
   passwordHash: text("passwordHash"),
+  /** When the password was last reset: sessions signed in before it are closed (lib/auth/session-cutoff.ts).
+   *  NULL = never. `npm run password-changed:migrate`. */
+  passwordChangedAt: timestamp("passwordChangedAt", { mode: "date" }),
   // Subscription tier. The Polar billing webhook (app/api/billing/webhook)
   // flips this to "pro" on an active subscription and back to "free" on
   // revoke. Free-tier limits live in lib/limits.ts + lib/credits.ts.

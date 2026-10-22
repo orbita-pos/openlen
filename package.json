@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "artifacts:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/artifacts-migrate.ts",
+    "password-changed:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/password-changed-migrate.ts",
     "artifacts:bundle": "node scripts/build-artifacts.mjs",
     "artifacts:worker": "node --env-file=.env.local --import @inariwatch/capture/auto --import tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifacts-worker.ts",
     "artifacts:preview": "node --env-file=.env.local --import @inariwatch/capture/auto --import tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifacts-preview.ts",

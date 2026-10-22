@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, gt } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { passwordCutoff } from "@/lib/auth/session-cutoff";
 import {
   IP_LIMITS,
   checkAndConsume,
@@ -82,10 +83,14 @@ export async function POST(req: Request): Promise<Response> {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // The sessions already open close (lib/auth/session-cutoff.ts): every one signed in before
+    // `passwordChangedAt` stops being valid, and the phone app's keys, sessions too, go.
     await db
       .update(schema.users)
-      .set({ passwordHash })
+      .set({ passwordHash, passwordChangedAt: new Date() })
       .where(eq(schema.users.id, tokenRow.userId));
+    passwordCutoff.forget(tokenRow.userId);
+    await db.delete(schema.movilLlaves).where(eq(schema.movilLlaves.userId, tokenRow.userId));
 
     await db
       .update(schema.passwordResetTokens)

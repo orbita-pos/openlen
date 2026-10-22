@@ -198,6 +198,8 @@ const targets = [
   // creditLedger. Inert while OPENLEN_ARTIFACTS is off (nothing reads them);
   // 🔴 MANDATORY before turning it on: every artifact route queries them.
   "artifacts-migrate",
+  // users.passwordChangedAt: a password reset closes the sessions already open (lib/auth/session-cutoff.ts).
+  "password-changed-migrate",
   // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b): the projectSandboxes table.
   // New, with IF NOT EXISTS. Inert while the box is off (OPENLEN_SANDBOX=0 or no E2B_API_KEY);
   // 🔴 MANDATORY before turning it on: every turn that opens a box reads and writes it.

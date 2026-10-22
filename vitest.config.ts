@@ -157,6 +157,8 @@ export default defineConfig({
       // la base LOCAL con `credit-ledger:migrate`.
       "lib/credit-ledger.test.ts",
       "lib/credit-ledger.pg.test.ts",
+      // A password reset closes the sessions already open (2026-10-21). WHITELIST.
+      "app/api/auth/reset/route.pg.test.ts",
       "lib/credits-no-old-debits.test.ts",
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",

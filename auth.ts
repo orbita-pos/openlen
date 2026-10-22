@@ -9,6 +9,7 @@ import { db, schema } from "@/lib/db";
 import authConfig from "@/auth.config";
 import { sessionIdentity } from "@/lib/profile/identity";
 import { refreshTokenIdentity } from "@/lib/profile/session";
+import { passwordCutoff } from "@/lib/auth/session-cutoff";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Auth.js v5 — full (Node-runtime) configuration.
@@ -103,6 +104,9 @@ export const config: NextAuthConfig = {
     // auth.config.ts: aquél es el del middleware, sin base.
     async jwt(params) {
       const token = await authConfig.callbacks.jwt(params);
+      // A session from before the last password reset is no session (lib/auth/session-cutoff.ts): null is
+      // Auth.js's «no session», and it clears the cookie.
+      if (!(await passwordCutoff.stillValid(token))) return null;
       return refreshTokenIdentity(token, {
         signingIn: Boolean(params.user),
         trigger: params.trigger,
