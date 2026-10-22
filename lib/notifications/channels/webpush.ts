@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
-import type { AppAiCapEvent, FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
+import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
+import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -106,6 +107,13 @@ async function avisoDeCuota(event: FunctionsQuotaEvent): Promise<PushPayload> {
 
 // ── La IA de las apps · el tope del mes de la cuenta ──────────────────────────
 
+/** PROJECT EMAIL (spec local 2026-10-22-email-integration): no prose, like the other pushes. */
+async function projectEmailPush(event: EmailDomainEvent | EmailQuotaEvent): Promise<PushPayload> {
+  const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
+  const projectTitle = p?.title ?? null;
+  return event.type === "email_quota" ? quotaNoticePush({ ...event, projectTitle }) : domainNoticePush({ projectId: event.projectId, projectTitle, domain: event.domain, status: event.status });
+}
+
 async function appAiCapPush(event: AppAiCapEvent): Promise<PushPayload> {
   const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
   return capPush({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, spent: event.spent, cap: event.cap });
@@ -142,7 +150,9 @@ export const webPushChannel: NotificationChannel = {
             ? await avisoDeCuota(event)
             : event.type === "app_ai_cap"
               ? await appAiCapPush(event)
-              : {
+              : event.type === "email_domain" || event.type === "email_quota"
+                ? await projectEmailPush(event)
+                : {
                   title: event.senderName,
                   body: event.preview,
                   url: "/inbox?conv=" + event.conversationId,
