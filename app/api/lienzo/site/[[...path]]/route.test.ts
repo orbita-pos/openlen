@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   carpetas: {} as Record<string, Record<string, string>>,
+  proyectos: {} as Record<string, { title: string; subdomain: string | null; data: Record<string, unknown> }>,
+}));
+vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
+  loadSavedProject: vi.fn(async (projectId: string) => mocks.proyectos[projectId] ?? null),
 }));
 vi.mock("@/lib/backend/files", () => ({
   listProjectFiles: vi.fn(async (projectId: string, prefix = "/") =>
@@ -17,6 +21,7 @@ import { GET } from "./route";
 import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
+import { boxMarker } from "@/lib/agent/sandbox/box-marker";
 
 const SECRETO = "s3cr3t";
 const P1 = "4f9c10cb-8781-48f1-b291-c5d146579f09";
@@ -182,5 +187,61 @@ describe("GET /api/lienzo/site — una app web", () => {
 
   it("🔴 sin un documento vivo del proyecto, ni el paquete", async () => {
     expect((await pide(host(P1), "/src/main.jsx")).status).toBe(404);
+  });
+});
+
+// LA CAJA DE LEN (plan local 2026-10-21-playwright-in-the-box): con la marca que pone el proxy de E2B,
+// el lienzo le sirve el BORRADOR GUARDADO en cualquier ruta de página — lo mismo que ven los ojos —,
+// sin pedir un documento vivo. Sin marca válida y de este proyecto, todo sigue como antes.
+describe("GET /api/lienzo/site — la vista del borrador para la caja", () => {
+  const marca = (id: string) => boxMarker(id, { AUTH_SECRET: SECRETO })!;
+  const pideDesdeLaCaja = (h: string, ruta: string, valor: string) => {
+    const url = new URL(ruta, `https://${h}`);
+    const path = url.pathname.split("/").filter(Boolean);
+    return GET(new Request(url, { headers: { host: h, "x-openlen-caja": valor } }), { params: Promise.resolve({ path }) });
+  };
+
+  beforeEach(() => {
+    mocks.proyectos = {
+      [P1]: {
+        title: "Panadería",
+        subdomain: "masa",
+        data: { html: "<!doctype html><html><body><p>home guardada</p></body></html>", pages: { menu: { html: "<!doctype html><html><body><p>menú guardado</p></body></html>" } } },
+      },
+    };
+  });
+
+  it("la home en `/`, guardada, con las cabeceras del lienzo", async () => {
+    const res = await pideDesdeLaCaja(host(P1), "/", marca(P1));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("<p>home guardada</p>");
+    expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("una página en `/menu`, `/menu/` y `/menu/index.html`; una que no existe, 404", async () => {
+    for (const ruta of ["/menu", "/menu/", "/menu/index.html"]) {
+      const res = await pideDesdeLaCaja(host(P1), ruta, marca(P1));
+      expect(res.status, ruta).toBe(200);
+      expect(await res.text()).toContain("<p>menú guardado</p>");
+    }
+    expect((await pideDesdeLaCaja(host(P1), "/nada", marca(P1))).status).toBe(404);
+  });
+
+  it("la carpeta que se publica, sin documento vivo; lo que no se publica, 404", async () => {
+    const res = await pideDesdeLaCaja(host(P1), "/js/app.js", marca(P1));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("document.title = 'cargó'");
+    expect((await pideDesdeLaCaja(host(P1), "/tests/a.spec.ts", marca(P1))).status).toBe(404);
+  });
+
+  it("🔴 la marca de OTRO proyecto, o una falsa, no abre nada", async () => {
+    mocks.proyectos[P2] = { title: "Otro", subdomain: null, data: { html: "<p>ajeno</p>" } };
+    expect((await pideDesdeLaCaja(host(P1), "/", marca(P2))).status).toBe(404);
+    expect((await pideDesdeLaCaja(host(P1), "/", `${P1}.${"0".repeat(32)}`)).status).toBe(404);
+  });
+
+  it("sin marca, `/` sin documento sigue siendo 404", async () => {
+    expect((await pide(host(P1), "/")).status).toBe(404);
   });
 });
