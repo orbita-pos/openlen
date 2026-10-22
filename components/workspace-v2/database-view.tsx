@@ -282,7 +282,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
           </div>
         )}
         {otherTabs || email ? (
-          <div role="tablist" aria-label={t("title")} className="flex gap-1 overflow-x-auto px-3 sm:px-5">
+          <div role="tablist" aria-label={t("title")} className="flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
             {overview.status === "ready" && (
               <>
                 <TabButton active={activeTab === "tables"} onClick={() => setTab("tables")} icon={<Table2 size={14} />} label={t("tabs.tables")} />
