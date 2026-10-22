@@ -68,7 +68,11 @@
     "manageSubscription": "Abonnement beheren",
     "signOut": "Afmelden",
     "profile": "Je profiel",
-    "connectedApps": "Gekoppelde apps"
+    "connectedApps": "Gekoppelde apps",
+    "emailPending": "E-mail niet bevestigd",
+    "resend": "Opnieuw sturen",
+    "resendSent": "Verstuurd: kijk in je inbox",
+    "resendFailed": "Versturen mislukt"
   },
   "relativeTime": {
     "seconds": "{count}s geleden",

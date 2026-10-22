@@ -78,6 +78,32 @@ export function AccountMenu({
     };
   }, [userId]);
 
+  // THE EMAIL STILL TO CONFIRM (2026-10-22): an account with a password whose sign-up link was never
+  // opened can ask for another one here (app/api/auth/verify-email). Asked each time the menu opens, so
+  // confirming in another tab hides it.
+  const [emailPending, setEmailPending] = useState(false);
+  const [resend, setResend] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    void fetch("/api/auth/verify-email")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { pending?: boolean } | null) => {
+        if (!cancelled) setEmailPending(d?.pending === true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, userId]);
+
+  const resendLink = async () => {
+    setResend("sending");
+    const r = await fetch("/api/auth/verify-email", { method: "POST" }).catch(() => null);
+    setResend(r?.ok ? "sent" : "failed");
+  };
+
   const userName = session?.user?.name ?? "";
   const userEmail = session?.user?.email ?? "";
   const userImage = session?.user?.image ?? null;
@@ -154,6 +180,27 @@ export function AccountMenu({
             <div className="text-[11px] fg-faint truncate">
               {userEmail || "—"}
             </div>
+            {emailPending && (
+              <div className="mt-1 flex items-center gap-1.5 text-[11px]" aria-live="polite">
+                {resend === "sent" ? (
+                  <span className="fg-muted truncate">{t("account.resendSent")}</span>
+                ) : (
+                  <>
+                    <span className="fg-muted truncate">
+                      {resend === "failed" ? t("account.resendFailed") : t("account.emailPending")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void resendLink()}
+                      disabled={resend === "sending"}
+                      className="ml-auto shrink-0 font-medium text-[color:var(--accent)] hover:underline disabled:opacity-60"
+                    >
+                      {t("account.resend")}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* TU PERFIL (/me → /@handle, o elegir el @ primero). */}

@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { db, schema } from "@/lib/db";
 
-import { crearVerificacionDelCorreo, enlaceDeVerificacion, verificarCorreo } from "./verify-email";
+import { correoPorConfirmar, crearVerificacionDelCorreo, enlaceDeVerificacion, verificarCorreo } from "./verify-email";
 
 const HAS_DB = Boolean(process.env.DATABASE_URL);
 const userId = crypto.randomUUID();
@@ -41,6 +41,13 @@ describe.skipIf(!HAS_DB)("🔴 verifying the email", () => {
     expect(await verificarCorreo(raw)).toBe(false);
   });
 
+  it("a new link replaces the one before: only the last email works", async () => {
+    const first = await crearVerificacionDelCorreo(email);
+    const second = await crearVerificacionDelCorreo(email);
+    expect(await verificarCorreo(first)).toBe(false);
+    expect(await verificarCorreo(second)).toBe(true);
+  });
+
   it("the link is built from the server's address, never the request's", () => {
     const before = process.env.NEXTAUTH_URL;
     process.env.NEXTAUTH_URL = "https://openlen.com";
@@ -50,5 +57,30 @@ describe.skipIf(!HAS_DB)("🔴 verifying the email", () => {
       if (before === undefined) delete process.env.NEXTAUTH_URL;
       else process.env.NEXTAUTH_URL = before;
     }
+  });
+});
+
+describe.skipIf(!HAS_DB)("🔴 whose email is still to confirm", () => {
+  const ids = { password: crypto.randomUUID(), verified: crypto.randomUUID(), google: crypto.randomUUID() };
+  const mail = (id: string) => `pending-${id}@openlen.test`;
+  beforeAll(async () => {
+    await db.insert(schema.users).values([
+      { id: ids.password, email: mail(ids.password), passwordHash: "x" },
+      { id: ids.verified, email: mail(ids.verified), passwordHash: "x", emailVerified: new Date() },
+      { id: ids.google, email: mail(ids.google) },
+    ]);
+  });
+  afterAll(async () => {
+    for (const id of Object.values(ids)) await db.delete(schema.users).where(eq(schema.users.id, id));
+  });
+
+  it("an account with a password and no confirmation has its email to confirm", async () => {
+    expect(await correoPorConfirmar(ids.password)).toBe(mail(ids.password));
+  });
+
+  it("a confirmed account, a Google one (no password) or a missing one has none", async () => {
+    expect(await correoPorConfirmar(ids.verified)).toBeNull();
+    expect(await correoPorConfirmar(ids.google)).toBeNull();
+    expect(await correoPorConfirmar(crypto.randomUUID())).toBeNull();
   });
 });

@@ -68,7 +68,11 @@
     "manageSubscription": "Manage subscription",
     "signOut": "Sign out",
     "profile": "Your profile",
-    "connectedApps": "Connected apps"
+    "connectedApps": "Connected apps",
+    "emailPending": "Email not confirmed",
+    "resend": "Resend",
+    "resendSent": "Sent — check your inbox",
+    "resendFailed": "Couldn't send it"
   },
   "relativeTime": {
     "seconds": "{count}s ago",

@@ -68,7 +68,11 @@
     "manageSubscription": "Abo verwalten",
     "signOut": "Abmelden",
     "profile": "Dein Profil",
-    "connectedApps": "Verbundene Apps"
+    "connectedApps": "Verbundene Apps",
+    "emailPending": "E-Mail nicht bestätigt",
+    "resend": "Erneut senden",
+    "resendSent": "Gesendet – schau in dein Postfach",
+    "resendFailed": "Senden fehlgeschlagen"
   },
   "relativeTime": {
     "seconds": "vor {count}s",
