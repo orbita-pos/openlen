@@ -13,6 +13,8 @@ import { randomUUID } from "node:crypto";
 
 import type { WebSocket } from "ws";
 
+import { BOX_READS_PRODUCTION } from "@/lib/agent/sandbox/box-marker";
+
 import type { ProjectDatabase } from "../db";
 import { confirmToken, type Confirmed, type RealtimeKeys } from "./auth";
 import { emptyPolicies, ensureMessagePartitions, readAuthorizations, writeAuthorization, type Policies } from "./authorization";
@@ -27,6 +29,8 @@ export interface RealtimeProject extends RealtimeKeys {
   /** La base del proyecto por el pool de `authenticator` (postgres_changes y
    *  canales privados). */
   readonly db?: ProjectDatabase;
+  /** El entorno de los datos (lib/backend/environments.ts). */
+  readonly environment?: "draft" | "live";
 }
 
 /** Los temas de todos los sockets (server.ts). */
@@ -45,6 +49,9 @@ export interface SessionOptions {
   /** Su CHANNEL_ERROR_BACKOFF_MS (5 s): lo que espera un join que no entra. */
   readonly channelErrorBackoffMs: number;
   readonly limits: RealtimeLimits;
+  /** La caja de Len en producción (lib/agent/sandbox/box-marker.ts): oye,
+   *  nunca escribe —ni broadcast ni presence—. */
+  readonly readOnly?: boolean;
 }
 
 /** Un filtro de `postgres_changes` como lo manda el cliente. */
@@ -382,6 +389,7 @@ export class Session {
       return this.reply(m, "ok", {});
     }
     if (event !== "track") return this.reply(m, "error", {});
+    if (this.o.readOnly) return this.reply(m, "error", { reason: BOX_READS_PRODUCTION });
     // Un canal privado escribe presence si RLS le deja (su `authorize`, la
     // primera vez; antes, la lectura si no se miró al unirse).
     if (ch.policies && this.project.db) {
@@ -484,8 +492,17 @@ export class Session {
     return true;
   }
 
+  /** La caja en producción no manda nada a los visitantes; con `ack`, se le
+   *  dice por qué. */
+  private refusedToBox(ch: Channel, m: { joinRef: string | null; ref: string | null; topic: string }): boolean {
+    if (!this.o.readOnly) return false;
+    if (ch.config.broadcastAck) this.reply(m, "error", { reason: BOX_READS_PRODUCTION });
+    return true;
+  }
+
   private async textBroadcast(ch: Channel, m: PhxMessage): Promise<void> {
     if (this.overEventRate(ch)) return;
+    if (this.refusedToBox(ch, m)) return;
     if (!(await this.canBroadcast(ch))) return;
     const size = Buffer.byteLength(JSON.stringify(m.payload ?? null));
     if (payloadTooLarge(size, this.o.limits)) {
@@ -500,6 +517,7 @@ export class Session {
     const ch = this.channels.get(b.topic);
     if (!ch) return this.reply(b, "error", { reason: "unmatched topic" });
     if (this.overEventRate(ch)) return;
+    if (this.refusedToBox(ch, b)) return;
     if (!(await this.canBroadcast(ch))) return;
     if (payloadTooLarge(b.payload.length, this.o.limits)) {
       if (ch.config.broadcastAck) this.reply(b, "error", "payload_size_exceeded");

@@ -13,6 +13,8 @@ import type { Duplex } from "node:stream";
 
 import { WebSocketServer } from "ws";
 
+import { BOX_MARKER_HEADER } from "@/lib/agent/sandbox/box-marker";
+
 import { authorizeSocket } from "./auth";
 import { handleBroadcastApi, isBroadcastApi } from "./broadcast-api";
 import { PostgresChangesHub, type ChangeSourceFactory } from "./changes";
@@ -50,6 +52,12 @@ const PING_EVERY_MS = 30_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Gate = { ok: true; project: RealtimeProject; token: string } | { ok: false; status: number; error: string };
+
+/** Len's box (lib/agent/sandbox/box-marker.ts) reads production, it never writes
+ *  there: the marker is enough, as in lib/backend/serve.ts. */
+function boxOnProduction(req: http.IncomingMessage, project: RealtimeProject): boolean {
+  return project.environment === "live" && req.headers[BOX_MARKER_HEADER] !== undefined;
+}
 
 function writeHttpError(socket: Duplex, status: number, error: string): void {
   const body = JSON.stringify({ error });
@@ -145,7 +153,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
           res.writeHead(404, { "content-type": "application/json" }).end(JSON.stringify({ message: "Tenant not found" }));
           return;
         }
-        return handleBroadcastApi(req, res, url, project, hub, limits);
+        return handleBroadcastApi(req, res, url, project, hub, limits, boxOnProduction(req, project));
       }
       if (url.pathname === WEBSOCKET_PATH) {
         // La misma puerta que el apretón, contestada como HTTP.
@@ -169,7 +177,7 @@ export function createRealtimeServer(o: RealtimeServerOptions): { server: http.S
       const g = await gate(req, url);
       if (!g.ok) return writeHttpError(socket, g.status, g.error);
       wss.handleUpgrade(req, socket, head, (ws) => {
-        const session = new Session(ws, g.project, g.token, hub, { channelErrorBackoffMs, limits });
+        const session = new Session(ws, g.project, g.token, hub, { channelErrorBackoffMs, limits, readOnly: boxOnProduction(req, g.project) });
         sessions.add(session);
         let mine = sessionsByProject.get(g.project.ref);
         if (!mine) sessionsByProject.set(g.project.ref, (mine = new Set()));
