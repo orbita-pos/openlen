@@ -1082,6 +1082,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  y `turnText` se reinicia en cada vuelta: sin esto, una continuación
    *  devolvería sólo la segunda mitad de su propia frase. */
   let textoArrastrado = "";
+  /** The text the transcript closes with when it isn't `finalText`: a turn that ends on a
+   *  question already holds Len's prose in the call's message, so only the rest goes after it. */
+  let transcriptClosingText: string | null = null;
   /** El turno acabó esperando al dueño (ver `AgentLoopResult.endedOnQuestion`). */
   let endedOnQuestion = false;
   let continuaciones = 0;
@@ -1098,7 +1101,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // El arrastre va DELANTE y sin separador: la continuación sigue la frase
     // exactamente donde se cortó, así que pegarlas es reconstruirla.
     finalText: textoArrastrado + finalText,
-    transcripcion: transcripcionDelTurno(textoArrastrado + finalText),
+    transcripcion: transcripcionDelTurno(transcriptClosingText ?? textoArrastrado + finalText),
     usage: { inputTokens, outputTokens, cachedTokens, thinkingTokens },
     turns,
     toolCalls,
@@ -2013,6 +2016,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (!turnText.includes(pregunta)) args.emit({ type: "text", text: pregunta });
         finalText = turnText.trim() ? `${turnText.trim()}\n\n${pregunta}` : pregunta;
       }
+      // The call and its result stay in the conversation, as in the dismissed close above and as
+      // DeepSeek's timed question keeps its `pending` result: what the owner answers later, as a
+      // message, answers THIS call. Real test of 22/10: a secrets card left nothing in the
+      // transcript, and with the key saved after the wait Len asked for it again.
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      transcriptClosingText = preguntaSinTexto || turnText.includes(pregunta) ? "" : pregunta;
       // 🔴 ESTA SALIDA NO PASA POR EL EMBUDO, y es a propósito: el turno cierra
       // porque una herramienta PREGUNTÓ al usuario. Empujar al modelo a seguir
       // hacia el objetivo aquí sería mandarlo a trabajar cuando no puede: le

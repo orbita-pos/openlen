@@ -1466,6 +1466,40 @@ describe("runAgentLoop — ask_user_question (antes preguntar)", () => {
     expect(siguio.endedOnQuestion).toBeUndefined();
   });
 
+  // Real test of 22/10 (Stripe): the secrets card's wait ran out, the owner saved the key after it,
+  // and the next turn's history had the request and the «saved» message but not Len's call — so he
+  // asked for the same key again. As DeepSeek's timed question: the call and its result stay in the
+  // conversation, and the answer that comes later reads as the answer to it.
+  it("🔴 a card left unanswered stays in the transcript: the call and its result, for the next turn to read", async () => {
+    const preguntas = [{ id: "secrets", question: "Enter the secret values for: STRIPE_SECRET_KEY.", intent: { kind: "secrets" as const, secrets: [{ name: "STRIPE_SECRET_KEY", description: "La clave de prueba." }] } }];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "pídeme la clave de Stripe" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "request_secrets", args: { secrets: [{ name: "STRIPE_SECRET_KEY", description: "La clave de prueba." }] } }, done]),
+      runTool: async () => ({ response: { ok: true, preguntado: true }, pregunta: preguntas[0]!.question, preguntas }),
+      emit: () => {},
+    });
+    expect(r.endedOnQuestion).toBe(true);
+    expect(r.transcripcion!.at(-2)!.functionCalls?.[0]?.name).toBe("request_secrets");
+    expect(r.transcripcion!.at(-1)!.functionResponses?.[0]).toMatchObject({ name: "request_secrets", response: { ok: true, preguntado: true } });
+  });
+
+  it("…without saying twice what Len already wrote: his prose once, then the question the owner saw", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "publícala" }], tools: [],
+      openStream: scripted([
+        { type: "text_delta", text: "Claro." },
+        { type: "function_call", name: "ask_user_question", args: { questions: [{ id: "q", question: "¿Qué dirección quieres?" }] } },
+        done,
+      ]),
+      runTool: async (_n, args) => ({ response: { ok: true, preguntado: true }, pregunta: preguntaDe(args) }),
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Claro.\n\n¿Qué dirección quieres?");
+    const textos = r.transcripcion!.filter((m) => m.role === "assistant").map((m) => m.content);
+    expect(textos).toEqual(["Claro.", "¿Qué dirección quieres?"]);
+    expect(r.transcripcion!.at(-2)!.functionResponses?.[0]?.name).toBe("ask_user_question");
+  });
+
   it("LOTE 7-8 (2) · BRAZO DE CONTROL: sin nada escrito, la pregunta sigue cerrando el turno", async () => {
     let llamadas = 0;
     const r = await runAgentLoop({
