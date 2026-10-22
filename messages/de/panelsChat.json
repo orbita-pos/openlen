@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "Die Funktionen lassen sich nicht kompilieren, daher wurde nichts veröffentlicht:\n{errors}",
     "functionsFailed": "Die Funktionen konnten nicht gestartet werden. Die Seite hat sich nicht geändert.",
     "stripe": {
+      "missingHint": "Beim Veröffentlichen werden deine Stripe-Produkte, -Preise und -Zahlungslinks mit diesem Schlüssel in dein Live-Konto kopiert. Ohne ihn behält die veröffentlichte Seite die Testversionen, und niemand kann dich wirklich bezahlen.",
       "hint": "Besser ein eingeschränkter Schlüssel, nur mit dem, was Len braucht: Produkte, Preise, Zahlungslinks, Checkout, Kunden, Abos, das Kundenportal und Webhooks.",
       "dashboard": "In Stripe holen",
       "publishable_key": "Das ist der veröffentlichbare Schlüssel (pk_…). Hier gehört der geheime (sk_…) oder ein eingeschränkter (rk_…) hin.",

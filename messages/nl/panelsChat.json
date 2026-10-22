@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "De functies compileren niet, dus er is niets gepubliceerd:\n{errors}",
     "functionsFailed": "De functies konden niet worden gestart. De pagina is niet veranderd.",
     "stripe": {
+      "missingHint": "Bij publiceren worden je Stripe-producten, -prijzen en -betaallinks met deze sleutel naar je live account gekopieerd. Zonder de sleutel houdt de gepubliceerde pagina de testversies en kan niemand je echt betalen.",
       "hint": "Liever een beperkte sleutel, met alleen wat Len nodig heeft: producten, prijzen, betaallinks, Checkout, klanten, abonnementen, het klantenportaal en webhooks.",
       "dashboard": "Haal hem in Stripe",
       "publishable_key": "Dat is de publiceerbare sleutel (pk_…). Hier hoort de geheime (sk_…) of een beperkte (rk_…).",

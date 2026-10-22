@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "函数无法编译，所以没有发布任何内容：\n{errors}",
     "functionsFailed": "函数无法启动。页面没有改变。",
     "stripe": {
+      "missingHint": "发布时会用这个密钥把你的 Stripe 产品、价格和支付链接复制到正式账户。没有它，发布的页面仍使用测试版本，没人能真正付款给你。",
       "hint": "最好用受限密钥，只给 Len 需要的权限：产品、价格、支付链接、Checkout、客户、订阅、客户门户和 Webhook。",
       "dashboard": "在 Stripe 获取",
       "publishable_key": "这是可发布密钥（pk_…）。这里需要的是秘密密钥（sk_…）或受限密钥（rk_…）。",
