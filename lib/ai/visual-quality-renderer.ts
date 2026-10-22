@@ -1,6 +1,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import { installSubresourceSsrfGuard, SIN_VENTANAS_NUEVAS } from "@/lib/security/render-ssrf-guard";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import { chromiumEnv } from "@/lib/security/chromium-env";
 import { cargarEnOrigenReal, origenDeMedida, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas } from "@/lib/ai/sitio-del-error";
 import { DESPERTAR_LA_PAGINA } from "@/lib/ai/despertar-la-pagina";
@@ -584,10 +585,18 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
     // (sin GPU) `getContext("webgl")` da null y Len ve negra una escena de
     // three.js, un mapa 3D o un juego — medido el 2026-10-13, Chrome 148
     // (`eyes-see-webgl.browser.test.ts`). Chrome la llama «unsafe» porque
-    // SwiftShader es más superficie para contenido ajeno; este Chromium ya
-    // corre sin sandbox y con la red filtrada.
+    // SwiftShader es más superficie para contenido ajeno, y corre en el proceso
+    // de GPU, que va SIN sandbox aun con el de Chrome puesto (medido abajo).
     args: [
-      "--no-sandbox",
+      // CON el sandbox de Chrome (2026-10-20). Medido en la caja con systemd-run
+      // como openlen-deploy y el endurecimiento de la unidad: sin `--no-sandbox`
+      // arranca, el perfil AppArmor `chrome` de Ubuntu 24.04 se pega a
+      // /opt/google/chrome/chrome bajo NoNewPrivileges, cada renderer corre con
+      // seccomp-bpf en su propio espacio de usuario y de PID, y WebGL sigue
+      // pintando. El ayudante setuid no puede ir nunca bajo NoNewPrivileges:
+      // esta bandera impide que Chrome caiga a él. Si un Chrome sin ese perfil
+      // (otra ruta, otra distro) dice «No usable sandbox!», es esto.
+      // Ver `eyes-run-sandboxed.browser.test.ts`.
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       ...WEBGL_ARGS,
@@ -596,7 +605,10 @@ export async function lanzarChromium(): Promise<import("puppeteer").Browser> {
       "--disable-crash-reporter",
       ...(await isolatedNetworkArgs()),
     ],
-    env: { ...process.env, HOME: "/tmp" },
+    // Ni un secreto del servidor: el proceso de GPU va sin sandbox y lo que
+    // hereda queda al alcance de un fallo suyo (lib/security/chromium-env.ts).
+    // Lleva HOME=/tmp.
+    env: chromiumEnv(),
   });
   // Antes de que dibuje nada: en la caja, cede la CPU a la app (medido: una
   // escena 3D se comía 2,56 de sus 3 núcleos). Ver `lib/ai/chromium-nice.ts`.
