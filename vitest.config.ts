@@ -159,6 +159,10 @@ export default defineConfig({
       "lib/credit-ledger.pg.test.ts",
       // A password reset closes the sessions already open (2026-10-21). WHITELIST.
       "app/api/auth/reset/route.pg.test.ts",
+      // Signing up sends the email that confirms the address (2026-10-21). WHITELIST.
+      "app/api/auth/register/route.pg.test.ts",
+      // Resending the email that confirms the address (2026-10-22). WHITELIST.
+      "app/api/auth/verify-email/route.test.ts",
       "lib/credits-no-old-debits.test.ts",
       "lib/plan.test.ts",
       "lib/credits-client.test.ts",

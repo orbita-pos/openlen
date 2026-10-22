@@ -2,6 +2,8 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { crearVerificacionDelCorreo, enlaceDeVerificacion } from "@/lib/auth/verify-email";
+import { sendVerificationEmail } from "@/lib/email";
 import {
   IP_LIMITS,
   checkAndConsume,
@@ -79,6 +81,15 @@ export async function POST(req: Request): Promise<Response> {
       passwordHash,
       name: name ?? null,
     });
+
+    // The email that confirms the address (lib/auth/verify-email.ts). The account works already, so a
+    // failure here never undoes the sign-up: it's logged.
+    try {
+      const raw = await crearVerificacionDelCorreo(email);
+      await sendVerificationEmail({ to: email, verifyUrl: enlaceDeVerificacion(raw) });
+    } catch (err) {
+      console.error("[auth/register] no se pudo mandar el correo de confirmación", err);
+    }
 
     return json({ ok: true }, 200);
   } catch (err) {

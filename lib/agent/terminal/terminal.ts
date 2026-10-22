@@ -178,7 +178,8 @@ export class TerminalDeLen implements TerminalBackend {
       if (m.ok) p.resolve(m);
       else p.reject(new Error(m.error ?? "the terminal failed"));
     });
-    hilo.on("error", (e) => this.fallarTodo(e));
+    // `unknown` en @types/node 26 (el de movil/), `Error` en el 22 de la raíz.
+    hilo.on("error", (e: unknown) => this.fallarTodo(e instanceof Error ? e : new Error(String(e))));
     hilo.on("exit", () => {
       if (this.hilo === hilo) this.hilo = null;
       this.fallarTodo(new Error("the terminal closed"));
