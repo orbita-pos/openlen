@@ -101,6 +101,25 @@ export function realSendDeps(): SendDeps {
   };
 }
 
+/** Resend's webhooks of the customers' account (webhooks.ts). */
+export function realWebhookDeps(): { store: typeof pgEmailStore; secret: string } {
+  return { store: pgEmailStore, secret: process.env.RESEND_CLIENTS_WEBHOOK_SECRET?.trim() ?? "" };
+}
+
+/** The unsubscribe page (app/u/[token]): who the emails came from is the project's email domain, else its name. */
+export function realUnsubscribeDeps(): { store: typeof pgEmailStore; secret: string; senderOf(projectId: string): Promise<string | null> } {
+  return {
+    store: pgEmailStore,
+    secret: serverSecret(),
+    async senderOf(projectId) {
+      const domain = await pgEmailStore.getDomain(projectId);
+      if (domain) return domain.domain;
+      const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+      return p?.title ?? null;
+    },
+  };
+}
+
 /** After a form submission is stored: the form's automatic reply, if it has one (form-reply.ts). Never throws. */
 export async function replyToFormSubmission(i: { projectId: string; sub: string; data: Record<string, string>; formIndex: number | null; formId: string | null; page: string | null }): Promise<void> {
   const [{ emailEnabledIn }, { formReplyConfig, sendFormReply }, { publishedHost }] = await Promise.all([import("./enabled"), import("./form-reply"), import("@/lib/publish/base-host")]);

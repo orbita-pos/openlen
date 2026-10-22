@@ -84,7 +84,10 @@ export function memoryEmailStore(now: () => Date = () => new Date()): EmailStore
     },
     async suppress(projectId, address, reason) {
       const k = sKey(projectId, address);
-      suppressions.set(k, { address: normalizeAddress(address), reason, createdAt: suppressions.get(k)?.createdAt ?? now() });
+      const had = suppressions.get(k);
+      // An unsubscribe never weakens a bounce or a complaint: those stop the sign-in emails too.
+      if (had && reason === "unsubscribed") return;
+      suppressions.set(k, { address: normalizeAddress(address), reason, createdAt: had?.createdAt ?? now() });
     },
     async unsuppress(projectId, address) {
       suppressions.delete(sKey(projectId, address));

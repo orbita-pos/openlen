@@ -705,6 +705,8 @@ export default defineConfig({
       // Project email (spec local 2026-10-22-email-integration).
       "app/api/projects/[id]/email/route.test.ts",
       "app/api/email/domain-connect/return/route.test.ts",
+      "app/api/email/webhooks/resend/route.test.ts",
+      "app/u/[token]/route.test.ts",
       // Las Edge Functions de un proyecto, para la vista Base de datos (fase 3). LISTA BLANCA.
       "app/api/projects/[id]/functions/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
