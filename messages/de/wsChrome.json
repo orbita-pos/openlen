@@ -460,7 +460,8 @@
       "functions": "Funktionen",
       "secrets": "Secrets",
       "ai": "KI",
-      "payments": "Zahlungen"
+      "payments": "Zahlungen",
+      "email": "E-Mails"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Gib {word} ein, um zu bestätigen",
       "disconnectConfirm": "Trennen",
       "cancel": "Abbrechen"
+    },
+    "email": {
+      "loading": "Wird geladen…",
+      "loadError": "Die E-Mail-Einstellungen konnten nicht gelesen werden. Versuche es gleich noch einmal.",
+      "free": {
+        "title": "E-Mail von deiner eigenen Domain gibt es in den bezahlten Plänen",
+        "body": "Deine App, die Anmelde-E-Mails und deine Formulare können von deiner Domain senden, mit monatlich inklusiven E-Mails in den bezahlten Plänen.",
+        "cta": "Auf Pro upgraden"
+      },
+      "connectTitle": "E-Mails von deiner Domain senden",
+      "connectBody": "Deine App, die Anmelde-E-Mails und deine Formulare senden dann von einer Adresse deiner Domain. Du fügst drei Zeilen zu ihrem DNS hinzu oder bestätigst sie mit einem Klick, wenn dein Anbieter das erlaubt.",
+      "domainLabel": "Deine Domain",
+      "domainPlaceholder": "deinunternehmen.de",
+      "showAsRoot": "Als @{domain} anzeigen (standardmäßig wird von notify.{domain} gesendet)",
+      "connect": "Verbinden",
+      "connecting": "Wird verbunden…",
+      "errors": {
+        "free_plan": "E-Mail von deiner Domain gibt es in den bezahlten Plänen.",
+        "invalid_domain": "Das sieht nicht nach einer Domain aus (wie deinunternehmen.de).",
+        "host_taken": "Ein anderes Projekt sendet bereits von dieser Domain.",
+        "provider_error": "Der E-Mail-Anbieter hat nicht geantwortet. Versuche es gleich noch einmal.",
+        "generic": "Etwas ist schiefgelaufen. Versuche es gleich noch einmal."
+      },
+      "status": {
+        "pending": "Warte auf die DNS-Zeilen",
+        "verifying": "DNS-Zeilen werden geprüft",
+        "ready": "Bereit",
+        "failed": "DNS-Zeilen nicht gefunden",
+        "offline": "Die DNS-Zeilen antworten nicht mehr"
+      },
+      "check": "Jetzt prüfen",
+      "checking": "Wird geprüft…",
+      "checkHint": "Wir prüfen alle 15 Minuten und beim Veröffentlichen. DNS-Änderungen können einige Stunden dauern.",
+      "oneClick": "Mit einem Klick einrichten",
+      "oneClickHint": "Dein DNS-Anbieter bittet dich, die Zeilen für OpenLen zu bestätigen.",
+      "manualTitle": "Füge diese Zeilen zu deinem DNS hinzu",
+      "manualTitleOr": "Oder füge diese Zeilen von Hand zu deinem DNS hinzu",
+      "recordName": "Name",
+      "recordValue": "Wert",
+      "priority": "Priorität {n}",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "optional": "Optional",
+      "dmarcHint": "Die optionale Zeile hilft, dass weniger E-Mails im Spam landen.",
+      "instructions": "So fügst du sie bei deinem Anbieter hinzu",
+      "usageTitle": "Diesen Monat",
+      "usage": "{sent} von {included} inklusiven E-Mails",
+      "extra": "Über das Inklusive hinaus: {credits} Credits",
+      "recentTitle": "Letzte E-Mails",
+      "noRecent": "Noch keine E-Mails.",
+      "kinds": {
+        "app": "App",
+        "auth": "Anmeldung",
+        "form": "Formular"
+      },
+      "statuses": {
+        "sent": "Gesendet",
+        "delivered": "Zugestellt",
+        "bounced": "Unzustellbar",
+        "complained": "Als Spam markiert",
+        "rejected": "Nicht gesendet",
+        "not_sent_draft": "Nicht gesendet (Test)"
+      },
+      "listTitle": "Abmeldungen und Unzustellbare",
+      "listHint": "Niemand auf dieser Liste bekommt die E-Mails deiner App. Nimm jemanden nur herunter, wenn die Person darum bittet: Wer dich als Spam markiert hat und wieder angeschrieben wird, schadet deiner Domain.",
+      "noList": "Noch niemand.",
+      "reasons": {
+        "unsubscribed": "Abgemeldet",
+        "bounced": "Unzustellbar",
+        "complained": "Als Spam markiert"
+      },
+      "unsuppress": "Von der Liste nehmen",
+      "dnsLines": "DNS-Zeilen",
+      "disconnect": "Domain trennen",
+      "disconnectWarning": "Deine App, die Anmelde-E-Mails und deine Formulare senden wieder von OpenLen. Nichts geht verloren.",
+      "disconnectTypeHint": "Gib {domain} ein, um zu bestätigen",
+      "disconnectConfirm": "Trennen",
+      "cancel": "Abbrechen",
+      "cleanupDns": "Getrennt. Du kannst jetzt die Zeilen aus deinem DNS entfernen, die du für die E-Mails von OpenLen hinzugefügt hast."
     }
   },
   "appBirth": {

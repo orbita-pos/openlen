@@ -460,7 +460,8 @@
       "functions": "Functies",
       "secrets": "Geheimen",
       "ai": "AI",
-      "payments": "Betalingen"
+      "payments": "Betalingen",
+      "email": "E-mails"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Typ {word} om te bevestigen",
       "disconnectConfirm": "Ontkoppelen",
       "cancel": "Annuleren"
+    },
+    "email": {
+      "loading": "Laden…",
+      "loadError": "De e-mailinstellingen konden niet worden gelezen. Probeer het zo opnieuw.",
+      "free": {
+        "title": "E-mail vanaf je eigen domein zit in de betaalde abonnementen",
+        "body": "Je app, de inlogmails en je formulieren kunnen vanaf je domein versturen, met elke maand inbegrepen e-mails in de betaalde abonnementen.",
+        "cta": "Upgraden naar Pro"
+      },
+      "connectTitle": "Verstuur e-mail vanaf je domein",
+      "connectBody": "Je app, de inlogmails en je formulieren versturen vanaf een adres op je domein. Je voegt drie regels toe aan de DNS, of keurt ze met één klik goed als je provider dat toestaat.",
+      "domainLabel": "Je domein",
+      "domainPlaceholder": "jouwbedrijf.nl",
+      "showAsRoot": "Tonen als @{domain} (standaard wordt verstuurd vanaf notify.{domain})",
+      "connect": "Verbinden",
+      "connecting": "Verbinden…",
+      "errors": {
+        "free_plan": "E-mail vanaf je domein zit in de betaalde abonnementen.",
+        "invalid_domain": "Dat lijkt geen domein (zoals jouwbedrijf.nl).",
+        "host_taken": "Een ander project verstuurt al vanaf dat domein.",
+        "provider_error": "De e-mailprovider antwoordde niet. Probeer het zo opnieuw.",
+        "generic": "Er ging iets mis. Probeer het zo opnieuw."
+      },
+      "status": {
+        "pending": "Wachten op de DNS-regels",
+        "verifying": "DNS-regels worden gecontroleerd",
+        "ready": "Klaar",
+        "failed": "DNS-regels niet gevonden",
+        "offline": "De DNS-regels antwoorden niet meer"
+      },
+      "check": "Nu controleren",
+      "checking": "Controleren…",
+      "checkHint": "We controleren elke 15 minuten en bij het publiceren. DNS-wijzigingen kunnen een paar uur duren.",
+      "oneClick": "Met één klik instellen",
+      "oneClickHint": "Je DNS-provider vraagt je de regels voor OpenLen goed te keuren.",
+      "manualTitle": "Voeg deze regels toe aan je DNS",
+      "manualTitleOr": "Of voeg deze regels handmatig toe aan je DNS",
+      "recordName": "Naam",
+      "recordValue": "Waarde",
+      "priority": "prioriteit {n}",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd",
+      "optional": "Optioneel",
+      "dmarcHint": "De optionele regel helpt dat minder e-mails in spam belanden.",
+      "instructions": "Zo voeg je ze toe bij je provider",
+      "usageTitle": "Deze maand",
+      "usage": "{sent} van {included} inbegrepen e-mails",
+      "extra": "Boven het inbegrepene: {credits} credits",
+      "recentTitle": "Laatste e-mails",
+      "noRecent": "Nog geen e-mails.",
+      "kinds": {
+        "app": "App",
+        "auth": "Inloggen",
+        "form": "Formulier"
+      },
+      "statuses": {
+        "sent": "Verstuurd",
+        "delivered": "Afgeleverd",
+        "bounced": "Gebounced",
+        "complained": "Als spam gemarkeerd",
+        "rejected": "Niet verstuurd",
+        "not_sent_draft": "Niet verstuurd (test)"
+      },
+      "listTitle": "Afmeldingen en bounces",
+      "listHint": "Niemand op deze lijst krijgt de e-mails van je app. Haal iemand er alleen af als die persoon dat vraagt: opnieuw mailen naar wie je als spam markeerde schaadt je domein.",
+      "noList": "Nog niemand.",
+      "reasons": {
+        "unsubscribed": "Afgemeld",
+        "bounced": "Gebounced",
+        "complained": "Als spam gemarkeerd"
+      },
+      "unsuppress": "Van de lijst halen",
+      "dnsLines": "DNS-regels",
+      "disconnect": "Domein loskoppelen",
+      "disconnectWarning": "Je app, de inlogmails en je formulieren versturen weer vanaf OpenLen. Er gaat niets verloren.",
+      "disconnectTypeHint": "Typ {domain} om te bevestigen",
+      "disconnectConfirm": "Loskoppelen",
+      "cancel": "Annuleren",
+      "cleanupDns": "Losgekoppeld. Je kunt nu de regels uit je DNS halen die je voor de e-mail van OpenLen had toegevoegd."
     }
   },
   "appBirth": {
