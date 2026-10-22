@@ -84,7 +84,7 @@ export const pgEmailStore: EmailStore = {
     const [r] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(M)
-      .where(and(eq(M.ownerId, ownerId), eq(M.kind, kind), inArray(M.status, [...WENT_OUT]), gte(M.createdAt, since)));
+      .where(and(eq(M.ownerId, ownerId), inArray(M.kind, kind === "app" ? ["app", "form"] : [kind]), inArray(M.status, [...WENT_OUT]), gte(M.createdAt, since)));
     return r?.n ?? 0;
   },
   async countMessages(f) {

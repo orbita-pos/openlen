@@ -63,7 +63,7 @@ export interface EmailStore {
   /** Newest first. */
   recentMessages(projectId: string, limit: number): Promise<EmailMessageRow[]>;
   deleteMessagesBefore(date: Date): Promise<number>;
-  /** What went out (sent, delivered, bounced, complained) for an owner since a moment: the hourly cap. */
+  /** What went out (sent, delivered, bounced, complained) for an owner since a moment: the hourly cap. «app» also counts the form replies. */
   countSentSince(ownerId: string, kind: "app" | "auth", since: Date): Promise<number>;
   /** What went out for a project, narrowed: the form replies' brakes. */
   countMessages(f: { readonly projectId: string; readonly kind: EmailKind; readonly toAddress?: string; readonly tag?: string; readonly since: Date }): Promise<number>;
