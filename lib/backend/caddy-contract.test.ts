@@ -30,6 +30,26 @@ describe("Caddy pasa el backend de las páginas a Next", () => {
   }
 });
 
+// LA CAJA DE LEN (plan local 2026-10-21-playwright-in-the-box): puede LEER la publicada, nunca escribir.
+// Sus rutas propias (formularios, chat, analítica…) contestan 403 a lo que trae la marca de la caja,
+// DENTRO de su handle y antes de pasarlo a Next (`respond` va después de `handle` en el orden de Caddy).
+describe("la publicada no recibe nada de la caja de Len", () => {
+  it("hay un matcher con la cabecera de la caja en el bloque de las páginas", () => {
+    expect(paginas).toMatch(/@caja header X-Openlen-Caja \*/);
+  });
+
+  for (const ruta of ["/c/*", "/api/f/*", "/api/m/*", "/api/cm/*", "/api/bk/*", "/api/b/*", "/api/chat/*"]) {
+    it(`${ruta} corta la caja antes de Next`, () => {
+      const escaped = ruta.replace(/[/*]/g, (c) => `\\${c}`);
+      const bloque = paginas.match(new RegExp(`\\thandle ${escaped}\\s*\\{[\\s\\S]*?\\n\\t\\}`));
+      expect(bloque, `falta el handle ${ruta}`).not.toBeNull();
+      const cuerpo = bloque![0];
+      expect(cuerpo).toMatch(/respond @caja "[^"]+" 403/);
+      expect(cuerpo.indexOf("respond @caja")).toBeLessThan(cuerpo.indexOf("reverse_proxy"));
+    });
+  }
+});
+
 describe("el middleware de idiomas no toca el backend", () => {
   const src = readFileSync(join(process.cwd(), "middleware.ts"), "utf8");
   // En el fuente el patrón va con las barras dobladas de un literal de JS. Es

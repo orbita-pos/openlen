@@ -23,6 +23,7 @@ import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { envVarsFor } from "@/lib/apps/env/store";
 import { envHashOf } from "@/lib/apps/env/hash";
 import { dropPageDatabases, pageDatabaseScopes } from "@/lib/backend/teardown";
+import { killSandboxOfDeletedProject, sandboxOfProject } from "@/lib/agent/sandbox/reaper";
 import { backupReleaseToR2 } from "@/lib/publish/backup-r2";
 import { createVersion } from "@/lib/projects/versions";
 import { copyFolderForDuplicate, listProjectFiles } from "@/lib/backend/files";
@@ -569,6 +570,8 @@ export async function deleteProject(
   // cascada). Sin esto la base y su rol se quedaban en el clúster con las
   // cuentas de los visitantes dentro y sin dueño. Ver lib/backend/teardown.ts.
   const pageDbs = existing[0] ? await pageDatabaseScopes(projectId) : null;
+  // Y la caja de la terminal real: su fila también se va en cascada.
+  const sandboxId = existing[0] ? await sandboxOfProject(projectId) : null;
 
   const result = await db
     .delete(schema.projects)
@@ -587,6 +590,8 @@ export async function deleteProject(
     });
   }
   if (pageDbs && result.length > 0) await dropPageDatabases(pageDbs);
+  // Sin esperar a E2B: borrar no depende de él, y un fallo sólo se apunta en el registro.
+  if (sandboxId && result.length > 0) void killSandboxOfDeletedProject(sandboxId);
   return result.length > 0;
 }
 

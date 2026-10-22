@@ -29,6 +29,12 @@ import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
+import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
+import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
+import { boxMarker } from "@/lib/agent/sandbox/box-marker";
+import { boxNetworkFor, type BoxNetwork } from "@/lib/agent/sandbox/box-network";
+import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
 import { whileWorking } from "./still-working";
 import { longSleep, longSleepRefusal } from "./sleep-rule";
 
@@ -51,7 +57,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   // F5 · lo de sólo lectura se lista de nuevo cada vez que arranca una
   // terminal (también tras un corte duro) y se calcula al leerlo.
   let soloLectura: Promise<SoloLectura> | null = null;
-  const terminal = (session.terminal ??= new TerminalDeLen({
+  // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B del proyecto
+  // cuando está encendida y se puede; si no, ésta de siempre (`local`).
+  const local = () => new TerminalDeLen({
     cargarFicheros: async () => {
       const ficheros = await cargarFicherosDeLaTerminal(session, deps);
       session.fotoDeLaTerminal = { ...ficheros };
@@ -76,13 +84,29 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     appTools: appToolsFor(session, deps),
     // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).
     ...(deps.functionsCurl ? { functionsCurl: () => deps.functionsCurl!(session.projectId) } : {}),
+  });
+  const terminal = (session.terminal ??= await terminalForTurn(session, {
+    local,
+    projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
+    readOnly: () => readOnlyForBox(session, deps),
+    bridge: () => bridgeHandlersFor(session, deps),
+    network: () => boxNetworkOf(session),
+    baseEnv: () => boxBaseEnvOf(session),
+    signal: deps.turnSignal,
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
-  const r = await whileWorking(terminal.ejecutar(command, { timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined }), deps.stillWorking);
+  const r = await whileWorking(
+    terminal.ejecutar(command, {
+      timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined,
+      // LA TERMINAL REAL: arrancar y volver al momento (la de siempre no tiene procesos y lo corre igual).
+      ...(args.run_in_background === true ? { background: true } : {}),
+    }),
+    deps.stillWorking,
+  );
   // La salida que no cabe, ENTERA a /tmp (no es del proyecto), como Claude Code.
   let persistida: string | undefined;
   if (r.stdout.length + r.stderr.length > MAX_SALIDA) {
@@ -129,15 +153,19 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...(guardado ? { guardado: guardado.notas, rechazado: guardado.rechazado } : {}),
     ...(r.reiniciada ? { reiniciada: r.reiniciada } : {}),
     ...(persistida ? { persistida } : {}),
+    ...(r.noGuardados ? { noGuardados: r.noGuardados } : {}),
   });
   // Lo que escribió un visitante, a la vista: es dato, nunca una orden (como en Read).
   // También si el comando leyó la bandeja aunque lo impreso no lleve la marca
   // (`jq -r .datos.mensaje`): lo de ahí lo escribió siempre un visitante.
   const tocoLaBandeja = command.includes("bandeja") || (r.cargados ?? []).some((c) => c.startsWith(CARPETA_BANDEJA));
-  const texto =
+  const delComandoYa =
     /"_origen":\s*"visitante"/.test(salida.texto) || tocoLaBandeja
       ? salida.texto + AVISO_DE_VISITANTES_EN_LA_TERMINAL
       : salida.texto;
+  // LA TERMINAL REAL: si este turno va con la limitada (o la caja se paró), una línea delante, una vez.
+  const texto = session.sandboxNotice ? `${session.sandboxNotice}\n${delComandoYa}` : delComandoYa;
+  session.sandboxNotice = undefined;
 
   const escrituras = guardado?.escrituras ?? [];
   const paginas = escrituras.filter((o) => o.updatedHtml !== undefined);
@@ -219,10 +247,115 @@ async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<boolea
   return true;
 }
 
-/** Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. */
-export async function cerrarTerminalDeLaSesion(session: AgentSession): Promise<void> {
-  const t = session.terminal;
-  session.terminal = undefined;
-  session.fotoDeLaTerminal = undefined;
-  await t?.cerrar();
+/**
+ * Al acabar el turno: la terminal se cierra (su hilo muere) y la sesión la olvida. Si era la caja
+ * (LA TERMINAL REAL), antes se guarda por las guardas de Write lo que la caja cambió y aún no se
+ * guardó (un proceso en segundo plano), se pausa, se suelta y se cobra (`closeTurnTerminal`).
+ */
+export async function cerrarTerminalDeLaSesion(session: AgentSession, deps?: AgentDeps): Promise<void> {
+  await closeTurnTerminal(session, deps ? { save: savePendingThroughGuards(session, deps) } : {});
+}
+
+/**
+ * LA TERMINAL REAL: antes de la última foto del turno (la de sus cambios y su «Deshacer»), la caja
+ * para lo de segundo plano y guarda lo pendiente, para que sea del turno. Con la terminal de siempre
+ * no hace nada. El cierre de después ya no lo repite.
+ */
+export async function settleSessionTerminal(session: AgentSession, deps: AgentDeps): Promise<void> {
+  await settleTurnTerminal(session, { save: savePendingThroughGuards(session, deps) });
+}
+
+/** What the box changed and nobody saved yet, saved through Write's guards against the terminal's
+ *  photo — taken NOW: `closeTurnTerminal` forgets it before saving. */
+function savePendingThroughGuards(session: AgentSession, deps: AgentDeps) {
+  const antes = { ...(session.fotoDeLaTerminal ?? {}) };
+  return async (pendiente: Readonly<Record<string, string | null>>): Promise<void> => {
+    const despues = { ...antes };
+    for (const [ruta, contenido] of Object.entries(pendiente)) {
+      if (contenido === null) delete despues[ruta];
+      else despues[ruta] = contenido;
+    }
+    const cambios = cambiosDeLaTerminal(antes, despues);
+    if (cambios.length > 0) await guardarLoDeLaTerminal(session, deps, cambios, antes);
+    if (session.fotoDeLaTerminal) session.fotoDeLaTerminal = despues;
+  };
+}
+
+/** Lo de /.openlen que va a la caja: nunca lo de los visitantes, y como mucho 20 MB (las versiones, al final). */
+const MAX_SOLO_LECTURA_EN_LA_CAJA = 20 * 1024 * 1024;
+
+async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+  const sl = await soloLecturaDeLaTerminal(session, deps);
+  const rutas = sl.rutas.filter((r) => !NEVER_IN_BOX.test(r));
+  const esVersion = (r: string) => r.startsWith("/.openlen/versiones/");
+  const out: Record<string, string> = {};
+  let total = 0;
+  for (const ruta of [...rutas.filter((r) => !esVersion(r)), ...rutas.filter(esVersion)]) {
+    let texto: string;
+    try {
+      texto = await sl.leer(ruta);
+    } catch {
+      continue;
+    }
+    const peso = Buffer.byteLength(texto, "utf8");
+    if (total + peso > MAX_SOLO_LECTURA_EN_LA_CAJA) continue;
+    total += peso;
+    out[ruta] = texto;
+  }
+  return out;
+}
+
+/** LA TERMINAL REAL: the project's OpenLen hosts the box may reach (plan local 2026-10-21-playwright-in-
+ *  the-box) — its canvas (only on a real deploy: locally it is `*.localhost`, out of the box's reach), its
+ *  backend and its published page — with the box's marker. */
+async function boxNetworkOf(session: AgentSession): Promise<BoxNetwork | null> {
+  const [{ etiquetaDeLienzo, lienzoBaseHost, esProduccion }, { getBackendByProject, projectUrl }, { loadSavedProject }, { publishedHost }] =
+    await Promise.all([
+      import("@/lib/lienzo/host"),
+      import("@/lib/backend/registry"),
+      import("@/lib/lienzo/proyecto-guardado"),
+      import("@/lib/publish/base-host"),
+    ]);
+  const label = etiquetaDeLienzo(session.projectId);
+  const base = lienzoBaseHost();
+  const [backend, saved] = await Promise.all([getBackendByProject(session.projectId).catch(() => null), loadSavedProject(session.projectId).catch(() => null)]);
+  return boxNetworkFor({
+    canvasHost: esProduccion() && label && base ? `${label}.${base}` : null,
+    backendHost: backend ? new URL(projectUrl(backend.ref)).host : null,
+    publishedHost: saved?.subdomain ? publishedHost(saved.subdomain) : null,
+    marker: boxMarker(session.projectId),
+  });
+}
+
+/** LA TERMINAL REAL: `BASE_URL` = the project's canvas, where the box's tests see the saved draft (only
+ *  on a real deploy, as its network: locally the canvas is out of the box's reach). */
+async function boxBaseEnvOf(session: AgentSession): Promise<Record<string, string>> {
+  const { etiquetaDeLienzo, lienzoBaseHost, esProduccion } = await import("@/lib/lienzo/host");
+  const label = etiquetaDeLienzo(session.projectId);
+  const base = lienzoBaseHost();
+  return esProduccion() && label && base ? { BASE_URL: `https://${label}.${base}` } : {};
+}
+
+/** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */
+async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promise<BridgeHandlers> {
+  const git = gitForTerminal(session, deps);
+  const appTools = appToolsFor(session, deps);
+  const curl = deps.functionsCurl ? await deps.functionsCurl(session.projectId).catch(() => null) : null;
+  return {
+    ...(git ? { git } : {}),
+    ...(deps.supabaseCli
+      ? {
+          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o),
+        }
+      : {}),
+    ...(appTools ? { appTools } : {}),
+    // EDGE FUNCTIONS: the box's `curl` to them runs in today's terminal over the box's files, through the same door.
+    ...(curl
+      ? {
+          functionsUrls: curl.prefixes,
+          functionsCurl: functionsCurlThrough((ficheros) => new TerminalDeLen({ cargarFicheros: async () => ficheros, functionsCurl: async () => curl })),
+        }
+      : {}),
+  };
 }

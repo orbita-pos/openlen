@@ -258,6 +258,10 @@ openlen.com, www.openlen.com {
 	# lib/lienzo/caddy-lienzo.test.ts.
 	# `lienzo-visuals` es el host del marco de los visuales de Len en el chat
 	# (spec local 2026-10-16-len-inline-visuals): también va entero a Next.
+	# LA CAJA DE LEN (lib/agent/sandbox/box-marker.ts, plan local 2026-10-21-playwright-in-the-box): el
+	# proxy de E2B añade esta cabecera a lo que la caja manda a los hosts de su proyecto. La publicada se
+	# puede LEER desde la caja; sus rutas propias (abajo, dentro de cada handle) le contestan 403.
+	@caja header X-Openlen-Caja *
 	@lienzo header_regexp Host ^lienzo-([0-9a-f]{32}|visuals)\.
 	handle @lienzo {
 		header -X-Frame-Options
@@ -268,6 +272,7 @@ openlen.com, www.openlen.com {
 	# country resolution at the app layer (request log is off here —
 	# the app handles its own aggregation).
 	handle /c/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 			header_up CF-IPCountry {http.request.header.cf-ipcountry}
@@ -276,6 +281,7 @@ openlen.com, www.openlen.com {
 
 	# Lead-capture form submissions on published pages → Next.js.
 	handle /api/f/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000
 	}
 
@@ -370,6 +376,7 @@ openlen.com, www.openlen.com {
 	# without it Caddy stamps a public s-maxage header on these responses and
 	# Cloudflare would cache protected HTML at the edge.
 	handle /api/m/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
@@ -379,6 +386,7 @@ openlen.com, www.openlen.com {
 	# Same-host so the ol_member cookie is first-party; @doc-excluded above so
 	# the live thread (no-store) is never edge-cached.
 	handle /api/cm/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
@@ -389,6 +397,7 @@ openlen.com, www.openlen.com {
 	# bookings); @doc-excluded above so availability (no-store, changes on every
 	# booking) is never edge-cached.
 	handle /api/bk/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
@@ -409,6 +418,7 @@ openlen.com, www.openlen.com {
 	# serves the static homepage with 200 — the opt-out is silently dropped, which
 	# is a CAN-SPAM / RFC 8058 violation.
 	handle /api/b/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 		}
@@ -422,6 +432,7 @@ openlen.com, www.openlen.com {
 	# keeps the SSE stream (/api/chat/<sub>/stream) flowing token-by-token (the
 	# owner /api/inbox/* stream rides the apex catch-all which already flushes).
 	handle /api/chat/* {
+		respond @caja "Len's box only reads the published page: test against the draft (the canvas)." 403
 		reverse_proxy 127.0.0.1:3000 {
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 			flush_interval -1

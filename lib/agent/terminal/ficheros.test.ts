@@ -25,6 +25,22 @@ describe("cambiosDeLaTerminal", () => {
   });
 });
 
+describe("salidaDeLaTerminal — lo que la terminal real no pudo guardar", () => {
+  it("dice, una línea por fichero, lo que no se guardó y por qué", () => {
+    expect(
+      salidaDeLaTerminal({
+        stdout: "ok\n",
+        stderr: "",
+        exitCode: 0,
+        noGuardados: [
+          { ruta: "/data/x.zip", motivo: "binary" },
+          { ruta: "/data/big.csv", motivo: "too_large" },
+        ],
+      }).texto,
+    ).toBe("ok\n/data/x.zip: not saved — binary file\n/data/big.csv: not saved — larger than 1 MB");
+  });
+});
+
 describe("salidaDeLaTerminal — como el Bash de Claude Code (binario 2.1.293)", () => {
   it("🔴 bien: sólo la salida, sin líneas en blanco delante ni espacio detrás; sin código", () => {
     expect(salidaDeLaTerminal({ stdout: "\n\n1:<h1>Marejada</h1>\n\n", stderr: "", exitCode: 0 })).toEqual({ texto: "1:<h1>Marejada</h1>", exitCode: 0 });

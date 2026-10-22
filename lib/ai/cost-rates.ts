@@ -8,14 +8,17 @@
  * today's; a second provider only adds its row here, and users keep paying the
  * billing rate (spec local docs/superpowers/specs/2026-10-16-credit-ledger-design.md).
  *
- * Pure and import-free on purpose, like `tarifas.ts`: the ledger, the reports
- * and the tests read it without pulling the database in.
+ * Pure on purpose, like `tarifas.ts`: the ledger, the reports and the tests read
+ * it without pulling the database in. Its one import, the real terminal's box
+ * size and price, is import-free too.
  *
  * Every value is USD; token prices are per million tokens. An unknown model or
  * unit is `null`, never 0 — a cost of 0 would read as "free".
  */
 
-export type CostProvider = "fireworks" | "deepinfra" | "openai" | "exa";
+import { SANDBOX_MODEL, SANDBOX_USD_PER_SECOND } from "@/lib/agent/sandbox/size";
+
+export type CostProvider = "fireworks" | "deepinfra" | "openai" | "exa" | "e2b";
 
 export interface TokenPrices {
   readonly input: number;
@@ -58,6 +61,8 @@ export const UNIT_COSTS_USD = {
   /** Per search: Exa "Auto" $7/1 000 plus ~8 result snippets as Contents at
    *  $1/1 000 pages (exa.ai/pricing, read 2026-10-02; lib/agent/web/buscar.ts). */
   webSearchQuery: { "exa/search": 0.015 } as Readonly<Record<string, number>>,
+  /** Per second of the real terminal's box running (lib/agent/sandbox/size.ts). */
+  sandboxSecond: { [`e2b/${SANDBOX_MODEL}`]: SANDBOX_USD_PER_SECOND } as Readonly<Record<string, number>>,
 } as const;
 
 /** Direct Images API, Standard (not Batch/Flex). Official pricing.md read
@@ -131,6 +136,8 @@ export function unitCostMicroUsd(u: {
     return usd === undefined ? null : Math.round(u.images * usd * 1_000_000);
   }
   if (u.seconds !== undefined) {
+    const perSecond = UNIT_COSTS_USD.sandboxSecond[key];
+    if (perSecond !== undefined) return Math.round(u.seconds * perSecond * 1_000_000);
     const usd = UNIT_COSTS_USD.voiceMinute[key];
     return usd === undefined ? null : Math.round((u.seconds / 60) * usd * 1_000_000);
   }

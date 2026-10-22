@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit } from "./declaracion";
+import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit, withSandbox } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = { OPENLEN_TERMINAL: "0" };
@@ -176,5 +176,75 @@ describe("git in the bash description (spec local 2026-10-15-git-for-len, §5)",
   it("withGit finds its sentence (a substitution that finds nothing is a lever to nowhere)", () => {
     expect(() => withGit("nothing to replace")).toThrow();
     expect(withGit(String(DECLARACION_BASH.description))).not.toBe(String(DECLARACION_BASH.description));
+  });
+});
+
+// LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b, §11): con la caja encendida, bash dice
+// que corre de verdad, dónde llega su red, que lo de los visitantes se lee con sus herramientas y
+// que hay segundo plano. Apagada, la descripción es la de hoy, byte a byte.
+describe("bash con la terminal real", () => {
+  const bashDe = (env: Record<string, string>, app: { catalogo: string; entrada: string } | null = null) =>
+    buildFunctionDeclarations(env, {}, "len", app as never).find((d) => d.name === NOMBRE_BASH)!;
+  const SIN_CAJA = { OPENLEN_GIT: "0" };
+  const CON_CAJA = { OPENLEN_GIT: "0", E2B_API_KEY: "k" };
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+
+  it("apagada, la descripción y los parámetros son los de hoy", () => {
+    expect(bashDe({ ...SIN_CAJA, OPENLEN_SANDBOX: "0", E2B_API_KEY: "k" })).toEqual(bashDe(SIN_CAJA));
+    expect(JSON.stringify(bashDe(SIN_CAJA))).not.toContain("run_in_background");
+  });
+
+  it("encendida, dice que corre de verdad y hasta dónde llega su red", () => {
+    const d = String(bashDe(CON_CAJA).description);
+    expect(d).not.toContain("interprets commands without running real programs");
+    expect(d).toContain("isolated Linux computer");
+    expect(d).toContain("python3 with pip");
+    expect(d).toContain("package registries (npm, PyPI) and GitHub");
+  });
+
+  it("lo de los visitantes se lee con sus herramientas, no en la terminal", () => {
+    const d = String(bashDe(CON_CAJA).description);
+    expect(d).not.toContain("/.openlen/bandeja/formularios.jsonl");
+    expect(d).not.toContain("/.openlen/resultados/visitas.json");
+    expect(d).toContain("list_form_submissions");
+    expect(d).toContain("get_visits");
+  });
+
+  it("dice lo del segundo plano y trae run_in_background", () => {
+    const d = bashDe(CON_CAJA);
+    expect(String(d.description)).toContain("keeps running in the background");
+    expect(JSON.stringify(d.parameters)).toContain("run_in_background");
+  });
+
+  it("con git, en una app, también", () => {
+    const d = String(bashDe({ E2B_API_KEY: "k" }, APP).description);
+    expect(d).toContain("isolated Linux computer");
+    expect(d).toContain("this project's repository (one branch, main, no remote yet)");
+    expect(d).toContain("npm test, npm run build");
+  });
+
+  it("no promete que una búsqueda de / se salte nada: en la caja recorre el ordenador entero", () => {
+    for (const d of [bashDe(CON_CAJA), bashDe({ E2B_API_KEY: "k" }, APP)].map((x) => String(x.description))) {
+      expect(d).not.toMatch(/grep -r \/,? does not enter it/);
+      expect(d).not.toContain("does not enter it unless you name it");
+      expect(d).toContain("not with grep -r /");
+    }
+  });
+
+  it("en una página, /tests se corre: npx playwright test contra $BASE_URL", () => {
+    const d = String(bashDe(CON_CAJA).description);
+    expect(d).not.toContain("there is no Playwright in this terminal");
+    expect(d).toContain("npx playwright test");
+    expect(d).toContain("$BASE_URL");
+  });
+
+  it("en una app, /tests sigue siendo de vitest", () => {
+    const d = String(bashDe({ ...CON_CAJA }, APP).description);
+    expect(d).toContain("/tests holds the app's tests (vitest)");
+    expect(d).not.toContain("npx playwright test");
+  });
+
+  it("withSandbox encuentra su frase (si no, falla)", () => {
+    expect(() => withSandbox("nothing to replace")).toThrow();
   });
 });

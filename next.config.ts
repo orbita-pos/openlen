@@ -129,6 +129,9 @@ const nextConfig = {
     "globals",
     // El empaquetador de las apps (plan 02): ver `outputFileTracingIncludes`.
     "esbuild-wasm",
+    // La terminal real (lib/agent/sandbox/e2b-driver.ts): el SDK de E2B se carga en
+    // ejecución y su árbol (undici, tar, glob…) va entero, sin pasar por webpack.
+    "e2b",
   ],
   // serverExternalPackages alone doesn't always exclude transitively-linked
   // workspace deps from webpack's module graph (the `file:` symlink to

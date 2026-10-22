@@ -1,4 +1,5 @@
 import { contentTypeFor, isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { BOX_MARKER_HEADER, projectOfBoxMarker } from "@/lib/agent/sandbox/box-marker";
 import { esFuenteCompilable } from "@/lib/apps/compilador";
 import { entradaServida, servirFuenteDePagina } from "@/lib/apps/servir";
 import { bundleApp } from "@/lib/apps/bundler/bundle-app";
@@ -52,6 +53,14 @@ export async function GET(
   // Los segmentos de la carpeta y de las páginas son `[A-Za-z0-9._-]`: no hay
   // nada que decodificar, y lo que traiga otra cosa no casa con nada.
   const ruta = `/${path.join("/")}`;
+
+  // LA CAJA DE LEN (plan local 2026-10-21-playwright-in-the-box): con su marca —la pone el proxy de E2B,
+  // la caja no la ve— y de ESTE proyecto, el borrador guardado en cualquier ruta, sin documento vivo.
+  const deLaCaja = projectOfBoxMarker(req.headers.get(BOX_MARKER_HEADER));
+  if (deLaCaja && etiquetaDeLienzo(deLaCaja) === etiqueta) {
+    const { servirVistaDeLaCaja } = await import("@/lib/lienzo/vista-de-la-caja");
+    return (await servirVistaDeLaCaja(deLaCaja, ruta)) ?? noEncontrado();
+  }
 
   // LOS FUENTES (.jsx .tsx .ts, y en una app también .js), antes que la
   // carpeta: un `.jsx` es un fichero de la carpeta, pero el navegador nunca

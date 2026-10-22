@@ -66,6 +66,7 @@ export async function realtimeProjectForHost(host: string, origin: string | null
   // del ENTORNO, para que un broadcast del borrador no llegue a producción.
   const project: RealtimeProject = {
     ref: scope ?? newScope(rec.ref, decision.environment),
+    environment: decision.environment,
     publishableKey: rec.publishableKey,
     secretKeyHash: rec.secretKeyHash,
     jwtSecret: decryptToken(env?.jwtSecretEncrypted ?? rec.jwtSecretEncrypted),

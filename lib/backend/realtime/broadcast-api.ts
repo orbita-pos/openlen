@@ -10,6 +10,8 @@
 
 import type http from "node:http";
 
+import { BOX_READS_PRODUCTION } from "@/lib/agent/sandbox/box-marker";
+
 import { authorizeSocket } from "./auth";
 import { writeAuthorization, emptyPolicies, ensureMessagePartitions } from "./authorization";
 import type { Hub, RealtimeProject } from "./channel";
@@ -101,8 +103,11 @@ export async function handleBroadcastApi(
   project: RealtimeProject,
   hub: Hub,
   limits: RealtimeLimits,
+  /** Len's box on production (server.ts): it never writes there. */
+  readOnly = false,
 ): Promise<void> {
   if (req.method !== "POST") return send(res, 404, { message: "not found" });
+  if (readOnly) return send(res, 403, { message: BOX_READS_PRODUCTION });
   // Su AuthTenant: el `Authorization: Bearer` o la `apikey`.
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "")?.[1];
   const apikey = typeof req.headers.apikey === "string" ? req.headers.apikey : null;

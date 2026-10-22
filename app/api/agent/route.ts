@@ -111,7 +111,8 @@ import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
-import { cerrarTerminalDeLaSesion } from "@/lib/agent/terminal/herramienta";
+import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
+import { TurnSandbox } from "@/lib/agent/sandbox/choose";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
@@ -1109,6 +1110,8 @@ async function correrTurno(
   const agentSession: AgentSession = {
     projectId,
     userId,
+    // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
+    turnId: turnoId,
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
@@ -1429,6 +1432,11 @@ async function correrTurno(
         // `done`, sólo con lo que cambió. Nunca tumba el cierre del turno.
         emitirCambios = async () => {
           try {
+            // LA TERMINAL REAL: lo que la caja dejó sin guardar (segundo plano) entra ANTES de la
+            // foto de después, para que sea de este turno y de su «Deshacer».
+            await settleSessionTerminal(agentSession, deps).catch((err: unknown) => {
+              console.warn("[agent] no se pudo guardar lo pendiente de la caja", err);
+            });
             const antes = await fotoAntes;
             if (!antes) return;
             const despues = await cargarFicherosDeLaTerminal(agentSession, deps);
@@ -1566,6 +1574,8 @@ async function correrTurno(
           // UNA APP (plan 03): los tipos y el lint que llegaron tras escribir,
           // antes de cada llamada al modelo, como el LSP de Claude Code.
           lateDiagnostics: () => takeTypesAndLint(agentSession),
+          // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
+          lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground() : []),
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
@@ -2071,7 +2081,8 @@ async function correrTurno(
         // muere con el turno. Nunca tumba el cierre, y no se ESPERA: con el
         // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
         // route.test.ts, «el navegador del turno se cierra al acabar»).
-        void cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
+        // Con la caja (LA TERMINAL REAL), además guarda lo pendiente, la pausa y la cobra: por eso los deps.
+        void cerrarTerminalDeLaSesion(agentSession, deps).catch(() => undefined);
         // Y LA PESTAÑA DEL TURNO (`use_page`, 14/10): su Chromium muere con él.
         void closeBrowserTab(agentSession.browserTab).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a

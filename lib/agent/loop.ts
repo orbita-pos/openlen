@@ -225,6 +225,9 @@ export interface AgentLoopArgs {
    *  lint de una app (`takeTypesAndLint`)—, recogido antes de cada llamada al
    *  modelo, como los adjuntos `lsp_diagnostics` de Claude Code. */
   lateDiagnostics?: () => readonly Diagnostico[];
+  /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): los comandos de la caja
+   *  que terminaron en segundo plano, recogidos igual, antes de cada llamada al modelo. */
+  lateNotices?: () => Promise<readonly string[]>;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -1061,7 +1064,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // identidad, la de Claude Code, que lleva el rango).
     const nuevos: Diagnostico[] = [...entregados.nuevos(diagnosticosDeLaTanda), ...(args.lateDiagnostics?.() ?? [])];
     diagnosticosDeLaTanda = [];
-    return redactarDiagnosticos(nuevos) ?? "";
+    const avisos = (await args.lateNotices?.().catch(() => [])) ?? [];
+    return [redactarDiagnosticos(nuevos) ?? "", ...avisos].filter((p) => p !== "").join("\n\n");
   };
 
   /** Ver `AgentLoopResult.rechazos`. */

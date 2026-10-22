@@ -327,3 +327,25 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
     expect(buildManualDeLaPlataforma({})).not.toContain("/ai/v1/chat/completions");
   });
 });
+
+// LA TERMINAL REAL (plan local 2026-10-21-playwright-in-the-box): con la caja, /tests de una página se corre.
+describe("/tests de una página con la caja", () => {
+  const CAJA = { E2B_API_KEY: "k" };
+
+  it("con la caja: npx playwright test contra el borrador en $BASE_URL, sin capturas de referencia", () => {
+    const m = buildManualDeLaPlataforma(CAJA);
+    expect(m).not.toContain("there is no Playwright in the terminal");
+    expect(m).toContain("npx playwright test");
+    expect(m).toContain("process.env.BASE_URL");
+    expect(m).toContain("toHaveScreenshot");
+  });
+
+  it("sin la caja, como hoy", () => {
+    expect(buildManualDeLaPlataforma({})).toContain("there is no Playwright in the terminal");
+  });
+
+  it("una app no cambia: sus pruebas son las de vitest", () => {
+    const app = buildManualDeLaPlataforma(CAJA, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
+    expect(app).not.toContain("npx playwright test");
+  });
+});

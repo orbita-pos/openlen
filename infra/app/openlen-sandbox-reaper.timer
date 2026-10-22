@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenLen — cajas viejas de la terminal real, una vez al día
+Requires=openlen-sandbox-reaper.service
+
+[Timer]
+# 10:00 UTC = 4:00 en Ciudad de México, media hora después de la limpieza del MCP.
+# Persistent=true recupera la corrida perdida si la caja estaba apagada.
+OnCalendar=*-*-* 10:00:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target
