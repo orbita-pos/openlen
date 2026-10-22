@@ -53,6 +53,8 @@ const ADDRESS = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
 const HOUR_MS = 60 * 60 * 1000;
 
 const err = (statusCode: number, name: string, message: string): ResendError => ({ statusCode, name, message });
+/** A notice that can't be scheduled never turns an email that went out (or a refusal) into another error. */
+const noticeFailed = (e: unknown) => console.warn("[email] quota notice failed", e);
 const notVerified = (domain: string) => err(403, "validation_error", `The \`${domain}\` domain is not verified. Please, add and verify your domain.`);
 
 /** "Name <a@b.c>" or "a@b.c" → the address's domain, lower case. */
@@ -144,7 +146,7 @@ export async function sendProjectEmail(i: SendInput, d: SendDeps): Promise<SendO
     const included = limits.includedPerMonth;
     const extra = Math.max(0, used + to.length - included) - Math.max(0, used - included);
     if (extra > 0 && !(await d.debitIfEnough(owner.userId, extra * EXTRA_CENTICREDITS_PER_EMAIL, i.projectId))) {
-      await d.notify({ type: "email_quota", projectId: i.projectId, recipientUserId: owner.userId, percent: 100, sent: used, included, noCredits: true });
+      await d.notify({ type: "email_quota", projectId: i.projectId, recipientUserId: owner.userId, percent: 100, sent: used, included, noCredits: true }).catch(noticeFailed);
       return reject(err(429, "monthly_quota_exceeded", "You have exceeded your monthly email sending quota, and there are no credits left for more."), to);
     }
 
@@ -171,7 +173,7 @@ export async function sendProjectEmail(i: SendInput, d: SendDeps): Promise<SendO
     const after = await d.store.addUsage(owner.userId, month, sent);
     for (const percent of [80, 100] as const) {
       const line = (included * percent) / 100;
-      if (used < line && after >= line) await d.notify({ type: "email_quota", projectId: i.projectId, recipientUserId: owner.userId, percent, sent: after, included, noCredits: false });
+      if (used < line && after >= line) await d.notify({ type: "email_quota", projectId: i.projectId, recipientUserId: owner.userId, percent, sent: after, included, noCredits: false }).catch(noticeFailed);
     }
     return { kind: "sent", id: firstId!, skipped };
   });

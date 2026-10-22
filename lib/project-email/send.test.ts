@@ -167,6 +167,15 @@ describe("the month's allowance", () => {
     await sendProjectEmail(input(), w.d);
     expect(w.notices.map((n) => n.percent)).toEqual([80, 100]);
   });
+
+  it("a notice that fails doesn't turn an email that went out into an error", async () => {
+    const w = await world();
+    await w.store.addUsage("owner-1", "2026-10", 799);
+    w.d.notify = async () => {
+      throw new Error("notifications down");
+    };
+    await expect(sendProjectEmail(input(), w.d)).resolves.toMatchObject({ kind: "sent" });
+  });
 });
 
 describe("what goes out", () => {
