@@ -413,7 +413,9 @@ export interface StoredChatTurn {
       intent?:
         | { kind: "plan-review"; plan: string }
         | { kind: "plan-consent" }
-        | { kind: "secrets"; secrets: Array<{ name: string; description: string; url?: string }> };
+        | { kind: "secrets"; secrets: Array<{ name: string; description: string; url?: string }> }
+        // Project email: the domain's card (`connect_email_domain`).
+        | { kind: "email-domain" };
     }>;
     /** Lo que contestó el dueño dentro del turno, en una línea. */
     respuesta?: string;

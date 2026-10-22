@@ -19,6 +19,7 @@ import { APPROVE_LABEL, planTitle } from "@/lib/agent/plan-mode";
 import { PLAN_LABEL_KEYS } from "./plan-mode-state";
 import { TextoDeLen } from "../texto-de-len";
 import { SecretsCardView } from "./secrets-card";
+import { EmailDomainCardView } from "./email-domain-card";
 
 type Translate = (key: string, values?: Record<string, string>) => string;
 
@@ -71,6 +72,10 @@ export function QuestionCardView({ question, questions, answer, onAnswer, onDism
   // cosa — campos de contraseña que van directos a la ruta de secretos.
   if (intent?.kind === "secrets") {
     return <SecretsCardView projectId={projectId ?? null} secrets={intent.secrets} answer={answer} cancelled={cancelled} onAnswer={onAnswer} t={t} />;
+  }
+  // PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): the domain's card connects through the Correos tab's route.
+  if (intent?.kind === "email-domain") {
+    return <EmailDomainCardView projectId={projectId ?? null} answer={answer} cancelled={cancelled} onAnswer={onAnswer} t={t} />;
   }
 
   if (answer !== null || cancelled) {

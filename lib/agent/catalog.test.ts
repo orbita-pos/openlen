@@ -58,6 +58,15 @@ const RETIRADAS = [
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
+  it("PROJECT EMAIL: connect_email_domain and set_form_auto_reply only with the email on, after request_secrets", () => {
+    const off = buildFunctionDeclarations({}).map((d) => d.name);
+    expect(off).not.toContain("connect_email_domain");
+    expect(off).not.toContain("set_form_auto_reply");
+    const on = buildFunctionDeclarations({ RESEND_CLIENTS_API_KEY: "re_x" }).map((d) => d.name);
+    expect(on.slice(on.indexOf("request_secrets"), on.indexOf("request_secrets") + 3)).toEqual(["request_secrets", "connect_email_domain", "set_form_auto_reply"]);
+    expect(buildFunctionDeclarations({ RESEND_CLIENTS_API_KEY: "re_x", OPENLEN_EMAIL: "0" }).map((d) => d.name)).not.toContain("connect_email_domain");
+  });
+
   it("EDGE FUNCTIONS: sin motor de funciones (functionSecrets: false), request_secrets no se declara", () => {
     expect(buildFunctionDeclarations(undefined, { functionSecrets: false }).some((d) => d.name === "request_secrets")).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "request_secrets")).toBe(true);

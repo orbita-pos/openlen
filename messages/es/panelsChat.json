@@ -384,5 +384,26 @@
   "visualLoading": "Preparando el visual…",
   "visualLinkTitle": "¿Abrir este enlace?",
   "visualLinkOpen": "Abrir",
-  "visualLinkCancel": "Cancelar"
+  "visualLinkCancel": "Cancelar",
+  "emailDomain": {
+    "cardLabel": "Dominio del correo",
+    "cardHint": "Los correos del proyecto saldrán de una dirección de este dominio. Las líneas del DNS que añadir estarán en la pestaña Correos.",
+    "placeholder": "tunegocio.com",
+    "showAsRoot": "Mostrar como @{domain}",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "skip": "Ahora no",
+    "connected": "Conectado: {host}",
+    "skipped": "Sin conectar",
+    "answerMessage": "Conecté el dominio del correo: {host}",
+    "answerSkipped": "Por ahora no conecté un dominio para el correo.",
+    "errors": {
+      "free_plan": "El correo desde tu dominio es de los planes de pago.",
+      "invalid_domain": "Eso no parece un dominio (como tunegocio.com).",
+      "host_taken": "Otro proyecto ya manda desde ese dominio.",
+      "provider_error": "El proveedor de correo no contestó. Inténtalo en un momento.",
+      "generic": "Algo salió mal. Inténtalo en un momento."
+    },
+    "liveWaiting": "Len espera que conectes el dominio del correo"
+  }
 }

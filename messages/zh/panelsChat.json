@@ -384,5 +384,26 @@
   "visualLoading": "正在准备图示…",
   "visualLinkTitle": "打开这个链接？",
   "visualLinkOpen": "打开",
-  "visualLinkCancel": "取消"
+  "visualLinkCancel": "取消",
+  "emailDomain": {
+    "cardLabel": "邮件域名",
+    "cardHint": "项目的邮件将从这个域名下的地址发出。需要添加的 DNS 记录会显示在邮件标签页中。",
+    "placeholder": "yourbusiness.com",
+    "showAsRoot": "显示为 @{domain}",
+    "connect": "连接",
+    "connecting": "连接中…",
+    "skip": "暂不",
+    "connected": "已连接：{host}",
+    "skipped": "未连接",
+    "answerMessage": "我已连接邮件域名：{host}",
+    "answerSkipped": "我暂时没有连接邮件域名。",
+    "errors": {
+      "free_plan": "从自己的域名发邮件是付费方案的功能。",
+      "invalid_domain": "这看起来不像一个域名（例如 yourbusiness.com）。",
+      "host_taken": "另一个项目已经在用这个域名发送邮件。",
+      "provider_error": "邮件服务商没有响应。请稍后再试。",
+      "generic": "出了点问题。请稍后再试。"
+    },
+    "liveWaiting": "Len 正在等你连接邮件域名"
+  }
 }

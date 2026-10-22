@@ -43,8 +43,11 @@ import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
-import { ASK_USER_QUESTION, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
+import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
 import { REQUEST_SECRETS_DECLARATION } from "@/lib/agent/request-secrets";
+import { CONNECT_EMAIL_DOMAIN_DECLARATION } from "@/lib/agent/connect-email-domain";
+import { SET_FORM_AUTO_REPLY, SET_FORM_AUTO_REPLY_DECLARATION } from "@/lib/agent/form-auto-reply";
+import { emailEnabledIn } from "@/lib/project-email/enabled";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
@@ -170,6 +173,12 @@ function declaracionesDelModo(
   if (capacidades.mirarPagina === false) fuera.add("view_page");
   if (capacidades.usarPagina === false) fuera.add("use_page");
   if (capacidades.functionSecrets === false) fuera.add(REQUEST_SECRETS);
+  // PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): only with the email on, per server
+  // like Stripe's manual line, so the catalog doesn't change between turns.
+  if (!emailEnabledIn(_env)) {
+    fuera.add(CONNECT_EMAIL_DOMAIN);
+    fuera.add(SET_FORM_AUTO_REPLY);
+  }
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
@@ -431,6 +440,10 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): la tarjeta segura de
     // los secretos, por el canal de la pregunta (`lib/agent/request-secrets.ts`).
     REQUEST_SECRETS_DECLARATION,
+    // PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): the domain's card, by the same
+    // channel, and the form's automatic reply.
+    CONNECT_EMAIL_DOMAIN_DECLARATION,
+    SET_FORM_AUTO_REPLY_DECLARATION,
     // LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): las dos
     // de las herramientas visualize de Claude, con sus nombres y su forma, y
     // palabras nuestras (`lib/agent/visuals/tools.ts`).

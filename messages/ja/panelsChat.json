@@ -384,5 +384,26 @@
   "visualLoading": "ビジュアルを準備中…",
   "visualLinkTitle": "このリンクを開きますか?",
   "visualLinkOpen": "開く",
-  "visualLinkCancel": "キャンセル"
+  "visualLinkCancel": "キャンセル",
+  "emailDomain": {
+    "cardLabel": "メールドメイン",
+    "cardHint": "プロジェクトのメールはこのドメインのアドレスから送られます。追加する DNS の行はメールタブに表示されます。",
+    "placeholder": "yourbusiness.com",
+    "showAsRoot": "@{domain} として表示",
+    "connect": "接続",
+    "connecting": "接続中…",
+    "skip": "今はしない",
+    "connected": "接続済み：{host}",
+    "skipped": "未接続",
+    "answerMessage": "メールドメインを接続しました：{host}",
+    "answerSkipped": "今はメールドメインを接続しませんでした。",
+    "errors": {
+      "free_plan": "独自ドメインからのメールは有料プランの機能です。",
+      "invalid_domain": "ドメインの形式ではないようです（例：yourbusiness.com）。",
+      "host_taken": "別のプロジェクトがすでにそのドメインから送信しています。",
+      "provider_error": "メールプロバイダーから応答がありませんでした。少し待ってからもう一度お試しください。",
+      "generic": "問題が発生しました。少し待ってからもう一度お試しください。"
+    },
+    "liveWaiting": "Len はメールドメインの接続を待っています"
+  }
 }
