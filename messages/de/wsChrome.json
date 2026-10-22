@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Funktionen",
       "secrets": "Secrets",
-      "ai": "KI"
+      "ai": "KI",
+      "payments": "Zahlungen"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -577,6 +578,32 @@
       "saving": "Wird gespeichert…",
       "useDefault": "Standard verwenden",
       "saveError": "Das Limit konnte nicht gespeichert werden."
+    },
+    "payments": {
+      "mode": "Stripe-Modus",
+      "test": "Test",
+      "live": "Live",
+      "account": "Stripe-Konto: {name}",
+      "openInStripe": "In Stripe öffnen",
+      "loading": "Wird geladen…",
+      "loadError": "Stripe konnte nicht gelesen werden. Versuche es gleich noch einmal.",
+      "empty": "Noch kein Stripe-Konto verbunden. Bitte Len, etwas zu verkaufen, dann fragt er nach deinem Stripe-Schlüssel.",
+      "cannotChargeYet": "Dein Stripe-Konto kann noch keine echten Zahlungen annehmen.",
+      "finishInStripe": "Einrichtung in Stripe abschließen",
+      "payments": "Letzte Zahlungen",
+      "noPayments": "Noch keine Zahlungen.",
+      "subscriptions": "Aktive Abos",
+      "noSubscriptions": "Keine aktiven Abos.",
+      "products": "Produkte",
+      "noProducts": "Keine Produkte.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "Keine Webhooks.",
+      "disconnect": "Stripe trennen",
+      "disconnectWarning": "Entfernt deine Stripe-Schlüssel aus dem Projekt und die damit registrierten Webhooks. Kündigt keine Abos und erstattet keine Zahlungen: Das bleibt in Stripe.",
+      "disconnectWord": "TRENNEN",
+      "disconnectTypeHint": "Gib {word} ein, um zu bestätigen",
+      "disconnectConfirm": "Trennen",
+      "cancel": "Abbrechen"
     }
   },
   "appBirth": {

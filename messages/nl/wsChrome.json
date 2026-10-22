@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Functies",
       "secrets": "Geheimen",
-      "ai": "AI"
+      "ai": "AI",
+      "payments": "Betalingen"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -577,6 +578,32 @@
       "saving": "Opslaan…",
       "useDefault": "Standaard gebruiken",
       "saveError": "De limiet kon niet worden opgeslagen."
+    },
+    "payments": {
+      "mode": "Stripe-modus",
+      "test": "Test",
+      "live": "Echt",
+      "account": "Stripe-account: {name}",
+      "openInStripe": "Openen in Stripe",
+      "loading": "Laden…",
+      "loadError": "Stripe kon niet worden gelezen. Probeer het zo opnieuw.",
+      "empty": "Nog geen Stripe-account gekoppeld. Vraag Len om iets te verkopen, dan vraagt hij om je Stripe-sleutel.",
+      "cannotChargeYet": "Je Stripe-account kan nog geen echte betalingen ontvangen.",
+      "finishInStripe": "Rond de aanmelding af in Stripe",
+      "payments": "Laatste betalingen",
+      "noPayments": "Nog geen betalingen.",
+      "subscriptions": "Actieve abonnementen",
+      "noSubscriptions": "Geen actieve abonnementen.",
+      "products": "Producten",
+      "noProducts": "Geen producten.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "Geen webhooks.",
+      "disconnect": "Stripe ontkoppelen",
+      "disconnectWarning": "Verwijdert je Stripe-sleutels uit het project en de webhooks die ermee zijn geregistreerd. Annuleert geen abonnementen en betaalt niets terug: dat blijft in Stripe.",
+      "disconnectWord": "ONTKOPPELEN",
+      "disconnectTypeHint": "Typ {word} om te bevestigen",
+      "disconnectConfirm": "Ontkoppelen",
+      "cancel": "Annuleren"
     }
   },
   "appBirth": {

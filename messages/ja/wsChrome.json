@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "関数",
       "secrets": "シークレット",
-      "ai": "AI"
+      "ai": "AI",
+      "payments": "支払い"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -577,6 +578,32 @@
       "saving": "保存中…",
       "useDefault": "初期値に戻す",
       "saveError": "上限を保存できませんでした。"
+    },
+    "payments": {
+      "mode": "Stripe のモード",
+      "test": "テスト",
+      "live": "本番",
+      "account": "Stripe アカウント：{name}",
+      "openInStripe": "Stripe で開く",
+      "loading": "読み込み中…",
+      "loadError": "Stripe を読み込めませんでした。少ししてからもう一度お試しください。",
+      "empty": "まだ Stripe アカウントが接続されていません。Len に何かを販売するよう頼むと、Stripe キーを聞いてきます。",
+      "cannotChargeYet": "Stripe アカウントはまだ実際の支払いを受け付けられません。",
+      "finishInStripe": "Stripe で登録を完了する",
+      "payments": "最近の支払い",
+      "noPayments": "まだ支払いはありません。",
+      "subscriptions": "有効なサブスクリプション",
+      "noSubscriptions": "有効なサブスクリプションはありません。",
+      "products": "商品",
+      "noProducts": "商品はありません。",
+      "webhooks": "Webhook",
+      "noWebhooks": "Webhook はありません。",
+      "disconnect": "Stripe の接続を解除",
+      "disconnectWarning": "プロジェクトから Stripe キーと、それで登録した Webhook を削除します。サブスクリプションの解約や返金は行いません。それは Stripe で行います。",
+      "disconnectWord": "解除",
+      "disconnectTypeHint": "確認のため {word} と入力してください",
+      "disconnectConfirm": "接続を解除",
+      "cancel": "キャンセル"
     }
   },
   "appBirth": {

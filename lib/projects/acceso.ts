@@ -41,6 +41,9 @@
  *     —formularios recibidos (submissions, test-email), resultados (insights,
  *     funnel), el backend de la app (tablas, usuarios, almacenamiento), la
  *     bandeja—: un miembro trabaja en el sitio, no en la gente que lo usa.
+ *     …/stripe (GET: la pestaña Pagos, con los pagos y los clientes de la cuenta
+ *     de Stripe del dueño; DELETE: desconectar Stripe) — 403 `owner_only`
+ *     (spec local 2026-10-21-stripe-integration).
  *     Duplicar y remezclar copian el proyecto a la cuenta de quien lo pide;
  *     /api/templates/ai-design (el Chat sin Len, la salida de emergencia):
  *     también sólo el dueño.

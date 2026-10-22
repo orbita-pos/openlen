@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Functions",
       "secrets": "Secrets",
-      "ai": "AI"
+      "ai": "AI",
+      "payments": "Payments"
     },
     "unavailable": {
       "title": "The database isn't available here",
@@ -577,6 +578,32 @@
       "saving": "Saving…",
       "useDefault": "Use the default",
       "saveError": "The limit couldn't be saved."
+    },
+    "payments": {
+      "mode": "Stripe mode",
+      "test": "Test",
+      "live": "Live",
+      "account": "Stripe account: {name}",
+      "openInStripe": "Open in Stripe",
+      "loading": "Loading…",
+      "loadError": "Couldn't read Stripe. Try again in a moment.",
+      "empty": "No Stripe account connected yet. Ask Len to charge for something and it will ask you for your Stripe key.",
+      "cannotChargeYet": "Your Stripe account can't take real payments yet.",
+      "finishInStripe": "Finish setting it up in Stripe",
+      "payments": "Latest payments",
+      "noPayments": "No payments yet.",
+      "subscriptions": "Active subscriptions",
+      "noSubscriptions": "No active subscriptions.",
+      "products": "Products",
+      "noProducts": "No products.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "No webhooks.",
+      "disconnect": "Disconnect Stripe",
+      "disconnectWarning": "This removes your Stripe keys from the project and the webhooks registered with them. It doesn't cancel subscriptions or refund payments: that stays in Stripe.",
+      "disconnectWord": "DISCONNECT",
+      "disconnectTypeHint": "Type {word} to confirm",
+      "disconnectConfirm": "Disconnect",
+      "cancel": "Cancel"
     }
   },
   "appBirth": {

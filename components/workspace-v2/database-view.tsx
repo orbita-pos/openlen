@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  CreditCard,
   Database,
   ExternalLink,
   HardDrive,
@@ -37,6 +38,7 @@ import type { AppAiOverview } from "@/lib/app-ai/overview";
 import type { FunctionsOverview } from "@/lib/functions/overview";
 import { ConfirmButton } from "./confirm-button";
 import { AppAiTab } from "./database-app-ai";
+import { PaymentsTab } from "./database-payments";
 import { FunctionsTab } from "./database-functions";
 import { SecretsTab } from "./database-secrets";
 
@@ -76,7 +78,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai" | "payments">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
   // El entorno que pide el selector; el que se ve es el que contestó el servidor.
   const [wanted, setWanted] = useState<PanelEnv | null>(null);
@@ -149,6 +151,25 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     void loadAi();
   }, [loadAi]);
 
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.6): its tab shows with Stripe on and
+  // only for the owner (a member gets a 403). Whether it is available is all this view needs.
+  const [paymentsState, setPaymentsState] = useState<{ readonly projectId: string; readonly available: boolean } | null>(null);
+  const loadPayments = useCallback(async () => {
+    if (!projectId) return;
+    let available = false;
+    try {
+      available = (await call<{ available?: unknown }>(`/api/projects/${projectId}/stripe?env=draft`)).available === true;
+    } catch {
+      available = false;
+    }
+    if (currentProject.current === projectId) setPaymentsState({ projectId, available });
+  }, [projectId]);
+  const payments = paymentsState?.projectId === projectId && paymentsState.available;
+
+  useEffect(() => {
+    void loadPayments();
+  }, [loadPayments]);
+
   const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
   const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
 
@@ -169,8 +190,13 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
   // La pestaña que se ve: sin tablas pero con funciones, Funciones (no hay otra
   // que enseñar); si las funciones ya no están, Tablas.
   const tableTab = tab === "tables" || tab === "users" || tab === "storage";
-  const activeTab = !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : tab === "ai" && !ai ? "functions" : tab;
-  const fnTab = fn !== null && projectId !== null && (activeTab === "functions" || activeTab === "secrets" || activeTab === "ai") && (overview.status === "ready" || overview.status === "empty");
+  const activeTab =
+    !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : (tab === "ai" && !ai) || (tab === "payments" && !payments) ? "functions" : tab;
+  const fnTab =
+    fn !== null &&
+    projectId !== null &&
+    (activeTab === "functions" || activeTab === "secrets" || activeTab === "ai" || activeTab === "payments") &&
+    (overview.status === "ready" || overview.status === "empty");
 
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col bg-app text-zinc-900 dark:text-zinc-100">
@@ -240,6 +266,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
                 <TabButton active={activeTab === "functions"} onClick={() => setTab("functions")} icon={<Zap size={14} />} label={t("tabs.functions")} />
                 <TabButton active={activeTab === "secrets"} onClick={() => setTab("secrets")} icon={<KeyRound size={14} />} label={t("tabs.secrets")} />
                 {ai && <TabButton active={activeTab === "ai"} onClick={() => setTab("ai")} icon={<Sparkles size={14} />} label={t("tabs.ai")} />}
+                {payments && <TabButton active={activeTab === "payments"} onClick={() => setTab("payments")} icon={<CreditCard size={14} />} label={t("tabs.payments")} />}
               </>
             )}
           </div>
@@ -297,6 +324,8 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
         {fnTab && fn && projectId && (
           activeTab === "functions" ? (
             <FunctionsTab overview={fn} />
+          ) : activeTab === "payments" && payments ? (
+            <PaymentsTab key={projectId} projectId={projectId} />
           ) : activeTab === "ai" && ai ? (
             <AppAiTab key={projectId} projectId={projectId} overview={ai} onChange={(next) => setAiState({ projectId, overview: next })} />
           ) : (

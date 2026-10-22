@@ -699,6 +699,7 @@ export default defineConfig({
       "app/api/projects/[id]/env/route.test.ts",
       // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.
       "app/api/projects/[id]/function-secrets/route.test.ts",
+      "app/api/projects/[id]/stripe/route.test.ts",
       // Las Edge Functions de un proyecto, para la vista Base de datos (fase 3). LISTA BLANCA.
       "app/api/projects/[id]/functions/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.
