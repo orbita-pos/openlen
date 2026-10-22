@@ -121,6 +121,39 @@ export const PLAYWRIGHT_DIR = "/opt/openlen/playwright";
 export const PLAYWRIGHT_BROWSERS = "/opt/openlen/ms-playwright";
 const PLAYWRIGHT_BIN = `${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`;
 
+/** Loaded into every `node` of the box by NODE_OPTIONS (sandbox-terminal.ts). */
+export const PLAYWRIGHT_RESOLVER = `${BOX_BIN}/playwright-resolve.cjs`;
+
+/** The template's Playwright for what a PROJECT's file imports or requires (its tests, its config),
+ *  ESM included —NODE_PATH only reaches `require`— and also next to a copy of its own, which would
+ *  be a second Playwright beside the runner's (measured 21/10 in a real box: «did not expect test()
+ *  to be called here»). What a package in node_modules asks for stays its own. CJS through
+ *  `_resolveFilename` (Playwright wraps it with its own and calls ours), ESM through registerHooks. */
+export function playwrightResolverScript(dir: string = PLAYWRIGHT_DIR): string {
+  return `"use strict";
+const Module = require("node:module");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+const DIR = ${JSON.stringify(dir)};
+const OURS = /^(@playwright\\/test|playwright|playwright-core)(\\/.*)?$/;
+const IN_PACKAGE = /[\\\\/]node_modules[\\\\/]/;
+const ours = (specifier, parent) => OURS.test(specifier) && !IN_PACKAGE.test(parent || "");
+const asParent = { id: path.join(DIR, "package.json"), filename: path.join(DIR, "package.json"), paths: Module._nodeModulePaths(DIR) };
+const resolveFilename = Module._resolveFilename;
+Module._resolveFilename = function (request, parent, ...rest) {
+  return resolveFilename.call(this, request, ours(request, parent && parent.filename) ? asParent : parent, ...rest);
+};
+if (typeof Module.registerHooks === "function") {
+  const parentURL = pathToFileURL(path.join(DIR, "package.json")).href;
+  Module.registerHooks({
+    resolve(specifier, context, nextResolve) {
+      return nextResolve(specifier, ours(specifier, context.parentURL) ? { ...context, parentURL } : context);
+    },
+  });
+}
+`;
+}
+
 export function wrapperScript(program: string): string {
   // `npx playwright …` is the template's Playwright, straight: no bridge, no download.
   const playwright = program === "npx" ? `if [ "$1" = "playwright" ]; then shift; exec ${PLAYWRIGHT_BIN} "$@"; fi\n` : "";
@@ -135,5 +168,6 @@ export function templateFiles(): Record<string, { readonly content: string; read
   };
   for (const p of BRIDGED_PROGRAMS) files[`${BOX_BIN}/${p}`] = { content: wrapperScript(p), mode: 0o755 };
   files[`${BOX_BIN}/playwright`] = { content: `#!/bin/sh\nexec ${PLAYWRIGHT_BIN} "$@"\n`, mode: 0o755 };
+  files[PLAYWRIGHT_RESOLVER] = { content: playwrightResolverScript(), mode: 0o644 };
   return files;
 }

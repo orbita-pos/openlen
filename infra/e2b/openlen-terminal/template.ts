@@ -38,7 +38,8 @@ export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: st
       user: "root",
     })
     // Playwright at a fixed version with its Chromium and system libraries (the pages' /tests). The box
-    // finds it through PLAYWRIGHT_BROWSERS_PATH and NODE_PATH (lib/agent/sandbox/sandbox-terminal.ts).
+    // finds it through PLAYWRIGHT_BROWSERS_PATH, NODE_PATH and, for ESM, the resolver NODE_OPTIONS
+    // loads (lib/agent/sandbox/sandbox-terminal.ts, template-files.ts).
     .runCmd(
       `mkdir -p ${PLAYWRIGHT_DIR} && cd ${PLAYWRIGHT_DIR} && npm init -y >/dev/null && npm i @playwright/test@${PLAYWRIGHT_VERSION} --no-audit --no-fund && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS} npx playwright install --with-deps chromium && chmod -R a+rX ${PLAYWRIGHT_DIR} ${PLAYWRIGHT_BROWSERS}`,
       { user: "root" },

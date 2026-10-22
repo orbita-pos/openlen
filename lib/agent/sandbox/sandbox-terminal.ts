@@ -24,7 +24,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR } from "./template-files";
+import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_RESOLVER } from "./template-files";
 
 const REQUESTS = `${BRIDGE_DIR}/requests`;
 const RESPONSES = `${BRIDGE_DIR}/responses`;
@@ -73,6 +73,11 @@ function baseEnvScript(turn: Readonly<Record<string, string>>): string {
   const lines = Object.entries({ ...fixed, ...turn }).map(([k, v]) => `export ${k}=${quote(v)}`);
   // Node only if the file is there: a missing one makes every `node` print a warning.
   lines.push(`[ -f ${E2B_CA} ] && export NODE_EXTRA_CA_CERTS=${E2B_CA}`);
+  // The template's Playwright for a project's ESM too (template-files.ts); once, after what the shell
+  // already carries (its own NODE_OPTIONS included), and only if the template has the file: a
+  // missing --require stops every `node`.
+  const require = `--require=${PLAYWRIGHT_RESOLVER}`;
+  lines.push(`[ -f ${PLAYWRIGHT_RESOLVER} ] && case " $NODE_OPTIONS " in *" ${require} "*) ;; *) export NODE_OPTIONS="\${NODE_OPTIONS:+$NODE_OPTIONS }${require}" ;; esac`);
   return `${lines.join("\n")}\n`;
 }
 
