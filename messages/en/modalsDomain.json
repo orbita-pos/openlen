@@ -161,7 +161,8 @@
       "cannotChargeYet": "Your Stripe account can't take real payments yet.",
       "finishInStripe": "Finish setting it up in Stripe",
       "accountMismatch": "The Stripe key for the published site is from a different account than the test one. Use keys from the same account.",
-      "syncFailed": "Couldn't copy your products to live Stripe ({message}). Nothing was published; try again."
+      "syncFailed": "Couldn't copy your products to live Stripe ({message}). Nothing was published; try again.",
+      "willCreate": "Will be copied to your live Stripe: {list}."
     }
   },
   "inspector": {

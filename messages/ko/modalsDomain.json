@@ -161,7 +161,8 @@
       "cannotChargeYet": "Stripe 계정이 아직 실제 결제를 받을 수 없어요.",
       "finishInStripe": "Stripe에서 가입 마치기",
       "accountMismatch": "게시된 페이지의 Stripe 키가 테스트 키와 다른 계정의 키예요. 같은 계정의 키를 쓰세요.",
-      "syncFailed": "상품을 실제 Stripe에 복사하지 못했어요({message}). 아무것도 게시되지 않았어요. 다시 시도하세요."
+      "syncFailed": "상품을 실제 Stripe에 복사하지 못했어요({message}). 아무것도 게시되지 않았어요. 다시 시도하세요.",
+      "willCreate": "실제 Stripe에 복사해요: {list}."
     }
   },
   "inspector": {

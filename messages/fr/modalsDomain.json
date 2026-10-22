@@ -161,7 +161,8 @@
       "cannotChargeYet": "Votre compte Stripe ne peut pas encore encaisser de vrais paiements.",
       "finishInStripe": "Terminez l'inscription dans Stripe",
       "accountMismatch": "La clé Stripe de la page publiée vient d'un autre compte que celle de test. Utilisez des clés du même compte.",
-      "syncFailed": "Impossible de copier vos produits dans Stripe réel ({message}). Rien n'a été publié ; réessayez."
+      "syncFailed": "Impossible de copier vos produits dans Stripe réel ({message}). Rien n'a été publié ; réessayez.",
+      "willCreate": "Sera copié dans votre Stripe réel : {list}."
     }
   },
   "inspector": {

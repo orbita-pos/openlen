@@ -161,7 +161,8 @@
       "cannotChargeYet": "Dein Stripe-Konto kann noch keine echten Zahlungen annehmen.",
       "finishInStripe": "Einrichtung in Stripe abschließen",
       "accountMismatch": "Der Stripe-Schlüssel der veröffentlichten Seite gehört zu einem anderen Konto als der Testschlüssel. Nutze Schlüssel desselben Kontos.",
-      "syncFailed": "Deine Produkte konnten nicht ins echte Stripe kopiert werden ({message}). Nichts wurde veröffentlicht; versuche es noch einmal."
+      "syncFailed": "Deine Produkte konnten nicht ins echte Stripe kopiert werden ({message}). Nichts wurde veröffentlicht; versuche es noch einmal.",
+      "willCreate": "Wird in dein echtes Stripe kopiert: {list}."
     }
   },
   "inspector": {
