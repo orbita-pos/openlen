@@ -198,9 +198,6 @@ const targets = [
   // creditLedger. Inert while OPENLEN_ARTIFACTS is off (nothing reads them);
   // 🔴 MANDATORY before turning it on: every artifact route queries them.
   "artifacts-migrate",
-  // Len's real terminal: projectSandboxes (lib/agent/sandbox/store.ts). It wasn't here, so the deploy
-  // never created the table, and `npm run sandbox:migrate` reads .env.local, not the box's database.
-  "sandbox-migrate",
   // users.passwordChangedAt: a password reset closes the sessions already open (lib/auth/session-cutoff.ts).
   "password-changed-migrate",
   // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b): the projectSandboxes table.
