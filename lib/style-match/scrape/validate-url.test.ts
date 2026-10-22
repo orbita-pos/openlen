@@ -183,3 +183,55 @@ describe("ipv6IsPrivate — el clasificador que faltaba", () => {
     if (r.ok) expect(r.value.resolvedIp).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
   });
 });
+
+// 4. CERRADO (21/10, revisión de seguridad): una IPv6 que empezaba por «::» —salvo ::1 y ::— salía
+//    pública sin mirar nada más, y las mapeadas a IPv4 sólo se reconocían escritas con puntos. Ahora se
+//    leen los 128 bits: lo que lleva una IPv4 dentro se juzga por esa IPv4, y los rangos que no son
+//    internet (multicast, documentación, NAT64, 6to4/Teredo con IPv4 privada) no pasan.
+describe("🔴 ipv6IsPrivate lee la dirección entera", () => {
+  it.each([
+    ["::127.0.0.1", "compatible con IPv4, al loopback"],
+    ["::7f00:1", "lo mismo en hexadecimal"],
+    ["::ffff:7f00:1", "MAPEADA al loopback en hexadecimal"],
+    ["::ffff:a9fe:a9fe", "MAPEADA a los metadatos de nube, en hexadecimal"],
+    ["0:0:0:0:0:ffff:127.0.0.1", "mapeada sin comprimir"],
+    ["64:ff9b::7f00:1", "NAT64"],
+    ["64:ff9b:1::1", "NAT64 de uso local"],
+    ["2002:7f00:1::1", "6to4 hacia una IPv4 privada"],
+    ["2001:0:4136:e378:8000:63bf:3fff:fdd2", "Teredo"],
+    ["ff02::1", "multicast"],
+    ["2001:db8::1", "documentación"],
+    ["100::1", "descarte"],
+    ["fec0::1", "sitio local (en desuso)"],
+    ["no:es:una:ip", "no se puede leer: cerrado"],
+  ])("bloquea %s (%s)", (ip) => {
+    expect(ipv6IsPrivate(ip)).toBe(true);
+  });
+
+  it.each([
+    ["::ffff:808:808", "MAPEADA a 8.8.8.8 en hexadecimal: pública"],
+    ["2002:808:808::1", "6to4 hacia una IPv4 pública"],
+    ["2a01:4f8:c17:1234::1", "Hetzner"],
+  ])("deja pasar %s (%s)", (ip) => {
+    expect(ipv6IsPrivate(ip)).toBe(false);
+  });
+});
+
+describe("🔴 ipInPrivateRange cierra los rangos IPv4 que no son internet", () => {
+  it.each([
+    ["224.0.0.1", "multicast"],
+    ["239.255.255.250", "multicast (SSDP)"],
+    ["240.0.0.1", "reservado"],
+    ["255.255.255.255", "difusión"],
+    ["192.0.2.1", "documentación TEST-NET-1"],
+    ["198.51.100.1", "documentación TEST-NET-2"],
+    ["203.0.113.1", "documentación TEST-NET-3"],
+  ])("bloquea %s (%s)", (ip) => {
+    expect(ipInPrivateRange(ip)).toBe(true);
+  });
+
+  it("y una pública sigue pasando", () => {
+    expect(ipInPrivateRange("8.8.8.8")).toBe(false);
+    expect(ipInPrivateRange("223.255.255.255")).toBe(false);
+  });
+});
