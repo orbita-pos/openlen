@@ -27,7 +27,8 @@ const OPENLEN_FACTS = `OPENLEN PLATFORM FACTS (treat these as true):
 5. Code under /src, /js and the HTML pages runs in the visitor's browser and is not trusted. A missing check there is not a vulnerability by itself; RLS or the function must enforce it.
 6. Everything in import.meta.env and /.env is PUBLIC (readable by anyone), because it is compiled into the JavaScript every visitor downloads. Its values are still trusted: visitors can't change them.
 7. CORS is not authentication.
-8. The migrations in /supabase/migrations define the schema that publishing applies to production. The schema below is the draft database after those migrations.`;
+8. The migrations in /supabase/migrations define the schema that publishing applies to production. The schema below is the draft database after those migrations.
+9. A function that sends email with the project's RESEND_API_KEY (OpenLen's email, from the owner's own domain) to an address taken from the request, without authorizing the caller, is an open relay and HIGH: anyone can send mail from the owner's domain with the owner's credits. Sending to the signed-in user's own address (from their verified JWT), to a fixed address of the owner, or to addresses read from the database under RLS is fine.`;
 
 export const SCAN_SYSTEM = `You are a senior security engineer conducting a focused security review of a web project that is about to be published on OpenLen, a platform where people who don't code build pages and apps with an AI agent.
 
