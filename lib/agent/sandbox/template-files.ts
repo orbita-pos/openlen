@@ -78,25 +78,33 @@ export function bridgeScript(): string {
 BRIDGE = os.environ.get("OPENLEN_BRIDGE_DIR", ${JSON.stringify(BRIDGE_DIR)})
 OWN_BIN = ${JSON.stringify(BOX_BIN)}
 program, args = sys.argv[1], sys.argv[2:]
-rid = uuid.uuid4().hex
-request = {"id": rid, "program": program, "args": args, "cwd": os.getcwd()}
-tmp = os.path.join(BRIDGE, "requests", "." + rid + ".tmp")
-with open(tmp, "w", encoding="utf-8") as f:
-    json.dump(request, f)
-os.replace(tmp, os.path.join(BRIDGE, "requests", rid + ".json"))
 
-answer = os.path.join(BRIDGE, "responses", rid + ".json")
-response = None
-while response is None:
-    time.sleep(0.05)
-    if not os.path.exists(answer):
-        continue
-    try:
-        with open(answer, encoding="utf-8") as f:
-            response = json.load(f)
-    except ValueError:
-        response = None  # still being written
-os.remove(answer)
+def ask(extra):
+    rid = uuid.uuid4().hex
+    request = {"id": rid, "program": program, "args": args, "cwd": os.getcwd(), **extra}
+    tmp = os.path.join(BRIDGE, "requests", "." + rid + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(request, f)
+    os.replace(tmp, os.path.join(BRIDGE, "requests", rid + ".json"))
+    answer = os.path.join(BRIDGE, "responses", rid + ".json")
+    response = None
+    while response is None:
+        time.sleep(0.05)
+        if not os.path.exists(answer):
+            continue
+        try:
+            with open(answer, encoding="utf-8") as f:
+                response = json.load(f)
+        except ValueError:
+            response = None  # still being written
+    os.remove(answer)
+    return response
+
+response = ask({})
+# The program reads one line of its stdin before going on (stripe's DELETE confirmation): read it
+# only when asked, as the real program would, and ask again with it.
+if response.get("readLine"):
+    response = ask({"stdinLine": sys.stdin.readline() if sys.stdin else ""})
 
 if response.get("passthrough"):
     path = os.pathsep.join(p for p in os.environ.get("PATH", "").split(os.pathsep) if p and os.path.realpath(p) != OWN_BIN)

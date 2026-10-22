@@ -343,7 +343,7 @@ async function boxBaseEnvOf(session: AgentSession): Promise<Record<string, strin
 function stripeForTerminal(
   session: AgentSession,
   deps: AgentDeps,
-): ((args: readonly string[], o?: { readonly signal?: AbortSignal }) => Promise<{ stdout: string; stderr: string; exitCode: number }>) | null {
+): ((args: readonly string[], o?: { readonly signal?: AbortSignal; readonly stdin?: string }) => Promise<{ stdout: string; stderr: string; exitCode: number }>) | null {
   if (!deps.stripeCli || !stripeEnabled()) return null;
   return (args, o) => deps.stripeCli!(session.projectId, args, o);
 }

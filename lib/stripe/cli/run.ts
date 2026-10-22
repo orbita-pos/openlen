@@ -71,16 +71,40 @@ export interface StripeCliOptions {
   readonly signal?: AbortSignal;
   /** false in a member's turn: live mode is the owner's payments and customers (lib/projects/acceso.ts). */
   readonly readLive?: boolean;
+  /** The command's standard input: a DELETE without --confirm reads its answer from it, as the CLI does. */
+  readonly stdin?: string;
+}
+
+/** Whether the command reads a line of stdin before running: a DELETE in test mode without --confirm
+ *  (pkg/requests/base.go: confirmationCommands). The box asks its stdin for that line only then. */
+export function stripeNeedsConfirmation(args: readonly string[]): boolean {
+  const c = parseStripeArgs(args);
+  if (c.kind !== "operation" && c.kind !== "raw") return false;
+  return (c.kind === "operation" ? c.op.method : c.method) === "DELETE" && !c.confirm && !c.live;
+}
+
+/** getUserConfirmation: one line (`ReadString('\n')`; none before EOF is no answer), trimmed of
+ *  " \r\n" and lowercased, must be "yes". */
+function confirmedBy(stdin: string | undefined): boolean {
+  const end = stdin?.indexOf("\n") ?? -1;
+  if (end === -1) return false;
+  return stdin!.slice(0, end + 1).replace(/^[ \r\n]+|[ \r\n]+$/g, "").toLowerCase() === "yes";
 }
 
 export async function runStripeCli(args: readonly string[], deps: StripeCliDeps, o: StripeCliOptions = {}): Promise<StripeCliOutput> {
   if (o.signal?.aborted) return ABORTED_OUTPUT;
-  const out = await run(args, deps, o.signal, o.readLive !== false);
+  const out = await run(args, deps, o.signal, o.readLive !== false, o.stdin);
   if (out === STOPPED) return ABORTED_OUTPUT;
   return { stdout: await deps.mask(out.stdout), stderr: await deps.mask(out.stderr), exitCode: out.exitCode };
 }
 
-async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSignal | undefined, readLive: boolean): Promise<StripeCliOutput | typeof STOPPED> {
+async function run(
+  args: readonly string[],
+  deps: StripeCliDeps,
+  signal: AbortSignal | undefined,
+  readLive: boolean,
+  stdin: string | undefined,
+): Promise<StripeCliOutput | typeof STOPPED> {
   const c = parseStripeArgs(args);
   switch (c.kind) {
     case "help":
@@ -117,19 +141,18 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
   if (c.live && !readLive) return { stdout: "", stderr: MEMBER_LIVE_REFUSAL, exitCode: 1 };
   const key = await deps.keyFor(env);
   if (!key) return { stdout: "", stderr: noKeyText(env), exitCode: 1 };
+  // The prompt goes out before the answer is read; a piped "yes" isn't echoed, so the output follows it.
+  let asked = "";
   if (method === "DELETE" && !c.confirm) {
-    return {
-      stdout: `This command will be executed on the account with the following details:\n> Mode: ${c.live ? "Live" : "Test"}\nAre you sure you want to perform the command: DELETE?\nEnter 'yes' to confirm: \nExiting without execution. User did not confirm the command.\n`,
-      stderr: "",
-      exitCode: 0,
-    };
+    asked = `This command will be executed on the account with the following details:\n> Mode: ${c.live ? "Live" : "Test"}\nAre you sure you want to perform the command: DELETE?\nEnter 'yes' to confirm: `;
+    if (!confirmedBy(stdin)) return { stdout: `${asked}\nExiting without execution. User did not confirm the command.\n`, stderr: "", exitCode: 0 };
   }
 
   const form = encodeForm(c.form);
   const req: StripeRequest = { method, path: c.path, ...(form ? { form } : {}), ...(c.idempotencyKey ? { idempotencyKey: c.idempotencyKey } : {}) };
   const r = await race(deps.request(key, req), signal);
   if (r === STOPPED) return r;
-  if (r.status === 401) return { stdout: "", stderr: `Request failed, status=401, body=${r.text}\n`, exitCode: 1 };
+  if (r.status === 401) return { stdout: asked, stderr: `Request failed, status=401, body=${r.text}\n`, exitCode: 1 };
 
   let body = r.text;
   const created = !c.live && method === "POST" && r.status >= 200 && r.status < 300 ? RECORDED[c.path] : undefined;
@@ -152,5 +175,5 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
       }
     }
   }
-  return { stdout: `${body}\n`, stderr: "", exitCode: 0 };
+  return { stdout: `${asked}${body}\n`, stderr: "", exitCode: 0 };
 }

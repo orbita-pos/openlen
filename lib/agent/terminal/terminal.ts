@@ -95,7 +95,7 @@ export class TerminalDeLen implements TerminalBackend {
        *  here (lib/stripe/cli/real.ts); the key never reaches the worker. Without it, no `stripe`. */
       readonly stripe?: (
         args: readonly string[],
-        o?: { readonly signal?: AbortSignal },
+        o?: { readonly signal?: AbortSignal; readonly stdin?: string },
       ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
       /** GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository, answered
        *  here (its objects are in Postgres). `write`: files it changes (`null` deletes). Without
@@ -168,7 +168,7 @@ export class TerminalDeLen implements TerminalBackend {
         return;
       }
       if (typeof m.stripe === "number") {
-        void this.serveStripe(hilo, m.stripe, m.args as string[]);
+        void this.serveStripe(hilo, m.stripe, m.args as string[], typeof m.stdin === "string" ? m.stdin : "");
         return;
       }
       if (typeof m.cancelStripe === "number") {
@@ -259,13 +259,13 @@ export class TerminalDeLen implements TerminalBackend {
   }
 
   /** `stripe …`: answered here and sent back to the worker, like `supabase`; aborted with its command. */
-  private async serveStripe(hilo: Worker, pid: number, args: string[]): Promise<void> {
+  private async serveStripe(hilo: Worker, pid: number, args: string[], stdin: string): Promise<void> {
     let respuesta: Record<string, unknown>;
     const cancel = new AbortController();
     this.stripeInFlight.set(pid, cancel);
     try {
       if (!this.o.stripe) throw new Error("this terminal has no stripe");
-      respuesta = { tipo: "stripe", pid, resultado: await this.o.stripe(args, { signal: cancel.signal }) };
+      respuesta = { tipo: "stripe", pid, resultado: await this.o.stripe(args, { signal: cancel.signal, stdin }) };
     } catch (e) {
       respuesta = { tipo: "stripe", pid, error: e instanceof Error ? e.message : String(e) };
     } finally {

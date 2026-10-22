@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { StripeRequest, StripeResponse } from "../api";
-import { runStripeCli, type StripeCliDeps } from "./run";
+import { runStripeCli, stripeNeedsConfirmation, type StripeCliDeps } from "./run";
 import { CREDENTIALS_ANSWER, LIVE_WRITE_REFUSAL, MEMBER_LIVE_REFUSAL, listenText, noKeyText } from "./texts";
 
 const DRAFT_FN = "https://draftrefdraftrefdraf.openlen.app/functions/v1/";
@@ -113,6 +113,37 @@ describe("runStripeCli", () => {
     expect(d.request).not.toHaveBeenCalled();
     await runStripeCli(["products", "delete", "curso", "--confirm"], d);
     expect(d.request).toHaveBeenCalledWith("sk_test_d", { method: "DELETE", path: "/v1/products/curso" });
+  });
+
+  // Real test of 22/10: Len piped `echo yes | stripe delete …` and it didn't confirm. The CLI reads the
+  // answer from stdin, one line, trimmed and lowercased (pkg/requests/base.go, getUserConfirmation).
+  it("a DELETE reads its confirmation from stdin, one line, as the CLI does", async () => {
+    const d = deps({ answer: () => res(200, { id: "we_1", object: "webhook_endpoint", deleted: true }) });
+    const r = await runStripeCli(["delete", "/v1/webhook_endpoints/we_1"], d, { stdin: "yes\n" });
+    expect(d.request).toHaveBeenCalledWith("sk_test_d", { method: "DELETE", path: "/v1/webhook_endpoints/we_1" });
+    expect(r.stdout).toMatch(/^This command will be executed on the account with the following details:\n> Mode: Test\nAre you sure you want to perform the command: DELETE\?\nEnter 'yes' to confirm: \{/);
+    expect(r.exitCode).toBe(0);
+    await runStripeCli(["products", "delete", "curso"], d, { stdin: " YES\r\nno\n" });
+    expect(d.request).toHaveBeenCalledTimes(2);
+  });
+
+  it("…and anything else doesn't run: another answer, a line with no end (EOF), or no stdin", async () => {
+    const d = deps();
+    for (const stdin of ["no\n", "yes", "", undefined]) {
+      const r = await runStripeCli(["products", "delete", "curso"], d, stdin === undefined ? {} : { stdin });
+      expect(r.stdout).toContain("Exiting without execution. User did not confirm the command.");
+    }
+    expect(d.request).not.toHaveBeenCalled();
+  });
+
+  it("only a DELETE in test mode without --confirm reads a line (what the box asks its stdin for)", () => {
+    expect(stripeNeedsConfirmation(["delete", "/v1/webhook_endpoints/we_1"])).toBe(true);
+    expect(stripeNeedsConfirmation(["products", "delete", "curso"])).toBe(true);
+    expect(stripeNeedsConfirmation(["products", "delete", "curso", "--confirm"])).toBe(false);
+    expect(stripeNeedsConfirmation(["products", "delete", "curso", "-c"])).toBe(false);
+    expect(stripeNeedsConfirmation(["products", "list"])).toBe(false);
+    // Refused before it asks: live mode writes nothing.
+    expect(stripeNeedsConfirmation(["customers", "delete", "cus_1", "--live"])).toBe(false);
   });
 
   it("listen explains that the draft already gets the events", async () => {

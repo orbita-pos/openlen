@@ -392,6 +392,19 @@ describe("TerminalDeLen", () => {
       expect(signal?.aborted).toBe(true);
     }, 20_000);
 
+    it("a pipe's input reaches stripe as its stdin, so `echo yes | stripe delete …` confirms as with the CLI", async () => {
+      const seen: (string | undefined)[] = [];
+      const { t } = terminal({
+        stripe: async (_args, o) => {
+          seen.push(o?.stdin);
+          return { stdout: "", stderr: "", exitCode: 0 };
+        },
+      });
+      await t.ejecutar("echo yes | stripe delete /v1/webhook_endpoints/we_1");
+      await t.ejecutar("stripe products list");
+      expect(seen).toEqual(["yes\n", ""]);
+    }, 20_000);
+
     it("without the option there is no stripe", async () => {
       const { t } = terminal();
       expect((await t.ejecutar("stripe products list")).exitCode).toBe(127);
