@@ -307,7 +307,10 @@ class Walk {
 
   private async paymentLink(row: StripeObjectRow, test: Obj): Promise<string | null> {
     const items = await this.call("test", "GET", `/v1/payment_links/${encodeURIComponent(row.testId)}/line_items`, { limit: 100 });
-    const lineItems = (Array.isArray(items?.data) ? (items.data as Obj[]) : []).map((li) => ({ price: idOf(li.price), quantity: li.quantity }));
+    const testItems = Array.isArray(items?.data) ? (items.data as Obj[]) : [];
+    const lineItems = testItems.map((li) => ({ price: idOf(li.price), quantity: li.quantity }));
+    // Stripe returns `payment_method_collection` on every link, but refuses it on create without a recurring price (real test, 22/10).
+    const recurring = testItems.some((li) => isObj(li.price) && isObj(li.price.recurring));
     const shippingOptions = Array.isArray(test.shipping_options) ? (test.shipping_options as Obj[]).map((s) => ({ shipping_rate: idOf(s.shipping_rate) })) : [];
     const fields = defined({
       line_items: lineItems,
@@ -323,7 +326,7 @@ class Walk {
       submit_type: test.submit_type,
       subscription_data: isObj(test.subscription_data) && test.subscription_data.trial_period_days ? { trial_period_days: test.subscription_data.trial_period_days } : null,
       tax_id_collection: isObj(test.tax_id_collection) ? { enabled: test.tax_id_collection.enabled } : null,
-      payment_method_collection: test.payment_method_collection,
+      payment_method_collection: recurring ? test.payment_method_collection : null,
       custom_fields: test.custom_fields,
     });
     return this.recreatable(row, "payment_link", fields, async (f) => ({
