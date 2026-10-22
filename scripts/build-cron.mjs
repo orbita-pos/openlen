@@ -47,6 +47,7 @@ const targets = [
   { entry: "scripts/renewal-reminders.ts", out: ".next/standalone/cron/renewal-reminders.mjs" },
   { entry: "scripts/mcp-cleanup.ts", out: ".next/standalone/cron/mcp-cleanup.mjs" },
   { entry: "scripts/sandbox-reaper.ts", out: ".next/standalone/cron/sandbox-reaper.mjs" },
+  { entry: "scripts/email-domains-check.ts", out: ".next/standalone/cron/email-domains-check.mjs" },
   // NB: lo que llama a publishProject NO se bundlea aquí — arrastra los crates
   // nativos (.node), cuyo `require` relativo esbuild no puede empaquetar en un
   // .mjs standalone. Esas tareas corren EN PROCESO con la app, detrás de una
