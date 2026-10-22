@@ -106,6 +106,14 @@ export function fakeStripe(): FakeStripe {
       }
     }
     if (object === "payment_link") {
+      // As real Stripe answered on 22/10: these come back on every link, and
+      // `payment_method_collection` is refused on create without a recurring price.
+      const items = (Array.isArray(params.line_items) ? params.line_items : []) as { price?: string }[];
+      const recurring = items.some((li) => !!(li.price && m.objects.get(li.price)?.recurring));
+      if (params.payment_method_collection !== undefined && !recurring) {
+        return json(400, { error: { type: "invalid_request_error", param: "payment_method_collection", message: "`payment_method_collection` can only be used if the payment link contains recurring prices." } });
+      }
+      Object.assign(obj, { payment_method_collection: "if_required", customer_creation: "if_required", submit_type: "auto", billing_address_collection: "auto", allow_promotion_codes: false }, rest);
       obj.url = `https://buy.stripe.com/${mode === "test" ? "test_" : ""}${id.slice(-8)}`;
       obj.line_items_data = obj.line_items;
       delete obj.line_items;

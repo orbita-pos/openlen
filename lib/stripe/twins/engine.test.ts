@@ -82,6 +82,24 @@ describe("applyTwins", () => {
     expect((await w.store.listObjects("p")).every((r) => r.liveId)).toBe(true);
   });
 
+  it("Real test 22/10: a link with one-time prices is copied without the payment_method_collection Stripe returns on it", async () => {
+    const w = await world();
+    const { link } = await w.curso();
+    expect(w.stripe.get("test", link.id)).toMatchObject({ payment_method_collection: "if_required" });
+    await applyTwins("p", [link.url], w.deps, vi.fn());
+    expect(w.stripe.all("live", "payment_link")).toHaveLength(1);
+  });
+
+  it("a link with a recurring price keeps its payment_method_collection", async () => {
+    const w = await world();
+    await w.t("POST", "/v1/products", { id: "club", name: "Club" });
+    const price = await w.t<{ id: string }>("POST", "/v1/prices", { product: "club", unit_amount: 900, currency: "usd", recurring: { interval: "month" } });
+    const link = await w.t<{ id: string; url: string }>("POST", "/v1/payment_links", { line_items: [{ price: price.id, quantity: 1 }], payment_method_collection: "always" });
+    await w.store.recordTestObject({ projectId: "p", kind: "payment_link", testId: link.id, source: "cli", testUrl: link.url });
+    await applyTwins("p", [link.url], w.deps, vi.fn());
+    expect(w.stripe.all("live", "payment_link")[0]).toMatchObject({ payment_method_collection: "always" });
+  });
+
   it("a second apply creates nothing", async () => {
     const w = await world();
     const { link } = await w.curso();
