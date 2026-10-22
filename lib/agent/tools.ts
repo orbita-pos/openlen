@@ -291,6 +291,8 @@ export interface AgentDeps {
   /** EDGE FUNCTIONS: tras escribir en /supabase/functions/** o config.toml,
    *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
+  /** PROJECT EMAIL: after writing supabase/config.toml or a template, what would break a sign-in email. */
+  authTemplatesAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
   /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
   edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
   /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): for PROJECT STATE. null = no Stripe here or none yet. */
@@ -660,6 +662,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async functionsAfterWrite(projectId, written) {
       const { draftDeployAfterWrite } = await import("@/lib/functions/deploy");
       return draftDeployAfterWrite(projectId, written);
+    },
+    async authTemplatesAfterWrite(projectId, written) {
+      const [{ authTemplateDiagnostics }, { listProjectFiles }] = await Promise.all([import("@/lib/project-email/auth-templates"), import("@/lib/backend/files")]);
+      return authTemplateDiagnostics(written, await listProjectFiles(projectId, "/supabase/"));
     },
     async edgeFunctions(projectId) {
       const { edgeFunctionsState } = await import("@/lib/functions/state");
