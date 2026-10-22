@@ -6,7 +6,7 @@
 // answers 403—; on the draft it does everything, as the canvas does.
 import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import WebSocket from "ws";
+import { WebSocket } from "ws";
 
 import { BOX_MARKER_HEADER } from "@/lib/agent/sandbox/box-marker";
 

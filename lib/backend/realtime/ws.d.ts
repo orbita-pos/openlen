@@ -1,6 +1,7 @@
 // Los tipos de lo que usamos de `ws` 8 (no hay `@types/ws` instalado: instalar
-// una dependencia nueva en la carpeta principal poda lo de otras ramas). Sólo
-// el servidor de Realtime (lib/backend/realtime/server.ts) lo usa.
+// una dependencia nueva en la carpeta principal poda lo de otras ramas). Lo usa
+// el servidor de Realtime (lib/backend/realtime/server.ts); el cliente, sólo la
+// prueba de la caja de Len (supabase-js-box.test.ts), por las cabeceras.
 declare module "ws" {
   import type { EventEmitter } from "node:events";
   import type { IncomingMessage } from "node:http";
@@ -9,6 +10,7 @@ declare module "ws" {
   export type RawData = Buffer | ArrayBuffer | Buffer[];
 
   export class WebSocket extends EventEmitter {
+    constructor(address: string, protocols?: string | string[], options?: { headers?: Record<string, string>; origin?: string });
     static readonly OPEN: 1;
     readonly readyState: 0 | 1 | 2 | 3;
     send(data: string | Uint8Array, opts?: { binary?: boolean }, cb?: (err?: Error) => void): void;
