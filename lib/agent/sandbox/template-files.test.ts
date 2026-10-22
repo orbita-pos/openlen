@@ -10,7 +10,19 @@ import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 
 import { SYSTEM_TOP_LEVEL } from "./paths";
 import { SANDBOX_TEMPLATE } from "./config";
-import { BIG_FILE_PREFIX, BRIDGED_PROGRAMS, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_VERSION, bridgeScript, manifestScript, templateFiles, wrapperScript } from "./template-files";
+import {
+  BIG_FILE_PREFIX,
+  BRIDGED_PROGRAMS,
+  PLAYWRIGHT_BROWSERS,
+  PLAYWRIGHT_DIR,
+  PLAYWRIGHT_RESOLVER,
+  PLAYWRIGHT_VERSION,
+  bridgeScript,
+  manifestScript,
+  playwrightResolverScript,
+  templateFiles,
+  wrapperScript,
+} from "./template-files";
 
 // The scripts run in the box with python3; here, with whatever Python this machine has.
 const PYTHON = ["python3", "python"].find((p) => spawnSync(p, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" }).stdout?.trim() === "3");
@@ -37,12 +49,33 @@ describe("the box's scripts", () => {
     expect(BRIDGED_PROGRAMS).toEqual(["git", "supabase", "tsc", "eslint", "vitest", "npm", "npx", "curl"]);
   });
 
-  it("the template carries the two scripts and one wrapper per program, executable", () => {
+  it("the template carries the two scripts, one wrapper per program, executable, and Playwright's resolver", () => {
     const files = templateFiles();
-    expect(Object.keys(files).sort()).toEqual(
-      ["/opt/openlen/bin/openlen-bridge", "/opt/openlen/bin/openlen-manifest", "/opt/openlen/bin/playwright", ...BRIDGED_PROGRAMS.map((p) => `/opt/openlen/bin/${p}`)].sort(),
-    );
-    for (const f of Object.values(files)) expect(f.mode).toBe(0o755);
+    const programs = ["/opt/openlen/bin/openlen-bridge", "/opt/openlen/bin/openlen-manifest", "/opt/openlen/bin/playwright", ...BRIDGED_PROGRAMS.map((p) => `/opt/openlen/bin/${p}`)];
+    expect(Object.keys(files).sort()).toEqual([...programs, PLAYWRIGHT_RESOLVER].sort());
+    for (const p of programs) expect(files[p]!.mode).toBe(0o755);
+    expect(files[PLAYWRIGHT_RESOLVER]!.content).toBe(playwrightResolverScript());
+  });
+
+  it("🔴 a project's file gets the template's Playwright, CJS or ESM, even next to its own copy; a package keeps its own", () => {
+    const pkg = `{ "name": "@playwright/test", "main": "index.js" }`;
+    const root = tempRoot({
+      "/pinned/node_modules/@playwright/test/package.json": pkg,
+      "/pinned/node_modules/@playwright/test/index.js": `module.exports = { who: "pinned" };`,
+      "/cjs/node_modules/@playwright/test/package.json": pkg,
+      "/cjs/node_modules/@playwright/test/index.js": `module.exports = { who: "own" };`,
+      "/cjs/node_modules/a-lib/index.js": `module.exports = require("@playwright/test").who;`,
+      "/cjs/test.js": `console.log(require("@playwright/test").who, require("a-lib"));`,
+      "/esm/package.json": `{ "type": "module" }`,
+      "/esm/test.js": `import pw from "@playwright/test";\nconsole.log(pw.who);`,
+    });
+    const resolver = join(root, "resolver.cjs");
+    writeFileSync(resolver, playwrightResolverScript(join(root, "pinned")));
+    const node = (file: string) => spawnSync(process.execPath, ["--require", resolver, join(root, file)], { encoding: "utf8" });
+    expect(node("cjs/test.js").stdout.trim()).toBe("pinned own");
+    const esm = node("esm/test.js");
+    expect(esm.stderr).toBe("");
+    expect(esm.stdout.trim()).toBe("pinned");
   });
 
   it("the template has Python, Node, git and the usual tools, and copies the scripts into /opt/openlen/bin", async () => {

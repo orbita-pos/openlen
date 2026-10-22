@@ -1,5 +1,9 @@
 // @vitest-environment node
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,8 +12,11 @@ import type { SandboxHandle } from "./driver";
 import { fakeDriver, type FakeRun } from "./fake-driver";
 import { NEVER_IN_BOX } from "./paths";
 import { BASE_ENV_FILE, SandboxTerminal, readOnlySource } from "./sandbox-terminal";
+import { PLAYWRIGHT_RESOLVER } from "./template-files";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+// A POSIX shell, as the box's (Git's on Windows); without one, the shell test is skipped.
+const SH = spawnSync("sh", ["-c", "printf ok"], { encoding: "utf8" }).stdout === "ok" ? "sh" : null;
 
 async function open(o: {
   projectFiles: Record<string, string>;
@@ -68,9 +75,29 @@ describe("SandboxTerminal — what every opening sets up for Playwright", () => 
     expect(env).toContain("export REQUESTS_CA_BUNDLE='/etc/ssl/certs/ca-certificates.crt'");
     expect(env).toContain("NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/e2b-ca.crt");
     expect(env).toContain("export BASE_URL='https://lienzo-x.openlen.app'");
+    expect(env).toContain(`--require=${PLAYWRIGHT_RESOLVER}`);
     const run = d.commands(handle.id).find((c) => c.includes("bash-tasks") && c.includes("true"))!;
     // The platform's values win over the shell's carried ones.
     expect(run.indexOf(`. ${BASE_ENV_FILE}`)).toBeGreaterThan(run.indexOf("/run/openlen/env"));
+  });
+
+  // Every command sources it after the shell's carried variables, which already hold the last value.
+  it.skipIf(!SH)("🔴 NODE_OPTIONS gets Playwright's resolver once, after what the shell had, and only if the template has it", async () => {
+    const d = fakeDriver();
+    const handle = await d.create({ template: "t", metadata: {} });
+    const terminal = new SandboxTerminal({ handle, projectFiles: {}, syncedManifest: {}, bridge: {}, readOnly: async () => ({}), startedAt: Date.now() });
+    await terminal.ejecutar("true");
+    const dir = mkdtempSync(join(tmpdir(), "openlen-base-env-"));
+    const here = join(dir, "resolver.cjs").replace(/\\/g, "/");
+    writeFileSync(here, "");
+    const envFile = join(dir, "base.env");
+    const source = (resolver: string) => {
+      writeFileSync(envFile, d.files(handle.id).get(BASE_ENV_FILE)!.split(PLAYWRIGHT_RESOLVER).join(resolver));
+      const f = envFile.replace(/\\/g, "/");
+      return spawnSync(SH!, ["-c", `NODE_OPTIONS=--max-old-space-size=99; . '${f}'; . '${f}'; printf %s "$NODE_OPTIONS"`], { encoding: "utf8" }).stdout;
+    };
+    expect(source(here)).toBe(`--max-old-space-size=99 --require=${here}`);
+    expect(source(`${dir.replace(/\\/g, "/")}/missing.cjs`)).toBe("--max-old-space-size=99");
   });
 });
 
