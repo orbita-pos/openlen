@@ -83,6 +83,10 @@ openlen.com, www.openlen.com {
 		header Cache-Control "public, immutable, max-age=2592000"
 	}
 
+	# Next's image optimizer, closed (2026-10-21, GHSA-2xp9-vwfh-vxw4: AVIF → remote code execution in
+	# `sharp`'s libheif). Nothing uses it; Next answers it 404 too (`images.unoptimized` in next.config.ts).
+	respond /_next/image "Not found" 404
+
 	# Everything else → Next.js. flush_interval -1 keeps SSE streams
 	# (/api/generate, /api/templates/ai-design) flowing token-by-token
 	# instead of being chunked into Caddy's buffer.
@@ -265,6 +269,8 @@ openlen.com, www.openlen.com {
 	@lienzo header_regexp Host ^lienzo-([0-9a-f]{32}|visuals)\.
 	handle @lienzo {
 		header -X-Frame-Options
+		# Next's image optimizer, closed here too (see the openlen.com block).
+		respond /_next/image "Not found" 404
 		reverse_proxy 127.0.0.1:3000
 	}
 

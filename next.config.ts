@@ -12,6 +12,11 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 // letting TS infer from the literal keeps both happy.
 const nextConfig = {
   reactStrictMode: true,
+  // NEXT'S IMAGE OPTIMIZER, CLOSED (2026-10-21, GHSA-2xp9-vwfh-vxw4: `libheif` in `sharp` allows remote
+  // code execution when an AVIF is optimized). Nothing here uses `next/image`, yet `/_next/image` answered
+  // on openlen.com and any account can upload an AVIF that Next serves at /uploads. Unoptimized, Next
+  // answers it 404 (next-server.js); Caddy answers it 404 too (infra/caddy/Caddyfile).
+  images: { unoptimized: true },
   // Self-host SIN R2: lib/storage/templates.ts cae a servir el HTML crudo de
   // las plantillas desde /template-objects, o sea el MISMO origen que la app —
   // y ese HTML no pasa por sanitizeForPublish (se guarda crudo a propósito,
