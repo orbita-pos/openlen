@@ -27,3 +27,12 @@ export function sandboxConfig(env: Readonly<Record<string, string | undefined>> 
   const users = (env.OPENLEN_SANDBOX_ONLY_USERS ?? "").split(",").map((u) => u.trim()).filter(Boolean);
   return { apiKey, template: SANDBOX_TEMPLATE, dailyUsd, onlyUsers: users.length > 0 ? users : null };
 }
+
+/** Whether the turns of the project's owner `userId` get the box: on, and during a rollout, on its list
+ *  (as terminalForTurn decides, ./choose.ts). What Len is told about its terminal —bash's description,
+ *  the manual— follows this. Without a person (scripts, Len-Bench, the MCP docs), only with no rollout. */
+export function realTerminalFor(userId: string | null | undefined, env: Readonly<Record<string, string | undefined>> = process.env): boolean {
+  const config = sandboxConfig(env);
+  if (!config) return false;
+  return config.onlyUsers === null || (typeof userId === "string" && config.onlyUsers.includes(userId));
+}

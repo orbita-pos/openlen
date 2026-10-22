@@ -26,7 +26,7 @@ import { swapJsClauses } from "@/lib/ai/js-clause";
 import { conContratoMinimo, contratoParaSuperficie } from "@/lib/publish-contract-min";
 import { bloqueDeLibrerias } from "@/lib/librerias";
 import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaracion";
-import { sandboxConfig } from "@/lib/agent/sandbox/config";
+import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
@@ -316,9 +316,11 @@ export function buildManualDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
   mode: AgentMode = "len",
   app: AppDeProyecto | null = null,
+  /** Whether this turn's terminal is the box (`realTerminalFor` its owner, as bash's description). */
+  realTerminal: boolean = realTerminalFor(null, env),
 ): string {
   const page = partirElManual().agents;
-  const base = app ? manualDeLaApp(manualSinPartir(), app) : sandboxConfig(env) ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
+  const base = app ? manualDeLaApp(manualSinPartir(), app) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
   const agents = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${ARTIFACT_MANUAL_INDEX}` : agents;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(withArtifacts) : withArtifacts;
@@ -340,8 +342,13 @@ export function documentosDeLaPlataforma(
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
-export function textoDeLaPlataforma(ruta: string, mode: AgentMode = "len", app: AppDeProyecto | null = null): string | null {
-  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app);
+export function textoDeLaPlataforma(
+  ruta: string,
+  mode: AgentMode = "len",
+  app: AppDeProyecto | null = null,
+  realTerminal: boolean = realTerminalFor(null),
+): string | null {
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app, realTerminal);
   const docs = documentosDeLaPlataforma(app);
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }
