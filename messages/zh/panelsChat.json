@@ -366,7 +366,18 @@
     "saveAndPublish": "保存并发布",
     "publishAnyway": "仍然发布",
     "functionsDoNotCompile": "函数无法编译，所以没有发布任何内容：\n{errors}",
-    "functionsFailed": "函数无法启动。页面没有改变。"
+    "functionsFailed": "函数无法启动。页面没有改变。",
+    "stripe": {
+      "hint": "最好用受限密钥，只给 Len 需要的权限：产品、价格、支付链接、Checkout、客户、订阅、客户门户和 Webhook。",
+      "dashboard": "在 Stripe 获取",
+      "publishable_key": "这是可发布密钥（pk_…）。这里需要的是秘密密钥（sk_…）或受限密钥（rk_…）。",
+      "webhook_secret": "这是 Webhook 的签名密钥（whsec_…），不是 API 密钥。",
+      "not_a_stripe_key": "这看起来不像 Stripe 密钥：它以 sk_ 或 rk_ 开头。",
+      "live_in_draft": "测试请用测试密钥（sk_test_… 或 rk_test_…）：画布从不会扣真实的卡。",
+      "test_in_live": "已发布的页面请用正式密钥（sk_live_… 或 rk_live_…）。",
+      "rejected_by_stripe": "Stripe 拒绝了这个密钥。请检查是否完整复制、是否仍然有效。",
+      "other_account": "这个密钥和另一个密钥来自不同的 Stripe 账户。两个必须来自同一个账户。"
+    }
   },
   "visualLabel": "Len 的图示：{title}",
   "visualLoading": "正在准备图示…",

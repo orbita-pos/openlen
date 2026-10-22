@@ -16,12 +16,21 @@ import { postFunctionSecrets, type SaveSecretsOutcome, type SecretEnvironment, t
 type Translate = (key: string, values?: Record<string, string>) => string;
 
 const ENTORNOS: readonly SecretEnvironment[] = ["draft", "live"];
+
+// STRIPE (spec local 2026-10-21-stripe-integration, §6.1): the server checks the key;
+// the card says why it refused one, and where each environment's key is.
+const STRIPE_KEY_PROBLEMS: ReadonlySet<string> = new Set(["publishable_key", "webhook_secret", "not_a_stripe_key", "live_in_draft", "test_in_live", "rejected_by_stripe", "other_account"]);
+const STRIPE_KEYS_PAGE: Readonly<Record<SecretEnvironment, string>> = {
+  draft: "https://dashboard.stripe.com/test/apikeys",
+  live: "https://dashboard.stripe.com/apikeys",
+};
 const claveDe = (name: string, env: SecretEnvironment) => `${name}:${env}`;
 const envKey = (env: SecretEnvironment) => (env === "draft" ? "functionSecrets.envDraft" : "functionSecrets.envLive");
 
 export function saveErrorText(o: Exclude<SaveSecretsOutcome, { kind: "saved" }>, t: Translate): string {
   if (o.kind === "too_large") return t("functionSecrets.tooLarge", { available: String(o.availableVars), environment: t(envKey(o.environment)) });
   if (o.kind === "invalid_name") return t("functionSecrets.invalidName");
+  if (o.kind === "rejected" && STRIPE_KEY_PROBLEMS.has(o.reason)) return t(`functionSecrets.stripe.${o.reason}`);
   return t("functionSecrets.saveFailed");
 }
 
@@ -89,6 +98,7 @@ export function SecretFieldsView({
         </div>
       )}
       {showHeader && secret.description ? <p className="m-0 text-[12px] leading-snug fg-muted">{secret.description}</p> : null}
+      {secret.name === "STRIPE_SECRET_KEY" ? <p className="m-0 text-[11.5px] leading-snug fg-muted">{t("functionSecrets.stripe.hint")}</p> : null}
       {environments.map((env) => {
         const valor = values[claveDe(k, env)] ?? "";
         const aviso = valor.trim() ? secretModeWarning(env, valor) : null;
@@ -98,6 +108,12 @@ export function SecretFieldsView({
             <span className="text-[11.5px] fg-muted">
               {etiqueta}
               {env === "live" && environments.length > 1 ? <span className="fg-faint"> · {t("functionSecrets.liveLater")}</span> : null}
+              {secret.name === "STRIPE_SECRET_KEY" ? (
+                <a href={STRIPE_KEYS_PAGE[env]} target="_blank" rel="noreferrer noopener" className="ml-1.5 inline-flex items-center gap-0.5 text-[var(--nc-accent-text)] hover:underline">
+                  {t("functionSecrets.stripe.dashboard")}
+                  <ExternalLink size={9} />
+                </a>
+              ) : null}
             </span>
             <input
               type="password"
