@@ -3,8 +3,9 @@
 // says (github.com/Domain-Connect/spec): discovery by the `_domainconnect` TXT
 // and `/v2/{domain}/settings`, the template check, and the synchronous apply
 // URL signed with OpenLen's key (RS256 over the query without `sig` and `key`).
-// OpenLen is the service provider `openlen.app`, service `email`; its template
-// is infra/domain-connect/openlen.app.email.json and its public key lives in
+// OpenLen is the service provider `openlen.app`, with one service per set of
+// Resend's lines (`email`, `email-cname`: see templateFor); their templates are
+// infra/domain-connect/openlen.app.<service>.json and the public key lives in
 // TXT `_dcpubkeyv1.openlen.app`. Pure apart from what comes in DcDeps.
 
 import { createSign } from "node:crypto";
@@ -12,7 +13,7 @@ import { createSign } from "node:crypto";
 import type { DnsRecord } from "./types";
 
 export const DC_PROVIDER_ID = "openlen.app";
-export const DC_SERVICE_ID = "email";
+export type DcServiceId = "email" | "email-cname";
 export const DC_KEY_HOST = "_dcpubkeyv1";
 
 export interface DcSettings {
@@ -58,9 +59,9 @@ export async function discover(domain: string, d: DcDeps): Promise<DcSettings | 
   }
 }
 
-export async function templateSupported(s: DcSettings, d: DcDeps): Promise<boolean> {
+export async function templateSupported(s: DcSettings, serviceId: DcServiceId, d: DcDeps): Promise<boolean> {
   try {
-    const res = await d.fetch(`${trimSlash(s.urlAPI)}/v2/domainTemplates/providers/${DC_PROVIDER_ID}/services/${DC_SERVICE_ID}`);
+    const res = await d.fetch(`${trimSlash(s.urlAPI)}/v2/domainTemplates/providers/${DC_PROVIDER_ID}/services/${serviceId}`);
     return res.status >= 200 && res.status < 300;
   } catch {
     return false;
@@ -70,22 +71,58 @@ export async function templateSupported(s: DcSettings, d: DcDeps): Promise<boole
 const enc = (k: string, v: string) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`;
 
 export function applyUrl(
-  o: { settings: DcSettings; domain: string; host: string; vars: Readonly<Record<string, string>>; redirectUri: string; state: string },
+  o: { settings: DcSettings; serviceId: DcServiceId; domain: string; host: string; vars: Readonly<Record<string, string>>; redirectUri: string; state: string },
   privateKeyPem: string,
 ): string {
   const base = trimSlash(o.settings.urlSyncUX ?? o.settings.urlAPI);
   const parts = [enc("domain", o.domain), ...(o.host ? [enc("host", o.host)] : []), ...Object.entries(o.vars).map(([k, v]) => enc(k, v)), enc("redirect_uri", o.redirectUri), enc("state", o.state)];
   const query = parts.join("&");
   const sig = createSign("sha256").update(query).sign(privateKeyPem, "base64");
-  return `${base}/v2/domainTemplates/providers/${DC_PROVIDER_ID}/services/${DC_SERVICE_ID}/apply?${query}&sig=${encodeURIComponent(sig)}&key=${DC_KEY_HOST}`;
+  return `${base}/v2/domainTemplates/providers/${DC_PROVIDER_ID}/services/${o.serviceId}/apply?${query}&sig=${encodeURIComponent(sig)}&key=${DC_KEY_HOST}`;
 }
 
-/** The template's variables from Resend's records: the DKIM key, the MX host, and the host relative to the domain. */
-export function templateVars(records: readonly DnsRecord[], sendingHost: string, domain: string): Record<string, string> {
-  const dkim = records.find((r) => r.type === "TXT" && r.name.startsWith("resend._domainkey"))?.value ?? "";
-  const mxhost = records.find((r) => r.type === "MX")?.value ?? "";
+const SPF_VALUE = "v=spf1 include:amazonses.com ~all";
+const MX_PRIORITY = 10;
+
+/** A Resend record's name relative to the sending host: `send.notify.pruebas` for notify.pruebas.openlen.com → `send`.
+ *  Resend names its records relative to the zone, which OpenLen doesn't know: the first labels whose rest is the
+ *  start of the sending host are the record's own. */
+function ownLabel(name: string, sendingHost: string): string {
+  const n = name.split(".");
+  const h = sendingHost.split(".");
+  for (let k = 1; k <= n.length; k++) {
+    if (n.slice(k).every((label, i) => label === h[i])) return n.slice(0, k).join(".");
+  }
+  return name;
+}
+
+/**
+ * Which of OpenLen's Domain Connect templates fits Resend's records EXACTLY, with its variables, or null —
+ * then there is no one-click button and the owner adds the lines by hand. Domain Connect has no optional
+ * records, and Resend's set varies: for domains created after August 2026 it may add a CNAME for SPF
+ * (resend.com/docs/dashboard/domains/manage-domains, read 22/10; seen in the real test: `rsend.<host>` →
+ * `send.forge.rmta.net`). So one template per set: `email` (DKIM TXT, MX, SPF TXT) and `email-cname`
+ * (the same plus that CNAME). A set no template matches never gets a button that would leave lines out.
+ */
+export function templateFor(
+  records: readonly DnsRecord[],
+  sendingHost: string,
+  domain: string,
+): { serviceId: DcServiceId; host: string; vars: Record<string, string> } | null {
+  const own = records.map((r) => ({ ...r, label: ownLabel(r.name, sendingHost) }));
+  const one = (type: DnsRecord["type"], label: string) => {
+    const found = own.filter((r) => r.type === type && r.label === label);
+    return found.length === 1 ? found[0]! : null;
+  };
+  const dkim = one("TXT", "resend._domainkey");
+  const mx = one("MX", "send");
+  const spf = one("TXT", "send");
+  const cname = one("CNAME", "rsend");
+  if (!dkim || !mx || mx.priority !== MX_PRIORITY || !spf || spf.value !== SPF_VALUE) return null;
   const host = sendingHost === domain ? "" : sendingHost.slice(0, -(domain.length + 1));
-  return { dkim, mxhost, host };
+  if (records.length === 3) return { serviceId: "email", host, vars: { dkim: dkim.value, mxhost: mx.value } };
+  if (records.length === 4 && cname) return { serviceId: "email-cname", host, vars: { dkim: dkim.value, mxhost: mx.value, rsend: cname.value } };
+  return null;
 }
 
 /** «Show as @domain» wants a DMARC record at the root; if the domain has none, a p=none one is the optional fourth line. */

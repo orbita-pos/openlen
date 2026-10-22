@@ -8,6 +8,7 @@ import { connectDomain } from "./domain";
 import { dcState, dcStateProject, emailPanel, type PanelDeps } from "./panel";
 import type { ResendClients } from "./resend-clients";
 import { memoryEmailStore } from "./store";
+import type { DnsRecord } from "./types";
 
 const RECORDS = [
   { type: "MX" as const, name: "send.notify", value: "feedback-smtp.us-east-1.amazonses.com", priority: 10 },
@@ -16,10 +17,10 @@ const RECORDS = [
 ];
 const PEM = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
 
-function world(o: { plan?: Plan; dc?: "godaddy-with-template" | "godaddy-without-template" | "none"; resendStatus?: string; custom?: string | null } = {}) {
+function world(o: { plan?: Plan; dc?: "godaddy-with-template" | "godaddy-without-template" | "none"; resendStatus?: string; custom?: string | null; records?: DnsRecord[] } = {}) {
   const resend: ResendClients = {
-    createDomain: vi.fn(async () => ({ id: "rd_1", records: RECORDS, status: "not_started" })),
-    getDomain: vi.fn(async () => ({ status: o.resendStatus ?? "not_started", records: RECORDS })),
+    createDomain: vi.fn(async () => ({ id: "rd_1", records: o.records ?? [...RECORDS], status: "not_started" })),
+    getDomain: vi.fn(async () => ({ status: o.resendStatus ?? "not_started", records: o.records ?? [...RECORDS] })),
     verifyDomain: vi.fn(async () => {}),
     deleteDomain: vi.fn(async () => {}),
     send: vi.fn(),
@@ -78,6 +79,15 @@ describe("emailPanel", () => {
     const { checkDomain } = await import("./domain");
     await checkDomain("p1", d);
     expect((await emailPanel("p1", d)).domain!.oneClickUrl).toBeNull();
+  });
+
+  it("with Resend's sending CNAME the button applies the `email-cname` template, with the CNAME's target; an unknown set of lines has no button", async () => {
+    const withCname = [...RECORDS, { type: "CNAME" as const, name: "rsend.notify", value: "send.forge.rmta.net" }];
+    const url = (await panelAfterConnect(world({ dc: "godaddy-with-template", records: withCname }))).domain!.oneClickUrl!;
+    expect(url).toMatch(/^https:\/\/ux\.gd\/v2\/domainTemplates\/providers\/openlen\.app\/services\/email-cname\/apply\?domain=taller\.mx&host=notify&/);
+    expect(url).toContain("rsend=send.forge.rmta.net");
+    const odd = [...withCname, { type: "TXT" as const, name: "otra.notify", value: "x" }];
+    expect((await panelAfterConnect(world({ dc: "godaddy-with-template", records: odd }))).domain!.oneClickUrl).toBeNull();
   });
 
   it("without OpenLen's signing key there is no button", async () => {

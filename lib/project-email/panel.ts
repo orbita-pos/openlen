@@ -10,7 +10,7 @@ import type { Plan } from "@/lib/plan";
 
 import { instructionsUrl, providerFromNs, type DnsProvider } from "./dns-instructions";
 import type { DomainDeps } from "./domain";
-import { applyUrl, discover, dmarcSuggestion, templateSupported, templateVars, type DcDeps } from "./domain-connect";
+import { applyUrl, discover, dmarcSuggestion, templateFor, templateSupported, type DcDeps } from "./domain-connect";
 import { EMAIL_LIMITS, EXTRA_CENTICREDITS_PER_EMAIL, monthOf } from "./limits";
 import type { DnsRecord, EmailDomainRow, EmailMessageRow, SuppressionReason } from "./types";
 
@@ -61,10 +61,12 @@ export function dcStateProject(state: string, secret: string): string | null {
 
 async function oneClick(row: EmailDomainRow, d: PanelDeps): Promise<string | null> {
   if (!d.privateKeyPem || row.status === "ready") return null;
+  // Only a set of lines one of OpenLen's templates matches exactly gets a button (domain-connect.ts).
+  const template = templateFor(row.records, row.sendingHost, row.domain);
+  if (!template) return null;
   const settings = await discover(row.domain, d.dc);
-  if (!settings || !(await templateSupported(settings, d.dc))) return null;
-  const { host, ...vars } = templateVars(row.records, row.sendingHost, row.domain);
-  return applyUrl({ settings, domain: row.domain, host: host ?? "", vars, redirectUri: d.returnUrl, state: dcState(row.projectId, d.stateSecret) }, d.privateKeyPem);
+  if (!settings || !(await templateSupported(settings, template.serviceId, d.dc))) return null;
+  return applyUrl({ settings, serviceId: template.serviceId, domain: row.domain, host: template.host, vars: template.vars, redirectUri: d.returnUrl, state: dcState(row.projectId, d.stateSecret) }, d.privateKeyPem);
 }
 
 export async function emailPanel(projectId: string, d: PanelDeps): Promise<EmailPanel> {

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { applyUrl, DC_KEY_HOST, discover, dmarcSuggestion, templateSupported, templateVars, type DcDeps, type DcSettings } from "./domain-connect";
+import { applyUrl, DC_KEY_HOST, discover, dmarcSuggestion, templateFor, templateSupported, type DcDeps, type DcSettings } from "./domain-connect";
 
 const SETTINGS: DcSettings = {
   providerId: "godaddy.com",
@@ -45,9 +45,9 @@ describe("Domain Connect discovery (spec: _domainconnect TXT, then /v2/{domain}/
 
   it("templateSupported is true only on 2xx from the provider's API", async () => {
     const ok = deps({ http: () => ({ status: 200, body: { version: 1 } }) });
-    expect(await templateSupported(SETTINGS, ok)).toBe(true);
-    expect(ok.urls[0]).toBe("https://domainconnect.api.godaddy.com/v2/domainTemplates/providers/openlen.app/services/email");
-    expect(await templateSupported(SETTINGS, deps())).toBe(false);
+    expect(await templateSupported(SETTINGS, "email-cname", ok)).toBe(true);
+    expect(ok.urls[0]).toBe("https://domainconnect.api.godaddy.com/v2/domainTemplates/providers/openlen.app/services/email-cname");
+    expect(await templateSupported(SETTINGS, "email", deps())).toBe(false);
   });
 });
 
@@ -55,7 +55,7 @@ describe("the synchronous apply URL", () => {
   it("the signature verifies with the public key over the query without sig and key", () => {
     const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const url = applyUrl(
-      { settings: SETTINGS, domain: "taller.mx", host: "notify", vars: { dkim: "p=MIG f/+=", mxhost: "feedback-smtp.us-east-1.amazonses.com" }, redirectUri: "https://openlen.com/api/email/domain-connect/return", state: "st 1" },
+      { settings: SETTINGS, serviceId: "email", domain: "taller.mx", host: "notify", vars: { dkim: "p=MIG f/+=", mxhost: "feedback-smtp.us-east-1.amazonses.com" }, redirectUri: "https://openlen.com/api/email/domain-connect/return", state: "st 1" },
       privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
     );
     expect(url.startsWith("https://dcc.godaddy.com/manage/v2/domainTemplates/providers/openlen.app/services/email/apply?domain=taller.mx&host=notify&")).toBe(true);
@@ -70,31 +70,64 @@ describe("the synchronous apply URL", () => {
 
   it("a root domain goes without host", () => {
     const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-    const url = applyUrl({ settings: SETTINGS, domain: "taller.mx", host: "", vars: {}, redirectUri: "https://openlen.com/r", state: "s" }, privateKey.export({ type: "pkcs8", format: "pem" }).toString());
-    expect(url).toContain("apply?domain=taller.mx&redirect_uri=");
+    const url = applyUrl({ settings: SETTINGS, serviceId: "email-cname", domain: "taller.mx", host: "", vars: {}, redirectUri: "https://openlen.com/r", state: "s" }, privateKey.export({ type: "pkcs8", format: "pem" }).toString());
+    expect(url).toContain("/services/email-cname/apply?domain=taller.mx&redirect_uri=");
   });
 });
 
-describe("the template and its variables", () => {
-  const records = [
+describe("the templates and their variables", () => {
+  const three = [
     { type: "MX" as const, name: "send.notify", value: "feedback-smtp.us-east-1.amazonses.com", priority: 10 },
     { type: "TXT" as const, name: "send.notify", value: "v=spf1 include:amazonses.com ~all" },
     { type: "TXT" as const, name: "resend._domainkey.notify", value: "p=MIGfMA0" },
   ];
+  // What Resend gave for notify.pruebas.openlen.com in the real test (22/10): names relative to the zone.
+  const four = [
+    { type: "TXT" as const, name: "resend._domainkey.notify.pruebas", value: "p=MIGfMA0" },
+    { type: "MX" as const, name: "send.notify.pruebas", value: "feedback-smtp.us-east-1.amazonses.com", priority: 10 },
+    { type: "TXT" as const, name: "send.notify.pruebas", value: "v=spf1 include:amazonses.com ~all" },
+    { type: "CNAME" as const, name: "rsend.notify.pruebas", value: "send.forge.rmta.net" },
+  ];
+  const template = (serviceId: string) => JSON.parse(readFileSync(join(process.cwd(), `infra/domain-connect/openlen.app.${serviceId}.json`), "utf8"));
 
-  it("templateVars takes the DKIM value and the MX host from Resend's records, and the host from the sending host", () => {
-    expect(templateVars(records, "notify.taller.mx", "taller.mx")).toEqual({ dkim: "p=MIGfMA0", mxhost: "feedback-smtp.us-east-1.amazonses.com", host: "notify" });
-    expect(templateVars(records, "taller.mx", "taller.mx").host).toBe("");
+  it("Resend's three lines are the `email` template, with the DKIM key, the MX host and the host relative to the domain", () => {
+    expect(templateFor(three, "notify.taller.mx", "taller.mx")).toEqual({ serviceId: "email", host: "notify", vars: { dkim: "p=MIGfMA0", mxhost: "feedback-smtp.us-east-1.amazonses.com" } });
+    expect(templateFor(three.map((r) => ({ ...r, name: r.name.replace(/\.?notify$/, "") || r.name })), "taller.mx", "taller.mx")?.host).toBe("");
   });
 
-  it("the template file has exactly the three records of the spec and parses as JSON", () => {
-    const t = JSON.parse(readFileSync(join(process.cwd(), "infra/domain-connect/openlen.app.email.json"), "utf8"));
-    expect(t).toMatchObject({ providerId: "openlen.app", serviceId: "email", syncPubKeyDomain: "openlen.app" });
-    expect(t.records).toEqual([
+  it("with Resend's sending CNAME it is `email-cname`, with the CNAME's target", () => {
+    expect(templateFor(four, "notify.pruebas.openlen.com", "pruebas.openlen.com")).toEqual({
+      serviceId: "email-cname",
+      host: "notify",
+      vars: { dkim: "p=MIGfMA0", mxhost: "feedback-smtp.us-east-1.amazonses.com", rsend: "send.forge.rmta.net" },
+    });
+  });
+
+  it("any other set of lines has no template, so no button: another SPF value, another priority, an extra or a missing line, only CNAMEs", () => {
+    const host = "notify.pruebas.openlen.com";
+    const domain = "pruebas.openlen.com";
+    expect(templateFor(four.map((r) => (r.type === "TXT" && r.name.startsWith("send.") ? { ...r, value: "v=spf1 include:otro.com ~all" } : r)), host, domain)).toBeNull();
+    expect(templateFor(four.map((r) => (r.type === "MX" ? { ...r, priority: 20 } : r)), host, domain)).toBeNull();
+    expect(templateFor([...four, { type: "TXT" as const, name: "otra.notify.pruebas", value: "x" }], host, domain)).toBeNull();
+    expect(templateFor(four.filter((r) => r.type !== "MX"), host, domain)).toBeNull();
+    expect(templateFor([four[0]!, { type: "CNAME" as const, name: "send.notify.pruebas", value: "a.rmta.net" }, { type: "CNAME" as const, name: "rsend.notify.pruebas", value: "b.rmta.net" }], host, domain)).toBeNull();
+  });
+
+  it("the template files: `email` has the three records, `email-cname` the same plus the CNAME, and every variable is one templateFor gives", () => {
+    const base = [
       { type: "TXT", host: "resend._domainkey", data: "%dkim%", ttl: 3600 },
       { type: "MX", host: "send", pointsTo: "%mxhost%", priority: 10, ttl: 3600 },
       { type: "TXT", host: "send", data: "v=spf1 include:amazonses.com ~all", ttl: 3600 },
-    ]);
+    ];
+    expect(template("email")).toMatchObject({ providerId: "openlen.app", serviceId: "email", syncPubKeyDomain: "openlen.app" });
+    expect(template("email").records).toEqual(base);
+    expect(template("email-cname")).toMatchObject({ providerId: "openlen.app", serviceId: "email-cname", syncPubKeyDomain: "openlen.app", warnPhishing: true });
+    expect(template("email-cname").records).toEqual([...base, { type: "CNAME", host: "rsend", pointsTo: "%rsend%", ttl: 3600 }]);
+    for (const [serviceId, records, sendingHost, domain] of [["email", three, "notify.taller.mx", "taller.mx"], ["email-cname", four, "notify.pruebas.openlen.com", "pruebas.openlen.com"]] as const) {
+      const given = Object.keys(templateFor(records, sendingHost, domain)!.vars).sort();
+      const used = [...JSON.stringify(template(serviceId).records).matchAll(/%(\w+)%/g)].map((m) => m[1]!).sort();
+      expect(used).toEqual(given);
+    }
   });
 
   it("dmarcSuggestion proposes p=none only when there is no _dmarc TXT", async () => {
