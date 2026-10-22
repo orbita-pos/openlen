@@ -615,7 +615,7 @@
         "cta": "Mejorar a Pro"
       },
       "connectTitle": "Manda correos desde tu dominio",
-      "connectBody": "Tu app, los correos para entrar a la cuenta y tus formularios mandarán desde una dirección de tu dominio. Añadirás tres líneas a su DNS, o las aprobarás con un clic si tu proveedor lo permite.",
+      "connectBody": "Tu app, los correos para entrar a la cuenta y tus formularios mandarán desde una dirección de tu dominio. Añadirás unas líneas a su DNS, o las aprobarás con un clic si tu proveedor lo permite.",
       "domainLabel": "Tu dominio",
       "domainPlaceholder": "tunegocio.com",
       "showAsRoot": "Mostrar como @{domain} (por defecto manda desde notify.{domain})",

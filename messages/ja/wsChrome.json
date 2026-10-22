@@ -615,7 +615,7 @@
         "cta": "Pro にアップグレード"
       },
       "connectTitle": "あなたのドメインからメールを送る",
-      "connectBody": "アプリ、ログイン用メール、フォームがあなたのドメインのアドレスから送られます。DNS に 3 行を追加するか、プロバイダーが対応していればワンクリックで承認します。",
+      "connectBody": "アプリ、ログイン用メール、フォームがあなたのドメインのアドレスから送られます。DNS に数行を追加するか、プロバイダーが対応していればワンクリックで承認します。",
       "domainLabel": "あなたのドメイン",
       "domainPlaceholder": "yourbusiness.com",
       "showAsRoot": "@{domain} として表示（通常は notify.{domain} から送信）",

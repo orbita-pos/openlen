@@ -24,7 +24,7 @@ export const CONNECT_EMAIL_DOMAIN_DECLARATION: Record<string, unknown> = {
   name: CONNECT_EMAIL_DOMAIN,
   description:
     "Show the project owner a card in the chat to connect their own domain for the project's email, so the app's emails, the sign-in emails and the form replies go from an address on it (noreply@notify.<their domain>) instead of OpenLen's. "
-    + "The owner types the domain there; afterwards they add three DNS lines (or approve them in one click if their DNS provider supports it) from the Correos tab of the Database view, and the domain is checked by itself. "
+    + "The owner types the domain there; afterwards they add its DNS lines (or approve them in one click if their DNS provider supports it) from the Correos tab of the Database view, and the domain is checked by itself. "
     + "Only the owner can, on a paid plan. Call it when the user wants emails from their domain and PROJECT STATE's `email.status` is `none`. Never ask for the domain or DNS details in chat.",
   parameters: { type: "OBJECT", properties: {} },
 };

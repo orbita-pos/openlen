@@ -615,7 +615,7 @@
         "cta": "Passer à Pro"
       },
       "connectTitle": "Envoyez des e-mails depuis votre domaine",
-      "connectBody": "Votre app, les e-mails de connexion et vos formulaires enverront depuis une adresse de votre domaine. Vous ajouterez trois lignes à son DNS, ou les approuverez en un clic si votre fournisseur le permet.",
+      "connectBody": "Votre app, les e-mails de connexion et vos formulaires enverront depuis une adresse de votre domaine. Vous ajouterez quelques lignes à son DNS, ou les approuverez en un clic si votre fournisseur le permet.",
       "domainLabel": "Votre domaine",
       "domainPlaceholder": "votreentreprise.com",
       "showAsRoot": "Afficher comme @{domain} (par défaut, envoi depuis notify.{domain})",

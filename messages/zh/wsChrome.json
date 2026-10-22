@@ -615,7 +615,7 @@
         "cta": "升级到 Pro"
       },
       "connectTitle": "从你的域名发送邮件",
-      "connectBody": "你的应用、登录邮件和表单将从你域名下的地址发出。你需要在 DNS 中添加三行，如果你的服务商支持，也可以一键批准。",
+      "connectBody": "你的应用、登录邮件和表单将从你域名下的地址发出。你需要在 DNS 中添加几行，如果你的服务商支持，也可以一键批准。",
       "domainLabel": "你的域名",
       "domainPlaceholder": "yourbusiness.com",
       "showAsRoot": "显示为 @{domain}（默认从 notify.{domain} 发送）",

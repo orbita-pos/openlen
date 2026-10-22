@@ -47,6 +47,24 @@ describe("resendClients — the customers' Resend account (spec 0.7)", () => {
     ]);
   });
 
+  it("a sending CNAME (domains created after August 2026) is kept too: the owner adds every sending line", async () => {
+    // What Resend returned for notify.pruebas.openlen.com on 22/10, the real test.
+    const withCname = {
+      id: "d_2",
+      status: "not_started",
+      records: [
+        { record: "DKIM", name: "resend._domainkey.notify.pruebas", type: "TXT", value: "p=MIGf", status: "not_started", ttl: "Auto" },
+        { record: "SPF", name: "send.notify.pruebas", type: "MX", value: "feedback-smtp.us-east-1.amazonses.com", priority: 10, status: "not_started", ttl: "Auto" },
+        { record: "SPF", name: "send.notify.pruebas", type: "TXT", value: "v=spf1 include:amazonses.com ~all", status: "not_started", ttl: "Auto" },
+        { record: "SPF", name: "rsend.notify.pruebas", type: "CNAME", value: "send.forge.rmta.net", status: "not_started", ttl: "Auto" },
+      ],
+    };
+    const { f } = fakeFetch(() => ({ status: 201, body: withCname }));
+    const r = await resendClients("re_clients_key", f).createDomain("notify.pruebas.openlen.com");
+    expect(r.records).toContainEqual({ type: "CNAME", name: "rsend.notify.pruebas", value: "send.forge.rmta.net" });
+    expect(r.records).toHaveLength(4);
+  });
+
   it("the key goes as a Bearer header and nowhere else", async () => {
     const { f, seen } = fakeFetch(() => ({ status: 200, body: { id: "re_1" } }));
     await resendClients("re_clients_key", f).send({ from: "Taller <noreply@notify.taller.mx>", to: ["ana@x.com"], subject: "Hola", html: "<p>Hola</p>" }, "idem-1");

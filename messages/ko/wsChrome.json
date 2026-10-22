@@ -615,7 +615,7 @@
         "cta": "Pro로 업그레이드"
       },
       "connectTitle": "내 도메인에서 이메일 보내기",
-      "connectBody": "앱, 로그인 이메일, 양식이 내 도메인의 주소에서 발송됩니다. DNS에 세 줄을 추가하거나, 제공업체가 지원하면 한 번의 클릭으로 승인합니다.",
+      "connectBody": "앱, 로그인 이메일, 양식이 내 도메인의 주소에서 발송됩니다. DNS에 몇 줄을 추가하거나, 제공업체가 지원하면 한 번의 클릭으로 승인합니다.",
       "domainLabel": "내 도메인",
       "domainPlaceholder": "yourbusiness.com",
       "showAsRoot": "@{domain}(으)로 표시 (기본적으로 notify.{domain}에서 발송)",

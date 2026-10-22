@@ -85,7 +85,9 @@ export async function connectDomain(projectId: string, input: { domain: string; 
 }
 
 function nextStatus(previous: EmailDomainStatus, resendStatus: string | null): EmailDomainStatus {
-  if (resendStatus === "verified") return "ready";
+  // partially_verified: one of two sending CNAMEs still pending, and Resend sends normally
+  // (resend.com/docs/dashboard/domains/manage-domains, read 22/10).
+  if (resendStatus === "verified" || resendStatus === "partially_verified") return "ready";
   const wasSending = previous === "ready" || previous === "offline";
   if (wasSending) return "offline";
   if (resendStatus === null || resendStatus === "failed") return "failed";
