@@ -92,6 +92,15 @@ describe("transporte de texto en streaming", () => {
     expect(events).toEqual([{ type: "done", stopReason: { kind: "error", error: "missing_key" } }]);
   });
 
+  it("top_p va en el cable sólo cuando quien llama lo pide (si no, el del proveedor)", async () => {
+    const con = client(chunk({ content: "x" }, "stop"));
+    await drain(con.client.stream({ ...REQUEST, topP: 1 }));
+    expect(JSON.parse((con.fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body).top_p).toBe(1);
+    const sin = client(chunk({ content: "x" }, "stop"));
+    await drain(sin.client.stream(REQUEST));
+    expect("top_p" in JSON.parse((sin.fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body)).toBe(false);
+  });
+
   it("el modelo y el esfuerzo salen de la política, no de quien llama", async () => {
     const { client: c, fetchImpl } = client(chunk({ content: "x" }, "stop"));
     await drain(c.stream(REQUEST));

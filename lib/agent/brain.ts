@@ -212,6 +212,12 @@ const CLOSEOUT_MAX_OUTPUT_TOKENS = 2_048;
 // Len Dynamis ya corría a 1,0 (`lib/agent/dynamis.ts`).
 const TEMPERATURE = 1.0;
 
+// TOP_P 1,0, el otro valor de la ficha de la 1017 (2026-10-22), EXPLÍCITO y en
+// todos los modos. DeepInfra ya usa 1,0 si no se manda (su documentación);
+// Fireworks, el respaldo, no documenta el suyo, y un turno que cae al respaldo
+// no debe muestrear distinto del que se midió.
+const TOP_P = 1.0;
+
 /** Qué operación corre una vuelta: la del agente, salvo que la conversación
  *  traiga fotos y el modelo del agente NO las vea — entonces, el papel con
  *  visión (sin esfuerzo, como era antes de A). Con un agente que ve, la foto
@@ -464,6 +470,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           ...(withTools ? { streamToolArgs: true } : {}),
           maxOutputTokens,
           temperature,
+          topP: TOP_P,
           requestId: options.requestId,
           operation,
           // La POSTURA sólo tiene sentido para `agent_turn`: si una vuelta con
