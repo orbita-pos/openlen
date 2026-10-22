@@ -101,6 +101,18 @@ export function realSendDeps(): SendDeps {
   };
 }
 
+/** After a form submission is stored: the form's automatic reply, if it has one (form-reply.ts). Never throws. */
+export async function replyToFormSubmission(i: { projectId: string; sub: string; data: Record<string, string>; formIndex: number | null; formId: string | null; page: string | null }): Promise<void> {
+  const [{ emailEnabledIn }, { formReplyConfig, sendFormReply }, { publishedHost }] = await Promise.all([import("./enabled"), import("./form-reply"), import("@/lib/publish/base-host")]);
+  if (!emailEnabledIn()) return;
+  const [p] = await db.select({ title: schema.projects.title, data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, i.projectId)).limit(1);
+  const found = formReplyConfig(p?.data?.settings?.forms, i.formId, i.formIndex, i.page);
+  if (!p || !found) return;
+  const custom = await realPanelDeps().customDomainOf(i.projectId);
+  const r = await sendFormReply({ projectId: i.projectId, formKey: found.key, fromName: p.title, hosts: [publishedHost(i.sub), ...(custom ? [custom] : [])], reply: found.reply, data: i.data }, realSendDeps());
+  if (r?.kind === "rejected") console.warn("[email] form reply not sent:", i.projectId, r.error.name);
+}
+
 export function realPanelDeps(): PanelDeps {
   return {
     ...realDomainDeps(),

@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/danke  (optional)",
     "invalidEmail": "Gib eine gültige E-Mail-Adresse ein.",
     "invalidUrl": "Gib eine vollständige URL ein, die mit http:// oder https:// beginnt.",
+    "autoReplySubject": "Automatische Antwort: Betreff",
+    "autoReplySubjectPlaceholder": "Danke, {open}name{close}",
+    "autoReplyBody": "Automatische Antwort: Text",
+    "autoReplyBodyPlaceholder": "Hallo {open}name{close}, wir haben deine Nachricht erhalten und melden uns bald.",
+    "autoReplyNote": "Geht an alle, die das Formular ausfüllen, von der E-Mail-Domain des Projekts (Tab E-Mails), mit einem bezahlten Plan. {open}feld{close} setzt ein, was in diesem Feld steht. Lass beide leer, um sie auszuschalten.",
     "applyNote": "Formularänderungen werden bei deinem nächsten Deploy wirksam."
   },
   "testEmail": {

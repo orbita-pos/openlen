@@ -109,6 +109,11 @@
     "redirectPlaceholder": "https://…/bedankt  (optioneel)",
     "invalidEmail": "Voer een geldig e-mailadres in.",
     "invalidUrl": "Voer een volledige URL in die begint met http:// of https://.",
+    "autoReplySubject": "Automatisch antwoord: onderwerp",
+    "autoReplySubjectPlaceholder": "Bedankt, {open}naam{close}",
+    "autoReplyBody": "Automatisch antwoord: tekst",
+    "autoReplyBodyPlaceholder": "Hoi {open}naam{close}, we hebben je bericht ontvangen en reageren snel.",
+    "autoReplyNote": "Gaat naar wie het formulier invult, vanaf het e-maildomein van het project (tab E-mails), met een betaald abonnement. {open}veld{close} vult in wat in dat veld staat. Laat beide leeg om het uit te zetten.",
     "applyNote": "Formulierwijzigingen worden toegepast bij je volgende deploy."
   },
   "testEmail": {

@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/gracias  (opcional)",
     "invalidEmail": "Introduce un correo electrónico válido.",
     "invalidUrl": "Introduce una URL completa que empiece con http:// o https://.",
+    "autoReplySubject": "Respuesta automática: asunto",
+    "autoReplySubjectPlaceholder": "Gracias, {open}nombre{close}",
+    "autoReplyBody": "Respuesta automática: texto",
+    "autoReplyBodyPlaceholder": "Hola {open}nombre{close}, recibimos tu mensaje y te escribimos pronto.",
+    "autoReplyNote": "Le llega a quien llena el formulario, desde el dominio de correo del proyecto (pestaña Correos), con un plan de pago. {open}campo{close} pone lo que escribió en ese campo. Déjalos vacíos para apagarla.",
     "applyNote": "Los cambios del formulario se aplican en tu próximo deploy."
   },
   "testEmail": {

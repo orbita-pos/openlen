@@ -173,6 +173,13 @@ export async function POST(
     // eslint-disable-next-line no-console
     console.error("[forms] notifyOwner failed", err);
   });
+  // Project email: the form's automatic reply to whoever filled it, also without waiting.
+  void import("@/lib/project-email/real")
+    .then(({ replyToFormSubmission }) => replyToFormSubmission({ projectId: owner.projectId, sub, data, formIndex, formId, page }))
+    .catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.error("[forms] auto-reply failed", err);
+    });
 
   return done(wantsJson, sub, true, 200, page);
 }

@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/thank-you  （任意）",
     "invalidEmail": "有効なメールアドレスを入力してください。",
     "invalidUrl": "http:// または https:// で始まる完全な URL を入力してください。",
+    "autoReplySubject": "自動返信：件名",
+    "autoReplySubjectPlaceholder": "{open}name{close} 様、ありがとうございます",
+    "autoReplyBody": "自動返信：本文",
+    "autoReplyBodyPlaceholder": "{open}name{close} 様、メッセージを受け取りました。近日中にご連絡します。",
+    "autoReplyNote": "フォームを送信した人に、プロジェクトのメールドメイン（メールタブ）から送られます。有料プランのみ。{open}field{close} はその欄に書かれた内容に置き換わります。両方を空にするとオフになります。",
     "applyNote": "フォームの変更は次回のデプロイで反映されます。"
   },
   "testEmail": {

@@ -1057,6 +1057,9 @@ function StyleSection({
   );
 }
 
+/** `{{field}}` in the reply's texts: the braces go in as arguments, ICU would read them as its own. */
+const FIELD_BRACES = { open: "{{", close: "}}" };
+
 function FormView({
   formIndex,
   formId,
@@ -1106,6 +1109,22 @@ function FormView({
         }
         onCommit={(v) => onApply(formIndex, formId, { redirectUrl: v })}
       />
+      <TextField
+        label={t("form.autoReplySubject")}
+        value={config?.autoReply?.subject ?? ""}
+        placeholder={t("form.autoReplySubjectPlaceholder", FIELD_BRACES)}
+        onCommit={(v) => onApply(formIndex, formId, { autoReply: { subject: v, body: config?.autoReply?.body ?? "" } })}
+      />
+      <TextField
+        label={t("form.autoReplyBody")}
+        value={config?.autoReply?.body ?? ""}
+        placeholder={t("form.autoReplyBodyPlaceholder", FIELD_BRACES)}
+        multiline
+        onCommit={(v) => onApply(formIndex, formId, { autoReply: { subject: config?.autoReply?.subject ?? "", body: v } })}
+      />
+      <p className="text-[10.5px] fg-faint leading-relaxed">
+        {t("form.autoReplyNote", FIELD_BRACES)}
+      </p>
       {onSendTestEmail && (
         <TestEmailButton formIndex={formIndex} onSend={onSendTestEmail} />
       )}
