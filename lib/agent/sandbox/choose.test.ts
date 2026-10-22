@@ -7,7 +7,7 @@ import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
 import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, settleTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
 import { fakeDriver } from "./fake-driver";
-import { SandboxTerminal } from "./sandbox-terminal";
+import { BASE_ENV_FILE, SandboxTerminal } from "./sandbox-terminal";
 import type { ProjectSandboxRow } from "./store";
 
 const ENV = { E2B_API_KEY: "k" };
@@ -148,6 +148,13 @@ describe("terminalForTurn", () => {
     const next = { ...a.s, turnId: "turn-2", terminal: undefined } as AgentSession;
     await terminalForTurn(next, { ...a.o, network: async () => NET2 });
     expect(a.driver.networkOf(id)).toEqual(NET2);
+  });
+
+  it("the turn's base environment (BASE_URL: the draft) reaches every command of the box", async () => {
+    const { s, o, driver, store } = setup({ baseEnv: async () => ({ BASE_URL: "https://lienzo-x.openlen.app" }) });
+    s.terminal = await terminalForTurn(s, o);
+    await s.terminal.ejecutar("true");
+    expect(driver.files(store.rows.p!.sandboxId!).get(BASE_ENV_FILE)).toContain("export BASE_URL='https://lienzo-x.openlen.app'");
   });
 
   it("resumes the project's paused box with its manifest", async () => {

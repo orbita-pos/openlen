@@ -7,7 +7,7 @@ import type { BridgeHandlers } from "./bridge";
 import type { SandboxHandle } from "./driver";
 import { fakeDriver, type FakeRun } from "./fake-driver";
 import { NEVER_IN_BOX } from "./paths";
-import { SandboxTerminal, readOnlySource } from "./sandbox-terminal";
+import { BASE_ENV_FILE, SandboxTerminal, readOnlySource } from "./sandbox-terminal";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
@@ -35,6 +35,44 @@ async function open(o: {
   });
   return { d, handle, terminal, box: () => d.files(handle.id) };
 }
+
+describe("SandboxTerminal — what every opening sets up for Playwright", () => {
+  it("puts E2B's proxy authority in Chromium's own store, only when its fingerprint changed", async () => {
+    const { terminal, d, handle } = await open({ projectFiles: { "/index.html": "a" } });
+    await terminal.ejecutar("true");
+    const ran = d.commands(handle.id);
+    const before = ran.slice(0, ran.findIndex((c) => c.includes("bash-tasks")));
+    const ca = before.find((c) => c.includes("certutil"));
+    expect(ca).toBeDefined();
+    expect(ca).toContain("/usr/local/share/ca-certificates/e2b-ca.crt");
+    expect(ca).toContain("sha256sum");
+    expect(ca).toContain("sql:$HOME/.pki/nssdb");
+  });
+
+  it("the base environment: Playwright's browsers and package, the authority for Node and Python, BASE_URL", async () => {
+    const d = fakeDriver();
+    const handle = await d.create({ template: "t", metadata: {} });
+    const terminal = new SandboxTerminal({
+      handle,
+      projectFiles: { "/index.html": "a" },
+      syncedManifest: {},
+      bridge: {},
+      readOnly: async () => ({}),
+      startedAt: Date.now(),
+      baseEnv: { BASE_URL: "https://lienzo-x.openlen.app" },
+    });
+    await terminal.ejecutar("true");
+    const env = d.files(handle.id).get(BASE_ENV_FILE)!;
+    expect(env).toContain("export PLAYWRIGHT_BROWSERS_PATH='/opt/openlen/ms-playwright'");
+    expect(env).toContain("export NODE_PATH='/opt/openlen/playwright/node_modules'");
+    expect(env).toContain("export REQUESTS_CA_BUNDLE='/etc/ssl/certs/ca-certificates.crt'");
+    expect(env).toContain("NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/e2b-ca.crt");
+    expect(env).toContain("export BASE_URL='https://lienzo-x.openlen.app'");
+    const run = d.commands(handle.id).find((c) => c.includes("bash-tasks") && c.includes("true"))!;
+    // The platform's values win over the shell's carried ones.
+    expect(run.indexOf(`. ${BASE_ENV_FILE}`)).toBeGreaterThan(run.indexOf("/run/openlen/env"));
+  });
+});
 
 describe("SandboxTerminal — opening fast", () => {
   it("a box just created from the template has nothing of the project: no manifest before the first command", async () => {

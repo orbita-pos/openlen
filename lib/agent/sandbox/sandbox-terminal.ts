@@ -24,7 +24,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR } from "./template-files";
+import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR } from "./template-files";
 
 const REQUESTS = `${BRIDGE_DIR}/requests`;
 const RESPONSES = `${BRIDGE_DIR}/responses`;
@@ -56,6 +56,38 @@ export function readOnlySource(path: string): string {
 
 /** "/.openlen/docs/a.md" → "/.openlen". */
 const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
+
+/** The platform's variables for every command (plan local 2026-10-21-playwright-in-the-box). In the user's
+ *  home, never synced (only ~/.len is). */
+export const BASE_ENV_FILE = "/home/user/.openlen-base.env";
+const E2B_CA = "/usr/local/share/ca-certificates/e2b-ca.crt";
+
+function baseEnvScript(turn: Readonly<Record<string, string>>): string {
+  const fixed: Record<string, string> = {
+    PLAYWRIGHT_BROWSERS_PATH: PLAYWRIGHT_BROWSERS,
+    // Tests import "@playwright/test": the template's, wherever they are.
+    NODE_PATH: `${PLAYWRIGHT_DIR}/node_modules`,
+    // Python's requests trusts the system's store, which has E2B's authority.
+    REQUESTS_CA_BUNDLE: "/etc/ssl/certs/ca-certificates.crt",
+  };
+  const lines = Object.entries({ ...fixed, ...turn }).map(([k, v]) => `export ${k}=${quote(v)}`);
+  // Node only if the file is there: a missing one makes every `node` print a warning.
+  lines.push(`[ -f ${E2B_CA} ] && export NODE_EXTRA_CA_CERTS=${E2B_CA}`);
+  return `${lines.join("\n")}\n`;
+}
+
+/** E2B's proxy authority (it differs per box, measured 21/10) into Chromium's own store (NSS), so a
+ *  browser in the box trusts the hosts whose requests E2B rewrites; again only when its fingerprint changed. */
+const TRUST_E2B_IN_CHROMIUM = [
+  `[ -f ${E2B_CA} ] && command -v certutil >/dev/null`,
+  `F=$(sha256sum ${E2B_CA} | cut -c1-64)`,
+  `[ "$(cat ${BRIDGE_DIR}/e2b-ca.sha 2>/dev/null)" != "$F" ]`,
+  `mkdir -p $HOME/.pki/nssdb`,
+  `{ certutil -d sql:$HOME/.pki/nssdb -L >/dev/null 2>&1 || certutil -d sql:$HOME/.pki/nssdb -N --empty-password; }`,
+  `{ certutil -d sql:$HOME/.pki/nssdb -D -n e2b-proxy >/dev/null 2>&1; true; }`,
+  `certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n e2b-proxy -i ${E2B_CA}`,
+  `echo "$F" > ${BRIDGE_DIR}/e2b-ca.sha`,
+].join(" && ");
 
 /** What the box already has of the read-only files, across turns; outside what Len sees. */
 const UPLOADED_FILE = `${BRIDGE_DIR}/ro/.uploaded.json`;
@@ -106,6 +138,8 @@ export interface SandboxTerminalOptions {
   readonly logFirstSync?: (timings: string) => void;
   /** The box was just created from the template: nothing of the project is in it yet. */
   readonly fresh?: boolean;
+  /** Variables of this turn for every command, on top of the platform's (BASE_URL: the draft for the tests). */
+  readonly baseEnv?: Readonly<Record<string, string>>;
 }
 
 type NotSaved = { readonly ruta: string; readonly motivo: "binary" | "too_large" };
@@ -144,7 +178,7 @@ export class SandboxTerminal implements TerminalBackend {
 
   private async firstSync(): Promise<void> {
     const box = this.o.handle;
-    const prepare = `sudo mkdir -p ${REQUESTS} ${RESPONSES} && sudo chown -R "$(id -u)" ${BRIDGE_DIR}`;
+    const prepare = `sudo mkdir -p ${REQUESTS} ${RESPONSES} && sudo chown -R "$(id -u)" ${BRIDGE_DIR} && { ${TRUST_E2B_IN_CHROMIUM} || true; }`;
     const t0 = this.now();
     // A box just created from the template has nothing of the project: its manifest would be empty,
     // and reading it is the slowest thing a cold box does (measured 1.4 s, 21/10). A resumed one
@@ -162,6 +196,8 @@ export class SandboxTerminal implements TerminalBackend {
       if (c.kind === "deleted") removes.push(c.path);
       else writes[c.path] = this.tree[c.path]!;
     }
+    // The base environment rides along with the project's files: rewritten each turn (BASE_URL may change).
+    writes[BASE_ENV_FILE] = baseEnvScript(this.o.baseEnv ?? {});
     // The project's files and /.openlen go up at the same time.
     let uploaded = t1;
     let readOnly = t1;
@@ -290,6 +326,8 @@ export class SandboxTerminal implements TerminalBackend {
       // OpenLen's wrappers first; then what pip and npm -g install for the box's user (the template).
       `export PATH=${BOX_BIN}:$HOME/.local/bin:$HOME/.npm-global/bin:$PATH`,
       `[ -f ${ENV_FILE} ] && . ${ENV_FILE}`,
+      // After the shell's carried variables: the platform's (BASE_URL, Playwright's) are the ones that count.
+      `[ -f ${BASE_ENV_FILE} ] && . ${BASE_ENV_FILE}`,
       `cd ${quote(this.cwd)} 2>/dev/null || cd /`,
       command,
       `__openlen_rc=$?`,
