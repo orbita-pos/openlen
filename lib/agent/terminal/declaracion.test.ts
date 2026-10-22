@@ -231,6 +231,19 @@ describe("bash con la terminal real", () => {
     }
   });
 
+  it("en una página, /tests se corre: npx playwright test contra $BASE_URL", () => {
+    const d = String(bashDe(CON_CAJA).description);
+    expect(d).not.toContain("there is no Playwright in this terminal");
+    expect(d).toContain("npx playwright test");
+    expect(d).toContain("$BASE_URL");
+  });
+
+  it("en una app, /tests sigue siendo de vitest", () => {
+    const d = String(bashDe({ ...CON_CAJA }, APP).description);
+    expect(d).toContain("/tests holds the app's tests (vitest)");
+    expect(d).not.toContain("npx playwright test");
+  });
+
   it("withSandbox encuentra su frase (si no, falla)", () => {
     expect(() => withSandbox("nothing to replace")).toThrow();
   });
