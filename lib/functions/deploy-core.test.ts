@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FunctionsBundle } from "./bundler/bundle-functions";
-import { applyFunctionEnv, deployDraft, deployDraftSerialized, ensureDraftDeployed, pendingDraftDeploy, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
+import { applyFunctionEnv, deployDraft, deployDraftSerialized, ensureDraftDeployed, functionEnv, pendingDraftDeploy, scheduleDraftDeploy, type DeployDeps } from "./deploy-core";
 import { memoryDeploymentStore } from "./deployments";
 import type { Destination, EngineBundle, FunctionsEngine, FunctionsEnvironment } from "./engines/types";
 
@@ -234,5 +234,15 @@ describe("los secretos (fase 2)", () => {
     soltar();
     await Promise.all([despliegue, aplicar]);
     expect(m.entornos.get(`${REF}|draft`)!.STRIPE_SECRET_KEY).toBe("sk_test_nuevo");
+  });
+});
+
+// Project email (spec local 2026-10-22-email-integration, 5): its variables sit between the base ones
+// and the user's secrets, so a secret the user saved always wins.
+describe("functionEnv and project email", () => {
+  it("the email env goes over the base and under the user's secrets", () => {
+    const t = { ref: "r", url: "https://x.openlen.app", publishableKey: "pk", secretKey: "sk", plan: "pro" as const, secrets: { RESEND_API_KEY: "re_suya" }, email: { RESEND_API_KEY: "sk", RESEND_BASE_URL: "https://x.openlen.app/email/v1" } };
+    expect(functionEnv(t)).toMatchObject({ SUPABASE_URL: "https://x.openlen.app", RESEND_API_KEY: "re_suya", RESEND_BASE_URL: "https://x.openlen.app/email/v1" });
+    expect(functionEnv({ ...t, secrets: {} }).RESEND_API_KEY).toBe("sk");
   });
 });

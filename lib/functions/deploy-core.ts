@@ -31,6 +31,8 @@ export interface DeployTarget {
   readonly plan: Plan;
   /** Los secretos de ESE entorno, en claro: van como variables de la función. */
   readonly secrets: Readonly<Record<string, string>>;
+  /** Project email's variables (lib/project-email/function-env.ts): under the user's secrets. */
+  readonly email?: Readonly<Record<string, string>>;
 }
 
 export interface DeployDeps {
@@ -41,9 +43,9 @@ export interface DeployDeps {
   bundle(files: Readonly<Record<string, string>>, catalog: string, mode: FunctionsBundleMode): Promise<FunctionsBundle | null>;
 }
 
-/** Lo que ve la función en `Deno.env`: las `SUPABASE_*` de su entorno y sus secretos. */
+/** Lo que ve la función en `Deno.env`: las `SUPABASE_*` de su entorno, las del correo y sus secretos (que ganan). */
 export function functionEnv(t: DeployTarget): Record<string, string> {
-  return { ...defaultFunctionEnv(t), ...t.secrets };
+  return { ...defaultFunctionEnv(t), ...(t.email ?? {}), ...t.secrets };
 }
 
 export function engineLimits(plan: Plan): EngineLimits {

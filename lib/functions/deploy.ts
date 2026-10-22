@@ -46,15 +46,18 @@ export function realDeployDeps(): DeployDeps | null {
       const rec = await ensureBackend(projectId);
       const owner = await ownerOf(projectId);
       if (!owner) throw new Error(`no existe el proyecto ${projectId}`);
-      return {
-        ref: rec.ref,
-        // Una función llama a SUPABASE_URL sin Origin: el borrador, con su ref propio.
-        url: environment === "draft" ? await draftProjectUrl(rec) : projectUrl(rec.ref),
-        publishableKey: rec.publishableKey,
-        secretKey: decryptToken(rec.secretKeyEncrypted),
-        plan: owner.plan,
-        secrets: await pgSecretStore.values(projectId, environment),
-      };
+      // Una función llama a SUPABASE_URL sin Origin: el borrador, con su ref propio.
+      const url = environment === "draft" ? await draftProjectUrl(rec) : projectUrl(rec.ref);
+      const secretKey = decryptToken(rec.secretKeyEncrypted);
+      const secrets = await pgSecretStore.values(projectId, environment);
+      const [{ emailFunctionEnv }, { emailEnabledIn }, { pgEmailStore }] = await Promise.all([
+        import("@/lib/project-email/function-env"),
+        import("@/lib/project-email/enabled"),
+        import("@/lib/project-email/store-pg"),
+      ]);
+      const enabled = emailEnabledIn();
+      const email = emailFunctionEnv({ enabled, envUrl: url, secretKey, userSecrets: secrets, domain: enabled ? await pgEmailStore.getDomain(projectId) : null });
+      return { ref: rec.ref, url, publishableKey: rec.publishableKey, secretKey, plan: owner.plan, secrets, email };
     },
     bundle: (files, catalog, mode) => bundleFunctions({ files, catalog, mode }),
   };
