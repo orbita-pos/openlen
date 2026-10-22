@@ -396,6 +396,25 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.match(texto(out), /THE BACKEND \(Supabase\)/);
   });
 
+  // LA TERMINAL REAL en un despliegue por fases: el manual que lee Len sigue a la caja del dueño (como
+  // terminalForTurn); quien no está en la lista tiene la terminal de siempre, sin Playwright.
+  it("🔴 en un despliegue por fases, /AGENTS.md habla de la caja sólo si el dueño está en la lista", async () => {
+    const antes = { key: process.env.E2B_API_KEY, users: process.env.OPENLEN_SANDBOX_ONLY_USERS };
+    const leer = async () => texto(await runAgentTool(makeSession(), makeDeps({ html: HOME }).deps, "Read", { file_path: "/AGENTS.md" }));
+    try {
+      process.env.E2B_API_KEY = "k";
+      process.env.OPENLEN_SANDBOX_ONLY_USERS = "otra-persona";
+      assert.match(await leer(), /there is no Playwright in the terminal/);
+      process.env.OPENLEN_SANDBOX_ONLY_USERS = "u1";
+      assert.match(await leer(), /`npx playwright test` runs them/);
+    } finally {
+      for (const [k, v] of [["E2B_API_KEY", antes.key], ["OPENLEN_SANDBOX_ONLY_USERS", antes.users]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
+
   it("🔴 un Grep por todo el sitio encuentra la página, no los ejemplos del manual", async () => {
     const { deps } = makeDeps({ html: HOME });
     // El manual nombra `createClient` (THE BACKEND); la página no lo llama. Si el
