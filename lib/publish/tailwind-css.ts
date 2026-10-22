@@ -26,7 +26,9 @@ export async function generateTailwindCss(
       plugins: [],
       corePlugins: { preflight: true },
     } as Parameters<typeof tailwindcss>[0]),
-  ]).process(entrada, { from: undefined });
+    // Sin mapas: PostCSS cargaría del disco del servidor el «anterior» que nombre un
+    // `sourceMappingURL` de la hoja (que escriben el modelo o el dueño), y nada aquí los usa.
+  ]).process(entrada, { from: undefined, map: false });
 
   // El CSS va dentro de un `<style>` del documento: un `</style>` de la hoja
   // (en un comentario, en un `content:`) lo cerraría y el resto saldría como
