@@ -524,17 +524,27 @@ describe("los créditos de los planes de pago, contra la portada", () => {
   // plan entero, a la tarifa de LISTA —todo en Fireworks, sin el ahorro de
   // DeepInfra— y con la comisión de Polar (5 % + 50¢, +1,5 % tarjeta no de EE. UU.).
   // Subir un plan sin rehacer esta cuenta es lo que lo rompe.
-  it("🔴 ningún plan de pago pierde dinero aunque todo vaya a Fireworks y se gaste entero", async () => {
+  // Y TODO EL CORREO INCLUIDO (spec local 2026-10-22-email-integration, 0.4): lo que
+  // cuesta en Resend mandar el mes entero de su plan, encima del peor caso de arriba.
+  it("🔴 ningún plan de pago pierde dinero aunque todo vaya a Fireworks, se gaste entero y mande todo su correo", async () => {
     const pp = await import("@/lib/marketing/plan-price");
     const { USD_PER_CREDIT } = await import("@/lib/credits-client");
-    for (const [price, credits] of [
-      [pp.PRO_PRICE, pp.PRO_CREDITS],
-      [pp.MAX_PRICE, pp.MAX_CREDITS],
-      [pp.ULTRA_PRICE, pp.ULTRA_CREDITS],
+    const { EMAIL_LIMITS, RESEND_COST_USD_PER_EMAIL } = await import("@/lib/project-email/limits");
+    for (const [plan, price, credits] of [
+      ["pro", pp.PRO_PRICE, pp.PRO_CREDITS],
+      ["max", pp.MAX_PRICE, pp.MAX_CREDITS],
+      ["ultra", pp.ULTRA_PRICE, pp.ULTRA_CREDITS],
     ] as const) {
       const net = price * (1 - 0.05 - 0.015) - 0.5;
-      expect(net - credits * USD_PER_CREDIT, `$${price} con ${credits} créditos`).toBeGreaterThan(0);
+      const email = EMAIL_LIMITS[plan].includedPerMonth * RESEND_COST_USD_PER_EMAIL;
+      expect(net - credits * USD_PER_CREDIT - email, `$${price} con ${credits} créditos`).toBeGreaterThan(0);
     }
+  });
+
+  it("🔴 lo que se cobra de correo de más cubre lo que cuesta en Resend", async () => {
+    const { USD_PER_CREDIT, CENTICREDITOS_POR_CREDITO } = await import("@/lib/credits-client");
+    const { EXTRA_CENTICREDITS_PER_EMAIL, RESEND_COST_USD_PER_EMAIL } = await import("@/lib/project-email/limits");
+    expect((EXTRA_CENTICREDITS_PER_EMAIL / CENTICREDITOS_POR_CREDITO) * USD_PER_CREDIT).toBeGreaterThanOrEqual(RESEND_COST_USD_PER_EMAIL);
   });
 
   // LA CAJA (spec local 2026-10-21-real-terminal-e2b, §8): un crédito gastado en la
