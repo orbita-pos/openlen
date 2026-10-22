@@ -113,10 +113,9 @@ export const pgEmailStore: EmailStore = {
     return r.reason !== "unsubscribed" || kind !== "auth";
   },
   async suppress(projectId, address, reason) {
-    await db
-      .insert(S)
-      .values({ projectId, email: normalizeAddress(address), reason })
-      .onConflictDoUpdate({ target: [S.projectId, S.email], set: { reason } });
+    const row = db.insert(S).values({ projectId, email: normalizeAddress(address), reason });
+    // An unsubscribe never weakens a bounce or a complaint: those stop the sign-in emails too.
+    await (reason === "unsubscribed" ? row.onConflictDoNothing({ target: [S.projectId, S.email] }) : row.onConflictDoUpdate({ target: [S.projectId, S.email], set: { reason } }));
   },
   async unsuppress(projectId, address) {
     await db.delete(S).where(and(eq(S.projectId, projectId), eq(S.email, normalizeAddress(address))));

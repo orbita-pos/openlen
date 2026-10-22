@@ -102,6 +102,16 @@ export function describeEmailStoreContract(name: string, setup: () => Promise<Em
       for (const kind of ["app", "form", "auth"] as const) expect(await store.isSuppressed(projectA, "beto@cliente.mx", kind)).toBe(true);
     });
 
+    it("an unsubscribe never weakens a bounce or a complaint (the sign-in emails stay stopped)", async () => {
+      const { store, projectA } = await setup();
+      await store.suppress(projectA, "beto@cliente.mx", "bounced");
+      await store.suppress(projectA, "beto@cliente.mx", "unsubscribed");
+      expect(await store.isSuppressed(projectA, "beto@cliente.mx", "auth")).toBe(true);
+      await store.suppress(projectA, "ana@cliente.mx", "unsubscribed");
+      await store.suppress(projectA, "ana@cliente.mx", "complained");
+      expect(await store.isSuppressed(projectA, "ana@cliente.mx", "auth")).toBe(true);
+    });
+
     it("suppression matches whatever the case and spaces, and is per project", async () => {
       const { store, projectA, projectB } = await setup();
       await store.suppress(projectA, "ana@x.com", "complained");
