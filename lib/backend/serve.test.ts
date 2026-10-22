@@ -68,3 +68,34 @@ describe("cada petición a su entorno", () => {
     expect(served).toEqual(["live"]);
   });
 });
+
+// LA CAJA DE LEN (plan local 2026-10-21-playwright-in-the-box): con su marca, producción sólo se LEE.
+describe("lo que llega de la caja de Len", () => {
+  const box = (method: string, origin?: string) =>
+    new Request("https://abcdefghijklmnopqrst.openlen.app/rest/v1/leads", {
+      method,
+      headers: { host: "abcdefghijklmnopqrst.openlen.app", "x-openlen-caja": "p1.whatever", ...(origin ? { origin } : {}) },
+      ...(method === "POST" ? { body: "{}" } : {}),
+    });
+
+  it("lee producción", async () => {
+    await serveBackend(box("GET"));
+    expect(served).toEqual(["live"]);
+  });
+
+  it("🔴 nunca escribe en producción: 403 y nada servido", async () => {
+    for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+      served.length = 0;
+      const res = await serveBackend(box(method));
+      expect(res.status, method).toBe(403);
+      expect(await res.text()).toContain("production");
+      expect(served).toEqual([]);
+    }
+  });
+
+  it("al borrador (desde el lienzo) escribe como siempre", async () => {
+    const res = await serveBackend(box("POST", "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app"));
+    expect(res.status).toBe(200);
+    expect(served).toEqual(["draft"]);
+  });
+});

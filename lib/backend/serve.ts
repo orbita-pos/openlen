@@ -5,6 +5,7 @@
 
 import "server-only";
 
+import { BOX_MARKER_HEADER } from "@/lib/agent/sandbox/box-marker";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
 import { decideEnvironment, isPublicObjectRead } from "./environment-routing";
@@ -12,6 +13,8 @@ import { getEnvironment, type Environment } from "./environments";
 import { backendConfigured } from "./pg";
 import { backendForHost, backendProjectFor, ensureEnvironmentReady, hasLiveEnvironment, type HostBackend } from "./registry";
 import { handleBackendRequest } from "./router";
+
+const READS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -48,6 +51,10 @@ export async function serveBackend(req: Request): Promise<Response> {
     hasLive: await hasLiveEnvironment(hb.record),
   });
   if (decision.kind === "forbidden") return json({ message: decision.message }, 403);
+  // LEN'S BOX (lib/agent/sandbox/box-marker.ts): it reads production, it never writes there.
+  if (decision.environment === "live" && req.headers.has(BOX_MARKER_HEADER) && !READS.has(req.method)) {
+    return json({ message: "Len's box only reads production: test writes against the draft (the canvas)." }, 403);
+  }
   const res = await serveIn(req, hb, decision.environment);
   // Un `<img>` del lienzo no dice de dónde viene (sin Origin, y el lienzo
   // sirve con `no-referrer`): lo que no está en producción se busca en el
