@@ -124,13 +124,16 @@ const PLAYWRIGHT_BIN = `${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`;
 /** Loaded into every `node` of the box by NODE_OPTIONS (sandbox-terminal.ts). */
 export const PLAYWRIGHT_RESOLVER = `${BOX_BIN}/playwright-resolve.cjs`;
 
-/** The template's Playwright for what a PROJECT's file imports or requires (its tests, its config),
- *  ESM included —NODE_PATH only reaches `require`— and also next to a copy of its own, which would
- *  be a second Playwright beside the runner's (measured 21/10 in a real box: «did not expect test()
- *  to be called here»). What a package in node_modules asks for stays its own. CJS through
- *  `_resolveFilename` (Playwright wraps it with its own and calls ours), ESM through registerHooks. */
+/** The runner and the project's files it loads (its tests, its config) must be ONE Playwright (measured
+ *  21/10 in a real box: «did not expect test() to be called here» with two). In the template's own
+ *  process —its runner and its workers— what a project's file asks of Playwright is the template's, also
+ *  next to a copy of its own; in any other —`npm test` or ./node_modules/.bin with the project's copy— the
+ *  template's only when the project has none, ESM included (NODE_PATH only reaches `require`). What a
+ *  package in node_modules asks for stays its own. CJS through `_resolveFilename` (Playwright wraps it
+ *  with its own and calls ours), ESM through registerHooks. */
 export function playwrightResolverScript(dir: string = PLAYWRIGHT_DIR): string {
   return `"use strict";
+const fs = require("node:fs");
 const Module = require("node:module");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
@@ -138,25 +141,55 @@ const DIR = ${JSON.stringify(dir)};
 const OURS = /^(@playwright\\/test|playwright|playwright-core)(\\/.*)?$/;
 const IN_PACKAGE = /[\\\\/]node_modules[\\\\/]/;
 const ours = (specifier, parent) => OURS.test(specifier) && !IN_PACKAGE.test(parent || "");
+const real = (p) => { try { return fs.realpathSync(p); } catch { return null; } };
+const REAL_DIR = real(DIR) || DIR;
+const main = process.argv[1] ? real(process.argv[1]) : null;
+const TEMPLATES = main !== null && (main === REAL_DIR || main.startsWith(REAL_DIR + path.sep));
 const asParent = { id: path.join(DIR, "package.json"), filename: path.join(DIR, "package.json"), paths: Module._nodeModulePaths(DIR) };
 const resolveFilename = Module._resolveFilename;
 Module._resolveFilename = function (request, parent, ...rest) {
-  return resolveFilename.call(this, request, ours(request, parent && parent.filename) ? asParent : parent, ...rest);
+  if (!ours(request, parent && parent.filename)) return resolveFilename.call(this, request, parent, ...rest);
+  if (TEMPLATES) return resolveFilename.call(this, request, asParent, ...rest);
+  try {
+    return resolveFilename.call(this, request, parent, ...rest);
+  } catch (e) {
+    if (e && e.code === "MODULE_NOT_FOUND") return resolveFilename.call(this, request, asParent, ...rest);
+    throw e;
+  }
 };
 if (typeof Module.registerHooks === "function") {
   const parentURL = pathToFileURL(path.join(DIR, "package.json")).href;
   Module.registerHooks({
     resolve(specifier, context, nextResolve) {
-      return nextResolve(specifier, ours(specifier, context.parentURL) ? { ...context, parentURL } : context);
+      if (!ours(specifier, context.parentURL)) return nextResolve(specifier, context);
+      if (TEMPLATES) return nextResolve(specifier, { ...context, parentURL });
+      try {
+        return nextResolve(specifier, context);
+      } catch (e) {
+        if (e && e.code === "ERR_MODULE_NOT_FOUND") return nextResolve(specifier, { ...context, parentURL });
+        throw e;
+      }
     },
   });
 }
 `;
 }
 
+/** `npx playwright …` —also after -y, and at any @version— is the template's Playwright, straight: no
+ *  bridge, no download (with another runner, the tests would get two Playwrights). `-p`/`-c` is another
+ *  use of npx: the bridge's. */
+const NPX_PLAYWRIGHT = `for a in "$@"; do
+  case "$a" in
+    -p|--package|--package=*|-c|--call|--call=*) break ;;
+    playwright|playwright@*|@playwright/test|@playwright/test@*) shift $((n + 1)); exec ${PLAYWRIGHT_BIN} "$@" ;;
+    -*) n=$((n + 1)) ;;
+    *) break ;;
+  esac
+done
+`;
+
 export function wrapperScript(program: string): string {
-  // `npx playwright …` is the template's Playwright, straight: no bridge, no download.
-  const playwright = program === "npx" ? `if [ "$1" = "playwright" ]; then shift; exec ${PLAYWRIGHT_BIN} "$@"; fi\n` : "";
+  const playwright = program === "npx" ? `n=0\n${NPX_PLAYWRIGHT}` : "";
   return `#!/bin/sh\n${playwright}exec ${BOX_BIN}/openlen-bridge ${program} "$@"\n`;
 }
 

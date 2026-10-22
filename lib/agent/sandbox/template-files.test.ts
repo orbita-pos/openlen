@@ -12,6 +12,7 @@ import { SYSTEM_TOP_LEVEL } from "./paths";
 import { SANDBOX_TEMPLATE } from "./config";
 import {
   BIG_FILE_PREFIX,
+  BOX_BIN,
   BRIDGED_PROGRAMS,
   PLAYWRIGHT_BROWSERS,
   PLAYWRIGHT_DIR,
@@ -24,8 +25,10 @@ import {
   wrapperScript,
 } from "./template-files";
 
+// A POSIX shell, as the box's (Git's on Windows); without one, the shell tests are skipped.
+const SH = spawnSync("sh", ["-c", "printf ok"], { encoding: "utf8" }).stdout === "ok" ? "sh" : null;
 // The scripts run in the box with python3; here, with whatever Python this machine has.
-const PYTHON = ["python3", "python"].find((p) => spawnSync(p, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" }).stdout?.trim() === "3");
+const PYTHON =["python3", "python"].find((p) => spawnSync(p, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" }).stdout?.trim() === "3");
 
 function tempRoot(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), "openlen-manifest-"));
@@ -57,25 +60,42 @@ describe("the box's scripts", () => {
     expect(files[PLAYWRIGHT_RESOLVER]!.content).toBe(playwrightResolverScript());
   });
 
-  it("🔴 a project's file gets the template's Playwright, CJS or ESM, even next to its own copy; a package keeps its own", () => {
+  // The template's runner and the files it loads must be one Playwright (measured 21/10 in a real box:
+  // «did not expect test() to be called here» with two). `runner.js` stands in for it, inside its folder.
+  describe("🔴 the resolver: one Playwright with the runner that loads the project's files", () => {
     const pkg = `{ "name": "@playwright/test", "main": "index.js" }`;
     const root = tempRoot({
       "/pinned/node_modules/@playwright/test/package.json": pkg,
       "/pinned/node_modules/@playwright/test/index.js": `module.exports = { who: "pinned" };`,
-      "/cjs/node_modules/@playwright/test/package.json": pkg,
-      "/cjs/node_modules/@playwright/test/index.js": `module.exports = { who: "own" };`,
-      "/cjs/node_modules/a-lib/index.js": `module.exports = require("@playwright/test").who;`,
-      "/cjs/test.js": `console.log(require("@playwright/test").who, require("a-lib"));`,
+      "/pinned/runner.js": `const f = process.argv[2];\nif (f.endsWith(".mjs") || f.includes("esm")) import(require("node:url").pathToFileURL(f).href);\nelse require(f);\n`,
+      "/own/node_modules/@playwright/test/package.json": pkg,
+      "/own/node_modules/@playwright/test/index.js": `module.exports = { who: "own" };`,
+      "/own/node_modules/a-lib/index.js": `module.exports = require("@playwright/test").who;`,
+      "/own/test.js": `console.log(require("@playwright/test").who, require("a-lib"));`,
       "/esm/package.json": `{ "type": "module" }`,
       "/esm/test.js": `import pw from "@playwright/test";\nconsole.log(pw.who);`,
+      "/bare/test.js": `console.log(require("@playwright/test").who);`,
     });
     const resolver = join(root, "resolver.cjs");
     writeFileSync(resolver, playwrightResolverScript(join(root, "pinned")));
-    const node = (file: string) => spawnSync(process.execPath, ["--require", resolver, join(root, file)], { encoding: "utf8" });
-    expect(node("cjs/test.js").stdout.trim()).toBe("pinned own");
-    const esm = node("esm/test.js");
-    expect(esm.stderr).toBe("");
-    expect(esm.stdout.trim()).toBe("pinned");
+    const node = (...files: string[]) => {
+      const r = spawnSync(process.execPath, ["--require", resolver, ...files.map((f) => join(root, f))], { encoding: "utf8" });
+      return { out: r.stdout.trim(), err: r.stderr };
+    };
+
+    it("under the template's runner, a project's file gets the template's even next to its own copy; a package keeps its own", () => {
+      expect(node("pinned/runner.js", "own/test.js")).toEqual({ out: "pinned own", err: "" });
+      expect(node("pinned/runner.js", "esm/test.js")).toEqual({ out: "pinned", err: "" });
+    });
+
+    it("under its own runner (npm test, ./node_modules/.bin/playwright), a project with its own copy keeps it", () => {
+      expect(node("own/test.js")).toEqual({ out: "own own", err: "" });
+    });
+
+    it("a project without one gets the template's, ESM too (NODE_PATH only reaches require)", () => {
+      expect(node("esm/test.js")).toEqual({ out: "pinned", err: "" });
+      expect(node("bare/test.js")).toEqual({ out: "pinned", err: "" });
+    });
   });
 
   it("the template has Python, Node, git and the usual tools, and copies the scripts into /opt/openlen/bin", async () => {
@@ -90,12 +110,24 @@ describe("the box's scripts", () => {
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("/run/openlen/requests"))).toBe(true);
   });
 
-  it("`npx playwright` and `playwright` run the template's own version, never one npx would fetch", () => {
-    const npx = wrapperScript("npx");
-    expect(npx).toContain(`"$1" = "playwright"`);
-    expect(npx).toContain(`${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`);
-    expect(npx).toContain(`openlen-bridge npx "$@"`);
+  it("`playwright` runs the template's own version", () => {
     expect(templateFiles()[`/opt/openlen/bin/playwright`]?.content).toContain(`exec ${PLAYWRIGHT_DIR}/node_modules/.bin/playwright "$@"`);
+  });
+
+  // Measured 21/10 in a real box: `npx -y playwright test` went to npx, which runs a Playwright of its own.
+  it.skipIf(!SH)("🔴 `npx playwright …` is the template's, also with -y and at any @version; the rest goes to the bridge", () => {
+    const script = wrapperScript("npx").split(`${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`).join("echo PIN").split(`${BOX_BIN}/openlen-bridge`).join("echo BRIDGE");
+    const file = join(mkdtempSync(join(tmpdir(), "openlen-npx-")), "npx");
+    writeFileSync(file, script);
+    const npx = (...args: string[]) => spawnSync(SH!, [file.replace(/\\/g, "/"), ...args], { encoding: "utf8" }).stdout.trim();
+    expect(npx("playwright", "test")).toBe("PIN test");
+    expect(npx("-y", "playwright", "test")).toBe("PIN test");
+    expect(npx("--yes", "playwright@latest", "test", "--headed")).toBe("PIN test --headed");
+    expect(npx("@playwright/test", "test")).toBe("PIN test");
+    expect(npx("-p", "playwright", "playwright", "test")).toBe("BRIDGE npx -p playwright playwright test");
+    expect(npx("-y", "create-vite")).toBe("BRIDGE npx -y create-vite");
+    expect(npx("tsx", "a.ts")).toBe("BRIDGE npx tsx a.ts");
+    expect(npx()).toBe("BRIDGE npx");
   });
 
   it("the template has Playwright at a fixed version with its Chromium, and certutil for E2B's authority", async () => {
