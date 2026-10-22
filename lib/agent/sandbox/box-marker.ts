@@ -15,6 +15,9 @@ type Env = Readonly<Record<string, string | undefined>>;
 /** Lowercase: as Node's Headers and Caddy's matchers compare it. */
 export const BOX_MARKER_HEADER = "x-openlen-caja";
 
+/** What a write from the box to production gets (the backend, its Realtime). */
+export const BOX_READS_PRODUCTION = "Len's box only reads production: test writes against the draft (the canvas).";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function secretOf(env: Env): string | null {
