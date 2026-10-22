@@ -8,7 +8,7 @@
 
 import crypto from "node:crypto";
 
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -16,11 +16,26 @@ const TTL_MS = 24 * 60 * 60_000;
 const PREFIX = "verify:";
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
-/** A new link's token for `email` (the raw one goes in the email; the database keeps its hash). */
+/** A new link's token for `email` (the raw one goes in the email; the database keeps its hash). It replaces
+ *  the links sent before: only the last email works. */
 export async function crearVerificacionDelCorreo(email: string, now: Date = new Date()): Promise<string> {
   const raw = crypto.randomBytes(32).toString("base64url");
-  await db.insert(schema.verificationTokens).values({ identifier: `${PREFIX}${email}`, token: sha256(raw), expires: new Date(now.getTime() + TTL_MS) });
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.verificationTokens).where(eq(schema.verificationTokens.identifier, `${PREFIX}${email}`));
+    await tx.insert(schema.verificationTokens).values({ identifier: `${PREFIX}${email}`, token: sha256(raw), expires: new Date(now.getTime() + TTL_MS) });
+  });
   return raw;
+}
+
+/** The person's email when it is still to confirm: an account with a password (a Google one was proven by
+ *  Google) and no `emailVerified`. Null otherwise. What the account menu asks to offer «Resend». */
+export async function correoPorConfirmar(userId: string): Promise<string | null> {
+  const [u] = await db
+    .select({ email: schema.users.email })
+    .from(schema.users)
+    .where(and(eq(schema.users.id, userId), isNotNull(schema.users.passwordHash), isNull(schema.users.emailVerified)))
+    .limit(1);
+  return u?.email ?? null;
 }
 
 /** The link, from the server's own address (never the request's: see app/api/auth/forgot). */

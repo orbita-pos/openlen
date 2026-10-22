@@ -68,7 +68,11 @@
     "manageSubscription": "Gerenciar assinatura",
     "signOut": "Sair",
     "profile": "Seu perfil",
-    "connectedApps": "Aplicativos conectados"
+    "connectedApps": "Aplicativos conectados",
+    "emailPending": "E-mail não confirmado",
+    "resend": "Reenviar",
+    "resendSent": "Enviado: confira seu e-mail",
+    "resendFailed": "Não foi possível enviar"
   },
   "relativeTime": {
     "seconds": "há {count}s",

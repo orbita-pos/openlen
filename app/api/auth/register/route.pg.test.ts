@@ -18,8 +18,10 @@ import { POST } from "./route";
 
 const HAS_DB = Boolean(process.env.DATABASE_URL);
 const emails: string[] = [];
+// A random address per request: the sign-up limit (5 an hour per IP) lives in the database and outlasts a run.
+const someIp = () => `198.18.${crypto.randomInt(256)}.${crypto.randomInt(256)}`;
 const register = (email: string) =>
-  POST(new Request("http://localhost/api/auth/register", { method: "POST", headers: { "x-forwarded-for": `10.9.${emails.length}.1` }, body: JSON.stringify({ email, password: "a good password" }) }));
+  POST(new Request("http://localhost/api/auth/register", { method: "POST", headers: { "x-forwarded-for": someIp() }, body: JSON.stringify({ email, password: "a good password" }) }));
 
 describe.skipIf(!HAS_DB)("🔴 POST /api/auth/register sends the confirmation email", () => {
   // A block, not an arrow that returns: what beforeEach returns, vitest calls after the test.

@@ -68,7 +68,11 @@
     "manageSubscription": "管理订阅",
     "signOut": "退出登录",
     "profile": "我的个人资料",
-    "connectedApps": "已连接的应用"
+    "connectedApps": "已连接的应用",
+    "emailPending": "邮箱未确认",
+    "resend": "重新发送",
+    "resendSent": "已发送，请查收邮件",
+    "resendFailed": "发送失败"
   },
   "relativeTime": {
     "seconds": "{count} 秒前",
