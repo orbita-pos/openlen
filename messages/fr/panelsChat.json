@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "Les fonctions ne compilent pas, rien n'a donc été publié :\n{errors}",
     "functionsFailed": "Impossible de démarrer les fonctions. La page n'a pas changé.",
     "stripe": {
+      "missingHint": "À la publication, vos produits, prix et liens de paiement Stripe sont copiés vers votre compte réel avec cette clé. Sans elle, la page publiée garde ceux de test et personne ne peut vraiment vous payer.",
       "hint": "Mieux vaut une clé restreinte, avec seulement ce dont Len a besoin : produits, prix, liens de paiement, Checkout, clients, abonnements, le portail client et les webhooks.",
       "dashboard": "La récupérer dans Stripe",
       "publishable_key": "C'est la clé publiable (pk_…). Ici, il faut la clé secrète (sk_…) ou une clé restreinte (rk_…).",

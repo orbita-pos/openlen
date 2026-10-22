@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "The functions don't compile, so nothing was published:\n{errors}",
     "functionsFailed": "The functions couldn't be started. The page didn't change.",
     "stripe": {
+      "missingHint": "Publishing copies your Stripe products, prices and payment links to your live account with this key. Without it the published page keeps the test ones, and nobody can really pay you.",
       "hint": "Better a restricted key, with only what Len needs: products, prices, payment links, Checkout, customers, subscriptions, the customer portal and webhooks.",
       "dashboard": "Get it in Stripe",
       "publishable_key": "That's the publishable key (pk_…). Here goes the secret key (sk_…) or a restricted one (rk_…).",

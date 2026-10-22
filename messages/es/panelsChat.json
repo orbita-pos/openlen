@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "Las funciones no compilan, así que no se publicó nada:\n{errors}",
     "functionsFailed": "No se pudieron poner en marcha las funciones. La página no cambió.",
     "stripe": {
+      "missingHint": "Al publicar se copian tus productos, precios y enlaces de pago de Stripe a tu cuenta real con esta clave. Sin ella, la página publicada lleva los de prueba y nadie puede pagarte de verdad.",
       "hint": "Mejor una clave restringida, sólo con lo que Len necesita: productos, precios, enlaces de pago, Checkout, clientes, suscripciones, el portal de clientes y webhooks.",
       "dashboard": "Sácala en Stripe",
       "publishable_key": "Esa es la clave publicable (pk_…). Aquí va la secreta (sk_…) o una restringida (rk_…).",

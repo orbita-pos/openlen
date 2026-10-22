@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "함수를 컴파일할 수 없어 아무것도 게시되지 않았습니다:\n{errors}",
     "functionsFailed": "함수를 시작할 수 없었습니다. 페이지는 바뀌지 않았습니다.",
     "stripe": {
+      "missingHint": "게시할 때 이 키로 Stripe 상품, 가격, 결제 링크가 실제 계정에 복사됩니다. 키가 없으면 게시된 페이지는 테스트용을 그대로 쓰며 실제 결제를 받을 수 없습니다.",
       "hint": "Len에게 필요한 권한만 있는 제한된 키가 좋아요: 상품, 가격, 결제 링크, Checkout, 고객, 구독, 고객 포털, 웹훅.",
       "dashboard": "Stripe에서 받기",
       "publishable_key": "그건 공개 키(pk_…)예요. 여기에는 비밀 키(sk_…)나 제한된 키(rk_…)가 들어가요.",

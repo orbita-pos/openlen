@@ -368,6 +368,7 @@
     "functionsDoNotCompile": "Le funzioni non compilano, quindi non è stato pubblicato nulla:\n{errors}",
     "functionsFailed": "Non è stato possibile avviare le funzioni. La pagina non è cambiata.",
     "stripe": {
+      "missingHint": "Alla pubblicazione, i tuoi prodotti, prezzi e link di pagamento di Stripe vengono copiati nel tuo account reale con questa chiave. Senza, la pagina pubblicata mantiene quelli di prova e nessuno può pagarti davvero.",
       "hint": "Meglio una chiave limitata, solo con ciò che serve a Len: prodotti, prezzi, link di pagamento, Checkout, clienti, abbonamenti, il portale clienti e i webhook.",
       "dashboard": "Prendila su Stripe",
       "publishable_key": "Questa è la chiave pubblicabile (pk_…). Qui va quella segreta (sk_…) o una limitata (rk_…).",
