@@ -89,16 +89,25 @@ function nextStatus(previous: EmailDomainStatus, resendStatus: string | null): E
   // (resend.com/docs/dashboard/domains/manage-domains, read 22/10).
   if (resendStatus === "verified" || resendStatus === "partially_verified") return "ready";
   const wasSending = previous === "ready" || previous === "offline";
+  // Resend is checking: right after a verify (ours, or one pressed in its dashboard) a verified
+  // domain reads `pending` for a while (measured 22/10). It says nothing new.
+  if (resendStatus === "pending") return wasSending ? previous : "verifying";
   if (wasSending) return "offline";
   if (resendStatus === null || resendStatus === "failed") return "failed";
   return "verifying";
 }
 
+/** What Resend isn't checking by itself: asking it to verify starts it (or starts it again). */
+const NEEDS_VERIFY: ReadonlySet<string> = new Set(["not_started", "failed", "temporary_failure", "partially_failed"]);
+
 export async function checkDomain(projectId: string, d: DomainDeps): Promise<EmailDomainStatus | null> {
   const row = await d.store.getDomain(projectId);
   if (!row) return null;
-  await d.resend.verifyDomain(row.resendDomainId).catch(() => {});
+  // Read first, and ask Resend to verify only when it isn't already checking nor verified: its
+  // verify flips the domain to `pending` for some seconds, and reading right after it showed a
+  // ready domain as not ready (the real test, 22/10).
   const remote = await d.resend.getDomain(row.resendDomainId);
+  if (remote && NEEDS_VERIFY.has(remote.status)) await d.resend.verifyDomain(row.resendDomainId).catch(() => {});
   const status = nextStatus(row.status, remote?.status ?? null);
   await d.store.setDomainStatus(projectId, status, d.now());
   const becameReady = status === "ready" && row.status !== "ready";

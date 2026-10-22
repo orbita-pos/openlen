@@ -128,6 +128,34 @@ describe("checkDomain", () => {
     expect(await checkDomain("p1", d)).toBe("offline");
   });
 
+  it("🔴 a check doesn't ask Resend to verify a domain it is already checking or has verified: Resend's verify flips it to pending for a while (measured 22/10)", async () => {
+    const { d, resend, setResend } = world();
+    await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
+    setResend("not_started");
+    expect(await checkDomain("p1", d)).toBe("verifying");
+    expect(resend.verifyDomain).toHaveBeenCalledTimes(1);
+    setResend("pending");
+    expect(await checkDomain("p1", d)).toBe("verifying");
+    setResend("partially_verified");
+    expect(await checkDomain("p1", d)).toBe("ready");
+    setResend("verified");
+    expect(await checkDomain("p1", d)).toBe("ready");
+    expect(resend.verifyDomain).toHaveBeenCalledTimes(1);
+    setResend("temporary_failure");
+    expect(await checkDomain("p1", d)).toBe("offline");
+    expect(resend.verifyDomain).toHaveBeenCalledTimes(2);
+  });
+
+  it("🔴 a ready domain that Resend shows as pending for a moment (someone pressed verify) stays ready, without a notice", async () => {
+    const { d, notices, setResend } = world({ resendStatus: "verified" });
+    await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
+    expect(await checkDomain("p1", d)).toBe("ready");
+    const before = notices.length;
+    setResend("pending");
+    expect(await checkDomain("p1", d)).toBe("ready");
+    expect(notices).toHaveLength(before);
+  });
+
   it("ready → offline notifies the owner and reapplies the env", async () => {
     const { d, notices, applied, setResend } = world({ resendStatus: "verified" });
     await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
