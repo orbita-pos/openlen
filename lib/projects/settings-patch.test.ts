@@ -123,3 +123,36 @@ describe("assistant en el embudo", () => {
     expect(out.settings.assistant?.facts?.length).toBe(4000);
   });
 });
+
+// Project email (spec local 2026-10-22-email-integration, 6.5): a form's automatic reply.
+describe("the form's autoReply", () => {
+  const patched = (data: ProjectData, body: SettingsPatchBody) => {
+    const out = applySettingsPatch(data, body);
+    if ("error" in out) throw new Error(out.error);
+    return out.nextData;
+  };
+
+  it("settings-patch keeps autoReply and drops it when empty", () => {
+    const body: SettingsPatchBody = { formIndex: 0, patch: { autoReply: { subject: " Gracias ", body: "Te escribimos pronto." } } };
+    expect(validateSettingsPatch(body, "p1").ok).toBe(true);
+    const data = patched(baseData(), body);
+    expect(data.settings?.forms?.["0"]?.autoReply).toEqual({ subject: "Gracias", body: "Te escribimos pronto." });
+    expect(patched(data, { formIndex: 0, patch: { autoReply: null } }).settings?.forms?.["0"]?.autoReply).toBeUndefined();
+    expect(patched(data, { formIndex: 0, patch: { autoReply: { subject: "", body: "" } } }).settings?.forms?.["0"]?.autoReply).toBeUndefined();
+  });
+
+  it("a half-filled reply is kept while the owner writes the other half", () => {
+    expect(patched(baseData(), { formIndex: 0, patch: { autoReply: { subject: "Gracias", body: "" } } }).settings?.forms?.["0"]?.autoReply).toEqual({ subject: "Gracias", body: "" });
+  });
+
+  it("a reply that isn't an object of strings is refused", () => {
+    expect(validateSettingsPatch({ formIndex: 0, patch: { autoReply: "hola" } }, "p1").ok).toBe(false);
+    expect(validateSettingsPatch({ formIndex: 0, patch: { autoReply: { subject: 1, body: "x" } } }, "p1").ok).toBe(false);
+  });
+
+  it("over-long text is cut to its limits", () => {
+    const data = patched(baseData(), { formIndex: 0, patch: { autoReply: { subject: "s".repeat(500), body: "b".repeat(9_000) } } });
+    expect(data.settings?.forms?.["0"]?.autoReply?.subject).toHaveLength(200);
+    expect(data.settings?.forms?.["0"]?.autoReply?.body).toHaveLength(5_000);
+  });
+});

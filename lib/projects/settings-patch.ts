@@ -21,6 +21,8 @@ const MAX_URL = 2000;
  *  `app/api/agent/route.ts` AL CONSUMIR; aquí se recorta AL ESCRIBIR, que es
  *  donde el tope pertenece. */
 const MAX_ASSISTANT_FACTS = 4000;
+const MAX_REPLY_SUBJECT = 200;
+const MAX_REPLY_BODY = 5000;
 
 interface PatchBody {
   /** Index of the <form> being configured (document order). */
@@ -37,6 +39,8 @@ interface PatchBody {
     notifyEmail?: string;
     successMessage?: string;
     redirectUrl?: string;
+    /** null (or empty) turns the automatic reply off. */
+    autoReply?: { subject?: string; body?: string } | null;
   };
   /** Opt-out for the analytics snippet injected at publish time. The
    *  toggle does not retroactively affect already-published HTML — it
@@ -174,6 +178,16 @@ export function validateSettingsPatch(
     if (!Number.isInteger(fi) || fi < 0 || fi > 99) {
       return { ok: false, message: "formIndex must be 0-99" };
     }
+    const reply = body.patch?.autoReply;
+    if (
+      reply !== undefined &&
+      reply !== null &&
+      (typeof reply !== "object" ||
+        ("subject" in reply && reply.subject !== undefined && typeof reply.subject !== "string") ||
+        ("body" in reply && reply.body !== undefined && typeof reply.body !== "string"))
+    ) {
+      return { ok: false, message: "patch.autoReply must be null or { subject, body } strings" };
+    }
   }
 
   return { ok: true, body };
@@ -255,6 +269,14 @@ export function applySettingsPatch(
       const u = clean(patch.redirectUrl, MAX_URL);
       if (u) next.redirectUrl = u;
       else delete next.redirectUrl;
+    }
+    if ("autoReply" in patch) {
+      const a = patch.autoReply;
+      const subject = a ? clean(a.subject, MAX_REPLY_SUBJECT) : "";
+      const body = a ? clean(a.body, MAX_REPLY_BODY) : "";
+      // Half-filled is kept, so typing one field first doesn't erase it; it goes out only with both.
+      if (subject || body) next.autoReply = { subject, body };
+      else delete next.autoReply;
     }
 
     if (Object.keys(next).length > 0) forms[key] = next;
