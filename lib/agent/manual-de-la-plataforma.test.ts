@@ -267,6 +267,35 @@ describe("el manual cuenta las dos bases", () => {
   });
 });
 
+describe("STRIPE (spec local 2026-10-21-stripe-integration, §6.8)", () => {
+  const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+
+  it("the manual has the Stripe line only with Stripe on, in pages and apps, and it is stable per server", () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" } as const;
+    for (const m of [buildManualDeLaPlataforma(CON), buildManualDeLaPlataforma(CON, "len", app)]) {
+      for (const f of [
+        "request_secrets with the name STRIPE_SECRET_KEY",
+        "`stripe` in the terminal",
+        "--live only reads",
+        "stripe webhook_endpoints create --url=",
+        "STRIPE_WEBHOOK_SECRET",
+        "stripe trigger",
+        "4242 4242 4242 4242",
+        "4000 0000 0000 3220",
+        "4000 0000 0000 0002",
+        "--lookup-key",
+        "Publishing copies",
+        "stripe billing_portal configurations create",
+      ]) {
+        expect(m).toContain(f);
+      }
+    }
+    expect(buildManualDeLaPlataforma({ ...CON, OPENLEN_STRIPE: "0" })).not.toContain("stripe trigger");
+    expect(buildManualDeLaPlataforma({})).not.toContain("STRIPE_SECRET_KEY");
+    expect(buildManualDeLaPlataforma(CON)).toBe(buildManualDeLaPlataforma(CON));
+  });
+});
+
 describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
   const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
 

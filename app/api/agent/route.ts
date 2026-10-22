@@ -854,6 +854,8 @@ async function correrTurno(
       // Las Edge Functions (spec local 2026-10-11): sus nombres y la URL del
       // borrador. Si no se pueden leer, el turno sigue sin ellas.
       edgeFunctions: await (deps.edgeFunctions?.(projectId) ?? Promise.resolve(null)).catch(() => null),
+      // Stripe (spec local 2026-10-21-stripe-integration): the account of each key and the endpoints.
+      stripe: await (deps.stripeState?.(projectId) ?? Promise.resolve(null)).catch(() => null),
       // En una app, las rutas de su carpeta (su código) y los nombres de las
       // variables del dueño. Si no se pueden leer, el turno sigue sin ellos
       // (Len saca la carpeta con la terminal; las variables, del manual).
