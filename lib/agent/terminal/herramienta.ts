@@ -32,6 +32,8 @@ import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./so
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
 import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
 import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
+import { boxMarker } from "@/lib/agent/sandbox/box-marker";
+import { boxNetworkFor, type BoxNetwork } from "@/lib/agent/sandbox/box-network";
 import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
 import { whileWorking } from "./still-working";
 import { longSleep, longSleepRefusal } from "./sleep-rule";
@@ -88,6 +90,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
     readOnly: () => readOnlyForBox(session, deps),
     bridge: () => bridgeHandlersFor(session, deps),
+    network: () => boxNetworkOf(session),
     signal: deps.turnSignal,
   }));
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
@@ -299,6 +302,28 @@ async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<R
     out[ruta] = texto;
   }
   return out;
+}
+
+/** LA TERMINAL REAL: the project's OpenLen hosts the box may reach (plan local 2026-10-21-playwright-in-
+ *  the-box) — its canvas (only on a real deploy: locally it is `*.localhost`, out of the box's reach), its
+ *  backend and its published page — with the box's marker. */
+async function boxNetworkOf(session: AgentSession): Promise<BoxNetwork | null> {
+  const [{ etiquetaDeLienzo, lienzoBaseHost, esProduccion }, { getBackendByProject, projectUrl }, { loadSavedProject }, { publishedHost }] =
+    await Promise.all([
+      import("@/lib/lienzo/host"),
+      import("@/lib/backend/registry"),
+      import("@/lib/lienzo/proyecto-guardado"),
+      import("@/lib/publish/base-host"),
+    ]);
+  const label = etiquetaDeLienzo(session.projectId);
+  const base = lienzoBaseHost();
+  const [backend, saved] = await Promise.all([getBackendByProject(session.projectId).catch(() => null), loadSavedProject(session.projectId).catch(() => null)]);
+  return boxNetworkFor({
+    canvasHost: esProduccion() && label && base ? `${label}.${base}` : null,
+    backendHost: backend ? new URL(projectUrl(backend.ref)).host : null,
+    publishedHost: saved?.subdomain ? publishedHost(saved.subdomain) : null,
+    marker: boxMarker(session.projectId),
+  });
 }
 
 /** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */

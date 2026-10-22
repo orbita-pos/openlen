@@ -15,6 +15,7 @@ import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 import type { AgentSession } from "@/lib/agent/tools";
 
 import { chargeSandbox } from "./billing";
+import type { BoxNetwork } from "./box-network";
 import type { BridgeHandlers } from "./bridge";
 import { sandboxBudgetOk, spentTodayMicroUsd } from "./budget";
 import { sandboxConfig } from "./config";
@@ -53,6 +54,8 @@ export interface TurnTerminalOptions {
   readonly projectFiles: () => Promise<Record<string, string>>;
   readonly readOnly: () => Promise<Readonly<Record<string, string>>>;
   readonly bridge: () => Promise<BridgeHandlers>;
+  /** The project's OpenLen hosts the box may reach, with its marker (./box-network.ts); `null` = none. */
+  readonly network?: () => Promise<BoxNetwork | null>;
   readonly signal?: AbortSignal;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly driver?: SandboxDriver;
@@ -214,11 +217,12 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
     }
     const driver = o.driver ?? e2bDriver(config);
     const row = await store.get(session.projectId);
+    const network = (await o.network?.().catch(() => null)) ?? null;
     let handle: SandboxHandle | undefined;
     let synced: Manifest = {};
     if (row?.sandboxId && row.template === config.template) {
       try {
-        handle = await driver.resume(row.sandboxId);
+        handle = await driver.resume(row.sandboxId, network);
         synced = row.syncedManifest;
       } catch {
         handle = undefined; // gone (reclaimed, killed): a new one below
@@ -227,7 +231,7 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
     const resumed = handle !== undefined;
     if (!handle) {
       if (row?.sandboxId) void driver.kill(row.sandboxId).catch(() => undefined);
-      handle = await driver.create({ template: config.template, metadata: { projectId: session.projectId } });
+      handle = await driver.create({ template: config.template, metadata: { projectId: session.projectId }, network });
     }
     const startedAt = now();
     log(`[sandbox] open project=${session.projectId} ${resumed ? "resumed" : "created"} ms=${startedAt - openingAt}`);

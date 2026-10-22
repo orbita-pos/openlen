@@ -136,6 +136,20 @@ describe("terminalForTurn", () => {
     expect(lines.some((l) => /^\[sandbox\] first sync project=p ms=\d+ \(prepare \d+ · manifest \d+ · upload \d+ · read-only \d+\)/.test(l))).toBe(true);
   });
 
+  it("the box gets its project's network when it is created and again when it is resumed", async () => {
+    const NET = { hosts: ["lienzo-x.openlen.app"], headers: { "x-openlen-caja": "p.mac" } };
+    const a = setup({ network: async () => NET });
+    a.s.terminal = await terminalForTurn(a.s, a.o);
+    const id = a.store.rows.p!.sandboxId!;
+    expect(a.driver.networkOf(id)).toEqual(NET);
+    await a.s.terminal.ejecutar("true");
+    await closeTurnTerminal(a.s, { save: async () => {}, store: a.store, charge: a.charge });
+    const NET2 = { hosts: ["lienzo-x.openlen.app", "masa.openlen.app"], headers: NET.headers };
+    const next = { ...a.s, turnId: "turn-2", terminal: undefined } as AgentSession;
+    await terminalForTurn(next, { ...a.o, network: async () => NET2 });
+    expect(a.driver.networkOf(id)).toEqual(NET2);
+  });
+
   it("resumes the project's paused box with its manifest", async () => {
     const a = setup();
     a.s.terminal = await terminalForTurn(a.s, a.o);

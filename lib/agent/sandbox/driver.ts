@@ -2,6 +2,8 @@
 // create, resume, run, move files, pause, kill. The E2B one is ./e2b-driver.ts; ./fake-driver.ts
 // is an in-memory one for tests. Paths are the box's, which are the project's (./paths.ts).
 
+import type { BoxNetwork } from "./box-network";
+
 export interface RunResult {
   readonly stdout: string;
   readonly stderr: string;
@@ -36,7 +38,9 @@ export interface SandboxHandle {
 }
 
 export interface SandboxDriver {
-  create(o: { readonly template: string; readonly metadata: Readonly<Record<string, string>> }): Promise<SandboxHandle>;
-  resume(sandboxId: string): Promise<SandboxHandle>;
+  /** `network`: the project's OpenLen hosts the box may reach, with the box's marker (./box-network.ts). */
+  create(o: { readonly template: string; readonly metadata: Readonly<Record<string, string>>; readonly network?: BoxNetwork | null }): Promise<SandboxHandle>;
+  /** With `network`, the box's network is set again (the project may have gained hosts since it paused). */
+  resume(sandboxId: string, network?: BoxNetwork | null): Promise<SandboxHandle>;
   kill(sandboxId: string): Promise<void>;
 }
