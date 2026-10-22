@@ -262,12 +262,8 @@ export function backendProjectFor(hb: HostBackend, e: EnvironmentRecord): Backen
     db: projectDatabase(dbNameOf(e.scope)),
     auth: {
       config,
-      sendMail:
-        e.environment === "draft"
-          ? async (m) => {
-              console.info("[backend] correo del borrador, no se envía:", m.kind, m.to);
-            }
-          : (m) => sendAuthEmail(m, pageHost ?? `${rec.ref}.${base}`),
+      // The draft sends only to the project's team (lib/backend/auth/mail.ts).
+      sendMail: (m) => sendAuthEmail(m, { siteHost: pageHost ?? `${rec.ref}.${base}`, projectId: rec.projectId, environment: e.environment }),
     },
   };
 }
