@@ -362,6 +362,42 @@ describe("TerminalDeLen", () => {
     }, 20_000);
   });
 
+  describe("stripe, answered by the app's thread (spec local 2026-10-21-stripe-integration)", () => {
+    it("gets the args and its output comes back with its exit code", async () => {
+      const calls: (readonly string[])[] = [];
+      const { t } = terminal({
+        stripe: async (args) => {
+          calls.push(args);
+          return { stdout: '{\n  "object": "list"\n}\n', stderr: "", exitCode: 0 };
+        },
+      });
+      const r = await t.ejecutar('stripe products create --name="Curso de cerámica" -d "metadata[k]=v"');
+      expect(calls[0]).toEqual(["products", "create", "--name=Curso de cerámica", "-d", "metadata[k]=v"]);
+      expect([r.stdout, r.exitCode]).toEqual(['{\n  "object": "list"\n}\n', 0]);
+      const fails = terminal({ stripe: async () => ({ stdout: "", stderr: "No Stripe key\n", exitCode: 1 }) });
+      expect((await fails.t.ejecutar("stripe products list")).exitCode).toBe(1);
+    }, 20_000);
+
+    it("a stripe that doesn't finish: «Command timed out», 143, and the app's thread is told to stop", async () => {
+      let signal: AbortSignal | undefined;
+      const { t } = terminal({
+        stripe: (_args, o) => {
+          signal = o?.signal;
+          return new Promise(() => {});
+        },
+      });
+      const r = await t.ejecutar("stripe trigger invoice.paid", { timeoutMs: 1_000 });
+      expect([r.stdout, r.exitCode]).toEqual(["Command timed out after 1s", 143]);
+      await new Promise((ok) => setTimeout(ok, 100));
+      expect(signal?.aborted).toBe(true);
+    }, 20_000);
+
+    it("without the option there is no stripe", async () => {
+      const { t } = terminal();
+      expect((await t.ejecutar("stripe products list")).exitCode).toBe(127);
+    }, 20_000);
+  });
+
   // plans/pages-backend/design.md: `supabase …` lo corre el hilo de la app (con
   // la base); el hilo de la terminal le pasa los argumentos y los ficheros de
   // `/supabase/` como están en la terminal, y escribe los que la CLI crea.

@@ -19,7 +19,7 @@ import { NEVER_SYNCED_ANYWHERE, SYSTEM_TOP_LEVEL } from "./paths";
 export const BOX_BIN = "/opt/openlen/bin";
 export const BRIDGE_DIR = "/run/openlen";
 
-export const BRIDGED_PROGRAMS: readonly string[] = ["git", "supabase", "tsc", "eslint", "vitest", "npm", "npx", "curl"];
+export const BRIDGED_PROGRAMS: readonly string[] = ["git", "supabase", "stripe", "tsc", "eslint", "vitest", "npm", "npx", "curl"];
 
 /** A manifest entry for a file over the cap: `big:<bytes>:<mtime ns>`, without reading it (it can't be saved anyway). */
 export const BIG_FILE_PREFIX = "big:";

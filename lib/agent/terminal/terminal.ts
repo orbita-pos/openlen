@@ -68,6 +68,7 @@ export class TerminalDeLen implements TerminalBackend {
   /** Lo que el hilo le pidió a la app y sigue corriendo: un `timeout` dentro del guion lo cancela. */
   private readonly appEnCurso = new Map<number, AbortController>();
   private readonly supabaseInFlight = new Map<number, AbortController>();
+  private readonly stripeInFlight = new Map<number, AbortController>();
   /** El `curl` de las Edge Functions de esta terminal (null: no hay `curl`). */
   private curl: FunctionsCurl | null = null;
 
@@ -90,6 +91,12 @@ export class TerminalDeLen implements TerminalBackend {
         /** Se aborta si el comando pasa de su tiempo (14/10): lo que arrancó acaba con él. */
         o?: { readonly signal?: AbortSignal },
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+      /** STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` with the project's key, answered
+       *  here (lib/stripe/cli/real.ts); the key never reaches the worker. Without it, no `stripe`. */
+      readonly stripe?: (
+        args: readonly string[],
+        o?: { readonly signal?: AbortSignal },
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
       /** GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository, answered
        *  here (its objects are in Postgres). `write`: files it changes (`null` deletes). Without
        *  it, the terminal has no `git`. */
@@ -160,6 +167,14 @@ export class TerminalDeLen implements TerminalBackend {
         void this.servirGit(hilo, m.git, m.args as string[], String(m.cwd ?? "/"), m.ficheros as Record<string, string>);
         return;
       }
+      if (typeof m.stripe === "number") {
+        void this.serveStripe(hilo, m.stripe, m.args as string[]);
+        return;
+      }
+      if (typeof m.cancelStripe === "number") {
+        this.stripeInFlight.get(m.cancelStripe)?.abort();
+        return;
+      }
       if (typeof m.app === "number") {
         void this.servirAppTools(hilo, m.app, m.program as AppProgram, m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
         return;
@@ -193,6 +208,7 @@ export class TerminalDeLen implements TerminalBackend {
       perezosos,
       supabase: Boolean(this.o.supabase),
       git: Boolean(this.o.git),
+      stripe: Boolean(this.o.stripe),
       functions: this.curl ? { prefixes: [...this.curl.prefixes] } : undefined,
       app: this.o.appTools
         ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
@@ -238,6 +254,22 @@ export class TerminalDeLen implements TerminalBackend {
       respuesta = { tipo: "supabase", pid, error: e instanceof Error ? e.message : String(e) };
     } finally {
       this.supabaseInFlight.delete(pid);
+    }
+    if (this.hilo === hilo) hilo.postMessage(respuesta);
+  }
+
+  /** `stripe …`: answered here and sent back to the worker, like `supabase`; aborted with its command. */
+  private async serveStripe(hilo: Worker, pid: number, args: string[]): Promise<void> {
+    let respuesta: Record<string, unknown>;
+    const cancel = new AbortController();
+    this.stripeInFlight.set(pid, cancel);
+    try {
+      if (!this.o.stripe) throw new Error("this terminal has no stripe");
+      respuesta = { tipo: "stripe", pid, resultado: await this.o.stripe(args, { signal: cancel.signal }) };
+    } catch (e) {
+      respuesta = { tipo: "stripe", pid, error: e instanceof Error ? e.message : String(e) };
+    } finally {
+      this.stripeInFlight.delete(pid);
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
@@ -361,6 +393,7 @@ export class TerminalDeLen implements TerminalBackend {
     this.hilo = null;
     // Lo que `supabase` dejó corriendo aquí (partir el SQL en su hilo) acaba con la terminal.
     for (const cancel of this.supabaseInFlight.values()) cancel.abort();
+    for (const cancel of this.stripeInFlight.values()) cancel.abort();
     if (hilo) await hilo.terminate();
   }
 }

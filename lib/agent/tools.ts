@@ -261,6 +261,9 @@ export interface AgentDeps {
     ficheros: Readonly<Record<string, string>>,
     o?: { readonly signal?: AbortSignal },
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` in the terminals, with the
+   *  project's key, which never reaches Len (`lib/stripe/cli/real.ts`). */
+  stripeCli?(projectId: string, args: readonly string[], o?: { readonly signal?: AbortSignal }): Promise<{ stdout: string; stderr: string; exitCode: number }>;
   /** GIT (spec local 2026-10-15-git-for-len): `git …` in the terminals, over the project's
    *  repository (`lib/git/service.ts`). `write`: what the command changes in the working tree. */
   gitCli?(p: {
@@ -630,6 +633,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async gitCli(p) {
       const { gitCli } = await import("@/lib/git/service");
       return gitCli(p);
+    },
+    async stripeCli(projectId, args, o) {
+      const { runStripeCliFor } = await import("@/lib/stripe/cli/real");
+      return runStripeCliFor(projectId, args, o);
     },
     async gitStatusForTurn(p) {
       const { gitStatusForTurn } = await import("@/lib/git/service");
