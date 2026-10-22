@@ -161,7 +161,8 @@
       "cannotChargeYet": "Tu cuenta de Stripe aún no puede cobrar de verdad.",
       "finishInStripe": "Termina el alta en Stripe",
       "accountMismatch": "La clave de Stripe de la página publicada es de otra cuenta que la de prueba. Usa claves de la misma cuenta.",
-      "syncFailed": "No se pudieron copiar tus productos a Stripe real ({message}). No se publicó nada; inténtalo otra vez."
+      "syncFailed": "No se pudieron copiar tus productos a Stripe real ({message}). No se publicó nada; inténtalo otra vez.",
+      "willCreate": "Se copiará a tu Stripe real: {list}."
     }
   },
   "inspector": {

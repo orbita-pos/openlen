@@ -34,6 +34,8 @@ import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { StripeStateForLen } from "@/lib/stripe/state";
+import type { StripeForCard } from "@/lib/stripe/card";
+import type { StripeReleasePreview } from "@/lib/stripe/preview";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { InstallOutcome, InstallRequest } from "@/lib/apps/npm/install";
@@ -403,6 +405,8 @@ export interface AgentDeps {
    *  funciones —compilarlas para producción, y los secretos que les faltan
    *  allí—, sin hacerlo. null = sin funciones (o sin motor). */
   previewFunctionsRelease?(projectId: string): Promise<FunctionsReleasePreview | null>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration, §6.4): what publishing would copy to live mode, without copying. */
+  previewStripeRelease?(projectId: string, liveFunctions: readonly string[]): Promise<StripeReleasePreview>;
   /** LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): la del proyecto tal como
    *  está, esperada hasta 155 s. `null` = apagada o sin proyecto. */
   securityReview?(projectId: string, locale: string): Promise<AgentReview | null>;
@@ -693,6 +697,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async previewFunctionsRelease(projectId) {
       const { previewFunctionsForPublish } = await import("@/lib/functions/publish");
       return previewFunctionsForPublish(projectId);
+    },
+    async previewStripeRelease(projectId, liveFunctions) {
+      const { previewStripeForPublish } = await import("@/lib/stripe/preview");
+      return previewStripeForPublish(projectId, liveFunctions);
     },
     async securityReview(projectId, locale) {
       const { securityReviewer } = await import("@/lib/security-review/real");
@@ -1237,6 +1245,8 @@ export interface ToolOutcome {
         secretosQueFaltan?: string[];
         /** La revisión de seguridad (spec local 2026-10-15): lo que Len ya vio. */
         seguridad?: { fingerprint: string; blocking: Finding[]; medium: Finding[] };
+        /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode. */
+        stripe?: StripeForCard;
       }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
@@ -2138,6 +2148,25 @@ async function toolPublicar(
   }
   const secretosQueFaltan = funciones?.kind === "ok" ? [...funciones.missingSecrets] : [];
 
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode,
+  // said to Len and put on the card. Keys of two accounts stop it here, like functions that don't compile.
+  const stripe = deps.previewStripeRelease
+    ? await deps.previewStripeRelease(session.projectId, funciones?.kind === "ok" ? funciones.functions : []).catch(() => null)
+    : null;
+  if (stripe?.kind === "account_mismatch") {
+    return {
+      response: {
+        ok: false,
+        error: "The production Stripe key belongs to another Stripe account than the draft's: ask the owner to fix it in the project's secrets (nothing was published).",
+      },
+    };
+  }
+  if (stripe?.kind === "missing_live_key" && !secretosQueFaltan.includes("STRIPE_SECRET_KEY")) secretosQueFaltan.push("STRIPE_SECRET_KEY");
+  const stripePlan = stripe?.kind === "ok" ? stripe.preview.plan : null;
+  const stripeForTheCard = stripePlan
+    ? { create: { ...stripePlan.create }, swaps: stripePlan.swaps, chargesEnabled: stripePlan.chargesEnabled, unknownRefs: [...stripePlan.unknownRefs] }
+    : null;
+
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
 
@@ -2316,6 +2345,15 @@ async function toolPublicar(
           }
         : {}),
       ...(hallazgos?.medium.length ? { security_warnings: hallazgos.medium.map(findingLineForAgent) } : {}),
+      ...(stripePlan && (stripePlan.needsWrites || stripePlan.swaps > 0) ? { stripe_live: { create: { ...stripePlan.create }, swaps: stripePlan.swaps } } : {}),
+      ...(stripePlan?.unknownRefs.length
+        ? {
+            stripe_unknown_refs: [...stripePlan.unknownRefs],
+            stripe_note: "These Stripe ids are in the files but exist neither in test nor in live mode: they will not work. Fix them before publishing.",
+          }
+        : stripePlan?.chargesEnabled === false
+          ? { stripe_note: "The owner's Stripe account can't take real payments yet: the publish card tells them where to finish it." }
+          : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
@@ -2328,6 +2366,7 @@ async function toolPublicar(
       ...(conDatos ? { cambiosDeDatos: conDatos } : {}),
       ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}),
       ...(hallazgos ? { seguridad: { fingerprint: hallazgos.fingerprint, blocking: [...hallazgos.blocking], medium: [...hallazgos.medium] } } : {}),
+      ...(stripeForTheCard ? { stripe: stripeForTheCard } : {}),
     },
   };
 }

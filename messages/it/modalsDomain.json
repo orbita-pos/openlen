@@ -161,7 +161,8 @@
       "cannotChargeYet": "Il tuo account Stripe non può ancora ricevere pagamenti reali.",
       "finishInStripe": "Completa la registrazione su Stripe",
       "accountMismatch": "La chiave Stripe della pagina pubblicata è di un altro account rispetto a quella di test. Usa chiavi dello stesso account.",
-      "syncFailed": "Non è stato possibile copiare i tuoi prodotti in Stripe reale ({message}). Non è stato pubblicato nulla; riprova."
+      "syncFailed": "Non è stato possibile copiare i tuoi prodotti in Stripe reale ({message}). Non è stato pubblicato nulla; riprova.",
+      "willCreate": "Verrà copiato nel tuo Stripe reale: {list}."
     }
   },
   "inspector": {

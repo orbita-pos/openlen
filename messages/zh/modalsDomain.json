@@ -161,7 +161,8 @@
       "cannotChargeYet": "你的 Stripe 账户还不能接收真实付款。",
       "finishInStripe": "在 Stripe 完成注册",
       "accountMismatch": "已发布页面的 Stripe 密钥与测试密钥属于不同账户。请使用同一账户的密钥。",
-      "syncFailed": "无法把你的产品复制到正式 Stripe（{message}）。没有发布任何内容；请重试。"
+      "syncFailed": "无法把你的产品复制到正式 Stripe（{message}）。没有发布任何内容；请重试。",
+      "willCreate": "将复制到你的正式 Stripe：{list}。"
     }
   },
   "inspector": {

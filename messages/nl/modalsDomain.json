@@ -161,7 +161,8 @@
       "cannotChargeYet": "Je Stripe-account kan nog geen echte betalingen ontvangen.",
       "finishInStripe": "Rond de aanmelding af in Stripe",
       "accountMismatch": "De Stripe-sleutel van de gepubliceerde pagina is van een ander account dan de testsleutel. Gebruik sleutels van hetzelfde account.",
-      "syncFailed": "Je producten konden niet naar het echte Stripe worden gekopieerd ({message}). Er is niets gepubliceerd; probeer het opnieuw."
+      "syncFailed": "Je producten konden niet naar het echte Stripe worden gekopieerd ({message}). Er is niets gepubliceerd; probeer het opnieuw.",
+      "willCreate": "Wordt gekopieerd naar je echte Stripe: {list}."
     }
   },
   "inspector": {
