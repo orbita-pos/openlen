@@ -366,7 +366,19 @@
     "saveAndPublish": "Opslaan en publiceren",
     "publishAnyway": "Toch publiceren",
     "functionsDoNotCompile": "De functies compileren niet, dus er is niets gepubliceerd:\n{errors}",
-    "functionsFailed": "De functies konden niet worden gestart. De pagina is niet veranderd."
+    "functionsFailed": "De functies konden niet worden gestart. De pagina is niet veranderd.",
+    "stripe": {
+      "missingHint": "Bij publiceren worden je Stripe-producten, -prijzen en -betaallinks met deze sleutel naar je live account gekopieerd. Zonder de sleutel houdt de gepubliceerde pagina de testversies en kan niemand je echt betalen.",
+      "hint": "Liever een beperkte sleutel, met alleen wat Len nodig heeft: producten, prijzen, betaallinks, Checkout, klanten, abonnementen, het klantenportaal en webhooks.",
+      "dashboard": "Haal hem in Stripe",
+      "publishable_key": "Dat is de publiceerbare sleutel (pk_…). Hier hoort de geheime (sk_…) of een beperkte (rk_…).",
+      "webhook_secret": "Dat is het ondertekeningsgeheim van een webhook (whsec_…), niet de API-sleutel.",
+      "not_a_stripe_key": "Dat lijkt geen Stripe-sleutel: die begint met sk_ of rk_.",
+      "live_in_draft": "Om te testen een testsleutel (sk_test_… of rk_test_…): het canvas belast nooit echte kaarten.",
+      "test_in_live": "Voor de gepubliceerde pagina een live sleutel (sk_live_… of rk_live_…).",
+      "rejected_by_stripe": "Stripe heeft deze sleutel geweigerd. Controleer of hij volledig gekopieerd en nog actief is.",
+      "other_account": "Deze sleutel is van een ander Stripe-account dan de andere. Beide moeten van hetzelfde account zijn."
+    }
   },
   "visualLabel": "Visual van Len: {title}",
   "visualLoading": "Visual wordt voorbereid…",

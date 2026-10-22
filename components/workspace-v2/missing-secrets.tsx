@@ -65,7 +65,11 @@ export function MissingSecretsView({
         <KeyRound size={12} />
         {t("functionSecrets.missingTitle")}
       </div>
-      <p className="m-0 mt-0.5 fg-muted">{t("functionSecrets.missingHint")}</p>
+      {/* Stripe (spec local 2026-10-21-stripe-integration, §6.4): with no function reading it, the key is what
+          copies the Stripe objects to live mode, and without it the published page keeps the test ones. */}
+      <p className="m-0 mt-0.5 fg-muted">
+        {t(missing.length === 1 && missing[0] === "STRIPE_SECRET_KEY" ? "functionSecrets.stripe.missingHint" : "functionSecrets.missingHint")}
+      </p>
       <div className="mt-2 flex flex-col gap-2">
         {secretos.map((s) => (
           <SecretFieldsView key={s.name} secret={s} environments={["live"]} values={values} onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))} disabled={busy || guardando} t={t} />

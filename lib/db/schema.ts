@@ -2455,6 +2455,50 @@ export const functionSecrets = pgTable(
   (t) => [primaryKey({ columns: [t.projectId, t.environment, t.name] })],
 );
 
+/** The Stripe account behind each environment's key (spec local
+ *  2026-10-21-stripe-integration, §7). Never the key: that one is the function
+ *  secret `STRIPE_SECRET_KEY`. Created by scripts/stripe-migrate.ts. */
+export const stripeAccounts = pgTable(
+  "stripeAccounts",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    environment: text("environment").$type<"draft" | "live">().notNull(),
+    accountId: text("accountId").notNull(),
+    accountName: text("accountName"),
+    keyKind: text("keyKind").$type<"sk" | "rk">().notNull(),
+    chargesEnabled: boolean("chargesEnabled"),
+    checkedAt: timestamp("checkedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.environment] })],
+);
+
+/** A project's test-mode Stripe objects and, once published, their live twin. */
+export const stripeObjects = pgTable(
+  "stripeObjects",
+  {
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    testId: text("testId").notNull(),
+    kind: text("kind")
+      .$type<"product" | "price" | "payment_link" | "shipping_rate" | "portal_configuration" | "webhook_endpoint">()
+      .notNull(),
+    testUrl: text("testUrl"),
+    lookupKey: text("lookupKey"),
+    functionName: text("functionName"),
+    secretName: text("secretName"),
+    source: text("source").$type<"cli" | "files">().notNull(),
+    liveId: text("liveId"),
+    liveUrl: text("liveUrl"),
+    fingerprint: text("fingerprint"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    syncedAt: timestamp("syncedAt", { mode: "date" }),
+  },
+  (t) => [primaryKey({ columns: [t.projectId, t.testId] })],
+);
+
 /** Las Edge Functions APAGADAS de un proyecto (abuso; spec local 2026-10-11,
  *  Parte 3): con fila, sus llamadas contestan 503. La pone y la quita el
  *  operador con SQL (infra/FUNCTIONS_RUNBOOK.md). */

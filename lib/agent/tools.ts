@@ -33,6 +33,9 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
+import type { StripeStateForLen } from "@/lib/stripe/state";
+import type { StripeForCard } from "@/lib/stripe/card";
+import type { StripeReleasePreview } from "@/lib/stripe/preview";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { InstallOutcome, InstallRequest } from "@/lib/apps/npm/install";
@@ -261,6 +264,13 @@ export interface AgentDeps {
     ficheros: Readonly<Record<string, string>>,
     o?: { readonly signal?: AbortSignal },
   ): Promise<{ stdout: string; stderr: string; exitCode: number; escribir?: Record<string, string>; borrar?: string[] }>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` in the terminals, with the
+   *  project's key, which never reaches Len (`lib/stripe/cli/real.ts`). */
+  stripeCli?(
+    projectId: string,
+    args: readonly string[],
+    o?: { readonly signal?: AbortSignal; readonly readLive?: boolean; readonly stdin?: string },
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }>;
   /** GIT (spec local 2026-10-15-git-for-len): `git …` in the terminals, over the project's
    *  repository (`lib/git/service.ts`). `write`: what the command changes in the working tree. */
   gitCli?(p: {
@@ -283,6 +293,8 @@ export interface AgentDeps {
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
   /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
   edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): for PROJECT STATE. null = no Stripe here or none yet. */
+  stripeState?(projectId: string): Promise<StripeStateForLen | null>;
   /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
    *  los lee para contestar). null = sin funciones en este servidor. */
   functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
@@ -397,6 +409,8 @@ export interface AgentDeps {
    *  funciones —compilarlas para producción, y los secretos que les faltan
    *  allí—, sin hacerlo. null = sin funciones (o sin motor). */
   previewFunctionsRelease?(projectId: string): Promise<FunctionsReleasePreview | null>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration, §6.4): what publishing would copy to live mode, without copying. */
+  previewStripeRelease?(projectId: string, liveFunctions: readonly string[]): Promise<StripeReleasePreview>;
   /** LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): la del proyecto tal como
    *  está, esperada hasta 155 s. `null` = apagada o sin proyecto. */
   securityReview?(projectId: string, locale: string): Promise<AgentReview | null>;
@@ -631,6 +645,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       const { gitCli } = await import("@/lib/git/service");
       return gitCli(p);
     },
+    async stripeCli(projectId, args, o) {
+      const { runStripeCliFor } = await import("@/lib/stripe/cli/real");
+      return runStripeCliFor(projectId, args, o);
+    },
     async gitStatusForTurn(p) {
       const { gitStatusForTurn } = await import("@/lib/git/service");
       return gitStatusForTurn(p);
@@ -646,6 +664,12 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async edgeFunctions(projectId) {
       const { edgeFunctionsState } = await import("@/lib/functions/state");
       return edgeFunctionsState(projectId);
+    },
+    async stripeState(projectId) {
+      const { stripeEnabled } = await import("@/lib/stripe/enabled");
+      if (!stripeEnabled()) return null;
+      const { stripeStateFor } = await import("@/lib/stripe/state");
+      return stripeStateFor(projectId);
     },
     async functionSecretNames(projectId) {
       const { functionSecretNames } = await import("@/lib/functions/secrets-real");
@@ -677,6 +701,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async previewFunctionsRelease(projectId) {
       const { previewFunctionsForPublish } = await import("@/lib/functions/publish");
       return previewFunctionsForPublish(projectId);
+    },
+    async previewStripeRelease(projectId, liveFunctions) {
+      const { previewStripeForPublish } = await import("@/lib/stripe/preview");
+      return previewStripeForPublish(projectId, liveFunctions);
     },
     async securityReview(projectId, locale) {
       const { securityReviewer } = await import("@/lib/security-review/real");
@@ -1221,6 +1249,8 @@ export interface ToolOutcome {
         secretosQueFaltan?: string[];
         /** La revisión de seguridad (spec local 2026-10-15): lo que Len ya vio. */
         seguridad?: { fingerprint: string; blocking: Finding[]; medium: Finding[] };
+        /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode. */
+        stripe?: StripeForCard;
       }
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
@@ -1333,6 +1363,9 @@ export function summarizeProjectState(
       readonly draftUrl: string;
       readonly secrets: { readonly draft: readonly string[]; readonly live: readonly string[] };
     } | null;
+    /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): the account of each key and the
+     *  test-mode webhook endpoints. Absent ⇒ no Stripe yet. */
+    stripe?: StripeStateForLen | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1411,6 +1444,8 @@ export function summarizeProjectState(
           },
         }
       : {}),
+    // Stripe: whose account each key is and the registered endpoints (never a value).
+    ...(row.stripe ? { stripe: row.stripe } : {}),
   };
 }
 
@@ -2117,6 +2152,25 @@ async function toolPublicar(
   }
   const secretosQueFaltan = funciones?.kind === "ok" ? [...funciones.missingSecrets] : [];
 
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode,
+  // said to Len and put on the card. Keys of two accounts stop it here, like functions that don't compile.
+  const stripe = deps.previewStripeRelease
+    ? await deps.previewStripeRelease(session.projectId, funciones?.kind === "ok" ? funciones.functions : []).catch(() => null)
+    : null;
+  if (stripe?.kind === "account_mismatch") {
+    return {
+      response: {
+        ok: false,
+        error: "The production Stripe key belongs to another Stripe account than the draft's: ask the owner to fix it in the project's secrets (nothing was published).",
+      },
+    };
+  }
+  if (stripe?.kind === "missing_live_key" && !secretosQueFaltan.includes("STRIPE_SECRET_KEY")) secretosQueFaltan.push("STRIPE_SECRET_KEY");
+  const stripePlan = stripe?.kind === "ok" ? stripe.preview.plan : null;
+  const stripeForTheCard = stripePlan
+    ? { create: { ...stripePlan.create }, swaps: stripePlan.swaps, chargesEnabled: stripePlan.chargesEnabled, unknownRefs: [...stripePlan.unknownRefs] }
+    : null;
+
   const current = row.subdomain; // string | null — the project's active claim
   const raw = typeof args.subdomain === "string" ? args.subdomain.trim().toLowerCase() : "";
 
@@ -2295,6 +2349,15 @@ async function toolPublicar(
           }
         : {}),
       ...(hallazgos?.medium.length ? { security_warnings: hallazgos.medium.map(findingLineForAgent) } : {}),
+      ...(stripePlan && (stripePlan.needsWrites || stripePlan.swaps > 0) ? { stripe_live: { create: { ...stripePlan.create }, swaps: stripePlan.swaps } } : {}),
+      ...(stripePlan?.unknownRefs.length
+        ? {
+            stripe_unknown_refs: [...stripePlan.unknownRefs],
+            stripe_note: "These Stripe ids are in the files but exist neither in test nor in live mode: they will not work. Fix them before publishing.",
+          }
+        : stripePlan?.chargesEnabled === false
+          ? { stripe_note: "The owner's Stripe account can't take real payments yet: the publish card tells them where to finish it." }
+          : {}),
     },
     action: { tool: "publish", ok: true, summary: subdominio },
     // La tarjeta de confirmación (`agent-confirm-card.tsx`) lee sus claves de
@@ -2307,6 +2370,7 @@ async function toolPublicar(
       ...(conDatos ? { cambiosDeDatos: conDatos } : {}),
       ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}),
       ...(hallazgos ? { seguridad: { fingerprint: hallazgos.fingerprint, blocking: [...hallazgos.blocking], medium: [...hallazgos.medium] } } : {}),
+      ...(stripeForTheCard ? { stripe: stripeForTheCard } : {}),
     },
   };
 }

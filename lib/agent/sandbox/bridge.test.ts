@@ -9,6 +9,8 @@ describe("routeBoxCommand", () => {
     ["git", ["status"], true, { kind: "git" }],
     ["git", ["log"], false, { kind: "git" }],
     ["supabase", ["db", "push"], true, { kind: "supabase" }],
+    ["stripe", ["products", "list"], false, { kind: "stripe" }],
+    ["stripe", ["trigger", "invoice.paid"], true, { kind: "stripe" }],
     ["tsc", ["--noEmit"], true, { kind: "app", program: "tsc", args: ["--noEmit"] }],
     ["eslint", ["."], true, { kind: "app", program: "eslint", args: ["."] }],
     ["vitest", ["run"], true, { kind: "app", program: "test", args: ["run"] }],
@@ -47,6 +49,31 @@ describe("answerBridgeRequest", () => {
     const supabase = vi.fn(async () => ({ stdout: "ok\n", stderr: "", exitCode: 0, escribir: { "/supabase/migrations/2_b.sql": "x" }, borrar: ["/supabase/a.sql"] }));
     const r = await answerBridgeRequest({ id: "1", program: "supabase", args: ["db", "pull"], cwd: "/" }, { supabase }, files);
     expect(r).toMatchObject({ exitCode: 0, files: { "/supabase/migrations/2_b.sql": "x", "/supabase/a.sql": null } });
+  });
+
+  // The CLI reads its DELETE confirmation from stdin, one line, and only then: the box is asked for that
+  // line first, so a `while read` around stripe loses no line the real CLI wouldn't have read.
+  it("a stripe DELETE without --confirm asks the box for one line of stdin, then runs with it", async () => {
+    const stripe = vi.fn(async () => ({ stdout: "deleted\n", stderr: "", exitCode: 0 }));
+    const args = ["delete", "/v1/webhook_endpoints/we_1"];
+    expect(await answerBridgeRequest({ id: "1", program: "stripe", args, cwd: "/" }, { stripe }, files)).toEqual({ readLine: true });
+    expect(stripe).not.toHaveBeenCalled();
+    const r = await answerBridgeRequest({ id: "2", program: "stripe", args, cwd: "/", stdinLine: "yes\n" }, { stripe }, files);
+    expect(stripe).toHaveBeenCalledWith(args, { signal: undefined, stdin: "yes\n" });
+    expect(r).toEqual({ stdout: "deleted\n", stderr: "", exitCode: 0, files: {} });
+  });
+
+  it("stripe is answered by OpenLen, never by a real CLI in the box (the key never enters it)", async () => {
+    const stripe = vi.fn(async () => ({ stdout: "{}\n", stderr: "", exitCode: 0 }));
+    const r = await answerBridgeRequest({ id: "1", program: "stripe", args: ["products", "list"], cwd: "/" }, { stripe }, files);
+    expect(stripe).toHaveBeenCalledWith(["products", "list"], { signal: undefined });
+    expect(r).toEqual({ stdout: "{}\n", stderr: "", exitCode: 0, files: {} });
+    expect(await answerBridgeRequest({ id: "2", program: "stripe", args: ["products", "list"], cwd: "/" }, {}, files)).toEqual({
+      stdout: "",
+      stderr: "stripe: not available in this project\n",
+      exitCode: 127,
+      files: {},
+    });
   });
 
   it("an app check runs OpenLen's checker with the tree", async () => {

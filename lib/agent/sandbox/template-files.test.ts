@@ -49,7 +49,7 @@ describe("the box's scripts", () => {
 
   it("every bridged program goes through the bridge", () => {
     for (const p of BRIDGED_PROGRAMS) expect(wrapperScript(p)).toContain(`openlen-bridge ${p} "$@"`);
-    expect(BRIDGED_PROGRAMS).toEqual(["git", "supabase", "tsc", "eslint", "vitest", "npm", "npx", "curl"]);
+    expect(BRIDGED_PROGRAMS).toEqual(["git", "supabase", "stripe", "tsc", "eslint", "vitest", "npm", "npx", "curl"]);
   });
 
   it("the template carries the two scripts, one wrapper per program, executable, and Playwright's resolver", () => {
@@ -222,4 +222,37 @@ describe("the box's scripts", () => {
     expect(stdout.replace(/\r\n/g, "\n")).toBe("M index.html\n");
     expect(code).toBe(3);
   });
+
+  it.skipIf(!PYTHON)("asked for a line, the bridge reads ONE line of its stdin and asks again with it", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "openlen-bridge-"));
+    mkdirSync(join(dir, "requests"));
+    mkdirSync(join(dir, "responses"));
+    const child = spawn(PYTHON!, ["-c", bridgeScript(), "stripe", "delete", "/v1/webhook_endpoints/we_1"], { env: { ...process.env, OPENLEN_BRIDGE_DIR: dir } });
+    child.stdin.write("yes\nno\n");
+    child.stdin.end();
+    let stdout = "";
+    child.stdout.on("data", (d) => (stdout += d));
+    const answered = new Set<string>();
+    const nextRequest = async () => {
+      for (let i = 0; i < 100; i++) {
+        const name = readdirSync(join(dir, "requests")).find((f) => f.endsWith(".json") && !answered.has(f));
+        if (name) {
+          answered.add(name);
+          return JSON.parse(spawnSync(PYTHON!, ["-c", `print(open(r"${join(dir, "requests", name)}").read())`], { encoding: "utf8" }).stdout) as Record<string, unknown>;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      throw new Error("no request");
+    };
+    const first = await nextRequest();
+    expect(first).toMatchObject({ program: "stripe", args: ["delete", "/v1/webhook_endpoints/we_1"] });
+    expect(first.stdinLine).toBeUndefined();
+    writeFileSync(join(dir, "responses", `${String(first.id)}.json`), JSON.stringify({ readLine: true }));
+    const second = await nextRequest();
+    expect(second).toMatchObject({ program: "stripe", args: ["delete", "/v1/webhook_endpoints/we_1"], stdinLine: "yes\n" });
+    writeFileSync(join(dir, "responses", `${String(second.id)}.json`), JSON.stringify({ stdout: "deleted\n", stderr: "", exitCode: 0 }));
+    const code = await new Promise<number | null>((r) => child.on("close", r));
+    expect(stdout.replace(/\r\n/g, "\n")).toBe("deleted\n");
+    expect(code).toBe(0);
+  }, 20_000);
 });

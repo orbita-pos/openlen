@@ -204,6 +204,10 @@ const targets = [
   // New, with IF NOT EXISTS. Inert while the box is off (OPENLEN_SANDBOX=0 or no E2B_API_KEY);
   // 🔴 MANDATORY before turning it on: every turn that opens a box reads and writes it.
   "sandbox-migrate",
+  // STRIPE (spec local 2026-10-21-stripe-integration): the tables stripeAccounts and
+  // stripeObjects. New, with IF NOT EXISTS. 🔴 Before the code: saving a project's
+  // secrets and publishing read them.
+  "stripe-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

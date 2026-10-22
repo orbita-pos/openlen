@@ -92,6 +92,17 @@ describe("/api/projects/[id]/function-secrets", () => {
     expect(lista.live.some((s) => s.name.startsWith("MY_KEY_"))).toBe(false);
   });
 
+  it("una clave que un gancho rechaza (Stripe, spec local 2026-10-21): 400 rejected con el motivo, sin guardar", async () => {
+    real.deps = {
+      ...real.deps!,
+      hooks: [{ prepare: async () => ({ rejection: { environment: "draft", name: "STRIPE_SECRET_KEY", reason: "live_in_draft", message: "m" } }) }],
+    };
+    const r = await pedir("POST", { secrets: [{ environment: "draft", name: "STRIPE_SECRET_KEY", value: "sk_live_x" }] });
+    expect(r.status).toBe(400);
+    expect(await r.json()).toEqual({ error: "rejected", environment: "draft", name: "STRIPE_SECRET_KEY", reason: "live_in_draft", message: "m" });
+    expect(await real.deps.store.list("p1")).toEqual([]);
+  });
+
   it("quitar", async () => {
     await pedir("POST", { secrets: [{ environment: "draft", name: "MY_KEY", value: "v" }] });
     aplicados = [];

@@ -7,6 +7,7 @@ import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { dataChangesForCard, type DataChangesPreview } from "@/lib/backend/data-changes-types";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { securityForCard, type SecurityForCard } from "@/lib/security-review/card";
+import { stripeForCard, type StripeForCard } from "@/lib/stripe/card";
 import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EventoParaLaVoz = {
@@ -29,6 +30,7 @@ export type TarjetaDeLlamada =
         cambiosDeDatos?: DataChangesPreview;
         secretosQueFaltan?: string[];
         seguridad?: SecurityForCard;
+        stripe?: StripeForCard;
       };
     };
 
@@ -93,6 +95,8 @@ export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlam
     // de seguridad: la tarjeta los pinta, pero sólo si esta lectura los deja pasar.
     const secretosQueFaltan = Array.isArray(d.secretosQueFaltan) ? d.secretosQueFaltan.filter((x): x is string => typeof x === "string") : [];
     const seguridad = securityForCard(d.seguridad);
+    // Stripe (spec local 2026-10-21-stripe-integration): what goes to live mode.
+    const stripe = stripeForCard(d.stripe);
     return {
       tipo: "publicar",
       confirm: {
@@ -103,6 +107,7 @@ export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlam
         ...(cambiosDeDatos ? { cambiosDeDatos } : {}),
         ...(secretosQueFaltan.length ? { secretosQueFaltan } : {}),
         ...(seguridad ? { seguridad } : {}),
+        ...(stripe ? { stripe } : {}),
       },
     };
   }

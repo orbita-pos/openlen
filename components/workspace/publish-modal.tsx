@@ -107,6 +107,24 @@ const BASE_HOST = PUBLISHED_BASE_HOST;
 // re-validates — this is purely a UX optimization.
 const SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+/** What publishing did in Stripe's live mode (lib/projects.ts, `PublishResult.stripe`). */
+interface StripePublishSummary {
+  readonly created: Readonly<Record<"products" | "prices" | "paymentLinks" | "shippingRates" | "portalConfigurations" | "webhookEndpoints", number>>;
+  readonly swaps: number;
+  readonly chargesEnabled: boolean | null;
+}
+
+const STRIPE_KINDS = ["products", "prices", "paymentLinks", "shippingRates", "portalConfigurations", "webhookEndpoints"] as const;
+
+function stripeCreatedKinds(s: StripePublishSummary): [string, number][] {
+  return STRIPE_KINDS.filter((k) => (s.created[k] ?? 0) > 0).map((k) => [k, s.created[k]]);
+}
+
+/** Worth keeping the modal open: something was copied, or the account can't charge yet. */
+function stripeWorthSaying(s: StripePublishSummary): boolean {
+  return stripeCreatedKinds(s).length > 0 || s.chargesEnabled === false;
+}
+
 export function PublishModal({
   open,
   onClose,
@@ -129,6 +147,8 @@ export function PublishModal({
   // pero tampoco un éxito callado: el modal se queda ABIERTO para que se lea,
   // porque el usuario acaba de encender esas banderas a mano.
   const [langsFallidos, setLangsFallidos] = useState<string[]>([]);
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode, said after publishing.
+  const [stripeDone, setStripeDone] = useState<StripePublishSummary | null>(null);
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   // Los datos (spec local 2026-10-09): la casilla de copiar los datos de prueba
   // en la primera publicación, y lo destructivo que pide confirmar (428).
@@ -318,6 +338,16 @@ export function PublishModal({
         setSubmitting(null);
         return;
       }
+      if (outcome.kind === "stripe_account_mismatch") {
+        setError(t("publish.stripe.accountMismatch"));
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "stripe_sync_failed") {
+        setError(t("publish.stripe.syncFailed", { message: outcome.message }));
+        setSubmitting(null);
+        return;
+      }
       if (outcome.kind === "diverged") {
         setError(t("dataChanges.diverged", { versions: outcome.versions.join(", ") }));
         setSubmitting(null);
@@ -342,13 +372,16 @@ export function PublishModal({
       // publica igual y el único rastro era un console.warn.
       const datos = outcome.data as {
         localesFallidos?: string[];
+        stripe?: StripePublishSummary;
       };
       const fallidos = datos.localesFallidos ?? [];
+      const stripeSummary = datos.stripe && stripeWorthSaying(datos.stripe) ? datos.stripe : null;
       onSuccess(normalized);
-      if (fallidos.length > 0) {
+      if (fallidos.length > 0 || stripeSummary) {
         // La página SÍ se publicó, así que onSuccess va igual; lo que no va es
         // el cierre, o el aviso se iría con el modal.
         setLangsFallidos(fallidos);
+        setStripeDone(stripeSummary);
         setSubmitting(null);
         return;
       }
@@ -604,6 +637,31 @@ export function PublishModal({
                     .join(", "),
                 })}
               </span>
+            </div>
+          )}
+
+          {stripeDone && (
+            <div className="flex items-start gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 ring-1 ring-emerald-200 dark:ring-emerald-500/30 px-3 py-2 text-[12px] text-emerald-900 dark:text-emerald-100">
+              <AlertCircle size={13} className="mt-0.5 shrink-0" />
+              <div className="flex flex-col gap-1">
+                {stripeCreatedKinds(stripeDone).length > 0 && (
+                  <span>
+                    {t("publish.stripe.created", {
+                      list: stripeCreatedKinds(stripeDone)
+                        .map(([kind, count]) => t(`publish.stripe.kind.${kind}`, { count }))
+                        .join(", "),
+                    })}
+                  </span>
+                )}
+                {stripeDone.chargesEnabled === false && (
+                  <span>
+                    {t("publish.stripe.cannotChargeYet")}{" "}
+                    <a href="https://dashboard.stripe.com/account/onboarding" target="_blank" rel="noreferrer noopener" className="underline">
+                      {t("publish.stripe.finishInStripe")}
+                    </a>
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

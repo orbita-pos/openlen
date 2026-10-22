@@ -88,6 +88,7 @@
     "sandbox:playwright-acceptance": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local scripts/sandbox-playwright-acceptance.ts",
     "sandbox:acceptance": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/sandbox-acceptance.ts",
     "security-review:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/security-review-migrate.ts",
+    "stripe:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/stripe-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",

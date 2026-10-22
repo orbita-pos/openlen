@@ -44,6 +44,7 @@ const mocks = vi.hoisted(() => {
   // Sin miembros por defecto: el turno de siempre, sin el chat del equipo.
   personasDelProyecto: vi.fn(async (): Promise<{ userId: string; nombre: string; email: string; rol: "dueno" | "editor" | "lector" }[]> => []),
   guardarCambiosDelTurno: vi.fn(async () => false),
+  stripeCli: vi.fn(async () => ({ stdout: "", stderr: "", exitCode: 0 })),
   auth: vi.fn(),
   getCreditState: vi.fn(),
   noCreditsMessage: vi.fn(),
@@ -232,6 +233,7 @@ vi.mock("@/lib/agent/tools", () => ({
       loadBusinessProfile: mocks.loadBusinessProfile,
       projectFiles: mocks.projectFiles,
       memoryNotes: mocks.memoryNotes,
+      stripeCli: mocks.stripeCli,
     };
   },
   runAgentTool: mocks.runAgentTool,
@@ -2730,6 +2732,34 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     const uso = (i: number) => ({ inputTokens: i, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 });
     expect(excede!(uso(499))).toBe(false);
     expect(excede!(uso(500))).toBe(true);
+  });
+
+  // Stripe (spec local 2026-10-21-stripe-integration): live mode is the owner's payments and
+  // customers, which acceso.ts keeps from members; the owner's turn is the control arm.
+  const stripeDepsOfTheTurn = async () => {
+    vi.stubEnv("FIREWORKS_API_KEY", "k");
+    let seen: Record<string, unknown> | null = null;
+    mocks.runAgentTool.mockImplementation(async (_s: unknown, deps: Record<string, unknown>) => {
+      seen = deps;
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("bash", { command: "stripe customers list --live" });
+      return { turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false };
+    });
+    await readEvents(await pedir());
+    const stripeCli = seen!.stripeCli as (p: string, a: string[], o?: object) => Promise<unknown>;
+    await stripeCli("p1", ["customers", "list", "--live"]);
+    return mocks.stripeCli.mock.calls[0];
+  };
+
+  it("Stripe: a member's turn runs `stripe` without live mode", async () => {
+    expect(await stripeDepsOfTheTurn()).toEqual(["p1", ["customers", "list", "--live"], { readLive: false }]);
+  });
+
+  it("Stripe: the owner's turn reads live mode (control arm)", async () => {
+    fijarAccesoDePrueba(null);
+    expect(await stripeDepsOfTheTurn()).toEqual(["p1", ["customers", "list", "--live"]]);
   });
 
   it("con el tope del proyecto agotado, 402 y Len no empieza", async () => {

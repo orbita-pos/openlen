@@ -127,6 +127,8 @@ export default defineConfig({
       "lib/app-ai/**/*.test.ts",
       // La revisión de seguridad al publicar (spec local 2026-10-15). `include` es LISTA BLANCA.
       "lib/security-review/**/*.test.ts",
+      // Stripe (spec local 2026-10-21-stripe-integration).
+      "lib/stripe/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
@@ -169,6 +171,7 @@ export default defineConfig({
       "components/app/credit-pill.test.tsx",
       // En una app, el diálogo de publicar no ofrece traducción automática (invariante 6).
       "components/workspace/publish-modal.test.tsx",
+      "components/workspace/publish-modal-stripe.test.tsx",
       // El modal de publicar con la revisión de seguridad (spec local 2026-10-15). LISTA BLANCA.
       "components/workspace/publish-modal-security.test.tsx",
       // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con
@@ -696,6 +699,7 @@ export default defineConfig({
       "app/api/projects/[id]/env/route.test.ts",
       // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.
       "app/api/projects/[id]/function-secrets/route.test.ts",
+      "app/api/projects/[id]/stripe/route.test.ts",
       // Las Edge Functions de un proyecto, para la vista Base de datos (fase 3). LISTA BLANCA.
       "app/api/projects/[id]/functions/route.test.ts",
       // Abrir un hilo en una línea (lib/projects/hilos.ts): una línea larga no se rechaza.

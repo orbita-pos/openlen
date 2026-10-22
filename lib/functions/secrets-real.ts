@@ -7,6 +7,11 @@ import "server-only";
 import type { SecretsCli } from "@/lib/backend/cli-core";
 import { getBackendByProject } from "@/lib/backend/registry";
 import { autorDelCambio } from "@/lib/projects/autor-del-cambio";
+import { stripeEnabled } from "@/lib/stripe/enabled";
+import { deleteProjectEndpoints } from "@/lib/stripe/endpoints";
+import { checkStripeKey } from "@/lib/stripe/key-check";
+import { stripeSecretHook } from "@/lib/stripe/secret-hooks";
+import { pgStripeStore } from "@/lib/stripe/store-pg";
 
 import { functionBaseEnv } from "./base-env";
 import { realDeployDeps } from "./deploy";
@@ -15,10 +20,24 @@ import { secretNamesOf } from "./secret-store";
 import { pgSecretStore } from "./secret-store-pg";
 import { setFunctionSecrets, unsetFunctionSecrets, type SecretsDeps } from "./secrets-core";
 
+/** STRIPE (spec local 2026-10-21-stripe-integration, §6.1): its key is checked at this door. */
+function stripeHooks(): SecretsDeps["hooks"] {
+  if (!stripeEnabled()) return [];
+  return [
+    stripeSecretHook({
+      store: pgStripeStore,
+      check: (value, env) => checkStripeKey(value, env),
+      deleteEndpoints: (projectId, env) =>
+        deleteProjectEndpoints(projectId, env, { store: pgStripeStore, keyFor: async (e) => (await pgSecretStore.values(projectId, e)).STRIPE_SECRET_KEY ?? null }),
+    }),
+  ];
+}
+
 export function realSecretsDeps(): SecretsDeps | null {
   const deploy = realDeployDeps();
   if (!deploy) return null;
   return {
+    hooks: stripeHooks(),
     store: pgSecretStore,
     // Sin backend todavía, guardar un secreto no lo crea (lib/functions/base-env.ts).
     baseEnv: (projectId, env) =>

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { dataChangesErrorBody } from "@/lib/backend/data-changes";
 import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
+import { stripePublishErrorBody } from "@/lib/stripe/publish-errors";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
@@ -53,6 +54,10 @@ export const dynamic = "force-dynamic";
 //                      accepted: `blocking`, `medium`, `accepted`, `fingerprint`
 //                      and `status`; resend with `acceptSecurityFingerprint`
 //                      («Publicar igual», spec local 2026-10-15)
+//   422 stripe_account_mismatch — the production Stripe key is from another
+//                      account than the draft's (spec local 2026-10-21-stripe-integration)
+//   502 stripe_sync_failed — copying to Stripe's live mode failed; the release
+//                      wasn't switched (what was copied stays, for next time)
 //   428 security_review_pending — the review is still running: `fingerprint`;
 //                      wait for it (GET …/security-review) and resend
 //   500 error         — disk write or DB error after validation passed
@@ -160,6 +165,9 @@ export const POST = paraLaApp(async (
     if (dataError) return json(dataError.body, dataError.status);
     // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
     // o su despliegue falló (la página no cambió).
+    // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
+    const stripeError = stripePublishErrorBody(err);
+    if (stripeError) return json(stripeError.body, stripeError.status);
     const fnError = functionsPublishErrorBody(err);
     if (fnError) return json(fnError.body, fnError.status);
     // eslint-disable-next-line no-console

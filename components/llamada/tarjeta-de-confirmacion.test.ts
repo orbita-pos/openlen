@@ -69,6 +69,16 @@ describe("tarjetaDeConfirmacion y la revisión de seguridad", () => {
     });
   });
 
+  it("🔴 STRIPE (spec local 2026-10-21): the reader keeps the stripe field, and drops one without its shape", () => {
+    const stripe = { create: { products: 1, prices: 1, paymentLinks: 1, shippingRates: 0, portalConfigurations: 0, webhookEndpoints: 0 }, swaps: 1, chargesEnabled: false, unknownRefs: [] };
+    const t = tarjetaDeConfirmacion({ ...BASE, stripe });
+    expect(t?.tipo === "publicar" && t.confirm.stripe).toEqual(stripe);
+    for (const bad of [{ create: "x", swaps: 1 }, { swaps: 1 }, "stripe", null]) {
+      const u = tarjetaDeConfirmacion({ ...BASE, stripe: bad });
+      expect(u?.tipo === "publicar" && "stripe" in u.confirm).toBe(false);
+    }
+  });
+
   it("🔴 y los secretos de producción que faltan", () => {
     const t = tarjetaDeConfirmacion({ ...BASE, secretosQueFaltan: ["STRIPE_SECRET_KEY", 7] });
     expect(t?.tipo === "publicar" && t.confirm.secretosQueFaltan).toEqual(["STRIPE_SECRET_KEY"]);

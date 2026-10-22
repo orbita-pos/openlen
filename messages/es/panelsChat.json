@@ -366,7 +366,19 @@
     "saveAndPublish": "Guardar y publicar",
     "publishAnyway": "Publicar igual",
     "functionsDoNotCompile": "Las funciones no compilan, así que no se publicó nada:\n{errors}",
-    "functionsFailed": "No se pudieron poner en marcha las funciones. La página no cambió."
+    "functionsFailed": "No se pudieron poner en marcha las funciones. La página no cambió.",
+    "stripe": {
+      "missingHint": "Al publicar se copian tus productos, precios y enlaces de pago de Stripe a tu cuenta real con esta clave. Sin ella, la página publicada lleva los de prueba y nadie puede pagarte de verdad.",
+      "hint": "Mejor una clave restringida, sólo con lo que Len necesita: productos, precios, enlaces de pago, Checkout, clientes, suscripciones, el portal de clientes y webhooks.",
+      "dashboard": "Sácala en Stripe",
+      "publishable_key": "Esa es la clave publicable (pk_…). Aquí va la secreta (sk_…) o una restringida (rk_…).",
+      "webhook_secret": "Ese es el secreto de firma de un webhook (whsec_…), no la clave de la API.",
+      "not_a_stripe_key": "Eso no parece una clave de Stripe: empieza por sk_ o rk_.",
+      "live_in_draft": "Para probar, una clave de prueba (sk_test_… o rk_test_…): el lienzo nunca cobra tarjetas de verdad.",
+      "test_in_live": "Para la página publicada, una clave real (sk_live_… o rk_live_…).",
+      "rejected_by_stripe": "Stripe rechazó esta clave. Mira que esté copiada entera y que siga activa.",
+      "other_account": "Esta clave es de otra cuenta de Stripe que la otra. Las dos tienen que ser de la misma cuenta."
+    }
   },
   "visualLabel": "Visual de Len: {title}",
   "visualLoading": "Preparando el visual…",

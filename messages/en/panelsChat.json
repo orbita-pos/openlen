@@ -366,7 +366,19 @@
     "saveAndPublish": "Save and publish",
     "publishAnyway": "Publish anyway",
     "functionsDoNotCompile": "The functions don't compile, so nothing was published:\n{errors}",
-    "functionsFailed": "The functions couldn't be started. The page didn't change."
+    "functionsFailed": "The functions couldn't be started. The page didn't change.",
+    "stripe": {
+      "missingHint": "Publishing copies your Stripe products, prices and payment links to your live account with this key. Without it the published page keeps the test ones, and nobody can really pay you.",
+      "hint": "Better a restricted key, with only what Len needs: products, prices, payment links, Checkout, customers, subscriptions, the customer portal and webhooks.",
+      "dashboard": "Get it in Stripe",
+      "publishable_key": "That's the publishable key (pk_…). Here goes the secret key (sk_…) or a restricted one (rk_…).",
+      "webhook_secret": "That's a webhook signing secret (whsec_…), not the API key.",
+      "not_a_stripe_key": "That doesn't look like a Stripe key: it starts with sk_ or rk_.",
+      "live_in_draft": "For testing, use a test key (sk_test_… or rk_test_…): the canvas never charges real cards.",
+      "test_in_live": "For the published page, use a live key (sk_live_… or rk_live_…).",
+      "rejected_by_stripe": "Stripe rejected this key. Check that it's copied whole and still active.",
+      "other_account": "This key is from a different Stripe account than the other one. Both must be from the same account."
+    }
   },
   "visualLabel": "Len's visual: {title}",
   "visualLoading": "Preparing the visual…",

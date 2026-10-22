@@ -28,6 +28,7 @@ import { resumenDelComando } from "./resumen-del-comando";
 import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
+import { stripeEnabled } from "@/lib/stripe/enabled";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
 import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
@@ -80,6 +81,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
     // writes comes back as any other changed file and is saved below, Write's way.
     ...((git) => (git ? { git } : {}))(gitForTerminal(session, deps)),
+    // STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` with the project's key, answered here.
+    ...((stripe) => (stripe ? { stripe } : {}))(stripeForTerminal(session, deps)),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
     appTools: appToolsFor(session, deps),
     // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).
@@ -336,13 +339,24 @@ async function boxBaseEnvOf(session: AgentSession): Promise<Record<string, strin
   return esProduccion() && label && base ? { BASE_URL: `https://${label}.${base}` } : {};
 }
 
+/** `stripe …` in both terminals, only where Stripe is on (spec local 2026-10-21-stripe-integration, §6.10). */
+function stripeForTerminal(
+  session: AgentSession,
+  deps: AgentDeps,
+): ((args: readonly string[], o?: { readonly signal?: AbortSignal; readonly stdin?: string }) => Promise<{ stdout: string; stderr: string; exitCode: number }>) | null {
+  if (!deps.stripeCli || !stripeEnabled()) return null;
+  return (args, o) => deps.stripeCli!(session.projectId, args, o);
+}
+
 /** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */
 async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promise<BridgeHandlers> {
   const git = gitForTerminal(session, deps);
+  const stripe = stripeForTerminal(session, deps);
   const appTools = appToolsFor(session, deps);
   const curl = deps.functionsCurl ? await deps.functionsCurl(session.projectId).catch(() => null) : null;
   return {
     ...(git ? { git } : {}),
+    ...(stripe ? { stripe } : {}),
     ...(deps.supabaseCli
       ? {
           supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>

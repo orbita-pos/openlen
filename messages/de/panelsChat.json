@@ -366,7 +366,19 @@
     "saveAndPublish": "Speichern und veröffentlichen",
     "publishAnyway": "Trotzdem veröffentlichen",
     "functionsDoNotCompile": "Die Funktionen lassen sich nicht kompilieren, daher wurde nichts veröffentlicht:\n{errors}",
-    "functionsFailed": "Die Funktionen konnten nicht gestartet werden. Die Seite hat sich nicht geändert."
+    "functionsFailed": "Die Funktionen konnten nicht gestartet werden. Die Seite hat sich nicht geändert.",
+    "stripe": {
+      "missingHint": "Beim Veröffentlichen werden deine Stripe-Produkte, -Preise und -Zahlungslinks mit diesem Schlüssel in dein Live-Konto kopiert. Ohne ihn behält die veröffentlichte Seite die Testversionen, und niemand kann dich wirklich bezahlen.",
+      "hint": "Besser ein eingeschränkter Schlüssel, nur mit dem, was Len braucht: Produkte, Preise, Zahlungslinks, Checkout, Kunden, Abos, das Kundenportal und Webhooks.",
+      "dashboard": "In Stripe holen",
+      "publishable_key": "Das ist der veröffentlichbare Schlüssel (pk_…). Hier gehört der geheime (sk_…) oder ein eingeschränkter (rk_…) hin.",
+      "webhook_secret": "Das ist das Signaturgeheimnis eines Webhooks (whsec_…), nicht der API-Schlüssel.",
+      "not_a_stripe_key": "Das sieht nicht nach einem Stripe-Schlüssel aus: Er beginnt mit sk_ oder rk_.",
+      "live_in_draft": "Zum Testen ein Testschlüssel (sk_test_… oder rk_test_…): Die Leinwand belastet nie echte Karten.",
+      "test_in_live": "Für die veröffentlichte Seite ein Live-Schlüssel (sk_live_… oder rk_live_…).",
+      "rejected_by_stripe": "Stripe hat diesen Schlüssel abgelehnt. Prüfe, ob er vollständig kopiert und noch aktiv ist.",
+      "other_account": "Dieser Schlüssel gehört zu einem anderen Stripe-Konto als der andere. Beide müssen vom selben Konto sein."
+    }
   },
   "visualLabel": "Visual von Len: {title}",
   "visualLoading": "Visual wird vorbereitet…",

@@ -147,7 +147,23 @@
       "failed": "Publicada, pero {langs} no se pudo traducir esta vez. Tu página está online en los demás idiomas — vuelve a publicar para reintentarlo."
     },
     "membersOffWarning": "{count, plural, one {# página está marcada solo-miembros pero el módulo Cuentas está APAGADO — se publicará PÚBLICA. Actívalo en la pestaña Módulos.} other {# páginas están marcadas solo-miembros pero el módulo Cuentas está APAGADO — se publicarán PÚBLICAS. Actívalo en la pestaña Módulos.}}",
-    "membersGatedSummary": "{count, plural, one {# página solo-miembros se publicará detrás del acceso con login.} other {# páginas solo-miembros se publicarán detrás del acceso con login.}}"
+    "membersGatedSummary": "{count, plural, one {# página solo-miembros se publicará detrás del acceso con login.} other {# páginas solo-miembros se publicarán detrás del acceso con login.}}",
+    "stripe": {
+      "created": "Copiado a tu Stripe real: {list}. La página publicada ya cobra de verdad.",
+      "kind": {
+        "products": "{count, plural, one {# producto} other {# productos}}",
+        "prices": "{count, plural, one {# precio} other {# precios}}",
+        "paymentLinks": "{count, plural, one {# enlace de pago} other {# enlaces de pago}}",
+        "shippingRates": "{count, plural, one {# tarifa de envío} other {# tarifas de envío}}",
+        "portalConfigurations": "el portal de clientes",
+        "webhookEndpoints": "{count, plural, one {# webhook} other {# webhooks}}"
+      },
+      "cannotChargeYet": "Tu cuenta de Stripe aún no puede cobrar de verdad.",
+      "finishInStripe": "Termina el alta en Stripe",
+      "accountMismatch": "La clave de Stripe de la página publicada es de otra cuenta que la de prueba. Usa claves de la misma cuenta.",
+      "syncFailed": "No se pudieron copiar tus productos a Stripe real ({message}). No se publicó nada; inténtalo otra vez.",
+      "willCreate": "Se copiará a tu Stripe real: {list}."
+    }
   },
   "inspector": {
     "radius": "Radio",

@@ -366,7 +366,19 @@
     "saveAndPublish": "Enregistrer et publier",
     "publishAnyway": "Publier quand même",
     "functionsDoNotCompile": "Les fonctions ne compilent pas, rien n'a donc été publié :\n{errors}",
-    "functionsFailed": "Impossible de démarrer les fonctions. La page n'a pas changé."
+    "functionsFailed": "Impossible de démarrer les fonctions. La page n'a pas changé.",
+    "stripe": {
+      "missingHint": "À la publication, vos produits, prix et liens de paiement Stripe sont copiés vers votre compte réel avec cette clé. Sans elle, la page publiée garde ceux de test et personne ne peut vraiment vous payer.",
+      "hint": "Mieux vaut une clé restreinte, avec seulement ce dont Len a besoin : produits, prix, liens de paiement, Checkout, clients, abonnements, le portail client et les webhooks.",
+      "dashboard": "La récupérer dans Stripe",
+      "publishable_key": "C'est la clé publiable (pk_…). Ici, il faut la clé secrète (sk_…) ou une clé restreinte (rk_…).",
+      "webhook_secret": "C'est le secret de signature d'un webhook (whsec_…), pas la clé d'API.",
+      "not_a_stripe_key": "Ça ne ressemble pas à une clé Stripe : elle commence par sk_ ou rk_.",
+      "live_in_draft": "Pour tester, une clé de test (sk_test_… ou rk_test_…) : le canevas ne débite jamais de vraies cartes.",
+      "test_in_live": "Pour la page publiée, une clé réelle (sk_live_… ou rk_live_…).",
+      "rejected_by_stripe": "Stripe a refusé cette clé. Vérifiez qu'elle est copiée en entier et toujours active.",
+      "other_account": "Cette clé vient d'un autre compte Stripe que l'autre. Les deux doivent venir du même compte."
+    }
   },
   "visualLabel": "Visuel de Len : {title}",
   "visualLoading": "Préparation du visuel…",
