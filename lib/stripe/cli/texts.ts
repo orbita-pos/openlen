@@ -7,6 +7,10 @@ import type { StripeEnv } from "../api";
 export const LIVE_WRITE_REFUSAL =
   "Len doesn't write in live mode. Publishing copies the products, prices, payment links, shipping rates, portal configurations and webhook endpoints the project uses to live mode. What only the owner can do there (refunds, cancelling subscriptions) is done in the Stripe dashboard: https://dashboard.stripe.com/\n";
 
+/** A member's turn (lib/projects/acceso.ts): live mode holds the owner's payments and customers. */
+export const MEMBER_LIVE_REFUSAL =
+  "Live mode holds the owner's payments and customers: only the owner reads them, in the Payments tab or in the Stripe dashboard. Everything else works in test mode (without --live).\n";
+
 export const CREDENTIALS_ANSWER =
   "The Stripe key is the project's: ask the user for it with request_secrets, name STRIPE_SECRET_KEY. stripe login isn't needed here.\n";
 

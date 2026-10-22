@@ -119,6 +119,24 @@ describe("prepareStripeForPublish", () => {
     expect([...(await storedTwins("p", w.deps))]).toEqual([...first]);
   });
 
+  it("Final review: once the twins exist, a publish without one of the keys keeps the live refs, without calling Stripe", async () => {
+    const w = await world();
+    const l = await w.link();
+    const first = await (await prepareStripeForPublish("p", { ...OWNER, texts: [l.url] }, w.deps))!.apply();
+    for (const env of ["live", "draft"] as const) {
+      const keys = await w.secrets.values("p", env);
+      await w.secrets.unset("p", env, ["STRIPE_SECRET_KEY"]);
+      const before = w.stripe.calls.length;
+      for (const o of [{ ...OWNER, mode: "system" as const }, { ...OWNER, skipMissingSecrets: true }]) {
+        const s = await prepareStripeForPublish("p", { ...o, texts: [l.url] }, w.deps);
+        expect([...(await s!.apply())]).toEqual([...first]);
+        expect(s!.preview.plan).toMatchObject({ needsWrites: false, swaps: 1 });
+      }
+      expect(w.stripe.calls.length).toBe(before);
+      await w.secrets.set("p", env, keys, null);
+    }
+  });
+
   it("a system republish that would need a new twin → StripeNeedsOwnerError, which republishers skip like the functions'", async () => {
     const w = await world();
     const l = await w.link();

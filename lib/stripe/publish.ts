@@ -17,7 +17,7 @@ import type { SecretStore } from "@/lib/functions/secret-store";
 import { StripeApiError, type StripeEnv, type StripeFetch } from "./api";
 import { UNKNOWN_ACCOUNT, type StripeKeyCheck } from "./key-check";
 import { StripeAccountMismatchError, StripeNeedsOwnerError, StripeSyncFailedError } from "./publish-errors";
-import type { StripeStore } from "./store";
+import type { StripeObjectRow, StripeStore } from "./store";
 import { findStripeRefs } from "./twins/discover";
 import { applyTwins, planTwins, type TwinsDeps, type TwinsPlan } from "./twins/engine";
 import { twinMapFrom, type TwinMap } from "./twins/swap";
@@ -94,6 +94,19 @@ async function accountOf(projectId: string, env: StripeEnv, key: string, d: Stri
   return a.accountId;
 }
 
+/** Without one of the keys nothing is read from Stripe, but the twins already made still go into
+ *  the release: the published site keeps its live refs instead of going back to the test ones. */
+function reuseTwins(rows: readonly StripeObjectRow[], refs: ReturnType<typeof findStripeRefs>): PreparedStripePublish | null {
+  const twins = twinMapFrom(rows);
+  if (twins.size === 0) return null;
+  const swaps = [...refs.ids, ...refs.links].filter((r) => twins.has(r)).length;
+  const none = { products: 0, prices: 0, paymentLinks: 0, shippingRates: 0, portalConfigurations: 0, webhookEndpoints: 0 };
+  return {
+    preview: { plan: { create: none, swaps, unknownRefs: [], chargesEnabled: null, needsWrites: false, droppedImages: 0 }, accountName: null },
+    apply: async () => twins,
+  };
+}
+
 export async function prepareStripeForPublish(
   projectId: string,
   o: { readonly mode: "owner" | "system"; readonly skipMissingSecrets: boolean; readonly texts: readonly string[]; readonly liveFunctions: readonly string[] },
@@ -109,10 +122,10 @@ export async function prepareStripeForPublish(
   const testKey = draft.STRIPE_SECRET_KEY;
   const liveKey = live.STRIPE_SECRET_KEY;
   if (!liveKey) {
-    if (o.skipMissingSecrets || o.mode === "system") return null;
+    if (o.skipMissingSecrets || o.mode === "system") return reuseTwins(rows, refs);
     throw new FunctionSecretsMissingError(["STRIPE_SECRET_KEY"]);
   }
-  if (!testKey) return null;
+  if (!testKey) return reuseTwins(rows, refs);
   const [draftAccount, liveAccount] = await Promise.all([accountOf(projectId, "draft", testKey, deps), accountOf(projectId, "live", liveKey, deps)]);
   if (draftAccount && liveAccount && draftAccount !== UNKNOWN_ACCOUNT && liveAccount !== UNKNOWN_ACCOUNT && draftAccount !== liveAccount) {
     throw new StripeAccountMismatchError();

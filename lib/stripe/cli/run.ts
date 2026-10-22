@@ -12,7 +12,7 @@
 import { encodeStripeParams, type StripeEnv, type StripeRequest, type StripeResponse } from "../api";
 import type { StripeObjectKind } from "../store";
 import { parseStripeArgs, type FormPair } from "./parse";
-import { CREDENTIALS_ANSWER, LIVE_WRITE_REFUSAL, listenText, noKeyText } from "./texts";
+import { CREDENTIALS_ANSWER, LIVE_WRITE_REFUSAL, MEMBER_LIVE_REFUSAL, listenText, noKeyText } from "./texts";
 
 export interface StripeCliDeps {
   keyFor(env: StripeEnv): Promise<string | null>;
@@ -67,14 +67,20 @@ function functionOf(url: string, draftFunctionsUrl: string | null): string | und
   return url.slice(draftFunctionsUrl.length).split(/[/?#]/)[0] || undefined;
 }
 
-export async function runStripeCli(args: readonly string[], deps: StripeCliDeps, o: { readonly signal?: AbortSignal } = {}): Promise<StripeCliOutput> {
+export interface StripeCliOptions {
+  readonly signal?: AbortSignal;
+  /** false in a member's turn: live mode is the owner's payments and customers (lib/projects/acceso.ts). */
+  readonly readLive?: boolean;
+}
+
+export async function runStripeCli(args: readonly string[], deps: StripeCliDeps, o: StripeCliOptions = {}): Promise<StripeCliOutput> {
   if (o.signal?.aborted) return ABORTED_OUTPUT;
-  const out = await run(args, deps, o.signal);
+  const out = await run(args, deps, o.signal, o.readLive !== false);
   if (out === STOPPED) return ABORTED_OUTPUT;
   return { stdout: await deps.mask(out.stdout), stderr: await deps.mask(out.stderr), exitCode: out.exitCode };
 }
 
-async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSignal | undefined): Promise<StripeCliOutput | typeof STOPPED> {
+async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSignal | undefined, readLive: boolean): Promise<StripeCliOutput | typeof STOPPED> {
   const c = parseStripeArgs(args);
   switch (c.kind) {
     case "help":
@@ -108,6 +114,7 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
   const method = c.kind === "operation" ? c.op.method : c.method;
   const env: StripeEnv = c.live ? "live" : "draft";
   if (c.live && method !== "GET") return { stdout: "", stderr: LIVE_WRITE_REFUSAL, exitCode: 1 };
+  if (c.live && !readLive) return { stdout: "", stderr: MEMBER_LIVE_REFUSAL, exitCode: 1 };
   const key = await deps.keyFor(env);
   if (!key) return { stdout: "", stderr: noKeyText(env), exitCode: 1 };
   if (method === "DELETE" && !c.confirm) {
