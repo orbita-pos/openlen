@@ -9,7 +9,8 @@ import { describe, expect, it } from "vitest";
 import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 
 import { SYSTEM_TOP_LEVEL } from "./paths";
-import { BIG_FILE_PREFIX, BRIDGED_PROGRAMS, bridgeScript, manifestScript, templateFiles, wrapperScript } from "./template-files";
+import { SANDBOX_TEMPLATE } from "./config";
+import { BIG_FILE_PREFIX, BRIDGED_PROGRAMS, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_VERSION, bridgeScript, manifestScript, templateFiles, wrapperScript } from "./template-files";
 
 // The scripts run in the box with python3; here, with whatever Python this machine has.
 const PYTHON = ["python3", "python"].find((p) => spawnSync(p, ["-c", "import sys; print(sys.version_info[0])"], { encoding: "utf8" }).stdout?.trim() === "3");
@@ -39,7 +40,7 @@ describe("the box's scripts", () => {
   it("the template carries the two scripts and one wrapper per program, executable", () => {
     const files = templateFiles();
     expect(Object.keys(files).sort()).toEqual(
-      ["/opt/openlen/bin/openlen-bridge", "/opt/openlen/bin/openlen-manifest", ...BRIDGED_PROGRAMS.map((p) => `/opt/openlen/bin/${p}`)].sort(),
+      ["/opt/openlen/bin/openlen-bridge", "/opt/openlen/bin/openlen-manifest", "/opt/openlen/bin/playwright", ...BRIDGED_PROGRAMS.map((p) => `/opt/openlen/bin/${p}`)].sort(),
     );
     for (const f of Object.values(files)) expect(f.mode).toBe(0o755);
   });
@@ -54,6 +55,29 @@ describe("the box's scripts", () => {
     expect(calls).toContainEqual(["copy", ["infra/e2b/openlen-terminal/.build", "/opt/openlen/bin"]]);
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("setup_22.x"))).toBe(true);
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("/run/openlen/requests"))).toBe(true);
+  });
+
+  it("`npx playwright` and `playwright` run the template's own version, never one npx would fetch", () => {
+    const npx = wrapperScript("npx");
+    expect(npx).toContain(`"$1" = "playwright"`);
+    expect(npx).toContain(`${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`);
+    expect(npx).toContain(`openlen-bridge npx "$@"`);
+    expect(templateFiles()[`/opt/openlen/bin/playwright`]?.content).toContain(`exec ${PLAYWRIGHT_DIR}/node_modules/.bin/playwright "$@"`);
+  });
+
+  it("the template has Playwright at a fixed version with its Chromium, and certutil for E2B's authority", async () => {
+    const { defineTemplate, APT_PACKAGES } = await import("@/infra/e2b/openlen-terminal/template");
+    const ran: string[] = [];
+    const builder: Record<string, (...a: unknown[]) => unknown> = {};
+    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
+    defineTemplate(() => builder as never, "x");
+    expect(APT_PACKAGES).toContain("libnss3-tools");
+    const install = ran.find((c) => c.includes("@playwright/test@"))!;
+    expect(install).toContain(`@playwright/test@${PLAYWRIGHT_VERSION}`);
+    expect(install).toContain(`PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS}`);
+    expect(install).toContain("install --with-deps chromium");
+    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v2");
   });
 
   it("the box's user can work at / (the project's root), pip installs and npm -g goes to its home", async () => {

@@ -114,8 +114,17 @@ sys.exit(int(response.get("exitCode", 0)))
 `;
 }
 
+/** Playwright, fixed in the template with its Chromium (plan local 2026-10-21-playwright-in-the-box): the
+ *  browser a version downloads must be the one it runs, and npx would fetch the newest from the registry. */
+export const PLAYWRIGHT_VERSION = "1.63.0";
+export const PLAYWRIGHT_DIR = "/opt/openlen/playwright";
+export const PLAYWRIGHT_BROWSERS = "/opt/openlen/ms-playwright";
+const PLAYWRIGHT_BIN = `${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`;
+
 export function wrapperScript(program: string): string {
-  return `#!/bin/sh\nexec ${BOX_BIN}/openlen-bridge ${program} "$@"\n`;
+  // `npx playwright …` is the template's Playwright, straight: no bridge, no download.
+  const playwright = program === "npx" ? `if [ "$1" = "playwright" ]; then shift; exec ${PLAYWRIGHT_BIN} "$@"; fi\n` : "";
+  return `#!/bin/sh\n${playwright}exec ${BOX_BIN}/openlen-bridge ${program} "$@"\n`;
 }
 
 /** Box path → content and mode, for the template build. */
@@ -125,5 +134,6 @@ export function templateFiles(): Record<string, { readonly content: string; read
     [`${BOX_BIN}/openlen-bridge`]: { content: `#!/usr/bin/env python3\n${bridgeScript()}`, mode: 0o755 },
   };
   for (const p of BRIDGED_PROGRAMS) files[`${BOX_BIN}/${p}`] = { content: wrapperScript(p), mode: 0o755 };
+  files[`${BOX_BIN}/playwright`] = { content: `#!/bin/sh\nexec ${PLAYWRIGHT_BIN} "$@"\n`, mode: 0o755 };
   return files;
 }
