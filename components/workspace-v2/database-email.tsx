@@ -2,7 +2,7 @@
 // THE CORREOS TAB of the Database view (spec local 2026-10-22-email-integration,
 // 4 and 6.9): the project's email domain from the plan to a ready domain — the
 // upgrade on the free plan; the field (proposing the project's own domain) and
-// «show as @domain»; then Domain Connect's one-click button or the three DNS
+// «show as @domain»; then Domain Connect's one-click button or the DNS
 // lines to copy, with the provider's instructions; once ready, the month against
 // what's included, the latest emails, and the unsubscribed and bounced with
 // «take off the list». Disconnecting asks to type the domain, like Stripe's.

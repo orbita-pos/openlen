@@ -615,7 +615,7 @@
         "cta": "Upgraden naar Pro"
       },
       "connectTitle": "Verstuur e-mail vanaf je domein",
-      "connectBody": "Je app, de inlogmails en je formulieren versturen vanaf een adres op je domein. Je voegt drie regels toe aan de DNS, of keurt ze met één klik goed als je provider dat toestaat.",
+      "connectBody": "Je app, de inlogmails en je formulieren versturen vanaf een adres op je domein. Je voegt een paar regels toe aan de DNS, of keurt ze met één klik goed als je provider dat toestaat.",
       "domainLabel": "Je domein",
       "domainPlaceholder": "jouwbedrijf.nl",
       "showAsRoot": "Tonen als @{domain} (standaard wordt verstuurd vanaf notify.{domain})",

@@ -6,7 +6,7 @@ export type EmailDomainStatus = "pending" | "verifying" | "ready" | "failed" | "
 
 /** One of the DNS records the owner puts at their provider (Resend's SPF and DKIM). */
 export interface DnsRecord {
-  readonly type: "TXT" | "MX";
+  readonly type: "TXT" | "MX" | "CNAME";
   /** Relative to the root domain, as Resend gives it ("resend._domainkey.notify"). */
   readonly name: string;
   readonly value: string;

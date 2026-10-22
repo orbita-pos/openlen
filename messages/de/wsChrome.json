@@ -615,7 +615,7 @@
         "cta": "Auf Pro upgraden"
       },
       "connectTitle": "E-Mails von deiner Domain senden",
-      "connectBody": "Deine App, die Anmelde-E-Mails und deine Formulare senden dann von einer Adresse deiner Domain. Du fügst drei Zeilen zu ihrem DNS hinzu oder bestätigst sie mit einem Klick, wenn dein Anbieter das erlaubt.",
+      "connectBody": "Deine App, die Anmelde-E-Mails und deine Formulare senden dann von einer Adresse deiner Domain. Du fügst ein paar Zeilen zu ihrem DNS hinzu oder bestätigst sie mit einem Klick, wenn dein Anbieter das erlaubt.",
       "domainLabel": "Deine Domain",
       "domainPlaceholder": "deinunternehmen.de",
       "showAsRoot": "Als @{domain} anzeigen (standardmäßig wird von notify.{domain} gesendet)",

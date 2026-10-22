@@ -52,7 +52,8 @@ function dnsRecords(raw: unknown): DnsRecord[] {
   const out: DnsRecord[] = [];
   for (const r of raw as Record<string, unknown>[]) {
     if (r.record !== "SPF" && r.record !== "DKIM") continue;
-    if ((r.type !== "TXT" && r.type !== "MX") || typeof r.name !== "string" || typeof r.value !== "string") continue;
+    // CNAME too: for domains created after August 2026 Resend may give SPF as CNAMEs (manage-domains, read 22/10).
+    if ((r.type !== "TXT" && r.type !== "MX" && r.type !== "CNAME") || typeof r.name !== "string" || typeof r.value !== "string") continue;
     // A TXT value in quotes: the provider adds its own.
     const value = r.type === "TXT" ? r.value.replace(/^"(.*)"$/s, "$1") : r.value;
     out.push({ type: r.type, name: r.name, value, ...(typeof r.priority === "number" ? { priority: r.priority } : {}) });

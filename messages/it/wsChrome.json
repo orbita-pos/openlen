@@ -615,7 +615,7 @@
         "cta": "Passa a Pro"
       },
       "connectTitle": "Invia email dal tuo dominio",
-      "connectBody": "La tua app, le email di accesso e i tuoi moduli invieranno da un indirizzo del tuo dominio. Aggiungerai tre righe al suo DNS, oppure le approverai con un clic se il tuo provider lo consente.",
+      "connectBody": "La tua app, le email di accesso e i tuoi moduli invieranno da un indirizzo del tuo dominio. Aggiungerai alcune righe al suo DNS, oppure le approverai con un clic se il tuo provider lo consente.",
       "domainLabel": "Il tuo dominio",
       "domainPlaceholder": "latuaattivita.it",
       "showAsRoot": "Mostra come @{domain} (di base invia da notify.{domain})",

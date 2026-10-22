@@ -119,6 +119,15 @@ describe("checkDomain", () => {
     expect(await d.store.getDomain("p1")).toMatchObject({ status: "ready", verifiedAt: new Date("2026-10-22T10:00:00Z") });
   });
 
+  it("partially_verified is ready: with one of the sending CNAMEs still pending Resend sends normally (resend.com/docs/dashboard/domains/manage-domains, read 22/10)", async () => {
+    const { d, setResend } = world();
+    await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);
+    setResend("partially_verified");
+    expect(await checkDomain("p1", d)).toBe("ready");
+    setResend("partially_failed");
+    expect(await checkDomain("p1", d)).toBe("offline");
+  });
+
   it("ready → offline notifies the owner and reapplies the env", async () => {
     const { d, notices, applied, setResend } = world({ resendStatus: "verified" });
     await connectDomain("p1", { domain: "taller.mx", showAsRoot: false }, d);

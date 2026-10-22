@@ -615,7 +615,7 @@
         "cta": "Upgrade to Pro"
       },
       "connectTitle": "Send email from your domain",
-      "connectBody": "Your app, the sign-in emails and your forms will send from an address on your domain. You'll add three lines to its DNS, or approve them in one click if your provider allows it.",
+      "connectBody": "Your app, the sign-in emails and your forms will send from an address on your domain. You'll add a few lines to its DNS, or approve them in one click if your provider allows it.",
       "domainLabel": "Your domain",
       "domainPlaceholder": "yourbusiness.com",
       "showAsRoot": "Show as @{domain} (by default it sends from notify.{domain})",
