@@ -171,6 +171,7 @@ export default defineConfig({
       "components/app/credit-pill.test.tsx",
       // En una app, el diálogo de publicar no ofrece traducción automática (invariante 6).
       "components/workspace/publish-modal.test.tsx",
+      "components/workspace/publish-modal-stripe.test.tsx",
       // El modal de publicar con la revisión de seguridad (spec local 2026-10-15). LISTA BLANCA.
       "components/workspace/publish-modal-security.test.tsx",
       // ⚰️ `lib/use-generation*.test.ts(x)`, el cliente de Crear: se fueron con

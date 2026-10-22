@@ -27,6 +27,15 @@ describe("lo que contesta publicar", () => {
   });
 });
 
+describe("postPublish — Stripe (spec local 2026-10-21-stripe-integration)", () => {
+  it("422 stripe_account_mismatch and 502 stripe_sync_failed", async () => {
+    reply(422, { error: "stripe_account_mismatch" });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "stripe_account_mismatch" });
+    reply(502, { error: "stripe_sync_failed", message: "Too many requests" });
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "stripe_sync_failed", message: "Too many requests" });
+  });
+});
+
 describe("postPublish — las Edge Functions", () => {
   it("428 de secretos, 422 de funciones que no compilan, y el despliegue o el empaquetador que fallan", async () => {
     reply(428, { error: "secrets_required", missing: ["STRIPE_SECRET_KEY"] });

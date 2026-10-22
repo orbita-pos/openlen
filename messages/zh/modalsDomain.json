@@ -147,7 +147,22 @@
       "failed": "已发布，但本次未能翻译 {langs}。你的页面已在其他语言上线——重新发布可再试一次。"
     },
     "membersOffWarning": "{count} 个页面已标记为会员专属，但账户模块处于关闭状态 — 它们将公开发布。请在模块标签页中开启。",
-    "membersGatedSummary": "{count} 个会员专属页面将发布在登录门之后。"
+    "membersGatedSummary": "{count} 个会员专属页面将发布在登录门之后。",
+    "stripe": {
+      "created": "已复制到你的正式 Stripe：{list}。已发布的页面现在可以真实收款了。",
+      "kind": {
+        "products": "{count} 个产品",
+        "prices": "{count} 个价格",
+        "paymentLinks": "{count} 个支付链接",
+        "shippingRates": "{count} 个运费",
+        "portalConfigurations": "客户门户",
+        "webhookEndpoints": "{count} 个 Webhook"
+      },
+      "cannotChargeYet": "你的 Stripe 账户还不能接收真实付款。",
+      "finishInStripe": "在 Stripe 完成注册",
+      "accountMismatch": "已发布页面的 Stripe 密钥与测试密钥属于不同账户。请使用同一账户的密钥。",
+      "syncFailed": "无法把你的产品复制到正式 Stripe（{message}）。没有发布任何内容；请重试。"
+    }
   },
   "inspector": {
     "radius": "圆角",

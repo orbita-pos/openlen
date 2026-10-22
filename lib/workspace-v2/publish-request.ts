@@ -21,6 +21,9 @@ export type PublishOutcome =
   | { readonly kind: "functions_failed" }
   | { readonly kind: "security_findings"; readonly view: ReviewView }
   | { readonly kind: "security_review_pending"; readonly fingerprint: string }
+  // Stripe (spec local 2026-10-21-stripe-integration): the two keys are of different accounts, or copying to live failed.
+  | { readonly kind: "stripe_account_mismatch" }
+  | { readonly kind: "stripe_sync_failed"; readonly message: string }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
 export async function postPublish(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
@@ -50,6 +53,8 @@ export async function postPublish(projectId: string, body: Record<string, unknow
   if (res.status === 428 && data.error === "secrets_required") return { kind: "secrets_required", missing: (data.missing as string[]) ?? [] };
   if (data.error === "functions_do_not_compile") return { kind: "functions_do_not_compile", errors: (data.errors as string[]) ?? [] };
   if (data.error === "functions_deploy_failed" || data.error === "functions_bundler_unavailable") return { kind: "functions_failed" };
+  if (data.error === "stripe_account_mismatch") return { kind: "stripe_account_mismatch" };
+  if (data.error === "stripe_sync_failed") return { kind: "stripe_sync_failed", message: String(data.message ?? "") };
   if (data.error === "migration_failed") return { kind: "migration_failed", migration: String(data.migration ?? ""), message: String(data.message ?? "") };
   if (data.error === "migrations_diverged") return { kind: "diverged", versions: (data.versions as string[]) ?? [] };
   return { kind: "error", status: res.status, error: typeof data.error === "string" ? data.error : `HTTP ${res.status}` };
