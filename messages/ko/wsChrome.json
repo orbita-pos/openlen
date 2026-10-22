@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "함수",
       "secrets": "시크릿",
-      "ai": "AI"
+      "ai": "AI",
+      "payments": "결제"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -577,6 +578,32 @@
       "saving": "저장 중…",
       "useDefault": "기본값 사용",
       "saveError": "한도를 저장하지 못했습니다."
+    },
+    "payments": {
+      "mode": "Stripe 모드",
+      "test": "테스트",
+      "live": "실제",
+      "account": "Stripe 계정: {name}",
+      "openInStripe": "Stripe에서 열기",
+      "loading": "불러오는 중…",
+      "loadError": "Stripe를 읽지 못했어요. 잠시 후 다시 시도하세요.",
+      "empty": "아직 연결된 Stripe 계정이 없어요. Len에게 무언가를 판매해 달라고 하면 Stripe 키를 물어볼 거예요.",
+      "cannotChargeYet": "Stripe 계정이 아직 실제 결제를 받을 수 없어요.",
+      "finishInStripe": "Stripe에서 가입 마치기",
+      "payments": "최근 결제",
+      "noPayments": "아직 결제가 없어요.",
+      "subscriptions": "활성 구독",
+      "noSubscriptions": "활성 구독이 없어요.",
+      "products": "상품",
+      "noProducts": "상품이 없어요.",
+      "webhooks": "웹훅",
+      "noWebhooks": "웹훅이 없어요.",
+      "disconnect": "Stripe 연결 해제",
+      "disconnectWarning": "프로젝트에서 Stripe 키와 그 키로 등록한 웹훅을 지워요. 구독을 취소하거나 환불하지는 않아요. 그건 Stripe에서 해요.",
+      "disconnectWord": "해제",
+      "disconnectTypeHint": "확인하려면 {word}를 입력하세요",
+      "disconnectConfirm": "연결 해제",
+      "cancel": "취소"
     }
   },
   "appBirth": {

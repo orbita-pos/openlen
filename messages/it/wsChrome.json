@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Funzioni",
       "secrets": "Segreti",
-      "ai": "IA"
+      "ai": "IA",
+      "payments": "Pagamenti"
     },
     "unavailable": {
       "title": "Il database non è disponibile qui",
@@ -577,6 +578,32 @@
       "saving": "Salvataggio…",
       "useDefault": "Usa il predefinito",
       "saveError": "Impossibile salvare il limite."
+    },
+    "payments": {
+      "mode": "Modalità Stripe",
+      "test": "Test",
+      "live": "Reale",
+      "account": "Account Stripe: {name}",
+      "openInStripe": "Apri in Stripe",
+      "loading": "Caricamento…",
+      "loadError": "Impossibile leggere Stripe. Riprova tra poco.",
+      "empty": "Nessun account Stripe ancora collegato. Chiedi a Len di far pagare qualcosa e ti chiederà la tua chiave Stripe.",
+      "cannotChargeYet": "Il tuo account Stripe non può ancora ricevere pagamenti reali.",
+      "finishInStripe": "Completa la registrazione su Stripe",
+      "payments": "Ultimi pagamenti",
+      "noPayments": "Ancora nessun pagamento.",
+      "subscriptions": "Abbonamenti attivi",
+      "noSubscriptions": "Nessun abbonamento attivo.",
+      "products": "Prodotti",
+      "noProducts": "Nessun prodotto.",
+      "webhooks": "Webhook",
+      "noWebhooks": "Nessun webhook.",
+      "disconnect": "Scollega Stripe",
+      "disconnectWarning": "Rimuove le tue chiavi Stripe dal progetto e i webhook registrati con esse. Non annulla abbonamenti né rimborsa pagamenti: resta tutto in Stripe.",
+      "disconnectWord": "SCOLLEGA",
+      "disconnectTypeHint": "Scrivi {word} per confermare",
+      "disconnectConfirm": "Scollega",
+      "cancel": "Annulla"
     }
   },
   "appBirth": {
