@@ -65,6 +65,20 @@ const FILES: Record<string, string> = {
     "});",
     "",
   ].join("\n"),
+  // Resend's own Supabase guide (resend.com/docs/send-with-supabase-edge-functions, read 22/10):
+  // raw fetch to api.resend.com with the key from the environment, no SDK.
+  "/supabase/functions/guia-de-resend/index.ts": [
+    'const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");',
+    "Deno.serve(async () => {",
+    '  const res = await fetch("https://api.resend.com/emails", {',
+    '    method: "POST",',
+    '    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },',
+    '    body: JSON.stringify({ from: "noreply@notify.taller.mx", to: ["beto@x.com"], subject: "hello world", html: "<strong>it works!</strong>" }),',
+    "  });",
+    "  return new Response(JSON.stringify(await res.json()), { status: res.status });",
+    "});",
+    "",
+  ].join("\n"),
 };
 
 const sent: ResendEmail[] = [];
@@ -148,5 +162,12 @@ describe("React Email in a function", () => {
     // React separates two text nodes with an empty comment: «Hola <!-- -->Ana».
     expect(sent[0]!.html).toMatch(/Hola (<!-- -->)?Ana/);
     expect(sent[0]!.html).toContain('href="https://taller.mx/menu"');
+  });
+
+  it("raw fetch to api.resend.com, as Resend's own Supabase guide writes it, reaches OpenLen's gateway too", { timeout: T }, async () => {
+    const res = await handleFunctionsRequest(new Request(`https://${HOST}/functions/v1/guia-de-resend`, { method: "POST", headers: { apikey: PUBLISHABLE } }), functionsDeps());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: expect.stringMatching(/^re_/) });
+    expect(sent.at(-1)).toMatchObject({ to: ["beto@x.com"], subject: "hello world" });
   });
 });
