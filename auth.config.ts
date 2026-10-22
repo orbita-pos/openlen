@@ -29,7 +29,12 @@ export default {
       return session;
     },
     async jwt({ token, user }) {
-      if (user?.id) token.sub = user.id;
+      if (user?.id) {
+        token.sub = user.id;
+        // When this session signed in: a password reset closes the ones from before it
+        // (lib/auth/session-cutoff.ts, checked in auth.ts).
+        token.authAt = Date.now();
+      }
       return token;
     },
   },
