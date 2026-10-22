@@ -147,7 +147,7 @@ export type LiveStatus =
       /** Pieza 7: es la revisión del plan o el consentimiento para entrar, o la
        *  de los secretos (Edge Functions). Su `question` es el inglés del
        *  servidor; la barra dice la suya traducida. */
-      readonly intent?: "plan-review" | "plan-consent" | "secrets";
+      readonly intent?: "plan-review" | "plan-consent" | "secrets" | "email-domain";
     }
   /** El turno dejó una tarjeta de publicar sin tocar: te toca aprobarla. */
   | { readonly kind: "waiting"; readonly face: FaceState; readonly reason: "publish"; readonly question: null }

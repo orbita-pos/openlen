@@ -104,7 +104,9 @@ export function LiveBar({
             ? t("newChat.plan.consentQuestion")
             : status.reason === "question" && status.intent === "secrets"
               ? t("functionSecrets.liveWaiting")
-              : status.question || null;
+              : status.reason === "question" && status.intent === "email-domain"
+                ? t("emailDomain.liveWaiting")
+                : status.question || null;
       break;
     case "done":
       verb = t("newChat.live.done");

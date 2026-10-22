@@ -499,6 +499,9 @@ export default defineConfig({
       // Pieza 3 de Len 2.5: ask_user_question, como DeepSeek. LISTA BLANCA.
       "lib/agent/ask-user-question.test.ts",
       "lib/agent/request-secrets.test.ts",
+      // Project email (spec local 2026-10-22-email-integration, 6.8): the domain's card and the form's reply.
+      "lib/agent/connect-email-domain.test.ts",
+      "lib/agent/form-auto-reply.test.ts",
       "lib/agent/historial-saneado.test.ts",
       // Pieza 5 de Len 2.5: buscar en las charlas, como session-query de DeepSeek.
       "lib/agent/session-query.test.ts",
