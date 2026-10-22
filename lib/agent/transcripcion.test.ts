@@ -72,6 +72,22 @@ describe("historialDesdeLaBase", () => {
     expect(h.at(-1)).toEqual({ role: "assistant", content: "Listo: el título dice El Farol." });
   });
 
+  // Real test of 22/10: the secrets card's wait ran out and the key was saved after it. The next
+  // turn has to read Len's call and its result BEFORE «… guardado en: borrador», or he asks again.
+  it("🔴 a card left unanswered: the next turn reads the call and its result before the late answer", () => {
+    const h = historialDesdeLaBase([
+      fila("pídeme la clave de Stripe", [
+        { role: "assistant", content: "", functionCalls: [{ name: "request_secrets", args: { secrets: [{ name: "STRIPE_SECRET_KEY", description: "La clave de prueba." }] } }] },
+        { role: "user", content: "", functionResponses: [{ name: "request_secrets", response: { ok: true, preguntado: true } }] },
+      ]),
+      fila("STRIPE_SECRET_KEY guardado en: borrador", [{ role: "assistant", content: "Conectada." }]),
+    ]);
+    expect(h.map((m) => m.role)).toEqual(["user", "assistant", "user", "user", "assistant"]);
+    expect(h[1]!.functionCalls![0]!.name).toBe("request_secrets");
+    expect(h[2]!.functionResponses![0]!.response).toEqual({ ok: true, preguntado: true });
+    expect(h[3]).toEqual({ role: "user", content: "STRIPE_SECRET_KEY guardado en: borrador", opensTurn: true });
+  });
+
   it("pieza 3: una conversación vieja con `preguntar` vuelve con el nombre y la forma de ask_user_question", () => {
     const h = historialDesdeLaBase([
       fila("publícala", [
