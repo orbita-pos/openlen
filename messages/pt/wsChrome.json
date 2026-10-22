@@ -460,7 +460,8 @@
       "functions": "Funções",
       "secrets": "Segredos",
       "ai": "IA",
-      "payments": "Pagamentos"
+      "payments": "Pagamentos",
+      "email": "E-mails"
     },
     "unavailable": {
       "title": "O banco de dados não está disponível aqui",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Digite {word} para confirmar",
       "disconnectConfirm": "Desconectar",
       "cancel": "Cancelar"
+    },
+    "email": {
+      "loading": "Carregando…",
+      "loadError": "Não foi possível ler as configurações de e-mail. Tente novamente em um momento.",
+      "free": {
+        "title": "E-mail a partir do seu domínio é dos planos pagos",
+        "body": "Seu app, os e-mails de acesso à conta e seus formulários podem enviar a partir do seu domínio, com e-mails incluídos todo mês nos planos pagos.",
+        "cta": "Assinar o Pro"
+      },
+      "connectTitle": "Envie e-mails a partir do seu domínio",
+      "connectBody": "Seu app, os e-mails de acesso à conta e seus formulários vão enviar de um endereço do seu domínio. Você vai adicionar algumas linhas ao DNS, ou aprová-las com um clique se o seu provedor permitir.",
+      "domainLabel": "Seu domínio",
+      "domainPlaceholder": "seunegocio.com",
+      "showAsRoot": "Mostrar como @{domain} (por padrão envia de notify.{domain})",
+      "connect": "Conectar",
+      "connecting": "Conectando…",
+      "errors": {
+        "free_plan": "E-mail a partir do seu domínio é dos planos pagos.",
+        "invalid_domain": "Isso não parece um domínio (como seunegocio.com).",
+        "host_taken": "Outro projeto já envia a partir desse domínio.",
+        "provider_error": "O provedor de e-mail não respondeu. Tente novamente em um momento.",
+        "generic": "Algo deu errado. Tente novamente em um momento."
+      },
+      "status": {
+        "pending": "Aguardando as linhas do DNS",
+        "verifying": "Verificando as linhas do DNS",
+        "ready": "Pronto",
+        "failed": "Linhas do DNS não encontradas",
+        "offline": "As linhas do DNS pararam de responder"
+      },
+      "check": "Verificar agora",
+      "checking": "Verificando…",
+      "checkHint": "Verificamos a cada 15 minutos e ao publicar. Mudanças de DNS podem levar algumas horas.",
+      "oneClick": "Configurar com um clique",
+      "oneClickHint": "Seu provedor de DNS vai pedir que você aprove as linhas para o OpenLen.",
+      "manualTitle": "Adicione estas linhas ao seu DNS",
+      "manualTitleOr": "Ou adicione estas linhas ao seu DNS manualmente",
+      "recordName": "Nome",
+      "recordValue": "Valor",
+      "priority": "prioridade {n}",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "optional": "Opcional",
+      "dmarcHint": "A linha opcional ajuda menos e-mails a caírem no spam.",
+      "instructions": "Como adicioná-las no seu provedor",
+      "usageTitle": "Este mês",
+      "usage": "{sent} de {included} e-mails incluídos",
+      "extra": "Além do incluído: {credits} créditos",
+      "recentTitle": "Últimos e-mails",
+      "noRecent": "Ainda não há e-mails.",
+      "kinds": {
+        "app": "App",
+        "auth": "Acesso",
+        "form": "Formulário"
+      },
+      "statuses": {
+        "sent": "Enviado",
+        "delivered": "Entregue",
+        "bounced": "Devolvido",
+        "complained": "Marcado como spam",
+        "rejected": "Não enviado",
+        "not_sent_draft": "Não enviado (teste)"
+      },
+      "listTitle": "Cancelamentos e devoluções",
+      "listHint": "Ninguém nesta lista recebe os e-mails do seu app. Tire alguém só se a pessoa pedir: voltar a escrever para quem marcou você como spam prejudica seu domínio.",
+      "noList": "Ninguém ainda.",
+      "reasons": {
+        "unsubscribed": "Cancelou a inscrição",
+        "bounced": "Devolvido",
+        "complained": "Marcou como spam"
+      },
+      "unsuppress": "Tirar da lista",
+      "dnsLines": "Linhas do DNS",
+      "disconnect": "Desconectar domínio",
+      "disconnectWarning": "Seu app, os e-mails de acesso à conta e seus formulários voltarão a enviar a partir do OpenLen. Nada se perde.",
+      "disconnectTypeHint": "Digite {domain} para confirmar",
+      "disconnectConfirm": "Desconectar",
+      "cancel": "Cancelar",
+      "cleanupDns": "Desconectado. Agora você pode remover do seu DNS as linhas que adicionou para o e-mail do OpenLen."
     }
   },
   "appBirth": {

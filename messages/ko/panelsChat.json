@@ -384,5 +384,26 @@
   "visualLoading": "시각 자료 준비 중…",
   "visualLinkTitle": "이 링크를 여시겠어요?",
   "visualLinkOpen": "열기",
-  "visualLinkCancel": "취소"
+  "visualLinkCancel": "취소",
+  "emailDomain": {
+    "cardLabel": "이메일 도메인",
+    "cardHint": "프로젝트의 이메일이 이 도메인의 주소에서 발송됩니다. 추가할 DNS 줄은 이메일 탭에 표시됩니다.",
+    "placeholder": "yourbusiness.com",
+    "showAsRoot": "@{domain}(으)로 표시",
+    "connect": "연결",
+    "connecting": "연결 중…",
+    "skip": "나중에",
+    "connected": "연결됨: {host}",
+    "skipped": "연결 안 됨",
+    "answerMessage": "이메일 도메인을 연결했습니다: {host}",
+    "answerSkipped": "지금은 이메일 도메인을 연결하지 않았습니다.",
+    "errors": {
+      "free_plan": "내 도메인에서 보내는 이메일은 유료 플랜 기능입니다.",
+      "invalid_domain": "도메인 형식이 아닌 것 같습니다 (예: yourbusiness.com).",
+      "host_taken": "다른 프로젝트가 이미 그 도메인에서 발송하고 있습니다.",
+      "provider_error": "이메일 제공업체가 응답하지 않았습니다. 잠시 후 다시 시도해 주세요.",
+      "generic": "문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+    },
+    "liveWaiting": "Len이 이메일 도메인 연결을 기다리고 있습니다"
+  }
 }

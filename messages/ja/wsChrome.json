@@ -460,7 +460,8 @@
       "functions": "関数",
       "secrets": "シークレット",
       "ai": "AI",
-      "payments": "支払い"
+      "payments": "支払い",
+      "email": "メール"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "確認のため {word} と入力してください",
       "disconnectConfirm": "接続を解除",
       "cancel": "キャンセル"
+    },
+    "email": {
+      "loading": "読み込み中…",
+      "loadError": "メールの設定を読み込めませんでした。少し待ってからもう一度お試しください。",
+      "free": {
+        "title": "独自ドメインからのメールは有料プランの機能です",
+        "body": "アプリ、ログイン用メール、フォームをあなたのドメインから送れます。有料プランには毎月の送信枠が含まれます。",
+        "cta": "Pro にアップグレード"
+      },
+      "connectTitle": "あなたのドメインからメールを送る",
+      "connectBody": "アプリ、ログイン用メール、フォームがあなたのドメインのアドレスから送られます。DNS に数行を追加するか、プロバイダーが対応していればワンクリックで承認します。",
+      "domainLabel": "あなたのドメイン",
+      "domainPlaceholder": "yourbusiness.com",
+      "showAsRoot": "@{domain} として表示（通常は notify.{domain} から送信）",
+      "connect": "接続",
+      "connecting": "接続中…",
+      "errors": {
+        "free_plan": "独自ドメインからのメールは有料プランの機能です。",
+        "invalid_domain": "ドメインの形式ではないようです（例：yourbusiness.com）。",
+        "host_taken": "別のプロジェクトがすでにそのドメインから送信しています。",
+        "provider_error": "メールプロバイダーから応答がありませんでした。少し待ってからもう一度お試しください。",
+        "generic": "問題が発生しました。少し待ってからもう一度お試しください。"
+      },
+      "status": {
+        "pending": "DNS の行を待っています",
+        "verifying": "DNS の行を確認しています",
+        "ready": "準備完了",
+        "failed": "DNS の行が見つかりません",
+        "offline": "DNS の行が応答しなくなりました"
+      },
+      "check": "今すぐ確認",
+      "checking": "確認中…",
+      "checkHint": "15 分ごとと公開時に確認します。DNS の変更には数時間かかることがあります。",
+      "oneClick": "ワンクリックで設定",
+      "oneClickHint": "DNS プロバイダーから OpenLen 用の行を承認するよう求められます。",
+      "manualTitle": "次の行を DNS に追加してください",
+      "manualTitleOr": "または次の行を手動で DNS に追加してください",
+      "recordName": "名前",
+      "recordValue": "値",
+      "priority": "優先度 {n}",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "optional": "任意",
+      "dmarcHint": "任意の行を追加すると、迷惑メールに入りにくくなります。",
+      "instructions": "プロバイダーでの追加方法",
+      "usageTitle": "今月",
+      "usage": "含まれる {included} 通のうち {sent} 通",
+      "extra": "含まれる分を超えた分：{credits} クレジット",
+      "recentTitle": "最近のメール",
+      "noRecent": "まだメールはありません。",
+      "kinds": {
+        "app": "アプリ",
+        "auth": "ログイン",
+        "form": "フォーム"
+      },
+      "statuses": {
+        "sent": "送信済み",
+        "delivered": "配信済み",
+        "bounced": "不達",
+        "complained": "迷惑メール報告",
+        "rejected": "未送信",
+        "not_sent_draft": "未送信（テスト）"
+      },
+      "listTitle": "配信停止と不達",
+      "listHint": "このリストの人にはアプリのメールが届きません。本人から頼まれた場合だけ外してください。迷惑メールとして報告した人に再び送るとドメインの評価が下がります。",
+      "noList": "まだいません。",
+      "reasons": {
+        "unsubscribed": "配信停止",
+        "bounced": "不達",
+        "complained": "迷惑メール報告"
+      },
+      "unsuppress": "リストから外す",
+      "dnsLines": "DNS の行",
+      "disconnect": "ドメインの接続を解除",
+      "disconnectWarning": "アプリ、ログイン用メール、フォームは再び OpenLen から送信されます。失われるものはありません。",
+      "disconnectTypeHint": "確認のため {domain} と入力してください",
+      "disconnectConfirm": "接続を解除",
+      "cancel": "キャンセル",
+      "cleanupDns": "接続を解除しました。OpenLen のメール用に追加した行を DNS から削除できます。"
     }
   },
   "appBirth": {

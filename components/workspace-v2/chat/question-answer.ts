@@ -52,6 +52,12 @@ export function liveQuestionTurno(
 /** EDGE FUNCTIONS: la tarjeta de los secretos contestada cuando el turno ya no
  *  espera. Sale como un mensaje NORMAL —sólo nombres y dónde, en el idioma del
  *  dueño—: los valores ya fueron directos a la ruta de secretos. */
+/** PROJECT EMAIL: the domain's card answered after the turn closed — the address, or that it was skipped. */
+export function emailDomainAnswerMessage(answers: readonly QuestionAnswer[], t: (key: string, values?: Record<string, string>) => string): string {
+  const host = answers.flatMap((a) => a.selected)[0];
+  return host ? t("emailDomain.answerMessage", { host }) : t("emailDomain.answerSkipped");
+}
+
 export function secretsAnswerMessage(
   secrets: readonly Pick<SecretRequest, "name">[],
   answers: readonly QuestionAnswer[],

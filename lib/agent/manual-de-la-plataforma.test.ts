@@ -296,6 +296,23 @@ describe("STRIPE (spec local 2026-10-21-stripe-integration, §6.8)", () => {
   });
 });
 
+describe("PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8)", () => {
+  const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+
+  it("the manual has the email line only with the email on, in pages and apps, and it is stable per server", () => {
+    const on = { ...CON, RESEND_CLIENTS_API_KEY: "re_x" };
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" } as const;
+    for (const m of [buildManualDeLaPlataforma(on), buildManualDeLaPlataforma(on, "len", app)]) {
+      for (const f of ["connect_email_domain", "OPENLEN_EMAIL_FROM", "RESEND_API_KEY", "never promotions", "only reach the project's team", "[auth.email.template.", "set_form_auto_reply"]) {
+        expect(m).toContain(f);
+      }
+    }
+    expect(buildManualDeLaPlataforma(CON)).not.toContain("OPENLEN_EMAIL_FROM");
+    expect(buildManualDeLaPlataforma({ ...on, OPENLEN_EMAIL: "0" })).not.toContain("OPENLEN_EMAIL_FROM");
+    expect(buildManualDeLaPlataforma(on)).toBe(buildManualDeLaPlataforma(on));
+  });
+});
+
 describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
   const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
 

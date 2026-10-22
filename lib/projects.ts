@@ -1284,6 +1284,11 @@ export async function publishProject(
     });
   }
 
+  // 11. Project email (spec local 2026-10-22-email-integration, 6.1): publishing checks the
+  // project's email domain again, without waiting — the owner who just set the DNS
+  // doesn't wait for the timer.
+  void checkEmailDomainAfterPublish(params.projectId);
+
   return {
     subdomain: v.value,
     url: `https://${v.value}.${publishBaseHost()}`,
@@ -1292,6 +1297,22 @@ export async function publishProject(
       ? { stripe: { created: { ...stripe.preview.plan.create }, swaps: stripe.preview.plan.swaps, chargesEnabled: stripe.preview.plan.chargesEnabled } }
       : {}),
   };
+}
+
+/** Publish step 11. Never throws: the publish is already done. */
+async function checkEmailDomainAfterPublish(projectId: string): Promise<void> {
+  try {
+    const { emailEnabledIn } = await import("@/lib/project-email/enabled");
+    if (!emailEnabledIn()) return;
+    const [{ realDomainDeps }, { checkDomain }] = await Promise.all([import("@/lib/project-email/real"), import("@/lib/project-email/domain")]);
+    const deps = realDomainDeps();
+    const row = await deps.store.getDomain(projectId);
+    if (!row || row.status === "failed") return;
+    await checkDomain(projectId, deps);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[publish] email domain check failed", projectId, err);
+  }
 }
 
 interface UnpublishParams {

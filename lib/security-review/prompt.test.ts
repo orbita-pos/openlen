@@ -43,6 +43,14 @@ describe("the method (adapted from anthropics/claude-code-security-review, MIT)"
     }
   });
 
+  it("PROJECT EMAIL: both passes know a function that emails an address from the request, unauthorized, is an open relay (HIGH)", () => {
+    for (const s of [SCAN_SYSTEM, FILTER_SYSTEM]) {
+      expect(s).toContain("RESEND_API_KEY");
+      expect(s).toContain("open relay");
+      expect(s).toMatch(/open relay[^.]*HIGH|HIGH[^.]*open relay/);
+    }
+  });
+
   it("both passes carry OpenLen's facts: RLS is the boundary, the publishable key is public, verify_jwt", () => {
     for (const s of ["Row Level Security", "PUBLISHABLE key", "verify_jwt = false", "import.meta.env"]) {
       expect(SCAN_SYSTEM).toContain(s);

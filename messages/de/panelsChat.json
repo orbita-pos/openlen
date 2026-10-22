@@ -384,5 +384,26 @@
   "visualLoading": "Visual wird vorbereitet…",
   "visualLinkTitle": "Diesen Link öffnen?",
   "visualLinkOpen": "Öffnen",
-  "visualLinkCancel": "Abbrechen"
+  "visualLinkCancel": "Abbrechen",
+  "emailDomain": {
+    "cardLabel": "E-Mail-Domain",
+    "cardHint": "Die E-Mails des Projekts gehen von einer Adresse dieser Domain aus. Die DNS-Zeilen zum Hinzufügen findest du im Tab E-Mails.",
+    "placeholder": "deinunternehmen.de",
+    "showAsRoot": "Als @{domain} anzeigen",
+    "connect": "Verbinden",
+    "connecting": "Wird verbunden…",
+    "skip": "Jetzt nicht",
+    "connected": "Verbunden: {host}",
+    "skipped": "Nicht verbunden",
+    "answerMessage": "Ich habe die E-Mail-Domain verbunden: {host}",
+    "answerSkipped": "Ich habe vorerst keine E-Mail-Domain verbunden.",
+    "errors": {
+      "free_plan": "E-Mail von deiner Domain gibt es in den bezahlten Plänen.",
+      "invalid_domain": "Das sieht nicht nach einer Domain aus (wie deinunternehmen.de).",
+      "host_taken": "Ein anderes Projekt sendet bereits von dieser Domain.",
+      "provider_error": "Der E-Mail-Anbieter hat nicht geantwortet. Versuche es gleich noch einmal.",
+      "generic": "Etwas ist schiefgelaufen. Versuche es gleich noch einmal."
+    },
+    "liveWaiting": "Len wartet darauf, dass du die E-Mail-Domain verbindest"
+  }
 }

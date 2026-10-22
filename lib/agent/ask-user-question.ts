@@ -23,6 +23,12 @@ export const REQUEST_SECRETS = "request_secrets";
 /** El id de su pregunta: lo pone la herramienta y lo contesta la tarjeta. */
 export const SECRETS_QUESTION_ID = "secrets";
 
+/** PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): the card where the owner connects
+ *  the project's email domain. Same channel as the secrets: it waits inside the turn, and what
+ *  comes back is read from the email tables, not from what the chat says. */
+export const CONNECT_EMAIL_DOMAIN = "connect_email_domain";
+export const EMAIL_DOMAIN_QUESTION_ID = "email-domain";
+
 /** Un secreto que Len pide por su nombre. */
 export interface SecretRequest {
   name: string;
@@ -39,7 +45,11 @@ export interface QuestionOption {
  *  plan (`exit_plan_mode`) o el consentimiento para entrar en modo plan
  *  (`enter_plan_mode`). La pone SÓLO el servidor; el chat la usa para pintar la
  *  tarjeta (como el `intent` de DeepSeek: «presentation only»). */
-export type QuestionIntent = { kind: "plan-review"; plan: string } | { kind: "plan-consent" } | { kind: "secrets"; secrets: SecretRequest[] };
+export type QuestionIntent =
+  | { kind: "plan-review"; plan: string }
+  | { kind: "plan-consent" }
+  | { kind: "secrets"; secrets: SecretRequest[] }
+  | { kind: "email-domain" };
 
 export interface UserQuestion {
   id: string;
@@ -124,6 +134,7 @@ export function validateQuestions(raw: unknown): { ok: true; questions: UserQues
 function intentFrom(raw: unknown): QuestionIntent | null {
   if (!isObject(raw)) return null;
   if (raw.kind === "plan-consent") return { kind: "plan-consent" };
+  if (raw.kind === "email-domain") return { kind: "email-domain" };
   if (raw.kind === "plan-review" && typeof raw.plan === "string" && raw.plan.trim()) return { kind: "plan-review", plan: raw.plan };
   // Sólo nombre, para qué y dónde: aunque llegue algo más, aquí no viaja.
   if (raw.kind === "secrets" && Array.isArray(raw.secrets)) {
@@ -182,7 +193,7 @@ export function isQuestionTool(name: string): boolean {
  *  y la de los secretos (`request_secrets`). Su tarjeta es una pregunta en el
  *  chat, en la barra, en el aviso del cierre y en Len-Bench. Con los nombres en
  *  texto: `plan-mode.ts` ya importa de aquí. */
-const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode", REQUEST_SECRETS]);
+const ASKS_THE_OWNER: ReadonlySet<string> = new Set([ASK_USER_QUESTION, LEGACY_QUESTION_TOOL, "enter_plan_mode", "exit_plan_mode", REQUEST_SECRETS, CONNECT_EMAIL_DOMAIN]);
 
 /** ¿Le pregunta al dueño y espera su respuesta? */
 export function asksTheOwner(name: string): boolean {

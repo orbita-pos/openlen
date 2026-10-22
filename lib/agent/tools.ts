@@ -34,6 +34,7 @@ import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { StripeStateForLen } from "@/lib/stripe/state";
+import type { EmailStateForLen } from "@/lib/project-email/state";
 import type { StripeForCard } from "@/lib/stripe/card";
 import type { StripeReleasePreview } from "@/lib/stripe/preview";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
@@ -104,6 +105,7 @@ import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import {
   ASK_CANCELLED_ERROR,
   ASK_USER_QUESTION,
+  CONNECT_EMAIL_DOMAIN,
   QUESTION_DISMISSED,
   REQUEST_SECRETS,
   answerSummary,
@@ -115,6 +117,8 @@ import {
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
 import { toolRequestSecrets } from "@/lib/agent/request-secrets";
+import { toolConnectEmailDomain } from "@/lib/agent/connect-email-domain";
+import { SET_FORM_AUTO_REPLY, toolSetFormAutoReply } from "@/lib/agent/form-auto-reply";
 import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
@@ -291,10 +295,14 @@ export interface AgentDeps {
   /** EDGE FUNCTIONS: tras escribir en /supabase/functions/** o config.toml,
    *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
+  /** PROJECT EMAIL: after writing supabase/config.toml or a template, what would break a sign-in email. */
+  authTemplatesAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
   /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
   edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
   /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): for PROJECT STATE. null = no Stripe here or none yet. */
   stripeState?(projectId: string): Promise<StripeStateForLen | null>;
+  /** PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): for PROJECT STATE and the email tools. null = email off. */
+  emailState?(projectId: string): Promise<EmailStateForLen | null>;
   /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
    *  los lee para contestar). null = sin funciones en este servidor. */
   functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
@@ -661,6 +669,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       const { draftDeployAfterWrite } = await import("@/lib/functions/deploy");
       return draftDeployAfterWrite(projectId, written);
     },
+    async authTemplatesAfterWrite(projectId, written) {
+      const [{ authTemplateDiagnostics }, { listProjectFiles }] = await Promise.all([import("@/lib/project-email/auth-templates"), import("@/lib/backend/files")]);
+      return authTemplateDiagnostics(written, await listProjectFiles(projectId, "/supabase/"));
+    },
     async edgeFunctions(projectId) {
       const { edgeFunctionsState } = await import("@/lib/functions/state");
       return edgeFunctionsState(projectId);
@@ -670,6 +682,12 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       if (!stripeEnabled()) return null;
       const { stripeStateFor } = await import("@/lib/stripe/state");
       return stripeStateFor(projectId);
+    },
+    async emailState(projectId) {
+      const { emailEnabledIn } = await import("@/lib/project-email/enabled");
+      if (!emailEnabledIn()) return null;
+      const { emailStateFor } = await import("@/lib/project-email/state");
+      return emailStateFor(projectId);
     },
     async functionSecretNames(projectId) {
       const { functionSecretNames } = await import("@/lib/functions/secrets-real");
@@ -1366,6 +1384,8 @@ export function summarizeProjectState(
     /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): the account of each key and the
      *  test-mode webhook endpoints. Absent ⇒ no Stripe yet. */
     stripe?: StripeStateForLen | null;
+    /** PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): the domain, its status and the month. Absent ⇒ email off. */
+    email?: EmailStateForLen | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1446,6 +1466,8 @@ export function summarizeProjectState(
       : {}),
     // Stripe: whose account each key is and the registered endpoints (never a value).
     ...(row.stripe ? { stripe: row.stripe } : {}),
+    // The project's email: its domain, status, address and the month (never a record value).
+    ...(row.email ? { email: row.email } : {}),
   };
 }
 
@@ -2700,6 +2722,11 @@ async function ejecutarHerramienta(
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
       case REQUEST_SECRETS:
         return await toolRequestSecrets(session, deps, args);
+      // Project email: the domain's card (the same channel) and the form's reply.
+      case CONNECT_EMAIL_DOMAIN:
+        return await toolConnectEmailDomain(session, deps);
+      case SET_FORM_AUTO_REPLY:
+        return await toolSetFormAutoReply(session, deps, args);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
       case ENTER_PLAN_MODE:
         return await toolEnterPlanMode(session, deps, args);

@@ -2,7 +2,7 @@ export declare const STD_HTTP_SERVER: "openlen:std-http-server";
 export declare const TYPES_ONLY: "openlen:types-only";
 
 export interface ResolveCatalog {
-  readonly dependencies: readonly { readonly name: string; readonly version: string; readonly file: string }[];
+  readonly dependencies: readonly { readonly name: string; readonly version: string; readonly file: string; readonly subpaths?: Readonly<Record<string, string>> }[];
 }
 
 export type Resolution =

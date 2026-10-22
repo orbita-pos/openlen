@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/grazie  (facoltativo)",
     "invalidEmail": "Inserisci un indirizzo email valido.",
     "invalidUrl": "Inserisci un URL completo che inizi con http:// o https://.",
+    "autoReplySubject": "Risposta automatica: oggetto",
+    "autoReplySubjectPlaceholder": "Grazie, {open}nome{close}",
+    "autoReplyBody": "Risposta automatica: testo",
+    "autoReplyBodyPlaceholder": "Ciao {open}nome{close}, abbiamo ricevuto il tuo messaggio e ti risponderemo presto.",
+    "autoReplyNote": "Arriva a chi compila il modulo, dal dominio email del progetto (scheda Email), con un piano a pagamento. {open}campo{close} inserisce ciò che ha scritto in quel campo. Lasciali vuoti per disattivarla.",
     "applyNote": "Le modifiche al modulo si applicano al prossimo deploy."
   },
   "testEmail": {

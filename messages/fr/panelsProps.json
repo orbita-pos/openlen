@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/merci  (facultatif)",
     "invalidEmail": "Saisissez une adresse e-mail valide.",
     "invalidUrl": "Saisissez une URL complète commençant par http:// ou https://.",
+    "autoReplySubject": "Réponse automatique : objet",
+    "autoReplySubjectPlaceholder": "Merci, {open}nom{close}",
+    "autoReplyBody": "Réponse automatique : texte",
+    "autoReplyBodyPlaceholder": "Bonjour {open}nom{close}, nous avons bien reçu votre message et vous répondrons bientôt.",
+    "autoReplyNote": "Envoyée à qui remplit le formulaire, depuis le domaine e-mail du projet (onglet E-mails), avec un forfait payant. {open}champ{close} insère ce qui a été écrit dans ce champ. Laissez les deux vides pour la désactiver.",
     "applyNote": "Les modifications du formulaire s'appliquent à votre prochain déploiement."
   },
   "testEmail": {

@@ -519,12 +519,23 @@ async function guardarEnLaCarpeta(
  * Fail-soft: si no se puede, nada (el `curl` y los ojos lo verán igual).
  */
 export async function diagnosticosDeFuncionesTrasEscribir(session: AgentSession, deps: AgentDeps, written: readonly string[]): Promise<Diagnostico[]> {
-  if (!deps.functionsAfterWrite || !written.some(isFunctionsInputPath)) return [];
-  try {
-    return await deps.functionsAfterWrite(session.projectId, written);
-  } catch {
-    return [];
+  const out: Diagnostico[] = [];
+  if (deps.functionsAfterWrite && written.some(isFunctionsInputPath)) {
+    try {
+      out.push(...(await deps.functionsAfterWrite(session.projectId, written)));
+    } catch {
+      // fail-soft
+    }
   }
+  // Project email (spec local 2026-10-22-email-integration, 6.4): a sign-in template that would leave people out.
+  if (deps.authTemplatesAfterWrite && written.some((p) => /^\/supabase\/(config\.toml|templates\/)/.test(p))) {
+    try {
+      out.push(...(await deps.authTemplatesAfterWrite(session.projectId, written)));
+    } catch {
+      // fail-soft
+    }
+  }
+  return out;
 }
 
 export async function diagnosticosDeLaAppTrasEscribir(

@@ -19,6 +19,12 @@ describe("functionBaseEnv", () => {
     expect(Object.keys(env).sort()).toEqual(["SUPABASE_ANON_KEY", "SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL"]);
   });
 
+  it("with project email on, its three variables count too (spec local 2026-10-22-email-integration, 5)", async () => {
+    const env = await functionBaseEnv("p1", "draft", { hasBackend: async () => true, target: async () => REAL, email: true });
+    expect(env).toMatchObject({ RESEND_API_KEY: "sb_secret_real", RESEND_BASE_URL: `${REAL.url}/email/v1` });
+    expect(env.OPENLEN_EMAIL_FROM).toMatch(/^noreply@/);
+  });
+
   it("con backend, las de verdad de ese entorno", async () => {
     const env = await functionBaseEnv("p1", "live", { hasBackend: async () => true, target: async () => REAL });
     expect(env.SUPABASE_URL).toBe(REAL.url);

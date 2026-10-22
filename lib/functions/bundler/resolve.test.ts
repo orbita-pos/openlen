@@ -7,6 +7,14 @@ import { applyImportMap, resolveSpecifier, STD_HTTP_SERVER, TYPES_ONLY } from ".
 const CAT = FUNCTIONS_CATALOGS["2026-11"]!;
 
 describe("resolveSpecifier", () => {
+  it("a subpath the catalog declares (react/jsx-runtime, react-dom/server) goes to its own file; another one is still refused", () => {
+    const c12 = FUNCTIONS_CATALOGS["2026-12"]!;
+    expect(resolveSpecifier(c12, "react/jsx-runtime")).toMatchObject({ kind: "catalog", file: "react-jsx-runtime.mjs" });
+    expect(resolveSpecifier(c12, "npm:react-dom@19/server")).toMatchObject({ kind: "catalog", file: "react-dom-server.mjs" });
+    expect(resolveSpecifier(c12, "npm:react-email")).toMatchObject({ kind: "catalog", file: "react-email.mjs" });
+    expect(resolveSpecifier(c12, "react-dom/client")).toMatchObject({ kind: "error" });
+  });
+
   it("npm:, jsr:, esm.sh y el nombre suelto van al MISMO fichero del catálogo", () => {
     for (const s of ["npm:stripe", "npm:stripe@23", "npm:stripe@^23.0.0", "https://esm.sh/stripe@23?target=deno", "https://esm.sh/v135/stripe@23", "stripe"]) {
       expect(resolveSpecifier(CAT, s), s).toEqual({ kind: "catalog", name: "stripe", file: "stripe.mjs", warning: null });

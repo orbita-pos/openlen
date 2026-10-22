@@ -103,6 +103,11 @@
     "redirectPlaceholder": "https://…/obrigado  (opcional)",
     "invalidEmail": "Digite um endereço de e-mail válido.",
     "invalidUrl": "Digite uma URL completa começando com http:// ou https://.",
+    "autoReplySubject": "Resposta automática: assunto",
+    "autoReplySubjectPlaceholder": "Obrigado, {open}nome{close}",
+    "autoReplyBody": "Resposta automática: texto",
+    "autoReplyBodyPlaceholder": "Olá {open}nome{close}, recebemos sua mensagem e responderemos em breve.",
+    "autoReplyNote": "Vai para quem preenche o formulário, pelo domínio de e-mail do projeto (aba E-mails), nos planos pagos. {open}campo{close} insere o que a pessoa escreveu nesse campo. Deixe os dois vazios para desativar.",
     "applyNote": "As alterações no formulário entram em vigor no próximo deploy."
   },
   "testEmail": {

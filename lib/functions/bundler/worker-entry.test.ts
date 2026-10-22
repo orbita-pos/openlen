@@ -68,4 +68,31 @@ describe("el paquete en workerd", () => {
       await mf.dispose();
     }
   });
+
+  // PROJECT EMAIL (spec local 2026-10-22-email-integration, Task 15): a React Email template in a
+  // .tsx function, with a hook, rendered in workerd by the 2026-12 catalog's one React.
+  it("React Email in workerd: a .tsx template with a hook renders to HTML", { timeout: T }, async () => {
+    const PLANTILLA = [
+      'import { useState } from "npm:react";',
+      'import { Html, Body, Button, render } from "npm:react-email";',
+      "function Correo() {",
+      "  const [n] = useState(3);",
+      '  return (<Html><Body><Button href="https://taller.mx/menu">{`Ver ${n}`}</Button></Body></Html>);',
+      "}",
+      "Deno.serve(async () => new Response(await render(<Correo />)));",
+      "",
+    ].join("\n");
+    const b = await bundleFunctions({ catalog: "2026-12", mode: "production", files: { "/supabase/functions/correo/index.tsx": PLANTILLA } });
+    expect(b?.ok).toBe(true);
+    if (!b?.ok) return;
+    const Miniflare = loadMiniflare();
+    const mf = new Miniflare(scriptOptions(b.files, {}));
+    try {
+      const html = cuerpo(await marcos(await mf.dispatchFetch("https://function.internal/", { method: "POST", body: JSON.stringify(evento("correo")) })));
+      expect(html).toContain('href="https://taller.mx/menu"');
+      expect(html).toContain("Ver 3");
+    } finally {
+      await mf.dispose();
+    }
+  });
 });

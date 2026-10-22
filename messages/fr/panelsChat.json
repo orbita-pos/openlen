@@ -384,5 +384,26 @@
   "visualLoading": "Préparation du visuel…",
   "visualLinkTitle": "Ouvrir ce lien ?",
   "visualLinkOpen": "Ouvrir",
-  "visualLinkCancel": "Annuler"
+  "visualLinkCancel": "Annuler",
+  "emailDomain": {
+    "cardLabel": "Domaine e-mail",
+    "cardHint": "Les e-mails du projet partiront d'une adresse de ce domaine. Les lignes DNS à ajouter seront dans l'onglet E-mails.",
+    "placeholder": "votreentreprise.com",
+    "showAsRoot": "Afficher comme @{domain}",
+    "connect": "Connecter",
+    "connecting": "Connexion…",
+    "skip": "Pas maintenant",
+    "connected": "Connecté : {host}",
+    "skipped": "Non connecté",
+    "answerMessage": "J'ai connecté le domaine e-mail : {host}",
+    "answerSkipped": "Je n'ai pas connecté de domaine e-mail pour l'instant.",
+    "errors": {
+      "free_plan": "L'e-mail depuis votre domaine fait partie des forfaits payants.",
+      "invalid_domain": "Cela ne ressemble pas à un domaine (comme votreentreprise.com).",
+      "host_taken": "Un autre projet envoie déjà depuis ce domaine.",
+      "provider_error": "Le fournisseur d'e-mail n'a pas répondu. Réessayez dans un instant.",
+      "generic": "Une erreur s'est produite. Réessayez dans un instant."
+    },
+    "liveWaiting": "Len attend que vous connectiez le domaine e-mail"
+  }
 }

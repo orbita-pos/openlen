@@ -1,0 +1,17 @@
+{
+  "name": "openlen-functions-catalog-2026-12",
+  "private": true,
+  "description": "Los paquetes del catálogo 2026-12 de las Edge Functions (el 2026-11 más React Email): los construye npm run functions:vendor. Aparte de los del producto y de los de las apps (es Node en servidor).",
+  "dependencies": {
+    "@react-email/render": "2.1.0",
+    "@supabase/supabase-js": "2.117.2",
+    "mercadopago": "3.6.1",
+    "openai": "7.32.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-email": "6.11.1",
+    "resend": "6.32.1",
+    "stripe": "23.0.0",
+    "zod": "3.25.76"
+  }
+}

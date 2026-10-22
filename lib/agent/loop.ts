@@ -19,7 +19,7 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 // Len 2.0 (T9): los diagnósticos anclados a línea. Puros, como los de arriba.
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
-import { ASK_USER_QUESTION, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { TODO_WRITE, nearCapNotice, todoCapFacts, type TodoItem } from "@/lib/agent/todo-list";
@@ -761,6 +761,8 @@ const READ_ONLY_TOOLS = new Set([
   ASK_USER_QUESTION,
   // Pedir secretos no cambia la página.
   REQUEST_SECRETS,
+  // Ni conectar el dominio del correo (una tarjeta, como la de los secretos).
+  CONNECT_EMAIL_DOMAIN,
   // Pieza 7: entrar en modo plan y presentar el plan no cambian la página.
   ENTER_PLAN_MODE,
   EXIT_PLAN_MODE,

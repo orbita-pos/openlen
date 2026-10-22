@@ -865,6 +865,23 @@ export async function sendAppAiCapEmail(input: { to: string; subject: string; te
   await enviar(live, "app AI cap email", { from, to: input.to, subject: input.subject, text: input.text });
 }
 
+/** PROJECT EMAIL (spec local 2026-10-22-email-integration): the owner's alerts about their sending domain and
+ *  their month's allowance, from OpenLen's own account (never the customers' one). */
+export async function sendProjectEmailNotice(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("project email notice");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`
+  📧 [DEV] Project email notice to ${input.to}
+     ${input.subject}
+`);
+    }
+    return;
+  }
+  await enviar(live, "project email notice", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
 /** EDGE FUNCTIONS: una bolsa pasó del 80 % de su tope. Al operador (la bandeja
  *  de los reportes de abuso, si no hay una propia), una vez al mes por bolsa. */
 export async function sendFunctionsPoolAlertEmail(input: { subject: string; text: string }): Promise<void> {

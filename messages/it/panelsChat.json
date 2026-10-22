@@ -384,5 +384,26 @@
   "visualLoading": "Preparazione del visual…",
   "visualLinkTitle": "Aprire questo link?",
   "visualLinkOpen": "Apri",
-  "visualLinkCancel": "Annulla"
+  "visualLinkCancel": "Annulla",
+  "emailDomain": {
+    "cardLabel": "Dominio email",
+    "cardHint": "Le email del progetto partiranno da un indirizzo di questo dominio. Le righe DNS da aggiungere saranno nella scheda Email.",
+    "placeholder": "latuaattivita.it",
+    "showAsRoot": "Mostra come @{domain}",
+    "connect": "Collega",
+    "connecting": "Collegamento…",
+    "skip": "Non ora",
+    "connected": "Collegato: {host}",
+    "skipped": "Non collegato",
+    "answerMessage": "Ho collegato il dominio email: {host}",
+    "answerSkipped": "Per ora non ho collegato un dominio email.",
+    "errors": {
+      "free_plan": "L'email dal tuo dominio è nei piani a pagamento.",
+      "invalid_domain": "Non sembra un dominio (come latuaattivita.it).",
+      "host_taken": "Un altro progetto invia già da quel dominio.",
+      "provider_error": "Il provider email non ha risposto. Riprova tra un momento.",
+      "generic": "Qualcosa è andato storto. Riprova tra un momento."
+    },
+    "liveWaiting": "Len aspetta che tu colleghi il dominio email"
+  }
 }

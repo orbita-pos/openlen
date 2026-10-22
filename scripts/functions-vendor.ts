@@ -19,16 +19,19 @@
 // «Dynamic require of "crypto" is not supported». Con éste, carga el de Node.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog, type FunctionsDependency } from "../lib/functions/catalog";
 
 const RAIZ = path.resolve(import.meta.dirname, "..");
 const comprobar = process.argv.includes("--comprobar");
-const nombre = FUNCTIONS_CATALOG_CURRENT;
+// `-- --catalogo=2026-11` checks (or builds) another one than the current: an old catalog's bytes never change.
+const nombre = process.argv.find((a) => a.startsWith("--catalogo="))?.slice("--catalogo=".length) ?? FUNCTIONS_CATALOG_CURRENT;
 const catalogo = functionsCatalog(nombre);
 if (!catalogo) throw new Error(`no hay catálogo ${nombre}`);
 const paquetes = path.join(RAIZ, "scripts", "functions-catalog", nombre);
@@ -55,9 +58,58 @@ function entrada(dep: FunctionsDependency): string {
   return `import m from ${id};\nexport default m;\nexport const { ${nombres.join(", ")} } = m;\n`;
 }
 
+// ONE REACT (catalog 2026-12, React Email): react, its jsx-runtime, react-dom/server,
+// react-email and @react-email/render go in ONE shared file, built once; each of their
+// catalog files is a few lines over it. Built one by one, each would carry its own React,
+// and a template rendered by another React's render breaks on its first hook. The other
+// packages leave these out (resend's `import("@react-email/render")` stays an import that
+// the functions bundler resolves to the catalog's file). 2026-11 has none: its bytes don't move.
+const SHARED: Readonly<Record<string, { readonly file: string; readonly specs: readonly string[] }>> = {
+  "2026-12": { file: "react-shared.mjs", specs: ["react", "react/jsx-runtime", "react-dom/server", "react-email", "@react-email/render"] },
+};
+const compartido = SHARED[nombre] ?? null;
+const IDENTIFICADOR = /^[A-Za-z_$][\w$]*$/;
+const BANNER_REQUIRE = `import { createRequire as __olCreateRequire } from "node:module";\nconst require = __olCreateRequire(import.meta.url);`;
+
+/** The shared file, and the names each of its packages exports (asked to Node, on the built file). */
+async function construirCompartido(c: { readonly file: string; readonly specs: readonly string[] }): Promise<{ text: string; nombres: string[][] }> {
+  const r = await build({
+    stdin: { contents: c.specs.map((s, i) => `export * as m${i} from ${JSON.stringify(s)};`).join("\n") + "\n", resolveDir: paquetes, sourcefile: `openlen-${c.file}`, loader: "js" },
+    bundle: true,
+    write: false,
+    format: "esm",
+    platform: "node",
+    target: "node22",
+    conditions: ["node", "import", "default"],
+    mainFields: ["module", "main"],
+    legalComments: "none",
+    logLevel: "silent",
+    // React's production build only: a function never runs the development one.
+    define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    banner: { js: `// ${c.specs.join(", ")} — un solo React para el catálogo ${nombre} de las Edge Functions de OpenLen (npm run functions:vendor).\n${BANNER_REQUIRE}` },
+  });
+  const text = r.outputFiles[0]!.text;
+  const tmp = path.join(os.tmpdir(), `openlen-functions-vendor-${process.pid}-${c.file}`);
+  writeFileSync(tmp, text);
+  try {
+    const mod = (await import(pathToFileURL(tmp).href)) as Record<string, Record<string, unknown>>;
+    return { text, nombres: c.specs.map((_, i) => Object.keys(mod[`m${i}`]!).filter((k) => IDENTIFICADOR.test(k) && k !== "default").sort()) };
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+}
+
+function sobreElCompartido(spec: string, dep: FunctionsDependency, i: number, nombres: readonly string[], file: string): string {
+  return (
+    `// ${spec}@${dep.version} — catálogo ${nombre} de las Edge Functions de OpenLen (npm run functions:vendor), sobre ${file}: un solo React.\n` +
+    `import { m${i} as m } from "./${file}";\nexport default (m.default ?? m);\nexport const { ${nombres.join(", ")} } = m;\n`
+  );
+}
+
 async function construir(dep: FunctionsDependency): Promise<string> {
   const r = await build({
     stdin: { contents: entrada(dep), resolveDir: paquetes, sourcefile: `openlen-${dep.file}`, loader: "js" },
+    ...(compartido ? { external: [...compartido.specs] } : {}),
     bundle: true,
     write: false,
     format: "esm",
@@ -87,10 +139,23 @@ function licencia(dep: FunctionsDependency): string {
 
 async function main(): Promise<void> {
   const salida: Record<string, string> = {};
+  const hecho = compartido ? await construirCompartido(compartido) : null;
+  if (compartido && hecho) salida[compartido.file] = hecho.text;
   for (const dep of catalogo!.dependencies) {
     const v = packageJson(dep).version;
     if (v !== dep.version) throw new Error(`${dep.name}: instalada ${v}, el catálogo pide ${dep.version} (cd scripts/functions-catalog/${nombre} && npm ci)`);
-    salida[dep.file] = await construir(dep);
+    // Each file once: the main entry and its subpaths (react-dom's main IS its /server).
+    const porFichero = new Map<string, string>();
+    for (const [spec, file] of [[dep.name, dep.file] as const, ...Object.entries(dep.subpaths ?? {}).map(([s, f]) => [dep.name + s, f] as const)]) {
+      const ya = porFichero.get(file);
+      if (!ya || (compartido?.specs.includes(spec) && !compartido.specs.includes(ya))) porFichero.set(file, spec);
+    }
+    for (const [file, spec] of porFichero) {
+      const i = compartido?.specs.indexOf(spec) ?? -1;
+      if (hecho && compartido && i >= 0) salida[file] = sobreElCompartido(spec, dep, i, hecho.nombres[i]!, compartido.file);
+      else if (spec === dep.name) salida[file] = await construir(dep);
+      else throw new Error(`${spec}: un subpath del catálogo sólo puede ir en el fichero compartido`);
+    }
   }
   salida["LICENCIAS.txt"] = catalogo!.dependencies.map((d) => `===== ${d.name}@${d.version} =====\n\n${licencia(d).trim()}\n`).join("\n");
   const files = Object.fromEntries(Object.entries(salida).map(([f, t]) => [f, createHash("sha256").update(t).digest("hex")]));
