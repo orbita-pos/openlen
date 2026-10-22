@@ -90,6 +90,8 @@ export interface FireworksStreamRequest {
   readonly messages: readonly FireworksStreamMessage[];
   readonly maxOutputTokens: number;
   readonly temperature: number;
+  /** Ausente = el del proveedor. Len lo manda (`lib/agent/brain.ts`). */
+  readonly topP?: number;
   readonly requestId: string;
   /** El TRABAJO, no el modelo: la política elige ambos. */
   readonly operation: ModelOperation;
@@ -362,6 +364,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
                 })()
               : { reasoning_effort: reasoningEffortFor(role, request.operation) }),
             temperature: request.temperature,
+            ...(request.topP !== undefined ? { top_p: request.topP } : {}),
             max_tokens: request.maxOutputTokens,
             // Sólo se manda cuando NO es el defecto: un `service_tier:
             // "standard"` explícito es ruido en el cable y una diferencia más

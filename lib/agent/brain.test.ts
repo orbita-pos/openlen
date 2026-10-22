@@ -147,6 +147,7 @@ describe("Len Dynamis en el cable", () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis" });
     await drain(brain.openStream([USER]));
     expect(pedido().temperature).toBe(1);
+    expect(pedido().topP).toBe(1);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
   });
@@ -182,6 +183,8 @@ describe("Len Dynamis en el cable", () => {
       await drain(brain.openStream([USER]));
       await drain(brain.closeOut([USER]));
       expect(pedido(0).temperature).toBe(1);
+      expect(pedido(0).topP).toBe(1);
+      expect(pedido(1).topP).toBe(1);
       expect(pedido(0).maxOutputTokens).toBe(32_768);
       expect(pedido(1).maxOutputTokens).toBe(2_048);
       expect("reasoningEffortWord" in pedido(0)).toBe(false);
