@@ -49,6 +49,7 @@ import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 import { userEditLabels } from "@/lib/agent/version-labels";
@@ -164,7 +165,7 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       // El manual de la plataforma —/AGENTS.md y, desde F4, /.openlen/docs—: Read lo abre
       // por su ruta, con terminal o sin ella, pero no está en `ficheros`, así que
       // Grep y Glob no lo ven (`lib/agent/ficheros/manual.ts`).
-      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode, session.app ?? null);
+      if (esDeLaPlataforma(ruta)) return textoDeLaPlataforma(ruta, session.mode, session.app ?? null, realTerminalFor(session.userId));
       const artifact = v.artifacts.get(ruta);
       if (artifact !== undefined) return artifact;
       const memoria = v.memoria.get(ruta);
@@ -623,7 +624,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
-  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null);
+  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null, realTerminalFor(session.userId));
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
   // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
   // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).

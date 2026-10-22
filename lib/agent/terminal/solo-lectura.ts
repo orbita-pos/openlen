@@ -40,6 +40,7 @@ import { todasLasFotosCuradas } from "@/lib/agent/photo-search";
 import { ficherosDelSitio, paginaDeRuta, rutaDePagina, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { fechaLocal, restarDias, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 import { documentosDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
+import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import { NODE_MODULES, nodeModulesOf, type NodeModulesView } from "@/lib/apps/npm/node-modules";
 
 /** La carpeta oculta de lo que no es el sitio (la regla, en `ficheros.ts`). */
@@ -168,7 +169,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         if (texto === null) throw new Error("its types couldn't be read now");
         return texto;
       }
-      const doc = textoDeLaPlataforma(ruta, session.mode, session.app ?? null);
+      const doc = textoDeLaPlataforma(ruta, session.mode, session.app ?? null, realTerminalFor(session.userId));
       if (doc !== null) return doc;
       throw new Error(`${ruta}: no such read-only file`);
     },

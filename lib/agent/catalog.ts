@@ -39,7 +39,7 @@ import {
   withGit,
 } from "@/lib/agent/terminal/declaracion";
 import { gitEnabled } from "@/lib/git/enabled";
-import { sandboxConfig } from "@/lib/agent/sandbox/config";
+import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
@@ -139,6 +139,9 @@ export interface CapacidadesDelEntorno {
   /** `false` cuando este servidor no tiene motor de Edge Functions: sin él no
    *  hay dónde guardar un secreto, y la tarjeta no se ofrece. */
   readonly functionSecrets?: boolean;
+  /** Whether this turn's bash is the box's (`realTerminalFor` its owner). Absent: whether it would be
+   *  for anyone, that is, with no rollout. */
+  readonly realTerminal?: boolean;
 }
 
 export function buildFunctionDeclarations(
@@ -154,7 +157,8 @@ export function buildFunctionDeclarations(
   const withArtifacts = _env.OPENLEN_ARTIFACTS === "1" ? [...declaraciones, ...artifactToolDeclarations(capacidades.artifactKinds ?? [])] : declaraciones;
   const forTheProject = app ? declaracionesDeLaApp(withArtifacts) : withArtifacts;
   // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b, §11): last, over the page's or the app's bash.
-  return sandboxConfig(_env) ? forTheProject.map((d) => (d.name === NOMBRE_BASH ? bashWithSandbox(d) : d)) : forTheProject;
+  const real = capacidades.realTerminal ?? realTerminalFor(null, _env);
+  return real ? forTheProject.map((d) => (d.name === NOMBRE_BASH ? bashWithSandbox(d) : d)) : forTheProject;
 }
 
 function declaracionesDelModo(

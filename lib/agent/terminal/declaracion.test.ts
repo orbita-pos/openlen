@@ -194,6 +194,17 @@ describe("bash con la terminal real", () => {
     expect(JSON.stringify(bashDe(SIN_CAJA))).not.toContain("run_in_background");
   });
 
+  // 🔴 Durante el despliegue por fases (OPENLEN_SANDBOX_ONLY_USERS), quien no está en la lista tiene la
+  // terminal de siempre (terminalForTurn, sin aviso): bash tiene que decir ésa, no la caja.
+  it("🔴 en un despliegue por fases, la de hoy para quien no está en la lista; la caja para quien sí", () => {
+    const FASES = { ...CON_CAJA, OPENLEN_SANDBOX_ONLY_USERS: "u1" };
+    const bashPara = (realTerminal: boolean) => buildFunctionDeclarations(FASES, { realTerminal }, "len", null).find((d) => d.name === NOMBRE_BASH)!;
+    expect(bashPara(false)).toEqual(bashDe(SIN_CAJA));
+    expect(JSON.stringify(bashPara(true))).toContain("run_in_background");
+    // Sin persona (scripts, Len-Bench), como quien no está en la lista.
+    expect(bashDe(FASES)).toEqual(bashDe(SIN_CAJA));
+  });
+
   it("encendida, dice que corre de verdad y hasta dónde llega su red", () => {
     const d = String(bashDe(CON_CAJA).description);
     expect(d).not.toContain("interprets commands without running real programs");

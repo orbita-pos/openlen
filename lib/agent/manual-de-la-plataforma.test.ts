@@ -344,6 +344,14 @@ describe("/tests de una página con la caja", () => {
     expect(buildManualDeLaPlataforma({})).toContain("there is no Playwright in the terminal");
   });
 
+  it("🔴 en un despliegue por fases, como hoy para quien no está en la lista; con la caja para quien sí", () => {
+    const FASES = { ...CAJA, OPENLEN_SANDBOX_ONLY_USERS: "u1" };
+    expect(buildManualDeLaPlataforma(FASES, "len", null, false)).toBe(buildManualDeLaPlataforma({}));
+    expect(buildManualDeLaPlataforma(FASES, "len", null, true)).toBe(buildManualDeLaPlataforma(CAJA));
+    expect(buildManualDeLaPlataforma(FASES)).toBe(buildManualDeLaPlataforma({}));
+    expect(textoDeLaPlataforma(RUTA_MANUAL, "len", null, false)).toBe(buildManualDeLaPlataforma(process.env, "len", null, false));
+  });
+
   it("una app no cambia: sus pruebas son las de vitest", () => {
     const app = buildManualDeLaPlataforma(CAJA, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
     expect(app).not.toContain("npx playwright test");

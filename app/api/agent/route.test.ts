@@ -1454,6 +1454,34 @@ describe("POST /api/agent — el turno entra SIN topes de vueltas", () => {
   });
 });
 
+// LA TERMINAL REAL en un despliegue por fases (OPENLEN_SANDBOX_ONLY_USERS): quien no está en la lista
+// tiene la terminal de siempre (terminalForTurn), y la descripción de bash y el manual tienen que decir ésa.
+describe("POST /api/agent — la terminal real en un despliegue por fases", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  async function loQueSeLeDiceALen() {
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 50, allotment: 20, refillsAt: null });
+    await readEvents(
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "prueba la página" }) })),
+    );
+    const capacidades = (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as [unknown, { realTerminal?: boolean }])[1];
+    const mensajes = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ realTerminal?: boolean }])[0];
+    return { bash: capacidades.realTerminal, manual: mensajes.realTerminal };
+  }
+
+  it("🔴 el dueño fuera de la lista: ni bash ni el manual hablan de la caja", async () => {
+    vi.stubEnv("E2B_API_KEY", "k");
+    vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "otra-persona");
+    expect(await loQueSeLeDiceALen()).toEqual({ bash: false, manual: false });
+  });
+
+  it("el dueño en la lista: los dos, la caja", async () => {
+    vi.stubEnv("E2B_API_KEY", "k");
+    vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "u1");
+    expect(await loQueSeLeDiceALen()).toEqual({ bash: true, manual: true });
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // H4 · EL HISTORIAL SALE DE LA BASE (plans/len-2/hipotesis/H4-alcance-prompt-e-historial.md).
 //
