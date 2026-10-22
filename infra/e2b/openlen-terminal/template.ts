@@ -4,6 +4,8 @@
 // `npm run sandbox:template`, which writes the scripts to `filesDir` first: E2B's `copy` takes local
 // files. API from docs.e2b.dev/template (read 2026-10-21); the SDK is the `e2b` package.
 
+import { PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_VERSION } from "../../../lib/agent/sandbox/template-files";
+
 /** The parts of E2B's Template builder this file uses. */
 export interface TemplateBuilderLike {
   fromUbuntuImage(version: string): TemplateBuilderLike;
@@ -12,7 +14,9 @@ export interface TemplateBuilderLike {
   copy(from: string, to: string): TemplateBuilderLike;
 }
 
-export const APT_PACKAGES = ["ca-certificates", "curl", "git", "ripgrep", "jq", "sqlite3", "unzip", "python3", "python3-pip", "python3-venv"];
+// libnss3-tools: `certutil`, to put E2B's proxy authority in Chromium's own store when each box opens
+// (it differs per box; measured 21/10, docs/superpowers/specs/2026-10-21-playwright-in-the-box-notes.md).
+export const APT_PACKAGES = ["ca-certificates", "curl", "git", "ripgrep", "jq", "sqlite3", "unzip", "python3", "python3-pip", "python3-venv", "libnss3-tools"];
 
 export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: string): TemplateBuilderLike {
   return Template()
@@ -32,5 +36,11 @@ export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: st
     // `npm install -g` in the user's home (the box's PATH has its bin, lib/agent/sandbox/sandbox-terminal.ts).
     .runCmd("mkdir -p /home/user/.npm-global && printf 'prefix=/home/user/.npm-global\\n' > /home/user/.npmrc && chown -R user:user /home/user/.npm-global /home/user/.npmrc", {
       user: "root",
-    });
+    })
+    // Playwright at a fixed version with its Chromium and system libraries (the pages' /tests). The box
+    // finds it through PLAYWRIGHT_BROWSERS_PATH and NODE_PATH (lib/agent/sandbox/sandbox-terminal.ts).
+    .runCmd(
+      `mkdir -p ${PLAYWRIGHT_DIR} && cd ${PLAYWRIGHT_DIR} && npm init -y >/dev/null && npm i @playwright/test@${PLAYWRIGHT_VERSION} --no-audit --no-fund && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS} npx playwright install --with-deps chromium && chmod -R a+rX ${PLAYWRIGHT_DIR} ${PLAYWRIGHT_BROWSERS}`,
+      { user: "root" },
+    );
 }
