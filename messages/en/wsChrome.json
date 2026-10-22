@@ -460,7 +460,8 @@
       "functions": "Functions",
       "secrets": "Secrets",
       "ai": "AI",
-      "payments": "Payments"
+      "payments": "Payments",
+      "email": "Emails"
     },
     "unavailable": {
       "title": "The database isn't available here",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Type {word} to confirm",
       "disconnectConfirm": "Disconnect",
       "cancel": "Cancel"
+    },
+    "email": {
+      "loading": "Loading…",
+      "loadError": "Couldn't read the email settings. Try again in a moment.",
+      "free": {
+        "title": "Email from your own domain is on paid plans",
+        "body": "Your app, the sign-in emails and your forms can send from your domain, with emails included every month on paid plans.",
+        "cta": "Upgrade to Pro"
+      },
+      "connectTitle": "Send email from your domain",
+      "connectBody": "Your app, the sign-in emails and your forms will send from an address on your domain. You'll add three lines to its DNS, or approve them in one click if your provider allows it.",
+      "domainLabel": "Your domain",
+      "domainPlaceholder": "yourbusiness.com",
+      "showAsRoot": "Show as @{domain} (by default it sends from notify.{domain})",
+      "connect": "Connect",
+      "connecting": "Connecting…",
+      "errors": {
+        "free_plan": "Email from your domain is on paid plans.",
+        "invalid_domain": "That doesn't look like a domain (like yourbusiness.com).",
+        "host_taken": "Another project already sends from that domain.",
+        "provider_error": "The email provider didn't answer. Try again in a moment.",
+        "generic": "Something went wrong. Try again in a moment."
+      },
+      "status": {
+        "pending": "Waiting for the DNS lines",
+        "verifying": "Checking the DNS lines",
+        "ready": "Ready",
+        "failed": "DNS lines not found",
+        "offline": "The DNS lines stopped answering"
+      },
+      "check": "Check now",
+      "checking": "Checking…",
+      "checkHint": "We check every 15 minutes, and when you publish. DNS changes can take a few hours.",
+      "oneClick": "Set it up in one click",
+      "oneClickHint": "Your DNS provider will ask you to approve the lines for OpenLen.",
+      "manualTitle": "Add these lines to your DNS",
+      "manualTitleOr": "Or add these lines to your DNS by hand",
+      "recordName": "Name",
+      "recordValue": "Value",
+      "priority": "priority {n}",
+      "copy": "Copy",
+      "copied": "Copied",
+      "optional": "Optional",
+      "dmarcHint": "The optional line helps fewer emails land in spam.",
+      "instructions": "How to add them at your provider",
+      "usageTitle": "This month",
+      "usage": "{sent} of {included} included emails",
+      "extra": "Beyond what's included: {credits} credits",
+      "recentTitle": "Latest emails",
+      "noRecent": "No emails yet.",
+      "kinds": {
+        "app": "App",
+        "auth": "Sign-in",
+        "form": "Form"
+      },
+      "statuses": {
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "bounced": "Bounced",
+        "complained": "Marked as spam",
+        "rejected": "Not sent",
+        "not_sent_draft": "Not sent (test)"
+      },
+      "listTitle": "Unsubscribed and bounced",
+      "listHint": "Nobody on this list gets your app's emails. Take someone off only if they ask you to: writing again to someone who marked you as spam hurts your domain.",
+      "noList": "Nobody yet.",
+      "reasons": {
+        "unsubscribed": "Unsubscribed",
+        "bounced": "Bounced",
+        "complained": "Marked as spam"
+      },
+      "unsuppress": "Take off the list",
+      "dnsLines": "DNS lines",
+      "disconnect": "Disconnect domain",
+      "disconnectWarning": "Your app, the sign-in emails and your forms will send from OpenLen again. Nothing is lost.",
+      "disconnectTypeHint": "Type {domain} to confirm",
+      "disconnectConfirm": "Disconnect",
+      "cancel": "Cancel",
+      "cleanupDns": "Disconnected. You can now remove from your DNS the lines you added for OpenLen's email."
     }
   },
   "appBirth": {

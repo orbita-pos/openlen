@@ -460,7 +460,8 @@
       "functions": "函数",
       "secrets": "密钥",
       "ai": "AI",
-      "payments": "付款"
+      "payments": "付款",
+      "email": "邮件"
     },
     "unavailable": {
       "title": "此处无法使用数据库",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "输入 {word} 以确认",
       "disconnectConfirm": "断开",
       "cancel": "取消"
+    },
+    "email": {
+      "loading": "加载中…",
+      "loadError": "无法读取邮件设置。请稍后再试。",
+      "free": {
+        "title": "从自己的域名发邮件是付费方案的功能",
+        "body": "你的应用、登录邮件和表单都可以从你的域名发出，付费方案每月包含一定数量的邮件。",
+        "cta": "升级到 Pro"
+      },
+      "connectTitle": "从你的域名发送邮件",
+      "connectBody": "你的应用、登录邮件和表单将从你域名下的地址发出。你需要在 DNS 中添加三行，如果你的服务商支持，也可以一键批准。",
+      "domainLabel": "你的域名",
+      "domainPlaceholder": "yourbusiness.com",
+      "showAsRoot": "显示为 @{domain}（默认从 notify.{domain} 发送）",
+      "connect": "连接",
+      "connecting": "连接中…",
+      "errors": {
+        "free_plan": "从自己的域名发邮件是付费方案的功能。",
+        "invalid_domain": "这看起来不像一个域名（例如 yourbusiness.com）。",
+        "host_taken": "另一个项目已经在用这个域名发送邮件。",
+        "provider_error": "邮件服务商没有响应。请稍后再试。",
+        "generic": "出了点问题。请稍后再试。"
+      },
+      "status": {
+        "pending": "等待 DNS 记录",
+        "verifying": "正在检查 DNS 记录",
+        "ready": "已就绪",
+        "failed": "未找到 DNS 记录",
+        "offline": "DNS 记录不再响应"
+      },
+      "check": "立即检查",
+      "checking": "检查中…",
+      "checkHint": "我们每 15 分钟以及发布时检查一次。DNS 更改可能需要几个小时生效。",
+      "oneClick": "一键设置",
+      "oneClickHint": "你的 DNS 服务商会请你批准 OpenLen 的记录。",
+      "manualTitle": "将以下记录添加到你的 DNS",
+      "manualTitleOr": "或手动将以下记录添加到你的 DNS",
+      "recordName": "名称",
+      "recordValue": "值",
+      "priority": "优先级 {n}",
+      "copy": "复制",
+      "copied": "已复制",
+      "optional": "可选",
+      "dmarcHint": "添加这条可选记录可以减少邮件进入垃圾箱。",
+      "instructions": "如何在你的服务商处添加",
+      "usageTitle": "本月",
+      "usage": "已用 {sent} / 包含 {included} 封",
+      "extra": "超出包含部分：{credits} 积分",
+      "recentTitle": "最近的邮件",
+      "noRecent": "还没有邮件。",
+      "kinds": {
+        "app": "应用",
+        "auth": "登录",
+        "form": "表单"
+      },
+      "statuses": {
+        "sent": "已发送",
+        "delivered": "已送达",
+        "bounced": "被退回",
+        "complained": "被标记为垃圾邮件",
+        "rejected": "未发送",
+        "not_sent_draft": "未发送（测试）"
+      },
+      "listTitle": "退订和退信",
+      "listHint": "这个列表中的人不会收到你应用的邮件。只有对方要求时才把他们移出：再次给把你标记为垃圾邮件的人发信会损害你的域名。",
+      "noList": "还没有人。",
+      "reasons": {
+        "unsubscribed": "已退订",
+        "bounced": "被退回",
+        "complained": "标记为垃圾邮件"
+      },
+      "unsuppress": "移出列表",
+      "dnsLines": "DNS 记录",
+      "disconnect": "断开域名",
+      "disconnectWarning": "你的应用、登录邮件和表单将重新从 OpenLen 发送。不会丢失任何内容。",
+      "disconnectTypeHint": "输入 {domain} 以确认",
+      "disconnectConfirm": "断开",
+      "cancel": "取消",
+      "cleanupDns": "已断开。现在可以从 DNS 中删除你为 OpenLen 邮件添加的记录。"
     }
   },
   "appBirth": {

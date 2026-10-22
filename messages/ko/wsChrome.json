@@ -460,7 +460,8 @@
       "functions": "함수",
       "secrets": "시크릿",
       "ai": "AI",
-      "payments": "결제"
+      "payments": "결제",
+      "email": "이메일"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "확인하려면 {word}를 입력하세요",
       "disconnectConfirm": "연결 해제",
       "cancel": "취소"
+    },
+    "email": {
+      "loading": "불러오는 중…",
+      "loadError": "이메일 설정을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "free": {
+        "title": "내 도메인에서 보내는 이메일은 유료 플랜 기능입니다",
+        "body": "앱, 로그인 이메일, 양식을 내 도메인에서 보낼 수 있으며, 유료 플랜에는 매달 이메일이 포함됩니다.",
+        "cta": "Pro로 업그레이드"
+      },
+      "connectTitle": "내 도메인에서 이메일 보내기",
+      "connectBody": "앱, 로그인 이메일, 양식이 내 도메인의 주소에서 발송됩니다. DNS에 세 줄을 추가하거나, 제공업체가 지원하면 한 번의 클릭으로 승인합니다.",
+      "domainLabel": "내 도메인",
+      "domainPlaceholder": "yourbusiness.com",
+      "showAsRoot": "@{domain}(으)로 표시 (기본적으로 notify.{domain}에서 발송)",
+      "connect": "연결",
+      "connecting": "연결 중…",
+      "errors": {
+        "free_plan": "내 도메인에서 보내는 이메일은 유료 플랜 기능입니다.",
+        "invalid_domain": "도메인 형식이 아닌 것 같습니다 (예: yourbusiness.com).",
+        "host_taken": "다른 프로젝트가 이미 그 도메인에서 발송하고 있습니다.",
+        "provider_error": "이메일 제공업체가 응답하지 않았습니다. 잠시 후 다시 시도해 주세요.",
+        "generic": "문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
+      },
+      "status": {
+        "pending": "DNS 줄을 기다리는 중",
+        "verifying": "DNS 줄을 확인하는 중",
+        "ready": "준비됨",
+        "failed": "DNS 줄을 찾을 수 없음",
+        "offline": "DNS 줄이 더 이상 응답하지 않음"
+      },
+      "check": "지금 확인",
+      "checking": "확인 중…",
+      "checkHint": "15분마다, 그리고 게시할 때 확인합니다. DNS 변경은 몇 시간 걸릴 수 있습니다.",
+      "oneClick": "한 번의 클릭으로 설정",
+      "oneClickHint": "DNS 제공업체가 OpenLen용 줄을 승인하라고 요청합니다.",
+      "manualTitle": "DNS에 다음 줄을 추가하세요",
+      "manualTitleOr": "또는 DNS에 다음 줄을 직접 추가하세요",
+      "recordName": "이름",
+      "recordValue": "값",
+      "priority": "우선순위 {n}",
+      "copy": "복사",
+      "copied": "복사됨",
+      "optional": "선택 사항",
+      "dmarcHint": "선택 사항인 줄을 추가하면 스팸으로 분류되는 이메일이 줄어듭니다.",
+      "instructions": "제공업체에서 추가하는 방법",
+      "usageTitle": "이번 달",
+      "usage": "포함된 {included}통 중 {sent}통",
+      "extra": "포함분 초과: {credits} 크레딧",
+      "recentTitle": "최근 이메일",
+      "noRecent": "아직 이메일이 없습니다.",
+      "kinds": {
+        "app": "앱",
+        "auth": "로그인",
+        "form": "양식"
+      },
+      "statuses": {
+        "sent": "발송됨",
+        "delivered": "전달됨",
+        "bounced": "반송됨",
+        "complained": "스팸 신고됨",
+        "rejected": "발송 안 됨",
+        "not_sent_draft": "발송 안 됨 (테스트)"
+      },
+      "listTitle": "수신 거부 및 반송",
+      "listHint": "이 목록에 있는 사람은 앱의 이메일을 받지 않습니다. 본인이 요청할 때만 빼 주세요. 스팸으로 신고한 사람에게 다시 보내면 도메인 평판이 떨어집니다.",
+      "noList": "아직 없습니다.",
+      "reasons": {
+        "unsubscribed": "수신 거부",
+        "bounced": "반송됨",
+        "complained": "스팸 신고"
+      },
+      "unsuppress": "목록에서 빼기",
+      "dnsLines": "DNS 줄",
+      "disconnect": "도메인 연결 해제",
+      "disconnectWarning": "앱, 로그인 이메일, 양식은 다시 OpenLen에서 발송됩니다. 잃는 것은 없습니다.",
+      "disconnectTypeHint": "확인하려면 {domain}을(를) 입력하세요",
+      "disconnectConfirm": "연결 해제",
+      "cancel": "취소",
+      "cleanupDns": "연결이 해제되었습니다. 이제 OpenLen 이메일용으로 추가한 줄을 DNS에서 삭제해도 됩니다."
     }
   },
   "appBirth": {

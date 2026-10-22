@@ -460,7 +460,8 @@
       "functions": "Funzioni",
       "secrets": "Segreti",
       "ai": "IA",
-      "payments": "Pagamenti"
+      "payments": "Pagamenti",
+      "email": "Email"
     },
     "unavailable": {
       "title": "Il database non è disponibile qui",
@@ -604,6 +605,85 @@
       "disconnectTypeHint": "Scrivi {word} per confermare",
       "disconnectConfirm": "Scollega",
       "cancel": "Annulla"
+    },
+    "email": {
+      "loading": "Caricamento…",
+      "loadError": "Impossibile leggere le impostazioni email. Riprova tra un momento.",
+      "free": {
+        "title": "L'email dal tuo dominio è nei piani a pagamento",
+        "body": "La tua app, le email di accesso e i tuoi moduli possono inviare dal tuo dominio, con email incluse ogni mese nei piani a pagamento.",
+        "cta": "Passa a Pro"
+      },
+      "connectTitle": "Invia email dal tuo dominio",
+      "connectBody": "La tua app, le email di accesso e i tuoi moduli invieranno da un indirizzo del tuo dominio. Aggiungerai tre righe al suo DNS, oppure le approverai con un clic se il tuo provider lo consente.",
+      "domainLabel": "Il tuo dominio",
+      "domainPlaceholder": "latuaattivita.it",
+      "showAsRoot": "Mostra come @{domain} (di base invia da notify.{domain})",
+      "connect": "Collega",
+      "connecting": "Collegamento…",
+      "errors": {
+        "free_plan": "L'email dal tuo dominio è nei piani a pagamento.",
+        "invalid_domain": "Non sembra un dominio (come latuaattivita.it).",
+        "host_taken": "Un altro progetto invia già da quel dominio.",
+        "provider_error": "Il provider email non ha risposto. Riprova tra un momento.",
+        "generic": "Qualcosa è andato storto. Riprova tra un momento."
+      },
+      "status": {
+        "pending": "In attesa delle righe DNS",
+        "verifying": "Verifica delle righe DNS",
+        "ready": "Pronto",
+        "failed": "Righe DNS non trovate",
+        "offline": "Le righe DNS non rispondono più"
+      },
+      "check": "Verifica ora",
+      "checking": "Verifica…",
+      "checkHint": "Verifichiamo ogni 15 minuti e quando pubblichi. Le modifiche DNS possono richiedere alcune ore.",
+      "oneClick": "Configura con un clic",
+      "oneClickHint": "Il tuo provider DNS ti chiederà di approvare le righe per OpenLen.",
+      "manualTitle": "Aggiungi queste righe al tuo DNS",
+      "manualTitleOr": "Oppure aggiungi queste righe al tuo DNS a mano",
+      "recordName": "Nome",
+      "recordValue": "Valore",
+      "priority": "priorità {n}",
+      "copy": "Copia",
+      "copied": "Copiato",
+      "optional": "Facoltativa",
+      "dmarcHint": "La riga facoltativa aiuta a far finire meno email nello spam.",
+      "instructions": "Come aggiungerle dal tuo provider",
+      "usageTitle": "Questo mese",
+      "usage": "{sent} di {included} email incluse",
+      "extra": "Oltre l'incluso: {credits} crediti",
+      "recentTitle": "Ultime email",
+      "noRecent": "Ancora nessuna email.",
+      "kinds": {
+        "app": "App",
+        "auth": "Accesso",
+        "form": "Modulo"
+      },
+      "statuses": {
+        "sent": "Inviata",
+        "delivered": "Consegnata",
+        "bounced": "Respinta",
+        "complained": "Segnalata come spam",
+        "rejected": "Non inviata",
+        "not_sent_draft": "Non inviata (prova)"
+      },
+      "listTitle": "Disiscrizioni e respinte",
+      "listHint": "Nessuno in questa lista riceve le email della tua app. Togli qualcuno solo se te lo chiede: scrivere di nuovo a chi ti ha segnalato come spam danneggia il tuo dominio.",
+      "noList": "Ancora nessuno.",
+      "reasons": {
+        "unsubscribed": "Disiscritto",
+        "bounced": "Respinta",
+        "complained": "Segnalata come spam"
+      },
+      "unsuppress": "Togli dalla lista",
+      "dnsLines": "Righe DNS",
+      "disconnect": "Scollega dominio",
+      "disconnectWarning": "La tua app, le email di accesso e i tuoi moduli torneranno a inviare da OpenLen. Non si perde nulla.",
+      "disconnectTypeHint": "Scrivi {domain} per confermare",
+      "disconnectConfirm": "Scollega",
+      "cancel": "Annulla",
+      "cleanupDns": "Scollegato. Ora puoi togliere dal tuo DNS le righe aggiunte per le email di OpenLen."
     }
   },
   "appBirth": {
