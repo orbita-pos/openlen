@@ -290,6 +290,18 @@ describe("summarizeProjectState", () => {
     assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).edge_functions, undefined);
   });
 
+  it("STRIPE (spec local 2026-10-21): the account and endpoints, never a value; without them, nothing", () => {
+    const stripe = {
+      draft: { account_id: "acct_1", account_name: "Taller", key: "restricted" as const },
+      production: null,
+      webhook_endpoints: [{ url: "https://d/functions/v1/pago", function: "pago", secret: "STRIPE_WEBHOOK_SECRET" }],
+    };
+    const con = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null, stripe });
+    assert.deepEqual(con.stripe, stripe);
+    assert.ok(!/sk_|rk_|whsec_/.test(JSON.stringify(con)));
+    assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).stripe, undefined);
+  });
+
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);

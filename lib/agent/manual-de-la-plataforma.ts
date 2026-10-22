@@ -43,6 +43,7 @@ import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/catalog";
 import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
+import { stripeEnabledIn } from "@/lib/stripe/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
@@ -279,6 +280,17 @@ const LINEA_DE_IA =
   " It is server-only: never call it from the page and never send the key to the browser." +
   " Every call spends the owner's credits, within a monthly limit for all their apps together: a 402 (no credits, or the limit reached), 429 or 503 means no AI right now, and the app must keep working without it —save the text as it came, show the plain form— instead of failing.";
 
+// STRIPE (spec local 2026-10-21-stripe-integration, §6.8): only with Stripe on, inside the
+// functions' lines. It is OpenLen's contract with Stripe —the key, the `stripe` command, what
+// publishing does—, documented because the model can't guess it.
+const LINEA_DE_STRIPE =
+  "- Stripe, with the owner's own account: ask for the key with request_secrets with the name STRIPE_SECRET_KEY —a test key for the draft, a live one for the published site; never in the chat." +
+  " Then use `stripe` in the terminal, with the Stripe CLI's syntax (`stripe products create --id=… --name=…`, `stripe prices create --product=… --unit-amount=2900 --currency=usd --lookup-key=…`, `stripe payment_links create -d \"line_items[0][price]=…\" -d \"line_items[0][quantity]=1\"`, `stripe get /v1/…`): it works in test mode with the draft's key, and --live only reads production." +
+  " Register a webhook with `stripe webhook_endpoints create --url=<draft_url><function> --enabled-events=…`: its signing secret is saved by itself for the draft as STRIPE_WEBHOOK_SECRET (the output says the exact name), and `stripe trigger <event>` sends it a test event." +
+  " Test cards: 4242 4242 4242 4242 pays, 4000 0000 0000 3220 asks for 3D Secure, 4000 0000 0000 0002 is declined (any future date, any CVC)." +
+  " Publishing copies to live mode the products, prices, payment links, shipping rates, portal configurations and webhook endpoints the project uses, and the published site gets their live ids and links: in code, a price by its lookup key or by its id both work." +
+  " Checkout and payment links open outside the canvas, in a new tab. The customer portal needs a configuration created with `stripe billing_portal configurations create`, passed as `configuration`, or turned on once in the owner's Stripe dashboard.";
+
 function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): string {
   const catalogo = functionsCatalog(FUNCTIONS_CATALOG_CURRENT)!
     .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
@@ -293,6 +305,7 @@ function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): s
     "- A function needs the user's JWT or the project's key in Authorization unless `verify_jwt` is off: a webhook (Stripe, Mercado Pago) needs `[functions.<name>]` with `verify_jwt = false` in /supabase/config.toml (or `supabase functions deploy <name> --no-verify-jwt`). Check Stripe's signature on the raw text body with `stripe.webhooks.constructEventAsync(body, signature, secret, undefined, Stripe.createSubtleCryptoProvider())`.",
     `- Limits: ${FUNCTION_MEMORY_MB} MB of memory; per call, ${FUNCTION_LIMITS.free.cpuMs} ms of CPU and ${FUNCTION_LIMITS.free.timeoutSec} s in total on the Free plan, ${FUNCTION_LIMITS.pro.cpuMs} ms of CPU and ${FUNCTION_LIMITS.pro.timeoutSec} s on paid plans (waiting for another service doesn't count as CPU; going over it ends the call with a 546 WORKER_RESOURCE_LIMIT); ${MAX_REQUEST_BYTES / 1024 / 1024} MB per request body. Publishing compiles them for production, and if they don't compile nothing is published. A 429 means the project used its calls for the month, has too many at once, or too many from one visitor: explain it to the user; don't retry.`,
     ...(appAiEnabledIn(env) ? [LINEA_DE_IA] : []),
+    ...(stripeEnabledIn(env) ? [LINEA_DE_STRIPE] : []),
   ].join("\n");
 }
 

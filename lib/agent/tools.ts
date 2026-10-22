@@ -33,6 +33,7 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
+import type { StripeStateForLen } from "@/lib/stripe/state";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
 import type { TestRun } from "@/lib/apps/tests/run-tests";
 import type { InstallOutcome, InstallRequest } from "@/lib/apps/npm/install";
@@ -286,6 +287,8 @@ export interface AgentDeps {
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
   /** EDGE FUNCTIONS: las del borrador y las de producción, para el ESTADO. */
   edgeFunctions?(projectId: string): Promise<{ draft: string[]; live: string[]; draftUrl: string; secrets: { draft: string[]; live: string[] } } | null>;
+  /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): for PROJECT STATE. null = no Stripe here or none yet. */
+  stripeState?(projectId: string): Promise<StripeStateForLen | null>;
   /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
    *  los lee para contestar). null = sin funciones en este servidor. */
   functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
@@ -653,6 +656,12 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async edgeFunctions(projectId) {
       const { edgeFunctionsState } = await import("@/lib/functions/state");
       return edgeFunctionsState(projectId);
+    },
+    async stripeState(projectId) {
+      const { stripeEnabled } = await import("@/lib/stripe/enabled");
+      if (!stripeEnabled()) return null;
+      const { stripeStateFor } = await import("@/lib/stripe/state");
+      return stripeStateFor(projectId);
     },
     async functionSecretNames(projectId) {
       const { functionSecretNames } = await import("@/lib/functions/secrets-real");
@@ -1340,6 +1349,9 @@ export function summarizeProjectState(
       readonly draftUrl: string;
       readonly secrets: { readonly draft: readonly string[]; readonly live: readonly string[] };
     } | null;
+    /** STRIPE (spec local 2026-10-21-stripe-integration, §6.8): the account of each key and the
+     *  test-mode webhook endpoints. Absent ⇒ no Stripe yet. */
+    stripe?: StripeStateForLen | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1418,6 +1430,8 @@ export function summarizeProjectState(
           },
         }
       : {}),
+    // Stripe: whose account each key is and the registered endpoints (never a value).
+    ...(row.stripe ? { stripe: row.stripe } : {}),
   };
 }
 
