@@ -148,7 +148,7 @@ export function bundleFunctions(args: {
       sources,
       importMaps,
       sharedImportMap: layout.sharedImportMap,
-      catalog: { dependencies: catalog.dependencies.map((d) => ({ name: d.name, version: d.version, file: d.file })) },
+      catalog: { dependencies: catalog.dependencies.map((d) => ({ name: d.name, version: d.version, file: d.file, ...(d.subpaths ? { subpaths: d.subpaths } : {}) })) },
       vendorDir: path.join(process.cwd(), "lib", "functions", "vendor", args.catalog),
       runtimeFile: path.join(process.cwd(), "lib", "functions", "runtime", "runtime.mjs"),
       minify: args.mode === "production",
