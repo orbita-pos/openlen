@@ -15,6 +15,13 @@ const PRIVATE_IPV4_RANGES: Array<[number, number, number, number, number]> = [
   // una web pública, y los dos son alcanzables desde dentro.
   [192, 0, 0, 0, 24],
   [198, 18, 0, 0, 15],
+  // Documentación (TEST-NET-1/2/3), multicast y lo reservado con la difusión
+  // dentro (21/10): nada de esto es una web.
+  [192, 0, 2, 0, 24],
+  [198, 51, 100, 0, 24],
+  [203, 0, 113, 0, 24],
+  [224, 0, 0, 0, 4],
+  [240, 0, 0, 0, 4],
 ];
 
 function ipv4ToInt(parts: number[]): number {
@@ -29,23 +36,54 @@ function ipv4ToInt(parts: number[]): number {
  * familias: bloqueaba TODA web con IPv6 pública, que hoy son casi todas
  * (`example.com` misma). Medido antes de darlo por bueno.
  *
- * Bloquea: `::1` (loopback), `::` (sin especificar), `fc00::/7` (únicas
- * locales), `fe80::/10` (enlace local) y las `::ffff:x.x.x.x` mapeadas a IPv4,
- * que son la puerta de atrás clásica — `::ffff:127.0.0.1` alcanza el loopback.
+ * Se leen los 128 bits (21/10: antes miraba el texto, y una que empezaba por
+ * «::» salía pública, y una mapeada sólo se reconocía escrita con puntos). Lo
+ * que lleva una IPv4 dentro —mapeada `::ffff:0:0/96`, 6to4 `2002::/16`— se
+ * juzga por esa IPv4: `::ffff:7f00:1` es el loopback. Bloquea además `::1`,
+ * `::`, la compatible `::/96`, NAT64 `64:ff9b::/32`, Teredo `2001::/32`,
+ * documentación `2001:db8::/32`, descarte `100::/64`, `fc00::/7`, `fe80::/10`,
+ * `fec0::/10` y multicast `ff00::/8`. Lo que no se puede leer, también.
  */
 export function ipv6IsPrivate(ip: string): boolean {
-  const low = ip.toLowerCase().split("%")[0]!;
-  if (low === "::1" || low === "::") return true;
-  // IPv4 mapeada: se decide con las reglas de IPv4, que son las que valen.
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(low);
-  if (mapped) return ipInPrivateRange(mapped[1]!);
-  const head = low.split(":")[0] ?? "";
-  if (head.length === 0) return false;
-  const first = parseInt(head.padEnd(4, "0").slice(0, 4), 16);
-  if (Number.isNaN(first)) return true;
+  const g = ipv6Groups(ip);
+  if (!g) return true;
+  const ceros = (n: number) => g.slice(0, n).every((x) => x === 0);
+  const v4 = (alto: number, bajo: number) => `${alto >> 8}.${alto & 255}.${bajo >> 8}.${bajo & 255}`;
+  if (ceros(8) || (ceros(7) && g[7] === 1)) return true; // `::` y `::1`
+  if (ceros(5) && g[5] === 0xffff) return ipInPrivateRange(v4(g[6]!, g[7]!)); // mapeada a IPv4
+  if (ceros(6)) return true; // compatible con IPv4, en desuso
+  if (g[0] === 0x64 && g[1] === 0xff9b) return true; // NAT64
+  if (g[0] === 0x2002) return ipInPrivateRange(v4(g[1]!, g[2]!)); // 6to4
+  if (g[0] === 0x2001 && (g[1] === 0 || g[1] === 0x0db8)) return true; // Teredo y documentación
+  if (g[0] === 0x0100 && g[1] === 0 && g[2] === 0 && g[3] === 0) return true; // descarte 100::/64
+  const first = g[0]!;
   if ((first & 0xfe00) === 0xfc00) return true; // fc00::/7 — únicas locales
   if ((first & 0xffc0) === 0xfe80) return true; // fe80::/10 — enlace local
+  if ((first & 0xffc0) === 0xfec0) return true; // fec0::/10 — sitio local
+  if ((first & 0xff00) === 0xff00) return true; // ff00::/8 — multicast
   return false;
+}
+
+/** Los ocho grupos de 16 bits de una IPv6 (con «::» y una IPv4 al final), o null. */
+function ipv6Groups(ip: string): number[] | null {
+  let s = ip.toLowerCase().split("%")[0]!;
+  let cola: number[] = [];
+  const conPuntos = /^(.*:)(\d+\.\d+\.\d+\.\d+)$/.exec(s);
+  if (conPuntos) {
+    const p = conPuntos[2]!.split(".").map(Number);
+    if (p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+    cola = [(p[0]! << 8) | p[1]!, (p[2]! << 8) | p[3]!];
+    s = conPuntos[1]!.endsWith("::") ? conPuntos[1]! : conPuntos[1]!.slice(0, -1);
+  }
+  const mitades = s.split("::");
+  if (mitades.length > 2) return null;
+  const grupos = (t: string) => (t === "" ? [] : t.split(":").map((x) => (/^[0-9a-f]{1,4}$/.test(x) ? parseInt(x, 16) : Number.NaN)));
+  const delante = grupos(mitades[0]!);
+  const detras = mitades.length === 2 ? grupos(mitades[1]!) : [];
+  if ([...delante, ...detras].some(Number.isNaN)) return null;
+  const conocidos = delante.length + detras.length + cola.length;
+  if (mitades.length === 1 ? conocidos !== 8 : conocidos > 7) return null;
+  return [...delante, ...new Array<number>(mitades.length === 2 ? 8 - conocidos : 0).fill(0), ...detras, ...cola];
 }
 
 export function ipInPrivateRange(ip: string): boolean {

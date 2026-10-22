@@ -68,7 +68,11 @@
     "manageSubscription": "구독 관리",
     "signOut": "로그아웃",
     "profile": "내 프로필",
-    "connectedApps": "연결된 앱"
+    "connectedApps": "연결된 앱",
+    "emailPending": "이메일이 확인되지 않았습니다",
+    "resend": "다시 보내기",
+    "resendSent": "보냈습니다. 받은편지함을 확인하세요",
+    "resendFailed": "보내지 못했습니다"
   },
   "relativeTime": {
     "seconds": "{count}초 전",

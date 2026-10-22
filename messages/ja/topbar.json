@@ -68,7 +68,11 @@
     "manageSubscription": "サブスクリプションを管理",
     "signOut": "サインアウト",
     "profile": "プロフィール",
-    "connectedApps": "接続済みのアプリ"
+    "connectedApps": "接続済みのアプリ",
+    "emailPending": "メールアドレスが未確認です",
+    "resend": "再送信",
+    "resendSent": "送信しました。受信箱をご確認ください",
+    "resendFailed": "送信できませんでした"
   },
   "relativeTime": {
     "seconds": "{count}秒前",
