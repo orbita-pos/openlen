@@ -11,13 +11,28 @@ import { describe, expect, it } from "vitest";
 const LIB = path.join(process.cwd(), "lib");
 const OWNER = "lib/ai/visual-quality-renderer.ts";
 
-/** The launchers that stay, each with why. Those that look at Len's pages carry `WEBGL_ARGS`. */
-const ALLOWED: Readonly<Record<string, { readonly why: string; readonly viewsLensPages: boolean }>> = {
-  "lib/len-bench/navegador.ts": { why: "Len-Bench's grader: its own --host-resolver-rules so it can't reach production", viewsLensPages: true },
-  "lib/agent/brazo-sin-acciones.ts": { why: "the battery's control arm, an eval tool", viewsLensPages: true },
-  "lib/templates/capture-screenshot.ts": { why: "a CLI that captures the curated templates, outside the server", viewsLensPages: false },
-  "lib/style-match/scrape/fetch-puppeteer.ts": { why: "scrapes another site's styles, not a page of ours", viewsLensPages: false },
-  "lib/apps/tests/runtime-harness.ts": { why: "test-only harness for the vitest runtime", viewsLensPages: false },
+/** The launchers that stay, each with why. Those that look at Len's pages carry
+ *  `WEBGL_ARGS`; those that run HTML nobody here wrote hand Chromium `chromiumEnv()`. */
+const ALLOWED: Readonly<
+  Record<string, { readonly why: string; readonly viewsLensPages: boolean; readonly runsUntrustedHtml: boolean }>
+> = {
+  "lib/len-bench/navegador.ts": {
+    why: "Len-Bench's grader: its own --host-resolver-rules so it can't reach production",
+    viewsLensPages: true,
+    runsUntrustedHtml: true,
+  },
+  "lib/agent/brazo-sin-acciones.ts": { why: "the battery's control arm, an eval tool", viewsLensPages: true, runsUntrustedHtml: true },
+  "lib/templates/capture-screenshot.ts": {
+    why: "a CLI that captures the curated templates, outside the server",
+    viewsLensPages: false,
+    runsUntrustedHtml: false,
+  },
+  "lib/style-match/scrape/fetch-puppeteer.ts": {
+    why: "scrapes another site's styles, not a page of ours",
+    viewsLensPages: false,
+    runsUntrustedHtml: true,
+  },
+  "lib/apps/tests/runtime-harness.ts": { why: "test-only harness for the vitest runtime", viewsLensPages: false, runsUntrustedHtml: false },
 };
 
 function sources(dir: string, out: string[] = []): string[] {
@@ -45,6 +60,15 @@ describe("one Chromium launcher", () => {
       if (viewsLensPages) expect(readFileSync(path.join(process.cwd(), file), "utf8"), file).toContain("...WEBGL_ARGS");
     }
     expect(readFileSync(path.join(process.cwd(), OWNER), "utf8")).toContain("...WEBGL_ARGS");
+  });
+
+  it("🔴 every launcher that runs HTML nobody here wrote hands Chromium chromiumEnv(), not process.env", () => {
+    // Without `env` Puppeteer passes all of process.env: DATABASE_URL, AUTH_SECRET,
+    // every provider key, to a browser whose GPU process, at least, has no sandbox (lib/security/chromium-env.ts).
+    for (const [file, { runsUntrustedHtml }] of Object.entries(ALLOWED)) {
+      if (runsUntrustedHtml) expect(readFileSync(path.join(process.cwd(), file), "utf8"), file).toContain("env: chromiumEnv()");
+    }
+    expect(readFileSync(path.join(process.cwd(), OWNER), "utf8")).toContain("env: chromiumEnv()");
   });
 
   it("🔴 the launcher yields the box's CPU: every Chromium it starts is deprioritized (lib/ai/chromium-nice.ts)", () => {

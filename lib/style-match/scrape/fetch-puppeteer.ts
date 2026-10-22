@@ -9,6 +9,7 @@ import {
   type ScrapeTarget,
 } from "../types";
 import { isolatedNetworkArgs } from "@/lib/security/egress-proxy";
+import { chromiumEnv } from "@/lib/security/chromium-env";
 import { findChromeExecutable } from "./find-browser";
 import { validateUrl } from "./validate-url";
 
@@ -38,7 +39,9 @@ export async function fetchPuppeteer(
       headless: true,
       executablePath,
       args: [
-        "--no-sandbox",
+        // CON el sandbox de Chrome, como los ojos (`lanzarChromium`, medido en la
+        // caja el 2026-10-20): sólo se le quita la caída al ayudante setuid, que
+        // bajo NoNewPrivileges no puede ir. Ver `fetch-puppeteer.test.ts`.
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-blink-features=AutomationControlled",
@@ -46,6 +49,8 @@ export async function fetchPuppeteer(
         // filtra (lib/security/egress-proxy.ts), que no deja ver lo interno.
         ...(await isolatedNetworkArgs()),
       ],
+      // Y ni un secreto del servidor en su entorno (lib/security/chromium-env.ts).
+      env: chromiumEnv(),
     });
     page = await browser.newPage();
     await page.setUserAgent(CHROME_UA);
