@@ -12,9 +12,12 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 import type { DomainDeps } from "./domain";
+import { monthOf } from "./limits";
 import type { PanelDeps } from "./panel";
 import { resendClients } from "./resend-clients";
+import type { SendDeps } from "./send";
 import { pgEmailStore } from "./store-pg";
+import { unsubscribeToken } from "./unsubscribe";
 
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://openlen.com").replace(/\/+$/, "");
@@ -61,6 +64,43 @@ export function realDomainDeps(): DomainDeps {
   };
 }
 
+function serverSecret(): string {
+  return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+}
+
+/** The sending core with the real things: the gateway, the sign-in emails and the form replies use it. */
+export function realSendDeps(): SendDeps {
+  const domain = realDomainDeps();
+  return {
+    store: pgEmailStore,
+    resend: domain.resend,
+    ownerOf: domain.ownerOf,
+    async planOf(userId) {
+      const [{ planFromDb }, [u]] = await Promise.all([import("@/lib/plan"), db.select({ plan: schema.users.plan }).from(schema.users).where(eq(schema.users.id, userId)).limit(1)]);
+      return planFromDb(u?.plan);
+    },
+    async team(projectId) {
+      const [{ listarMiembros }, owner] = await Promise.all([import("@/lib/projects/miembros"), domain.ownerOf(projectId)]);
+      const { miembros } = await listarMiembros(projectId);
+      return [...(owner?.email ? [owner.email] : []), ...miembros.map((m) => m.email)].filter(Boolean);
+    },
+    async debitIfEnough(userId, centicredits, projectId) {
+      const { chargeCreditsIfEnough } = await import("@/lib/credits");
+      return chargeCreditsIfEnough(userId, centicredits, { surface: "project_email", outcome: "ok", projectId, listCenticredits: centicredits });
+    },
+    async refund(userId, centicredits, projectId) {
+      const { returnCredits } = await import("@/lib/credits");
+      await returnCredits(userId, centicredits, { surface: "project_email", outcome: "refund", projectId });
+    },
+    unsubscribeUrl: (projectId, address) => `${siteUrl()}/u/${unsubscribeToken(projectId, address, serverSecret())}`,
+    async notify(e) {
+      const { scheduleNotification } = await import("@/lib/notifications/dispatch");
+      await scheduleNotification(e, `email_quota:${e.recipientUserId}:${monthOf(new Date())}:${e.noCredits ? "nocredits" : e.percent}`);
+    },
+    now: () => new Date(),
+  };
+}
+
 export function realPanelDeps(): PanelDeps {
   return {
     ...realDomainDeps(),
@@ -76,6 +116,6 @@ export function realPanelDeps(): PanelDeps {
       return r?.domain ?? null;
     },
     returnUrl: `${siteUrl()}/api/email/domain-connect/return`,
-    stateSecret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "",
+    stateSecret: serverSecret(),
   };
 }

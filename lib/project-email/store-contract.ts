@@ -131,7 +131,9 @@ export function describeEmailStoreContract(name: string, setup: () => Promise<Em
         await store.logMessage(message({ projectId: projectA, ownerId: owner, status }));
       }
       await store.logMessage(message({ projectId: projectA, ownerId: owner, kind: "auth" }));
-      expect(await store.countSentSince(owner, "app", since)).toBe(4);
+      await store.logMessage(message({ projectId: projectA, ownerId: owner, kind: "form" }));
+      // A form reply counts against the app emails' cap.
+      expect(await store.countSentSince(owner, "app", since)).toBe(5);
       expect(await store.countSentSince(owner, "auth", since)).toBe(1);
       expect(await store.countSentSince(owner, "app", new Date(Date.now() + 60_000))).toBe(0);
     });
