@@ -32,7 +32,9 @@ export interface StripeCliOutput {
   readonly exitCode: number;
 }
 
-const ABORTED: StripeCliOutput = { stdout: "", stderr: "", exitCode: 143 };
+const ABORTED_OUTPUT: StripeCliOutput = { stdout: "", stderr: "", exitCode: 143 };
+/** The command was stopped (its time, or `timeout N stripe …`): nothing more is waited for. */
+const STOPPED: unique symbol = Symbol("stopped");
 
 /** The collections whose test-mode creates are copied to live when publishing. */
 const RECORDED: Readonly<Record<string, StripeObjectKind>> = {
@@ -47,15 +49,15 @@ const RECORDED: Readonly<Record<string, StripeObjectKind>> = {
 const encodeForm = (form: readonly FormPair[]) => form.map(([k, v]) => encodeStripeParams({ [k]: v })).join("&");
 const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
 
-function whenAborted(signal: AbortSignal | undefined): Promise<typeof ABORTED> | null {
+function whenAborted(signal: AbortSignal | undefined): Promise<typeof STOPPED> | null {
   if (!signal) return null;
   return new Promise((resolve) => {
-    if (signal.aborted) resolve(ABORTED);
-    else signal.addEventListener("abort", () => resolve(ABORTED), { once: true });
+    if (signal.aborted) resolve(STOPPED);
+    else signal.addEventListener("abort", () => resolve(STOPPED), { once: true });
   });
 }
 
-async function race<T>(work: Promise<T>, signal: AbortSignal | undefined): Promise<T | typeof ABORTED> {
+async function race<T>(work: Promise<T>, signal: AbortSignal | undefined): Promise<T | typeof STOPPED> {
   const stop = whenAborted(signal);
   return stop ? Promise.race([work, stop]) : work;
 }
@@ -66,13 +68,13 @@ function functionOf(url: string, draftFunctionsUrl: string | null): string | und
 }
 
 export async function runStripeCli(args: readonly string[], deps: StripeCliDeps, o: { readonly signal?: AbortSignal } = {}): Promise<StripeCliOutput> {
-  if (o.signal?.aborted) return ABORTED;
+  if (o.signal?.aborted) return ABORTED_OUTPUT;
   const out = await run(args, deps, o.signal);
-  if (out === ABORTED) return ABORTED;
+  if (out === STOPPED) return ABORTED_OUTPUT;
   return { stdout: await deps.mask(out.stdout), stderr: await deps.mask(out.stderr), exitCode: out.exitCode };
 }
 
-async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSignal | undefined): Promise<StripeCliOutput> {
+async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSignal | undefined): Promise<StripeCliOutput | typeof STOPPED> {
   const c = parseStripeArgs(args);
   switch (c.kind) {
     case "help":
@@ -85,7 +87,7 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
       const key = await deps.keyFor("draft");
       if (!key) return { stdout: "", stderr: noKeyText("draft"), exitCode: 1 };
       const r = await race(deps.request(key, { method: "GET", path: "/v1/webhook_endpoints", form: "limit=100" }), signal);
-      if (r === ABORTED) return r;
+      if (r === STOPPED) return r;
       const data = ((r.json as { data?: unknown } | null)?.data ?? []) as { url?: unknown; enabled_events?: unknown }[];
       const endpoints = (Array.isArray(data) ? data : []).map((e) => ({ url: str(e.url) ?? "", events: Array.isArray(e.enabled_events) ? e.enabled_events.map(String) : [] }));
       return { stdout: listenText(endpoints, deps.draftFunctionsUrl), stderr: "", exitCode: 0 };
@@ -95,7 +97,7 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
       const key = await deps.keyFor("draft");
       if (!key) return { stdout: "", stderr: noKeyText("draft"), exitCode: 1 };
       const r = await race(deps.trigger(c.event, key), signal);
-      if (r === ABORTED) return r;
+      if (r === STOPPED) return r;
       return { stdout: r.exitCode === 0 ? r.stdout : "", stderr: r.exitCode === 0 ? "" : r.stdout, exitCode: r.exitCode };
     }
     case "operation":
@@ -119,7 +121,7 @@ async function run(args: readonly string[], deps: StripeCliDeps, signal: AbortSi
   const form = encodeForm(c.form);
   const req: StripeRequest = { method, path: c.path, ...(form ? { form } : {}), ...(c.idempotencyKey ? { idempotencyKey: c.idempotencyKey } : {}) };
   const r = await race(deps.request(key, req), signal);
-  if (r === ABORTED) return r;
+  if (r === STOPPED) return r;
   if (r.status === 401) return { stdout: "", stderr: `Request failed, status=401, body=${r.text}\n`, exitCode: 1 };
 
   let body = r.text;

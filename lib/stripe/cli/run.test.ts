@@ -11,7 +11,7 @@ function deps(o: { keys?: { draft?: string | null; live?: string | null }; answe
   const keys = { draft: "sk_test_d", live: "sk_live_l", ...o.keys };
   const request = vi.fn(async (key: string, req: StripeRequest) => (o.answer ? o.answer(key, req) : res(200, { object: "list", data: [] })));
   const d: StripeCliDeps & { request: typeof request } = {
-    keyFor: vi.fn(async (env) => keys[env] ?? null),
+    keyFor: vi.fn(async (env: "draft" | "live") => keys[env] ?? null),
     request,
     record: vi.fn(async () => {}),
     saveWebhookSecret: vi.fn(async () => "STRIPE_WEBHOOK_SECRET"),

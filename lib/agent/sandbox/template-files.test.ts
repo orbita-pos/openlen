@@ -49,7 +49,7 @@ describe("the box's scripts", () => {
 
   it("every bridged program goes through the bridge", () => {
     for (const p of BRIDGED_PROGRAMS) expect(wrapperScript(p)).toContain(`openlen-bridge ${p} "$@"`);
-    expect(BRIDGED_PROGRAMS).toEqual(["git", "supabase", "tsc", "eslint", "vitest", "npm", "npx", "curl"]);
+    expect(BRIDGED_PROGRAMS).toEqual(["git", "supabase", "stripe", "tsc", "eslint", "vitest", "npm", "npx", "curl"]);
   });
 
   it("the template carries the two scripts, one wrapper per program, executable, and Playwright's resolver", () => {
