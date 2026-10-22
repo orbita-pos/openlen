@@ -23,6 +23,8 @@ type Table = { readonly commit: string; readonly resources: Readonly<Record<stri
 const T = table as unknown as Table;
 
 export const STRIPE_CLI_COMMIT: string = T.commit;
+/** The release STRIPE_CLI_COMMIT sits on (one commit after v1.55.0): what an installed CLI prints. */
+export const STRIPE_CLI_VERSION = "1.55.0";
 export const STRIPE_CLI_RESOURCES: readonly string[] = Object.keys(T.resources).sort();
 
 function resource(name: string): StripeResourceSpec | null {
