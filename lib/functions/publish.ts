@@ -20,17 +20,19 @@ import {
 
 export async function prepareFunctionsForPublish(
   projectId: string,
-  o: { readonly mode: "owner" | "system"; readonly skipMissingSecrets: boolean },
-): Promise<{ deploy(): Promise<void> } | null> {
+  o: { readonly mode: "owner" | "system"; readonly skipMissingSecrets: boolean; readonly swap?: (text: string) => string },
+): Promise<{ deploy(swap?: (text: string) => string): Promise<void>; readonly functions: readonly string[] } | null> {
   const deps = realDeployDeps();
   if (!deps) return null;
   const release = await prepareLiveRelease(projectId, deps, o);
   if (release.kind === "none") return null;
   return {
-    deploy: () =>
-      deployLiveRelease(projectId, release, deps).catch((e: unknown) => {
+    // Stripe (spec local 2026-10-21-stripe-integration, §6.4): the live ids, once copied, go into the bundle.
+    deploy: (swap) =>
+      deployLiveRelease(projectId, release, deps, swap).catch((e: unknown) => {
         throw new FunctionsDeployFailedError(e);
       }),
+    functions: release.kind === "deploy" ? release.bundle.functions.map((f) => f.name) : [],
   };
 }
 

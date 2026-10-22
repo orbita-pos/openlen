@@ -72,6 +72,7 @@ export function AgentConfirmCard({
   const t = useTranslations("wsPage");
   const tDatos = useTranslations("modalsDomain.dataChanges");
   const tSecretos = useTranslations("panelsChat");
+  const tStripe = useTranslations("modalsDomain.publish.stripe");
   // Los secretos que Len ya vio que faltan salen desde el principio.
   const [state, setState] = useState<CardState>(
     confirm.seguridad?.blocking.length
@@ -187,6 +188,15 @@ export function AgentConfirmCard({
         setState({ kind: "error", text: tDatos("diverged", { versions: outcome.versions.join(", ") }) });
         return;
       }
+      // Stripe (spec local 2026-10-21-stripe-integration, §6.4).
+      if (outcome.kind === "stripe_account_mismatch") {
+        setState({ kind: "error", text: tStripe("accountMismatch") });
+        return;
+      }
+      if (outcome.kind === "stripe_sync_failed") {
+        setState({ kind: "error", text: tStripe("syncFailed", { message: outcome.message }) });
+        return;
+      }
       if (outcome.kind === "error") {
         // The endpoint is the final authority — map its status codes to text.
         setState({
@@ -210,7 +220,7 @@ export function AgentConfirmCard({
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
     }
-  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, copyDraftData, onPublished, locale, tSecurity]);
+  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, tStripe, copyDraftData, onPublished, locale, tSecurity]);
 
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
