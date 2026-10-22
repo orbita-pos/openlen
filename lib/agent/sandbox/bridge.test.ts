@@ -51,6 +51,18 @@ describe("answerBridgeRequest", () => {
     expect(r).toMatchObject({ exitCode: 0, files: { "/supabase/migrations/2_b.sql": "x", "/supabase/a.sql": null } });
   });
 
+  // The CLI reads its DELETE confirmation from stdin, one line, and only then: the box is asked for that
+  // line first, so a `while read` around stripe loses no line the real CLI wouldn't have read.
+  it("a stripe DELETE without --confirm asks the box for one line of stdin, then runs with it", async () => {
+    const stripe = vi.fn(async () => ({ stdout: "deleted\n", stderr: "", exitCode: 0 }));
+    const args = ["delete", "/v1/webhook_endpoints/we_1"];
+    expect(await answerBridgeRequest({ id: "1", program: "stripe", args, cwd: "/" }, { stripe }, files)).toEqual({ readLine: true });
+    expect(stripe).not.toHaveBeenCalled();
+    const r = await answerBridgeRequest({ id: "2", program: "stripe", args, cwd: "/", stdinLine: "yes\n" }, { stripe }, files);
+    expect(stripe).toHaveBeenCalledWith(args, { signal: undefined, stdin: "yes\n" });
+    expect(r).toEqual({ stdout: "deleted\n", stderr: "", exitCode: 0, files: {} });
+  });
+
   it("stripe is answered by OpenLen, never by a real CLI in the box (the key never enters it)", async () => {
     const stripe = vi.fn(async () => ({ stdout: "{}\n", stderr: "", exitCode: 0 }));
     const r = await answerBridgeRequest({ id: "1", program: "stripe", args: ["products", "list"], cwd: "/" }, { stripe }, files);
