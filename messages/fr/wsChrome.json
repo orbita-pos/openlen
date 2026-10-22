@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Fonctions",
       "secrets": "Secrets",
-      "ai": "IA"
+      "ai": "IA",
+      "payments": "Paiements"
     },
     "unavailable": {
       "title": "La base de données n'est pas disponible ici",
@@ -577,6 +578,32 @@
       "saving": "Enregistrement…",
       "useDefault": "Utiliser la valeur par défaut",
       "saveError": "Impossible d'enregistrer la limite."
+    },
+    "payments": {
+      "mode": "Mode Stripe",
+      "test": "Test",
+      "live": "Réel",
+      "account": "Compte Stripe : {name}",
+      "openInStripe": "Ouvrir dans Stripe",
+      "loading": "Chargement…",
+      "loadError": "Impossible de lire Stripe. Réessayez dans un instant.",
+      "empty": "Aucun compte Stripe n'est encore connecté. Demandez à Len de faire payer quelque chose et il vous demandera votre clé Stripe.",
+      "cannotChargeYet": "Votre compte Stripe ne peut pas encore encaisser de vrais paiements.",
+      "finishInStripe": "Terminez l'inscription dans Stripe",
+      "payments": "Derniers paiements",
+      "noPayments": "Aucun paiement pour l'instant.",
+      "subscriptions": "Abonnements actifs",
+      "noSubscriptions": "Aucun abonnement actif.",
+      "products": "Produits",
+      "noProducts": "Aucun produit.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "Aucun webhook.",
+      "disconnect": "Déconnecter Stripe",
+      "disconnectWarning": "Retire vos clés Stripe du projet et les webhooks enregistrés avec elles. N'annule pas les abonnements et ne rembourse pas les paiements : cela reste dans Stripe.",
+      "disconnectWord": "DÉCONNECTER",
+      "disconnectTypeHint": "Tapez {word} pour confirmer",
+      "disconnectConfirm": "Déconnecter",
+      "cancel": "Annuler"
     }
   },
   "appBirth": {

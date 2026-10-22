@@ -2,11 +2,11 @@
 //
 // Guardar y quitar secretos (spec local 2026-10-11, Parte 4): lo mismo para la
 // tarjeta (la ruta) y para `supabase secrets set/unset` (la terminal).
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { memorySecretStore } from "./secret-store";
 import { ENV_VARS_MAX, MAX_SECRET_VALUE_BYTES } from "./secrets";
-import { setFunctionSecrets, unsetFunctionSecrets, type SecretsDeps } from "./secrets-core";
+import { setFunctionSecrets, unsetFunctionSecrets, type SecretsDeps, type SecretsHook } from "./secrets-core";
 
 function montar(o: { apply?: SecretsDeps["apply"] } = {}) {
   const store = memorySecretStore();
@@ -98,7 +98,53 @@ describe("setFunctionSecrets", () => {
   });
 });
 
+describe("setFunctionSecrets con ganchos (Stripe, spec local 2026-10-21)", () => {
+  it("🔴 el rechazo de un gancho no guarda NADA y vuelve como error rejected", async () => {
+    const { store, aplicados, deps } = montar();
+    const hook: SecretsHook = {
+      prepare: async () => ({ rejection: { environment: "draft", name: "STRIPE_SECRET_KEY", reason: "live_in_draft", message: "test key please" } }),
+    };
+    const r = await setFunctionSecrets("p1", [{ environment: "draft", name: "STRIPE_SECRET_KEY", value: "sk_live_1" }, { environment: "draft", name: "OTRA", value: "1" }], null, { ...deps, hooks: [hook] });
+    expect(r).toEqual({ ok: false, error: "rejected", environment: "draft", name: "STRIPE_SECRET_KEY", reason: "live_in_draft", message: "test key please" });
+    expect(await store.list("p1")).toEqual([]);
+    expect(aplicados).toEqual([]);
+  });
+
+  it("commit corre DESPUÉS de guardar, y lo no verificado sale en la respuesta", async () => {
+    const { store, deps } = montar();
+    let vistoAlConfirmar: Record<string, string> | null = null;
+    const hook: SecretsHook = {
+      prepare: async () => ({
+        commit: async () => void (vistoAlConfirmar = await store.values("p1", "draft")),
+        unverified: [{ environment: "draft", name: "STRIPE_SECRET_KEY" }],
+      }),
+    };
+    const r = await setFunctionSecrets("p1", [{ environment: "draft", name: "STRIPE_SECRET_KEY", value: "sk_test_1" }], null, { ...deps, hooks: [hook] });
+    expect(r).toEqual({ ok: true, saved: [{ environment: "draft", name: "STRIPE_SECRET_KEY" }], unverified: [{ environment: "draft", name: "STRIPE_SECRET_KEY" }] });
+    expect(vistoAlConfirmar).toEqual({ STRIPE_SECRET_KEY: "sk_test_1" });
+  });
+
+  it("si no cabe, commit no corre", async () => {
+    const { store, deps } = montar();
+    await store.set("p1", "live", Object.fromEntries(Array.from({ length: 127 }, (_, i) => [`YA_${i}`, "v"])), null);
+    const commit = vi.fn(async () => {});
+    const r = await setFunctionSecrets("p1", [{ environment: "live", name: "STRIPE_SECRET_KEY", value: "sk_live_1" }], null, { ...deps, hooks: [{ prepare: async () => ({ commit }) }] });
+    expect(r).toMatchObject({ ok: false, error: "env_too_large" });
+    expect(commit).not.toHaveBeenCalled();
+  });
+});
+
 describe("unsetFunctionSecrets", () => {
+  it("quita también los nombres que añade un gancho", async () => {
+    const { store, deps } = montar();
+    await store.set("p1", "draft", { STRIPE_SECRET_KEY: "sk_test_1", STRIPE_WEBHOOK_SECRET: "whsec_1", OTRA: "1" }, null);
+    const hook: SecretsHook = { beforeUnset: async (_p, _e, names) => (names.includes("STRIPE_SECRET_KEY") ? ["STRIPE_WEBHOOK_SECRET"] : []) };
+    expect(await unsetFunctionSecrets("p1", "draft", ["STRIPE_SECRET_KEY"], { ...deps, hooks: [hook] })).toEqual(["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]);
+    expect(await store.values("p1", "draft")).toEqual({ OTRA: "1" });
+  });
+});
+
+describe("unsetFunctionSecrets (de siempre)", () => {
   it("quita, lo lleva al motor, y devuelve sólo lo que había", async () => {
     const { store, aplicados, deps } = montar();
     await store.set("p1", "draft", { A: "1", B: "2" }, null);

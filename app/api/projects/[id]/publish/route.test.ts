@@ -24,6 +24,7 @@ vi.mock("@/lib/projects", async () => {
 import { POST } from "./route";
 import { AppNoCompilaError } from "@/lib/apps/compilador";
 import { FunctionSecretsMissingError, FunctionsDeployFailedError, FunctionsDoNotCompileError } from "@/lib/functions/publish-errors";
+import { StripeAccountMismatchError, StripeSyncFailedError } from "@/lib/stripe/publish-errors";
 
 const pide = (extra: Record<string, unknown> = {}) =>
   POST(
@@ -79,6 +80,20 @@ describe("POST /publish — las Edge Functions (spec local 2026-10-11)", () => {
     expect(await a.json()).toEqual({ error: "functions_do_not_compile", errors: ["/supabase/functions/checkout/index.ts:3:5 — x"] });
     mocks.publishProject.mockRejectedValueOnce(new FunctionsDeployFailedError(new Error("motor")));
     expect((await pide()).status).toBe(502);
+  });
+});
+
+describe("POST /publish — Stripe (spec local 2026-10-21-stripe-integration)", () => {
+  it("another account: 422 stripe_account_mismatch; the copy failed: 502 stripe_sync_failed; a published one returns the summary", async () => {
+    mocks.publishProject.mockRejectedValueOnce(new StripeAccountMismatchError());
+    const a = await pide();
+    expect([a.status, await a.json()]).toEqual([422, { error: "stripe_account_mismatch" }]);
+    mocks.publishProject.mockRejectedValueOnce(new StripeSyncFailedError(new Error("Too many requests"), "req_1"));
+    const b = await pide();
+    expect([b.status, await b.json()]).toEqual([502, { error: "stripe_sync_failed", message: "Too many requests", requestId: "req_1" }]);
+    const stripe = { created: { products: 1, prices: 1, paymentLinks: 1, shippingRates: 0, portalConfigurations: 0, webhookEndpoints: 0 }, swaps: 1, chargesEnabled: false };
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "mi-pos", url: "https://mi-pos.openlen.app", publishedAt: new Date(), stripe });
+    expect((await (await pide()).json()).stripe).toEqual(stripe);
   });
 });
 

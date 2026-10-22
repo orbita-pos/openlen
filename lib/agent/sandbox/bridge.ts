@@ -8,6 +8,7 @@
 // here" (`npx <other>`, `npm run <other>`, a page's `npm`…) runs for real here.
 
 import type { AppProgram } from "@/lib/agent/terminal/terminal";
+import { stripeNeedsConfirmation } from "@/lib/stripe/cli/run";
 
 import type { FunctionsCurlHandler } from "./functions-curl";
 
@@ -16,11 +17,14 @@ export interface BridgeRequest {
   readonly program: string;
   readonly args: readonly string[];
   readonly cwd: string;
+  /** The line the command read from its stdin, when the first answer asked for it (`readLine`). */
+  readonly stdinLine?: string;
 }
 
 export type BoxRoute =
   | { readonly kind: "git" }
   | { readonly kind: "supabase" }
+  | { readonly kind: "stripe" }
   | { readonly kind: "functions-curl" }
   | { readonly kind: "app"; readonly program: AppProgram; readonly args: readonly string[] }
   | { readonly kind: "passthrough" };
@@ -49,6 +53,8 @@ export function routeBoxCommand(
 ): BoxRoute {
   if (program === "git") return { kind: "git" };
   if (program === "supabase") return { kind: "supabase" };
+  // Stripe (spec local 2026-10-21-stripe-integration): never a real CLI in the box, the key stays out of it.
+  if (program === "stripe") return { kind: "stripe" };
   if (program === "curl") return args.some((a) => o.functionsUrls.some((u) => a.startsWith(u))) ? { kind: "functions-curl" } : PASSTHROUGH;
   if (!o.isApp) return PASSTHROUGH;
   if (program === "tsc" || program === "eslint") return app(program, args);
@@ -97,6 +103,11 @@ export interface BridgeHandlers {
       signal?: AbortSignal,
     ) => Promise<{ stdout: string; stderr: string; exitCode: number; files?: Readonly<Record<string, string | null>> }>;
   };
+  /** `stripe …` with the project's key, answered by OpenLen (lib/stripe/cli/real.ts). */
+  readonly stripe?: (
+    args: readonly string[],
+    o?: { readonly signal?: AbortSignal; readonly stdin?: string },
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
   /** The project's Edge Functions' URLs (FunctionsCurl.prefixes). */
   readonly functionsUrls?: readonly string[];
   /** `curl` to one of them, through OpenLen's door (./functions-curl.ts). */
@@ -105,6 +116,8 @@ export interface BridgeHandlers {
 
 export type BridgeAnswer =
   | { readonly passthrough: true }
+  /** Read one line of the command's stdin and ask again with it (`stdinLine`). */
+  | { readonly readLine: true }
   | { readonly stdout: string; readonly stderr: string; readonly exitCode: number; readonly files: Readonly<Record<string, string | null>> };
 
 function abortable<T>(work: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
@@ -140,6 +153,14 @@ export async function answerBridgeRequest(
       const out: Record<string, string | null> = { ...(r.escribir ?? {}) };
       for (const p of r.borrar ?? []) out[p] = null;
       return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: out };
+    }
+    case "stripe": {
+      if (!handlers.stripe) return { stdout: "", stderr: "stripe: not available in this project\n", exitCode: 127, files: {} };
+      // The CLI reads a DELETE's confirmation from stdin, one line, and only then: the box reads that
+      // line only when asked, so it takes nothing from a pipe the real CLI wouldn't have read.
+      if (req.stdinLine === undefined && stripeNeedsConfirmation(req.args)) return { readLine: true };
+      const r = await abortable(handlers.stripe(req.args, { signal: o.signal, ...(req.stdinLine !== undefined ? { stdin: req.stdinLine } : {}) }), o.signal);
+      return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: {} };
     }
     case "functions-curl": {
       if (!handlers.functionsCurl) return { passthrough: true };

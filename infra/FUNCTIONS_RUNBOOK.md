@@ -151,3 +151,23 @@ Va encima de las funciones: con ellas encendidas, está encendida.
       GROUP BY "userId" ORDER BY 2 DESC LIMIT 20;
 
 - **Desplegar:** `app-ai-migrate` corre con las demás migraciones (antes que el código); el `handle /ai/v1/*` nuevo pide recargar Caddy (paso 8).
+
+## 8. Stripe (`lib/stripe`, spec local 2026-10-21-stripe-integration)
+
+Va encima de las funciones: con ellas encendidas, está encendido. La clave es la del DUEÑO (su cuenta de Stripe):
+OpenLen no tiene cuenta de Stripe ni cobra nada de esto.
+
+- **Apagarlo en caliente:** `OPENLEN_STRIPE=0` en `/etc/openlen/openlen.env` y reiniciar la app. Lo ya publicado sigue
+  cobrando (el código y los secretos son del proyecto); sólo se van la comprobación de la clave, el comando `stripe`,
+  la copia a real al publicar y la pestaña Pagos.
+- **Desplegar:** `stripe-migrate` corre con las demás migraciones (antes que el código: guardar secretos y publicar leen
+  `stripeAccounts` y `stripeObjects`).
+- 🔴 **La plantilla de E2B cambia** (`stripe` en `BRIDGED_PROGRAMS`, `lib/agent/sandbox/template-files.ts`): hay que
+  reconstruirla y subir su versión (`infra/e2b/openlen-terminal/README.md`). Hasta entonces la caja vieja no tiene
+  `stripe` (command not found); la terminal de hoy sí.
+- **El ensayo real** (con el motor de Cloudflare encendido, §6): una app con `stripe webhook_endpoints create` hacia su
+  función del borrador; pagar con la 4242 en el lienzo y ver que el evento LLEGA a `/functions/v1/<función>` por Caddy y
+  que el pedido queda pagado. Después, publicar con la clave real y comprobar que la publicada lleva los ids reales.
+- **Ver lo copiado a real** (psql de la base de la app):
+
+      SELECT "kind", "testId", "liveId", "syncedAt" FROM "stripeObjects" WHERE "projectId" = '<id>' ORDER BY "createdAt";

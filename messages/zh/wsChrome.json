@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "函数",
       "secrets": "密钥",
-      "ai": "AI"
+      "ai": "AI",
+      "payments": "付款"
     },
     "unavailable": {
       "title": "此处无法使用数据库",
@@ -577,6 +578,32 @@
       "saving": "正在保存…",
       "useDefault": "使用默认值",
       "saveError": "无法保存上限。"
+    },
+    "payments": {
+      "mode": "Stripe 模式",
+      "test": "测试",
+      "live": "正式",
+      "account": "Stripe 账户：{name}",
+      "openInStripe": "在 Stripe 中打开",
+      "loading": "加载中…",
+      "loadError": "无法读取 Stripe。请稍后再试。",
+      "empty": "还没有连接 Stripe 账户。让 Len 帮你卖点东西，它会向你要 Stripe 密钥。",
+      "cannotChargeYet": "你的 Stripe 账户还不能接收真实付款。",
+      "finishInStripe": "在 Stripe 完成注册",
+      "payments": "最近的付款",
+      "noPayments": "还没有付款。",
+      "subscriptions": "有效订阅",
+      "noSubscriptions": "没有有效订阅。",
+      "products": "产品",
+      "noProducts": "没有产品。",
+      "webhooks": "Webhook",
+      "noWebhooks": "没有 Webhook。",
+      "disconnect": "断开 Stripe",
+      "disconnectWarning": "从项目中移除你的 Stripe 密钥和用它们注册的 Webhook。不会取消订阅或退款：这些仍在 Stripe 中处理。",
+      "disconnectWord": "断开",
+      "disconnectTypeHint": "输入 {word} 以确认",
+      "disconnectConfirm": "断开",
+      "cancel": "取消"
     }
   },
   "appBirth": {

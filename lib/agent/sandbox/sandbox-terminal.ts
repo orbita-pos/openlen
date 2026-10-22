@@ -407,7 +407,8 @@ export class SandboxTerminal implements TerminalBackend {
         const { tree } = await this.look();
         const answer = await answerBridgeRequest(req, this.o.bridge, tree, { signal: this.o.signal });
         response = { passthrough: true };
-        if (!("passthrough" in answer)) {
+        if ("readLine" in answer) response = { readLine: true };
+        else if (!("passthrough" in answer)) {
           const writes: Record<string, string> = {};
           const removes: string[] = [];
           for (const [p, c] of Object.entries(answer.files)) (c === null ? removes.push(p) : (writes[p] = c));

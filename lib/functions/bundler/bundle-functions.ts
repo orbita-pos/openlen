@@ -15,6 +15,7 @@ import { runOnBundlerThread, stripNamespaces } from "@/lib/apps/bundler/bundle-a
 import { functionsCatalog } from "../catalog";
 import { WORKER_MAIN_MODULE } from "../engines/cloudflare-api";
 import { readFunctionsLayout, type FunctionSpec } from "../project-files";
+import { bundleHash } from "./bundle-hash";
 
 export type FunctionsBundleMode = "development" | "production";
 
@@ -165,9 +166,7 @@ export function bundleFunctions(args: {
       else files[nombre] = texto;
     }
     files[WORKER_MAIN_MODULE] = WORKER_ENTRY;
-    const hash = createHash("sha256")
-      .update(JSON.stringify(Object.entries(files).sort(([a], [b]) => a.localeCompare(b))))
-      .digest("hex");
+    const hash = bundleHash(files);
     const bundle: FunctionsBundle = { ok: true, hash, files, maps: projectMapsOnly(maps), functions: layout.functions, warnings };
     hechos.set(clave, bundle);
     if (hechos.size > CACHE_MAX) hechos.delete(hechos.keys().next().value!);

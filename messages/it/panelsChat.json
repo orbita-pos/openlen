@@ -366,7 +366,19 @@
     "saveAndPublish": "Salva e pubblica",
     "publishAnyway": "Pubblica comunque",
     "functionsDoNotCompile": "Le funzioni non compilano, quindi non è stato pubblicato nulla:\n{errors}",
-    "functionsFailed": "Non è stato possibile avviare le funzioni. La pagina non è cambiata."
+    "functionsFailed": "Non è stato possibile avviare le funzioni. La pagina non è cambiata.",
+    "stripe": {
+      "missingHint": "Alla pubblicazione, i tuoi prodotti, prezzi e link di pagamento di Stripe vengono copiati nel tuo account reale con questa chiave. Senza, la pagina pubblicata mantiene quelli di prova e nessuno può pagarti davvero.",
+      "hint": "Meglio una chiave limitata, solo con ciò che serve a Len: prodotti, prezzi, link di pagamento, Checkout, clienti, abbonamenti, il portale clienti e i webhook.",
+      "dashboard": "Prendila su Stripe",
+      "publishable_key": "Questa è la chiave pubblicabile (pk_…). Qui va quella segreta (sk_…) o una limitata (rk_…).",
+      "webhook_secret": "Questo è il segreto di firma di un webhook (whsec_…), non la chiave API.",
+      "not_a_stripe_key": "Non sembra una chiave Stripe: inizia con sk_ o rk_.",
+      "live_in_draft": "Per provare, una chiave di test (sk_test_… o rk_test_…): la tela non addebita mai carte vere.",
+      "test_in_live": "Per la pagina pubblicata, una chiave reale (sk_live_… o rk_live_…).",
+      "rejected_by_stripe": "Stripe ha rifiutato questa chiave. Controlla che sia copiata per intero e ancora attiva.",
+      "other_account": "Questa chiave è di un altro account Stripe rispetto all'altra. Devono essere dello stesso account."
+    }
   },
   "visualLabel": "Visual di Len: {title}",
   "visualLoading": "Preparazione del visual…",

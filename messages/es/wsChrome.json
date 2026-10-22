@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Funciones",
       "secrets": "Secretos",
-      "ai": "IA"
+      "ai": "IA",
+      "payments": "Pagos"
     },
     "unavailable": {
       "title": "La base de datos no está disponible aquí",
@@ -577,6 +578,32 @@
       "saving": "Guardando…",
       "useDefault": "Usar el de por defecto",
       "saveError": "No se pudo guardar el tope."
+    },
+    "payments": {
+      "mode": "Modo de Stripe",
+      "test": "Prueba",
+      "live": "Real",
+      "account": "Cuenta de Stripe: {name}",
+      "openInStripe": "Abrir en Stripe",
+      "loading": "Cargando…",
+      "loadError": "No se pudo leer Stripe. Inténtalo en un momento.",
+      "empty": "Todavía no hay una cuenta de Stripe conectada. Pídele a Len que cobre algo y te pedirá tu clave de Stripe.",
+      "cannotChargeYet": "Tu cuenta de Stripe aún no puede cobrar de verdad.",
+      "finishInStripe": "Termina el alta en Stripe",
+      "payments": "Últimos pagos",
+      "noPayments": "Todavía no hay pagos.",
+      "subscriptions": "Suscripciones activas",
+      "noSubscriptions": "No hay suscripciones activas.",
+      "products": "Productos",
+      "noProducts": "No hay productos.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "No hay webhooks.",
+      "disconnect": "Desconectar Stripe",
+      "disconnectWarning": "Quita tus claves de Stripe del proyecto y los webhooks registrados con ellas. No cancela suscripciones ni devuelve pagos: eso sigue en Stripe.",
+      "disconnectWord": "DESCONECTAR",
+      "disconnectTypeHint": "Escribe {word} para confirmar",
+      "disconnectConfirm": "Desconectar",
+      "cancel": "Cancelar"
     }
   },
   "appBirth": {

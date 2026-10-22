@@ -147,7 +147,23 @@
       "failed": "公開しましたが、今回は {langs} を翻訳できませんでした。他の言語では公開されています。もう一度公開すると再試行します。"
     },
     "membersOffWarning": "{count} ページがメンバー限定に設定されていますが、アカウントモジュールがオフのため公開されます。モジュールタブでオンにしてください。",
-    "membersGatedSummary": "{count} ページのメンバー限定ページがログインの背後に公開されます。"
+    "membersGatedSummary": "{count} ページのメンバー限定ページがログインの背後に公開されます。",
+    "stripe": {
+      "created": "本番の Stripe にコピーしました：{list}。公開ページで実際に決済できるようになりました。",
+      "kind": {
+        "products": "商品 {count} 件",
+        "prices": "価格 {count} 件",
+        "paymentLinks": "支払いリンク {count} 件",
+        "shippingRates": "配送料 {count} 件",
+        "portalConfigurations": "カスタマーポータル",
+        "webhookEndpoints": "Webhook {count} 件"
+      },
+      "cannotChargeYet": "Stripe アカウントはまだ実際の支払いを受け付けられません。",
+      "finishInStripe": "Stripe で登録を完了する",
+      "accountMismatch": "公開ページ用の Stripe キーが、テスト用とは別のアカウントのものです。同じアカウントのキーを使ってください。",
+      "syncFailed": "商品を本番の Stripe にコピーできませんでした（{message}）。何も公開されていません。もう一度お試しください。",
+      "willCreate": "本番の Stripe にコピーします：{list}。"
+    }
   },
   "inspector": {
     "radius": "角丸",

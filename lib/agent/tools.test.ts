@@ -290,6 +290,18 @@ describe("summarizeProjectState", () => {
     assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).edge_functions, undefined);
   });
 
+  it("STRIPE (spec local 2026-10-21): the account and endpoints, never a value; without them, nothing", () => {
+    const stripe = {
+      draft: { account_id: "acct_1", account_name: "Taller", key: "restricted" as const },
+      production: null,
+      webhook_endpoints: [{ url: "https://d/functions/v1/pago", function: "pago", secret: "STRIPE_WEBHOOK_SECRET" }],
+    };
+    const con = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null, stripe });
+    assert.deepEqual(con.stripe, stripe);
+    assert.ok(!/sk_|rk_|whsec_/.test(JSON.stringify(con)));
+    assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).stripe, undefined);
+  });
+
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);
@@ -1184,6 +1196,28 @@ describe("publish", () => {
     assert.deepEqual(out.response.missing_production_secrets, ["STRIPE_SECRET_KEY"]);
     assert.match(String(out.response.secrets_note), /You can't set production secrets/);
     assert.deepEqual((pub(out) as { secretosQueFaltan?: string[] }).secretosQueFaltan, ["STRIPE_SECRET_KEY"]);
+  });
+
+  it("STRIPE (spec local 2026-10-21): publish tells Len what goes to Stripe live and puts it on the card", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const create = { products: 1, prices: 1, paymentLinks: 1, shippingRates: 0, portalConfigurations: 0, webhookEndpoints: 0 };
+    const plan = { create, swaps: 1, unknownRefs: ["price_1QnotThereAtAll00"], chargesEnabled: false, needsWrites: true, droppedImages: 0 };
+    const out = await runAgentTool(makeSession(), { ...deps, previewStripeRelease: async () => ({ kind: "ok" as const, preview: { plan, accountName: "Taller" } }) }, "publish", {});
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(out.response.stripe_live, { create, swaps: 1 });
+    assert.deepEqual(out.response.stripe_unknown_refs, ["price_1QnotThereAtAll00"]);
+    assert.match(String(out.response.stripe_note), /exist neither in test nor in live mode/);
+    assert.deepEqual((pub(out) as { stripe?: unknown }).stripe, { create, swaps: 1, chargesEnabled: false, unknownRefs: ["price_1QnotThereAtAll00"] });
+  });
+
+  it("STRIPE: a missing live key joins the missing production secrets; keys of two accounts stop the publish", async () => {
+    const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
+    const a = await runAgentTool(makeSession(), { ...deps, previewStripeRelease: async () => ({ kind: "missing_live_key" as const }) }, "publish", {});
+    assert.deepEqual(a.response.missing_production_secrets, ["STRIPE_SECRET_KEY"]);
+    const b = await runAgentTool(makeSession(), { ...deps, previewStripeRelease: async () => ({ kind: "account_mismatch" as const }) }, "publish", {});
+    assert.equal(b.response.ok, false);
+    assert.match(String(b.response.error), /another Stripe account than the draft's/);
+    assert.equal(b.confirm, undefined);
   });
 
   // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave se le dice a Len

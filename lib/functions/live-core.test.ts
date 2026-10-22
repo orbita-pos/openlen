@@ -7,7 +7,7 @@ import type { FunctionsBundle } from "./bundler/bundle-functions";
 import type { DeployDeps } from "./deploy-core";
 import { memoryDeploymentStore } from "./deployments";
 import type { Destination, EngineBundle, FunctionsEngine, FunctionsEnvironment } from "./engines/types";
-import { deployLiveRelease, ensureLiveDeployed, prepareLiveRelease } from "./live-core";
+import { deployLiveRelease, ensureLiveDeployed, prepareLiveRelease, swapBundle } from "./live-core";
 import { FunctionSecretsMissingError, FunctionsBundlerUnavailableError, FunctionsDoNotCompileError, FunctionsNeedOwnerError } from "./publish-errors";
 
 const REF = "abcdefghijklmnopqrst";
@@ -96,6 +96,37 @@ describe("prepareLiveRelease", () => {
     await expect(prepareLiveRelease("p", m.deps, { mode: "system", skipMissingSecrets: false })).rejects.toBeInstanceOf(FunctionsNeedOwnerError);
     await m.store.put({ projectId: "p", environment: "live", catalog: "2026-11", hash: "p1h", functions: [{ name: "checkout", verifyJwt: true }], deployedAt: new Date() }, {}, { "index.mjs": "// p1h" });
     expect(await prepareLiveRelease("p", m.deps, { mode: "system", skipMissingSecrets: false })).toMatchObject({ kind: "deploy", missingSecrets: [] });
+  });
+});
+
+describe("Stripe's live ids in the functions (spec local 2026-10-21-stripe-integration, §6.4)", () => {
+  const swap = (t: string) => t.replaceAll("price_TEST", "price_LIVE");
+  const conPrecio = (): FunctionsBundle => ({ ...ok("x", ["checkout"]), files: { "index.mjs": 'const p = "price_TEST";' } } as FunctionsBundle);
+
+  it("swapBundle changes the files and the hash; the same swap gives the same hash", () => {
+    const b = conPrecio() as Extract<FunctionsBundle, { ok: true }>;
+    const a = swapBundle(b, swap);
+    expect(a.files["index.mjs"]).toBe('const p = "price_LIVE";');
+    expect(a.hash).not.toBe(b.hash);
+    expect(swapBundle(b, swap).hash).toBe(a.hash);
+    expect(b.files["index.mjs"]).toBe('const p = "price_TEST";');
+  });
+
+  it("deploy carries the live ids", async () => {
+    const m = montar({ bundle: conPrecio });
+    m.secretos.live.STRIPE_SECRET_KEY = "sk_live_1";
+    const r = await prepareLiveRelease("p", m.deps, OWNER);
+    await deployLiveRelease("p", r, m.deps, swap);
+    expect(m.desplegados.get("live")!.files["index.mjs"]).toBe('const p = "price_LIVE";');
+    expect(await m.store.bundle("p", "live")).toEqual({ "index.mjs": 'const p = "price_LIVE";' });
+  });
+
+  it("Review 2: a system republish with the same twins matches the deployed hash", async () => {
+    const m = montar({ bundle: conPrecio });
+    const desplegado = swapBundle(conPrecio() as Extract<FunctionsBundle, { ok: true }>, swap);
+    await m.store.put({ projectId: "p", environment: "live", catalog: "2026-11", hash: desplegado.hash, functions: [{ name: "checkout", verifyJwt: true }], deployedAt: new Date() }, {}, desplegado.files);
+    expect(await prepareLiveRelease("p", m.deps, { mode: "system", skipMissingSecrets: false, swap })).toMatchObject({ kind: "deploy" });
+    await expect(prepareLiveRelease("p", m.deps, { mode: "system", skipMissingSecrets: false })).rejects.toBeInstanceOf(FunctionsNeedOwnerError);
   });
 });
 

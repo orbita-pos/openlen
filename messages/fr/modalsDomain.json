@@ -147,7 +147,23 @@
       "failed": "Publiée, mais {langs} n'a pas pu être traduite cette fois. Votre page est en ligne dans les autres langues — republiez pour réessayer."
     },
     "membersOffWarning": "{count, plural, one {# page est réservée aux membres mais le module Comptes est DÉSACTIVÉ — elle sera publiée PUBLIQUE. Activez-le dans l'onglet Modules.} other {# pages sont réservées aux membres mais le module Comptes est DÉSACTIVÉ — elles seront publiées PUBLIQUES. Activez-le dans l'onglet Modules.}}",
-    "membersGatedSummary": "{count, plural, one {# page réservée sera publiée derrière la connexion.} other {# pages réservées seront publiées derrière la connexion.}}"
+    "membersGatedSummary": "{count, plural, one {# page réservée sera publiée derrière la connexion.} other {# pages réservées seront publiées derrière la connexion.}}",
+    "stripe": {
+      "created": "Copié dans votre Stripe réel : {list}. La page publiée encaisse maintenant pour de vrai.",
+      "kind": {
+        "products": "{count, plural, one {# produit} other {# produits}}",
+        "prices": "{count, plural, one {# prix} other {# prix}}",
+        "paymentLinks": "{count, plural, one {# lien de paiement} other {# liens de paiement}}",
+        "shippingRates": "{count, plural, one {# tarif de livraison} other {# tarifs de livraison}}",
+        "portalConfigurations": "le portail client",
+        "webhookEndpoints": "{count, plural, one {# webhook} other {# webhooks}}"
+      },
+      "cannotChargeYet": "Votre compte Stripe ne peut pas encore encaisser de vrais paiements.",
+      "finishInStripe": "Terminez l'inscription dans Stripe",
+      "accountMismatch": "La clé Stripe de la page publiée vient d'un autre compte que celle de test. Utilisez des clés du même compte.",
+      "syncFailed": "Impossible de copier vos produits dans Stripe réel ({message}). Rien n'a été publié ; réessayez.",
+      "willCreate": "Sera copié dans votre Stripe réel : {list}."
+    }
   },
   "inspector": {
     "radius": "Rayon",

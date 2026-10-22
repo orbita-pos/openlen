@@ -801,6 +801,8 @@ interface PublishResult {
   subdomain: string;
   url: string;
   publishedAt: Date;
+  /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode and what the release carries live. */
+  stripe?: { created: import("@/lib/stripe/twins/engine").TwinsPlanCounts; swaps: number; chargesEnabled: boolean | null };
 }
 
 export async function publishProject(
@@ -873,9 +875,15 @@ export async function publishProject(
   // compilan (422) o faltan secretos (428), no ha cambiado nada. Se despliegan
   // dentro de `beforeSwap`, tras las migraciones.
   const { prepareFunctionsForPublish } = await import("@/lib/functions/publish");
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): the live ids already copied, read
+  // without calling Stripe, so a system republish compares the right functions bundle.
+  const stripeModule = await import("@/lib/stripe/publish");
+  const { swapTwins } = await import("@/lib/stripe/twins/swap");
+  const twinsSoFar = await stripeModule.storedTwins(params.projectId);
   const funciones = await prepareFunctionsForPublish(params.projectId, {
     mode: params.dataChanges?.mode ?? "system",
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
+    ...(twinsSoFar.size > 0 ? { swap: (t: string) => swapTwins(t, twinsSoFar) } : {}),
   });
 
   // Born-complete the <head> at publish too, so even legacy projects (and
@@ -933,6 +941,15 @@ export async function publishProject(
   const app = project.data?.app ?? null;
   const ownProductionEnv = app ? await envVarsFor(params.projectId, "production") : {};
   const projectFiles = await listProjectFiles(params.projectId);
+
+  // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): before claiming anything, what would go
+  // to live mode; no live key → the functions' 428, keys of two accounts → 422.
+  const stripe = await stripeModule.prepareStripeForPublish(params.projectId, {
+    mode: params.dataChanges?.mode ?? "system",
+    skipMissingSecrets: params.functions?.skipMissingSecrets === true,
+    texts: [html, ...splitPagesForPublish(project.data).publicPages.map((p) => p.html), ...Object.values(projectFiles)],
+    liveFunctions: funciones?.functions ?? [],
+  });
 
   const previousSubdomain = project.subdomain;
   const previousPublished = await db
@@ -1031,9 +1048,14 @@ export async function publishProject(
     locales: string[];
   };
   try {
+    // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): copy to live mode now —the release is
+    // content-addressed, so the live ids must exist before it is written— and write it with them.
+    // The sources and the published hashes keep the test ids: the canvas stays in test mode.
+    const twins = stripe ? await stripe.apply() : null;
+    const toLive = twins && twins.size > 0 ? (t: string) => swapTwins(t, twins) : null;
     publishResult = await publishToDir({
       subdomain: v.value,
-      html,
+      html: toLive ? toLive(html) : html,
       projectId: params.projectId,
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
@@ -1053,8 +1075,8 @@ export async function publishProject(
             theme: project.data?.settings?.chat?.theme,
           }
         : undefined,
-      pages: publicPages,
-      files: Object.entries(projectFiles).map(([path, content]) => ({ path, content })),
+      pages: toLive ? publicPages.map((p) => ({ ...p, html: toLive(p.html) })) : publicPages,
+      files: Object.entries(projectFiles).map(([path, content]) => ({ path, content: toLive ? toLive(content) : content })),
       app,
       ...(entornoDeLaApp ? { entorno: entornoDeLaApp } : {}),
       // LOS DATOS (spec local 2026-10-09): con la release ya escrita y antes de
@@ -1067,7 +1089,7 @@ export async function publishProject(
           const { publishDataChanges } = await import("@/lib/backend/data-changes");
           await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
         }
-        await funciones?.deploy();
+        await funciones?.deploy(toLive ?? undefined);
       },
       sourceLang,
       // `targets` ya viene filtrado (códigos válidos, sin el idioma de origen),
@@ -1266,6 +1288,9 @@ export async function publishProject(
     subdomain: v.value,
     url: `https://${v.value}.${publishBaseHost()}`,
     publishedAt: now,
+    ...(stripe
+      ? { stripe: { created: { ...stripe.preview.plan.create }, swaps: stripe.preview.plan.swaps, chargesEnabled: stripe.preview.plan.chargesEnabled } }
+      : {}),
   };
 }
 

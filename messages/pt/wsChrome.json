@@ -459,7 +459,8 @@
       "storage": "Storage",
       "functions": "Funções",
       "secrets": "Segredos",
-      "ai": "IA"
+      "ai": "IA",
+      "payments": "Pagamentos"
     },
     "unavailable": {
       "title": "O banco de dados não está disponível aqui",
@@ -577,6 +578,32 @@
       "saving": "Salvando…",
       "useDefault": "Usar o padrão",
       "saveError": "Não foi possível salvar o limite."
+    },
+    "payments": {
+      "mode": "Modo do Stripe",
+      "test": "Teste",
+      "live": "Real",
+      "account": "Conta do Stripe: {name}",
+      "openInStripe": "Abrir no Stripe",
+      "loading": "Carregando…",
+      "loadError": "Não foi possível ler o Stripe. Tente de novo em instantes.",
+      "empty": "Ainda não há uma conta do Stripe conectada. Peça ao Len para cobrar algo e ele pedirá sua chave do Stripe.",
+      "cannotChargeYet": "Sua conta do Stripe ainda não pode receber pagamentos reais.",
+      "finishInStripe": "Termine o cadastro no Stripe",
+      "payments": "Últimos pagamentos",
+      "noPayments": "Ainda não há pagamentos.",
+      "subscriptions": "Assinaturas ativas",
+      "noSubscriptions": "Nenhuma assinatura ativa.",
+      "products": "Produtos",
+      "noProducts": "Nenhum produto.",
+      "webhooks": "Webhooks",
+      "noWebhooks": "Nenhum webhook.",
+      "disconnect": "Desconectar o Stripe",
+      "disconnectWarning": "Remove suas chaves do Stripe do projeto e os webhooks registrados com elas. Não cancela assinaturas nem reembolsa pagamentos: isso continua no Stripe.",
+      "disconnectWord": "DESCONECTAR",
+      "disconnectTypeHint": "Digite {word} para confirmar",
+      "disconnectConfirm": "Desconectar",
+      "cancel": "Cancelar"
     }
   },
   "appBirth": {

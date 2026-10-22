@@ -11,6 +11,7 @@ import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 import { MissingSecrets } from "./missing-secrets";
 import { SecurityPanel } from "./security-findings";
+import { stripeKindsToCopy, type StripeForCard } from "@/lib/stripe/card";
 
 // The publish gate (Task 7). The agent NEVER publishes — it emits a `confirm`
 // SSE event, the chat panel renders THIS card, and only the user's tap on
@@ -30,6 +31,8 @@ export type AgentConfirm = {
   /** La revisión de seguridad (spec local 2026-10-15): lo que Len ya vio. Con
    *  `blocking`, la tarjeta se lo enseña al dueño y sólo «Publicar igual» publica. */
   seguridad?: { fingerprint: string; blocking: Finding[]; medium: Finding[] };
+  /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode. */
+  stripe?: StripeForCard;
 };
 
 type CardState =
@@ -72,6 +75,7 @@ export function AgentConfirmCard({
   const t = useTranslations("wsPage");
   const tDatos = useTranslations("modalsDomain.dataChanges");
   const tSecretos = useTranslations("panelsChat");
+  const tStripe = useTranslations("modalsDomain.publish.stripe");
   // Los secretos que Len ya vio que faltan salen desde el principio.
   const [state, setState] = useState<CardState>(
     confirm.seguridad?.blocking.length
@@ -187,6 +191,15 @@ export function AgentConfirmCard({
         setState({ kind: "error", text: tDatos("diverged", { versions: outcome.versions.join(", ") }) });
         return;
       }
+      // Stripe (spec local 2026-10-21-stripe-integration, §6.4).
+      if (outcome.kind === "stripe_account_mismatch") {
+        setState({ kind: "error", text: tStripe("accountMismatch") });
+        return;
+      }
+      if (outcome.kind === "stripe_sync_failed") {
+        setState({ kind: "error", text: tStripe("syncFailed", { message: outcome.message }) });
+        return;
+      }
       if (outcome.kind === "error") {
         // The endpoint is the final authority — map its status codes to text.
         setState({
@@ -210,7 +223,7 @@ export function AgentConfirmCard({
     } catch {
       setState({ kind: "error", text: t("agent.confirm.invalid") });
     }
-  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, copyDraftData, onPublished, locale, tSecurity]);
+  }, [busy, inert, confirm, projectId, t, tDatos, tSecretos, tStripe, copyDraftData, onPublished, locale, tSecurity]);
 
   const handleCancel = useCallback(() => {
     if (busy || inert) return;
@@ -330,6 +343,28 @@ export function AgentConfirmCard({
       {state.kind !== "security_findings" && confirm.seguridad && confirm.seguridad.medium.length > 0 && (
         <div className="mt-2">
           <SecurityPanel view={{ fingerprint: confirm.seguridad.fingerprint, status: "done", blocking: [], medium: confirm.seguridad.medium, accepted: [] }} busy={busy} />
+        </div>
+      )}
+
+      {confirm.stripe && (stripeKindsToCopy(confirm.stripe).length > 0 || confirm.stripe.chargesEnabled === false) && (
+        <div className="mt-2 flex flex-col gap-1 text-[11px] fg-muted">
+          {stripeKindsToCopy(confirm.stripe).length > 0 && (
+            <span>
+              {tStripe("willCreate", {
+                list: stripeKindsToCopy(confirm.stripe)
+                  .map(([kind, count]) => tStripe(`kind.${kind}`, { count }))
+                  .join(", "),
+              })}
+            </span>
+          )}
+          {confirm.stripe.chargesEnabled === false && (
+            <span className="text-amber-700 dark:text-amber-300">
+              {tStripe("cannotChargeYet")}{" "}
+              <a href="https://dashboard.stripe.com/account/onboarding" target="_blank" rel="noreferrer noopener" className="underline">
+                {tStripe("finishInStripe")}
+              </a>
+            </span>
+          )}
         </div>
       )}
 
