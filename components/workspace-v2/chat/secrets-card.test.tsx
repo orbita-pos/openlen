@@ -109,6 +109,25 @@ describe("la tarjeta de los secretos", () => {
     expect(respuestas).toEqual([]);
   });
 
+  it("STRIPE_SECRET_KEY (spec local 2026-10-21): la pista de la clave restringida y el panel de Stripe de cada entorno", () => {
+    const host = montar();
+    expect(host.textContent).toContain("functionSecrets.stripe.hint");
+    const enlaces = [...host.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+    expect(enlaces).toContain("https://dashboard.stripe.com/test/apikeys");
+    expect(enlaces).toContain("https://dashboard.stripe.com/apikeys");
+  });
+
+  it("si la ruta rechaza la clave de Stripe, dice por qué y NO contesta", async () => {
+    servidor(400, { error: "rejected", environment: "draft", name: "STRIPE_SECRET_KEY", reason: "live_in_draft", message: "m" });
+    const respuestas: QuestionAnswer[][] = [];
+    const host = montar({ onAnswer: (a) => respuestas.push(a) });
+    escribir(campos(host)[0]!, "sk_live_51H8abcdefghijklmnop");
+    await act(async () => boton(host, "functionSecrets.save").click());
+    await settle();
+    expect(host.querySelector("[role=alert]")?.textContent).toBe("functionSecrets.stripe.live_in_draft");
+    expect(respuestas).toEqual([]);
+  });
+
   it("«Ahora no» contesta sin guardar nada", async () => {
     const llamadas = servidor();
     const respuestas: QuestionAnswer[][] = [];

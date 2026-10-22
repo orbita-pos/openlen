@@ -366,7 +366,18 @@
     "saveAndPublish": "저장하고 게시",
     "publishAnyway": "그대로 게시",
     "functionsDoNotCompile": "함수를 컴파일할 수 없어 아무것도 게시되지 않았습니다:\n{errors}",
-    "functionsFailed": "함수를 시작할 수 없었습니다. 페이지는 바뀌지 않았습니다."
+    "functionsFailed": "함수를 시작할 수 없었습니다. 페이지는 바뀌지 않았습니다.",
+    "stripe": {
+      "hint": "Len에게 필요한 권한만 있는 제한된 키가 좋아요: 상품, 가격, 결제 링크, Checkout, 고객, 구독, 고객 포털, 웹훅.",
+      "dashboard": "Stripe에서 받기",
+      "publishable_key": "그건 공개 키(pk_…)예요. 여기에는 비밀 키(sk_…)나 제한된 키(rk_…)가 들어가요.",
+      "webhook_secret": "그건 웹훅 서명 비밀(whsec_…)이지 API 키가 아니에요.",
+      "not_a_stripe_key": "Stripe 키가 아닌 것 같아요. 키는 sk_ 또는 rk_로 시작해요.",
+      "live_in_draft": "테스트에는 테스트 키(sk_test_… 또는 rk_test_…)를 쓰세요. 캔버스는 실제 카드로 결제하지 않아요.",
+      "test_in_live": "게시된 페이지에는 실제 키(sk_live_… 또는 rk_live_…)를 쓰세요.",
+      "rejected_by_stripe": "Stripe가 이 키를 거부했어요. 전부 복사됐는지, 아직 유효한지 확인하세요.",
+      "other_account": "이 키는 다른 키와 다른 Stripe 계정의 키예요. 두 키 모두 같은 계정이어야 해요."
+    }
   },
   "visualLabel": "Len의 시각 자료: {title}",
   "visualLoading": "시각 자료 준비 중…",

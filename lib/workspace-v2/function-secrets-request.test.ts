@@ -19,6 +19,13 @@ describe("postFunctionSecrets", () => {
   });
 });
 
+describe("postFunctionSecrets y Stripe (spec local 2026-10-21)", () => {
+  it("entiende el rechazo de la clave, con su motivo", async () => {
+    const f = responde(400, { error: "rejected", environment: "live", name: "STRIPE_SECRET_KEY", reason: "test_in_live", message: "m" });
+    expect(await postFunctionSecrets("p", [], f as unknown as typeof fetch)).toEqual({ kind: "rejected", name: "STRIPE_SECRET_KEY", environment: "live", reason: "test_in_live" });
+  });
+});
+
 describe("functionSecretsAvailable", () => {
   it("sí sólo si el servidor lo dice", async () => {
     expect(await functionSecretsAvailable("p", responde(200, { available: true }) as unknown as typeof fetch)).toBe(true);

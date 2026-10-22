@@ -366,7 +366,18 @@
     "saveAndPublish": "Salvar e publicar",
     "publishAnyway": "Publicar mesmo assim",
     "functionsDoNotCompile": "As funções não compilam, então nada foi publicado:\n{errors}",
-    "functionsFailed": "Não foi possível iniciar as funções. A página não mudou."
+    "functionsFailed": "Não foi possível iniciar as funções. A página não mudou.",
+    "stripe": {
+      "hint": "Melhor uma chave restrita, só com o que o Len precisa: produtos, preços, links de pagamento, Checkout, clientes, assinaturas, o portal do cliente e webhooks.",
+      "dashboard": "Pegue no Stripe",
+      "publishable_key": "Essa é a chave publicável (pk_…). Aqui vai a secreta (sk_…) ou uma restrita (rk_…).",
+      "webhook_secret": "Esse é o segredo de assinatura de um webhook (whsec_…), não a chave da API.",
+      "not_a_stripe_key": "Isso não parece uma chave do Stripe: ela começa com sk_ ou rk_.",
+      "live_in_draft": "Para testar, use uma chave de teste (sk_test_… ou rk_test_…): a tela nunca cobra cartões de verdade.",
+      "test_in_live": "Para a página publicada, use uma chave real (sk_live_… ou rk_live_…).",
+      "rejected_by_stripe": "O Stripe recusou esta chave. Confira se está copiada inteira e ainda ativa.",
+      "other_account": "Esta chave é de outra conta do Stripe que a outra. As duas precisam ser da mesma conta."
+    }
   },
   "visualLabel": "Visual do Len: {title}",
   "visualLoading": "Preparando o visual…",

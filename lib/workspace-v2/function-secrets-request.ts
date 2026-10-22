@@ -15,6 +15,8 @@ export type SaveSecretsOutcome =
   | { readonly kind: "saved" }
   | { readonly kind: "too_large"; readonly environment: SecretEnvironment; readonly availableVars: number }
   | { readonly kind: "invalid_name"; readonly name: string }
+  /** A provider refused the value (Stripe: a live key for the draft…); `reason` is its code, for the text. */
+  | { readonly kind: "rejected"; readonly name: string; readonly environment: SecretEnvironment; readonly reason: string }
   | { readonly kind: "error" };
 
 const rutaDe = (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/function-secrets`;
@@ -28,6 +30,9 @@ export async function postFunctionSecrets(projectId: string, secrets: readonly S
       return { kind: "too_large", environment: data.environment === "live" ? "live" : "draft", availableVars: Number(data.availableVars ?? 0) };
     }
     if (data.error === "invalid_name") return { kind: "invalid_name", name: String(data.name ?? "") };
+    if (data.error === "rejected") {
+      return { kind: "rejected", name: String(data.name ?? ""), environment: data.environment === "live" ? "live" : "draft", reason: String(data.reason ?? "") };
+    }
     return { kind: "error" };
   } catch {
     return { kind: "error" };
