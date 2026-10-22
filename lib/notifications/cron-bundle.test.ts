@@ -16,7 +16,7 @@ const LANZA = "cannot be imported from a Client Component";
 describe("los bundles del cron", () => {
   it("🔴 ninguno lleva el `throw` de server-only (el drenaje de avisos cargaba hilos.ts)", () => {
     execFileSync(process.execPath, ["scripts/build-cron.mjs"], { cwd: raiz, stdio: "pipe" });
-    for (const f of ["notifications-drain.mjs", "renewal-reminders.mjs", "analytics-rollup.mjs"]) {
+    for (const f of ["notifications-drain.mjs", "renewal-reminders.mjs", "analytics-rollup.mjs", "email-domains-check.mjs"]) {
       const bundle = readFileSync(resolve(raiz, ".next/standalone/cron", f), "utf8");
       expect(bundle.includes(LANZA), f).toBe(false);
     }

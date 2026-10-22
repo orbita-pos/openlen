@@ -73,6 +73,10 @@ install -m 644 "${SCRIPT_DIR}/openlen-backup-system.timer"      /etc/systemd/sys
 # mano en prod; cazado en el ensayo DR cuando el box resucitado no lo tenía).
 install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.service" /etc/systemd/system/openlen-notifications-drain.service 2>/dev/null || true
 install -m 644 "${SCRIPT_DIR}/openlen-notifications-drain.timer"   /etc/systemd/system/openlen-notifications-drain.timer   2>/dev/null || true
+# El correo de los proyectos (spec local 2026-10-22-email-integration): comprueba los
+# dominios cada 15 min. Sin RESEND_CLIENTS_API_KEY no hace nada, así que se habilita ya.
+install -m 644 "${SCRIPT_DIR}/openlen-email-domains.service" /etc/systemd/system/openlen-email-domains.service 2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-email-domains.timer"   /etc/systemd/system/openlen-email-domains.timer   2>/dev/null || true
 # carril D (Len 2.5, pieza 15): el servicio de Realtime de las páginas. Se
 # habilita a mano cuando el clúster de las páginas tenga replicación lógica
 # (infra/PAGES_BACKEND_RUNBOOK.md §4c):  systemctl enable --now openlen-realtime
@@ -88,6 +92,7 @@ install -m 755 "${SCRIPT_DIR}/../scripts/backup-published-to-r2.sh" /opt/openlen
 install -m 755 "${SCRIPT_DIR}/../scripts/backup-system-to-r2.sh"    /opt/openlen-backup/backup-system-to-r2.sh    2>/dev/null || true
 systemctl daemon-reload
 systemctl enable openlen-app.service
+systemctl enable --now openlen-email-domains.timer 2>/dev/null || true
 # Backup timer stays disabled until /etc/openlen/rclone.conf is populated.
 # Enable manually with: systemctl enable --now openlen-backup.timer
 # The rollup timer is safe to enable once the app env is set:
