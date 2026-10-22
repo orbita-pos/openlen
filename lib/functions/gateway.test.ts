@@ -182,6 +182,15 @@ describe("la puerta", () => {
     expect(eventos).toHaveLength(0);
   });
 
+  it("🔴 desde la caja de Len, las funciones de producción no corren (las del borrador sí)", async () => {
+    const live = montar(undefined, { resolve: async () => ({ ...TARGET, environment: "live" as const }), deployment: async () => ({ ...DEPLOY, environment: "live" as const }) });
+    const res = await llamar(live.deps, "/functions/v1/webhook", { headers: { "x-openlen-caja": "p1.x" } });
+    expect(res.status).toBe(403);
+    expect(live.eventos).toHaveLength(0);
+    const draft = montar();
+    expect((await leida(llamar(draft.deps, "/functions/v1/webhook", { headers: { "x-openlen-caja": "p1.x" } }))).status).toBe(200);
+  });
+
   it("verify_jwt: la función con JWT exige cabecera; la de webhook no", async () => {
     const { deps, eventos } = montar();
     const sin = await llamar(deps, "/functions/v1/hola");

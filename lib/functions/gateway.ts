@@ -12,6 +12,7 @@
 //      la llamada con sus registros, tapados, y su traza traducida.
 // Sin base ni motor de verdad: todo entra por `GatewayDeps` (serve.ts cablea).
 
+import { BOX_MARKER_HEADER } from "@/lib/agent/sandbox/box-marker";
 import type { Plan } from "@/lib/plan";
 
 import { admit, type AdmissionAlerts } from "./admission";
@@ -129,6 +130,11 @@ export async function handleFunctionsRequest(req: Request, deps: GatewayDeps, o:
   const target = await deps.resolve(req, { forceDraft: o.forceDraft === true });
   if (!target) return functionsError("NOT_FOUND");
   if ("forbidden" in target) return functionsError("FORBIDDEN", { message: target.forbidden });
+  // LEN'S BOX (lib/agent/sandbox/box-marker.ts): a production function can write anything; from the box,
+  // only the draft's run (the box's own `curl` already goes to the draft through the door).
+  if (target.environment === "live" && req.headers.has(BOX_MARKER_HEADER)) {
+    return functionsError("FORBIDDEN", { message: "Len's box doesn't run production functions: call the draft's (from the canvas)." });
+  }
   if (await deps.blocked?.(target.projectId)) return functionsError("FUNCTIONS_UNAVAILABLE", { message: "Edge Functions are disabled for this project" });
   // Un visitante no se come el proyecto: ni las llamadas del mes ni, con la IA
   // de las apps, los créditos del dueño (spec local 2026-10-15, 4.5).
