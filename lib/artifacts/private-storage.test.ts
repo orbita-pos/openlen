@@ -1,9 +1,9 @@
 // @vitest-environment node
-import { mkdtemp, readdir, rm, symlink } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, rm, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { FilesystemArtifactStorage, R2ArtifactStorage } from "./private-storage";
+import { FilesystemArtifactStorage, R2ArtifactStorage, storageModes } from "./private-storage";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -30,6 +30,19 @@ describe("private output storage", () => {
     const { root, storage } = await makeStorage();
     for (const key of ["../escape", "/absolute", "p/../../escape", "p\\..\\escape", "https://public.test/x"]) await expect(storage.put(key, new Uint8Array([1]))).rejects.toThrow();
     expect(await readdir(root)).toEqual([]);
+  });
+  it("keeps objects private unless the folder was made readable to its group", () => {
+    expect(storageModes(0o40700)).toEqual({ dir: 0o700, file: 0o600 });
+    expect(storageModes(0o40740)).toEqual({ dir: 0o700, file: 0o600 }); // the group could not enter it
+    expect(storageModes(0o42750)).toEqual({ dir: 0o750, file: 0o640 }); // the box: setgid, group may read
+    expect(storageModes(0o40755)).toEqual({ dir: 0o750, file: 0o640 }); // others never get a bit from us
+  });
+  it.runIf(process.platform !== "win32")("writes group-readable objects into a folder the operator shared with a group", async () => {
+    const { root, storage } = await makeStorage();
+    await chmod(root, 0o750);
+    await storage.put("project/a/result.pdf", new Uint8Array([1]));
+    expect((await stat(join(root, "project"))).mode & 0o777).toBe(0o750);
+    expect((await stat(join(root, "project/a/result.pdf"))).mode & 0o777).toBe(0o640);
   });
   // Windows sandbox cannot create reparse points; this exact boundary also ran
   // against the production module in isolated Linux (see execution ledger).
