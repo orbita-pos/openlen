@@ -902,3 +902,24 @@ a {
     transition: none !important;
   }
 }
+
+/* The supplied launch artwork contains its own type: preserve the entire image. */
+.launch-art { margin: 0; overflow: hidden; border-radius: 18px; background: #15191d; }
+.release-art { display: block; }
+.release-art img, .release-cover img { display: block; width: 100%; height: auto; object-fit: contain; }
+.launch-art figcaption { display: flex; justify-content: space-between; gap: 16px; padding: 16px 22px; color: #f8f4ec; font-size: 13px; }
+.launch-art figcaption a { text-decoration: underline; text-underline-offset: 4px; }
+.release-intro { max-width: 650px; color: var(--muted); line-height: 1.7; }
+.release-feature { display: grid; grid-template-columns: 1fr 1.6fr; gap: 40px; padding: 26px 0; border-top: 1px solid var(--line); }
+.release-feature h3, .release-resource-list h3 { margin: 0 0 12px; font-size: 21px; letter-spacing: -.025em; }
+.release-feature p, .release-resource-list p { margin: 0; line-height: 1.75; color: #3d3932; }
+.release-formats { font-size: 12px; color: var(--muted); }
+.release-features > .btn { margin-top: 14px; }
+.release-resource-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 32px; margin: 30px 0 20px; }
+@media(max-width:760px) { .release-feature { grid-template-columns: 1fr; gap: 14px; } .release-resource-list { grid-template-columns: 1fr; gap: 28px; } .launch-art figcaption { padding: 14px; font-size: 12px; } }
+
+/* Source references must not widen the article on small screens. */
+.prose { min-width: 0; }
+.prose .src { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+.hero h1 em { white-space: nowrap; }

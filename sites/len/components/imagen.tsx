@@ -1,6 +1,7 @@
-type Nombre = "primera" | "segunda" | "tercera";
+type Nombre = "primera" | "segunda" | "tercera" | "len3";
 
 const ANCHOS: Record<Nombre, [number, number]> = {
+  len3: [832, 1664],
   primera: [1080, 2160],
   segunda: [1080, 2160],
   tercera: [1080, 1536],
@@ -33,6 +34,8 @@ export function Imagen({
         src={`/img/${nombre}-${a}.webp`}
         srcSet={set("webp")}
         sizes={SIZES}
+        width={nombre === "len3" ? 1664 : undefined}
+        height={nombre === "len3" ? 936 : undefined}
         alt={alt}
         loading={prioridad ? "eager" : "lazy"}
         fetchPriority={prioridad ? "high" : "auto"}

@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       type: "website",
       title: d.meta.title,
       description: d.meta.description,
-      images: ["/img/og/primera.jpg"],
+      images: ["/img/og/len3.jpg"],
       locale: lang === "es" ? "es_ES" : "en_US",
     },
   };

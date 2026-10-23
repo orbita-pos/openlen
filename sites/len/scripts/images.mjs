@@ -11,6 +11,7 @@ const OUT = join(SITE, "public", "img");
 mkdirSync(join(OUT, "og"), { recursive: true });
 
 const TRABAJOS = [
+  { nombre: "len3", anchos: [832, 1664] },
   { nombre: "primera", anchos: [1080, 2160] },
   { nombre: "segunda", anchos: [1080, 2160] },
   { nombre: "tercera", anchos: [1080, 1536] },
@@ -25,7 +26,7 @@ for (const { nombre, anchos } of TRABAJOS) {
     await sharp(src).resize({ width: w }).webp({ quality: 78 }).toFile(join(OUT, `${nombre}-${w}.webp`));
   }
   await sharp(src)
-    .resize(1200, 630, { fit: "cover", position: "attention" })
+    .resize(1200, 630, { fit: nombre === "len3" ? "contain" : "cover", position: nombre === "len3" ? "centre" : "attention", background: "#15191d" })
     .jpeg({ quality: 82, mozjpeg: true })
     .toFile(join(OUT, "og", `${nombre}.jpg`));
 }

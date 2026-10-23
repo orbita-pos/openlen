@@ -1,4 +1,4 @@
-export type Portada = "primera" | "segunda" | "tercera";
+export type Portada = "primera" | "segunda" | "tercera" | "len3";
 
 export interface MetaArticulo {
   slug: string; // igual en en y es

@@ -15,4 +15,6 @@
 // en la tarjeta y el titular subirá en uno.
 import { buildFunctionDeclarations } from "../../../lib/agent/catalog";
 
-console.log(JSON.stringify(buildFunctionDeclarations({}, { functionSecrets: false }).map((d) => String(d.name))));
+console.log(JSON.stringify(buildFunctionDeclarations({ OPENLEN_ARTIFACTS: "1" }, { functionSecrets: false, artifactKinds: ["dashboard", "slides", "image", "motion", "audio"] }).map((d) => String(d.name))));
+
+// Production exposes all five deliverable kinds; Edge Functions remain disabled.
