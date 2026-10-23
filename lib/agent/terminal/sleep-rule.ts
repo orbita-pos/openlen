@@ -1,5 +1,5 @@
 /**
- * A long `sleep` is refused before it runs, as Claude Code's Bash does (its validateInput, binary 2.1.304): when a
+ * A long `sleep` is refused before it runs, as Claude Code's Bash does: when a
  * command OPENS with `sleep N` and N is 25 s or more, nothing runs and the answer says how to wait instead — for
  * a condition, not for a time. Claude Code only does this when it has something better to offer; here a sleep can
  * never be the better thing, because nothing runs in the background of this terminal: the only work that goes on
