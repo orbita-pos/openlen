@@ -461,7 +461,8 @@
       "secrets": "密钥",
       "ai": "AI",
       "payments": "付款",
-      "email": "邮件"
+      "email": "邮件",
+      "shopify": "Shopify"
     },
     "unavailable": {
       "title": "此处无法使用数据库",
@@ -684,6 +685,21 @@
       "disconnectConfirm": "断开",
       "cancel": "取消",
       "cleanupDns": "已断开。现在可以从 DNS 中删除你为 OpenLen 邮件添加的记录。"
+    },
+    "shopify": {
+      "loading": "加载中…",
+      "loadError": "无法读取店铺，请稍后再试。",
+      "title": "你的 Shopify 店铺",
+      "catalog": "{products} 个商品 · {collections} 个系列（截至 {date}）",
+      "currencyCountry": "价格币种 {currency} · {country}",
+      "connectedAt": "连接于 {date}",
+      "open": "在 Shopify 中打开",
+      "readOnly": "OpenLen 不保存商品目录的副本：你的页面每次都直接从 Shopify 读取。",
+      "disconnect": "断开连接",
+      "disconnectConfirm": "页面不会改变：Len 已经写好的内容会继续使用这家店铺，直到你提出别的要求。",
+      "disconnectYes": "是，断开",
+      "cancel": "取消",
+      "disconnected": "店铺已断开。要连接另一家店铺，请告诉 Len。"
     }
   },
   "appBirth": {

@@ -131,6 +131,8 @@ export default defineConfig({
       "lib/stripe/**/*.test.ts",
       // Project email (spec local 2026-10-22-email-integration).
       "lib/project-email/**/*.test.ts",
+      // Shopify without a key (spec local 2026-10-22-shopify-storefront).
+      "lib/shopify/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
@@ -501,6 +503,7 @@ export default defineConfig({
       "lib/agent/request-secrets.test.ts",
       // Project email (spec local 2026-10-22-email-integration, 6.8): the domain's card and the form's reply.
       "lib/agent/connect-email-domain.test.ts",
+      "lib/agent/connect-shopify-store.test.ts",
       "lib/agent/form-auto-reply.test.ts",
       "lib/agent/historial-saneado.test.ts",
       // Pieza 5 de Len 2.5: buscar en las charlas, como session-query de DeepSeek.
@@ -707,6 +710,8 @@ export default defineConfig({
       "app/api/projects/[id]/stripe/route.test.ts",
       // Project email (spec local 2026-10-22-email-integration).
       "app/api/projects/[id]/email/route.test.ts",
+      // Shopify without a key (spec local 2026-10-22-shopify-storefront): the Shopify tab.
+      "app/api/projects/[id]/shopify/route.test.ts",
       "app/api/email/domain-connect/return/route.test.ts",
       "app/api/email/webhooks/resend/route.test.ts",
       "app/u/[token]/route.test.ts",

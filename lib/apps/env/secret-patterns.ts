@@ -22,6 +22,7 @@ export type SecretKind =
   | "google_oauth"
   | "supabase_secret"
   | "supabase_service_role"
+  | "shopify"
   | "private_key"
   | "secret_name";
 
@@ -40,6 +41,7 @@ export const SECRET_PROVIDER: Readonly<Record<ProviderSecretKind, string>> = {
   google_oauth: "Google",
   supabase_secret: "Supabase",
   supabase_service_role: "Supabase",
+  shopify: "Shopify",
 };
 
 // El orden importa: `sk-ant-` también casaría con la de OpenAI.
@@ -57,6 +59,10 @@ const BY_VALUE: ReadonlyArray<readonly [ProviderSecretKind, RegExp]> = [
   ["sendgrid", /^SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}$/],
   ["google_oauth", /^GOCSPX-[A-Za-z0-9_-]{10,}$/],
   ["supabase_secret", /^sb_secret_[A-Za-z0-9_-]{10,}$/],
+  // Shopify's admin access token, custom app token, private app password and app shared secret
+  // (spec local 2026-10-22-shopify-storefront, §6.8). Its Storefront PUBLIC token is 32 hex with no
+  // prefix: it is meant for the browser and doesn't match.
+  ["shopify", /^shp(?:at|ca|pa|ss)_[a-fA-F0-9]{32}$/],
 ];
 
 const PRIVATE_KEY = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
@@ -159,6 +165,7 @@ export function findSecretsInText(text: string): FoundSecret[] {
 
 const SUGGESTED_NAME: Partial<Record<ProviderSecretKind, string>> = {
   mercadopago: "MERCADOPAGO_ACCESS_TOKEN",
+  shopify: "SHOPIFY_ADMIN_ACCESS_TOKEN",
   anthropic: "ANTHROPIC_API_KEY",
   openai: "OPENAI_API_KEY",
   github: "GITHUB_TOKEN",

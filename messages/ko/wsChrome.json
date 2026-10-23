@@ -461,7 +461,8 @@
       "secrets": "시크릿",
       "ai": "AI",
       "payments": "결제",
-      "email": "이메일"
+      "email": "이메일",
+      "shopify": "Shopify"
     },
     "unavailable": {
       "title": "여기서는 데이터베이스를 사용할 수 없습니다",
@@ -684,6 +685,21 @@
       "disconnectConfirm": "연결 해제",
       "cancel": "취소",
       "cleanupDns": "연결이 해제되었습니다. 이제 OpenLen 이메일용으로 추가한 줄을 DNS에서 삭제해도 됩니다."
+    },
+    "shopify": {
+      "loading": "불러오는 중…",
+      "loadError": "스토어를 읽지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "title": "내 Shopify 스토어",
+      "catalog": "상품 {products}개 · 컬렉션 {collections}개 ({date} 기준)",
+      "currencyCountry": "가격 {currency} · {country}",
+      "connectedAt": "{date}에 연결됨",
+      "open": "Shopify에서 열기",
+      "readOnly": "OpenLen은 카탈로그 사본을 저장하지 않아요. 페이지가 열릴 때마다 Shopify에서 읽어 와요.",
+      "disconnect": "연결 해제",
+      "disconnectConfirm": "페이지는 바뀌지 않아요. Len이 이미 작성한 내용은 다른 요청을 할 때까지 이 스토어를 계속 사용해요.",
+      "disconnectYes": "네, 해제할게요",
+      "cancel": "취소",
+      "disconnected": "스토어 연결을 해제했어요. 다른 스토어를 연결하려면 Len에게 요청하세요."
     }
   },
   "appBirth": {

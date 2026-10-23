@@ -234,6 +234,29 @@ mod tests {
     // poner `rel=noopener`. Ninguno de los dos es CSP.
     use super::*;
 
+    // A <template>'s content (Shopify's Storefront Web Components paint products from
+    // one; spec local 2026-10-22-shopify-storefront, §6.3) survives the parse and the
+    // serialize: kuchikiki 0.8.2 parses it into `template_contents` but serializes only
+    // `children()`. Measured on 22/10: the canvas and the release served an empty <template>.
+    #[test]
+    fn template_content_survives_the_seal() {
+        let html = r#"<body><shopify-list-context first="2"><template><article class="x"><h2><shopify-data query="product.title"></shopify-data></h2></article></template></shopify-list-context></body>"#;
+        let r = seal_release(html, None, None);
+        assert!(
+            r.html.contains(r#"<template><article class="x"><h2><shopify-data query="product.title"></shopify-data></h2></article></template>"#),
+            "{}",
+            r.html
+        );
+    }
+
+    #[test]
+    fn nested_templates_survive_and_sealing_twice_changes_nothing() {
+        let html = r#"<body><template><div><template><p>dentro</p></template></div></template></body>"#;
+        let once = seal_release(html, None, None).html;
+        assert!(once.contains("<template><div><template><p>dentro</p></template></div></template>"), "{once}");
+        assert_eq!(seal_release(&once, None, None).html, once);
+    }
+
     fn hash_token(text: &str) -> String {
         format!(
             "'sha256-{}'",

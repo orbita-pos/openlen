@@ -19,5 +19,8 @@ export interface CurlResponse {
 export interface FunctionsCurl {
   /** Las URLs a las que el `curl` de la terminal puede llamar. */
   readonly prefixes: readonly string[];
+  /** What those URLs are, in words, for the refusal of any other ("this project's Edge
+   *  Functions (…)"). Absent = the functions' sentence of before. */
+  readonly reaches?: string;
   call(req: CurlRequest): Promise<CurlResponse>;
 }

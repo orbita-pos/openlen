@@ -205,6 +205,8 @@ fn collapse(s: &str, max_chars: usize) -> String {
 }
 
 fn serialize_node(node: &NodeRef) -> String {
+    // A <template>'s content lives in `template_contents`, which kuchikiki doesn't serialize.
+    crate::publish::inline_template_contents(node);
     let mut out: Vec<u8> = Vec::new();
     if node.serialize(&mut out).is_err() {
         return String::new();

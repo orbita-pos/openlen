@@ -45,6 +45,7 @@ import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { stripeEnabledIn } from "@/lib/stripe/enabled";
 import { emailEnabledIn } from "@/lib/project-email/enabled";
+import { shopifyEnabledIn } from "@/lib/shopify/enabled";
 import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/functions/limits";
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
@@ -302,6 +303,34 @@ const LINEA_DEL_CORREO =
   " The sign-in emails use the project's Supabase templates: `[auth.email.template.<confirmation|recovery|invite|magic_link>]` with `subject` and `content_path` in /supabase/config.toml, an HTML file with {{ .ConfirmationURL }} or {{ .Token }}." +
   " A form's automatic reply to whoever filled it is set with set_form_auto_reply.";
 
+// SHOPIFY WITHOUT A KEY (spec local 2026-10-22-shopify-storefront, §6.7): with Shopify on, in
+// pages and apps, with or without the functions. Shopify's own Storefront Web Components (a
+// page) and Storefront API, plus what OpenLen adds: the connection, the canvas's checkout and
+// the rules. An app has no <script> tags to add: it goes through the API. What differs goes in
+// its own "- In the page" / "- In the app" line, like the backend's.
+const SHOPIFY_LINE =
+  "- Shopify, the owner's existing store (PROJECT STATE's `shopify`): if the user talks about their Shopify store and there is no `shopify`, call connect_shopify_store with its domain." +
+  " Products, prices, photos and stock come from Shopify live: never copy them into the page as text, and never guess a handle: read it with `curl` in the terminal (POST GraphQL to `storefront_api`, without a key)." +
+  " Without a key there is no `quantityAvailable`, tags come back empty, and there are no metafields or customers: use `availableForSale` for sold out." +
+  " In the canvas the checkout opens in a new tab by itself: leave the cart's `target` as it is, so the published page takes the buyer to the checkout in the same tab, like any Shopify store. When you try the cart with use_page, never fill in or pay Shopify's checkout. If the store changes, update the pages that use the old one.";
+const SHOPIFY_IN_THE_PAGE =
+  '- In the page, sell from the Shopify store with Shopify\'s Storefront Web Components: `<script src="https://cdn.shopify.com/storefront/web-components.js"></script>`, `<shopify-store store-domain="https://<store_domain>" country="<country>">`, then `<shopify-context type="product" handle="…">` or `<shopify-list-context type="product" query="products" first="12">` around a `<template>` you design (`<shopify-data query="product.title">`, `<shopify-money query="product.selectedOrFirstAvailableVariant.price">`, `<shopify-media query="product.selectedOrFirstAvailableVariant.image">`, `<shopify-variant-selector>`), and `<shopify-cart id="cart">` with `onclick="getElementById(\'cart\').addLine(event).showModal()"` (or `buyNow(event)` on `<shopify-store>`); style the cart with `shopify-cart::part(…)` and its slots.' +
+  " For anything else, `fetch` the Storefront API from the page.";
+// Measured on 22/10 in Chromium with React 19.2 and the demo store: JSX children of a
+// <template> stay outside `template.content`, so the components show nothing unless the
+// template gets its HTML as a string; and the official client refuses to start without a key.
+const SHOPIFY_IN_THE_APP =
+  "- In the app, sell from the Shopify store through the Storefront API without a key: POST GraphQL to `storefront_api` with `fetch`, and its Cart API (`cartCreate`, `cartLinesAdd`) ending in the cart's `checkoutUrl`; `@shopify/storefront-api-client` refuses to start without a key, so don't install it." +
+  " Shopify's Storefront Web Components work too, with their web-components.js loaded once in /index.html: in JSX each `<template>` takes its HTML as a string through `dangerouslySetInnerHTML` (React leaves JSX children outside `template.content`, and the components then show nothing), and the cart is opened from that HTML's own `onclick` or from a ref (`cartRef.current.addLine(e.nativeEvent).showModal()`).";
+
+/** The manual with the Shopify lines, after Realtime's (where the functions' lines also go), or at the end. */
+function conShopify(manual: string, app: AppDeProyecto | null): string {
+  const line = `${SHOPIFY_LINE}\n${app ? SHOPIFY_IN_THE_APP : SHOPIFY_IN_THE_PAGE}`;
+  const i = manual.indexOf(LINEA_DE_REALTIME);
+  const fin = i === -1 ? -1 : manual.indexOf("\n", i + 1);
+  return fin === -1 ? `${manual}\n${line}` : `${manual.slice(0, fin)}\n${line}${manual.slice(fin)}`;
+}
+
 function lineasDeFunciones(env: Readonly<Record<string, string | undefined>>): string {
   const catalogo = functionsCatalog(FUNCTIONS_CATALOG_CURRENT)!
     .dependencies.map((d) => `\`npm:${d.name}\` (${d.for.replace(/\.$/, "")})`)
@@ -346,7 +375,8 @@ export function buildManualDeLaPlataforma(
 ): string {
   const page = partirElManual().agents;
   const base = app ? manualDeLaApp(manualSinPartir(), app) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
-  const agents = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
+  const withFunctions = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
+  const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${ARTIFACT_MANUAL_INDEX}` : agents;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(withArtifacts) : withArtifacts;
 }

@@ -26,6 +26,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   Table2,
   Trash2,
@@ -41,6 +42,7 @@ import { ConfirmButton } from "./confirm-button";
 import { AppAiTab } from "./database-app-ai";
 import { PaymentsTab } from "./database-payments";
 import { EmailTab } from "./database-email";
+import { ShopifyTab } from "./database-shopify";
 import { FunctionsTab } from "./database-functions";
 import { SecretsTab } from "./database-secrets";
 
@@ -80,7 +82,7 @@ const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export function DatabaseView({ projectId }: { projectId: string | null }) {
   const t = useTranslations("wsChrome.database");
-  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai" | "payments" | "email">("tables");
+  const [tab, setTab] = useState<"tables" | "users" | "storage" | "functions" | "secrets" | "ai" | "payments" | "email" | "shopify">("tables");
   const [overview, setOverview] = useState<Overview>({ status: "loading" });
   // El entorno que pide el selector; el que se ve es el que contestó el servidor.
   const [wanted, setWanted] = useState<PanelEnv | null>(null);
@@ -192,6 +194,26 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
     void loadEmail();
   }, [loadEmail]);
 
+  // SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.6): its tab shows only for the owner
+  // and only with a store connected, EVEN on a page with no backend nor functions.
+  const [shopifyState, setShopifyState] = useState<{ readonly projectId: string; readonly connected: boolean } | null>(null);
+  const loadShopify = useCallback(async () => {
+    if (!projectId) return;
+    let connected = false;
+    try {
+      const r = await call<{ available?: unknown; store?: unknown }>(`/api/projects/${projectId}/shopify`);
+      connected = r.available === true && r.store !== null && typeof r.store === "object";
+    } catch {
+      connected = false;
+    }
+    if (currentProject.current === projectId) setShopifyState({ projectId, connected });
+  }, [projectId]);
+  const shopify = shopifyState?.projectId === projectId && shopifyState.connected;
+
+  useEffect(() => {
+    void loadShopify();
+  }, [loadShopify]);
+
   const shown: PanelEnv | null = overview.status === "ready" || overview.status === "empty" ? (overview.environment ?? null) : null;
   const hasLive = overview.status === "ready" || overview.status === "empty" ? overview.hasLive : undefined;
 
@@ -214,12 +236,18 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
   // Correos has no data of its own to wait for: it is the tab when chosen, or when, once
   // the backend answered, there is no other.
   const otherTabs = overview.status === "ready" || (overview.status === "empty" && fn !== null);
-  const baseTab = tab === "email" ? "tables" : tab;
+  const baseTab = tab === "email" || tab === "shopify" ? "tables" : tab;
   const tableTab = baseTab === "tables" || baseTab === "users" || baseTab === "storage";
+  // Shopify, like Correos, has no data of its own to wait for.
+  const alone = !otherTabs && overview.status !== "loading";
   const activeTab =
-    email && (tab === "email" || (!otherTabs && overview.status !== "loading"))
-      ? "email"
-      : !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : (baseTab === "ai" && !ai) || (baseTab === "payments" && !payments) ? "functions" : baseTab;
+    shopify && tab === "shopify"
+      ? "shopify"
+      : email && (tab === "email" || alone)
+        ? "email"
+        : shopify && alone
+          ? "shopify"
+          : !fn && !tableTab ? "tables" : fn && overview.status === "empty" && tableTab ? "functions" : (baseTab === "ai" && !ai) || (baseTab === "payments" && !payments) ? "functions" : baseTab;
   const fnTab =
     fn !== null &&
     projectId !== null &&
@@ -241,6 +269,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
               void load();
               void loadFn();
               void loadEmail();
+              void loadShopify();
             }}
             aria-label={t("refresh")}
             title={t("refresh")}
@@ -281,7 +310,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
             )}
           </div>
         )}
-        {otherTabs || email ? (
+        {otherTabs || email || shopify ? (
           <div role="tablist" aria-label={t("title")} className="flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
             {overview.status === "ready" && (
               <>
@@ -299,6 +328,7 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
               </>
             )}
             {email && <TabButton active={activeTab === "email"} onClick={() => setTab("email")} icon={<Mail size={14} />} label={t("tabs.email")} />}
+            {shopify && <TabButton active={activeTab === "shopify"} onClick={() => setTab("shopify")} icon={<ShoppingBag size={14} />} label={t("tabs.shopify")} />}
           </div>
         ) : (
           <div className="h-3" />
@@ -308,6 +338,8 @@ export function DatabaseView({ projectId }: { projectId: string | null }) {
       <div className="flex-1 min-h-0 flex">
         {activeTab === "email" && projectId ? (
           <EmailTab key={projectId} projectId={projectId} />
+        ) : activeTab === "shopify" && projectId ? (
+          <ShopifyTab key={projectId} projectId={projectId} />
         ) : (
           <>
           {overview.status === "loading" && <Centered>{t("loading")}</Centered>}

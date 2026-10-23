@@ -25,6 +25,11 @@ describe("detectSecret", () => {
       ["SG.abcdefghijklmnopqr.abcdefghijklmnopqrstuv", "sendgrid"],
       ["GOCSPX-abcdefghijklmnop", "google_oauth"],
       ["sb_secret_abcdefghijklmnop", "supabase_secret"],
+      // Shopify (spec local 2026-10-22-shopify-storefront, §6.8): Admin API, custom app, private app, shared secret.
+      ["shpat_" + "a1".repeat(16), "shopify"],
+      ["shpca_" + "b2".repeat(16), "shopify"],
+      ["shppa_" + "c3".repeat(16), "shopify"],
+      ["shpss_" + "d4".repeat(16), "shopify"],
       [jwt({ role: "service_role", iss: "supabase" }), "supabase_service_role"],
       ["-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----", "private_key"],
       ["-----BEGIN RSA PRIVATE KEY-----", "private_key"],
@@ -44,6 +49,8 @@ describe("detectSecret", () => {
       "AIzaSyA-1234567890abcdefghijklmnopqrstu",
       "phc_abcdefghijklmnopqrstuvwxyz0123456789",
       "sb_publishable_abcdefghijklmnop",
+      // A Shopify Storefront PUBLIC token: 32 hex, no prefix, meant for the browser.
+      "a1b2".repeat(8),
       jwt({ role: "anon", iss: "supabase" }),
       "https://abc123@o123.ingest.sentry.io/456",
       "https://api.example.com",
@@ -119,6 +126,11 @@ describe("findSecretsInText", () => {
     expect(findSecretsInText(`toma: ${pem}`)).toMatchObject([{ kind: "private_key", value: pem }]);
     expect(findSecretsInText("pon el precio en 200 pesos y la clave pública pk_live_51H8abcdefghijklmnop")).toEqual([]);
     expect(findSecretsInText("el campo se llama SECRET_KEY")).toEqual([]);
+  });
+
+  it("a Shopify admin token inside a text is found", () => {
+    const token = "shpat_" + "0".repeat(32);
+    expect(findSecretsInText(`token: ${token}.`)).toMatchObject([{ kind: "shopify", value: token }]);
   });
 });
 

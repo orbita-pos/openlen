@@ -48,6 +48,8 @@ import { REQUEST_SECRETS_DECLARATION } from "@/lib/agent/request-secrets";
 import { CONNECT_EMAIL_DOMAIN_DECLARATION } from "@/lib/agent/connect-email-domain";
 import { SET_FORM_AUTO_REPLY, SET_FORM_AUTO_REPLY_DECLARATION } from "@/lib/agent/form-auto-reply";
 import { emailEnabledIn } from "@/lib/project-email/enabled";
+import { CONNECT_SHOPIFY_STORE, CONNECT_SHOPIFY_STORE_DECLARATION } from "@/lib/agent/connect-shopify-store";
+import { shopifyEnabledIn } from "@/lib/shopify/enabled";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
@@ -179,6 +181,8 @@ function declaracionesDelModo(
     fuera.add(CONNECT_EMAIL_DOMAIN);
     fuera.add(SET_FORM_AUTO_REPLY);
   }
+  // SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.9): on unless OPENLEN_SHOPIFY=0, per server.
+  if (!shopifyEnabledIn(_env)) fuera.add(CONNECT_SHOPIFY_STORE);
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
@@ -444,6 +448,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // channel, and the form's automatic reply.
     CONNECT_EMAIL_DOMAIN_DECLARATION,
     SET_FORM_AUTO_REPLY_DECLARATION,
+    // SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.1): the user's store by its domain, no card.
+    CONNECT_SHOPIFY_STORE_DECLARATION,
     // LOS VISUALES DE LEN (spec local 2026-10-16-len-inline-visuals): las dos
     // de las herramientas visualize de Claude, con sus nombres y su forma, y
     // palabras nuestras (`lib/agent/visuals/tools.ts`).
