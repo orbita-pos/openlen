@@ -68,6 +68,16 @@ describe("la web de Len", () => {
   });
 });
 
+describe("la vista previa de los entregables", () => {
+  // preview.openlen.com es el host de la vista previa de Len 3.0 (bloque propio
+  // en infra/caddy/Caddyfile). Sin la reserva, alguien ocuparía preview.openlen.app
+  // y su redirección de .com quedaría tapada por la vista previa.
+  it("preview está reservado y el validador lo rechaza", () => {
+    expect(isReserved("preview")).toBe(true);
+    expect(validateSubdomain("preview").ok).toBe(false);
+  });
+});
+
 describe("el prefijo del lienzo está reservado", () => {
   // 🔴 El lienzo del taller vive en lienzo-<id>.openlen.app. Si un usuario
   // pudiera publicar en ese nombre, su página y el lienzo de otro proyecto
