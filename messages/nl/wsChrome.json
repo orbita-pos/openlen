@@ -461,7 +461,8 @@
       "secrets": "Geheimen",
       "ai": "AI",
       "payments": "Betalingen",
-      "email": "E-mails"
+      "email": "E-mails",
+      "shopify": "Shopify"
     },
     "unavailable": {
       "title": "De database is hier niet beschikbaar",
@@ -684,6 +685,21 @@
       "disconnectConfirm": "Loskoppelen",
       "cancel": "Annuleren",
       "cleanupDns": "Losgekoppeld. Je kunt nu de regels uit je DNS halen die je voor de e-mail van OpenLen had toegevoegd."
+    },
+    "shopify": {
+      "loading": "Laden…",
+      "loadError": "De winkel kon niet worden gelezen. Probeer het zo opnieuw.",
+      "title": "Je Shopify-winkel",
+      "catalog": "{products} producten · {collections} collecties (op {date})",
+      "currencyCountry": "Prijzen in {currency} · {country}",
+      "connectedAt": "Verbonden op {date}",
+      "open": "Openen in Shopify",
+      "readOnly": "OpenLen bewaart geen kopie van de catalogus: je pagina's lezen hem bij het laden bij Shopify.",
+      "disconnect": "Loskoppelen",
+      "disconnectConfirm": "Je pagina's veranderen niet: wat Len al schreef blijft deze winkel gebruiken tot je iets anders vraagt.",
+      "disconnectYes": "Ja, loskoppelen",
+      "cancel": "Annuleren",
+      "disconnected": "Winkel losgekoppeld. Vraag Len om een andere te verbinden."
     }
   },
   "appBirth": {

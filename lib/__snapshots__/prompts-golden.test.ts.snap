@@ -731,6 +731,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "connect_shopify_store",
+    "description": "Connect the user's existing Shopify store to this project by its domain, so pages and apps can show its products, its cart and Shopify's checkout without any key. Takes their own domain (tienda.com) or the .myshopify.com one; it checks the store and returns its name, currency, country and a sample of its catalog. Call it when the user talks about their Shopify store and PROJECT STATE has no \`shopify\`, or wants another store (it replaces the connected one). Never ask the user for Shopify keys or tokens.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "domain": {
+          "type": "STRING",
+          "description": "The store's domain, as the user gave it."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    }
+  },
+  {
     "name": "read_me",
     "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
     "parameters": {
@@ -1577,6 +1593,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "connect_shopify_store",
+    "description": "Connect the user's existing Shopify store to this project by its domain, so pages and apps can show its products, its cart and Shopify's checkout without any key. Takes their own domain (tienda.com) or the .myshopify.com one; it checks the store and returns its name, currency, country and a sample of its catalog. Call it when the user talks about their Shopify store and PROJECT STATE has no \`shopify\`, or wants another store (it replaces the connected one). Never ask the user for Shopify keys or tokens.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "domain": {
+          "type": "STRING",
+          "description": "The store's domain, as the user gave it."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    }
+  },
+  {
     "name": "read_me",
     "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
     "parameters": {
@@ -2417,6 +2449,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "connect_shopify_store",
+    "description": "Connect the user's existing Shopify store to this project by its domain, so pages and apps can show its products, its cart and Shopify's checkout without any key. Takes their own domain (tienda.com) or the .myshopify.com one; it checks the store and returns its name, currency, country and a sample of its catalog. Call it when the user talks about their Shopify store and PROJECT STATE has no \`shopify\`, or wants another store (it replaces the connected one). Never ask the user for Shopify keys or tokens.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "domain": {
+          "type": "STRING",
+          "description": "The store's domain, as the user gave it."
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    }
+  },
+  {
     "name": "read_me",
     "description": "Returns the design manual for show_widget: the CSS variables the chat provides, layout and streaming rules, and guidance for each module. Call it once before your first show_widget in a conversation, and again only to load a module you haven't loaded yet. Don't mention this call to the user.",
     "parameters": {
@@ -3036,6 +3084,8 @@ This project has its own Supabase backend —a Postgres database behind the REST
 - To test what is behind signing in, use_page can sign in as a user of the test database (\`sign_in_as\` with an email): if there is none with that email, a test user is created. The test database sends no emails; new accounts are confirmed automatically.
 - Files go to Storage, with supabase-js as usual: \`supabase.storage.from(bucket).upload(path, file)\`, \`getPublicUrl(path)\` for a public bucket, \`createSignedUrl(path, seconds)\` for a private one. Create buckets in a migration (\`insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);\`). Who can upload, see, change or delete files is decided by policies on \`storage.objects\`, the same way as for tables; \`(storage.foldername(name))[1] = (select auth.uid()::text)\` keeps each user in their own folder. With no policy, only the secret key gets in. Limits: 50 MB per file and 1 GB per project. Image transformations and resumable uploads don't exist here yet.
 - Live updates go through Realtime, with supabase-js as usual: \`supabase.channel(name)\` with \`.on('broadcast', { event }, …)\` and \`send()\` for messages between visitors, \`.track()\` and \`presenceState()\` for who is here, and \`.on('postgres_changes', { event, schema: 'public', table }, …)\` for changes to a table. A table is heard only after a migration adds it to the publication (\`alter publication supabase_realtime add table public.messages;\`), and its RLS policies decide who hears each change. Private channels (\`{ config: { private: true } }\`) are allowed by policies on \`realtime.messages\` with \`realtime.topic()\`. Limits: 200 connections and 100 messages per second per project.
+- Shopify, the owner's existing store (PROJECT STATE's \`shopify\`): if the user talks about their Shopify store and there is no \`shopify\`, call connect_shopify_store with its domain. Products, prices, photos and stock come from Shopify live: never copy them into the page as text, and never guess a handle: read it with \`curl\` in the terminal (POST GraphQL to \`storefront_api\`, without a key). Without a key there is no \`quantityAvailable\`, tags come back empty, and there are no metafields or customers: use \`availableForSale\` for sold out. In the canvas the checkout opens in a new tab by itself: leave the cart's \`target\` as it is, so the published page takes the buyer to the checkout in the same tab, like any Shopify store. When you try the cart with use_page, never fill in or pay Shopify's checkout. If the store changes, update the pages that use the old one.
+- In the page, sell from the Shopify store with Shopify's Storefront Web Components: \`<script src="https://cdn.shopify.com/storefront/web-components.js"></script>\`, \`<shopify-store store-domain="https://<store_domain>" country="<country>">\`, then \`<shopify-context type="product" handle="…">\` or \`<shopify-list-context type="product" query="products" first="12">\` around a \`<template>\` you design (\`<shopify-data query="product.title">\`, \`<shopify-money query="product.selectedOrFirstAvailableVariant.price">\`, \`<shopify-media query="product.selectedOrFirstAvailableVariant.image">\`, \`<shopify-variant-selector>\`), and \`<shopify-cart id="cart">\` with \`onclick="getElementById('cart').addLine(event).showModal()"\` (or \`buyNow(event)\` on \`<shopify-store>\`); style the cart with \`shopify-cart::part(…)\` and its slots. For anything else, \`fetch\` the Storefront API from the page.
 
 WHAT PUBLISHING REQUIRES
 
@@ -3093,6 +3143,8 @@ This project has its own Supabase backend —a Postgres database behind the REST
 - To test what is behind signing in, use_page can sign in as a user of the test database (\`sign_in_as\` with an email): if there is none with that email, a test user is created. The test database sends no emails; new accounts are confirmed automatically.
 - Files go to Storage, with supabase-js as usual: \`supabase.storage.from(bucket).upload(path, file)\`, \`getPublicUrl(path)\` for a public bucket, \`createSignedUrl(path, seconds)\` for a private one. Create buckets in a migration (\`insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);\`). Who can upload, see, change or delete files is decided by policies on \`storage.objects\`, the same way as for tables; \`(storage.foldername(name))[1] = (select auth.uid()::text)\` keeps each user in their own folder. With no policy, only the secret key gets in. Limits: 50 MB per file and 1 GB per project. Image transformations and resumable uploads don't exist here yet.
 - Live updates go through Realtime, with supabase-js as usual: \`supabase.channel(name)\` with \`.on('broadcast', { event }, …)\` and \`send()\` for messages between visitors, \`.track()\` and \`presenceState()\` for who is here, and \`.on('postgres_changes', { event, schema: 'public', table }, …)\` for changes to a table. A table is heard only after a migration adds it to the publication (\`alter publication supabase_realtime add table public.messages;\`), and its RLS policies decide who hears each change. Private channels (\`{ config: { private: true } }\`) are allowed by policies on \`realtime.messages\` with \`realtime.topic()\`. Limits: 200 connections and 100 messages per second per project.
+- Shopify, the owner's existing store (PROJECT STATE's \`shopify\`): if the user talks about their Shopify store and there is no \`shopify\`, call connect_shopify_store with its domain. Products, prices, photos and stock come from Shopify live: never copy them into the page as text, and never guess a handle: read it with \`curl\` in the terminal (POST GraphQL to \`storefront_api\`, without a key). Without a key there is no \`quantityAvailable\`, tags come back empty, and there are no metafields or customers: use \`availableForSale\` for sold out. In the canvas the checkout opens in a new tab by itself: leave the cart's \`target\` as it is, so the published page takes the buyer to the checkout in the same tab, like any Shopify store. When you try the cart with use_page, never fill in or pay Shopify's checkout. If the store changes, update the pages that use the old one.
+- In the page, sell from the Shopify store with Shopify's Storefront Web Components: \`<script src="https://cdn.shopify.com/storefront/web-components.js"></script>\`, \`<shopify-store store-domain="https://<store_domain>" country="<country>">\`, then \`<shopify-context type="product" handle="…">\` or \`<shopify-list-context type="product" query="products" first="12">\` around a \`<template>\` you design (\`<shopify-data query="product.title">\`, \`<shopify-money query="product.selectedOrFirstAvailableVariant.price">\`, \`<shopify-media query="product.selectedOrFirstAvailableVariant.image">\`, \`<shopify-variant-selector>\`), and \`<shopify-cart id="cart">\` with \`onclick="getElementById('cart').addLine(event).showModal()"\` (or \`buyNow(event)\` on \`<shopify-store>\`); style the cart with \`shopify-cart::part(…)\` and its slots. For anything else, \`fetch\` the Storefront API from the page.
 
 WHAT PUBLISHING REQUIRES
 
@@ -3180,6 +3232,8 @@ This project has its own Supabase backend —a Postgres database behind the REST
 - To test what is behind signing in, use_page can sign in as a user of the test database (\`sign_in_as\` with an email): if there is none with that email, a test user is created. The test database sends no emails; new accounts are confirmed automatically.
 - Files go to Storage, with supabase-js as usual: \`supabase.storage.from(bucket).upload(path, file)\`, \`getPublicUrl(path)\` for a public bucket, \`createSignedUrl(path, seconds)\` for a private one. Create buckets in a migration (\`insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);\`). Who can upload, see, change or delete files is decided by policies on \`storage.objects\`, the same way as for tables; \`(storage.foldername(name))[1] = (select auth.uid()::text)\` keeps each user in their own folder. With no policy, only the secret key gets in. Limits: 50 MB per file and 1 GB per project. Image transformations and resumable uploads don't exist here yet.
 - Live updates go through Realtime, with supabase-js as usual: \`supabase.channel(name)\` with \`.on('broadcast', { event }, …)\` and \`send()\` for messages between visitors, \`.track()\` and \`presenceState()\` for who is here, and \`.on('postgres_changes', { event, schema: 'public', table }, …)\` for changes to a table. A table is heard only after a migration adds it to the publication (\`alter publication supabase_realtime add table public.messages;\`), and its RLS policies decide who hears each change. Private channels (\`{ config: { private: true } }\`) are allowed by policies on \`realtime.messages\` with \`realtime.topic()\`. Limits: 200 connections and 100 messages per second per project.
+- Shopify, the owner's existing store (PROJECT STATE's \`shopify\`): if the user talks about their Shopify store and there is no \`shopify\`, call connect_shopify_store with its domain. Products, prices, photos and stock come from Shopify live: never copy them into the page as text, and never guess a handle: read it with \`curl\` in the terminal (POST GraphQL to \`storefront_api\`, without a key). Without a key there is no \`quantityAvailable\`, tags come back empty, and there are no metafields or customers: use \`availableForSale\` for sold out. In the canvas the checkout opens in a new tab by itself: leave the cart's \`target\` as it is, so the published page takes the buyer to the checkout in the same tab, like any Shopify store. When you try the cart with use_page, never fill in or pay Shopify's checkout. If the store changes, update the pages that use the old one.
+- In the app, sell from the Shopify store through the Storefront API without a key: POST GraphQL to \`storefront_api\` with \`fetch\`, and its Cart API (\`cartCreate\`, \`cartLinesAdd\`) ending in the cart's \`checkoutUrl\`; \`@shopify/storefront-api-client\` refuses to start without a key, so don't install it. Shopify's Storefront Web Components work too, with their web-components.js loaded once in /index.html: in JSX each \`<template>\` takes its HTML as a string through \`dangerouslySetInnerHTML\` (React leaves JSX children outside \`template.content\`, and the components then show nothing), and the cart is opened from that HTML's own \`onclick\` or from a ref (\`cartRef.current.addLine(e.nativeEvent).showModal()\`).
 
 WHAT PUBLISHING REQUIRES:
 • The shell keeps Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`) and the Google Fonts stylesheets in its <head>; when publishing, OpenLen replaces the CDN with the compiled CSS.

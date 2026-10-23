@@ -99,11 +99,39 @@ pub(crate) fn escape_html(s: &str) -> String {
     out
 }
 
+/// Moves each `<template>`'s content (where kuchikiki's parser puts it, in
+/// `template_contents`) back under the element, so serializing writes it.
+/// kuchikiki 0.8.2 serializes only `children()`: without this, every
+/// parse-and-serialize pass emptied the templates — measured on 22/10 with
+/// Shopify's Storefront Web Components (spec local
+/// 2026-10-22-shopify-storefront, §6.3), whose products are painted from one.
+/// Nested templates come out as their parent's content moves; idempotent.
+pub(crate) fn inline_template_contents(root: &NodeRef) {
+    loop {
+        let pending: Vec<(NodeRef, NodeRef)> = root
+            .inclusive_descendants()
+            .filter_map(|node| {
+                let contents = node.as_element()?.template_contents.clone()?;
+                contents.first_child().map(|_| (node.clone(), contents))
+            })
+            .collect();
+        if pending.is_empty() {
+            return;
+        }
+        for (template, contents) in pending {
+            for child in contents.children().collect::<Vec<_>>() {
+                template.append(child);
+            }
+        }
+    }
+}
+
 /// Serialize a kuchikiki document (or subtree) back to a UTF-8 HTML string.
 /// Returns an empty string on serialization error — kuchikiki only fails here
 /// on IO, which can't happen with an in-memory Vec, but we don't unwrap on
-/// principle.
+/// principle. Templates keep their content (`inline_template_contents`).
 pub(crate) fn serialize_doc(root: &NodeRef) -> String {
+    inline_template_contents(root);
     let mut out: Vec<u8> = Vec::new();
     if root.serialize(&mut out).is_err() {
         return String::new();

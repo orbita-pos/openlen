@@ -461,7 +461,8 @@
       "secrets": "シークレット",
       "ai": "AI",
       "payments": "支払い",
-      "email": "メール"
+      "email": "メール",
+      "shopify": "Shopify"
     },
     "unavailable": {
       "title": "ここではデータベースを利用できません",
@@ -684,6 +685,21 @@
       "disconnectConfirm": "接続を解除",
       "cancel": "キャンセル",
       "cleanupDns": "接続を解除しました。OpenLen のメール用に追加した行を DNS から削除できます。"
+    },
+    "shopify": {
+      "loading": "読み込み中…",
+      "loadError": "ストアを読み込めませんでした。少し待ってからもう一度お試しください。",
+      "title": "あなたの Shopify ストア",
+      "catalog": "商品 {products} 件 · コレクション {collections} 件（{date} 時点）",
+      "currencyCountry": "価格は {currency} · {country}",
+      "connectedAt": "{date} に接続",
+      "open": "Shopify で開く",
+      "readOnly": "OpenLen はカタログのコピーを保存しません。ページは表示のたびに Shopify から読み込みます。",
+      "disconnect": "接続を解除",
+      "disconnectConfirm": "ページは変わりません。Len がすでに書いたものは、別の指示をするまでこのストアを使い続けます。",
+      "disconnectYes": "はい、解除します",
+      "cancel": "キャンセル",
+      "disconnected": "ストアの接続を解除しました。別のストアをつなぐには Len に頼んでください。"
     }
   },
   "appBirth": {

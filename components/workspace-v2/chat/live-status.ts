@@ -70,6 +70,7 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   edit_image: "image",
   web_search: "web",
   web_fetch: "web",
+  connect_shopify_store: "web",
   leer_de_internet: "web",
   verificar_diseno: "checking",
   use_page: "checking",

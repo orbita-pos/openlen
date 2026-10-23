@@ -302,6 +302,23 @@ describe("summarizeProjectState", () => {
     assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).stripe, undefined);
   });
 
+  it("SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.7): the connected store; without one, nothing", () => {
+    const shopify = {
+      store_domain: "hydrogen-preview.myshopify.com",
+      primary_domain: "checkout.hydrogen.shop",
+      name: "Hydrogen Demo Store",
+      currency: "USD",
+      country: "CA",
+      products: 22,
+      collections: 6,
+      checked_at: "2026-10-22T10:00:00.000Z",
+      storefront_api: "https://hydrogen-preview.myshopify.com/api/2026-10/graphql.json",
+    };
+    const con = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null, shopify });
+    assert.deepEqual(con.shopify, shopify);
+    assert.equal(summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null }).shopify, undefined);
+  });
+
   it("reports modules off by default and unpublished", () => {
     const s = summarizeProjectState({ data: { html: HTML }, title: "Tacos", subdomain: null, publishedAt: null });
     assert.equal(s.publicado, false);

@@ -15,7 +15,8 @@
 // son el binding nativo de Rust.
 
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
-import { withStripeCheckoutEscape } from "./stripe-checkout-escape";
+import { withCheckoutEscape } from "./checkout-escape";
+import { shopifyEnabledIn } from "@/lib/shopify/enabled";
 import { sealRelease } from "@/lib/html-engine";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import { bakeModulesForPreviewHtml } from "@/lib/publish/preview-bake";
@@ -140,9 +141,10 @@ export function documentoDeVista(html: string, ctx: ContextoDeVista): string {
     // aquí para que nadie deduzca un efecto que no ocurre.
     sandboxed: false,
   });
-  // Stripe (spec local 2026-10-21-stripe-integration, §6.5): Checkout se abre
-  // fuera del iframe del lienzo; arriba del todo (los ojos), no hace nada.
-  out = withStripeCheckoutEscape(out);
+  // Stripe (spec local 2026-10-21-stripe-integration, §6.5) y Shopify (spec local
+  // 2026-10-22-shopify-storefront, §6.4): el pago se abre fuera del iframe del lienzo;
+  // arriba del todo (los ojos), no hace nada. Con OPENLEN_SHOPIFY=0, sólo Stripe.
+  out = withCheckoutEscape(out, { shopify: shopifyEnabledIn() });
   // Una app ya no lleva import map (plan 02): su entrada es el paquete, que
   // trae dentro lo que usa del catálogo.
   return sealRelease(out).html;

@@ -248,7 +248,10 @@ ${CORE_SRC}
         if (!p || seen.has(p)) continue;
         if (p.hasAttribute && p.hasAttribute('data-openlen-editable')) { seen.add(p); continue; }
         if (SKIP_TAG[p.tagName]) continue;
-        if (p.closest && p.closest('svg, script, style, noscript, template')) continue;
+        // Shopify's components paint their <template> with the store's data (spec local
+        // 2026-10-22-shopify-storefront, §6.4): editing that text by hand would overwrite the
+        // <shopify-data> in the template, and the price would stop coming from Shopify.
+        if (p.closest && p.closest('svg, script, style, noscript, template, shopify-context, shopify-list-context, shopify-cart')) continue;
         if (p.closest && p.closest('[data-openlen-no-edit]')) continue;
         if (p.closest && p.closest('[data-openlen-edit-overlay]')) continue;
         var anc = p.parentElement;

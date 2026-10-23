@@ -36,6 +36,13 @@ describe("documentoDeVista: lo que se replica de la publicación", () => {
     expect(out).toMatch(/<a [^>]*rel="[^"]*noopener/);
   });
 
+  // Medido el 22/10 con los componentes de Shopify (spec local
+  // 2026-10-22-shopify-storefront, §6.3): el sello vaciaba los <template>.
+  it("el contenido de un <template> llega entero", () => {
+    const html = '<!doctype html><html><head><title>t</title></head><body><shopify-list-context first="2"><template><article class="x"><h2><shopify-data query="product.title"></shopify-data></h2></article></template></shopify-list-context></body></html>';
+    expect(documentoDeVista(html, ctx())).toContain('<template><article class="x"><h2><shopify-data query="product.title"></shopify-data></h2></article></template>');
+  });
+
   it("el logo, cuando lo hay", () => {
     const out = documentoDeVista(DOC, ctx({ logoUrl: "https://uploads.example/logo.png" }));
     expect(out).toContain('rel="icon"');

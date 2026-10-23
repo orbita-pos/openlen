@@ -24,6 +24,7 @@ export async function functionsCurlFor(projectId: string): Promise<FunctionsCurl
   const borrador = await draftProjectUrl(rec);
   return {
     prefixes: [`${projectUrl(rec.ref)}/functions/v1/`, `${borrador}/functions/v1/`],
+    reaches: `this project's Edge Functions (${borrador}/functions/v1/<name>)`,
     async call(r) {
       const headers = Object.fromEntries(Object.entries(r.headers).filter(([k]) => !FUERA.has(k.toLowerCase())));
       const conCuerpo = r.bodyB64 !== null && r.method !== "GET" && r.method !== "HEAD";

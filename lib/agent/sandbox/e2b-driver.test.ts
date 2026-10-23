@@ -50,6 +50,23 @@ describe("e2bDriver", () => {
     });
   });
 
+  it("the connected Shopify store is allowed out, with no header rule", async () => {
+    const { sdk } = fakeSdk();
+    const network = { hosts: ["abc.openlen.app"], headers: { "x-openlen-caja": "p.mac" }, thirdPartyHosts: ["x.myshopify.com", "www.tienda.mx"] };
+    await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {}, network });
+    const opts = (sdk.Sandbox.create as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(opts.network.allowOut).toEqual([...BOX_ALLOW_OUT, "abc.openlen.app", "x.myshopify.com", "www.tienda.mx"]);
+    expect(Object.keys(opts.network.rules)).toEqual(["abc.openlen.app"]);
+  });
+
+  it("only the store, with no OpenLen host: allowed, and no rules at all", async () => {
+    const { sdk } = fakeSdk();
+    await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {}, network: { hosts: [], headers: {}, thirdPartyHosts: ["x.myshopify.com"] } });
+    const opts = (sdk.Sandbox.create as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(opts.network.allowOut).toEqual([...BOX_ALLOW_OUT, "x.myshopify.com"]);
+    expect(opts.network.rules).toBeUndefined();
+  });
+
   it("resuming sets the network again (a backend or a publish may be new); without one, it is left as it was", async () => {
     const { sdk, box: raw } = fakeSdk();
     const network = { hosts: ["abc.openlen.app"], headers: { "x-openlen-caja": "p.mac" } };

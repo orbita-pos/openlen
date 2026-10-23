@@ -2574,6 +2574,25 @@ export const emailBlocks = pgTable(
   (t) => [primaryKey({ columns: [t.scope, t.id] })],
 );
 
+/** The Shopify store a project sells from, without a key (spec local
+ *  2026-10-22-shopify-storefront, §7). One per project; two projects may share a
+ *  store. Nothing secret. Created by scripts/shopify-migrate.ts. */
+export const shopifyStores = pgTable("shopifyStores", {
+  projectId: text("projectId")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  shopDomain: text("shopDomain").notNull(),
+  primaryDomain: text("primaryDomain").notNull(),
+  name: text("name").notNull(),
+  currency: text("currency").notNull(),
+  country: text("country").notNull(),
+  productsCount: integer("productsCount").notNull(),
+  collectionsCount: integer("collectionsCount").notNull(),
+  checkedAt: timestamp("checkedAt", { mode: "date" }).notNull(),
+  connectedAt: timestamp("connectedAt", { mode: "date" }).notNull().defaultNow(),
+  connectedBy: text("connectedBy").references(() => users.id, { onDelete: "set null" }),
+});
+
 /** Las Edge Functions APAGADAS de un proyecto (abuso; spec local 2026-10-11,
  *  Parte 3): con fila, sus llamadas contestan 503. La pone y la quita el
  *  operador con SQL (infra/FUNCTIONS_RUNBOOK.md). */

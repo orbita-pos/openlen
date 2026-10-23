@@ -293,7 +293,8 @@ describe("los nombres que usa el modo app", () => {
     // (`env_vars`). Si una herramienta se renombra, su
     // nombre viejo cae aquí y la prueba lo dice.
     // `in_progress`: un estado de `todo_write` (la lista de progreso).
-    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress"]);
+    // `store_domain`, `storefront_api`: fields of PROJECT STATE's `shopify`.
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress", "store_domain", "storefront_api"]);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
       (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
     );

@@ -313,6 +313,47 @@ describe("PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8)", () => {
   });
 });
 
+describe("SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.7)", () => {
+  const FUNCTIONS = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+  const app = { catalogo: "2026-11", entrada: "/src/main.tsx" } as const;
+
+  it("the manual has the Shopify line by default, in pages and apps, without the functions", () => {
+    for (const m of [buildManualDeLaPlataforma({}), buildManualDeLaPlataforma({}, "len", app)]) {
+      for (const f of ["connect_shopify_store", "storefront_api", "never guess a handle", "quantityAvailable", "never fill in or pay"]) {
+        expect(m).toContain(f);
+      }
+    }
+    // A page uses Shopify's web components; an app has no <script> to add, it goes through the API.
+    expect(buildManualDeLaPlataforma({})).toContain("https://cdn.shopify.com/storefront/web-components.js");
+    const appLine = buildManualDeLaPlataforma({}, "len", app).split("\n").find((l) => l.startsWith("- In the app, sell from the Shopify store"));
+    expect(appLine).toBeDefined();
+    expect(appLine).not.toContain("<script");
+    expect(appLine).toContain("cartCreate");
+  });
+
+  // Len's real turn (22/10) set target="_blank" on <shopify-cart> to get past the canvas, so the
+  // published page's checkout opened in another tab too: the canvas already does it by itself.
+  it("says the canvas opens the checkout by itself, so the cart's target stays as Shopify has it", () => {
+    for (const m of [buildManualDeLaPlataforma({}), buildManualDeLaPlataforma({}, "len", app)]) {
+      expect(m).toContain("In the canvas the checkout opens in a new tab by itself: leave the cart's `target` as it is");
+    }
+  });
+
+  it("an app gets what was measured on 22/10: the components need dangerouslySetInnerHTML, the client needs a key", () => {
+    const m = buildManualDeLaPlataforma({}, "len", app);
+    expect(m).toContain("dangerouslySetInnerHTML");
+    expect(m).toContain("@shopify/storefront-api-client");
+    expect(m).toContain("web-components.js");
+  });
+
+  it("not with OPENLEN_SHOPIFY=0, and once with the functions on", () => {
+    expect(buildManualDeLaPlataforma({ OPENLEN_SHOPIFY: "0" })).not.toContain("connect_shopify_store");
+    expect(buildManualDeLaPlataforma({ OPENLEN_SHOPIFY: "0" })).not.toContain("web-components.js");
+    expect(buildManualDeLaPlataforma(FUNCTIONS).split("connect_shopify_store").length).toBe(2);
+    expect(buildManualDeLaPlataforma({})).toBe(buildManualDeLaPlataforma({}));
+  });
+});
+
 describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
   const CON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
 

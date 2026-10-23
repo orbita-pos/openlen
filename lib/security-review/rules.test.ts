@@ -90,6 +90,11 @@ describe("the secret rules", () => {
     expect(f.map((x) => x.key)).toEqual(["secret_in_client:/index.html:supabase_service_role"]);
   });
 
+  it("a Shopify admin token in a page is HIGH (spec local 2026-10-22-shopify-storefront, §6.8)", () => {
+    const f = runRules(inputs({ homeHtml: `<script>const shop = "${"shpat_" + "f".repeat(32)}";</script>` }));
+    expect(f).toEqual([expect.objectContaining({ key: "secret_in_client:/index.html:shopify", severity: "HIGH", params: { provider: "Shopify" } })]);
+  });
+
   it("a Stripe live key is HIGH and a test key is MEDIUM", () => {
     const f = runRules(inputs({ pages: { tienda: `<p>${STRIPE_LIVE}</p>` }, files: { "/js/pago.js": `const k = "${STRIPE_TEST}";` } }));
     expect(f).toEqual([
