@@ -90,6 +90,7 @@
     "security-review:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/security-review-migrate.ts",
     "stripe:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/stripe-migrate.ts",
     "email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/email-migrate.ts",
+    "shopify:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/shopify-migrate.ts",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",

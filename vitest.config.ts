@@ -131,6 +131,8 @@ export default defineConfig({
       "lib/stripe/**/*.test.ts",
       // Project email (spec local 2026-10-22-email-integration).
       "lib/project-email/**/*.test.ts",
+      // Shopify without a key (spec local 2026-10-22-shopify-storefront).
+      "lib/shopify/**/*.test.ts",
       // Lo que las TRES superficies mandan de verdad: nada de gusto nuestro,
       // ningún módulo ni conducta retirados, y el JavaScript del modelo sí
       // ofrecido. Importa app/api/**/system-prompt.ts (módulos planos, sin
