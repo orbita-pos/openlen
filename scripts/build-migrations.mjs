@@ -212,6 +212,10 @@ const targets = [
   // emailSuppressions, emailUsage and emailBlocks. New, with IF NOT EXISTS. 🔴 Before the
   // code: sending, the Correos tab and the sign-in emails read them.
   "email-migrate",
+  // SHOPIFY WITHOUT A KEY (spec local 2026-10-22-shopify-storefront): shopifyStores. New,
+  // with IF NOT EXISTS. 🔴 Before the code: connect_shopify_store, Len's PROJECT STATE,
+  // the terminal's curl and the Shopify tab read it.
+  "shopify-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
