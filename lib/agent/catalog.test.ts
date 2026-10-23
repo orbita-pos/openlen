@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as catalogo from "./catalog";
 import {
   AGENT_MODULES,
@@ -416,7 +416,11 @@ describe("buildAgentSystemPrompt", () => {
   });
 
   it("voltea agente + contrato completo + CONDUCTAS sin anexar otro contrato", () => {
+    // Without Shopify's line: it writes Shopify's own `onclick="…addLine(event)…"`
+    // markup on purpose, and has its own tests (manual-de-la-plataforma.test.ts).
+    vi.stubEnv("OPENLEN_SHOPIFY", "0");
     const p = instruccionesDeLen();
+    vi.unstubAllEnvs();
 
     for (const id of ["agente", "contrato-completo", "conductas"] as const) {
       expect(p).not.toContain(clauseMarker(id));
@@ -833,11 +837,15 @@ describe("la vista «Datos» se retiró y el prompt no la nombra", () => {
 // todo el 2026-10-04. Lo que sí se vigila: que nada de lo que lee Len la enseñe.
 describe("los almacenes data-ol-stores no vuelven", () => {
   it("ni el prompt ni el manual enseñan data-ol-stores ni /datos", () => {
+    // Without Shopify's line, whose "store" is the user's Shopify store, not the
+    // retired data stores; it has its own tests (manual-de-la-plataforma.test.ts).
+    vi.stubEnv("OPENLEN_SHOPIFY", "0");
     const textos: Record<string, string> = {
       prompt: instruccionesDeLen(),
       "/AGENTS.md": buildManualDeLaPlataforma(),
       ...documentosDeLaPlataforma(),
     };
+    vi.unstubAllEnvs();
     for (const [donde, texto] of Object.entries(textos)) {
       expect(texto, donde).not.toContain("data-ol-stores");
       expect(texto, donde).not.toMatch(/\/datos\b/);
