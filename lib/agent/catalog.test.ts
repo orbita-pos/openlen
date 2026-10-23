@@ -67,6 +67,14 @@ describe("buildFunctionDeclarations", () => {
     expect(buildFunctionDeclarations({ RESEND_CLIENTS_API_KEY: "re_x", OPENLEN_EMAIL: "0" }).map((d) => d.name)).not.toContain("connect_email_domain");
   });
 
+  it("SHOPIFY: connect_shopify_store by default, after the email's tools, in a page and in an app; not with OPENLEN_SHOPIFY=0", () => {
+    const page = buildFunctionDeclarations({ RESEND_CLIENTS_API_KEY: "re_x" }).map((d) => d.name);
+    expect(page[page.indexOf("set_form_auto_reply") + 1]).toBe("connect_shopify_store");
+    const app = buildFunctionDeclarations({}, {}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" }).map((d) => d.name);
+    expect(app).toContain("connect_shopify_store");
+    expect(buildFunctionDeclarations({ OPENLEN_SHOPIFY: "0" }).map((d) => d.name)).not.toContain("connect_shopify_store");
+  });
+
   it("EDGE FUNCTIONS: sin motor de funciones (functionSecrets: false), request_secrets no se declara", () => {
     expect(buildFunctionDeclarations(undefined, { functionSecrets: false }).some((d) => d.name === "request_secrets")).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "request_secrets")).toBe(true);
@@ -97,6 +105,8 @@ describe("buildFunctionDeclarations", () => {
       "ask_user_question",
       // Edge Functions (fase 2): la tarjeta segura de los secretos.
       "request_secrets",
+      // Shopify without a key (spec local 2026-10-22-shopify-storefront): on by default.
+      "connect_shopify_store",
       // Los visuales de Len (spec local 2026-10-16): las dos de Claude.
       "read_me",
       "show_widget",

@@ -35,6 +35,8 @@ import type { CheckResult } from "@/lib/apps/checker/checker-core.mjs";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import type { StripeStateForLen } from "@/lib/stripe/state";
 import type { EmailStateForLen } from "@/lib/project-email/state";
+import type { ConnectStoreResult } from "@/lib/shopify/connect";
+import type { ShopifyStateForLen } from "@/lib/shopify/state";
 import type { StripeForCard } from "@/lib/stripe/card";
 import type { StripeReleasePreview } from "@/lib/stripe/preview";
 import type { AppBundle } from "@/lib/apps/bundler/bundle-app";
@@ -118,6 +120,7 @@ import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { toolEnterPlanMode, toolExitPlanMode } from "@/lib/agent/plan-mode-tools";
 import { toolRequestSecrets } from "@/lib/agent/request-secrets";
 import { toolConnectEmailDomain } from "@/lib/agent/connect-email-domain";
+import { CONNECT_SHOPIFY_STORE, toolConnectShopifyStore } from "@/lib/agent/connect-shopify-store";
 import { SET_FORM_AUTO_REPLY, toolSetFormAutoReply } from "@/lib/agent/form-auto-reply";
 import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
@@ -303,6 +306,10 @@ export interface AgentDeps {
   stripeState?(projectId: string): Promise<StripeStateForLen | null>;
   /** PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): for PROJECT STATE and the email tools. null = email off. */
   emailState?(projectId: string): Promise<EmailStateForLen | null>;
+  /** SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.1): read the user's store and save it for the project. */
+  connectShopifyStore?(projectId: string, domain: string, personId: string | null): Promise<ConnectStoreResult>;
+  /** SHOPIFY (§6.7): for PROJECT STATE. null = Shopify off or no store. */
+  shopifyState?(projectId: string): Promise<ShopifyStateForLen | null>;
   /** Los NOMBRES de los secretos de las funciones, por entorno (`request_secrets`
    *  los lee para contestar). null = sin funciones en este servidor. */
   functionSecretNames?(projectId: string): Promise<{ draft: string[]; live: string[] } | null>;
@@ -688,6 +695,14 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       if (!emailEnabledIn()) return null;
       const { emailStateFor } = await import("@/lib/project-email/state");
       return emailStateFor(projectId);
+    },
+    async connectShopifyStore(projectId, domain, personId) {
+      const [{ connectStore }, { realConnectDeps }] = await Promise.all([import("@/lib/shopify/connect"), import("@/lib/shopify/real")]);
+      return connectStore(projectId, domain, personId, realConnectDeps());
+    },
+    async shopifyState(projectId) {
+      const { shopifyStateFor } = await import("@/lib/shopify/state");
+      return shopifyStateFor(projectId);
     },
     async functionSecretNames(projectId) {
       const { functionSecretNames } = await import("@/lib/functions/secrets-real");
@@ -2727,6 +2742,9 @@ async function ejecutarHerramienta(
         return await toolConnectEmailDomain(session, deps);
       case SET_FORM_AUTO_REPLY:
         return await toolSetFormAutoReply(session, deps, args);
+      // Shopify: the user's store by its domain (no card).
+      case CONNECT_SHOPIFY_STORE:
+        return await toolConnectShopifyStore(session, args, deps);
       // Pieza 7: el modo plan, como DeepSeek (la salida) y Claude Code (la entrada).
       case ENTER_PLAN_MODE:
         return await toolEnterPlanMode(session, deps, args);
