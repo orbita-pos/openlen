@@ -316,8 +316,12 @@ const SHOPIFY_LINE =
 const SHOPIFY_IN_THE_PAGE =
   '- In the page, sell from the Shopify store with Shopify\'s Storefront Web Components: `<script src="https://cdn.shopify.com/storefront/web-components.js"></script>`, `<shopify-store store-domain="https://<store_domain>" country="<country>">`, then `<shopify-context type="product" handle="…">` or `<shopify-list-context type="product" query="products" first="12">` around a `<template>` you design (`<shopify-data query="product.title">`, `<shopify-money query="product.selectedOrFirstAvailableVariant.price">`, `<shopify-media query="product.selectedOrFirstAvailableVariant.image">`, `<shopify-variant-selector>`), and `<shopify-cart id="cart">` with `onclick="getElementById(\'cart\').addLine(event).showModal()"` (or `buyNow(event)` on `<shopify-store>`); style the cart with `shopify-cart::part(…)` and its slots.' +
   " For anything else, `fetch` the Storefront API from the page.";
+// Measured on 22/10 in Chromium with React 19.2 and the demo store: JSX children of a
+// <template> stay outside `template.content`, so the components show nothing unless the
+// template gets its HTML as a string; and the official client refuses to start without a key.
 const SHOPIFY_IN_THE_APP =
-  "- In the app, sell from the Shopify store through the Storefront API without a key: POST GraphQL to `storefront_api` with `fetch`, and its Cart API (`cartCreate`, `cartLinesAdd`) ending in the cart's `checkoutUrl`.";
+  "- In the app, sell from the Shopify store through the Storefront API without a key: POST GraphQL to `storefront_api` with `fetch`, and its Cart API (`cartCreate`, `cartLinesAdd`) ending in the cart's `checkoutUrl`; `@shopify/storefront-api-client` refuses to start without a key, so don't install it." +
+  " Shopify's Storefront Web Components work too, with their web-components.js loaded once in /index.html: in JSX each `<template>` takes its HTML as a string through `dangerouslySetInnerHTML` (React leaves JSX children outside `template.content`, and the components then show nothing), and the cart is opened from that HTML's own `onclick` or from a ref (`cartRef.current.addLine(e.nativeEvent).showModal()`).";
 
 /** The manual with the Shopify lines, after Realtime's (where the functions' lines also go), or at the end. */
 function conShopify(manual: string, app: AppDeProyecto | null): string {

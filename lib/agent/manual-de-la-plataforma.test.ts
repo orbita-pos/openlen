@@ -325,8 +325,17 @@ describe("SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.7)", () => {
     }
     // A page uses Shopify's web components; an app has no <script> to add, it goes through the API.
     expect(buildManualDeLaPlataforma({})).toContain("https://cdn.shopify.com/storefront/web-components.js");
-    expect(buildManualDeLaPlataforma({}, "len", app)).not.toContain("web-components.js");
-    expect(buildManualDeLaPlataforma({}, "len", app)).toContain("cartCreate");
+    const appLine = buildManualDeLaPlataforma({}, "len", app).split("\n").find((l) => l.startsWith("- In the app, sell from the Shopify store"));
+    expect(appLine).toBeDefined();
+    expect(appLine).not.toContain("<script");
+    expect(appLine).toContain("cartCreate");
+  });
+
+  it("an app gets what was measured on 22/10: the components need dangerouslySetInnerHTML, the client needs a key", () => {
+    const m = buildManualDeLaPlataforma({}, "len", app);
+    expect(m).toContain("dangerouslySetInnerHTML");
+    expect(m).toContain("@shopify/storefront-api-client");
+    expect(m).toContain("web-components.js");
   });
 
   it("not with OPENLEN_SHOPIFY=0, and once with the functions on", () => {
