@@ -54,7 +54,7 @@ for (const lang of ["en", "es"]) {
 const art = leer(join(OUT, "es", "research", slugs[0], "index.html"));
 debe(art.includes('type="application/ld+json"'), "el artículo perdió su JSON-LD");
 
-const hero = join(OUT, "img", "primera-1080.avif");
+const hero = join(OUT, "img", "len3-832.avif");
 debe(existsSync(hero) && statSync(hero).size <= 256000, "el héroe AVIF pasa de 250 KB");
 
 if (fallos.length) {

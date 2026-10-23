@@ -4,7 +4,7 @@ import { Nav } from "@/components/nav";
 import { Pie } from "@/components/pie";
 import { Imagen } from "@/components/imagen";
 import { TarjetaLen } from "@/components/tarjeta-len";
-import { CifraGrande, EstadoPrincipio, Fuente } from "@/components/contenido";
+import { EstadoPrincipio, Fuente } from "@/components/contenido";
 import { articulos } from "@/content/research";
 
 export default async function Portada({ params }: { params: Promise<{ lang: string }> }) {
@@ -31,23 +31,28 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               <a className="btn" href={d.pruebaUrl}>
                 {p.cta}
               </a>
-              <a className="btn ghost" href="#oficio">
+              <a className="btn ghost" href={`/${lang}/research/len-3-0/`}>
                 {p.ctaSecundario}
               </a>
             </div>
           </div>
         </section>
 
-        <div className="cielo">
-          <Imagen nombre="primera" alt={p.altCielo} className="sky" prioridad />
-          <div className="cielo-texto">
-            <h2>{p.cielo.titulo}</h2>
-            <p>{p.cielo.texto}</p>
-            <a className="btn claro" href="#como">
-              {p.cielo.cta}
-            </a>
-          </div>
-        </div>
+        <figure className="launch-art">
+          <Imagen nombre="len3" alt={p.altCielo} className="release-art" prioridad />
+          <figcaption><span>Len 3.0</span><Link href={`/${lang}/research/len-3-0/`}>{p.novedades.leer}</Link></figcaption>
+        </figure>
+
+        <section className="sec release-features" id="novedades" aria-labelledby="release-features-title">
+          <div className="sec-head"><div><h2 id="release-features-title">{p.novedades.titulo}</h2><p className="release-intro">{p.novedades.intro}</p></div></div>
+          {p.novedades.items.map(x=><div className="release-feature" key={x.titulo}><div><h3>{x.titulo}</h3><span className="release-formats">{x.formatos}</span></div><p>{x.texto}</p></div>)}
+          <Link className="btn ghost" href={`/${lang}/research/len-3-0/`}>{p.novedades.leer}</Link>
+        </section>
+        <section className="sec release-resources" aria-labelledby="release-resources-title">
+          <h2 id="release-resources-title">{p.recursos.titulo}</h2>
+          <div className="release-resource-list">{p.recursos.items.map(x=><div key={x.titulo}><h3>{x.titulo}</h3><p>{x.texto}</p></div>)}</div>
+          <Fuente commit="8a690189" />
+        </section>
 
         <section className="sec" id="oficio">
           <div className="sec-head">
@@ -65,28 +70,6 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               </div>
             ))}
           </div>
-        </section>
-
-        <section className="sec">
-          <div className="sec-head">
-            <div>
-              <div className="eyebrow">{p.cifras.antetitulo}</div>
-              <h2>{p.cifras.titulo}</h2>
-            </div>
-            <Link className="btn ghost" href={`/${lang}/research/len-2-5/`}>
-              {p.cifras.leer}
-            </Link>
-          </div>
-          <div className="big">
-            {p.cifras.items.map((c) => (
-              <CifraGrande key={c.valor} valor={c.valor} commit={c.commit}>
-                {c.texto}
-              </CifraGrande>
-            ))}
-          </div>
-          <p className="nota-cifras">
-            {p.cifras.nota} <Fuente commit={p.cifras.notaCommit} />
-          </p>
         </section>
 
         <TarjetaLen lang={lang} />

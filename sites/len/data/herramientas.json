@@ -1,11 +1,90 @@
 [
-  { "id": "mirar",      "herramientas": ["view_page", "use_page"] },
-  { "id": "leer",       "herramientas": ["Read", "bash", "web_search", "web_fetch"] },
-  { "id": "editar",     "herramientas": ["Edit", "Write", "undo_last_change", "convert_to_app"] },
-  { "id": "fotos",      "herramientas": ["find_photo", "edit_image"] },
-  { "id": "datos",      "herramientas": ["toggle_module"] },
-  { "id": "resultados", "herramientas": ["get_visits", "list_form_submissions", "list_messages", "draft_reply"] },
-  { "id": "contigo",    "herramientas": ["ask_user_question", "publish"] },
-  { "id": "planear",    "herramientas": ["todo_write", "enter_plan_mode", "exit_plan_mode", "get_goal", "create_goal", "update_goal"] },
-  { "id": "recordar",   "herramientas": ["session_search", "session_event_search", "session_event_read"] }
+  {
+    "id": "mirar",
+    "herramientas": [
+      "view_page",
+      "use_page"
+    ]
+  },
+  {
+    "id": "leer",
+    "herramientas": [
+      "Read",
+      "bash",
+      "web_search",
+      "web_fetch",
+      "read_me"
+    ]
+  },
+  {
+    "id": "editar",
+    "herramientas": [
+      "Edit",
+      "Write",
+      "undo_last_change",
+      "convert_to_app"
+    ]
+  },
+  {
+    "id": "fotos",
+    "herramientas": [
+      "find_photo",
+      "edit_image"
+    ]
+  },
+  {
+    "id": "datos",
+    "herramientas": [
+      "toggle_module",
+      "connect_shopify_store"
+    ]
+  },
+  {
+    "id": "resultados",
+    "herramientas": [
+      "get_visits",
+      "list_form_submissions",
+      "list_messages",
+      "draft_reply"
+    ]
+  },
+  {
+    "id": "contigo",
+    "herramientas": [
+      "ask_user_question",
+      "publish",
+      "show_widget"
+    ]
+  },
+  {
+    "id": "planear",
+    "herramientas": [
+      "todo_write",
+      "enter_plan_mode",
+      "exit_plan_mode",
+      "get_goal",
+      "create_goal",
+      "update_goal"
+    ]
+  },
+  {
+    "id": "recordar",
+    "herramientas": [
+      "session_search",
+      "session_event_search",
+      "session_event_read"
+    ]
+  },
+  {
+    "id": "entregables",
+    "herramientas": [
+      "list_artifact_audio",
+      "create_artifact",
+      "list_artifacts",
+      "inspect_artifact",
+      "render_artifact",
+      "cancel_artifact_job",
+      "query_artifact_data"
+    ]
+  }
 ]

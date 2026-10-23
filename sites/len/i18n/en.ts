@@ -1,11 +1,8 @@
-import type { Diccionario } from "./index";
-
-export const en: Diccionario = {
+export const en = {
   htmlLang: "en",
   meta: {
-    title: "Len — your own web developer",
-    description:
-      "Tell Len what you want and it builds your page, publishes it, and changes it whenever you ask. No agency, no quotes.",
+    title: "Len 3.0 — from idea to deliverable",
+    description: "Create websites and apps, presentations, dashboards, images, videos and voice with Len. A real terminal and new connections to take your project further."
   },
   nav: {
     research: "Research",
@@ -13,7 +10,7 @@ export const en: Diccionario = {
     openlen: "OpenLen",
     prueba: "Try Len",
     otroIdioma: "Español",
-    otroLang: "es",
+    otroLang: "es"
   },
   pie: {
     marca: "Len, by OpenLen",
@@ -22,34 +19,35 @@ export const en: Diccionario = {
     openlen: "OpenLen",
     idioma: "Language",
     status: "Status",
-    github: "GitHub",
+    github: "GitHub"
   },
   pruebaUrl: "https://openlen.com/en/new",
   principiosPagina: {
     titulo: "Principles",
-    intro:
-      "What Len promises, why, how we check it, and where each promise stands today. No varnish: what isn’t guaranteed yet, we say.",
+    intro: "What Len promises, why, how we check it, and where each promise stands today. No varnish: what isn’t guaranteed yet, we say."
   },
   research: {
     titulo: "Research",
-    intro:
-      "What we’ve learned building Len: the problem, how we measured it, what we found —our own mistakes included— and what’s still open.",
+    intro: "What we’ve learned building Len: the problem, how we measured it, what we found —our own mistakes included— and what’s still open.",
     leer: "min read",
     volver: "← All research",
-    otroIdioma: "Leer en español",
+    otroIdioma: "Leer en español"
   },
   portada: {
     antetitulo: "Len, by OpenLen",
-    titular: ["Your ", "own", " web developer."],
-    parrafo:
-      "Tell Len what you want, the way you’d tell a person, and it builds your page, publishes it, and changes it whenever you ask. No agency, no quotes, no waiting weeks.",
+    titular: [
+      "Introducing ",
+      "Len 3.0",
+      "."
+    ],
+    parrafo: "Websites and apps. Presentations, dashboards, images, videos and voice. Len turns more of your ideas into something you can open, review and download, in the same conversation.",
     cta: "Try Len",
-    ctaSecundario: "What it can do",
-    altCielo: "A painted dawn sky with a thin coral ring of light among the clouds.",
+    ctaSecundario: "Explore what is new",
+    altCielo: "Len 3.0 beneath an orange horizon. Our most capable agent yet. Now also creates images, videos, and presentations.",
     cielo: {
-      titulo: "Len 2.5",
-      texto: "What used to mean hiring someone now means sending a message.",
-      cta: "How it works →",
+      titulo: "Len 3.0",
+      texto: "Websites and apps. Presentations, dashboards, images, videos and voice. Len turns more of your ideas into something you can open, review and download, in the same conversation.",
+      cta: "Explore what is new"
     },
     oficio: {
       antetitulo: "What it does for you",
@@ -59,105 +57,87 @@ export const en: Diccionario = {
           k: "construye",
           t: "Builds what you ask for",
           p: "A section, a new page, or the whole site redesigned. And if you ask to change one sentence, it changes that sentence — it doesn’t rewrite everything else.",
-          commit: "",
+          commit: ""
         },
         {
           k: "funciona",
           t: "Working, not just good-looking",
           p: "Your page with its own database: accounts for your visitors, photos they upload, and changes that show up instantly on every screen. And forms that reach you.",
-          commit: "3bf4d721",
+          commit: "3bf4d721"
         },
         {
           k: "pruebas",
           t: "Leaves tests for what it builds",
           p: "When something on your page moves — a cart, tabs, a menu — it writes a test and runs it in a real browser. After every later change it runs it again: if something that worked breaks, it tells you.",
-          commit: "7c483747",
+          commit: "7c483747"
         },
         {
           k: "mira",
           t: "Looks before handing over",
           p: "It opens the page and measures it: contrast at the pixel, mobile overflow, and JavaScript errors. On every page it touched, not just the last one.",
-          commit: "0ba909b2",
+          commit: "0ba909b2"
         },
         {
           k: "cuenta",
           t: "Tells you what it checked",
           p: "What it did, what it checked, and what it didn’t. If something didn’t work out, it says so — and what was missing.",
-          commit: "110d8f70",
+          commit: "110d8f70"
         },
         {
           k: "cobro",
-          t: "Doesn’t charge for what it didn’t do",
-          p: "If a turn gets stuck and goes nowhere, it isn’t charged.",
-          commit: "a370742c",
-        },
-      ],
-    },
-    cifras: {
-      antetitulo: "Len 2.0 → Len 2.5",
-      titulo: "What changed since 2.0, measured.",
-      leer: "How we measured it",
-      items: [
-        {
-          valor: "232 → 199 s",
-          texto: "per task, on the same 31 tasks from our test bench and at the same cost",
-          commit: "e4058f56",
-        },
-        {
-          valor: "2.8 → 1.9",
-          texto: "turns per task: it gets there with less back-and-forth with you",
-          commit: "e4058f56",
-        },
-      ],
-      nota: "At building and editing pages it is on par with 2.0; the full table, task by task, is in the article. What’s new in 2.5 —questions with options, plans, long jobs and the database— is what that bench doesn’t measure.",
-      notaCommit: "e4058f56",
+          t: "See what the work costs",
+          p: "Work is measured in credits. Images, voice and terminal usage can add to a turn’s cost; you can review the project’s usage.",
+          commit: "8a690189"
+        }
+      ]
     },
     tarjeta: {
-      antetitulo: "Len 2.5 · October 2026",
-      titulo: "Twenty-eight tools, one developer",
-      texto:
-        "It works on your site the way a programmer works on code: every page is a file, and it has its own terminal to search and change things precisely. If you ask, it proposes a plan before touching anything. And before handing it over, it uses the page the way a visitor would: it clicks, types, reloads and looks at what happened.",
+      antetitulo: "Len 3.0 · October 2026",
+      titulo: "38 tools, one agent",
+      texto: "It reads and changes project files, runs code in a real terminal and prepares deliverables with their own versions. It asks for what is missing and shows what it checked before calling the work finished.",
       como: "How it works →",
       grupos: {
         mirar: {
           titulo: "Look and use",
-          texto:
-            "It measures the page in a real browser —pixel contrast, mobile overflow, JS errors— and uses it like a visitor: it clicks buttons, fills in forms and reloads to see what changed.",
+          texto: "It measures the page in a real browser —pixel contrast, mobile overflow, JS errors— and uses it like a visitor: it clicks buttons, fills in forms and reloads to see what changed."
         },
         leer: {
           titulo: "Read, search and the terminal",
-          texto:
-            "Every page is a file, and it has a terminal like a programmer’s to search the whole site and change many files at once. What’s published elsewhere, it looks up on the web.",
+          texto: "Reads project files and guides, searches the web and runs code in a real terminal inside an isolated environment."
         },
         editar: {
           titulo: "Write",
-          texto: "It changes the exact text that needs changing, writes whole new pages, turns a page into an app when it grows and undoes its last change.",
+          texto: "It changes the exact text that needs changing, writes whole new pages, turns a page into an app when it grows and undoes its last change."
         },
-        fotos: { titulo: "Photos", texto: "Choose and edit images for your line of business." },
+        fotos: {
+          titulo: "Photos",
+          texto: "Choose and edit images for your line of business."
+        },
         datos: {
           titulo: "Data and modules",
-          texto:
-            "It turns on the chat, a real OpenLen module. And what your page stores lives in its own database, with your visitors’ accounts and photos.",
+          texto: "Enables modules and connects your store. Your website has its own database, visitor accounts, files and real-time updates."
         },
         resultados: {
           titulo: "Your results",
-          texto:
-            "It tells you how many visits your page had and where they came from, reads the forms and messages people leave you, and drafts the reply: you send it.",
+          texto: "It tells you how many visits your page had and where they came from, reads the forms and messages people leave you, and drafts the reply: you send it."
         },
         contigo: {
           titulo: "With you",
-          texto: "It asks you, with options, for the detail it’s missing instead of making it up, and publishes when you confirm.",
+          texto: "Asks with options, can show an interactive interface in chat and publishes when you confirm."
         },
         planear: {
           titulo: "Plans and long jobs",
-          texto:
-            "On a long job it shows you the list of steps and where it is. If you ask, it proposes a plan and touches nothing until you approve it. A long job it works through on its own, round after round.",
+          texto: "On a long job it shows you the list of steps and where it is. If you ask, it proposes a plan and touches nothing until you approve it. A long job it works through on its own, round after round."
         },
         recordar: {
           titulo: "Memory",
-          texto: "It searches your project’s past chats for what you already discussed.",
+          texto: "It searches your project’s past chats for what you already discussed."
         },
-      },
+        entregables: {
+          titulo: "Deliverables",
+          texto: "Creates, inspects and renders presentations, dashboards, images, videos and voice; queries data and reuses audio you have uploaded."
+        }
+      }
     },
     como: {
       antetitulo: "How it works",
@@ -166,18 +146,30 @@ export const en: Diccionario = {
         {
           k: "one",
           t: "Read",
-          p: "The project’s real state — the pages, their data, the modules, whether it is published — not what it remembers from the chat.",
+          p: "The project’s real state — the pages, their data, the modules, whether it is published — not what it remembers from the chat."
         },
-        { k: "two", t: "Act", p: "It changes the exact text. It never rewrites a whole page to change a sentence." },
+        {
+          k: "two",
+          t: "Act",
+          p: "It changes the exact text. It never rewrites a whole page to change a sentence."
+        },
         {
           k: "three",
           t: "Look",
-          p: "It renders in a real browser and measures —pixel contrast, mobile overflow, JS errors— and uses the page like a visitor.",
+          p: "It renders in a real browser and measures —pixel contrast, mobile overflow, JS errors— and uses the page like a visitor."
         },
-        { k: "four", t: "Report", p: "What happened, with the evidence. If it couldn’t, it says so — and what was missing." },
-      ],
+        {
+          k: "four",
+          t: "Report",
+          p: "What happened, with the evidence. If it couldn’t, it says so — and what was missing."
+        }
+      ]
     },
-    ultimo: { antetitulo: "Research", titulo: "Latest", todo: "All research" },
+    ultimo: {
+      antetitulo: "Research",
+      titulo: "Latest",
+      todo: "All research"
+    },
     principios: {
       antetitulo: "Principles",
       titulo: "What Len promises — and how we check",
@@ -188,33 +180,86 @@ export const en: Diccionario = {
           t: "Don’t lie",
           p: "Every claim rests on an observed result. If it didn’t look, it doesn’t say it’s fine.",
           estado: "vigilado",
-          chip: "Guarded by its battery and a guard in the loop",
+          chip: "Guarded by its battery and a guard in the loop"
         },
         {
           k: "second",
           t: "Finish the job",
           p: "What you asked for is the deliverable. If it doesn’t fit, it says exactly what’s left.",
           estado: "medicion",
-          chip: "Built, being measured",
+          chip: "Built, being measured"
         },
         {
           k: "third",
           t: "Evidence, not verdicts",
           p: "There is no judge between Len and your page: Len asks for a measurement or a description of the screenshot, and the conclusion is its own, with the file in front of it.",
           estado: "vigilado",
-          chip: "Guarded by its tests",
-        },
-      ],
+          chip: "Guarded by its tests"
+        }
+      ]
     },
     disponible: {
       antetitulo: "Available today",
       titulo: "Len works inside OpenLen.",
-      texto: "It’s the chat in the editor: open your page, tell it what you want, and it gets to work. In ten languages.",
-      cta: "Try Len",
+      texto: "Open a conversation and ask for a website, an app or a deliverable. Start from scratch or continue an existing project. Available in ten languages.",
+      cta: "Try Len"
     },
     mision: {
       antetitulo: "Why",
-      frase: ["A good website shouldn’t depend on ", "being able to afford one", "."],
+      frase: [
+        "A good website shouldn’t depend on ",
+        "being able to afford one",
+        "."
+      ]
     },
-  },
+    novedades: {
+      titulo: "One conversation. More ways to create.",
+      intro: "Ask for what you need. Each piece has its own preview, versions and downloadable files, saved alongside your project.",
+      leer: "Explore what is new",
+      items: [
+        {
+          titulo: "Presentations",
+          texto: "Turn an idea into a presentation you can browse, review and download as a PowerPoint or PDF.",
+          formatos: "PPTX · PDF · HTML"
+        },
+        {
+          titulo: "Dashboards",
+          texto: "Turn data into metrics and interactive charts. Check where the numbers come from and download the data behind them.",
+          formatos: "HTML · PNG · CSV"
+        },
+        {
+          titulo: "Videos",
+          texto: "Prepare an animated video to introduce your product, explain an idea or accompany a launch.",
+          formatos: "MP4 · HTML"
+        },
+        {
+          titulo: "Images",
+          texto: "Create an image for your project or ask for a variation. Save the result as a piece you can open again and download.",
+          formatos: "PNG · JPEG · WebP"
+        },
+        {
+          titulo: "Voice",
+          texto: "Turn text into voice for a video or an audio piece. You can include music and sound effects you upload yourself.",
+          formatos: "MP3 · WAV"
+        }
+      ]
+    },
+    recursos: {
+      titulo: "More ways to finish the work.",
+      items: [
+        {
+          titulo: "A real terminal",
+          texto: "Len can run code, install packages and work with project files in an isolated environment. It has more ways to check what it builds."
+        },
+        {
+          titulo: "Your accounts, connected",
+          texto: "Connect your Shopify store, configure your Stripe account and set up project email from OpenLen. Credentials belong in their settings, without pasting them into the chat."
+        },
+        {
+          titulo: "Your project stays with you",
+          texto: "Website or app, a database, visitor accounts, files and real-time updates. Deliverables live alongside the project without replacing its page."
+        }
+      ]
+    }
+  }
 };

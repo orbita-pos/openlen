@@ -75,7 +75,7 @@ export default async function Pagina({ params }: { params: Promise<{ lang: strin
             </span>
           </div>
         </header>
-        <Imagen nombre={m.cover} alt="" className="cover" prioridad />
+        <Imagen nombre={m.cover} alt="" className={m.cover === "len3" ? "cover release-cover" : "cover"} prioridad />
         <div className="body">
           <nav className="toc" aria-label={r.titulo}>
             {m.indice.map((i) => (

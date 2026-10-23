@@ -1,0 +1,86 @@
+export const meta = {
+  slug: "len-3-0",
+  title: "Len 3.0: from idea to deliverable",
+  dek: "Presentations, dashboards, images, videos and voice, alongside your websites and apps. A real terminal and new connections expand what you can ask Len to do in a conversation.",
+  date: "2026-10-23",
+  category: "Research",
+  topic: "Releases",
+  cover: "len3",
+  readingMinutes: 5,
+  author: "OpenLen team",
+  cifra: {
+    valor: "5",
+    nota: "deliverable kinds",
+    commit: "8a690189"
+  },
+  indice: [
+    {
+      id: "create",
+      texto: "More ways to create"
+    },
+    {
+      id: "saved",
+      texto: "A piece you can open again"
+    },
+    {
+      id: "terminal",
+      texto: "A real terminal"
+    },
+    {
+      id: "connections",
+      texto: "Your accounts and your project"
+    },
+    {
+      id: "checks",
+      texto: "How a delivery is checked"
+    },
+    {
+      id: "open",
+      texto: "What remains open"
+    }
+  ]
+}
+
+<h2 id="create">More ways to create</h2>
+
+Len started by helping you build and change your website. With **Len 3.0**, that conversation can also end with a presentation for a meeting, a dashboard to understand your data, an image for your project, an animated video or a voice piece. You keep working in OpenLen, in the same project, without opening a different chat for every format.
+
+You do not need to start with a website. Ask directly for a deliverable and open it in the center of your workspace.
+
+<h2 id="saved">A piece you can open again</h2>
+
+Each deliverable is saved separately, with its title, source files, versions and exports. Correcting a piece preserves its identity; returning to a project lets you find it again. Creating a presentation or dashboard does not replace your project's page.
+
+- **Presentations:** a browsable preview and PowerPoint, PDF and HTML files.
+- **Dashboards:** metrics and interactive charts, with identified source data and HTML, PNG and CSV exports.
+- **Images:** pieces you can open and download in image formats.
+- **Videos:** animated compositions with a preview and an MP4 file.
+- **Voice:** text turned into downloadable audio. Videos and audio pieces can also include music and sound effects you upload yourself.
+
+The preview fits a dashboard to the available space and slides to the window width, preserving their proportions. <Fuente ruta="components/workspace-v2/artifacts/artifact-viewer.tsx" commit="8a690189" />
+
+<h2 id="terminal">A real terminal</h2>
+
+In the previous release, Len's terminal interpreted commands within the project. Now it can **run programs, install packages and execute code in an isolated environment**. One account does not share its environment with another account's files.
+
+This gives it more ways to work and check results: process files, run a test or prepare a resource the project needs. Environment usage is measured and charged as part of the turn. <Fuente ruta="lib/agent/sandbox/choose.ts" commit="8a690189" />
+
+<h2 id="connections">Your accounts and your project</h2>
+
+OpenLen also brings together configuration for **Shopify, Stripe and project email**. You can connect your store, configure your payment account and set up incoming and outgoing project email. Each connection requires your own account and the corresponding setup.
+
+Credentials belong in their settings, without pasting them into the conversation or including them in public code. Connecting an account does not mean all its flows have been configured: Len should explain what it prepared and what remains.
+
+Websites and apps retain their database, visitor accounts, files and real-time updates. The new deliverables join that workspace.
+
+<h2 id="checks">How a delivery is checked</h2>
+
+A queued job is not a finished delivery. Deliverables go through compilation and format-specific checks before becoming available. Dashboards bind their figures to the accompanying data; presentations and videos are rendered before the final export is offered. <Fuente ruta="lib/artifacts/jobs.ts" commit="8a690189" />
+
+You can open the preview, download the result and request a correction to the same piece. If something fails, the deliverable's status should say so. Generated images and voice cost credits; generating them again is not a free correction.
+
+<Abierto id="open" titulo="What remains open">
+**Edge Functions are still awaiting activation.** This release therefore does not promise custom server code for every app or that connecting an integration completes all its flows.
+
+Len does not generate music or sound effects: it can use files you upload. We are not publishing a new score against previous versions; historical results retain their dates and context. Delivery checks provide evidence, not a guarantee that every project will work without review.
+</Abierto>
