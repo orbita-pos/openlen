@@ -1,3 +1,5 @@
+import { RENDER_FRAME } from "../../artifacts/render-protocol";
+
 export const dashboardManual = `# Dashboard deliverables
 A dashboard is a page of figures, charts and tables over datasets, written in /.len/artifacts/<id>/ (the app stays untouched). It exports as a self-contained HTML page, a PNG of its first screen and one CSV per dataset.
 
@@ -5,7 +7,7 @@ A dashboard is a page of figures, charts and tables over datasets, written in /.
 - No figure typed into the markup and no array of values in a script: charts, tables and figures read their dataset. A constant the user chose (a goal line, a price they named) may stay a constant.
 - Real project data: query_artifact_data with source backend (SELECT), visits or forms, as a snapshot or live. It is private to the owner. If the source is unavailable, say so; never fill it with invented values.
 - A scenario: rows you write from facts the user gave (the chat, /LEN.md), e.g. "100 clients a month at $299". Put them in a CSV, TSV or JSON file in the dashboard's folder (JSON: an array of row objects) and name the file in datasetIds; or call query_artifact_data with source "scenario" and rows_json as row objects. Say what the rows are in dashboard.json "datasets": {"escenario.csv": {"title": "100 clientes por mes", "description": "Filas escritas con: precio $299 al mes, 30 % menos citas perdidas"}}. The page labels it "Escenario hipotético" and its title; never present it as real data.
-- dashboard.json: {"entry":"index.html","datasetIds":["escenario.csv"],"datasets":{…},"width":1280,"height":720,"probes":[{"select":{"selector":"#mes","value":"Mes 6"},"expect":{"selector":"#total","text":"$29,900"}}]}. Probes check the important interactions: select an option or click, then the exact text.
+- dashboard.json: {"entry":"index.html","datasetIds":["escenario.csv"],"datasets":{…},"width":1280,"height":720,"probes":[{"select":{"selector":"#mes","value":"Mes 6"},"expect":{"selector":"#total","text":"$29,900"}}]}. "width" ${RENDER_FRAME.width.min}–${RENDER_FRAME.width.max} and "height" ${RENDER_FRAME.height.min}–${RENDER_FRAME.height.max} px are the frame it renders in: the PNG is its first screen at that size, and what sits below stays in the HTML. Probes check the important interactions: select an option or click, then the exact text.
 - In the page, window.lenData.datasets[i] is {id, columns, rows, mode, title}; rows are arrays in the columns' order (const c = d.columns.indexOf("clientes")). CSV cells that are plain numbers arrive as numbers.
 - Mark the figures you show: on the smallest element showing a value, data-source="<dataset id>" data-field="<column>" and data-where="col=value" (several joined by &, values URL-encoded) or data-row="<index>". The export checks every mark against its data and reports a figure that differs. A computed figure (a total, a share) is not a cell: say how it is computed next to it.
 

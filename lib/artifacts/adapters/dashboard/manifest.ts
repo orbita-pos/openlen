@@ -1,4 +1,4 @@
-import { ArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
+import { ArtifactError, isArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
 import { safeArtifactPath } from "../../state";
 import { validateRenderPacket, type RenderProbe } from "../../render-protocol";
 import {CATALOGO_ACTUAL,catalogo} from "../../../apps/dependencias";
@@ -18,7 +18,9 @@ export function dashboardManifest(input: SealedArtifactInput): DashboardManifest
     if (DATASET_FILE.test(id) && safeArtifactPath(id) && Object.hasOwn(input.revision.files, id)) return fileDataset(id, input.revision.files[id]!, m.datasets?.[id], capturedAt);
     throw new ArtifactError("dashboard_dataset_missing", `"${id}" is neither a dataset query_artifact_data saved here nor a CSV, TSV or JSON file of this dashboard`);
   });
-  validateRenderPacket({ version: 1, kind: "dashboard", html: "", width: m.width, height: m.height, probes: m.probes ?? [] });
+  // The packet check names the field ("height" is 1200…); here it is a field of dashboard.json, as in the errors above.
+  try { validateRenderPacket({ version: 1, kind: "dashboard", html: "", width: m.width, height: m.height, probes: m.probes ?? [] }); }
+  catch (error) { throw isArtifactError(error) && error.code === "invalid_render_packet" ? new ArtifactError(error.code, `dashboard.json ${error.message}`) : error; }
   if(m.catalogo!==undefined&&(typeof m.catalogo!=="string"||!catalogo(m.catalogo)))throw new ArtifactError("artifact_catalog_unavailable");
   return { ...m,catalogo:m.catalogo??CATALOGO_ACTUAL, probes: m.probes ?? [], resolved };
 }
