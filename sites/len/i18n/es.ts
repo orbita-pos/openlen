@@ -2,7 +2,7 @@ export const es = {
   htmlLang: "es",
   meta: {
     title: "Len 3.0 — de la idea al entregable",
-    description: "Crea páginas y apps, presentaciones, dashboards, imágenes, videos y voz con Len. Una terminal real y nuevas conexiones para llevar tu proyecto más lejos."
+    description: "Un agente que trabaja con el contexto de tu proyecto, planea, ejecuta y comprueba. Ahora también crea presentaciones, dashboards, imágenes, videos y voz, con una terminal real para llevar el trabajo a la práctica."
   },
   nav: {
     research: "Research",
@@ -40,7 +40,7 @@ export const es = {
       "Len 3.0",
       "."
     ],
-    parrafo: "Páginas y apps. Presentaciones, dashboards, imágenes, videos y voz. Len ahora lleva más de tus ideas a un resultado que puedes abrir, revisar y descargar, desde la misma conversación.",
+    parrafo: "Nuestro agente más capaz hasta ahora. Entiende tu encargo, trabaja con el contexto de tu proyecto, planea los pasos y comprueba lo que construye. Ahora también crea presentaciones, dashboards, imágenes, videos y voz, con una terminal real para ejecutar código y pruebas.",
     cta: "Prueba Len",
     ctaSecundario: "Conoce todas las novedades",
     altCielo: "Len 3.0 sobre un horizonte naranja. Nuestro agente más capaz hasta ahora. Ahora también crea imágenes, videos y presentaciones.",
@@ -258,6 +258,28 @@ export const es = {
         {
           titulo: "Tu proyecto sigue contigo",
           texto: "Página o app, base de datos, cuentas de visitantes, archivos y cambios en tiempo real. Los entregables se guardan junto al proyecto sin reemplazar su página."
+        }
+      ]
+    },
+    criterio: {
+      titulo: "Un agente para llevar tu idea más lejos.",
+      intro: "Cuéntale qué quieres conseguir. Len consulta tu proyecto, organiza el trabajo y elige las herramientas para llevarlo a la práctica.",
+      items: [
+        {
+          titulo: "Entiende el objetivo",
+          texto: "Si falta una decisión importante, te pregunta con opciones. Puede aclarar lo que necesitas antes de empezar a construir."
+        },
+        {
+          titulo: "Planea y mantiene el rumbo",
+          texto: "En un trabajo largo puede proponerte un plan, mostrar sus pasos y continuar por rondas con un objetivo. Te muestra por dónde va y qué queda pendiente."
+        },
+        {
+          titulo: "Trabaja con tu contexto",
+          texto: "Lee los archivos del proyecto y puede recuperar lo que ya hablaron en conversaciones anteriores. Tus decisiones forman parte del trabajo que continúa."
+        },
+        {
+          titulo: "Comprueba y corrige",
+          texto: "Ejecuta código y pruebas, abre el resultado en un navegador real y usa lo que observa para corregir. Puede revisar cómo se ve y cómo funciona."
         }
       ]
     }

@@ -1,7 +1,7 @@
 export const meta = {
   slug: "len-3-0",
-  title: "Len 3.0: from idea to deliverable",
-  dek: "Presentations, dashboards, images, videos and voice, alongside your websites and apps. A real terminal and new connections expand what you can ask Len to do in a conversation.",
+  title: "Len 3.0: our most capable agent yet",
+  dek: "An agent that works with your project’s context, plans, executes and checks. Now it also creates presentations, dashboards, images, videos and voice, with a real terminal to put the work into practice.",
   date: "2026-10-23",
   category: "Research",
   topic: "Releases",
@@ -14,6 +14,7 @@ export const meta = {
     commit: "8a690189"
   },
   indice: [
+    { id: "agent", texto: "Understand, plan and check" },
     {
       id: "create",
       texto: "More ways to create"
@@ -40,6 +41,20 @@ export const meta = {
     }
   ]
 }
+
+<h2 id="agent">Understand, plan and check</h2>
+
+Len's capabilities are also in **how it carries a task forward**. It can consult project files and conversations, clarify what is missing, organize a longer task and choose the tools it needs. Planning, context and checking come together with execution and the new deliverables in the same workspace.
+
+**Understand the goal.** When it needs your decision, it can ask with options. It clarifies the task with you rather than guessing that missing detail. <Fuente ruta="lib/agent/ask-user-question.ts" commit="8a690189" />
+
+**Stay on track.** It can show a list of steps, propose a plan before changing the project and continue a longer task across rounds. The goal and what remains are part of its work. <Fuente ruta="lib/agent/plan-mode.ts" commit="8a690189" /> <Fuente ruta="lib/agent/goal.ts" commit="8a690189" />
+
+**Retrieve context.** It can search earlier project conversations and return to decisions you have already made. Files and the project's state give it context to continue. <Fuente ruta="lib/agent/session-query.ts" commit="8a690189" />
+
+**Check and correct.** It has a terminal to run code and tests, and a real browser to inspect and use what it builds. Execution errors and observed results give it information to correct a delivery. <Fuente ruta="lib/agent/verify.ts" commit="8a690189" />
+
+Ask for a presentation about your project alongside a dashboard, for example: it can work on the pieces, inspect their results and keep them together for the next correction.
 
 <h2 id="create">More ways to create</h2>
 
@@ -82,5 +97,5 @@ You can open the preview, download the result and request a correction to the sa
 <Abierto id="open" titulo="What remains open">
 **Edge Functions are still awaiting activation.** This release therefore does not promise custom server code for every app or that connecting an integration completes all its flows.
 
-Len does not generate music or sound effects: it can use files you upload. We are not publishing a new score against previous versions; historical results retain their dates and context. Delivery checks provide evidence, not a guarantee that every project will work without review.
+Len does not generate music or sound effects: it can use files you upload. We have not yet published a comparison of intelligence or performance between Len 3.0 and 2.5; historical results retain their dates and context. Delivery checks provide evidence, not a guarantee that every project will work without review.
 </Abierto>
