@@ -16,6 +16,10 @@
  *   npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-linux-acceptance.ts \
  *     --evidence <new directory> [--distro Ubuntu-24.04] [--image openlen/artifact-renderer:1] \
  *     [--node <linux path to node 22>] [--only id,id] [--skip-long]
+ *     [--ssh <host> [--run-as <user>] [--tmpdir <dir>]]
+ *
+ * With --ssh the Linux half runs on that host instead of WSL — the production box, as the worker's user and with
+ * its TMPDIR, which is where infra/artifacts/README.md asks for the acceptance to be repeated.
  */
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -35,7 +39,7 @@ import { stopBundlerWorker } from "../lib/apps/bundler/bundle-app";
 import type { ArtifactRender, ArtifactRenderPacket } from "../lib/artifacts/render-protocol";
 import { ArtifactError, type AdapterResult, type SealedArtifactInput } from "../lib/artifacts/types";
 import { rendererContainerArgs } from "../lib/artifacts/render-container";
-import { bundleBridge, createBridge, wsl as wslIn, type Bridge, type BridgeCall } from "../lib/artifacts/acceptance/bridge-client";
+import { bundleBridge, createBridge, sshHost, wslHost, type Bridge, type BridgeCall, type LinuxHost } from "../lib/artifacts/acceptance/bridge-client";
 
 // ── Options ──────────────────────────────────────────────────────────────────
 
@@ -48,10 +52,14 @@ const distro = arg("--distro") ?? "Ubuntu-24.04";
 const image = arg("--image") ?? "openlen/artifact-renderer:1";
 const only = arg("--only")?.split(",").map((s) => s.trim()).filter(Boolean);
 const skipLong = process.argv.includes("--skip-long");
+const sshTarget = arg("--ssh"), runAs = arg("--run-as"), remoteTmp = arg("--tmpdir");
 
 const sha256 = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
-const wsl = (args: readonly string[]) => wslIn(distro, args);
+const host: LinuxHost = sshTarget
+  ? sshHost(sshTarget, { ...(runAs ? { runAs } : {}), ...(remoteTmp ? { env: { TMPDIR: remoteTmp } } : {}), dir: "/opt/openlen-acceptance" })
+  : wslHost(distro);
+const linux = (args: readonly string[]) => host.exec(args);
 
 // ── The bridge ───────────────────────────────────────────────────────────────
 
@@ -338,7 +346,7 @@ const probe=new Image();probe.src=["https:","","example.com","x.png"].join("/");
       verify: async (_r, rec) => {
         // A cancel that lands during compilation proves nothing about the container.
         must(rec.calls.some((c) => c.kind === "motion" && c.metrics.samples > 0), "cancelled before the renderer container was running");
-        const left = wsl(["docker", "ps", "-a", "-q", "--filter", "label=openlen.artifact-renderer=1"]);
+        const left = linux(["docker", "ps", "-a", "-q", "--filter", "label=openlen.artifact-renderer=1"]);
         rec.verification.containersAfterCancel = left.stdout.split("\n").filter(Boolean).length;
         must(left.code === 0 && rec.verification.containersAfterCancel === 0, "a renderer container survived the cancellation");
       } },
@@ -463,25 +471,25 @@ async function main() {
   await mkdir(join(evidence, "packets"), { recursive: true });
 
   // Prerequisites, all read-only.
-  const docker = wsl(["docker", "version", "--format", "{{.Server.Version}}"]);
-  must(docker.code === 0, `docker is not reachable in ${distro}: ${docker.stderr.slice(0, 300)}`);
-  const cgroup = wsl(["docker", "info", "--format", "{{.CgroupVersion}}"]).stdout.trim();
+  const docker = linux(["docker", "version", "--format", "{{.Server.Version}}"]);
+  must(docker.code === 0, `docker is not reachable on ${host.label}: ${docker.stderr.slice(0, 300)}`);
+  const cgroup = linux(["docker", "info", "--format", "{{.CgroupVersion}}"]).stdout.trim();
   must(cgroup === "2", `cgroup v${cgroup}: the CPU/memory limits need cgroup v2`);
-  const imageId = wsl(["docker", "image", "inspect", image, "--format", "{{.Id}}"]);
+  const imageId = linux(["docker", "image", "inspect", image, "--format", "{{.Id}}"]);
   must(imageId.code === 0, `image ${image} is not built locally (the supervisor never pulls)`);
-  const node = arg("--node") ?? wsl(["sh", "-c", 'command -v node || echo "$HOME/.local/bin/node"']).stdout.trim();
-  const nodeVersion = wsl([node, "--version"]);
-  must(nodeVersion.code === 0, `no node at ${node} inside ${distro}`);
+  const node = arg("--node") ?? linux(["sh", "-c", 'command -v node || echo "$HOME/.local/bin/node"']).stdout.trim();
+  const nodeVersion = linux([node, "--version"]);
+  must(nodeVersion.code === 0, `no node at ${node} on ${host.label}`);
 
   // The bridge: the real supervisor, bundled with nothing else.
   const bridgeFile = join(evidence, "package", "renderer-bridge.mjs");
   const bridgeSha256 = await bundleBridge(bridgeFile);
-  bridge = createBridge({ distro, node, bridgeFile, image });
+  bridge = createBridge({ host, node, bridgeFile, image });
   const versions = await bridge.call({ type: "inspect", image, tool: "versions" });
   must(versions.ok, `the bridge could not inspect the image: ${versions.ok ? "" : versions.error.message}`);
 
   const environment = {
-    distro, docker: docker.stdout.trim(), cgroup, image, imageId: imageId.stdout.trim(), bridgeNode: nodeVersion.stdout.trim(),
+    distro: host.label, docker: docker.stdout.trim(), cgroup, image, imageId: imageId.stdout.trim(), bridgeNode: nodeVersion.stdout.trim(),
     rendererTools: (versions.output ?? "").trim().split("\n"), orchestratorNode: process.version, platform: process.platform,
   };
   console.log(JSON.stringify(environment, null, 2));
@@ -500,8 +508,8 @@ async function main() {
     stopBundlerWorker();
   }
 
-  const containers = wsl(["docker", "ps", "-a", "-q", "--filter", "label=openlen.artifact-renderer=1"]);
-  const temps = wsl(["sh", "-c", "ls -d /tmp/openlen-artifact-* /tmp/openlen-inspect-* 2>/dev/null | wc -l"]);
+  const containers = linux(["docker", "ps", "-a", "-q", "--filter", "label=openlen.artifact-renderer=1"]);
+  const temps = linux(["sh", "-c", 'ls -d "${TMPDIR:-/tmp}"/openlen-artifact-* "${TMPDIR:-/tmp}"/openlen-inspect-* 2>/dev/null | wc -l']);
   const global = { rendererContainersLeft: containers.stdout.split("\n").filter(Boolean).length, tempDirectoriesLeft: Number(temps.stdout.trim()) };
   const report = { startedAt, finishedAt: new Date().toISOString(), environment, bridgeSha256, cases: results, global };
   await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
