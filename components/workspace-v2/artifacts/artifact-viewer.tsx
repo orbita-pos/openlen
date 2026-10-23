@@ -3,6 +3,8 @@
 import {useEffect,useId,useRef,useState,type MouseEvent} from "react";
 import {useLocale,useTranslations} from "next-intl";
 import {Check,ChevronLeft,ChevronRight,Download,FileQuestion,ImageIcon,LayoutDashboard,Loader2,Presentation,RefreshCw,Video,Volume2} from "lucide-react";
+import {previewFrame,type ArtifactPreviewFrame} from "@/lib/artifacts/preview-frame";
+import {FittedPreview} from "./fitted-preview";
 import {ModalShell} from "../modal-shell";
 import {artifactLiveRefreshClient,connectArtifactLivePreview,type ArtifactLiveView} from "@/lib/artifacts/live-preview";
 import {artifactFetch,artifactFileUrl,artifactJson,artifactUrl,ArtifactClientError,inspectArtifact,validatePreviewUrl,type ArtifactFetch,type ArtifactOutputInfo,type ArtifactSummary} from "./client";
@@ -11,7 +13,7 @@ interface Props {projectId:string;item:ArtifactSummary;revision:number;onClose:(
   /** In the workspace center (a project with no page shows its piece there, as Claude opens an artifact): the same
    *  preview and files, in the page instead of a dialog. */
   inline?:boolean}
-type Preview={url:string;view:ArtifactLiveView};
+type Preview={url:string;view:ArtifactLiveView;frame?:ArtifactPreviewFrame};
 const kindIcons={dashboard:LayoutDashboard,slides:Presentation,image:ImageIcon,motion:Video,audio:Volume2};
 const preferredFormats={dashboard:"html",slides:"pptx",image:"png",motion:"mp4",audio:"mp3"};
 function fileSize(bytes:number,locale:string){
@@ -58,7 +60,7 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
         if(disposed)return;
         const url=validatePreviewUrl(grant.url,window.location.origin),view=grant.view;
         if(!view||view.artifactId!==item.id||view.revision!==revision||typeof view.id!=="string"||!Array.isArray(view.liveDatasetIds)||!view.liveDatasetIds.every(id=>typeof id==="string"))throw new ArtifactClientError("invalid_preview");
-        setState({identity,outputs,preview:{url,view},loading:false,error:false});
+        setState({identity,outputs,preview:{url,view,frame:item.kind==="dashboard"?previewFrame(grant.frame):undefined},loading:false,error:false});
       }catch(error){
         if(disposed)return;
         const lost=error instanceof ArtifactClientError&&[401,403,404].includes(error.status);
@@ -115,6 +117,7 @@ export function ArtifactViewer({projectId,item,revision,onClose,onAccessLost,fet
   const body=<div className={`artifact-scroll nice-scroll overflow-y-auto ${inline?"min-h-0 flex-1":"max-h-[80dvh]"}`}>
       <div className={`flex items-center justify-center relative ${hasPreview?"min-h-52 bg-side":"bg-elev"}`}>
         {shown.loading?<div role="status" className="flex min-h-64 flex-col items-center justify-center gap-4 p-10 text-sm fg-muted"><span className="flex h-14 w-14 items-center justify-center rounded-2xl border bd bg-side"><Loader2 size={23} className="motion-safe:animate-spin"/></span>{t("loading")}</div>
+          :shown.preview?.frame?<FittedPreview frame={shown.preview.frame} frameRef={frame} title={t("preview")} url={shown.preview.url}/>
           :shown.preview?<iframe ref={frame} title={t("preview")} src={shown.preview.url} sandbox="allow-scripts" referrerPolicy="no-referrer" className="w-full h-[min(64dvh,680px)] border-0 bg-white"/>
           // Blob URLs are authorized private bytes, not Next image optimizer inputs.
           // eslint-disable-next-line @next/next/no-img-element

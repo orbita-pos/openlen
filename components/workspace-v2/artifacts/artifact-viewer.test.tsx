@@ -12,7 +12,7 @@ const item:ArtifactSummary={id:"a",projectId:"p",requestId:"r",title:"Dashboard"
 const response=(data:unknown)=>new Response(JSON.stringify(data));
 let host:HTMLDivElement,root:Root;
 beforeEach(()=>{host=document.createElement("div");document.body.append(host);root=createRoot(host);});
-afterEach(()=>{act(()=>root.unmount());host.remove();vi.restoreAllMocks();});
+afterEach(()=>{act(()=>root.unmount());host.remove();vi.restoreAllMocks();vi.unstubAllGlobals();});
 async function render(fetcher:ArtifactFetch,onAccessLost=()=>{},selectedItem=item){await act(async()=>{root.render(<NextIntlClientProvider locale="es" messages={{topbar:messages}}><ArtifactViewer projectId="p" item={selectedItem} revision={1} fetcher={fetcher} onClose={()=>{}} onAccessLost={onAccessLost}/></NextIntlClientProvider>);});}
 const inspection={artifact:item,revision:{artifactId:"a",revision:1,outputs:[{index:0,name:"dashboard.html",mime:"text/html",format:"html",bytes:100}],evidence:{valid:true}},jobs:[]};
 it("embeds only a private grant with an opaque sandbox and never source HTML",async()=>{
@@ -115,4 +115,22 @@ it("falls back to the slide pictures when the live preview is unavailable, one a
   await settle(()=>fetched.at(-1)!.includes("/files/2?")&&!!document.querySelector("img"));
   expect(fetched.at(-1)).toContain("/files/2?");
   expect(document.body.textContent).toContain("2 / 2");
+});
+
+
+it("fits the saved dashboard viewport in both dimensions on resize without upscaling",async()=>{
+  let resize:ResizeObserverCallback=()=>{};const disconnect=vi.fn();
+  vi.stubGlobal("ResizeObserver",class {constructor(callback:ResizeObserverCallback){resize=callback;}observe(){}disconnect=disconnect;});
+  await render(async(url)=>response(url.endsWith("/preview")?{url:`https://preview.openlen.test/grant/${"a".repeat(43)}`,frame:{width:1280,height:720},view:{id:"view",artifactId:"a",revision:1,liveDatasetIds:[]}}:inspection));
+  const frame=document.querySelector("iframe")!;
+  const fit=async(width:number,height:number)=>{await act(async()=>resize([{contentRect:{width,height}} as ResizeObserverEntry],{} as ResizeObserver));};
+  await fit(640,500);
+  expect(frame.style.width).toBe("1280px");expect(frame.style.height).toBe("720px");expect(frame.style.transform).toBe("scale(0.5)");
+  await fit(1000,180);expect(frame.style.transform).toBe("scale(0.25)");
+  await fit(2000,1200);expect(frame.style.transform).toBe("scale(1)");
+  act(()=>root.unmount());root=createRoot(host);expect(disconnect).toHaveBeenCalled();vi.unstubAllGlobals();
+});
+it.each([{width:999999,height:720},{width:1280,height:0},{width:"1280",height:720}])("ignores invalid preview dimensions: %j",async(frame)=>{
+  await render(async(url)=>response(url.endsWith("/preview")?{url:`https://preview.openlen.test/grant/${"a".repeat(43)}`,frame,view:{id:"view",artifactId:"a",revision:1,liveDatasetIds:[]}}:inspection));
+  expect(document.querySelector("iframe")!.style.width).toBe("");
 });
