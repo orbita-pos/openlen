@@ -928,3 +928,20 @@ a {
 .release-thinking-item h3 { font-size: 22px; letter-spacing: -.025em; margin: 0 0 12px; }
 .release-thinking-item p { color: #3d3932; line-height: 1.75; margin: 0; }
 @media(max-width:760px) { .release-thinking-list { grid-template-columns: 1fr; gap: 28px; } }
+
+/* Published model evidence is a comparison table, with its scope beside it. */
+.release-performance h2 { max-width: 720px; font-size: 34px; line-height: 1.12; letter-spacing: -.03em; margin: 0 0 16px; }
+.model-results { margin: 28px 0 0; max-width: 820px; }
+.model-results table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
+.model-results caption { text-align: left; font-size: 14px; color: var(--muted); padding-bottom: 14px; }
+.model-results thead th { border-bottom: 1px solid var(--ink); color: var(--muted); font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.model-results th, .model-results td { padding: 18px 12px; border-bottom: 1px solid var(--line); text-align: right; }
+.model-results th:first-child { width: 54%; text-align: left; padding-left: 0; }
+.model-results tbody th { font-size: 17px; font-weight: 500; color: var(--ink); text-transform: none; letter-spacing: 0; }
+.model-results th small { display: block; font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--muted); margin-top: 4px; }
+.model-results td { font-family: var(--f-titular), Georgia, serif; font-size: 30px; font-variant-numeric: tabular-nums; }
+.model-results td strong { font-weight: 500; }
+.model-results figcaption { margin-top: 18px; max-width: 78ch; }
+.model-results figcaption p { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 8px; }
+.model-results figcaption a { font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+@media(max-width:760px) { .release-performance h2 { font-size: 28px; } .model-results th, .model-results td { padding: 14px 4px; } .model-results tbody th { font-size: 15px; } .model-results td { font-size: 25px; } .model-results th:first-child { width: 50%; } }

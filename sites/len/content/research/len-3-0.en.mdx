@@ -6,7 +6,7 @@ export const meta = {
   category: "Research",
   topic: "Releases",
   cover: "len3",
-  readingMinutes: 5,
+  readingMinutes: 6,
   author: "OpenLen team",
   cifra: {
     valor: "5",
@@ -14,6 +14,7 @@ export const meta = {
     commit: "8a690189"
   },
   indice: [
+    { id: "engine", texto: "A more capable engine" },
     { id: "agent", texto: "Understand, plan and check" },
     {
       id: "create",
@@ -41,6 +42,14 @@ export const meta = {
     }
   ]
 }
+
+<h2 id="engine">More capable at reasoning, coding and execution</h2>
+
+Len 3.0 brings an updated engine with improved published results in reasoning, coding and terminal tasks. It combines this with your project’s context, planning, checks and a real terminal to take your ideas further.
+
+<ResultadosModelo lang="en" />
+
+This release’s configuration incorporates the evaluated update. <Fuente ruta="lib/generation/model-policy.ts" commit="8a690189" />
 
 <h2 id="agent">Understand, plan and check</h2>
 
@@ -97,5 +106,5 @@ You can open the preview, download the result and request a correction to the sa
 <Abierto id="open" titulo="What remains open">
 **Edge Functions are still awaiting activation.** This release therefore does not promise custom server code for every app or that connecting an integration completes all its flows.
 
-Len does not generate music or sound effects: it can use files you upload. We have not yet published a comparison of intelligence or performance between Len 3.0 and 2.5; historical results retain their dates and context. Delivery checks provide evidence, not a guarantee that every project will work without review.
+Len does not generate music or sound effects: it can use files you upload. Delivery checks provide evidence, not a guarantee that every project will work without review.
 </Abierto>

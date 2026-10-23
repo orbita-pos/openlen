@@ -261,6 +261,25 @@ export const es = {
         }
       ]
     },
+    rendimiento: {
+      "titulo": "Más capacidad para razonar, programar y ejecutar.",
+      "intro": "Len 3.0 incorpora un motor actualizado con mejores resultados publicados en razonamiento, programación y tareas de terminal. Lo combina con el contexto de tu proyecto, planificación, comprobaciones y una terminal real para llevar tus ideas más lejos.",
+      "caption": "Modelo base: puntuaciones publicadas",
+      "columns": [
+            "Evaluación",
+            "Anterior",
+            "Actual"
+      ],
+      "metrics": [
+            "Razonamiento",
+            "Tareas de terminal",
+            "Programación"
+      ],
+      "hle": "HLE sin herramientas",
+      "note": "Resultados publicados por el fabricante del modelo base: versión anterior frente a la actualización incorporada en Len 3.0. No son una evaluación completa de Len 3.0 frente a 2.5.",
+      "method": "Terminal-Bench se midió con un sistema de agente externo a OpenLen. Las herramientas, los límites y la configuración pueden cambiar los resultados.",
+      "source": "Ver la evaluación original"
+},
     criterio: {
       titulo: "Un agente para llevar tu idea más lejos.",
       intro: "Cuéntale qué quieres conseguir. Len consulta tu proyecto, organiza el trabajo y elige las herramientas para llevarlo a la práctica.",
