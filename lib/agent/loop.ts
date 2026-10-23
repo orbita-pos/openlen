@@ -636,6 +636,8 @@ export function sobreQue(argsDeLaLlamada: Record<string, unknown>): string {
     consultas?.slice(0, 60) ??
     // Pieza 5: lo que se busca en las charlas pasadas (`session_search`).
     texto("query")?.slice(0, 60) ??
+    // Shopify: the store's domain (`connect_shopify_store`).
+    texto("domain")?.slice(0, 60) ??
     texto("url")?.slice(0, 60) ??
     (comando ? resumenDelComando(comando) : "")
   );
