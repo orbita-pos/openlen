@@ -1,5 +1,5 @@
 import { constants } from "node:fs";
-import { mkdir, open, readFile, realpath, unlink } from "node:fs/promises";
+import { mkdir, open, readFile, realpath, stat, unlink } from "node:fs/promises";
 import { isAbsolute, relative, resolve, dirname } from "node:path";
 import { safeArtifactPath } from "./state";
 import { ArtifactError } from "./types";
@@ -13,24 +13,35 @@ const validateKey = (key: string) => { if (!safeArtifactPath(key)) throw new Art
 const sameBytes = (a: Uint8Array, b: Uint8Array) => Buffer.from(a).equals(Buffer.from(b));
 const contained = (root: string, path: string) => { const part = relative(root, path); return part !== "" && !part.startsWith("..") && !isAbsolute(part); };
 
+/**
+ * The folder decides who else reads, as a setgid share does: a root this code creates is private (0700), and a root
+ * an operator created with group access — on the box, /var/openlen/artifacts, written only by the worker and read by
+ * Next and the preview, which run as another user — gets group-readable objects. Writing stays the owner's, and
+ * others never get a bit from here.
+ */
+export function storageModes(rootMode: number): { dir: number; file: number } {
+  return (rootMode & 0o050) === 0o050 ? { dir: 0o750, file: 0o640 } : { dir: 0o700, file: 0o600 };
+}
+
 export class FilesystemArtifactStorage implements ArtifactStorage {
   private readonly root: string;
   constructor(root: string) { this.root = resolve(root); }
-  private async location(key: string, createParent = false): Promise<string> {
+  private async location(key: string, createParent = false): Promise<{ path: string; file: number }> {
     validateKey(key);
     await mkdir(this.root, { recursive: true, mode: 0o700 });
     const root = await realpath(this.root);
+    const modes = storageModes((await stat(root)).mode);
     const path = resolve(root, key);
     if (!contained(root, path)) throw new ArtifactError("invalid_object_key");
-    if (createParent) await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    if (createParent) await mkdir(dirname(path), { recursive: true, mode: modes.dir });
     const parent = await realpath(dirname(path));
     if (parent !== root && !contained(root, parent)) throw new ArtifactError("invalid_object_key");
-    return path;
+    return { path, file: modes.file };
   }
   async put(key: string, bytes: Uint8Array): Promise<void> {
-    const path = await this.location(key, true);
+    const { path, file: mode } = await this.location(key, true);
     let file;
-    try { file = await open(path, "wx", 0o600); }
+    try { file = await open(path, "wx", mode); }
     catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
       if (!sameBytes(await this.get(key), bytes)) throw new ArtifactError("object_conflict");
@@ -41,7 +52,7 @@ export class FilesystemArtifactStorage implements ArtifactStorage {
     await file.close();
   }
   async get(key: string): Promise<Uint8Array> {
-    const path = await this.location(key);
+    const { path } = await this.location(key);
     const real = await realpath(path);
     const root = await realpath(this.root);
     if (!contained(root, real)) throw new ArtifactError("invalid_object_key");
@@ -49,7 +60,7 @@ export class FilesystemArtifactStorage implements ArtifactStorage {
     try { return new Uint8Array(await handle.readFile()); } finally { await handle.close(); }
   }
   async delete(key: string): Promise<void> {
-    try { await unlink(await this.location(key)); }
+    try { await unlink((await this.location(key)).path); }
     catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; }
   }
 }
