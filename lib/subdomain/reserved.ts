@@ -66,6 +66,7 @@ export const RESERVED_SUBDOMAINS: ReadonlySet<string> = new Set([
   // infra/caddy/Caddyfile). Reservado para que nadie ocupe len.openlen.app.
   "len",
   "mcp", // el servidor MCP vive en mcp.openlen.com (plans/mcp-de-openlen)
+  "preview", // la vista previa de los entregables de Len 3.0 (preview.openlen.com)
   // Product-adjacent (ES/EN) — collides with the platform's own account
   // concept ("Mi cuenta" / Members sign-in), same reasoning as app/dashboard.
   // Mirrors lib/projects/site-pages.ts's RESERVED_SLUGS (a per-project page
