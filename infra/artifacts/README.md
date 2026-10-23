@@ -105,6 +105,12 @@ npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-linu
   --ssh openlen --run-as openlen-artifacts --tmpdir /var/openlen/artifacts-tmp
 ```
 
+🔴 **Con el worker encendido, PARARLO antes** (`systemctl stop openlen-artifacts-worker`, mirando que no haya
+trabajos en cola) y arrancarlo al acabar: en cada vuelta `reconcileArtifactContainers` quita todo contenedor
+`openlen-artifact-*` que no sea de un trabajo activo, y los de la aceptación no lo son. Con él encendido, cada caso
+sale `bridge_error` a los ~3 s («…/result.json: ENOENT»). Medido el 23/10. El PPTX y el PDF cambian de una corrida a
+otra del mismo código (llevan su fecha); el HTML y los PNG no.
+
 En `/etc/openlen/openlen.env` (Next y el worker lo leen; la vista previa recibe
 un subconjunto que el deploy genera en `/etc/openlen/artifacts-preview.env`):
 
