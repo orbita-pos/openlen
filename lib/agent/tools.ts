@@ -1401,6 +1401,8 @@ export function summarizeProjectState(
     stripe?: StripeStateForLen | null;
     /** PROJECT EMAIL (spec local 2026-10-22-email-integration, 6.8): the domain, its status and the month. Absent ⇒ email off. */
     email?: EmailStateForLen | null;
+    /** SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.7): the connected store. Absent ⇒ none or Shopify off. */
+    shopify?: ShopifyStateForLen | null;
   },
   /** La página que el dueño tiene abierta en el editor; `null` es la Home. */
   page: string | null = null,
@@ -1483,6 +1485,8 @@ export function summarizeProjectState(
     ...(row.stripe ? { stripe: row.stripe } : {}),
     // The project's email: its domain, status, address and the month (never a record value).
     ...(row.email ? { email: row.email } : {}),
+    // The connected Shopify store: its domains, name, currency, country and counts.
+    ...(row.shopify ? { shopify: row.shopify } : {}),
   };
 }
 

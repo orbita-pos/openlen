@@ -864,6 +864,8 @@ async function correrTurno(
       stripe: await (deps.stripeState?.(projectId) ?? Promise.resolve(null)).catch(() => null),
       // Project email (spec local 2026-10-22-email-integration, 6.8): the domain, its status and the month.
       email: await (deps.emailState?.(projectId) ?? Promise.resolve(null)).catch(() => null),
+      // Shopify (spec local 2026-10-22-shopify-storefront, §6.7): the connected store.
+      shopify: await (deps.shopifyState?.(projectId) ?? Promise.resolve(null)).catch(() => null),
       // En una app, las rutas de su carpeta (su código) y los nombres de las
       // variables del dueño. Si no se pueden leer, el turno sigue sin ellos
       // (Len saca la carpeta con la terminal; las variables, del manual).
