@@ -324,12 +324,18 @@ async function boxNetworkOf(session: AgentSession): Promise<BoxNetwork | null> {
     ]);
   const label = etiquetaDeLienzo(session.projectId);
   const base = lienzoBaseHost();
-  const [backend, saved] = await Promise.all([getBackendByProject(session.projectId).catch(() => null), loadSavedProject(session.projectId).catch(() => null)]);
+  const [backend, saved, store] = await Promise.all([
+    getBackendByProject(session.projectId).catch(() => null),
+    loadSavedProject(session.projectId).catch(() => null),
+    // Shopify (spec local 2026-10-22-shopify-storefront, §6.2): the connected store, for the box's Chromium.
+    import("@/lib/shopify/real").then((m) => m.storeHostsFor(session.projectId)).catch(() => [] as readonly string[]),
+  ]);
   return boxNetworkFor({
     canvasHost: esProduccion() && label && base ? `${label}.${base}` : null,
     backendHost: backend ? new URL(projectUrl(backend.ref)).host : null,
     publishedHost: saved?.subdomain ? publishedHost(saved.subdomain) : null,
     marker: boxMarker(session.projectId),
+    thirdPartyHosts: store,
   });
 }
 

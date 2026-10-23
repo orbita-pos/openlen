@@ -29,6 +29,22 @@ describe("the box's network for its project", () => {
   });
 
   it("the CDNs pages load their styles, fonts and libraries from", () => {
-    for (const h of ["cdn.tailwindcss.com", "fonts.googleapis.com", "fonts.gstatic.com", "cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com"]) expect(PAGE_CDNS).toContain(h);
+    for (const h of ["cdn.tailwindcss.com", "fonts.googleapis.com", "fonts.gstatic.com", "cdn.jsdelivr.net", "unpkg.com", "cdnjs.cloudflare.com", "cdn.shopify.com"]) expect(PAGE_CDNS).toContain(h);
+  });
+
+  // Shopify (spec local 2026-10-22-shopify-storefront, §6.2): the connected store, allowed
+  // with no header rule — it isn't OpenLen's.
+  const STORE = ["hydrogen-preview.myshopify.com", "checkout.hydrogen.shop"];
+
+  it("the connected store's hosts beside OpenLen's, which keep their marker", () => {
+    const n = boxNetworkFor({ canvasHost: hosts.canvasHost, backendHost: null, publishedHost: null, marker: "p.mac", thirdPartyHosts: STORE })!;
+    expect(n.hosts).toEqual([hosts.canvasHost]);
+    expect(n.headers).toEqual({ [BOX_MARKER_HEADER]: "p.mac" });
+    expect(n.thirdPartyHosts).toEqual(STORE);
+  });
+
+  it("without a marker the store is still reachable, but none of OpenLen's hosts", () => {
+    expect(boxNetworkFor({ ...hosts, marker: null, thirdPartyHosts: STORE })).toEqual({ hosts: [], headers: {}, thirdPartyHosts: STORE });
+    expect(boxNetworkFor({ canvasHost: null, backendHost: null, publishedHost: null, marker: "p.mac", thirdPartyHosts: [] })).toBeNull();
   });
 });
