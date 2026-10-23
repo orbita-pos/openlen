@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parse, type HTMLElement } from "node-html-parser";
 import { ArtifactError, type SealedArtifactInput } from "../../types";
 import { checkSlideSource } from "./subset";
+import { deckScreenCss } from "./screen";
 
 /**
  * A deck as Claude's Slides keeps one: `deck.json` is the index (title, the slide ids in order, an outline in
@@ -71,7 +72,8 @@ const BASE_CSS = `*{box-sizing:border-box}html,body{margin:0;padding:0;backgroun
 .slide h1,.slide h2,.slide h3,.slide h4,.slide h5,.slide h6,.slide p,.slide ul,.slide ol,.slide li,.slide table,.slide figure,.slide blockquote{margin:0}
 .slide h1{font-size:96px;font-weight:600;line-height:1.1}.slide h2{font-size:64px;font-weight:600;line-height:1.15}.slide h3,.slide h4,.slide h5,.slide h6{font-size:44px;font-weight:600;line-height:1.2}
 .slide ul,.slide ol{padding-left:1.2em}.slide table{border-collapse:collapse}.slide th,.slide td{padding:.35em .6em;border:1px solid #d0d4d8;text-align:left;vertical-align:top}.slide th{font-weight:600}
-.slide img,.slide svg{display:block}.slide aside{display:none}`;
+.slide img,.slide svg{display:block}.slide aside{display:none}
+${deckScreenCss(SLIDE_WIDTH)}`;
 
 /** One static document of every slide: no scripts, every element stamped `data-len-src="<slide>:<line>:<col>"`. */
 export function compileSlideDeck(deck: SlideDeckV3, input: SealedArtifactInput): string {

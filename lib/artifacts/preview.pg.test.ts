@@ -3,6 +3,7 @@ import {afterAll,beforeAll,expect,it} from "vitest";
 import {createHash} from "node:crypto";
 import {artifactFixture} from "./testing/fixture";
 import {createArtifactPreview,previewConfig} from "./preview";
+import {deckScreenCss} from "./adapters/slides/screen";
 let f:Awaited<ReturnType<typeof artifactFixture>>;
 beforeAll(async()=>{f=await artifactFixture();},30_000);afterAll(async()=>{await f.pg.close();});
 const config={origin:"https://preview.example.test",appOrigin:"https://app.example.test"};
@@ -64,4 +65,20 @@ it("advertises and injects live mediation only in authorized private dashboard p
   expect(text).not.toContain("private-query-marker");
   expect(response.headers.get("content-security-policy")).toContain("connect-src 'none'");
   expect(response.headers.get("content-security-policy")).not.toContain("allow-same-origin");
+});
+
+it("fits a deck's slides to the viewer's width, also decks made before the fix, and leaves dashboards as they are",async()=>{
+  const open=async(kind:"slides"|"dashboard",files:Record<string,string>)=>{
+    const {ctx,artifact}=await f.create("project",kind);
+    const html=new TextEncoder().encode('<!doctype html><html><head><title>Saved</title></head><body><div class="slide">x</div></body></html>');
+    await f.store.writeArtifactFiles(ctx,artifact.id,0,files);await f.store.sealArtifactRevision(ctx,artifact.id,1);
+    const output={key:`private/${artifact.id}.html`,hash:createHash("sha256").update(html).digest("hex"),mime:"text/html",format:"html",bytes:html.length};
+    await f.database.query(`update "artifactRevisions" set "outputs"=$3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2`,[artifact.id,1,JSON.stringify([output]),JSON.stringify({valid:true})]);
+    const preview=createArtifactPreview(f.database,f.store,{get:async()=>html,put:async()=>{},delete:async()=>{}},config);
+    const grant=await preview.mint(ctx,artifact.id,1,0),boot=await preview.handle(new Request(grant.url));
+    return (await preview.handle(new Request(config.origin+boot.headers.get("location"),{headers:{cookie:boot.headers.get("set-cookie")!.split(";")[0]!}}))).text();
+  };
+  expect(await open("slides",{"deck.json":JSON.stringify({version:3,title:"x",order:[]})})).toContain(`<style>${deckScreenCss(1920)}</style></head>`);
+  expect(await open("slides",{"deck.json":JSON.stringify({version:1,width:1280,height:720,slides:[]})})).toContain(`<style>${deckScreenCss(1280)}</style></head>`);
+  expect(await open("dashboard",{"index.html":"<html></html>"})).toBe('<!doctype html><html><head><title>Saved</title></head><body><div class="slide">x</div></body></html>');
 });
