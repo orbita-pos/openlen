@@ -73,7 +73,7 @@ export type ReadStoreResult =
 type Failure = Exclude<ReadStoreResult, { kind: "ok" }>;
 
 const SAMPLE_QUERY =
-  "{ shop { name } localization { availableCountries { isoCode } } collections(first: 20) { nodes { handle title } } products(first: 10) { nodes { handle title availableForSale priceRange { minVariantPrice { amount currencyCode } maxVariantPrice { amount currencyCode } } } } }";
+  "{ shop { name } localization { availableCountries { isoCode currency { isoCode } } } collections(first: 20) { nodes { handle title } } products(first: 10) { nodes { handle title availableForSale priceRange { minVariantPrice { amount currencyCode } maxVariantPrice { amount currencyCode } } } } }";
 
 class TooBig extends Error {}
 
@@ -172,7 +172,7 @@ export async function readStore(input: string, d: StorefrontDeps): Promise<ReadS
   }
   const data = (gql?.data ?? null) as {
     shop?: { name?: unknown } | null;
-    localization?: { availableCountries?: { isoCode?: unknown }[] } | null;
+    localization?: { availableCountries?: { isoCode?: unknown; currency?: { isoCode?: unknown } | null }[] } | null;
     collections?: { nodes?: { handle?: unknown; title?: unknown }[] } | null;
     products?: {
       nodes?: {
@@ -188,9 +188,20 @@ export async function readStore(input: string, d: StorefrontDeps): Promise<ReadS
     return failed("storefront_closed", str(errors[0]?.message) ?? "no answer without a key");
   }
 
-  const markets = (data.localization?.availableCountries ?? []).map((c) => str(c.isoCode)).filter((c): c is string => c !== null);
+  // <shopify-store country> picks the market, and so the currency prices show in. The market of
+  // the shop's own currency first (found in Len's real turn, 22/10: the demo store's address is
+  // in Canada but it sells in USD — "CA" would show converted CAD prices), then the address's
+  // country if it is a market, then the first market.
+  const countries = (data.localization?.availableCountries ?? []).flatMap((c) => {
+    const iso = str(c.isoCode);
+    return iso ? [{ iso, currency: str(c.currency?.isoCode) }] : [];
+  });
+  const markets = countries.map((c) => c.iso);
   const own = str(meta.country);
-  const country = own && markets.includes(own) ? own : (markets[0] ?? own ?? "US");
+  const shopCurrency = str(meta.currency);
+  const inShopCurrency = countries.filter((c) => shopCurrency !== null && c.currency === shopCurrency).map((c) => c.iso);
+  const country =
+    own && inShopCurrency.includes(own) ? own : (inShopCurrency[0] ?? (own && markets.includes(own) ? own : (markets[0] ?? own ?? "US")));
   return {
     kind: "ok",
     facts: {
