@@ -762,4 +762,40 @@ describe("TerminalDeLen", () => {
       expect((await t.ejecutar("curl https://example.com/")).exitCode).toBe(127);
     }, 20_000);
   });
+
+  // Shopify (spec local 2026-10-22-shopify-storefront, §6.2): the same curl reaches the
+  // connected store's Storefront API, and its refusal says what it does reach.
+  describe("curl to the connected Shopify store", () => {
+    const API = "https://x.myshopify.com/api/2026-10/graphql.json";
+    function withStore() {
+      const asked: CurlRequest[] = [];
+      const { t } = terminal({
+        functionsCurl: async () => ({
+          prefixes: ["https://x.myshopify.com/api/"],
+          reaches: `the connected Shopify store's Storefront API (POST ${API})`,
+          call: async (r) => {
+            asked.push(r);
+            return { status: 200, statusText: "OK", headers: { "content-type": "application/json" }, bodyB64: Buffer.from('{"data":{"shop":{"name":"X"}}}').toString("base64") };
+          },
+        }),
+      });
+      return { t, asked };
+    }
+
+    it("POST GraphQL to the store prints its answer", async () => {
+      const { t, asked } = withStore();
+      const r = await t.ejecutar(`curl -s -X POST ${API} -H 'content-type: application/json' -d '{"query":"{ shop { name } }"}'`);
+      expect(r.exitCode, r.stderr).toBe(0);
+      expect(r.stdout).toBe('{"data":{"shop":{"name":"X"}}}');
+      expect(asked[0]).toMatchObject({ url: API, method: "POST" });
+    }, 20_000);
+
+    it("any other URL is refused, naming what this terminal reaches", async () => {
+      const { t, asked } = withStore();
+      const r = await t.ejecutar("curl https://example.com/");
+      expect(r.exitCode).not.toBe(0);
+      expect(r.stderr).toMatch(/only reaches the connected Shopify store's Storefront API/);
+      expect(asked).toHaveLength(0);
+    }, 20_000);
+  });
 });

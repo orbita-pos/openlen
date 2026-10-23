@@ -209,7 +209,7 @@ export class TerminalDeLen implements TerminalBackend {
       supabase: Boolean(this.o.supabase),
       git: Boolean(this.o.git),
       stripe: Boolean(this.o.stripe),
-      functions: this.curl ? { prefixes: [...this.curl.prefixes] } : undefined,
+      functions: this.curl ? { prefixes: [...this.curl.prefixes], ...(this.curl.reaches ? { reaches: this.curl.reaches } : {}) } : undefined,
       app: this.o.appTools
         ? { catalogSpecifiers: [...this.o.appTools.catalogSpecifiers], typesPackages: [...(this.o.appTools.typesPackages ?? [])] }
         : undefined,
