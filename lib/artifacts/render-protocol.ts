@@ -1,3 +1,4 @@
+import {RENDER_FRAME} from "./preview-frame";
 import { ArtifactError } from "./types";
 import {validateAudioMix,type AudioMix} from "./audio-protocol";
 export interface RenderProbe { readonly select?: { readonly selector: string; readonly value: string }; readonly click?: string; readonly expect: { readonly selector: string; readonly text: string } }
@@ -12,7 +13,7 @@ export type ArtifactRenderPacket = RenderPacketBase & ({ readonly kind: "dashboa
 export interface ArtifactRenderResult { readonly png: Uint8Array; readonly checks: readonly string[]; readonly layout?:unknown;readonly pages?: readonly Uint8Array[]; readonly pdf?: Uint8Array; readonly mp4?:Uint8Array;readonly mp3?:Uint8Array;readonly wav?:Uint8Array;readonly audio?:{readonly durationSeconds:number;readonly sampleRate:number;readonly channels:number}; readonly video?:{readonly frameCount:number;readonly fps:number;readonly durationSeconds:number} }
 export type ArtifactRender = (packet: ArtifactRenderPacket, signal: AbortSignal) => Promise<ArtifactRenderResult>;
 /** The frame a render opens: Chromium's viewport, and the PNG of a dashboard's first screen. */
-export const RENDER_FRAME = { width: { min: 320, max: 1920 }, height: { min: 240, max: 1080 } } as const;
+export {RENDER_FRAME} from "./preview-frame";
 const RENDER_KINDS: readonly string[] = ["dashboard", "slides", "slides-layout", "motion", "capture", "audio"];
 const MAX_PROBES = 20, MAX_HTML_BYTES = 8 * 1024 * 1024;
 

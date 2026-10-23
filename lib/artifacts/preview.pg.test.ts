@@ -82,3 +82,14 @@ it("fits a deck's slides to the viewer's width, also decks made before the fix, 
   expect(await open("slides",{"deck.json":JSON.stringify({version:1,width:1280,height:720,slides:[]})})).toContain(`<style>${deckScreenCss(1280)}</style></head>`);
   expect(await open("dashboard",{"index.html":"<html></html>"})).toBe('<!doctype html><html><head><title>Saved</title></head><body><div class="slide">x</div></body></html>');
 });
+
+
+it.each([{width:1280,height:720},{width:1920,height:1080},{width:999999,height:720},{width:1280,height:0},{width:"1280",height:720}])("advertises only bounded saved dashboard dimensions: %j",async(frame)=>{
+  const {ctx,artifact}=await f.create("project","dashboard"),html=new TextEncoder().encode("<html></html>");
+  await f.store.writeArtifactFiles(ctx,artifact.id,0,{"dashboard.json":JSON.stringify(frame)});await f.store.sealArtifactRevision(ctx,artifact.id,1);
+  const output={key:`private/${artifact.id}.html`,hash:createHash("sha256").update(html).digest("hex"),mime:"text/html",format:"html",bytes:html.length};
+  await f.database.query(`update "artifactRevisions" set "outputs"=$3::jsonb,"evidence"=$4::jsonb where "artifactId"=$1 and "revision"=$2`,[artifact.id,1,JSON.stringify([output]),JSON.stringify({valid:true})]);
+  const preview=createArtifactPreview(f.database,f.store,{get:async()=>html,put:async()=>{},delete:async()=>{}},config);
+  const grant=await preview.mint(ctx,artifact.id,1,0);
+  expect((grant as {frame?:unknown}).frame).toEqual(typeof frame.width==="number"&&frame.width<=1920&&frame.height>=240?frame:undefined);
+});

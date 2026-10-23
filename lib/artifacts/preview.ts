@@ -7,6 +7,7 @@ import {ARTIFACT_CSP,SLIDES_CSP} from "./html-policy";
 import {datasetsFromRevision} from "./data";
 import {livePreviewScript} from "./live-preview-runtime";
 import {deckSlideWidth,withDeckScreenCss} from "./adapters/slides/screen";
+import {previewFrame} from "./preview-frame";
 import {SLIDE_WIDTH} from "./adapters/slides/deck";
 export interface ArtifactPreviewConfig {readonly origin:string;readonly appOrigin:string}
 export function previewConfig(env:Readonly<Record<string,string|undefined>>):ArtifactPreviewConfig|null{
@@ -42,7 +43,11 @@ export function createArtifactPreview(database:ArtifactDatabase,store:ArtifactSt
     });
     const artifact=await store.getArtifact(ctx,artifactId);
     const liveDatasetIds=artifact.kind==="dashboard"?datasetsFromRevision(source).filter(d=>d.mode==="live").map(d=>d.id):[];
-    return {url:`${config.origin}/grant/${token}`,expiresInSeconds:ttlSeconds,view:{id:publicId,artifactId,revision,liveDatasetIds}};
+    let frame;
+    if(artifact.kind==="dashboard"){
+      try{frame=previewFrame(JSON.parse(source.files["dashboard.json"]??""));}catch{/* Older revisions without a viewport keep their existing preview. */}
+    }
+    return {frame,url:`${config.origin}/grant/${token}`,expiresInSeconds:ttlSeconds,view:{id:publicId,artifactId,revision,liveDatasetIds}};
   }
   async function handle(request:Request):Promise<Response>{
     try{
