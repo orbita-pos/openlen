@@ -710,6 +710,8 @@ export default defineConfig({
       "app/api/projects/[id]/stripe/route.test.ts",
       // Project email (spec local 2026-10-22-email-integration).
       "app/api/projects/[id]/email/route.test.ts",
+      // Shopify without a key (spec local 2026-10-22-shopify-storefront): the Shopify tab.
+      "app/api/projects/[id]/shopify/route.test.ts",
       "app/api/email/domain-connect/return/route.test.ts",
       "app/api/email/webhooks/resend/route.test.ts",
       "app/u/[token]/route.test.ts",

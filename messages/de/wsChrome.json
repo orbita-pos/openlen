@@ -461,7 +461,8 @@
       "secrets": "Secrets",
       "ai": "KI",
       "payments": "Zahlungen",
-      "email": "E-Mails"
+      "email": "E-Mails",
+      "shopify": "Shopify"
     },
     "unavailable": {
       "title": "Die Datenbank ist hier nicht verfügbar",
@@ -684,6 +685,21 @@
       "disconnectConfirm": "Trennen",
       "cancel": "Abbrechen",
       "cleanupDns": "Getrennt. Du kannst jetzt die Zeilen aus deinem DNS entfernen, die du für die E-Mails von OpenLen hinzugefügt hast."
+    },
+    "shopify": {
+      "loading": "Wird geladen …",
+      "loadError": "Der Shop konnte nicht gelesen werden. Versuche es gleich noch einmal.",
+      "title": "Dein Shopify-Shop",
+      "catalog": "{products} Produkte · {collections} Kollektionen (Stand {date})",
+      "currencyCountry": "Preise in {currency} · {country}",
+      "connectedAt": "Verbunden am {date}",
+      "open": "In Shopify öffnen",
+      "readOnly": "OpenLen speichert keine Kopie des Katalogs: Deine Seiten lesen ihn beim Laden direkt bei Shopify.",
+      "disconnect": "Trennen",
+      "disconnectConfirm": "Deine Seiten ändern sich nicht: Was Len schon geschrieben hat, nutzt diesen Shop weiter, bis du etwas anderes möchtest.",
+      "disconnectYes": "Ja, trennen",
+      "cancel": "Abbrechen",
+      "disconnected": "Shop getrennt. Um einen anderen zu verbinden, frag Len."
     }
   },
   "appBirth": {
