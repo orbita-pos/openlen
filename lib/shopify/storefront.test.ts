@@ -117,6 +117,30 @@ describe("readStore", () => {
     expect(r.kind === "ok" && r.facts.country).toBe("AD");
   });
 
+  // Found in Len's real turn (22/10): the demo store's address is in Canada but it sells in USD;
+  // country="CA" would show converted CAD prices. The market of the shop's own currency wins.
+  it("the country is the market of the shop's currency, not just where its address is", async () => {
+    const markets = {
+      ...GRAPHQL,
+      data: {
+        ...GRAPHQL.data,
+        localization: {
+          availableCountries: [
+            { isoCode: "AD", currency: { isoCode: "EUR" } },
+            { isoCode: "CA", currency: { isoCode: "CAD" } },
+            { isoCode: "US", currency: { isoCode: "USD" } },
+          ],
+        },
+      },
+    };
+    const usd = await readStore("checkout.hydrogen.shop", world({ "https://checkout.hydrogen.shop/meta.json": json(META), [API]: json(markets) }).d);
+    expect(usd.kind === "ok" && usd.facts.country).toBe("US");
+    const cad = await readStore("checkout.hydrogen.shop", world({ "https://checkout.hydrogen.shop/meta.json": json({ ...META, currency: "CAD" }), [API]: json(markets) }).d);
+    expect(cad.kind === "ok" && cad.facts.country).toBe("CA");
+    const none = await readStore("checkout.hydrogen.shop", world({ "https://checkout.hydrogen.shop/meta.json": json({ ...META, currency: "MXN" }), [API]: json(markets) }).d);
+    expect(none.kind === "ok" && none.facts.country).toBe("CA");
+  });
+
   it("follows an apex → www redirect, checking every hop", async () => {
     const { d, checked } = world({
       "https://tienda.com/meta.json": redirect("https://www.tienda.com/meta.json"),
