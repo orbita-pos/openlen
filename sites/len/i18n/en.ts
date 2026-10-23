@@ -261,6 +261,25 @@ export const en = {
         }
       ]
     },
+    rendimiento: {
+      "titulo": "More capable at reasoning, coding and execution.",
+      "intro": "Len 3.0 brings an updated engine with improved published results in reasoning, coding and terminal tasks. It combines this with your project’s context, planning, checks and a real terminal to take your ideas further.",
+      "caption": "Base model: published scores",
+      "columns": [
+            "Evaluation",
+            "Previous",
+            "Current"
+      ],
+      "metrics": [
+            "Reasoning",
+            "Terminal tasks",
+            "Coding"
+      ],
+      "hle": "HLE without tools",
+      "note": "Results published by the base model’s developer, comparing its previous version with the update incorporated in Len 3.0. These are not an end-to-end evaluation of Len 3.0 against 2.5.",
+      "method": "Terminal-Bench was measured with an agent system outside OpenLen. Tools, limits and configuration can change the results.",
+      "source": "Read the original evaluation"
+},
     criterio: {
       titulo: "An agent to take your idea further.",
       intro: "Tell it what you want to achieve. Len consults your project, organizes the work and chooses the tools to put it into practice.",

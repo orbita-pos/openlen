@@ -1,0 +1,25 @@
+{
+  "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "checked": "2026-10-23",
+  "previousModel": "DeepSeek-V4.1-Flash",
+  "currentModel": "DeepSeek-V4.1-Flash-1017",
+  "previousPolicyCommit": "5311bbe7",
+  "currentPolicyCommit": "8a690189",
+  "rows": [
+    {
+      "benchmark": "HLE",
+      "previous": 36.8,
+      "current": 42.6
+    },
+    {
+      "benchmark": "Terminal-Bench 4.0",
+      "previous": 31.2,
+      "current": 42.3
+    },
+    {
+      "benchmark": "ProgramBench",
+      "previous": 20.3,
+      "current": 29.1
+    }
+  ]
+}

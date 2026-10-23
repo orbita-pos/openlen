@@ -6,7 +6,7 @@ export const meta = {
   category: "Research",
   topic: "Lanzamientos",
   cover: "len3",
-  readingMinutes: 5,
+  readingMinutes: 6,
   author: "Equipo OpenLen",
   cifra: {
     valor: "5",
@@ -14,6 +14,7 @@ export const meta = {
     commit: "8a690189"
   },
   indice: [
+    { id: "engine", texto: "Un motor más capaz" },
     { id: "agent", texto: "Entender, planear y comprobar" },
     {
       id: "create",
@@ -41,6 +42,14 @@ export const meta = {
     }
   ]
 }
+
+<h2 id="engine">Más capacidad para razonar, programar y ejecutar</h2>
+
+Len 3.0 incorpora un motor actualizado con mejores resultados publicados en razonamiento, programación y tareas de terminal. Lo combina con el contexto de tu proyecto, planificación, comprobaciones y una terminal real para llevar tus ideas más lejos.
+
+<ResultadosModelo lang="es" />
+
+La configuración de este lanzamiento incorpora la actualización evaluada. <Fuente ruta="lib/generation/model-policy.ts" commit="8a690189" />
 
 <h2 id="agent">Entender, planear y comprobar</h2>
 
@@ -97,5 +106,5 @@ Puedes abrir la vista previa, descargar el resultado y pedir una corrección sob
 <Abierto id="open" titulo="Lo que sigue abierto">
 Las **Edge Functions siguen pendientes de activación**. Por eso este lanzamiento no promete código de servidor personalizado disponible para todas las apps ni todos los flujos de una integración terminados con sólo conectarla.
 
-Len no genera música ni efectos de sonido: puede usar los que tú subas. Aún no hemos publicado una comparativa de inteligencia o rendimiento entre Len 3.0 y 2.5; los resultados históricos mantienen su fecha y su contexto. Las comprobaciones de una entrega aportan evidencia, no una garantía de que cualquier proyecto funcionará sin revisión.
+Len no genera música ni efectos de sonido: puede usar los que tú subas. Las comprobaciones de una entrega aportan evidencia, no una garantía de que cualquier proyecto funcionará sin revisión.
 </Abierto>

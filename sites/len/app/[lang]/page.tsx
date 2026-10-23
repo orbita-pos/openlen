@@ -6,6 +6,7 @@ import { Imagen } from "@/components/imagen";
 import { TarjetaLen } from "@/components/tarjeta-len";
 import { EstadoPrincipio, Fuente } from "@/components/contenido";
 import { articulos } from "@/content/research";
+import { ResultadosModelo } from "@/components/resultados-modelo";
 
 export default async function Portada({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -54,6 +55,12 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="sec release-performance" aria-labelledby="release-performance-title">
+          <h2 id="release-performance-title">{p.rendimiento.titulo}</h2>
+          <p className="release-intro">{p.rendimiento.intro}</p>
+          <ResultadosModelo lang={lang} />
         </section>
 
         <section className="sec release-features" id="novedades" aria-labelledby="release-features-title">
