@@ -637,6 +637,24 @@ mcp.openlen.com {
 	}
 }
 
+# ─── preview.openlen.com: LA VISTA PREVIA DE LOS ENTREGABLES (Len 3.0) ─
+# El servicio openlen-artifacts-preview escucha en 127.0.0.1:3012 y rechaza
+# cualquier Host que no sea éste (lib/artifacts/preview-http.ts). Host propio
+# del MISMO sitio que la app, por la cookie SameSite=Strict de sus tickets
+# (infra/artifacts/README.md). Va ANTES del comodín de abajo, como `len.` y
+# `mcp.`: el bloque más específico gana. El DNS ya lo cubre el comodín
+# `*.openlen.com` de Cloudflare; `preview` está reservado como subdominio
+# (lib/subdomain/reserved.ts). Las cabeceras de seguridad del documento las pone
+# el propio servicio; aquí sólo HSTS y quitar Server.
+preview.openlen.com {
+	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	reverse_proxy 127.0.0.1:3012
+}
+
 # ─── *.openlen.com → *.openlen.app (308) ──────────────────────────────
 #
 # 🔴 ESTO EXISTE PORQUE QUITAR `*.openlen.com` DEL BLOQUE DE ARRIBA DEJÓ 404 A

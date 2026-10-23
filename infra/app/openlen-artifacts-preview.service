@@ -1,0 +1,44 @@
+# LEN 3.0 — THE DELIVERABLES PREVIEW (infra/artifacts/README.md, "Turning it on
+# on the box"). Serves finished deliverables on 127.0.0.1:3012; Caddy publishes
+# it at preview.openlen.com (its own host on the SAME site as the app, for the
+# SameSite=Strict cookie) and the server itself refuses any other Host.
+#
+# Its own user, `openlen-preview`, in the `openlen-artifacts` group: it READS
+# the private store and nothing else. Its environment is a separate file with
+# only what it needs (database, the app's and the preview's origins, the
+# folder): neither the OpenAI key nor the app's other secrets reach this
+# internet-facing process. The deploy regenerates that file from
+# /etc/openlen/openlen.env each time, when the unit is enabled; with the store
+# in R2 (R2_ARTIFACTS_BUCKET) it would also need those credentials.
+[Unit]
+Description=OpenLen — deliverables preview (preview.openlen.com)
+After=network-online.target postgresql.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=openlen-preview
+Group=openlen-artifacts
+WorkingDirectory=/opt/openlen-app
+Environment=NODE_ENV=production
+Environment=OPENLEN_ARTIFACT_PREVIEW_PORT=3012
+EnvironmentFile=/etc/openlen/artifacts-preview.env
+ExecStart=/usr/bin/node /opt/openlen-app/artifacts/preview.mjs
+Restart=on-failure
+RestartSec=5s
+RestartSteps=5
+RestartMaxDelaySec=60s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-artifacts-preview
+MemoryAccounting=true
+MemoryHigh=192M
+MemoryMax=256M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

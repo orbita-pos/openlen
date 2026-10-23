@@ -1,9 +1,9 @@
 # Len 3.0 — estado y operación de entregables
 
-Implementación en `len-3.0`. **No activar todavía en producción.** Los motores
-tienen pruebas locales, pero el ensayo Linux y la aceptación real del pedido
-completo siguen pendientes. Este documento no instala servicios ni modifica
-el despliegue existente.
+Implementación en `len-3.0`. **23/10/2026: la aceptación Linux pasó 22/22 EN LA
+CAJA** (con su Docker, su kernel y el usuario del worker; ver «Encenderlo en la
+caja», abajo). El encendido en producción sigue esa sección; la aceptación real
+del pedido completo desde el chat es lo último.
 
 ## Procesos y archivos
 
@@ -67,6 +67,79 @@ de cookies de terceros. Verificar en los navegadores objetivo antes de activar.
 No usar `PrivateTmp=true` para el worker cuando Docker comparte el daemon del
 host: los bind mounts deben apuntar a rutas visibles por ese daemon. Preparar un
 `TMPDIR` privado del usuario del worker y probar permisos con el UID/GID real.
+
+## Encenderlo en la caja (23/10/2026)
+
+Medido en la caja (Hetzner, 3 vCPU, 3,8 GB): aceptación **22/22**, sin
+contenedores ni temporales sobrantes; pico de un render 465 MiB (video), el de
+120 s tardó 341 s; producción durante la prueba, ≥2,0 GB disponibles, swap igual
+y la web sin errores. Renders en la misma caja, de uno en uno.
+
+**Quién es quién.** `openlen-artifacts` (grupo `docker` = root a efectos
+prácticos) es el worker y el ÚNICO que escribe el almacén. Next
+(`openlen-deploy`) y la vista previa (`openlen-preview`) lo LEEN por el grupo
+`openlen-artifacts`: el almacén escribe `0640`/`0750` cuando su carpeta deja
+leer al grupo (`storageModes`, `lib/artifacts/private-storage.ts`), y privado
+(`0600`/`0700`) cuando la crea el propio código.
+
+**Una vez, como root en la caja:**
+
+```sh
+NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io
+useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin --groups docker openlen-artifacts
+useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin --gid openlen-artifacts openlen-preview
+usermod -aG openlen-artifacts openlen-deploy     # Next lee las descargas; efecto al reiniciar la app
+install -d -m 2750 -o openlen-artifacts -g openlen-artifacts /var/openlen/artifacts
+install -d -m 0700 -o openlen-artifacts -g openlen-artifacts /var/openlen/artifacts-tmp
+```
+
+La imagen: la VERIFICADA, no una reconstrucción (`docker save
+openlen/artifact-renderer:2 | gzip` donde pasó la aceptación → `scp` →
+`gunzip -c | docker load`) y comprobar que el ID es el mismo. Después, la
+aceptación en la caja desde una máquina con el repo (en Git Bash,
+`MSYS_NO_PATHCONV=1` y la carpeta de evidencia como `C:/…`):
+
+```sh
+npx tsx --require ./scripts/test-node-server-only-shim.cjs scripts/artifact-linux-acceptance.ts \
+  --evidence <carpeta nueva> --image openlen/artifact-renderer:2 \
+  --ssh openlen --run-as openlen-artifacts --tmpdir /var/openlen/artifacts-tmp
+```
+
+En `/etc/openlen/openlen.env` (Next y el worker lo leen; la vista previa recibe
+un subconjunto que el deploy genera en `/etc/openlen/artifacts-preview.env`):
+
+```sh
+NEXT_PUBLIC_SITE_URL=https://openlen.com
+OPENLEN_ARTIFACTS=1
+OPENLEN_ARTIFACTS_DIR=/var/openlen/artifacts
+OPENLEN_ARTIFACT_RENDERER_IMAGE=openlen/artifact-renderer:2
+OPENLEN_ARTIFACT_MOTION_VERIFIED=1
+OPENLEN_ARTIFACT_AUDIO_VERIFIED=1
+OPENLEN_ARTIFACT_IMAGE_CENTICREDITS=500
+OPENLEN_ARTIFACT_RENDER_CENTICREDITS=0
+OPENLEN_ARTIFACT_AUDIO_CENTICREDITS=25
+OPENLEN_ARTIFACT_PREVIEW_ORIGIN=https://preview.openlen.com
+```
+
+`NEXT_PUBLIC_SITE_URL` hace falta EN EJECUCIÓN: `previewConfig` y la
+comprobación de origen de las rutas (`lib/artifacts/routes.ts`) lo leen de un
+parámetro, no del build; todos los demás que lo leen caen ya en
+`https://openlen.com`, así que no cambia nada más. Los servicios
+(`infra/app/openlen-artifacts-{worker,preview}.service` y la línea de
+`needrestart-openlen.conf`) se instalan con `install-app.sh` y se habilitan con
+`systemctl enable openlen-artifacts-worker openlen-artifacts-preview`.
+
+**El deploy** empaqueta los dos (`artifacts:bundle`, paso 3), comprueba
+`worker.mjs --verify-install` en la carpeta de staging antes del swap (paso 6.6)
+y, tras el swap, rehace el entorno de la vista previa y reinicia los dos, sólo si
+están habilitados. Caddy publica la vista previa en `preview.openlen.com` (bloque
+propio; el DNS lo cubre el comodín de `*.openlen.com` y `preview` está reservado
+como subdominio).
+
+**Apagarlo:** quitar `OPENLEN_ARTIFACTS=1` de `openlen.env` y reiniciar
+`openlen-app`; el worker y la vista previa contestan «disabled» y se paran en
+el próximo reinicio (`systemctl restart openlen-artifacts-worker
+openlen-artifacts-preview`).
 
 ## Diagnóstico y recuperación
 
