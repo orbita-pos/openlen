@@ -295,6 +295,9 @@ export interface AgentDeps {
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
    *  proyecto desde la terminal (siempre al borrador). `null` sin motor. */
   functionsCurl?(projectId: string): Promise<FunctionsCurl | null>;
+  /** SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.2): `curl` to the connected store's
+   *  Storefront API from the terminal. `null` with Shopify off or no store. */
+  shopifyCurl?(projectId: string): Promise<FunctionsCurl | null>;
   /** EDGE FUNCTIONS: tras escribir en /supabase/functions/** o config.toml,
    *  despliega el borrador y devuelve lo que no compila. Sin él, nada. */
   functionsAfterWrite?(projectId: string, written: readonly string[]): Promise<Diagnostico[]>;
@@ -671,6 +674,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async functionsCurl(projectId) {
       const { functionsCurlFor } = await import("@/lib/functions/curl");
       return functionsCurlFor(projectId);
+    },
+    async shopifyCurl(projectId) {
+      const { shopifyCurlFor } = await import("@/lib/shopify/curl");
+      return shopifyCurlFor(projectId);
     },
     async functionsAfterWrite(projectId, written) {
       const { draftDeployAfterWrite } = await import("@/lib/functions/deploy");

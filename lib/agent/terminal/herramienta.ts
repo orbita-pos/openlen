@@ -33,6 +33,8 @@ import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./so
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
 import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
 import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
+import type { FunctionsCurl } from "@/lib/functions/curl-types";
+import { mergeCurls } from "./curl-targets";
 import { boxMarker } from "@/lib/agent/sandbox/box-marker";
 import { boxNetworkFor, type BoxNetwork } from "@/lib/agent/sandbox/box-network";
 import { NEVER_IN_BOX } from "@/lib/agent/sandbox/paths";
@@ -85,8 +87,9 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     ...((stripe) => (stripe ? { stripe } : {}))(stripeForTerminal(session, deps)),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
     appTools: appToolsFor(session, deps),
-    // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11).
-    ...(deps.functionsCurl ? { functionsCurl: () => deps.functionsCurl!(session.projectId) } : {}),
+    // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11), y a la
+    // Storefront API de la tienda de Shopify conectada (spec local 2026-10-22-shopify-storefront).
+    ...(deps.functionsCurl || deps.shopifyCurl ? { functionsCurl: () => terminalCurlFor(session, deps) } : {}),
   });
   const terminal = (session.terminal ??= await terminalForTurn(session, {
     local,
@@ -348,12 +351,22 @@ function stripeForTerminal(
   return (args, o) => deps.stripeCli!(session.projectId, args, o);
 }
 
+/** The terminal's one `curl`: to the project's Edge Functions and to the connected Shopify
+ *  store's Storefront API, whichever this project has (spec local 2026-10-22-shopify-storefront, §6.2). */
+async function terminalCurlFor(session: AgentSession, deps: AgentDeps): Promise<FunctionsCurl | null> {
+  const [functions, shop] = await Promise.all([
+    deps.functionsCurl ? deps.functionsCurl(session.projectId).catch(() => null) : null,
+    deps.shopifyCurl ? deps.shopifyCurl(session.projectId).catch(() => null) : null,
+  ]);
+  return mergeCurls([functions, shop]);
+}
+
 /** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */
 async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promise<BridgeHandlers> {
   const git = gitForTerminal(session, deps);
   const stripe = stripeForTerminal(session, deps);
   const appTools = appToolsFor(session, deps);
-  const curl = deps.functionsCurl ? await deps.functionsCurl(session.projectId).catch(() => null) : null;
+  const curl = await terminalCurlFor(session, deps);
   return {
     ...(git ? { git } : {}),
     ...(stripe ? { stripe } : {}),

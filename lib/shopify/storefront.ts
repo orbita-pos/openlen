@@ -14,6 +14,14 @@ export const SHOPIFY_TIMEOUT_MS = 15_000;
 export const SHOPIFY_MAX_BYTES = 1_000_000;
 const MAX_REDIRECTS = 3;
 
+/** A signal that aborts after `ms`, with a `setTimeout` (that tests' fake timers drive)
+ *  instead of `AbortSignal.timeout` (which they don't). `clear` once the answer is read. */
+export function timeoutSignal(ms: number = SHOPIFY_TIMEOUT_MS): { signal: AbortSignal; clear(): void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new DOMException(`over ${ms} ms`, "TimeoutError")), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
 export function storefrontApiUrl(shopDomain: string): string {
   return `https://${shopDomain}/api/${STOREFRONT_API_VERSION}/graphql.json`;
 }
