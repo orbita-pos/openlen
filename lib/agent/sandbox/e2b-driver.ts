@@ -24,12 +24,13 @@ export const BOX_ALLOW_OUT: readonly string[] = [
   ...PAGE_CDNS,
 ];
 
-/** E2B's network for a box: closed but the allow list and the project's hosts, each with its rule. */
+/** E2B's network for a box: closed but the allow list and the project's hosts, each with its rule
+ *  (and the connected store's, with none). */
 function networkOf(project: BoxNetwork | null | undefined) {
   const hosts = project?.hosts ?? [];
   return {
     denyOut: ["0.0.0.0/0"],
-    allowOut: [...BOX_ALLOW_OUT, ...hosts],
+    allowOut: [...BOX_ALLOW_OUT, ...hosts, ...(project?.thirdPartyHosts ?? [])],
     ...(hosts.length > 0 ? { rules: Object.fromEntries(hosts.map((h) => [h, [{ transform: { headers: { ...project!.headers } } }]])) } : {}),
   };
 }
