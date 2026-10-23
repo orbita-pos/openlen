@@ -6,6 +6,8 @@ import {ArtifactError,type ArtifactContext,type ArtifactDatabase} from "./types"
 import {ARTIFACT_CSP,SLIDES_CSP} from "./html-policy";
 import {datasetsFromRevision} from "./data";
 import {livePreviewScript} from "./live-preview-runtime";
+import {deckSlideWidth,withDeckScreenCss} from "./adapters/slides/screen";
+import {SLIDE_WIDTH} from "./adapters/slides/deck";
 export interface ArtifactPreviewConfig {readonly origin:string;readonly appOrigin:string}
 export function previewConfig(env:Readonly<Record<string,string|undefined>>):ArtifactPreviewConfig|null{
   if(!env.OPENLEN_ARTIFACT_PREVIEW_ORIGIN)return null;
@@ -75,7 +77,11 @@ export function createArtifactPreview(database:ArtifactDatabase,store:ArtifactSt
       const liveIds=artifact.kind==="dashboard"?datasetsFromRevision(source).filter(d=>d.mode==="live").map(d=>d.id):[];
       // Add trusted mediation after verifying the original saved bytes. The
       // downloaded export remains an immutable snapshot with no live bridge.
-      const html=liveIds.length?`${new TextDecoder("utf-8",{fatal:true}).decode(bytes)}<script>${livePreviewScript({appOrigin:config.appOrigin,channel:publicId,datasetIds:liveIds})}</script>`:new Uint8Array(bytes);
+      // A deck saved before its HTML carried the screen rule still fits the viewer's width: the rule is added here,
+      // after the saved bytes were verified (adapters/slides/screen.ts). Downloads stay the saved file.
+      const text=()=>new TextDecoder("utf-8",{fatal:true}).decode(bytes);
+      const html=liveIds.length?`${text()}<script>${livePreviewScript({appOrigin:config.appOrigin,channel:publicId,datasetIds:liveIds})}</script>`
+        :artifact.kind==="slides"?withDeckScreenCss(text(),deckSlideWidth(source.files,SLIDE_WIDTH)):new Uint8Array(bytes);
       return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"private, no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":`sandbox allow-scripts; ${artifact.kind==="slides"?SLIDES_CSP:ARTIFACT_CSP}; frame-ancestors ${config.appOrigin}`,"permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()"}});
     }catch{return notFound();}
   }

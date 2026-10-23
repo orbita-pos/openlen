@@ -1,6 +1,7 @@
 import { type SealedArtifactInput } from "../../types";
 import { ARTIFACT_CSP, datasetLabel } from "../dashboard/compile";
 import { chartData, type SlideChart, type SlideDeck } from "./manifest";
+import { deckScreenCss } from "./screen";
 const esc = (v: unknown) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const colors = ["75BDA0", "5C8DA6", "F0B66E", "9F89CA", "D88080", "9CA977"];
 function chartSvg(chart: SlideChart, input: SealedArtifactInput) {
@@ -42,5 +43,5 @@ export function slideDeckHtml(deck: SlideDeck, input: SealedArtifactInput): stri
     }).join("");
     return `<section class="slide" data-slide-id="${s.id}" style="background:#${s.background ?? deck.background}">${elements}${labels.size ? `<footer style="position:absolute;bottom:12px;left:32px;font-size:14px">${esc([...labels].join(" · "))}</footer>` : ""}</section>`;
   }).join("\n");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><title>${esc(deck.title)}</title><style>@page{size:${deck.width}px ${deck.height}px;margin:0}*{box-sizing:border-box}body{margin:0;color:#${deck.color};font-family:'${deck.fontFamily}',sans-serif}.slide{position:relative;width:${deck.width}px;height:${deck.height}px;overflow:hidden;break-after:page;page-break-after:always}.slide:last-child{break-after:auto;page-break-after:auto}img{display:block}svg{overflow:visible}</style></head><body>${slides}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}"><title>${esc(deck.title)}</title><style>@page{size:${deck.width}px ${deck.height}px;margin:0}*{box-sizing:border-box}body{margin:0;color:#${deck.color};font-family:'${deck.fontFamily}',sans-serif}.slide{position:relative;width:${deck.width}px;height:${deck.height}px;overflow:hidden;break-after:page;page-break-after:always}.slide:last-child{break-after:auto;page-break-after:auto}img{display:block}svg{overflow:visible}${deckScreenCss(deck.width)}</style></head><body>${slides}</body></html>`;
 }
