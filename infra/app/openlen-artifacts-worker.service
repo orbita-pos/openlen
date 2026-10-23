@@ -1,0 +1,54 @@
+# LEN 3.0 — THE DELIVERABLES WORKER (infra/artifacts/README.md, "Turning it on
+# on the box"). Claims jobs from the database and renders each one, one at a
+# time, in a container of the verified image (`docker run --network none
+# --read-only`, at most 2 CPUs and 2 GiB; the acceptance on the box measured
+# ≤465 MiB).
+#
+# Runs as `openlen-artifacts`, which is in the `docker` group — root in all but
+# name — and therefore is NOT the app's user. It is the ONLY writer of the
+# private store (/var/openlen/artifacts, 2750): Next (openlen-deploy) and the
+# preview (openlen-preview) READ it through the `openlen-artifacts` group.
+#
+# No PrivateTmp, on purpose: Docker's bind mounts must see the host path, so
+# its temporary directory is its own private folder (TMPDIR). The bundle lives
+# at /opt/openlen-app/artifacts/worker.mjs; the deploy checks the install
+# before the swap and restarts it after, only when the unit is enabled.
+#
+# The memory cap is the Node process's (compiling and bundling sources); Docker
+# accounts the container separately. If something runs away, the kernel does
+# not pick Postgres.
+[Unit]
+Description=OpenLen — Len deliverables worker (renders in Docker)
+After=network-online.target postgresql.service docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=openlen-artifacts
+Group=openlen-artifacts
+WorkingDirectory=/opt/openlen-app
+Environment=NODE_ENV=production
+Environment=TMPDIR=/var/openlen/artifacts-tmp
+EnvironmentFile=/etc/openlen/openlen.env
+ExecStart=/usr/bin/node /opt/openlen-app/artifacts/worker.mjs
+Restart=on-failure
+RestartSec=5s
+RestartSteps=5
+RestartMaxDelaySec=60s
+TimeoutStopSec=30s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-artifacts-worker
+MemoryAccounting=true
+MemoryHigh=768M
+MemoryMax=1G
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/openlen/artifacts /var/openlen/artifacts-tmp
+
+[Install]
+WantedBy=multi-user.target

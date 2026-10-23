@@ -81,6 +81,11 @@ install -m 644 "${SCRIPT_DIR}/openlen-email-domains.timer"   /etc/systemd/system
 # habilita a mano cuando el clúster de las páginas tenga replicación lógica
 # (infra/PAGES_BACKEND_RUNBOOK.md §4c):  systemctl enable --now openlen-realtime
 install -m 644 "${SCRIPT_DIR}/openlen-realtime.service" /etc/systemd/system/openlen-realtime.service 2>/dev/null || true
+# Len 3.0, los entregables: el worker (renders en Docker) y la vista previa. Se
+# habilitan a mano después de preparar sus usuarios, carpetas y Docker
+# (infra/artifacts/README.md, «Encenderlo en la caja»).
+install -m 644 "${SCRIPT_DIR}/openlen-artifacts-worker.service"  /etc/systemd/system/openlen-artifacts-worker.service  2>/dev/null || true
+install -m 644 "${SCRIPT_DIR}/openlen-artifacts-preview.service" /etc/systemd/system/openlen-artifacts-preview.service 2>/dev/null || true
 # Las actualizaciones automáticas de Ubuntu no reinician la app (ni el tiempo real) a media
 # ejecución de un turno (15/10: 91 s caída); lo hace el próximo deploy. Ver el fichero.
 install -d -m 755 /etc/needrestart/conf.d

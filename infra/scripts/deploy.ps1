@@ -333,6 +333,16 @@ Step 3 "Bundling DB migrations (esbuild) to run on the box..."
 npm run migrations:bundle
 if ($LASTEXITCODE -ne 0) { throw "migrations:bundle failed (exit $LASTEXITCODE)" }
 
+# LOS ENTREGABLES DE LEN 3.0 (infra/artifacts/README.md): el worker y la vista
+# previa viajan en el mismo paquete, en .next/standalone/artifacts/, con lo que
+# su traza necesita. Van SIEMPRE, encendidos o no: un servicio habilitado que
+# arranca sobre una carpeta sin su bundle es la palanca que no vuelve a ningun
+# sitio. El binario nativo de imagenes es el de Windows aqui; el paso 6.5 pone
+# el de Linux y el 6.6 comprueba la instalacion en la caja.
+Step 3 "Bundling the deliverables worker + preview (esbuild + trace)..."
+npm run artifacts:bundle
+if ($LASTEXITCODE -ne 0) { throw "artifacts:bundle failed (exit $LASTEXITCODE)" }
+
 # Never relabel reused output. A normal build receives its attestation only
 # after Next and all local standalone composition steps succeeded; skip-build
 # can only verify the pre-existing revision/build/artifact identity.
@@ -543,6 +553,24 @@ bash /root/build-crates-on-box.sh $stagingDir
   Start-Sleep -Seconds 3
 }
 
+# --- 6.6. El worker de los entregables, comprobado ANTES del swap ------
+#
+# `worker.mjs --verify-install` compila los fixtures con el compilador del
+# paquete, arma un PPTX nativo, carga GSAP y el binario de imagenes de Linux que
+# acaba de poner el 6.5: sin base, sin proveedor, sin Docker. Sobre la carpeta de
+# staging, para que un paquete al que le falte algo no llegue a cambiarse. Solo
+# si el worker esta habilitado en la caja: apagado, no hay nada que proteger.
+$verifyCmd = @"
+if systemctl is-enabled --quiet openlen-artifacts-worker 2>/dev/null; then
+  cd $stagingDir && node artifacts/worker.mjs --verify-install
+else
+  echo '    (worker de entregables no habilitado en la caja: sin comprobar)'
+fi
+"@
+Step "6.6" "Checking the deliverables worker install on the box (staging)..."
+& ssh $host_ (Sh $verifyCmd)
+if ($LASTEXITCODE -ne 0) { throw "Deliverables worker install check failed (exit $LASTEXITCODE) -- NO se cambia" }
+
 # --- 7. Atomic swap + restart + smoke test ---------------------------
 Step 7 "Atomic swap + restart..."
 # El bloque que reescribe los interruptores de Fable en /etc/openlen/openlen.env
@@ -586,6 +614,16 @@ curl -sI -o /dev/null -w '  smoke: HTTP %{http_code} (%{time_total}s)' http://12
 # carril D (Len 2.5, pieza 15): el Realtime de las paginas lee su bundle de la
 # carpeta que se acaba de cambiar. Solo si esta habilitado (runbook §4c).
 if systemctl is-enabled --quiet openlen-realtime 2>/dev/null; then systemctl restart openlen-realtime; fi
+# Los entregables de Len 3.0 (infra/artifacts/README.md): el worker y la vista
+# previa leen su bundle de la carpeta recien cambiada. Solo si estan habilitados.
+# El entorno de la vista previa se rehace desde openlen.env con lo justo: sin la
+# clave de OpenAI ni las demas de la app (infra/app/openlen-artifacts-preview.service).
+if systemctl is-enabled --quiet openlen-artifacts-preview 2>/dev/null; then
+  ( umask 077; grep -E '^(DATABASE_URL|NEXT_PUBLIC_SITE_URL|OPENLEN_ARTIFACTS|OPENLEN_ARTIFACTS_DIR|OPENLEN_ARTIFACT_PREVIEW_ORIGIN|INARIWATCH_DSN)=' /etc/openlen/openlen.env > /etc/openlen/artifacts-preview.env.nuevo || true )
+  mv -f /etc/openlen/artifacts-preview.env.nuevo /etc/openlen/artifacts-preview.env
+  systemctl restart openlen-artifacts-preview
+fi
+if systemctl is-enabled --quiet openlen-artifacts-worker 2>/dev/null; then systemctl restart openlen-artifacts-worker; fi
 "@
 $swapCmd = $swapCmd.Replace("__TARGET_MODE__", $targetMode).Replace("__TARGET_ROLLOUT_PERCENT__", $targetRolloutPercent).Replace("__BACKUP_DIR__", $backupDir).Replace("__REMOTE_DIR__", $remoteDir).Replace("__STAGING_DIR__", $stagingDir)
 
