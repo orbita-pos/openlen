@@ -2,7 +2,7 @@ export const en = {
   htmlLang: "en",
   meta: {
     title: "Len 3.0 — from idea to deliverable",
-    description: "Create websites and apps, presentations, dashboards, images, videos and voice with Len. A real terminal and new connections to take your project further."
+    description: "An agent that works with your project’s context, plans, executes and checks. Now it also creates presentations, dashboards, images, videos and voice, with a real terminal to put the work into practice."
   },
   nav: {
     research: "Research",
@@ -40,7 +40,7 @@ export const en = {
       "Len 3.0",
       "."
     ],
-    parrafo: "Websites and apps. Presentations, dashboards, images, videos and voice. Len turns more of your ideas into something you can open, review and download, in the same conversation.",
+    parrafo: "Our most capable agent yet. It understands your task, works with your project’s context, plans the steps and checks what it builds. Now it also creates presentations, dashboards, images, videos and voice, with a real terminal to run code and tests.",
     cta: "Try Len",
     ctaSecundario: "Explore what is new",
     altCielo: "Len 3.0 beneath an orange horizon. Our most capable agent yet. Now also creates images, videos, and presentations.",
@@ -258,6 +258,28 @@ export const en = {
         {
           titulo: "Your project stays with you",
           texto: "Website or app, a database, visitor accounts, files and real-time updates. Deliverables live alongside the project without replacing its page."
+        }
+      ]
+    },
+    criterio: {
+      titulo: "An agent to take your idea further.",
+      intro: "Tell it what you want to achieve. Len consults your project, organizes the work and chooses the tools to put it into practice.",
+      items: [
+        {
+          titulo: "Understands the goal",
+          texto: "When an important decision is missing, it asks with options. It can clarify what you need before it starts building."
+        },
+        {
+          titulo: "Plans and stays on track",
+          texto: "For longer tasks, it can propose a plan, show its steps and continue across rounds with a goal. You can see its progress and what remains."
+        },
+        {
+          titulo: "Works with your context",
+          texto: "It reads project files and can retrieve what you discussed in earlier conversations. Your decisions remain part of the work it continues."
+        },
+        {
+          titulo: "Checks and corrects",
+          texto: "It runs code and tests, opens the result in a real browser and uses what it observes to make corrections. It can review both appearance and behavior."
         }
       ]
     }

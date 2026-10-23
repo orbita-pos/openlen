@@ -923,3 +923,8 @@ a {
 .prose .src { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
 .hero h1 em { white-space: nowrap; }
+
+.release-thinking-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 36px 56px; margin-top: 32px; }
+.release-thinking-item h3 { font-size: 22px; letter-spacing: -.025em; margin: 0 0 12px; }
+.release-thinking-item p { color: #3d3932; line-height: 1.75; margin: 0; }
+@media(max-width:760px) { .release-thinking-list { grid-template-columns: 1fr; gap: 28px; } }

@@ -43,6 +43,19 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
           <figcaption><span>Len 3.0</span><Link href={`/${lang}/research/len-3-0/`}>{p.novedades.leer}</Link></figcaption>
         </figure>
 
+        <section className="sec release-thinking" aria-labelledby="release-thinking-title">
+          <h2 id="release-thinking-title">{p.criterio.titulo}</h2>
+          <p className="release-intro">{p.criterio.intro}</p>
+          <div className="release-thinking-list">
+            {p.criterio.items.map(x => (
+              <div className="release-thinking-item" key={x.titulo}>
+                <h3>{x.titulo}</h3>
+                <p>{x.texto}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="sec release-features" id="novedades" aria-labelledby="release-features-title">
           <div className="sec-head"><div><h2 id="release-features-title">{p.novedades.titulo}</h2><p className="release-intro">{p.novedades.intro}</p></div></div>
           {p.novedades.items.map(x=><div className="release-feature" key={x.titulo}><div><h3>{x.titulo}</h3><span className="release-formats">{x.formatos}</span></div><p>{x.texto}</p></div>)}
