@@ -331,6 +331,14 @@ describe("SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.7)", () => {
     expect(appLine).toContain("cartCreate");
   });
 
+  // Len's real turn (22/10) set target="_blank" on <shopify-cart> to get past the canvas, so the
+  // published page's checkout opened in another tab too: the canvas already does it by itself.
+  it("says the canvas opens the checkout by itself, so the cart's target stays as Shopify has it", () => {
+    for (const m of [buildManualDeLaPlataforma({}), buildManualDeLaPlataforma({}, "len", app)]) {
+      expect(m).toContain("In the canvas the checkout opens in a new tab by itself: leave the cart's `target` as it is");
+    }
+  });
+
   it("an app gets what was measured on 22/10: the components need dangerouslySetInnerHTML, the client needs a key", () => {
     const m = buildManualDeLaPlataforma({}, "len", app);
     expect(m).toContain("dangerouslySetInnerHTML");
