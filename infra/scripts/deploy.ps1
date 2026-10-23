@@ -426,7 +426,13 @@ rm /root/$tarballName
 cd $stagingDir
 PUPPETEER_SKIP_DOWNLOAD=1 npm install --no-save --include=optional --os=linux --cpu=x64 "@img/sharp-linux-x64" "@img/sharp-libvips-linux-x64" --silent 2>&1 | tail -3
 chown -R openlen-deploy:www-data $stagingDir
+chmod -R u+rwX,go+rX,go-w $stagingDir
 "@
+# The chmod: Windows' tar records every file as 666 and every folder as 777, so
+# until 2026-10-23 any user on the box could rewrite the app's code (measured:
+# /opt/openlen-app drwxrwxrwx, server.js -rw-rw-rw-). Only the owner writes now;
+# everyone still reads, which the deliverables worker and preview need (their
+# own users run code from this tree).
 & ssh $host_ (Sh $extractCmd)
 if ($LASTEXITCODE -ne 0) { throw "Remote extract failed (exit $LASTEXITCODE)" }
 
