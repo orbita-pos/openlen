@@ -46,7 +46,10 @@ for(const warning of trace.warnings){
   // line-clamp is built into core. This compiler always passes plugins: [].
   const optionalTailwindProbe=/Cannot find module '@tailwindcss\/line-clamp' loaded from .*node_modules[\\/]tailwindcss[\\/]lib[\\/]util[\\/]validateConfig\.js/.test(message);
   const otherNativePlatform=/crates[\\/]images[\\/]openlen-images\.[^'\s]+\.node/.test(message);
-  if(!optionalCaptureIntegration&&!unusedCatalogDevProbe&&!optionalTailwindProbe&&!otherNativePlatform&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
+  // d3 is read as DATA from public/artifact-vendor (adapters/dashboard/d3.ts, checked by its hash), which the
+  // deploy ships with public/. The tracer only sees the folder and tries to parse its LICENSE as code.
+  const vendorDataFile=/^Failed to parse .*public[\\/]artifact-vendor[\\/]/.test(message);
+  if(!optionalCaptureIntegration&&!unusedCatalogDevProbe&&!optionalTailwindProbe&&!otherNativePlatform&&!vendorDataFile&&!/pg-native|bufferutil|utf-8-validate|cloudflare:sockets|__next|@openlen\//.test(message))unsupportedWarnings.push(message);
 }
 if(unsupportedWarnings.length)throw new Error(unsupportedWarnings.join("\n"));
 const files=new Set([...trace.fileList,...assets]);const links=[{relative:"node_modules/@openlen/images",actual:imageNativeRoot}],copiedPaths=new Set();let copied=0;
