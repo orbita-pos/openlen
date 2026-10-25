@@ -10,6 +10,8 @@
  * reasons live in the spec.
  */
 
+// Cache effect: none on the prefix: the reminder rides at the end of a step with the tool results and is saved with them.
+
 export const TODO_WRITE = "todo_write";
 
 export const TODO_STATUSES = ["pending", "in_progress", "completed"] as const;

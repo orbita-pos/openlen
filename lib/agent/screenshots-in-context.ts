@@ -4,6 +4,8 @@
 // Fireworks does not cache and that every later step of the turn re-sends, so
 // only the most recent ones keep their pixels; older ones keep their label and
 // say they were dropped (how DeepSeek's harness handles old photos).
+
+// Cache effect: pixels are dropped in jumps (A7), so an earlier message is rewritten once every few screenshots, not every step; across turns the saved transcript keeps none (accepted).
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 
 /** Screenshots that keep their pixels in the conversation, the newest batch always whole. */

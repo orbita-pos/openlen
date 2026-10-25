@@ -11,6 +11,8 @@
 // (from catalog) is pure TS too — no native — so importing it here keeps that
 // invariant.
 
+// Cache effect: [system, manual, …history] is the cached prefix, rebuilt byte for byte from the saved transcripts; what changes each turn (memory changes, context, the request) goes last; pruning under pressure cuts in jumps (A7).
+
 import { todayLine } from "@/lib/ai/today-line";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/publish/publish-locales";
 import type { Message } from "@/lib/ai-gateway";

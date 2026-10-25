@@ -5,6 +5,8 @@
  * descripción dice «hasta 2.000 líneas», y sin `limit` devuelve el fichero
  * ENTERO. Lo que corta de verdad son los 25.000 tokens y los 256 KB.
  */
+
+// Efecto en la caché: el resultado de un Read es texto determinista del fichero y se guarda tal cual; queda en el prefijo hasta que el microcompact lo vacía, a saltos.
 import { CWD, resolverRuta, sugerirRuta } from "./sitio";
 import { exito, fallo, formatoDeBytes, type Resultado } from "./resultado";
 

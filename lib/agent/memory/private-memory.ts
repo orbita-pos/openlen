@@ -16,6 +16,8 @@
  *
  * Puro.
  */
+
+// Efecto en la caché: la memoria personal va en el contexto del turno, al final, y lo guardado dice que se tocó sin su texto, igual en cada turno: no mueve el prefijo.
 import type { Message } from "@/lib/ai-gateway";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { HOME_DIR, PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";

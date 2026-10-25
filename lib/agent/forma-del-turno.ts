@@ -24,6 +24,8 @@
 // Módulo PURO: sin `fs`, sin `db`, sin bindings nativos. Su prueba corre bajo
 // vitest sin mockear nada.
 
+// Efecto en la caché: ninguno: mide lo que se mandó y no escribe nada que lea el modelo.
+
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
 
 // ⚰️ Aquí se medía también el DOCUMENTO que viajaba en el contexto —cómo

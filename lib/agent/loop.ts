@@ -9,6 +9,8 @@
 // A runtime (value) import of either would transitively load the native
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
+
+// Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and screenshots dropped in jumps (A7), and a correction is a new message.
 import type { Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
 import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";

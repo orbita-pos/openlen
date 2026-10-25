@@ -10,6 +10,8 @@
 //
 // Puro: ni red, ni base, ni bindings nativos.
 
+// Efecto en la caché: sólo cuenta para turnos sin transcripción (anteriores a H4, o del Chat): lo que se acepta del navegador tiene que salir igual cada vez, o ese tramo se paga de nuevo.
+
 import { currentToolName } from "@/lib/agent/tool-renames";
 
 /** Un mensaje del historial tal y como lo acepta el servidor. */

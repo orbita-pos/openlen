@@ -7,6 +7,8 @@
 // id que Gemini nunca emitió. Un turno mal traducido no falla a medias: el
 // proveedor rechaza la petición entera.
 
+// Efecto en la caché: serializa argumentos y respuestas en el orden de claves de jsonb, para que lo que se manda y lo que vuelve de la base sean los mismos bytes (4ab8a249).
+
 import type { Message } from "@/lib/ai-gateway";
 import type { FireworksStreamMessage, FireworksStreamToolCall } from "@/lib/ai/fireworks-stream-client";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
