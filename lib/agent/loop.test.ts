@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop as realRunAgentLoop, sobreQue, type AgentLoopResult, type AgentStreamEvent } from "./loop";
+import { runAgentLoop as realRunAgentLoop, sobreQue, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN, type AgentLoopResult, type AgentStreamEvent } from "./loop";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import { withReplayInvariant } from "./testing/replay-invariant";
 
@@ -4107,5 +4107,42 @@ describe("runAgentLoop — sin medición obligatoria al cerrar (plans/crear-es-l
     });
     expect(r.finalText).toContain("Listo");
     expect(events.some((e) => e.type === "action" && (e as { tool?: string }).tool === "verificar_diseno")).toBe(false);
+  });
+});
+
+// A6 of Len 3.1, DeepSeek's `failed-step-tool-results` (MIT): when a step fails with calls unanswered,
+// each one gets a result before the step closes — the answered ones intact, a started one an unknown
+// outcome, one that never started its own — and the turn keeps its failure. Until now the loop threw,
+// the row was saved with no transcript, and the next turn did not know what the tools had done.
+describe("a step that fails with calls unanswered", () => {
+  it("answers every call in order, does not run the rest, and ends the turn as an error with its transcript", async () => {
+    const ran: string[] = [];
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted([
+        { type: "function_call", name: "Write", args: { file_path: "/a.html", content: "a" } },
+        { type: "function_call", name: "Edit", args: { file_path: "/b.html", old_string: "b", new_string: "c" } },
+        { type: "function_call", name: "Write", args: { file_path: "/c.html", content: "c" } },
+        done,
+      ]),
+      runTool: async (name, args) => {
+        ran.push(String(args.file_path));
+        if (name === "Edit") throw new Error("the diary could not be written");
+        return { response: { ok: true } };
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(ran).toEqual(["/a.html", "/b.html"]);
+    expect(r).toMatchObject({ terminalError: true, errorCode: "upstream" });
+    const last = (r.transcripcion ?? []).filter((m) => m.functionResponses?.length).at(-1)!;
+    expect(last.functionResponses!.map((f) => f.response)).toEqual([
+      { ok: true },
+      { ok: false, error: TOOL_OUTCOME_UNKNOWN },
+      { ok: false, error: TOOL_NOT_STARTED },
+    ]);
+    const asked = (r.transcripcion ?? []).filter((m) => m.role === "assistant" && m.functionCalls?.length).at(-1)!;
+    expect(asked.functionCalls!.map((c) => c.args.file_path)).toEqual(["/a.html", "/b.html", "/c.html"]);
+    expect(events.filter((e) => e.type === "error")).toEqual([expect.objectContaining({ code: "upstream" })]);
   });
 });
