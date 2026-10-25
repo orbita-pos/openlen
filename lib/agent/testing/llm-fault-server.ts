@@ -13,6 +13,8 @@ export type FaultStep =
   | {
       kind: "ok";
       text: string;
+      /** Thinking streamed before the text (`reasoning_content`). */
+      reasoning?: string;
       /** Calls the model makes in this answer (finish_reason becomes `tool_calls`). */
       toolCalls?: { name: string; arguments: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number };
@@ -45,6 +47,7 @@ async function answer(step: FaultStep, req: IncomingMessage, res: ServerResponse
     case "ok": {
       sseHead(res);
       res.write(chunk({ role: "assistant", content: "" }));
+      for (const p of pieces(step.reasoning ?? "")) res.write(chunk({ reasoning_content: p }));
       for (const p of pieces(step.text)) res.write(chunk({ content: p }));
       (step.toolCalls ?? []).forEach((c, index) =>
         res.write(chunk({ tool_calls: [{ index, id: `call_${index}`, type: "function", function: { name: c.name, arguments: c.arguments } }] })),

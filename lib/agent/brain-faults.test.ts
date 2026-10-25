@@ -12,6 +12,7 @@ import { _resetProviderWarnings } from "@/lib/ai/providers";
 import { createAgentBrain, RETRIES_BEFORE_FALLBACK, type BrainCall } from "./brain";
 import { runAgentLoop } from "./loop";
 import { _resetProviderHealth } from "./provider-health";
+import { MAX_PROVIDER_RETRIES } from "./retry-policy";
 import { startFaultServer, type FaultServer, type FaultStep } from "./testing/llm-fault-server";
 
 let server: FaultServer | null = null;
@@ -91,14 +92,35 @@ describe("provider faults against real sockets", () => {
     expect(t.requests("/deepinfra")).toBe(2);
   });
 
-  it("an empty completion is pinned at today's behavior (changes on purpose with fix A4)", async () => {
-    const t = await turn({ "/deepinfra": [{ kind: "empty_completion" }] });
+  // A4 of Len 3.1, DeepSeek's `empty-model-response-is-retryable`: a `stop` with no text, no reasoning
+  // and no calls is a retryable EMPTY_RESPONSE failure, not an empty success. It used to close the turn
+  // with nothing said and no retry.
+  it("an empty completion is retried on the same provider and the turn gets the recovered answer", async () => {
+    const t = await turn({ "/deepinfra": [{ kind: "empty_completion" }, ok("Hecho.")] });
     expect({ finalText: t.result.finalText, terminalError: t.result.terminalError, deepinfra: t.requests("/deepinfra"), fireworks: t.requests("/fireworks") }).toEqual({
-      finalText: "",
+      finalText: "Hecho.",
       terminalError: false,
-      deepinfra: 1,
+      deepinfra: 2,
       fireworks: 0,
     });
+    expect(t.events.some((e) => e.type === "retry")).toBe(true);
+    expect(t.calls[0]).toMatchObject({ provider: "deepinfra", stop: "error" });
+  });
+
+  it("a provider that keeps answering empty moves the turn to the fallback, and one that never answers fails the turn out loud", async () => {
+    const empty: FaultStep = { kind: "empty_completion" };
+    // On the fallback the count starts over: the first try plus MAX_PROVIDER_RETRIES.
+    const onFallback = MAX_PROVIDER_RETRIES + 1;
+    const t = await turn({ "/deepinfra": Array.from({ length: RETRIES_BEFORE_FALLBACK }, () => empty), "/fireworks": Array.from({ length: onFallback }, () => empty) });
+    expect(t.requests("/deepinfra")).toBe(RETRIES_BEFORE_FALLBACK);
+    expect(t.requests("/fireworks")).toBe(onFallback);
+    expect(t.result).toMatchObject({ finalText: "", terminalError: true });
+    expect(t.events.filter((e) => e.type === "error")).toEqual([expect.objectContaining({ code: "upstream", message: expect.stringMatching(/empty response/) })]);
+  });
+
+  it("an answer that only thought is not empty: it is not retried", async () => {
+    const t = await turn({ "/deepinfra": [{ kind: "ok", text: "", reasoning: "Nada que añadir." }] });
+    expect({ terminalError: t.result.terminalError, deepinfra: t.requests("/deepinfra") }).toEqual({ terminalError: false, deepinfra: 1 });
   });
 
   it("a 429 with Retry-After is retried on the same provider, not switched, and the wait ignores Retry-After (today)", async () => {

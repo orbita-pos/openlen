@@ -453,6 +453,8 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         }, FIRST_EVENT_TIMEOUT_MS)
       : undefined;
     let callUsage: UsageTotals | null = null;
+    /** Llegó texto, pensamiento o una llamada (lo que DeepSeek llama «bloques»). */
+    let said = false;
     try {
       for await (const event of clientFor(provider).stream(request, {
         signal: callAbort.signal,
@@ -468,11 +470,23 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           noteUsage(provider, event);
         }
         if (event.type === "done") {
-          stopKind = event.stopReason.kind;
+          // UNA RESPUESTA VACÍA ES UN FALLO REINTENTABLE, no un éxito vacío (A4 de
+          // Len 3.1, DeepSeek `empty-model-response-is-retryable`, MIT): un final
+          // limpio sin texto, sin pensamiento y sin llamadas cerraba el turno sin
+          // decir nada y sin reintentar. Se decide aquí, en la frontera con el
+          // proveedor, como ellos en el adaptador: el cliente lo comparte `/ai/v1`,
+          // donde una respuesta vacía de OpenAI se devuelve tal cual. `max_tokens`
+          // vacío conserva su significado.
+          const stop: FireworksStopReason =
+            event.stopReason.kind === "end_turn" && !said
+              ? { kind: "error", error: "empty response: the model finished with no text, reasoning or tool calls", code: "empty_response" }
+              : event.stopReason;
+          stopKind = stop.kind;
           servedModel = event.servedModel;
-          yield settle(provider, event.stopReason, timedOut, callUsage);
+          yield settle(provider, stop, timedOut, callUsage);
           return;
         }
+        if (event.type === "text_delta" || event.type === "reasoning_delta" || event.type === "function_call" || event.type === "function_call_cut") said = true;
         yield event;
       }
     } finally {
