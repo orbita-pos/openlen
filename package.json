@@ -95,6 +95,7 @@
     "replay-scenes:fetch": "tsx --tsconfig tsconfig.eval.json scripts/fetch-replay-scenes.ts",
     "requests:diff": "tsx --tsconfig tsconfig.eval.json scripts/request-diff.ts",
     "len-replay:gate": "node scripts/len-replay-gate.mjs",
+    "test:flaky": "node scripts/flaky-hunt.mjs",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
