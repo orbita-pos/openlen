@@ -34,6 +34,13 @@ import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import { registrarUso } from "@/lib/uso/cliente";
 import { TarjetasNaceComo, type NaceComo } from "./tarjetas-nace-como";
+import { CajaConMenciones } from "./hilos-del-codigo";
+import { hasLink } from "@/lib/chat/links";
+import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+
+// The first message has nobody to mention: the box only paints its URLs.
+const NO_PEOPLE: readonly PersonaMencionable[] = [];
+const NO_COLOR = () => "";
 
 export interface StartLandingProps {
   /** The shared AI brief form state ({ prompt, setPrompt }). */
@@ -444,33 +451,40 @@ export function HeroComposer({
           />
         </div>
 
-        <textarea
-          ref={taRef}
-          value={state.prompt}
-          onChange={(e) => {
-            marcarEscrito();
-            briefLimit.onChange(e);
-          }}
-          onPaste={(e) => {
-            marcarEscrito();
-            briefLimit.onPaste(e);
-          }}
-          onKeyDown={(e) => {
-            // Mientras un IME compone (japonés, coreano, chino), Enter confirma
-            // la palabra: no puede mandar el encargo a medias.
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              if (canGenerate) enviar();
-            }
-          }}
-          rows={1}
-          disabled={generating}
-          placeholder={placeholder ?? t("aiBrief.placeholder")}
-          maxLength={briefLimit.maxLength}
-          aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
-          className="mt-0.5 block w-full resize-none bg-transparent text-[14px] leading-normal fg outline-none placeholder:fg-faint nice-scroll disabled:opacity-60"
-          style={{ minHeight: 44 }}
-        />
+        {/* La caja que pinta: una URL se ve azul mientras se escribe, como en el chat. */}
+        <div className="mt-0.5">
+          <CajaConMenciones
+            cajaRef={taRef}
+            pintar={hasLink(state.prompt)}
+            gente={NO_PEOPLE}
+            colorDe={NO_COLOR}
+            medida="text-[14px] leading-normal"
+            value={state.prompt}
+            onChange={(e) => {
+              marcarEscrito();
+              briefLimit.onChange(e);
+            }}
+            onPaste={(e) => {
+              marcarEscrito();
+              briefLimit.onPaste(e);
+            }}
+            onKeyDown={(e) => {
+              // Mientras un IME compone (japonés, coreano, chino), Enter confirma
+              // la palabra: no puede mandar el encargo a medias.
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                if (canGenerate) enviar();
+              }
+            }}
+            rows={1}
+            disabled={generating}
+            placeholder={placeholder ?? t("aiBrief.placeholder")}
+            maxLength={briefLimit.maxLength}
+            aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
+            className="outline-none placeholder:fg-faint nice-scroll disabled:opacity-60"
+            style={{ minHeight: 44 }}
+          />
+        </div>
         {/* Lo que el motor va oyendo. Fuera del textarea a proposito: es texto
             que todavia puede CORREGIRSE, y verlo reescribirse dentro de lo ya
             escrito da la sensacion de que te lo borra. */}

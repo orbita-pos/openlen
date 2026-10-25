@@ -33,7 +33,9 @@ import {
   type PersonaMencionable,
 } from "@/lib/workspace-v2/menciones";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
+import { splitLinks } from "@/lib/chat/links";
 import { AvatarContent } from "./avatar-content";
+import { ChatLink } from "./texto-de-len";
 
 export interface EtiquetasDeHilos {
   /** En la caja de comentar una línea, cuando hay gente o Len a quien mencionar. */
@@ -175,15 +177,19 @@ export function useHilos(projectId: string | null | undefined, ruta: string | nu
 
 export type ContextoDeHilos = ReturnType<typeof useHilos>;
 
-/** Un texto con sus menciones de color: `@Len` en su naranja, cada persona en el suyo. */
+/** Un texto con sus menciones de color: `@Len` en su naranja, cada persona en el
+ *  suyo. Y sus URLs en azul (`lib/chat/links.ts`): enlaces que se abren, o sólo
+ *  el color en la copia de detrás de una caja (`links="color"`), que no se toca. */
 export function TextoConMenciones({
   texto,
   gente,
   colorDe,
+  links = "open",
 }: {
   texto: string;
   gente: readonly PersonaMencionable[];
   colorDe: (userId: string) => string;
+  links?: "open" | "color";
 }) {
   return (
     <>
@@ -197,7 +203,21 @@ export function TextoConMenciones({
             {t.texto}
           </span>
         ) : (
-          <span key={i}>{t.texto}</span>
+          <span key={i}>
+            {splitLinks(t.texto).map((p, j) =>
+              !p.href ? (
+                p.text
+              ) : links === "open" ? (
+                <ChatLink key={j} href={p.href}>
+                  {p.text}
+                </ChatLink>
+              ) : (
+                <span key={j} className="text-link" data-link="">
+                  {p.text}
+                </span>
+              ),
+            )}
+          </span>
         ),
       )}
     </>
@@ -242,7 +262,7 @@ export function CajaConMenciones({
           aria-hidden="true"
           className={`pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words border-transparent fg ${medida} ${fondo}`}
         >
-          <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} />
+          <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} links="color" />
           {/* Un salto final como el del textarea: si no, la última línea vacía no ocupa sitio. */}
           {"\n"}
         </span>

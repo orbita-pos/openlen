@@ -77,3 +77,21 @@ describe("LenReply", () => {
     expect(host.querySelector('[data-testid="visual"]')).toBeNull();
   });
 });
+
+// GAPS AND LINKS (24/10/2026, from production).
+describe("LenReply text", () => {
+  it("four line breaks between two notes leave one blank line, and none at the end", () => {
+    const { host } = mount({}, "Voy a ver qué hay.\n\n\n\nEl proyecto está vacío.\n\n");
+    expect(host.querySelector("p")?.textContent).toBe("Voy a ver qué hay.\n\nEl proyecto está vacío.");
+  });
+
+  it("a source cited as [text](url) is a link that opens in a new tab", () => {
+    const { host } = mount({}, "Según el [cierre de Investing](https://mx.investing.com/x).");
+    const a = host.querySelector("a");
+    expect(a?.textContent).toBe("cierre de Investing");
+    expect(a?.getAttribute("href")).toBe("https://mx.investing.com/x");
+    expect(a?.getAttribute("target")).toBe("_blank");
+    expect(a?.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(host.textContent).not.toContain("](");
+  });
+});
