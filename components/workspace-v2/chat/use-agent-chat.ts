@@ -182,6 +182,8 @@ export interface DesignTurn {
    *  el servidor guardó como cortada. Es lo que el historial marca para el
    *  modelo y lo que pinta el aviso al recargar. */
   cortado?: boolean;
+  /** A5 · por qué paró, leído de la fila (`StoredChatTurn.endReason`). */
+  endReason?: AgentErrorCode;
   /** El servidor rechazó el último Deshacer. El turno SIGUE aplicado. */
   undoFallo?: FalloDeUndo;
   /** F2 de las apps web: el id con el que el servidor guardó lo que cambió el
@@ -2654,6 +2656,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Guardado como cortado por el servidor: el aviso se compone al pintar,
     // en el idioma de quien lo mira (`AvisoDeTurno`).
     ...(s.cortado ? { cortado: true } : {}),
+    ...(s.endReason ? { endReason: s.endReason } : {}),
     // Deshacer tras recargar: el servidor aún tiene lo que cambió el turno.
     ...(s.deshacible ? { deshacerEnServidor: s.id } : {}),
     // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).

@@ -20,6 +20,8 @@ async function main() {
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "conversation" text;`);
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "centicredits" integer;`);
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "durationMs" integer;`);
+  // A5 de Len 3.1 (25/10): por qué paró el turno, para el aviso al recargar.
+  await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "endReason" text;`);
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "projectChatMessages_projectId_conversation_idx" ON "projectChatMessages" ("projectId", "conversation");`,
   );
@@ -42,7 +44,7 @@ async function main() {
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "chatTurnFeedback_projectId_idx" ON "chatTurnFeedback" ("projectId");`,
   );
-  console.log("chat nuevo listo: conversation, centicredits, durationMs y chatTurnFeedback");
+  console.log("chat nuevo listo: conversation, centicredits, durationMs, endReason y chatTurnFeedback");
 }
 
 main().catch((err) => {

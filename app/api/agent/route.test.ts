@@ -2355,6 +2355,37 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     };
   };
 
+  // A5 de Len 3.1 (DeepSeek, el motivo del `turn/end` es durable): la fila guarda por qué paró el turno,
+  // para que el aviso del chat salga igual al recargar. Terminado = sin motivo.
+  describe("la fila guarda por qué paró el turno", () => {
+    const motivo = () => (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { endReason?: string | null }])[1].endReason;
+    const parado = (extra: Record<string, unknown>) => async (args: AgentLoopArgs) => ({ ...(await limpio()(args)), terminalError: true, ...extra });
+
+    it("terminado: sin motivo", async () => {
+      mocks.runAgentLoop.mockImplementation(limpio());
+      await readEvents(await pedir());
+      expect(motivo() ?? null).toBeNull();
+    });
+
+    it("el error con el que cerró el bucle, y el tope si fue un tope", async () => {
+      mocks.runAgentLoop.mockImplementation(parado({ errorCode: "truncated" }));
+      await readEvents(await pedir());
+      expect(motivo()).toBe("truncated");
+      mocks.runAgentLoop.mockImplementation(parado({ terminalError: false, topeAlcanzado: "turn_limit" }));
+      await readEvents(await pedir());
+      expect(motivo()).toBe("turn_limit");
+    });
+
+    it("un bucle que revienta después de escribir: upstream", async () => {
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.emit({ type: "text", text: "Voy." });
+        throw new Error("se cayó el proveedor");
+      });
+      await readEvents(await pedir());
+      expect(motivo()).toBe("upstream");
+    });
+  });
+
   it("se abre EN CURSO, con el id del cliente, pasada la puerta de créditos", async () => {
     mocks.runAgentLoop.mockImplementation(limpio());
     await readEvents(await pedir());

@@ -37,6 +37,7 @@ import {
 
 import { KNOWN_TOOLS, coberturaTitle, reasonLine, summaryLabel, type AgentAction } from "../agent-action-card";
 import { SalidaEnLaTarjeta } from "../salida-en-la-tarjeta";
+import { avisoDelTurno } from "../panels/turno-cerrado";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
 import { activityOf, openQuestionIndex, type Activity } from "./live-status";
@@ -105,7 +106,8 @@ export function StepsCard({
   const process = procesoDelTurno({
     status: turn.status,
     enServidor: turn.enServidor,
-    cortado: turn.cortado,
+    // A5: un turno que, al recargar, paró por un error tampoco se pliega como bueno.
+    cortado: turn.cortado || avisoDelTurno(turn, () => "")?.cortado,
     avisoTurno: turn.avisoTurno,
     pasos: steps.length,
     startedAt: turn.startedAt,

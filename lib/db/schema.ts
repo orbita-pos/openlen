@@ -454,6 +454,11 @@ export const projectChatMessages = pgTable(
     // enseña y así no desaparecen al recargar. NULL = fila anterior a esto.
     centicredits: integer("centicredits"),
     durationMs: integer("durationMs"),
+    // POR QUÉ PARÓ el turno, si no terminó (A5 de Len 3.1, como el `turn/end`
+    // de DeepSeek): un `AgentErrorCode`. Lo escribe SÓLO el servidor al cerrar
+    // la fila; el aviso del chat sale de aquí también al recargar. NULL = terminó,
+    // o fila anterior a esto. `npm run chat-conversations:migrate`.
+    endReason: text("endReason"),
   },
   (table) => [
     index("projectChatMessages_projectId_createdAt_idx").on(

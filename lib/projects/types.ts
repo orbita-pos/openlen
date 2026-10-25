@@ -466,4 +466,7 @@ export interface StoredChatTurn {
    *  recargar (plans/new-chat/). Ausentes en filas anteriores. */
   centicredits?: number;
   durationMs?: number;
+  /** A5 de Len 3.1 · por qué paró, si no terminó (un `AgentErrorCode`). Lo
+   *  guarda el servidor; el aviso al recargar sale de aquí. */
+  endReason?: import("@/lib/agent/loop").AgentErrorCode;
 }

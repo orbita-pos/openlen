@@ -1262,6 +1262,8 @@ async function correrTurno(
       let corte: AgentErrorCode | null = null;
       /** Cómo acabó el turno, para la última fila de la capa 0 (`stepRecorder`). */
       let finDelTurno: string | null = null;
+      /** A5 · por qué paró, para la fila (`endReason`); null = terminó. */
+      let motivoDelFin: AgentErrorCode | null = null;
       /** Lo paró el dueño con ■ (no el perro del silencio): va en la
        *  transcripción y el historial siguiente lo dice (`MARCA_DE_TURNO_DETENIDO`). */
       let detenido = false;
@@ -1357,6 +1359,7 @@ async function correrTurno(
               // cobraron las herramientas sigue cobrado y se dice (N42).
               centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
               durationMs: Date.now() - empezo,
+              endReason: motivoDelFin ?? undefined,
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
               // estado del turno siguiente.
@@ -1801,6 +1804,7 @@ async function correrTurno(
         transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
         finDelTurno = result.topeAlcanzado ?? result.errorCode ?? (corte ? "cut" : "completed");
+        motivoDelFin = result.topeAlcanzado ?? result.errorCode ?? (result.terminalError ? "cancelled" : null);
         detenido = canceladoAProposito && result.errorCode === "cancelled";
 
         // ⚰️ Aquí se guardaba la suite de la página (`marcarRegresiones` →
@@ -2129,6 +2133,7 @@ async function correrTurno(
         const code: AgentErrorCode = "upstream";
         corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable: mutoDurable || estadoCambiado() });
         finDelTurno = code;
+        motivoDelFin = code;
         // La fila, cerrada antes de avisar, como en el final bueno.
         await cerrarFila();
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });

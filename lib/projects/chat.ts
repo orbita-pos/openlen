@@ -446,6 +446,7 @@ export async function registrarTurnoDelServidor(
   },
 ): Promise<void> {
   const toolResults = turn.toolResults ?? null;
+  const endReason = turn.endReason ?? null;
   const transcript = turn.transcript ?? null;
   const centicredits = enteroONulo(turn.centicredits);
   const durationMs = enteroONulo(turn.durationMs);
@@ -467,6 +468,7 @@ export async function registrarTurnoDelServidor(
       transcript,
       centicredits,
       durationMs,
+      endReason,
     })
     .where(
       and(
@@ -493,10 +495,11 @@ export async function registrarTurnoDelServidor(
       transcript,
       centicredits,
       durationMs,
+      endReason,
     })
     .onConflictDoUpdate({
       target: schema.projectChatMessages.id,
-      set: { toolResults, transcript, centicredits, durationMs },
+      set: { toolResults, transcript, centicredits, durationMs, endReason },
     });
   await trim(projectId);
 }
