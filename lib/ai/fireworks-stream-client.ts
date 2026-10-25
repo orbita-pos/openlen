@@ -47,7 +47,7 @@ export type FireworksStreamEvent =
   | { readonly type: "function_call_cut"; readonly name: string; readonly argsHead: string }
   // Misma forma discriminada que el transporte de Gemini, para que el consumidor
   // los lea con el mismo `switch` y ninguno de los dos necesite un adaptador.
-  | { readonly type: "done"; readonly stopReason: FireworksStopReason };
+  | { readonly type: "done"; readonly stopReason: FireworksStopReason; readonly servedModel?: string };
 
 export type FireworksStopReason =
   | { readonly kind: "end_turn" }
@@ -496,6 +496,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
 
       // Un generador puede abandonarse a media lectura (el consumidor hace
       // `break`): sin esto el socket de arriba se queda abierto.
+      let servedModel: string | undefined;
       try {
         outer: for (;;) {
           const { done, value } = await reader.read();
@@ -510,6 +511,9 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             if (data === "" || data === "[DONE]") continue;
             let parsed: unknown;
             try { parsed = JSON.parse(data); } catch { continue; }
+            // El modelo que de verdad respondió, si el proveedor lo dice (capa 0).
+            const servido = record(parsed)?.model;
+            if (typeof servido === "string" && servido) servedModel = servido;
             const root = record(parsed);
             if (!root) continue;
             // UN ERROR DENTRO DEL STREAM (`data: {"error": …}`): el proveedor
@@ -614,6 +618,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       }
       yield {
         type: "done",
+        ...(servedModel ? { servedModel } : {}),
         stopReason: cancelled
           ? { kind: "cancelled" }
           : finishReason === null

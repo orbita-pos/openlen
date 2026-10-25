@@ -271,3 +271,45 @@ describe("Len's brain and its providers", () => {
     expect(brain.fellBack()).toBe(false);
   });
 });
+
+// LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.1): one report
+// per call, with its kind, provider and usage — the raw material of the step rows.
+describe("onCall", () => {
+  it("reports each call once, with kind, provider and usage; a fallback gives the calls on both providers", async () => {
+    const f = fakes({
+      deepinfra: [[coded("server")], [coded("server")], [coded("server")], [coded("server")]],
+      fireworks: [[usage(100, 0, 5), end]],
+    });
+    const seen: { kind: string; provider: string; usage: unknown }[] = [];
+    const brain = createAgentBrain({
+      tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: f.streamClientFor,
+      onCall: (c) => seen.push({ kind: c.kind, provider: c.provider, usage: c.usage }),
+    });
+    for (let i = 0; i <= RETRIES_BEFORE_FALLBACK; i++) await drain(brain.openStream([USER]));
+    expect(seen.map((c) => [c.kind, c.provider])).toEqual([
+      ...Array.from({ length: RETRIES_BEFORE_FALLBACK }, () => ["loop", "deepinfra"]),
+      ["loop", "fireworks"],
+    ]);
+    expect(seen.at(-1)!.usage).toEqual({ inputTokens: 100, cachedTokens: 0, outputTokens: 5, thinkingTokens: 0 });
+  });
+
+  it("closeOut calls are reported with kind closeOut, with model and timing", async () => {
+    const f = fakes({});
+    const seen: { kind: string; model: string; durationMs: number; stop: string }[] = [];
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: f.streamClientFor, onCall: (c) => seen.push(c) });
+    await drain(brain.closeOut([USER]));
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ kind: "closeOut", model: DI_MODEL, stop: "end_turn" });
+    expect(seen[0]!.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("an onCall that throws does not break the stream", async () => {
+    const f = fakes({});
+    const brain = createAgentBrain({
+      tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: f.streamClientFor,
+      onCall: () => { throw new Error("boom"); },
+    });
+    expect(lastDone(await drain(brain.openStream([USER])))).toMatchObject({ kind: "end_turn" });
+  });
+});
+

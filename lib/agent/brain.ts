@@ -7,6 +7,8 @@ import {
   type FireworksStreamRequest,
 } from "@/lib/ai/fireworks-stream-client";
 import { resolveAgentProviders, type ProviderId, type ResolvedProvider } from "@/lib/ai/providers";
+import type { WireBody } from "@/lib/ai/fireworks-stream-client";
+import type { CallKind } from "@/lib/agent/telemetry/cache-break";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { MODEL_POLICY, esfuerzoDisponible, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { CreditRate } from "@/lib/credits";
@@ -68,6 +70,23 @@ export interface AgentBrainOptions {
    *  vida para el reloj de silencio de la ruta: sin ella, pensar más de 3 min
    *  seguidos parecía un cuelgue y se cancelaba el turno (E del 26/09, con H5). */
   readonly alPensar?: () => void;
+  /** LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.1): one
+   *  report per call to the provider, once, when it ends. Telemetry only: an
+   *  `onCall` that throws never touches the turn. */
+  readonly onCall?: (call: BrainCall) => void;
+}
+
+/** One call to the provider, as the step rows record it. */
+export interface BrainCall {
+  readonly kind: CallKind;
+  readonly provider: ProviderId;
+  readonly model: string;
+  readonly effort: string | null;
+  readonly startedAt: number;
+  readonly durationMs: number;
+  readonly usage: UsageTotals | null;
+  readonly stop: FireworksStopReason["kind"];
+  readonly wire: WireBody | null;
 }
 
 export interface AgentBrain {
@@ -412,8 +431,12 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
 
   /** Una llamada en el proveedor actual, con su propio corte (el ■ del dueño,
    *  o el reloj del primer evento cuando hay respaldo). */
-  async function* routed(request: FireworksStreamRequest): AsyncIterable<FireworksStreamEvent> {
+  async function* routed(request: FireworksStreamRequest, kind: CallKind): AsyncIterable<FireworksStreamEvent> {
     const provider = legacy ? null : order[current]!;
+    const startedAt = Date.now();
+    let wire: WireBody | null = null;
+    let stopKind: FireworksStopReason["kind"] = "cancelled";
+    let servedModel: string | undefined;
     const hasNext = !legacy && current + 1 < order.length;
     const callAbort = new AbortController();
     const outer = options.signal;
@@ -431,7 +454,10 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       : undefined;
     let callUsage: UsageTotals | null = null;
     try {
-      for await (const event of clientFor(provider).stream(request, { signal: callAbort.signal })) {
+      for await (const event of clientFor(provider).stream(request, {
+        signal: callAbort.signal,
+        ...(options.onCall ? { onWireBody: (body: WireBody) => { wire = body; } } : {}),
+      })) {
         if (!sawEvent) {
           sawEvent = true;
           clearTimeout(timer);
@@ -442,6 +468,8 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           noteUsage(provider, event);
         }
         if (event.type === "done") {
+          stopKind = event.stopReason.kind;
+          servedModel = event.servedModel;
           yield settle(provider, event.stopReason, timedOut, callUsage);
           return;
         }
@@ -450,6 +478,24 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     } finally {
       clearTimeout(timer);
       outer?.removeEventListener("abort", onOuterAbort);
+      if (options.onCall) {
+        const sent = wire as WireBody | null;
+        try {
+          options.onCall({
+            kind,
+            provider: provider?.id ?? "fireworks",
+            model: servedModel ?? provider?.modelId ?? modelIdForRole("agent"),
+            effort: sent?.reasoningEffort == null ? null : String(sent.reasoningEffort),
+            startedAt,
+            durationMs: Date.now() - startedAt,
+            usage: callUsage,
+            stop: stopKind,
+            wire: sent,
+          });
+        } catch {
+          // Telemetry never touches the turn.
+        }
+      }
     }
   }
 
@@ -480,6 +526,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
             ? { esfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
             : {}),
         },
+        withTools ? "loop" : "closeOut",
       ),
       options.alPensar,
       );

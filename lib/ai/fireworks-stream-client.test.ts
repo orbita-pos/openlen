@@ -805,3 +805,19 @@ describe("onWireBody", () => {
   });
 });
 
+describe("servedModel", () => {
+  it("the final done carries the model the provider says served the call", async () => {
+    const body = `data: ${JSON.stringify({ model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", choices: [{ delta: { content: "ok" }, finish_reason: "stop" }] })}
+
+`;
+    const { client: c } = client(body);
+    const events = await drain(c.stream(REQUEST));
+    expect(events.at(-1)).toMatchObject({ type: "done", servedModel: "deepseek-ai/DeepSeek-V4.1-Flash-1017" });
+  });
+  it("without a model field there is no servedModel", async () => {
+    const { client: c } = client(chunk({ content: "ok" }, "stop"));
+    const events = await drain(c.stream(REQUEST));
+    expect("servedModel" in (events.at(-1) as object)).toBe(false);
+  });
+});
+
