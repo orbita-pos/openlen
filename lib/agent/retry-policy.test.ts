@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
+import { retryAfterMs } from "@/lib/ai/provider-error-code";
+import { MAX_PROVIDER_RETRIES, isRetryable, providerWait, retryDelayMs, sleepAbortable } from "./retry-policy";
 
 describe("la política de reintento (la de DeepSeek, literal)", () => {
   it("son cinco reintentos", () => {
@@ -33,5 +34,29 @@ describe("la política de reintento (la de DeepSeek, literal)", () => {
     ctrl.abort();
     await espera;
     expect(Date.now() - inicio).toBeLessThan(1_000);
+  });
+});
+
+// El `Retry-After` del proveedor (DeepSeek, `bounded-llm-request-recovery`): lo lee el adaptador, en
+// segundos o como fecha HTTP; dentro del techo es la espera exacta, más allá no se reintenta antes.
+describe("el Retry-After del proveedor", () => {
+  const ahora = Date.parse("Sun, 25 Oct 2026 12:00:00 GMT");
+  it.each([
+    ["7", 7_000],
+    ["0.5", 500],
+    ["Sun, 25 Oct 2026 12:00:03 GMT", 3_000],
+  ])("lee %s", (cabecera, ms) => {
+    expect(retryAfterMs(cabecera, ahora)).toBe(ms);
+  });
+
+  it.each([[null], [""], ["0"], ["-3"], ["mañana"], ["Sun, 25 Oct 2026 11:59:00 GMT"]])("no lee %s", (cabecera) => {
+    expect(retryAfterMs(cabecera, ahora)).toBeUndefined();
+  });
+
+  it("dentro del techo es la espera; más allá, no se espera; sin cabecera, nada", () => {
+    expect(providerWait(7_000)).toEqual({ ms: 7_000 });
+    expect(providerWait(10_000)).toEqual({ ms: 10_000 });
+    expect(providerWait(30_000)).toBe("over_cap");
+    expect(providerWait(undefined)).toBeNull();
   });
 });

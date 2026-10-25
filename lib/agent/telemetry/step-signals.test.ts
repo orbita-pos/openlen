@@ -26,7 +26,9 @@ describe("summarizeBatch", () => {
     const [a] = summarizeBatch([{ name: "Read", args: { file_path: "/a", limit: 5 } }], [{ name: "Read", response: { ok: true } }]);
     const [b] = summarizeBatch([{ name: "Read", args: { limit: 5, file_path: "/a" } }], [{ name: "Read", response: { ok: true } }]);
     expect(a!.argsHash).toBe(b!.argsHash);
-    expect(a).toEqual({ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: true });
+    // The file goes only as a hash (for the rereads): no path or customer text leaves the request path.
+    expect(a).toEqual({ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: true, pathHash: expect.stringMatching(/^[0-9a-f]{16}$/) });
+    expect(JSON.stringify(a)).not.toContain("/a");
   });
 });
 

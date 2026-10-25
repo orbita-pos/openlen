@@ -9,6 +9,16 @@
 // resume lo más viejo y repite el paso UNA vez.
 export type ProviderErrorCode = "rate_limit" | "server" | "transport" | "empty_response" | "context_window_exceeded";
 
+/** El `Retry-After` del proveedor, en segundos o como fecha HTTP, en milisegundos
+ *  positivos y finitos; si no viene o no se entiende, nada. Lo lee el adaptador,
+ *  como en DeepSeek (`bounded-llm-request-recovery`): la política no parsea texto. */
+export function retryAfterMs(header: string | null | undefined, now: number = Date.now()): number | undefined {
+  const raw = header?.trim();
+  if (!raw) return undefined;
+  const ms = /^\d+(\.\d+)?$/.test(raw) ? Number(raw) * 1000 : Date.parse(raw) - now;
+  return Number.isFinite(ms) && ms > 0 ? Math.ceil(ms) : undefined;
+}
+
 export function codeForHttpStatus(status: number): ProviderErrorCode | undefined {
   if (status === 429) return "rate_limit";
   if (status >= 500 && status <= 599) return "server";

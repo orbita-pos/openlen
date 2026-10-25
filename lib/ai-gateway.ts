@@ -172,7 +172,7 @@ export type StopReason =
   // `switchedProvider`: el cerebro pasó al proveedor de respaldo y el bucle
   // repite el paso allí, con sus reintentos completos (spec local
   // 2026-10-16-second-provider). `httpStatus`: el del proveedor, si lo hubo.
-  | { kind: "error"; error: string; code?: ProviderErrorCode; httpStatus?: number; switchedProvider?: true };
+  | { kind: "error"; error: string; code?: ProviderErrorCode; httpStatus?: number; retryAfterMs?: number; switchedProvider?: true };
 
 export type GatewayErrorKind =
   | "api"

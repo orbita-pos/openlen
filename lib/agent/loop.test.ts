@@ -56,7 +56,7 @@ describe("runAgentLoop", () => {
       emit: () => {},
       onStepTools: (batch) => batches.push(batch),
     });
-    expect(batches).toEqual([[{ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: false, errorCode: "not_read" }]]);
+    expect(batches).toEqual([[{ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: false, errorCode: "not_read", pathHash: expect.stringMatching(/^[0-9a-f]{16}$/) }]]);
   });
 
   // 🔴 The 24/10 «graciasa»: Postgres jsonb gave Read's arguments back as
@@ -4192,5 +4192,37 @@ describe("the elapsed-time reminder", () => {
     const contents = toolMessages(r).map((m) => m.content);
     expect(contents[0]).toContain("Elapsed time so far: 10m 00s");
     expect(contents[1]).toContain("Elapsed time so far: 10m 00s");
+  });
+});
+
+// Claude Code's `silent_turn_reminder` (binary 2.1.304): after 5 model steps in a row with nothing the person
+// can see — no text, no question to them — the step ends with its text in a <system-reminder>; at most 3
+// times per silent stretch. Len speaking, or a message from the person, starts the count over.
+describe("the silent-turn reminder", () => {
+  const SILENT = "The user hasn't heard from you in a while. As you continue, keep them updated when there's something to tell — a finding, a change of plan.";
+  const step = (text = ""): StreamEvent[] => [...(text ? [{ type: "text_delta" as const, text }] : []), { type: "function_call", name: "Read", args: { file_path: `/${Math.random()}` } }, done];
+  const contents = (r: AgentLoopResult) => (r.transcripcion ?? []).filter((m) => m.functionResponses?.length).map((m) => m.content);
+
+  it("the 5th silent step gets Claude Code's reminder; earlier ones do not", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(step(), step(), step(), step(), step(), step(), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    const c = contents(r);
+    expect(c.slice(0, 4).some((x) => x.includes(SILENT))).toBe(false);
+    expect(c[4]).toContain(`<system-reminder>\n${SILENT}\n</system-reminder>`);
+    expect(c[5]).not.toContain(SILENT);
+  });
+
+  it("a step where Len says something starts the count over", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(step(), step(), step(), step("Voy por la mitad."), step(), step(), step(), step(), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(contents(r).some((x) => x.includes(SILENT))).toBe(false);
   });
 });

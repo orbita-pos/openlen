@@ -15,6 +15,10 @@ export type FaultStep =
       text: string;
       /** Thinking streamed before the text (`reasoning_content`). */
       reasoning?: string;
+      /** Wait before the first byte (a slow first byte). */
+      delayFirstMs?: number;
+      /** A pause in the middle of the text: after `after` pieces, `ms` of silence (a stall). */
+      pause?: { after: number; ms: number };
       /** Calls the model makes in this answer (finish_reason becomes `tool_calls`). */
       toolCalls?: { name: string; arguments: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number };
@@ -45,10 +49,14 @@ function sseHead(res: ServerResponse): void {
 async function answer(step: FaultStep, req: IncomingMessage, res: ServerResponse): Promise<void> {
   switch (step.kind) {
     case "ok": {
+      if (step.delayFirstMs) await new Promise((resolve) => setTimeout(resolve, step.delayFirstMs));
       sseHead(res);
       res.write(chunk({ role: "assistant", content: "" }));
       for (const p of pieces(step.reasoning ?? "")) res.write(chunk({ reasoning_content: p }));
-      for (const p of pieces(step.text)) res.write(chunk({ content: p }));
+      for (const [i, p] of pieces(step.text).entries()) {
+        if (step.pause && i === step.pause.after) await new Promise((resolve) => setTimeout(resolve, step.pause!.ms));
+        res.write(chunk({ content: p }));
+      }
       (step.toolCalls ?? []).forEach((c, index) =>
         res.write(chunk({ tool_calls: [{ index, id: `call_${index}`, type: "function", function: { name: c.name, arguments: c.arguments } }] })),
       );

@@ -21,18 +21,19 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 // Len 2.0 (T9): los diagnósticos anclados a línea. Puros, como los de arriba.
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
-import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
+import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { NO_SUCH_TOOL, currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { TODO_WRITE, nearCapNotice, todoCapFacts, todoReminder, type TodoItem } from "@/lib/agent/todo-list";
 import { summarizeBatch, type ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
 import { createRepeatReminder } from "@/lib/agent/repeat-reminder";
 import { elapsedTimeReminder } from "@/lib/agent/elapsed-time-reminder";
+import { createSilentTurnReminder } from "@/lib/agent/silent-turn-reminder";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
-import { MAX_PROVIDER_RETRIES, isRetryable, retryDelayMs, sleepAbortable } from "./retry-policy";
+import { MAX_PROVIDER_RETRIES, isRetryable, providerWait, retryDelayMs, sleepAbortable } from "./retry-policy";
 import { compactIfNeeded } from "./compaction/compact";
 import { retainOversized } from "./compaction/spill";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
@@ -903,6 +904,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const ownArchived: Message[] = [];
   /** A2 de Len 3.1: el aviso de llamadas repetidas de DeepSeek (`repeat-reminder.ts`). */
   const repeticiones = createRepeatReminder();
+  // El `silent_turn_reminder` de Claude Code: 5 pasos sin decirle nada a la persona.
+  const silencio = createSilentTurnReminder();
   // A3 · el reloj del turno, el de Claude Code: empieza con el mensaje del dueño
   // y vuelve a empezar con una corrección (también es un mensaje suyo).
   const ahora = args.now ?? Date.now;
@@ -1323,6 +1326,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (direccion) {
       messages.push(steerMessage(direccion));
       repeticiones.reset();
+      silencio.reset();
       relojDesde = ahora();
       args.emit({ type: "direccion", texto: direccion });
       maxTurns += VUELTAS_POR_DIRECCION;
@@ -1399,6 +1403,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     for (let intento = 1; ; intento++) {
       let emitidoEnElIntento = 0;
       let falloReintentable: ProviderErrorCode | undefined;
+      /** La espera que pidió el proveedor (`Retry-After`), si cabe en el techo. */
+      let esperaDelProveedor: number | null = null;
       /** El cerebro pasó al proveedor de respaldo (`switchedProvider`). */
       let cambioDeProveedor = false;
       /** El proveedor dijo que no cabe (`context_window_exceeded`). */
@@ -1472,8 +1478,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
             } else if (ev.stopReason.switchedProvider && !args.signal?.aborted) {
               falloReintentable = ev.stopReason.code ?? "server";
               cambioDeProveedor = true;
-            } else if (isRetryable(ev.stopReason.code) && intento <= MAX_PROVIDER_RETRIES && !args.signal?.aborted) {
+            } else if (
+              isRetryable(ev.stopReason.code) &&
+              intento <= MAX_PROVIDER_RETRIES &&
+              !args.signal?.aborted &&
+              // Un `Retry-After` más largo que el techo no se reintenta antes: sin
+              // respaldo (el cerebro ya habría cambiado), el turno termina.
+              providerWait(ev.stopReason.retryAfterMs) !== "over_cap"
+            ) {
               falloReintentable = ev.stopReason.code;
+              const espera = providerWait(ev.stopReason.retryAfterMs);
+              esperaDelProveedor = espera && espera !== "over_cap" ? espera.ms : null;
             } else {
               args.emit({ type: "error", message: ev.stopReason.error, code: "upstream" });
               errorCode = "upstream";
@@ -1555,7 +1570,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         estimadoSinUso.thinkingTokens = 0;
         intento = 0;
       } else {
-        const delayMs = retryDelayMs(intento);
+        // La del proveedor, exacta y sin azar, si la dio; si no, la nuestra.
+        const delayMs = esperaDelProveedor ?? retryDelayMs(intento);
         args.emit({ type: "retry", attempt: intento, maxAttempts: MAX_PROVIDER_RETRIES, delayMs, discardChars: emitidoEnElIntento });
         await (args.sleep ?? sleepAbortable)(delayMs, args.signal);
       }
@@ -1647,6 +1663,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (turnText.trim()) messages.push(delAsistente(turnText));
         messages.push(steerMessage(tardia));
         repeticiones.reset();
+        silencio.reset();
         relojDesde = ahora();
         args.emit({ type: "direccion", texto: tardia });
         maxTurns += VUELTAS_POR_DIRECCION;
@@ -2125,6 +2142,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         ...repeticiones.observe(functionResponses.map((r, i) => ({ name: calls[i]?.name ?? r.name, args: calls[i]?.args, response: r.response }))),
         // Y el tiempo que lleva el turno, el `elapsed_time_reminder` de Claude Code (A3).
         elapsedTimeReminder(ahora() - relojDesde),
+        // Y si lleva 5 pasos sin decirle nada a la persona, el `silent_turn_reminder`.
+        silencio.observe(turnText.trim() !== "" || calls.some((c) => asksTheOwner(c.name))),
         cutNotice,
       ].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
@@ -2143,6 +2162,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (pendiente) {
       messages.push(steerMessage(pendiente));
       repeticiones.reset();
+      silencio.reset();
       relojDesde = ahora();
       args.emit({ type: "direccion", texto: pendiente });
       maxTurns += VUELTAS_POR_DIRECCION;
