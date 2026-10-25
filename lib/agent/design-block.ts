@@ -3,6 +3,8 @@
 // context.ts, copiado de la selección de líneas del IDE de Claude Code), con
 // el fichero, las líneas con su número y su texto —como las da Read— y los
 // cambios en CSS normal.
+
+// Efecto en la caché: ninguno sobre lo anterior: va en el contexto del turno, al final, y se guarda con él (`transcript.contexto`), así que el turno siguiente lo rehace igual.
 import type { DesignRequest } from "@/lib/apps/design/types";
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 

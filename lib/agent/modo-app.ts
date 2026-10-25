@@ -26,6 +26,8 @@
 //
 // Todo en inglés: lo lee el modelo.
 
+// Efecto en la caché: en una app el prompt, el manual y las herramientas son otros: convertir una página en app cambia el prefijo una vez; dentro de la app es fijo.
+
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";

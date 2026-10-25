@@ -13,6 +13,8 @@
  *
  * Puro.
  */
+
+// Efecto en la caché: la memoria entra UNA vez como mensaje durable al empezar la charla y se repite igual en cada turno; sólo lo que cambia entra después, como mensaje nuevo (DeepSeek).
 import { createHash } from "node:crypto";
 
 export interface MemoryFile {

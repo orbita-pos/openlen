@@ -3,6 +3,8 @@
 // © 2026 DeepSeek — LICENSES/deepseek-harness.MIT.txt). Regla de Jesús
 // (04/10): «todo como DeepSeek y Claude Code»; en lo que toca al modelo, el
 // arnés de DeepSeek. No se le añade texto propio.
+
+// Efecto en la caché: compactar reescribe el historial (un corte por compactación, como en DeepSeek); el resumen se guarda y se reenvía igual después.
 import type { Message } from "@/lib/ai-gateway";
 import type { Span } from "./select";
 

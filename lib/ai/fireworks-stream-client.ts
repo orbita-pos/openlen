@@ -12,6 +12,8 @@
 // `reasoning_delta`: DeepSeek manda su pensamiento por un canal aparte
 // (`delta.reasoning_content`) en vez de mezclarlo con la respuesta.
 
+// Efecto en la caché: manda los mensajes y las herramientas tal cual se los dan, en su orden; `tool_choice` no entra en el prefijo (la plantilla no lo pinta).
+
 import {
   modelIdForRole,
   reasoningEffortFor,

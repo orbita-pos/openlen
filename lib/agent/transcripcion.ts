@@ -24,6 +24,8 @@
  *
  * Puro salvo la huella (`node:crypto`).
  */
+
+// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos.
 import { createHash } from "node:crypto";
 
 import type { InlineImage, Message } from "@/lib/ai-gateway";

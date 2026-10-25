@@ -13,6 +13,8 @@
 // still rendering after `wait_ms`) is polling, not a loop: transparent, it
 // neither counts nor breaks a chain.
 
+// Cache effect: none on the prefix: the reminder is text appended after the step's tool results and saved with them.
+
 export const REPEAT_THRESHOLDS: readonly number[] = [3, 5, 8];
 const ARGUMENTS_PREVIEW_CHARS = 500;
 

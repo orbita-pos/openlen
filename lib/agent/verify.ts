@@ -19,6 +19,8 @@
 // Len cuando decide mirar —`view_page` (`observarPagina`)— y
 // `verifyEditedPage` sólo lo llama `scripts/medir-ojos.ts`.
 
+// Efecto en la caché: ninguno sobre Len: es otra llamada, con su propio prompt.
+
 import type { InlineImage, StreamEvent } from "@/lib/ai-gateway";
 import { esGritoDeLaPagina, renderHtmlToInlineImage } from "@/lib/ai/inline-image";
 import { partirGritos } from "@/lib/generation/rotura-ajena";

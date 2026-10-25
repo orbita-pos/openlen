@@ -9,6 +9,8 @@
  * invariantes: `data-slot-path` se rechaza, se archiva el «antes» para
  * deshacer, y un guardado que choca no pisa lo del dueño.
  */
+
+// Efecto en la caché: lo que devuelven Read, Edit, Write, Grep y Glob (y el aviso de visitantes) se guarda tal cual en la transcripción; nada de aquí reescribe un mensaje anterior.
 import "server-only";
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";

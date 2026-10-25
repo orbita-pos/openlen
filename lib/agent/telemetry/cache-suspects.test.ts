@@ -124,9 +124,9 @@ describe("cache suspects, pinned as they are today (A7: closeOut, screenshots an
   // old messages, and the next turn keeps the same cut until the history grows past the next one.
   it("reasoning pruned under pressure: the next turn keeps the same cut, so its prefix holds", () => {
     const turns = (n: number): MensajeDelHistorial[] =>
-      Array.from({ length: n }, (_, i) => [
-        { role: "user" as const, content: `pide ${i}`, opensTurn: true },
-        { role: "assistant" as const, content: `hecho ${i}`, reasoning: "r".repeat(1_000) },
+      Array.from({ length: n }, (_, i): MensajeDelHistorial[] => [
+        { role: "user", content: `pide ${i}`, opensTurn: true },
+        { role: "assistant", content: `hecho ${i}`, reasoning: "r".repeat(1_000) },
       ]).flat();
     const roomy = buildAgentMessages({ state: {}, history: turns(40), prompt: "otra", maxPromptTokens: 400_000 });
     if (!roomy.ok) throw new Error("no cupo");

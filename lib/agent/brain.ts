@@ -1,3 +1,4 @@
+// Efecto en la caché: el cierre (`closeOut`) manda las mismas herramientas con `tool_choice: "none"` y comparte el prefijo del bucle; cambiar de proveedor a mitad de turno empieza en frío (inevitable) y el turno siguiente prefiere el que cerró.
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import {
   createFireworksStreamClient,

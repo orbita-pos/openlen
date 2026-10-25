@@ -19,6 +19,8 @@
 //   · Quién corre cada vuelta, cómo se lee y qué modelo es vienen INYECTADOS,
 //     como en el bucle: así se prueba con streams guionados y sin gastar.
 
+// Efecto en la caché: conversación propia, con su prompt: no toca el prefijo de la conversación de Len.
+
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { ToolOutcome } from "@/lib/agent/tools";
 import { runAgentLoop } from "@/lib/agent/loop";

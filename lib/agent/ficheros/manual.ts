@@ -27,6 +27,8 @@
  * que necesitan las herramientas, sin nada pesado detrás. Puro.
  */
 
+// Efecto en la caché: va justo detrás del prompt de sistema, en el prefijo fijo; sólo cambia con el modo (página o app) o con la terminal real, y entonces se paga todo una vez.
+
 export const RUTA_MANUAL = "/AGENTS.md";
 
 /**

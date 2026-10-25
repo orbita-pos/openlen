@@ -18,6 +18,8 @@
 // y los atajos de tema (cambiar_tema, aplicar_tematica: el CSS es un fichero
 // más). El porqué, medido: en `encargo-grande`, `editar_runtime` le exigió
 // reteclear 8.845 caracteres para quitar la gorra y se dejó las zapatillas.
+
+// Efecto en la caché: el prompt de sistema y las herramientas son el principio del prefijo: cambiar su texto, su orden o una herramienta invalida la caché de TODAS las conversaciones a la vez.
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { DECLARACION_WEB_FETCH, DECLARACION_WEB_SEARCH } from "@/lib/agent/web/herramientas";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
