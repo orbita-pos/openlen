@@ -11,7 +11,7 @@ import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
-import { createStepStore } from "@/lib/agent/telemetry/step-store";
+import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-store";
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
 import { noteTurn } from "@/lib/agent/provider-health";
@@ -179,6 +179,11 @@ export const runtime = "nodejs";
 // caía a CADA turno nuevo y la petición dejaba de coincidir desde el principio,
 // sin caché. Ahora cuántos entran lo dice `turnosQueSeQuedan`, a saltos.
 const ENCODER = new TextEncoder();
+
+/** LA CAPA 0 DE LEN 3.1: UN almacén de filas por proceso, no uno por turno — es
+ *  quien recuerda que ya podó hoy (poda como mucho una vez cada 24 h). */
+let almacenDePasos: StepStore | null = null;
+const stepStore = (): StepStore => (almacenDePasos ??= createStepStore(drizzleStepStoreDb, { log: console.warn }));
 /** GIT (spec local 2026-10-15-git-for-len, §5): the status block waits this long at most;
  *  without it the turn goes on. */
 const GIT_STATUS_TIMEOUT_MS = 2_000;
@@ -1193,7 +1198,7 @@ async function correrTurno(
           projectId,
           turnId: turnIdDelCliente ?? turnoId,
           hasHistory: filasDelHistorial.length > 0,
-          store: createStepStore(drizzleStepStoreDb, { log: console.warn }),
+          store: stepStore(),
           log: console.warn,
         });
   const brain = createAgentBrain({
