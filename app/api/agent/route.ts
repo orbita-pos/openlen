@@ -10,6 +10,9 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
+import { createStepStore } from "@/lib/agent/telemetry/step-store";
+import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
 import { noteTurn } from "@/lib/agent/provider-health";
 import { resolveAgentProviders } from "@/lib/ai/providers";
@@ -1179,7 +1182,22 @@ async function correrTurno(
   // El razonamiento no llega al loop, pero es vida: lo que el modelo piensa
   // rearma el reloj de silencio, que se crea más abajo con el stream.
   const pensando = { vivo: (): void => {} };
+  // LA CAPA 0 DE LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.4): una
+  // fila por llamada al proveedor, con sus huellas y su caché, y el aviso
+  // `[cache-break]` cuando la caché cae. Sólo telemetría: no espera, no lanza y
+  // no cambia un byte de lo que recibe el modelo. `OPENLEN_STEP_TELEMETRY=0` la apaga.
+  const stepRecorder =
+    process.env.OPENLEN_STEP_TELEMETRY === "0"
+      ? null
+      : createStepRecorder({
+          projectId,
+          turnId: turnIdDelCliente ?? turnoId,
+          hasHistory: filasDelHistorial.length > 0,
+          store: createStepStore(drizzleStepStoreDb, { log: console.warn }),
+          log: console.warn,
+        });
   const brain = createAgentBrain({
+    ...(stepRecorder ? { onCall: stepRecorder.onCall } : {}),
     alPensar: () => pensando.vivo(),
     tools,
     requestId: projectId,
@@ -1226,6 +1244,8 @@ async function correrTurno(
        *  Vive fuera del try por lo mismo que `mutoDurable`: lo lee el `finally`
        *  al escribir la fila. Ver `corteDelTurno`. */
       let corte: AgentErrorCode | null = null;
+      /** Cómo acabó el turno, para la última fila de la capa 0 (`stepRecorder`). */
+      let finDelTurno: string | null = null;
       /** Lo paró el dueño con ■ (no el perro del silencio): va en la
        *  transcripción y el historial siguiente lo dice (`MARCA_DE_TURNO_DETENIDO`). */
       let detenido = false;
@@ -1585,6 +1605,7 @@ async function correrTurno(
         const result = await runAgentLoop({
           messages,
           tools,
+          ...(stepRecorder ? { onStepTools: stepRecorder.onStepTools } : {}),
           // La página a medias de un `Write` que aún no dijo su ruta se pinta
           // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
           activePage: () => agentSession.page,
@@ -1734,6 +1755,7 @@ async function correrTurno(
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
+            if (ev.type === "compaction") stepRecorder?.onCompaction();
             // Un reintento cambia la fila: `registro.texto` acaba de soltar lo
             // descartado, y `avance` la escribe ya, como tras un `text`. (El
             // reloj de silencio no va por aquí: lo rearma el `emit` de arriba
@@ -1754,6 +1776,7 @@ async function correrTurno(
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
+        finDelTurno = result.topeAlcanzado ?? result.errorCode ?? (corte ? "cut" : "completed");
         detenido = canceladoAProposito && result.errorCode === "cancelled";
 
         // ⚰️ Aquí se guardaba la suite de la página (`marcarRegresiones` →
@@ -2081,6 +2104,7 @@ async function correrTurno(
         }
         const code: AgentErrorCode = "upstream";
         corte = corteDelTurno({ terminalError: true, topeAlcanzado: null, errorCode: code, mutoDurable: mutoDurable || estadoCambiado() });
+        finDelTurno = code;
         // La fila, cerrada antes de avisar, como en el final bueno.
         await cerrarFila();
         emit("error", { message: err instanceof Error ? err.message : "Unknown error", code });
@@ -2094,6 +2118,7 @@ async function correrTurno(
         close();
       } finally {
         reloj.parar();
+        stepRecorder?.finish({ endReason: finDelTurno ?? "upstream" });
         // La terminal del turno (F1, plans/len-agente-2026), si se usó: su hilo
         // muere con el turno. Nunca tumba el cierre, y no se ESPERA: con el
         // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
