@@ -33,6 +33,39 @@ const usage = (o: number, cached = 0): StreamEvent => ({
 });
 
 describe("runAgentLoop", () => {
+  // LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.3): each tool
+  // batch reaches the step recorder as name, args hash, ok and error code.
+  it("onStepTools receives one summary per tool batch", async () => {
+    const batches: unknown[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "Read", args: { file_path: "/a" } }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({
+        response: { ok: false, tool_result: "<tool_use_error>You have not read this file in this conversation. Read it before changing it.</tool_use_error>" },
+      }),
+      emit: () => {},
+      onStepTools: (batch) => batches.push(batch),
+    });
+    expect(batches).toEqual([[{ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: false, errorCode: "not_read" }]]);
+  });
+
+  it("an onStepTools that throws does not break the turn", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "Read", args: { file_path: "/a" } }, done],
+        [{ type: "text_delta", text: "Listo." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      onStepTools: () => { throw new Error("boom"); },
+    });
+    expect(r.finalText).toBe("Listo.");
+  });
+
   // LA LISTA DE PROGRESO (spec local 2026-10-15): viaja en el evento de su tarjeta.
   it("la lista de todo_write sale en su evento action", async () => {
     const events: AgentStreamEvent[] = [];

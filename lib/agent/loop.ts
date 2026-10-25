@@ -23,6 +23,7 @@ import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, type UserQues
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { TODO_WRITE, nearCapNotice, todoCapFacts, todoReminder, type TodoItem } from "@/lib/agent/todo-list";
+import { summarizeBatch, type ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -228,6 +229,10 @@ export interface AgentLoopArgs {
   /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): los comandos de la caja
    *  que terminaron en segundo plano, recogidos igual, antes de cada llamada al modelo. */
   lateNotices?: () => Promise<readonly string[]>;
+  /** LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.3): each
+   *  tool batch, summarized (name, args hash, ok, error code), right after its
+   *  responses are pushed. Telemetry only: if it throws, the turn goes on. */
+  onStepTools?: (batch: readonly ToolOutcomeSummary[]) => void;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** La compactación dentro del turno (`lib/agent/compaction/`). Sin ella, el
@@ -2073,6 +2078,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       ...(imagenes.length > 0 ? { images: imagenes } : {}),
     });
     if (imagenes.length > 0) keepRecentScreenshots(messages);
+    if (args.onStepTools) {
+      try {
+        args.onStepTools(summarizeBatch(calls.slice(0, functionResponses.length), functionResponses));
+      } catch {
+        // La telemetría nunca toca el turno.
+      }
+    }
     // Lote 7-8 (2): lo que el dueño escribió mientras la pregunta esperaba, detrás
     // de la tanda; como la corrección tardía, con su margen de vueltas.
     if (pendiente) {
