@@ -2412,6 +2412,28 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     expect(fila.userText).toBe("cambia el título\n↳ sólo el botón");
   });
 
+  // A7 de Len 3.1, como el `steering/message` de DeepSeek: la corrección es su
+  // propio mensaje (ya va en la transcripción) y el mensaje que abrió el turno no
+  // se reescribe. La fila guarda lo que se mandó para rehacerlo tal cual.
+  it("Len 3.1 · con una corrección a media faena, la fila guarda también el texto que se mandó (sentText)", async () => {
+    mocks.leerDireccion.mockReturnValueOnce("sólo el botón");
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.leerDireccion?.();
+      return { ...(await limpio()(args)), transcripcion: [{ role: "assistant" as const, content: "Listo." }] };
+    });
+    await readEvents(await pedir());
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { userText: string; transcript: { sentText?: string } }])[1];
+    expect(fila.userText).toBe("cambia el título\n↳ sólo el botón");
+    expect(fila.transcript.sentText).toBe("cambia el título");
+  });
+
+  it("BRAZO DE CONTROL: sin corrección no se guarda sentText (la fila de siempre)", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => ({ ...(await limpio()(args)), transcripcion: [{ role: "assistant" as const, content: "Listo." }] }));
+    await readEvents(await pedir());
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { transcript: Record<string, unknown> }])[1];
+    expect(fila.transcript).not.toHaveProperty("sentText");
+  });
+
   it("si el bucle revienta, la fila se cierra igual y una sola vez", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "text", text: "empiezo" });
@@ -2904,6 +2926,7 @@ describe("POST /api/agent — un miembro del proyecto", () => {
       finalText: "Cambiado el título.", turns: 1, toolCalls: 1,
       usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
       terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+      transcripcion: [{ role: "assistant", content: "Cambiado el título." }],
     });
     mocks.creditsForUsage.mockReturnValue(5);
     mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
@@ -2917,6 +2940,11 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     const filaAbierta = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { userText: string; origen?: unknown }])[1];
     expect(filaAbierta).toMatchObject({ userText: "@Len pon el título en azul", origen: { hiloId: "h1", ruta: "/src/App.jsx", linea: 3 } });
     expect(mocks.respuestaDeLen).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", hiloId: "h1", filaId: fila }));
+    // Len 3.1 (A7): la fila guarda además lo que se mandó, con el contexto del
+    // hilo, para que el turno siguiente rehaga este mensaje tal cual.
+    const cerrada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { userText: string; transcript: { sentText?: string } }])[1];
+    expect(cerrada.userText).toBe("@Len pon el título en azul");
+    expect(cerrada.transcript.sentText).toBe(paraElModelo.prompt);
     // Y sigue siendo un turno de un miembro: lo paga el dueño.
     expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 5, expect.anything());
   });

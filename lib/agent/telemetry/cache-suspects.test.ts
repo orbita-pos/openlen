@@ -159,11 +159,17 @@ describe("cache suspects, pinned as they are today", () => {
     expect(despues.filas[0]!.prefijoDelEquipo).toBe(`${ahora.ahora}${quienPide(gente[0]!)}\n`);
   });
 
-  it("a mid-turn correction: the row's userText gets «↳ …» appended, so the next turn rebuilds a first message the model never saw", () => {
-    // In the turn: your message was the prompt alone; the correction came later as its own message.
+  // FIXED (A7, like DeepSeek's `steering/message`): a correction is its own
+  // message and the turn's opening message is never rewritten. The row's
+  // userText still shows «↳ …» for the panel; the history rebuilds what was sent.
+  it("a mid-turn correction: the next turn rebuilds your first message as it was sent, and the correction stays its own message", () => {
     const sent = "hazme la portada";
-    const [rebuilt] = historialDesdeLaBase([{ userText: `${sent}\n↳ mejor en azul`, assistantReasoning: "", transcript: { mensajes: [], leidos: [] } }]);
-    expect(diffConsecutive(wire([{ role: "user", content: sent }]), wire([rebuilt as Message]))).toMatchObject({ match: false, part: "messages", index: 0 });
+    const correction: Message = { role: "user", content: "[The user wrote while you were working] mejor en azul" };
+    // What the route saves: the panel's userText, and the text that was sent.
+    const [rebuilt, second] = historialDesdeLaBase([
+      { userText: `${sent}\n↳ mejor en azul`, assistantReasoning: "", transcript: { mensajes: [correction], leidos: [], sentText: sent } },
+    ]);
+    expect(diffConsecutive(wire([{ role: "user", content: sent }, correction]), wire([rebuilt as Message, second as Message]))).toEqual({ match: true });
   });
 
   it("a provider fallback mid-turn sends the same messages to Fireworks (the miss is the other provider's cold cache, not a rewrite)", async () => {
