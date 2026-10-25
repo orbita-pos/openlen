@@ -54,7 +54,7 @@ export const drizzleStepStoreDb: StepStoreDb = {
       .select()
       .from(agentRequestSteps)
       .where(and(eq(agentRequestSteps.projectId, projectId), eq(agentRequestSteps.kind, kind), isNotNull(agentRequestSteps.messageHashes)))
-      .orderBy(desc(agentRequestSteps.createdAt))
+      .orderBy(desc(agentRequestSteps.createdAt), desc(agentRequestSteps.step))
       .limit(1);
     return rows[0] ? fromDb(rows[0]) : null;
   },

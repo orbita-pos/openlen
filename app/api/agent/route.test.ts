@@ -224,6 +224,9 @@ vi.mock("@/lib/agent/loop", async (real) => ({
   runAgentLoop: mocks.runAgentLoop,
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
+// La capa 0 de Len 3.1: las filas de cada llamada, a una base de mentira.
+const stepDb = vi.hoisted(() => ({ insert: vi.fn(async () => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
+vi.mock("@/lib/agent/telemetry/step-store-db", () => ({ drizzleStepStoreDb: stepDb }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: (cobro?: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>) => {
     mocks.cobroDeLasHerramientas = cobro;
@@ -502,6 +505,54 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
     expect(mocks.createAgentBrain).toHaveBeenCalledWith(
       expect.objectContaining({ esfuerzoDelUsuario: "high" }),
     );
+  });
+
+  // LA CAPA 0 DE LEN 3.1: el cerebro avisa de cada llamada, el bucle de cada
+  // tanda de herramientas, y las filas se escriben al cerrar el turno.
+  describe("las filas de cada llamada (capa 0)", () => {
+    const turno = async () =>
+      readEvents(
+        await POST(
+          new Request("http://localhost/api/agent", {
+            method: "POST",
+            body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }),
+          }),
+        ),
+      );
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      stepDb.insert.mockClear();
+      mocks.runAgentLoop.mockReset();
+    });
+
+    it("una fila por llamada, con su herramienta y cómo acabó el turno", async () => {
+      vi.stubEnv("OPENLEN_AGENT", "1");
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        const { onCall } = (mocks.createAgentBrain.mock.calls.at(-1) as unknown as [{ onCall: (c: unknown) => void }])[0];
+        onCall({
+          kind: "loop", provider: "deepinfra", model: "m", effort: "high", startedAt: 0, durationMs: 5,
+          usage: { inputTokens: 10, cachedTokens: 0, outputTokens: 1, thinkingTokens: 0 }, stop: "end_turn",
+          wire: { model: "m", messages: [{ role: "system", content: "S" }, { role: "user", content: "hola" }] },
+        });
+        args.onStepTools?.([{ name: "Read", argsHash: "h", ok: true }]);
+        return { turns: 1, toolCalls: 1, usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0 }, terminalError: false, topeAlcanzado: null, errorCode: null };
+      });
+      await turno();
+      expect(stepDb.insert).toHaveBeenCalledTimes(1);
+      const rows = (stepDb.insert.mock.calls[0] as unknown as [{ projectId: string; tools: unknown[]; endReason: string }[]])[0];
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ projectId: "p1", tools: [{ name: "Read", argsHash: "h", ok: true }], endReason: "completed" });
+    });
+
+    it("OPENLEN_STEP_TELEMETRY=0: ni el cerebro ni el bucle reciben a quién avisar", async () => {
+      vi.stubEnv("OPENLEN_AGENT", "1");
+      vi.stubEnv("OPENLEN_STEP_TELEMETRY", "0");
+      mocks.runAgentLoop.mockResolvedValue({ turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false });
+      await turno();
+      expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onCall");
+      expect((mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onStepTools");
+      expect(stepDb.insert).not.toHaveBeenCalled();
+    });
   });
 
   // LEN DYNAMIS (`lib/agent/dynamis.ts`): el modo viaja en el cuerpo, como el
