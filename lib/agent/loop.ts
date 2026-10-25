@@ -20,7 +20,7 @@ import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { NuevosDiagnosticos, redactarDiagnosticos, type Diagnostico } from "@/lib/agent/diagnosticos";
 import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/tool-concurrency";
 import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { currentToolName } from "@/lib/agent/tool-renames";
+import { NO_SUCH_TOOL, currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { TODO_WRITE, nearCapNotice, todoCapFacts, todoReminder, type TodoItem } from "@/lib/agent/todo-list";
 import { summarizeBatch, type ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
@@ -1742,7 +1742,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           // siguiente llamada; la «más parecida» no la encontraría.
           const ahora = currentToolName(original.name);
           const error_de_uso =
-            `There is no tool called "${original.name}".` +
+            `${NO_SUCH_TOOL} "${original.name}".` +
             (ahora !== original.name
               ? ` It is called "${ahora}" now.`
               : reparo.sugerido

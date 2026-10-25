@@ -124,7 +124,7 @@ import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
-import { captureDesignElements } from "@/lib/agent/design-screenshots";
+import { captureDesignElements, storeDesignCaptures } from "@/lib/agent/design-screenshots";
 import { vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { observarPagina } from "@/lib/agent/verify";
 import { closeBrowserTab, usarPagina } from "@/lib/agent/usar-pagina";
@@ -804,18 +804,23 @@ async function correrTurno(
   // (`fotosQueCaben`); el turno sigue.
   const masNuevaPrimero = [
     ...attachedImages.map((f) => f.url),
-    ...[...filasDelHistorial].reverse().flatMap((f) => photosOf(f.attachedImage).map((p) => p.url)),
+    // Y las capturas del modo Diseño de cada turno, detrás de sus fotos (Len 3.1).
+    ...[...filasDelHistorial].reverse().flatMap((f) => [...photosOf(f.attachedImage).map((p) => p.url), ...(f.transcript?.designCaptures ?? [])]),
   ];
   const fotos = fotosQueCaben(masNuevaPrimero, await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal }));
   const pixelesDe = (url: string): InlineImage | null => {
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;
   };
+  /** Las fotos de este turno que no se pudieron bajar: su nota dice que no cargaron. */
+  const fotosSinVer = attachedImages.filter((f) => !pixelesDe(f.url)).map((f) => f.url);
   const attachedInlines: InlineImage[] = attachedImages
     .map((f) => pixelesDe(f.url))
     .filter((p): p is InlineImage => p !== null);
   // EL MODO DISEÑO: una captura de cada elemento, como v0 con «Apply». Comparten
   // el tope de fotos de un mensaje con las que adjunte el dueño.
+  /** Dónde quedaron guardadas (Len 3.1): el historial las vuelve a pegar. */
+  let capturasGuardadas: string[] = [];
   if (disenoDelTurno && disenoDelTurno.elements.length > 0) {
     const vistaDelDiseno = await vistaConCarpeta(vistaParaMedir(projectId, project, null), deps, projectId);
     const capturas = await captureDesignElements({
@@ -827,6 +832,7 @@ async function correrTurno(
       signal: req.signal,
     }).catch(() => []);
     attachedInlines.push(...capturas);
+    if (capturas.length > 0) capturasGuardadas = await storeDesignCaptures(projectId, capturas).catch(() => []);
     if (capturas.length > 0) console.log(`[agent] modo Diseño — ${capturas.length} captura(s) de ${disenoDelTurno.elements.length} elemento(s)`);
   }
   if (fotos.size > 0) {
@@ -1371,6 +1377,10 @@ async function correrTurno(
                     // LEN.md: la memoria del proyecto que llevó este turno y lo que
                     // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
                     ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
+                    // Len 3.1: las fotos que no se vieron y las capturas del modo
+                    // Diseño, para que el historial rehaga este mensaje tal cual.
+                    ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
+                    ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la

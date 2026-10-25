@@ -2056,11 +2056,9 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
       [{ type: "function_call", name: "mirar_pagina", args: { tipo: "medir", pregunta: "¿se lee?" } }, usage(10), done],
       [{ type: "text_delta", text: "ok" }, usage(5), done],
     );
-    // 🔴 KNOWN REPLAY BREAK (Len 3.1, plans/len-3-1-pruebas/auditoria-sospechosos.md):
-    // the saved transcript renames the old-name call (`currentToolCall`), so the
-    // next turn reads `view_page` where the model wrote `mirar_pagina`. Rare (the
-    // model only sees today's names) and left as is; this test runs unwrapped.
-    const r = await realRunAgentLoop({
+    // The wrapper also proves the call is saved as the model wrote it
+    // (`mirar_pagina`): renamed, the next turn would read a call never made.
+    const r = await runAgentLoop({
       messages: [{ role: "user", content: "mira la página" }],
       tools: [{ name: "view_page" }, ...(DECLARADAS as unknown[])] as unknown as Parameters<typeof runAgentLoop>[0]["tools"],
       openStream: (m: Message[]) => { vueltas.push(structuredClone(m)); return guion(m); },
