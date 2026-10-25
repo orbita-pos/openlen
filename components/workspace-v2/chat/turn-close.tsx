@@ -20,6 +20,7 @@ import { Clock, RotateCcw, Sparkles, TriangleAlert, X } from "lucide-react";
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
+import { avisoDelTurno } from "../panels/turno-cerrado";
 import { ofreceDeshacer, planDeUndo, textoDelFallo, type FalloDeUndo } from "../panels/undo-turn";
 import { isPublishNote } from "./publish-note";
 import { editsOfTurn } from "./turn-changes";
@@ -119,9 +120,9 @@ export function TurnClose({
   // CORTADO a medias (tras cambiar algo): «se cortó antes de terminar…». Un
   // aviso SIN corte —el tope o la conversación que no cabe— no se cortó: se
   // dice tal cual, sin la plantilla (el turno sí terminó su cierre).
-  const notice = turn.cortado
-    ? t(esApp ? "cutShortApp" : "cutShort", { reason: turn.avisoTurno || tAgent("errors.cancelled") })
-    : turn.avisoTurno || null;
+  // A5: al recargar, el motivo sale de la fila (`avisoDelTurno`).
+  const aviso = avisoDelTurno(turn, (code) => tAgent(`errors.${code}`));
+  const notice = aviso?.cortado ? t(esApp ? "cutShortApp" : "cutShort", { reason: aviso.motivo }) : aviso?.motivo ?? null;
   // La nota «✓ Publicada…» no es un turno de Len: sin la etiqueta de «No cambió
   // nada» (ver `publish-note.ts`).
   const showLabel = !(turn.status === "applied" && turn.noDocChange && isPublishNote(turn));

@@ -89,6 +89,31 @@ export function cierreDeTurno(args: {
  *
  * Los textos llegan ya localizados: esto decide, no traduce.
  */
+/**
+ * A5 DE LEN 3.1 · TODA PARADA SE EXPLICA, TAMBIÉN AL RECARGAR (DeepSeek
+ * `tui-turn-end-stop-reason-notices` y `max-tokens-turn-end-notice`, MIT: el
+ * aviso sale del registro durable, así que recargar lo pinta igual). Las que se
+ * avisan desde la fila (`endReason`): las de error. Un tope no: su cierre ya lo
+ * cuenta —lo redacta el modelo con los hechos y el cliente guarda su línea—.
+ */
+export type ParadaConAviso = "cancelled" | "upstream" | "truncated" | "no_credits";
+const PARADAS_CON_AVISO: ReadonlySet<string> = new Set<ParadaConAviso>(["cancelled", "upstream", "truncated", "no_credits"]);
+
+/** El aviso de un turno: el de vivo (`avisoTurno`) o, al recargar, el que sale
+ *  de la fila. `cortado` = va con la plantilla «se cortó antes de terminar».
+ *  `null` = sin aviso. Una fila cortada sin motivo (anterior a `endReason`, o
+ *  huérfana tras reiniciar el servidor) conserva el genérico. */
+export function avisoDelTurno(
+  t: { readonly avisoTurno?: string | undefined; readonly cortado?: boolean | undefined; readonly endReason?: string | undefined },
+  porCodigo: (code: ParadaConAviso) => string,
+): { readonly motivo: string; readonly cortado: boolean } | null {
+  if (t.avisoTurno) return { motivo: t.avisoTurno, cortado: t.cortado === true };
+  const desdeLaFila = t.endReason && PARADAS_CON_AVISO.has(t.endReason) ? (t.endReason as ParadaConAviso) : null;
+  if (desdeLaFila) return { motivo: porCodigo(desdeLaFila), cortado: true };
+  if (t.cortado) return { motivo: porCodigo("cancelled"), cortado: true };
+  return null;
+}
+
 export function lineaGuardadaDelCierre(
   cierre: CierreDeTurno,
   o: { readonly avisoDeTope: string | null; readonly plantillaDeCorte: (motivo: string) => string },

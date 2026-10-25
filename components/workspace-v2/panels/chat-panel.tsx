@@ -38,6 +38,7 @@ export type { HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina, ofreceDeshacer, planDeUndo, textoDelFallo } from "./undo-turn";
+import { avisoDelTurno } from "./turno-cerrado";
 import { MandoEsfuerzo } from "./mando-esfuerzo";
 import { ModePicker } from "./mode-picker";
 import type { AgentMode } from "@/lib/agent/dynamis";
@@ -724,7 +725,7 @@ function TurnFooter({
           <div className="inline-flex items-center gap-1.5 rounded-md bg-app border bd px-1.5 py-0.5 text-[10.5px] fg-faint ui-small">
             <span>{t("noChange.label")}</span>
           </div>
-          <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} />
+          <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} endReason={turn.endReason} />
         </div>
       );
     }
@@ -766,7 +767,7 @@ function TurnFooter({
             {t("applied.otherPage")}
           </div>
         )}
-        <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} />
+        <AvisoDeTurno texto={turn.avisoTurno} cortado={turn.cortado} endReason={turn.endReason} />
         {turn.undoFallo && (
           <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-red-500/40 bg-red-500/5 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 max-w-full">
             <X size={11} className="mt-0.5 shrink-0" />
@@ -814,17 +815,17 @@ function TurnFooter({
 
 /** El turno cambió la página y luego se cortó. Ámbar, no rojo: no es un fallo
  *  del cambio —está hecho— sino del cierre. Rojo mandaría a repetirlo. */
-function AvisoDeTurno({ texto, cortado }: { texto?: string; cortado?: boolean }) {
+function AvisoDeTurno({ texto, cortado, endReason }: { texto?: string; cortado?: boolean; endReason?: string }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
-  // Una fila que el servidor guardó como cortada no trae el motivo concreto:
-  // el genérico existe ya en los diez idiomas.
-  if (!texto && cortado) texto = tAgent("errors.cancelled");
-  if (!texto) return null;
+  // Al recargar, el motivo sale de la fila (A5, `avisoDelTurno`); una fila
+  // cortada sin él conserva el genérico, que existe ya en los diez idiomas.
+  const aviso = avisoDelTurno({ avisoTurno: texto, cortado, endReason }, (code) => tAgent(`errors.${code}`));
+  if (!aviso) return null;
   return (
     <div className="mt-1 flex items-start gap-1.5 rounded-md ring-1 ring-amber-500/40 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400 max-w-full">
       <TriangleAlert size={11} className="mt-0.5 shrink-0" />
-      <span className="flex-1 break-words">{t("cutShort", { reason: texto })}</span>
+      <span className="flex-1 break-words">{t("cutShort", { reason: aviso.motivo })}</span>
     </div>
   );
 }

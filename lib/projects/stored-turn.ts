@@ -4,6 +4,7 @@
 // tienen que pintar un turno igual que el panel.
 import type { projectChatMessages } from "@/lib/db/schema";
 import { photosOf } from "@/lib/projects/chat-photos";
+import type { AgentErrorCode } from "@/lib/agent/loop";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 /** LEN 2.1 · el turno sigue trabajando en el servidor. Es texto en la base, como
@@ -13,7 +14,20 @@ export const ESTADO_EN_CURSO = "en_curso";
 type ChatRow = typeof projectChatMessages.$inferSelect;
 /** Lo que hace falta de la fila; las columnas de después pueden faltar (una escena descargada no las trae). */
 export type ChatRowForTurn = Pick<ChatRow, "id" | "userText" | "assistantReasoning" | "status" | "createdAt" | "attachedImage" | "actions"> &
-  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones">>;
+  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones" | "endReason">>;
+
+/** Los motivos de parada que se leen de la fila; otro texto se ignora. */
+const END_REASONS = {
+  turn_limit: true,
+  tool_limit: true,
+  budget_limit: true,
+  cancelled: true,
+  truncated: true,
+  upstream: true,
+  no_credits: true,
+  agent_off: true,
+} satisfies Record<AgentErrorCode, true>;
+const isEndReason = (v: unknown): v is AgentErrorCode => typeof v === "string" && Object.hasOwn(END_REASONS, v);
 
 export function storedTurnFromRow(row: ChatRowForTurn): StoredChatTurn {
   const turn: StoredChatTurn = {
@@ -42,6 +56,8 @@ export function storedTurnFromRow(row: ChatRowForTurn): StoredChatTurn {
   // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
   if (typeof row.centicredits === "number") turn.centicredits = row.centicredits;
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
+  // A5 · por qué paró, si no terminó: el aviso al recargar sale de aquí.
+  if (isEndReason(row.endReason)) turn.endReason = row.endReason;
   // Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo».
   if (row.origen) turn.origen = row.origen;
   // El chat del equipo: un mensaje entre personas y a quién menciona.
