@@ -24,6 +24,7 @@ import { NO_SUCH_TOOL, currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { TODO_WRITE, nearCapNotice, todoCapFacts, todoReminder, type TodoItem } from "@/lib/agent/todo-list";
 import { summarizeBatch, type ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
+import { createRepeatReminder } from "@/lib/agent/repeat-reminder";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -886,6 +887,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // transcripción es el registro entero, como el almacén de sesión de DeepSeek;
   // lo compactado es sólo lo que se le manda al modelo.
   const ownArchived: Message[] = [];
+  /** A2 de Len 3.1: el aviso de llamadas repetidas de DeepSeek (`repeat-reminder.ts`). */
+  const repeticiones = createRepeatReminder();
   let ownStart = args.messages.length;
   const transcripcionDelTurno = (texto: string): Message[] => {
     const propios = [...ownArchived, ...messages.slice(ownStart)];
@@ -1301,6 +1304,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const direccion = args.leerDireccion?.() ?? null;
     if (direccion) {
       messages.push(steerMessage(direccion));
+      repeticiones.reset();
       args.emit({ type: "direccion", texto: direccion });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
@@ -1623,6 +1627,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       if (tardia) {
         if (turnText.trim()) messages.push(delAsistente(turnText));
         messages.push(steerMessage(tardia));
+        repeticiones.reset();
         args.emit({ type: "direccion", texto: tardia });
         maxTurns += VUELTAS_POR_DIRECCION;
         continue;
@@ -2072,6 +2077,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         imagenes.length > 0 ? screenshotsLabel(capturas) : "",
         // El recordatorio de la lista, el de Claude Code: cada 10 pasos sin `todo_write`.
         offersTodoWrite ? (todoReminder(messages, currentTodos) ?? "") : "",
+        // Y el de las llamadas repetidas, el de DeepSeek: detrás de los resultados, sin bloquear nada.
+        ...repeticiones.observe(functionResponses.map((r, i) => ({ name: calls[i]?.name ?? r.name, args: calls[i]?.args, response: r.response }))),
         cutNotice,
       ].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
@@ -2089,6 +2096,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // de la tanda; como la corrección tardía, con su margen de vueltas.
     if (pendiente) {
       messages.push(steerMessage(pendiente));
+      repeticiones.reset();
       args.emit({ type: "direccion", texto: pendiente });
       maxTurns += VUELTAS_POR_DIRECCION;
     }

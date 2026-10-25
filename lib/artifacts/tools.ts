@@ -10,6 +10,7 @@ import { ArtifactError, isArtifactError, type ArtifactContext, type ArtifactData
 import type { ToolOutcome } from "../agent/tools";
 import type {ArtifactAudioUploads} from "./assets";
 import {AUDIO_MIMES} from "./audio-protocol";
+import { whatToDoAfter } from "./render-failures";
 
 export const ARTIFACT_TOOLS = ["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data","list_artifact_audio"] as const;
 const idParameter = { type: "STRING", description: "Exact artifact id returned by create_artifact or list_artifacts." };
@@ -122,11 +123,14 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
           // After a wait the piece is read again: its status and last ready revision moved with the job.
           if (waitMs > 0) artifact = await requireArtifactAccess(database, ctx, id, "read");
           const revision = await store.getRevision(ctx, id, artifact.currentRevision);
-          const jobRows = await database.query(`select "id","revision","status","errorCode","diagnostics" from "artifactJobs" where "artifactId"=$1 order by "createdAt" limit 100`, [id]);
+          // The NEWEST first (A1 de Len 3.1): the 23/10 video read a failure from three revisions back
+          // before its own. A failure says what to do, even with empty diagnostics (`render-failures.ts`).
+          const jobRows = (await database.query(`select "id","revision","status","errorCode","diagnostics" from "artifactJobs" where "artifactId"=$1 order by "createdAt" desc limit 100`, [id])) as { status: string; errorCode: string | null }[];
+          const jobsForLen = jobRows.map((job, i) => (i === 0 && job.status === "failed" ? { ...job, whatToDo: whatToDoAfter(job.errorCode) } : job));
           // Register sources in this turn's virtual tree; the next Bash sees
           // the same bytes as Read without copying them into the app's folder.
           if (Object.keys(revision.files)[0]) await workspace.read(`/.len/artifacts/${id}/${Object.keys(revision.files)[0]}`);
-          return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, evidence:revision.evidence, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobRows, ...(pending ? { note: `the export is still ${pending} after ${seconds(Math.min(waitMs, MAX_WAIT_MS))}; wait again with wait_ms, or tell the user it is still rendering` } : {}) } };
+          return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, evidence:revision.evidence, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobsForLen, ...(pending ? { pending: true, note: `the export is still ${pending} after ${seconds(Math.min(waitMs, MAX_WAIT_MS))}; wait again with wait_ms, or tell the user it is still rendering` } : {}) } };
         }
         if (name === "render_artifact") {
           if (!kinds.includes(artifact.kind) || !Array.isArray(args.formats) || !args.formats.length || args.formats.some((f) => typeof f !== "string" || !ARTIFACT_FORMATS[artifact.kind].includes(f))) throw new ArtifactError("format_unavailable");

@@ -97,6 +97,31 @@ it("stops waiting when the turn is stopped", async () => {
   expect(Date.now() - started).toBeLessThan(3_000);
 });
 
+// A1 of Len 3.1 (the 23/10 video turn): the jobs came oldest first, so the failure of revision 3 was read before
+// the current one, and the current one (motion_nondeterministic) came with empty diagnostics.
+it("inspect_artifact shows the newest job first and says what to do about a failure", async () => {
+  const a = agent();
+  const { id, jobId } = await queuedDeck(a);
+  await f.database.query(`update "artifactJobs" set "createdAt"=now()-interval '1 hour' where "id"=$1`, [jobId]);
+  await f.database.query(
+    `insert into "artifactJobs" ("id","artifactId","revision","actorId","operation","optionsHash","options","status","errorCode","diagnostics")
+     select $1,$2,"revision","actorId","operation",'h2','{}'::jsonb,'failed','motion_nondeterministic','[]'::jsonb from "artifactJobs" where "id"=$3`,
+    ["00000000-0000-4000-8000-000000000002", id, jobId],
+  );
+  const out = await a.execute("inspect_artifact", { artifact_id: id });
+  const jobs = out.response.jobs as { id: string; whatToDo?: string }[];
+  expect(jobs[0]).toMatchObject({ id: "00000000-0000-4000-8000-000000000002", whatToDo: expect.stringMatching(/seek.*new revision/s) });
+  expect(jobs[1]!.id).toBe(jobId);
+  expect(jobs[1]!.whatToDo).toBeUndefined();
+});
+
+it("a wait that ends with the export still going says pending: true (polling, not a repeated call)", async () => {
+  const a = agent();
+  const { id } = await queuedDeck(a);
+  const out = await a.execute("inspect_artifact", { artifact_id: id, wait_ms: 300 });
+  expect(out.response).toMatchObject({ ok: true, pending: true });
+});
+
 it("declares the wait on inspect_artifact and points render_artifact to it", () => {
   const tools = artifactToolDeclarations(["slides"]);
   expect(tools.find((t) => t.name === "inspect_artifact")).toMatchObject({ parameters: { properties: { wait_ms: { type: "NUMBER", description: expect.stringMatching(/600000/) } } } });

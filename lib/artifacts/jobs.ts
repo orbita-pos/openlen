@@ -3,6 +3,7 @@ import { requireArtifactAccess } from "./access";
 import type { ArtifactStore } from "./store";
 import { ArtifactError, isArtifactError, type ArtifactContext, type ArtifactDatabase, type ArtifactJob, type ArtifactOutput, type ArtifactSql, type JobClaim } from "./types";
 import { validateArtifactOutputs } from "./state";
+import { SOURCE_FAILURES, whatToDoAfter } from "./render-failures";
 
 export const ACTIVE_JOB_STATES = ["running", "validating", "storing"] as const;
 function canonical(value: unknown): unknown {
@@ -54,6 +55,8 @@ export function createArtifactJobs(database: ArtifactDatabase, store: ArtifactSt
       if (job.status === "failed" || job.status === "cancelled") {
         const why = job.errorCode ?? job.status;
         if (artifact.kind === "image" || artifact.kind === "audio") throw new ArtifactError("render_already_failed", `revision ${revision} of this piece already failed (${why}); a paid take is not repeated on its own: write a new revision and render it if the user wants another try`);
+        // A1 de Len 3.1: lo que falló por sus fuentes falla igual otra vez; la llamada dice qué cambiar.
+        if (SOURCE_FAILURES.has(why)) throw new ArtifactError("render_already_failed", `revision ${revision} of this piece already failed (${why}): ${whatToDoAfter(why)}`);
         if (job.attempt >= MAX_RENDER_RUNS) throw new ArtifactError("render_already_failed", `revision ${revision} of this piece failed ${job.attempt} times (${why}); change its sources and render the new revision, or tell the user why it fails`);
         const [requeued] = await tx.query(`update "artifactJobs" set "status"='queued',"errorCode"=null,"diagnostics"='[]'::jsonb,"cancelRequested"=false,"workerId"=null,"fencingToken"=null,"leaseUntil"=null,"updatedAt"=now() where "id"=$1 and "status" in ('failed','cancelled') returning *`, [job.id]);
         if (requeued) job = jobRow(requeued);
