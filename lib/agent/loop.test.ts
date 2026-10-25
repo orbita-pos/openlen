@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop, sobreQue, type AgentLoopResult, type AgentStreamEvent } from "./loop";
+import { runAgentLoop as realRunAgentLoop, sobreQue, type AgentLoopResult, type AgentStreamEvent } from "./loop";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
+import { withReplayInvariant } from "./testing/replay-invariant";
+
+// LAYER 1 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §5.1): every turn
+// these tests run also proves that what the model saw replays byte for byte from
+// the saved transcript.
+const runAgentLoop = withReplayInvariant(realRunAgentLoop);
 
 // Repite el ÚLTIMO guion cuando se acaba: así una prueba con \`maxTurns\` llega
 // al tope sin escribir doce vueltas. Desde H1 (2026-09-25) el bucle no topa por
@@ -50,6 +56,23 @@ describe("runAgentLoop", () => {
       onStepTools: (batch) => batches.push(batch),
     });
     expect(batches).toEqual([[{ name: "Read", argsHash: expect.stringMatching(/^[0-9a-f]{16}$/), ok: false, errorCode: "not_read" }]]);
+  });
+
+  // 🔴 The 24/10 «graciasa»: Postgres jsonb gave Read's arguments back as
+  // {limit, offset, file_path} and the next turn paid the previous one again.
+  // The wrapper (withReplayInvariant) fails this test if the wire order ever
+  // differs from what the saved row rebuilds.
+  it("🔴 a Read with file_path/offset/limit replays byte for byte after saving", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "lee" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "Read", args: { file_path: "/index.html", offset: 10, limit: 50 } }, usage(1), done],
+        [{ type: "text_delta", text: "Leído." }, usage(1), done],
+      ),
+      runTool: async () => ({ response: { ok: true, tool_result: "<h1>Hola</h1>" } }),
+      emit: () => {},
+    });
+    expect(r.transcripcion?.[0]?.functionCalls?.[0]?.args).toEqual({ file_path: "/index.html", offset: 10, limit: 50 });
   });
 
   it("an onStepTools that throws does not break the turn", async () => {
@@ -2033,7 +2056,11 @@ describe("la llamada mal escrita se repara, no se cobra", () => {
       [{ type: "function_call", name: "mirar_pagina", args: { tipo: "medir", pregunta: "¿se lee?" } }, usage(10), done],
       [{ type: "text_delta", text: "ok" }, usage(5), done],
     );
-    const r = await runAgentLoop({
+    // 🔴 KNOWN REPLAY BREAK (Len 3.1, plans/len-3-1-pruebas/auditoria-sospechosos.md):
+    // the saved transcript renames the old-name call (`currentToolCall`), so the
+    // next turn reads `view_page` where the model wrote `mirar_pagina`. Rare (the
+    // model only sees today's names) and left as is; this test runs unwrapped.
+    const r = await realRunAgentLoop({
       messages: [{ role: "user", content: "mira la página" }],
       tools: [{ name: "view_page" }, ...(DECLARADAS as unknown[])] as unknown as Parameters<typeof runAgentLoop>[0]["tools"],
       openStream: (m: Message[]) => { vueltas.push(structuredClone(m)); return guion(m); },
