@@ -10,7 +10,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 
 export type FaultStep =
-  | { kind: "ok"; text: string; usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number } }
+  | {
+      kind: "ok";
+      text: string;
+      /** Calls the model makes in this answer (finish_reason becomes `tool_calls`). */
+      toolCalls?: { name: string; arguments: string }[];
+      usage?: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number };
+    }
   | { kind: "reset_before_first_event" }
   | { kind: "disconnect_after"; chunks: number; text?: string }
   | { kind: "empty_completion" }
@@ -40,13 +46,16 @@ async function answer(step: FaultStep, req: IncomingMessage, res: ServerResponse
       sseHead(res);
       res.write(chunk({ role: "assistant", content: "" }));
       for (const p of pieces(step.text)) res.write(chunk({ content: p }));
+      (step.toolCalls ?? []).forEach((c, index) =>
+        res.write(chunk({ tool_calls: [{ index, id: `call_${index}`, type: "function", function: { name: c.name, arguments: c.arguments } }] })),
+      );
       const u = step.usage ?? { prompt_tokens: 100, completion_tokens: 10 };
       res.write(
         `data: ${JSON.stringify({
           id: "fault",
           object: "chat.completion.chunk",
           model: "fault-model",
-          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          choices: [{ index: 0, delta: {}, finish_reason: step.toolCalls?.length ? "tool_calls" : "stop" }],
           usage: {
             prompt_tokens: u.prompt_tokens,
             completion_tokens: u.completion_tokens,

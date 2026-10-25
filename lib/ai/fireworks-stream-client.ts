@@ -19,6 +19,7 @@ import {
   type ModelOperation,
 } from "../generation/model-policy";
 import { providerUsage } from "./fireworks-client";
+import { captureRequest } from "./request-capture";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
 import { codeForInBandError, codeForProviderError, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -401,6 +402,8 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             // El cuerpo sale igual.
           }
         }
+        // Y la captura entera, sólo en desarrollo (`request-capture.ts`).
+        captureRequest(request.requestId, body);
         return JSON.stringify(body);
       };
 
