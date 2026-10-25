@@ -544,6 +544,15 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       expect(rows[0]).toMatchObject({ projectId: "p1", tools: [{ name: "Read", argsHash: "h", ok: true }], endReason: "completed" });
     });
 
+    it("el almacén es uno por proceso: dos turnos podan como mucho una vez", async () => {
+      vi.stubEnv("OPENLEN_AGENT", "1");
+      mocks.runAgentLoop.mockResolvedValue({ turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false });
+      const antes = stepDb.deleteOlderThan.mock.calls.length;
+      await turno();
+      await turno();
+      expect(stepDb.deleteOlderThan.mock.calls.length - antes).toBeLessThanOrEqual(1);
+    });
+
     it("OPENLEN_STEP_TELEMETRY=0: ni el cerebro ni el bucle reciben a quién avisar", async () => {
       vi.stubEnv("OPENLEN_AGENT", "1");
       vi.stubEnv("OPENLEN_STEP_TELEMETRY", "0");
