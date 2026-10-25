@@ -803,7 +803,7 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
     assert.match(r.enLaTerminal["/index.html"] ?? "", /Calle Gaviotas 7/);
   });
 
-  it("el manual, un borrado y un data-slot-path NO se guardan, y vuelven a la terminal como estaban", async () => {
+  it("el manual, borrar la portada y un data-slot-path NO se guardan, y vuelven a la terminal como estaban", async () => {
     const { deps, store } = makeDeps(sitio());
     const r = await guardarLoDeLaTerminal(
       makeSession(),
@@ -811,7 +811,7 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
       [
         { tipo: "escrito", ruta: "/AGENTS.md", contenido: "otro manual", crea: false },
         { tipo: "escrito", ruta: "/index.html", contenido: HOME.replace("<h1>", '<h1 data-slot-path="x">'), crea: false },
-        { tipo: "borrado", ruta: "/menu/index.html" },
+        { tipo: "borrado", ruta: "/index.html" },
       ],
       antes,
     );
@@ -821,10 +821,38 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
     assert.equal(store.data.html, HOME);
     assert.equal(r.enLaTerminal["/AGENTS.md"], "manual");
     assert.equal(r.enLaTerminal["/index.html"], HOME);
-    assert.equal(r.enLaTerminal["/menu/index.html"], MENU);
     assert.match(r.notas[0]!, /^AGENTS\.md: not saved — .*read-only.*It is back as it was\.$/);
     assert.match(r.notas[1]!, /^index\.html: not saved — .*data-slot-path/);
-    assert.match(r.notas[2]!, /^menu\/index\.html: not saved — the terminal cannot delete/);
+    assert.match(r.notas[2]!, /^index\.html: not saved — the home page can't be removed/);
+  });
+
+  // El ensayo del 25/10: Len creó una página de prueba (/borrame) y no pudo
+  // quitarla — la regla decía que una página la borra el dueño en el editor.
+  // Como `rm` en Claude Code: se va, con su copia en Versiones, y el Deshacer
+  // del turno la devuelve (las fotos del turno la tienen en el «antes»).
+  it("🔴 `rm` de una página que no es la portada la quita, con su copia en Versiones y sin sus ajustes de formulario", async () => {
+    const data: ProjectData = { ...sitio(), settings: { forms: { "0": { notifyEmail: "a@b.c" }, "menu:0": { notifyEmail: "x@y.z" }, "contacto:0": { notifyEmail: "c@d.e" } } } } as ProjectData;
+    const { deps, store } = makeDeps(data);
+    const r = await guardarLoDeLaTerminal(makeSession(), deps, [{ tipo: "borrado", ruta: "/menu/index.html" }], antes);
+    assert.equal(r.rechazado, false, r.notas.join("\n"));
+    assert.deepEqual(r.notas, ["menu/index.html: removed."]);
+    assert.equal(r.enLaTerminal["/menu/index.html"], null);
+    assert.deepEqual(Object.keys(store.data.pages ?? {}), ["contacto"]);
+    assert.equal(store.data.html, HOME);
+    assert.deepEqual(Object.keys(store.data.settings?.forms ?? {}).sort(), ["0", "contacto:0"]);
+    assert.deepEqual(store.versions, [{ label: "bash rm menu/index.html", page: "menu" }]);
+    assert.equal(r.escrituras.length, 1);
+    assert.equal(r.escrituras[0]!.mutoDurable, true);
+    assert.deepEqual(r.escrituras[0]!.ficherosTocados, [{ ruta: "/menu/index.html", versionPrevia: "v1" }]);
+  });
+
+  it("`rm` de una página que ya no existe no inventa nada: lo dice y no guarda", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const r = await guardarLoDeLaTerminal(makeSession(), deps, [{ tipo: "borrado", ruta: "/menu/index.html" }], antes);
+    assert.equal(r.rechazado, true);
+    assert.equal(store.saved, 0);
+    assert.equal(store.versions.length, 0);
+    assert.match(r.notas[0]!, /^menu\/index\.html: not saved — /);
   });
 
   it("un fichero nuevo que no es página ni cabe en la carpeta no se guarda y desaparece; una página nueva, sí", async () => {
@@ -1619,7 +1647,7 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.deepEqual(archivos, {});
   });
 
-  it("🔴 la terminal la ve; sed -i la cambia y rm la borra (archivando); rm de una página, no", async () => {
+  it("🔴 la terminal la ve; sed -i la cambia y rm la borra (archivando); rm de la portada, no", async () => {
     const { deps, archivos, versiones } = conCarpeta({ html: HOME });
     archivos["/css/site.css"] = "body{color:red}\n";
     const s = makeSession();
@@ -1637,6 +1665,24 @@ describe("la carpeta del proyecto (pieza 9)", () => {
       assert.equal(rm.mutoDurable, true);
       const rmPagina = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /index.html" }));
       assert.equal(rmPagina.response.ok, false);
+      assert.match(texto(rmPagina), /the home page can't be removed/);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 `rm` de una página por la terminal de verdad: se va del proyecto y de la terminal; la portada sigue", async () => {
+    const { deps, store } = conCarpeta({ html: HOME, pages: { borrame: { html: MENU } } });
+    const s = makeSession();
+    try {
+      const rm = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "rm /borrame/index.html && ls /" }));
+      assert.equal(rm.response.ok, true, texto(rm));
+      assert.match(texto(rm), /borrame\/index\.html: removed\./);
+      assert.equal(store.data.pages?.borrame, undefined);
+      assert.equal(store.data.html, HOME);
+      assert.equal(rm.mutoDurable, true);
+      const ls = await conTerminal(() => runAgentTool(s, deps, "bash", { command: "ls /borrame 2>&1; echo fin" }));
+      assert.doesNotMatch(texto(ls), /index\.html/);
     } finally {
       await cerrarTerminalDeLaSesion(s);
     }
@@ -2470,7 +2516,8 @@ describe("git in Len's terminal, end to end (spec local 2026-10-15-git-for-len)"
     }
   });
 
-  it("a restore that would delete a page is refused by the page's rule, and says so", async () => {
+  // 25/10: a page other than the home can be deleted, so a restore deletes it like `rm` (it was refused).
+  it("a restore that deletes a page removes it from the project, like rm, and says so", async () => {
     const { deps, store } = withGit({ html: HOME });
     const session = makeSession();
     try {
@@ -2479,8 +2526,9 @@ describe("git in Len's terminal, end to end (spec local 2026-10-15-git-for-len)"
       await conTerminal(() => runAgentTool(session, deps, "bash", { command: "mkdir -p /menu && cp /index.html /menu/index.html && git add -A && git commit -qm 'Add the menu'" }));
       assert.ok(store.data.pages?.menu, "the menu page was created");
       const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "git restore --source=HEAD~1 ." }));
-      assert.match(texto(out), /menu\/index\.html: not saved/);
-      assert.ok(store.data.pages?.menu, "the menu page is still there");
+      assert.match(texto(out), /menu\/index\.html: removed\./);
+      assert.equal(store.data.pages?.menu, undefined, "the menu page is gone");
+      assert.equal(store.data.html, HOME);
     } finally {
       await cerrarTerminalDeLaSesion(session);
     }

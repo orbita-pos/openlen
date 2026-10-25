@@ -655,6 +655,25 @@ describe("view_page", () => {
     assert.equal("zona" in vistas[1], false);
   });
 
+  // El ensayo del 25/10: «revísala en móvil, con capturas» y Len sólo podía
+  // capturar en escritorio — probó con iframes de 390 px y no vio nada.
+  it("🔴 viewport: \"mobile\" viaja a la visita; sin él, escritorio; uno que no existe se dice", async () => {
+    const { deps } = makeDeps();
+    const vistas: (string | undefined)[] = [];
+    const ojos = {
+      ...deps,
+      usarPagina: async (input: { viewport?: string }) => (vistas.push(input.viewport), { informe: "1. screenshot of the screen → attached below as image 1.", images: [CAPTURA] }),
+    };
+    const movil = await runAgentTool(makeSession(), ojos, "view_page", { mode: "screenshot", viewport: "mobile" });
+    await runAgentTool(makeSession(), ojos, "view_page", { mode: "screenshot" });
+    assert.equal(movil.response.ok, true);
+    assert.deepEqual(vistas, ["mobile", undefined]);
+    const raro = await runAgentTool(makeSession(), ojos, "view_page", { mode: "screenshot", viewport: "tablet" });
+    assert.equal(raro.response.ok, false);
+    assert.match(String(raro.response.error), /"viewport" has to be "mobile" .* or "desktop"/);
+    assert.equal(vistas.length, 2);
+  });
+
   // Pasado el tope se endurece la respuesta, no se bloquea la llamada — misma
   // doctrina que find_photo. Y los dos topes son INDEPENDIENTES.
   it("pasado el tope de capturas, endurece la respuesta sin fallar; y no agota measure", async () => {

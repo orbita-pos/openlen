@@ -456,6 +456,26 @@ describe("use_page — la pestaña que dura el turno", () => {
     }
   }, 120_000);
 
+  // El ensayo del 25/10: la pestaña era siempre de escritorio (1280 px) y Len
+  // no podía ver la página en un teléfono.
+  it("🔴 viewport mobile: la página se ve a 390 px y el informe lo dice; BRAZO DE CONTROL: la llamada siguiente, sin él, vuelve a escritorio en la misma pestaña", async () => {
+    const tab = newBrowserTabHolder();
+    const ancho = marco(`<p id="w"></p><script>
+      function pinta() { document.getElementById("w").textContent = "ancho " + window.innerWidth; }
+      pinta(); window.addEventListener("resize", pinta);
+    </script>`);
+    try {
+      const movil = await visita(ancho, [{ read: "ancho" }], { tab, viewport: "mobile" });
+      expect(movil).toContain("in a phone-sized browser tab (390×844)");
+      expect(movil).toContain("it reads: «ancho 390»");
+      const escritorio = await visita(ancho, [{ read: "ancho" }], { tab });
+      expect(escritorio).toContain("now desktop-sized (1280×900)");
+      expect(escritorio).toContain("it reads: «ancho 1280»");
+    } finally {
+      await closeBrowserTab(tab);
+    }
+  }, 120_000);
+
   it("🔴 si los ficheros cambiaron, carga la versión nueva en la misma pestaña y conserva lo guardado; new_visit empieza de cero", async () => {
     const tab = newBrowserTabHolder();
     try {

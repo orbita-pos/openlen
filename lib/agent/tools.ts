@@ -415,6 +415,8 @@ export interface AgentDeps {
     /** La pestaña del turno; sin ella, cada visita abre y cierra la suya. */
     tab?: BrowserTabHolder;
     newVisit?: boolean;
+    /** El tamaño de la pestaña en esta visita (`view_page viewport`); sin él, escritorio. */
+    viewport?: "mobile" | "desktop";
   }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
@@ -1722,6 +1724,12 @@ async function toolMirarPagina(
   }
   const pregunta = typeof args.question === "string" ? args.question.trim() : "";
   const zona = typeof args.area === "string" && args.area.trim() ? args.area.trim() : undefined;
+  // EL TELÉFONO (ensayo del 25/10: «revísala en móvil, con capturas» y Len sólo
+  // podía capturar en escritorio). `measure` ya mide los dos tamaños solo.
+  if (args.viewport !== undefined && args.viewport !== "mobile" && args.viewport !== "desktop") {
+    return { response: { ok: false, error: '"viewport" has to be "mobile" (a phone, 390×844) or "desktop" (the default).' } };
+  }
+  const enTelefono = args.viewport === "mobile";
 
   if (tipo === "medir" ? !deps.observarPagina : !deps.usarPagina) {
     return {
@@ -1776,7 +1784,9 @@ async function toolMirarPagina(
     const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
     // EN LA PESTAÑA DEL TURNO: la captura es de lo que hay en ella, como la de Claude Code.
     const tab = (session.browserTab ??= newBrowserTabHolder());
-    const visto = await visitar(() => deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab })).catch(() => null);
+    const visto = await visitar(() =>
+      deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab, ...(enTelefono ? { viewport: "mobile" as const } : {}) }),
+    ).catch(() => null);
     if (!visto) {
       return {
         response: {

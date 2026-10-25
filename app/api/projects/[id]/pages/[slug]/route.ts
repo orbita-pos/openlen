@@ -3,8 +3,8 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { db, schema } from "@/lib/db";
-import type { FormConfig, ProjectData } from "@/lib/projects/types";
-import { pageTitle, validatePageSlug } from "@/lib/projects/site-pages";
+import type { ProjectData } from "@/lib/projects/types";
+import { pageTitle, validatePageSlug, withoutPage } from "@/lib/projects/site-pages";
 import { unpublishPageDir } from "@/lib/publish/filesystem";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -144,27 +144,8 @@ export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async function DELET
   const escrito = await actualizarData({
     projectId: id,
     userId: duenoId,
-    aplicar: (actual) => {
-      if (!actual.pages?.[slug]) return { error: "not_found" };
-      const { [slug]: _removed, ...rest } = actual.pages;
-
-      // Clean the page's page-scoped form config ("<slug>:<index>" keys) so a
-      // recreated same-slug page doesn't silently re-inherit the old
-      // notify-email / redirect (wrong-recipient lead emails).
-      const forms = { ...(actual.settings?.forms ?? {}) } as Record<string, FormConfig>;
-      let formsTouched = false;
-      for (const key of Object.keys(forms)) {
-        if (key.startsWith(`${slug}:`)) {
-          delete forms[key];
-          formsTouched = true;
-        }
-      }
-      return {
-        ...actual,
-        pages: rest,
-        ...(formsTouched ? { settings: { ...actual.settings, forms } } : {}),
-      };
-    },
+    // Sin la página y sin sus ajustes de formulario: la misma regla que el `rm` de Len (`withoutPage`).
+    aplicar: (actual) => withoutPage(actual, slug) ?? { error: "not_found" },
   });
   if (!escrito.ok) {
     return json(
