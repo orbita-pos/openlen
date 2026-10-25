@@ -113,6 +113,7 @@ export default defineConfig({
       "lib/agent/design-request.test.ts",
       "lib/agent/design-block.test.ts",
       "lib/agent/design-screenshots.browser.test.ts",
+      "lib/agent/design-captures.test.ts",
       "app/api/len-email/**/*.test.ts",
       // Lo que cambió en el turno, fichero a fichero (la lente «Cambios»).
       "lib/agent/cambios-del-turno.test.ts",

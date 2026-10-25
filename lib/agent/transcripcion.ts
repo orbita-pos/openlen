@@ -31,7 +31,7 @@ import type { ProviderId } from "@/lib/ai/providers";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
-import { currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
+import { NO_SUCH_TOOL, currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
 import { MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
@@ -145,6 +145,15 @@ export interface TranscripcionGuardada {
    *  (`memoryMessageForTurn`). Se pliegan juntando las de todas las filas que
    *  el historial reenvía: lo que salió de la ventana vuelve a entrar. */
   readonly memoriaHuellas?: MemoryDigests;
+  /** LEN 3.1 · las fotos de ESTE turno que Len NO vio (no se pudieron bajar):
+   *  su nota dijo que no cargaron y no llevaron píxeles. El historial las rehace
+   *  igual, aunque ahora sí bajen: si no, el mensaje cambiaba en el turno
+   *  siguiente y se pagaba sin caché desde ahí. */
+  readonly unseenPhotos?: readonly string[];
+  /** LEN 3.1 · las capturas del modo Diseño que llevó ESTE turno, guardadas como
+   *  cualquier subida (`storeDesignCaptures`): el historial vuelve a pegar las
+   *  MISMAS detrás de las fotos, como Claude Code guarda la imagen pegada. */
+  readonly designCaptures?: readonly string[];
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
@@ -200,19 +209,44 @@ function vaciada(response: Record<string, unknown>): Record<string, unknown> {
   return { ...(typeof response.ok === "boolean" ? { ok: response.ok } : {}), [CLAVE_TOOL_RESULT]: RESULTADO_VACIADO };
 }
 
+/** Las respuestas que son el aviso del bucle a una llamada SIN herramienta (un
+ *  nombre de antes, una errata sin arreglo): esa llamada no llegó a ninguna, y se
+ *  guarda y se reenvía como la escribió el modelo. Renombrarla —como a las de las
+ *  filas de antes del cambio de nombre, que sí corrieron— hacía que el turno
+ *  siguiente leyera una llamada que el modelo nunca hizo, y pagara sin caché
+ *  desde ahí (Len 3.1, invariante de la repetición). */
+function sinHerramienta(m: Message | MensajeDelHistorial | undefined): ReadonlySet<number> {
+  const posiciones = new Set<number>();
+  m?.functionResponses?.forEach((r, j) => {
+    const aviso = r.response?.error_de_uso;
+    if (r.response?.ok === false && typeof aviso === "string" && aviso.startsWith(NO_SUCH_TOOL)) posiciones.add(j);
+  });
+  return posiciones;
+}
+
 /** Sólo estos campos de `Message`: nada más se guarda ni se reenvía. Lo pensado
  *  por Len (H15 fase 2, 02/10) se guarda con su mensaje y vuelve en los turnos
- *  siguientes, como en el arnés de DeepSeek; las fotos no (las pone la ruta). */
-function limpio<M extends Message | MensajeDelHistorial>(m: M): M {
+ *  siguientes, como en el arnés de DeepSeek; las fotos no (las pone la ruta).
+ *  `siguiente`: el mensaje de después, el que trae las respuestas a sus llamadas. */
+function limpio<M extends Message | MensajeDelHistorial>(m: M, siguiente?: Message | MensajeDelHistorial): M {
+  const llamadasTalCual = sinHerramienta(siguiente);
+  const respuestasTalCual = sinHerramienta(m);
   return {
     role: m.role,
     content: typeof m.content === "string" ? m.content : "",
     ...(m.role === "assistant" && typeof m.reasoning === "string" && m.reasoning ? { reasoning: m.reasoning } : {}),
     // Con el nombre de HOY (pieza 3: `preguntar` → `ask_user_question`): el
     // modelo no puede leer una llamada a una herramienta que ya no tiene.
-    ...(m.functionCalls?.length ? { functionCalls: m.functionCalls.map(currentToolCall) } : {}),
+    ...(m.functionCalls?.length
+      ? { functionCalls: m.functionCalls.map((c, j) => (llamadasTalCual.has(j) ? { name: c.name, args: c.args ?? {} } : currentToolCall(c))) }
+      : {}),
     ...(m.functionResponses?.length
-      ? { functionResponses: m.functionResponses.map((r) => ({ name: currentToolName(r.name), response: r.response ?? {} })) }
+      ? {
+          functionResponses: m.functionResponses.map((r, j) => ({
+            name: respuestasTalCual.has(j) ? r.name : currentToolName(r.name),
+            response: r.response ?? {},
+          })),
+        }
       : {}),
   } as M;
 }
@@ -256,7 +290,7 @@ export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: L
     ...(l.limit !== undefined ? { limit: l.limit } : {}),
     ...(l.vistaParcial ? { vistaParcial: true as const } : {}),
   }));
-  let limpios = withoutPersonalMemory(mensajes.map(limpio));
+  let limpios = withoutPersonalMemory(mensajes.map((m, i) => limpio(m, mensajes[i + 1])));
   // Lo que sólo es para la pantalla se va ANTES que nada de lo que lee el
   // modelo: que la lente pierda un diff, no que Len pierda un resultado.
   if (JSON.stringify(limpios).length > TOPE_TRANSCRIPCION) limpios = sinLoDeLaPantalla(limpios);
@@ -313,19 +347,26 @@ function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): Men
   const adjuntas = photosOf(f.attachedImage);
   // Como se mandó: sus palabras y, detrás, los avisos de ese turno.
   const texto = `${f.prefijoDelEquipo ?? ""}${f.userText}${f.transcript?.avisos ?? ""}`;
-  if (adjuntas.length === 0) return { role: "user", content: texto, opensTurn: true };
+  const sinVer = new Set(f.transcript?.unseenPhotos ?? []);
   const notas: string[] = [];
   const imagenes: InlineImage[] = [];
   for (const adjunta of adjuntas) {
-    const foto = fotos.get(adjunta.url) ?? null;
+    // La que no se vio en su turno, como entonces: sin píxeles y con su nota.
+    const foto = sinVer.has(adjunta.url) ? null : (fotos.get(adjunta.url) ?? null);
     const estado = foto === NO_CABE ? NO_CABE : foto ? "vista" : "no-cargo";
     notas.push(notaDeLaFoto(adjunta, estado));
     if (foto && foto !== NO_CABE) imagenes.push(foto);
   }
+  // Las capturas del modo Diseño van detrás de las fotos, como en el turno.
+  for (const url of f.transcript?.designCaptures ?? []) {
+    const captura = fotos.get(url);
+    if (captura && captura !== NO_CABE) imagenes.push(captura);
+  }
+  if (notas.length === 0 && imagenes.length === 0) return { role: "user", content: texto, opensTurn: true };
   return {
     role: "user",
     opensTurn: true,
-    content: `${texto}\n\n${notas.join("\n")}`,
+    content: notas.length > 0 ? `${texto}\n\n${notas.join("\n")}` : texto,
     ...(imagenes.length > 0 ? { images: imagenes } : {}),
   };
 }
@@ -352,7 +393,8 @@ export function historialDesdeLaBase(
       // no tiene sitio en un historial y no se reenvía.
       // Sin la memoria personal, también en las filas de antes de que se
       // dejara de guardar (y en las de /memoria/dueno.md).
-      for (const m of withoutPersonalMemory(f.transcript.mensajes)) if (m.role !== "system") mensajes.push(limpio({ ...m, role: m.role }));
+      const propios = withoutPersonalMemory(f.transcript.mensajes).filter((m) => m.role !== "system");
+      propios.forEach((m, i) => mensajes.push(limpio({ ...m, role: m.role as "user" | "assistant" }, propios[i + 1])));
     } else if (f.assistantReasoning.trim()) {
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }

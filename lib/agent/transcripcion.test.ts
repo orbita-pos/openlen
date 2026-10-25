@@ -99,6 +99,32 @@ describe("historialDesdeLaBase", () => {
     expect(h[2]!.functionResponses![0]!.name).toBe("ask_user_question");
   });
 
+  // Len 3.1 (invariante de la repetición): una llamada con un nombre de antes HECHA
+  // HOY no llegó a ninguna herramienta — su respuesta es el aviso del bucle —, así
+  // que vuelve como la escribió el modelo; renombrada, el turno siguiente leía una
+  // llamada que nunca hizo y pagaba sin caché desde ahí.
+  it("Len 3.1 · una llamada sin herramienta (nombre de antes, hoy) se guarda y vuelve como la escribió el modelo", () => {
+    const aviso = { ok: false, error_de_uso: 'There is no tool called "mirar_pagina". It is called "view_page" now. Call one of the tools you have declared, with its exact name.' };
+    const turno: Message[] = [
+      { role: "assistant", content: "", functionCalls: [{ name: "mirar_pagina", args: { tipo: "medir" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "mirar_pagina", response: aviso }] },
+      { role: "assistant", content: "Uso view_page." },
+    ];
+    const guardada = transcripcionParaGuardar(turno, new Map());
+    expect(guardada.mensajes[0]!.functionCalls).toEqual([{ name: "mirar_pagina", args: { tipo: "medir" } }]);
+    expect(guardada.mensajes[1]!.functionResponses![0]!.name).toBe("mirar_pagina");
+    const h = historialDesdeLaBase([{ userText: "mira", assistantReasoning: "", transcript: guardada }]);
+    expect(h[1]!.functionCalls).toEqual([{ name: "mirar_pagina", args: { tipo: "medir" } }]);
+    // BRAZO DE CONTROL: la misma llamada con una respuesta de verdad (una fila de antes del cambio) se renombra.
+    const vieja = historialDesdeLaBase([
+      fila("mira", [
+        { role: "assistant", content: "", functionCalls: [{ name: "mirar_pagina", args: { tipo: "medir" } }] },
+        { role: "user", content: "", functionResponses: [{ name: "mirar_pagina", response: { ok: true, contraste: "bien" } }] },
+      ]),
+    ]);
+    expect(vieja[1]!.functionCalls![0]!.name).toBe("view_page");
+  });
+
   // Ensayo de caja de crear-es-len (06/10): el dueño paró con ■ una «reescribe
   // la portada» a mitad del Write; el historial sólo decía «La escribo entera.»
   // y el turno siguiente («¿cómo va mi página?») la rehízo sin que nadie se lo

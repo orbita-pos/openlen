@@ -98,6 +98,8 @@ const mocks = vi.hoisted(() => {
   // Sin miembros por defecto: ni se piden las personas.
   proyectoCompartido: vi.fn(async () => false),
   registrarTurnoDelServidor: vi.fn(async () => {}),
+  captureDesignElements: vi.fn(async (): Promise<unknown[]> => []),
+  storeDesignCaptures: vi.fn(async (): Promise<string[]> => []),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
   avanceDelTurno: vi.fn(async () => {}),
@@ -200,7 +202,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
-vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: vi.fn(async () => []) }));
+vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/projects/chat", () => ({
   // 12 turnos: `turnosQueSeQuedan(12)` son 12, la ventana de siempre.
   contarTurnosParaElHistorial: vi.fn(async () => 12),
@@ -1649,6 +1651,58 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { images?: unknown[] }[] };
     expect(args.messages.at(-1)!.images).toEqual([FOTO]);
     expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("attachedImage");
+  });
+
+  // LEN 3.1: lo que vio el modelo vuelve igual en el turno siguiente.
+  const filaGuardada = () =>
+    (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: Record<string, unknown> | null }])[1].transcript;
+  /** Un turno que escribió algo: sólo así se registra su fila. */
+  const turnoQueEscribe = () =>
+    mocks.runAgentLoop.mockResolvedValueOnce({
+      finalText: "listo", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+      terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "listo" }],
+    });
+
+  it("Len 3.1 · una foto que no se pudo bajar: la fila la guarda como no vista y el historial la rehace igual aunque ahora baje", async () => {
+    const URL_ROTA = "https://u/rota.jpg";
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_ROTA, null]]));
+    turnoQueEscribe();
+    await readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "ponla", attachedImage: { url: URL_ROTA } }) })));
+    expect(filaGuardada()).toMatchObject({ unseenPhotos: [URL_ROTA] });
+
+    mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, attachedImage: { url: URL_ROTA }, transcript: { ...TRANSCRITO.transcript, unseenPhotos: [URL_ROTA] } }]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_ROTA, { mimeType: "image/jpeg", dataBase64: "AAAA" }]]));
+    await readEvents(await pedir());
+    const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
+    expect(tuMensaje.content).toContain(`[Attached photo: ${URL_ROTA} (it couldn't be loaded to see it)]`);
+    expect(tuMensaje.images).toBeUndefined();
+  });
+
+  it("Len 3.1 · modo Diseño: las capturas se guardan y el turno siguiente pega las MISMAS detrás de las fotos", async () => {
+    const CAPTURA = { mimeType: "image/png", dataBase64: "Q0FQ" };
+    const URL_CAPTURA = "https://u/uploads/p1/design-1.png";
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "a\nb\nc\nd\ne\nf\n<h1>Hola</h1>\n" });
+    mocks.loadProject.mockResolvedValueOnce({
+      title: "App", subdomain: null, publishedAt: null, userBrief: "", brief: null, generatedRuntime: null,
+      data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" } },
+    });
+    mocks.captureDesignElements.mockResolvedValueOnce([CAPTURA]);
+    mocks.storeDesignCaptures.mockResolvedValueOnce([URL_CAPTURA]);
+    turnoQueEscribe();
+    const elemento = { chain: [{ path: "/src/App.tsx", line: 7, component: null }], primary: 0, tag: "h1", text: "Hola", copies: 1, screen: "#/", changes: [{ property: "font-size", before: "32px", after: "48px" }] };
+    await readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "Cambios de diseño · 1 elementos", design: { elements: [elemento] } }) })));
+    expect(mocks.storeDesignCaptures).toHaveBeenCalledWith("p1", [CAPTURA]);
+    expect(filaGuardada()).toMatchObject({ designCaptures: [URL_CAPTURA] });
+    const enviado = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { images?: unknown[] }[] };
+    expect(enviado.messages.at(-1)!.images).toEqual([CAPTURA]);
+
+    mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, designCaptures: [URL_CAPTURA] } }]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_CAPTURA, CAPTURA]]));
+    await readEvents(await pedir());
+    expect(mocks.conseguirFotos).toHaveBeenLastCalledWith([URL_CAPTURA], expect.anything());
+    const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
+    expect(tuMensaje.content).toBe(TRANSCRITO.userText);
+    expect(tuMensaje.images).toEqual([CAPTURA]);
   });
 
   // Crear es Len: hasta 4 fotos en un mensaje, como los adjuntos de DeepSeek.

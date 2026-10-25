@@ -61,6 +61,11 @@ const STEP_KEYS: Readonly<Record<string, string>> = {
   lee: "read",
 };
 
+/** Cómo empieza la respuesta del bucle a una llamada sin herramienta (un nombre
+ *  de antes, una errata sin arreglo). La transcripción la reconoce por aquí para
+ *  guardar esa llamada como la escribió el modelo (`transcripcion.ts`). */
+export const NO_SUCH_TOOL = "There is no tool called";
+
 /** El nombre de hoy de una herramienta que pudo guardarse con el de antes. */
 export function currentToolName(name: string): string {
   return Object.hasOwn(TOOL_RENAMES, name) ? TOOL_RENAMES[name]! : name;
