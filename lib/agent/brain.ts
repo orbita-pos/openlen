@@ -524,9 +524,15 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       routed(
         {
           messages: messagesForFireworks(messages),
-          ...(withTools ? { tools: wireTools } : {}),
+          // 🔴 A7 · EL CIERRE LLEVA LAS MISMAS HERRAMIENTAS, con `tool_choice:
+          // "none"`: no puede llamar ninguna, y su prefijo es el del bucle (la
+          // plantilla del modelo pone las herramientas en el prompt de sistema).
+          // Sin ellas, la llamada del cierre se pagaba entera sin caché
+          // (auditoría de los sospechosos, `cache-suspects.test.ts`).
+          tools: wireTools,
+          ...(withTools ? {} : { toolChoice: "none" as const }),
           // LOS TROZOS DE LOS ARGUMENTOS, para pintar un Write mientras se
-          // escribe. Sólo con herramientas: el cierre (`closeOut`) no tiene.
+          // escribe. Sólo en el bucle: el cierre no llama a nada.
           ...(withTools ? { streamToolArgs: true } : {}),
           maxOutputTokens,
           temperature,

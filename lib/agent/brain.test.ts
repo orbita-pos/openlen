@@ -66,10 +66,12 @@ describe("el cerebro del Agente", () => {
   // viaja en todas las vueltas, como una imagen pegada en Claude Code. Las
   // pruebas nuevas están en «la foto en la conversación», abajo.
 
-  it("el cierre de turno va sin herramientas", async () => {
+  // A7 (25/10): con las MISMAS herramientas y `tool_choice: "none"` — no puede llamar ninguna y comparte el prefijo del bucle.
+  it("el cierre de turno lleva las herramientas del bucle, sin poder llamarlas", async () => {
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
     await drain(brain.closeOut([USER]));
-    expect(fireworksStream.mock.calls[0][0].tools).toBeUndefined();
+    expect(fireworksStream.mock.calls[0][0].tools).toHaveLength(TOOLS.length);
+    expect(fireworksStream.mock.calls[0][0].toolChoice).toBe("none");
   });
 
   // 🔴 H15 (01/10): el razonamiento LLEGA al loop, para que vuelva al modelo en
@@ -158,7 +160,7 @@ describe("Len Dynamis en el cable", () => {
     expect(pedido().temperature).toBe(1);
     expect(pedido().reasoningEffortWord).toBe("max");
     expect(pedido().maxOutputTokens).toBe(65_536);
-    expect(pedido().tools).toBeUndefined();
+    expect(pedido().toolChoice).toBe("none");
   });
 
   it("la preferencia guardada no lo baja: el modo es la postura del turno", async () => {

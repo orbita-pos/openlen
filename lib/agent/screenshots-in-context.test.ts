@@ -17,14 +17,31 @@ describe("screenshots in the turn's context", () => {
     );
   });
 
-  it("🔴 only the newest screenshots keep their pixels; older batches keep their text and say they were dropped", () => {
+  // A7 (25/10): in jumps. Under the ceiling nothing moves, so earlier requests keep their prefix.
+  it("under the limit nothing is touched", () => {
+    const messages: Message[] = [results(["1"]), { role: "assistant", content: "" }, results(["2", "3"])];
+    const before = structuredClone(messages);
+    keepRecentScreenshots(messages, 3);
+    expect(messages).toEqual(before);
+  });
+
+  it("🔴 past the limit, every batch but the newest loses its pixels at once; they keep their text and say they were dropped", () => {
     const messages: Message[] = [results(["1"], "Screenshots below…"), { role: "assistant", content: "" }, results(["2", "3"]), { role: "assistant", content: "" }, results(["4"])];
     keepRecentScreenshots(messages, 3);
     expect(messages[4]!.images?.map((i) => i.dataBase64)).toEqual(["4"]);
-    expect(messages[2]!.images?.map((i) => i.dataBase64)).toEqual(["2", "3"]);
+    expect(messages[2]!.images).toBeUndefined();
     expect(messages[0]!.images).toBeUndefined();
     expect(messages[0]!.content).toContain("Screenshots below…");
     expect(messages[0]!.content).toContain("were dropped");
+  });
+
+  it("after a jump the next screenshots pile up again without touching what came before", () => {
+    const messages: Message[] = [results(["1"]), { role: "assistant", content: "" }, results(["2", "3"]), { role: "assistant", content: "" }, results(["4"])];
+    keepRecentScreenshots(messages, 3);
+    const afterJump = structuredClone(messages);
+    messages.push({ role: "assistant", content: "" }, results(["5"]));
+    keepRecentScreenshots(messages, 3);
+    expect(messages.slice(0, 5)).toEqual(afterJump);
   });
 
   it("the newest batch stays whole even above the limit, and the user's own photo is never touched", () => {

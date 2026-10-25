@@ -125,6 +125,10 @@ export interface FireworksStreamRequest {
   readonly reasoningEffortWord?: "max";
   /** Declaraciones en formato OpenAI. Sin herramientas el turno es sólo texto. */
   readonly tools?: readonly Record<string, unknown>[];
+  /** `"none"`: las herramientas viajan (el prefijo de la caché es el mismo)
+   *  pero no se puede llamar ninguna — el cierre del Agente (A7). Por defecto
+   *  `"auto"`. */
+  readonly toolChoice?: "auto" | "none";
   /** Ceder `function_call_delta` mientras llegan los argumentos. Sin él, el
    *  cable sale como siempre. */
   readonly streamToolArgs?: boolean;
@@ -187,6 +191,8 @@ export interface WireBody {
   readonly model: string;
   readonly messages: readonly Record<string, unknown>[];
   readonly tools?: readonly Record<string, unknown>[];
+  /** No entra en el prefijo (la plantilla no lo pinta): sólo decide si se puede llamar. */
+  readonly toolChoice?: "auto" | "none";
   readonly reasoningEffort?: unknown;
 }
 
@@ -334,7 +340,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
               return wire;
             })(),
             ...(request.jsonObject ? { response_format: { type: "json_object" } } : {}),
-            ...(request.tools?.length ? { tools: request.tools, tool_choice: "auto" } : {}),
+            ...(request.tools?.length ? { tools: request.tools, tool_choice: request.toolChoice ?? "auto" } : {}),
             // MANDA LA POSTURA DONDE LA HAY; DONDE NO, LA TABLA. Este cliente
             // es COMPARTIDO —sirve también `page_edit` y
             // `page_write_with_reference`— y una operación que no pregunta la
@@ -395,7 +401,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             opts.onWireBody({
               model: body.model,
               messages: body.messages,
-              ...(request.tools?.length ? { tools: request.tools } : {}),
+              ...(request.tools?.length ? { tools: request.tools, toolChoice: request.toolChoice ?? "auto" } : {}),
               ...("reasoning_effort" in body ? { reasoningEffort: (body as { reasoning_effort?: unknown }).reasoning_effort } : {}),
             });
           } catch {

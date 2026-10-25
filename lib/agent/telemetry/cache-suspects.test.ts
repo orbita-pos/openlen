@@ -54,8 +54,10 @@ function brainOn(s: FaultServer, calls: BrainCall[], extra: Partial<Parameters<t
   });
 }
 
-describe("cache suspects, pinned as they are today", () => {
-  it("closeOut: the closing call sends no tools, so it shares no prefix with the loop's calls (A7)", async () => {
+describe("cache suspects, pinned as they are today (A7: closeOut, screenshots and pruning fixed)", () => {
+  // A7 (25/10): fixed. The closing call sends the SAME tools with tool_choice "none" — it still cannot
+  // call one — so its prefix is the loop's. Before, it sent none: `part=tools`, the whole call uncached.
+  it("closeOut: the closing call keeps the loop's tools (tool_choice none), so it shares the loop's prefix", async () => {
     server = await startFaultServer({
       "/deepinfra": [
         { kind: "ok", text: "", toolCalls: [{ name: "Read", arguments: '{"file_path":"/index.html"}' }] },
@@ -75,9 +77,9 @@ describe("cache suspects, pinned as they are today", () => {
     });
     expect(calls.map((c) => c.kind)).toEqual(["loop", "closeOut"]);
     const [loop, close] = calls.map((c) => c.wire!);
-    expect(diffConsecutive(loop!, close!)).toMatchObject({ match: false, part: "tools" });
-    // Without the tools, the closing call's messages do extend the loop's.
-    expect(diffConsecutive({ ...loop!, tools: undefined }, close!)).toEqual({ match: true });
+    expect(diffConsecutive(loop!, close!)).toEqual({ match: true });
+    expect(close!.tools).toEqual(loop!.tools);
+    expect([loop!.toolChoice, close!.toolChoice]).toEqual(["auto", "none"]);
   });
 
   it("effort changed between turns: the messages still match; only reasoning_effort differs (provider-side, layer 0 will tell)", async () => {
@@ -116,7 +118,36 @@ describe("cache suspects, pinned as they are today", () => {
     expect(diffConsecutive(wire(roomy.messages), wire(tight.messages))).toMatchObject({ match: false, part: "messages", index: 3 });
   });
 
-  it("screenshots: dropping old ones rewrites the turn's own request mid-turn, and the next turn loses all of them (images_dropped)", async () => {
+  // A7 (25/10): in jumps. The first prune still rewrites from the oldest message (above); what changes is
+  // the turn after: before, one more turn under the same ceiling pruned one more reasoning, so the cut
+  // moved and every turn near the ceiling paid the history again. Now the cut points depend only on the
+  // old messages, and the next turn keeps the same cut until the history grows past the next one.
+  it("reasoning pruned under pressure: the next turn keeps the same cut, so its prefix holds", () => {
+    const turns = (n: number): MensajeDelHistorial[] =>
+      Array.from({ length: n }, (_, i) => [
+        { role: "user" as const, content: `pide ${i}`, opensTurn: true },
+        { role: "assistant" as const, content: `hecho ${i}`, reasoning: "r".repeat(1_000) },
+      ]).flat();
+    const roomy = buildAgentMessages({ state: {}, history: turns(40), prompt: "otra", maxPromptTokens: 400_000 });
+    if (!roomy.ok) throw new Error("no cupo");
+    const contextChars = roomy.messages.reduce((n, m) => n + m.content.length + (m.reasoning?.length ?? 0), 0);
+    const ceiling = Math.ceil((contextChars - 10_000) / 3.5);
+    const pruned = (h: MensajeDelHistorial[]) => {
+      const r = buildAgentMessages({ state: {}, history: h, prompt: "otra", maxPromptTokens: ceiling });
+      if (!r.ok) throw new Error("no cupo apretado");
+      return r.messages.flatMap((m, i) => (m.role === "assistant" && m.content.startsWith("hecho") && !m.reasoning ? [m.content] : []));
+    };
+    const now = pruned(turns(40));
+    expect(now.length).toBeGreaterThanOrEqual(10);
+    expect(pruned(turns(41))).toEqual(now);
+  });
+
+  // A7 (25/10): in jumps, like the microcompact. Before, from the 4th screenshot on EVERY step dropped the
+  // oldest one's pixels and rewrote an earlier message (5 breaks in 8 screenshots); now they pile up to the
+  // same 3 and, past that, all but the newest batch go at once (2 breaks), never more than 3 images.
+  // Across turns the break is accepted: keeping the pixels would re-send up to 3 images in every later
+  // request, and with jumps what is paid again runs only from the last images to the end of the turn.
+  it("screenshots: dropped in jumps mid-turn (a break every few, not every step); the next turn still loses them (accepted)", async () => {
     const shot = { mimeType: "image/png", dataBase64: "AAAA" };
     const requests: Message[][] = [];
     let step = 0;
@@ -127,7 +158,7 @@ describe("cache suspects, pinned as they are today", () => {
       openStream: (m) => {
         requests.push(structuredClone(m));
         const events: StreamEvent[] =
-          step++ < 5 ? [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, { type: "done", stopReason: { kind: "end_turn" } }] : [{ type: "text_delta", text: "Visto." }, { type: "done", stopReason: { kind: "end_turn" } }];
+          step++ < 8 ? [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, { type: "done", stopReason: { kind: "end_turn" } }] : [{ type: "text_delta", text: "Visto." }, { type: "done", stopReason: { kind: "end_turn" } }];
         return (async function* () {
           for (const e of events) yield e;
         })();
@@ -135,10 +166,9 @@ describe("cache suspects, pinned as they are today", () => {
       runTool: async () => ({ response: { ok: true, screenshot: "attached below" }, images: [shot] }),
       emit: () => {},
     });
-    // Request 4 (after the 4th screenshot) no longer carries the 1st one's pixels.
-    const inTurn = requests.slice(1).map((r, i) => diffConsecutive(wire(requests[i]!), wire(r)));
-    expect(inTurn.slice(0, 3)).toEqual([{ match: true }, { match: true }, { match: true }]);
-    expect(inTurn[3]).toMatchObject({ match: false, part: "messages" });
+    const inTurn = requests.slice(1).map((r, i) => diffConsecutive(wire(requests[i]!), wire(r)).match);
+    expect(inTurn).toEqual([true, true, true, false, true, true, false, true]);
+    expect(Math.max(...requests.map((r) => r.reduce((n, m) => n + (m.images?.length ?? 0), 0)))).toBe(3);
     // And across turns, the saved row keeps no screenshot at all.
     expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toMatchObject({ ok: false, cause: "images_dropped" });
   });

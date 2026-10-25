@@ -166,6 +166,16 @@ describe("transporte de texto en streaming", () => {
     expect(body.messages[2]).toEqual({ role: "tool", tool_call_id: "a", content: '{"ok":true}' });
   });
 
+  // A7 (25/10): el cierre del Agente manda las herramientas sin poder llamarlas, para compartir el prefijo.
+  it("con toolChoice none, las herramientas viajan y no se puede llamar ninguna", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    const tools = [{ type: "function", function: { name: "leer_estado" } }];
+    await drain(c.stream({ ...REQUEST, tools, toolChoice: "none" }));
+    const body = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(body.tools).toEqual(tools);
+    expect(body.tool_choice).toBe("none");
+  });
+
   // 🔴 H15 (01/10): como el arnés de DeepSeek (`serializeAssistant`, nota
   // `2026-08-19-deepseek-reasoning-passback-every-turn`): el asistente que pensó
   // lleva su `reasoning_content`, haya llamado herramientas o no; el que no

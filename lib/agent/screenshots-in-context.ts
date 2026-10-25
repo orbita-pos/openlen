@@ -27,19 +27,20 @@ export function screenshotsLabel(batch: readonly BatchScreenshots[]): string {
   return `Screenshots below, in order: ${parts.join("; ")}. Look at them yourself.`;
 }
 
-/** Drops the pixels of older tool-result screenshots, in place. The user's own
- *  photos (a user message without tool results) are never touched. */
+/** Drops the pixels of older tool-result screenshots, in place, IN JUMPS (A7 of
+ *  Len 3.1, like the history's microcompact): while the screenshots that keep
+ *  their pixels fit in `keep`, nothing is touched; past it, every batch but the
+ *  newest loses its pixels at once. Dropping one per step rewrote an earlier
+ *  message on every step from the 4th screenshot on, and each rewrite pays the
+ *  rest of the turn again uncached; in jumps it happens once every few, with
+ *  never more than `keep` images. The newest batch always stays whole, and the
+ *  user's own photos (a user message without tool results) are never touched. */
 export function keepRecentScreenshots(messages: Message[], keep = MAX_SCREENSHOTS_IN_CONTEXT): void {
-  let kept = 0;
-  let newest = true;
-  for (let i = messages.length - 1; i >= 0; i--) {
+  const withPixels = messages.flatMap((m, i) => (m.functionResponses?.length && m.images?.length ? [i] : []));
+  const total = withPixels.reduce((n, i) => n + messages[i]!.images!.length, 0);
+  if (total <= keep) return;
+  for (const i of withPixels.slice(0, -1)) {
     const m = messages[i]!;
-    if (!m.functionResponses?.length || !m.images?.length) continue;
-    if (newest || kept + m.images.length <= keep) {
-      kept += m.images.length;
-      newest = false;
-      continue;
-    }
     const { images: _dropped, ...rest } = m;
     messages[i] = { ...rest, content: [m.content, DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n") };
   }
