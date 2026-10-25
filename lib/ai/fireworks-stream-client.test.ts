@@ -772,3 +772,36 @@ describe("provider dialect", () => {
     expect(done.stopReason.code).toBeUndefined();
   });
 });
+
+// LAYER 0 (spec local 2026-10-24-len-3-1-layers-0-1, §4.1): the telemetry hashes
+// what is POSTed, never the app's own messages — and must not change one byte of it.
+describe("onWireBody", () => {
+  const tools = [{ type: "function", function: { name: "Read", parameters: { type: "object" } } }];
+
+  it("receives exactly what is POSTed", async () => {
+    const { client: c, fetchImpl } = client(chunk({ content: "ok" }, "stop"));
+    const seen: { messages: unknown; tools: unknown; model: string }[] = [];
+    await drain(c.stream({ ...REQUEST, tools }, { onWireBody: (b) => seen.push({ messages: b.messages, tools: b.tools, model: b.model }) }));
+    const body = JSON.parse((fetchImpl.mock.calls[0] as unknown as [string, { body: string }])[1].body);
+    expect(seen).toHaveLength(1);
+    expect(body.messages).toEqual(seen[0]!.messages);
+    expect(body.tools).toEqual(seen[0]!.tools);
+    expect(body.model).toBe(seen[0]!.model);
+  });
+
+  it("the POSTed bytes are identical with and without onWireBody", async () => {
+    const a = client(chunk({ content: "ok" }, "stop"));
+    const b = client(chunk({ content: "ok" }, "stop"));
+    await drain(a.client.stream({ ...REQUEST, tools }));
+    await drain(b.client.stream({ ...REQUEST, tools }, { onWireBody: () => {} }));
+    const bodyOf = (f: typeof a.fetchImpl) => (f.mock.calls[0] as unknown as [string, { body: string }])[1].body;
+    expect(bodyOf(b.fetchImpl)).toBe(bodyOf(a.fetchImpl));
+  });
+
+  it("a sink that throws does not break the call", async () => {
+    const { client: c } = client(chunk({ content: "ok" }, "stop"));
+    const events = await drain(c.stream(REQUEST, { onWireBody: () => { throw new Error("boom"); } }));
+    expect(events.at(-1)).toMatchObject({ type: "done", stopReason: { kind: "end_turn" } });
+  });
+});
+
