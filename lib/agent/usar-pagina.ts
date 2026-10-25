@@ -38,7 +38,7 @@ import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { esperarALaRed, origenDeMedida, type DocumentoServido } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-del-error";
-import { lanzarChromium } from "@/lib/ai/visual-quality-renderer";
+import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import type { BrowserTabHolder, PasoDeUso } from "@/lib/agent/pasos-de-uso";
@@ -705,7 +705,16 @@ export interface VisitaParams {
   readonly tab?: BrowserTabHolder;
   /** Empezar de cero en la pestaña, como un visitante nuevo. */
   readonly newVisit?: boolean;
+  /** El tamaño de la pestaña en esta visita: un teléfono (390×844, el mismo del
+   *  pase de móvil de `measure`) o, si no se dice, escritorio. */
+  readonly viewport?: "mobile" | "desktop";
 }
+
+/** Escritorio, el de siempre de la pestaña. */
+const DESKTOP_TAB_VIEWPORT = { width: 1280, height: 900 } as const;
+const tabViewportOf = (v: VisitaParams["viewport"]) => (v === "mobile" ? VISUAL_QUALITY_MOBILE_VIEWPORT : DESKTOP_TAB_VIEWPORT);
+const tabSizeLabel = (v: { width: number; height: number }) =>
+  v === VISUAL_QUALITY_MOBILE_VIEWPORT ? `phone-sized (${v.width}×${v.height})` : `desktop-sized (${v.width}×${v.height})`;
 
 export interface SignedInAs {
   readonly email: string;
@@ -946,6 +955,8 @@ interface OpenTab {
   /** Our own DevTools session, to make the page stand still between calls. */
   cdp: CDPSession | null;
   standingStill: boolean;
+  /** El tamaño que tiene ahora la pestaña (`viewport` de la visita). */
+  viewport: { width: number; height: number };
 }
 
 /** Una pestaña que nadie usa en este tiempo se cierra sola (el turno la cierra antes). */
@@ -967,7 +978,7 @@ async function openTab(internals: VisitaInternals, signedInAs: SignedInAs | null
   const browser = await (internals.lanzar ?? lanzarChromium)();
   try {
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 900 });
+    await page.setViewport(DESKTOP_TAB_VIEWPORT);
     const origen = await origenDeMedida();
     const tab: OpenTab = {
       browser,
@@ -985,6 +996,7 @@ async function openTab(internals: VisitaInternals, signedInAs: SignedInAs | null
       sessionScript: null,
       cdp: null,
       standingStill: false,
+      viewport: DESKTOP_TAB_VIEWPORT,
     };
     await installSubresourceSsrfGuard(page, {
       allowOrigins: [origen.origin],
@@ -1193,6 +1205,23 @@ async function visitTab(
   const enUnaApp = Boolean(p.vista?.app);
   const inicio = (doc: DocumentoServido) => doc.url + (opciones?.hash ?? "");
 
+  // EL TAMAÑO, antes de cargar: cada visita dice el suyo (escritorio si no), así
+  // que un teléfono no se queda puesto para la siguiente. En una página ya
+  // abierta es el `browser_resize` de Playwright: le llega un `resize` y sigue.
+  const viewport = tabViewportOf(p.viewport);
+  const resized = tab.viewport !== viewport;
+  if (resized) {
+    await tab.page.setViewport(viewport);
+    tab.viewport = viewport;
+    // Una página ya abierta atiende su `resize` en el fotograma siguiente: que
+    // el primer paso no la lea antes (medido: leía aún 390 tras volver a 1280).
+    if (tab.doc) {
+      await tab.page
+        .evaluate("new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(function () { r(); }); }); setTimeout(r, 1000); })")
+        .catch(() => undefined);
+    }
+  }
+
   // Qué visita es: la primera de la pestaña, la misma página tal cual, otra
   // pantalla de la misma versión, o la versión nueva tras cambiar los ficheros.
   let como: "nueva" | "igual" | "otra" | "recargada";
@@ -1226,15 +1255,17 @@ async function visitTab(
   const visitor = p.signedInAs
     ? `signed in as ${p.signedInAs.email} (a real session of the page's backend, closed when the visit ends; nothing else saved from before)`
     : "as a new visitor (with nothing saved from before)";
+  const enTelefono = viewport === VISUAL_QUALITY_MOBILE_VIEWPORT;
   const encabezadoDeLaVisita = {
     nueva: o.persistent
-      ? `Visit to ${p.ruta} ${visitor}, in a desktop browser tab that stays open: your next use_page in this turn carries on from where this one leaves it (in between, the page stands still).`
-      : `Visit to ${p.ruta} ${visitor}, in a desktop browser.`,
+      ? `Visit to ${p.ruta} ${visitor}, in a ${enTelefono ? `phone-sized browser tab (${viewport.width}×${viewport.height})` : "desktop browser tab"} that stays open: your next use_page in this turn carries on from where this one leaves it (in between, the page stands still).`
+      : `Visit to ${p.ruta} ${visitor}, in a ${enTelefono ? `phone-sized browser (${viewport.width}×${viewport.height})` : "desktop browser"}.`,
     igual: `Same tab as your last call, still on ${p.ruta}: the files didn't change, so the page is as you left it (what is on screen and what it saved). ${STOOD_STILL}`,
     otra: `Same tab, now on ${p.ruta}: the files didn't change, so what the page saved in the browser is kept. ${STOOD_STILL}`,
     recargada: `Same tab, ${p.ruta} loaded again with the files as they are now (they changed since your last call): what the page saved in the browser is kept, what was on screen is not.`,
   }[como];
   const lineas: string[] = [`${encabezadoDeLaVisita} ${TEXTO_DE_LA_PAGINA_ES_DATO}`];
+  if (resized && como !== "nueva") lineas.push(`(note: the tab is now ${tabSizeLabel(viewport)}.)`);
   if (o.recovered) lineas.push("(note: the tab from your last call had stopped responding, so this is a new visit.)");
   if (o.closedIdle) lineas.push(`(note: the tab from your last call was closed after ${TAB_IDLE_MS / 60_000} minutes without use, so this is a new visit.)`);
   const notas = new Set<string>();

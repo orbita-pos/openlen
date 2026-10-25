@@ -9,7 +9,7 @@
 
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { extractChrome } from "./page-chrome";
-import type { ProjectData, SitePage } from "./types";
+import type { FormConfig, ProjectData, SitePage } from "./types";
 
 export const MAX_SITE_PAGES = 20;
 
@@ -87,6 +87,25 @@ export function pageTitle(slug: string, page: SitePage | undefined): string {
   const t = page?.title?.trim();
   if (t) return t;
   return slug.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** `data` without the page `slug`, or null if it has no such page. Its JavaScript goes with it (it
+ *  lives in its html), and so do its page-scoped form configs ("<slug>:<index>"), so a recreated
+ *  same-slug page doesn't silently re-inherit the old notify-email / redirect. One rule for the
+ *  editor's DELETE and for Len's `rm`. */
+export function withoutPage(data: ProjectData, slug: string): ProjectData | null {
+  if (!data.pages?.[slug]) return null;
+  const { [slug]: _removed, ...pages } = data.pages;
+  void _removed;
+  const forms = { ...(data.settings?.forms ?? {}) } as Record<string, FormConfig>;
+  let formsTouched = false;
+  for (const key of Object.keys(forms)) {
+    if (key.startsWith(`${slug}:`)) {
+      delete forms[key];
+      formsTouched = true;
+    }
+  }
+  return { ...data, pages, ...(formsTouched ? { settings: { ...data.settings, forms } } : {}) };
 }
 
 /** The pages array publishToDir consumes — slug + html pairs. ALL non-empty

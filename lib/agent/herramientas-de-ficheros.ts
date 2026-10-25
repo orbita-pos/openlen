@@ -19,7 +19,7 @@ import { detectSlotPath } from "@/lib/html-engine";
 import { diagnosticosDeLaEscritura } from "@/lib/agent/diagnosticos-de-la-escritura";
 import { persistPage } from "@/lib/page-engine/persist";
 import { preparePage } from "@/lib/page-engine/prepare";
-import { MAX_SITE_PAGES, validatePageSlug } from "@/lib/projects/site-pages";
+import { MAX_SITE_PAGES, validatePageSlug, withoutPage } from "@/lib/projects/site-pages";
 import type { ProjectData } from "@/lib/projects/types";
 import { diagnosticosDeLaApp, shellEntry } from "@/lib/agent/compila-la-app";
 import { isFunctionsInputPath } from "@/lib/functions/project-files";
@@ -672,8 +672,7 @@ export interface GuardadoDeLaTerminal {
  * diagnósticos—, y los de la memoria (LEN.md) y la carpeta con sus reglas. Sin el «léelo
  * antes» de Write: en una terminal el fichero se lee y se escribe en el mismo
  * comando (`sed -i`), como en la de DeepSeek. Lo que no se guarda —el manual,
- * borrar un fichero del sitio, lo que su puerta rechaza— vuelve a la terminal
- * como estaba.
+ * borrar la portada, lo que su puerta rechaza— vuelve a la terminal como estaba.
  */
 export async function guardarLoDeLaTerminal(
   session: AgentSession,
@@ -728,8 +727,7 @@ export async function guardarLoDeLaTerminal(
         continue;
       }
       // LA CARPETA (pieza 9): un fichero de la carpeta se borra, como `rm` en
-      // cualquier proyecto, con su contenido archivado para deshacer. Una
-      // página, no: la quita el dueño en el editor.
+      // cualquier proyecto, con su contenido archivado para deshacer.
       if (isFolderPath(c.ruta) && deps.deleteProjectFile && Object.hasOwn(antes, c.ruta)) {
         const detalle = rutaRelativa(c.ruta);
         // UNA APP: la carpeta de antes de la primera escritura del turno, con
@@ -755,7 +753,38 @@ export async function guardarLoDeLaTerminal(
         });
         continue;
       }
-      deshacer(c.ruta, SITE_FILE_REFUSAL);
+      // UNA PÁGINA que no es la portada se borra también, como `rm` en Claude
+      // Code (el ensayo del 25/10: Len dejó una /borrame que no podía quitar).
+      // Antes, a Versiones —fail-soft, como `convert_to_app`—; el Deshacer del
+      // turno la devuelve entera, título incluido (sus fotos la tienen en el
+      // «antes»). La publicada sigue igual hasta que se vuelva a publicar, como
+      // cualquier otro cambio de Len.
+      const slug = deletionRefusal(c.ruta) === null ? paginaDeRuta(c.ruta)?.page : null;
+      if (slug) {
+        const detalle = rutaRelativa(c.ruta);
+        const html = (await deps.loadProject(session.projectId, session.userId))?.data.pages?.[slug]?.html;
+        if (typeof html !== "string") {
+          rechazado = true;
+          enLaTerminal[c.ruta] = null;
+          notas.push(`${detalle}: not saved — the page was no longer there.`);
+          continue;
+        }
+        const etiqueta = etiquetaDeVersion(session, "bash", `rm ${detalle}`);
+        const versionPrevia = await deps
+          .snapshotVersion({ projectId: session.projectId, html, label: etiqueta.label, source: etiqueta.source, page: slug })
+          .catch(() => null);
+        await deps.saveProjectData(session.projectId, session.userId, (actual) => withoutPage(actual, slug) ?? actual);
+        enLaTerminal[c.ruta] = null;
+        notas.push(`${detalle}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${detalle}`, cambio: "cambio" },
+          ficherosTocados: [{ ruta: c.ruta, versionPrevia }],
+          mutoDurable: true,
+        });
+        continue;
+      }
+      deshacer(c.ruta, deletionRefusal(c.ruta) ?? SITE_FILE_REFUSAL);
       continue;
     }
     if (esDeLaPlataforma(c.ruta)) {

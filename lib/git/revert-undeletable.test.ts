@@ -1,5 +1,5 @@
 // @vitest-environment node
-// A revert that would delete a file the terminal cannot delete (a page) is refused whole: otherwise
+// A revert that would delete a file the terminal cannot delete (the home page, since 25/10) is refused whole: otherwise
 // the history would say the page is gone while the project keeps it (a deliberate difference).
 import { describe, expect, it } from "vitest";
 import { memoryStore } from "./memory-store";

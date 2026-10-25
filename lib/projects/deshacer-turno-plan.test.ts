@@ -201,3 +201,23 @@ describe("deshacer una conversión en app", () => {
     expect(despues).toEqual({ ok: false, motivo: "se_solapan", rutas: [RUTA_FORMA] });
   });
 });
+
+// 25/10: Len can `rm` a page (not the home). The turn's photos have it before and not after,
+// so its Deshacer puts it back with its title, like any other change of the turn.
+describe("a page Len deleted with rm comes back with the turn's Deshacer", () => {
+  const antes: ProjectData = { html: "<h1>inicio</h1>", pages: { borrame: { html: "<p>prueba</p>", title: "Prueba" }, menu: { html: "<h1>menú</h1>" } } };
+  const despues: ProjectData = { html: "<h1>inicio</h1>", pages: { menu: { html: "<h1>menú</h1>" } } };
+  const foto = (d: ProjectData) => {
+    const f: Record<string, string> = { "/index.html": d.html };
+    for (const [slug, p] of Object.entries(d.pages ?? {})) f[`/${slug}/index.html`] = p.html;
+    return conForma(f, d);
+  };
+
+  it("🔴 the page and its title are back; nothing else moves", () => {
+    const cambios = cambiosDelTurnoParaDeshacer(foto(antes), foto(despues));
+    expect(cambios.map((c) => c.ruta)).toEqual([RUTA_FORMA, "/borrame/index.html"]);
+    const plan = planearDeshacer(cambios, { data: despues, ficheros: {} });
+    if (!plan.ok) throw new Error(plan.motivo);
+    expect(plan.data).toEqual(antes);
+  });
+});

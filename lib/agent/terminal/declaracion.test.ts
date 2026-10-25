@@ -155,6 +155,10 @@ describe("la lista de ficheros de bash nombra la carpeta", () => {
     expect(d).toContain("/tests holds Playwright tests: not run here (there is no Playwright in this terminal), never published");
     expect(d).toContain("rm deletes a folder file");
   });
+  it("rm also deletes a page that isn't the home (25/10), and no longer says the user has to", () => {
+    expect(d).toContain("rm deletes a page other than /index.html");
+    expect(d).not.toContain("pages are removed by the user");
+  });
 });
 
 describe("git in the bash description (spec local 2026-10-15-git-for-len, §5)", () => {
