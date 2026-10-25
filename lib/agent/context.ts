@@ -419,6 +419,11 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
  *  2026-10-01: 945 una foto de 1672×941; una de 800 px, ~280. */
 export const TOKENS_POR_FOTO = 1_024;
 
+/** A7 · cada cuánto pensado acumulado hay un corte posible al podar bajo
+ *  presión, como fracción del techo: un salto quita al menos esto, y el turno
+ *  siguiente no vuelve a podar hasta que el historial crezca otro tanto. */
+export const TRAMO_DE_LO_PENSADO = 0.1;
+
 export interface BuildAgentMessagesArgs {
   /** Ver buildAgentContext.equipo. */
   equipo?: boolean;
@@ -586,18 +591,40 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // mensaje se queda; sólo pierde lo pensado. Si ni así cabe, `too_large` como
   // siempre. La cuenta es lineal (`estimateContextTokens`): quitar lo pensado
   // baja el historial en su longitud más el salto que lo separa.
+  //
+  // 🔴 A7 de Len 3.1 (25/10): Y A SALTOS, como el microcompact. Antes se quitaba
+  // justo lo que hacía falta, así que cada turno cerca del techo quitaba uno más:
+  // el corte se movía y cada turno pagaba otra vez el historial desde ahí. Los
+  // cortes posibles salen sólo de los mensajes viejos —cada `TRAMO_DE_LO_PENSADO`
+  // de lo pensado acumulado— y se usa el primero con el que cabe: mientras el
+  // historial crezca sin pasar del siguiente, el corte no se mueve y el prefijo
+  // sigue en caché.
   let caracteres = historyText.length;
   let history = args.history;
   if (!cabe(caracteres)) {
-    const podado = [...args.history];
-    for (let i = 0; i < podado.length && !cabe(caracteres); i++) {
-      const m = podado[i]!;
-      if (!m.reasoning) continue;
-      caracteres -= m.reasoning.length + 1;
-      const { reasoning: _quitado, ...sinPensar } = m;
-      podado[i] = sinPensar;
+    const tramo = Math.max(1, Math.floor(args.maxPromptTokens * 3.5 * TRAMO_DE_LO_PENSADO));
+    const cortes: number[] = [];
+    let acumulado = 0;
+    args.history.forEach((m, i) => {
+      if (!m.reasoning) return;
+      acumulado += m.reasoning.length;
+      // Un pensado muy largo puede pasar de varios tramos a la vez: un corte por tramo.
+      while (acumulado >= (cortes.length + 1) * tramo) cortes.push(i);
+    });
+    // El último salto: todo lo pensado.
+    cortes.push(args.history.length - 1);
+    for (const corte of cortes) {
+      let quitado = 0;
+      const podado = args.history.map((m, i) => {
+        if (i > corte || !m.reasoning) return m;
+        quitado += m.reasoning.length + 1;
+        const { reasoning: _quitado, ...sinPensar } = m;
+        return sinPensar;
+      });
+      caracteres = historyText.length - quitado;
+      history = podado;
+      if (cabe(caracteres)) break;
     }
-    history = podado;
   }
   if (!cabe(caracteres)) {
     return { ok: false, reason: "too_large" };
