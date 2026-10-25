@@ -11,21 +11,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 
-const DEFAULT_FILES = [
-  "lib/agent/testing/replay-invariant.test.ts",
-  "lib/agent/loop.test.ts",
-  "lib/agent/context.test.ts",
-  "lib/agent/replay-scenes/replay-scenes.test.ts",
-  "components/workspace-v2/chat/chat-scenes.test.tsx",
-  "lib/agent/brain-faults.test.ts",
-  "lib/agent/telemetry/request-fingerprint.test.ts",
-  "lib/agent/telemetry/cache-break.test.ts",
-  "lib/agent/telemetry/step-signals.test.ts",
-  "lib/agent/telemetry/step-store.test.ts",
-  "lib/agent/telemetry/step-recorder.test.ts",
-  "lib/agent/telemetry/request-diff.test.ts",
-  "lib/agent/telemetry/cache-suspects.test.ts",
-];
+import { DEFAULT_FILES } from "./len-replay-files.mjs";
 
 const files = process.env.LEN_REPLAY_GATE_FILES ? process.env.LEN_REPLAY_GATE_FILES.split(",").map((f) => f.trim()).filter(Boolean) : DEFAULT_FILES;
 const missing = files.filter((f) => !existsSync(f));
