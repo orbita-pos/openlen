@@ -15,6 +15,8 @@ const FW_MODEL = "accounts/fireworks/models/deepseek-v4p1-flash-1017";
 type Script = FireworksStreamEvent[] | "hang";
 
 const end: FireworksStreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
+/** An answer says something: a bare `end` is an empty response (A4), which is retried. */
+const said: FireworksStreamEvent = { type: "text_delta", text: "ok" };
 const usage = (inputTokens: number, cachedTokens: number, outputTokens: number): FireworksStreamEvent => ({
   type: "usage",
   inputTokens,
@@ -38,7 +40,7 @@ function fakes(scripts: Partial<Record<ProviderId, Script[]>>) {
     modelId: p.modelId,
     async *stream(request, opts) {
       calls.push({ provider: p.id, request });
-      const list = scripts[p.id] ?? [[end]];
+      const list = scripts[p.id] ?? [[said, end]];
       const script = list.length > 1 ? list.shift()! : list[0]!;
       if (script === "hang") {
         await new Promise<void>((resolve) => {
@@ -222,7 +224,7 @@ describe("Len's brain and its providers", () => {
     expect(lastDone(await pending)).toEqual({ kind: "cancelled" });
     expect(brain.fellBack()).toBe(false);
 
-    const g = fakes({ deepinfra: [[coded("context_window_exceeded")], [end]] });
+    const g = fakes({ deepinfra: [[coded("context_window_exceeded")], [said, end]] });
     const full = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: g.streamClientFor });
     const stop = lastDone(await drain(full.openStream([USER])));
     expect(stop).toMatchObject({ code: "context_window_exceeded" });
@@ -246,7 +248,7 @@ describe("Len's brain and its providers", () => {
       deepinfra: [[usage(100, 0, 10), coded("server")], [coded("server")]],
       fireworks: [
         [{ type: "text_delta", text: "ok" }, usage(1000, 200, 50), end],
-        [usage(1100, 1000, 20), end],
+        [said, usage(1100, 1000, 20), end],
       ],
     });
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: f.streamClientFor });
@@ -264,7 +266,7 @@ describe("Len's brain and its providers", () => {
   });
 
   it("a turn with no switch owes nothing back", async () => {
-    const f = fakes({ deepinfra: [[usage(500, 400, 20), end]] });
+    const f = fakes({ deepinfra: [[said, usage(500, 400, 20), end]] });
     const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: ENV, streamClientFor: f.streamClientFor });
     await drain(brain.openStream([USER]));
     expect(brain.billingAdjustment()).toEqual({ minus: { inputTokens: 0, cachedTokens: 0, outputTokens: 0, thinkingTokens: 0 }, extraCached: 0 });
@@ -278,7 +280,7 @@ describe("onCall", () => {
   it("reports each call once, with kind, provider and usage; a fallback gives the calls on both providers", async () => {
     const f = fakes({
       deepinfra: [[coded("server")], [coded("server")], [coded("server")], [coded("server")]],
-      fireworks: [[usage(100, 0, 5), end]],
+      fireworks: [[said, usage(100, 0, 5), end]],
     });
     const seen: { kind: string; provider: string; usage: unknown }[] = [];
     const brain = createAgentBrain({
