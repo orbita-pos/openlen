@@ -410,13 +410,19 @@ function install() {
 
 install();
 
-export function ChatSandbox({ dark, only }: { dark: boolean; only: Side | null }) {
+export function ChatSandbox({ dark, only, scene = null }: { dark: boolean; only: Side | null; scene?: StoredChatTurn[] | null }) {
+  // Una escena real (`?scene=`): sus turnos son la charla del lado nuevo antes
+  // de que el panel la pida.
+  useState(() => {
+    if (scene) project(PROJECT.new).chat = [...scene];
+    return null;
+  });
   const [, setTick] = useState(0);
   const [scenario, setScenario] = useState<ScenarioId | null>(null);
   const [selecting, setSelecting] = useState<Record<Side, boolean>>({ new: false, old: false });
   const [scope, setScope] = useState<Record<Side, ScopedSelection | null>>({ new: null, old: null });
   const [draft, setDraft] = useState<Record<Side, { text: string; auto: boolean } | null>>({ new: null, old: null });
-  const [chat, setChat] = useState<Record<Side, StoredChatTurn[]>>({ new: [], old: [] });
+  const [chat, setChat] = useState<Record<Side, StoredChatTurn[]>>({ new: scene ? [...scene] : [], old: [] });
   const [html, setHtml] = useState<Record<Side, string>>({ new: START_HTML, old: START_HTML });
   // Lo que el sandbox finge del resto del taller (C15, A3, I2, C19).
   const [undoMode, setUndoMode] = useState<UndoFailure>("none");
