@@ -33,6 +33,15 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Google Search needs a raster favicon; the SVG remains available to clients.
+  icons: {
+    icon: [
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/icon-192.png",
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+  },
   title: {
     default: "OpenLen — Landing pages you own. AI-built. Open source.",
     template: "%s | OpenLen",
