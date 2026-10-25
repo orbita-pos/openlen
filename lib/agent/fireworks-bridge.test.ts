@@ -56,6 +56,24 @@ describe("puente del Agente al cable de Fireworks", () => {
     expect(wire[3]).toEqual({ role: "tool", content: '{"ok":true,"modulo":"members"}', toolCallId: calls[1].id });
   });
 
+  it("🔴 una llamada sale con los MISMOS bytes en su turno y al volver de la base (jsonb reordena las claves)", () => {
+    // Lo que devolvió Postgres en producción el 24/10/2026 para
+    // `select '{"file_path":"/a","offset":1,"limit":50}'::jsonb`.
+    const fromJsonb = JSON.parse('{"limit": 50, "offset": 1, "file_path": "/a"}') as Record<string, unknown>;
+    const asTheModelWroteIt = { file_path: "/a", offset: 1, limit: 50 };
+    const turn = (args: Record<string, unknown>, response: Record<string, unknown>): Message[] => [
+      { role: "user", content: "lee" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args }] },
+      { role: "user", content: "", functionResponses: [{ name: "use_page", response }] },
+    ];
+    const inTurn = messagesForFireworks(turn(asTheModelWroteIt, { "ñu": 1, ok: true, steps: [{ url: "/", action: "click" }], zz: 2 }));
+    const replayed = messagesForFireworks(turn(fromJsonb, { ok: true, zz: 2, "ñu": 1, steps: [{ action: "click", url: "/" }] }));
+    expect(JSON.stringify(replayed)).toBe(JSON.stringify(inTurn));
+    expect(inTurn[1].toolCalls?.[0].argumentsJson).toBe('{"limit":50,"offset":1,"file_path":"/a"}');
+    // Y la respuesta, con el orden que dio la misma base: por bytes, «ñu» (3) detrás de «zz» (2).
+    expect(inTurn[2].content).toBe('{"ok":true,"zz":2,"ñu":1,"steps":[{"url":"/","action":"click"}]}');
+  });
+
   it("una herramienta de ficheros devuelve TEXTO, y va tal cual: el cat -n no llega escapado", () => {
     // Claude Code: el `tool_result` de Read es el texto que el modelo lee, con
     // sus saltos de línea y tabuladores. Serializado como JSON le llegaría

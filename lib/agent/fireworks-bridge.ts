@@ -26,7 +26,41 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function contenidoDeRespuesta(response: Record<string, unknown>): string {
   const texto = response[CLAVE_TOOL_RESULT];
-  return typeof texto === "string" ? texto : JSON.stringify(response);
+  return typeof texto === "string" ? texto : stringifyInJsonbOrder(response);
+}
+
+/** Postgres orders a jsonb object's keys by their length in bytes and then
+ *  byte by byte; this compares two keys the same way. */
+function jsonbKeyOrder(a: string, b: string): number {
+  const ba = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  return ba.length - bb.length || Buffer.compare(ba, bb);
+}
+
+function inJsonbOrder(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(inJsonbOrder);
+  if (!isRecord(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(value).sort(jsonbKeyOrder)) out[key] = inJsonbOrder(value[key]);
+  return out;
+}
+
+/**
+ * 🔴 LO QUE SE MANDÓ ES LO QUE VUELVE, como la transcripción de Claude Code,
+ * que reenvía cada `tool_use` con los mismos bytes del turno en que salió.
+ *
+ * La transcripción se guarda en una columna jsonb (`projectChatMessages.transcript`)
+ * y Postgres reordena las claves: `Read {"file_path","offset","limit"}` vuelve
+ * como `{"limit","offset","file_path"}`. Serializado tal cual, el turno siguiente
+ * dejaba de coincidir con la caché del proveedor en la primera llamada de dos o
+ * más claves, y pagaba el turno anterior entero otra vez. Medido el 24/10/2026:
+ * «graciasa» tras un turno de 32 herramientas, 29.749 tokens sin caché (1,02
+ * créditos); el «gracias» de después, tras un turno con un `web_search {query}`,
+ * 1.820 (0,20). Con el orden de jsonb en los dos sitios, lo ya guardado sale
+ * idéntico y no hay un fallo de caché al desplegar.
+ */
+export function stringifyInJsonbOrder(value: unknown): string {
+  return JSON.stringify(inJsonbOrder(value));
 }
 
 /** Baja a minúsculas los `type` del esquema, en toda su profundidad. */
@@ -117,7 +151,7 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
       const calls = message.functionCalls.map((call, index) => ({
         id: `call_${turn}_${index}`,
         name: call.name,
-        argumentsJson: JSON.stringify(call.args ?? {}),
+        argumentsJson: stringifyInJsonbOrder(call.args ?? {}),
       }));
       pending = calls;
       out.push({ role: "assistant", content: message.content, ...razonamiento(message), toolCalls: calls });
