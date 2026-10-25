@@ -468,6 +468,7 @@ export default defineConfig({
       // con Crear el 2026-10-06.
       "lib/agent/brain.test.ts",
       "lib/agent/brain-providers.test.ts",
+      "lib/agent/brain-faults.test.ts",
       "lib/agent/provider-health.test.ts",
       "lib/agent/provider-billing.test.ts",
       // Len Dynamis (lib/agent/dynamis.ts): del cuerpo del turno a lo que lee el
