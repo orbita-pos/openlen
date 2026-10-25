@@ -28,7 +28,7 @@ afterEach(async () => {
   server = null;
 });
 
-async function turn(script: Record<string, FaultStep[]>) {
+async function turn(script: Record<string, FaultStep[]>, providers = "deepinfra,fireworks") {
   server = await startFaultServer(script);
   const s = server;
   const calls: BrainCall[] = [];
@@ -37,7 +37,7 @@ async function turn(script: Record<string, FaultStep[]>) {
   const brain = createAgentBrain({
     tools: [],
     requestId: "p1",
-    env: { OPENLEN_AGENT_PROVIDERS: "deepinfra,fireworks", DEEPINFRA_API_KEY: "test", FIREWORKS_API_KEY: "test" },
+    env: { OPENLEN_AGENT_PROVIDERS: providers, DEEPINFRA_API_KEY: "test", FIREWORKS_API_KEY: "test" },
     streamClientFor: (p) =>
       createFireworksStreamClient({
         endpoint: s.url(`/${p.id}`),
@@ -123,14 +123,40 @@ describe("provider faults against real sockets", () => {
     expect({ terminalError: t.result.terminalError, deepinfra: t.requests("/deepinfra") }).toEqual({ terminalError: false, deepinfra: 1 });
   });
 
-  it("a 429 with Retry-After is retried on the same provider, not switched, and the wait ignores Retry-After (today)", async () => {
+  // DeepSeek's `bounded-llm-request-recovery`: a provider Retry-After within the 10 s cap is the wait, exact
+  // and unjittered; a longer one is never retried early — the turn goes to the fallback, or fails without one.
+  // Until 25/10 the loop waited its own backoff (500 ms ± 10 %) and ignored the provider.
+  it("a 429 with Retry-After within the cap waits exactly that, on the same provider", async () => {
     const t = await turn({ "/deepinfra": [{ kind: "http", status: 429, retryAfterS: 7 }, ok("Hecho.")] });
     expect(t.requests("/deepinfra")).toBe(2);
     expect(t.requests("/fireworks")).toBe(0);
-    expect(t.sleeps).toHaveLength(1);
-    // The loop's own backoff (500 ms ± 10 %), not the provider's 7 s.
-    expect(t.sleeps[0]).toBeGreaterThanOrEqual(450);
-    expect(t.sleeps[0]).toBeLessThanOrEqual(550);
+    expect(t.sleeps).toEqual([7_000]);
+    expect(t.result.finalText).toBe("Hecho.");
+  });
+
+  it("a Retry-After past the cap is not retried early: the turn moves to the fallback at once", async () => {
+    const t = await turn({ "/deepinfra": [{ kind: "http", status: 429, retryAfterS: 30 }], "/fireworks": [ok("Hecho.")] });
+    expect(t.requests("/deepinfra")).toBe(1);
+    expect(t.requests("/fireworks")).toBe(1);
+    expect(t.sleeps).toEqual([]);
+    expect(t.result.finalText).toBe("Hecho.");
+  });
+
+  it("with no fallback, a Retry-After past the cap ends the turn instead of retrying early", async () => {
+    const t = await turn({ "/deepinfra": [{ kind: "http", status: 429, retryAfterS: 30 }] }, "deepinfra");
+    expect(t.requests("/deepinfra")).toBe(1);
+    expect(t.sleeps).toEqual([]);
+    expect(t.result.terminalError).toBe(true);
+  });
+
+  // Layer 0, Claude Code's `slow_first_byte` and `streaming_stall`: onCall says when the first event came and
+  // the longest silence between two events, raw; whoever reads the rows applies the threshold.
+  it("onCall reports the time to the first event and the longest gap between events", async () => {
+    const t = await turn({ "/deepinfra": [{ kind: "ok", text: "Hecho del todo, gracias.", delayFirstMs: 150, pause: { after: 2, ms: 250 } }] });
+    const c = t.calls[0]!;
+    expect(c.firstEventMs).toBeGreaterThanOrEqual(140);
+    expect(c.longestGapMs).toBeGreaterThanOrEqual(240);
+    expect(c.longestGapMs!).toBeLessThan(c.durationMs);
   });
 
   it("a script that runs out fails loud: 500 «script exhausted»", async () => {

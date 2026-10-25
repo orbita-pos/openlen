@@ -13,6 +13,10 @@ export interface ToolOutcomeSummary {
   readonly argsHash: string;
   readonly ok: boolean;
   readonly errorCode?: string;
+  /** El fichero de la llamada (`file_path`), sólo como hash: para ver las relecturas. */
+  readonly pathHash?: string;
+  /** Un Read igual a otro del turno sin escritura en ese fichero entre medias (`tengu_file_read_reread`). */
+  readonly reread?: true;
 }
 
 export interface RepeatSignals {
@@ -48,7 +52,14 @@ export function summarizeBatch(
   return calls.map((call, i) => {
     const response = responses[i]?.response ?? {};
     const errorCode = toolErrorCode(response);
-    return { name: call.name, argsHash: argsHash(call.args), ok: response.ok !== false, ...(errorCode ? { errorCode } : {}) };
+    const path = call.args?.file_path;
+    return {
+      name: call.name,
+      argsHash: argsHash(call.args),
+      ok: response.ok !== false,
+      ...(errorCode ? { errorCode } : {}),
+      ...(typeof path === "string" ? { pathHash: createHash("sha1").update(path).digest("hex").slice(0, 16) } : {}),
+    };
   });
 }
 

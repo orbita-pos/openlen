@@ -2418,6 +2418,8 @@ export const agentRequestSteps = pgTable(
     effort: text("effort"),
     startedAt: timestamp("startedAt", { mode: "date" }).notNull(),
     durationMs: integer("durationMs").notNull(),
+    firstByteMs: integer("firstByteMs"),
+    longestGapMs: integer("longestGapMs"),
     inputTokens: integer("inputTokens"),
     cachedTokens: integer("cachedTokens"),
     outputTokens: integer("outputTokens"),

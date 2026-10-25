@@ -161,3 +161,28 @@ describe("createStepRecorder", () => {
     expect(f.rows.map((r) => [r.kind, r.cacheBreak, r.messageHashes !== null])).toEqual([["loop", null, true], ["closeOut", null, true]]);
   });
 });
+
+// Layer 0, the signals Claude Code keeps and Len did not: the time to the first event and the longest stall of
+// each call (raw), and a Read that repeats one already done in the turn with no write to that file since
+// (`tengu_file_read_reread`). The path never leaves: only its hash.
+describe("createStepRecorder: first byte, stalls and rereads", () => {
+  it("each row carries the call's time to first event and longest gap", () => {
+    const { store, rows } = fakeStore();
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
+    rec.onCall(call(["a"], 0, { firstEventMs: 820, longestGapMs: 4_100 }));
+    rec.finish({ endReason: "completed" });
+    expect(rows[0]).toMatchObject({ firstByteMs: 820, longestGapMs: 4_100 });
+  });
+
+  it("a Read repeated with no write to that file since is a reread; after an Edit of it, it is not", () => {
+    const { store, rows } = fakeStore();
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
+    const read = { name: "Read", argsHash: "r1", pathHash: "p1", ok: true };
+    for (const batch of [[read], [read], [{ name: "Edit", argsHash: "e1", pathHash: "p1", ok: true }], [read]]) {
+      rec.onCall(call(["a"], 0));
+      rec.onStepTools(batch);
+    }
+    rec.finish({ endReason: "completed" });
+    expect(rows.map((r) => r.tools[0]!.reread ?? false)).toEqual([false, true, false, false]);
+  });
+});

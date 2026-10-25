@@ -51,6 +51,21 @@ export function createStepRecorder(o: {
   const compacted = new Map<CallKind, boolean>();
   const pending: Pending[] = [];
   const history: ToolOutcomeSummary[][] = [];
+  /** Los Read del turno por fichero (hash de la ruta → hashes de sus argumentos), hasta que se escribe en él. */
+  const lecturas = new Map<string, Set<string>>();
+  const conRelecturas = (batch: readonly ToolOutcomeSummary[]): ToolOutcomeSummary[] =>
+    batch.map((t) => {
+      if (!t.pathHash) return t;
+      if (t.name !== "Read") {
+        lecturas.delete(t.pathHash);
+        return t;
+      }
+      const vistas = lecturas.get(t.pathHash) ?? new Set<string>();
+      lecturas.set(t.pathHash, vistas);
+      if (vistas.has(t.argsHash)) return { ...t, reread: true as const };
+      vistas.add(t.argsHash);
+      return t;
+    });
   let step = 0;
   let finished = false;
 
@@ -121,8 +136,9 @@ export function createStepRecorder(o: {
       guard("onStepTools", () => {
         const last = pending.at(-1);
         if (finished || !last) return;
-        history.push([...batch]);
-        last.tools.push(...batch);
+        const marcado = conRelecturas(batch);
+        history.push(marcado);
+        last.tools.push(...marcado);
         last.repeats = repeatSignals(history);
       });
     },
@@ -151,6 +167,8 @@ export function createStepRecorder(o: {
           effort: p.call.effort,
           startedAt: new Date(p.call.startedAt),
           durationMs: Math.round(p.call.durationMs),
+          firstByteMs: p.call.firstEventMs == null ? null : Math.round(p.call.firstEventMs),
+          longestGapMs: p.call.longestGapMs == null ? null : Math.round(p.call.longestGapMs),
           inputTokens: p.call.usage?.inputTokens ?? null,
           cachedTokens: p.call.usage?.cachedTokens ?? null,
           outputTokens: p.call.usage?.outputTokens ?? null,

@@ -17,6 +17,14 @@ export function isRetryable(code: ProviderErrorCode | undefined): boolean {
   return code !== undefined && RETRYABLE.has(code);
 }
 
+/** EL `Retry-After` DEL PROVEEDOR (DeepSeek, `bounded-llm-request-recovery`): dentro
+ *  del techo es la espera, exacta y sin azar; uno más largo no se reintenta antes
+ *  —sería desobedecer al proveedor—: el turno pasa al respaldo o termina. */
+export function providerWait(retryAfterMs: number | undefined): { readonly ms: number } | "over_cap" | null {
+  if (retryAfterMs === undefined || !Number.isFinite(retryAfterMs) || retryAfterMs <= 0) return null;
+  return retryAfterMs <= MAX_DELAY_MS ? { ms: retryAfterMs } : "over_cap";
+}
+
 /** `retry` empieza en 1. La fórmula es la de `localDelay` de DeepSeek. */
 export function retryDelayMs(retry: number, random: () => number = Math.random): number {
   const exponential = Math.min(INITIAL_DELAY_MS * 2 ** Math.min(retry - 1, 1024), MAX_DELAY_MS);

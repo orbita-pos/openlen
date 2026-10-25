@@ -22,6 +22,8 @@ function fromDb(r: DbRow): StepRow {
     effort: r.effort,
     startedAt: r.startedAt,
     durationMs: r.durationMs,
+    firstByteMs: r.firstByteMs,
+    longestGapMs: r.longestGapMs,
     inputTokens: r.inputTokens,
     cachedTokens: r.cachedTokens,
     outputTokens: r.outputTokens,

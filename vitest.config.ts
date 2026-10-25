@@ -500,6 +500,7 @@ export default defineConfig({
       "lib/agent/loop.test.ts",
       "lib/agent/repeat-reminder.test.ts",
       "lib/agent/cache-effect-declared.test.ts",
+      "lib/agent/silent-turn-reminder.test.ts",
       "lib/agent/write-preview.test.ts",
       // La compactación dentro del turno (pieza 2 de Len 2.5): todo el módulo.
       "lib/agent/compaction/**/*.test.ts",

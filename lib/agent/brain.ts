@@ -16,7 +16,7 @@ import type { CreditRate } from "@/lib/credits";
 import { esfuerzoEfectivo, operatorEffort } from "./esfuerzo-efectivo";
 import { caparEsfuerzo, capacidadDeEsfuerzo, type EsfuerzoAgente } from "./esfuerzo";
 import { coolDown, isCooling } from "./provider-health";
-import { isRetryable } from "./retry-policy";
+import { isRetryable, providerWait } from "./retry-policy";
 import {
   DYNAMIS_MAX_OUTPUT_TOKENS,
   DYNAMIS_REASONING_EFFORT,
@@ -85,6 +85,10 @@ export interface BrainCall {
   readonly effort: string | null;
   readonly startedAt: number;
   readonly durationMs: number;
+  /** Capa 0 (`slow_first_byte` de Claude Code): del inicio al primer evento; null si no llegó ninguno. */
+  readonly firstEventMs?: number | null;
+  /** Capa 0 (`streaming_stall`): el silencio más largo entre dos eventos seguidos. */
+  readonly longestGapMs?: number | null;
   readonly usage: UsageTotals | null;
   readonly stop: FireworksStopReason["kind"];
   readonly wire: WireBody | null;
@@ -403,7 +407,14 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
       if (stop.httpStatus === 402 && provider && coolDown(provider.id, Date.now())) {
         console.error(`[agent] ${provider.id} sin saldo (402): ${next ? `turnos a ${PROVIDER_LABEL[next.id]}` : "sin respaldo"}`);
       }
-      const trigger = stop.code === "context_window_exceeded" ? "never" : isRetryable(stop.code) ? "retryable" : "now";
+      // Un `Retry-After` más largo que el techo: no se espera ni se reintenta antes,
+      // se pasa al respaldo ya (DeepSeek delega en la política siguiente).
+      const trigger =
+        stop.code === "context_window_exceeded"
+          ? "never"
+          : isRetryable(stop.code) && providerWait(stop.retryAfterMs) !== "over_cap"
+            ? "retryable"
+            : "now";
       if (trigger === "retryable") failuresOnCurrent += 1;
       switching =
         next !== undefined &&
@@ -446,6 +457,9 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     else outer?.addEventListener("abort", onOuterAbort, { once: true });
     let sawEvent = false;
     let timedOut = false;
+    let firstEventAt: number | null = null;
+    let lastEventAt = 0;
+    let longestGapMs: number | null = null;
     const timer = hasNext
       ? setTimeout(() => {
           if (sawEvent) return;
@@ -461,6 +475,10 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
         signal: callAbort.signal,
         ...(options.onCall ? { onWireBody: (body: WireBody) => { wire = body; } } : {}),
       })) {
+        const at = Date.now();
+        if (firstEventAt === null) firstEventAt = at;
+        else longestGapMs = Math.max(longestGapMs ?? 0, at - lastEventAt);
+        lastEventAt = at;
         if (!sawEvent) {
           sawEvent = true;
           clearTimeout(timer);
@@ -503,6 +521,8 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
             effort: sent?.reasoningEffort == null ? null : String(sent.reasoningEffort),
             startedAt,
             durationMs: Date.now() - startedAt,
+            firstEventMs: firstEventAt === null ? null : firstEventAt - startedAt,
+            longestGapMs,
             usage: callUsage,
             stop: stopKind,
             wire: sent,

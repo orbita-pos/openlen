@@ -18,6 +18,9 @@ export interface StepRow {
   readonly effort: string | null;
   readonly startedAt: Date;
   readonly durationMs: number;
+  /** Capa 0: del inicio al primer evento, y el silencio más largo entre eventos (ms). */
+  readonly firstByteMs: number | null;
+  readonly longestGapMs: number | null;
   readonly inputTokens: number | null;
   readonly cachedTokens: number | null;
   readonly outputTokens: number | null;

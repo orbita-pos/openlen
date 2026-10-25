@@ -23,6 +23,8 @@ async function main() {
       "effort" text,
       "startedAt" timestamp NOT NULL,
       "durationMs" integer NOT NULL,
+      "firstByteMs" integer,
+      "longestGapMs" integer,
       "inputTokens" integer,
       "cachedTokens" integer,
       "outputTokens" integer,
@@ -40,6 +42,9 @@ async function main() {
       "createdAt" timestamp NOT NULL DEFAULT now()
     );
   `);
+  // Para una base que ya tuviera la tabla sin estas dos (25/10).
+  await db.execute(sql`ALTER TABLE "agentRequestSteps" ADD COLUMN IF NOT EXISTS "firstByteMs" integer;`);
+  await db.execute(sql`ALTER TABLE "agentRequestSteps" ADD COLUMN IF NOT EXISTS "longestGapMs" integer;`);
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS "agentRequestSteps_projectId_kind_createdAt_idx"
       ON "agentRequestSteps" ("projectId", "kind", "createdAt");

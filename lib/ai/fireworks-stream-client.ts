@@ -23,7 +23,7 @@ import {
 import { providerUsage } from "./fireworks-client";
 import { captureRequest } from "./request-capture";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
-import { codeForInBandError, codeForProviderError, type ProviderErrorCode } from "./provider-error-code";
+import { codeForInBandError, codeForProviderError, retryAfterMs, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { presupuestoDeEsfuerzo, resolverEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
@@ -65,6 +65,9 @@ export type FireworksStopReason =
       /** El estado HTTP cuando el proveedor rechazó la petición (p. ej. 402 = sin
        *  saldo en DeepInfra). Lo lee el cerebro para decidir el respaldo. */
       readonly httpStatus?: number;
+      /** El `Retry-After` del proveedor, en ms (`retryAfterMs`). Lo respeta el
+       *  bucle, y uno más largo que el techo de espera no se reintenta antes. */
+      readonly retryAfterMs?: number;
       /** El cerebro cambió de proveedor: el bucle reintenta el paso con todos sus
        *  reintentos (spec local 2026-10-16-second-provider §3.4). */
       readonly switchedProvider?: true;
@@ -475,11 +478,13 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             try { cuerpo = await response.text(); } catch { /* sin cuerpo */ }
             const reintento = `http_${response.status}${cuerpo ? `: ${cuerpo.slice(0, 300)}` : ""}`;
             const code = codeForProviderError(response.status, cuerpo);
-            yield { type: "done", stopReason: { kind: "error", error: reintento, httpStatus: response.status, ...(code ? { code } : {}) } };
+            const espera = retryAfterMs(response.headers.get("retry-after"));
+            yield { type: "done", stopReason: { kind: "error", error: reintento, httpStatus: response.status, ...(code ? { code } : {}), ...(espera ? { retryAfterMs: espera } : {}) } };
             return;
           }
         } else {
           const code = codeForProviderError(response.status, crudo);
+          const espera = retryAfterMs(response.headers.get("retry-after"));
           yield {
             type: "done",
             stopReason: {
@@ -487,6 +492,7 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
               error: `http_${response.status}${crudo ? `: ${crudo.slice(0, 300)}` : ""}`,
               httpStatus: response.status,
               ...(code ? { code } : {}),
+              ...(espera ? { retryAfterMs: espera } : {}),
             },
           };
           return;
