@@ -154,6 +154,12 @@ export interface TranscripcionGuardada {
    *  cualquier subida (`storeDesignCaptures`): el historial vuelve a pegar las
    *  MISMAS detrás de las fotos, como Claude Code guarda la imagen pegada. */
   readonly designCaptures?: readonly string[];
+  /** LEN 3.1 (A7) · tu mensaje de ESTE turno tal y como se mandó, cuando no es
+   *  `userText`: la fila guarda también las correcciones «↳» (para el panel) y
+   *  no guarda el contexto de un hilo o de un correo. Como el `steering/message`
+   *  de DeepSeek, la corrección ya es su propio mensaje en la transcripción y el
+   *  mensaje que abrió el turno se rehace sin tocar. Ausente = `userText`. */
+  readonly sentText?: string;
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
@@ -346,7 +352,7 @@ export function notaDeLaFoto(foto: { url: string; alt?: string }, estado: "vista
 function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): MensajeDelHistorial {
   const adjuntas = photosOf(f.attachedImage);
   // Como se mandó: sus palabras y, detrás, los avisos de ese turno.
-  const texto = `${f.prefijoDelEquipo ?? ""}${f.userText}${f.transcript?.avisos ?? ""}`;
+  const texto = `${f.prefijoDelEquipo ?? ""}${f.transcript?.sentText ?? f.userText}${f.transcript?.avisos ?? ""}`;
   const sinVer = new Set(f.transcript?.unseenPhotos ?? []);
   const notas: string[] = [];
   const imagenes: InlineImage[] = [];

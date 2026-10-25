@@ -988,6 +988,11 @@ async function correrTurno(
   // ese día (plans/len-2/corridas/2026-10-01-resultados-humo). Leer la
   // guardada tampoco tumba el turno: si la base falla, UTC, y la herramienta lo dice.
   const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
+  // LO QUE SE MANDA COMO TU MENSAJE, detrás del sobre del equipo: el contexto del
+  // hilo o del correo, si lo hay, y lo que pediste. La fila guarda sólo lo escrito
+  // (y las correcciones «↳», para el panel); si difiere de esto, guarda también
+  // esto (`sentText`) para que el historial lo rehaga tal cual (A7 de Len 3.1).
+  const textoEnviado = `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`;
   const argsDelTurno = {
     mode,
     app: appDelTurno,
@@ -1039,7 +1044,7 @@ async function correrTurno(
     // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
     // Con miembros, lo escrito va con las marcas a mano neutralizadas: el único
     // <asked-by> que vale es el que pone el servidor (como en el binario).
-    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+    prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${textoEnviado}`,
     equipo: compartido,
     history,
     todoRestore: listaDelTurno.restoreLine,
@@ -1381,6 +1386,10 @@ async function correrTurno(
                     // Diseño, para que el historial rehaga este mensaje tal cual.
                     ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
                     ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
+                    // Y tu mensaje como se mandó, si no es lo que guarda la fila:
+                    // una corrección «↳» es su propio mensaje en la transcripción, y
+                    // el mensaje que abrió el turno no se reescribe (DeepSeek, `steering/message`).
+                    ...(textoEnviado !== textoDelUsuario() ? { sentText: textoEnviado } : {}),
                   }
                 : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
                   // estado si el turno lo cambió —lo plegado es de ANTES de la
