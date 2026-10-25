@@ -636,7 +636,7 @@ function TurnView({
             )}
             <div className="inline-block max-w-full rounded-2xl px-3 py-2 text-left bg-elev border bd">
               {turn.assistantReasoning.length > 0 && (
-                <div className="text-[12.5px] fg leading-relaxed whitespace-pre-wrap break-words">
+                <div className="text-[12.5px] fg leading-relaxed break-words">
                   <TextoDeLen texto={turn.assistantReasoning} rutas={rutas} onAbrir={abrirFichero} />
                 </div>
               )}

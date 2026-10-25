@@ -332,19 +332,19 @@ function PlanBody({ plan }: { plan: string }) {
         if (encabezado)
           return (
             <p key={i} className="m-0 mt-2 font-semibold">
-              <TextoDeLen texto={encabezado[1]!} />
+              <TextoDeLen enLinea texto={encabezado[1]!} />
             </p>
           );
         const vineta = /^\s*[-*]\s+(.*)$/.exec(linea);
         if (vineta)
           return (
             <p key={i} className="m-0 pl-2">
-              • <TextoDeLen texto={vineta[1]!} />
+              • <TextoDeLen enLinea texto={vineta[1]!} />
             </p>
           );
         return linea.trim() ? (
           <p key={i} className="m-0 whitespace-pre-wrap break-words">
-            <TextoDeLen texto={linea} />
+            <TextoDeLen enLinea texto={linea} />
           </p>
         ) : (
           <div key={i} className="h-1.5" />

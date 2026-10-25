@@ -55,7 +55,8 @@ describe("LenReply", () => {
 
   it("a stored visual goes where Len put it", () => {
     const { host } = mount({ actions: [{ tool: "show_widget", status: "done", summary: "", widget, textOffset: 5 }] }, "Mira: esto");
-    expect(host.textContent).toBe("Mira:<p>V</p> esto");
+    // The visual sits between two blocks (A8, Markdown): the space at the edge of a block is not shown.
+    expect(host.textContent).toBe("Mira:<p>V</p>esto");
     expect(host.querySelector('[data-testid="visual"]')!.getAttribute("data-final")).toBe("true");
   });
 
@@ -80,9 +81,9 @@ describe("LenReply", () => {
 
 // GAPS AND LINKS (24/10/2026, from production).
 describe("LenReply text", () => {
-  it("four line breaks between two notes leave one blank line, and none at the end", () => {
+  it("four line breaks between two notes leave two paragraphs, and nothing at the end", () => {
     const { host } = mount({}, "Voy a ver qué hay.\n\n\n\nEl proyecto está vacío.\n\n");
-    expect(host.querySelector("p")?.textContent).toBe("Voy a ver qué hay.\n\nEl proyecto está vacío.");
+    expect([...host.querySelectorAll("p")].map((p) => p.textContent)).toEqual(["Voy a ver qué hay.", "El proyecto está vacío."]);
   });
 
   it("a source cited as [text](url) is a link that opens in a new tab", () => {
