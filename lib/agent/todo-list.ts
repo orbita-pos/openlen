@@ -157,6 +157,48 @@ export function nearCapNotice(o: { hasList: boolean; goalContinues: boolean }): 
   );
 }
 
+/**
+ * Claude Code's TodoWrite reminder (binary 2.1.304: `todo_reminder`, its
+ * `TURNS_SINCE_WRITE: 10, TURNS_BETWEEN_REMINDERS: 10` and its text, with the
+ * tool's name). Measured in production on 24/10/2026: Len wrote a 5-step list
+ * at the start of a 40-call turn and never touched it again, so the user saw
+ * "0 of 5" while the app got built. Claude Code counts the assistant messages
+ * back through the whole conversation — earlier turns too — to the last
+ * `TodoWrite` call and to the last reminder, and reminds when both are 10 or
+ * more away, whether or not there is a list.
+ */
+export const TODO_REMINDER_TURNS = { sinceWrite: 10, betweenReminders: 10 } as const;
+
+const TODO_REMINDER_TEXT =
+  `The ${TODO_WRITE} tool hasn't been used recently. If you're working on tasks that would benefit from tracking progress, consider using the ${TODO_WRITE} tool to track progress. Also consider cleaning up the todo list if has become stale and no longer matches what you are working on. Only use it if it's relevant to the current work. This is just a gentle reminder - ignore if not applicable.`;
+
+type ConversationLike = readonly {
+  readonly role: string;
+  readonly content?: string;
+  readonly functionCalls?: readonly { readonly name: string }[];
+}[];
+
+/** The reminder for the next model call, or `null` when it isn't due. */
+export function todoReminder(messages: ConversationLike, todos: readonly TodoItem[] | null): string | null {
+  let sinceWrite = 0;
+  let sinceReminder = 0;
+  let wroteFound = false;
+  let reminderFound = false;
+  for (let i = messages.length - 1; i >= 0 && !(wroteFound && reminderFound); i--) {
+    const m = messages[i]!;
+    if (m.role === "assistant") {
+      if (!wroteFound && m.functionCalls?.some((c) => c.name === TODO_WRITE)) wroteFound = true;
+      if (!wroteFound) sinceWrite++;
+      if (!reminderFound) sinceReminder++;
+    } else if (!reminderFound && m.role === "user" && m.content?.includes(TODO_REMINDER_TEXT)) {
+      reminderFound = true;
+    }
+  }
+  if (sinceWrite < TODO_REMINDER_TURNS.sinceWrite || sinceReminder < TODO_REMINDER_TURNS.betweenReminders) return null;
+  const list = todos && todos.length > 0 ? `\n\nHere are the existing contents of your todo list:\n\n[${todoLines(todos)}]` : "";
+  return `<system-reminder>\n${TODO_REMINDER_TEXT}\n${list}\n</system-reminder>`;
+}
+
 /** Appended to the budget wrap-up at 100 %: the list as facts. */
 export function todoCapFacts(todos: readonly TodoItem[]): string {
   return `\n\nYour task list as it stands (from your last ${TODO_WRITE} call):\n${todoLines(todos)}\nName the steps that are done, the one left half-done if any, and the ones still pending.`;

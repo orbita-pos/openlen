@@ -11,6 +11,7 @@ import {
   parseTodoList,
   todoCapFacts,
   todoCounts,
+  todoReminder,
   todoSummaryLine,
   todosForTurn,
   todosFrom,
@@ -145,5 +146,37 @@ describe("the notices", () => {
     const f = todoCapFacts(list);
     expect(f).toContain("1. [completed] Home page");
     expect(f).toContain("3. [pending] Contact page");
+  });
+});
+
+describe("todoReminder (Claude Code's todo_reminder)", () => {
+  const step = (name = "Write") => ({ role: "assistant", content: "", functionCalls: [{ name }] });
+  const results = (content = "") => ({ role: "user", content });
+  const calls = (n: number) => Array.from({ length: n }, () => [step(), results()]).flat();
+
+  it("stays quiet until 10 model calls have passed since the last todo_write", () => {
+    const conversation = [step(TODO_WRITE), results(), ...calls(9)];
+    expect(todoReminder(conversation, list)).toBeNull();
+    expect(todoReminder([...conversation, step()], list)).not.toBeNull();
+  });
+
+  it("carries Claude Code's text and the list as it stands", () => {
+    const r = todoReminder([step(TODO_WRITE), ...calls(10)], list)!;
+    expect(r.startsWith("<system-reminder>\nThe todo_write tool hasn't been used recently.")).toBe(true);
+    expect(r).toContain(
+      "This is just a gentle reminder - ignore if not applicable.\n\n\nHere are the existing contents of your todo list:\n\n[1. [completed] Home page",
+    );
+    expect(r.endsWith("]\n</system-reminder>")).toBe(true);
+  });
+
+  it("reminds without a list too, as Claude Code does", () => {
+    const r = todoReminder(calls(10), null)!;
+    expect(r).not.toContain("existing contents");
+  });
+
+  it("waits another 10 calls after a reminder, counting earlier turns of the conversation", () => {
+    const reminded = [...calls(10), results(todoReminder(calls(10), list)!)];
+    expect(todoReminder([...reminded, ...calls(9)], list)).toBeNull();
+    expect(todoReminder([...reminded, ...calls(10)], list)).not.toBeNull();
   });
 });
