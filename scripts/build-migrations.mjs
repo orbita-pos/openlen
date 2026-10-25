@@ -216,6 +216,10 @@ const targets = [
   // with IF NOT EXISTS. 🔴 Before the code: connect_shopify_store, Len's PROJECT STATE,
   // the terminal's curl and the Shopify tab read it.
   "shopify-migrate",
+  // LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1): agentRequestSteps. New,
+  // with IF NOT EXISTS. 🔴 Before the code: the agent route writes it on every model call
+  // (best effort — without the table the turn goes on and the store logs the failure).
+  "agent-steps-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE

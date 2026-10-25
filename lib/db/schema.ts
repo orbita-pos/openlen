@@ -2395,6 +2395,46 @@ export const creditLedger = pgTable(
   ],
 );
 
+// LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.1): one row per
+// call Len makes to the provider — cost, cache, the cause of any cache break and
+// what each tool batch did. Hashes and codes only, never customer text. Written by
+// lib/agent/telemetry/step-recorder.ts; pruned to 90 days by its store.
+export const agentRequestSteps = pgTable(
+  "agentRequestSteps",
+  {
+    id: text("id").primaryKey(),
+    /** Sin FK, como creditLedger: borrar un proyecto no borra lo medido. */
+    projectId: text("projectId").notNull(),
+    turnId: text("turnId").notNull(),
+    step: integer("step").notNull(),
+    kind: text("kind").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    effort: text("effort"),
+    startedAt: timestamp("startedAt", { mode: "date" }).notNull(),
+    durationMs: integer("durationMs").notNull(),
+    inputTokens: integer("inputTokens"),
+    cachedTokens: integer("cachedTokens"),
+    outputTokens: integer("outputTokens"),
+    reasoningTokens: integer("reasoningTokens"),
+    systemHash: text("systemHash"),
+    toolsHash: text("toolsHash"),
+    prefixHash: text("prefixHash").notNull(),
+    messageCount: integer("messageCount").notNull(),
+    turnFirstMessageCount: integer("turnFirstMessageCount"),
+    messageHashes: jsonb("messageHashes"),
+    tools: jsonb("tools"),
+    repeats: jsonb("repeats"),
+    cacheBreak: jsonb("cacheBreak"),
+    endReason: text("endReason"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("agentRequestSteps_projectId_kind_createdAt_idx").on(t.projectId, t.kind, t.createdAt),
+    index("agentRequestSteps_createdAt_idx").on(t.createdAt),
+  ],
+);
+
 // La revisión de seguridad al publicar (lib/security-review, spec local
 // 2026-10-15-security-review-design): una fila por proyecto y huella — lo que
 // encontraron las reglas y el modelo, y lo que costó (lo paga OpenLen).
