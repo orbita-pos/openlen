@@ -17,12 +17,12 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Compositor({ busy = false, conPlan = true, esApp = false, compacta = false }: { busy?: boolean; conPlan?: boolean; esApp?: boolean; compacta?: boolean }) {
+function Compositor({ busy = false, conPlan = true, esApp = false, compacta = false, value = "" }: { busy?: boolean; conPlan?: boolean; esApp?: boolean; compacta?: boolean; value?: string }) {
   const [plan, setPlan] = useState(false);
   const ta = useRef<HTMLTextAreaElement | null>(null);
   return (
     <ChatComposer
-      value=""
+      value={value}
       onChange={() => {}}
       onSubmit={() => {}}
       onStop={() => {}}
@@ -195,5 +195,20 @@ describe("el compositor compacto", () => {
   it("el de siempre conserva el aviso", () => {
     const host = montar();
     expect(host.textContent).toContain("newChat.composer.disclaimer");
+  });
+});
+
+// LAS URL EN AZUL MIENTRAS SE ESCRIBEN (24/10/2026), como en la caja de Claude.
+describe("una URL en la caja", () => {
+  it("se pinta de azul en la copia de detrás, y el texto de la caja se vuelve transparente", () => {
+    const host = montar({ value: "una app como la de https://monkeytype.com/ para practicar" });
+    expect(host.querySelector("[data-link]")?.textContent).toBe("https://monkeytype.com/");
+    expect(host.querySelector("textarea")?.className).toContain("text-transparent");
+  });
+
+  it("BRAZO DE CONTROL: sin URL ni gente, una caja normal", () => {
+    const host = montar({ value: "una app para practicar escritura" });
+    expect(host.querySelector("[data-link]")).toBeNull();
+    expect(host.querySelector("textarea")?.className).not.toContain("text-transparent");
   });
 });

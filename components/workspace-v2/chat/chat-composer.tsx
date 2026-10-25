@@ -24,6 +24,7 @@ import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
+import { hasLink } from "@/lib/chat/links";
 
 const NADIE: readonly PersonaMencionable[] = [];
 const SIN_COLOR = () => "";
@@ -256,13 +257,14 @@ export function ChatComposer({
           };
           // UNA sola caja, con o sin gente: si la gente llega mientras se
           // escribe, se encienden los colores sin desmontarla ni quitarle el foco.
+          // Lo mismo al escribir una URL, que se pinta de azul (como la caja de Claude).
           return (
             <div className={compacta ? "order-2 min-w-0 flex-1 pt-[7px]" : "mt-0.5"}>
               {arroba.menu && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu}</div>}
               <CajaConMenciones
                 {...caja}
                 cajaRef={textareaRef}
-                pintar={!!mencionables}
+                pintar={!!mencionables || hasLink(value)}
                 gente={mencionables?.gente ?? NADIE}
                 colorDe={mencionables?.colorDe ?? SIN_COLOR}
                 medida="text-[14px] leading-normal"

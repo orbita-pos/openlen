@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { trozosConFormato, type Trozo } from "./formato-de-len";
+import { collapseBlankLines, trozosConFormato, type Trozo } from "./formato-de-len";
 
 const texto = (t: string): Trozo => ({ tipo: "texto", texto: t });
 const negrita = (t: string): Trozo => ({ tipo: "negrita", texto: t });
@@ -67,5 +67,41 @@ describe("trozosConFormato — el markdown que Len escribe DE VERDAD", () => {
     const original = "Listo: **Vitalvet** en el pie, `tel:+52…` y *nada más*.";
     const visible = trozosConFormato(original).map((t) => t.texto).join("");
     expect(visible).toBe("Listo: Vitalvet en el pie, tel:+52… y nada más.");
+  });
+});
+
+describe("enlaces y huecos (24/10/2026)", () => {
+  const enlace = (t: string, href = t): Trozo => ({ tipo: "enlace", texto: t, href });
+
+  it("el enlace markdown de una fuente se pinta como enlace, sin corchetes", () => {
+    // La respuesta del dólar en producción.
+    expect(trozosConFormato("según el [cierre de Investing](https://mx.investing.com/currencies/usd-mxn).")).toEqual([
+      texto("según el "),
+      enlace("cierre de Investing", "https://mx.investing.com/currencies/usd-mxn"),
+      texto("."),
+    ]);
+  });
+
+  it("una URL suelta es enlace, sin el punto de la frase", () => {
+    expect(trozosConFormato("como https://monkeytype.com/. Listo")).toEqual([texto("como "), enlace("https://monkeytype.com/"), texto(". Listo")]);
+  });
+
+  it("dentro de `código` una URL no es enlace", () => {
+    expect(trozosConFormato("`https://x.com`")).toEqual([{ tipo: "codigo", texto: "https://x.com" }]);
+  });
+
+  it("un enlace a otra cosa que http(s) no es enlace", () => {
+    expect(trozosConFormato("[clic](javascript:alert(1))").every((t) => t.tipo !== "enlace")).toBe(true);
+  });
+
+  it("cuatro saltos entre dos notas quedan en una línea en blanco, y el final no deja hueco", () => {
+    // Lo guardado del turno de monkeytype en producción.
+    const guardado = "Voy a ver qué hay ya en el proyecto antes de construir.\n\n\n\nEl proyecto está vacío.\n\n";
+    expect(collapseBlankLines(guardado)).toBe("Voy a ver qué hay ya en el proyecto antes de construir.\n\nEl proyecto está vacío.");
+  });
+
+  it("una línea en blanco sola, y una lista, se quedan como estaban", () => {
+    const t = "Qué hace:\n- uno\n- dos\n\nListo.";
+    expect(collapseBlankLines(t)).toBe(t);
   });
 });

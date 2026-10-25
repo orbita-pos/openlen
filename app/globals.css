@@ -381,6 +381,7 @@
   .workspace-v2 .bd-strong    { border-color: var(--border-strong); }
   .workspace-v2 .bg-accent-soft { background: var(--accent-soft); }
   .workspace-v2 .text-accent  { color: var(--accent); }
+  .workspace-v2 .text-link    { color: var(--link); }
   .workspace-v2 .ring-accent  { box-shadow: 0 0 0 2px var(--accent); }
   .workspace-v2 .shadow-card  { box-shadow: var(--shadow-card); }
   .workspace-v2 .shadow-elev  { box-shadow: var(--shadow-elev); }
