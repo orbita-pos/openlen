@@ -866,6 +866,15 @@ const GUARDAR_YA_CHOCO =
  *  MIT). Así la transcripción queda con cada llamada y su respuesta. */
 export const TOOL_ABORTED_BEFORE_DISPATCH = "tool call aborted before dispatch";
 
+/** A6 de Len 3.1 · lo que reciben las llamadas sin respuesta cuando un paso
+ *  falla: los textos de DeepSeek (`packages/core/session/README.md`,
+ *  `failed-step-tool-results`, MIT). La empezada pudo tener efecto; la otra no
+ *  llegó a empezar. */
+export const TOOL_OUTCOME_UNKNOWN =
+  "The tool call was interrupted after it was recorded, but no result was durably recorded. Its outcome is unknown. Decide whether to retry from the tool semantics: retry only if the operation is read-only or idempotent; if it may have side effects, first verify external state or ask the user. Do not retry blindly.";
+export const TOOL_NOT_STARTED =
+  "The tool call was interrupted before the Harness recorded it as started. Retry it if it is still needed.";
+
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
@@ -1724,6 +1733,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       response: Record<string, unknown>,
     ): Prepared<Rechazo | Ejecutada> => ({ kind: "result", value: { kind: "rechazo", name, motivo, args: original.args, response } });
 
+    /** Las que se despacharon, con su tarjeta: si el paso falla, ésas pudieron tener efecto (A6). */
+    const empezadas = new Map<number, { tool: string; summary: string }>();
     const ronda = await scheduleToolCalls<PendingCall, Rechazo | Ejecutada>({
       calls,
       maxParallel: args.maxParallelToolCalls ?? DEFAULT_MAX_PARALLEL_TOOL_CALLS,
@@ -1732,7 +1743,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         const r = reparar(original);
         return "arreglado" in r && isConcurrencySafe(r.arreglado, original.args);
       },
-      prepare: (original) => {
+      prepare: (original, indice) => {
         // LA ERRATA SE ARREGLA ANTES DE COBRAR. El presupuesto se descuenta más
         // abajo, así que reparar aquí es lo que hace que un fallo de tecleo no
         // cueste una plaza.
@@ -1791,6 +1802,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // la vez, el dueño ve todas las que están en marcha.
         const summary = sobreQue(call.args);
         args.emit({ type: "action", tool: call.name, status: "running", summary });
+        empezadas.set(indice, { tool: call.name, summary });
         return {
           kind: "dispatch",
           run: async () => ({ kind: "ejecutada", call, readOnly, summary, sig, outcome: await args.runTool(call.name, call.args) }),
@@ -1962,7 +1974,28 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       skip: (original) => {
         functionResponses.push({ name: nombreDe(original), response: { ok: false, error: TOOL_ABORTED_BEFORE_DISPATCH } });
       },
-    });
+    }).catch((fallo: unknown) => ({ fallo }));
+    if ("fallo" in ronda) {
+      const err = ronda.fallo;
+      // 🔴 A6 · EL PASO FALLÓ CON LLAMADAS SIN RESPUESTA (DeepSeek
+      // `failed-step-tool-results`, MIT). El planificador espera a las empezadas
+      // y relanza; antes el error salía del bucle, la fila se guardaba sin
+      // transcripción y el turno siguiente no sabía lo que ya habían escrito. Cada
+      // llamada recibe su respuesta, en el orden del modelo: las confirmadas
+      // intactas, la empezada un resultado desconocido (pudo tener efecto: no se
+      // repite a ciegas), la que no empezó la suya. Nada se reintenta y el turno
+      // conserva su fallo.
+      console.error("[agent] tool step failed", err);
+      for (let i = functionResponses.length; i < calls.length; i++) {
+        const empezada = empezadas.get(i);
+        if (empezada) args.emit({ type: "action", tool: empezada.tool, status: "error", summary: empezada.summary });
+        functionResponses.push({ name: nombreDe(calls[i]!), response: { ok: false, error: empezada ? TOOL_OUTCOME_UNKNOWN : TOOL_NOT_STARTED } });
+      }
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      args.emit({ type: "error", message: err instanceof Error ? err.message : String(err), code: "upstream" });
+      return buildResult(true, null, "upstream");
+    }
     if (ronda.stopped) {
       empujarLoEjecutado();
       return await finishOnCap("tool_limit");
