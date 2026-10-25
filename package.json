@@ -210,6 +210,9 @@
     "just-bash": "3.6.0",
     "lucide-react": "^1.16.0",
     "mcp-handler": "^2.3.0",
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-gfm": "^3.1.0",
+    "micromark-extension-gfm": "^3.0.0",
     "next": "15.5.28",
     "next-auth": "5.0.0-beta.32",
     "next-intl": "^4.13.0",
@@ -277,6 +280,9 @@
   "overrides": {
     "pptxgenjs": {
       "image-size": "2.0.4"
-    }
+    },
+    "mdast-util-find-and-replace": "3.0.3",
+    "unist-util-visit": "5.1.0",
+    "unist-util-visit-parents": "6.0.2"
   }
 }

@@ -15,7 +15,9 @@ import { splitReplyAtWidgets, type ReplyWidget } from "@/lib/visuals/split-reply
 import type { DesignTurn } from "./use-agent-chat";
 import { VisualFrame } from "./visual-frame";
 
-const TEXT_CLASS = "m-0 whitespace-pre-wrap break-words text-[14px] leading-[1.62] fg [text-wrap:pretty]";
+// Each block keeps its own lines (`TextoDeLen`); the wrapper is a `div` because a list or a table
+// cannot live inside a `<p>`.
+const TEXT_CLASS = "m-0 break-words text-[14px] leading-[1.62] fg [text-wrap:pretty]";
 
 export function LenReply({
   turn,
@@ -51,10 +53,14 @@ export function LenReply({
     <>
       {parts.map((p, i) =>
         p.kind === "text" ? (
-          <p key={`text-${i}`} className={TEXT_CLASS}>
-            <TextoDeLen texto={p.text} rutas={paths} {...(onOpenFile ? { onAbrir: onOpenFile } : {})} />
-            {streaming && i === lastText && <span className="nc-caret" />}
-          </p>
+          <div key={`text-${i}`} className={TEXT_CLASS}>
+            <TextoDeLen
+              texto={p.text}
+              rutas={paths}
+              {...(onOpenFile ? { onAbrir: onOpenFile } : {})}
+              {...(streaming && i === lastText ? { cola: <span className="nc-caret" /> } : {})}
+            />
+          </div>
         ) : (
           <VisualFrame key={p.key} widget={p.widget} final={!p.live} {...(onPrompt ? { onPrompt } : {})} />
         ),
