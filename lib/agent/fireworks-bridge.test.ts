@@ -218,3 +218,29 @@ describe("puente del Agente al cable de Fireworks", () => {
     expect(wire[1]).toEqual({ role: "assistant", content: "la vi" });
   });
 });
+
+// DeepSeek's `messages-historical-tool-input` (MIT): a historical call whose arguments are not a JSON object
+// cannot block every later request of the conversation — the provider rejects the whole request. It goes out
+// as `{}` only on the wire; what is stored is not touched.
+describe("historical arguments that are not an object", () => {
+  it.each([["a string", "Read /a"], ["an array", [1, 2]], ["a number", 3]])("%s goes out as {}", (_label, args) => {
+    const stored = { name: "Read", args: args as unknown as Record<string, unknown> };
+    const messages: Message[] = [
+      { role: "user", content: "x" },
+      { role: "assistant", content: "", functionCalls: [stored] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true } }] },
+    ];
+    const wire = messagesForFireworks(messages);
+    expect(wire[1]!.toolCalls![0]!.argumentsJson).toBe("{}");
+    expect(stored.args).toBe(args);
+  });
+
+  it("an object goes out as it is", () => {
+    const wire = messagesForFireworks([
+      { role: "user", content: "x" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/a" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true } }] },
+    ]);
+    expect(wire[1]!.toolCalls![0]!.argumentsJson).toBe('{"file_path":"/a"}');
+  });
+});

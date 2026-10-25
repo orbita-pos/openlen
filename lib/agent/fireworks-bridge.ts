@@ -153,7 +153,11 @@ export function messagesForFireworks(messages: readonly Message[]): FireworksStr
       const calls = message.functionCalls.map((call, index) => ({
         id: `call_${turn}_${index}`,
         name: call.name,
-        argumentsJson: stringifyInJsonbOrder(call.args ?? {}),
+        // Unos argumentos que no son un objeto no pueden tumbar todas las
+        // peticiones siguientes (el proveedor rechaza la entera): salen como
+        // `{}` sólo en el cable, lo guardado no se toca (DeepSeek,
+        // `messages-historical-tool-input`).
+        argumentsJson: stringifyInJsonbOrder(isRecord(call.args) ? call.args : {}),
       }));
       pending = calls;
       out.push({ role: "assistant", content: message.content, ...razonamiento(message), toolCalls: calls });
