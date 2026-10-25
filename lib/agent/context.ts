@@ -18,7 +18,7 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
-import { textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { directionToBriefBlock } from "@/lib/style-match/direction";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
@@ -568,7 +568,13 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que
   // ocupan contexto como en Claude Code. La del turno cuenta si se vio.
   const fotos = args.history.reduce((n, m) => n + (m.images?.length ?? 0), 0) + (args.attachedImages ?? []).filter((f) => f.visible).length;
-  const fijo = manual + (args.memoryMessage ?? "") + contextBlock + args.prompt + avisos;
+  // 🔴 LA NOTA DE CADA FOTO, YA EN ESTE TURNO (Len 3.1, escena «photo-turn»): el
+  // historial la pone detrás de tu mensaje (`mensajeDelDueno`), así que si este
+  // turno la mandaba sin ella, el siguiente dejaba de coincidir con la caché del
+  // proveedor desde tu mensaje y pagaba el turno entero otra vez. Como Claude
+  // Code, que anota la imagen pegada en el mismo mensaje en que se pega.
+  const peticion = turnRequestText({ prompt: args.prompt, avisos, attachedImages: args.attachedImages });
+  const fijo = manual + (args.memoryMessage ?? "") + contextBlock + peticion;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
     args.maxPromptTokens;
@@ -596,13 +602,49 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   if (!cabe(caracteres)) {
     return { ok: false, reason: "too_large" };
   }
-  const messages: Message[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: manual },
-    ...history,
-    ...(args.memoryMessage ? [{ role: "user" as const, content: args.memoryMessage }] : []),
-    { role: "user", content: contextBlock },
-    { role: "user", content: `${args.prompt}${avisos}` },
-  ];
+  const messages = assembleTurnMessages({
+    systemPrompt,
+    manual,
+    history,
+    memoryMessage: args.memoryMessage,
+    contextBlock,
+    prompt: peticion,
+  });
   return { ok: true, messages, systemPrompt, contextBlock, avisos };
+}
+
+/** Tu mensaje de este turno tal y como viaja: lo que pides, sus avisos y la nota
+ *  de cada foto, en el orden en que el historial lo rehará (`mensajeDelDueno`). */
+export function turnRequestText(o: {
+  readonly prompt: string;
+  readonly avisos: string;
+  readonly attachedImages?: readonly AttachedImageForContext[] | null;
+}): string {
+  const notas = (o.attachedImages ?? []).map((f) => notaDeLaFoto(f, f.visible ? "vista" : "no-cargo"));
+  return `${o.prompt}${o.avisos}${notas.length > 0 ? `\n\n${notas.join("\n")}` : ""}`;
+}
+
+/**
+ * EL ORDEN DE LA PETICIÓN DE UN TURNO, en un solo sitio: [sistema, manual,
+ * …historial, memoria, contexto, petición]. Lo usa `buildAgentMessages` y lo
+ * usan las escenas reales de Len 3.1 (`lib/agent/replay-scenes/`), que
+ * reconstruyen turnos de producción con las MISMAS piezas: si el orden cambia
+ * aquí, cambia en las dos. `prompt` ya lleva los avisos detrás.
+ */
+export function assembleTurnMessages(o: {
+  readonly systemPrompt: string;
+  readonly manual: string;
+  readonly history: readonly MensajeDelHistorial[];
+  readonly memoryMessage?: string | null;
+  readonly contextBlock: string;
+  readonly prompt: string;
+}): Message[] {
+  return [
+    { role: "system", content: o.systemPrompt },
+    { role: "user", content: o.manual },
+    ...o.history,
+    ...(o.memoryMessage ? [{ role: "user" as const, content: o.memoryMessage }] : []),
+    { role: "user", content: o.contextBlock },
+    { role: "user", content: o.prompt },
+  ];
 }

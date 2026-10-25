@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { TOKENS_POR_FOTO, avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens, gitStatusBlock } from "./context";
+import { TOKENS_POR_FOTO, assembleTurnMessages, avisosDelTurno, buildAgentContext, buildAgentMessages, estimateContextTokens, gitStatusBlock } from "./context";
 import { buildFunctionDeclarations } from "./catalog";
 import { esAdjuntoDelManual } from "./ficheros/manual";
-import type { MensajeDelHistorial } from "./transcripcion";
+import { historialDesdeLaBase, type MensajeDelHistorial } from "./transcripcion";
 import { todayLine } from "@/lib/ai/today-line";
 import { fechaLocal } from "@/lib/resultados/zona";
 
@@ -777,5 +777,52 @@ describe("avisosDelTurno — la lista de progreso (spec local 2026-10-15)", () =
 
   it("BRAZO DE CONTROL: sin línea y sin nada más, no hay avisos", () => {
     expect(avisosDelTurno({})).toBe("");
+  });
+});
+
+// LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §5.2): las escenas reales
+// arman sus turnos con `assembleTurnMessages`; tiene que ser el MISMO orden.
+describe("assembleTurnMessages", () => {
+  it("buildAgentMessages assembles through assembleTurnMessages (same output as before)", () => {
+    const history: MensajeDelHistorial[] = [
+      { role: "user", content: "antes", opensTurn: true },
+      { role: "assistant", content: "hecho" },
+    ];
+    const r = buildAgentMessages({ state: {}, history, prompt: "hola", memoryMessage: "MEMORIA", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.messages.map((m) => m.content)).toEqual([r.systemPrompt, r.messages[1]!.content, "antes", "hecho", "MEMORIA", r.contextBlock, `hola${r.avisos}`]);
+    expect(
+      assembleTurnMessages({
+        systemPrompt: r.systemPrompt,
+        manual: r.messages[1]!.content,
+        history,
+        memoryMessage: "MEMORIA",
+        contextBlock: r.contextBlock,
+        prompt: `hola${r.avisos}`,
+      }),
+    ).toEqual(r.messages);
+  });
+
+  // 🔴 La escena «photo-turn»: el turno con foto mandaba tu mensaje sin la nota
+  // y el historial lo reconstruía con ella; el turno siguiente pagaba el de la
+  // foto entero sin caché.
+  it("🔴 a photo turn sends your message exactly as the next turn's history rebuilds it", () => {
+    const foto = { url: "https://uploads.openlen.com/p/foto.webp", alt: "portada" };
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "pon esta foto", attachedImages: [{ ...foto, visible: true }], maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    const pixeles = { mimeType: "image/webp", dataBase64: "AAAA" };
+    const [rehecho] = historialDesdeLaBase(
+      [{ userText: "pon esta foto", assistantReasoning: "", transcript: { mensajes: [], leidos: [], ...(r.avisos ? { avisos: r.avisos } : {}) }, attachedImage: foto }],
+      undefined,
+      new Map([[foto.url, pixeles]]),
+    );
+    expect(r.messages.at(-1)!.content).toBe(rehecho!.content);
+    expect(r.messages.at(-1)!.content).toContain(`[Attached photo: ${foto.url} — «portada»]`);
+  });
+
+  it("BRAZO DE CONTROL: without a photo the message is the prompt and its notices, byte for byte", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.messages.at(-1)!.content).toBe(`hola${r.avisos}`);
   });
 });
