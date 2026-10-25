@@ -3,6 +3,7 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { runAgentLoop as realRunAgentLoop, sobreQue, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN, type AgentLoopResult, type AgentStreamEvent } from "./loop";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import { withReplayInvariant } from "./testing/replay-invariant";
+import { elapsedTimeReminder } from "./elapsed-time-reminder";
 
 // LAYER 1 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §5.1): every turn
 // these tests run also proves that what the model saw replays byte for byte from
@@ -2173,6 +2174,8 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
     { type: "function_call", name: "Edit", args: {} },
     done,
   ];
+  // A3: el sobre acaba con el tiempo del turno; con el reloj parado, siempre el mismo.
+  const RELOJ = elapsedTimeReminder(0);
   const VISIBLE = '<html>\n<body>\n<div class="grid">x</div>\n</body>\n</html>';
   const herramientaQueEdita = async () => ({
     response: { ok: true },
@@ -2181,17 +2184,18 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
     page: null as string | null,
   });
 
-  it("una tanda sin diagnósticos deja el mensaje byte a byte como antes", async () => {
+  it("una tanda sin diagnósticos deja el mensaje byte a byte como antes, más el reloj", async () => {
     const vistos: Message[][] = [];
     await runAgentLoop({
       messages: [{ role: "user", content: "x" }],
       tools: [],
       openStream: mirando(vistos, scripted(edita(), [{ type: "text_delta", text: "ok" }, done])),
       runTool: herramientaQueEdita,
+      now: () => 0,
       emit: () => {},
     });
     const conRespuestas = (vistos[1] ?? []).find((m) => m.functionResponses);
-    expect(conRespuestas?.content).toBe("");
+    expect(conRespuestas?.content).toBe(RELOJ);
   });
 
   // ⚰️ «un rechazo del almacén llega al modelo como defecto» (el carrito del
@@ -2221,14 +2225,15 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
         n += 1;
         return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`), diagnosticos: [diag] };
       },
+      now: () => 0,
       emit: () => {},
     });
     const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
     expect(sobres[0]).toBe(
-      "<new-diagnostics>Problems that appeared with this change:\n\n/index.html:\n  ⚠ [Line 3:1] El enlace dice «55 1111 2222» y lleva a tel:5599998888 [enlace-desfasado] (openlen)</new-diagnostics>",
+      "<new-diagnostics>Problems that appeared with this change:\n\n/index.html:\n  ⚠ [Line 3:1] El enlace dice «55 1111 2222» y lleva a tel:5599998888 [enlace-desfasado] (openlen)</new-diagnostics>\n\n" + RELOJ,
     );
     // La segunda tanda lo trae otra vez y ya no se repite: se le entregó.
-    expect(sobres[1]).toBe("");
+    expect(sobres[1]).toBe(RELOJ);
   });
 
   // Plan 03 de las apps: los tipos y el lint llegan DESPUÉS de la herramienta
@@ -2250,12 +2255,13 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
         return { ...(await herramientaQueEdita()), updatedHtml: VISIBLE.replace(">x<", `>x${n}<`) };
       },
       lateDiagnostics: () => tardios.shift() ?? [],
+      now: () => 0,
       emit: () => {},
     });
     const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
-    expect(sobres[0]).toBe("");
+    expect(sobres[0]).toBe(RELOJ);
     expect(sobres[1]).toBe(
-      "<new-diagnostics>Problems that appeared with this change:\n\n/src/App.tsx:\n  ✘ [Line 5:17] Type 'number' is not assignable to type 'string'. [TS2322] (typescript)</new-diagnostics>",
+      "<new-diagnostics>Problems that appeared with this change:\n\n/src/App.tsx:\n  ✘ [Line 5:17] Type 'number' is not assignable to type 'string'. [TS2322] (typescript)</new-diagnostics>\n\n" + RELOJ,
     );
   });
 
@@ -2271,10 +2277,11 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
       openStream: mirando(vistos, scripted(edita(), edita(), [{ type: "text_delta", text: "ok" }, done])),
       runTool: async () => herramientaQueEdita(),
       lateNotices: async () => avisos.shift() ?? [],
+      now: () => 0,
       emit: () => {},
     });
     const sobres = (vistos.at(-1) ?? []).filter((m) => m.functionResponses).map((m) => m.content as string);
-    expect(sobres).toEqual(["", aviso]);
+    expect(sobres).toEqual([RELOJ, `${aviso}\n\n${RELOJ}`]);
   });
 });
 
@@ -4144,5 +4151,46 @@ describe("a step that fails with calls unanswered", () => {
     const asked = (r.transcripcion ?? []).filter((m) => m.role === "assistant" && m.functionCalls?.length).at(-1)!;
     expect(asked.functionCalls!.map((c) => c.args.file_path)).toEqual(["/a.html", "/b.html", "/c.html"]);
     expect(events.filter((e) => e.type === "error")).toEqual([expect.objectContaining({ code: "upstream" })]);
+  });
+});
+
+// A3 of Len 3.1, Claude Code's `elapsed_time_reminder` (binary 2.1.304): after every round of tools the
+// model reads how long the turn has been running, in a <system-reminder> at the end of the step — never
+// in the system prompt, so the cached prefix stays. The clock starts with the user's message and starts
+// over with a correction. Anthropic measured it: runs finish sooner and cost less.
+describe("the elapsed-time reminder", () => {
+  const call = (name: string): StreamEvent[] => [{ type: "function_call", name, args: { file_path: "/a" } }, done];
+  const toolMessages = (r: AgentLoopResult) => (r.transcripcion ?? []).filter((m) => m.functionResponses?.length);
+
+  it("each step after tools says how long the turn has run, in Claude Code's words; the user's message does not", async () => {
+    let clock = 1_000_000;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(call("Read"), call("Read"), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => { clock += 62_500; return { response: { ok: true } }; },
+      now: () => clock,
+      emit: () => {},
+    });
+    const contents = toolMessages(r).map((m) => m.content);
+    expect(contents[0]).toContain("<system-reminder>\nElapsed time so far: 1m 02s\n</system-reminder>");
+    expect(contents[1]).toContain("Elapsed time so far: 2m 05s");
+    expect(contents[1]!.endsWith("</system-reminder>")).toBe(true);
+    expect(r.transcripcion?.some((m) => m.role === "user" && !m.functionResponses?.length && m.content.includes("Elapsed"))).toBe(false);
+  });
+
+  it("a correction from the user starts the clock over", async () => {
+    let clock = 0;
+    let said = false;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(call("Read"), call("Read"), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => { clock += 600_000; return { response: { ok: true } }; },
+      leerDireccion: () => (clock >= 600_000 && !said ? ((said = true), "mejor en azul") : null),
+      now: () => clock,
+      emit: () => {},
+    });
+    const contents = toolMessages(r).map((m) => m.content);
+    expect(contents[0]).toContain("Elapsed time so far: 10m 00s");
+    expect(contents[1]).toContain("Elapsed time so far: 10m 00s");
   });
 });
