@@ -2920,6 +2920,47 @@ describe("el techo de dinero del turno", () => {
     expect(vistos.every((m) => avisos(m).length === 0)).toBe(true);
   });
 
+  // EL RECORDATORIO DE LA LISTA, el de Claude Code (lib/agent/todo-list.ts).
+  // Producción, 24/10: una lista de 5 escrita al principio y nunca tocada en 40 llamadas.
+  const recordatorios = (m: Message[]) => m.filter((x) => x.role === "user" && String(x.content).includes("tool hasn't been used recently"));
+  const listaYOnceLecturas = () =>
+    scripted(
+      [{ type: "function_call", name: "todo_write", args: { todos: [{ content: "Juego", status: "in_progress" }] } }, done],
+      ...Array.from({ length: 11 }, (): StreamEvent[] => [{ type: "function_call", name: "Read", args: { file_path: "/a" } }, done]),
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+
+  it("🔴 diez pasos sin todo_write: el paso siguiente lleva el recordatorio con la lista", async () => {
+    const vistos: Message[][] = [];
+    const guion = listaYOnceLecturas();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un juego" }],
+      tools: [{ name: "todo_write" }, { name: "Read" }],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async (name) => (name === "todo_write"
+        ? { response: { ok: true }, todos: [{ content: "Juego", status: "in_progress" as const }] }
+        : { response: { ok: true } }),
+      emit: () => {},
+    });
+    // Petición k = lo visto tras k pasos del modelo; el de todo_write es el 1.º.
+    expect(recordatorios(vistos[10]!)).toHaveLength(0);
+    expect(recordatorios(vistos[11]!)).toHaveLength(1);
+    expect(String(recordatorios(vistos[11]!)[0]!.content)).toContain("[1. [in_progress] Juego]");
+    expect(recordatorios(vistos[12]!)).toHaveLength(1);
+  });
+
+  it("BRAZO DE CONTROL: sin todo_write entre las herramientas no hay recordatorio", async () => {
+    const vistos: Message[][] = [];
+    const guion = listaYOnceLecturas();
+    await runAgentLoop({
+      messages: [{ role: "user", content: "hazme un juego" }], tools: [{ name: "Read" }],
+      openStream: (m) => { vistos.push(m.map((x) => ({ ...x }))); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(vistos.every((m) => recordatorios(m).length === 0)).toBe(true);
+  });
+
   it("🔴 al 100 % el cierre recibe la lista como hechos", async () => {
     const instrucciones: string[] = [];
     await runAgentLoop({

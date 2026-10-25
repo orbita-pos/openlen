@@ -22,7 +22,7 @@ import { DEFAULT_MAX_PARALLEL_TOOL_CALLS, isConcurrencySafe } from "@/lib/agent/
 import { ASK_USER_QUESTION, CONNECT_EMAIL_DOMAIN, REQUEST_SECRETS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
-import { TODO_WRITE, nearCapNotice, todoCapFacts, type TodoItem } from "@/lib/agent/todo-list";
+import { TODO_WRITE, nearCapNotice, todoCapFacts, todoReminder, type TodoItem } from "@/lib/agent/todo-list";
 import { scheduleToolCalls, type Prepared } from "@/lib/agent/tool-scheduler";
 import { resumenDelComando } from "@/lib/agent/terminal/resumen-del-comando";
 import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
@@ -1094,6 +1094,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   let continuaciones = 0;
   /** La lista de progreso vigente: la heredada o la última de `todo_write`. */
   let currentTodos: readonly TodoItem[] | null = args.initialTodos ?? null;
+  /** Like Claude Code, the list's reminder only goes where the tool is offered. */
+  const offersTodoWrite = args.tools.some((t) => t.name === TODO_WRITE);
   /** El aviso del 70 % sale una vez por turno. */
   let nearCapNotified = false;
 
@@ -2059,7 +2061,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     messages.push({
       role: "user",
       // El aviso del corte, el último: es lo que decide el paso siguiente.
-      content: [medido, ...avisos, imagenes.length > 0 ? screenshotsLabel(capturas) : "", cutNotice].filter((x) => x.length > 0).join("\n\n"),
+      content: [
+        medido,
+        ...avisos,
+        imagenes.length > 0 ? screenshotsLabel(capturas) : "",
+        // El recordatorio de la lista, el de Claude Code: cada 10 pasos sin `todo_write`.
+        offersTodoWrite ? (todoReminder(messages, currentTodos) ?? "") : "",
+        cutNotice,
+      ].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
       ...(imagenes.length > 0 ? { images: imagenes } : {}),
     });
