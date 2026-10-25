@@ -228,6 +228,7 @@ export default defineConfig({
       "lib/ai/origen-de-medida-carpeta.test.ts",
       "lib/ai/fireworks-tool-client.test.ts",
       "lib/ai/fireworks-stream-client.test.ts",
+      "lib/ai/request-capture.test.ts",
       // LAYER 0 of Len 3.1 (spec local 2026-10-24-len-3-1-layers-0-1).
       "lib/agent/telemetry/**/*.test.ts",
       "lib/agent/testing/**/*.test.ts",
