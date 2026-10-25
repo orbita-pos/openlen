@@ -144,6 +144,12 @@ npm.cmd run generation:visual-engine-assets:gate
 if ($LASTEXITCODE -ne 0) { throw "Visual Engine assets gate failed" }
 npm.cmd run generation:page-engine:gate
 if ($LASTEXITCODE -ne 0) { throw "Page engine gate failed" }
+# LA PUERTA DE LEN 3.1 (capa 1, spec local 2026-10-24-len-3-1-layers-0-1): lo que
+# vio el modelo tiene que volver byte a byte en el turno siguiente, las escenas
+# reales de produccion (se bajan por ssh, solo lectura) se repiten y se pintan, y
+# los fallos del proveedor se comportan como se fijo. Sin modelo y sin base: $0.
+npm.cmd run len-replay:gate
+if ($LASTEXITCODE -ne 0) { throw "len-replay:gate failed - the reason is right above" }
 npm.cmd run typecheck
 if ($LASTEXITCODE -ne 0) { throw "Typecheck failed" }
 
