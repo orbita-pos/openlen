@@ -55,6 +55,14 @@ function firstPrefixMismatch(inTurn: readonly string[], stored: readonly string[
   return undefined;
 }
 
+/** Is `earlier` sent again, byte for byte on the wire, at the start of `later`? */
+export function comparePrefix(earlier: readonly Message[], later: readonly Message[]): ReplayCheck {
+  const index = firstPrefixMismatch(wire(earlier), wire(later));
+  if (index === undefined) return { ok: true };
+  const imagesOnly = firstPrefixMismatch(wire(withoutImages(earlier)), wire(withoutImages(later))) === undefined;
+  return { ok: false, firstMismatch: index, cause: imagesOnly ? "images_dropped" : "bytes_differ" };
+}
+
 /** Does `lastRequest` (a request of the turn) come back as the start of what the
  *  next turn rebuilds from the saved `transcript`? */
 export function checkReplay(o: {
@@ -66,12 +74,7 @@ export function checkReplay(o: {
   const saved = jsonbRoundTrip(transcripcionParaGuardar(o.transcript, o.leidos));
   // The row's own user message comes first; the loop's messages follow it.
   const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved }]).slice(1) as Message[];
-  const inTurn = [...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)];
-  const rebuilt = [...o.initialMessages, ...stored];
-  const index = firstPrefixMismatch(wire(inTurn), wire(rebuilt));
-  if (index === undefined) return { ok: true };
-  const imagesOnly = firstPrefixMismatch(wire(withoutImages(inTurn)), wire(withoutImages(rebuilt))) === undefined;
-  return { ok: false, firstMismatch: index, cause: imagesOnly ? "images_dropped" : "bytes_differ" };
+  return comparePrefix([...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)], [...o.initialMessages, ...stored]);
 }
 
 /**
