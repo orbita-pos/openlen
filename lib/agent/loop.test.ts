@@ -3872,6 +3872,63 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
   });
 });
 
+// A2 OF LEN 3.1: DeepSeek's repeat-tool-reminder (3, 5, 8; never blocks), plus
+// the alternating pair seen in the 23/10 video turn (render → inspect, again).
+describe("the repeated-call reminder", () => {
+  const call = (name: string, args: Record<string, unknown>): StreamEvent[] => [{ type: "function_call", name, args }, done];
+  const toolMessages = (r: AgentLoopResult) => (r.transcripcion ?? []).filter((m) => m.functionResponses?.length);
+
+  it("the third identical call in a row gets DeepSeek's gentle reminder after its result; the call still runs", async () => {
+    let runs = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(call("Read", { file_path: "/a", limit: 5 }), call("Read", { limit: 5, file_path: "/a" }), call("Read", { file_path: "/a", limit: 5 }), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => { runs++; return { response: { ok: true, tool_result: "a" } }; },
+      emit: () => {},
+    });
+    expect(runs).toBe(3);
+    const contents = toolMessages(r).map((m) => m.content);
+    expect(contents[0]).not.toContain("repeating");
+    expect(contents[1]).not.toContain("repeating");
+    expect(contents[2]).toContain("You are repeating the exact same tool call with identical arguments.");
+  });
+
+  it("three render → inspect cycles with identical arguments get the pair reminder", async () => {
+    const R = call("render_artifact", { artifact_id: "v", revision: 10, formats: ["mp4"] });
+    const I = call("inspect_artifact", { artifact_id: "v", wait_ms: 480000 });
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(R, I, R, I, R, I, [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    const contents = toolMessages(r).map((m) => m.content);
+    expect(contents.slice(0, 5).some((c) => c.includes("alternating"))).toBe(false);
+    expect(contents[5]).toContain("You are alternating the same two tool calls with identical arguments.");
+  });
+
+  it("polling that is told to wait (pending: true) is not a loop, and a message from the user clears the count", async () => {
+    let n = 0;
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(...Array.from({ length: 4 }, () => call("inspect_artifact", { artifact_id: "v", wait_ms: 1000 })), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: n++ < 3 ? { ok: true, pending: true } : { ok: true } }),
+      emit: () => {},
+    });
+    expect(toolMessages(r).some((m) => m.content.includes("repeating"))).toBe(false);
+
+    let direcciones = 0;
+    const s = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(call("Read", { file_path: "/a" }), call("Read", { file_path: "/a" }), call("Read", { file_path: "/a" }), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: { ok: true, tool_result: "a" } }),
+      leerDireccion: () => (direcciones++ === 2 ? "sigue" : null),
+      emit: () => {},
+    });
+    expect(toolMessages(s).some((m) => m.content.includes("repeating"))).toBe(false);
+  });
+});
+
 describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
   it("pieza 5: la tarjeta de buscar en charlas pasadas enseña lo que se busca", () => {
     expect(sobreQue({ query: "horario de la tienda" })).toBe("horario de la tienda");

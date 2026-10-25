@@ -158,6 +158,19 @@ describe("asking again for a render that failed", () => {
     await expect(jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["png"] })).rejects.toMatchObject({ code: "render_already_failed", message: expect.stringMatching(/paid.*new revision/) });
   });
 
+  // A1 of Len 3.1 (the 23/10 video turn): revision 10 failed as motion_nondeterministic and Len rendered the
+  // same revision again; it was queued, ran and failed the same way. A failure that comes from the sources
+  // repeats identically: the call says so and what to change, as Claude Code's errors do.
+  it("a failure that comes from the sources is not queued again: it says what to change", async () => {
+    const { ctx, artifact, job } = await failed();
+    await f.pg.query(`update "artifactJobs" set "errorCode"='motion_nondeterministic',"diagnostics"='[]'::jsonb where "id"=$1`, [job.id]);
+    await expect(jobs.enqueueArtifactJob(ctx, artifact.id, 1, "export", { formats: ["pdf"] })).rejects.toMatchObject({
+      code: "render_already_failed",
+      message: expect.stringMatching(/motion_nondeterministic.*seek.*new revision/s),
+    });
+    expect((await jobs.getJob(ctx, job.id)).status).toBe("failed");
+  });
+
   it("leaves alone a job whose paid outcome is unknown", async () => {
     const { ctx, artifact, job } = await failed();
     await f.pg.query(`update "artifactJobs" set "status"='needs_attention',"errorCode"='external_outcome_unknown' where "id"=$1`, [job.id]);
