@@ -179,9 +179,22 @@ export interface FireworksStreamClientOptions {
   readonly effortStyle?: "budget" | "word";
 }
 
+/** The objects of one POSTed body (layer 0 of Len 3.1, spec local
+ *  2026-10-24-len-3-1-layers-0-1): the telemetry fingerprints WHAT IS SENT, never
+ *  the app's own messages — that re-serialization is exactly what breaks a cache. */
+export interface WireBody {
+  readonly model: string;
+  readonly messages: readonly Record<string, unknown>[];
+  readonly tools?: readonly Record<string, unknown>[];
+  readonly reasoningEffort?: unknown;
+}
+
 export interface FireworksStreamClient {
   readonly modelId: string;
-  stream(request: FireworksStreamRequest, opts?: { signal?: AbortSignal }): AsyncIterableIterator<FireworksStreamEvent>;
+  stream(
+    request: FireworksStreamRequest,
+    opts?: { signal?: AbortSignal; onWireBody?: (body: WireBody) => void },
+  ): AsyncIterableIterator<FireworksStreamEvent>;
 }
 
 /** Mete las imágenes en el mensaje, ETIQUETADAS cuando son varias.
@@ -307,8 +320,8 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
       // El cuerpo se construye en una funcion porque puede mandarse DOS VECES:
       // si el proveedor rechaza `reasoning_effort`, se repite sin el en vez de
       // tirarle el turno al usuario. Ver `esfuerzo-no-admitido.ts`.
-      const cuerpo = (conEsfuerzo: boolean) =>
-        JSON.stringify({
+      const cuerpo = (conEsfuerzo: boolean) => {
+        const body = {
             model: modelId,
             messages: (() => {
               const wire = request.messages.map(wireMessage);
@@ -373,7 +386,23 @@ export function createFireworksStreamClient(options: FireworksStreamClientOption
             [affinityField]: request.requestId,
             stream: true,
             stream_options: { include_usage: true },
-        });
+        };
+        // La capa 0: los MISMOS objetos que se serializan abajo. Un receptor que
+        // falla nunca toca la llamada.
+        if (opts.onWireBody) {
+          try {
+            opts.onWireBody({
+              model: body.model,
+              messages: body.messages,
+              ...(request.tools?.length ? { tools: request.tools } : {}),
+              ...("reasoning_effort" in body ? { reasoningEffort: (body as { reasoning_effort?: unknown }).reasoning_effort } : {}),
+            });
+          } catch {
+            // El cuerpo sale igual.
+          }
+        }
+        return JSON.stringify(body);
+      };
 
       const pedir = (conEsfuerzo: boolean) =>
         fetchImpl(endpoint, {
