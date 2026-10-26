@@ -3946,6 +3946,35 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(events.filter((e) => e.type === "error")).toHaveLength(1);
   });
 
+  // A11: como Claude Code, tras resumir vuelven los ficheros leídos en lo
+  // resumido, justo detrás del resumen, y entran en la marca.
+  it("🔴 A11: tras resumir, los ficheros leídos vuelven detrás del resumen y en la marca", async () => {
+    const vistos: Message[][] = [];
+    const pedidos: string[][] = [];
+    const conLectura: Message[] = [
+      { role: "system", content: "s" }, { role: "user", content: "manual" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/menu/index.html" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x".repeat(140) } }] },
+      ...historial(10).slice(2),
+    ];
+    const VUELTA: Message = { role: "user", content: "Called the Read tool with the following input: {\"file_path\":\"/menu/index.html\"}\nResult of calling the Read tool:\n1\t<h1>Menú</h1>" };
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: conLectura, tools: leer,
+      compaction: { ...compaction, restoreFiles: async (paths) => (pedidos.push([...paths]), VUELTA) },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(pedidos).toEqual([["/menu/index.html"]]);
+    expect(vistos[1]![2]!.content).toContain("<compacted-summary>");
+    expect(vistos[1]![3]).toEqual(VUELTA);
+    expect(r.compactionMark?.messages[1]).toEqual(VUELTA);
+  });
+
   it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {
     const vistos: Message[][] = [];
     const largo = "r".repeat(20_000);

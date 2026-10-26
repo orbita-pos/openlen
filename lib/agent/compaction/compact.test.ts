@@ -140,6 +140,24 @@ describe("compactIfNeeded", () => {
     expect(summarize).toHaveBeenCalledTimes(1);
   });
 
+  // A11: qué ficheros vuelven tras resumir (como `Clr` de Claude Code): los
+  // leídos en lo resumido, del más reciente al más viejo, sin los que siguen leídos en lo conservado.
+  it("🔴 A11: readPaths son los Read del tramo resumido, del más reciente, sin repetir ni los del tramo conservado", async () => {
+    const leer = (ruta: string): Message[] => [
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: ruta } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x".repeat(70) } }] },
+    ];
+    const ms: Message[] = [
+      { role: "system", content: "s" }, { role: "user", content: "manual" },
+      ...leer("/a"), ...leer("/b"), ...leer("/a"), ...leer("/c"),
+      ...Array.from({ length: 6 }, (_, i): Message => ({ role: i % 2 ? "assistant" : "user", content: "x".repeat(70) })),
+      ...leer("/c"),
+    ];
+    const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 400, policy: { thresholdTokens: 100, retainTokens: 60 }, trigger: "pressure", summarize: async () => "r" });
+    expect(out.summarized).toBe(true);
+    expect(out.readPaths).toEqual(["/a", "/b"]);
+  });
+
   it("un desborde compacta aunque la presión estimada sea baja, y deja sólo la unidad más nueva", async () => {
     const ms = largo(10);
     const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 0, policy, trigger: "overflow", summarize: async () => "r" });
