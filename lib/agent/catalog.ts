@@ -282,7 +282,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
         "Uses the page as a visitor would, in a real browser, to check that what you built WORKS: it tells you, step by step, what happened —including what the browser did for the page, like taking the pointer or going fullscreen— and the conclusion is yours. "
         + "The browser tab stays open for the whole turn, like a tab you keep open: each call carries on from where the last one left the page (what is on screen and what it saved), and if you changed files since, the page is loaded again with the new version first. The steps run in order, each one does ONE thing, and it stops at the first one that can't be done. "
         + "It is free. A form doesn't reach the user's email and a link to another site isn't opened (it tells you where it was going). "
-        + "What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data.",
+        + "What the page sends to its backend (Supabase) goes to the TEST database, never to the published page's real data. "
+        + "With url, the visit is to another site instead —one the user names or one you found—: a new visit each call, its links are followed and its forms are never sent.",
       parameters: {
         type: "OBJECT",
         properties: {
@@ -321,6 +322,10 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
               'Optional: to visit signed in to the test database (Supabase Auth) as one of its users, their email; if there is no user with that email, a test user is created. "only_user" if there is a single user. If there are several and nobody said which one, it doesn\'t visit and tells you who they are.',
           },
           new_visit: { type: "BOOLEAN", description: "Optional: true starts over in a fresh tab, as a new visitor with nothing saved." },
+          url: {
+            type: "STRING",
+            description: "Optional: the full address (https://…) of another site to use instead of this project's page. Take its look, never its text.",
+          },
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["steps"],

@@ -5,10 +5,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/style-match/scrape/fetch-raw", () => ({ fetchRaw: vi.fn() }));
-vi.mock("@/lib/style-match/scrape/fetch-puppeteer", () => ({ fetchPuppeteer: vi.fn() }));
 
-import { buscarEnExa, screenshotRealSite, ErrorDeLaWeb, fuentesDeExa, webDelServidor } from "./buscar";
-import type { fetchPuppeteer } from "@/lib/style-match/scrape/fetch-puppeteer";
+import { buscarEnExa, ErrorDeLaWeb, fuentesDeExa, visitRealSite, webDelServidor } from "./buscar";
 import { webASerializable } from "@/lib/len-bench/web-sustituta";
 
 const senal = () => new AbortController().signal;
@@ -90,10 +88,10 @@ describe("webDelServidor — de dónde sale la web", () => {
     expect(await web.leer("p1", "https://museo.example/no")).toEqual({ ok: false, error: "the page does not exist (HTTP 404)" });
     // Otro proyecto, sin fichero: una web vacía.
     expect(await web.buscar("p2", "museo", 8, senal())).toEqual([]);
-    // The fixed web of a case has no browser: a screenshot of another site says so.
-    expect(await web.screenshot("p1", "https://museo.example/", "desktop")).toEqual({
+    // The fixed web of a case has no browser: a visit to another site says so.
+    expect(await web.visit("p1", "https://museo.example/", [{ screenshot: "screen" }], "desktop")).toEqual({
       ok: false,
-      error: "screenshots of other sites are not available here; read the page with web_fetch",
+      error: "opening other sites in a browser is not available here; read the page with web_fetch",
     });
     await web.cobrar("u1", 3);
     expect(debit).not.toHaveBeenCalled();
@@ -110,48 +108,43 @@ describe("webDelServidor — de dónde sale la web", () => {
   });
 });
 
-// ANOTHER SITE, SEEN (26/10): `view_page` with `url`. The browser is the one the
-// "make one like this" chip used (`fetchPuppeteer`: the address checked on every
-// redirect, its traffic through the filtering proxy, no server secrets in its
-// environment); this only turns its answer into what Len reads.
-describe("screenshotRealSite — a screenshot of another site", () => {
-  const fetcher = (r: Awaited<ReturnType<typeof fetchPuppeteer>>) => vi.fn(async () => r) as unknown as typeof fetchPuppeteer & ReturnType<typeof vi.fn>;
-  const rendered = (finalUrl: string, screenshot?: Buffer) =>
-    ({ ok: true, value: { url: finalUrl, finalUrl, screenshot } }) as unknown as Awaited<ReturnType<typeof fetchPuppeteer>>;
-
-  it("comes back as a JPEG image, at the size asked for: 1440×900 on a desktop, 390×844 on a phone", async () => {
-    const f = fetcher(rendered("https://linear.app/", Buffer.from("jpeg-bytes")));
-    expect(await screenshotRealSite("https://linear.app", "desktop", f)).toEqual({
-      ok: true,
-      url: "https://linear.app/",
-      image: { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg-bytes").toString("base64") },
+// ANOTHER SITE, USED (26/10): `use_page` and `view_page` with `url`. The visit
+// runs in the eyes' browser (lib/agent/usar-pagina.ts, `visitAnotherSite`);
+// this is the door in front of it: the address is checked before anything
+// opens, and what can't be opened is said without detail.
+describe("visitRealSite — the door to another site", () => {
+  const PASOS = [{ click: "Pricing" }, { screenshot: "screen" }] as const;
+  const visitor = (r: { informe: string; images?: { mimeType: string; dataBase64: string }[] } | Error) =>
+    vi.fn(async () => {
+      if (r instanceof Error) throw r;
+      return r;
     });
-    await screenshotRealSite("https://linear.app", "mobile", f);
-    expect(f.mock.calls.map((c) => c[0])).toEqual([
-      { url: "https://linear.app", viewport: { width: 1440, height: 900 } },
-      { url: "https://linear.app", viewport: { width: 390, height: 844 } },
-    ]);
+
+  it("a public address opens with its steps and its size, and the visit's report comes back", async () => {
+    const v = visitor({ informe: "Visit to https://linear.app/ …", images: [{ mimeType: "image/jpeg", dataBase64: "JPEG" }] });
+    const ok = async () => ({ ok: true as const, value: { url: new URL("https://linear.app/"), hostname: "linear.app" } });
+    expect(await visitRealSite("https://linear.app", [...PASOS], "mobile", { validate: ok as never, visit: v })).toEqual({
+      ok: true,
+      report: "Visit to https://linear.app/ …",
+      images: [{ mimeType: "image/jpeg", dataBase64: "JPEG" }],
+    });
+    expect(v).toHaveBeenCalledWith({ url: "https://linear.app/", pasos: [...PASOS], viewport: "mobile" });
   });
 
-  it("🔴 an address that is not a public website is refused without saying what is behind it", async () => {
-    const f = fetcher({ ok: false, error: { kind: "ssrf-blocked", reason: "resolves to 10.0.0.5" } });
-    const r = await screenshotRealSite("http://intranet.local", "desktop", f);
+  it("🔴 an address that is not a public website is refused before any browser opens, without saying what is behind it", async () => {
+    const v = visitor({ informe: "no" });
+    const blocked = async () => ({ ok: false as const, error: { kind: "ssrf-blocked" as const, reason: "resolves to 10.0.0.5" } });
+    const r = await visitRealSite("http://intranet.local", [...PASOS], "desktop", { validate: blocked as never, visit: v });
     expect(r).toEqual({ ok: false, error: "that address is not a public website and cannot be read" });
     expect(JSON.stringify(r)).not.toContain("10.0.0.5");
+    expect(v).not.toHaveBeenCalled();
   });
 
-  it("a site that refuses, a render with no picture and a browser that throws each say so", async () => {
-    expect(await screenshotRealSite("https://x.example", "desktop", fetcher({ ok: false, error: { kind: "blocked", status: 403 } }))).toEqual({
+  it("a browser that can't open the site says so, and doesn't pass it off as working or not", async () => {
+    const ok = async () => ({ ok: true as const, value: { url: new URL("https://x.example/"), hostname: "x.example" } });
+    expect(await visitRealSite("https://x.example", [...PASOS], "desktop", { validate: ok as never, visit: visitor(new Error("net::ERR_NAME_NOT_RESOLVED")) })).toEqual({
       ok: false,
-      error: "the site refused the request (HTTP 403) — do not retry; ask the user to paste the text",
+      error: "the site couldn't be opened in the browser this time (net::ERR_NAME_NOT_RESOLVED).",
     });
-    expect(await screenshotRealSite("https://x.example", "desktop", fetcher(rendered("https://x.example/")))).toEqual({
-      ok: false,
-      error: "the page opened but no screenshot came out",
-    });
-    const roto = vi.fn(async () => {
-      throw new Error("Chrome not found");
-    }) as unknown as typeof fetchPuppeteer;
-    expect(await screenshotRealSite("https://x.example", "desktop", roto)).toEqual({ ok: false, error: "Chrome not found" });
   });
 });
