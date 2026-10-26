@@ -751,6 +751,9 @@ export async function startNewConversation(projectId: string): Promise<Conversat
 /** Volver a una charla archivada: la pone en curso y archiva la que hubiera. */
 export async function reopenConversation(projectId: string, conversation: string): Promise<ConversationChange> {
   if (await hayTurnoEnCurso(projectId)) return { ok: false, reason: "busy" };
+  // A11 · la que pasó los 30 días ya no está (como en Claude Code), antes de
+  // archivar la de ahora por ella.
+  await pruneOldConversations(projectId);
   const c = schema.projectChatMessages.conversation;
   const existe = await db
     .select({ id: schema.projectChatMessages.id })
@@ -782,9 +785,11 @@ export interface ArchivedConversation {
   readonly endedAt: number;
 }
 
-/** Las charlas archivadas, de la más reciente a la más vieja. */
+/** Las charlas archivadas, de la más reciente a la más vieja. Sin las que pasaron
+ *  los `CHAT_RETENTION_DAYS` (A11): se borran con la escritura siguiente. */
 export async function listArchivedConversations(projectId: string): Promise<ArchivedConversation[]> {
   const t = schema.projectChatMessages;
+  const corte = new Date(Date.now() - CHAT_RETENTION_DAYS * 86_400_000);
   const rows = await db
     .select({
       id: t.conversation,
@@ -798,6 +803,7 @@ export async function listArchivedConversations(projectId: string): Promise<Arch
     .from(t)
     .where(and(eq(t.projectId, projectId), sql`${t.conversation} IS NOT NULL`))
     .groupBy(t.conversation)
+    .having(sql`max(${t.createdAt}) >= ${corte}`)
     .orderBy(sql`max(${t.createdAt}) DESC`);
   const out: ArchivedConversation[] = [];
   for (const r of rows) {

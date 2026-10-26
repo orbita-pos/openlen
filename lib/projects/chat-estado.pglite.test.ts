@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -199,6 +199,19 @@ describe("A11 · retención de 30 días", () => {
     await pruneOldConversations("p1", AHORA);
     expect(await cuantas(`"projectId" = 'p1'`)).toBe(0);
     expect(await cuantas(`"projectId" = 'p2'`)).toBe(1);
+  });
+
+  // Como Claude Code, que borra al arrancar lo que pasó los 30 días: una charla
+  // caducada no se lista, y volver a ella no archiva la de ahora para nada.
+  it("🔴 una archivada de hace 31 días no se lista ni se reabre; la charla en curso se queda donde estaba", async () => {
+    const ya = Date.now();
+    const antes = (d: number) => new Date(ya - d * 86_400_000);
+    await filaEn({ id: "cad1", at: antes(31), conversation: "caducada" });
+    await filaEn({ id: "rec1", at: antes(2), conversation: "reciente" });
+    await filaEn({ id: "hoy1", at: antes(0) });
+    expect((await listArchivedConversations("p1")).map((c) => c.id)).toEqual(["reciente"]);
+    expect(await reopenConversation("p1", "caducada")).toEqual({ ok: false, reason: "not_found" });
+    expect(await cuantas(`"id" = 'hoy1' and "conversation" is null`)).toBe(1);
   });
 
   it("🔴 el chat carga las 50 más RECIENTES, de la más vieja a la más reciente", async () => {
