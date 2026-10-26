@@ -65,7 +65,9 @@ const encargo: GoalSnapshot = { id: "goal-1", revision: 2, objective: "la tienda
 beforeEach(() => {
   consultas.length = 0;
   _resetGoalActivation();
-  respuestas.panel = [fila("t1", "applied"), fila("t2", "en_curso")];
+  // Como las da la base: de la más reciente a la más vieja (A11: el panel pide
+  // las `CHAT_LIMIT` más recientes y las pone en orden).
+  respuestas.panel = [fila("t2", "en_curso"), fila("t1", "applied")];
   respuestas.estado = [];
   respuestas.fila = [];
   respuestas.gente = [];
@@ -98,7 +100,7 @@ describe("getChatMessages y el estado de la charla", () => {
   });
 
   it("cada turno dice quién lo pidió: el dueño si la fila no dice otro", async () => {
-    respuestas.panel = [fila("t1", "applied"), { ...fila("t2", "applied"), autorId: "ana" }];
+    respuestas.panel = [{ ...fila("t2", "applied"), autorId: "ana" }, fila("t1", "applied")];
     respuestas.gente = [
       { id: "dueno", name: "Jesús", email: "j@x", duenoId: "dueno" },
       { id: "ana", name: null, email: "ana@x", duenoId: "dueno" },

@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { filasParaElHistorialConEquipo, getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -155,6 +155,58 @@ ${texto}
     expect(await reopenConversation("p1", "c1")).toMatchObject({ ok: true });
     const filas = await turnosParaElHistorial("p1");
     expect(filas.map((f) => f.userText)).toEqual(["turno x2", "turno x3"]);
+  });
+});
+
+// A11: como Claude Code (`cleanupPeriodDays`, 30 por defecto): una charla se
+// guarda entera 30 días desde su último mensaje; sin tope de filas ni de charlas.
+describe("A11 · retención de 30 días", () => {
+  const AHORA = new Date(Date.UTC(2026, 9, 25, 12, 0));
+  const haceDias = (d: number, minuto = 0) => new Date(AHORA.getTime() - d * 86_400_000 + minuto * 60_000);
+  async function filaEn(o: { id: string; at: Date; conversation?: string }) {
+    await pg.query(
+      `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "conversation") values ($1, 'p1', 'x', '', 'applied', $2, $3)`,
+      [o.id, o.at, o.conversation ?? null],
+    );
+  }
+  const cuantas = async (where = "true") => Number((await pg.query<{ n: number }>(`select count(*)::int as n from "projectChatMessages" where ${where}`)).rows[0]!.n);
+
+  it("🔴 son 30 días, como Claude Code", () => {
+    expect(CHAT_RETENTION_DAYS).toBe(30);
+  });
+
+  it("🔴 una charla de 60 filas recientes no pierde ninguna, tampoco al escribir un turno más", async () => {
+    for (let i = 0; i < 60; i++) await filaEn({ id: `r${i}`, at: haceDias(1, i) });
+    await registrarTurnoDelServidor("p1", { id: "nuevo", userText: "hola", assistantReasoning: "Hola.", status: "applied" });
+    expect(await cuantas()).toBe(61);
+  });
+
+  it("🔴 se borra entera la charla cuyo último mensaje tiene más de 30 días; la de 29 y 12 archivadas recientes, no", async () => {
+    await filaEn({ id: "v1", at: haceDias(40), conversation: "vieja" });
+    await filaEn({ id: "v2", at: haceDias(31), conversation: "vieja" });
+    await filaEn({ id: "n1", at: haceDias(45), conversation: "casi" });
+    await filaEn({ id: "n2", at: haceDias(29), conversation: "casi" });
+    for (let i = 0; i < 12; i++) await filaEn({ id: `a${i}`, at: haceDias(2, i), conversation: `k${i}` });
+    await pruneOldConversations("p1", AHORA);
+    expect(await cuantas(`"conversation" = 'vieja'`)).toBe(0);
+    expect(await cuantas(`"conversation" = 'casi'`)).toBe(2);
+    expect(await cuantas(`"conversation" like 'k%'`)).toBe(12);
+  });
+
+  it("la charla en curso con su último mensaje de hace 31 días también se va; la de otro proyecto no se toca", async () => {
+    await filaEn({ id: "e1", at: haceDias(31) });
+    await pg.query(`insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt") values ('otro', 'p2', 'x', '', 'applied', $1)`, [haceDias(90)]);
+    await pruneOldConversations("p1", AHORA);
+    expect(await cuantas(`"projectId" = 'p1'`)).toBe(0);
+    expect(await cuantas(`"projectId" = 'p2'`)).toBe(1);
+  });
+
+  it("🔴 el chat carga las 50 más RECIENTES, de la más vieja a la más reciente", async () => {
+    for (let i = 0; i < 60; i++) await filaEn({ id: `m${String(i).padStart(2, "0")}`, at: haceDias(1, i) });
+    const turnos = await getChatMessages("p1");
+    expect(turnos).toHaveLength(50);
+    expect(turnos[0]!.id).toBe("m10");
+    expect(turnos.at(-1)!.id).toBe("m59");
   });
 });
 
