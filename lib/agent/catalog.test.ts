@@ -363,6 +363,25 @@ describe("buildAgentSystemPrompt", () => {
     }
   });
 
+  // A QUESTION UNRELATED TO THE PAGE (26/10), as Claude Code: it does not refuse
+  // it, it answers normally without touching the project. Len used to say «that
+  // isn't mine» and go back to the page, and charged the turn anyway.
+  it("🔴 a question unrelated to the page is answered normally, not turned away", () => {
+    for (const p of [buildAgentSystemPrompt({}), buildAgentSystemPrompt({}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" })]) {
+      expect(p).not.toContain("not a general chatbot");
+      expect(p).not.toContain("say so gracefully and come back to it");
+      expect(p).toContain(
+        "You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.",
+      );
+    }
+  });
+
+  it("🔴 web_search is what current events and recent data go through, as Claude Code's WebSearch", () => {
+    const web = buildFunctionDeclarations().find((d) => d.name === "web_search");
+    expect(web?.description).toContain("current events and recent data");
+    expect(web?.description).toContain("beyond your knowledge cutoff");
+  });
+
   it("🔴 pregunta antes de empezar sólo sin una lectura más probable; si quiere aprobar antes de seguir, se para y enseña lo entendido", () => {
     for (const p of [buildAgentSystemPrompt({}), buildAgentSystemPrompt({}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" })]) {
       expect(p).toContain("Ask before starting only when you can't tell which reading of the request is the most likely");
