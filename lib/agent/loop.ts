@@ -35,6 +35,7 @@ import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
 import { MAX_PROVIDER_RETRIES, isRetryable, providerWait, retryDelayMs, sleepAbortable } from "./retry-policy";
 import { compactIfNeeded } from "./compaction/compact";
+import type { CompactionMark } from "./compaction/mark";
 import { retainOversized } from "./compaction/spill";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
@@ -338,6 +339,10 @@ export interface AgentLoopResult {
    *  sale de ahí, como la transcripción de Claude Code. El bucle trabaja sobre
    *  una COPIA de `messages`, así que tiene que devolverlo. */
   transcripcion?: Message[];
+  /** A11 · la marca de la ÚLTIMA compactación que resumió en este turno: lo que
+   *  vio el modelo tras resumir. La ruta la guarda en la fila y el historial del
+   *  turno siguiente arranca en ella (`historialDesdeLaBase`). Ausente si no resumió. */
+  compactionMark?: CompactionMark;
   /** El turno ACABÓ esperando al dueño: una pregunta sin contestar (vencida o
    *  sin quien conteste) o descartada para hablar. Lo lee el conductor del
    *  encargo: aquí una pregunta cierra el turno, así que esa ronda no encadena.
@@ -1005,6 +1010,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     return valid && text.trim() !== "" ? text : null;
   };
 
+  let compactionMark: CompactionMark | undefined;
   /** Compacta `messages` EN SITIO (como hacen los `push`). `true` si cambió. */
   const compactNow = async (trigger: "pressure" | "overflow", discardChars: number): Promise<boolean> => {
     if (!args.compaction) return false;
@@ -1027,6 +1033,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     ownArchived.push(...messages.slice(ownStart));
     messages.splice(0, messages.length, ...outcome.messages);
     ownStart = messages.length;
+    if (outcome.summarized) {
+      compactionMark = {
+        messages: structuredClone(messages.slice(args.compaction.firstIndex)),
+        fromTranscript: ownArchived.length,
+        trigger,
+        preTokens: Math.round(pressureTokens),
+        postTokens: Math.round(estimateTokens(messages)),
+      };
+    }
     lastInputTokens = null;
     args.emit({ type: "compaction", pruned: outcome.pruned, summarized: outcome.summarized, discardChars });
     return true;
@@ -1137,6 +1152,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // exactamente donde se cortó, así que pegarlas es reconstruirla.
     finalText: textoArrastrado + finalText,
     transcripcion: transcripcionDelTurno(transcriptClosingText ?? textoArrastrado + finalText),
+    ...(compactionMark ? { compactionMark } : {}),
     usage: { inputTokens, outputTokens, cachedTokens, thinkingTokens },
     turns,
     toolCalls,
