@@ -239,6 +239,8 @@ export interface DesignTurn {
    *  (plans/new-chat/). Ausentes en turnos viejos y en los de `ai-design`. */
   centicredits?: number;
   durationMs?: number;
+  /** A11 · en este turno se resumió la conversación (ver `StoredChatTurn`). */
+  compactedTokens?: number;
 }
 
 const FLUSH_INTERVAL_MS = 800;
@@ -627,9 +629,18 @@ export function useAgentChat({
     // it). Restore turns we've never seen. Desde Len 2.1 la regla entera —el
     // turno en vuelo y los que siguen en el servidor— vive en
     // `fusionarConversacion`, con sus pruebas.
+    // A11: el servidor manda las más recientes; lo de antes que el chat trajo
+    // al subir (y la que se sale de esas con un turno nuevo) sigue delante.
+    const primeraDelServidor = server[0]?.appliedAt;
     setTurns((prev) =>
       fusionarConversacion(prev, server, {
         enVuelo: enVueloRef.current,
+        older: (t) =>
+          primeraDelServidor !== undefined &&
+          t.appliedAt !== undefined &&
+          t.status !== "streaming" &&
+          t.status !== "error" &&
+          t.appliedAt < primeraDelServidor,
         restaurar: restoreTurn,
         // El de otra pestaña (deshecho), sí; pero no le quita su error a un
         // turno que aquí falló (ver `server-status.ts`).
@@ -676,11 +687,46 @@ export function useAgentChat({
         .join("|"),
     [turns],
   );
+  // A11 · lo de antes (ver `loadOlder`).
+  const olderRef = useRef<"idle" | "loading" | "done">("idle");
+  const keepScrollRef = useRef<{ height: number; top: number } | null>(null);
   useLayoutEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (!el) return;
+    // A11: lo de antes entra por arriba; quien lee se queda donde estaba.
+    const kept = keepScrollRef.current;
+    if (kept) {
+      keepScrollRef.current = null;
+      el.scrollTop = el.scrollHeight - kept.height + kept.top;
+      return;
     }
+    el.scrollTop = el.scrollHeight;
   }, [lastSig, sending]);
+
+  /** A11 · LO DE ANTES. El proyecto trae las 50 más recientes; al llegar
+   *  arriba, el chat pide las anteriores al turno más viejo que tiene, de 50 en
+   *  50, hasta que el servidor dice que no queda nada (`hasMore`). Un fallo
+   *  deja volver a intentarlo al subir otra vez. */
+  const loadOlder = useCallback(async () => {
+    if (olderRef.current !== "idle") return;
+    const first = turnsRef.current.find((t) => t.appliedAt !== undefined && t.status !== "error" && t.status !== "streaming");
+    if (!first?.appliedAt) return;
+    olderRef.current = "loading";
+    try {
+      const res = await fetch(`/api/projects/${projectId}/chat?before=${encodeURIComponent(new Date(first.appliedAt).toISOString())}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as { turns?: StoredChatTurn[]; hasMore?: boolean };
+      const older = (body.turns ?? []).map(restoreTurn);
+      const el = scrollRef.current;
+      if (older.length > 0) {
+        if (el) keepScrollRef.current = { height: el.scrollHeight, top: el.scrollTop };
+        setTurns((prev) => [...older.filter((o) => !prev.some((p) => p.id === o.id)), ...prev]);
+      }
+      olderRef.current = body.hasMore === true && older.length > 0 ? "idle" : "done";
+    } catch {
+      olderRef.current = "idle";
+    }
+  }, [projectId]);
 
   const updateTurn = useCallback((id: string, patch: Partial<DesignTurn>) => {
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -2531,6 +2577,8 @@ export function useAgentChat({
    */
   const conversationChanged = useCallback(() => {
     setTurns([]);
+    // La charla nueva tiene su propio «antes».
+    olderRef.current = "idle";
     // Una charla nueva empieza sin modo plan (el servidor pliega de sus filas).
     setPlanKnown(false);
     setPlanWanted(null);
@@ -2582,6 +2630,8 @@ export function useAgentChat({
     answerQuestion,
     dismissQuestion,
     conversationChanged,
+    /** A11 · trae lo de antes de los turnos que hay (al llegar arriba). */
+    loadOlder,
     /** Pieza 7: el modo plan que se ve (lo elegido, o lo que dice el servidor). */
     planMode: planWanted ?? planKnown,
     togglePlan,
@@ -2640,6 +2690,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     // Lo que cobró y tardó, si el servidor lo apuntó (plans/new-chat/).
     ...(typeof s.centicredits === "number" ? { centicredits: s.centicredits } : {}),
     ...(typeof s.durationMs === "number" ? { durationMs: s.durationMs } : {}),
+    ...(typeof s.compactedTokens === "number" ? { compactedTokens: s.compactedTokens } : {}),
     ...(s.origen ? { origen: s.origen } : {}),
     ...(s.autor ? { autor: s.autor } : {}),
     ...(s.tipo ? { tipo: s.tipo } : {}),

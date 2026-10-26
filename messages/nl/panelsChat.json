@@ -254,7 +254,8 @@
     "close": {
       "applied": "Toegepast",
       "appliedEdits": "Toegepast · {count, plural, one {# bewerking} other {# bewerkingen}}",
-      "credits": "{credits} credits"
+      "credits": "{credits} credits",
+      "compacted": "Gesprek samengevat · {tokens} tokens"
     },
     "feedback": {
       "up": "Dit hielp",

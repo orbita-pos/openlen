@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -21,10 +21,15 @@ import type { CompactionMark } from "@/lib/agent/compaction/mark";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
- *  al importar: hay pruebas que simulan un esquema sin esta tabla. */
+ *  al importar: hay pruebas que simulan un esquema sin esta tabla. Tampoco la
+ *  marca de compactación (A11), que lleva el resumen y la cola: de ella el
+ *  panel sólo pinta cuántos tokens se resumieron. */
 function columnasDelPanel() {
-  const { transcript: _transcripcion, ...columnas } = getTableColumns(schema.projectChatMessages);
-  return columnas;
+  const { transcript: _transcripcion, compaction: _marca, ...columnas } = getTableColumns(schema.projectChatMessages);
+  return {
+    ...columnas,
+    compactedTokens: sql<number | null>`(${schema.projectChatMessages.compaction}->>'preTokens')::bigint`.mapWith(Number),
+  };
 }
 
 /** Filas que trae el chat de una vez (A11: ya no es un tope de lo que se guarda;
@@ -40,21 +45,25 @@ export const CHAT_RETENTION_DAYS = 30;
 export { ESTADO_EN_CURSO };
 
 /** Load a project's transcript, oldest-first. Ownership is the caller's
- *  responsibility — `getProject` already scoped the project to the user. */
+ *  responsibility — `getProject` already scoped the project to the user.
+ *  A11: the `limit` most recent rows (`CHAT_LIMIT` by default) before `before`;
+ *  the chat asks for the earlier ones when it reaches the top. */
 export async function getChatMessages(
   projectId: string,
+  page: { before?: Date; limit?: number } = {},
 ): Promise<StoredChatTurn[]> {
   const [rows, estado] = await Promise.all([
     db
       .select(columnasDelPanel())
       .from(schema.projectChatMessages)
-      .where(enCurso(projectId))
+      .where(page.before ? and(enCurso(projectId), lt(schema.projectChatMessages.createdAt, page.before)) : enCurso(projectId))
       // Las MÁS RECIENTES (antes la poda dejaba 50 y daba igual por dónde se
       // empezara); se ponen de la más vieja a la más reciente abajo.
       .orderBy(desc(schema.projectChatMessages.createdAt))
-      .limit(CHAT_LIMIT)
+      .limit(page.limit ?? CHAT_LIMIT)
       .then((filas) => filas.reverse()),
-    conversationStateOf(projectId),
+    // El modo plan y el encargo van en el último turno: una página de antes no lo trae.
+    page.before ? Promise.resolve({ planMode: false, goal: null }) : conversationStateOf(projectId),
   ]);
   const turns = await conDeshacibles(projectId, await conAutores(projectId, rows));
   // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
@@ -86,7 +95,7 @@ async function conDeshacibles(projectId: string, turns: StoredChatTurn[]): Promi
  *  van sin autor y el chat pinta la inicial de quien mira, como antes. */
 async function conAutores(
   projectId: string,
-  rows: Omit<typeof schema.projectChatMessages.$inferSelect, "transcript">[],
+  rows: (Omit<typeof schema.projectChatMessages.$inferSelect, "transcript" | "compaction"> & { compactedTokens: number | null })[],
 ): Promise<StoredChatTurn[]> {
   const turns = rows.map(storedTurnFromRow);
   if (rows.length === 0) return turns;

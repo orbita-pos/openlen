@@ -402,7 +402,13 @@ function AgentChatView({
       )}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
-      <div ref={chat.scrollRef} className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
+      <div
+        ref={chat.scrollRef}
+        // A11: la conversación entera; lo de antes llega al acercarse arriba.
+        onScroll={(e) => {
+          if (e.currentTarget.scrollTop < 200) void chat.loadOlder();
+        }}
+        className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
         {chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}

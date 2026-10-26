@@ -254,7 +254,8 @@
     "close": {
       "applied": "Übernommen",
       "appliedEdits": "Übernommen · {count, plural, one {# Änderung} other {# Änderungen}}",
-      "credits": "{credits} Credits"
+      "credits": "{credits} Credits",
+      "compacted": "Unterhaltung zusammengefasst · {tokens} Tokens"
     },
     "feedback": {
       "up": "Hat geholfen",

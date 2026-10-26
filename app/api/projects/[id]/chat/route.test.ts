@@ -16,10 +16,12 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/projects/chat", () => ({
   appendChatMessage: vi.fn(),
   updateChatMessageStatus: vi.fn(),
+  getChatMessages: vi.fn(),
+  CHAT_LIMIT: 50,
 }));
 
-import { POST } from "./route";
-import { appendChatMessage } from "@/lib/projects/chat";
+import { GET, POST } from "./route";
+import { appendChatMessage, getChatMessages } from "@/lib/projects/chat";
 import { auth } from "@/auth";
 
 const turno = (actions: unknown[]) => ({
@@ -226,5 +228,40 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     const res = await guardar(turno([{ tool: "editar_pagina", status: "done", summary: "titular", edits: 1 }]));
     expect(res.status).toBe(200);
     expect(guardada()).toEqual({ tool: "editar_pagina", status: "done", summary: "titular", edits: 1 });
+  });
+});
+
+// A11: el chat enseña la conversación entera; lo de antes de las 50 que trae el
+// proyecto se pide al subir, de 50 en 50.
+describe("GET /api/projects/[id]/chat?before= — lo de antes, por páginas", () => {
+  const turnoEn = (i: number) => ({ id: `t${i}`, userText: "x", assistantReasoning: "", status: "applied" as const, appliedAt: i });
+  const pedir = (query: string) => GET(new Request(`http://x/api/projects/p1/chat${query}`), { params: Promise.resolve({ id: "p1" }) });
+  beforeEach(() => {
+    vi.mocked(getChatMessages).mockReset();
+    vi.mocked(auth).mockResolvedValue({ user: { id: "u1" } } as never);
+  });
+
+  it("🔴 pide una de más para saber si queda algo y devuelve las 50 de antes de `before`", async () => {
+    vi.mocked(getChatMessages).mockResolvedValue(Array.from({ length: 51 }, (_, k) => turnoEn(k)));
+    const res = await pedir("?before=2026-10-25T12:00:00.000Z");
+    expect(res.status).toBe(200);
+    expect(vi.mocked(getChatMessages).mock.calls[0]).toEqual(["p1", { before: new Date("2026-10-25T12:00:00.000Z"), limit: 51 }]);
+    const body = (await res.json()) as { turns: { id: string }[]; hasMore: boolean };
+    expect(body.hasMore).toBe(true);
+    expect(body.turns.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => `t${k + 1}`));
+  });
+
+  it("🔴 al llegar a la primera, hasMore es falso", async () => {
+    vi.mocked(getChatMessages).mockResolvedValue([turnoEn(1), turnoEn(2)]);
+    const body = (await (await pedir("?before=2026-10-25T12:00:00.000Z&limit=10")).json()) as { turns: unknown[]; hasMore: boolean };
+    expect(vi.mocked(getChatMessages).mock.calls[0]![1]).toEqual({ before: new Date("2026-10-25T12:00:00.000Z"), limit: 11 });
+    expect(body).toEqual({ turns: [turnoEn(1), turnoEn(2)], hasMore: false });
+  });
+
+  it("un `before` que no es una fecha es un 400; sin sesión, 401", async () => {
+    expect((await pedir("?before=ayer")).status).toBe(400);
+    vi.mocked(auth).mockResolvedValue(null as never);
+    expect((await pedir("?before=2026-10-25T12:00:00.000Z")).status).toBe(401);
+    expect(getChatMessages).not.toHaveBeenCalled();
   });
 });

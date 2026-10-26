@@ -8,6 +8,8 @@ import { todosFrom } from "@/lib/agent/todo-list";
 import { widgetFrom } from "@/lib/agent/visuals/widget";
 import {
   appendChatMessage,
+  CHAT_LIMIT,
+  getChatMessages,
   updateChatMessageStatus,
 } from "@/lib/projects/chat";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -16,7 +18,9 @@ import { exigirAcceso } from "@/lib/projects/acceso";
 // Chat transcript — append-only log endpoints.
 //
 // POST appends one settled turn; PATCH flips a turn's status (Undo). Reads go
-// through GET /api/projects/[id] (getProject bundles the transcript). The
+// through GET /api/projects/[id] (getProject bundles the latest turns); GET here
+// pages back through the earlier ones (A11: the chat shows the whole
+// conversation and asks for what came before when it reaches the top). The
 // append-only model is what makes the same project safe in two browser tabs:
 // concurrent POSTs interleave, never clobber.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,6 +256,36 @@ async function ownsProject(
     )
     .limit(1);
   return rows.length > 0;
+}
+
+// GET /api/projects/[id]/chat?before=<ISO>&limit=<n> — the `limit` turns before
+// `before` (oldest first) and whether there are earlier ones. Reading is «ver».
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  const session = await auth();
+  if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
+  const { id } = await params;
+  const url = new URL(req.url);
+  const before = new Date(url.searchParams.get("before") ?? "");
+  if (Number.isNaN(before.getTime())) return json({ error: "before must be an ISO date" }, 400);
+  const pedido = Number(url.searchParams.get("limit") ?? CHAT_LIMIT);
+  const limit = Number.isInteger(pedido) ? Math.min(Math.max(pedido, 1), CHAT_LIMIT) : CHAT_LIMIT;
+  const acceso = await exigirAcceso(id, session.user.id, "ver");
+  if (acceso instanceof Response) return acceso;
+  if (!(await ownsProject(id, acceso.duenoId))) {
+    return json({ error: "not_found" }, 404);
+  }
+  try {
+    // Una de más: si llega, queda algo antes de esta página.
+    const turns = await getChatMessages(id, { before, limit: limit + 1 });
+    return json({ turns: turns.slice(-limit), hasMore: turns.length > limit }, 200);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[projects/chat] page failed", err);
+    return json({ error: "db_error" }, 500);
+  }
 }
 
 // POST /api/projects/[id]/chat — append one settled turn to the transcript.

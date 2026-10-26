@@ -105,4 +105,24 @@ describe("juntar la conversación del servidor con la de la vista", () => {
     );
     expect(r.map((t) => t.id)).toEqual(["err1", "a", "err2"]);
   });
+
+  // A11: el chat trae lo de antes al subir, y el servidor manda sólo las 50 más
+  // recientes. Lo traído (y la que se sale de las 50 con un turno nuevo) va
+  // DELANTE: antes saltaba detrás del último turno.
+  it("🔴 lo que el servidor ya no manda porque es MÁS VIEJO que su ventana va delante, en su orden", () => {
+    const r = fusionarConversacion(
+      [
+        { id: "v1", status: "applied", texto: "de antes" },
+        { id: "v2", status: "applied", texto: "de antes" },
+        { id: "a", status: "applied", texto: "uno" },
+        { id: "nuevo", status: "applied", texto: "aún no guardado" },
+      ],
+      [
+        { id: "a", status: "applied", texto: "uno" },
+        { id: "b", status: "applied", texto: "dos" },
+      ],
+      { ...opciones(), older: (t: Local) => t.id.startsWith("v") },
+    );
+    expect(r.map((t) => t.id)).toEqual(["v1", "v2", "a", "b", "nuevo"]);
+  });
 });

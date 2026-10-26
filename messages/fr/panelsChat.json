@@ -254,7 +254,8 @@
     "close": {
       "applied": "Appliqué",
       "appliedEdits": "Appliqué · {count, plural, one {# modification} other {# modifications}}",
-      "credits": "{credits} crédits"
+      "credits": "{credits} crédits",
+      "compacted": "Conversation résumée · {tokens} jetons"
     },
     "feedback": {
       "up": "Ça m'a aidé",
