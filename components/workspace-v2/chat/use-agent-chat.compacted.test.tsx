@@ -24,11 +24,18 @@ afterEach(() => {
 
 const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 
+const calls: string[] = [];
+afterEach(() => {
+  calls.length = 0;
+  window.localStorage.removeItem("ol:agent");
+});
+
 async function lastTurn(events: string[]) {
   const enc = new TextEncoder();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push(String(url));
       if (String(url) === "/api/agent" && init?.method === "POST") {
         const body = new ReadableStream<Uint8Array>({
           start(c) {
@@ -83,5 +90,18 @@ describe("A11 · the live turn that summarized", () => {
       sse("done", { turns: 1, toolCalls: 0 }),
     ]);
     expect(turn.compactedTokens).toBeUndefined();
+  });
+});
+
+// Como Claude Code con un comando que no hay en ese entorno («/restart isn't
+// available in this environment.»): el chat clásico (`ai-design`, la vía de
+// escape) no resume, así que `/compact` se contesta aquí y no va al modelo como
+// una petición de edición.
+describe("A11 · /compact in the classic chat", () => {
+  it("🔴 is answered locally and never reaches ai-design", async () => {
+    window.localStorage.setItem("ol:agent", "0");
+    const turn = await lastTurn([]);
+    expect(calls.some((u) => u.includes("/api/templates/ai-design"))).toBe(false);
+    expect(turn).toMatchObject({ status: "applied", assistantReasoning: "newChat.compactUnavailable", noDocChange: true });
   });
 });

@@ -332,7 +332,8 @@
       "clear": "Weghalen",
       "clearFailed": "Het doel kon niet worden weggehaald.",
       "roundLine": "Doel · ronde {round} van {max}"
-    }
+    },
+    "compactUnavailable": "/compact is niet beschikbaar in de klassieke chat."
   },
   "functionSecrets": {
     "cardLabel": "Geheime sleutels",

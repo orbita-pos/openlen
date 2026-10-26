@@ -264,6 +264,10 @@ export interface AgentLoopArgs {
      *  el mensaje que va justo detrás del resumen (`restoredFilesMessage`), o
      *  `null`. Como Claude Code, que vuelve a adjuntar los leídos. */
     restoreFiles?(paths: readonly string[]): Promise<Message | null>;
+    /** A11 · la marca, EN CUANTO resume (antes de la llamada siguiente), como
+     *  Claude Code anota el `compact_boundary` en ese momento: un turno que
+     *  revienta después no la pierde. Un fallo al guardarla no para el turno. */
+    saveMark?(mark: CompactionMark): Promise<void>;
   };
   /** A11 · la charla no cabe (`buildAgentMessages` → `compactFirst`): resumir
    *  ANTES de la primera llamada de trabajo; si no sale, `context_too_long`. */
@@ -1068,6 +1072,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         preTokens: Math.round(pressureTokens),
         postTokens: Math.round(estimateTokens(messages)),
       };
+      await args.compaction.saveMark?.(compactionMark).catch(() => undefined);
     }
     lastInputTokens = null;
     args.emit({

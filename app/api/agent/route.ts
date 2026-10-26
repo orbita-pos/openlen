@@ -61,7 +61,7 @@ import {
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { filasParaElHistorialConEquipo, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
@@ -1360,7 +1360,8 @@ async function correrTurno(
               endReason: motivoDelFin ?? undefined,
               // A11 · si resumió, de aquí arranca el historial del turno siguiente
               // (el `compact_boundary` de Claude Code), limpia como la transcripción.
-              ...(transcripcionDelTurno && marcaDelTurno ? { compaction: compactionMarkForStorage(marcaDelTurno) } : {}),
+              // También sin transcripción: el turno pudo reventar tras resumir.
+              ...(marcaDelTurno ? { compaction: compactionMarkForStorage(marcaDelTurno) } : {}),
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
               // estado del turno siguiente.
@@ -1666,6 +1667,11 @@ async function correrTurno(
             // A11 · lo que estaba leyendo vuelve tras resumir, como en Claude Code:
             // con el propio `Read` de Len (su salida de siempre, y queda leído
             // para editar). Lo que ya no existe no vuelve.
+            // A11 · la marca, a la fila en cuanto existe (ver `guardarMarcaDelTurno`).
+            saveMark: async (mark) => {
+              marcaDelTurno = mark;
+              if (filaAbierta) await guardarMarcaDelTurno(projectId, filaId, compactionMarkForStorage(mark));
+            },
             restoreFiles: async (paths) => {
               const files = [];
               for (const path of paths.slice(0, POST_COMPACT_MAX_FILES)) {
@@ -1818,7 +1824,7 @@ async function correrTurno(
         });
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
-        marcaDelTurno = result.compactionMark ?? null;
+        marcaDelTurno = result.compactionMark ?? marcaDelTurno;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
         finDelTurno = result.topeAlcanzado ?? result.errorCode ?? (corte ? "cut" : "completed");
         motivoDelFin = result.topeAlcanzado ?? result.errorCode ?? (result.terminalError ? "cancelled" : null);

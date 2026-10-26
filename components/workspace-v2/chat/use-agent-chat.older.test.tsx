@@ -54,7 +54,7 @@ describe("A11 · lo de antes, al llegar arriba", () => {
     await act(async () => {
       await chat!.loadOlder();
     });
-    expect(pedidas.filter((u) => u.includes("before="))).toEqual([`/api/projects/p1/chat?before=${encodeURIComponent(new Date(1000).toISOString())}`]);
+    expect(pedidas.filter((u) => u.includes("before="))).toEqual(["/api/projects/p1/chat?before=t1"]);
     expect(chat!.turns.map((t) => t.id)).toEqual(["a", "b", "t1", "t2"]);
 
     await act(async () => {

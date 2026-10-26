@@ -332,7 +332,8 @@
       "clear": "Togli",
       "clearFailed": "Non è stato possibile togliere l'obiettivo.",
       "roundLine": "Obiettivo · giro {round} di {max}"
-    }
+    },
+    "compactUnavailable": "/compact non è disponibile nella chat classica."
   },
   "functionSecrets": {
     "cardLabel": "Chiavi segrete",
