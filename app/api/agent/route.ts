@@ -52,18 +52,16 @@ import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/l
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
-  TURNOS_DE_LA_VENTANA,
   historialDesdeLaBase,
   leidosSembrados,
   stateOnlyTranscript,
   transcripcionParaGuardar,
   compactionMarkForStorage,
-  turnosQueSeQuedan,
   type FilaDelHistorial,
   type MensajeDelHistorial,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { contarTurnosParaElHistorial, filasParaElHistorialConEquipo, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
@@ -138,9 +136,7 @@ import {
   type VisualQualityViewports,
 } from "@/lib/ai/visual-quality-renderer";
 import {
-  sanearDichoAntes,
   sanearHistorial,
-  turnosTotalesDe,
   ventanaVisibleDe,
 } from "@/lib/agent/historial-saneado";
 import { medirUnaVezPorDocumento } from "@/lib/ai/medir-una-vez";
@@ -179,7 +175,8 @@ export const runtime = "nodejs";
 
 // ⚰️ Aquí vivía `TURNOS_DEL_HISTORIAL = 12`, una ventana fija: el turno más viejo
 // caía a CADA turno nuevo y la petición dejaba de coincidir desde el principio,
-// sin caché. Ahora cuántos entran lo dice `turnosQueSeQuedan`, a saltos.
+// sin caché. Luego fue `turnosQueSeQuedan`, a saltos; desde A11 entra la charla
+// entera desde la última marca de resumen (`turnosParaElHistorial`).
 const ENCODER = new TextEncoder();
 
 /** LA CAPA 0 DE LEN 3.1: UN almacén de filas por proceso, no uno por turno — es
@@ -302,12 +299,9 @@ type CuerpoDelTurno = {
     functionCalls?: unknown;
     functionResponses?: unknown;
   }[];
-  /** Cuántos turnos tiene la conversación entera (el cliente sólo manda los
-   *  últimos). Sólo sirve para avisarle al modelo de que no lo ve todo. */
-  historyTotal?: number;
-  /** Lo que el dueño dijo en los turnos que ya no caben (H08-a). Se sanea
-   *  con `sanearDichoAntes`: aquí es `unknown` a efectos prácticos. */
-  dichoAntes?: unknown;
+  // ⚰️ `historyTotal` y `dichoAntes` (la ventana y lo dicho antes de ella) se
+  // fueron con A11: la charla entera sale de la base. Una pestaña vieja que aún
+  // los mande no rompe nada: se ignoran.
   scope?: ScopeBody;
   attachedImage?: AttachedImageBody;
   /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
@@ -629,7 +623,6 @@ async function correrTurno(
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
   // conversación con el MISMO saneado que aplica esta ruta.
-  const turnosTotales = turnosTotalesDe(body?.historyTotal);
   // 🔴 H4 · EL HISTORIAL SALE DE LA BASE, como la transcripción de Claude Code
   // (`lib/agent/transcripcion.ts`): con los argumentos de cada llamada y sus
   // resultados, los viejos vaciados con su marca. Lo escribió el servidor; nada
@@ -647,12 +640,11 @@ async function correrTurno(
   const compartido = genteDelProyecto.length > 1;
   let equipoAhora = "";
   let filasDelHistorial: FilaDelHistorial[];
-  // Cuántos turnos entran, A SALTOS (`turnosQueSeQuedan`): así el primero que se
-  // ve no cambia a cada turno y lo de delante sigue en caché. Si no se puede
-  // contar, los 12 de siempre.
-  const turnosQueEntran = turnosQueSeQuedan(await contarTurnosParaElHistorial(projectId).catch(() => TURNOS_DE_LA_VENTANA));
+  // A11 · LA CHARLA ENTERA desde la última marca de resumen, como Claude Code
+  // (spec local 2026-10-25-a11-continuity): sin ventana de turnos. Sólo crece por
+  // el final, así que lo de delante sigue en caché hasta el próximo resumen.
   if (compartido) {
-    const crudas = await filasParaElHistorialConEquipo(projectId, turnosQueEntran).catch(() => []);
+    const crudas = await filasParaElHistorialConEquipo(projectId).catch(() => []);
     // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
     const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
     const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
@@ -663,12 +655,11 @@ async function correrTurno(
     filasDelHistorial = plegado.filas;
     equipoAhora = plegado.ahora;
   } else {
-    filasDelHistorial = await turnosParaElHistorial(projectId, turnosQueEntran).catch(() => []);
+    filasDelHistorial = await turnosParaElHistorial(projectId).catch(() => []);
   }
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
-  const dichoAntes = sanearDichoAntes(body?.dichoAntes);
 
   // PIEZA 8 · EL ENCARGO DEL TURNO, como el goal de DeepSeek: plegado de la
   // última fila con transcripción (`goalFromRows`) y armado o no según el
@@ -1033,12 +1024,6 @@ async function correrTurno(
     // veía por ningún lado, así que empezaba a ciegas una conversación sobre
     // un fallo que el sistema tenía diagnosticado por escrito.
     degradaciones: project.data?.degradations ?? [],
-    // Qué parte de la conversación NO ve — para que pueda decir «no me
-    // acuerdo» en vez de nombrar el turno más viejo que tenga a mano.
-    conversacionRecortada:
-      turnosTotales > 0 ? { visibles: ventanaVisible, totales: turnosTotales } : null,
-    // Y lo que el dueño dijo en los turnos que ya no se ven (H08-a).
-    dichoAntes,
     // Desde un hilo del código, el modelo lee también dónde y lo dicho antes;
     // la fila (y el chat) guardan sólo lo que se escribió.
     // En un proyecto con miembros, delante: lo que el equipo se dijo desde el
@@ -1094,7 +1079,7 @@ async function correrTurno(
           systemPrompt: built.systemPrompt,
           contextBlock: built.contextBlock,
           history,
-          turnosTotales,
+          turnosTotales: ventanaVisible,
           prompt,
           userBrief: project.userBrief,
           userMemory: argsDelTurno.userMemory,
@@ -2112,23 +2097,6 @@ async function correrTurno(
           // compone el cliente en su idioma, como el tope (plans/new-chat/).
           centicredits: cobrado,
           durationMs: Date.now() - empezo,
-          // 🔴 EL CORTE DE LA VENTANA, TAMBIÉN AL USUARIO.
-          //
-          // Al MODELO ya se le decía (`conversacionRecortada` → la nota de
-          // `buildAgentContext`), para que pueda contestar «de eso ya no me
-          // acuerdo» en vez de nombrar el turno más viejo que tenga a mano. Al
-          // usuario no se le decía nada: veía a Len olvidar y no tenía forma de
-          // saber por qué, ni de saber que hablar más largo empeora la memoria.
-          //
-          // Van los DOS números, no un booleano: «ve 12 de 20» es un hecho que
-          // el usuario puede usar —resumirle lo importante, o abrir otra
-          // conversación—; «memoria recortada» es una disculpa.
-          //
-          // Números, no prosa: la frase la compone el cliente en el idioma del
-          // usuario, como el aviso de tope. Ver [[error-del-servidor-como-dato-no-prosa]].
-          ...(turnosTotales > ventanaVisible
-            ? { ventana: { visibles: ventanaVisible, totales: turnosTotales } }
-            : {}),
         });
         close();
       } catch (err) {

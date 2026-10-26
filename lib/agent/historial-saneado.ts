@@ -125,25 +125,6 @@ export function sanearHistorial(raw: unknown, nombresValidos: ReadonlySet<string
   return cortado;
 }
 
-/** Lo que el dueño dijo antes de la ventana (H08-a): sólo cadenas, acotadas en
- *  número y en tamaño. Es texto del navegador y va al modelo como DATO dentro
- *  de su bloque, nunca como instrucción. */
-export function sanearDichoAntes(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((d): d is string => typeof d === "string" && d.trim().length > 0)
-    .slice(-20)
-    .map((d) => d.trim().slice(0, 300));
-}
-
-/** Cuántos turnos tiene la conversación DE VERDAD, no cuántos caben. Del mismo
- *  `turnsRef` del cliente del que salieron los que sí viajan. */
-export function turnosTotalesDe(historyTotal: unknown): number {
-  return typeof historyTotal === "number" && Number.isFinite(historyTotal)
-    ? Math.min(Math.max(Math.trunc(historyTotal), 0), 500)
-    : 0;
-}
-
 /** Lo que necesitan los dos contadores de abajo de cada mensaje. */
 type MensajeContado = {
   role: "user" | "assistant";
@@ -177,8 +158,8 @@ function peticionDelDueno(history: readonly MensajeContado[]): (h: MensajeContad
 /**
  * CUÁNTOS TURNOS DE LA CHARLA VIAJAN DE VERDAD.
  *
- * Lo leen DOS sitios que tienen que decir lo mismo: la nota que va al modelo
- * (`conversacionRecortada`) y el aviso que va al usuario (en el evento `done`).
+ * Lo lee la línea de forma del turno (`formaDelTurno`). Antes de A11 también la
+ * nota de la ventana para el modelo y su aviso al usuario, que se fueron con ella.
  *
  * Los mensajes de respuestas de herramienta TAMBIÉN son role "user": contarlos
  * infla la cuenta y diría que se ven más turnos de los que se ven. En el

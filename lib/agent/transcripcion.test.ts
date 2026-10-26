@@ -8,7 +8,6 @@ import {
   historialDesdeLaBase,
   leidosSembrados,
   stateOnlyTranscript,
-  turnosQueSeQuedan,
   textoDelHistorial,
   transcripcionParaGuardar,
   compactionMarkForStorage,
@@ -221,19 +220,6 @@ describe("historialDesdeLaBase", () => {
       { role: "user", content: contexto },
       { role: "user", content: "Hola", opensTurn: true },
     ]);
-  });
-});
-
-describe("turnosQueSeQuedan — la ventana del historial, a saltos", () => {
-  it("hasta 2 × 12 turnos, todos; al pasarse, vuelve a 12 y crece otra vez", () => {
-    expect([0, 5, 12, 24].map((n) => turnosQueSeQuedan(n))).toEqual([0, 5, 12, 24]);
-    expect([25, 26, 35, 36, 37].map((n) => turnosQueSeQuedan(n))).toEqual([13, 14, 23, 12, 13]);
-  });
-
-  it("🔴 el primer turno que se ve sólo se mueve una vez cada 12 turnos (la caché lo sirve entre medias)", () => {
-    const primero = (total: number) => total - turnosQueSeQuedan(total);
-    expect([24, 25, 30, 35].map(primero)).toEqual([0, 12, 12, 12]);
-    expect([36, 40, 47].map(primero)).toEqual([24, 24, 24]);
   });
 });
 

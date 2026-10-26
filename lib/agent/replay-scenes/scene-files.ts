@@ -41,10 +41,11 @@ export interface SceneFile {
   readonly name: string;
   readonly projectId: string;
   readonly fetchedAt: string;
-  /** Closed turns of the conversation older than `rows[0]`, not downloaded: the
-   *  route's window (`turnosQueSeQuedan`) counts them. */
+  /** Closed turns of the conversation older than `rows[0]`. Since A11 the fetcher
+   *  downloads them all (the route sends the whole conversation); older files may
+   *  still carry the count of turns the old window left out. */
   readonly olderTurns: number;
-  /** From the oldest turn of the first replayed turn's window to the last replayed turn. */
+  /** From the start of the conversation to the last replayed turn. */
   readonly rows: readonly SceneRow[];
 }
 

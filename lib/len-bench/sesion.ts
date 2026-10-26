@@ -67,8 +67,6 @@ export interface CuerpoDelTurno {
   /** Un uuid: la ruta descarta cualquier otra forma. */
   readonly turnId: string;
   readonly history: unknown[];
-  readonly historyTotal: number;
-  readonly dichoAntes: unknown;
   /**
    * El panel SIEMPRE lo manda, con lo que el dueño tiene seleccionado, y un
    * usuario nuevo tiene `"auto"` (chat-panel.tsx). Sin él, la ruta caería al

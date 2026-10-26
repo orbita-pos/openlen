@@ -264,8 +264,8 @@ async function main(): Promise<number> {
       console.log(`${step.id} … ${step.title}`);
       const sendTurn = async (prompt: string) => {
         const turns = (await getChatMessages(projectId)).map((t) => ({ ...t, actions: accionesAlRecargar(t.actions) }));
-        const { history, historyTotal, dichoAntes } = historialParaElAgente(turns, null);
-        return enviarTurno({ base: BASE_LEN_BENCH, cookie, cuerpo: { projectId, prompt, turnId: randomUUID(), history, historyTotal, dichoAntes, esfuerzo: "auto", zonaHoraria: "America/Chihuahua" }, timeoutMs: TIMEOUT_TURNO_MS });
+        const { history } = historialParaElAgente(turns, null);
+        return enviarTurno({ base: BASE_LEN_BENCH, cookie, cuerpo: { projectId, prompt, turnId: randomUUID(), history, esfuerzo: "auto", zonaHoraria: "America/Chihuahua" }, timeoutMs: TIMEOUT_TURNO_MS });
       };
       const turnStarted = Date.now();
       let events = await sendTurn(step.message);

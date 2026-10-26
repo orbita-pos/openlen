@@ -80,7 +80,7 @@ describe("las charlas del proyecto, contra Postgres", () => {
     expect(r.ok).toBe(true);
     expect(r.ok && r.archived).toBeTruthy();
     expect(await getChatMessages(PROYECTO)).toEqual([]);
-    expect(await turnosParaElHistorial(PROYECTO, 20)).toEqual([]);
+    expect(await turnosParaElHistorial(PROYECTO)).toEqual([]);
 
     const archivadas = await listArchivedConversations(PROYECTO);
     expect(archivadas).toHaveLength(1);

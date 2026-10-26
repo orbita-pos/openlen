@@ -64,9 +64,9 @@ async function main():Promise<number>{
         const capabilities=await response.json().catch(()=>null) as {kinds?:string[]}|null;
         if(!response.ok||!["dashboard","slides","image","motion"].every(k=>capabilities?.kinds?.includes(k)))throw new Error("Len-Bench server does not advertise all four installed artifact kinds; finish renderer/configuration acceptance first");
         const before=await contentHash(projectId);
-        const {history,historyTotal,dichoAntes}=historialParaElAgente([],null);
+        const {history}=historialParaElAgente([],null);
         sent=true;
-        const events=await enviarTurno({base,cookie,cuerpo:{projectId,prompt:test.message,turnId:randomUUID(),history,historyTotal,dichoAntes,esfuerzo:"auto",zonaHoraria:"America/Chihuahua"},timeoutMs:TIMEOUT_TURNO_MS});
+        const events=await enviarTurno({base,cookie,cuerpo:{projectId,prompt:test.message,turnId:randomUUID(),history,esfuerzo:"auto",zonaHoraria:"America/Chihuahua"},timeoutMs:TIMEOUT_TURNO_MS});
         const saved=await database.query(`select "id","kind","itemKey","status" from "artifacts" where "projectId"=$1 order by "createdAt","id"`,[projectId]) as unknown as SelectionArtifact[];
         observation={...observation,...gradeArtifactSelection(test.creates,[],saved,{assistantResponded:!!textoDeLen(events).trim(),sourceUnchanged:before===await contentHash(projectId),allowSourceChange:test.id==="ordinary-app-edit",error:events.some(e=>e.nombre==="error")}),tools:herramientasDeLen(events),projectId,recordingDirectory:resolve(DIR_GRABACIONES)};
       }catch(error){observation.error=error instanceof Error?error.message:"selection run failed";}

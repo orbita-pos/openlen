@@ -103,33 +103,16 @@ export function mismaPagina(
  * confunda una edición de /menu— pero la cura correcta no es esconder el turno:
  * es DECIR de qué página fue.
  *
- * `historyTotal` es cuántos turnos tiene la charla de VERDAD. Viaja aparte para
- * que el modelo pueda decir «de eso ya no me acuerdo» en vez de contestar con el
- * turno más viejo que le quede a mano — que es lo que hacía, con total seguridad
- * y equivocándose (medido el 2026-08-22).
+ * Sólo lo usa la ruta para una charla SIN ninguna transcripción (anterior a H4):
+ * lo demás sale de la base. ⚰️ `historyTotal` y `dichoAntes` (la ventana y lo
+ * dicho antes de ella) se fueron con A11: la charla entera sale de la base.
  */
-/** Cuántos mensajes del dueño anteriores a la ventana viajan, y cuánto de
- *  cada uno. Son sus palabras, no un resumen: se pagan en cada turno. */
-const MAX_DICHO_ANTES = 20;
-const MAX_CARACTERES_DICHO = 300;
 
 export function historialParaElAgente(
   turnos: readonly TurnoParaHistorial[],
   paginaDelTurno: string | null | undefined,
-): { history: HistoryEntry[]; historyTotal: number; dichoAntes: string[] } {
+): { history: HistoryEntry[] } {
   const relevantes = turnos.filter((t) => t.status === "applied" || t.status === "reverted");
-  // 🔴 H08-a · LO QUE EL DUEÑO DIJO Y YA NO CABE. La ventana es de doce turnos
-  // y lo que se cae no deja rastro: un «de ahora en adelante todos los precios
-  // con MXN» dicho en el turno 2 de 14 no llegaba al modelo de ninguna forma
-  // (C14 de la auditoría del 2026-09-22). Claude Code resume con el modelo
-  // cuando se le llena el contexto; aquí se conservan las palabras del dueño tal
-  // cual —sin llamada de modelo y sin almacén nuevo—, que es lo que ese resumen
-  // tendría que haber guardado.
-  const fuera = relevantes.slice(0, Math.max(0, relevantes.length - CHAT_HISTORY_TURNS));
-  const dichoAntes = fuera
-    .map((t) => t.userText.trim().slice(0, MAX_CARACTERES_DICHO))
-    .filter(Boolean)
-    .slice(-MAX_DICHO_ANTES);
   const history = relevantes.slice(-CHAT_HISTORY_TURNS).flatMap((t) => {
     // 🔴 LO QUE FALLÓ TAMBIÉN CUENTA. Esto filtraba a `status === "done"`, así
     // que una herramienta que falló no viajaba en el historial de NINGUNA forma:
@@ -171,5 +154,5 @@ export function historialParaElAgente(
     }
     return turno;
   });
-  return { history, historyTotal: relevantes.length, dichoAntes };
+  return { history };
 }

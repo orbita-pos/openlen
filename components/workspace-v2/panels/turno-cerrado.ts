@@ -18,7 +18,7 @@ export type CierreDeTurno =
   /** Terminó bien. */
   | { readonly kind: "aplicado" }
   /** Aplicado, con un aviso a la vista. `cortado` sólo cuando de verdad se
-   *  cortó —un error DESPUÉS de haber cambiado algo—: el aviso de ventana o de
+   *  cortó —un error DESPUÉS de haber cambiado algo—: el aviso de
    *  tope sale en un turno que terminó, y marcarlo cortado le contaba al modelo
    *  que no llegó a hacer lo que sí hizo. Es la misma línea que traza el
    *  servidor en `corteDelTurno`. */
@@ -37,20 +37,6 @@ export function cierreDeTurno(args: {
    * a medias. Es aviso, no rojo — lo hecho está hecho y sigue siendo suyo.
    */
   readonly avisoDeTope?: string | null;
-  /**
-   * LA CONVERSACIÓN NO CABE ENTERA y el usuario tiene derecho a saberlo, ya
-   * localizado. `null`/ausente = cabe.
-   *
-   * 🔴 Al MODELO ya se le decía —la nota de `buildAgentContext`, para que pueda
-   * contestar «de eso ya no me acuerdo» en vez de nombrar el turno más viejo que
-   * tenga a mano—. Al usuario no: veía a Len olvidar y no tenía forma de saber
-   * por qué, ni de saber que seguir alargando la misma charla empeora la
-   * memoria en vez de mejorarla.
-   *
-   * NO es un error ni un tope: el turno hizo su trabajo entero. Es un hecho
-   * sobre la conversación, y por eso viaja como aviso sobre un turno aplicado.
-   */
-  readonly avisoDeVentana?: string | null;
   /** El servidor dijo que alguna herramienta escribió en la base. Cubre los
    *  cambios de AJUSTES, que son durables y no emiten documento. */
   readonly mutoDurable: boolean;
@@ -58,12 +44,10 @@ export function cierreDeTurno(args: {
    *  llega (la ruta reventó después de pintar el documento). */
   readonly hayDocumentoNuevo: boolean;
 }): CierreDeTurno {
-  // LOS AVISOS SE SUMAN, NO SE PISAN. Un turno puede a la vez quedarse sin
-  // pasos Y estar hablando con media conversación fuera de la ventana: son dos
-  // hechos distintos y quedarse con uno le esconde el otro al usuario. Es la
-  // misma lección que los `aviso_critico` de `editar_pagina`, donde cuatro
-  // claves sueltas en el mismo objeto hacían que ganara la última en silencio.
-  const avisos = [args.avisoDeTope, args.avisoDeVentana].filter(
+  // LOS AVISOS SE SUMAN, NO SE PISAN (la misma lección que los `aviso_critico`
+  // de `editar_pagina`). ⚰️ El otro aviso era el de la ventana de la charla, que
+  // se fue con A11: Len ve la conversación entera.
+  const avisos = [args.avisoDeTope].filter(
     (a): a is string => typeof a === "string" && a.length > 0,
   );
   if (args.errorMessage === null) {
