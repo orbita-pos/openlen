@@ -22,7 +22,7 @@ import {
   restoreAgentMemory,
   snapshotAgentMemory,
 } from "@/lib/len-bench/proyecto-de-eval";
-import { CHAT_LIMIT, getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
+import { getChatMessages, turnosParaElHistorial } from "@/lib/projects/chat";
 import { accionesAlRecargar, historialParaElAgente } from "@/lib/chat/historial-del-agente";
 import { publishProject } from "@/lib/projects";
 import { getPublishRoot } from "@/lib/publish/filesystem";
@@ -186,7 +186,7 @@ export async function calificarDatos(
         explicacion: g.pago && extra.saltarPagados ? `saltado: ${extra.saltarPagados}` : motivo,
       }));
       graders.push(cierreHonesto(graders, extra.conversacion));
-      return { graders, sub, traza: trazaDeLasFilas(await turnosParaElHistorial(projectId, CHAT_LIMIT)) };
+      return { graders, sub, traza: trazaDeLasFilas(await turnosParaElHistorial(projectId)) };
     }
   } else {
     await publicar();
@@ -197,7 +197,7 @@ export async function calificarDatos(
   // servidor. La fila se cierra ANTES de que el stream acabe (`cerrarFila` en
   // app/api/agent/route.ts), así que aquí ya están todas. Al validar no hay
   // turnos: sale vacía.
-  const traza = trazaDeLasFilas(await turnosParaElHistorial(projectId, CHAT_LIMIT));
+  const traza = trazaDeLasFilas(await turnosParaElHistorial(projectId));
   const servidor = await servirPublicada({ raiz: getPublishRoot(), sub, next: o.base, hostPublicado: publishedHost(sub) });
   try {
     const ctx = {
@@ -306,7 +306,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
         // Las filas del servidor, como las restaura el taller al recargar: una
         // acción que murió a medias vuelve como fallida (`accionesAlRecargar`).
         const turnos = (await getChatMessages(projectId)).map((t) => ({ ...t, actions: accionesAlRecargar(t.actions) }));
-        const { history, historyTotal, dichoAntes } = historialParaElAgente(turnos, null);
+        const { history } = historialParaElAgente(turnos, null);
         const eventos = await enviarTurno({
           base: o.base,
           cookie: o.cookie,
@@ -318,8 +318,6 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
             prompt: mensaje,
             turnId: crypto.randomUUID(),
             history,
-            historyTotal,
-            dichoAntes,
             esfuerzo: "auto",
             zonaHoraria: zona,
             ...(o.mode === "dynamis" ? { mode: "dynamis" as const } : {}),

@@ -1242,12 +1242,13 @@ export function useAgentChat({
       // EL HISTORIAL, CON LA FORMA QUE DE VERDAD TUVO — ver
       // `lib/chat/historial-del-agente.ts`, que es también lo que el arnés de
       // evals manda para reproducir una conversación.
-      const { history, historyTotal, dichoAntes } = historialParaElAgente(
-        // Los mensajes entre personas no son turnos de Len (el servidor los
-        // pliega en su sobre, `lib/agent/plegar-equipo.ts`).
-        turnsRef.current.filter((t) => t.tipo !== "persona"),
-        turnPage,
-      );
+      // Los mensajes entre personas no son turnos de Len (el servidor los
+      // pliega en su sobre, `lib/agent/plegar-equipo.ts`).
+      const turnosDeLen = turnsRef.current.filter((t) => t.tipo !== "persona");
+      const { history } = historialParaElAgente(turnosDeLen, turnPage);
+      // Sólo para el camino de reserva (`ai-design`), que aún tiene su ventana:
+      // Len (A11) ve la charla entera desde la base y no lo necesita.
+      const historyTotal = turnosDeLen.filter((t) => t.status === "applied" || t.status === "reverted").length;
 
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
@@ -1353,9 +1354,6 @@ export function useAgentChat({
         let huboCambioReal: boolean | null = null;
 
         let topeAlcanzado: "turn_limit" | "tool_limit" | "budget_limit" | null = null;
-        /** Cuántos turnos vio Len de cuántos tiene la charla. Presente sólo
-         *  cuando de verdad se quedó algo fuera de la ventana. */
-        let ventana: { visibles: number; totales: number } | null = null;
         // Lo que cobró y tardó, en números: la frase la compone quien pinta.
         let centicredits: number | undefined;
         let durationMs: number | undefined;
@@ -1383,9 +1381,6 @@ export function useAgentChat({
               projectId,
               prompt,
               history,
-              historyTotal,
-              // Lo que el dueño dijo antes de la ventana (H08-a).
-              ...(dichoAntes.length > 0 ? { dichoAntes } : {}),
               // EL ID DE LA FILA, para que el servidor y este panel escriban la
               // MISMA. El servidor registra el turno desde su `finally` —o sea
               // también cuando el stream muere y este `fetch` nunca llega a
@@ -1870,17 +1865,6 @@ export function useAgentChat({
                 const tope = (payload as { topeAlcanzado?: unknown } | null)?.topeAlcanzado;
                 // `budget_limit` (Len 2.1): el techo de DINERO del turno.
                 if (tope === "turn_limit" || tope === "tool_limit" || tope === "budget_limit") topeAlcanzado = tope;
-                // LA CONVERSACIÓN NO CABE ENTERA. Vienen los dos números y la
-                // frase se compone aquí, en el idioma del usuario — el servidor
-                // manda datos, no prosa.
-                const v = (payload as { ventana?: unknown } | null)?.ventana;
-                if (
-                  v && typeof v === "object" &&
-                  typeof (v as { visibles?: unknown }).visibles === "number" &&
-                  typeof (v as { totales?: unknown }).totales === "number"
-                ) {
-                  ventana = v as { visibles: number; totales: number };
-                }
                 const cc = (payload as { centicredits?: unknown } | null)?.centicredits;
                 if (typeof cc === "number" && Number.isFinite(cc) && cc >= 0) centicredits = cc;
                 const ms = (payload as { durationMs?: unknown } | null)?.durationMs;
@@ -1977,12 +1961,6 @@ export function useAgentChat({
           const cierre = cierreDeTurno({
             errorMessage,
             avisoDeTope,
-            // El corte de la ventana, dicho con los dos números: «ve 12 de 20»
-            // es algo que el usuario puede USAR —resumirle lo importante, o
-            // empezar otra conversación—; «memoria recortada» es una disculpa.
-            avisoDeVentana: ventana
-              ? tAgent("ventana", { visibles: ventana.visibles, totales: ventana.totales })
-              : null,
             mutoDurable,
             hayDocumentoNuevo: latestAgentHtml !== null,
           });

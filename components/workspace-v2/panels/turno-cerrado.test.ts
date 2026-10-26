@@ -126,74 +126,7 @@ describe("el tope llega al usuario", () => {
   });
 });
 
-/**
- * LA CONVERSACIÓN NO CABE ENTERA, y el usuario tiene derecho a saberlo.
- *
- * 🔴 Al MODELO ya se le decía —la nota de `buildAgentContext`, para que pueda
- * contestar «de eso ya no me acuerdo» en vez de nombrar el turno más viejo que
- * tenga a mano—. Al usuario no: veía a Len olvidar y no tenía forma de saber por
- * qué, ni de saber que seguir alargando la misma charla empeora la memoria en
- * vez de mejorarla.
- */
-describe("el corte de la ventana llega al usuario", () => {
-  const VENTANA = "Len ve los últimos 12 mensajes de esta conversación, de 20.";
-  const TOPE = "El agente llegó a su límite de pasos por turno.";
 
-  it("un turno limpio con la charla recortada cierra APLICADO CON AVISO", () => {
-    expect(
-      cierreDeTurno({
-        errorMessage: null,
-        avisoDeVentana: VENTANA,
-        mutoDurable: true,
-        hayDocumentoNuevo: true,
-      }),
-    ).toEqual({ kind: "aplicado-con-aviso", aviso: VENTANA });
-  });
-
-  // 🔴 LOS AVISOS SE SUMAN, NO SE PISAN. Quedarse sin pasos y estar hablando con
-  // media conversación fuera de la ventana son DOS hechos distintos: quedarse
-  // con uno le esconde el otro al usuario. Es la misma lección que los cuatro
-  // `aviso_critico` sueltos en el mismo objeto de `editar_pagina`, donde ganaba
-  // la última EN SILENCIO.
-  it("y si además agotó un tope, se dicen LOS DOS", () => {
-    const r = cierreDeTurno({
-      errorMessage: null,
-      avisoDeTope: TOPE,
-      avisoDeVentana: VENTANA,
-      mutoDurable: true,
-      hayDocumentoNuevo: true,
-    });
-    expect(r.kind).toBe("aplicado-con-aviso");
-    if (r.kind !== "aplicado-con-aviso") return;
-    expect(r.aviso).toContain(TOPE);
-    expect(r.aviso).toContain(VENTANA);
-  });
-
-  it("con error Y mutación, el error va delante y el aviso no se pierde", () => {
-    const r = cierreDeTurno({
-      errorMessage: "El modelo tuvo un problema.",
-      avisoDeVentana: VENTANA,
-      mutoDurable: true,
-      hayDocumentoNuevo: true,
-    });
-    expect(r).toEqual({
-      kind: "aplicado-con-aviso",
-      aviso: `El modelo tuvo un problema. ${VENTANA}`,
-      cortado: true,
-    });
-  });
-
-  it("la charla que cabe entera no dice nada", () => {
-    expect(
-      cierreDeTurno({
-        errorMessage: null,
-        avisoDeVentana: null,
-        mutoDurable: true,
-        hayDocumentoNuevo: true,
-      }),
-    ).toEqual({ kind: "aplicado" });
-  });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔴 UN AVISO NO ES UN CORTE (revisión pre-deploy del 2026-09-22).
@@ -206,18 +139,8 @@ describe("el corte de la ventana llega al usuario", () => {
 // tope no es un corte); el panel tiene que decir lo mismo.
 // ─────────────────────────────────────────────────────────────────────────────
 describe("un aviso no es un corte", () => {
-  const VENTANA = "Len ve los últimos 12 mensajes de esta conversación, de 14.";
   const TOPE = "El agente alcanzó su límite de pasos por turno.";
   const plantillaDeCorte = (motivo: string) => `⚠️ Este turno se cortó antes de terminar (${motivo}).`;
-
-  it("🔴 un turno limpio con el aviso de ventana NO está cortado, ni se guarda nada", () => {
-    const cierre = cierreDeTurno({ errorMessage: null, avisoDeVentana: VENTANA, mutoDurable: true, hayDocumentoNuevo: true });
-    expect(cierre.kind).toBe("aplicado-con-aviso");
-    expect(cierre.kind === "aplicado-con-aviso" && cierre.cortado).toBeFalsy();
-    // La ventana se recalcula en cada turno: guardarla en el texto la dejaría
-    // dentro de lo que dijo Len, reenviada al modelo como si fuera suya.
-    expect(lineaGuardadaDelCierre(cierre, { avisoDeTope: null, plantillaDeCorte })).toBeNull();
-  });
 
   it("🔴 un turno que agotó el tope NO está cortado: se guarda el aviso del tope, no «se cortó»", () => {
     const cierre = cierreDeTurno({ errorMessage: null, avisoDeTope: TOPE, mutoDurable: true, hayDocumentoNuevo: true });

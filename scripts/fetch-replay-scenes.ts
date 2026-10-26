@@ -11,7 +11,6 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { scenes, scenesDir, type SceneFile, type SceneRow, type SceneSpec } from "../lib/agent/replay-scenes/scene-files";
-import { turnosQueSeQuedan } from "../lib/agent/transcripcion";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,13 +37,11 @@ function fetchScene(spec: SceneSpec): SceneFile {
   if (spec.rowIds.length < 1 || !ids.every((id) => UUID.test(id))) throw new Error(`scene ${spec.name}: ids must be uuids`);
   const first = spec.rowIds[0]!;
   const last = spec.rowIds.at(-1)!;
-  const older = Number(psql(`select count(*) from (${conversation(first)}) c where c."createdAt" < (select "createdAt" from "projectChatMessages" where id = '${first}');`));
-  if (!Number.isInteger(older)) throw new Error(`scene ${spec.name}: could not count the older turns`);
-  const window = turnosQueSeQuedan(older);
   const json = psql(`
     with c as (${conversation(first)}),
     lim as (select (select "createdAt" from "projectChatMessages" where id = '${first}') a, (select "createdAt" from "projectChatMessages" where id = '${last}') b),
-    w as (select * from c, lim where c."createdAt" < lim.a order by c."createdAt" desc limit ${window}),
+    -- A11: the whole conversation before the first replayed turn, as the route loads it now.
+    w as (select * from c, lim where c."createdAt" < lim.a),
     r as (select * from c, lim where c."createdAt" >= lim.a and c."createdAt" <= lim.b)
     select coalesce(json_agg(x order by x."createdAt"), '[]') from (
       select id, "projectId", "createdAt", status, tipo, "userText", "assistantReasoning", transcript, "attachedImage", actions from w
@@ -56,7 +53,7 @@ function fetchScene(spec: SceneSpec): SceneFile {
     return row;
   });
   for (const id of spec.rowIds) if (!rows.some((r) => r.id === id)) throw new Error(`scene ${spec.name}: row ${id} not found in its conversation`);
-  return { name: spec.name, projectId: spec.projectId, fetchedAt: new Date().toISOString(), olderTurns: older - window, rows };
+  return { name: spec.name, projectId: spec.projectId, fetchedAt: new Date().toISOString(), olderTurns: 0, rows };
 }
 
 function main(): void {
@@ -67,7 +64,7 @@ function main(): void {
     const scene = fetchScene(spec);
     const body = JSON.stringify(scene);
     writeFileSync(join(dir, `${spec.name}.json`), body, "utf8");
-    console.log(`${spec.name}: ${scene.rows.length} rows (${scene.olderTurns} older not downloaded), ${(body.length / 1024).toFixed(0)} KB`);
+    console.log(`${spec.name}: ${scene.rows.length} rows ${(body.length / 1024).toFixed(0)} KB`);
   }
   for (const file of readdirSync(dir)) {
     if (file.endsWith(".json") && !wanted.has(file)) {

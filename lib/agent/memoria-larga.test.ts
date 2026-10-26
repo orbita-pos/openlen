@@ -51,36 +51,6 @@ describe("el registro de cambios", () => {
   });
 });
 
-describe("el aviso de que no ve toda la conversación", () => {
-  /**
-   * EL FALLO QUE CIERRA. MEDIDO el 2026-08-22: a «¿qué fue LO PRIMERO que te
-   * pedí en esta conversación?» contestó nombrando el turno más VIEJO que aún
-   * tenía en su ventana, presentándolo como el primero. Con total seguridad y
-   * equivocado. No dijo «no me acuerdo» porque no sabía que estaba truncado.
-   */
-  it("cuando ve menos de lo que hay, se lo dice", () => {
-    const out = buildAgentContext({
-      ...base,
-      conversacionRecortada: { visibles: 12, totales: 31 },
-    });
-    expect(out).toContain("last 12");
-    expect(out).toContain("31");
-    expect(out).toMatch(/no longer remember/);
-  });
+// ⚰️ «el aviso de que no ve toda la conversación» se fue con A11: Len ve la
+// charla entera desde el último resumen (ver context.test.ts, A11).
 
-  it("cuando lo ve todo NO dice nada", () => {
-    const sin = buildAgentContext(base);
-    expect(buildAgentContext({ ...base, conversacionRecortada: { visibles: 4, totales: 4 } })).toBe(sin);
-    expect(buildAgentContext({ ...base, conversacionRecortada: null })).toBe(sin);
-  });
-
-  // Si el aviso no dijera dónde SÍ está la historia completa, el modelo se
-  // quedaría sólo con «no sé» — que es honesto pero inútil.
-  it("le apunta al registro de cambios, que sí sobrevive", () => {
-    const out = buildAgentContext({
-      ...base,
-      conversacionRecortada: { visibles: 12, totales: 31 },
-    });
-    expect(out).toMatch(/change log/);
-  });
-});

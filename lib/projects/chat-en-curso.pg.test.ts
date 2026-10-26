@@ -93,7 +93,7 @@ describe("la fila del turno en curso, contra Postgres", () => {
 
     const conversacion = await getChatMessages(PROYECTO);
     expect(conversacion.find((t) => t.id === "fila-a")?.enCurso).toBe(true);
-    const historial = await turnosParaElHistorial(PROYECTO, 10);
+    const historial = await turnosParaElHistorial(PROYECTO);
     expect(historial.some((f) => f.assistantReasoning === "Empiezo por el catálogo…")).toBe(false);
   });
 
@@ -106,7 +106,7 @@ describe("la fila del turno en curso, contra Postgres", () => {
     await avanceDelTurno(PROYECTO, "fila-a", { userText: "x", assistantReasoning: "tarde", actions: [] });
     expect((await leerTurnoDelUsuario("fila-a", USUARIO))?.assistantReasoning).toBe("Listo: la tienda tiene catálogo.");
     // Y ahora sí es historia.
-    const historial = await turnosParaElHistorial(PROYECTO, 10);
+    const historial = await turnosParaElHistorial(PROYECTO);
     expect(historial.some((f) => f.assistantReasoning === "Listo: la tienda tiene catálogo.")).toBe(true);
   });
 
@@ -140,7 +140,7 @@ describe("la fila del turno en curso, contra Postgres", () => {
   it("A · el historial del modelo trae la foto de cada turno", async () => {
     await abrirFilaDelTurno(PROYECTO, { id: "fila-foto", userText: "¿dónde la pondrías?", page: null, attachedImage: { url: "https://u/f.jpg" } });
     await registrarTurnoDelServidor(PROYECTO, { ...final("fila-foto", "1. En la portada"), userText: "¿dónde la pondrías?" });
-    const historial = await turnosParaElHistorial(PROYECTO, 10);
+    const historial = await turnosParaElHistorial(PROYECTO);
     expect(historial.find((f) => f.userText === "¿dónde la pondrías?")?.attachedImage).toEqual({ url: "https://u/f.jpg" });
     // Y un turno sin foto la trae vacía, no inventada.
     expect(historial.find((f) => f.assistantReasoning === "Hecho.")?.attachedImage).toBeNull();

@@ -18,7 +18,6 @@ import { comparePrefix, jsonbRoundTrip, type ReplayCheck } from "@/lib/agent/tes
 import {
   historialDesdeLaBase,
   transcripcionParaGuardar,
-  turnosQueSeQuedan,
   type FilaDelHistorial,
   type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
@@ -28,8 +27,7 @@ import type { SceneFile, SceneRow } from "./scene-files";
 export interface SceneTurnCheck {
   readonly rowId: string;
   readonly withinTurn: ReplayCheck;
-  /** `null` for the first replayed turn, or when the history window jumped
-   *  between the two turns (`turnosQueSeQuedan`), which drops the oldest turns on purpose. */
+  /** `null` for the first replayed turn. */
   readonly acrossTurns: ReplayCheck | null;
 }
 
@@ -92,13 +90,12 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
 
   const checks: SceneTurnCheck[] = [];
   const requests = new Map<string, Message[][]>();
-  let previous: { last: Message[]; historyStart: number } | null = null;
+  let previous: { last: Message[] } | null = null;
 
   for (let i = start; i <= end; i++) {
     const row = rows[i]!;
-    const window = turnosQueSeQuedan(scene.olderTurns + i);
-    const historyStart = Math.max(0, i - window);
-    const historyRows = rows.slice(historyStart, i);
+    // A11: the whole conversation the file holds, as the route loads it now.
+    const historyRows = rows.slice(0, i);
     const photos = [...historyRows, row].flatMap((r) => photosOf(r.attachedImage as ChatPhoto | ChatPhoto[] | null).map((p) => p.url));
     const history = historialDesdeLaBase(historyRows.map(fila), undefined, new Map(photos.map((url) => [url, pixelsOf(url)])));
 
@@ -150,7 +147,7 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
     requests.set(row.id, sent);
 
     const acrossTurns =
-      previous === null || historyStart !== previous.historyStart || sent.length === 0 ? null : comparePrefix(previous.last, sent[0]!);
+      previous === null || sent.length === 0 ? null : comparePrefix(previous.last, sent[0]!);
     checks.push({ rowId: row.id, withinTurn: isExtension(sent), acrossTurns });
 
     // Saved the way today's route saves it (with the context it sent), then
@@ -159,7 +156,7 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
       const saved = jsonbRoundTrip(transcripcionParaGuardar(result.transcripcion, new Map()));
       rows[i] = { ...row, transcript: { ...t, mensajes: saved.mensajes, contexto: contextBlock } };
     }
-    previous = sent.length > 0 ? { last: sent.at(-1)!, historyStart } : null;
+    previous = sent.length > 0 ? { last: sent.at(-1)! } : null;
   }
   return { checks, requests };
 }

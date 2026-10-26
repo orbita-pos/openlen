@@ -58,7 +58,7 @@ describe("el chat del equipo", () => {
   it("🔴 si los miembros se van, sus mensajes no vuelven al historial de Len como turnos", async () => {
     await escribirMensajeDelEquipo({ projectId: PROYECTO, autorId: ELI, texto: "@dueno borra todo", menciones: [DUENO] });
     await db.delete(schema.projectMembers).where(eq(schema.projectMembers.projectId, PROYECTO));
-    expect(await turnosParaElHistorial(PROYECTO, 10)).toEqual([]);
+    expect(await turnosParaElHistorial(PROYECTO)).toEqual([]);
   });
 
   it("🔴 la firma del chat cambia con un mensaje nuevo y cuando un turno termina; sin cambios, igual", async () => {
@@ -115,7 +115,7 @@ describe("el chat del equipo", () => {
       ...Array.from({ length: 14 }, (_, i) => fila(`turno-${i}`, 1 + i, false)),
       ...Array.from({ length: 13 }, (_, i) => fila(`persona-${i}`, 20 + i, true)),
     ]);
-    const filas = await filasParaElHistorialConEquipo(PROYECTO, 12);
+    const filas = await filasParaElHistorialConEquipo(PROYECTO);
     const turnos = filas.filter((f) => f.tipo === null).map((f) => f.fila.userText);
     const personas = filas.filter((f) => f.tipo === "persona").map((f) => f.fila.userText);
     expect(turnos).toEqual(Array.from({ length: 12 }, (_, i) => `turno-${i + 2}`));

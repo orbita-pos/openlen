@@ -105,14 +105,14 @@ async function correrConsulta(c: ConsultaDeDisparo, herramienta: string, o: Mont
   async function decidir(): Promise<Omit<ResultadoDeDisparo, "usd">> {
     await sembrar({ projectId, ownerId: o.owner.id, zona: ZONA_POR_DEFECTO, ahora: new Date() });
     // Un proyecto recién creado: el historial vacío, con la forma que lo manda el panel.
-    const { history, historyTotal, dichoAntes } = historialParaElAgente([], null);
+    const { history } = historialParaElAgente([], null);
     enviado = true;
     const eventos = await enviarTurno({
       base: o.base,
       cookie: o.cookie,
       // `esfuerzo` y `zonaHoraria`: lo que manda el panel de un usuario nuevo en
       // México (ver `CuerpoDelTurno`).
-      cuerpo: { projectId, prompt: c.query, turnId: crypto.randomUUID(), history, historyTotal, dichoAntes, esfuerzo: "auto", zonaHoraria: ZONA_POR_DEFECTO },
+      cuerpo: { projectId, prompt: c.query, turnId: crypto.randomUUID(), history, esfuerzo: "auto", zonaHoraria: ZONA_POR_DEFECTO },
       timeoutMs: TIMEOUT_TURNO_MS,
     });
     const llamadas = herramientasDeLen(eventos);

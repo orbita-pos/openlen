@@ -59,14 +59,9 @@ export interface PresupuestoDeResultados {
 }
 export const PRESUPUESTO_DE_RESULTADOS: PresupuestoDeResultados = { hasta: 400_000, deja: 200_000 };
 
-/** Los turnos que forman el historial, A SALTOS por lo mismo que el presupuesto:
- *  hasta 2 × `TURNOS_DE_LA_VENTANA` todos; al pasarse, vuelven a ser 12 y crecen
- *  otra vez. Una ventana fija de 12 dejaba caer el turno más viejo a CADA turno
- *  nuevo, y la petición dejaba de coincidir desde el principio. */
-export const TURNOS_DE_LA_VENTANA = 12;
-export function turnosQueSeQuedan(total: number, ventana: number = TURNOS_DE_LA_VENTANA): number {
-  return total <= 2 * ventana ? total : ventana + ((total - 2 * ventana) % ventana);
-}
+// ⚰️ Aquí vivían `TURNOS_DE_LA_VENTANA` y `turnosQueSeQuedan`, la ventana de
+// turnos a saltos. Con A11 el historial es la charla entera desde la última
+// marca de resumen (`turnosParaElHistorial`), como Claude Code.
 
 /** Tope de una transcripción al guardarla. Un turno con muchas lecturas de
  *  páginas grandes no puede escribir megas en la fila: se vacían sus

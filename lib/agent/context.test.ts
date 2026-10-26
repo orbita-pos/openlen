@@ -322,27 +322,18 @@ describe("H07 · lo que el dueño cambió a mano llega al modelo", () => {
   });
 });
 
-describe("H08-a · lo que el dueño dijo antes de la ventana llega al modelo", () => {
-  const args = {
-    state: {},
-    now: new Date("2026-09-22T12:00:00Z"),
-  };
-
-  it("🔴 sus palabras van en su bloque, junto a la nota de conversación recortada", () => {
-    const s = buildAgentContext({
-      ...args,
-      conversacionRecortada: { visibles: 12, totales: 14 },
-      dichoAntes: ['todos los precios con MXN y "IVA incluido"'],
-    });
-    expect(s).toContain("WHAT THE OWNER TOLD YOU EARLIER");
-    expect(s).toContain('«todos los precios con MXN y "IVA incluido"»');
-  });
-
-  it("BRAZO DE CONTROL: sin nada dicho antes, el contexto sale byte a byte igual", () => {
-    const rec = { conversacionRecortada: { visibles: 12, totales: 14 } };
-    expect(buildAgentContext({ ...args, ...rec, dichoAntes: [] })).toBe(buildAgentContext({ ...args, ...rec }));
+// A11: con la conversación entera ya no hay «palabras que se cayeron» ni nota de
+// ventana; el contexto no las pinta aunque alguien las pase.
+describe("A11 · sin la ventana, el contexto no habla de turnos perdidos", () => {
+  const args = { state: {}, now: new Date("2026-09-22T12:00:00Z") };
+  it("🔴 ni el bloque de lo dicho antes ni la nota de conversación recortada", () => {
+    const viejo = { conversacionRecortada: { visibles: 12, totales: 14 }, dichoAntes: ["todos los precios con MXN"] };
+    const s = buildAgentContext({ ...args, ...(viejo as object) } as Parameters<typeof buildAgentContext>[0]);
+    expect(s).not.toContain("WHAT THE OWNER TOLD YOU EARLIER");
+    expect(s).not.toContain("NOTE ABOUT THE CONVERSATION");
   });
 });
+
 
 describe("estimateContextTokens", () => {
   it("scales with combined content length (~chars/3.5, ceil'd)", () => {

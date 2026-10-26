@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -181,49 +181,52 @@ export async function quitarEncargo(projectId: string, userId: string): Promise<
   return "ok";
 }
 
-/** Cuántos turnos de Len tiene la charla en curso: los mismos que podría leer
- *  `turnosParaElHistorial`. Decide cuántos entran (`turnosQueSeQuedan`). */
-export async function contarTurnosParaElHistorial(projectId: string): Promise<number> {
+/** Un turno de Len de la charla en curso que ya es historia: cerrado (un turno
+ *  que sigue trabajando no lo es: otra pestaña leería su texto a medias como lo
+ *  que Len contestó) y no un mensaje entre personas (lib/projects/chat-equipo.ts:
+ *  si los miembros se fueron, siguen en la base y no deben volver a Len). */
+function turnoDeLaHistoria(projectId: string) {
+  return and(enCurso(projectId), ne(schema.projectChatMessages.status, ESTADO_EN_CURSO), isNull(schema.projectChatMessages.tipo));
+}
+
+/** A11 · desde cuándo cuenta el historial: la fila de la ÚLTIMA marca de resumen
+ *  (el `compact_boundary` de Claude Code), o `null` = desde el principio. */
+async function desdeLaUltimaMarca(projectId: string): Promise<Date | null> {
   const [fila] = await db
-    .select({ n: sql<number>`count(*)::int` })
+    .select({ at: schema.projectChatMessages.createdAt })
     .from(schema.projectChatMessages)
-    .where(and(enCurso(projectId), ne(schema.projectChatMessages.status, ESTADO_EN_CURSO), isNull(schema.projectChatMessages.tipo)));
-  return fila?.n ?? 0;
+    .where(and(turnoDeLaHistoria(projectId), isNotNull(schema.projectChatMessages.compaction)))
+    .orderBy(desc(schema.projectChatMessages.createdAt))
+    .limit(1);
+  return fila?.at ?? null;
 }
 
 /**
- * LOS ÚLTIMOS TURNOS PARA EL HISTORIAL DEL AGENTE (H4), del más viejo al más
- * reciente, con su transcripción. Sale de la base y lo escribió el servidor:
- * nada de aquí lo pone el navegador. Ownership, como arriba, del llamador.
+ * LA CHARLA ENTERA PARA EL HISTORIAL DEL AGENTE (H4; A11: sin ventana, como
+ * Claude Code), de la más vieja a la más reciente, con su transcripción: desde
+ * la fila de la última marca de resumen, incluida, o desde el principio. Sale de
+ * la base y lo escribió el servidor: nada de aquí lo pone el navegador.
+ * Ownership, como arriba, del llamador.
  */
-export async function turnosParaElHistorial(projectId: string, cuantos: number): Promise<FilaDelHistorial[]> {
+export async function turnosParaElHistorial(projectId: string): Promise<FilaDelHistorial[]> {
+  const desde = await desdeLaUltimaMarca(projectId);
   const rows = await db
     .select({
       userText: schema.projectChatMessages.userText,
       assistantReasoning: schema.projectChatMessages.assistantReasoning,
       transcript: schema.projectChatMessages.transcript,
+      compaction: schema.projectChatMessages.compaction,
       // La foto del turno sigue en la conversación (`historialDesdeLaBase`).
       attachedImage: schema.projectChatMessages.attachedImage,
     })
     .from(schema.projectChatMessages)
-    // Un turno que sigue trabajando no es historia todavía: si otra pestaña
-    // manda un turno mientras tanto, no puede leer el texto a medias de éste
-    // como si fuera lo que Len contestó.
-    .where(
-      and(
-        enCurso(projectId),
-        ne(schema.projectChatMessages.status, ESTADO_EN_CURSO),
-        // Los mensajes entre personas no son turnos (lib/projects/chat-equipo.ts):
-        // si los miembros se fueron, siguen en la base y no deben volver a Len.
-        isNull(schema.projectChatMessages.tipo),
-      ),
-    )
-    .orderBy(desc(schema.projectChatMessages.createdAt))
-    .limit(cuantos);
-  return rows.reverse().map((r) => ({
+    .where(and(turnoDeLaHistoria(projectId), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
+    .orderBy(asc(schema.projectChatMessages.createdAt));
+  return rows.map((r) => ({
     userText: r.userText,
     assistantReasoning: r.assistantReasoning,
     transcript: r.transcript ?? null,
+    compaction: r.compaction ?? null,
     attachedImage: r.attachedImage ?? null,
   }));
 }
@@ -263,8 +266,8 @@ export interface FilaCruda {
 }
 
 /** Como `turnosParaElHistorial`, con las filas de persona incluidas (el chat del
- *  equipo): las últimas `cuantos` filas, de la más vieja a la más reciente. */
-export async function filasParaElHistorialConEquipo(projectId: string, cuantos: number): Promise<FilaCruda[]> {
+ *  equipo): desde la última marca de resumen, de la más vieja a la más reciente. */
+export async function filasParaElHistorialConEquipo(projectId: string): Promise<FilaCruda[]> {
   const t = schema.projectChatMessages;
   const columnas = {
     tipo: t.tipo,
@@ -274,20 +277,21 @@ export async function filasParaElHistorialConEquipo(projectId: string, cuantos: 
     userText: t.userText,
     assistantReasoning: t.assistantReasoning,
     transcript: t.transcript,
+    compaction: t.compaction,
     attachedImage: t.attachedImage,
   };
   // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
-  // equipo NO cuentan en esa ventana —si contaran, una charla larga entre
+  // equipo NO cuentan para la marca —si contaran, una charla larga entre
   // personas le quitaría a Len su historial, su modo plan y su encargo—.
+  const desdeLaMarca = await desdeLaUltimaMarca(projectId);
   const turnos = await db
     .select(columnas)
     .from(t)
-    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), isNull(t.tipo)))
-    .orderBy(desc(t.createdAt))
-    .limit(cuantos);
+    .where(and(turnoDeLaHistoria(projectId), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
+    .orderBy(asc(t.createdAt));
   // Y aparte, los mensajes del equipo desde el turno más viejo que se ve (los
-  // de antes ya no tienen dónde ir), con el tope del sobre.
-  const desde = turnos.at(-1)?.createdAt;
+  // de antes ya van resumidos), con el tope del sobre.
+  const desde = turnos[0]?.createdAt;
   const personas = await db
     .select(columnas)
     .from(t)
@@ -301,7 +305,13 @@ export async function filasParaElHistorialConEquipo(projectId: string, cuantos: 
       autorId: r.autorId ?? null,
       menciones: r.menciones ?? null,
       createdAt: r.createdAt,
-      fila: { userText: r.userText, assistantReasoning: r.assistantReasoning, transcript: r.transcript ?? null, attachedImage: r.attachedImage ?? null },
+      fila: {
+        userText: r.userText,
+        assistantReasoning: r.assistantReasoning,
+        transcript: r.transcript ?? null,
+        compaction: r.compaction ?? null,
+        attachedImage: r.attachedImage ?? null,
+      },
     }));
 }
 

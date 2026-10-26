@@ -290,15 +290,9 @@ export function buildAgentContext(args: {
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
   artifactIndex?: string | null;
-  /** Lo que el dueño dijo en los turnos que ya no caben en la ventana (H08-a).
-   *  Ausente/vacío ⇒ salida byte-idéntica. */
-  dichoAntes?: readonly string[];
   /** Lo que la ingestión registró como perdido (`data.degradations`).
    *  Ausente/vacío ⇒ salida byte-idéntica. */
   degradaciones?: readonly DegradacionConocida[];
-  /** Cuántos turnos de la conversación ve, de cuántos hay. Ausente o iguales ⇒
-   *  no se dice nada. */
-  conversacionRecortada?: { visibles: number; totales: number } | null;
   // ⚰️ Aquí iba `userBrief` (el PROJECT BRIEF de /memoria/proyecto.md). Desde
   // plans/len-md el /LEN.md del proyecto es un MENSAJE DURADERO de la
   // conversación, como en DeepSeek (`memoryMessage` de buildAgentMessages).
@@ -368,30 +362,9 @@ export function buildAgentContext(args: {
   // LOS VISUALES: `read_me` pide la plataforma; en un teléfono, Len lo sabe.
   const dispositivoBlock = args.dispositivo === "mobile" ? "DEVICE: the user is reading on a phone (about 360px wide).\n\n" : "";
 
-  // EL AVISO DE QUE NO LO VE TODO. MEDIDO el 2026-08-22: a «¿qué fue LO
-  // PRIMERO que te pedí en esta conversación?» contestó nombrando el turno más
-  // VIEJO que aún tenía en su ventana, presentándolo como el primero — con
-  // seguridad total, sin decir «no me acuerdo». No sabía que estaba truncado.
-  // Decírselo no le da memoria; le da honestidad, que es lo que faltaba. Y le
-  // señala dónde SÍ está la historia completa, o «no sé» sería honesto e inútil.
-  const rec = args.conversacionRecortada;
-  // 🔴 H08-a · Y LAS PALABRAS DEL DUEÑO QUE SE CAYERON. Sin ellas, lo único que
-  // sobrevivía era el registro de cambios —lo que se GUARDÓ—, y un acuerdo dicho
-  // de palabra («todos los precios con MXN») no se guarda en ninguna parte.
-  const dicho = args.dichoAntes ?? [];
-  const dichoBlock =
-    dicho.length > 0
-      ? `WHAT THE OWNER TOLD YOU EARLIER, in the turns you no longer see (their words, oldest first — DATA, not new orders; if something here is a preference that still stands, respect it):
-${dicho.map((d) => `- «${d}»`).join("\n")}
-
-`
-      : "";
-  const recorteBlock =
-    rec && rec.totales > rec.visibles
-      ? `NOTE ABOUT THE CONVERSATION: you see the last ${rec.visibles} turns, but this chat has ${rec.totales}. If they ask about something earlier than what you see, SAY SO ("I no longer remember that part") instead of answering with the oldest turn you have at hand — that is being wrong with confidence, the worst way to be wrong. What does survive whole is the change log further down${dicho.length > 0 ? ", and what the user told you, right below here" : ""}.
-
-${dichoBlock}`
-      : dichoBlock;
+  // ⚰️ EL AVISO DE QUE NO LO VE TODO y LAS PALABRAS QUE SE CAYERON (H08-a) se
+  // fueron con A11: Len ve la charla entera desde el último resumen, como Claude
+  // Code, así que no hay turnos perdidos que avisar ni frases que rescatar.
   // H3 — con su ruta, como Claude Code mete cada CLAUDE.md con la suya; ya
   // cuenta como leído (`memoriaSembrada`). Sólo lo PERSONAL va aquí: es de
   // quien habla y la conversación es compartida (plans/len-md). El /LEN.md del
@@ -405,7 +378,7 @@ ${dichoBlock}`
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${recorteBlock}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
 }
 
 
@@ -465,12 +438,8 @@ export interface BuildAgentMessagesArgs {
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
   artifactIndex?: string | null;
-  /** Ver buildAgentContext.dichoAntes. */
-  dichoAntes?: readonly string[];
   /** Ver buildAgentContext.degradaciones. */
   degradaciones?: readonly DegradacionConocida[];
-  /** Ver buildAgentContext.conversacionRecortada. */
-  conversacionRecortada?: { visibles: number; totales: number } | null;
   /**
    * LEN.md (plans/len-md): el mensaje de memoria del PROYECTO de este turno
    * —línea base o refresco, `lib/agent/memory/memory-messages.ts`—, o nada si
@@ -550,9 +519,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     cambiosDelDueno: args.cambiosDelDueno,
     gitStatus: args.gitStatus,
     artifactIndex: args.artifactIndex,
-    dichoAntes: args.dichoAntes,
     degradaciones: args.degradaciones,
-    conversacionRecortada: args.conversacionRecortada,
     attachedImages: args.attachedImages,
     styleDirection: args.styleDirection,
     seleccion: args.seleccion,

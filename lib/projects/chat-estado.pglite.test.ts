@@ -23,7 +23,8 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor } = await import("./chat");
+const { filasParaElHistorialConEquipo, getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+  await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
   id: "g1",
@@ -105,6 +106,55 @@ describe("A11 · la marca de compactación en la fila", () => {
     await registrarTurnoDelServidor("p1", { id: "t2", userText: "hola", assistantReasoning: "Hola.", status: "applied" });
     const r = await pg.query<{ compaction: unknown }>(`select "compaction" from "projectChatMessages" where id = 't2'`);
     expect(r.rows[0]?.compaction).toBeNull();
+  });
+});
+
+describe("A11 · el historial es la charla entera, desde la última marca", () => {
+  const marca = (texto: string) => ({ messages: [{ role: "user", content: `<compacted-summary>
+${texto}
+</compacted-summary>` }], fromTranscript: 0, trigger: "pressure", preTokens: 9, postTokens: 1 });
+  /** Una fila cerrada; `tipo: "persona"` es un mensaje del equipo. */
+  async function turno(o: { id: string; minuto: number; texto?: string; compaction?: unknown; tipo?: string; conversation?: string }) {
+    await pg.query(
+      `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "transcript", "compaction", "tipo", "conversation")
+       values ($1, 'p1', $2, '', 'applied', $3, '{"mensajes":[],"leidos":[]}'::jsonb, $4::jsonb, $5, $6)`,
+      [o.id, o.texto ?? `turno ${o.id}`, new Date(Date.UTC(2026, 9, 5, 12, o.minuto)), o.compaction === undefined ? null : JSON.stringify(o.compaction), o.tipo ?? null, o.conversation ?? null],
+    );
+  }
+
+  it("🔴 C01: sin marca, los 36 turnos, el primero incluido", async () => {
+    await turno({ id: "t0", minuto: 0, texto: "NO_CAMBIAR_PRECIOS" });
+    for (let i = 1; i < 36; i++) await turno({ id: `t${i}`, minuto: i });
+    const filas = await turnosParaElHistorial("p1");
+    expect(filas).toHaveLength(36);
+    expect(filas[0]!.userText).toBe("NO_CAMBIAR_PRECIOS");
+  });
+
+  it("🔴 con una marca en el turno 20, del 20 al último, con la marca", async () => {
+    for (let i = 0; i < 36; i++) await turno({ id: `t${i}`, minuto: i, compaction: i === 20 ? marca("lo de antes") : undefined });
+    const filas = await turnosParaElHistorial("p1");
+    expect(filas).toHaveLength(16);
+    expect(filas[0]!.compaction).toEqual(marca("lo de antes"));
+  });
+
+  it("🔴 con miembros: el mensaje del equipo de después de la marca entra en su orden; el de antes, no", async () => {
+    await turno({ id: "a", minuto: 0 });
+    await turno({ id: "antes", minuto: 1, tipo: "persona", texto: "viejo" });
+    await turno({ id: "m", minuto: 2, compaction: marca("resumen") });
+    await turno({ id: "despues", minuto: 3, tipo: "persona", texto: "nuevo" });
+    await turno({ id: "b", minuto: 4 });
+    const filas = await filasParaElHistorialConEquipo("p1");
+    expect(filas.map((f) => f.fila.userText)).toEqual(["turno m", "nuevo", "turno b"]);
+  });
+
+  it("🔴 al reabrir una charla archivada, su historial arranca en SU marca", async () => {
+    await turno({ id: "x1", minuto: 0, conversation: "c1" });
+    await turno({ id: "x2", minuto: 1, conversation: "c1", compaction: marca("de c1") });
+    await turno({ id: "x3", minuto: 2, conversation: "c1" });
+    await turno({ id: "y1", minuto: 3, compaction: marca("de la en curso") });
+    expect(await reopenConversation("p1", "c1")).toMatchObject({ ok: true });
+    const filas = await turnosParaElHistorial("p1");
+    expect(filas.map((f) => f.userText)).toEqual(["turno x2", "turno x3"]);
   });
 });
 
