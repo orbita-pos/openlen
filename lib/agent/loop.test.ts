@@ -3747,7 +3747,7 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     const tipos = events.map((e) => e.type);
     expect(tipos.indexOf("compaction_start")).toBeLessThan(tipos.indexOf("compaction"));
     expect(events).toContainEqual({ type: "compaction_start" });
-    expect(events).toContainEqual({ type: "compaction", pruned: 0, summarized: true, discardChars: 0 });
+    expect(events).toContainEqual({ type: "compaction", pruned: 0, summarized: true, discardChars: 0, preTokens: expect.any(Number) });
     expect(r.finalText).toBe("Hecho.");
     expect(r.usage.outputTokens).toBe(15); // el resumen se cobra
     expect(events.some((e) => e.type === "text" && e.text.includes("Primary Request"))).toBe(false); // el resumen NO se le enseña al dueño
@@ -3973,6 +3973,63 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(vistos[1]![2]!.content).toContain("<compacted-summary>");
     expect(vistos[1]![3]).toEqual(VUELTA);
     expect(r.compactionMark?.messages[1]).toEqual(VUELTA);
+  });
+
+  // A11 · C16: `/compact` resume la charla con el mismo resumidor y no trabaja:
+  // UNA llamada (la del resumen), sin el «/compact» como petición, y las
+  // instrucciones al final con el formato de Claude Code.
+  it("🔴 C16: con manualCompaction, una sola llamada —el resumen con sus instrucciones— y la marca «manual»", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const guion = scripted([{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done]);
+    const conComando = [...historial(10).slice(0, -1), { role: "user" as const, content: "/compact céntrate en los precios" }];
+    const r = await runAgentLoop({
+      messages: conComando, tools: leer,
+      manualCompaction: { instructions: "céntrate en los precios" },
+      compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos).toHaveLength(1);
+    expect(esResumen(vistos[0]!)).toBe(true);
+    expect(vistos[0]!.at(-1)!.content.endsWith("\n\nAdditional Instructions:\ncéntrate en los precios")).toBe(true);
+    // (con las comillas: `</compacted-summary>` también contiene «/compact»)
+    expect(JSON.stringify(vistos[0])).not.toContain('"/compact');
+    expect(r.compactionMark?.trigger).toBe("manual");
+    expect(JSON.stringify(r.compactionMark?.messages)).not.toContain('"/compact');
+    expect(r.terminalError).toBe(false);
+    expect(r.finalText).toBe("");
+    expect(events.find((e) => e.type === "compaction")).toMatchObject({ summarized: true, preTokens: r.compactionMark!.preTokens });
+  });
+
+  it("🔴 C16: sin instrucciones, la petición del resumen es la de siempre", async () => {
+    const vistos: Message[][] = [];
+    await runAgentLoop({
+      messages: [...historial(10).slice(0, -1), { role: "user", content: "/compact" }], tools: leer,
+      manualCompaction: { instructions: null },
+      compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return scripted([{ type: "text_delta", text: "## Primary Request and Intent\n- x" }, uso(1), done])(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(vistos[0]!.at(-1)!.content).not.toContain("Additional Instructions");
+    expect(esResumen(vistos[0]!)).toBe(true);
+  });
+
+  it("🔴 C16: una charla que no da para resumir termina con compact_failed, sin llamada de trabajo", async () => {
+    const vistos: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "/compact" }], tools: leer,
+      manualCompaction: { instructions: null },
+      compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return scripted([{ type: "text_delta", text: "no" }, uso(1), done])(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(vistos).toHaveLength(0);
+    expect(r.errorCode).toBe("compact_failed");
+    expect(r.compactionMark).toBeUndefined();
   });
 
   it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {

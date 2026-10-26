@@ -116,6 +116,7 @@
       "cancelled": "De beurt is geannuleerd.",
       "truncated": "Het antwoord had meerdere keren achter elkaar geen ruimte meer — vraag Len om door te gaan.",
       "context_too_long": "Dit gesprek is te lang en kon niet worden samengevat. Typ /compact of begin een nieuw gesprek.",
+      "compact_failed": "Het gesprek kon niet worden samengevat: het is te kort of de samenvatting is mislukt.",
       "upstream": "Het model had een probleem — probeer het opnieuw.",
       "no_credits": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze worden elke 30 dagen vernieuwd — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken.",
       "no_credits_at": "Je credits zijn op. Je pagina is opgeslagen en je kunt hem nu publiceren. Ze komen terug op {date} — of tik bovenaan op je saldo en stap over op Pro om vandaag verder te werken."

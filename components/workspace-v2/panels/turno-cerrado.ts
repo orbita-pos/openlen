@@ -80,8 +80,8 @@ export function cierreDeTurno(args: {
  * avisan desde la fila (`endReason`): las de error. Un tope no: su cierre ya lo
  * cuenta —lo redacta el modelo con los hechos y el cliente guarda su línea—.
  */
-export type ParadaConAviso = "cancelled" | "upstream" | "truncated" | "no_credits" | "context_too_long";
-const PARADAS_CON_AVISO: ReadonlySet<string> = new Set<ParadaConAviso>(["cancelled", "upstream", "truncated", "no_credits", "context_too_long"]);
+export type ParadaConAviso = "cancelled" | "upstream" | "truncated" | "no_credits" | "context_too_long" | "compact_failed";
+const PARADAS_CON_AVISO: ReadonlySet<string> = new Set<ParadaConAviso>(["cancelled", "upstream", "truncated", "no_credits", "context_too_long", "compact_failed"]);
 
 /** El aviso de un turno: el de vivo (`avisoTurno`) o, al recargar, el que sale
  *  de la fila. `cortado` = va con la plantilla «se cortó antes de terminar».
