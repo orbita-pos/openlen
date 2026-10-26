@@ -353,6 +353,8 @@ export interface StoredChatTurn {
   attachedImage?: { url: string; alt?: string };
   /** Every photo of the turn, only when there are two or more. */
   attachedImages?: { url: string; alt?: string }[];
+  /** The PDFs attached to the turn (26/10), as `lib/projects/chat-files.ts` keeps them. */
+  attachedFiles?: { url: string; name: string; size: number }[];
   assistantReasoning: string;
   /** Settled status only — a turn is persisted once it stops streaming. */
   status: "applied" | "error" | "reverted";

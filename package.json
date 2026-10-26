@@ -220,6 +220,7 @@
     "node-diff3": "3.2.1",
     "node-html-parser": "^9.0.0",
     "node-vibrant": "^4.0.4",
+    "pdfjs-dist": "6.4.299",
     "pg": "^8.21.0",
     "pptxgenjs": "4.0.1",
     "puppeteer": "^25.0.2",

@@ -10,6 +10,7 @@ import {
 } from "@/lib/images";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
+import { MAX_PDF_BYTES } from "@/lib/projects/chat-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,15 +132,17 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
 
   const isVideo = ALLOWED_VIDEO_MIME.has(file.type);
   const isImage = ALLOWED_MIME.has(file.type);
-  if (!isVideo && !isImage) {
+  // A PDF for Len (26/10): the chat attaches it and Len reads it with Read.
+  const isPdf = file.type === "application/pdf";
+  if (!isVideo && !isImage && !isPdf) {
     return json(
-      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, MOV.` },
+      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, MOV, PDF.` },
       415,
     );
   }
 
-  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_SIZE_BYTES;
-  const maxLabel = isVideo ? "50 MB" : "5 MB";
+  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : isPdf ? MAX_PDF_BYTES : MAX_SIZE_BYTES;
+  const maxLabel = isVideo ? "50 MB" : isPdf ? "20 MB" : "5 MB";
 
   // Read the size BEFORE pulling the bytes into memory. Some clients still
   // populate file.size correctly even when sending a stream, and we'd rather
@@ -180,6 +183,24 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
 
   const hash = randomBytes(8).toString("hex");
   const storage = getStorage();
+
+  // ─── PDF pass-through (26/10) ────────────────────────────────────────────
+  // Stored as it comes, like a video; only a real PDF. Len draws its pages in
+  // the eyes when he reads it (lib/agent/pdf-pages.ts), never here.
+  if (isPdf) {
+    if (buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+      return json({ error: "That file is not a PDF." }, 415);
+    }
+    const key = `uploads/${generationId}/${hash}.pdf`;
+    try {
+      const result = await storage.upload({ key, contentType: "application/pdf", body: buffer });
+      const body: UploadResponse = { url: result.url, size: result.size, key, variants: [] };
+      return json(body, 200);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return json({ error: `Upload failed: ${message}` }, 500);
+    }
+  }
 
   // ─── Video pass-through ──────────────────────────────────────────────────
   // No decode/transcode — store the bytes as-is and return the URL. The page

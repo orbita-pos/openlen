@@ -133,6 +133,7 @@ import { ProjectUnavailable } from "@/components/workspace-v2/project-unavailabl
 import { isBlankProject } from "@/lib/projects/blank";
 import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
+import { uploadPdf } from "@/lib/workspace-v2/upload-pdf";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
 import { chatALaVista, useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
 import { setChatLayout, useChatLayout } from "@/components/workspace-v2/chat/use-chat-version";
@@ -852,6 +853,8 @@ function NewV2Inner() {
   // ESE brief, y dejarlas puestas haria que la siguiente pagina naciera mirando
   // referencias que el usuario ya no tiene delante.
   const [aiFotos, setAiFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
+  // Los PDF del estado vacío (26/10): se suben con el primer mensaje, como las fotos.
+  const [aiPdfs, setAiPdfs] = useState<readonly File[]>([]);
   const aiBriefFormState = useMemo(
     () => ({
       prompt: aiPrompt,
@@ -862,12 +865,15 @@ function NewV2Inner() {
       setTruncationAnnouncementToken,
       fotos: aiFotos,
       setFotos: setAiFotos,
+      pdfs: aiPdfs,
+      setPdfs: setAiPdfs,
     }),
     [
       aiPrompt,
       truncatedPrompt,
       truncationAnnouncementToken,
       aiFotos,
+      aiPdfs,
     ],
   );
   // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
@@ -1028,11 +1034,15 @@ function NewV2Inner() {
       const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
       const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
       if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
+      const pdfsSubidos = await Promise.all(aiPdfs.map((pdf) => uploadPdf(pdf, loadedProjectId)));
+      const files = pdfsSubidos.flatMap((r) => (r.ok ? [r.file] : []));
+      if (files.length < aiPdfs.length) toast.error(t("toast.pdfsNotUploaded", { count: aiPdfs.length - files.length }));
       // Con App elegida, el primer mensaje lleva `naceComo` y el idioma de la
       // interfaz: el servidor le pone el esqueleto antes del turno, con ese
       // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).
       setPendingChatAttachments({
         images: subidas.images,
+        ...(files.length > 0 ? { files } : {}),
         ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
@@ -1041,11 +1051,12 @@ function NewV2Inner() {
       setMode("chat");
       setLeftCollapsed(false);
       setAiFotos([]);
+      setAiPdfs([]);
       setAiPrompt("");
     } finally {
       setHeroSending(false);
     }
-  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, naceComo, locale, toast, t]);
+  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiPdfs, naceComo, locale, toast, t]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;

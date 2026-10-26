@@ -66,6 +66,9 @@ import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
+import { attachmentPath, filesOf, MAX_FILES_PER_MESSAGE, MAX_PDF_BYTES, type AttachedFile } from "@/lib/projects/chat-files";
+import { readAttachmentBytes } from "@/lib/agent/attachment-bytes";
+import { renderPdfPages } from "@/lib/agent/pdf-pages";
 import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
@@ -309,6 +312,8 @@ type CuerpoDelTurno = {
   attachedImage?: AttachedImageBody;
   /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
   attachedImages?: unknown;
+  /** Los PDF del mensaje (26/10): `{ url, name, size }`, ficheros que Len lee con Read. */
+  attachedFiles?: unknown;
   /** EL ESFUERZO DE ESTE TURNO, fijado por el cliente al ENVIAR. Ver
    *  `esfuerzoDelTurno` más abajo: se manda por turno, no se lee en vivo. */
   esfuerzo?: unknown;
@@ -571,6 +576,9 @@ async function correrTurno(
     // visita tiene que empezar limpia (sin lo guardado por la anterior) y lleva
     // su propio preludio.
     usarPagina,
+    // Un PDF adjunto (26/10): sus bytes, y sus páginas dibujadas en los ojos.
+    readAttachment: (file: AttachedFile) => readAttachmentBytes(file.url, { origen: req.url }),
+    pdfPages: renderPdfPages,
   };
   // Stripe (spec local 2026-10-21-stripe-integration): live mode is the owner's payments and
   // customers, which a member doesn't see (lib/projects/acceso.ts); test mode works the same.
@@ -749,6 +757,31 @@ async function correrTurno(
     if (foto && !attachedImages.some((f) => f.url === foto.url)) attachedImages.push(foto);
   }
   attachedImages.splice(MAX_PHOTOS_PER_MESSAGE);
+
+  // LOS PDF DEL MENSAJE (26/10): ficheros que Len lee con Read cuando decide,
+  // como en Claude Code. Sólo direcciones http(s) que acaban en .pdf, con su
+  // nombre y su tamaño; uno inválido se descarta en silencio, como una foto.
+  const leerFicheroAdjunto = (raw: unknown): AttachedFile | null => {
+    if (!raw || typeof raw !== "object") return null;
+    const r = raw as { url?: unknown; name?: unknown; size?: unknown };
+    const url = typeof r.url === "string" ? r.url.trim() : "";
+    const name = typeof r.name === "string" ? r.name.trim().slice(0, 120) : "";
+    const size = typeof r.size === "number" && Number.isFinite(r.size) && r.size >= 0 ? Math.round(r.size) : null;
+    if (!url || url.length > ATTACHED_URL_MAX || !name || size === null || size > MAX_PDF_BYTES) return null;
+    try {
+      const parsed = new URL(url, req.url);
+      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !/\.pdf$/i.test(parsed.pathname)) return null;
+      return { url: parsed.href, name, size };
+    } catch {
+      return null;
+    }
+  };
+  const attachedFiles: AttachedFile[] = [];
+  for (const raw of Array.isArray(body?.attachedFiles) ? body.attachedFiles : []) {
+    const file = leerFicheroAdjunto(raw);
+    if (file && !attachedFiles.some((f) => f.url === file.url)) attachedFiles.push(file);
+  }
+  attachedFiles.splice(MAX_FILES_PER_MESSAGE);
 
   // La puerta valida la credencial del papel que de verdad razona este turno —
   // ver lib/ai/turn-credentials.ts. Aqui vivia tambien un `PROVIDER` de Gemini
@@ -1037,6 +1070,7 @@ async function correrTurno(
     history,
     todoRestore: listaDelTurno.restoreLine,
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
+    ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
     seleccion,
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
@@ -1140,6 +1174,9 @@ async function correrTurno(
     app: appDelTurno,
     // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
+    // Los PDF de la conversación (26/10), por la ruta con la que Read los abre:
+    // los de este mensaje y los de los turnos que Len ve.
+    attachments: new Map([...attachedFiles, ...filasDelHistorial.flatMap((f) => filesOf(f.attachedFiles))].map((f) => [attachmentPath(f), f] as const)),
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
@@ -1530,6 +1567,7 @@ async function correrTurno(
             userText: prompt,
             page: pageSlug,
             attachedImage: photosForRow(attachedImages),
+            ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
             autorId: miembro ? quien : null,
             ...(hiloDelTurno ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } } : {}),
           });

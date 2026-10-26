@@ -70,7 +70,7 @@ beforeEach(async () => {
     create table "projectChatMessages" (
       "id" text primary key,
       "projectId" text not null references "projects"("id") on delete cascade,
-      "userText" text not null, "attachedImage" jsonb, "assistantReasoning" text not null,
+      "userText" text not null, "attachedImage" jsonb, "attachedFiles" jsonb, "assistantReasoning" text not null,
       "page" text, "actions" jsonb, "noDocChange" boolean, "toolResults" jsonb, "transcript" jsonb,
       "status" text not null, "createdAt" timestamp not null default now(),
       "conversation" text, "centicredits" integer, "durationMs" integer, "autorId" text, "origen" jsonb, "tipo" text, "menciones" jsonb, "endReason" text,
@@ -174,6 +174,24 @@ ${texto}
 
 // A11: como Claude Code (`cleanupPeriodDays`, 30 por defecto): una charla se
 // guarda entera 30 días desde su último mensaje; sin tope de filas ni de charlas.
+// Los PDF del mensaje (26/10): la fila los guarda, el historial de Len los lee
+// (su nota y Read) y el panel los trae para la burbuja.
+describe("los PDF del mensaje en la fila", () => {
+  it("🔴 se guardan al abrir el turno y vuelven en el historial y en el panel; sin ellos, NULL", async () => {
+    const menu = { url: "https://cdn.example/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 };
+    await abrirFilaDelTurno("p1", { id: "con-pdf", userText: "pon mi menú", page: null, attachedFiles: [menu] });
+    await abrirFilaDelTurno("p1", { id: "sin-pdf", userText: "hola", page: null });
+    // El historial es de turnos cerrados: se cierran como lo haría un corte.
+    await marcarCortadaSiSigueEnCurso("con-pdf");
+    await marcarCortadaSiSigueEnCurso("sin-pdf");
+    const historial = await turnosParaElHistorial("p1");
+    expect(historial.map((f) => f.attachedFiles ?? null)).toEqual([[menu], null]);
+    const panel = await getChatMessages("p1");
+    expect(panel.find((t) => t.id === "con-pdf")?.attachedFiles).toEqual([menu]);
+    expect(panel.find((t) => t.id === "sin-pdf")?.attachedFiles).toBeUndefined();
+  });
+});
+
 describe("A11 · retención de 30 días", () => {
   const AHORA = new Date(Date.UTC(2026, 9, 25, 12, 0));
   const haceDias = (d: number, minuto = 0) => new Date(AHORA.getTime() - d * 86_400_000 + minuto * 60_000);

@@ -12,7 +12,7 @@
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowUp, Crosshair, Flag, ImageIcon, KeyRound, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Crosshair, FileText, Flag, ImageIcon, KeyRound, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
 import { ModePicker } from "../panels/mode-picker";
@@ -22,6 +22,7 @@ import { findSecretsInText, type FoundSecret } from "@/lib/apps/env/secret-patte
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
+import type { AttachedFile } from "@/lib/projects/chat-files";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
@@ -45,6 +46,9 @@ export function ChatComposer({
   attachedImage,
   onAttachImage,
   onClearAttachedImage,
+  attachedFiles = [],
+  onAttachPdf,
+  onRemoveFile,
   effort,
   effortLevels,
   effortResolvesTo,
@@ -80,6 +84,11 @@ export function ChatComposer({
   attachedImage: AttachedImage | null;
   onAttachImage: () => void;
   onClearAttachedImage: () => void;
+  /** Los PDF adjuntos (26/10): Len los lee con Read cuando decide. Sin
+   *  `onAttachPdf` no se ofrece adjuntar uno. */
+  attachedFiles?: readonly AttachedFile[];
+  onAttachPdf?: () => void;
+  onRemoveFile?: (url: string) => void;
   effort: EsfuerzoAgente;
   effortLevels: readonly NivelEsfuerzo[];
   effortResolvesTo: NivelEsfuerzo;
@@ -182,7 +191,7 @@ export function ChatComposer({
             </button>
           </div>
         )}
-        {(comments.length > 0 || scopedSelection || attachedImage || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
+        {(comments.length > 0 || scopedSelection || attachedImage || attachedFiles.length > 0 || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
           <div className="mb-1 flex basis-full flex-wrap gap-1.5">
             {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
                 modo plan y su ✕ lo apaga. Mientras Len trabaja no se toca (se
@@ -225,6 +234,12 @@ export function ChatComposer({
                 <span className="min-w-0 truncate">{attachedImage.alt || hostOf(attachedImage.url)}</span>
               </Chip>
             )}
+            {attachedFiles.map((f) => (
+              <Chip key={f.url} title={f.name} {...(onRemoveFile ? { onRemove: () => onRemoveFile(f.url) } : {})} removeLabel={t("composer.removeFile")}>
+                <FileText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                <span className="min-w-0 max-w-[200px] truncate">{f.name}</span>
+              </Chip>
+            ))}
           </div>
         )}
         {(() => {
@@ -307,6 +322,19 @@ export function ChatComposer({
                     onAttachImage();
                   }}
                 />
+                {onAttachPdf && (
+                  <PlusOption
+                    icon={<FileText size={15} />}
+                    title={t("composer.attachPdf")}
+                    hint={t("composer.attachPdfHint")}
+                    on={attachedFiles.length > 0}
+                    onLabel={t("newChat.composer.on")}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      onAttachPdf();
+                    }}
+                  />
+                )}
                 {onTogglePlan && (
                   <PlusOption
                     icon={<ListChecks size={15} />}

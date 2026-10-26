@@ -2546,3 +2546,89 @@ describe("la carpeta viaja con la vista de view_page y use_page", () => {
     assert.equal("files" in vistas[0]!, false);
   });
 });
+
+// A PDF THE USER ATTACHED, READ LIKE CLAUDE CODE (26/10): its path in the
+// message, and `Read` with `pages` when Len decides — the pages come back as
+// images. The drawing itself is lib/agent/pdf-pages.browser.test.ts; here a
+// fake renderer, so what is pinned is the tool: Claude Code's wording, ranges
+// and limits.
+describe("Read on an attached PDF", () => {
+  const PATH = "/.openlen/attachments/abc123/menu.pdf";
+  const PAGE = { mimeType: "image/jpeg", dataBase64: "PAGE" };
+  const setup = (renderer: (bytes: Uint8Array, range: { first: number; last: number } | null) => Promise<unknown>, bytes: Uint8Array | null = new Uint8Array([37, 80, 68, 70])) => {
+    const { deps } = makeDeps();
+    const calls: unknown[] = [];
+    const session = makeSession();
+    session.attachments = new Map([[PATH, { url: "https://cdn.example/uploads/p1/abc123.pdf", name: "menu.pdf", size: 1_258_291 }]]);
+    const d = {
+      ...deps,
+      readAttachment: async () => bytes,
+      pdfPages: async (b: Uint8Array, range: { first: number; last: number } | null) => (calls.push(range), renderer(b, range)),
+    } as unknown as AgentDeps;
+    return { d, session, calls };
+  };
+  const text = (out: { response: Record<string, unknown> }) => String(out.response.tool_result);
+
+  it("🔴 a short PDF comes back whole: Claude Code's line, and one image per page", async () => {
+    const { d, session, calls } = setup(async () => ({ ok: true, pageCount: 3, first: 1, last: 3, images: [PAGE, PAGE, PAGE] }));
+    const out = await runAgentTool(session, d, "Read", { file_path: PATH });
+    assert.equal(out.response.ok, true);
+    assert.equal(text(out), `PDF pages extracted: 3 page(s) from ${PATH} (1.2MB)`);
+    assert.deepEqual(out.images, [PAGE, PAGE, PAGE]);
+    assert.deepEqual(calls, [null]);
+  });
+
+  it("🔴 a range: those pages, and where the rest is", async () => {
+    const { d, session, calls } = setup(async (_b, r) => ({ ok: true, pageCount: 12, first: r!.first, last: r!.last, images: [PAGE, PAGE] }));
+    const out = await runAgentTool(session, d, "Read", { file_path: PATH, pages: "2-3" });
+    assert.equal(
+      text(out),
+      `PDF pages extracted: 2 page(s) from ${PATH} (1.2MB). This PDF has 12 pages. These are pages 2-3. Use the pages parameter to read other pages (e.g., pages: "4-5").`,
+    );
+    await runAgentTool(session, d, "Read", { file_path: PATH, pages: " 7 " });
+    assert.deepEqual(calls, [{ first: 2, last: 3 }, { first: 7, last: 7 }]);
+  });
+
+  it("a pages value that isn't one page or one range, or asks for more than 20, is refused before anything opens", async () => {
+    const { d, session, calls } = setup(async () => ({ ok: true, pageCount: 1, first: 1, last: 1, images: [PAGE] }));
+    for (const bad of ["1,3", "0", "5-2", "abc", "1-3-5"]) {
+      const out = await runAgentTool(session, d, "Read", { file_path: PATH, pages: bad });
+      assert.equal(out.response.ok, false, bad);
+      assert.equal(
+        out.response.error,
+        `Invalid pages parameter: "${bad}". Give one page ("3") or one range ("1-5"), not a list. To read several pages or ranges, read each one separately. Pages are 1-indexed.`,
+      );
+    }
+    const big = await runAgentTool(session, d, "Read", { file_path: PATH, pages: "1-25" });
+    assert.equal(big.response.error, 'Invalid pages parameter: "1-25" asks for 25 pages. Maximum 20 pages per request (e.g., pages: "1-20").');
+    assert.deepEqual(calls, []);
+  });
+
+  it("Claude Code's errors: too many pages, out of range, a password, a damaged file", async () => {
+    const cases: [unknown, Record<string, unknown>, string][] = [
+      [{ ok: false, reason: "too_many_pages", pageCount: 37 }, {}, 'This PDF has 37 pages, which is too many to read at once. Use the pages parameter to read specific page ranges (e.g., pages: "1-5"). Maximum 20 pages per request.'],
+      [{ ok: false, reason: "page_out_of_range", pageCount: 12 }, { pages: "13-14" }, 'Requested pages 13-14 is outside the document (PDF has 12 pages). Use a range within 1-12, maximum 20 pages per request (e.g. pages: "1-12").'],
+      [{ ok: false, reason: "page_out_of_range", pageCount: 3 }, { pages: "9" }, 'Requested page 9 is outside the document (PDF has 3 pages). Use a range within 1-3, maximum 20 pages per request (e.g. pages: "1-3").'],
+      [{ ok: false, reason: "password_protected" }, {}, "PDF is password-protected. Please provide an unprotected version."],
+      [{ ok: false, reason: "corrupted" }, {}, "The PDF could not be read: it may be damaged, or not a PDF."],
+    ];
+    for (const [r, extra, error] of cases) {
+      const { d, session } = setup(async () => r);
+      const out = await runAgentTool(session, d, "Read", { file_path: PATH, ...extra });
+      assert.equal(out.response.ok, false);
+      assert.equal(out.response.error, error);
+      assert.equal(out.images, undefined);
+    }
+  });
+
+  it("an attachment that isn't in this conversation doesn't exist; one that can't be downloaded says so", async () => {
+    const { d, session, calls } = setup(async () => ({ ok: true, pageCount: 1, first: 1, last: 1, images: [PAGE] }));
+    const missing = await runAgentTool(session, d, "Read", { file_path: "/.openlen/attachments/zzz/otro.pdf" });
+    assert.equal(missing.response.ok, false);
+    assert.match(String(missing.response.error), /^There is no file at \/\.openlen\/attachments\/zzz\/otro\.pdf\./);
+    const gone = setup(async () => ({ ok: true, pageCount: 1, first: 1, last: 1, images: [PAGE] }), null);
+    const out = await runAgentTool(gone.session, gone.d, "Read", { file_path: PATH });
+    assert.equal(out.response.error, "The PDF couldn't be downloaded this time. Don't take it as empty; you can try again.");
+    assert.deepEqual(calls, []);
+  });
+});

@@ -282,7 +282,8 @@
       "llamada": "«{ruta}» risponde solo nella pagina pubblicata: qui la chiamata non arriva.",
       "formulario": "Non inviato: una volta pubblicata, arriva nella tua casella e nella tua email.",
       "navegacion": "La pagina ha provato ad andare a «{destino}». Qui resta nell’editor; pubblicata, ci andrebbe."
-    }
+    },
+    "pdfsNotUploaded": "{count, plural, one {Un PDF non è stato caricato} other {# PDF non sono stati caricati}}: il messaggio parte senza."
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",

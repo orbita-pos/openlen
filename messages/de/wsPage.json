@@ -282,7 +282,8 @@
       "llamada": "„{ruta}“ antwortet nur auf der veröffentlichten Seite — hier kommt der Aufruf nicht an.",
       "formulario": "Nicht gesendet: Veröffentlicht landet das in deinem Posteingang und in deiner E-Mail.",
       "navegacion": "Die Seite wollte zu „{destino}“. Hier bleibt sie im Editor; veröffentlicht würde sie dorthin gehen."
-    }
+    },
+    "pdfsNotUploaded": "{count, plural, one {Ein PDF konnte nicht hochgeladen werden} other {# PDFs konnten nicht hochgeladen werden}} – die Nachricht geht ohne sie raus."
   },
   "whatsapp": {
     "title": "WhatsApp-Button",

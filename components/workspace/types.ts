@@ -25,4 +25,8 @@ export interface BriefFormState {
    *  «todavia no»: las dos se recorren igual y las dos pintan nada. */
   fotos: readonly { dataUrl: string; nombre: string }[];
   setFotos: (v: readonly { dataUrl: string; nombre: string }[]) => void;
+  /** The PDFs attached on the start screen (26/10), uploaded with the first
+   *  message like the photos. Without `setPdfs` the composer doesn't offer them. */
+  pdfs?: readonly File[];
+  setPdfs?: (v: readonly File[]) => void;
 }

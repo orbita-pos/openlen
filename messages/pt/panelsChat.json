@@ -107,7 +107,14 @@
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Para trabalhos grandes: pensa o máximo possível antes de cada passo. Demora mais e gasta mais créditos",
     "effortDynamis": "O Len Odyssey sempre pensa o máximo possível",
-    "soloLectura": "Você pode ver este projeto, mas não alterá-lo. Peça ao dono acesso de editor."
+    "soloLectura": "Você pode ver este projeto, mas não alterá-lo. Peça ao dono acesso de editor.",
+    "attachPdf": "Anexar um PDF",
+    "attachPdfHint": "Um cardápio, um currículo, um folheto: o Len lê quando precisar",
+    "removeFile": "Remover o PDF",
+    "pdfLimit": "Cabem 4 PDFs por mensagem.",
+    "pdfTooBig": "Esse PDF passa de 20 MB.",
+    "pdfNotPdf": "Esse arquivo não é um PDF.",
+    "pdfFailed": "Não foi possível enviar o PDF. Tente de novo."
   },
   "equipo": {
     "paraLen": "Para o Len",

@@ -14,7 +14,7 @@ export const ESTADO_EN_CURSO = "en_curso";
 type ChatRow = typeof projectChatMessages.$inferSelect;
 /** Lo que hace falta de la fila; las columnas de después pueden faltar (una escena descargada no las trae). */
 export type ChatRowForTurn = Pick<ChatRow, "id" | "userText" | "assistantReasoning" | "status" | "createdAt" | "attachedImage" | "actions"> &
-  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones" | "endReason">> & {
+  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones" | "endReason" | "attachedFiles">> & {
     /** A11 · la marca de compactación de la fila: cuántos tokens se resumieron (`compaction.preTokens`). */
     compactedTokens?: number | null;
   };
@@ -48,6 +48,8 @@ export function storedTurnFromRow(row: ChatRowForTurn): StoredChatTurn {
   const fotos = photosOf(row.attachedImage);
   if (fotos.length > 0) turn.attachedImage = fotos[0]!;
   if (fotos.length > 1) turn.attachedImages = fotos;
+  // Los PDF del turno (26/10), para la burbuja.
+  if (row.attachedFiles?.length) turn.attachedFiles = [...row.attachedFiles];
   if (row.page) turn.page = row.page; // NULL stays undefined = home
   // F2-T11: NULL/absent stays undefined on both — restoreTurn (chat-panel.tsx)
   // treats undefined exactly like a pre-F2 row (no cards, "Applied" verb ok).

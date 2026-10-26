@@ -107,7 +107,14 @@
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "큰 작업용: 단계마다 최대한 깊이 생각합니다. 더 느리고 크레딧을 더 씁니다",
     "effortDynamis": "Len Odyssey는 항상 최대한 깊이 생각합니다",
-    "soloLectura": "이 프로젝트는 볼 수만 있고 바꿀 수는 없습니다. 소유자에게 편집자 권한을 요청하세요."
+    "soloLectura": "이 프로젝트는 볼 수만 있고 바꿀 수는 없습니다. 소유자에게 편집자 권한을 요청하세요.",
+    "attachPdf": "PDF 첨부",
+    "attachPdfHint": "메뉴판, 이력서, 브로셔 등: 필요할 때 Len이 읽어요",
+    "removeFile": "PDF 빼기",
+    "pdfLimit": "메시지당 PDF는 4개까지예요.",
+    "pdfTooBig": "그 PDF는 20MB를 넘어요.",
+    "pdfNotPdf": "그 파일은 PDF가 아니에요.",
+    "pdfFailed": "PDF를 올리지 못했어요. 다시 시도해 주세요."
   },
   "equipo": {
     "paraLen": "Len에게",

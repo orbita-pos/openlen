@@ -282,7 +282,8 @@
       "llamada": "「{ruta}」は公開ページでのみ応答します。ここでは呼び出しが届きません。",
       "formulario": "送信されていません。公開後は受信トレイとメールに届きます。",
       "navegacion": "ページが「{destino}」へ移動しようとしました。ここではエディターから離れません。公開後は移動します。"
-    }
+    },
+    "pdfsNotUploaded": "{count, plural, other {#件のPDFをアップロードできませんでした}}。メッセージはPDFなしで送信されます。"
   },
   "whatsapp": {
     "title": "WhatsAppボタン",

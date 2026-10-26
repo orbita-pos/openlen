@@ -10,7 +10,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AtSign, Crosshair, CornerDownRight, Flag } from "lucide-react";
+import { AtSign, Crosshair, CornerDownRight, FileText, Flag } from "lucide-react";
 
 import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
@@ -134,6 +134,19 @@ export function UserMessage({
               {fotos.length > 1 ? t("turn.imagesSent", { count: fotos.length }) : t("turn.imageSent")}
             </div>
           )}
+          {/* Los PDF del mensaje (26/10): la prueba de que fueron con él, como las fotos. */}
+          {turn.attachedFiles?.map((f) => (
+            <a
+              key={f.url}
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted hover:fg"
+            >
+              <FileText size={13} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{f.name}</span>
+            </a>
+          ))}
           {turn.scope && (
             <div className="mb-1.5 flex min-w-0 items-center gap-1.5 text-[11.5px] fg-muted">
               <Crosshair size={12} className="shrink-0 text-[var(--nc-accent-text)]" />

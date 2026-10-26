@@ -22,7 +22,7 @@
 // («Read it before changing it»)—: regla por regla en
 // plans/len-agente-2026/notas/f4-tabla-de-reglas.md (R, E, W, G, GL).
 
-const READ = `Reads a file of this website and returns it with numbered lines. A file longer than about 25,000 tokens comes back in part, with a note saying how to read the rest.`;
+const READ = `Reads a file of this website and returns it with numbered lines. A file longer than about 25,000 tokens comes back in part, with a note saying how to read the rest. It also reads a PDF the user attached, as images of its pages: one of more than 10 pages only by range, with pages, at most 20 per call.`;
 
 const EDIT = `Changes a file of this website by replacing exact text. Read the file in this conversation first: an Edit to a file you have not read is refused.`;
 
@@ -42,6 +42,7 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
         file_path: { type: "STRING", description: "Absolute path of the file, e.g. /index.html or /menu/index.html" },
         offset: { type: "NUMBER", description: "First line to return, counting from 1. To read only part of a long file." },
         limit: { type: "NUMBER", description: "How many lines to return. To read only part of a long file." },
+        pages: { type: "STRING", description: 'Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request.' },
       },
       required: ["file_path"],
     },

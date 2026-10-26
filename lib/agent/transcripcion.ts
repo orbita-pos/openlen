@@ -39,6 +39,7 @@ import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
+import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 
 /** La misma marca que usa Claude Code. */
@@ -174,6 +175,9 @@ export interface FilaDelHistorial {
   /** Las fotos que el dueño adjuntó a ese turno (columna `attachedImage`):
    *  un objeto en las filas de siempre, una lista con dos o más (`photosOf`). */
   readonly attachedImage?: ChatPhoto | readonly ChatPhoto[] | null;
+  /** The files (a PDF) attached to that turn, column `attachedFiles`: only
+   *  their note goes back, with the path Len reads them at (26/10). */
+  readonly attachedFiles?: readonly AttachedFile[] | null;
   /** EL CHAT DEL EQUIPO (lib/agent/plegar-equipo.ts): los mensajes entre personas
    *  que hubo antes de este turno y quién lo pidió, ya en su sobre. Sólo en
    *  proyectos con miembros; ausente = el mensaje de siempre, byte a byte. */
@@ -363,6 +367,8 @@ function mensajeDelDueno(f: FilaDelHistorial, fotos: FotosDeLaConversacion): Men
     notas.push(notaDeLaFoto(adjunta, estado));
     if (foto && foto !== NO_CABE) imagenes.push(foto);
   }
+  // Los ficheros, detrás de las fotos: sólo su nota (26/10).
+  for (const file of filesOf(f.attachedFiles)) notas.push(attachmentNote(file));
   // Las capturas del modo Diseño van detrás de las fotos, como en el turno.
   for (const url of f.transcript?.designCaptures ?? []) {
     const captura = fotos.get(url);

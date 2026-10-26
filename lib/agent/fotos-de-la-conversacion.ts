@@ -47,7 +47,13 @@ export interface FuentesDeFotos {
 /** El fichero de una subida NUESTRA en disco, o `null` si la dirección no lo
  *  es. Con R2 no hay disco: sus subidas son públicas y bajan por internet como
  *  cualquier otra. Mismas variables que `lib/storage/index.ts`. */
-export function rutaDeSubidaPropia(url: string, origen: string, env: Entorno = process.env): string | null {
+export function rutaDeSubidaPropia(
+  url: string,
+  origen: string,
+  env: Entorno = process.env,
+  /** Lo que se puede abrir: las fotos, si no se dice; `[".pdf"]` para un PDF adjunto. */
+  extensiones: readonly string[] = Object.keys(MIME_POR_EXTENSION),
+): string | null {
   if (env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY && env.R2_SECRET_KEY) return null;
   let u: URL;
   try {
@@ -64,7 +70,7 @@ export function rutaDeSubidaPropia(url: string, origen: string, env: Entorno = p
   } catch {
     return null;
   }
-  if (!clave || clave.includes("..") || !MIME_POR_EXTENSION[extname(clave).toLowerCase()]) return null;
+  if (!clave || clave.includes("..") || !extensiones.includes(extname(clave).toLowerCase())) return null;
   const raiz = resolve(env.UPLOADS_DIR || "./public/uploads");
   const ruta = resolve(raiz, clave);
   return ruta.startsWith(raiz + sep) ? ruta : null;

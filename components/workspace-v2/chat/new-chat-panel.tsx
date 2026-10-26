@@ -23,6 +23,9 @@ import { useSession } from "next-auth/react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { ReplaceAssetModal } from "../replace-asset-modal";
+import { useToast } from "../toast";
+import { uploadPdf } from "@/lib/workspace-v2/upload-pdf";
+import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
@@ -157,6 +160,9 @@ function AgentChatView({
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
+  const toast = useToast();
+  // UN PDF EN EL CHAT (26/10): se elige, se sube y queda como ficha; Len lo lee con Read.
+  const pdfInput = useRef<HTMLInputElement | null>(null);
   // `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya empezó el turno; aquí se
   // pinta en marcha y se sigue (lib/workspace-v2/turnos-del-hilo.ts).
   const turnoDelHilo = useSyncExternalStore(
@@ -493,6 +499,9 @@ function AgentChatView({
             attachedImage={chat.attachedImage}
             onAttachImage={() => chat.setImageModalOpen(true)}
             onClearAttachedImage={() => chat.setAttachedImage(null)}
+            attachedFiles={chat.attachedFiles}
+            {...(soloLectura ? {} : { onAttachPdf: () => pdfInput.current?.click() })}
+            onRemoveFile={(url) => chat.setAttachedFiles(chat.attachedFiles.filter((f) => f.url !== url))}
             effort={chat.esfuerzo}
             effortLevels={chat.esfuerzoNiveles}
             effortResolvesTo={chat.esfuerzoResuelveA}
@@ -539,6 +548,21 @@ function AgentChatView({
           onClose={() => setSecretoAGuardar(null)}
         />
       )}
+      <input
+        ref={pdfInput}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={async (e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = "";
+          if (!picked) return;
+          if (chat.attachedFiles.length >= MAX_FILES_PER_MESSAGE) return void toast.error(t("composer.pdfLimit"));
+          const r = await uploadPdf(picked, projectId);
+          if (!r.ok) return void toast.error(t(r.reason === "too_big" ? "composer.pdfTooBig" : r.reason === "not_pdf" ? "composer.pdfNotPdf" : "composer.pdfFailed"));
+          chat.setAttachedFiles([...chat.attachedFiles, r.file]);
+        }}
+      />
       <ReplaceAssetModal
         open={chat.imageModalOpen}
         kind={chat.imageModalOpen ? "image" : null}
