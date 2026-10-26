@@ -103,6 +103,8 @@ const mocks = vi.hoisted(() => {
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
   avanceDelTurno: vi.fn(async () => {}),
+  // A11: la marca se guarda en la fila en cuanto el bucle resume.
+  guardarMarcaDelTurno: vi.fn(async () => {}),
   quitarFilaDelTurno: vi.fn(async () => {}),
   // Len sabe de tus resultados: la zona del usuario se guarda y se lee.
   guardarZona: vi.fn(async () => {}),
@@ -204,11 +206,10 @@ vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/projects/chat", () => ({
-  // 12 turnos: `turnosQueSeQuedan(12)` son 12, la ventana de siempre.
-  contarTurnosParaElHistorial: vi.fn(async () => 12),
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
   registrarTurnoDelServidor: mocks.registrarTurnoDelServidor,
+  guardarMarcaDelTurno: mocks.guardarMarcaDelTurno,
   abrirFilaDelTurno: mocks.abrirFilaDelTurno,
   avanceDelTurno: mocks.avanceDelTurno,
   quitarFilaDelTurno: mocks.quitarFilaDelTurno,
@@ -1107,6 +1108,22 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { noDocChange?: boolean; compaction?: { trigger: string } }])[1];
       expect(fila.compaction?.trigger).toBe("manual");
       expect(fila.noDocChange).toBe(true);
+    });
+
+    // Como Claude Code, que anota el `compact_boundary` en la transcripción en
+    // cuanto resume: la marca llega a la fila en ese momento, y un turno que
+    // revienta después no la pierde.
+    it("🔴 la marca se guarda en la fila en cuanto el bucle resume, y sigue ahí si el turno revienta después", async () => {
+      const marca = { messages: [{ role: "user", content: "<compacted-summary>…" }], fromTranscript: 0, trigger: "pressure", preTokens: 900000, postTokens: 9000 };
+      mocks.runAgentLoop.mockImplementationOnce(async (a: { compaction: { saveMark(m: unknown): Promise<void> } }) => {
+        await a.compaction.saveMark(marca);
+        throw new Error("se cayó después de resumir");
+      });
+      await readEvents(await pestanaVieja());
+      const guardada = (mocks.guardarMarcaDelTurno.mock.calls.at(-1) as unknown as [string, string, { trigger: string }] | undefined);
+      expect(guardada?.[2].trigger).toBe("pressure");
+      const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { compaction?: { trigger: string } }])[1];
+      expect(fila.compaction?.trigger).toBe("pressure");
     });
 
     it("un mensaje que no es el comando no lleva manualCompaction", async () => {

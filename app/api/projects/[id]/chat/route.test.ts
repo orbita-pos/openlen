@@ -243,9 +243,9 @@ describe("GET /api/projects/[id]/chat?before= — lo de antes, por páginas", ()
 
   it("🔴 pide una de más para saber si queda algo y devuelve las 50 de antes de `before`", async () => {
     vi.mocked(getChatMessages).mockResolvedValue(Array.from({ length: 51 }, (_, k) => turnoEn(k)));
-    const res = await pedir("?before=2026-10-25T12:00:00.000Z");
+    const res = await pedir("?before=t51");
     expect(res.status).toBe(200);
-    expect(vi.mocked(getChatMessages).mock.calls[0]).toEqual(["p1", { before: new Date("2026-10-25T12:00:00.000Z"), limit: 51 }]);
+    expect(vi.mocked(getChatMessages).mock.calls[0]).toEqual(["p1", { before: "t51", limit: 51 }]);
     const body = (await res.json()) as { turns: { id: string }[]; hasMore: boolean };
     expect(body.hasMore).toBe(true);
     expect(body.turns.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => `t${k + 1}`));
@@ -253,15 +253,16 @@ describe("GET /api/projects/[id]/chat?before= — lo de antes, por páginas", ()
 
   it("🔴 al llegar a la primera, hasMore es falso", async () => {
     vi.mocked(getChatMessages).mockResolvedValue([turnoEn(1), turnoEn(2)]);
-    const body = (await (await pedir("?before=2026-10-25T12:00:00.000Z&limit=10")).json()) as { turns: unknown[]; hasMore: boolean };
-    expect(vi.mocked(getChatMessages).mock.calls[0]![1]).toEqual({ before: new Date("2026-10-25T12:00:00.000Z"), limit: 11 });
+    const body = (await (await pedir("?before=t3&limit=10")).json()) as { turns: unknown[]; hasMore: boolean };
+    expect(vi.mocked(getChatMessages).mock.calls[0]![1]).toEqual({ before: "t3", limit: 11 });
     expect(body).toEqual({ turns: [turnoEn(1), turnoEn(2)], hasMore: false });
   });
 
-  it("un `before` que no es una fecha es un 400; sin sesión, 401", async () => {
-    expect((await pedir("?before=ayer")).status).toBe(400);
+  it("sin `before` (o uno de más de 100 caracteres) es un 400; sin sesión, 401", async () => {
+    expect((await pedir("")).status).toBe(400);
+    expect((await pedir(`?before=${"x".repeat(101)}`)).status).toBe(400);
     vi.mocked(auth).mockResolvedValue(null as never);
-    expect((await pedir("?before=2026-10-25T12:00:00.000Z")).status).toBe(401);
+    expect((await pedir("?before=t3")).status).toBe(401);
     expect(getChatMessages).not.toHaveBeenCalled();
   });
 });

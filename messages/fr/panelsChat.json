@@ -332,7 +332,8 @@
       "clear": "Retirer",
       "clearFailed": "Impossible de retirer l'objectif.",
       "roundLine": "Objectif · tour {round} sur {max}"
-    }
+    },
+    "compactUnavailable": "/compact n'est pas disponible dans le chat classique."
   },
   "functionSecrets": {
     "cardLabel": "Clés secrètes",

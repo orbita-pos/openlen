@@ -5,7 +5,7 @@
 // project interleave instead of overwriting a shared blob. Callers verify
 // project ownership before invoking append/update — see the chat route.
 
-import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
@@ -46,20 +46,28 @@ export { ESTADO_EN_CURSO };
 
 /** Load a project's transcript, oldest-first. Ownership is the caller's
  *  responsibility — `getProject` already scoped the project to the user.
- *  A11: the `limit` most recent rows (`CHAT_LIMIT` by default) before `before`;
- *  the chat asks for the earlier ones when it reaches the top. */
+ *  A11: the `limit` most recent rows (`CHAT_LIMIT` by default) before the row
+ *  `before` (its id); the chat asks for the earlier ones when it reaches the top. */
 export async function getChatMessages(
   projectId: string,
-  page: { before?: Date; limit?: number } = {},
+  page: { before?: string; limit?: number } = {},
 ): Promise<StoredChatTurn[]> {
+  const t = schema.projectChatMessages;
+  // El cursor es la FILA, como el `uuid` de cada mensaje de Claude Code: su hora
+  // y, a igual hora, su id. Una hora del navegador (milisegundos) no distingue
+  // filas que la base guarda con microsegundos. Una fila que no es de esta
+  // charla no trae nada (la comparación con NULL no es cierta).
+  const antesDe = page.before
+    ? sql`(${t.createdAt}, ${t.id}) < (select c."createdAt", c."id" from "projectChatMessages" c where c."id" = ${page.before} and c."projectId" = ${projectId} and c."conversation" is null)`
+    : undefined;
   const [rows, estado] = await Promise.all([
     db
       .select(columnasDelPanel())
-      .from(schema.projectChatMessages)
-      .where(page.before ? and(enCurso(projectId), lt(schema.projectChatMessages.createdAt, page.before)) : enCurso(projectId))
+      .from(t)
+      .where(and(enCurso(projectId), antesDe))
       // Las MÁS RECIENTES (antes la poda dejaba 50 y daba igual por dónde se
       // empezara); se ponen de la más vieja a la más reciente abajo.
-      .orderBy(desc(schema.projectChatMessages.createdAt))
+      .orderBy(desc(t.createdAt), desc(t.id))
       .limit(page.limit ?? CHAT_LIMIT)
       .then((filas) => filas.reverse()),
     // El modo plan y el encargo van en el último turno: una página de antes no lo trae.
@@ -650,6 +658,18 @@ export async function leerTurnoDelUsuario(
   const turn = storedTurnFromRow(fila);
   const goal = parseGoalSnapshot(crudo);
   return goal ? { ...turn, goal: conActivacion(fila.projectId, goal) } : turn;
+}
+
+/** A11 · la marca del resumen, en la fila del turno EN CURSO en cuanto el bucle
+ *  resume: Claude Code anota el `compact_boundary` en la transcripción en ese
+ *  momento, no al final, así que un turno que revienta (o un reinicio) no la
+ *  pierde. Una fila ya cerrada no se toca: la escribe su cierre. */
+export async function guardarMarcaDelTurno(projectId: string, id: string, compaction: CompactionMark): Promise<void> {
+  const t = schema.projectChatMessages;
+  await db
+    .update(t)
+    .set({ compaction })
+    .where(and(eq(t.id, id), eq(t.projectId, projectId), eq(t.status, ESTADO_EN_CURSO)));
 }
 
 /** Una fila que se quedó en curso sin nadie que la corra (el servidor se

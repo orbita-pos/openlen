@@ -258,8 +258,8 @@ async function ownsProject(
   return rows.length > 0;
 }
 
-// GET /api/projects/[id]/chat?before=<ISO>&limit=<n> — the `limit` turns before
-// `before` (oldest first) and whether there are earlier ones. Reading is «ver».
+// GET /api/projects/[id]/chat?before=<turn id>&limit=<n> — the `limit` turns
+// before that one (oldest first) and whether there are earlier ones. Reading is «ver».
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -268,8 +268,8 @@ export async function GET(
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
   const url = new URL(req.url);
-  const before = new Date(url.searchParams.get("before") ?? "");
-  if (Number.isNaN(before.getTime())) return json({ error: "before must be an ISO date" }, 400);
+  const before = url.searchParams.get("before") ?? "";
+  if (before === "" || before.length > 100) return json({ error: "before must be a turn id" }, 400);
   const pedido = Number(url.searchParams.get("limit") ?? CHAT_LIMIT);
   const limit = Number.isInteger(pedido) ? Math.min(Math.max(pedido, 1), CHAT_LIMIT) : CHAT_LIMIT;
   const acceso = await exigirAcceso(id, session.user.id, "ver");

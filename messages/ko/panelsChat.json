@@ -332,7 +332,8 @@
       "clear": "지우기",
       "clearFailed": "목표를 지우지 못했습니다.",
       "roundLine": "목표 · 라운드 {round}/{max}"
-    }
+    },
+    "compactUnavailable": "/compact는 클래식 채팅에서 사용할 수 없습니다."
   },
   "functionSecrets": {
     "cardLabel": "비밀 키",

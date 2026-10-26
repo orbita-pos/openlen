@@ -3975,6 +3975,27 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(r.compactionMark?.messages[1]).toEqual(VUELTA);
   });
 
+  // A11: como Claude Code, que anota el `compact_boundary` en cuanto resume, la
+  // marca sale del bucle EN ESE MOMENTO (antes de la llamada siguiente), no sólo
+  // en el resultado: un turno que revienta después no la pierde.
+  it("🔴 A11: la marca se entrega con saveMark nada más resumir, antes de la llamada siguiente", async () => {
+    const vistos: Message[][] = [];
+    const entregas: { llamadasAntes: number; trigger: string }[] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer,
+      compaction: { ...compaction, saveMark: async (m) => void entregas.push({ llamadasAntes: vistos.length, trigger: m.trigger }) },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(entregas).toEqual([{ llamadasAntes: 1, trigger: "pressure" }]);
+    expect(r.compactionMark?.trigger).toBe("pressure");
+  });
+
   // A11 · C16: `/compact` resume la charla con el mismo resumidor y no trabaja:
   // UNA llamada (la del resumen), sin el «/compact» como petición, y las
   // instrucciones al final con el formato de Claude Code.

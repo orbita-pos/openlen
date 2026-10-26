@@ -332,7 +332,8 @@
       "clear": "Remover",
       "clearFailed": "Não foi possível remover o objetivo.",
       "roundLine": "Objetivo · rodada {round} de {max}"
-    }
+    },
+    "compactUnavailable": "/compact não está disponível no chat clássico."
   },
   "functionSecrets": {
     "cardLabel": "Chaves secretas",

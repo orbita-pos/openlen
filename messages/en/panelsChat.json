@@ -332,7 +332,8 @@
       "clear": "Remove",
       "clearFailed": "Couldn't remove the goal.",
       "roundLine": "Goal · round {round} of {max}"
-    }
+    },
+    "compactUnavailable": "/compact isn't available in the classic chat."
   },
   "functionSecrets": {
     "cardLabel": "Secret keys",

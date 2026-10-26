@@ -332,7 +332,8 @@
       "clear": "Quitar",
       "clearFailed": "No se pudo quitar el encargo.",
       "roundLine": "Encargo · ronda {round} de {max}"
-    }
+    },
+    "compactUnavailable": "/compact no está disponible en el chat clásico."
   },
   "functionSecrets": {
     "cardLabel": "Claves secretas",

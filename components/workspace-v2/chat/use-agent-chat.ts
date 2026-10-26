@@ -42,6 +42,7 @@ import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../pane
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
@@ -713,7 +714,8 @@ export function useAgentChat({
     if (!first?.appliedAt) return;
     olderRef.current = "loading";
     try {
-      const res = await fetch(`/api/projects/${projectId}/chat?before=${encodeURIComponent(new Date(first.appliedAt).toISOString())}`);
+      // El cursor es la fila (su id), no su hora: ver `getChatMessages`.
+      const res = await fetch(`/api/projects/${projectId}/chat?before=${encodeURIComponent(first.id)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = (await res.json()) as { turns?: StoredChatTurn[]; hasMore?: boolean };
       const older = (body.turns ?? []).map(restoreTurn);
@@ -924,6 +926,13 @@ export function useAgentChat({
       abort: AbortController;
     }) => {
       const { turnId, prompt, preEditHtml, turnPage, history, historyTotal, turnScope, turnImage, abort } = opts;
+      // A11 · el chat clásico no resume: `/compact` se contesta aquí, como un
+      // comando que Claude Code no tiene en ese entorno («… isn't available in
+      // this environment.»), en vez de llegar al modelo como una edición.
+      if (parseCompactCommand(prompt)) {
+        updateTurn(turnId, { status: "applied", assistantReasoning: t("newChat.compactUnavailable"), noDocChange: true, appliedAt: Date.now() });
+        return;
+      }
       // Rayo X — idempotent: a no-op if the agent branch already started the
       // loop before falling back here (F4 Task 7 kill-switch replay).
       scanController.start();

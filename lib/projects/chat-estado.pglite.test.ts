@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { abrirFilaDelTurno, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -110,6 +110,20 @@ describe("A11 · la marca de compactación en la fila", () => {
 });
 
 describe("A11 · el historial es la charla entera, desde la última marca", () => {
+  // Como Claude Code, que anota el `compact_boundary` en cuanto resume: la marca
+  // entra en la fila del turno que sigue en curso, y si el servidor se reinicia
+  // a mitad (la fila acaba cortada) el turno siguiente arranca en ella.
+  it("🔴 la marca guardada a mitad de turno sobrevive a un turno cortado; una fila ya cerrada no se toca", async () => {
+    const marca = { messages: [{ role: "user" as const, content: "resumen" }], fromTranscript: 0, trigger: "pressure" as const, preTokens: 900, postTokens: 90 };
+    await abrirFilaDelTurno("p1", { id: "viva", userText: "sigue", page: null });
+    await guardarMarcaDelTurno("p1", "viva", marca);
+    await marcarCortadaSiSigueEnCurso("viva");
+    const historial = await turnosParaElHistorial("p1");
+    expect(historial.at(-1)?.compaction).toEqual(marca);
+    await guardarMarcaDelTurno("p1", "viva", { ...marca, preTokens: 1 });
+    expect((await turnosParaElHistorial("p1")).at(-1)?.compaction?.preTokens).toBe(900);
+  });
+
   const marca = (texto: string) => ({ messages: [{ role: "user", content: `<compacted-summary>
 ${texto}
 </compacted-summary>` }], fromTranscript: 0, trigger: "pressure", preTokens: 9, postTokens: 1 });
@@ -227,11 +241,36 @@ describe("A11 · retención de 30 días", () => {
     for (let i = 1; i <= 120; i++) await filaEn({ id: id(i), at: haceDias(1, i) });
     const primera = await getChatMessages("p1");
     expect(primera.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => id(71 + k)));
-    const segunda = await getChatMessages("p1", { before: new Date(primera[0]!.appliedAt!) });
+    const segunda = await getChatMessages("p1", { before: primera[0]!.id });
     expect(segunda.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => id(21 + k)));
-    const tercera = await getChatMessages("p1", { before: new Date(segunda[0]!.appliedAt!) });
+    const tercera = await getChatMessages("p1", { before: segunda[0]!.id });
     expect(tercera.map((t) => t.id)).toEqual(Array.from({ length: 20 }, (_, k) => id(1 + k)));
-    expect(await getChatMessages("p1", { before: new Date(tercera[0]!.appliedAt!) })).toEqual([]);
+    expect(await getChatMessages("p1", { before: tercera[0]!.id })).toEqual([]);
+  });
+
+  // El cursor es la FILA (fecha y, a igual fecha, id), como el `uuid` de cada
+  // mensaje de Claude Code: un milisegundo del navegador no distingue filas que
+  // la base guarda con microsegundos, ni dos con la misma hora exacta.
+  it("🔴 en el borde de una página, las filas de la misma hora (y del mismo milisegundo) no se pierden", async () => {
+    const en = async (id: string, at: string) =>
+      pg.query(`insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt") values ($1, 'p1', 'x', '', 'applied', $2::timestamp)`, [id, at]);
+    await en("e1", "2026-10-24 12:00:00.100100");
+    await en("e2", "2026-10-24 12:00:00.100200");
+    await en("e3", "2026-10-24 12:00:00.100300");
+    await en("e4", "2026-10-24 12:00:01");
+    await en("e5", "2026-10-24 12:00:01");
+    const vistas: string[] = [];
+    let pagina = await getChatMessages("p1", { limit: 2 });
+    while (pagina.length > 0) {
+      vistas.unshift(...pagina.map((t) => t.id));
+      pagina = await getChatMessages("p1", { before: pagina[0]!.id, limit: 2 });
+    }
+    expect(vistas).toEqual(["e1", "e2", "e3", "e4", "e5"]);
+  });
+
+  it("un cursor que no es una fila de esta charla no trae nada", async () => {
+    await filaEn({ id: "z1", at: haceDias(1) });
+    expect(await getChatMessages("p1", { before: "no-existe" })).toEqual([]);
   });
 
   it("🔴 la fila con la marca dice cuántos tokens se resumieron; las demás, nada", async () => {

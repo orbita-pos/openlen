@@ -332,7 +332,8 @@
       "clear": "外す",
       "clearFailed": "ゴールを外せませんでした。",
       "roundLine": "ゴール · ラウンド {round}/{max}"
-    }
+    },
+    "compactUnavailable": "/compact はクラシックチャットでは使えません。"
   },
   "functionSecrets": {
     "cardLabel": "シークレットキー",

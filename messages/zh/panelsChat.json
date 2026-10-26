@@ -332,7 +332,8 @@
       "clear": "移除",
       "clearFailed": "无法移除目标。",
       "roundLine": "目标 · 第 {round} 轮，共 {max} 轮"
-    }
+    },
+    "compactUnavailable": "/compact 在经典聊天中不可用。"
   },
   "functionSecrets": {
     "cardLabel": "密钥",

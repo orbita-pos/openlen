@@ -332,7 +332,8 @@
       "clear": "Entfernen",
       "clearFailed": "Das Ziel konnte nicht entfernt werden.",
       "roundLine": "Ziel · Runde {round} von {max}"
-    }
+    },
+    "compactUnavailable": "/compact ist im klassischen Chat nicht verfügbar."
   },
   "functionSecrets": {
     "cardLabel": "Geheime Schlüssel",
