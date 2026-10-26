@@ -9,7 +9,8 @@ import { COMPACTION_INSTRUCTION } from "@/lib/agent/compaction/summary-prompt";
 import type { Leidos } from "@/lib/agent/ficheros/read";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import type { AgentLoopArgs, AgentLoopResult, runAgentLoop } from "@/lib/agent/loop";
-import { historialDesdeLaBase, transcripcionParaGuardar } from "@/lib/agent/transcripcion";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import { compactionMarkForStorage, historialDesdeLaBase, transcripcionParaGuardar } from "@/lib/agent/transcripcion";
 
 /**
  * What Postgres jsonb does to an object: keys ordered by UTF-8 byte length, then
@@ -70,8 +71,18 @@ export function checkReplay(o: {
   readonly lastRequest: readonly Message[];
   readonly transcript: readonly Message[];
   readonly leidos: Leidos;
+  /** A11: the turn summarized; `lastRequest` came after that summary. */
+  readonly compactionMark?: CompactionMark;
+  /** Where the summarizable part starts (`compaction.firstIndex`). */
+  readonly firstIndex?: number;
 }): ReplayCheck {
   const saved = jsonbRoundTrip(transcripcionParaGuardar(o.transcript, o.leidos));
+  if (o.compactionMark) {
+    // The next turn rebuilds from the stored mark and the tail of the transcript.
+    const mark = jsonbRoundTrip(compactionMarkForStorage(o.compactionMark));
+    const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved, compaction: mark }]) as Message[];
+    return comparePrefix(o.lastRequest, [...o.initialMessages.slice(0, o.firstIndex ?? 2), ...stored]);
+  }
   // The row's own user message comes first; the loop's messages follow it.
   const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved }]).slice(1) as Message[];
   return comparePrefix([...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)], [...o.initialMessages, ...stored]);
@@ -79,9 +90,10 @@ export function checkReplay(o: {
 
 /**
  * Wraps the loop so that every turn a test runs also proves the invariant: each
- * request sent through `openStream` must replay from the saved transcript. A
- * `compaction` event allows a mismatch (the turn rewrote its own history on
- * purpose). Two requests are not part of the conversation and are not checked:
+ * request sent through `openStream` must replay from the saved transcript; after
+ * a summary (A11), from the saved compaction mark and the transcript's tail. The
+ * requests before a compaction, or after one that only pruned, are not checked:
+ * the turn rewrote that history on purpose. Two requests are not part of the conversation and are not checked:
  * the closing call (`closeOut`), whose last user message is the cap notice the
  * transcript does not keep, and the compaction summary, which goes through
  * `openStream` with the summary instruction as its last message.
@@ -89,23 +101,38 @@ export function checkReplay(o: {
 export function withReplayInvariant(run: typeof runAgentLoop, o: { readonly allow?: readonly ReplayAllowance[] } = {}): typeof runAgentLoop {
   const allow = new Set<ReplayAllowance>(o.allow ?? ["images_dropped"]);
   return async (args: AgentLoopArgs): Promise<AgentLoopResult> => {
-    const requests: Message[][] = [];
-    let compacted = false;
+    // Each request with how many compactions came before it. A11: the ones after
+    // the LAST summary must replay from the mark; the ones before a compaction
+    // (or after a prune-only one) are not what the next turn rebuilds.
+    const requests: { messages: Message[]; compactionsBefore: number }[] = [];
+    let compactions = 0;
+    let lastSummaryAt = -1;
     const result = await run({
       ...args,
       openStream: (messages) => {
-        if (messages.at(-1)?.content !== COMPACTION_INSTRUCTION) requests.push(structuredClone(messages));
+        if (messages.at(-1)?.content !== COMPACTION_INSTRUCTION) requests.push({ messages: structuredClone(messages), compactionsBefore: compactions });
         return args.openStream(messages);
       },
       emit: (ev) => {
-        if (ev.type === "compaction") compacted = true;
+        if (ev.type === "compaction") {
+          compactions += 1;
+          if (ev.summarized) lastSummaryAt = compactions;
+        }
         args.emit(ev);
       },
     });
     if (!result.transcripcion) return result;
-    requests.forEach((request, n) => {
-      const check = checkReplay({ initialMessages: args.messages, lastRequest: request, transcript: result.transcripcion!, leidos: new Map() });
-      if (check.ok || (check.cause && check.cause !== "bytes_differ" && allow.has(check.cause)) || compacted) return;
+    requests.forEach(({ messages: request, compactionsBefore }, n) => {
+      const afterSummary = compactionsBefore > 0 && compactionsBefore === lastSummaryAt && result.compactionMark !== undefined;
+      if (compactions > 0 && !afterSummary) return;
+      const check = checkReplay({
+        initialMessages: args.messages,
+        lastRequest: request,
+        transcript: result.transcripcion!,
+        leidos: new Map(),
+        ...(afterSummary ? { compactionMark: result.compactionMark, firstIndex: args.compaction?.firstIndex } : {}),
+      });
+      if (check.ok || (check.cause && check.cause !== "bytes_differ" && allow.has(check.cause))) return;
       throw new Error(
         `replay invariant: request ${n} does not replay from the saved transcript (message ${check.firstMismatch}, ${check.cause})`,
       );

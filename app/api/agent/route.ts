@@ -57,6 +57,7 @@ import {
   leidosSembrados,
   stateOnlyTranscript,
   transcripcionParaGuardar,
+  compactionMarkForStorage,
   turnosQueSeQuedan,
   type FilaDelHistorial,
   type MensajeDelHistorial,
@@ -72,6 +73,7 @@ import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
 import { resolveCompaction } from "@/lib/agent/compaction/policy";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
 import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
@@ -1284,6 +1286,8 @@ async function correrTurno(
       const registro = crearRegistroDelTurno();
       /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
       let transcripcionDelTurno: Message[] | null = null;
+      /** A11 · la marca del último resumen del turno (`compactionMark`), para la fila. */
+      let marcaDelTurno: CompactionMark | null = null;
       // ⚰️ Aquí se recogía `suiteDelTurno`, CÓMO QUEDABA LA SUITE DE LA PÁGINA
       // al cerrar el turno. Lo llenaba el veredicto de los ojos (`verifyTurn`),
       // retirado el 2026-10-06 con las promesas rotas (plans/crear-es-len,
@@ -1360,6 +1364,9 @@ async function correrTurno(
               centicredits: cobrado ?? (chargedByTools > 0 ? chargedByTools : undefined),
               durationMs: Date.now() - empezo,
               endReason: motivoDelFin ?? undefined,
+              // A11 · si resumió, de aquí arranca el historial del turno siguiente
+              // (el `compact_boundary` de Claude Code), limpia como la transcripción.
+              ...(transcripcionDelTurno && marcaDelTurno ? { compaction: compactionMarkForStorage(marcaDelTurno) } : {}),
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
               // estado del turno siguiente.
@@ -1802,6 +1809,7 @@ async function correrTurno(
         });
         mutoDurable = mutoDurable || result.mutoDurable;
         transcripcionDelTurno = result.transcripcion ?? null;
+        marcaDelTurno = result.compactionMark ?? null;
         corte = corteDelTurno({ ...result, mutoDurable: mutoDurable || estadoCambiado() });
         finDelTurno = result.topeAlcanzado ?? result.errorCode ?? (corte ? "cut" : "completed");
         motivoDelFin = result.topeAlcanzado ?? result.errorCode ?? (result.terminalError ? "cancelled" : null);

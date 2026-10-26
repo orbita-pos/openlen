@@ -38,3 +38,32 @@ describe("checkReplay", () => {
     expect(r).toMatchObject({ ok: false, cause: "images_dropped" });
   });
 });
+
+// A11: after a summary, the next turn rebuilds from the saved mark (Claude Code's
+// `compact_boundary`), so the requests after it must replay byte for byte too.
+describe("checkReplay with a compaction mark", () => {
+  const initial: Message[] = [
+    { role: "system", content: "S" },
+    { role: "user", content: "manual" },
+    { role: "user", content: "old 1" },
+    { role: "assistant", content: "old 2" },
+    { role: "user", content: "now" },
+  ];
+  const summary: Message = { role: "user", content: "<compacted-summary>\nold\n</compacted-summary>" };
+  const own: Message[] = [
+    { role: "assistant", content: "before the summary" },
+    { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/a", offset: 1, limit: 50 } }] },
+    { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x" } }] },
+    { role: "assistant", content: "Done." },
+  ];
+  const mark = { messages: [summary, initial[4]!], fromTranscript: 1, trigger: "pressure" as const, preTokens: 50, postTokens: 10 };
+  const afterSummary: Message[] = [initial[0]!, initial[1]!, summary, initial[4]!, own[1]!, own[2]!];
+
+  it("🔴 C04/C12: a request after the summary replays from the mark (through jsonb) and the transcript's tail", () => {
+    expect(checkReplay({ initialMessages: initial, lastRequest: afterSummary, transcript: own, leidos: new Map(), compactionMark: mark, firstIndex: 2 })).toEqual({ ok: true });
+  });
+
+  it("CONTROL: without the mark the same request does not replay", () => {
+    expect(checkReplay({ initialMessages: initial, lastRequest: afterSummary, transcript: own, leidos: new Map() }).ok).toBe(false);
+  });
+});

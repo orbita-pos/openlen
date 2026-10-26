@@ -11,6 +11,7 @@ import {
   turnosQueSeQuedan,
   textoDelHistorial,
   transcripcionParaGuardar,
+  compactionMarkForStorage,
   type FilaDelHistorial,
 } from "./transcripcion";
 import { ventanaVisibleDe } from "./historial-saneado";
@@ -496,5 +497,66 @@ describe("el chat del equipo en el historial", () => {
     const con = historialDesdeLaBase([{ userText: "hola", assistantReasoning: "ok", transcript: null, prefijoDelEquipo: "<asked-by/>\n" }]);
     expect(sin[0]!.content).toBe("hola");
     expect(con[0]!.content).toBe("<asked-by/>\nhola");
+  });
+});
+
+// A11 (spec local 2026-10-25-a11-continuity): como el `compact_boundary` de Claude
+// Code, el historial arranca en la marca del resumen y sigue con lo que vino después.
+describe("A11 · el historial desde la marca del resumen", () => {
+  const RESUMEN: Message = { role: "user", content: "Continuing.\n\n<compacted-summary>\nlo de antes\n</compacted-summary>" };
+  const CONSERVADO: Message = { role: "user", content: "sigue con el menú" };
+  const marca = (messages: Message[], fromTranscript: number) => ({ messages, fromTranscript, trigger: "pressure" as const, preTokens: 900, postTokens: 100 });
+  const propios: Message[] = [
+    { role: "assistant", content: "ya resumido" },
+    { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/menu/index.html" } }] },
+    { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "1\t<h1>Menú</h1>" } }] },
+    { role: "assistant", content: "Listo." },
+  ];
+
+  it("🔴 una fila con marca: la marca y la cola de su transcripción, sin su memoria, su contexto ni su mensaje del dueño", () => {
+    const conMarca: FilaDelHistorial = {
+      userText: "sigue con el menú",
+      assistantReasoning: "",
+      transcript: { mensajes: propios, leidos: [], memoria: "MEMORIA-DEL-TURNO", contexto: "CONTEXTO-DEL-TURNO" },
+      compaction: marca([RESUMEN, CONSERVADO], 1),
+    };
+    const h = historialDesdeLaBase([conMarca, fila("gracias", [{ role: "assistant", content: "De nada." }])]);
+    expect(h.slice(0, 2)).toEqual([RESUMEN, CONSERVADO]);
+    expect(h.slice(2, 5).map((m) => m.content)).toEqual(["", "", "Listo."]);
+    expect(JSON.stringify(h)).not.toMatch(/MEMORIA-DEL-TURNO|CONTEXTO-DEL-TURNO|ya resumido/);
+    expect(h.filter((m) => m.content === "sigue con el menú")).toHaveLength(1);
+    expect(h.slice(-2)).toEqual([{ role: "user", content: "gracias", opensTurn: true }, { role: "assistant", content: "De nada." }]);
+  });
+
+  it("🔴 C10: lo de ~/.len/LEN.md dentro de la marca no vuelve", () => {
+    const conMarca: FilaDelHistorial = {
+      userText: "x",
+      assistantReasoning: "",
+      transcript: { mensajes: [], leidos: [] },
+      compaction: marca([RESUMEN, ...leer("/home/user/.len/LEN.md", "1\t- (Eli) Prefiero frases cortas.")], 0),
+    };
+    expect(JSON.stringify(historialDesdeLaBase([conMarca]))).not.toMatch(/frases cortas/);
+  });
+
+  it("un turno parado (■) después de resumir lleva su marca de detenido al final", () => {
+    const conMarca: FilaDelHistorial = {
+      userText: "x",
+      assistantReasoning: "",
+      transcript: { mensajes: propios, leidos: [], detenido: true },
+      compaction: marca([RESUMEN], 1),
+    };
+    expect(historialDesdeLaBase([conMarca]).at(-1)).toEqual({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+  });
+
+  it("🔴 la marca se guarda limpia, como una transcripción: sin píxeles ni memoria personal", () => {
+    const sucia = marca(
+      [{ ...RESUMEN, images: [{ mimeType: "image/png", dataBase64: "AAAA" }] }, ...leer("/home/user/.len/LEN.md", "1\tsecreto")],
+      0,
+    );
+    const limpia = compactionMarkForStorage(sucia);
+    // Como en la transcripción: la llamada privada se queda, su contenido se tapa.
+    expect(limpia.messages[0]).toEqual({ role: "user", content: RESUMEN.content });
+    expect(JSON.stringify(limpia.messages)).not.toMatch(/secreto|AAAA/);
+    expect(limpia.trigger).toBe("pressure");
   });
 });

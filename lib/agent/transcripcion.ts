@@ -39,7 +39,7 @@ import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
-import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -393,25 +393,51 @@ export function historialDesdeLaBase(
   fotos: FotosDeLaConversacion = new Map(),
 ): MensajeDelHistorial[] {
   const mensajes: MensajeDelHistorial[] = [];
-  for (const f of filas) {
+  // A11 · LA MARCA DEL RESUMEN (el `compact_boundary` de Claude Code): el
+  // historial arranca en la fila de la última marca; lo de antes ya va resumido.
+  const desdeLaMarca = filas.findLastIndex((f) => isCompactionMark(f.compaction));
+  for (const [i, f] of filas.entries()) {
+    if (i < desdeLaMarca) continue;
+    if (i === desdeLaMarca && isCompactionMark(f.compaction)) {
+      // Lo que vio el modelo tras resumir (ya trae, resumidos o tal cual, la
+      // memoria, el contexto y el mensaje del dueño de ese turno) y, detrás, la
+      // cola de su transcripción.
+      const marca = enElHistorial(f.compaction.messages);
+      const cola = enElHistorial((f.transcript?.mensajes ?? []).slice(f.compaction.fromTranscript));
+      mensajes.push(...marca, ...cola);
+      if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+      continue;
+    }
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
     if (f.transcript?.memoria) mensajes.push({ role: "user", content: f.transcript.memoria });
     // Y su contexto, en su sitio: lo de delante sigue en caché (ver `contexto`).
     if (f.transcript?.contexto) mensajes.push({ role: "user", content: f.transcript.contexto });
     mensajes.push(mensajeDelDueno(f, fotos));
     if (f.transcript?.mensajes.length) {
-      // Del bucle sólo salen mensajes de usuario y de asistente; uno de sistema
-      // no tiene sitio en un historial y no se reenvía.
-      // Sin la memoria personal, también en las filas de antes de que se
-      // dejara de guardar (y en las de /memoria/dueno.md).
-      const propios = withoutPersonalMemory(f.transcript.mensajes).filter((m) => m.role !== "system");
-      propios.forEach((m, i) => mensajes.push(limpio({ ...m, role: m.role as "user" | "assistant" }, propios[i + 1])));
+      mensajes.push(...enElHistorial(f.transcript.mensajes));
     } else if (f.assistantReasoning.trim()) {
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }
     if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
   }
   return microcompactarASaltos(mensajes, presupuesto);
+}
+
+/** Mensajes del bucle tal y como vuelven en el historial. Del bucle sólo salen
+ *  mensajes de usuario y de asistente; uno de sistema no tiene sitio en un
+ *  historial y no se reenvía. Sin la memoria personal, también en las filas de
+ *  antes de que se dejara de guardar (y en las de /memoria/dueno.md). */
+function enElHistorial(deLaFila: readonly Message[]): MensajeDelHistorial[] {
+  const propios = withoutPersonalMemory(deLaFila).filter((m) => m.role !== "system");
+  return propios.map((m, i) => limpio({ ...m, role: m.role as "user" | "assistant" }, propios[i + 1]));
+}
+
+/** A11 · la marca lista para la fila, limpia como una transcripción
+ *  (`transcripcionParaGuardar`): sin la memoria personal de quien habló y sin
+ *  píxeles (las fotos de lo conservado vuelven sin ellos, como `images_dropped`). */
+export function compactionMarkForStorage(mark: CompactionMark): CompactionMark {
+  const propios = withoutPersonalMemory(mark.messages);
+  return { ...mark, messages: propios.map((m, i) => limpio(m, propios[i + 1])) };
 }
 
 /**
