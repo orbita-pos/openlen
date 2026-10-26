@@ -161,6 +161,13 @@ export function TurnClose({
             {stats.join(" · ")}
           </span>
         )}
+        {typeof turn.compactedTokens === "number" && (
+          // A11 · como el «Compacted» de Claude Code: aquí se resumió la
+          // conversación. Es para quien lee el chat; el modelo nunca lo ve.
+          <span className="text-[11.5px] tabular-nums fg-faint" data-compacted="">
+            {t("newChat.close.compacted", { tokens: new Intl.NumberFormat(locale).format(turn.compactedTokens) })}
+          </span>
+        )}
         {said === "thanks" && <span className="text-[11.5px] fg-faint">{t("newChat.feedback.thanks")}</span>}
         {said === "failed" && <span className="text-[11.5px] nc-bad">{t("newChat.feedback.failed")}</span>}
         <FeedbackButtons vote={vote} onUp={up} onDown={down} />

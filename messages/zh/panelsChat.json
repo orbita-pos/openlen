@@ -254,7 +254,8 @@
     "close": {
       "applied": "已应用",
       "appliedEdits": "已应用 · {count, plural, other {# 处编辑}}",
-      "credits": "{credits} 积分"
+      "credits": "{credits} 积分",
+      "compacted": "对话已总结 · {tokens} 个 token"
     },
     "feedback": {
       "up": "有帮助",

@@ -14,7 +14,10 @@ export const ESTADO_EN_CURSO = "en_curso";
 type ChatRow = typeof projectChatMessages.$inferSelect;
 /** Lo que hace falta de la fila; las columnas de después pueden faltar (una escena descargada no las trae). */
 export type ChatRowForTurn = Pick<ChatRow, "id" | "userText" | "assistantReasoning" | "status" | "createdAt" | "attachedImage" | "actions"> &
-  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones" | "endReason">>;
+  Partial<Pick<ChatRow, "page" | "noDocChange" | "centicredits" | "durationMs" | "origen" | "tipo" | "menciones" | "endReason">> & {
+    /** A11 · la marca de compactación de la fila: cuántos tokens se resumieron (`compaction.preTokens`). */
+    compactedTokens?: number | null;
+  };
 
 /** Los motivos de parada que se leen de la fila; otro texto se ignora. */
 const END_REASONS = {
@@ -59,6 +62,8 @@ export function storedTurnFromRow(row: ChatRowForTurn): StoredChatTurn {
   if (typeof row.durationMs === "number") turn.durationMs = row.durationMs;
   // A5 · por qué paró, si no terminó: el aviso al recargar sale de aquí.
   if (isEndReason(row.endReason)) turn.endReason = row.endReason;
+  // A11 · en este turno se resumió la conversación: la línea «Conversación resumida».
+  if (typeof row.compactedTokens === "number" && Number.isFinite(row.compactedTokens)) turn.compactedTokens = row.compactedTokens;
   // Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo».
   if (row.origen) turn.origen = row.origen;
   // El chat del equipo: un mensaje entre personas y a quién menciona.

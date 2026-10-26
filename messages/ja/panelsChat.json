@@ -254,7 +254,8 @@
     "close": {
       "applied": "適用済み",
       "appliedEdits": "適用済み · {count, plural, other {# 件の編集}}",
-      "credits": "{credits} クレジット"
+      "credits": "{credits} クレジット",
+      "compacted": "会話を要約しました · {tokens} トークン"
     },
     "feedback": {
       "up": "役に立った",

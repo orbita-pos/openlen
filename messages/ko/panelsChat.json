@@ -254,7 +254,8 @@
     "close": {
       "applied": "적용됨",
       "appliedEdits": "적용됨 · {count, plural, other {편집 #개}}",
-      "credits": "{credits} 크레딧"
+      "credits": "{credits} 크레딧",
+      "compacted": "대화를 요약했습니다 · {tokens} 토큰"
     },
     "feedback": {
       "up": "도움이 됐어요",

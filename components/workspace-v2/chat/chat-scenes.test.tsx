@@ -124,3 +124,16 @@ describe("real production scenes paint without the 24/10 defects", () => {
     });
   }
 });
+
+// A11 · C14: the turn whose row carries the compaction mark says so, as Claude
+// Code's «Compacted» line, and the conversation above it stays on screen.
+describe("A11 · the summarized conversation", () => {
+  it("🔴 C14: a turn with compactedTokens paints «Conversación resumida · 912.000 tokens» and the messages above stay", () => {
+    const base = { assistantReasoning: "Listo.", status: "applied" as const, appliedAt: Date.UTC(2026, 9, 25) };
+    const before = paint(restoreTurn({ ...base, id: "t1", userText: "pon el menú arriba" }));
+    const host = paint(restoreTurn({ ...base, id: "t2", userText: "y el pie", compactedTokens: 912000 }));
+    expect(host.textContent).toContain(`newChat.close.compacted ${JSON.stringify({ tokens: "912.000" })}`);
+    expect(before.textContent).toContain("pon el menú arriba");
+    expect(before.textContent).not.toContain("newChat.close.compacted");
+  });
+});

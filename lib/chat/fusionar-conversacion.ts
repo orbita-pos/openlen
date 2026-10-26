@@ -21,6 +21,10 @@ export interface OpcionesDeFusion<L, S> {
    *  los errores. Si ya tiene detrás un turno que el servidor sí tiene, se
    *  queda en su sitio en vez de irse al final (ver abajo). */
   readonly keepsPlace?: (local: L) => boolean;
+  /** A11 · ¿Es un turno local MÁS VIEJO que lo que manda el servidor? El
+   *  servidor manda las más recientes; lo que el chat trajo al subir (y la que
+   *  se sale de esa ventana con un turno nuevo) va delante, en su orden. */
+  readonly older?: (local: L) => boolean;
 }
 
 /**
@@ -31,6 +35,7 @@ export interface OpcionesDeFusion<L, S> {
  *    local que guardar, ni preimagen ni Deshacer;
  *  · los demás conservan lo local (la preimagen del Deshacer) con el estado
  *    del servidor;
+ *  · lo local más viejo que lo que manda el servidor (`older`) va delante;
  *  · lo local que el servidor aún no tiene va detrás, en su orden;
  *  · salvo lo que nunca va a tener (`keepsPlace`) y ya quedó ENTRE turnos que
  *    sí tiene: eso se queda detrás del turno que tenía delante. Si no, un
@@ -55,11 +60,16 @@ export function fusionarConversacion<
     if (serverIds.has(t.id)) lastKnown = i;
   });
   const anchored = new Map<string | null, L[]>();
+  const head: L[] = [];
   const tail: L[] = [];
   let anchor: string | null = null;
   prev.forEach((t, i) => {
     if (serverIds.has(t.id)) {
       anchor = t.id;
+      return;
+    }
+    if (o.older?.(t)) {
+      head.push(t);
       return;
     }
     if (i < lastKnown && o.keepsPlace?.(t)) {
@@ -68,7 +78,7 @@ export function fusionarConversacion<
     }
     tail.push(t);
   });
-  const out: L[] = [...(anchored.get(null) ?? [])];
+  const out: L[] = [...head, ...(anchored.get(null) ?? [])];
   for (const m of merged) {
     out.push(m, ...(anchored.get(m.id) ?? []));
   }

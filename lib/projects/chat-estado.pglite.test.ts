@@ -208,6 +208,29 @@ describe("A11 · retención de 30 días", () => {
     expect(turnos[0]!.id).toBe("m10");
     expect(turnos.at(-1)!.id).toBe("m59");
   });
+
+  it("🔴 C15: 120 filas por páginas de 50, de atrás hacia delante, hasta la primera", async () => {
+    const id = (i: number) => `q${String(i).padStart(3, "0")}`;
+    for (let i = 1; i <= 120; i++) await filaEn({ id: id(i), at: haceDias(1, i) });
+    const primera = await getChatMessages("p1");
+    expect(primera.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => id(71 + k)));
+    const segunda = await getChatMessages("p1", { before: new Date(primera[0]!.appliedAt!) });
+    expect(segunda.map((t) => t.id)).toEqual(Array.from({ length: 50 }, (_, k) => id(21 + k)));
+    const tercera = await getChatMessages("p1", { before: new Date(segunda[0]!.appliedAt!) });
+    expect(tercera.map((t) => t.id)).toEqual(Array.from({ length: 20 }, (_, k) => id(1 + k)));
+    expect(await getChatMessages("p1", { before: new Date(tercera[0]!.appliedAt!) })).toEqual([]);
+  });
+
+  it("🔴 la fila con la marca dice cuántos tokens se resumieron; las demás, nada", async () => {
+    await filaEn({ id: "s1", at: haceDias(1, 1) });
+    await filaEn({ id: "s2", at: haceDias(1, 2) });
+    await pg.query(`update "projectChatMessages" set "compaction" = $1 where "id" = 's2'`, [
+      JSON.stringify({ messages: [{ role: "user", content: "resumen" }], fromTranscript: 0, trigger: "pressure", preTokens: 912000, postTokens: 9000 }),
+    ]);
+    const turnos = await getChatMessages("p1");
+    expect(turnos.find((t) => t.id === "s2")?.compactedTokens).toBe(912000);
+    expect(turnos.find((t) => t.id === "s1")).not.toHaveProperty("compactedTokens");
+  });
 });
 
 describe("el estado de la charla en Postgres", () => {
