@@ -71,6 +71,7 @@ import type { Message } from "@/lib/ai-gateway";
 import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
 import { resolveCompaction } from "@/lib/agent/compaction/policy";
+import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import { POST_COMPACT_MAX_FILES, restoredFilesMessage } from "@/lib/agent/compaction/restore-files";
 import { CHARS_PER_TOKEN } from "@/lib/agent/compaction/estimate";
@@ -1047,6 +1048,9 @@ async function correrTurno(
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
   const built = buildAgentMessages(argsDelTurno);
+  // A11 · `/compact` (como Claude Code): el bucle resume la charla y no trabaja.
+  // La fila guarda lo escrito, como cualquier turno, y la marca «manual».
+  const compactCommand = parseCompactCommand(prompt);
 
   // ⚰️ EL PLANO B —mandar sólo el índice de secciones cuando la página no
   // cabía— se fue con el documento (Len 2.0, T8c): el contexto ya no lleva
@@ -1334,7 +1338,9 @@ async function correrTurno(
         await avance.parar();
         // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
         // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
-        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado())) {
+        // A11 · y siempre que resumió: sin la fila se perdería la marca (un
+        // `/compact` no escribe nada más).
+        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado()) || marcaDelTurno !== null) {
           try {
             await registrarTurnoDelServidor(projectId, {
               ...registro.fila({
@@ -1641,6 +1647,7 @@ async function correrTurno(
           signal: upstreamAbort.signal,
           // A11 · la charla no cabe: resumir antes de la primera llamada de trabajo.
           ...(built.compactFirst ? { compactFirst: true } : {}),
+          ...(compactCommand ? { manualCompaction: compactCommand } : {}),
           // LA COMPACTACIÓN DENTRO DEL TURNO, como DeepSeek (`lib/agent/compaction/`).
           compaction: {
             policy: COMPACTION_POLICY,

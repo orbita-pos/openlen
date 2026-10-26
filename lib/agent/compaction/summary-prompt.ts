@@ -51,11 +51,17 @@ export const COMPACTION_INSTRUCTION = [
 export const CHECKPOINT_PREAMBLE =
   "This is an automatically generated checkpoint condensing an earlier span of the conversation to free up context. Treat the captured context as established background and build on it without restating it. Continue the task directly from the messages that follow, without acknowledging this checkpoint.";
 
+/** A11 · la instrucción, con las de `/compact <instrucciones>` detrás en el
+ *  formato de Claude Code («Additional Instructions:»). */
+export function summaryInstruction(instructions: string | null = null): string {
+  return instructions ? `${COMPACTION_INSTRUCTION}\n\nAdditional Instructions:\n${instructions}` : COMPACTION_INSTRUCTION;
+}
+
 /** La misma petición que la última vuelta hasta el final del tramo, y la
  *  instrucción AL FINAL: el prefijo sale de la caché (DeepSeek, «reuses the
  *  provider's warm prefix»). */
-export function buildSummaryRequest(messages: readonly Message[], span: Span): Message[] {
-  return [...messages.slice(0, span.end), { role: "user", content: COMPACTION_INSTRUCTION }];
+export function buildSummaryRequest(messages: readonly Message[], span: Span, instructions: string | null = null): Message[] {
+  return [...messages.slice(0, span.end), { role: "user", content: summaryInstruction(instructions) }];
 }
 
 /** El marcador de Claude Code en el reintento de un resumen que no cupo
@@ -64,14 +70,14 @@ export const COMPACTION_RETRY_MARKER = "[earlier conversation truncated for comp
 
 /** A11 · la petición del resumen sin la mitad más vieja del tramo, con el
  *  marcador en su lugar. El corte no deja una respuesta sin su llamada. */
-export function buildTruncatedSummaryRequest(messages: readonly Message[], span: Span): Message[] {
+export function buildTruncatedSummaryRequest(messages: readonly Message[], span: Span, instructions: string | null = null): Message[] {
   let from = span.start + Math.floor((span.end - span.start) / 2);
   while (from < span.end && messages[from]?.functionResponses?.length) from += 1;
   return [
     ...messages.slice(0, span.start),
     { role: "user", content: COMPACTION_RETRY_MARKER },
     ...messages.slice(from, span.end),
-    { role: "user", content: COMPACTION_INSTRUCTION },
+    { role: "user", content: summaryInstruction(instructions) },
   ];
 }
 

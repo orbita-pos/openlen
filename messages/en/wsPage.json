@@ -116,6 +116,7 @@
       "cancelled": "The turn was cancelled.",
       "truncated": "The response ran out of room several times in a row — ask Len to keep going.",
       "context_too_long": "This conversation is too long and couldn't be summarized. Type /compact or start a new conversation.",
+      "compact_failed": "Couldn't summarize the conversation: it's too short or the summary failed.",
       "upstream": "The model had a problem — try again.",
       "no_credits": "You're out of credits. Your page is saved and you can publish it now. They renew every 30 days — or tap your balance above to go Pro and keep working today.",
       "no_credits_at": "You're out of credits. Your page is saved and you can publish it now. They come back on {date} — or tap your balance above to go Pro and keep working today."

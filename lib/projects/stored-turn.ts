@@ -30,6 +30,7 @@ const END_REASONS = {
   no_credits: true,
   agent_off: true,
   context_too_long: true,
+  compact_failed: true,
 } satisfies Record<AgentErrorCode, true>;
 const isEndReason = (v: unknown): v is AgentErrorCode => typeof v === "string" && Object.hasOwn(END_REASONS, v);
 

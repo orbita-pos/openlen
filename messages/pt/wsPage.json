@@ -116,6 +116,7 @@
       "cancelled": "O turno foi cancelado.",
       "truncated": "A resposta ficou sem espaço várias vezes seguidas — peça ao Len para continuar.",
       "context_too_long": "Esta conversa é longa demais e não foi possível resumi-la. Escreva /compact ou comece uma nova conversa.",
+      "compact_failed": "Não foi possível resumir a conversa: ela é curta demais ou o resumo falhou.",
       "upstream": "O modelo teve um problema — tente novamente.",
       "no_credits": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles renovam a cada 30 dias — ou toque no seu saldo acima e assine o Pro para continuar hoje.",
       "no_credits_at": "Você ficou sem créditos. A sua página está salva e você pode publicá-la agora. Eles voltam em {date} — ou toque no seu saldo acima e assine o Pro para continuar hoje."

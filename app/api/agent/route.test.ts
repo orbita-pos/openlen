@@ -1093,6 +1093,29 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       expect(m?.content).toBe('Called the Read tool with the following input: {"file_path":"/index.html"}\nResult of calling the Read tool:\n1\t<h1>Hola</h1>');
     });
 
+    // C16 · `/compact`: el bucle resume y no trabaja; la fila guarda la marca
+    // «manual» y no cambia la página.
+    it("🔴 C16: «/compact <instrucciones>» llega al bucle como manualCompaction y la fila guarda la marca sin cambiar la página", async () => {
+      const marca = { messages: [{ role: "user", content: "<compacted-summary>…" }], fromTranscript: 0, trigger: "manual", preTokens: 912000, postTokens: 9000 };
+      mocks.runAgentLoop.mockResolvedValue({ ...limpio, finalText: "", toolCalls: 0, transcripcion: [], compactionMark: marca });
+      const res = await POST(
+        new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "/compact céntrate en los precios" }) }),
+      );
+      await readEvents(res);
+      const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+      expect(args.manualCompaction).toEqual({ instructions: "céntrate en los precios" });
+      const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { noDocChange?: boolean; compaction?: { trigger: string } }])[1];
+      expect(fila.compaction?.trigger).toBe("manual");
+      expect(fila.noDocChange).toBe(true);
+    });
+
+    it("un mensaje que no es el comando no lleva manualCompaction", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      await readEvents(await pestanaVieja());
+      const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+      expect(args.manualCompaction).toBeUndefined();
+    });
+
     it("🔴 lo que manda una pestaña vieja (`dichoAntes`, `historyTotal`) se ignora sin error", async () => {
       mocks.runAgentLoop.mockResolvedValue(limpio);
       const events = await readEvents(await pestanaVieja());

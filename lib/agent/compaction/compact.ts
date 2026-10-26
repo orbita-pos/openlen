@@ -17,10 +17,13 @@ export interface CompactInput {
   readonly firstIndex: number;
   readonly pressureTokens: number;
   readonly policy: CompactionPolicy;
-  readonly trigger: "pressure" | "overflow";
+  /** `"manual"` es `/compact` (A11): resume aunque no haya presión, como `force`. */
+  readonly trigger: "pressure" | "overflow" | "manual";
   /** A11 · resumir aunque no haya presión (con la cola de `retainTokens`): la
    *  charla que no cabía al empezar (`compactFirst`) y `/compact`. */
   readonly force?: boolean;
+  /** Las de `/compact <instrucciones>`, para el resumidor. */
+  readonly instructions?: string | null;
   /** Desde dónde están los mensajes que el modelo todavía no ha visto: no se
    *  podan. Por defecto, el último. DeepSeek poda también lo nuevo; aquí lo
    *  nuevo se ve entero una vez, y en un desborde el bucle pasa la longitud
@@ -56,7 +59,8 @@ function readPathsIn(messages: readonly Message[]): string[] {
 }
 
 export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> {
-  if (o.trigger === "pressure" && !o.force && o.pressureTokens < o.policy.thresholdTokens) {
+  const force = o.force === true || o.trigger === "manual";
+  if (o.trigger === "pressure" && !force && o.pressureTokens < o.policy.thresholdTokens) {
     return { messages: [...o.messages], changed: false, pruned: 0, summarized: false };
   }
 
@@ -76,7 +80,7 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
   const pruned = pruneToolResults(o.messages, protectFrom, paths);
   const prunedOnly: CompactOutcome = { messages: pruned.messages, changed: pruned.count > 0, pruned: pruned.count, summarized: false };
   const freed = estimateTokens(o.messages) - estimateTokens(pruned.messages);
-  if (o.trigger === "pressure" && !o.force && o.pressureTokens - freed < o.policy.thresholdTokens) return prunedOnly;
+  if (o.trigger === "pressure" && !force && o.pressureTokens - freed < o.policy.thresholdTokens) return prunedOnly;
 
   // 2 · Resumir lo más viejo.
   const span = selectSpan(pruned.messages, {
@@ -85,10 +89,11 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
     estimate: estimateMessageTokens,
   });
   if (!span) return prunedOnly;
-  let summary = await o.summarize(buildSummaryRequest(pruned.messages, span));
+  const instructions = o.instructions ?? null;
+  let summary = await o.summarize(buildSummaryRequest(pruned.messages, span, instructions));
   // A11 · el `compact_ptl_retry` de Claude Code: si el resumen no cabe, UN
   // reintento sin la mitad más vieja del tramo y su marcador en su lugar.
-  if (summary === "too_long") summary = await o.summarize(buildTruncatedSummaryRequest(pruned.messages, span));
+  if (summary === "too_long") summary = await o.summarize(buildTruncatedSummaryRequest(pruned.messages, span, instructions));
   if (!summary || summary === "too_long" || summary.trim() === "") return prunedOnly;
   const replaced = applySummary(pruned.messages, span, summary);
   // DeepSeek («shrink validation»): un resumen que no encoge no se acepta.

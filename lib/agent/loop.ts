@@ -35,7 +35,7 @@ import type { CambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
 import { MAX_PROVIDER_RETRIES, isRetryable, providerWait, retryDelayMs, sleepAbortable } from "./retry-policy";
 import { compactIfNeeded } from "./compaction/compact";
-import type { CompactionMark } from "./compaction/mark";
+import type { CompactionMark, CompactionTrigger } from "./compaction/mark";
 import { retainOversized } from "./compaction/spill";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
@@ -72,7 +72,10 @@ export type AgentErrorCode =
   | "agent_off"
   /** A11 · la conversación no cabe y no se pudo resumir (el «Conversation too
    *  long» de Claude Code). */
-  | "context_too_long";
+  | "context_too_long"
+  /** A11 · `/compact` y no salió resumen: la charla es demasiado corta (el «Not
+   *  enough messages to compact.» de Claude Code) o el resumen falló. */
+  | "compact_failed";
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
@@ -88,7 +91,8 @@ export type AgentStreamEvent =
   // recuperarse de un desborde a media vuelta, `discardChars` retira lo que el
   // intento llegó a escribir, como `retry`.
   | { type: "compaction_start" }
-  | { type: "compaction"; pruned: number; summarized: boolean; discardChars: number }
+  // A11 · si resumió, `preTokens`: cuántos había (la línea «Conversación resumida»).
+  | { type: "compaction"; pruned: number; summarized: boolean; discardChars: number; preTokens?: number }
   // LO QUE EL USUARIO ESCRIBIÓ A MEDIA FAENA. Se emite en cuanto el bucle lo
   // recoge, para que el panel pueda pintarlo en su sitio de la conversación:
   // sin esto, la corrección desaparecería y el usuario vería al Agente cambiar
@@ -264,6 +268,9 @@ export interface AgentLoopArgs {
   /** A11 · la charla no cabe (`buildAgentMessages` → `compactFirst`): resumir
    *  ANTES de la primera llamada de trabajo; si no sale, `context_too_long`. */
   compactFirst?: boolean;
+  /** A11 · `/compact` (`parseCompactCommand`): resumir la charla y terminar, sin
+   *  petición de trabajo; el último mensaje (el comando) no se le manda. */
+  manualCompaction?: { instructions: string | null };
   // ⚰️ Aquí vivían `verifyTurn` (los ojos al cerrar: UNA mirada obligatoria
   // con la tarjeta `verificar_diseno`) y `medirParaElModelo` (el navegador que
   // medía cada tanda y se lo devolvía al modelo). Se retiraron los dos el
@@ -1025,7 +1032,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
   let compactionMark: CompactionMark | undefined;
   /** Compacta `messages` EN SITIO (como hacen los `push`). `true` si cambió. */
-  const compactNow = async (trigger: "pressure" | "overflow", discardChars: number, force = false): Promise<boolean> => {
+  const compactNow = async (trigger: CompactionTrigger, discardChars: number, force = false, instructions: string | null = null): Promise<boolean> => {
     if (!args.compaction) return false;
     const pressureTokens =
       lastInputTokens === null ? estimateTokens(messages) : lastInputTokens + estimateTokens(messages.slice(messagesAtLastCall));
@@ -1036,6 +1043,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       policy: args.compaction.policy,
       trigger,
       force,
+      instructions,
       // Lo que el modelo aún no ha visto no se poda: lo llegado después de la
       // última llamada (sus respuestas, una corrección del dueño) o, antes de
       // la primera, la petición. Tras un desborde eso es todo: se puede podar.
@@ -1062,7 +1070,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       };
     }
     lastInputTokens = null;
-    args.emit({ type: "compaction", pruned: outcome.pruned, summarized: outcome.summarized, discardChars });
+    args.emit({
+      type: "compaction",
+      pruned: outcome.pruned,
+      summarized: outcome.summarized,
+      discardChars,
+      ...(outcome.summarized ? { preTokens: Math.round(pressureTokens) } : {}),
+    });
     return true;
   };
   let turns = 0;
@@ -1347,6 +1361,19 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     });
     return buildResult(true, code);
   };
+
+  // A11 · `/compact`: se resume la charla y el turno acaba, sin trabajo. El
+  // comando no es una petición para el modelo: sale de lo que se le manda.
+  if (args.manualCompaction && args.compaction) {
+    if (messages.at(-1)?.role === "user") messages.pop();
+    ownStart = messages.length;
+    const resumio = (await compactNow("manual", 0, true, args.manualCompaction.instructions)) && compactionMark !== undefined;
+    if (!resumio) {
+      args.emit({ type: "error", message: "No se pudo resumir la conversación.", code: "compact_failed" });
+      return buildResult(true, null, "compact_failed");
+    }
+    return buildResult(false);
+  }
 
   // A11 · LA CHARLA NO CABE: se resume antes de nada, como Claude Code al
   // recibir tu mensaje. Si no sale resumen, el turno termina diciéndolo, sin

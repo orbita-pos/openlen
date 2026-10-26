@@ -1602,7 +1602,9 @@ export function useAgentChat({
               } else if (evName === "compaction") {
                 // Acabó. Si fue para recuperarse de un desborde a media vuelta,
                 // lo que el intento llegó a escribir no existió, como en `retry`.
-                const p = payload as { discardChars?: unknown };
+                const p = payload as { discardChars?: unknown; summarized?: unknown; preTokens?: unknown };
+                // A11 · si resumió, la línea «Conversación resumida» del turno.
+                const resumido = p.summarized === true && typeof p.preTokens === "number" && Number.isFinite(p.preTokens) ? p.preTokens : null;
                 const discard = typeof p.discardChars === "number" && p.discardChars > 0 ? p.discardChars : 0;
                 if (discard > 0) {
                   accumulatedReasoning = accumulatedReasoning.slice(0, Math.max(0, accumulatedReasoning.length - discard));
@@ -1616,6 +1618,7 @@ export function useAgentChat({
                           assistantReasoning:
                             discard > 0 ? t.assistantReasoning.slice(0, Math.max(0, t.assistantReasoning.length - discard)) : t.assistantReasoning,
                           compacting: undefined,
+                          ...(resumido !== null ? { compactedTokens: resumido } : {}),
                         }
                       : t,
                   ),
@@ -2741,6 +2744,7 @@ const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   no_credits: true,
   agent_off: true,
   context_too_long: true,
+  compact_failed: true,
 };
 
 function isAgentErrorCode(value: unknown): value is AgentErrorCode {
