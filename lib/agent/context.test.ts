@@ -692,25 +692,8 @@ describe("los avisos del turno van al final, no enterrados", () => {
   });
 });
 
-// Crear es Len: la referencia por URL viaja con el mensaje, el mismo bloque que Crear.
-describe("buildAgentContext — la referencia por URL", () => {
-  const direccion = {
-    hostname: "",
-    palette: [{ role: "bg", hex: "#112233" }],
-    polarity: "dark" as const,
-    fontFamily: "Inter",
-    radius: "soft" as const,
-  };
-  it("con referencia, el bloque de Crear cierra el contexto", () => {
-    const s = buildAgentContext({ state: {}, styleDirection: direccion });
-    expect(s).toContain("<visual-direction>");
-    expect(s).toContain("#112233 (bg)");
-    expect(s.trimEnd().endsWith("</visual-direction>")).toBe(true);
-  });
-  it("sin ella, ni rastro", () => {
-    expect(buildAgentContext({ state: {} })).not.toContain("<visual-direction>");
-  });
-});
+// ⚰️ «la referencia por URL» (26/10): el bloque `<visual-direction>` se fue con
+// la ficha de una URL; la ruta lo prueba (un cliente viejo que aún lo mande).
 
 describe("el chat del equipo en el contexto", () => {
   it("🔴 la regla del equipo sólo con miembros; sin ella el contexto es el de siempre", () => {

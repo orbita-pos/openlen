@@ -62,7 +62,6 @@ import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 import { KIND_PARAM, kindFromParam } from "@/components/workspace-v2/chat/nace-como";
-import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
@@ -848,11 +847,8 @@ function NewV2Inner() {
         : null,
     );
   }, [briefParam, preparedBriefParam]);
-  // La referencia visual de "hazme una como esta". Vive junto al brief y no
-  // dentro del compositor porque quien manda el primer mensaje a Len es esta
-  // página.
-  const [aiReference, setAiReference] = useState<StyleDirection | null>(null);
-  // Las fotos adjuntas al brief, por lo mismo. Se limpian al generar: son de
+  // Las fotos adjuntas al brief. Viven junto a él y no dentro del compositor
+  // porque quien manda el primer mensaje a Len es esta página. Se limpian al generar: son de
   // ESE brief, y dejarlas puestas haria que la siguiente pagina naciera mirando
   // referencias que el usuario ya no tiene delante.
   const [aiFotos, setAiFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
@@ -864,8 +860,6 @@ function NewV2Inner() {
       setTruncatedPrompt,
       truncationAnnouncementToken,
       setTruncationAnnouncementToken,
-      reference: aiReference,
-      setReference: setAiReference,
       fotos: aiFotos,
       setFotos: setAiFotos,
     }),
@@ -873,7 +867,6 @@ function NewV2Inner() {
       aiPrompt,
       truncatedPrompt,
       truncationAnnouncementToken,
-      aiReference,
       aiFotos,
     ],
   );
@@ -1040,7 +1033,6 @@ function NewV2Inner() {
       // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).
       setPendingChatAttachments({
         images: subidas.images,
-        styleDirection: aiReference,
         ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
@@ -1049,12 +1041,11 @@ function NewV2Inner() {
       setMode("chat");
       setLeftCollapsed(false);
       setAiFotos([]);
-      setAiReference(null);
       setAiPrompt("");
     } finally {
       setHeroSending(false);
     }
-  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiReference, naceComo, locale, toast, t]);
+  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, naceComo, locale, toast, t]);
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
@@ -1550,7 +1541,7 @@ function NewV2Inner() {
     }
     if (!request) return;
     const texto = designSummary(request, (k, v) => tDesign(k, v));
-    setPendingChatAttachments({ images: [], styleDirection: null, design: request });
+    setPendingChatAttachments({ images: [], design: request });
     setPendingChatDraft(texto);
     setPendingChatAutoSend(true);
   }, [designEdits, designNote, tDesign, toast]);

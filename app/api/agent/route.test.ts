@@ -1772,31 +1772,27 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(fila.attachedImage).toEqual([{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }]);
   });
 
-  it("la referencia por URL va en tu mensaje (el bloque de Crear), y la fila guarda sólo lo que escribiste", async () => {
+  // The URL chip is gone (26/10): a URL is text in the message and Len looks at
+  // it with `view_page url`. A tab still open from before the deploy may send
+  // the old `styleDirection`; it reaches nothing the model reads.
+  it("a style direction from an old tab is ignored: the model gets only what was written", async () => {
     await readEvents(
       await POST(
         new Request("http://localhost/api/agent", {
           method: "POST",
           body: JSON.stringify({
             projectId: "p1",
-            prompt: "hazme la página",
+            prompt: "hazme una como https://linear.app",
             styleDirection: { palette: [{ role: "bg", hex: "#112233" }], polarity: "dark", fontFamily: "Inter", radius: "soft" },
           }),
         }),
       ),
     );
-    // El bloque lo monta el contexto (`buildAgentContext`, probado en
-    // lib/agent/context.test.ts); aquí, que la dirección le llega validada.
-    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ styleDirection: unknown }])[0];
-    expect(enviado.styleDirection).toEqual({
-      hostname: "",
-      palette: [{ role: "bg", hex: "#112233" }],
-      polarity: "dark",
-      fontFamily: "Inter",
-      radius: "soft",
-    });
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+    expect("styleDirection" in enviado).toBe(false);
+    expect(JSON.stringify(enviado)).not.toContain("#112233");
     const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { userText: string }])[1];
-    expect(fila.userText).toBe("hazme la página");
+    expect(fila.userText).toBe("hazme una como https://linear.app");
   });
 
   it("A · fotos que no caben juntas (20 MiB, como DeepSeek): la más vieja va sin píxeles y el turno sigue", async () => {

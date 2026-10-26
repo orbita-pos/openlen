@@ -22,8 +22,6 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
-import { directionToBriefBlock } from "@/lib/style-match/direction";
-import type { StyleDirection } from "@/lib/style-match/direction-types";
 import { REGLA_DEL_EQUIPO } from "./equipo";
 
 /**
@@ -310,11 +308,9 @@ export function buildAgentContext(args: {
   seleccion?: SeleccionDelDueno | null;
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
   design?: string | null;
-  /** LA REFERENCIA POR URL de este mensaje (Crear es Len, 2026-10-06): el
-   *  mismo bloque que Crear ponía delante del brief (`directionToBriefBlock`),
-   *  aquí al final del contexto, justo antes de lo que pide el dueño. Ausente ⇒
-   *  salida byte-idéntica. */
-  styleDirection?: StyleDirection | null;
+  // ⚰️ `styleDirection` (26/10): el bloque `<visual-direction>` de la ficha de
+  // una URL, con lo que un modelo de visión vio en esa web. Una URL es ahora
+  // texto del mensaje y Len la mira cuando decide (`view_page` con `url`).
 }): string {
   let imageBlock = "";
   const imagenes = args.attachedImages ?? [];
@@ -378,7 +374,7 @@ export function buildAgentContext(args: {
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.styleDirection ? `${directionToBriefBlock(args.styleDirection)}\n\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}`;
 }
 
 
@@ -454,8 +450,6 @@ export interface BuildAgentMessagesArgs {
    *  (the route slices to 36 + 4000 chars). */
   history: readonly MensajeDelHistorial[];
   attachedImages?: readonly AttachedImageForContext[] | null;
-  /** Ver buildAgentContext.styleDirection. */
-  styleDirection?: StyleDirection | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
@@ -524,7 +518,6 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     artifactIndex: args.artifactIndex,
     degradaciones: args.degradaciones,
     attachedImages: args.attachedImages,
-    styleDirection: args.styleDirection,
     seleccion: args.seleccion,
     design: args.design,
   });

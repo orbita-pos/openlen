@@ -1,5 +1,5 @@
 // Las dos tarjetas del principio, Página o App. Mismo arnés manual de
-// react-dom + act() que reference-field.test.tsx, con next-intl mockeado a un
+// react-dom + act() de siempre, con next-intl mockeado a un
 // pasapuertas de claves.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";

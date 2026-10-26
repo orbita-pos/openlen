@@ -85,14 +85,14 @@ describe("la app que nace con el primer mensaje", () => {
   it("🔴 recarga el proyecto en cuanto el turno empieza, sin esperar a que acabe", async () => {
     stubAgentStream();
     const onChatChange = vi.fn();
-    await render({ images: [], styleDirection: null, naceComo: "app", idioma: "es" }, onChatChange);
+    await render({ images: [], naceComo: "app", idioma: "es" }, onChatChange);
     expect(onChatChange).toHaveBeenCalledTimes(1);
   });
 
   it("CONTRA-PRUEBA: un primer mensaje de página no recarga a mitad del turno", async () => {
     stubAgentStream();
     const onChatChange = vi.fn();
-    await render({ images: [], styleDirection: null }, onChatChange);
+    await render({ images: [] }, onChatChange);
     expect(onChatChange).not.toHaveBeenCalled();
   });
 });

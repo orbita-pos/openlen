@@ -40,9 +40,10 @@ export const MODEL_POLICY = Object.freeze({
     // correspondan.
     displayName: "DeepSeek V4.1 Flash",
   }),
-  // EL PAPEL CON VISIÓN. Lo piden cuatro operaciones: `agent_visual_verify`
+  // EL PAPEL CON VISIÓN. Lo piden tres operaciones: `agent_visual_verify`
   // (los ojos de Len), `page_write_with_reference` (escribir mirando una
-  // referencia adjunta), `candidate_scouting` y `final_scoring`.
+  // referencia adjunta) y `candidate_scouting`. ⚰️ `final_scoring` (26/10) lo
+  // pedía sólo el «carácter» de la ficha de una URL, que se fue con ella.
   //
   // ⚰️ AQUÍ ESTABA `qwen3p7-plus`, Y LLEVABA MUERTO DESDE EL 2026-08-27
   // (`e50b8cb9`). Devuelve **404 NOT_FOUND** —«Model not found, inaccessible,
@@ -212,7 +213,6 @@ export type ModelOperation =
   | "copy"
   | "simple_extraction"
   | "candidate_scouting"
-  | "final_scoring"
   | "page_edit"
   /** UN turno del Agente: el bucle de herramientas de `lib/agent/brain.ts`.
    *  Existe separada de `page_edit` porque aquélla la comparten el Chat, el
@@ -244,7 +244,6 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   copy: { role: "reasoner", effort: "none" },
   simple_extraction: { role: "reasoner", effort: "none" },
   candidate_scouting: { role: "visual_critic", effort: "none" },
-  final_scoring: { role: "visual_critic", effort: "none" },
   // El Chat editando una página ya escrita. Entró como `high` —editar código
   // PARECE razonar— y la medición lo desmintió sobre la misma página y el mismo
   // prompt: 130.1s y 16,134 tokens de pensamiento para producir DOS ops; en

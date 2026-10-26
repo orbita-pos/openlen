@@ -7,8 +7,8 @@ const SESION = "0f8e2c1a-6b1d-4d7e-9a55-3c2b1f0e9d11";
 describe("el catálogo de eventos de uso", () => {
   it("acepta un evento del navegador que cumple su esquema", () => {
     expect(
-      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } }),
-    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2, referencia: false } });
+      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2 } }),
+    ).toEqual({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 2 } });
   });
 
   // 🔴 LA REGLA ENTERA: el brief no cabe. Una clave de más descarta el evento
@@ -24,7 +24,6 @@ describe("el catálogo de eventos de uso", () => {
         // seguiría verde. Lo único que sobra aquí es el brief.
         datos: {
           imagenes: 0,
-          referencia: false,
           brief: "mi negocio de tacos en Oaxaca",
         },
       }),
@@ -37,8 +36,10 @@ describe("el catálogo de eventos de uso", () => {
   // `/api/generate` el 2026-10-06.
   it("un evento de antes, con `escritor` (el selector de Crear), ya no pasa", () => {
     expect(
-      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 0, referencia: false, escritor: "reasoner" } }),
+      validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 0, escritor: "reasoner" } }),
     ).toBeNull();
+    // Ni con `referencia` (26/10), la de la ficha de una URL que se fue.
+    expect(validarEventoDeCliente({ nombre: "crear_envio", sesion: SESION, datos: { imagenes: 0, referencia: false } })).toBeNull();
     expect(validarEventoDeCliente({ nombre: "crear_modelo_abrio", sesion: SESION, datos: {} })).toBeNull();
   });
 

@@ -34,13 +34,14 @@ export const EVENTOS = {
    *  eso). La forma del encargo, nunca su contenido.
    *
    *  ⚰️ Llevaba `escritor`, el papel que iba a escribir en Crear; se fue con
-   *  el selector y con Crear. Los eventos guardados antes lo traen. */
+   *  el selector y con Crear. Los eventos guardados antes lo traen.
+   *  ⚰️ Y `referencia` (26/10), si la ficha de una URL había traído un estilo:
+   *  la ficha se fue y una URL es texto del mensaje. */
   crear_envio: {
     origen: "cliente",
     datos: z
       .object({
         imagenes: z.number().int().min(0).max(20),
-        referencia: z.boolean(),
       })
       .strict(),
   },

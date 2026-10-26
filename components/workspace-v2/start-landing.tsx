@@ -28,7 +28,6 @@ import { ArrowUp, ImageIcon, Mic, Plus, Square } from "lucide-react";
 import "./chat/new-chat.css";
 import { ComposerChip, ComposerPlusOption } from "./composer-pieces";
 import { useMandoDesplegable } from "./use-mando-desplegable";
-import { ReferenceField } from "./reference-field";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
@@ -407,12 +406,9 @@ export function HeroComposer({
   const canGenerate = briefLimit.isValid && !generating;
 
   // Enviar es UN evento aunque haya dos caminos, Enter y el botón. Lleva sólo
-  // la forma del encargo —cuántas imágenes, si hay referencia—, nunca el brief.
+  // la forma del encargo —cuántas imágenes—, nunca el brief.
   const enviar = () => {
-    registrarUso("crear_envio", {
-      imagenes: state.fotos.length,
-      referencia: state.reference !== null,
-    });
+    registrarUso("crear_envio", { imagenes: state.fotos.length });
     // El motor sigue vivo tras navegar si no se corta aqui.
     dictado.parar();
     onGenerate();
@@ -423,12 +419,13 @@ export function HeroComposer({
     // misma caja, las fichas encima del texto, el `+` con su menú, las opciones
     // como pastillas al final y el botón cuadrado. Bajo `.nc` por los tokens y
     // las animaciones de chat/new-chat.css. Lo que HACE no cambia: fotos,
-    // dictado, límite del brief, referencia y eventos de uso.
+    // dictado, límite del brief y eventos de uso.
     <div className="nc">
       <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
-        {/* Lo que va con el encargo, como fichas ARRIBA y dentro: las fotos y
-            la referencia de una web. `empty:hidden` porque la referencia no
-            pinta nada sin una dirección escrita, que es lo normal. */}
+        {/* Lo que va con el encargo, como fichas ARRIBA y dentro: las fotos.
+            Una URL escrita es texto y Len decide si la mira (`view_page` con
+            `url`, 26/10); antes una ficha la abría sola y le decía a Len que era
+            una referencia de estilo. `empty:hidden`: sin fotos no pinta nada. */}
         <div className="mb-1 flex flex-wrap gap-1.5 empty:hidden">
           {state.fotos.map((foto, i) => (
             <ComposerChip
@@ -442,13 +439,6 @@ export function HeroComposer({
               <span className="min-w-0 max-w-[180px] truncate">{foto.nombre || tm("heroPrompt.attachedAlt")}</span>
             </ComposerChip>
           ))}
-          <ReferenceField
-            brief={state.prompt}
-            reference={state.reference}
-            onChange={state.setReference}
-            disabled={generating}
-            variant="chip"
-          />
         </div>
 
         {/* La caja que pinta: una URL se ve azul mientras se escribe, como en el chat. */}

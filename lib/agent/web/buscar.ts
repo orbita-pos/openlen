@@ -13,10 +13,15 @@
  *     modelo puede leer; la herramienta sigue a la vista, como allí («stable
  *     registration»).
  *   · Leer una página va por `fetchRaw`, que ya lleva la defensa SSRF entera.
+ *   · Ver otra web (`view_page` con `url`, 26/10) va por `fetchPuppeteer`, el
+ *     navegador que usaba la ficha de «hazme una como ésta»: la dirección se
+ *     revalida en cada redirección y su red sale por el proxy que filtra.
  */
 import fs from "node:fs";
 
+import type { InlineImage } from "@/lib/ai-gateway";
 import type { LedgerUse } from "@/lib/credit-ledger";
+import { fetchPuppeteer } from "@/lib/style-match/scrape/fetch-puppeteer";
 import { fetchRaw } from "@/lib/style-match/scrape/fetch-raw";
 import { buscarEnLaWeb, ficheroDeLaWeb, leerDeLaWeb, webDeSerializable } from "@/lib/len-bench/web-sustituta";
 import type { WebDelCaso } from "@/lib/len-bench/tipos";
@@ -38,10 +43,14 @@ export class WebUnavailableError extends ErrorDeLaWeb {}
 
 export type PaginaWeb = { readonly ok: true; readonly url: string; readonly html: string } | { readonly ok: false; readonly error: string };
 
+/** Otra web, vista: `url` es adonde llegó tras las redirecciones. */
+export type SiteScreenshot = { readonly ok: true; readonly url: string; readonly image: InlineImage } | { readonly ok: false; readonly error: string };
+
 export interface WebDeps {
   /** Las fuentes de UNA consulta. Lanza `ErrorDeLaWeb`. */
   buscar(projectId: string, consulta: string, max: number, signal: AbortSignal): Promise<readonly FuenteWeb[]>;
   leer(projectId: string, url: string): Promise<PaginaWeb>;
+  screenshot(projectId: string, url: string, viewport: "desktop" | "mobile"): Promise<SiteScreenshot>;
   /** Lo buscado de verdad se cobra; la web de prueba, no. */
   cobrar(userId: string, consultas: number): Promise<void>;
 }
@@ -130,6 +139,23 @@ export async function leerPaginaDeVerdad(url: string, fetcher: typeof fetchRaw =
   }
 }
 
+// ── Ver otra web ────────────────────────────────────────────────────────────
+
+/** Los tamaños de los ojos (`view_page`): el escritorio del navegador de
+ *  `fetchPuppeteer` y el teléfono de `use_page`. */
+const SCREENSHOT_SIZES = { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844 } } as const;
+
+export async function screenshotRealSite(url: string, viewport: "desktop" | "mobile", fetcher: typeof fetchPuppeteer = fetchPuppeteer): Promise<SiteScreenshot> {
+  try {
+    const r = await fetcher({ url, viewport: SCREENSHOT_SIZES[viewport] });
+    if (!r.ok) return { ok: false, error: motivo(r.error as { kind: string }) };
+    if (!r.value.screenshot) return { ok: false, error: "the page opened but no screenshot came out" };
+    return { ok: true, url: r.value.finalUrl, image: { mimeType: "image/jpeg", dataBase64: r.value.screenshot.toString("base64") } };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // ── La web de prueba de Len-Bench ───────────────────────────────────────────
 
 /** La web del caso que el conductor dejó para este proyecto; vacía si no dejó ninguna. */
@@ -168,6 +194,10 @@ export function webDelServidor(debit: (userId: string, centicreditos: number, us
         const html = leerDeLaWeb(webDePrueba(dirDePrueba, projectId), url);
         return html === null ? { ok: false, error: "the page does not exist (HTTP 404)" } : { ok: true, url, html };
       },
+      // La web fija de un caso es HTML guardado, sin navegador detrás.
+      async screenshot() {
+        return { ok: false, error: "screenshots of other sites are not available here; read the page with web_fetch" };
+      },
       async cobrar() {},
     };
   }
@@ -178,6 +208,7 @@ export function webDelServidor(debit: (userId: string, centicreditos: number, us
       return buscarEnExa(clave, consulta, max, signal);
     },
     leer: (_projectId, url) => leerPaginaDeVerdad(url),
+    screenshot: (_projectId, url, viewport) => screenshotRealSite(url, viewport),
     async cobrar(userId, consultas) {
       if (consultas > 0) await debit(userId, consultas * CENTICREDITOS_POR_CONSULTA, { provider: "exa", model: "search", queries: consultas });
     },

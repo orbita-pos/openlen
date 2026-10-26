@@ -252,7 +252,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
       description:
         "Looks at a rendered page instead of guessing how it looks: to check what you changed and, BEFORE editing again, something that was pointed out to you and doesn't match the file. Both modes are free. "
         + 'mode="measure": the browser measures the color actually painted behind a text, the contrast, what overflows on mobile and the JavaScript errors. '
-        + 'mode="screenshot": a screenshot of the page as a visitor sees it on a desktop screen, or on a phone with viewport="mobile", comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step.',
+        + 'mode="screenshot": a screenshot of the page as a visitor sees it on a desktop screen, or on a phone with viewport="mobile", comes back to you as an image; look at it yourself, with the file in hand. To see what appears after a click (a game that starts, a dialog), use use_page with a screenshot step. '
+        + 'With url, the screenshot is of another site instead: one the user names or one you found.',
       parameters: {
         type: "OBJECT",
         properties: {
@@ -260,6 +261,11 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
           question: { type: "STRING", description: "Optional, for measure: what you want to know, in natural language." },
           area: { type: "STRING", description: 'Optional: a text from the block to look at, e.g. "Pricing"; with screenshot, only that block is captured.' },
           viewport: { type: "STRING", description: 'Optional, for screenshot: "mobile" to see it on a phone (390×844) or "desktop", the default.' },
+          url: {
+            type: "STRING",
+            description:
+              'Optional, with mode="screenshot": the full address (https://…) of another site to look at instead of this project, for example one the user wants theirs to look like. You see it as it opens; take its look, never its text.',
+          },
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["mode"],
