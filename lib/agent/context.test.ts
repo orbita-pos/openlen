@@ -363,8 +363,8 @@ describe("buildAgentMessages", () => {
       { role: "assistant" as const, content: "", functionCalls: [{ name: "Read", args: { file_path: "/index.html" } }] },
       { role: "user" as const, content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x".repeat(n) } }] },
     ];
-    expect(buildAgentMessages({ ...base, history: conResultado(1_000) }).ok).toBe(true); // brazo de control
-    expect(buildAgentMessages({ ...base, history: conResultado(400_000) })).toEqual({ ok: false, reason: "too_large" });
+    expect(buildAgentMessages({ ...base, history: conResultado(1_000) })).not.toHaveProperty("compactFirst"); // brazo de control
+    expect(buildAgentMessages({ ...base, history: conResultado(400_000) })).toMatchObject({ ok: true, compactFirst: true });
   });
 
   // A (2026-10-01): las fotos viajan pegadas a tu mensaje en todas las vueltas
@@ -375,7 +375,7 @@ describe("buildAgentMessages", () => {
     const foto = { mimeType: "image/jpeg", dataBase64: "A" };
     expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: [foto] }] }).ok).toBe(true); // brazo de control
     const muchas = Array.from({ length: Math.ceil(60_000 / TOKENS_POR_FOTO) + 1 }, () => foto);
-    expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: muchas }] })).toEqual({ ok: false, reason: "too_large" });
+    expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: muchas }] })).toMatchObject({ ok: true, compactFirst: true });
   });
 
   // 🔴 H15 fase 2 (02/10): lo pensado de turnos viejos vuelve en el historial y
@@ -404,13 +404,13 @@ describe("buildAgentMessages", () => {
     expect(r.ok && r.messages.find((m) => m.role === "assistant")?.reasoning).toBe("VIEJO-PENSADO");
   });
 
-  it("y si ni sin lo pensado cabe, too_large como siempre", () => {
+  it("🔴 A11: y si ni sin lo pensado cabe, no hay 413: el bucle resume antes de empezar (compactFirst)", () => {
     const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const history: MensajeDelHistorial[] = [
       { role: "user", content: "x".repeat(400_000) },
       { role: "assistant", content: "y", reasoning: "z".repeat(10_000) },
     ];
-    expect(buildAgentMessages({ ...base, history })).toEqual({ ok: false, reason: "too_large" });
+    expect(buildAgentMessages({ ...base, history })).toMatchObject({ ok: true, compactFirst: true });
   });
 
   it("el mensaje system real de Len le ofrece el JavaScript", () => {

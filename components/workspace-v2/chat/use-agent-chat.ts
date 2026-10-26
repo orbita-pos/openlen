@@ -2689,6 +2689,7 @@ const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   upstream: true,
   no_credits: true,
   agent_off: true,
+  context_too_long: true,
 };
 
 function isAgentErrorCode(value: unknown): value is AgentErrorCode {

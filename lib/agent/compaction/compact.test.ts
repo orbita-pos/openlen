@@ -117,6 +117,29 @@ describe("compactIfNeeded", () => {
     expect(out.summarized).toBe(false);
   });
 
+  // A11: como el `compact_ptl_retry` de Claude Code. Sólo si la petición del
+  // resumen tampoco cabe: un reintento sin la mitad más vieja del tramo y, en su
+  // lugar, su marcador literal.
+  it("🔴 A11: si el resumen no cabe, UN reintento con el marcador de Claude Code y sin la mitad más vieja", async () => {
+    const peticiones: Message[][] = [];
+    const respuestas: (string | null | "too_long")[] = ["too_long", "r"];
+    const out = await compactIfNeeded({
+      messages: largo(10), firstIndex: 2, pressureTokens: 400, policy, trigger: "pressure",
+      summarize: async (m) => (peticiones.push(m), respuestas.shift()!),
+    });
+    expect(out.summarized).toBe(true);
+    expect(peticiones).toHaveLength(2);
+    expect(peticiones[1]![2]).toEqual({ role: "user", content: "[earlier conversation truncated for compaction retry]" });
+    expect(peticiones[1]!.length).toBeLessThan(peticiones[0]!.length);
+    expect(peticiones[1]!.at(-1)!.content).toBe(COMPACTION_INSTRUCTION);
+  });
+
+  it("A11: si el resumen falla por otra cosa (null), no se reintenta", async () => {
+    const summarize = vi.fn(async () => null);
+    await compactIfNeeded({ messages: largo(10), firstIndex: 2, pressureTokens: 400, policy, trigger: "pressure", summarize });
+    expect(summarize).toHaveBeenCalledTimes(1);
+  });
+
   it("un desborde compacta aunque la presión estimada sea baja, y deja sólo la unidad más nueva", async () => {
     const ms = largo(10);
     const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 0, policy, trigger: "overflow", summarize: async () => "r" });

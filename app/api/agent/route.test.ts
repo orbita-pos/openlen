@@ -1072,6 +1072,16 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       expect(argsDelModelo().conversacionRecortada).toBeUndefined();
     });
 
+    it("🔴 una charla que no cabe ya no es un 413: el bucle recibe compactFirst", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      mocks.buildAgentMessages.mockReturnValueOnce({ ok: true as const, messages: [{ role: "user", content: "sigue" }], compactFirst: true } as never);
+      const res = await pestanaVieja();
+      expect(res.status).toBe(200);
+      await readEvents(res);
+      const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+      expect(args.compactFirst).toBe(true);
+    });
+
     it("🔴 lo que manda una pestaña vieja (`dichoAntes`, `historyTotal`) se ignora sin error", async () => {
       mocks.runAgentLoop.mockResolvedValue(limpio);
       const events = await readEvents(await pestanaVieja());

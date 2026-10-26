@@ -58,6 +58,23 @@ export function buildSummaryRequest(messages: readonly Message[], span: Span): M
   return [...messages.slice(0, span.end), { role: "user", content: COMPACTION_INSTRUCTION }];
 }
 
+/** El marcador de Claude Code en el reintento de un resumen que no cupo
+ *  (`compact_ptl_retry`), literal del binario. */
+export const COMPACTION_RETRY_MARKER = "[earlier conversation truncated for compaction retry]";
+
+/** A11 · la petición del resumen sin la mitad más vieja del tramo, con el
+ *  marcador en su lugar. El corte no deja una respuesta sin su llamada. */
+export function buildTruncatedSummaryRequest(messages: readonly Message[], span: Span): Message[] {
+  let from = span.start + Math.floor((span.end - span.start) / 2);
+  while (from < span.end && messages[from]?.functionResponses?.length) from += 1;
+  return [
+    ...messages.slice(0, span.start),
+    { role: "user", content: COMPACTION_RETRY_MARKER },
+    ...messages.slice(from, span.end),
+    { role: "user", content: COMPACTION_INSTRUCTION },
+  ];
+}
+
 /** El tramo, sustituido por UN mensaje del usuario con el marco de DeepSeek
  *  (`frameSummary`): preámbulo, etiqueta, resumen, etiqueta. */
 export function applySummary(messages: readonly Message[], span: Span, summary: string): Message[] {

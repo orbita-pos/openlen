@@ -1049,8 +1049,8 @@ async function correrTurno(
   // cabía— se fue con el documento (Len 2.0, T8c): el contexto ya no lleva
   // ninguna página, así que el tamaño de una no puede tumbar el turno. Una
   // página enorme se lee por trozos con Read (offset/limit), como en Claude
-  // Code. El 413 queda para un historial que no quepa.
-  if (!built.ok) return errorJson(413, "Page too large for an agent turn", "pageTooLarge");
+  // Code. ⚰️ El 413 para un historial que no cupiera se fue con A11: el bucle
+  // resume antes de empezar (`compactFirst`), como Claude Code.
 
   // LA FORMA DEL TURNO, en una línea y SIEMPRE. Ver lib/agent/forma-del-turno.ts
   // para el porqué largo; el corto es que de un turno del Agente sólo quedaban
@@ -1636,6 +1636,8 @@ async function correrTurno(
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,
+          // A11 · la charla no cabe: resumir antes de la primera llamada de trabajo.
+          ...(built.compactFirst ? { compactFirst: true } : {}),
           // LA COMPACTACIÓN DENTRO DEL TURNO, como DeepSeek (`lib/agent/compaction/`).
           compaction: {
             policy: COMPACTION_POLICY,
