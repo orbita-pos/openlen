@@ -256,6 +256,10 @@ export interface AgentLoopArgs {
     /** Deja el resultado entero de lo que se poda en un fichero que Len puede
      *  leer (`spill-policy` de DeepSeek); `false` si no pudo. */
     saveRecovery?(path: string, text: string): Promise<boolean>;
+    /** A11 · tras resumir, los ficheros que lo resumido leyó (del más reciente):
+     *  el mensaje que va justo detrás del resumen (`restoredFilesMessage`), o
+     *  `null`. Como Claude Code, que vuelve a adjuntar los leídos. */
+    restoreFiles?(paths: readonly string[]): Promise<Message | null>;
   };
   /** A11 · la charla no cabe (`buildAgentMessages` → `compactFirst`): resumir
    *  ANTES de la primera llamada de trabajo; si no sale, `context_too_long`. */
@@ -1042,6 +1046,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (!outcome.changed) return false;
     ownArchived.push(...messages.slice(ownStart));
     messages.splice(0, messages.length, ...outcome.messages);
+    // A11 · lo que estaba leyendo vuelve detrás del resumen (y entra en la marca).
+    if (outcome.summarized && outcome.summaryIndex !== undefined && outcome.readPaths?.length && args.compaction.restoreFiles) {
+      const vuelta = await args.compaction.restoreFiles(outcome.readPaths).catch(() => null);
+      if (vuelta) messages.splice(outcome.summaryIndex + 1, 0, vuelta);
+    }
     ownStart = messages.length;
     if (outcome.summarized) {
       compactionMark = {

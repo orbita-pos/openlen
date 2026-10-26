@@ -36,6 +36,23 @@ export interface CompactOutcome {
   readonly changed: boolean;
   readonly pruned: number;
   readonly summarized: boolean;
+  /** A11 · si resumió: dónde quedó el mensaje del resumen, y los ficheros que lo
+   *  resumido leyó (del más reciente al más viejo, sin los que el tramo
+   *  conservado vuelve a leer), para devolverlos detrás (`restore-files.ts`). */
+  readonly summaryIndex?: number;
+  readonly readPaths?: string[];
+}
+
+/** Los `file_path` de las llamadas `Read` de unos mensajes, del más reciente al más viejo. */
+function readPathsIn(messages: readonly Message[]): string[] {
+  const out: string[] = [];
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    for (const c of [...(messages[i]!.functionCalls ?? [])].reverse()) {
+      const path = (c.args as { file_path?: unknown } | undefined)?.file_path;
+      if (c.name === "Read" && typeof path === "string" && !out.includes(path)) out.push(path);
+    }
+  }
+  return out;
 }
 
 export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> {
@@ -76,5 +93,7 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
   const replaced = applySummary(pruned.messages, span, summary);
   // DeepSeek («shrink validation»): un resumen que no encoge no se acepta.
   if (estimateTokens(replaced) >= estimateTokens(pruned.messages)) return prunedOnly;
-  return { messages: replaced, changed: true, pruned: pruned.count, summarized: true };
+  const kept = new Set(readPathsIn(pruned.messages.slice(span.end)));
+  const readPaths = readPathsIn(pruned.messages.slice(span.start, span.end)).filter((p) => !kept.has(p));
+  return { messages: replaced, changed: true, pruned: pruned.count, summarized: true, summaryIndex: span.start, readPaths };
 }

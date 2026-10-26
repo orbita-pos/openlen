@@ -72,6 +72,9 @@ import { ESFUERZOS } from "@/lib/agent/esfuerzo";
 import { DYNAMIS_MAX_OUTPUT_TOKENS, modeOfTurn } from "@/lib/agent/dynamis";
 import { resolveCompaction } from "@/lib/agent/compaction/policy";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import { POST_COMPACT_MAX_FILES, restoredFilesMessage } from "@/lib/agent/compaction/restore-files";
+import { CHARS_PER_TOKEN } from "@/lib/agent/compaction/estimate";
+import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
 import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
@@ -1652,6 +1655,18 @@ async function correrTurno(
               if (!terminal?.arrancada) return false;
               await terminal.poner({ [path]: text });
               return true;
+            },
+            // A11 · lo que estaba leyendo vuelve tras resumir, como en Claude Code:
+            // con el propio `Read` de Len (su salida de siempre, y queda leído
+            // para editar). Lo que ya no existe no vuelve.
+            restoreFiles: async (paths) => {
+              const files = [];
+              for (const path of paths.slice(0, POST_COMPACT_MAX_FILES)) {
+                const o = await runAgentTool(agentSession, deps, "Read", { file_path: path }).catch(() => null);
+                const output = o && o.response.ok !== false && typeof o.response[CLAVE_TOOL_RESULT] === "string" ? (o.response[CLAVE_TOOL_RESULT] as string) : null;
+                files.push({ path, output, tokens: output === null ? 0 : Math.ceil(output.length / CHARS_PER_TOKEN) });
+              }
+              return restoredFilesMessage(files);
             },
           },
           // LA RETENCIÓN DE RESULTADOS GRANDES, como la `spill-policy` de DeepSeek

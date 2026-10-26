@@ -1082,6 +1082,17 @@ describe("POST /api/agent — la mutación durable viaja en el terminal", () => 
       expect(args.compactFirst).toBe(true);
     });
 
+    it("🔴 tras resumir, la ruta vuelve a leer los ficheros con el Read de Len; lo que ya no existe no vuelve", async () => {
+      mocks.runAgentLoop.mockResolvedValue(limpio);
+      await readEvents(await pestanaVieja());
+      const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [{ compaction: { restoreFiles(p: string[]): Promise<{ content: string } | null> } }])[0];
+      mocks.runAgentTool.mockImplementation(async (_s: unknown, _d: unknown, name: string, a: { file_path: string }) =>
+        name === "Read" && a.file_path === "/index.html" ? { response: { ok: true, tool_result: "1\t<h1>Hola</h1>" } } : { response: { ok: false, error: "File does not exist." } },
+      );
+      const m = await args.compaction.restoreFiles(["/index.html", "/borrada.html"]);
+      expect(m?.content).toBe('Called the Read tool with the following input: {"file_path":"/index.html"}\nResult of calling the Read tool:\n1\t<h1>Hola</h1>');
+    });
+
     it("🔴 lo que manda una pestaña vieja (`dichoAntes`, `historyTotal`) se ignora sin error", async () => {
       mocks.runAgentLoop.mockResolvedValue(limpio);
       const events = await readEvents(await pestanaVieja());
