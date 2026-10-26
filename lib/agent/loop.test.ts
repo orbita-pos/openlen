@@ -3909,6 +3909,43 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(r.compactionMark?.messages[0]!.content).toContain("- dos");
   });
 
+  // A11: la ruta ya no rechaza con 413 una charla que no cabe; se la pasa al
+  // bucle con `compactFirst` y éste resume ANTES de la primera llamada de trabajo.
+  it("🔴 A11: con compactFirst, la primera llamada es el resumen y el turno sigue", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compactFirst: true,
+      compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(esResumen(vistos[0]!)).toBe(true);
+    expect(JSON.stringify(vistos[1])).toContain("<compacted-summary>");
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.compactionMark?.trigger).toBe("pressure");
+  });
+
+  it("🔴 A11: con compactFirst y un resumen que no sale, termina con context_too_long sin llamada de trabajo", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compactFirst: true,
+      compaction: { policy: { thresholdTokens: 1_000_000, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return scripted([{ type: "function_call", name: "Read", args: {} }, uso(1), done])(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: (e) => events.push(e),
+    });
+    expect(vistos.every(esResumen)).toBe(true);
+    expect(r.errorCode).toBe("context_too_long");
+    expect(r.terminalError).toBe(true);
+    expect(events.filter((e) => e.type === "error")).toHaveLength(1);
+  });
+
   it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {
     const vistos: Message[][] = [];
     const largo = "r".repeat(20_000);

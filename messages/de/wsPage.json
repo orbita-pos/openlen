@@ -115,6 +115,7 @@
       "budget_limit": "Len hat an der Ausgabengrenze für einen Zug angehalten. Was erledigt ist, ist gespeichert; bitte ihn weiterzumachen, wenn du mehr willst.",
       "cancelled": "Der Zug wurde abgebrochen.",
       "truncated": "Der Antwort ist mehrmals hintereinander der Platz ausgegangen – bitte Len, weiterzumachen.",
+      "context_too_long": "Diese Unterhaltung ist zu lang und konnte nicht zusammengefasst werden. Schreib /compact oder beginne eine neue Unterhaltung.",
       "upstream": "Beim Modell ist ein Problem aufgetreten – versuche es erneut.",
       "no_credits": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie erneuern sich alle 30 Tage — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten.",
       "no_credits_at": "Deine Credits sind aufgebraucht. Deine Seite ist gespeichert und du kannst sie jetzt veröffentlichen. Sie kommen am {date} zurück — oder tippe oben auf dein Guthaben und wechsle zu Pro, um heute weiterzuarbeiten."

@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 // Hallazgo 4B — «Chat y Len pueden mutar la página de forma durable y terminar
 // como un fallo puro». Esta es la mitad del cliente: la decisión de pintar rojo
 // o cerrar aplicado-con-aviso.
 import { describe, expect, it } from "vitest";
-import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
+import { avisoDelTurno, cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "./turno-cerrado";
 
 describe("cierreDeTurno", () => {
   it("sin error, el turno cierra aplicado y sin aviso", () => {
@@ -216,5 +217,19 @@ describe("laPaginaNoCambio", () => {
     expect(
       laPaginaNoCambio({ huboCambioReal: null, hayDocumentoNuevo: true, mutoDurable: false }),
     ).toBe(false);
+  });
+});
+
+// A11: una charla que no cabe y no se pudo resumir lo dice, también al recargar.
+describe("A11 · conversación demasiado larga", () => {
+  it("🔴 context_too_long tiene su aviso desde la fila, como las demás paradas", () => {
+    expect(avisoDelTurno({ endReason: "context_too_long" }, (code) => `errors.${code}`)).toEqual({ motivo: "errors.context_too_long", cortado: true });
+  });
+  it("🔴 y su texto existe en los 10 idiomas", () => {
+    for (const l of ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"]) {
+      const m = JSON.parse(readFileSync(`messages/${l}/wsPage.json`, "utf8")) as Record<string, Record<string, Record<string, string>>>;
+      const errores = Object.values(m).find((v) => v && typeof v === "object" && "errors" in v)?.errors;
+      expect(typeof errores?.context_too_long, l).toBe("string");
+    }
   });
 });

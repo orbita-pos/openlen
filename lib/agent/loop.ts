@@ -69,7 +69,10 @@ export type AgentErrorCode =
   | "truncated"
   | "upstream"
   | "no_credits"
-  | "agent_off";
+  | "agent_off"
+  /** A11 · la conversación no cabe y no se pudo resumir (el «Conversation too
+   *  long» de Claude Code). */
+  | "context_too_long";
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }
@@ -254,6 +257,9 @@ export interface AgentLoopArgs {
      *  leer (`spill-policy` de DeepSeek); `false` si no pudo. */
     saveRecovery?(path: string, text: string): Promise<boolean>;
   };
+  /** A11 · la charla no cabe (`buildAgentMessages` → `compactFirst`): resumir
+   *  ANTES de la primera llamada de trabajo; si no sale, `context_too_long`. */
+  compactFirst?: boolean;
   // ⚰️ Aquí vivían `verifyTurn` (los ojos al cerrar: UNA mirada obligatoria
   // con la tarjeta `verificar_diseno`) y `medirParaElModelo` (el navegador que
   // medía cada tanda y se lo devolvía al modelo). Se retiraron los dos el
@@ -999,20 +1005,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    *  instrucción al final (`buildSummaryRequest`): el prefijo sale de la caché.
    *  Se cobra como cualquier llamada. Un resumen que llama herramientas, que se
    *  corta o que falla no vale: `null`, y el turno sigue sin resumen. */
-  const summarizeWithModel = async (request: Message[]): Promise<string | null> => {
+  const summarizeWithModel = async (request: Message[]): Promise<string | null | "too_long"> => {
     if (args.signal?.aborted) return null;
     args.emit({ type: "compaction_start" });
     const { text, calledTool, stop } = await streamOutsideRetries(() => args.openStream(request), {
       emitText: false,
       separated: false,
     });
+    // A11 · la petición del resumen tampoco cupo: `compactIfNeeded` la
+    // reintenta UNA vez recortada (el `compact_ptl_retry` de Claude Code).
+    if (stop?.kind === "error" && stop.code === "context_window_exceeded") return "too_long";
     const valid = !calledTool && (stop === null || stop.kind === "end_turn");
     return valid && text.trim() !== "" ? text : null;
   };
 
   let compactionMark: CompactionMark | undefined;
   /** Compacta `messages` EN SITIO (como hacen los `push`). `true` si cambió. */
-  const compactNow = async (trigger: "pressure" | "overflow", discardChars: number): Promise<boolean> => {
+  const compactNow = async (trigger: "pressure" | "overflow", discardChars: number, force = false): Promise<boolean> => {
     if (!args.compaction) return false;
     const pressureTokens =
       lastInputTokens === null ? estimateTokens(messages) : lastInputTokens + estimateTokens(messages.slice(messagesAtLastCall));
@@ -1022,6 +1031,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       pressureTokens,
       policy: args.compaction.policy,
       trigger,
+      force,
       // Lo que el modelo aún no ha visto no se poda: lo llegado después de la
       // última llamada (sus respuestas, una corrección del dueño) o, antes de
       // la primera, la petición. Tras un desborde eso es todo: se puede podar.
@@ -1329,6 +1339,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     return buildResult(true, code);
   };
 
+  // A11 · LA CHARLA NO CABE: se resume antes de nada, como Claude Code al
+  // recibir tu mensaje. Si no sale resumen, el turno termina diciéndolo, sin
+  // mandar al modelo una petición que no puede leer.
+  if (args.compactFirst && args.compaction) {
+    const resumio = (await compactNow("pressure", 0, true)) && compactionMark !== undefined;
+    if (!resumio) {
+      args.emit({ type: "error", message: "La conversación ya no cabe en lo que el modelo puede leer.", code: "context_too_long" });
+      return buildResult(true, null, "context_too_long");
+    }
+  }
+
   while (true) {
     // ─── ¿EL USUARIO HA CORREGIDO EL RUMBO? ──────────────────────────────
     //
@@ -1562,8 +1583,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           algunaVueltaYaDijoAlgo = yaHablabaAntesDelIntento;
           continue;
         }
-        args.emit({ type: "error", message: "La conversación ya no cabe en lo que el modelo puede leer.", code: "upstream" });
-        errorCode = "upstream";
+        args.emit({ type: "error", message: "La conversación ya no cabe en lo que el modelo puede leer.", code: "context_too_long" });
+        errorCode = "context_too_long";
         sawError = true;
         break;
       }

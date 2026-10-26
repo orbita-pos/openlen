@@ -460,7 +460,7 @@ export interface BuildAgentMessagesArgs {
   seleccion?: SeleccionDelDueno | null;
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
   design?: string | null;
-  /** Pre-flight size ceiling; over it → { ok:false, reason:"too_large" }. */
+  /** Pre-flight size ceiling; over it (A11) → `compactFirst`: the loop summarizes first. */
   maxPromptTokens: number;
 }
 
@@ -473,8 +473,11 @@ export type BuildAgentMessagesResult =
       /** Los avisos del turno, tal y como van detrás de las palabras del dueño:
        *  la ruta los guarda con el turno y el historial los repone en su sitio. */
       avisos: string;
-    }
-  | { ok: false; reason: "too_large" };
+      /** A11 · ni sin lo pensado cabe: el bucle resume ANTES de la primera
+       *  llamada de trabajo (`compactFirst`), como Claude Code al recibir tu
+       *  mensaje. Antes era `too_large` → 413 y el turno no empezaba. */
+      compactFirst?: true;
+    };
 
 // ⚰️ Aquí vivía `PETICION_DEL_USUARIO` («WHAT THE USER ASKS YOU NOW:»), la
 // costura entre el contexto y las palabras del dueño cuando iban en UN mensaje.
@@ -595,9 +598,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
       if (cabe(caracteres)) break;
     }
   }
-  if (!cabe(caracteres)) {
-    return { ok: false, reason: "too_large" };
-  }
+  const compactFirst = !cabe(caracteres);
   const messages = assembleTurnMessages({
     systemPrompt,
     manual,
@@ -606,7 +607,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     contextBlock,
     prompt: peticion,
   });
-  return { ok: true, messages, systemPrompt, contextBlock, avisos };
+  return { ok: true, messages, systemPrompt, contextBlock, avisos, ...(compactFirst ? { compactFirst: true as const } : {}) };
 }
 
 /** Tu mensaje de este turno tal y como viaja: lo que pides, sus avisos y la nota
