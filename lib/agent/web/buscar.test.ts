@@ -5,8 +5,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/style-match/scrape/fetch-raw", () => ({ fetchRaw: vi.fn() }));
+vi.mock("@/lib/style-match/scrape/fetch-puppeteer", () => ({ fetchPuppeteer: vi.fn() }));
 
-import { buscarEnExa, ErrorDeLaWeb, fuentesDeExa, webDelServidor } from "./buscar";
+import { buscarEnExa, screenshotRealSite, ErrorDeLaWeb, fuentesDeExa, webDelServidor } from "./buscar";
+import type { fetchPuppeteer } from "@/lib/style-match/scrape/fetch-puppeteer";
 import { webASerializable } from "@/lib/len-bench/web-sustituta";
 
 const senal = () => new AbortController().signal;
@@ -88,6 +90,11 @@ describe("webDelServidor — de dónde sale la web", () => {
     expect(await web.leer("p1", "https://museo.example/no")).toEqual({ ok: false, error: "the page does not exist (HTTP 404)" });
     // Otro proyecto, sin fichero: una web vacía.
     expect(await web.buscar("p2", "museo", 8, senal())).toEqual([]);
+    // The fixed web of a case has no browser: a screenshot of another site says so.
+    expect(await web.screenshot("p1", "https://museo.example/", "desktop")).toEqual({
+      ok: false,
+      error: "screenshots of other sites are not available here; read the page with web_fetch",
+    });
     await web.cobrar("u1", 3);
     expect(debit).not.toHaveBeenCalled();
     expect(red).not.toHaveBeenCalled();
@@ -100,5 +107,51 @@ describe("webDelServidor — de dónde sale la web", () => {
     await webDelServidor(debit).cobrar("u1", 3);
     // Con su uso, para el libro de gasto: Exa, tres consultas.
     expect(debit).toHaveBeenCalledWith("u1", 450, { provider: "exa", model: "search", queries: 3 });
+  });
+});
+
+// ANOTHER SITE, SEEN (26/10): `view_page` with `url`. The browser is the one the
+// "make one like this" chip used (`fetchPuppeteer`: the address checked on every
+// redirect, its traffic through the filtering proxy, no server secrets in its
+// environment); this only turns its answer into what Len reads.
+describe("screenshotRealSite — a screenshot of another site", () => {
+  const fetcher = (r: Awaited<ReturnType<typeof fetchPuppeteer>>) => vi.fn(async () => r) as unknown as typeof fetchPuppeteer & ReturnType<typeof vi.fn>;
+  const rendered = (finalUrl: string, screenshot?: Buffer) =>
+    ({ ok: true, value: { url: finalUrl, finalUrl, screenshot } }) as unknown as Awaited<ReturnType<typeof fetchPuppeteer>>;
+
+  it("comes back as a JPEG image, at the size asked for: 1440×900 on a desktop, 390×844 on a phone", async () => {
+    const f = fetcher(rendered("https://linear.app/", Buffer.from("jpeg-bytes")));
+    expect(await screenshotRealSite("https://linear.app", "desktop", f)).toEqual({
+      ok: true,
+      url: "https://linear.app/",
+      image: { mimeType: "image/jpeg", dataBase64: Buffer.from("jpeg-bytes").toString("base64") },
+    });
+    await screenshotRealSite("https://linear.app", "mobile", f);
+    expect(f.mock.calls.map((c) => c[0])).toEqual([
+      { url: "https://linear.app", viewport: { width: 1440, height: 900 } },
+      { url: "https://linear.app", viewport: { width: 390, height: 844 } },
+    ]);
+  });
+
+  it("🔴 an address that is not a public website is refused without saying what is behind it", async () => {
+    const f = fetcher({ ok: false, error: { kind: "ssrf-blocked", reason: "resolves to 10.0.0.5" } });
+    const r = await screenshotRealSite("http://intranet.local", "desktop", f);
+    expect(r).toEqual({ ok: false, error: "that address is not a public website and cannot be read" });
+    expect(JSON.stringify(r)).not.toContain("10.0.0.5");
+  });
+
+  it("a site that refuses, a render with no picture and a browser that throws each say so", async () => {
+    expect(await screenshotRealSite("https://x.example", "desktop", fetcher({ ok: false, error: { kind: "blocked", status: 403 } }))).toEqual({
+      ok: false,
+      error: "the site refused the request (HTTP 403) — do not retry; ask the user to paste the text",
+    });
+    expect(await screenshotRealSite("https://x.example", "desktop", fetcher(rendered("https://x.example/")))).toEqual({
+      ok: false,
+      error: "the page opened but no screenshot came out",
+    });
+    const roto = vi.fn(async () => {
+      throw new Error("Chrome not found");
+    }) as unknown as typeof fetchPuppeteer;
+    expect(await screenshotRealSite("https://x.example", "desktop", roto)).toEqual({ ok: false, error: "Chrome not found" });
   });
 });

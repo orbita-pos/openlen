@@ -44,7 +44,6 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
-import type { StyleDirection } from "@/lib/style-match/direction-types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
@@ -296,10 +295,9 @@ export interface AgentChatOptions {
   onDesignSettled?: (ok: boolean) => void;
 }
 
-/** Las fotos (ya subidas) y la referencia que acompañan a un borrador. */
+/** Las fotos (ya subidas) que acompañan a un borrador. */
 export interface PendingAttachments extends PideNacer {
   readonly images: readonly AttachedImage[];
-  readonly styleDirection: StyleDirection | null;
   /** «Aplicar» del modo Diseño de una app: los cambios del panel. */
   readonly design?: DesignRequest | null;
   // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
@@ -1202,8 +1200,6 @@ export function useAgentChat({
         /** Crear es Len: VARIAS fotos (hasta `MAX_PHOTOS_PER_MESSAGE`). Ganan
          *  sobre la del compositor y sobre `imageOverride`. */
         readonly images?: readonly AttachedImage[];
-        /** Crear es Len: la referencia por URL, que viaja con ESTE mensaje. */
-        readonly styleDirection?: StyleDirection | null;
         /** El primer mensaje de un proyecto en blanco que nace como app. */
         readonly naceComo?: PideNacer["naceComo"];
         readonly idioma?: string;
@@ -1477,7 +1473,6 @@ export function useAgentChat({
               ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
-              ...(opciones?.styleDirection ? { styleDirection: opciones.styleDirection } : {}),
               // EL MODO DISEÑO: los cambios del panel (`lib/agent/design-request.ts`).
               ...(opciones?.design ? { design: opciones.design } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
@@ -2252,11 +2247,10 @@ export function useAgentChat({
     const texto = pendingDraft;
     const adjuntos = pendingAttachments;
     onPendingDraftConsumed?.();
-    // El primer mensaje de un proyecto en blanco lleva sus fotos y su
-    // referencia (plans/crear-es-len); el resto de borradores, nada más.
+    // El primer mensaje de un proyecto en blanco lleva sus fotos
+    // (plans/crear-es-len); el resto de borradores, nada más.
     void send(texto, undefined, {
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
-      ...(adjuntos?.styleDirection ? { styleDirection: adjuntos.styleDirection } : {}),
       ...(adjuntos?.design ? { design: adjuntos.design } : {}),
       ...camposDeNacer(adjuntos),
     });

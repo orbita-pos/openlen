@@ -186,6 +186,19 @@ describe("buildFunctionDeclarations", () => {
     }
   });
 
+  // Another site is looked at by Len when he decides (26/10), not by a chip in
+  // the composer: view_page takes `url`, and a page web_fetch can't read
+  // because JavaScript builds it points there.
+  it("view_page declares url for another site; web_fetch points a JavaScript page to it", () => {
+    const declaraciones = buildFunctionDeclarations() as any[];
+    const ver = declaraciones.find((x) => x.name === "view_page");
+    expect(ver.parameters.properties.url?.type).toBe("STRING");
+    expect(ver.parameters.properties.url.description).toMatch(/another site/);
+    expect(ver.parameters.required).toEqual(["mode"]);
+    const leer = declaraciones.find((x) => x.name === "web_fetch");
+    expect(leer.description).toMatch(/view_page with its url/);
+  });
+
   // 🔴 El esquema NO puede anunciar un módulo retirado: Reservas se retiró el
   // 2026-08-21 y el enum escrito a mano siguió ofreciéndolo.
   it("toggle_module enum matches AGENT_MODULES", () => {

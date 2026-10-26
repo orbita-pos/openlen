@@ -12,21 +12,6 @@
     "effortMedium": "Geavanceerd",
     "effortHigh": "Maximaal",
     "effortSoon": "Binnenkort",
-    "reference": {
-      "add": "Laat je inspireren door een site",
-      "placeholder": "Plak de link van een pagina die je mooi vindt",
-      "use": "Gebruiken",
-      "looking": "Aan het kijken…",
-      "remove": "Referentie verwijderen",
-      "error": {
-        "blocked": "Die link kan niet worden geopend.",
-        "unreachable": "Die pagina was niet bereikbaar.",
-        "not_rendered": "Die pagina liet haar stijl niet zien.",
-        "rate_limited": "Te veel referenties achter elkaar. Probeer het zo nog eens.",
-        "network": "Ophalen is mislukt. Probeer het opnieuw."
-      },
-      "lookingAt": "Bekijkt {host}…"
-    },
     "trimmed": "We hebben je tekst beperkt tot maximaal {max} tekens — het einde is niet verzonden."
   },
   "toast": {

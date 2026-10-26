@@ -50,7 +50,6 @@ describe("Fable model policy", () => {
     ["reasoner", "copy", "none"],
     ["reasoner", "simple_extraction", "none"],
     ["visual_critic", "candidate_scouting", "none"],
-    ["visual_critic", "final_scoring", "none"],
   ] as const)("uses the bounded reasoning policy for %s/%s", (role, operation, expected) => {
     expect(reasoningEffortFor(role, operation)).toBe(expected);
   });

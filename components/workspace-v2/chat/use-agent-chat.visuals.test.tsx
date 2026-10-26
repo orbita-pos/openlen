@@ -53,7 +53,7 @@ async function lastTurn(events: string[]) {
       onLocalUpdate: () => {},
       pendingDraft: "¿cómo va?",
       pendingDraftAutoSend: true,
-      pendingAttachments: { images: [], styleDirection: null },
+      pendingAttachments: { images: [] },
       onPendingDraftConsumed: () => {},
     } as unknown as Parameters<typeof useAgentChat>[0]);
     return null;

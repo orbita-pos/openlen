@@ -1,7 +1,7 @@
 // La barra de dirección del lienzo. En una APP no hay páginas: sus pantallas
 // van por hash y las elige su propio menú, así que la barra no ofrece rutas ni
 // crear o borrar páginas (que en una app se rechazan). Mismo arnés de react-dom
-// + act() que reference-field.test.tsx.
+// + act() que tarjetas-nace-como.test.tsx.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

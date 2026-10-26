@@ -55,7 +55,7 @@ async function render(onDesignSettled: (ok: boolean) => void, capturar?: (c: Ret
       onLocalUpdate: () => {},
       pendingDraft: "Cambios de diseño · 1 elementos",
       pendingDraftAutoSend: true,
-      pendingAttachments: { images: [], styleDirection: null, design: { elements: [ELEMENTO] } },
+      pendingAttachments: { images: [], design: { elements: [ELEMENTO] } },
       onPendingDraftConsumed: () => {},
       onDesignSettled,
     } as Parameters<typeof useAgentChat>[0]);

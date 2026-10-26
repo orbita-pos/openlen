@@ -32,8 +32,6 @@ function Harness({
   const state: BriefFormState = {
     prompt,
     setPrompt,
-    reference: null,
-    setReference: () => undefined,
     fotos: [],
     setFotos: () => undefined,
     truncatedPrompt: sharedTruncatedPrompt,

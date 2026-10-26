@@ -8,7 +8,6 @@ import "../../new/tokens.css";
 
 import { useEffect, useRef, useState } from "react";
 
-import type { StyleDirection } from "@/lib/style-match/direction-types";
 import { HeroPromptInput } from "@/components/marketing/hero-prompt-input";
 import { HeroComposer } from "@/components/workspace-v2/start-landing";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
@@ -22,7 +21,6 @@ export function CreateSandbox({ dark }: { dark: boolean }) {
   }, [dark]);
 
   const [prompt, setPrompt] = useState("");
-  const [reference, setReference] = useState<StyleDirection | null>(null);
   const [fotos, setFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
   const [effort, setEffort] = useState<PageEffort>("low");
   const [chatText, setChatText] = useState("");
@@ -64,7 +62,7 @@ export function CreateSandbox({ dark }: { dark: boolean }) {
       <div className="workspace-v2 mx-auto mt-14 max-w-2xl rounded-2xl bg-app p-6" data-sandbox="new">
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] fg-faint">/new sin proyecto</p>
         <HeroComposer
-          state={{ prompt, setPrompt, reference, setReference, fotos, setFotos }}
+          state={{ prompt, setPrompt, fotos, setFotos }}
           onGenerate={() => {}}
           generating={false}
           effort={effort}

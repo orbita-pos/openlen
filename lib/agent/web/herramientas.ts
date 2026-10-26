@@ -73,7 +73,7 @@ export const DECLARACION_WEB_SEARCH = {
 export const DECLARACION_WEB_FETCH = {
   name: NOMBRE_WEB_FETCH,
   description:
-    "Reads one web page and returns it as markdown, up to 50,000 characters. It does not run the page's JavaScript, so a page built by it comes back almost empty: then ask the user to paste the text instead of retrying. Cite the URL when you use it, do not copy its text word for word into the user's page unless they ask, and read at most 5 pages per turn.",
+    "Reads one web page and returns it as markdown, up to 50,000 characters. It does not run the page's JavaScript, so a page built by it comes back almost empty: then look at it with view_page with its url, or ask the user to paste the text, instead of retrying. Cite the URL when you use it, do not copy its text word for word into the user's page unless they ask, and read at most 5 pages per turn.",
   parameters: {
     type: "OBJECT",
     properties: {
