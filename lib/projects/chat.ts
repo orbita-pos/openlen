@@ -17,6 +17,7 @@ import { photosForRow, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { ESTADO_EN_CURSO, storedTurnFromRow } from "@/lib/projects/stored-turn";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -439,6 +440,8 @@ export async function registrarTurnoDelServidor(
     toolResults?: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
     /** H4: lo que vio el modelo. Como el diario, SÓLO lo escribe el servidor. */
     transcript?: TranscripcionGuardada | null;
+    /** A11: la marca del resumen de este turno (ver `CompactionMark`). Sólo el servidor. */
+    compaction?: CompactionMark | null;
     /** Lo que cobró el turno (centicréditos) y lo que tardó. Sólo el servidor
      *  lo sabe; el cierre del turno lo enseña (plans/new-chat/). */
     centicredits?: number | null;
@@ -448,6 +451,7 @@ export async function registrarTurnoDelServidor(
   const toolResults = turn.toolResults ?? null;
   const endReason = turn.endReason ?? null;
   const transcript = turn.transcript ?? null;
+  const compaction = turn.compaction ?? null;
   const centicredits = enteroONulo(turn.centicredits);
   const durationMs = enteroONulo(turn.durationMs);
   // LEN 2.1 · LA FILA EN CURSO SE CIERRA ENTERA. La abrió este mismo servidor
@@ -466,6 +470,7 @@ export async function registrarTurnoDelServidor(
       status: turn.status,
       toolResults,
       transcript,
+      compaction,
       centicredits,
       durationMs,
       endReason,
@@ -493,13 +498,14 @@ export async function registrarTurnoDelServidor(
       status: turn.status,
       toolResults,
       transcript,
+      compaction,
       centicredits,
       durationMs,
       endReason,
     })
     .onConflictDoUpdate({
       target: schema.projectChatMessages.id,
-      set: { toolResults, transcript, centicredits, durationMs, endReason },
+      set: { toolResults, transcript, compaction, centicredits, durationMs, endReason },
     });
   await trim(projectId);
 }
