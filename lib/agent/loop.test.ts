@@ -3852,6 +3852,63 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(JSON.stringify(t)).not.toContain("<compacted-summary>");
   });
 
+  // A11 (spec local 2026-10-25-a11-continuity): lo que vio el modelo tras resumir
+  // vuelve en el resultado, para guardarlo en la fila como el `compact_boundary`.
+  it("🔴 A11: un turno que resume devuelve su marca, con lo que vio el modelo después", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    const mark = r.compactionMark;
+    expect(mark).toBeDefined();
+    expect(mark!.trigger).toBe("pressure");
+    expect(mark!.messages[0]!.content).toContain("<compacted-summary>");
+    expect(mark!.messages).toEqual(vistos[1]!.slice(2));
+    expect(mark!.fromTranscript).toBe(0);
+    expect(mark!.preTokens).toBeGreaterThan(mark!.postTokens);
+  });
+
+  it("A11: un resumen rechazado no deja marca", async () => {
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: {} }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: guion,
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.compactionMark).toBeUndefined();
+  });
+
+  it("A11: con dos compactaciones en el turno, queda la última", async () => {
+    const desborde: StreamEvent = { type: "done", stopReason: { kind: "error", error: "http_400", code: "context_window_exceeded" } };
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- uno" }, uso(1), done],
+      [desborde],
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- dos" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: historial(10), tools: leer, compaction,
+      openStream: guion,
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(r.finalText).toBe("Hecho.");
+    expect(r.compactionMark?.trigger).toBe("overflow");
+    expect(r.compactionMark?.messages[0]!.content).toContain("- dos");
+  });
+
   it("lo que el modelo aún no vio no se poda, aunque detrás llegue una corrección del dueño", async () => {
     const vistos: Message[][] = [];
     const largo = "r".repeat(20_000);
