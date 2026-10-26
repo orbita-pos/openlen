@@ -189,12 +189,16 @@ describe("buildFunctionDeclarations", () => {
   // Another site is looked at by Len when he decides (26/10), not by a chip in
   // the composer: view_page takes `url`, and a page web_fetch can't read
   // because JavaScript builds it points there.
-  it("view_page declares url for another site; web_fetch points a JavaScript page to it", () => {
+  it("view_page and use_page declare url for another site; web_fetch points a JavaScript page to it", () => {
     const declaraciones = buildFunctionDeclarations() as any[];
     const ver = declaraciones.find((x) => x.name === "view_page");
     expect(ver.parameters.properties.url?.type).toBe("STRING");
     expect(ver.parameters.properties.url.description).toMatch(/another site/);
     expect(ver.parameters.required).toEqual(["mode"]);
+    const usar = declaraciones.find((x) => x.name === "use_page");
+    expect(usar.parameters.properties.url?.type).toBe("STRING");
+    expect(usar.description).toMatch(/With url, the visit is to another site/);
+    expect(usar.parameters.required).toEqual(["steps"]);
     const leer = declaraciones.find((x) => x.name === "web_fetch");
     expect(leer.description).toMatch(/view_page with its url/);
   });
