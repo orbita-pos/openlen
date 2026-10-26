@@ -27,8 +27,13 @@ function columnasDelPanel() {
   return columnas;
 }
 
-/** Filas que se guardan por proyecto (`appendChatMessage` poda el resto). */
+/** Filas que trae el chat de una vez (A11: ya no es un tope de lo que se guarda;
+ *  lo de antes se pide al subir, `getChatMessages` con `before`). */
 export const CHAT_LIMIT = 50;
+
+/** A11 · como Claude Code (`cleanupPeriodDays`, 30 por defecto): una charla se
+ *  guarda entera 30 días desde su último mensaje, sin tope de filas ni de charlas. */
+export const CHAT_RETENTION_DAYS = 30;
 
 // LEN 2.1 · `ESTADO_EN_CURSO` vive con la fila → turno (`stored-turn.ts`, sin
 // base: lo usan también las escenas de Len 3.1) y se reexporta desde aquí.
@@ -44,8 +49,11 @@ export async function getChatMessages(
       .select(columnasDelPanel())
       .from(schema.projectChatMessages)
       .where(enCurso(projectId))
-      .orderBy(asc(schema.projectChatMessages.createdAt))
-      .limit(CHAT_LIMIT),
+      // Las MÁS RECIENTES (antes la poda dejaba 50 y daba igual por dónde se
+      // empezara); se ponen de la más vieja a la más reciente abajo.
+      .orderBy(desc(schema.projectChatMessages.createdAt))
+      .limit(CHAT_LIMIT)
+      .then((filas) => filas.reverse()),
     conversationStateOf(projectId),
   ]);
   const turns = await conDeshacibles(projectId, await conAutores(projectId, rows));
@@ -322,15 +330,14 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
  * sólo hace falta al leer un evento (`transcripcionDeLaFila`). El turno que
  * corre viene con su estado y lo descarta el módulo. Ownership, del llamador.
  */
-/** Techo de filas de una búsqueda: la charla en curso (`CHAT_LIMIT`) y las
- *  archivadas que se guardan (`MAX_ARCHIVED_CONVERSATIONS`), de `CHAT_LIMIT` cada
- *  una como mucho. 🔴 Sin `statement_timeout` en la base, y es a propósito: la app
+/** Techo de filas de una búsqueda. Desde A11 lo que se guarda lo acota el tiempo
+ *  (`CHAT_RETENTION_DAYS`) y no un número de filas, así que el techo es amplio y
+ *  sólo de seguridad. 🔴 Sin `statement_timeout` en la base, y es a propósito: la app
  *  no hace ninguna `db.transaction()` para que los dos conductores (Neon y pg)
  *  sigan intercambiables, y un SET de sesión se quedaría en la conexión del pool.
  *  Lo que la deja sin riesgo es su forma: igualdad por `projectId` (con índice),
- *  sin regex (la lección de la consulta que corrió 17 h) y con este LIMIT. Se
- *  calcula al llamar: `MAX_ARCHIVED_CONVERSATIONS` se declara más abajo. */
-const maxFilasParaBuscar = () => CHAT_LIMIT * (MAX_ARCHIVED_CONVERSATIONS + 1);
+ *  sin regex (la lección de la consulta que corrió 17 h) y con este LIMIT. */
+const MAX_FILAS_PARA_BUSCAR = 5_000;
 
 export async function filasParaBuscar(projectId: string): Promise<ChatRowForSearch[]> {
   const t = schema.projectChatMessages;
@@ -353,7 +360,7 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
     .leftJoin(schema.users, eq(schema.users.id, t.autorId))
     .where(eq(t.projectId, projectId))
     .orderBy(desc(t.createdAt))
-    .limit(maxFilasParaBuscar());
+    .limit(MAX_FILAS_PARA_BUSCAR);
   // Las más recientes si hubiera de más; el módulo las ordena por fecha.
   return rows.map(({ tipo, autorNombre, autorCorreo, ...r }) => ({
     ...r,
@@ -381,7 +388,7 @@ function fotosDelTurno(turn: Pick<StoredChatTurn, "attachedImage" | "attachedIma
 }
 
 /** Append one settled turn. The turn id is the PK, so a retried append is an
- *  idempotent no-op. Trims the project's log to the most-recent CHAT_LIMIT. */
+ *  idempotent no-op. Then drops the conversations older than CHAT_RETENTION_DAYS (A11). */
 export async function appendChatMessage(
   projectId: string,
   turn: StoredChatTurn,
@@ -420,7 +427,7 @@ export async function appendChatMessage(
         noDocChange: turn.noDocChange ?? null,
       },
     });
-  await trim(projectId);
+  await pruneOldConversations(projectId);
 }
 
 /**
@@ -517,7 +524,7 @@ export async function registrarTurnoDelServidor(
       target: schema.projectChatMessages.id,
       set: { toolResults, transcript, compaction, centicredits, durationMs, endReason },
     });
-  await trim(projectId);
+  await pruneOldConversations(projectId);
 }
 
 /**
@@ -559,7 +566,7 @@ export async function abrirFilaDelTurno(
       status: ESTADO_EN_CURSO,
     })
     .onConflictDoNothing({ target: schema.projectChatMessages.id });
-  await trim(projectId);
+  await pruneOldConversations(projectId);
 }
 
 /** Lo que el turno lleva: su texto y sus tarjetas. Sólo si la fila SIGUE en
@@ -665,22 +672,20 @@ export async function updateChatMessageStatus(
     );
 }
 
-/** Evict the oldest rows beyond the cap — mirrors projectVersions' trim. Sólo
- *  la charla en curso: las archivadas tienen su propio tope
- *  (`MAX_ARCHIVED_CONVERSATIONS`) y no se recortan con cada turno nuevo. */
-/** Poda la charla en curso a `CHAT_LIMIT` filas (las más viejas se van).
- *  Exportada para el chat del equipo, que escribe filas sin pasar por un turno. */
-export async function trim(projectId: string): Promise<void> {
-  const rows = await db
-    .select({ id: schema.projectChatMessages.id })
-    .from(schema.projectChatMessages)
-    .where(enCurso(projectId))
-    .orderBy(desc(schema.projectChatMessages.createdAt));
-  if (rows.length <= CHAT_LIMIT) return;
-  const excess = rows.slice(CHAT_LIMIT).map((r) => r.id);
-  await db
-    .delete(schema.projectChatMessages)
-    .where(inArray(schema.projectChatMessages.id, excess));
+/** A11 · LA RETENCIÓN de Claude Code (`cleanupPeriodDays`): borra entera cada
+ *  charla del proyecto —la en curso y cada archivada— cuyo último mensaje tiene
+ *  más de `CHAT_RETENTION_DAYS` días. Sustituye a la poda a 50 filas y al tope de
+ *  10 archivadas, que borraban lo que Len aún necesitaba para recordar. */
+export async function pruneOldConversations(projectId: string, now: Date = new Date()): Promise<void> {
+  const corte = new Date(now.getTime() - CHAT_RETENTION_DAYS * 86_400_000);
+  const t = schema.projectChatMessages;
+  const charla = sql`coalesce(${t.conversation}, '')`;
+  await db.delete(t).where(
+    and(
+      eq(t.projectId, projectId),
+      sql`${charla} in (select coalesce(c."conversation", '') from "projectChatMessages" c where c."projectId" = ${projectId} group by coalesce(c."conversation", '') having max(c."createdAt") < ${corte})`,
+    ),
+  );
 }
 
 function enteroONulo(n: number | null | undefined): number | null {
@@ -703,8 +708,8 @@ function enCurso(projectId: string) {
 // la página, no de la charla (como CLAUDE.md sobrevive a un `/clear`).
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Charlas archivadas que se guardan por proyecto; las más viejas se borran. */
-export const MAX_ARCHIVED_CONVERSATIONS = 10;
+// ⚰️ `MAX_ARCHIVED_CONVERSATIONS` (10): con A11 las charlas se guardan por
+// tiempo (`pruneOldConversations`), no por número.
 
 export type ConversationChange =
   | { readonly ok: true; readonly archived: string | null }
@@ -731,7 +736,7 @@ export async function startNewConversation(projectId: string): Promise<Conversat
     .set({ conversation: id })
     .where(enCurso(projectId))
     .returning({ id: schema.projectChatMessages.id });
-  await trimArchived(projectId);
+  await pruneOldConversations(projectId);
   return { ok: true, archived: movidas.length > 0 ? id : null };
 }
 
@@ -756,7 +761,7 @@ export async function reopenConversation(projectId: string, conversation: string
     .update(schema.projectChatMessages)
     .set({ conversation: sql`CASE WHEN ${c} IS NULL THEN ${nueva} ELSE NULL END` })
     .where(and(eq(schema.projectChatMessages.projectId, projectId), sql`(${c} IS NULL OR ${c} = ${conversation})`));
-  await trimArchived(projectId);
+  await pruneOldConversations(projectId);
   return { ok: true, archived: antes.length > 0 ? nueva : null };
 }
 
@@ -799,22 +804,6 @@ export async function listArchivedConversations(projectId: string): Promise<Arch
   }
   return out;
 }
-
-/** Se guardan las `MAX_ARCHIVED_CONVERSATIONS` archivadas más recientes. */
-async function trimArchived(projectId: string): Promise<void> {
-  const charlas = await listArchivedConversations(projectId);
-  const sobran = charlas.slice(MAX_ARCHIVED_CONVERSATIONS).map((c) => c.id);
-  if (sobran.length === 0) return;
-  await db
-    .delete(schema.projectChatMessages)
-    .where(
-      and(
-        eq(schema.projectChatMessages.projectId, projectId),
-        inArray(schema.projectChatMessages.conversation, sobran),
-      ),
-    );
-}
-
 
 /** ¿Es este proyecto de este usuario? Las rutas de las charlas y del 👍/👎 lo
  *  preguntan antes de tocar nada (la misma consulta que `ownsProject` de la
