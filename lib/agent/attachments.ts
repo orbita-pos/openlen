@@ -3,7 +3,7 @@
  * `Read` when he decides, as in Claude Code — its path goes in the message and
  * nothing is read ahead of him. The bytes are the user's upload; the pages
  * come back as images (`lib/agent/pdf-pages.ts`), with Claude Code's wording,
- * ranges and limits (read in its binary, 2.1.304).
+ * ranges and limits.
  */
 import type { InlineImage } from "@/lib/ai-gateway";
 

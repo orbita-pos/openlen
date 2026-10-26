@@ -52,10 +52,14 @@ const CORTADO = "(Content cut here. Fetch a more specific URL or section for the
 // prompt dice que SUS horarios y SUS precios se preguntan; sin esta frase, lo
 // publicado por OTROS se leía como dato del dueño. DeepSeek no la necesita
 // porque no tiene esa regla, que es de OpenLen y se queda.
+//
+// Los datos de actualidad (26/10), como el WebSearch de Claude Code: el prompt
+// ya no rechaza lo que no es de la página, y el «NEVER make up real-world data
+// (scores, market prices, news)» que iba con ese rechazo vive aquí.
 export const DECLARACION_WEB_SEARCH = {
   name: NOMBRE_WEB_SEARCH,
   description:
-    "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
+    "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. It provides up-to-date information for current events and recent data, and for anything beyond your knowledge cutoff: a score, today's price, the news are searched, never answered from memory. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
   parameters: {
     type: "OBJECT",
     properties: {

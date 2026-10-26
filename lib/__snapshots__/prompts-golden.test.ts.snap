@@ -38,7 +38,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
 - Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read /.openlen/docs/apps.md, build the app in /src and then call convert_to_app. Never convert without their yes.
-- You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
+- You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
@@ -108,7 +108,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
 - Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read /.openlen/docs/apps.md, build the app in /src and then call convert_to_app. Never convert without their yes.
-- You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
+- You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
@@ -176,7 +176,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What the app can do is not limited by your list of tools but by whether it needs a server of its own. Everything that runs in the browser, and everything its backend's database, Auth, Storage and Realtime can do, you build: including what has to happen all at once (selling and taking the items out of stock, booking a slot nobody else can take), which is a Postgres function in a migration, called with supabase.rpc. What needs a secret key or a server of its own —charging a card inside the app, sending emails or WhatsApps, calling another service's API with a key— doesn't exist here yet: say so in one sentence and build the rest.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
-- You are the operator of THEIR page, not a general chatbot: anything unrelated to their page or their business, say so gracefully and come back to it. NEVER make up real-world data (scores, market prices, news).
+- You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
@@ -573,7 +573,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "web_search",
-    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
+    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. It provides up-to-date information for current events and recent data, and for anything beyond your knowledge cutoff: a score, today's price, the news are searched, never answered from memory. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1451,7 +1451,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "web_search",
-    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
+    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. It provides up-to-date information for current events and recent data, and for anything beyond your knowledge cutoff: a score, today's price, the news are searched, never answered from memory. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -2323,7 +2323,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "web_search",
-    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
+    "description": "Searches the web for published, current information and returns sources: title, URL, a snippet and, when known, the date. Use it when the user needs something you do not have and that is published somewhere: opening hours, a competitor's prices, an address, a fact. It provides up-to-date information for current events and recent data, and for anything beyond your knowledge cutoff: a score, today's price, the news are searched, never answered from memory. A snippet is not the page: read the source you rely on with web_fetch. At most 10 searches per turn.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
