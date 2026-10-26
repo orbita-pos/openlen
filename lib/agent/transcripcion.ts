@@ -39,6 +39,7 @@ import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -173,6 +174,8 @@ export interface FilaDelHistorial {
   readonly userText: string;
   readonly assistantReasoning: string;
   readonly transcript: TranscripcionGuardada | null;
+  /** A11: la marca del resumen que hizo ese turno; el historial arranca en ella. */
+  readonly compaction?: CompactionMark | null;
   /** Las fotos que el dueño adjuntó a ese turno (columna `attachedImage`):
    *  un objeto en las filas de siempre, una lista con dos o más (`photosOf`). */
   readonly attachedImage?: ChatPhoto | readonly ChatPhoto[] | null;

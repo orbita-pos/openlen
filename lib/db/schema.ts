@@ -23,6 +23,7 @@ import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { Finding, ReviewStatus } from "@/lib/security-review/types";
 import type { DnsRecord, EmailDomainStatus, EmailKind, EmailMessageStatus } from "@/lib/project-email/types";
 import type { ArtifactDependency, ArtifactEvidence, ArtifactKind, ArtifactOutput, ArtifactSourceRef, ArtifactStatus, ArtifactVisibility, ArtifactJobStatus } from "@/lib/artifacts/types";
@@ -459,6 +460,10 @@ export const projectChatMessages = pgTable(
     // la fila; el aviso del chat sale de aquí también al recargar. NULL = terminó,
     // o fila anterior a esto. `npm run chat-conversations:migrate`.
     endReason: text("endReason"),
+    // LA MARCA DEL RESUMEN (A11, como el `compact_boundary` de Claude Code): lo
+    // que vio el modelo tras resumir en este turno. El historial del siguiente
+    // arranca aquí. NULL = el turno no resumió. `npm run chat-conversations:migrate`.
+    compaction: jsonb("compaction").$type<CompactionMark>(),
   },
   (table) => [
     index("projectChatMessages_projectId_createdAt_idx").on(

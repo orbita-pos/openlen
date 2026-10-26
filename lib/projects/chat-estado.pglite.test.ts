@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo } = await import("./chat");
+const { getChatMessages, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor } = await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
   id: "g1",
@@ -72,11 +72,40 @@ beforeEach(async () => {
       "userText" text not null, "attachedImage" jsonb, "assistantReasoning" text not null,
       "page" text, "actions" jsonb, "noDocChange" boolean, "toolResults" jsonb, "transcript" jsonb,
       "status" text not null, "createdAt" timestamp not null default now(),
-      "conversation" text, "centicredits" integer, "durationMs" integer, "autorId" text, "origen" jsonb, "tipo" text, "menciones" jsonb, "endReason" text);
+      "conversation" text, "centicredits" integer, "durationMs" integer, "autorId" text, "origen" jsonb, "tipo" text, "menciones" jsonb, "endReason" text,
+      "compaction" jsonb);
     create table "projectMembers" ("id" text primary key, "projectId" text not null, "userId" text not null, "rol" text not null);
     insert into "projects" ("id", "userId") values ('p1', 'u1'), ('p2', 'u2');
   `);
   base.db = drizzle(pg, { schema });
+});
+
+// A11 (spec local 2026-10-25-a11-continuity): el resumen se guarda como marca en
+// la fila del turno, como el `compact_boundary` de Claude Code en su transcripción.
+describe("A11 · la marca de compactación en la fila", () => {
+  const MARCA = {
+    messages: [{ role: "user", content: "<compacted-summary>\nx\n</compacted-summary>" }],
+    fromTranscript: 3,
+    trigger: "pressure",
+    preTokens: 900000,
+    postTokens: 120000,
+  };
+  it("🔴 la fila guarda la marca de compactación y la devuelve tal cual (jsonb)", async () => {
+    await registrarTurnoDelServidor("p1", {
+      id: "t1",
+      userText: "sigue",
+      assistantReasoning: "Hecho.",
+      status: "applied",
+      compaction: MARCA,
+    } as Parameters<typeof registrarTurnoDelServidor>[1]);
+    const r = await pg.query<{ compaction: unknown }>(`select "compaction" from "projectChatMessages" where id = 't1'`);
+    expect(r.rows[0]?.compaction).toEqual(MARCA);
+  });
+  it("sin marca, la columna queda NULL", async () => {
+    await registrarTurnoDelServidor("p1", { id: "t2", userText: "hola", assistantReasoning: "Hola.", status: "applied" });
+    const r = await pg.query<{ compaction: unknown }>(`select "compaction" from "projectChatMessages" where id = 't2'`);
+    expect(r.rows[0]?.compaction).toBeNull();
+  });
 });
 
 describe("el estado de la charla en Postgres", () => {
