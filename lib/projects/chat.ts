@@ -306,13 +306,12 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
     .from(t)
     .where(and(turnoDeLaHistoria(projectId), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
     .orderBy(asc(t.createdAt));
-  // Y aparte, los mensajes del equipo desde el turno más viejo que se ve (los
-  // de antes ya van resumidos), con el tope del sobre.
-  const desde = turnos[0]?.createdAt;
+  // Y aparte, los mensajes del equipo desde la marca (los de antes ya van
+  // resumidos; sin marca, los de toda la charla), con el tope del sobre.
   const personas = await db
     .select(columnas)
     .from(t)
-    .where(and(enCurso(projectId), eq(t.tipo, "persona"), desde ? gte(t.createdAt, desde) : undefined))
+    .where(and(enCurso(projectId), eq(t.tipo, "persona"), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
     .orderBy(desc(t.createdAt))
     .limit(MAX_MENSAJES_DEL_EQUIPO);
   return [...turnos, ...personas]

@@ -99,7 +99,10 @@ describe("el chat del equipo", () => {
     expect(turnos[0]!.userText).toBe("turno 1");
   });
 
-  it("🔴 C2 · los mensajes del equipo NO ocupan la ventana de turnos de Len: 12 turnos y, aparte, los mensajes desde el más viejo de ellos", async () => {
+  // A11: ya no hay ventana de 12 turnos; sin marca de compactación es la charla
+  // entera, y los mensajes del equipo de antes del primer turno también (no hay
+  // nada resumido que los cubra).
+  it("🔴 C2 · sin marca, los turnos de Len y los mensajes del equipo de toda la charla, en orden de fecha", async () => {
     const base = Date.UTC(2026, 9, 2);
     const fila = (id: string, min: number, persona: boolean) => ({
       id: `prueba-equipo-c2-${id}`,
@@ -118,9 +121,9 @@ describe("el chat del equipo", () => {
     const filas = await filasParaElHistorialConEquipo(PROYECTO);
     const turnos = filas.filter((f) => f.tipo === null).map((f) => f.fila.userText);
     const personas = filas.filter((f) => f.tipo === "persona").map((f) => f.fila.userText);
-    expect(turnos).toEqual(Array.from({ length: 12 }, (_, i) => `turno-${i + 2}`));
-    expect(personas).toEqual(Array.from({ length: 13 }, (_, i) => `persona-${i}`));
-    // En orden de fecha: los turnos primero (son anteriores), luego el equipo.
+    expect(turnos).toEqual(Array.from({ length: 14 }, (_, i) => `turno-${i}`));
+    expect(personas).toEqual(["persona-vieja", ...Array.from({ length: 13 }, (_, i) => `persona-${i}`)]);
+    // En orden de fecha.
     expect(filas.map((f) => f.createdAt.getTime())).toEqual([...filas.map((f) => f.createdAt.getTime())].sort((x, y) => x - y));
   });
 
