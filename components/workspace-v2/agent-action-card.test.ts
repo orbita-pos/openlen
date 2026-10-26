@@ -5,7 +5,7 @@ import { AgentActionCard, coberturaTitle, summaryLabel } from "./agent-action-ca
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-// Mismo pasapuertas de claves que reference-field.test.tsx: las aserciones
+// Mismo pasapuertas de claves que tarjetas-nace-como.test.tsx: las aserciones
 // miran la clave cruda, así que no hace falta cargar los mensajes.
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -236,16 +236,9 @@ describe("la tarjeta dice qué cubrió la comprobación", () => {
 // necesita su clave en los diez idiomas, y con los dos marcadores dentro: sin
 // ellos la frase sale sin los números y vuelve a ser una disculpa en vez de un
 // hecho que el usuario pueda usar.
-describe("«no me cabe la conversación entera» tiene texto en los diez", () => {
-  it.each(LOCALES)("%s", (loc) => {
-    const agente = JSON.parse(
-      readFileSync(join(process.cwd(), "messages", loc, "wsPage.json"), "utf-8"),
-    ).agent as { ventana?: string };
-    expect(agente.ventana, `sin traducir en ${loc}`).toBeTruthy();
-    expect(agente.ventana, `sin {visibles} en ${loc}`).toContain("{visibles}");
-    expect(agente.ventana, `sin {totales} en ${loc}`).toContain("{totales}");
-  });
-});
+// ⚰️ «no me cabe la conversación entera» tenía texto en los diez (`agent.ventana`):
+// A11 (b665ccd6, 25/10) le da a Len la conversación entera desde el último
+// resumen, así que no hay ventana que avisar y la clave se fue de los diez.
 
 // 🔴 N41 · CADA MOTIVO DEL DUEÑO TIENE SU FRASE EN LOS DIEZ, con sus datos
 // dentro. El servidor manda el código; si un idioma no tiene la clave, el dueño
