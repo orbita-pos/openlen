@@ -107,7 +107,14 @@
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "For big jobs: thinks as hard as it can before each step. Slower, and uses more credits",
     "effortDynamis": "Len Odyssey always thinks as hard as it can",
-    "soloLectura": "You can view this project, but not change it. Ask the owner for editor access."
+    "soloLectura": "You can view this project, but not change it. Ask the owner for editor access.",
+    "attachPdf": "Attach a PDF",
+    "attachPdfHint": "A menu, a CV, a brochure: Len reads it when it's needed",
+    "removeFile": "Remove the PDF",
+    "pdfLimit": "Up to 4 PDFs per message.",
+    "pdfTooBig": "That PDF is over 20 MB.",
+    "pdfNotPdf": "That file isn't a PDF.",
+    "pdfFailed": "The PDF couldn't be uploaded. Try again."
   },
   "equipo": {
     "paraLen": "To Len",

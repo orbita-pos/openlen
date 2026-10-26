@@ -1772,6 +1772,42 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(fila.attachedImage).toEqual([{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }]);
   });
 
+  // A PDF ATTACHED (26/10): a file Len reads with Read when he decides, like
+  // Claude Code. The route keeps it on the row, puts its note in the message
+  // and gives Read the files of the whole conversation — and only real ones.
+  it("🔴 a PDF attached: it goes on the row and in the message, and Read can reach it and the earlier ones", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValueOnce([
+      { userText: "antes", assistantReasoning: "", transcript: null, attachedFiles: [{ url: "http://localhost/uploads/p1/old999.pdf", name: "carta.pdf", size: 10 }] },
+    ]);
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            prompt: "pon mi menú",
+            attachedFiles: [
+              { url: "/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 },
+              { url: "javascript:alert(1)", name: "x.pdf", size: 1 },
+              { url: "https://cdn.example/foto.png", name: "foto.png", size: 1 },
+              { url: "https://cdn.example/a.pdf", name: 42, size: 1 },
+            ],
+          }),
+        }),
+      ),
+    );
+    const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedFiles: unknown }])[1];
+    expect(fila.attachedFiles).toEqual([{ url: "http://localhost/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 }]);
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ attachedFiles: unknown }])[0];
+    expect(enviado.attachedFiles).toEqual(fila.attachedFiles);
+    const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [{ runTool(n: string, a: unknown): Promise<unknown> }])[0];
+    await args.runTool("Read", { file_path: "/.openlen/attachments/abc123/menu.pdf" });
+    const [session, deps] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ attachments: Map<string, unknown> }, Record<string, unknown>];
+    expect([...session.attachments.keys()]).toEqual(["/.openlen/attachments/abc123/menu.pdf", "/.openlen/attachments/old999/carta.pdf"]);
+    expect(typeof deps.readAttachment).toBe("function");
+    expect(typeof deps.pdfPages).toBe("function");
+  });
+
   // The URL chip is gone (26/10): a URL is text in the message and Len looks at
   // it with `view_page url`. A tab still open from before the deploy may send
   // the old `styleDirection`; it reaches nothing the model reads.

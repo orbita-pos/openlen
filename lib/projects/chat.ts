@@ -14,6 +14,7 @@ import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
 import { goalActivation } from "@/lib/agent/goal-activation";
 import { TODO_WRITE, latestTodosOfActions, type TodoItem } from "@/lib/agent/todo-list";
 import { photosForRow, type ChatPhoto } from "@/lib/projects/chat-photos";
+import type { AttachedFile } from "@/lib/projects/chat-files";
 import { ESTADO_EN_CURSO, storedTurnFromRow } from "@/lib/projects/stored-turn";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
@@ -243,6 +244,8 @@ export async function turnosParaElHistorial(projectId: string): Promise<FilaDelH
       compaction: schema.projectChatMessages.compaction,
       // La foto del turno sigue en la conversación (`historialDesdeLaBase`).
       attachedImage: schema.projectChatMessages.attachedImage,
+      // Y sus PDF (26/10): su nota, y Read los abre (`session.attachments`).
+      attachedFiles: schema.projectChatMessages.attachedFiles,
     })
     .from(schema.projectChatMessages)
     .where(and(turnoDeLaHistoria(projectId), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
@@ -253,6 +256,7 @@ export async function turnosParaElHistorial(projectId: string): Promise<FilaDelH
     transcript: r.transcript ?? null,
     compaction: r.compaction ?? null,
     attachedImage: r.attachedImage ?? null,
+    attachedFiles: r.attachedFiles ?? null,
   }));
 }
 
@@ -304,6 +308,7 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
     transcript: t.transcript,
     compaction: t.compaction,
     attachedImage: t.attachedImage,
+    attachedFiles: t.attachedFiles,
   };
   // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
   // equipo NO cuentan para la marca —si contaran, una charla larga entre
@@ -335,6 +340,7 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
         transcript: r.transcript ?? null,
         compaction: r.compaction ?? null,
         attachedImage: r.attachedImage ?? null,
+        attachedFiles: r.attachedFiles ?? null,
       },
     }));
 }
@@ -562,6 +568,8 @@ export async function abrirFilaDelTurno(
     readonly page: string | null;
     /** Lo que se guarda tal cual: `photosForRow` (una foto, un objeto). */
     readonly attachedImage?: ChatPhoto | ChatPhoto[] | null;
+    /** Los PDF del mensaje (26/10). */
+    readonly attachedFiles?: readonly AttachedFile[] | null;
     /** Quién lo pidió, si no fue el dueño (compartir el proyecto). */
     readonly autorId?: string | null;
     /** Pedido con `@Len` desde un hilo del código: de dónde (el chat lo enseña). */
@@ -575,6 +583,7 @@ export async function abrirFilaDelTurno(
       projectId,
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
+      attachedFiles: turn.attachedFiles?.length ? [...turn.attachedFiles] : null,
       autorId: turn.autorId ?? null,
       origen: turn.origen ?? null,
       assistantReasoning: "",

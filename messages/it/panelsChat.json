@@ -107,7 +107,14 @@
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "Per i lavori grandi: pensa il più possibile prima di ogni passo. Più lento e consuma più crediti",
     "effortDynamis": "Len Odyssey pensa sempre il più possibile",
-    "soloLectura": "Puoi vedere questo progetto, ma non modificarlo. Chiedi al proprietario l’accesso da editor."
+    "soloLectura": "Puoi vedere questo progetto, ma non modificarlo. Chiedi al proprietario l’accesso da editor.",
+    "attachPdf": "Allega un PDF",
+    "attachPdfHint": "Un menù, un CV, una brochure: Len lo legge quando serve",
+    "removeFile": "Rimuovi il PDF",
+    "pdfLimit": "Massimo 4 PDF per messaggio.",
+    "pdfTooBig": "Quel PDF supera i 20 MB.",
+    "pdfNotPdf": "Quel file non è un PDF.",
+    "pdfFailed": "Non è stato possibile caricare il PDF. Riprova."
   },
   "equipo": {
     "paraLen": "A Len",

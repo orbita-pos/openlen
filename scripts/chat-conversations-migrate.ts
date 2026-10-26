@@ -24,6 +24,8 @@ async function main() {
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "endReason" text;`);
   // A11 (25/10): la marca del resumen, de donde arranca el historial del turno siguiente.
   await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "compaction" jsonb;`);
+  // Los PDF del mensaje (26/10): ficheros que Len lee con Read.
+  await db.execute(sql`ALTER TABLE "projectChatMessages" ADD COLUMN IF NOT EXISTS "attachedFiles" jsonb;`);
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "projectChatMessages_projectId_conversation_idx" ON "projectChatMessages" ("projectId", "conversation");`,
   );
@@ -46,7 +48,7 @@ async function main() {
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "chatTurnFeedback_projectId_idx" ON "chatTurnFeedback" ("projectId");`,
   );
-  console.log("chat nuevo listo: conversation, centicredits, durationMs, endReason, compaction y chatTurnFeedback");
+  console.log("chat nuevo listo: conversation, centicredits, durationMs, endReason, compaction, attachedFiles y chatTurnFeedback");
 }
 
 main().catch((err) => {

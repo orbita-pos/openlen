@@ -16,9 +16,9 @@ describe("las cinco herramientas de ficheros, como Claude Code", () => {
     expect(DECLARACIONES_DE_FICHEROS.map((d) => d.name)).toEqual(["Read", "Edit", "Write", "Grep", "Glob"]);
   });
 
-  it("Read: file_path obligatorio, offset y limit", () => {
+  it("Read: file_path obligatorio, offset, limit y (26/10, para un PDF adjunto) pages, como Claude Code", () => {
     const d = porNombre("Read");
-    expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "offset", "limit"]);
+    expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "offset", "limit", "pages"]);
     expect(d.parameters.required).toEqual(["file_path"]);
     expect(d.parameters.properties.offset!.type).toBe("NUMBER");
   });
@@ -83,11 +83,22 @@ describe("las cinco herramientas de ficheros, como Claude Code", () => {
     }
   });
 
-  it("no prometen lo que aquí no existe: imágenes, PDF, cuadernos, shell ni ripgrep", () => {
+  // ⚰️ «PDF» salió de esta lista el 26/10: Read lee el PDF que el usuario
+  // adjunta, como el de Claude Code (lib/agent/pdf-pages.ts).
+  it("no prometen lo que aquí no existe: imágenes, cuadernos, shell ni ripgrep", () => {
     const todo = DECLARACIONES_DE_FICHEROS.map((d) => d.description).join("\n");
-    for (const falso of ["PDF", "Jupyter", "screenshot", "Bash", "shell tool", "built on ripgrep", "Claude Code"]) {
+    for (const falso of ["Jupyter", "screenshot", "Bash", "shell tool", "built on ripgrep", "Claude Code"]) {
       expect(todo).not.toContain(falso);
     }
+  });
+
+  it("Read reads an attached PDF, with Claude Code's pages parameter and limits", () => {
+    const read = porNombre("Read") as unknown as { description: string; parameters: { properties: Record<string, { type: string; description: string }>; required: string[] } };
+    expect(read.description).toContain("PDF");
+    expect(read.description).toMatch(/more than 10 pages.*pages.*20/);
+    expect(read.parameters.properties.pages?.type).toBe("STRING");
+    expect(read.parameters.properties.pages!.description).toBe('Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request.');
+    expect(read.parameters.required).toEqual(["file_path"]);
   });
 
   it("dicen cómo es este sitio: cada fichero es una página", () => {

@@ -21,6 +21,7 @@ import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { REGLA_DEL_EQUIPO } from "./equipo";
 
@@ -450,6 +451,8 @@ export interface BuildAgentMessagesArgs {
    *  (the route slices to 36 + 4000 chars). */
   history: readonly MensajeDelHistorial[];
   attachedImages?: readonly AttachedImageForContext[] | null;
+  /** The files (a PDF) attached to this message: their note, like the photos'. */
+  attachedFiles?: readonly AttachedFile[] | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
@@ -543,7 +546,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // turno la mandaba sin ella, el siguiente dejaba de coincidir con la caché del
   // proveedor desde tu mensaje y pagaba el turno entero otra vez. Como Claude
   // Code, que anota la imagen pegada en el mismo mensaje en que se pega.
-  const peticion = turnRequestText({ prompt: args.prompt, avisos, attachedImages: args.attachedImages });
+  const peticion = turnRequestText({ prompt: args.prompt, avisos, attachedImages: args.attachedImages, attachedFiles: args.attachedFiles });
   const fijo = manual + (args.memoryMessage ?? "") + contextBlock + peticion;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
@@ -609,8 +612,12 @@ export function turnRequestText(o: {
   readonly prompt: string;
   readonly avisos: string;
   readonly attachedImages?: readonly AttachedImageForContext[] | null;
+  readonly attachedFiles?: readonly AttachedFile[] | null;
 }): string {
-  const notas = (o.attachedImages ?? []).map((f) => notaDeLaFoto(f, f.visible ? "vista" : "no-cargo"));
+  const notas = [
+    ...(o.attachedImages ?? []).map((f) => notaDeLaFoto(f, f.visible ? "vista" : "no-cargo")),
+    ...filesOf(o.attachedFiles).map(attachmentNote),
+  ];
   return `${o.prompt}${o.avisos}${notas.length > 0 ? `\n\n${notas.join("\n")}` : ""}`;
 }
 

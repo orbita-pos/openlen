@@ -146,6 +146,8 @@ import {
   type RespuestaPreparada,
   type ResultadosDeps,
 } from "@/lib/agent/resultados";
+import type { AttachedFile } from "@/lib/projects/chat-files";
+import type { PdfPages } from "@/lib/agent/pdf-pages";
 import type { AgentReview } from "@/lib/security-review/review";
 import type { Finding } from "@/lib/security-review/types";
 import { agentBlockedText, ENDING_FOR_LEN, findingLineForAgent } from "@/lib/security-review/view";
@@ -339,6 +341,10 @@ export interface AgentDeps {
   /** F2 · buscar y leer en internet (`lib/agent/web/buscar.ts`). Opcional: sin
    *  él, `web_search` y `web_fetch` lo dicen. */
   web?: WebDeps;
+  /** The bytes of a file the user attached; `null` if they can't be had. */
+  readAttachment?: (file: AttachedFile) => Promise<Uint8Array | null>;
+  /** A PDF's pages as images (`renderPdfPages`); a double in the tests. */
+  pdfPages?: (pdf: Uint8Array, range: { first: number; last: number } | null) => Promise<PdfPages>;
   loadProject(projectId: string, userId: string): Promise<{
     data: ProjectData;
     title: string;
@@ -1081,6 +1087,9 @@ export interface AgentSession {
   /** Capturas de `view_page` en este turno (los ojos como Claude Code, 14/10):
    *  gratis, pero cada una son ~1.000 tokens en las vueltas siguientes. */
   screenshotsThisTurn?: number;
+  /** The files the user attached in this conversation (a PDF), by the path Len
+   *  reads them at (`lib/agent/attachments.ts`). Set by the route. */
+  attachments?: ReadonlyMap<string, AttachedFile>;
   /** El /node_modules de la terminal de una app, al día tras `npm install`
    *  aunque el comando no haya acabado (`herramientas-de-app.ts`). */
   nodeModulesView?: NodeModulesView;

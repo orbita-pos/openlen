@@ -794,6 +794,21 @@ describe("assembleTurnMessages", () => {
     expect(r.messages.at(-1)!.content).toContain(`[Attached photo: ${foto.url} — «portada»]`);
   });
 
+  // A PDF (26/10): the same rule as the photo — the note this turn sends is the
+  // one the next turn's history rebuilds, or that turn pays it all uncached.
+  it("🔴 a PDF turn sends your message exactly as the next turn's history rebuilds it", () => {
+    const file = { url: "https://uploads.openlen.com/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 };
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "pon mi menú", attachedFiles: [file], maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    const [rehecho] = historialDesdeLaBase(
+      [{ userText: "pon mi menú", assistantReasoning: "", transcript: { mensajes: [], leidos: [], ...(r.avisos ? { avisos: r.avisos } : {}) }, attachedFiles: [file] }],
+      undefined,
+      new Map(),
+    );
+    expect(r.messages.at(-1)!.content).toBe(rehecho!.content);
+    expect(r.messages.at(-1)!.content).toContain("[Attached file: /.openlen/attachments/abc123/menu.pdf (PDF, 2KB)]");
+  });
+
   it("BRAZO DE CONTROL: without a photo the message is the prompt and its notices, byte for byte", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000 });
     if (!r.ok) throw new Error("no cupo");

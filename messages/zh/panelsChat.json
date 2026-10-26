@@ -107,7 +107,14 @@
     "modeDynamis": "Len Odyssey",
     "modeDynamisDesc": "适合大任务：每一步之前都尽全力思考。更慢，也更耗额度",
     "effortDynamis": "Len Odyssey 始终尽全力思考",
-    "soloLectura": "你可以查看此项目，但不能修改。请向所有者申请编辑权限。"
+    "soloLectura": "你可以查看此项目，但不能修改。请向所有者申请编辑权限。",
+    "attachPdf": "附加 PDF",
+    "attachPdfHint": "菜单、简历、宣传册：Len 需要时会读取",
+    "removeFile": "移除 PDF",
+    "pdfLimit": "每条消息最多 4 个 PDF。",
+    "pdfTooBig": "该 PDF 超过 20 MB。",
+    "pdfNotPdf": "该文件不是 PDF。",
+    "pdfFailed": "PDF 上传失败，请重试。"
   },
   "equipo": {
     "paraLen": "发给 Len",

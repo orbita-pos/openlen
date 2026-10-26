@@ -22,6 +22,7 @@ import {
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
+import type { AttachedFile } from "@/lib/projects/chat-files";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { Finding, ReviewStatus } from "@/lib/security-review/types";
@@ -388,6 +389,10 @@ export const projectChatMessages = pgTable(
     // más como lista. Sin migración: se lee con `photosOf`
     // (lib/projects/chat-photos.ts).
     attachedImage: jsonb("attachedImage").$type<ChatPhoto | ChatPhoto[]>(),
+    // LOS PDF DEL MENSAJE (26/10): ficheros que Len lee con Read cuando decide,
+    // como en Claude Code (lib/projects/chat-files.ts). NULL = ninguno.
+    // `npm run chat-conversations:migrate`.
+    attachedFiles: jsonb("attachedFiles").$type<AttachedFile[]>(),
     assistantReasoning: text("assistantReasoning").notNull(),
     // Multi-page: which document this turn edited. NULL = the home document
     // (data.html); a slug = data.pages[slug].html. Mirrors projectVersions.page.

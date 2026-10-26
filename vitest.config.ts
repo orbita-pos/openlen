@@ -383,6 +383,11 @@ export default defineConfig({
       // H9: usar la página como un visitante, con un navegador de verdad y el
       // brazo de control dentro de cada prueba. `include` es LISTA BLANCA.
       "lib/agent/usar-pagina.browser.test.ts",
+      // A PDF's pages drawn by pdf.js in the eyes' Chromium (26/10).
+      "lib/agent/pdf-pages.browser.test.ts",
+      "lib/agent/attachment-bytes.test.ts",
+      "app/api/upload/route.test.ts",
+      "lib/workspace-v2/upload-pdf.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
       "lib/agent/screenshots-in-context.test.ts",

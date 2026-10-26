@@ -84,6 +84,12 @@ const nextConfig = {
       "./lib/apps/bundler/bundler-worker.mjs",
       "./node_modules/esbuild-wasm/esbuild.wasm",
       "./node_modules/esbuild-wasm/lib/browser.js",
+      // A PDF's pages (lib/agent/pdf-pages.ts, 26/10): pdf.js runs inside the
+      // eyes' Chromium, which gets these files by path from `node_modules`.
+      "./node_modules/pdfjs-dist/build/pdf.min.mjs",
+      "./node_modules/pdfjs-dist/build/pdf.worker.min.mjs",
+      "./node_modules/pdfjs-dist/cmaps/*",
+      "./node_modules/pdfjs-dist/standard_fonts/*",
       // Las pruebas de una app (plan 04): `bundle-tests.ts` lee nuestro vitest
       // por ruta y lo empaqueta con cada prueba. El kit vive en public/.
       "./lib/apps/tests/vitest-runtime.js",

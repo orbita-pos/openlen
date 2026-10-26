@@ -44,6 +44,7 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
+import { MAX_FILES_PER_MESSAGE, type AttachedFile } from "@/lib/projects/chat-files";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
@@ -113,6 +114,8 @@ export interface DesignTurn {
   /** Crear es Len: todas las fotos del turno, sólo cuando son dos o más
    *  (`attachedImage` es entonces la primera). */
   attachedImages?: readonly AttachedImage[];
+  /** Los PDF del turno (26/10): la burbuja los enseña y Reintentar los vuelve a mandar. */
+  attachedFiles?: readonly AttachedFile[];
   /** «Aplicar» del modo Diseño: los cambios que llevó, para reintentar el mismo turno. */
   design?: DesignRequest;
   /**
@@ -298,6 +301,8 @@ export interface AgentChatOptions {
 /** Las fotos (ya subidas) que acompañan a un borrador. */
 export interface PendingAttachments extends PideNacer {
   readonly images: readonly AttachedImage[];
+  /** Los PDF del estado vacío (26/10). */
+  readonly files?: readonly AttachedFile[];
   /** «Aplicar» del modo Diseño de una app: los cambios del panel. */
   readonly design?: DesignRequest | null;
   // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
@@ -415,6 +420,8 @@ export function useAgentChat({
     }
   }, []);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
+  /** Los PDF del compositor (26/10): Len los lee con Read cuando decide. */
+  const [attachedFiles, setAttachedFiles] = useState<readonly AttachedFile[]>([]);
   const [imageModalOpen, setImageModalOpen] = useState(false);
 
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -1200,6 +1207,8 @@ export function useAgentChat({
         /** Crear es Len: VARIAS fotos (hasta `MAX_PHOTOS_PER_MESSAGE`). Ganan
          *  sobre la del compositor y sobre `imageOverride`. */
         readonly images?: readonly AttachedImage[];
+        /** Los PDF de este mensaje (26/10). Ganan sobre los del compositor. */
+        readonly files?: readonly AttachedFile[];
         /** El primer mensaje de un proyecto en blanco que nace como app. */
         readonly naceComo?: PideNacer["naceComo"];
         readonly idioma?: string;
@@ -1237,6 +1246,7 @@ export function useAgentChat({
         : img
           ? [img]
           : [];
+      const files: readonly AttachedFile[] = (opciones?.files ?? attachedFiles).slice(0, MAX_FILES_PER_MESSAGE);
       // Snapshot the page scope at send time — preEditHtml is THIS page's
       // document, and the drip / apply / revert / undo legs must all write
       // back to the same slot even if the user switches pages mid-stream.
@@ -1256,6 +1266,7 @@ export function useAgentChat({
         userText: textoDelTurno,
         attachedImage: imgs[0],
         ...(imgs.length > 1 ? { attachedImages: imgs } : {}),
+        ...(files.length > 0 ? { attachedFiles: files } : {}),
         ...(opciones?.design ? { design: opciones.design } : {}),
         // El alcance viaja EN el turno, no sólo en la petición: es la misma
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
@@ -1275,6 +1286,7 @@ export function useAgentChat({
       // here means the next prompt starts fresh. Users can re-attach if they
       // want the same image again.
       setAttachedImage(null);
+      setAttachedFiles([]);
       // EL ELEMENTO MARCADO SE VA CON SU TURNO, igual que la imagen.
       //
       // Se quedaba pegado: marcabas `div.video-placeholder`, mandabas tu
@@ -1473,6 +1485,7 @@ export function useAgentChat({
               ...(turnPage ? { page: turnPage } : {}),
               ...(turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
+              ...(files.length > 0 ? { attachedFiles: files } : {}),
               // EL MODO DISEÑO: los cambios del panel (`lib/agent/design-request.ts`).
               ...(opciones?.design ? { design: opciones.design } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
@@ -2184,6 +2197,7 @@ export function useAgentChat({
     [
       appendReasoning,
       attachedImage,
+      attachedFiles,
       // El esfuerzo y el modo viajan en el cuerpo: sin ellos aquí, `send`
       // mandaba los de cuando se creó (el `auto` del arranque, antes de que el
       // GET trajera lo guardado).
@@ -2251,6 +2265,7 @@ export function useAgentChat({
     // (plans/crear-es-len); el resto de borradores, nada más.
     void send(texto, undefined, {
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
+      ...(adjuntos?.files?.length ? { files: adjuntos.files } : {}),
       ...(adjuntos?.design ? { design: adjuntos.design } : {}),
       ...camposDeNacer(adjuntos),
     });
@@ -2270,6 +2285,7 @@ export function useAgentChat({
       // Y los cambios de un «Aplicar», que si no se pierden: el reintento sería sólo su resumen.
       void send(turn.userText, turn.attachedImage ?? null, {
         ...(turn.attachedImages ? { images: turn.attachedImages } : {}),
+        files: turn.attachedFiles ?? [],
         ...(turn.design ? { design: turn.design } : {}),
       });
     },
@@ -2613,6 +2629,8 @@ export function useAgentChat({
     scrollRef,
     attachedImage,
     setAttachedImage,
+    attachedFiles,
+    setAttachedFiles,
     imageModalOpen,
     setImageModalOpen,
     comentarios,
@@ -2665,6 +2683,7 @@ export function restoreTurn(s: StoredChatTurn): DesignTurn {
     userText: s.userText,
     attachedImage: s.attachedImage,
     ...(s.attachedImages ? { attachedImages: s.attachedImages } : {}),
+    ...(s.attachedFiles?.length ? { attachedFiles: s.attachedFiles } : {}),
     assistantReasoning: s.assistantReasoning,
     // Len 2.1: sigue trabajando en el servidor. Se pinta en marcha, contando
     // desde que empezó, y el panel relee su fila hasta que cierra.

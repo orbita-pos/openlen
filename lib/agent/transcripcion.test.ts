@@ -433,6 +433,22 @@ describe("la foto sigue en la conversación (como Claude Code)", () => {
     });
   });
 
+  // A PDF (26/10): only its note, with the path Len reads it at — no pages
+  // ahead of him, as in Claude Code. After the photos' notes.
+  it("a PDF attached to that turn leaves its note with its path, and no pixels", () => {
+    const f: FilaDelHistorial = {
+      ...conFoto("https://u/f.jpg"),
+      attachedFiles: [{ url: "https://u/uploads/p1/abc123.pdf", name: "menú del día.pdf", size: 1_258_291 }],
+    };
+    const h = historialDesdeLaBase([f], undefined, new Map([["https://u/f.jpg", FOTO]]));
+    expect(h[0]).toEqual({
+      role: "user",
+      opensTurn: true,
+      content: "¿dónde la pondrías?\n\n[Attached photo: https://u/f.jpg]\n[Attached file: /.openlen/attachments/abc123/menú-del-día.pdf (PDF, 1.2MB)]",
+      images: [FOTO],
+    });
+  });
+
   it("un turno sin foto queda exactamente igual que antes", () => {
     expect(historialDesdeLaBase([fila("hola", null, "¡Hola!")], undefined, new Map())).toEqual([
       { role: "user", content: "hola", opensTurn: true },

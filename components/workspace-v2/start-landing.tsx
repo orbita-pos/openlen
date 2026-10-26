@@ -24,13 +24,14 @@ import {
   type TemplateSpec,
 } from "./templates-data";
 import { Loader, Search } from "./icons";
-import { ArrowUp, ImageIcon, Mic, Plus, Square } from "lucide-react";
+import { ArrowUp, FileText, ImageIcon, Mic, Plus, Square } from "lucide-react";
 import "./chat/new-chat.css";
 import { ComposerChip, ComposerPlusOption } from "./composer-pieces";
 import { useMandoDesplegable } from "./use-mando-desplegable";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
+import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
 import { registrarUso } from "@/lib/uso/cliente";
 import { TarjetasNaceComo, type NaceComo } from "./tarjetas-nace-como";
 import { CajaConMenciones } from "./hilos-del-codigo";
@@ -329,6 +330,9 @@ export function HeroComposer({
   const locale = useLocale();
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  /** A PDF for Len (26/10): picked here, uploaded by the page with the first message. */
+  const pdfRef = useRef<HTMLInputElement>(null);
+  const pdfs = state.pdfs ?? [];
   const [leyendoFoto, setLeyendoFoto] = useState(false);
   const briefLimit = useGenerationBriefLimit({
     value: state.prompt,
@@ -439,6 +443,18 @@ export function HeroComposer({
               <span className="min-w-0 max-w-[180px] truncate">{foto.nombre || tm("heroPrompt.attachedAlt")}</span>
             </ComposerChip>
           ))}
+          {state.setPdfs &&
+            pdfs.map((pdf, i) => (
+              <ComposerChip
+                key={`${pdf.name}-${i}`}
+                title={pdf.name}
+                {...(generating ? {} : { onRemove: () => state.setPdfs!(pdfs.filter((_, j) => j !== i)) })}
+                removeLabel={tc("composer.removeFile")}
+              >
+                <FileText size={14} className="shrink-0 text-[var(--nc-accent-text)]" />
+                <span className="min-w-0 max-w-[180px] truncate">{pdf.name}</span>
+              </ComposerChip>
+            ))}
         </div>
 
         {/* La caja que pinta: una URL se ve azul mientras se escribe, como en el chat. */}
@@ -512,6 +528,20 @@ export function HeroComposer({
             tabIndex={-1}
             onChange={(e) => void elegirFotos(e.target.files)}
           />
+          {state.setPdfs && (
+            <input
+              ref={pdfRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={(e) => {
+                const picked = [...(e.target.files ?? [])].filter((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+                e.target.value = "";
+                if (picked.length > 0) state.setPdfs!([...pdfs, ...picked].slice(0, MAX_FILES_PER_MESSAGE));
+              }}
+            />
+          )}
           {/* EL `+` ABRE SU MENÚ, como en el chat: hoy una opción, adjuntar
               imágenes, con lo que hace dicho debajo. */}
           <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
@@ -556,6 +586,20 @@ export function HeroComposer({
                     fileRef.current?.click();
                   }}
                 />
+                {state.setPdfs && (
+                  <ComposerPlusOption
+                    icon={<FileText size={15} />}
+                    title={tc("composer.attachPdf")}
+                    hint={tc("composer.attachPdfHint")}
+                    on={pdfs.length > 0}
+                    onLabel={String(pdfs.length)}
+                    disabled={pdfs.length >= MAX_FILES_PER_MESSAGE}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      pdfRef.current?.click();
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>

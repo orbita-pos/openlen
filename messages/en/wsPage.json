@@ -282,7 +282,8 @@
       "llamada": "“{ruta}” only answers on the published page — the call doesn't get through here.",
       "formulario": "Not sent: once published, this reaches your inbox and your email.",
       "navegacion": "The page tried to go to “{destino}”. It stays in the editor here; once published, it would go."
-    }
+    },
+    "pdfsNotUploaded": "{count, plural, one {A PDF couldn't be uploaded} other {# PDFs couldn't be uploaded}} — the message goes without them."
   },
   "whatsapp": {
     "title": "WhatsApp button",
