@@ -127,6 +127,17 @@ describe("terminalForTurn", () => {
     expect((await t.ejecutar("true")).ficheros).toEqual({ "/index.html": "a" });
   });
 
+  // Found by the real turn of the skills (26/10): present reached the turn's terminal, which is this
+  // wrapper, and it didn't pass the box's bytes through, so every delivery said "no box".
+  it("the turn's box reads a file's bytes through its wrapper", async () => {
+    const { s, o } = setup();
+    const t = await terminalForTurn(s, o);
+    await t.ejecutar("true");
+    await (t as unknown as { inner: { o: { handle: { writeBytes(f: Record<string, Uint8Array>): Promise<void> } } } }).inner.o.handle.writeBytes({ "/tmp/office/a.xlsx": new Uint8Array([7, 8]) });
+    expect([...((await t.readFileBytes!("/tmp/office/a.xlsx")) ?? [])]).toEqual([7, 8]);
+    expect(await t.readFileBytes!("/tmp/office/nada.xlsx")).toBeNull();
+  });
+
   it("logs how long opening the box and its first sync took, phase by phase", async () => {
     const { s, o, log } = setup();
     const t = await terminalForTurn(s, o);
