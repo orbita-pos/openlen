@@ -158,6 +158,8 @@ export interface SandboxTerminalOptions {
   readonly bridge: BridgeHandlers;
   /** /.openlen's read-only files to put in the box (visitor data is dropped here anyway). */
   readonly readOnly: () => Promise<Readonly<Record<string, string>>>;
+  /** /.openlen's read-only BINARY files: what the person attached (spec local 2026-10-26-len-skills). */
+  readonly readOnlyBytes?: () => Promise<Readonly<Record<string, Uint8Array>>>;
   /** When the box was created or resumed for this turn (ms). */
   readonly startedAt: number;
   /** The turn's: the owner's ■. */
@@ -252,7 +254,11 @@ export class SandboxTerminal implements TerminalBackend {
   private async uploadReadOnly(): Promise<void> {
     const files: Record<string, string> = { ...VISITOR_DATA_READMES };
     for (const [path, text] of Object.entries(await this.o.readOnly())) if (!NEVER_IN_BOX.test(path)) files[path] = text;
-    for (const root of new Set(Object.keys(files).map(readOnlyRoot))) await this.mountReadOnly(root);
+    const binaries: Record<string, Uint8Array> = {};
+    if (this.o.handle.writeBytes) {
+      for (const [path, data] of Object.entries((await this.o.readOnlyBytes?.()) ?? {})) if (!NEVER_IN_BOX.test(path)) binaries[path] = data;
+    }
+    for (const root of new Set([...Object.keys(files), ...Object.keys(binaries)].map(readOnlyRoot))) await this.mountReadOnly(root);
     if (!this.uploadedRead) {
       this.uploadedRead = true;
       // Keyed by where each file is in the box, so a mount that took or didn't changes the keys.
@@ -275,11 +281,19 @@ export class SandboxTerminal implements TerminalBackend {
         bytes += text.length;
       }
     }
+    // The binary ones (attachments) go as bytes, with the same remembered hashes.
+    const binaryWrites: Record<string, Uint8Array> = {};
+    for (const [path, data] of Object.entries(binaries)) {
+      const at = inBox(path);
+      hashes[at] = createHash("sha256").update(data).digest("hex");
+      if (this.uploaded[at] !== hashes[at]) binaryWrites[at] = data;
+    }
     const removes = Object.keys(this.uploaded).filter((at) => !(at in hashes));
     if (Object.keys(writes).length > BUNDLE_OVER_FILES || bytes > BUNDLE_OVER_BYTES) await this.unbundle(writes);
     else await this.o.handle.write(writes);
+    if (Object.keys(binaryWrites).length > 0) await this.o.handle.writeBytes!(binaryWrites);
     await this.o.handle.remove(pathsToRemove(removes, Object.keys(hashes)));
-    if (Object.keys(writes).length > 0 || removes.length > 0) await this.o.handle.write({ [UPLOADED_FILE]: JSON.stringify(hashes) });
+    if (Object.keys(writes).length > 0 || Object.keys(binaryWrites).length > 0 || removes.length > 0) await this.o.handle.write({ [UPLOADED_FILE]: JSON.stringify(hashes) });
     this.uploaded = hashes;
   }
 

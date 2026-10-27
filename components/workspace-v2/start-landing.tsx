@@ -31,7 +31,8 @@ import { useMandoDesplegable } from "./use-mando-desplegable";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
-import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
+import { MAX_FILES_PER_MESSAGE, kindFromName } from "@/lib/projects/chat-files";
+import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
 import { registrarUso } from "@/lib/uso/cliente";
 import { TarjetasNaceComo, type NaceComo } from "./tarjetas-nace-como";
 import { CajaConMenciones } from "./hilos-del-codigo";
@@ -532,11 +533,11 @@ export function HeroComposer({
             <input
               ref={pdfRef}
               type="file"
-              accept="application/pdf,.pdf"
+              accept={ATTACHMENT_ACCEPT}
               className="sr-only"
               tabIndex={-1}
               onChange={(e) => {
-                const picked = [...(e.target.files ?? [])].filter((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+                const picked = [...(e.target.files ?? [])].filter((f) => f.type === "application/pdf" || kindFromName(f.name) !== null);
                 e.target.value = "";
                 if (picked.length > 0) state.setPdfs!([...pdfs, ...picked].slice(0, MAX_FILES_PER_MESSAGE));
               }}
@@ -589,8 +590,8 @@ export function HeroComposer({
                 {state.setPdfs && (
                   <ComposerPlusOption
                     icon={<FileText size={15} />}
-                    title={tc("composer.attachPdf")}
-                    hint={tc("composer.attachPdfHint")}
+                    title={tc("composer.attachFile")}
+                    hint={tc("composer.attachFileHint")}
                     on={pdfs.length > 0}
                     onLabel={String(pdfs.length)}
                     disabled={pdfs.length >= MAX_FILES_PER_MESSAGE}

@@ -133,7 +133,7 @@ import { ProjectUnavailable } from "@/components/workspace-v2/project-unavailabl
 import { isBlankProject } from "@/lib/projects/blank";
 import { UNTITLED_PROJECT_TITLE } from "@/lib/projects/titulo-del-html";
 import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
-import { uploadPdf } from "@/lib/workspace-v2/upload-pdf";
+import { uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
 import type { PendingAttachments } from "@/components/workspace-v2/chat/use-agent-chat";
 import { chatALaVista, useChatSinVer } from "@/components/workspace-v2/chat/use-chat-sin-ver";
 import { setChatLayout, useChatLayout } from "@/components/workspace-v2/chat/use-chat-version";
@@ -1034,9 +1034,9 @@ function NewV2Inner() {
       const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
       const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
       if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
-      const pdfsSubidos = await Promise.all(aiPdfs.map((pdf) => uploadPdf(pdf, loadedProjectId)));
+      const pdfsSubidos = await Promise.all(aiPdfs.map((pdf) => uploadAttachment(pdf, loadedProjectId)));
       const files = pdfsSubidos.flatMap((r) => (r.ok ? [r.file] : []));
-      if (files.length < aiPdfs.length) toast.error(t("toast.pdfsNotUploaded", { count: aiPdfs.length - files.length }));
+      if (files.length < aiPdfs.length) toast.error(t("toast.filesNotUploaded", { count: aiPdfs.length - files.length }));
       // Con App elegida, el primer mensaje lleva `naceComo` y el idioma de la
       // interfaz: el servidor le pone el esqueleto antes del turno, con ese
       // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).

@@ -58,7 +58,7 @@ export interface E2bSandboxLike {
     ): Promise<E2bCommandHandleLike>;
   };
   readonly files: {
-    write(entries: { path: string; data: string }[]): Promise<unknown>;
+    write(entries: { path: string; data: string | ArrayBuffer }[]): Promise<unknown>;
     read(path: string, o: { format: "bytes" }): Promise<Uint8Array>;
     remove(path: string): Promise<unknown>;
     list(path: string): Promise<{ readonly name: string }[]>;
@@ -146,6 +146,24 @@ function wrap(sbx: E2bSandboxLike, now: () => number): SandboxHandle {
     async write(files) {
       const entries = Object.entries(files).map(([path, data]) => ({ path, data }));
       if (entries.length > 0) await sbx.files.write(entries);
+    },
+    async writeBytes(files) {
+      // E2B's write takes an ArrayBuffer for binary data.
+      const entries = Object.entries(files).map(([path, data]) => ({ path, data: data.slice().buffer as ArrayBuffer }));
+      if (entries.length > 0) await sbx.files.write(entries);
+    },
+    async readBytes(paths) {
+      const out: Record<string, Uint8Array> = {};
+      await Promise.all(
+        paths.map(async (p) => {
+          try {
+            out[p] = await sbx.files.read(p, { format: "bytes" });
+          } catch {
+            // gone
+          }
+        }),
+      );
+      return out;
     },
     async remove(paths) {
       for (const p of paths) await sbx.files.remove(p).catch(() => undefined);

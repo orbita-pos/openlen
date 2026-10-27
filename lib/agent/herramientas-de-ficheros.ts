@@ -14,7 +14,7 @@
 import "server-only";
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { ATTACHMENTS_DIR, readAttachedPdf } from "@/lib/agent/attachments";
+import { ATTACHMENTS_DIR, readAttachment } from "@/lib/agent/attachments";
 import { createConcurrencyLimit } from "@/lib/agent/concurrency-limit";
 import { MAX_CONCURRENT_VISITS } from "@/lib/agent/tools";
 import { personOf } from "@/lib/agent/person";
@@ -231,14 +231,15 @@ function booleano(v: unknown): boolean | undefined {
 }
 
 export async function toolRead(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  // A PDF THE USER ATTACHED (26/10): its pages, as images, like Claude Code's Read.
+  // A FILE THE USER ATTACHED: a PDF's pages, as images, like Claude Code's Read (26/10); a CSV as
+  // text; an office file answered as a binary one (spec local 2026-10-26-len-skills).
   const asked = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
   if (resolverRuta(asked).startsWith(`${ATTACHMENTS_DIR}/`)) {
-    const { readAttachment, pdfPages } = deps;
-    if (!readAttachment || !pdfPages) return { response: respuesta(fallo("Reading attached PDFs isn't available in this environment.")) };
+    const { readAttachment: readAttachmentBytes, pdfPages } = deps;
+    if (!readAttachmentBytes || !pdfPages) return { response: respuesta(fallo("Reading attached PDFs isn't available in this environment.")) };
     const visit = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
-    const { result, images } = await readAttachedPdf(resolverRuta(asked), args.pages, session.attachments ?? new Map(), {
-      read: readAttachment,
+    const { result, images } = await readAttachment(resolverRuta(asked), { pages: args.pages, offset: numero(args.offset), limit: numero(args.limit) }, session.attachments ?? new Map(), {
+      read: readAttachmentBytes,
       render: (pdf, range) => visit(() => pdfPages(pdf, range)),
     });
     return { response: respuesta(result), ...(images?.length ? { images } : {}) };

@@ -10,7 +10,7 @@ import {
 } from "@/lib/images";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
 import { getStorage } from "@/lib/storage";
-import { MAX_PDF_BYTES } from "@/lib/projects/chat-files";
+import { ATTACHMENT_KINDS, MAX_OFFICE_BYTES, MAX_PDF_BYTES, bytesLookLike, kindFromName, type AttachedKind } from "@/lib/projects/chat-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -132,17 +132,20 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
 
   const isVideo = ALLOWED_VIDEO_MIME.has(file.type);
   const isImage = ALLOWED_MIME.has(file.type);
-  // A PDF for Len (26/10): the chat attaches it and Len reads it with Read.
-  const isPdf = file.type === "application/pdf";
-  if (!isVideo && !isImage && !isPdf) {
+  // A FILE FOR LEN: a PDF (26/10), which Read draws, or an office file or a CSV for the office skills
+  // (spec local 2026-10-26-len-skills, §4.8). By MIME type or, as browsers send office files as
+  // anything, by the name's extension; its header is checked below.
+  const documentKind: AttachedKind | null = isVideo || isImage ? null : file.type === "application/pdf" ? "pdf" : kindFromName(file.name);
+  const isDocument = documentKind !== null;
+  if (!isVideo && !isImage && !isDocument) {
     return json(
-      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, MOV, PDF.` },
+      { error: `File type "${file.type || "unknown"}" not allowed. Allowed: JPEG, PNG, WebP, GIF, MP4, WebM, MOV, PDF, XLSX, XLSM, DOCX, PPTX, CSV.` },
       415,
     );
   }
 
-  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : isPdf ? MAX_PDF_BYTES : MAX_SIZE_BYTES;
-  const maxLabel = isVideo ? "50 MB" : isPdf ? "20 MB" : "5 MB";
+  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : documentKind === "pdf" ? MAX_PDF_BYTES : isDocument ? MAX_OFFICE_BYTES : MAX_SIZE_BYTES;
+  const maxLabel = isVideo ? "50 MB" : isDocument ? "20 MB" : "5 MB";
 
   // Read the size BEFORE pulling the bytes into memory. Some clients still
   // populate file.size correctly even when sending a stream, and we'd rather
@@ -184,16 +187,17 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const hash = randomBytes(8).toString("hex");
   const storage = getStorage();
 
-  // ─── PDF pass-through (26/10) ────────────────────────────────────────────
-  // Stored as it comes, like a video; only a real PDF. Len draws its pages in
-  // the eyes when he reads it (lib/agent/pdf-pages.ts), never here.
-  if (isPdf) {
-    if (buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
-      return json({ error: "That file is not a PDF." }, 415);
+  // ─── A file for Len, pass-through (26/10) ────────────────────────────────
+  // Stored as it comes, like a video; only what its header says it is. Len
+  // draws a PDF's pages in the eyes when he reads it (lib/agent/pdf-pages.ts)
+  // and opens the others in the terminal, never here.
+  if (documentKind) {
+    if (!bytesLookLike(documentKind, buffer)) {
+      return json({ error: documentKind === "pdf" ? "That file is not a PDF." : `That file is not a ${documentKind.toUpperCase()} file.` }, 415);
     }
-    const key = `uploads/${generationId}/${hash}.pdf`;
+    const key = `uploads/${generationId}/${hash}.${documentKind}`;
     try {
-      const result = await storage.upload({ key, contentType: "application/pdf", body: buffer });
+      const result = await storage.upload({ key, contentType: ATTACHMENT_KINDS[documentKind].mime, body: buffer });
       const body: UploadResponse = { url: result.url, size: result.size, key, variants: [] };
       return json(body, 200);
     } catch (err) {

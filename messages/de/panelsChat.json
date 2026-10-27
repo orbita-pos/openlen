@@ -108,15 +108,15 @@
     "modeDynamisDesc": "Für große Aufträge: denkt vor jedem Schritt so gründlich wie möglich. Langsamer und verbraucht mehr Credits",
     "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich",
     "soloLectura": "Du kannst dieses Projekt ansehen, aber nicht ändern. Bitte den Eigentümer um Bearbeitungszugriff.",
-    "attachPdf": "PDF anhängen",
-    "attachPdfHint": "Eine Speisekarte, ein Lebenslauf, ein Flyer: Len liest es, wenn es gebraucht wird",
-    "removeFile": "PDF entfernen",
+    "attachFile": "Datei anhängen",
+    "attachFileHint": "Ein PDF, eine Excel-, Word- oder PowerPoint-Datei: Len liest sie, wenn es gebraucht wird",
+    "removeFile": "Datei entfernen",
     "skills": "Skills",
     "noSkills": "Keine Skill passt",
-    "pdfLimit": "Bis zu 4 PDFs pro Nachricht.",
-    "pdfTooBig": "Dieses PDF ist größer als 20 MB.",
-    "pdfNotPdf": "Diese Datei ist kein PDF.",
-    "pdfFailed": "Das PDF konnte nicht hochgeladen werden. Versuch es noch einmal."
+    "fileLimit": "Bis zu 4 Dateien pro Nachricht.",
+    "fileTooBig": "Diese Datei ist größer als 20 MB.",
+    "fileNotSupported": "Len liest PDF-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) und CSV-Dateien.",
+    "fileFailed": "Die Datei konnte nicht hochgeladen werden. Versuch es noch einmal."
   },
   "equipo": {
     "paraLen": "An Len",

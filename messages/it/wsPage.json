@@ -284,7 +284,7 @@
       "formulario": "Non inviato: una volta pubblicata, arriva nella tua casella e nella tua email.",
       "navegacion": "La pagina ha provato ad andare a «{destino}». Qui resta nell’editor; pubblicata, ci andrebbe."
     },
-    "pdfsNotUploaded": "{count, plural, one {Un PDF non è stato caricato} other {# PDF non sono stati caricati}}: il messaggio parte senza."
+    "filesNotUploaded": "{count, plural, one {Un file non è stato caricato} other {# file non sono stati caricati}}: il messaggio parte senza."
   },
   "whatsapp": {
     "title": "Pulsante WhatsApp",

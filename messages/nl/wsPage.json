@@ -284,7 +284,7 @@
       "formulario": "Niet verzonden: gepubliceerd komt dit in je inbox en je e-mail terecht.",
       "navegacion": "De pagina probeerde naar “{destino}” te gaan. Hier blijf je in de editor; gepubliceerd zou hij gaan."
     },
-    "pdfsNotUploaded": "{count, plural, one {Eén pdf kon niet worden geüpload} other {# pdf's konden niet worden geüpload}}: het bericht gaat zonder ze."
+    "filesNotUploaded": "{count, plural, one {Eén bestand kon niet worden geüpload} other {# bestanden konden niet worden geüpload}}: het bericht gaat zonder ze."
   },
   "whatsapp": {
     "title": "WhatsApp-knop",

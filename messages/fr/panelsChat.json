@@ -108,15 +108,15 @@
     "modeDynamisDesc": "Pour les gros travaux : réfléchit au maximum avant chaque étape. Plus lent, et consomme plus de crédits",
     "effortDynamis": "Len Odyssey réfléchit toujours au maximum",
     "soloLectura": "Vous pouvez voir ce projet, mais pas le modifier. Demandez au propriétaire un accès éditeur.",
-    "attachPdf": "Joindre un PDF",
-    "attachPdfHint": "Un menu, un CV, une brochure : Len le lit quand il en a besoin",
-    "removeFile": "Retirer le PDF",
+    "attachFile": "Joindre un fichier",
+    "attachFileHint": "Un PDF, un Excel, un Word ou un PowerPoint : Len le lit quand il en a besoin",
+    "removeFile": "Retirer le fichier",
     "skills": "Skills",
     "noSkills": "Aucune skill ne correspond",
-    "pdfLimit": "4 PDF maximum par message.",
-    "pdfTooBig": "Ce PDF dépasse 20 Mo.",
-    "pdfNotPdf": "Ce fichier n'est pas un PDF.",
-    "pdfFailed": "Le PDF n'a pas pu être envoyé. Réessayez."
+    "fileLimit": "4 fichiers maximum par message.",
+    "fileTooBig": "Ce fichier dépasse 20 Mo.",
+    "fileNotSupported": "Len lit les fichiers PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) et CSV.",
+    "fileFailed": "Le fichier n'a pas pu être envoyé. Réessayez."
   },
   "equipo": {
     "paraLen": "À Len",

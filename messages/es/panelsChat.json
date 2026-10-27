@@ -108,15 +108,15 @@
     "modeDynamisDesc": "Para encargos grandes: piensa todo lo que puede antes de cada paso. Tarda más y gasta más créditos",
     "effortDynamis": "Len Odyssey siempre piensa todo lo que puede",
     "soloLectura": "Puedes ver este proyecto, pero no cambiarlo. Pídele al dueño acceso de editor.",
-    "attachPdf": "Adjuntar un PDF",
-    "attachPdfHint": "Un menú, un CV, un folleto: Len lo lee cuando le hace falta",
-    "removeFile": "Quitar el PDF",
+    "attachFile": "Adjuntar un archivo",
+    "attachFileHint": "Un PDF, un Excel, un Word o un PowerPoint: Len lo lee cuando le hace falta",
+    "removeFile": "Quitar el archivo",
     "skills": "Skills",
     "noSkills": "Ninguna skill coincide",
-    "pdfLimit": "Caben 4 PDF por mensaje.",
-    "pdfTooBig": "Ese PDF pasa de 20 MB.",
-    "pdfNotPdf": "Ese archivo no es un PDF.",
-    "pdfFailed": "No se pudo subir el PDF. Inténtalo otra vez."
+    "fileLimit": "Caben 4 archivos por mensaje.",
+    "fileTooBig": "Ese archivo pasa de 20 MB.",
+    "fileNotSupported": "Len lee archivos PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) y CSV.",
+    "fileFailed": "No se pudo subir el archivo. Inténtalo otra vez."
   },
   "equipo": {
     "paraLen": "Para Len",

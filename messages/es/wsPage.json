@@ -284,7 +284,7 @@
       "formulario": "No se envió: publicada, esto llega a tu bandeja y a tu correo.",
       "navegacion": "La página intentó ir a «{destino}». Aquí no se sale del taller; publicada, sí iría."
     },
-    "pdfsNotUploaded": "{count, plural, one {Un PDF no se pudo subir} other {# PDF no se pudieron subir}}: el mensaje va sin ellos."
+    "filesNotUploaded": "{count, plural, one {Un archivo no se pudo subir} other {# archivos no se pudieron subir}}: el mensaje va sin ellos."
   },
   "whatsapp": {
     "title": "Botón de WhatsApp",

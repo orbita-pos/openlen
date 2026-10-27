@@ -284,7 +284,7 @@
       "formulario": "Non envoyé : une fois publiée, ceci arrive dans votre boîte de réception et par e-mail.",
       "navegacion": "La page a tenté d’aller vers « {destino} ». Ici, on reste dans l’éditeur ; publiée, elle irait."
     },
-    "pdfsNotUploaded": "{count, plural, one {Un PDF n'a pas pu être envoyé} other {# PDF n'ont pas pu être envoyés}} : le message part sans eux."
+    "filesNotUploaded": "{count, plural, one {Un fichier n'a pas pu être envoyé} other {# fichiers n'ont pas pu être envoyés}} : le message part sans eux."
   },
   "whatsapp": {
     "title": "Bouton WhatsApp",

@@ -53,6 +53,8 @@ export interface TurnTerminalOptions {
   readonly local: () => TerminalBackend;
   readonly projectFiles: () => Promise<Record<string, string>>;
   readonly readOnly: () => Promise<Readonly<Record<string, string>>>;
+  /** What the person attached, as bytes (spec local 2026-10-26-len-skills). */
+  readonly readOnlyBytes?: () => Promise<Readonly<Record<string, Uint8Array>>>;
   readonly bridge: () => Promise<BridgeHandlers>;
   /** The project's OpenLen hosts the box may reach, with its marker (./box-network.ts); `null` = none. */
   readonly network?: () => Promise<BoxNetwork | null>;
@@ -245,6 +247,7 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
       syncedManifest: synced,
       bridge: await o.bridge(),
       readOnly: o.readOnly,
+      ...(o.readOnlyBytes ? { readOnlyBytes: o.readOnlyBytes } : {}),
       startedAt,
       signal: o.signal,
       now,

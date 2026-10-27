@@ -28,6 +28,10 @@ export interface SandboxHandle {
     },
   ): Promise<RunResult>;
   write(files: Readonly<Record<string, string>>): Promise<void>;
+  /** Binary files (spec local 2026-10-26-len-skills): what the person attached, into the box. */
+  writeBytes?(files: Readonly<Record<string, Uint8Array>>): Promise<void>;
+  /** A file's bytes, binary or not; files that don't exist are left out (what `present` delivers). */
+  readBytes?(paths: readonly string[]): Promise<Record<string, Uint8Array>>;
   /** Each path a file, or a folder with all it holds (E2B's `files.remove`). */
   remove(paths: readonly string[]): Promise<void>;
   /** Files that don't exist are left out; a file that is not UTF-8 is `{ binary, size }`. */

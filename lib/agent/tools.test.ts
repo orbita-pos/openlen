@@ -2684,3 +2684,38 @@ describe("the skill tool", () => {
     assert.equal(out.response.error, 'skill "office-xlsx" is unknown or no longer available');
   });
 });
+
+// OFFICE FILES AND CSV (spec local 2026-10-26-len-skills, §4.8): Read answers an office file as
+// Claude Code answers any binary one, so Len goes to the terminal; a CSV is text and is read.
+describe("Read on an attached office file or CSV", () => {
+  const XLSX = "/.openlen/attachments/abc123/ventas.xlsx";
+  const CSV = "/.openlen/attachments/def456/lista.csv";
+  const setup = (bytes: Uint8Array) => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.attachments = new Map([
+      [XLSX, { url: "https://cdn.example/uploads/p1/abc123.xlsx", name: "ventas.xlsx", size: 4096, kind: "xlsx" as const }],
+      [CSV, { url: "https://cdn.example/uploads/p1/def456.csv", name: "lista.csv", size: 30, kind: "csv" as const }],
+    ]);
+    const d = { ...deps, readAttachment: async () => bytes, pdfPages: async () => ({ ok: false, reason: "corrupted" }) } as unknown as AgentDeps;
+    return { d, session };
+  };
+
+  it("Read of an attached xlsx answers as Claude Code", async () => {
+    const { d, session } = setup(new Uint8Array([0x50, 0x4b, 3, 4]));
+    const out = await runAgentTool(session, d, "Read", { file_path: XLSX });
+    assert.equal(out.response.ok, false);
+    assert.equal(
+      out.response.error,
+      "This tool cannot read binary files. The file appears to be a binary .xlsx file. Use a skill for this file type if one is available, or a shell command or script that can read the format.",
+    );
+  });
+
+  it("Read of an attached csv returns its text with line numbers", async () => {
+    const { d, session } = setup(new TextEncoder().encode("producto,precio\npan,10\n"));
+    const out = await runAgentTool(session, d, "Read", { file_path: CSV });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.match(String(out.response.tool_result), /1\tproducto,precio/);
+    assert.match(String(out.response.tool_result), /2\tpan,10/);
+  });
+});

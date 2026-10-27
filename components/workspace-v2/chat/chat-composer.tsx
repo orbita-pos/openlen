@@ -23,7 +23,7 @@ import { findSecretsInText, type FoundSecret } from "@/lib/apps/env/secret-patte
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
-import type { AttachedFile } from "@/lib/projects/chat-files";
+import { kindOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
@@ -248,6 +248,7 @@ export function ChatComposer({
             {attachedFiles.map((f) => (
               <Chip key={f.url} title={f.name} {...(onRemoveFile ? { onRemove: () => onRemoveFile(f.url) } : {})} removeLabel={t("composer.removeFile")}>
                 <FileText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                <b className="shrink-0 font-semibold">{kindOf(f).toUpperCase()}</b>
                 <span className="min-w-0 max-w-[200px] truncate">{f.name}</span>
               </Chip>
             ))}
@@ -338,8 +339,8 @@ export function ChatComposer({
                 {onAttachPdf && (
                   <PlusOption
                     icon={<FileText size={15} />}
-                    title={t("composer.attachPdf")}
-                    hint={t("composer.attachPdfHint")}
+                    title={t("composer.attachFile")}
+                    hint={t("composer.attachFileHint")}
                     on={attachedFiles.length > 0}
                     onLabel={t("newChat.composer.on")}
                     onClick={() => {

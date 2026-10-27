@@ -66,7 +66,7 @@ describe("a PDF in the chat composer", () => {
     const onAttachPdf = vi.fn();
     const host = montar({ files: [], onAttachPdf, onRemoveFile: () => {} });
     pulsar(host.querySelector('[aria-label="newChat.composer.plus"]'));
-    pulsar([...host.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.includes("composer.attachPdf")));
+    pulsar([...host.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.includes("composer.attachFile")));
     expect(onAttachPdf).toHaveBeenCalledTimes(1);
   });
 
@@ -76,5 +76,13 @@ describe("a PDF in the chat composer", () => {
     expect(host.textContent).toContain("menu del día.pdf");
     pulsar(host.querySelector('[aria-label="composer.removeFile"]'));
     expect(onRemoveFile).toHaveBeenCalledWith(MENU.url);
+  });
+
+  // Office files and CSV (spec local 2026-10-26-len-skills, §4.8).
+  it("the composer chip shows the file's type", () => {
+    const host = montar({ files: [{ url: "/uploads/uploads/p1/def456.xlsx", name: "ventas.xlsx", size: 4096, kind: "xlsx" } as typeof MENU, MENU], onAttachPdf: () => {}, onRemoveFile: () => {} });
+    const chips = [...host.querySelectorAll("b")].map((b) => b.textContent);
+    expect(chips).toContain("XLSX");
+    expect(chips).toContain("PDF");
   });
 });
