@@ -125,6 +125,9 @@ sys.exit(int(response.get("exitCode", 0)))
 /** Playwright, fixed in the template with its Chromium (plan local 2026-10-21-playwright-in-the-box): the
  *  browser a version downloads must be the one it runs, and npx would fetch the newest from the registry. */
 export const PLAYWRIGHT_VERSION = "1.63.0";
+/** What the office skills run with (spec local 2026-10-26-len-skills, §4.7), at fixed versions like
+ *  Playwright: DeepSeek's office skills use openpyxl and pandas, python-docx and python-pptx. */
+export const OFFICE_PYTHON_PACKAGES: Readonly<Record<string, string>> = { openpyxl: "3.1.5", pandas: "2.2.3", "python-docx": "1.1.2", "python-pptx": "1.0.2" };
 export const PLAYWRIGHT_DIR = "/opt/openlen/playwright";
 export const PLAYWRIGHT_BROWSERS = "/opt/openlen/ms-playwright";
 const PLAYWRIGHT_BIN = `${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`;
