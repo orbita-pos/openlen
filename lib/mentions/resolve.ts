@@ -19,15 +19,18 @@ const PATH_MAX = 2000;
 const TEXT_MAX = 40;
 
 const str = (x: unknown): x is string => typeof x === "string";
+/** An HTML tag name, and a JSX one (`Button`, `motion.div`, `svg:path`): nothing else gets in. */
+const PAGE_TAG = /^[a-z][a-z0-9-]{0,39}$/i;
+const APP_TAG = /^[A-Za-z_$][\w$.:-]{0,79}$/;
 
 function parseTarget(raw: unknown): PageTarget | AppTarget | null {
   if (!raw || typeof raw !== "object") return null;
   const t = raw as Record<string, unknown>;
   const text = str(t.text) && t.text ? { text: t.text.slice(0, TEXT_MAX) } : {};
-  if (t.type === "page" && str(t.path) && str(t.tag) && (t.page === null || str(t.page))) {
+  if (t.type === "page" && str(t.path) && str(t.tag) && PAGE_TAG.test(t.tag) && (t.page === null || str(t.page))) {
     return { type: "page", page: t.page as string | null, path: t.path.slice(0, PATH_MAX), tag: t.tag.slice(0, 40), ...text };
   }
-  if (t.type === "app" && str(t.path) && t.path.startsWith("/") && str(t.tag) && Number.isInteger(t.line) && (t.line as number) > 0) {
+  if (t.type === "app" && str(t.path) && t.path.startsWith("/") && str(t.tag) && APP_TAG.test(t.tag) && Number.isInteger(t.line) && (t.line as number) > 0) {
     return { type: "app", path: t.path.slice(0, PATH_MAX), line: t.line as number, tag: t.tag.slice(0, 80), ...text };
   }
   return null;
@@ -77,7 +80,8 @@ function pageSelection(ref: MentionRef & { type: "element" }, target: PageTarget
   if (!sel || !("desde" in sel)) return sel ?? pista;
   // The path still resolves, but is it still THAT element? A page's structure can
   // change under a path; lines of a neighbour would point Len at the wrong thing.
-  const sameTag = new RegExp(`^<${target.tag}[\\s>/]`, "i").test(sel.contenido);
+  const opening = `<${target.tag.toLowerCase()}`;
+  const sameTag = sel.contenido.slice(0, opening.length).toLowerCase() === opening && /[\s>/]/.test(sel.contenido[opening.length] ?? "");
   if (!sameTag || (target.text && !textFitsFragment(target.text, sel.contenido))) return { ruta: sel.ruta, pista: ref.label };
   return sel;
 }
