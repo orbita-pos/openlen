@@ -6,7 +6,8 @@ import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 
 /** The E2B template the boxes start from (infra/e2b/openlen-terminal). A new template is a new name. */
 // v3 (spec local 2026-10-26-len-skills): LibreOffice and the office Python packages.
-export const SANDBOX_TEMPLATE = "openlen-terminal-v3";
+// v4 (spec local 2026-10-27-len-pdf-skill): qpdf, tesseract, CJK fonts and the PDF Python packages.
+export const SANDBOX_TEMPLATE = "openlen-terminal-v4";
 
 /** OpenLen's daily cap on all E2B spend, in dollars, unless the box sets another. */
 export const DEFAULT_SANDBOX_DAILY_USD = 5;

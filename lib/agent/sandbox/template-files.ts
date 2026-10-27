@@ -128,6 +128,19 @@ export const PLAYWRIGHT_VERSION = "1.63.0";
 /** What the office skills run with (spec local 2026-10-26-len-skills, §4.7), at fixed versions like
  *  Playwright: DeepSeek's office skills use openpyxl and pandas, python-docx and python-pptx. */
 export const OFFICE_PYTHON_PACKAGES: Readonly<Record<string, string>> = { openpyxl: "3.1.5", pandas: "2.2.3", "python-docx": "1.1.2", "python-pptx": "1.0.2" };
+/** What the pdf skill runs with (spec local 2026-10-27-len-pdf-skill, §4.7): the libraries Claude's
+ *  pdf skill uses, and cryptography, without which pypdf neither opens nor sets an AES password. Each
+ *  is the newest release at least a week old on 2026-10-27. */
+export const PDF_PYTHON_PACKAGES: Readonly<Record<string, string>> = { pypdf: "6.21.1", pdfplumber: "0.11.10", reportlab: "5.0.1", cryptography: "50.0.2" };
+/** A TrueType file for each script Len writes in (spec local 2026-10-27-len-pdf-skill, §4.4): reportlab
+ *  embeds TrueType, not the CFF OpenType of Noto CJK. The pdf skill's SKILL.md and place_text.py name
+ *  the same paths. */
+export const PDF_FONT_FILES: Readonly<{ latin: string; ja: string; ko: string; zh: string }> = {
+  latin: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+  ja: "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+  ko: "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+  zh: "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+};
 export const PLAYWRIGHT_DIR = "/opt/openlen/playwright";
 export const PLAYWRIGHT_BROWSERS = "/opt/openlen/ms-playwright";
 const PLAYWRIGHT_BIN = `${PLAYWRIGHT_DIR}/node_modules/.bin/playwright`;

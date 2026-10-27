@@ -14,6 +14,11 @@ Since v3 (spec local `2026-10-26-len-skills-design.md`), for the office skills: 
 Writer, Impress) with its Python bridge (`python3-uno`), poppler-utils, DejaVu fonts, and openpyxl,
 pandas, python-docx and python-pptx at the versions in `OFFICE_PYTHON_PACKAGES`.
 
+Since v4 (spec local `2026-10-27-len-pdf-skill-design.md`), for the pdf skill: qpdf, tesseract with
+Len's ten languages, TrueType fonts for Japanese, Korean and Chinese (`PDF_FONT_FILES`), and pypdf,
+pdfplumber, reportlab and cryptography at the versions in `PDF_PYTHON_PACKAGES`. Check a built
+template with `npm run pdf-skill:box-check`.
+
 Size: 2 vCPU and 4 GiB (`lib/agent/sandbox/size.ts`), fixed at build.
 
 Build (needs the `e2b` package and `E2B_API_KEY`; costs E2B build time):
