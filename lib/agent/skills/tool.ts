@@ -9,6 +9,7 @@
  */
 import type { ResolvedSkill } from "./registry";
 import { SKILL_NAME } from "./skill-file";
+import { isCompactionMark } from "@/lib/agent/compaction/mark";
 
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
@@ -49,23 +50,18 @@ export function renderSkillContent(s: ResolvedSkill): string {
 /** Claude Code's answer when the skill is already in the conversation. */
 export const alreadyLoaded = (name: string) => `Skill /${name} is already loaded above; instructions unchanged.`;
 
-const CONTENT_OPEN = /<skill_content name="([a-z0-9-]+)">/g;
-
-/** The skills the resent history already shows in full: a `skill` answer with its `<skill_content>`,
- *  or one injected in a message by /name. What compaction or the window left out is not counted, so
- *  it loads again. */
-export function skillsLoadedIn(
-  history: readonly { readonly content?: unknown; readonly functionResponses?: readonly { readonly name: string; readonly response: Record<string, unknown> }[] }[],
+/**
+ * Which skills the conversation already shows, as STATE (Claude Code's `invokedSkills`, DeepSeek's
+ * messages sourced `skill-invocation`): each row records what its turn loaded (`skillsLoaded`), and a
+ * summary forgets what came before it, as Claude Code forgets its invoked skills on compaction. Never
+ * read from text, which anyone could type.
+ */
+export function foldLoadedSkills(
+  rows: readonly { readonly compaction?: unknown; readonly transcript: { readonly skillsLoaded?: readonly string[] } | null }[],
 ): Set<string> {
   const loaded = new Set<string>();
-  const scan = (text: unknown) => {
-    if (typeof text !== "string") return;
-    for (const m of text.matchAll(CONTENT_OPEN)) loaded.add(m[1]!);
-  };
-  for (const m of history) {
-    scan(m.content);
-    for (const r of m.functionResponses ?? []) if (r.name === SKILL_TOOL && r.response.ok === true) scan(r.response.tool_result);
-  }
+  const lastMark = rows.findLastIndex((r) => isCompactionMark(r.compaction));
+  for (const [i, r] of rows.entries()) if (i > lastMark) for (const name of r.transcript?.skillsLoaded ?? []) loaded.add(name);
   return loaded;
 }
 
