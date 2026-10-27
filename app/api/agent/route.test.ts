@@ -1989,6 +1989,28 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       vi.stubEnv("OPENLEN_SKILLS", "");
     });
 
+    it("/name: the invoked skill reaches the model after the prompt, and the row keeps it as sentText", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "/office-docx hazme una carta" }) })),
+      );
+      const prompt = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
+      expect(prompt).toMatch(/\/office-docx hazme una carta\n\n<skill_content name="office-docx">/);
+      const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1];
+      expect(guardada.transcript?.sentText).toMatch(/<skill_content name="office-docx">/);
+    });
+
+    it("/name inside a url invokes nothing", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "mira https://x.com/office-docx" }) })),
+      );
+      const prompt = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
+      expect(prompt).not.toMatch(/<skill_content/);
+    });
+
     it("an app's turn carries the same catalog", async () => {
       turno();
       mocks.loadProject.mockResolvedValue({
