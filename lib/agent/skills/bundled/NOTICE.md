@@ -21,3 +21,7 @@ What changed for Len (spec local 2026-10-26-len-skills, §4.7):
 `office/scripts/check_office.py` and `office-recalculate/scripts/recalc.py` are ours. DeepSeek's
 note `2026-09-15-bundled-office-skills.md` describes a structural checker that is not in its public
 repository.
+
+`skill-creator` is ours, after DeepSeek's idea of shipping "creator skills" for what the agent authors
+(`.agents/notes/archived/architecture/2026-09-21-creator-skills-progressive-disclosure.md`): added on
+2026-10-26 when a real turn showed Len did not know where a user's skill goes.
