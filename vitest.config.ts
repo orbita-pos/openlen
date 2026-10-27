@@ -491,6 +491,8 @@ export default defineConfig({
       "lib/agent/ficheros/**/*.test.ts",
       // LEN.md y su memoria (plans/len-md): la nota, el índice, el mensaje duradero.
       "lib/agent/memory/**/*.test.ts",
+      // Skills (spec local 2026-10-26-len-skills): the SKILL.md format, the layers, the catalog.
+      "lib/agent/skills/**/*.test.ts",
       // …y lo que vuelve tras editar: `<new-diagnostics>` anclados a línea.
       "lib/agent/diagnosticos.test.ts",
       "lib/agent/diagnosticos-de-la-escritura.test.ts",
