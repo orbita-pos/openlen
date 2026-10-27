@@ -67,6 +67,12 @@ describe("resolveMentions", () => {
     expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 4 });
   });
 
+  it("decodes every named entity, not only the common five", async () => {
+    const html = ["<body>", "<h3>Mama&rsquo;s Garden &ndash; Guimar&atilde;es</h3>", "</body>"].join("\n");
+    const r = await resolveMentions([el("@Título · x", null, "h3:nth-of-type(1)", "h3", "Mama’s Garden – Guimarães")], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 2 });
+  });
+
   it("does not judge an element by own text that is only punctuation", async () => {
     const html = ["<body>", "<div><span>email</span>,<span>joined</span>,<span>source</span></div>", "</body>"].join("\n");
     const r = await resolveMentions([el("@Elemento · div", null, "div:nth-of-type(1)", "div", ",,")], { pageHtml: () => html, files: async () => ({}) });
