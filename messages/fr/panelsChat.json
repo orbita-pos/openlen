@@ -118,7 +118,8 @@
     "fileLimit": "4 fichiers maximum par message.",
     "fileTooBig": "Ce fichier dépasse 20 Mo.",
     "fileNotSupported": "Len lit les fichiers PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) et CSV.",
-    "fileFailed": "Le fichier n'a pas pu être envoyé. Réessayez."
+    "fileFailed": "Le fichier n'a pas pu être envoyé. Réessayez.",
+    "pointLabel": "Pointer"
   },
   "equipo": {
     "paraLen": "À Len",
@@ -418,5 +419,29 @@
       "generic": "Une erreur s'est produite. Réessayez dans un instant."
     },
     "liveWaiting": "Len attend que vous connectiez le domaine e-mail"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Section",
+      "heading": "Titre",
+      "text": "Texte",
+      "button": "Bouton",
+      "link": "Lien",
+      "image": "Image",
+      "form": "Formulaire",
+      "input": "Champ",
+      "list": "Liste",
+      "media": "Média",
+      "embed": "Intégration",
+      "element": "Élément"
+    },
+    "pickOnCanvas": "Choisir sur le canevas…",
+    "notOnScreen": "pas à l'écran pour l'instant",
+    "onPage": "sur la page {page}",
+    "more": "{count} de plus — continuez à taper",
+    "limit": "Jusqu'à {max} mentions par message",
+    "cannotPoint": "Cet élément n'a pas de ligne dans le code à désigner.",
+    "files": "Fichiers",
+    "people": "Personnes"
   }
 }

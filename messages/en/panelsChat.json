@@ -118,7 +118,8 @@
     "fileLimit": "Up to 4 files per message.",
     "fileTooBig": "That file is over 20 MB.",
     "fileNotSupported": "Len reads PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) and CSV files.",
-    "fileFailed": "The file couldn't be uploaded. Try again."
+    "fileFailed": "The file couldn't be uploaded. Try again.",
+    "pointLabel": "Point"
   },
   "equipo": {
     "paraLen": "To Len",
@@ -418,5 +419,29 @@
       "generic": "Something went wrong. Try again in a moment."
     },
     "liveWaiting": "Len is waiting for you to connect the email domain"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Section",
+      "heading": "Heading",
+      "text": "Text",
+      "button": "Button",
+      "link": "Link",
+      "image": "Image",
+      "form": "Form",
+      "input": "Field",
+      "list": "List",
+      "media": "Media",
+      "embed": "Embed",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Pick on the canvas…",
+    "notOnScreen": "not on screen now",
+    "onPage": "on page {page}",
+    "more": "{count} more — keep typing",
+    "limit": "Up to {max} mentions per message",
+    "cannotPoint": "That element has no line in the code to point at.",
+    "files": "Files",
+    "people": "People"
   }
 }

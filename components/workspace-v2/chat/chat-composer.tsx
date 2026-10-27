@@ -400,11 +400,14 @@ export function ChatComposer({
               aria-pressed={sectionSelectMode}
               onClick={() => onToggleSectionSelect(!sectionSelectMode)}
               disabled={busy}
-              className={`order-3 grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
-                sectionSelectMode ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"
-              }`}
+              className={`order-3 inline-flex h-[30px] items-center gap-1 rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
+                compacta ? "w-[30px] justify-center" : "px-2 text-[12.5px] font-medium"
+              } ${sectionSelectMode ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"}`}
             >
               <Crosshair size={16} />
+              {/* Its name on it, not only in the tooltip (spec local 2026-10-27); the
+                  floating one-row box keeps the icon alone, it has no room. */}
+              {!compacta && <span>{t("composer.pointLabel")}</span>}
             </button>
           )}
           <div className="order-3 ml-auto flex items-center gap-1.5">

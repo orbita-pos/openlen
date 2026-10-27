@@ -69,6 +69,18 @@ describe("the page canvas answers a highlight", () => {
   });
 });
 
+describe("a click in select mode", () => {
+  it("sends the element's own text with its path, for the mention", () => {
+    const sent: unknown[] = [];
+    vi.mocked(window.postMessage).mockImplementation(((d: unknown) => sent.push(d)) as never);
+    document.body.innerHTML = '<section><a href="#">Ver   el\n mostrador<span>x</span></a></section>';
+    document.body.setAttribute("data-openlen-select-mode", "");
+    document.querySelector("a")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.body.removeAttribute("data-openlen-select-mode");
+    expect(sent).toContainEqual(expect.objectContaining({ type: "openlen:section-selected", path: "section:nth-of-type(1) > a:nth-of-type(1)", text: "Ver el mostrador" }));
+  });
+});
+
 describe("the parent-side helpers", () => {
   it("highlightMention posts the target to the canvas window", () => {
     const post = vi.fn();

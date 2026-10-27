@@ -26,6 +26,8 @@ import {
   designSummary,
 } from "@/components/workspace-v2/design-mode/design-edits";
 import { isDesignSelection } from "@/lib/apps/design/types";
+import { mentionFromDesignSelection } from "@/lib/mentions/from-pick";
+import type { MentionKind, MentionRef } from "@/lib/mentions/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import {
   isGenerationBriefLengthValid,
@@ -621,6 +623,18 @@ function NewV2Inner() {
   const [designEdits, dispatchDesign] = useReducer(designEditsReducer, EMPTY_DESIGN_EDITS);
   const [designNote, setDesignNote] = useState("");
   const tDesign = useTranslations("panelsProps");
+  // THE CHAT'S «@» (spec local 2026-10-27, §6.6): pointing on an app canvas reuses
+  // the Design mode's picking, without its panel; what gets picked becomes a
+  // mention in the chat (`incomingMention`, consumed by the chat panel).
+  const [mentionPick, setMentionPick] = useState(false);
+  const mentionPickRef = useRef(false);
+  mentionPickRef.current = mentionPick;
+  const [incomingMention, setIncomingMention] = useState<{ ref: MentionRef; id: number } | null>(null);
+  const tMentions = useTranslations("panelsChat");
+  const mentionKindLabelRef = useRef<(k: MentionKind) => string>((k) => k);
+  mentionKindLabelRef.current = (k) => tMentions(`mentions.kind.${k}`);
+  const cannotPointRef = useRef(() => {});
+  cannotPointRef.current = () => toast.error(tMentions("mentions.cannotPoint"));
   /** Lo último que se mandó al lienzo como vista previa (y lo que se reenvía si recarga). */
   const designPrevRef = useRef(EMPTY_DESIGN_EDITS);
   const [inspectSelection, setInspectSelection] =
@@ -1149,12 +1163,18 @@ function NewV2Inner() {
           });
         }
       } else if (data.type === "openlen:design-selected") {
-        if (isDesignSelection(data.selection)) {
+        if (isDesignSelection(data.selection) && mentionPickRef.current) {
+          const ref = mentionFromDesignSelection(data.selection, mentionKindLabelRef.current);
+          if (ref) setIncomingMention({ ref, id: Date.now() });
+          else cannotPointRef.current();
+          setMentionPick(false);
+        } else if (isDesignSelection(data.selection)) {
           dispatchDesign({ type: "select", selection: data.selection });
           setDesignSelectedKey(data.selection.key);
         }
       } else if (data.type === "openlen:design-exit") {
         setDesignMode(false);
+        setMentionPick(false);
       } else if (data.type === "openlen:iframe-ready") {
         // El lienzo se recargó: su vista previa se perdió con el documento.
         const win = iframeElRef.current?.contentWindow;
@@ -3660,8 +3680,8 @@ function NewV2Inner() {
           currentProjectId={loadedProject?.id ?? null}
           onRestoreApplied={applyRestoredVersion}
           onPrepareSnapshot={flushPendingSave}
-          sectionSelectMode={sectionSelectMode}
-          onToggleSectionSelect={esApp ? undefined : (active) => setSectionSelectMode(active)}
+          sectionSelectMode={esApp ? mentionPick : sectionSelectMode}
+          onToggleSectionSelect={esApp ? (designAvailable ? (active) => setMentionPick(active) : undefined) : (active) => setSectionSelectMode(active)}
           esApp={esApp}
           scopedSelection={scopedSelection}
           onClearScope={() => setScopedSelection(null)}
@@ -3899,6 +3919,7 @@ function NewV2Inner() {
                 inspectMode={inspectMode}
                 onToggleInspect={esApp ? undefined : toggleInspect}
                 designMode={designMode}
+                designPick={mentionPick}
                 onToggleDesign={designAvailable ? () => setDesignMode((v) => !v) : undefined}
                 // EL PANEL EMPUJA EL LIENZO (11/10): flotando encima tapaba la derecha de
                 // la app, y lo que quedaba debajo —un botón, un menú— no se podía elegir.

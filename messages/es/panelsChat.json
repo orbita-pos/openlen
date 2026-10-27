@@ -118,7 +118,8 @@
     "fileLimit": "Caben 4 archivos por mensaje.",
     "fileTooBig": "Ese archivo pasa de 20 MB.",
     "fileNotSupported": "Len lee archivos PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) y CSV.",
-    "fileFailed": "No se pudo subir el archivo. Inténtalo otra vez."
+    "fileFailed": "No se pudo subir el archivo. Inténtalo otra vez.",
+    "pointLabel": "Señalar"
   },
   "equipo": {
     "paraLen": "Para Len",
@@ -418,5 +419,29 @@
       "generic": "Algo salió mal. Inténtalo en un momento."
     },
     "liveWaiting": "Len espera que conectes el dominio del correo"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Sección",
+      "heading": "Título",
+      "text": "Texto",
+      "button": "Botón",
+      "link": "Enlace",
+      "image": "Foto",
+      "form": "Formulario",
+      "input": "Campo",
+      "list": "Lista",
+      "media": "Multimedia",
+      "embed": "Incrustado",
+      "element": "Elemento"
+    },
+    "pickOnCanvas": "Elegir en el lienzo…",
+    "notOnScreen": "no está en pantalla ahora",
+    "onPage": "en la página {page}",
+    "more": "{count} más — sigue escribiendo",
+    "limit": "Hasta {max} menciones por mensaje",
+    "cannotPoint": "Ese elemento no tiene una línea en el código a la que señalar.",
+    "files": "Ficheros",
+    "people": "Personas"
   }
 }

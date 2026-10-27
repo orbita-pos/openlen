@@ -118,7 +118,8 @@
     "fileLimit": "1つのメッセージに添付できるファイルは4つまでです。",
     "fileTooBig": "そのファイルは20MBを超えています。",
     "fileNotSupported": "LenはPDF、Excel（.xlsx）、Word（.docx）、PowerPoint（.pptx）、CSVファイルを読めます。",
-    "fileFailed": "ファイルをアップロードできませんでした。もう一度お試しください。"
+    "fileFailed": "ファイルをアップロードできませんでした。もう一度お試しください。",
+    "pointLabel": "指す"
   },
   "equipo": {
     "paraLen": "Len へ",
@@ -418,5 +419,29 @@
       "generic": "問題が発生しました。少し待ってからもう一度お試しください。"
     },
     "liveWaiting": "Len はメールドメインの接続を待っています"
+  },
+  "mentions": {
+    "kind": {
+      "section": "セクション",
+      "heading": "見出し",
+      "text": "テキスト",
+      "button": "ボタン",
+      "link": "リンク",
+      "image": "画像",
+      "form": "フォーム",
+      "input": "入力欄",
+      "list": "リスト",
+      "media": "メディア",
+      "embed": "埋め込み",
+      "element": "要素"
+    },
+    "pickOnCanvas": "キャンバスで選ぶ…",
+    "notOnScreen": "今は画面にありません",
+    "onPage": "{page} ページ",
+    "more": "ほか {count} 件 — 続けて入力",
+    "limit": "1 メッセージにつき最大 {max} 件まで",
+    "cannotPoint": "その要素には指せるコードの行がありません。",
+    "files": "ファイル",
+    "people": "メンバー"
   }
 }

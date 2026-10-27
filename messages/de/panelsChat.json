@@ -118,7 +118,8 @@
     "fileLimit": "Bis zu 4 Dateien pro Nachricht.",
     "fileTooBig": "Diese Datei ist größer als 20 MB.",
     "fileNotSupported": "Len liest PDF-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) und CSV-Dateien.",
-    "fileFailed": "Die Datei konnte nicht hochgeladen werden. Versuch es noch einmal."
+    "fileFailed": "Die Datei konnte nicht hochgeladen werden. Versuch es noch einmal.",
+    "pointLabel": "Zeigen"
   },
   "equipo": {
     "paraLen": "An Len",
@@ -418,5 +419,29 @@
       "generic": "Etwas ist schiefgelaufen. Versuche es gleich noch einmal."
     },
     "liveWaiting": "Len wartet darauf, dass du die E-Mail-Domain verbindest"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Abschnitt",
+      "heading": "Überschrift",
+      "text": "Text",
+      "button": "Button",
+      "link": "Link",
+      "image": "Bild",
+      "form": "Formular",
+      "input": "Feld",
+      "list": "Liste",
+      "media": "Medien",
+      "embed": "Einbettung",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Auf der Leinwand wählen…",
+    "notOnScreen": "gerade nicht sichtbar",
+    "onPage": "auf der Seite {page}",
+    "more": "{count} weitere — weiter tippen",
+    "limit": "Bis zu {max} Erwähnungen pro Nachricht",
+    "cannotPoint": "Dieses Element hat keine Codezeile, auf die man zeigen kann.",
+    "files": "Dateien",
+    "people": "Personen"
   }
 }

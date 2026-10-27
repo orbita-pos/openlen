@@ -92,7 +92,8 @@
       "refresh": "Refresh preview",
       "openNewTab": "Open in new tab",
       "viewCode": "View the code",
-      "viewData": "View data"
+      "viewData": "View data",
+      "designShort": "Design"
     },
     "banner": {
       "sectionSelect": "Click any section to scope your next chat · <kbd></kbd> to cancel",

@@ -81,6 +81,13 @@ ${CORE_SRC}
     return !!(document.body && document.body.hasAttribute('data-openlen-select-mode'));
   }
 
+  // The element's own text (not its children's), as the «@» index takes it.
+  function ownTextOf(el) {
+    var s = '';
+    for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += n.textContent || '';
+    return s.replace(/\\s+/g, ' ').trim().slice(0, 40);
+  }
+
   function buildHint(el) {
     var tag = el.tagName.toLowerCase();
     var text = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
@@ -120,6 +127,7 @@ ${CORE_SRC}
         hint: buildHint(t),
         tag: t.tagName.toLowerCase(),
         path: buildEditPath(t),
+        text: ownTextOf(t),
       }, '*');
     } catch (_) {}
   }, true);
