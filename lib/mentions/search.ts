@@ -21,7 +21,7 @@ function isSubsequence(needle: string, hay: string): boolean {
 function scoreIn(token: string, field: string, weight: number): number {
   if (!field) return 0;
   const at = field.indexOf(token);
-  if (at !== -1) return weight * 10 + (at === 0 || /[^a-z0-9]/.test(field[at - 1]!) ? 5 : 0);
+  if (at !== -1) return weight * 10 + (at === 0 ? 8 : /[^a-z0-9]/.test(field[at - 1]!) ? 5 : 0);
   return isSubsequence(token, field) ? weight * 3 : 0;
 }
 

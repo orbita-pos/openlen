@@ -44,6 +44,11 @@ describe("searchMentions", () => {
     expect(r.indexOf(LINK.key)).toBeLessThan(r.indexOf(BY_CLASS.key));
   });
 
+  it("ranks text that starts with the word above text with a later word starting with it", () => {
+    const r = keys(searchMentions(ALL, [], "ver", 10));
+    expect(r.indexOf(LINK.key)).toBeLessThan(r.indexOf(HERO.key));
+  });
+
   it("ignores accents and case", () => {
     expect(keys(searchMentions(ALL, [], "MOSTRÁDOR", 10))).toContain(LINK.key);
   });

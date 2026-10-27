@@ -25,6 +25,8 @@ import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
 import { kindOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
+import { useMentionMenu, type MentionIndex } from "./mention-menu";
+import type { MentionRef } from "@/lib/mentions/types";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
 
@@ -32,6 +34,8 @@ const NADIE: readonly PersonaMencionable[] = [];
 const SIN_COLOR = () => "";
 
 const SIN_SKILLS: readonly MenuSkill[] = [];
+const NO_MENTIONS: readonly MentionRef[] = [];
+const IGNORE_MENTIONS = () => {};
 
 export function ChatComposer({
   value,
@@ -72,6 +76,9 @@ export function ChatComposer({
   secretGuard,
   compacta = false,
   skills,
+  mentionIndex = null,
+  mentions = NO_MENTIONS,
+  onMentionsChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -136,6 +143,11 @@ export function ChatComposer({
   compacta?: boolean;
   /** SKILLS (spec local 2026-10-26-len-skills): what the `/` menu offers. Without it, no menu. */
   skills?: readonly MenuSkill[];
+  /** THE CHAT'S «@» (spec local 2026-10-27): what can be pointed at, and the mentions
+   *  in the box. Without an index and a handler, the team chat's own «@» runs as before. */
+  mentionIndex?: MentionIndex | null;
+  mentions?: readonly MentionRef[];
+  onMentionsChange?: (m: MentionRef[]) => void;
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -146,10 +158,33 @@ export function ChatComposer({
   const hasContent = value.trim().length > 0 || comments.length > 0;
   const typed = value.trim().length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
-  const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
+  // With the «@» of elements, its menu carries the people too; the team chat's
+  // own «@» stays for the boxes that have no index.
+  const withMentions = mentionIndex !== null && onMentionsChange !== undefined;
+  const arroba = useArroba(
+    value,
+    onChange,
+    textareaRef,
+    withMentions ? NADIE : (mencionables?.gente ?? NADIE),
+    withMentions ? false : (mencionables?.conLen ?? false),
+    mencionables?.colorDe,
+  );
+  const mention = useMentionMenu({
+    value,
+    setValue: onChange,
+    ref: textareaRef,
+    people: mencionables?.gente ?? NADIE,
+    withLen: mencionables?.conLen ?? false,
+    ...(mencionables?.colorDe ? { colorOf: mencionables.colorDe } : {}),
+    index: withMentions ? mentionIndex : null,
+    mentions,
+    onMentionsChange: onMentionsChange ?? IGNORE_MENTIONS,
+    ...(onToggleSectionSelect ? { onPickOnCanvas: () => onToggleSectionSelect(true) } : {}),
+  });
   const barra = useSkillSlash(value, onChange, textareaRef, skills ?? SIN_SKILLS);
   const alMoverElCursor = (e: { currentTarget: HTMLTextAreaElement }) => {
     arroba.onSeleccion(e);
+    mention.onCursor(e);
     barra.onSeleccion(e);
   };
   // La clave que se iba a mandar, a la espera de «Guardar como secreto» o «Mandar igual».
@@ -266,6 +301,7 @@ export function ChatComposer({
             onKeyUp: alMoverElCursor,
             onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
               // Con el desplegable del @ abierto, Enter/Tab/flechas son suyos.
+              if (mention.key(e)) return;
               if (arroba.tecla(e)) return;
               // And with the `/` one, its keys are its own too.
               if (barra.tecla(e)) return;
@@ -289,11 +325,12 @@ export function ChatComposer({
           // Lo mismo al escribir una URL, que se pinta de azul (como la caja de Claude).
           return (
             <div className={compacta ? "order-2 min-w-0 flex-1 pt-[7px]" : "mt-0.5"}>
-              {(arroba.menu ?? barra.menu) && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu ?? barra.menu}</div>}
+              {(mention.menu ?? arroba.menu ?? barra.menu) && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{mention.menu ?? arroba.menu ?? barra.menu}</div>}
               <CajaConMenciones
                 {...caja}
                 cajaRef={textareaRef}
-                pintar={!!mencionables || hasLink(value)}
+                pintar={!!mencionables || hasLink(value) || mention.labels.length > 0}
+                etiquetas={mention.labels}
                 gente={mencionables?.gente ?? NADIE}
                 colorDe={mencionables?.colorDe ?? SIN_COLOR}
                 medida="text-[14px] leading-normal"

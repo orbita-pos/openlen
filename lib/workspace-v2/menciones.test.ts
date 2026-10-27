@@ -49,6 +49,16 @@ describe("los colores de las menciones", () => {
     expect(trozosConMenciones("", GENTE)).toEqual([]);
   });
 
+  it("paints the chat's «@» element mentions by their exact label, next to the people", () => {
+    expect(trozosConMenciones("haz @Enlace · Ver el mostrador como @Len dice", GENTE, ["@Enlace · Ver el mostrador"])).toEqual([
+      { texto: "haz " },
+      { texto: "@Enlace · Ver el mostrador", elemento: true },
+      { texto: " como " },
+      { texto: "@Len", len: true },
+      { texto: " dice" },
+    ]);
+  });
+
   it("🔴 cada persona del proyecto, un color distinto y el mismo en todas partes", () => {
     const ids = GENTE.map((p) => p.userId);
     const colores = ids.map((id) => colorDePersona(id, ids));

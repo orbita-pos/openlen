@@ -180,21 +180,30 @@ export type ContextoDeHilos = ReturnType<typeof useHilos>;
 /** Un texto con sus menciones de color: `@Len` en su naranja, cada persona en el
  *  suyo. Y sus URLs en azul (`lib/chat/links.ts`): enlaces que se abren, o sólo
  *  el color en la copia de detrás de una caja (`links="color"`), que no se toca. */
+const SIN_ETIQUETAS: readonly string[] = [];
+
 export function TextoConMenciones({
   texto,
   gente,
   colorDe,
   links = "open",
+  etiquetas = SIN_ETIQUETAS,
 }: {
   texto: string;
   gente: readonly PersonaMencionable[];
   colorDe: (userId: string) => string;
   links?: "open" | "color";
+  /** The chat's «@» element and file mentions, by their exact label. */
+  etiquetas?: readonly string[];
 }) {
   return (
     <>
-      {trozosConMenciones(texto, gente).map((t, i) =>
-        t.len ? (
+      {trozosConMenciones(texto, gente, etiquetas).map((t, i) =>
+        t.elemento ? (
+          <span key={i} className="font-medium text-accent" data-mencion="elemento">
+            {t.texto}
+          </span>
+        ) : t.len ? (
           <span key={i} className="font-medium text-accent" data-mencion="len">
             {t.texto}
           </span>
@@ -241,12 +250,15 @@ export function CajaConMenciones({
   value,
   onScroll,
   pintar = true,
+  etiquetas = SIN_ETIQUETAS,
   ...resto
 }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value"> & {
   cajaRef: RefObject<HTMLTextAreaElement | null>;
   /** Sin pintar, una caja normal —el MISMO textarea, para que encender los
    *  colores después (llega la gente) no lo desmonte ni le quite el foco—. */
   pintar?: boolean;
+  /** The chat's «@» element and file mentions, painted by their exact label. */
+  etiquetas?: readonly string[];
   gente: readonly PersonaMencionable[];
   colorDe: (userId: string) => string;
   medida: string;
@@ -262,7 +274,7 @@ export function CajaConMenciones({
           aria-hidden="true"
           className={`pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words border-transparent fg ${medida} ${fondo}`}
         >
-          <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} links="color" />
+          <TextoConMenciones texto={value} gente={gente} colorDe={colorDe} links="color" etiquetas={etiquetas} />
           {/* Un salto final como el del textarea: si no, la última línea vacía no ocupa sitio. */}
           {"\n"}
         </span>
