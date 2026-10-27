@@ -30,6 +30,7 @@ import {
 import type { LedgerEntry, LedgerOutcome } from "@/lib/credit-ledger";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
+import { parseMentions, resolveMentions } from "@/lib/mentions/resolve";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { functionsEnabled } from "@/lib/functions/engines";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
@@ -322,6 +323,8 @@ type CuerpoDelTurno = {
   // fueron con A11: la charla entera sale de la base. Una pestaña vieja que aún
   // los mande no rompe nada: se ignoran.
   scope?: ScopeBody;
+  /** THE CHAT'S «@» (spec local 2026-10-27): what the message mentions; validated by `parseMentions`. */
+  mentions?: unknown;
   attachedImage?: AttachedImageBody;
   /** Crear es Len: hasta `MAX_PHOTOS_PER_MESSAGE` fotos en un mensaje. */
   attachedImages?: unknown;
@@ -829,7 +832,18 @@ async function correrTurno(
   // LO QUE EL DUEÑO SEÑALÓ EN EL LIENZO, como fichero y líneas — como Claude
   // Code cuenta lo que el usuario selecciona en su IDE. Ver
   // `lib/agent/seleccion-del-lienzo.ts`.
-  const seleccion = seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
+  // THE CHAT'S «@» (spec local 2026-10-27, §6.9): the mentions of the message,
+  // anchored against the files as they are now. With them, the old single scope
+  // is not read.
+  const mentionRefs = parseMentions(body?.mentions);
+  const mentioned =
+    mentionRefs.length > 0
+      ? await resolveMentions(mentionRefs, {
+          pageHtml: (p) => (p ? (project.data.pages?.[p]?.html ?? null) : (project.data.html ?? null)),
+          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno }, deps),
+        })
+      : null;
+  const seleccion = mentioned ? null : seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
 
   // 🔴 LAS FOTOS DE LA CONVERSACIÓN (A, 2026-10-01), como en Claude Code: la de
   // este turno y la de cada turno que Len ve, conseguidas en paralelo y pegadas
@@ -1118,6 +1132,7 @@ async function correrTurno(
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
     seleccion,
+    ...(mentioned ? { selecciones: mentioned.selecciones, mentionedFiles: mentioned.ficheros } : {}),
     maxPromptTokens: MAX_PROMPT_TOKENS,
   };
   const built = buildAgentMessages(argsDelTurno);
@@ -1165,7 +1180,7 @@ async function correrTurno(
           userMemory: argsDelTurno.userMemory,
           cambios: argsDelTurno.cambios,
           degradaciones: argsDelTurno.degradaciones,
-          conPin: seleccion !== null,
+          conPin: seleccion !== null || (mentioned?.selecciones.length ?? 0) > 0,
           conImagen: attachedImages.length > 0,
           activePage: pageSlug,
         }),

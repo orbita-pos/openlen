@@ -23,6 +23,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
+import { cortarLinea, formatoCatN, normalizarFinales } from "@/lib/agent/ficheros/read";
 import { REGLA_DEL_EQUIPO } from "./equipo";
 
 /**
@@ -226,6 +227,36 @@ export function seleccionBlock(sel: SeleccionDelDueno | null | undefined): strin
   return `<system-reminder>\n${cuerpo}\n\nIt may or may not matter for what you are doing now.\n</system-reminder>\n\n`;
 }
 
+/** THE CHAT'S «@» (spec local 2026-10-27, §6.8): one selection block per element
+ *  the user mentioned, in the order of the message — each is what Claude Code
+ *  gives for an IDE selection (`seleccionBlock`). */
+export function seleccionesBlock(sels: readonly SeleccionDelDueno[]): string {
+  return sels.map((s) => seleccionBlock(s)).join("");
+}
+
+/** A file the user mentioned with «@». */
+export interface MentionedFile {
+  readonly ruta: string;
+  readonly contenido: string;
+}
+
+/** The lines a mentioned file brings, as Read's default does. */
+const MENTIONED_FILE_LINES = 2000;
+
+/** A file mentioned with «@» arrives the way Claude Code attaches one: its
+ *  contents numbered as Read shows them, from line 1 (wording ours). */
+export function mentionedFilesBlock(files: readonly MentionedFile[]): string {
+  return files
+    .map((f) => {
+      const lines = normalizarFinales(f.contenido).split("\n");
+      const shown = lines.slice(0, MENTIONED_FILE_LINES).map(cortarLinea).join("\n");
+      const rest = lines.length - MENTIONED_FILE_LINES;
+      const tail = rest > 0 ? `\n[${rest} more lines: read the file for the rest]` : "";
+      return `<system-reminder>\nThe user mentioned ${f.ruta}. Its contents, as Read shows them:\n${formatoCatN(shown, 1)}${tail}\n</system-reminder>\n\n`;
+    })
+    .join("");
+}
+
 /** Una foto del mensaje, como la ve el contexto: `visible` = sus píxeles van
  *  pegados al mensaje y el modelo PUEDE VERLA. */
 export interface AttachedImageForContext {
@@ -310,6 +341,10 @@ export function buildAgentContext(args: {
   attachedImages?: readonly AttachedImageForContext[] | null;
   /** Lo que el dueño señaló en el lienzo. Ver `SeleccionDelDueno`. */
   seleccion?: SeleccionDelDueno | null;
+  /** The elements the user mentioned with «@», in message order (spec local 2026-10-27). With them, `seleccion` is ignored. */
+  selecciones?: readonly SeleccionDelDueno[];
+  /** The files the user mentioned with «@». */
+  mentionedFiles?: readonly MentionedFile[];
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
   design?: string | null;
   // ⚰️ `styleDirection` (26/10): el bloque `<visual-direction>` de la ficha de
@@ -378,7 +413,7 @@ export function buildAgentContext(args: {
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}`;
 }
 
 
@@ -464,6 +499,10 @@ export interface BuildAgentMessagesArgs {
   attachedFiles?: readonly AttachedFile[] | null;
   /** Ver buildAgentContext.seleccion. */
   seleccion?: SeleccionDelDueno | null;
+  /** Ver buildAgentContext.selecciones. */
+  selecciones?: readonly SeleccionDelDueno[];
+  /** Ver buildAgentContext.mentionedFiles. */
+  mentionedFiles?: readonly MentionedFile[];
   /** EL MODO DISEÑO de una app: el bloque de `designBlock` (lib/agent/design-block.ts), o nada. */
   design?: string | null;
   /** Pre-flight size ceiling; over it (A11) → `compactFirst`: the loop summarizes first. */
@@ -532,6 +571,8 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     degradaciones: args.degradaciones,
     attachedImages: args.attachedImages,
     seleccion: args.seleccion,
+    ...(args.selecciones ? { selecciones: args.selecciones } : {}),
+    ...(args.mentionedFiles ? { mentionedFiles: args.mentionedFiles } : {}),
     design: args.design,
   });
   const avisos = avisosDelTurno({

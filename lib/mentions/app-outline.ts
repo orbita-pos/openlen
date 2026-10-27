@@ -79,6 +79,7 @@ export async function outlineFile(path: string, source: string): Promise<Mention
         key,
         ruta: path,
         line,
+        endLine: sf.getLineAndCharacterOfPosition(node.getEnd()).line + 1,
         tag,
         kind: kindOf(tag, attrs, role),
         name: humanNameOf({ tag, ownText, attrs, component }),
