@@ -110,8 +110,10 @@ describe("buildFunctionDeclarations", () => {
       // Los visuales de Len (spec local 2026-10-16): las dos de Claude.
       "read_me",
       "show_widget",
-      // Skills (spec local 2026-10-26-len-skills): DeepSeek's, the one that loads a skill.
+      // Skills (spec local 2026-10-26-len-skills): DeepSeek's, the one that loads a skill,
+      // and the one that delivers the files Len makes.
       "skill",
+      "present",
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",
@@ -376,6 +378,14 @@ describe("buildAgentSystemPrompt", () => {
         "You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.",
       );
     }
+  });
+
+  it("declares present with DeepSeek's text, only with skills on", () => {
+    const present = buildFunctionDeclarations({}).find((d) => d.name === "present");
+    expect(String(present?.description)).toMatch(/^Declare existing files as final deliverables for the user\./);
+    expect(String(present?.description)).toContain("The user gets a copy of each file as it is when you call it.");
+    expect(JSON.stringify(present?.parameters)).toContain("at most 4 per call");
+    expect(buildFunctionDeclarations({ OPENLEN_SKILLS: "0" }).some((d) => d.name === "present")).toBe(false);
   });
 
   it("declares skill only with skills on, with DeepSeek's text", () => {

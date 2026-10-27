@@ -44,6 +44,7 @@ import type { CompactionPolicy } from "./compaction/policy";
 import { createWritePreview } from "./write-preview";
 import { createWidgetPreview } from "./visuals/widget-preview";
 import { READ_ME, type VisualWidget } from "./visuals/widget";
+import type { DeliveredFile } from "./skills/present";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
 // of the raw Spanish `message` (which stays as the server-side/fallback
@@ -163,6 +164,8 @@ export type AgentStreamEvent =
       /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): el visual que
        *  dibujó `show_widget`. Sólo de pantalla y de la tarjeta guardada. */
       widget?: VisualWidget;
+      /** The files `present` delivered (spec local 2026-10-26-len-skills): the card is their only link. */
+      delivered?: readonly DeliveredFile[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -1964,6 +1967,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.todos ? { todos: outcome.todos } : {}),
           // Y el visual de `show_widget`, entero: la tarjeta guardada es su única copia.
           ...(outcome.widget ? { widget: outcome.widget } : {}),
+          // Y lo que entregó `present`: sin esto el enlace de descarga no llega a la tarjeta.
+          ...(outcome.delivered?.length ? { delivered: outcome.delivered } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 

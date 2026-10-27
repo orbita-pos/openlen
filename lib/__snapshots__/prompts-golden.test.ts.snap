@@ -835,6 +835,38 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "present",
+    "description": "Declare existing files as final deliverables for the user. Hosts may show presented files only after your turn ends, so call it once the files are final. If the user needs to review files earlier, such as before a tool call that waits for their answer, link them in your message instead. Use it when the user needs a separate file, especially Office documents, spreadsheets, and slide decks; prefer your final response when that suffices. The user gets a copy of each file as it is when you call it.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "files": {
+          "type": "ARRAY",
+          "description": "Usually the 1-2 most important deliverables; at most 4 per call.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "path": {
+                "type": "STRING",
+                "description": "Path of an existing regular file in the terminal. Relative paths start at /."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "Brief description for the user."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      "required": [
+        "files"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -1729,6 +1761,38 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "present",
+    "description": "Declare existing files as final deliverables for the user. Hosts may show presented files only after your turn ends, so call it once the files are final. If the user needs to review files earlier, such as before a tool call that waits for their answer, link them in your message instead. Use it when the user needs a separate file, especially Office documents, spreadsheets, and slide decks; prefer your final response when that suffices. The user gets a copy of each file as it is when you call it.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "files": {
+          "type": "ARRAY",
+          "description": "Usually the 1-2 most important deliverables; at most 4 per call.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "path": {
+                "type": "STRING",
+                "description": "Path of an existing regular file in the terminal. Relative paths start at /."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "Brief description for the user."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      "required": [
+        "files"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -2613,6 +2677,38 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "name"
+      ]
+    }
+  },
+  {
+    "name": "present",
+    "description": "Declare existing files as final deliverables for the user. Hosts may show presented files only after your turn ends, so call it once the files are final. If the user needs to review files earlier, such as before a tool call that waits for their answer, link them in your message instead. Use it when the user needs a separate file, especially Office documents, spreadsheets, and slide decks; prefer your final response when that suffices. The user gets a copy of each file as it is when you call it.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "files": {
+          "type": "ARRAY",
+          "description": "Usually the 1-2 most important deliverables; at most 4 per call.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "path": {
+                "type": "STRING",
+                "description": "Path of an existing regular file in the terminal. Relative paths start at /."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "Brief description for the user."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          }
+        }
+      },
+      "required": [
+        "files"
       ]
     }
   },

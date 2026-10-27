@@ -16,6 +16,8 @@
     "subtitle": "Ich habe volle Kontrolle über deine Seite. Frag mich alles."
   },
   "turn": {
+    "deliveredFiles": "Dateien für dich",
+    "download": "Herunterladen",
     "imageSent": "Bild gesendet",
     "imagesSent": "{count} Bilder gesendet",
     "homePage": "Startseite",

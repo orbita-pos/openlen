@@ -16,6 +16,8 @@
     "subtitle": "J'ai le contrôle total de votre page. Demandez-moi ce que vous voulez."
   },
   "turn": {
+    "deliveredFiles": "Fichiers pour vous",
+    "download": "Télécharger",
     "imageSent": "Image envoyée",
     "imagesSent": "{count} images envoyées",
     "homePage": "Accueil",

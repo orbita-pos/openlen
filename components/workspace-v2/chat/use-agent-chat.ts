@@ -49,6 +49,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
+import { deliveredFrom } from "@/lib/agent/skills/present";
 import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
 import { fusionarConversacion } from "@/lib/chat/fusionar-conversacion";
 import { withServerStatus } from "./server-status";
@@ -1724,6 +1725,8 @@ export function useAgentChat({
                 const descartada = (payload as { dismissed?: unknown } | null)?.dismissed === true;
                 // La lista de progreso (spec local 2026-10-15), limpia.
                 const todos = todosFrom((payload as { todos?: unknown } | null)?.todos);
+                // Lo que entregó `present`, limpio (spec local 2026-10-26-len-skills).
+                const delivered = deliveredFrom((payload as { delivered?: unknown } | null)?.delivered);
                 // LOS VISUALES: el visual de `show_widget`, limpio, en el punto
                 // donde empezó a escribirse (o en el que va el texto ahora).
                 const widget = tool === SHOW_WIDGET && status !== "running" ? widgetFrom((payload as { widget?: unknown } | null)?.widget) : null;
@@ -1762,6 +1765,7 @@ export function useAgentChat({
                       : {}),
                     ...(descartada ? { dismissed: true as const } : {}),
                     ...(todos ? { todos } : {}),
+                    ...(delivered ? { delivered } : {}),
                     ...(widget && textOffset !== null ? { widget, textOffset } : {}),
                     ...(typeof valores === "string" && valores.trim()
                       ? { valores: valores.slice(0, 200) }

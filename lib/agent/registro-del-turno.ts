@@ -114,6 +114,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           // Y LA LISTA DE PROGRESO (spec local 2026-10-15): la tarjeta es su
           // única copia, así que sin esta línea se vería en vivo y no al recargar.
           ...(ev.todos ? { todos: ev.todos.map((t) => ({ content: t.content, status: t.status })) } : {}),
+          // Y LO QUE ENTREGÓ `present` (spec local 2026-10-26-len-skills): la tarjeta es su único enlace.
+          ...(ev.delivered?.length ? { delivered: ev.delivered.map((f) => ({ ...f })) } : {}),
           // Y EL VISUAL de `show_widget` (spec local 2026-10-16-len-inline-visuals),
           // con el punto del texto donde lo puso Len: lo que lleva escrito AHORA,
           // ya sin lo que descartó un reintento. Su única copia, como la lista.

@@ -234,6 +234,23 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // A FILE THE USER ATTACHED: a PDF's pages, as images, like Claude Code's Read (26/10); a CSV as
   // text; an office file answered as a binary one (spec local 2026-10-26-len-skills).
   const asked = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
+  // A PDF MADE IN THE BOX (an office file exported to see it, spec local 2026-10-26-len-skills):
+  // read by its pages like an attached one. The site's folder never holds a PDF (text only).
+  const enLaCaja = resolverRuta(asked);
+  const leerDeLaCaja = (session.terminal as { readFileBytes?: (p: string) => Promise<Uint8Array | null> } | undefined)?.readFileBytes;
+  if (/\.pdf$/i.test(enLaCaja) && !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`) && leerDeLaCaja && deps.pdfPages) {
+    const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
+    if (bytes) {
+      const pdfPages = deps.pdfPages;
+      const visit = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
+      const file = { url: enLaCaja, name: enLaCaja.split("/").pop()!, size: bytes.byteLength };
+      const { result, images } = await readAttachment(enLaCaja, { pages: args.pages }, new Map([[enLaCaja, file]]), {
+        read: async () => bytes,
+        render: (pdf, range) => visit(() => pdfPages(pdf, range)),
+      });
+      return { response: respuesta(result), ...(images?.length ? { images } : {}) };
+    }
+  }
   if (resolverRuta(asked).startsWith(`${ATTACHMENTS_DIR}/`)) {
     const { readAttachment: readAttachmentBytes, pdfPages } = deps;
     if (!readAttachmentBytes || !pdfPages) return { response: respuesta(fallo("Reading attached PDFs isn't available in this environment.")) };

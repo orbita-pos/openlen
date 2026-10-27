@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { todosFrom } from "@/lib/agent/todo-list";
+import { deliveredFrom } from "@/lib/agent/skills/present";
 import { widgetFrom } from "@/lib/agent/visuals/widget";
 import {
   appendChatMessage,
@@ -156,6 +157,12 @@ const ActionSchema = z.object({
     .transform((v) => widgetFrom(v) ?? undefined)
     .optional(),
   textOffset: z.number().int().min(0).max(1_000_000).optional().catch(undefined),
+  /** Lo que entregó `present` (spec local 2026-10-26-len-skills): se LIMPIA (`deliveredFrom`), no se
+   *  rechaza, por lo mismo que `todos`. */
+  delivered: z
+    .unknown()
+    .transform((v) => deliveredFrom(v) ?? undefined)
+    .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.
    *

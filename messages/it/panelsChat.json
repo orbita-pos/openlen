@@ -16,6 +16,8 @@
     "subtitle": "Ho pieno controllo sulla tua pagina. Chiedimi qualsiasi cosa."
   },
   "turn": {
+    "deliveredFiles": "File per te",
+    "download": "Scarica",
     "imageSent": "Immagine inviata",
     "imagesSent": "{count} immagini inviate",
     "homePage": "Home",

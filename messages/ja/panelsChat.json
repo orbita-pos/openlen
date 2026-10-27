@@ -16,6 +16,8 @@
     "subtitle": "ページの編集はすべてお任せください。何でも聞いてください。"
   },
   "turn": {
+    "deliveredFiles": "あなたへのファイル",
+    "download": "ダウンロード",
     "imageSent": "画像を送信しました",
     "imagesSent": "{count} 枚の画像を送信しました",
     "homePage": "ホーム",
