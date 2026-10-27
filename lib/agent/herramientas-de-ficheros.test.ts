@@ -758,6 +758,116 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
   });
 });
 
+describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
+  const SKILL = "---\nname: cotizar\ndescription: How I quote.\n---\n\nAsk for the size first.\n";
+
+  function depsConSkills(o: { project?: Record<string, string>; personal?: Record<string, Record<string, string>> } = {}) {
+    const base = makeDeps({ html: HOME });
+    const estado = {
+      project: new Map(Object.entries(o.project ?? {})),
+      personal: new Map(Object.entries(o.personal ?? {}).map(([k, v]) => [k, new Map(Object.entries(v))] as const)),
+      upserts: [] as unknown[][],
+      removed: [] as string[],
+      listed: [] as string[],
+    };
+    const of = (scope: string, owner: string) => {
+      if (scope === "project") return estado.project;
+      if (!estado.personal.has(owner)) estado.personal.set(owner, new Map());
+      return estado.personal.get(owner)!;
+    };
+    const deps = {
+      ...base.deps,
+      skillStore: {
+        async list(scope: "project" | "personal", owner: string) {
+          estado.listed.push(`${scope}:${owner}`);
+          return [...of(scope, owner)].map(([name, text]) => ({ name, text, updatedAt: new Date(0) }));
+        },
+        async upsert(scope: "project" | "personal", owner: string, name: string, text: string, author: string | null) {
+          estado.upserts.push([scope, owner, name, text, author]);
+          const before = of(scope, owner).get(name) ?? null;
+          of(scope, owner).set(name, text);
+          return { before };
+        },
+        async remove(scope: "project" | "personal", owner: string, name: string) {
+          estado.removed.push(`${scope}:${owner}:${name}`);
+          const before = of(scope, owner).get(name) ?? null;
+          of(scope, owner).delete(name);
+          return { before };
+        },
+      },
+    } as unknown as AgentDeps;
+    return { deps, estado };
+  }
+
+  it("Write of /.len/skills/cotizar/SKILL.md saves it to the store", async () => {
+    const { deps, estado } = depsConSkills();
+    const s = makeSession();
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/skills/cotizar/SKILL.md", content: SKILL });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.deepEqual(estado.upserts, [["project", s.projectId, "cotizar", SKILL, s.userId]]);
+    assert.equal(out.mutoDurable, true);
+  });
+
+  it("a bad SKILL.md is refused with parseSkillFile's error and nothing is saved", async () => {
+    const { deps, estado } = depsConSkills();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/skills/cotizar/SKILL.md", content: "just text" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /name: cotizar/);
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("a user skill named like a bundled one is refused", async () => {
+    const { deps, estado } = depsConSkills();
+    const out = await runAgentTool(makeSession(), deps, "Write", {
+      file_path: "/.len/skills/office-xlsx/SKILL.md",
+      content: SKILL.replace("cotizar", "office-xlsx"),
+    });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /office-xlsx/);
+    assert.match(texto(out), /reserved/);
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("a script next to a user skill is refused", async () => {
+    const { deps, estado } = depsConSkills();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/skills/cotizar/run.py", content: "print(1)" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /only a SKILL\.md/);
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("Read of a personal skill path returns the speaker's, never the owner's", async () => {
+    const { deps, estado } = depsConSkills({ personal: { dueno: { mia: SKILL.replace(/cotizar/g, "mia") } } });
+    const s = { ...makeSession(), userId: "dueno", personId: "editor" } as AgentSession;
+    const out = await runAgentTool(s, deps, "Read", { file_path: "~/.len/skills/mia/SKILL.md" });
+    assert.equal(out.response.ok, false, "the owner's personal skill is not the editor's");
+    assert.ok(estado.listed.includes("personal:editor"));
+    assert.ok(!estado.listed.includes("personal:dueno"));
+  });
+
+  it("rm of a skill deletes it", async () => {
+    const { deps, estado } = depsConSkills({ project: { cotizar: SKILL } });
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/.len/skills/cotizar/SKILL.md" }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual(estado.removed, [`project:${s.projectId}:cotizar`]);
+  });
+
+  it("the terminal's files include the skills", async () => {
+    const { deps } = depsConSkills({ project: { cotizar: SKILL }, personal: { u1: { mia: SKILL.replace(/cotizar/g, "mia") } } });
+    const ficheros = await cargarFicherosDeLaTerminal(makeSession(), deps);
+    assert.equal(ficheros["/.len/skills/cotizar/SKILL.md"], SKILL);
+    assert.ok(Object.hasOwn(ficheros, "/home/user/.len/skills/mia/SKILL.md"));
+  });
+
+  it("Grep does not see the skills", async () => {
+    const { deps } = depsConSkills({ project: { cotizar: SKILL.replace("Ask for", "zanahoria") } });
+    const out = await runAgentTool(makeSession(), deps, "Grep", { pattern: "zanahoria", output_mode: "files_with_matches" });
+    assert.doesNotMatch(texto(out), /\.len\/skills/);
+  });
+});
+
 // LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el
 // de su modo. Con `cat /AGENTS.md` en un turno Dynamis, mandarle a usar Edit
 // sería mandarle a una herramienta que no tiene.

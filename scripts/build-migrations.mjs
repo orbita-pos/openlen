@@ -152,6 +152,8 @@ const targets = [
   // marcadores viejos de `users.agentMemory` / `projects.userBrief`. Aditiva e
   // idempotente (los UPDATE sólo tocan lo que aún lleva el marcador).
   "len-memory-migrate",
+  // Las skills de Len: la tabla `lenSkills` (spec local 2026-10-26-len-skills). Aditiva e idempotente.
+  "len-skills-migrate",
   // Len por correo: los correos a Len, guardados antes de su turno (lenEmailRequests).
   "len-email-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,

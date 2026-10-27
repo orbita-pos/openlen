@@ -99,6 +99,7 @@
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
+    "len-skills:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-skills-migrate.ts",
     "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",
     "profile:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/profile-migrate.ts",
     "movil:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/movil-migrate.ts",
