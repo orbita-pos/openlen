@@ -11,6 +11,8 @@ import { CONFLICTO_AL_GUARDAR, realDeps } from "./tools";
 import { ErrorDeLaWeb, WebUnavailableError, type WebDeps } from "./web/buscar";
 import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
+import { resolveSkills } from "./skills/registry";
+import { bundledSkills } from "./skills/bundled";
 import type { ProjectData } from "@/lib/projects/types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 
@@ -2630,5 +2632,55 @@ describe("Read on an attached PDF", () => {
     const out = await runAgentTool(gone.session, gone.d, "Read", { file_path: PATH });
     assert.equal(out.response.error, "The PDF couldn't be downloaded this time. Don't take it as empty; you can try again.");
     assert.deepEqual(calls, []);
+  });
+});
+
+// SKILLS (spec local 2026-10-26-len-skills, §4.4): DeepSeek's `skill({ name })`, its
+// `<skill_content>` answer and its three errors; Claude Code's line for a skill already loaded.
+describe("the skill tool", () => {
+  const withSkills = (project: { name: string; text: string }[] = []) => {
+    const session = makeSession();
+    session.skills = resolveSkills({ bundled: bundledSkills(), project: project.map((p) => ({ ...p, updatedAt: new Date(0) })), personal: [] });
+    return session;
+  };
+  const text = (out: { response: Record<string, unknown> }) => String(out.response.tool_result ?? out.response.error);
+
+  it("loads a skill as DeepSeek's skill_content", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(withSkills(), deps, "skill", { name: "office-xlsx" });
+    assert.equal(out.response.ok, true, text(out));
+    assert.match(text(out), /^<skill_content name="office-xlsx">\n<skill_resources>\nBase directory for this skill: \/\.openlen\/skills\/office-xlsx\n/);
+    assert.match(text(out), /<skill_instructions>\n# Excel workbooks/);
+    assert.doesNotMatch(text(out), /^---$/m, "the frontmatter stays out");
+    assert.match(text(out), /<\/skill_instructions>\n<\/skill_content>$/);
+  });
+
+  it("an unknown name says it is unknown or no longer available", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(withSkills(), deps, "skill", { name: "gone-skill" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, 'skill "gone-skill" is unknown or no longer available');
+  });
+
+  it("an invalid name and a model-disabled skill fail with their own errors", async () => {
+    const { deps } = makeDeps();
+    const session = withSkills([{ name: "solo-mia", text: "---\nname: solo-mia\ndescription: d\ndisable-model-invocation: true\n---\n\nDo it.\n" }]);
+    assert.equal((await runAgentTool(session, deps, "skill", { name: "Not A Name" })).response.error, 'invalid skill name "Not A Name"');
+    assert.equal((await runAgentTool(session, deps, "skill", { name: "solo-mia" })).response.error, 'skill "solo-mia" is not available for model invocation');
+  });
+
+  it("a skill already loaded answers as Claude Code", async () => {
+    const { deps } = makeDeps();
+    const session = withSkills();
+    await runAgentTool(session, deps, "skill", { name: "office-xlsx" });
+    const again = await runAgentTool(session, deps, "skill", { name: "office-xlsx" });
+    assert.equal(again.response.ok, true);
+    assert.equal(text(again), "Skill /office-xlsx is already loaded above; instructions unchanged.");
+  });
+
+  it("without skills in the session, every name is unknown", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "skill", { name: "office-xlsx" });
+    assert.equal(out.response.error, 'skill "office-xlsx" is unknown or no longer available');
   });
 });

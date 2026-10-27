@@ -819,6 +819,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "skill",
+    "description": "Load the full instructions for a skill. Call it before acting on a task that names or clearly matches a skill in the session skill catalog.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "name": {
+          "type": "STRING",
+          "description": "The exact skill name from the available skills list."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -1697,6 +1713,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "skill",
+    "description": "Load the full instructions for a skill. Call it before acting on a task that names or clearly matches a skill in the session skill catalog.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "name": {
+          "type": "STRING",
+          "description": "The exact skill name from the available skills list."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
     "name": "enter_plan_mode",
     "description": "Ask the user to switch this conversation to plan mode before a change that isn't trivial, so you explore first and agree on the approach instead of redoing work. Use it when any of these is true: the request adds something new (a section, a page, a form, a feature); it can be done in more than one reasonable way; it changes how something that already works behaves; it means choosing between approaches (where the data lives, how something is laid out); it will touch more than two or three files; the request is vague and you need to look before you know how big it is; or the result depends on the user's taste — if you were about to ask them how they want it, plan instead. Skip it for small, clear changes (a text, a color, an obvious fix) and when the user already said exactly what they want. When unsure, plan. The user must accept; if they decline, carry on with the request without plan mode.",
     "parameters": {
@@ -2565,6 +2597,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "title",
         "loading_messages",
         "widget_code"
+      ]
+    }
+  },
+  {
+    "name": "skill",
+    "description": "Load the full instructions for a skill. Call it before acting on a task that names or clearly matches a skill in the session skill catalog.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "name": {
+          "type": "STRING",
+          "description": "The exact skill name from the available skills list."
+        }
+      },
+      "required": [
+        "name"
       ]
     }
   },

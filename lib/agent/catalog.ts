@@ -58,6 +58,8 @@ import { DECLARACION_CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/c
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
+import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
+import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { artifactToolDeclarations } from "@/lib/artifacts/tools";
@@ -185,6 +187,8 @@ function declaracionesDelModo(
   }
   // SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.9): on unless OPENLEN_SHOPIFY=0, per server.
   if (!shopifyEnabledIn(_env)) fuera.add(CONNECT_SHOPIFY_STORE);
+  // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
+  if (!skillsEnabled(_env)) fuera.add(SKILL_TOOL);
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
   if (conTerminal) for (const n of SUSTITUIDAS_POR_LA_TERMINAL) fuera.add(n);
@@ -469,6 +473,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // palabras nuestras (`lib/agent/visuals/tools.ts`).
     READ_ME_DECLARATION,
     SHOW_WIDGET_DECLARATION,
+    // SKILLS (spec local 2026-10-26-len-skills): DeepSeek's `skill`, the one that loads a skill of the catalog.
+    DECLARACION_SKILL,
     // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
     // acepta) y la salida de DeepSeek (el plan se revisa) en
     // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:

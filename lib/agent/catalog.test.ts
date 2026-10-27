@@ -110,6 +110,8 @@ describe("buildFunctionDeclarations", () => {
       // Los visuales de Len (spec local 2026-10-16): las dos de Claude.
       "read_me",
       "show_widget",
+      // Skills (spec local 2026-10-26-len-skills): DeepSeek's, the one that loads a skill.
+      "skill",
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",
@@ -374,6 +376,15 @@ describe("buildAgentSystemPrompt", () => {
         "You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.",
       );
     }
+  });
+
+  it("declares skill only with skills on, with DeepSeek's text", () => {
+    const on = buildFunctionDeclarations({}).find((d) => d.name === "skill");
+    expect(on?.description).toBe(
+      "Load the full instructions for a skill. Call it before acting on a task that names or clearly matches a skill in the session skill catalog.",
+    );
+    expect(JSON.stringify(on?.parameters)).toContain("The exact skill name from the available skills list.");
+    expect(buildFunctionDeclarations({ OPENLEN_SKILLS: "0" }).some((d) => d.name === "skill")).toBe(false);
   });
 
   it("🔴 web_search is what current events and recent data go through, as Claude Code's WebSearch", () => {
