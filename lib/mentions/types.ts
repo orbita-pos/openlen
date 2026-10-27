@@ -79,3 +79,11 @@ export type MentionRef =
 export type MentionIndexResponse =
   | { kind: "page"; hash: string; files: string[]; pages: { page: string | null; ruta: string; tagged: string }[] }
   | { kind: "app"; hash: string; files: string[]; entries: MentionEntry[] };
+
+/** A click on the canvas that became a mention, on its way to the chat's draft.
+ *  `labelInDraft`: the label is already in a draft the workshop proposes. */
+export interface IncomingMention {
+  ref: MentionRef;
+  id: number;
+  labelInDraft?: boolean;
+}

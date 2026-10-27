@@ -602,8 +602,8 @@ export function ChatSandbox({ dark, only, scene = null }: { dark: boolean; only:
                       onChatChange={refresh}
                       sectionSelectMode={selecting.new}
                       onToggleSectionSelect={(a) => setSelecting((x) => ({ ...x, new: a }))}
-                      scopedSelection={scope.new}
-                      onClearScope={() => setScope((x) => ({ ...x, new: null }))}
+                      incomingMention={scope.new ? { ref: { type: "element", label: `@${scope.new.hint}`, text: "", target: { type: "page", page: null, path: scope.new.path, tag: "section" } }, id: 1 } : null}
+                      onIncomingMentionConsumed={() => setScope((x) => ({ ...x, new: null }))}
                       pendingDraft={draft.new?.text ?? null}
                       pendingDraftAutoSend={draft.new?.auto ?? false}
                       onPendingDraftConsumed={() => setDraft((x) => ({ ...x, new: null }))}

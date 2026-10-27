@@ -32,6 +32,9 @@ import { TurnClose } from "./turn-close";
 import type { DesignTurn } from "./use-agent-chat";
 import { roundOfTurn } from "./goal-state";
 import { TextoConMenciones } from "../hilos-del-codigo";
+import { highlightOnCanvas } from "../mention-highlight";
+
+const SIN_MENCIONES: readonly string[] = [];
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { latestTodosOfActions } from "@/lib/agent/todo-list";
 import { TodoListView, continueStep } from "./todo-list";
@@ -173,7 +176,22 @@ export function UserMessage({
               {t("newChat.goal.label")}
             </div>
           )}
-          <TextoConMenciones texto={text} gente={gente} colorDe={colorDe} />
+          {/* THE «@» MENTIONS it carried (spec local 2026-10-27): painted, and
+              hovering one outlines its element on the canvas. */}
+          <span
+            onMouseOver={(e) => {
+              const el = (e.target as HTMLElement).closest('[data-mencion="elemento"]');
+              const m = el ? turn.mentions?.find((x) => x.label === el.textContent) : undefined;
+              if (m?.type === "element") highlightOnCanvas(m.label, m.target);
+            }}
+            onMouseOut={(e) => {
+              const el = (e.target as HTMLElement).closest('[data-mencion="elemento"]');
+              const m = el ? turn.mentions?.find((x) => x.label === el.textContent) : undefined;
+              if (m?.type === "element") highlightOnCanvas(m.label, null);
+            }}
+          >
+            <TextoConMenciones texto={text} gente={gente} colorDe={colorDe} etiquetas={turn.mentions?.map((m) => m.label) ?? SIN_MENCIONES} />
+          </span>
         </div>
         <span
           aria-hidden
