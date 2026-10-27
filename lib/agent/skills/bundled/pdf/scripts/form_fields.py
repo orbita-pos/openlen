@@ -48,6 +48,7 @@ def open_pdf(path):
 def _text(value):
     if value is None:
         return None
+    value = value.get_object()  # a value written through a reference reads like a direct one
     if isinstance(value, NameObject):
         return str(value)[1:]
     if isinstance(value, ArrayObject):

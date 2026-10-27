@@ -4345,7 +4345,7 @@ It checks every id and every value before writing anything. Fix what it reports 
 python3 <base directory>/scripts/form_layout.py "<form.pdf>"
 \`\`\`
 
-For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left. \`has_text\` says whether the PDF has any text at all.
+For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left of the page as it is shown, also when it is turned. \`has_text\` says whether the PDF has any text at all.
 
 When \`has_text\` is true, place each answer from that structure: an answer starts a few points after its label (\`x0\` = the label's \`x1\` + 4) and sits just above the line under it; a checkbox answer is an \`X\` inside its box.
 
@@ -4412,7 +4412,7 @@ It checks every id and every value before writing anything. Fix what it reports 
 python3 <base directory>/scripts/form_layout.py "<form.pdf>"
 \`\`\`
 
-For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left. \`has_text\` says whether the PDF has any text at all.
+For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left of the page as it is shown, also when it is turned. \`has_text\` says whether the PDF has any text at all.
 
 When \`has_text\` is true, place each answer from that structure: an answer starts a few points after its label (\`x0\` = the label's \`x1\` + 4) and sits just above the line under it; a checkbox answer is an \`X\` inside its box.
 
@@ -4451,7 +4451,7 @@ exports[`golden de los prompts de producción > manual de la plataforma (/.openl
 Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>
 
 values.json is {"<field id>": value}, with the ids form_fields.py prints. A text field takes a
-string; a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
+string (a number is written as text); a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
 takes one of its "options". Every id and value is checked before anything is written: on a wrong
 one it exits 1, says which and what is valid, and writes nothing.
 
@@ -4482,10 +4482,11 @@ def resolve(fields, values):
             continue
         kind = field["type"]
         if kind == "text":
-            if not isinstance(value, str):
+            if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                 errors.append(f"{key!r} is a text field: give it a string")
                 continue
-            out[key] = value
+            # A number is written as text: 25 is "25", 25.0 is "25" too.
+            out[key] = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
         elif kind == "checkbox":
             on = field["on"]
             if value is True or _state(value) == on:
@@ -4548,7 +4549,7 @@ exports[`golden de los prompts de producción > manual de la plataforma (/.openl
 Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>
 
 values.json is {"<field id>": value}, with the ids form_fields.py prints. A text field takes a
-string; a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
+string (a number is written as text); a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
 takes one of its "options". Every id and value is checked before anything is written: on a wrong
 one it exits 1, says which and what is valid, and writes nothing.
 
@@ -4579,10 +4580,11 @@ def resolve(fields, values):
             continue
         kind = field["type"]
         if kind == "text":
-            if not isinstance(value, str):
+            if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                 errors.append(f"{key!r} is a text field: give it a string")
                 continue
-            out[key] = value
+            # A number is written as text: 25 is "25", 25.0 is "25" too.
+            out[key] = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
         elif kind == "checkbox":
             on = field["on"]
             if value is True or _state(value) == on:
@@ -4689,6 +4691,7 @@ def open_pdf(path):
 def _text(value):
     if value is None:
         return None
+    value = value.get_object()  # a value written through a reference reads like a direct one
     if isinstance(value, NameObject):
         return str(value)[1:]
     if isinstance(value, ArrayObject):
@@ -4827,6 +4830,7 @@ def open_pdf(path):
 def _text(value):
     if value is None:
         return None
+    value = value.get_object()  # a value written through a reference reads like a direct one
     if isinstance(value, NameObject):
         return str(value)[1:]
     if isinstance(value, ArrayObject):
@@ -4925,8 +4929,9 @@ Prints {"pages": [page], "has_text": bool}. A page is
    "labels": [{"text", "x0", "top", "x1", "bottom"}],  words of one line next to each other, joined
    "lines": [{"x0", "x1", "y"}],                       horizontal rules (answers usually sit on one)
    "boxes": [{"x0", "top", "x1", "bottom"}]}           small squares, 6 to 20 pt (usually checkboxes)
-in PDF points with the origin at the TOP left, the coordinates place_text.py takes. "has_text"
-false means the pages are images (a scan): look at them instead.
+in PDF points with the origin at the TOP left of the page as it is shown (also when it is turned with
+/Rotate), the coordinates place_text.py takes. "has_text" false means the pages are images (a scan):
+look at them instead.
 
 Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pdfplumber.
 """
@@ -4981,15 +4986,20 @@ def main():
     if len(sys.argv) != 2:
         fail(1, "Usage: python3 form_layout.py <in.pdf>")
     path = sys.argv[1]
-    open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
+    reader = open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
     pages, has_text = [], False
     with pdfplumber.open(path) as pdf:
         for number, page in enumerate(pdf.pages, start=1):
             has_text = has_text or bool(page.chars)
+            # pdfplumber gives the words and rules of a turned page (/Rotate) as it is shown, but its
+            # width and height as stored: a page turned 90° or 270° is shown with them swapped.
+            width, height = float(page.width), float(page.height)
+            if reader.pages[number - 1].rotation % 180:
+                width, height = height, width
             pages.append({
                 "page": number,
-                "width": round(float(page.width), 1),
-                "height": round(float(page.height), 1),
+                "width": round(width, 1),
+                "height": round(height, 1),
                 "labels": labels_of(page),
                 "lines": lines_of(page),
                 "boxes": boxes_of(page),
@@ -5013,8 +5023,9 @@ Prints {"pages": [page], "has_text": bool}. A page is
    "labels": [{"text", "x0", "top", "x1", "bottom"}],  words of one line next to each other, joined
    "lines": [{"x0", "x1", "y"}],                       horizontal rules (answers usually sit on one)
    "boxes": [{"x0", "top", "x1", "bottom"}]}           small squares, 6 to 20 pt (usually checkboxes)
-in PDF points with the origin at the TOP left, the coordinates place_text.py takes. "has_text"
-false means the pages are images (a scan): look at them instead.
+in PDF points with the origin at the TOP left of the page as it is shown (also when it is turned with
+/Rotate), the coordinates place_text.py takes. "has_text" false means the pages are images (a scan):
+look at them instead.
 
 Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pdfplumber.
 """
@@ -5069,15 +5080,20 @@ def main():
     if len(sys.argv) != 2:
         fail(1, "Usage: python3 form_layout.py <in.pdf>")
     path = sys.argv[1]
-    open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
+    reader = open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
     pages, has_text = [], False
     with pdfplumber.open(path) as pdf:
         for number, page in enumerate(pdf.pages, start=1):
             has_text = has_text or bool(page.chars)
+            # pdfplumber gives the words and rules of a turned page (/Rotate) as it is shown, but its
+            # width and height as stored: a page turned 90° or 270° is shown with them swapped.
+            width, height = float(page.width), float(page.height)
+            if reader.pages[number - 1].rotation % 180:
+                width, height = height, width
             pages.append({
                 "page": number,
-                "width": round(float(page.width), 1),
-                "height": round(float(page.height), 1),
+                "width": round(width, 1),
+                "height": round(height, 1),
                 "labels": labels_of(page),
                 "lines": lines_of(page),
                 "boxes": boxes_of(page),
@@ -5099,8 +5115,9 @@ Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>
 fields.json is
   {"fields": [{"page": int (from 1), "box": [x0, top, x1, bottom], "text": str, "size": 10}],
    "images": [{"page": int, "width": int, "height": int}]}
-with each box in PDF points, origin at the top left (what form_layout.py prints). A page listed in
-"images" has its boxes in pixels of a render of that size instead. Each text is stamped into its
+with each box in PDF points, origin at the top left of the page as it is shown, also when it is
+turned with /Rotate (what form_layout.py prints). A page listed in "images" has its boxes in pixels
+of a render of that size instead. Each text is stamped into its
 page, left-aligned and centered in its box, so it prints and its text can be extracted.
 
 Refuses (exit 1, nothing written) two boxes that overlap on a page, and a text that does not fit its
@@ -5129,6 +5146,14 @@ FONT_FILES = {
     "ko": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
     "zh": "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 }
+# A page turned with /Rotate is shown turned clockwise: reportlab's transform that draws in the shown
+# page's coordinates (x right, y up) onto the stored page of width w and height h.
+TURN = {
+    0: lambda w, h: (1, 0, 0, 1, 0, 0),
+    90: lambda w, h: (0, 1, -1, 0, w, 0),
+    180: lambda w, h: (-1, 0, 0, -1, w, h),
+    270: lambda w, h: (0, -1, 1, 0, 0, h),
+}
 KANA = re.compile("[぀-ヿ]")
 HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏가-힯]")
 HAN = re.compile("[㐀-䶿一-鿿]")
@@ -5141,6 +5166,12 @@ def font_for(text):
         path = FONT_FILES[key]
         pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0) if path.endswith(".ttc") else TTFont(name, path))
     return name
+
+
+def shown_size(page):
+    """The page's width and height as it is shown: swapped when it is turned 90° or 270°."""
+    w, h = float(page.mediabox.width), float(page.mediabox.height)
+    return (h, w) if page.rotation % 180 else (w, h)
 
 
 def read_fields(path, reader):
@@ -5173,9 +5204,9 @@ def read_fields(path, reader):
         if len(box) != 4 or box[0] >= box[2] or box[1] >= box[3] or not text or size <= 0:
             errors.append(f"field {n}: box must be [x0, top, x1, bottom] with x0 < x1 and top < bottom, and text not empty")
             continue
-        media = reader.pages[page - 1].mediabox
         if page in images:
-            sx, sy = float(media.width) / images[page][0], float(media.height) / images[page][1]
+            shown_w, shown_h = shown_size(reader.pages[page - 1])
+            sx, sy = shown_w / images[page][0], shown_h / images[page][1]
             box = [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy]
         fields.append({"n": n, "page": page, "box": box, "text": text, "size": size})
     return fields, errors
@@ -5197,15 +5228,18 @@ def check(fields):
 def stamp(reader, fields):
     writer = PdfWriter(clone_from=reader)
     for number in sorted({f["page"] for f in fields}):
-        media = reader.pages[number - 1].mediabox
+        page = reader.pages[number - 1]
+        media = page.mediabox
         left, bottom_edge = float(media.left), float(media.bottom)
-        height = float(media.height)
+        width, height = float(media.width), float(media.height)
+        shown_height = shown_size(page)[1]
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=(float(media.width), height))
+        c = canvas.Canvas(buffer, pagesize=(width, height))
+        c.transform(*TURN[page.rotation % 360](width, height))
         for f in (f for f in fields if f["page"] == number):
             x0, top, _x1, bottom = f["box"]
             c.setFont(font_for(f["text"]), f["size"])
-            baseline = height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
+            baseline = shown_height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
             c.drawString(x0 + 1, baseline, f["text"])
         c.save()
         overlay = PdfReader(io.BytesIO(buffer.getvalue())).pages[0]
@@ -5251,8 +5285,9 @@ Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>
 fields.json is
   {"fields": [{"page": int (from 1), "box": [x0, top, x1, bottom], "text": str, "size": 10}],
    "images": [{"page": int, "width": int, "height": int}]}
-with each box in PDF points, origin at the top left (what form_layout.py prints). A page listed in
-"images" has its boxes in pixels of a render of that size instead. Each text is stamped into its
+with each box in PDF points, origin at the top left of the page as it is shown, also when it is
+turned with /Rotate (what form_layout.py prints). A page listed in "images" has its boxes in pixels
+of a render of that size instead. Each text is stamped into its
 page, left-aligned and centered in its box, so it prints and its text can be extracted.
 
 Refuses (exit 1, nothing written) two boxes that overlap on a page, and a text that does not fit its
@@ -5281,6 +5316,14 @@ FONT_FILES = {
     "ko": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
     "zh": "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 }
+# A page turned with /Rotate is shown turned clockwise: reportlab's transform that draws in the shown
+# page's coordinates (x right, y up) onto the stored page of width w and height h.
+TURN = {
+    0: lambda w, h: (1, 0, 0, 1, 0, 0),
+    90: lambda w, h: (0, 1, -1, 0, w, 0),
+    180: lambda w, h: (-1, 0, 0, -1, w, h),
+    270: lambda w, h: (0, -1, 1, 0, 0, h),
+}
 KANA = re.compile("[぀-ヿ]")
 HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏가-힯]")
 HAN = re.compile("[㐀-䶿一-鿿]")
@@ -5293,6 +5336,12 @@ def font_for(text):
         path = FONT_FILES[key]
         pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0) if path.endswith(".ttc") else TTFont(name, path))
     return name
+
+
+def shown_size(page):
+    """The page's width and height as it is shown: swapped when it is turned 90° or 270°."""
+    w, h = float(page.mediabox.width), float(page.mediabox.height)
+    return (h, w) if page.rotation % 180 else (w, h)
 
 
 def read_fields(path, reader):
@@ -5325,9 +5374,9 @@ def read_fields(path, reader):
         if len(box) != 4 or box[0] >= box[2] or box[1] >= box[3] or not text or size <= 0:
             errors.append(f"field {n}: box must be [x0, top, x1, bottom] with x0 < x1 and top < bottom, and text not empty")
             continue
-        media = reader.pages[page - 1].mediabox
         if page in images:
-            sx, sy = float(media.width) / images[page][0], float(media.height) / images[page][1]
+            shown_w, shown_h = shown_size(reader.pages[page - 1])
+            sx, sy = shown_w / images[page][0], shown_h / images[page][1]
             box = [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy]
         fields.append({"n": n, "page": page, "box": box, "text": text, "size": size})
     return fields, errors
@@ -5349,15 +5398,18 @@ def check(fields):
 def stamp(reader, fields):
     writer = PdfWriter(clone_from=reader)
     for number in sorted({f["page"] for f in fields}):
-        media = reader.pages[number - 1].mediabox
+        page = reader.pages[number - 1]
+        media = page.mediabox
         left, bottom_edge = float(media.left), float(media.bottom)
-        height = float(media.height)
+        width, height = float(media.width), float(media.height)
+        shown_height = shown_size(page)[1]
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=(float(media.width), height))
+        c = canvas.Canvas(buffer, pagesize=(width, height))
+        c.transform(*TURN[page.rotation % 360](width, height))
         for f in (f for f in fields if f["page"] == number):
             x0, top, _x1, bottom = f["box"]
             c.setFont(font_for(f["text"]), f["size"])
-            baseline = height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
+            baseline = shown_height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
             c.drawString(x0 + 1, baseline, f["text"])
         c.save()
         overlay = PdfReader(io.BytesIO(buffer.getvalue())).pages[0]

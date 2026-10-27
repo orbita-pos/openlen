@@ -4,7 +4,7 @@
 Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>
 
 values.json is {"<field id>": value}, with the ids form_fields.py prints. A text field takes a
-string; a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
+string (a number is written as text); a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
 takes one of its "options". Every id and value is checked before anything is written: on a wrong
 one it exits 1, says which and what is valid, and writes nothing.
 
@@ -35,10 +35,11 @@ def resolve(fields, values):
             continue
         kind = field["type"]
         if kind == "text":
-            if not isinstance(value, str):
+            if isinstance(value, bool) or not isinstance(value, (str, int, float)):
                 errors.append(f"{key!r} is a text field: give it a string")
                 continue
-            out[key] = value
+            # A number is written as text: 25 is "25", 25.0 is "25" too.
+            out[key] = str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
         elif kind == "checkbox":
             on = field["on"]
             if value is True or _state(value) == on:

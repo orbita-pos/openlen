@@ -6,8 +6,9 @@ Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>
 fields.json is
   {"fields": [{"page": int (from 1), "box": [x0, top, x1, bottom], "text": str, "size": 10}],
    "images": [{"page": int, "width": int, "height": int}]}
-with each box in PDF points, origin at the top left (what form_layout.py prints). A page listed in
-"images" has its boxes in pixels of a render of that size instead. Each text is stamped into its
+with each box in PDF points, origin at the top left of the page as it is shown, also when it is
+turned with /Rotate (what form_layout.py prints). A page listed in "images" has its boxes in pixels
+of a render of that size instead. Each text is stamped into its
 page, left-aligned and centered in its box, so it prints and its text can be extracted.
 
 Refuses (exit 1, nothing written) two boxes that overlap on a page, and a text that does not fit its
@@ -36,6 +37,14 @@ FONT_FILES = {
     "ko": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
     "zh": "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
 }
+# A page turned with /Rotate is shown turned clockwise: reportlab's transform that draws in the shown
+# page's coordinates (x right, y up) onto the stored page of width w and height h.
+TURN = {
+    0: lambda w, h: (1, 0, 0, 1, 0, 0),
+    90: lambda w, h: (0, 1, -1, 0, w, 0),
+    180: lambda w, h: (-1, 0, 0, -1, w, h),
+    270: lambda w, h: (0, -1, 1, 0, 0, h),
+}
 KANA = re.compile("[぀-ヿ]")
 HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏가-힯]")
 HAN = re.compile("[㐀-䶿一-鿿]")
@@ -48,6 +57,12 @@ def font_for(text):
         path = FONT_FILES[key]
         pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0) if path.endswith(".ttc") else TTFont(name, path))
     return name
+
+
+def shown_size(page):
+    """The page's width and height as it is shown: swapped when it is turned 90° or 270°."""
+    w, h = float(page.mediabox.width), float(page.mediabox.height)
+    return (h, w) if page.rotation % 180 else (w, h)
 
 
 def read_fields(path, reader):
@@ -80,9 +95,9 @@ def read_fields(path, reader):
         if len(box) != 4 or box[0] >= box[2] or box[1] >= box[3] or not text or size <= 0:
             errors.append(f"field {n}: box must be [x0, top, x1, bottom] with x0 < x1 and top < bottom, and text not empty")
             continue
-        media = reader.pages[page - 1].mediabox
         if page in images:
-            sx, sy = float(media.width) / images[page][0], float(media.height) / images[page][1]
+            shown_w, shown_h = shown_size(reader.pages[page - 1])
+            sx, sy = shown_w / images[page][0], shown_h / images[page][1]
             box = [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy]
         fields.append({"n": n, "page": page, "box": box, "text": text, "size": size})
     return fields, errors
@@ -104,15 +119,18 @@ def check(fields):
 def stamp(reader, fields):
     writer = PdfWriter(clone_from=reader)
     for number in sorted({f["page"] for f in fields}):
-        media = reader.pages[number - 1].mediabox
+        page = reader.pages[number - 1]
+        media = page.mediabox
         left, bottom_edge = float(media.left), float(media.bottom)
-        height = float(media.height)
+        width, height = float(media.width), float(media.height)
+        shown_height = shown_size(page)[1]
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=(float(media.width), height))
+        c = canvas.Canvas(buffer, pagesize=(width, height))
+        c.transform(*TURN[page.rotation % 360](width, height))
         for f in (f for f in fields if f["page"] == number):
             x0, top, _x1, bottom = f["box"]
             c.setFont(font_for(f["text"]), f["size"])
-            baseline = height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
+            baseline = shown_height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
             c.drawString(x0 + 1, baseline, f["text"])
         c.save()
         overlay = PdfReader(io.BytesIO(buffer.getvalue())).pages[0]

@@ -21,6 +21,14 @@ describe("Write", () => {
     expect(r).toMatchObject({ ok: false, resultado: { error: MANUAL_SOLO_LECTURA } });
   });
 
+  // 27/10: the same refusal guards OpenLen's skills; it says so, and where the user's own skill goes.
+  it("🔴 /.openlen/skills is read-only too, and the refusal names it", () => {
+    const r = planearWrite({ file_path: "/.openlen/skills/pdf/forms.md", content: "x" }, sitio({ "/index.html": "x" }), new Map());
+    expect(r).toMatchObject({ ok: false, resultado: { error: MANUAL_SOLO_LECTURA } });
+    expect(MANUAL_SOLO_LECTURA).toContain("/.openlen/skills");
+    expect(MANUAL_SOLO_LECTURA).toContain("/.len/skills/<name>/SKILL.md");
+  });
+
   it("un fichero nuevo se crea sin haber leído nada", () => {
     const r = planearWrite({ file_path: "/nosotros/index.html", content: "<h1>Nosotros</h1>" }, sitio({ "/index.html": "x" }), new Map());
     if (!r.ok) throw new Error(r.resultado.texto);
