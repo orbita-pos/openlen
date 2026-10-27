@@ -7,6 +7,8 @@ import "server-only";
 
 import type { SeleccionDelDueno } from "@/lib/agent/context";
 import type { MentionedFile } from "@/lib/agent/context";
+import { parse as parseHtml } from "node-html-parser";
+
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 
 import { outlineFile } from "./app-outline";
@@ -50,18 +52,11 @@ export function parseMentions(raw: unknown): MentionRef[] {
   return out;
 }
 
-const ENTITIES: Readonly<Record<string, string>> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
-
-/** The words a person reads in an HTML fragment: tags out, entities decoded. */
+/** The words a person reads in an HTML fragment: tags out (each one a space, so
+ *  words on both sides of a tag stay apart), then every entity decoded. */
 function wordsOf(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) =>
-      e[0] === "#" ? String.fromCodePoint(e[1]?.toLowerCase() === "x" ? parseInt(e.slice(2), 16) : Number(e.slice(1))) : (ENTITIES[e.toLowerCase()] ?? m),
-    )
-    .replace(/\s+/g, " ")
-    .trim();
+  const stripped = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]*>/g, " ");
+  return parseHtml(stripped).text.replace(/\s+/g, " ").trim();
 }
 
 /** Every word of the element's own text is in the fragment's text (its own text
