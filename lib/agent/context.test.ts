@@ -777,6 +777,33 @@ describe("assembleTurnMessages", () => {
     ).toEqual(r.messages);
   });
 
+  // SKILLS (spec local 2026-10-26-len-skills, §4.3): the catalog is its own durable message, after
+  // the memory and before the context, as DeepSeek injects it; the speaker's own skills ride the context.
+  it("the skill catalog goes after the memory, before the context", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", memoryMessage: "MEMORIA", skillCatalogMessage: "CATALOGO", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.messages.map((m) => m.content)).toEqual([r.systemPrompt, r.messages[1]!.content, "MEMORIA", "CATALOGO", r.contextBlock, `hola${r.avisos}`]);
+  });
+
+  it("the speaker's own skills go at the end of the context", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", personalSkills: "<system-reminder>\nMIAS\n</system-reminder>\n", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.contextBlock.endsWith("<system-reminder>\nMIAS\n</system-reminder>\n")).toBe(true);
+  });
+
+  it("🔴 the next turn rebuilds the catalog in its place, byte for byte", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", memoryMessage: "MEMORIA", skillCatalogMessage: "CATALOGO", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    const rehecho = historialDesdeLaBase([
+      {
+        userText: "hola",
+        assistantReasoning: "",
+        transcript: { mensajes: [], leidos: [], memoria: "MEMORIA", skills: "CATALOGO", contexto: r.contextBlock, ...(r.avisos ? { avisos: r.avisos } : {}) },
+      },
+    ]);
+    expect(rehecho.map((m) => m.content)).toEqual(r.messages.slice(2).map((m) => m.content));
+  });
+
   // 🔴 La escena «photo-turn»: el turno con foto mandaba tu mensaje sin la nota
   // y el historial lo reconstruía con ella; el turno siguiente pagaba el de la
   // foto entero sin caché.

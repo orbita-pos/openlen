@@ -44,6 +44,13 @@ describe("historialDesdeLaBase", () => {
     expect(h[1]).toMatchObject({ role: "user", content: "Hola", opensTurn: true });
   });
 
+  it("replays the skills catalog after the memory", () => {
+    const h = historialDesdeLaBase([
+      { userText: "Hola", assistantReasoning: "", transcript: { mensajes: [], leidos: [], memoria: "MEMORIA", skills: "CATALOGO", skillsDigest: "d1" } },
+    ]);
+    expect(h.slice(0, 3).map((m) => m.content)).toEqual(["MEMORIA", "CATALOGO", "Hola"]);
+  });
+
   // plans/len-md: la conversación es compartida entre miembros; el ~/.len/LEN.md
   // de cada uno es privado (lib/agent/memory/private-memory.ts).
   it("🔴 lo de ~/.len/LEN.md no vuelve en el historial, ni de filas viejas con /memoria/dueno.md", () => {

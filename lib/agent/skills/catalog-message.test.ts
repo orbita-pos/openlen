@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SKILL_DESCRIPTION_MAX, catalogBudgetChars, catalogDigest, personalSkillsReminder, skillCatalogMessage } from "./catalog-message";
+import { SKILL_DESCRIPTION_MAX, catalogBudgetChars, catalogDigest, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "./catalog-message";
 import type { ResolvedSkill } from "./registry";
 
 const skill = (name: string, description = `${name} skill`): ResolvedSkill => ({
@@ -84,6 +84,13 @@ describe("personalSkillsReminder", () => {
 
   it("is empty without skills", () => {
     expect(personalSkillsReminder([], BIG)).toBe("");
+  });
+});
+
+describe("foldSkillsDigest", () => {
+  it("is the newest digest the history still carries", () => {
+    expect(foldSkillsDigest([{ transcript: { skillsDigest: "a" } }, { transcript: null }, { transcript: { skillsDigest: "b" } }, { transcript: {} }])).toBe("b");
+    expect(foldSkillsDigest([{ transcript: null }])).toBeNull();
   });
 });
 

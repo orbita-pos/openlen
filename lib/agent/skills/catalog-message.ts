@@ -58,6 +58,14 @@ export function catalogDigest(skills: readonly ResolvedSkill[]): string {
   return h.digest("hex");
 }
 
+/** What the model already knows: the newest catalog digest among the rows the history resends. A
+ *  catalog that left the window no longer counts, so it goes again (like `foldMemoryDigests`). */
+export function foldSkillsDigest(rows: readonly { readonly transcript: { readonly skillsDigest?: string } | null }[]): string | null {
+  let known: string | null = null;
+  for (const row of rows) if (row.transcript?.skillsDigest) known = row.transcript.skillsDigest;
+  return known;
+}
+
 const INSTRUCTIONS =
   "If the user names a skill, or the task clearly matches a skill's description, call the `skill` tool with the exact skill name before taking task actions. Load all applicable skills, then follow their full instructions. This catalog contains summaries only; do not infer or follow a skill's instructions until it has been loaded.";
 const DIRECT = "A user may also invoke a skill directly; its <skill_content> block then appears in this conversation. Follow it, and do not call the `skill` tool again for that skill.";

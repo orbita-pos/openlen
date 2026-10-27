@@ -49,6 +49,10 @@ import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { MEMORY_INDEX_MAX, buildMemoryIndex } from "@/lib/agent/memory/note";
 import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
+import { bundledSkills } from "@/lib/agent/skills/bundled";
+import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "@/lib/agent/skills/catalog-message";
+import { skillsEnabled } from "@/lib/agent/skills/enabled";
+import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
@@ -1008,6 +1012,27 @@ async function correrTurno(
     historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
     PROJECT_MEMORY_MAX,
   );
+  // SKILLS (spec local 2026-10-26-len-skills, §4.3): OpenLen's and the project's as a durable
+  // message, like the memory (it goes again only when it changes); the speaker's own ride the
+  // turn's context, like ~/.len/LEN.md. The durable one never depends on who speaks: it is built
+  // without the personal ones, even where a personal skill shadows a project's.
+  const skillsOn = skillsEnabled();
+  const [skillsDelProyecto, skillsPersonales] = skillsOn
+    ? await Promise.all([
+        conPlazo(async () => (await deps.skillStore?.list("project", projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+        conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+      ])
+    : [[], []];
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills(), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
+  const catalogoDelTurno = skillsOn
+    ? skillCatalogMessage(
+        resolveSkills({ bundled: bundledSkills(), project: skillsDelProyecto, personal: [] }).modelInvocable(),
+        historialDeLaBase ? foldSkillsDigest(filasDelHistorial) : null,
+        presupuestoDeSkills,
+      )
+    : null;
+  const skillsPropias = skillsOn ? personalSkillsReminder(skillsDelTurno.modelInvocable().filter((s) => s.scope === "personal"), presupuestoDeSkills) || null : null;
 
   // LA ZONA DEL TURNO, resuelta UNA vez y antes del contexto: el HOY que lee
   // Len y el «hoy» que cuentan sus herramientas tienen que ser el mismo día.
@@ -1039,6 +1064,8 @@ async function correrTurno(
     design: bloqueDeDiseno || null,
     state,
     memoryMessage: memoriaDelTurno?.text ?? null,
+    skillCatalogMessage: catalogoDelTurno?.text ?? null,
+    personalSkills: skillsPropias,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
@@ -1165,6 +1192,7 @@ async function correrTurno(
   // Desde la app del teléfono no hay sesión que traiga el correo: se lee de la base.
   const ownerEmail = await correoDelUsuario(userId).catch(() => null);
   const agentSession: AgentSession = {
+    skills: skillsDelTurno,
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
@@ -1417,6 +1445,8 @@ async function correrTurno(
                     // LEN.md: la memoria del proyecto que llevó este turno y lo que
                     // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
                     ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
+                    // Skills: the catalog this turn sent and the digest the model knows from now on.
+                    ...(catalogoDelTurno ? { skills: catalogoDelTurno.text, skillsDigest: catalogoDelTurno.digest } : {}),
                     // Len 3.1: las fotos que no se vieron y las capturas del modo
                     // Diseño, para que el historial rehaga este mensaje tal cual.
                     ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
