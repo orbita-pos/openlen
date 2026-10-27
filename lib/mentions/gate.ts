@@ -8,7 +8,7 @@
 // Test and script only (it launches Chromium and loads jsdom).
 import { createServer } from "node:http";
 
-import { buildEditPath, elementAtEditPath, mentionSignatureMatches } from "@/components/workspace-v2/edit-path";
+import { buildEditPath, editChildTags, elementAtEditPath, isEditorNode, mentionSignatureMatches } from "@/components/workspace-v2/edit-path";
 import { injectDesignMode } from "@/components/workspace-v2/design-mode/inject-design-mode";
 import { decl } from "@/components/workspace-v2/serializar-al-iframe";
 import { etiquetarConPosiciones } from "@/lib/agent/ficheros/posiciones";
@@ -83,6 +83,8 @@ const PAGE_PROBE = `
 ${decl("buildEditPath", buildEditPath)}
 ${decl("elementAtEditPath", elementAtEditPath)}
 ${decl("mentionSignatureMatches", mentionSignatureMatches)}
+${decl("isEditorNode", isEditorNode)}
+${decl("editChildTags", editChildTags)}
 var SKIPPED = ${JSON.stringify(SKIPPED_TAGS)};
 function shown(el) { var r = el.getBoundingClientRect(); var cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden'; }
 function ownText(el) { var s = ''; for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += ' ' + (n.textContent || ''); return s.replace(/\\s+/g, ' ').trim().slice(0, 40); }
@@ -100,7 +102,9 @@ async function gatePage(browser: Browser, doc: { name: string; html: string }): 
     await page.setRequestInterception(true);
     page.on("request", (r) => void (r.url().startsWith("data:") || r.url() === "about:blank" ? r.continue() : r.abort()));
     await page.setViewport({ width: 1280, height: 900 });
-    await page.setContent(doc.html, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    // The page WITH its position ids: scripts run as they do on the canvas, and the
+    // element at a path says which source element it is (check 2).
+    await page.setContent(tagged, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.addScriptTag({ content: PAGE_PROBE });
     // 1. what can be clicked
     const clickable = (await page.evaluate(`(function () {
@@ -125,17 +129,25 @@ async function gatePage(browser: Browser, doc: { name: string; html: string }): 
       failures.push({ check: 1, key: c.path, reason: `<${c.tag}> «${c.text}» has no entry`, knownClass: fromScript ? "script-created" : null });
     }
     // 2. what the index outlines
-    const probes = index.map((e) => ({ key: e.key, path: (e.target as { path: string }).path, tag: e.tag, text: e.target.text ?? "" }));
+    const probes = index.map((e) => {
+      const t = e.target as { path: string; text?: string; sig?: unknown };
+      return { key: e.key, path: t.path, tag: e.tag, text: t.text ?? "", sig: t.sig ?? null, opId: `L${e.line}C${e.key.split(":").pop()}` };
+    });
     const outlined = (await page.evaluate(
       `(function (list) {
         return list.map(function (p) {
           var el = document.body ? elementAtEditPath(p.path, document.body) : null;
-          return { key: p.key, shown: !!el && shown(el), same: !!el && mentionSignatureMatches(el, p.tag, p.text || undefined) };
+          return { key: p.key, shown: !!el && shown(el), same: !!el && mentionSignatureMatches(el, p.tag, p.text || undefined, p.sig || undefined), opId: el ? el.getAttribute('data-op-id') : null, want: p.opId };
         });
       })(${JSON.stringify(probes)})`,
-    )) as { key: string; shown: boolean; same: boolean }[];
+    )) as { key: string; shown: boolean; same: boolean; opId: string | null; want: string }[];
     for (const o of outlined) {
-      if (o.shown && !o.same) failures.push({ check: 2, key: o.key, reason: "outlines another element", knownClass: "script-created" });
+      if (!o.shown) continue;
+      // The canvas would outline it (signature fits) but it is ANOTHER source
+      // element: the person would be pointed at the wrong thing. That is the bug.
+      if (o.same && o.opId !== o.want) failures.push({ check: 2, key: o.key, reason: `outlines ${o.opId ?? "an element the script made"}, not ${o.want}`, knownClass: null });
+      // A signature that no longer fits: the canvas says «not on screen now», which is honest.
+      else if (!o.same) failures.push({ check: 2, key: o.key, reason: "not on screen: a script changed what is at its path", knownClass: "script-created" });
     }
   } finally {
     await page.close();
