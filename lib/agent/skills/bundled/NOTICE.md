@@ -22,6 +22,11 @@ What changed for Len (spec local 2026-10-26-len-skills, §4.7):
 note `2026-09-15-bundled-office-skills.md` describes a structural checker that is not in its public
 repository.
 
+`pdf` is ours, written from the technical facts of Anthropic's `pdf` skill (which libraries do what,
+what breaks), without its text or its scripts (its license reserves all rights). Its four scripts
+(`pdf/scripts/`) are ours too. Added on 2026-10-27 (spec local 2026-10-27-len-pdf-skill); checked in a
+real box by `npm run pdf-skill:box-check`.
+
 `skill-creator` is ours, after DeepSeek's idea of shipping "creator skills" for what the agent authors
 (`.agents/notes/archived/architecture/2026-09-21-creator-skills-progressive-disclosure.md`): added on
 2026-10-26 when a real turn showed Len did not know where a user's skill goes.
