@@ -707,6 +707,7 @@ export default defineConfig({
       // `include` es LISTA BLANCA: sin esta linea no correria.
       "app/api/projects/[id]/brief/route.test.ts",
       "app/api/projects/[id]/skills/route.test.ts",
+      "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
       "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.

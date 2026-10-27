@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PRESENT_MAX_FILES, deliveredFrom, toolPresent } from "./present";
+import { PRESENT_MAX_FILES, deliverableLocation, deliveredFrom, toolPresent } from "./present";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 
 const XLSX = new Uint8Array([0x50, 0x4b, 3, 4, 7]);
@@ -83,18 +83,54 @@ describe("present", () => {
   });
 });
 
+// What `present` delivers is private (spec local 2026-10-26-len-skills, §4.9; like DeepSeek's host,
+// which exposes the presented file to the session, and Claude's files): kept in the private store and
+// served only through the project's route, which checks access.
+describe("deliverableLocation", () => {
+  it("keys it under the project and the turn, and serves it through the project's route", () => {
+    expect(deliverableLocation("p1", "t-1", "Inventario tienda.xlsx", "ab12cd34")).toEqual({
+      key: "deliveries/p1/t-1/ab12cd34-Inventario-tienda.xlsx",
+      url: "/api/projects/p1/deliveries/t-1/ab12cd34-Inventario-tienda.xlsx",
+    });
+  });
+
+  it("a name that tries to leave its folder stays in it", () => {
+    const { key } = deliverableLocation("p1", "t1", "../../etc/passwd", "ab12cd34");
+    expect(key.startsWith("deliveries/p1/t1/ab12cd34-")).toBe(true);
+    expect(key.split("/")).toHaveLength(4);
+    expect(key).not.toContain("..");
+  });
+
+  it("an accented name is kept, encoded in the url", () => {
+    const { key, url } = deliverableLocation("p1", "t1", "menú.docx", "ab12cd34");
+    expect(key).toBe("deliveries/p1/t1/ab12cd34-menú.docx");
+    expect(url).toBe("/api/projects/p1/deliveries/t1/ab12cd34-men%C3%BA.docx");
+  });
+});
+
 describe("deliveredFrom", () => {
   it("keeps what a card needs and drops the rest", () => {
-    expect(deliveredFrom([{ name: "a.xlsx", url: "https://x/a.xlsx", size: 3, extra: 1 }, { name: 4 }, "x"])).toEqual([{ name: "a.xlsx", url: "https://x/a.xlsx", size: 3 }]);
+    const url = "/api/projects/p1/deliveries/t1/ab12cd34-a.xlsx";
+    expect(deliveredFrom([{ name: "a.xlsx", url, size: 3, extra: 1 }, { name: 4 }, "x"])).toEqual([{ name: "a.xlsx", url, size: 3 }]);
     expect(deliveredFrom([{ name: "a.xlsx", url: "javascript:alert(1)", size: 3 }])).toBeNull();
     expect(deliveredFrom("nope")).toBeNull();
   });
 
   // Review of the branch (26/10): the chat is shared among a project's members and the browser saves
-  // its own cards, so a card must never link to another site through a protocol-relative URL.
-  it("refuses a protocol-relative url, which leads to another site", () => {
-    expect(deliveredFrom([{ name: "a.xlsx", url: "//evil.example/a.xlsx", size: 3 }])).toBeNull();
-    expect(deliveredFrom([{ name: "a.xlsx", url: "/\\evil.example/a.xlsx", size: 3 }])).toBeNull();
-    expect(deliveredFrom([{ name: "a.xlsx", url: "/uploads/deliveries/p1/t1/a.xlsx", size: 3 }])).toHaveLength(1);
+  // its own cards, so a card links only where `present` puts a file — the project's route, which
+  // checks access — and never to another site or another page of this one.
+  it("only links to a delivery's route", () => {
+    for (const url of [
+      "https://evil.example/a.xlsx",
+      "//evil.example/a.xlsx",
+      "/\\evil.example/a.xlsx",
+      "/uploads/deliveries/p1/t1/a.xlsx",
+      "/api/projects/p1/publish",
+      "/api/projects/p1/deliveries/t1/../../publish",
+      "/api/projects/p1/deliveries/t1/ab12cd34-a.xlsx?x=1",
+    ]) {
+      expect(deliveredFrom([{ name: "a.xlsx", url, size: 3 }])).toBeNull();
+    }
+    expect(deliveredFrom([{ name: "menú.docx", url: "/api/projects/p1/deliveries/t1/ab12cd34-men%C3%BA.docx", size: 3 }])).toHaveLength(1);
   });
 });

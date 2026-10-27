@@ -93,3 +93,18 @@ export async function createR2ArtifactStorage(config: { accountId: string; acces
     delete: async (key) => { await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key })); },
   });
 }
+
+/**
+ * The private store, by the environment: the private R2 bucket in production, otherwise a folder that
+ * is never under `public` (and none in production without one). Shared by the deliverables and, in
+ * development without R2, by what Len delivers with `present` (`lib/agent/skills/deliveries.ts`).
+ */
+export async function privateStorageFromEnv(env: Readonly<Record<string, string | undefined>>): Promise<ArtifactStorage> {
+  if (env.R2_ARTIFACTS_BUCKET && env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY && env.R2_SECRET_KEY) {
+    return createR2ArtifactStorage({ accountId: env.R2_ACCOUNT_ID, bucket: env.R2_ARTIFACTS_BUCKET, accessKeyId: env.R2_ACCESS_KEY, secretAccessKey: env.R2_SECRET_KEY });
+  }
+  if (!env.OPENLEN_ARTIFACTS_DIR && env.NODE_ENV === "production") throw new ArtifactError("private_storage_unavailable");
+  const root = resolve(env.OPENLEN_ARTIFACTS_DIR ?? ".artifacts-private");
+  if (root.replace(/\\/g, "/").toLowerCase().split("/").includes("public")) throw new ArtifactError("private_storage_unavailable");
+  return new FilesystemArtifactStorage(root);
+}

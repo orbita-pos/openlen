@@ -2733,7 +2733,7 @@ describe("present and a PDF made in the box", () => {
     const d = {
       ...deps,
       pdfPages: async () => ({ ok: true, pageCount: 2, first: 1, last: 2, images: [PAGE, PAGE] }),
-      storeDeliverable: async (_p: string, _t: string, name: string) => (stored.push(name), { url: `https://cdn.example/deliveries/p1/t1/${name}` }),
+      storeDeliverable: async (_p: string, _t: string, name: string) => (stored.push(name), { url: `/api/projects/p1/deliveries/t1/ab12cd34-${name}` }),
     } as unknown as AgentDeps;
     return { d, session, stored };
   };

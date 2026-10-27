@@ -20,7 +20,8 @@
  *     ni /.openlen/bandeja), …/raw, …/preview, …/pages, …/versions ([vid]/raw),
  *     …/releases, …/assets, …/terminal (su historial), …/env (GET),
  *     …/functions (GET: las funciones, su uso y sus últimos errores), POST /api/lienzo,
- *     /api/agent/turno/[fila] (reengancharse)
+ *     /api/agent/turno/[fila] (reengancharse), …/deliveries/[turn]/[file] (los ficheros
+ *     que Len entregó con `present`, que salen en el chat)
  *   editar (editor)
  *     PATCH /api/projects/[id] (título, brief, logo; NO el estado),
  *     …/ficheros (PUT/POST/PATCH/DELETE) y …/ficheros/versions/[vid]/restore,
