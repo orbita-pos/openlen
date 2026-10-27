@@ -51,10 +51,15 @@ export const RUTA_LIBRERIAS = `${CARPETA_DOCS}/librerias.md`;
 export const RUTA_APPS = `${CARPETA_DOCS}/apps.md`;
 export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS, RUTA_APPS];
 
+/** Las skills de Len (spec local 2026-10-26-len-skills): de la plataforma como
+ *  /.openlen/docs. `Read` lee sus ficheros de apoyo (el `forms.md` de `pdf`), como
+ *  Claude Code los de una skill; sin esto, sólo los veía la terminal (27/10). */
+export const CARPETA_SKILLS = "/.openlen/skills";
+
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */
 export function esDeLaPlataforma(ruta: string): boolean {
-  return ruta === RUTA_MANUAL || ruta.startsWith(`${CARPETA_DOCS}/`);
+  return ruta === RUTA_MANUAL || ruta.startsWith(`${CARPETA_DOCS}/`) || ruta.startsWith(`${CARPETA_SKILLS}/`);
 }
 
 /** El rechazo de Edit, Write y la terminal, en el idioma de los errores de las herramientas. */

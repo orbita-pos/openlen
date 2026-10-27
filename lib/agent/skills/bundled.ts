@@ -9,9 +9,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
+
 import { parseSkillFile, type SkillDefinition } from "./skill-file";
 
-export const BUNDLED_SKILLS_DIR = "/.openlen/skills";
+export const BUNDLED_SKILLS_DIR = CARPETA_SKILLS;
 
 export interface BundledSkill {
   readonly skill: SkillDefinition;
