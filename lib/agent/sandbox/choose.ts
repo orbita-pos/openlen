@@ -116,6 +116,11 @@ export class TurnSandbox implements TerminalBackend {
     }
   }
 
+  /** A file's bytes from the box (what `present` delivers, a PDF to read); none once it died. */
+  async readFileBytes(path: string): Promise<Uint8Array | null> {
+    return this.diedAt === null ? this.inner.readFileBytes(path) : null;
+  }
+
   private async answers(): Promise<boolean> {
     try {
       return (await this.ctx.handle.run("true", { timeoutMs: 15_000 })).exitCode === 0;
