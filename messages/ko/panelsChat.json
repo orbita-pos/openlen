@@ -118,7 +118,8 @@
     "fileLimit": "메시지당 파일은 4개까지예요.",
     "fileTooBig": "그 파일은 20MB를 넘어요.",
     "fileNotSupported": "Len은 PDF, 엑셀(.xlsx), 워드(.docx), 파워포인트(.pptx), CSV 파일을 읽어요.",
-    "fileFailed": "파일을 올리지 못했어요. 다시 시도해 주세요."
+    "fileFailed": "파일을 올리지 못했어요. 다시 시도해 주세요.",
+    "pointLabel": "가리키기"
   },
   "equipo": {
     "paraLen": "Len에게",
@@ -418,5 +419,29 @@
       "generic": "문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
     },
     "liveWaiting": "Len이 이메일 도메인 연결을 기다리고 있습니다"
+  },
+  "mentions": {
+    "kind": {
+      "section": "섹션",
+      "heading": "제목",
+      "text": "텍스트",
+      "button": "버튼",
+      "link": "링크",
+      "image": "이미지",
+      "form": "양식",
+      "input": "입력란",
+      "list": "목록",
+      "media": "미디어",
+      "embed": "임베드",
+      "element": "요소"
+    },
+    "pickOnCanvas": "캔버스에서 고르기…",
+    "notOnScreen": "지금 화면에 없음",
+    "onPage": "{page} 페이지",
+    "more": "{count}개 더 — 계속 입력하세요",
+    "limit": "메시지당 최대 {max}개까지",
+    "cannotPoint": "이 요소에는 가리킬 코드 줄이 없습니다.",
+    "files": "파일",
+    "people": "사람"
   }
 }

@@ -118,7 +118,8 @@
     "fileLimit": "Massimo 4 file per messaggio.",
     "fileTooBig": "Quel file supera i 20 MB.",
     "fileNotSupported": "Len legge file PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) e CSV.",
-    "fileFailed": "Non è stato possibile caricare il file. Riprova."
+    "fileFailed": "Non è stato possibile caricare il file. Riprova.",
+    "pointLabel": "Indica"
   },
   "equipo": {
     "paraLen": "A Len",
@@ -418,5 +419,29 @@
       "generic": "Qualcosa è andato storto. Riprova tra un momento."
     },
     "liveWaiting": "Len aspetta che tu colleghi il dominio email"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Sezione",
+      "heading": "Titolo",
+      "text": "Testo",
+      "button": "Pulsante",
+      "link": "Link",
+      "image": "Immagine",
+      "form": "Modulo",
+      "input": "Campo",
+      "list": "Elenco",
+      "media": "Media",
+      "embed": "Incorporato",
+      "element": "Elemento"
+    },
+    "pickOnCanvas": "Scegli nella tela…",
+    "notOnScreen": "non è sullo schermo ora",
+    "onPage": "nella pagina {page}",
+    "more": "altri {count} — continua a scrivere",
+    "limit": "Fino a {max} menzioni per messaggio",
+    "cannotPoint": "Questo elemento non ha una riga nel codice da indicare.",
+    "files": "File",
+    "people": "Persone"
   }
 }

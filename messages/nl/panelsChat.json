@@ -118,7 +118,8 @@
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",
     "fileNotSupported": "Len leest pdf-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) en CSV-bestanden.",
-    "fileFailed": "Het bestand kon niet worden geüpload. Probeer het opnieuw."
+    "fileFailed": "Het bestand kon niet worden geüpload. Probeer het opnieuw.",
+    "pointLabel": "Aanwijzen"
   },
   "equipo": {
     "paraLen": "Aan Len",
@@ -418,5 +419,29 @@
       "generic": "Er ging iets mis. Probeer het zo opnieuw."
     },
     "liveWaiting": "Len wacht tot je het e-maildomein verbindt"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Sectie",
+      "heading": "Kop",
+      "text": "Tekst",
+      "button": "Knop",
+      "link": "Link",
+      "image": "Afbeelding",
+      "form": "Formulier",
+      "input": "Veld",
+      "list": "Lijst",
+      "media": "Media",
+      "embed": "Insluiting",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Kies op het canvas…",
+    "notOnScreen": "nu niet in beeld",
+    "onPage": "op pagina {page}",
+    "more": "nog {count} — typ verder",
+    "limit": "Maximaal {max} vermeldingen per bericht",
+    "cannotPoint": "Dit element heeft geen regel in de code om naar te wijzen.",
+    "files": "Bestanden",
+    "people": "Mensen"
   }
 }

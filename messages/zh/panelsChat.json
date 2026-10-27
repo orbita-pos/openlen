@@ -118,7 +118,8 @@
     "fileLimit": "每条消息最多 4 个文件。",
     "fileTooBig": "该文件超过 20 MB。",
     "fileNotSupported": "Len 可以读取 PDF、Excel（.xlsx）、Word（.docx）、PowerPoint（.pptx）和 CSV 文件。",
-    "fileFailed": "文件上传失败，请重试。"
+    "fileFailed": "文件上传失败，请重试。",
+    "pointLabel": "指向"
   },
   "equipo": {
     "paraLen": "发给 Len",
@@ -418,5 +419,29 @@
       "generic": "出了点问题。请稍后再试。"
     },
     "liveWaiting": "Len 正在等你连接邮件域名"
+  },
+  "mentions": {
+    "kind": {
+      "section": "区块",
+      "heading": "标题",
+      "text": "文本",
+      "button": "按钮",
+      "link": "链接",
+      "image": "图片",
+      "form": "表单",
+      "input": "输入框",
+      "list": "列表",
+      "media": "媒体",
+      "embed": "嵌入",
+      "element": "元素"
+    },
+    "pickOnCanvas": "在画布上选择…",
+    "notOnScreen": "当前不在屏幕上",
+    "onPage": "在 {page} 页面",
+    "more": "还有 {count} 个 — 继续输入",
+    "limit": "每条消息最多 {max} 个",
+    "cannotPoint": "该元素在代码中没有可指向的行。",
+    "files": "文件",
+    "people": "成员"
   }
 }
