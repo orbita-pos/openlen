@@ -58,6 +58,21 @@ describe("resolveMentions", () => {
     ]);
   });
 
+  it("recognises the element by its text even with inline tags and entities in between", async () => {
+    const html = ["<body>", "<h1 class=x>", "  Pan <em>de</em> verdad &amp; café", "</h1>", "</body>"].join("\n");
+    const r = await resolveMentions([el("@Título · Pan verdad & café", null, "h1:nth-of-type(1)", "h1", "Pan verdad & café")], {
+      pageHtml: () => html,
+      files: async () => ({}),
+    });
+    expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 4 });
+  });
+
+  it("does not judge an element by own text that is only punctuation", async () => {
+    const html = ["<body>", "<div><span>email</span>,<span>joined</span>,<span>source</span></div>", "</body>"].join("\n");
+    const r = await resolveMentions([el("@Elemento · div", null, "div:nth-of-type(1)", "div", ",,")], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 2 });
+  });
+
   it("re-anchors an app element by its tag and text when lines were inserted above it", async () => {
     const shifted = APP.replace("    <ul>", "    {/* a */}\n    {/* b */}\n    <ul>");
     const ref: MentionRef = { type: "element", label: "@Lista · Pedido uno", text: "Pedido uno", target: { type: "app", path: "/src/App.tsx", line: 4, tag: "li", text: "Pedido uno" } };
