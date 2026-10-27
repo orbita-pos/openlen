@@ -3,7 +3,7 @@ import { chmod, mkdtemp, readdir, rm, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { FilesystemArtifactStorage, R2ArtifactStorage, storageModes } from "./private-storage";
+import { FilesystemArtifactStorage, R2ArtifactStorage, privateStorageFromEnv, storageModes } from "./private-storage";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -67,5 +67,22 @@ describe("private output storage", () => {
     // It exercises the storage contract; no credential or network dependency.
     await storage.delete("p/a/x.png");
     expect(values.size).toBe(0);
+  });
+});
+
+// One way to choose the private store, shared by the deliverables and, in development without R2, by
+// what `present` delivers (spec local 2026-10-26-len-skills, §4.9): never a folder under public.
+describe("privateStorageFromEnv", () => {
+  it("uses OPENLEN_ARTIFACTS_DIR when there is no private bucket", async () => {
+    const root = await mkdtemp(join(tmpdir(), "len3-private-env-"));
+    roots.push(root);
+    const storage = await privateStorageFromEnv({ OPENLEN_ARTIFACTS_DIR: root });
+    await storage.put("deliveries/p1/t1/a-x.xlsx", new Uint8Array([1, 2]));
+    expect([...(await new FilesystemArtifactStorage(root).get("deliveries/p1/t1/a-x.xlsx"))]).toEqual([1, 2]);
+  });
+
+  it("never a folder under public, and none at all in production without one", async () => {
+    await expect(privateStorageFromEnv({ OPENLEN_ARTIFACTS_DIR: join(tmpdir(), "public", "x") })).rejects.toThrow();
+    await expect(privateStorageFromEnv({ NODE_ENV: "production" })).rejects.toThrow();
   });
 });

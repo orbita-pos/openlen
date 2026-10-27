@@ -1,9 +1,9 @@
 /**
  * `present` (spec local 2026-10-26-len-skills, §4.9): DeepSeek Harness's tool to deliver files
  * (`packages/deliverables/tool-present/src/index.ts`, MIT, LICENSES/deepseek-harness.MIT.txt), its
- * description and its limit of 4 per call. In Len the box is ephemeral, so each file is COPIED to
- * storage as it is when presented (their last sentence changes for that) and the chat shows a card to
- * download it. Never saved to the project or published.
+ * description and its limit of 4 per call. In Len the box is ephemeral, so each file is COPIED to the
+ * private store as it is when presented (their last sentence changes for that; `deliveries.ts`) and the
+ * chat shows a card to download it through the project's route. Never saved to the project or published.
  */
 import { ATTACHMENT_KINDS, kindFromName } from "@/lib/projects/chat-files";
 
@@ -52,6 +52,25 @@ export function contentTypeOf(name: string): string {
   return EXTRA_TYPES[/\.([A-Za-z0-9]+)$/.exec(name)?.[1]?.toLowerCase() ?? ""] ?? "application/octet-stream";
 }
 
+/**
+ * Where a delivered file lives (spec local 2026-10-26-len-skills, §4.9): in the PRIVATE store, under
+ * the project and the turn, and the URL of the project's route that serves it to whoever has access
+ * (like DeepSeek's host, which exposes the presented file to the session, and Claude's files). `id`
+ * keeps two files of the same name apart. Only the file's own name is kept, never a folder.
+ */
+export function deliverableLocation(projectId: string, turnId: string, name: string, id: string): { key: string; url: string } {
+  const base = (name.split(/[\\/]/).pop() ?? "")
+    .replace(/[^\p{L}\p{N}._ -]/gu, "-")
+    .replace(/\s+/g, "-")
+    .replace(/^[.-]+/, "")
+    .slice(0, 100);
+  const turn = turnId.replace(/[^A-Za-z0-9_-]/g, "") || "turn";
+  const file = `${id}-${base || "file"}`;
+  return { key: `deliveries/${projectId}/${turn}/${file}`, url: `/api/projects/${encodeURIComponent(projectId)}/deliveries/${turn}/${encodeURIComponent(file)}` };
+}
+
+const DELIVERY_URL = /^\/api\/projects\/[A-Za-z0-9_-]{1,64}\/deliveries\/[A-Za-z0-9_-]{1,100}\/[0-9a-f]{8}-[A-Za-z0-9._%-]+$/;
+
 /** The delivered files a saved card may carry; anything else is dropped. Null if none survive. */
 export function deliveredFrom(v: unknown): DeliveredFile[] | null {
   if (!Array.isArray(v)) return null;
@@ -60,9 +79,9 @@ export function deliveredFrom(v: unknown): DeliveredFile[] | null {
     if (!f || typeof f !== "object") continue;
     const r = f as Record<string, unknown>;
     if (typeof r.name !== "string" || !r.name || typeof r.url !== "string" || typeof r.size !== "number" || !Number.isFinite(r.size) || r.size < 0) continue;
-    // An absolute http(s) URL, or a path of THIS site: one "/" and never "//" or "/\", which browsers
-    // read as another site (the chat is shared among the project's members).
-    if (!/^(https?:\/\/|\/(?![/\\]))/.test(r.url) || r.url.length > 500) continue;
+    // Only where `present` puts a file (`deliverableLocation`): the project's route, which checks
+    // access. Never another site or another page of this one: the chat is shared among the members.
+    if (!DELIVERY_URL.test(r.url) || r.url.length > 500) continue;
     out.push({ name: r.name.slice(0, 120), url: r.url, size: r.size, ...(typeof r.description === "string" && r.description ? { description: r.description.slice(0, 300) } : {}) });
   }
   return out.length > 0 ? out : null;

@@ -808,14 +808,18 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         return deleteNote(projectId, name);
       },
     },
-    // `present`: what Len delivers goes to storage, under the project and the turn (spec local
-    // 2026-10-26-len-skills, §4.9). Never the project's folder, never published.
+    // `present`: what Len delivers goes to the PRIVATE store, under the project and the turn, and is
+    // served by the project's route to whoever has access (spec local 2026-10-26-len-skills, §4.9).
+    // Never the project's folder, never public, never published.
     async storeDeliverable(projectId, turnId, name, bytes, contentType) {
-      const { getStorage } = await import("@/lib/storage");
-      const safe = name.replace(/[^\p{L}\p{N}._-]/gu, "-").replace(/^[.-]+/, "").slice(0, 100) || "file";
-      const key = `deliveries/${projectId}/${turnId.replace(/[^A-Za-z0-9_-]/g, "") || "turn"}/${safe}`;
-      const r = await getStorage().upload({ key, contentType, body: Buffer.from(bytes) });
-      return { url: r.url };
+      const { deliveryStore } = await import("@/lib/agent/skills/deliveries");
+      const { deliverableLocation } = await import("@/lib/agent/skills/present");
+      const { randomBytes } = await import("node:crypto");
+      const store = deliveryStore();
+      if (!store) throw new Error("This server has no private store for delivered files.");
+      const where = deliverableLocation(projectId, turnId, name, randomBytes(4).toString("hex"));
+      await store.put(where.key, bytes, contentType);
+      return { url: where.url };
     },
     // The skills of /.len/skills and ~/.len/skills. Lazy import, like the notes: the database.
     skillStore: {

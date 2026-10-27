@@ -12,7 +12,7 @@ describe("la fila del turno que escribe el servidor", () => {
 
   it("present: guarda los ficheros entregados en su tarjeta", () => {
     const r = crearRegistroDelTurno();
-    const delivered = [{ name: "inventario.xlsx", url: "https://cdn.example/deliveries/p1/t1/inventario.xlsx", size: 5 }];
+    const delivered = [{ name: "inventario.xlsx", url: "/api/projects/p1/deliveries/t1/ab12cd34-inventario.xlsx", size: 5 }];
     r.observar({ type: "action", tool: "present", status: "done", summary: "inventario.xlsx", delivered });
     expect(r.tarjetas[0]).toMatchObject({ tool: "present", delivered });
   });

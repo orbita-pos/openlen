@@ -28,12 +28,12 @@ function mount(actions: Parameters<typeof DeliveredFiles>[0]["actions"]) {
 describe("DeliveredFiles", () => {
   it("the turn shows a download card per presented file", () => {
     const host = mount([
-      { tool: "present", status: "done", summary: "", delivered: [{ name: "inventario.xlsx", url: "https://cdn.example/d/inventario.xlsx", size: 5120, description: "Inventory" }] },
-      { tool: "present", status: "done", summary: "", delivered: [{ name: "carta.docx", url: "https://cdn.example/d/carta.docx", size: 900 }] },
+      { tool: "present", status: "done", summary: "", delivered: [{ name: "inventario.xlsx", url: "/api/projects/p1/deliveries/t1/ab12cd34-inventario.xlsx", size: 5120, description: "Inventory" }] },
+      { tool: "present", status: "done", summary: "", delivered: [{ name: "carta.docx", url: "/api/projects/p1/deliveries/t2/ab12cd34-carta.docx", size: 900 }] },
       { tool: "Read", status: "done", summary: "x" },
     ]);
     const links = [...host.querySelectorAll("a")];
-    expect(links.map((a) => a.getAttribute("href"))).toEqual(["https://cdn.example/d/inventario.xlsx", "https://cdn.example/d/carta.docx"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["/api/projects/p1/deliveries/t1/ab12cd34-inventario.xlsx", "/api/projects/p1/deliveries/t2/ab12cd34-carta.docx"]);
     for (const a of links) {
       expect(a.getAttribute("rel")).toBe("noopener noreferrer");
       expect(a.getAttribute("target")).toBe("_blank");
