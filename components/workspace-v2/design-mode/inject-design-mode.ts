@@ -8,10 +8,11 @@
 // React repinta o monta un nodo nuevo. Restaurar quita exactamente lo puesto.
 // Nada de esto se guarda: en una app el lienzo no se serializa nunca.
 import { DESIGN_LIMITS, DESIGN_PROPERTIES } from "@/lib/apps/design/types";
-import { ownTextOf, primaryOf, readStylesOf, sourceChainOf, targetsOf } from "@/lib/apps/design/canvas-functions";
+import { outermostAtLine, ownTextOf, primaryOf, readStylesOf, sourceChainOf, targetsOf } from "@/lib/apps/design/canvas-functions";
 import { decl } from "../serializar-al-iframe";
 
 const STYLE = `
+[data-openlen-mention-hover] { outline: 2px solid rgba(255,90,54,0.85) !important; outline-offset: 2px !important; }
 body[data-openlen-design-mode] [data-openlen-design-hover] { outline: 2px solid rgba(255,90,54,0.4) !important; outline-offset: -2px !important; cursor: pointer !important; }
 body[data-openlen-design-mode] [data-openlen-design-selected] { outline: 2px solid rgba(255,90,54,0.95) !important; outline-offset: -2px !important; }
 `;
@@ -24,6 +25,7 @@ const SCRIPT = `(function () {
   ${decl("ownTextOf", ownTextOf)}
   ${decl("readStylesOf", readStylesOf)}
   ${decl("targetsOf", targetsOf)}
+  ${decl("outermostAtLine", outermostAtLine)}
   var PROPS = ${JSON.stringify(DESIGN_PROPERTIES)};
   var MAX_CHAIN = ${DESIGN_LIMITS.chain};
   var MAX_TEXT = ${DESIGN_LIMITS.text};
@@ -212,8 +214,21 @@ const SCRIPT = `(function () {
       watch();
     } else if (d.type === 'openlen:design-select-parent') {
       if (selected && selected.parentElement && !isOurs(selected.parentElement)) select(selected.parentElement);
+    } else if (d.type === 'openlen:mention-highlight') {
+      // THE CHAT'S «@» (spec local 2026-10-27): every copy of that source line
+      // on this screen, outlined; the answer says how many (0 = not on screen).
+      if (d.target && d.target.type !== 'app') return;
+      for (var m = 0; m < mentioned.length; m++) mentioned[m].removeAttribute('data-openlen-mention-hover');
+      mentioned = [];
+      if (!d.target) return;
+      var found = appBroken() ? [] : outermostAtLine(d.target.path, d.target.line, MAX_CHAIN);
+      for (var f = 0; f < found.length; f++) found[f].setAttribute('data-openlen-mention-hover', '');
+      mentioned = found;
+      if (found[0]) { try { found[0].scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (_) {} }
+      post({ type: 'openlen:mention-highlighted', key: d.key, count: found.length });
     }
   });
+  var mentioned = [];
   watch();
 })();`;
 
