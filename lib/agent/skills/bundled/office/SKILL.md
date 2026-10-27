@@ -11,6 +11,7 @@ Call the `skill` tool with the format skill name before creating, reading, or ed
 - Images, visual inspection, or tasks primarily about layout, spacing, sizing, or alignment: `office-render`, even without an explicit visual-check request.
 - Refresh spreadsheet formula results: `office-recalculate`.
 - Export an Office file to PDF: `office-export-pdf`.
+- Anything else with a PDF (create one from scratch, extract text or tables, merge, split, forms, password, OCR): `pdf`.
 
 Honor requests to skip rendering. New files, content edits, formulas, and incidental formatting such as bold headers or number formats need no render unless visual inspection is requested. Do not reload skills.
 

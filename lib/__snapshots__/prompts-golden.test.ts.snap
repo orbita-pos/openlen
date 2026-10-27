@@ -3254,6 +3254,7 @@ Call the \`skill\` tool with the format skill name before creating, reading, or 
 - Images, visual inspection, or tasks primarily about layout, spacing, sizing, or alignment: \`office-render\`, even without an explicit visual-check request.
 - Refresh spreadsheet formula results: \`office-recalculate\`.
 - Export an Office file to PDF: \`office-export-pdf\`.
+- Anything else with a PDF (create one from scratch, extract text or tables, merge, split, forms, password, OCR): \`pdf\`.
 
 Honor requests to skip rendering. New files, content edits, formulas, and incidental formatting such as bold headers or number formats need no render unless visual inspection is requested. Do not reload skills.
 
@@ -3277,6 +3278,7 @@ Call the \`skill\` tool with the format skill name before creating, reading, or 
 - Images, visual inspection, or tasks primarily about layout, spacing, sizing, or alignment: \`office-render\`, even without an explicit visual-check request.
 - Refresh spreadsheet formula results: \`office-recalculate\`.
 - Export an Office file to PDF: \`office-export-pdf\`.
+- Anything else with a PDF (create one from scratch, extract text or tables, merge, split, forms, password, OCR): \`pdf\`.
 
 Honor requests to skip rendering. New files, content edits, formulas, and incidental formatting such as bold headers or number formats need no render unless visual inspection is requested. Do not reload skills.
 
@@ -4177,6 +4179,1218 @@ Load \`office-render\` for requested images or visual inspection and whenever th
 Load \`office-recalculate\` when refreshed calculated values are needed and \`office-export-pdf\` for PDF output. Deliver after the requested data checks pass and the required operations finish.
 
 Call \`present({"files":[{"path":"/tmp/office/report.xlsx"}]})\` with the actual final workbook path, once it is final: the user gets a copy of the file as it is when you call it. Do not present intermediate scripts and reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: pdf
+description: Create PDF files and work on existing ones in the terminal (extract text or tables, merge, split, rotate, crop, watermark, add or remove a password, fill forms, OCR scanned pages). To just look at a PDF's pages, use Read with pages; to turn an Office file into a PDF, use office-export-pdf.
+---
+
+# PDF files
+
+Two things need no skill:
+- To see a PDF's pages, call \`Read\` with \`pages\` (an attached PDF or one in the terminal): the pages come back as images.
+- To turn a Word, Excel, or PowerPoint file into a PDF, use \`office-export-pdf\`. When the user also wants the editable Word file, write it with \`office-docx\` and export it.
+
+Work in \`/tmp/office\` (create it with \`mkdir -p /tmp/office\`): a file written at the project's root is saved to the project and published with the site, and \`/tmp\` never is. A file the user attached is in \`/.openlen/attachments/\`, read-only; save every result as a new file in \`/tmp/office\`. Quote every path: file names often have spaces.
+
+Run the terminal's \`python3\`, which has \`pypdf\`, \`pdfplumber\`, and \`reportlab\` installed, next to \`qpdf\`, poppler (\`pdftotext\`, \`pdftoppm\`, \`pdfimages\`, \`pdfinfo\`), and \`tesseract\`. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+## Which tool
+
+- A new document of several pages (a report, an invoice, a letter, a menu): \`reportlab\` with \`SimpleDocTemplate\` and its flowables (\`Paragraph\`, \`Table\`, \`Spacer\`, \`PageBreak\`). For text at exact positions on a page, its \`canvas\`.
+- Text: \`pdftotext -layout "<file.pdf>" -\` for the whole text; \`pdfplumber\` when the position of each word matters. To find something in a long PDF, search its text first and then \`Read\` only the pages that matter.
+- Tables: \`pdfplumber\` (\`page.extract_tables()\`), then \`pandas\`. For an Excel file, load \`office-xlsx\` and follow it.
+- Merge, split, take a range, rotate, crop, watermark, metadata: \`pypdf\` (\`PdfReader\`, \`PdfWriter\`, \`add_page\`, \`page.rotate\`, \`page.cropbox\`, \`page.merge_page\`, \`add_metadata\`). \`qpdf\` does the same in one line (\`qpdf --empty --pages "a.pdf" "b.pdf" -- "out.pdf"\`) and repairs a damaged file when it rewrites it.
+- The images inside a PDF: \`pdfimages -png "<file.pdf>" /tmp/office/img\`.
+- To set a password, \`PdfWriter.encrypt("<password>", algorithm="AES-256")\`; to remove one, \`PdfReader.decrypt("<password>")\`, or \`qpdf --decrypt\` with its \`--password\` option. Use the password the user gave only in the command: never write it to a file, to \`/LEN.md\`, or to memory, and do not repeat it in your reply.
+
+## Fonts
+
+reportlab's built-in fonts (Helvetica, Times, Courier) only cover Latin-1, and any other letter comes out as a box. Register a TrueType font of the terminal for all text, and set it in every style (\`fontName\`) and on the canvas (\`setFont\`):
+
+| Text | Font file |
+|---|---|
+| Latin, Greek, Cyrillic (á, ñ, €…) | \`/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf\` |
+| Japanese | \`/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf\` |
+| Korean | \`/usr/share/fonts/truetype/nanum/NanumGothic.ttf\` |
+| Chinese | \`/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc\` |
+
+\`\`\`python
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+pdfmetrics.registerFont(TTFont("Body", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+# A .ttc holds several fonts: TTFont("Body", "<file>.ttc", subfontIndex=0)
+\`\`\`
+
+Write subscripts and superscripts with \`<sub>\` and \`<super>\` inside a \`Paragraph\`, never with characters such as ₂ or ²: the font may not have them.
+
+## Scanned pages
+
+Try \`pdftotext\` first. When it gives nothing, or \`(cid:\` codes, the pages are images: render only the pages you need with \`pdftoppm -r 300 -png -f <n> -l <n> "<file.pdf>" /tmp/office/page\` and read each one with \`tesseract <page.png> - -l <language>\` (\`eng\`, \`spa\`, \`por\`, \`fra\`, \`deu\`, \`ita\`, \`jpn\`, \`kor\`, \`chi_sim\`, \`nld\`; join several with \`+\`). Each page takes seconds: say so before a long scan.
+
+## Forms
+
+Read \`forms.md\` (relative to this skill's base directory) before filling a form.
+
+## Check, then deliver
+
+Before delivering a PDF you made:
+- \`head -c 5 "<file.pdf>"\` is \`%PDF-\`, and \`pdfinfo\` shows the pages you expect;
+- \`pdftotext "<file.pdf>" -\` gives the text back, which proves its letters are letters;
+- look at the pages that matter with \`Read\` and \`pages\`: the first, the last, and the ones you changed, unless the user asks for a full review.
+
+For populated content, a blank or uniformly white page image is a render failure: check once, do not read the same image again, and say in one sentence that visual inspection was not completed. Deliver the files with \`present\`. Do not deliver inspection images or JSON unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: pdf
+description: Create PDF files and work on existing ones in the terminal (extract text or tables, merge, split, rotate, crop, watermark, add or remove a password, fill forms, OCR scanned pages). To just look at a PDF's pages, use Read with pages; to turn an Office file into a PDF, use office-export-pdf.
+---
+
+# PDF files
+
+Two things need no skill:
+- To see a PDF's pages, call \`Read\` with \`pages\` (an attached PDF or one in the terminal): the pages come back as images.
+- To turn a Word, Excel, or PowerPoint file into a PDF, use \`office-export-pdf\`. When the user also wants the editable Word file, write it with \`office-docx\` and export it.
+
+Work in \`/tmp/office\` (create it with \`mkdir -p /tmp/office\`): a file written at the project's root is saved to the project and published with the site, and \`/tmp\` never is. A file the user attached is in \`/.openlen/attachments/\`, read-only; save every result as a new file in \`/tmp/office\`. Quote every path: file names often have spaces.
+
+Run the terminal's \`python3\`, which has \`pypdf\`, \`pdfplumber\`, and \`reportlab\` installed, next to \`qpdf\`, poppler (\`pdftotext\`, \`pdftoppm\`, \`pdfimages\`, \`pdfinfo\`), and \`tesseract\`. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+## Which tool
+
+- A new document of several pages (a report, an invoice, a letter, a menu): \`reportlab\` with \`SimpleDocTemplate\` and its flowables (\`Paragraph\`, \`Table\`, \`Spacer\`, \`PageBreak\`). For text at exact positions on a page, its \`canvas\`.
+- Text: \`pdftotext -layout "<file.pdf>" -\` for the whole text; \`pdfplumber\` when the position of each word matters. To find something in a long PDF, search its text first and then \`Read\` only the pages that matter.
+- Tables: \`pdfplumber\` (\`page.extract_tables()\`), then \`pandas\`. For an Excel file, load \`office-xlsx\` and follow it.
+- Merge, split, take a range, rotate, crop, watermark, metadata: \`pypdf\` (\`PdfReader\`, \`PdfWriter\`, \`add_page\`, \`page.rotate\`, \`page.cropbox\`, \`page.merge_page\`, \`add_metadata\`). \`qpdf\` does the same in one line (\`qpdf --empty --pages "a.pdf" "b.pdf" -- "out.pdf"\`) and repairs a damaged file when it rewrites it.
+- The images inside a PDF: \`pdfimages -png "<file.pdf>" /tmp/office/img\`.
+- To set a password, \`PdfWriter.encrypt("<password>", algorithm="AES-256")\`; to remove one, \`PdfReader.decrypt("<password>")\`, or \`qpdf --decrypt\` with its \`--password\` option. Use the password the user gave only in the command: never write it to a file, to \`/LEN.md\`, or to memory, and do not repeat it in your reply.
+
+## Fonts
+
+reportlab's built-in fonts (Helvetica, Times, Courier) only cover Latin-1, and any other letter comes out as a box. Register a TrueType font of the terminal for all text, and set it in every style (\`fontName\`) and on the canvas (\`setFont\`):
+
+| Text | Font file |
+|---|---|
+| Latin, Greek, Cyrillic (á, ñ, €…) | \`/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf\` |
+| Japanese | \`/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf\` |
+| Korean | \`/usr/share/fonts/truetype/nanum/NanumGothic.ttf\` |
+| Chinese | \`/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc\` |
+
+\`\`\`python
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+pdfmetrics.registerFont(TTFont("Body", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+# A .ttc holds several fonts: TTFont("Body", "<file>.ttc", subfontIndex=0)
+\`\`\`
+
+Write subscripts and superscripts with \`<sub>\` and \`<super>\` inside a \`Paragraph\`, never with characters such as ₂ or ²: the font may not have them.
+
+## Scanned pages
+
+Try \`pdftotext\` first. When it gives nothing, or \`(cid:\` codes, the pages are images: render only the pages you need with \`pdftoppm -r 300 -png -f <n> -l <n> "<file.pdf>" /tmp/office/page\` and read each one with \`tesseract <page.png> - -l <language>\` (\`eng\`, \`spa\`, \`por\`, \`fra\`, \`deu\`, \`ita\`, \`jpn\`, \`kor\`, \`chi_sim\`, \`nld\`; join several with \`+\`). Each page takes seconds: say so before a long scan.
+
+## Forms
+
+Read \`forms.md\` (relative to this skill's base directory) before filling a form.
+
+## Check, then deliver
+
+Before delivering a PDF you made:
+- \`head -c 5 "<file.pdf>"\` is \`%PDF-\`, and \`pdfinfo\` shows the pages you expect;
+- \`pdftotext "<file.pdf>" -\` gives the text back, which proves its letters are letters;
+- look at the pages that matter with \`Read\` and \`pages\`: the first, the last, and the ones you changed, unless the user asks for a full review.
+
+For populated content, a blank or uniformly white page image is a render failure: check once, do not read the same image again, and say in one sentence that visual inspection was not completed. Deliver the files with \`present\`. Do not deliver inspection images or JSON unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/forms.md) — la salida entera, sin cambios accidentales 1`] = `
+"# Filling a PDF form
+
+Work in \`/tmp/office\`. The scripts are in \`scripts/\`, relative to this skill's base directory. Each one prints its result; exits 1 with the reason on stderr when its input is wrong, and then writes nothing; and exits 2 when the PDF cannot be opened. An encrypted PDF says so: ask the user for its password and remove it first (see \`SKILL.md\`).
+
+## 1. Does it have fields?
+
+\`\`\`text
+python3 <base directory>/scripts/form_fields.py "<form.pdf>"
+\`\`\`
+
+It prints \`{"fillable": true|false, "fields": [...]}\`. Each field has \`id\`, \`page\` (from 1), \`rect\` (\`[x0, y0, x1, y1]\` in PDF points, origin at the bottom left), \`type\` (\`text\`, \`checkbox\`, \`radio\`, or \`choice\`), and \`value\`. A checkbox also has \`on\`, its checked value; a radio group and a choice have \`options\`.
+
+## 2. With fields
+
+Look at the pages with \`Read\` and \`pages\` to know what each field asks for. Write \`/tmp/office/values.json\`, one entry per field to fill:
+
+\`\`\`json
+{"name": "Ana Núñez", "agree": true, "size": "M"}
+\`\`\`
+
+A checkbox takes \`true\` or \`false\` (or its \`on\` value); a radio group or a choice takes one of its \`options\`. Then:
+
+\`\`\`text
+python3 <base directory>/scripts/fill_form.py "<form.pdf>" /tmp/office/values.json "/tmp/office/<filled>.pdf"
+\`\`\`
+
+It checks every id and every value before writing anything. Fix what it reports and run it again.
+
+## 3. Without fields
+
+\`\`\`text
+python3 <base directory>/scripts/form_layout.py "<form.pdf>"
+\`\`\`
+
+For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left. \`has_text\` says whether the PDF has any text at all.
+
+When \`has_text\` is true, place each answer from that structure: an answer starts a few points after its label (\`x0\` = the label's \`x1\` + 4) and sits just above the line under it; a checkbox answer is an \`X\` inside its box.
+
+When \`has_text\` is false, the page is an image. Look at it with \`Read\`. To be precise:
+- render the page: \`pdftoppm -r 150 -png -f <n> -l <n> -singlefile "<form.pdf>" /tmp/office/page\`;
+- crop around each answer with Pillow into \`/tmp/office/crop-<n>.png\` and look at the crop with \`Read\`;
+- add the crop's offset back to what you measure in it.
+
+Coordinates measured on that render are its pixels: say so in \`images\`, with the render's size.
+
+Write \`/tmp/office/fields.json\`. \`box\` is \`[x0, top, x1, bottom]\`, and \`size\` is the font size (10 when left out):
+
+\`\`\`json
+{"fields": [{"page": 1, "box": [112, 62, 318, 75], "text": "Smith", "size": 10}],
+ "images": [{"page": 1, "width": 1275, "height": 1650}]}
+\`\`\`
+
+Leave \`images\` out when every box is in PDF points. Then:
+
+\`\`\`text
+python3 <base directory>/scripts/place_text.py "<form.pdf>" /tmp/office/fields.json "/tmp/office/<filled>.pdf"
+\`\`\`
+
+It refuses boxes that overlap and text that does not fit its box at that size: make the box bigger or the size smaller. It picks the font for Japanese, Korean, or Chinese text by itself.
+
+## 4. Check
+
+Read the filled PDF with \`Read\` and \`pages\`, and check that every answer is in its place before delivering it with \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/forms.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"# Filling a PDF form
+
+Work in \`/tmp/office\`. The scripts are in \`scripts/\`, relative to this skill's base directory. Each one prints its result; exits 1 with the reason on stderr when its input is wrong, and then writes nothing; and exits 2 when the PDF cannot be opened. An encrypted PDF says so: ask the user for its password and remove it first (see \`SKILL.md\`).
+
+## 1. Does it have fields?
+
+\`\`\`text
+python3 <base directory>/scripts/form_fields.py "<form.pdf>"
+\`\`\`
+
+It prints \`{"fillable": true|false, "fields": [...]}\`. Each field has \`id\`, \`page\` (from 1), \`rect\` (\`[x0, y0, x1, y1]\` in PDF points, origin at the bottom left), \`type\` (\`text\`, \`checkbox\`, \`radio\`, or \`choice\`), and \`value\`. A checkbox also has \`on\`, its checked value; a radio group and a choice have \`options\`.
+
+## 2. With fields
+
+Look at the pages with \`Read\` and \`pages\` to know what each field asks for. Write \`/tmp/office/values.json\`, one entry per field to fill:
+
+\`\`\`json
+{"name": "Ana Núñez", "agree": true, "size": "M"}
+\`\`\`
+
+A checkbox takes \`true\` or \`false\` (or its \`on\` value); a radio group or a choice takes one of its \`options\`. Then:
+
+\`\`\`text
+python3 <base directory>/scripts/fill_form.py "<form.pdf>" /tmp/office/values.json "/tmp/office/<filled>.pdf"
+\`\`\`
+
+It checks every id and every value before writing anything. Fix what it reports and run it again.
+
+## 3. Without fields
+
+\`\`\`text
+python3 <base directory>/scripts/form_layout.py "<form.pdf>"
+\`\`\`
+
+For each page it prints \`width\`, \`height\`, \`labels\` (text with \`x0\`, \`top\`, \`x1\`, \`bottom\`), \`lines\` (horizontal rules with \`x0\`, \`x1\`, \`y\`), and \`boxes\` (small squares, usually checkboxes), in PDF points with the origin at the top left. \`has_text\` says whether the PDF has any text at all.
+
+When \`has_text\` is true, place each answer from that structure: an answer starts a few points after its label (\`x0\` = the label's \`x1\` + 4) and sits just above the line under it; a checkbox answer is an \`X\` inside its box.
+
+When \`has_text\` is false, the page is an image. Look at it with \`Read\`. To be precise:
+- render the page: \`pdftoppm -r 150 -png -f <n> -l <n> -singlefile "<form.pdf>" /tmp/office/page\`;
+- crop around each answer with Pillow into \`/tmp/office/crop-<n>.png\` and look at the crop with \`Read\`;
+- add the crop's offset back to what you measure in it.
+
+Coordinates measured on that render are its pixels: say so in \`images\`, with the render's size.
+
+Write \`/tmp/office/fields.json\`. \`box\` is \`[x0, top, x1, bottom]\`, and \`size\` is the font size (10 when left out):
+
+\`\`\`json
+{"fields": [{"page": 1, "box": [112, 62, 318, 75], "text": "Smith", "size": 10}],
+ "images": [{"page": 1, "width": 1275, "height": 1650}]}
+\`\`\`
+
+Leave \`images\` out when every box is in PDF points. Then:
+
+\`\`\`text
+python3 <base directory>/scripts/place_text.py "<form.pdf>" /tmp/office/fields.json "/tmp/office/<filled>.pdf"
+\`\`\`
+
+It refuses boxes that overlap and text that does not fit its box at that size: make the box bigger or the size smaller. It picks the font for Japanese, Korean, or Chinese text by itself.
+
+## 4. Check
+
+Read the filled PDF with \`Read\` and \`pages\`, and check that every answer is in its place before delivering it with \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/fill_form.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Fill the fields of a PDF form (Len's pdf skill, forms.md step 2).
+
+Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>
+
+values.json is {"<field id>": value}, with the ids form_fields.py prints. A text field takes a
+string; a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
+takes one of its "options". Every id and value is checked before anything is written: on a wrong
+one it exits 1, says which and what is valid, and writes nothing.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf.
+"""
+import json
+import os
+import sys
+
+from pypdf import PdfWriter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import collect_fields, fail, open_pdf  # noqa: E402
+
+
+def _state(value):
+    return value[1:] if isinstance(value, str) and value.startswith("/") else value
+
+
+def resolve(fields, values):
+    """The value each field gets, as pypdf writes it, or the list of what is wrong."""
+    by_id = {f["id"]: f for f in fields}
+    errors, out = [], {}
+    for key, value in values.items():
+        field = by_id.get(key)
+        if field is None:
+            errors.append(f"unknown field {key!r}; the fields are: {', '.join(by_id) or 'none'}")
+            continue
+        kind = field["type"]
+        if kind == "text":
+            if not isinstance(value, str):
+                errors.append(f"{key!r} is a text field: give it a string")
+                continue
+            out[key] = value
+        elif kind == "checkbox":
+            on = field["on"]
+            if value is True or _state(value) == on:
+                out[key] = "/" + on
+            elif value is False or _state(value) == "Off":
+                out[key] = "/Off"
+            else:
+                errors.append(f"{key!r} is a checkbox: give it true, false, {on!r} or 'Off'")
+        else:
+            options = field["options"]
+            if _state(value) not in options:
+                errors.append(f"{key!r} takes one of {options}, not {value!r}")
+                continue
+            out[key] = "/" + _state(value) if kind == "radio" else _state(value)
+    return out, errors
+
+
+def main():
+    if len(sys.argv) != 4:
+        fail(1, "Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>")
+    source, values_path, target = sys.argv[1:]
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail(1, "Write the filled form to a new file, not over the original.")
+    reader = open_pdf(source)
+    try:
+        with open(values_path, encoding="utf-8") as f:
+            values = json.load(f)
+    except (OSError, ValueError) as e:
+        fail(1, f"Cannot read {values_path}: {e}")
+    if not isinstance(values, dict) or not values:
+        fail(1, f"{values_path} must be an object of field ids and values.")
+    fields = collect_fields(reader)
+    if not fields:
+        fail(1, f"{source} has no fillable fields: use form_layout.py and place_text.py.")
+    resolved, errors = resolve(fields, values)
+    if errors:
+        fail(1, "\\n".join(errors))
+    writer = PdfWriter(clone_from=reader)
+    for page in writer.pages:
+        writer.update_page_form_field_values(page, resolved, auto_regenerate=True)
+    try:
+        with open(target, "wb") as f:
+            writer.write(f)
+    except Exception:
+        if os.path.exists(target):
+            os.remove(target)
+        raise
+    print(f"filled {len(resolved)} fields -> {target}")
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/fill_form.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Fill the fields of a PDF form (Len's pdf skill, forms.md step 2).
+
+Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>
+
+values.json is {"<field id>": value}, with the ids form_fields.py prints. A text field takes a
+string; a checkbox takes true or false (or its "on" value, or "Off"); a radio group or a choice
+takes one of its "options". Every id and value is checked before anything is written: on a wrong
+one it exits 1, says which and what is valid, and writes nothing.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf.
+"""
+import json
+import os
+import sys
+
+from pypdf import PdfWriter
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import collect_fields, fail, open_pdf  # noqa: E402
+
+
+def _state(value):
+    return value[1:] if isinstance(value, str) and value.startswith("/") else value
+
+
+def resolve(fields, values):
+    """The value each field gets, as pypdf writes it, or the list of what is wrong."""
+    by_id = {f["id"]: f for f in fields}
+    errors, out = [], {}
+    for key, value in values.items():
+        field = by_id.get(key)
+        if field is None:
+            errors.append(f"unknown field {key!r}; the fields are: {', '.join(by_id) or 'none'}")
+            continue
+        kind = field["type"]
+        if kind == "text":
+            if not isinstance(value, str):
+                errors.append(f"{key!r} is a text field: give it a string")
+                continue
+            out[key] = value
+        elif kind == "checkbox":
+            on = field["on"]
+            if value is True or _state(value) == on:
+                out[key] = "/" + on
+            elif value is False or _state(value) == "Off":
+                out[key] = "/Off"
+            else:
+                errors.append(f"{key!r} is a checkbox: give it true, false, {on!r} or 'Off'")
+        else:
+            options = field["options"]
+            if _state(value) not in options:
+                errors.append(f"{key!r} takes one of {options}, not {value!r}")
+                continue
+            out[key] = "/" + _state(value) if kind == "radio" else _state(value)
+    return out, errors
+
+
+def main():
+    if len(sys.argv) != 4:
+        fail(1, "Usage: python3 fill_form.py <in.pdf> <values.json> <out.pdf>")
+    source, values_path, target = sys.argv[1:]
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail(1, "Write the filled form to a new file, not over the original.")
+    reader = open_pdf(source)
+    try:
+        with open(values_path, encoding="utf-8") as f:
+            values = json.load(f)
+    except (OSError, ValueError) as e:
+        fail(1, f"Cannot read {values_path}: {e}")
+    if not isinstance(values, dict) or not values:
+        fail(1, f"{values_path} must be an object of field ids and values.")
+    fields = collect_fields(reader)
+    if not fields:
+        fail(1, f"{source} has no fillable fields: use form_layout.py and place_text.py.")
+    resolved, errors = resolve(fields, values)
+    if errors:
+        fail(1, "\\n".join(errors))
+    writer = PdfWriter(clone_from=reader)
+    for page in writer.pages:
+        writer.update_page_form_field_values(page, resolved, auto_regenerate=True)
+    try:
+        with open(target, "wb") as f:
+            writer.write(f)
+    except Exception:
+        if os.path.exists(target):
+            os.remove(target)
+        raise
+    print(f"filled {len(resolved)} fields -> {target}")
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/form_fields.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""The fillable fields of a PDF form, as JSON (Len's pdf skill, forms.md step 1).
+
+Usage: python3 form_fields.py <in.pdf>
+
+Prints {"fillable": bool, "fields": [field]}. A field is
+  {"id": str, "page": int (from 1), "rect": [x0, y0, x1, y1], "type": "text"|"checkbox"|"radio"|"choice",
+   "value": str|null}
+with "rect" in PDF points, origin at the bottom left. A checkbox also has "on" (its checked value);
+a radio group and a choice have "options".
+
+Exit codes, shared by the skill's scripts: 0 done; 1 wrong input (the reason on stderr, nothing
+written); 2 the PDF cannot be opened (an encrypted one says so).
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf.
+"""
+import json
+import sys
+
+from pypdf import PdfReader
+from pypdf.generic import ArrayObject, NameObject
+
+PUSHBUTTON = 1 << 16
+RADIO = 1 << 15
+
+
+def fail(code, message):
+    print(message, file=sys.stderr)
+    sys.exit(code)
+
+
+def open_pdf(path):
+    """A reader for the PDF, or exit 2. An encrypted PDF opens only without a user password."""
+    try:
+        reader = PdfReader(path)
+    except Exception as e:  # noqa: BLE001 - any parser error means "cannot be opened"
+        fail(2, f"Cannot open {path}: {e}")
+    if reader.is_encrypted:
+        try:
+            opened = reader.decrypt("")
+        except Exception:  # noqa: BLE001
+            opened = 0
+        if not opened:
+            fail(2, f"{path} is encrypted: ask the user for its password and remove it first.")
+    return reader
+
+
+def _text(value):
+    if value is None:
+        return None
+    if isinstance(value, NameObject):
+        return str(value)[1:]
+    if isinstance(value, ArrayObject):
+        return ", ".join(_text(v.get_object()) or "" for v in value)
+    return str(value)
+
+
+def _inherited(obj, key):
+    while obj is not None:
+        if key in obj:
+            return obj[key]
+        obj = obj["/Parent"].get_object() if "/Parent" in obj else None
+    return None
+
+
+def _name(obj):
+    parts = []
+    while obj is not None:
+        if "/T" in obj:
+            parts.insert(0, str(obj["/T"]))
+        obj = obj["/Parent"].get_object() if "/Parent" in obj else None
+    return ".".join(parts)
+
+
+def _on_state(widget):
+    states = widget.get("/AP", {}).get("/N", {})
+    for key in getattr(states, "keys", lambda: [])():
+        if key != "/Off":
+            return key[1:]
+    return None
+
+
+def _options(field):
+    out = []
+    for item in field.get("/Opt", []) or []:
+        item = item.get_object()
+        out.append(str(item[0].get_object()) if isinstance(item, ArrayObject) else str(item))
+    return out
+
+
+def collect_fields(reader):
+    """Every field with its widgets, by its full name, in page order."""
+    fields = {}
+    for page_number, page in enumerate(reader.pages, start=1):
+        for ref in page.get("/Annots") or []:
+            widget = ref.get_object()
+            if widget.get("/Subtype") != "/Widget":
+                continue
+            field = widget if "/T" in widget else widget["/Parent"].get_object() if "/Parent" in widget else widget
+            name = _name(field)
+            kind = _inherited(field, "/FT")
+            flags = int(_inherited(field, "/Ff") or 0)
+            if not name or kind not in ("/Tx", "/Btn", "/Ch") or (kind == "/Btn" and flags & PUSHBUTTON):
+                continue
+            rect = [round(float(v), 1) for v in widget["/Rect"]]
+            if kind == "/Btn" and flags & RADIO:
+                entry = fields.setdefault(name, {"id": name, "page": page_number, "rect": rect, "type": "radio", "value": _text(field.get("/V")), "options": []})
+                entry["rect"] = [min(entry["rect"][0], rect[0]), min(entry["rect"][1], rect[1]), max(entry["rect"][2], rect[2]), max(entry["rect"][3], rect[3])]
+                on = _on_state(widget)
+                if on and on not in entry["options"]:
+                    entry["options"].append(on)
+            elif name not in fields:
+                entry = {"id": name, "page": page_number, "rect": rect, "value": _text(field.get("/V"))}
+                if kind == "/Tx":
+                    entry["type"] = "text"
+                elif kind == "/Btn":
+                    entry["type"] = "checkbox"
+                    entry["on"] = _on_state(widget) or "Yes"
+                else:
+                    entry["type"] = "choice"
+                    entry["options"] = _options(field)
+                fields[name] = entry
+    return list(fields.values())
+
+
+def main():
+    if len(sys.argv) != 2:
+        fail(1, "Usage: python3 form_fields.py <in.pdf>")
+    fields = collect_fields(open_pdf(sys.argv[1]))
+    print(json.dumps({"fillable": bool(fields), "fields": fields}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/form_fields.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""The fillable fields of a PDF form, as JSON (Len's pdf skill, forms.md step 1).
+
+Usage: python3 form_fields.py <in.pdf>
+
+Prints {"fillable": bool, "fields": [field]}. A field is
+  {"id": str, "page": int (from 1), "rect": [x0, y0, x1, y1], "type": "text"|"checkbox"|"radio"|"choice",
+   "value": str|null}
+with "rect" in PDF points, origin at the bottom left. A checkbox also has "on" (its checked value);
+a radio group and a choice have "options".
+
+Exit codes, shared by the skill's scripts: 0 done; 1 wrong input (the reason on stderr, nothing
+written); 2 the PDF cannot be opened (an encrypted one says so).
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf.
+"""
+import json
+import sys
+
+from pypdf import PdfReader
+from pypdf.generic import ArrayObject, NameObject
+
+PUSHBUTTON = 1 << 16
+RADIO = 1 << 15
+
+
+def fail(code, message):
+    print(message, file=sys.stderr)
+    sys.exit(code)
+
+
+def open_pdf(path):
+    """A reader for the PDF, or exit 2. An encrypted PDF opens only without a user password."""
+    try:
+        reader = PdfReader(path)
+    except Exception as e:  # noqa: BLE001 - any parser error means "cannot be opened"
+        fail(2, f"Cannot open {path}: {e}")
+    if reader.is_encrypted:
+        try:
+            opened = reader.decrypt("")
+        except Exception:  # noqa: BLE001
+            opened = 0
+        if not opened:
+            fail(2, f"{path} is encrypted: ask the user for its password and remove it first.")
+    return reader
+
+
+def _text(value):
+    if value is None:
+        return None
+    if isinstance(value, NameObject):
+        return str(value)[1:]
+    if isinstance(value, ArrayObject):
+        return ", ".join(_text(v.get_object()) or "" for v in value)
+    return str(value)
+
+
+def _inherited(obj, key):
+    while obj is not None:
+        if key in obj:
+            return obj[key]
+        obj = obj["/Parent"].get_object() if "/Parent" in obj else None
+    return None
+
+
+def _name(obj):
+    parts = []
+    while obj is not None:
+        if "/T" in obj:
+            parts.insert(0, str(obj["/T"]))
+        obj = obj["/Parent"].get_object() if "/Parent" in obj else None
+    return ".".join(parts)
+
+
+def _on_state(widget):
+    states = widget.get("/AP", {}).get("/N", {})
+    for key in getattr(states, "keys", lambda: [])():
+        if key != "/Off":
+            return key[1:]
+    return None
+
+
+def _options(field):
+    out = []
+    for item in field.get("/Opt", []) or []:
+        item = item.get_object()
+        out.append(str(item[0].get_object()) if isinstance(item, ArrayObject) else str(item))
+    return out
+
+
+def collect_fields(reader):
+    """Every field with its widgets, by its full name, in page order."""
+    fields = {}
+    for page_number, page in enumerate(reader.pages, start=1):
+        for ref in page.get("/Annots") or []:
+            widget = ref.get_object()
+            if widget.get("/Subtype") != "/Widget":
+                continue
+            field = widget if "/T" in widget else widget["/Parent"].get_object() if "/Parent" in widget else widget
+            name = _name(field)
+            kind = _inherited(field, "/FT")
+            flags = int(_inherited(field, "/Ff") or 0)
+            if not name or kind not in ("/Tx", "/Btn", "/Ch") or (kind == "/Btn" and flags & PUSHBUTTON):
+                continue
+            rect = [round(float(v), 1) for v in widget["/Rect"]]
+            if kind == "/Btn" and flags & RADIO:
+                entry = fields.setdefault(name, {"id": name, "page": page_number, "rect": rect, "type": "radio", "value": _text(field.get("/V")), "options": []})
+                entry["rect"] = [min(entry["rect"][0], rect[0]), min(entry["rect"][1], rect[1]), max(entry["rect"][2], rect[2]), max(entry["rect"][3], rect[3])]
+                on = _on_state(widget)
+                if on and on not in entry["options"]:
+                    entry["options"].append(on)
+            elif name not in fields:
+                entry = {"id": name, "page": page_number, "rect": rect, "value": _text(field.get("/V"))}
+                if kind == "/Tx":
+                    entry["type"] = "text"
+                elif kind == "/Btn":
+                    entry["type"] = "checkbox"
+                    entry["on"] = _on_state(widget) or "Yes"
+                else:
+                    entry["type"] = "choice"
+                    entry["options"] = _options(field)
+                fields[name] = entry
+    return list(fields.values())
+
+
+def main():
+    if len(sys.argv) != 2:
+        fail(1, "Usage: python3 form_fields.py <in.pdf>")
+    fields = collect_fields(open_pdf(sys.argv[1]))
+    print(json.dumps({"fillable": bool(fields), "fields": fields}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/form_layout.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""The layout of a form without fillable fields (Len's pdf skill, forms.md step 3).
+
+Usage: python3 form_layout.py <in.pdf>
+
+Prints {"pages": [page], "has_text": bool}. A page is
+  {"page": int (from 1), "width", "height",
+   "labels": [{"text", "x0", "top", "x1", "bottom"}],  words of one line next to each other, joined
+   "lines": [{"x0", "x1", "y"}],                       horizontal rules (answers usually sit on one)
+   "boxes": [{"x0", "top", "x1", "bottom"}]}           small squares, 6 to 20 pt (usually checkboxes)
+in PDF points with the origin at the TOP left, the coordinates place_text.py takes. "has_text"
+false means the pages are images (a scan): look at them instead.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pdfplumber.
+"""
+import json
+import os
+import sys
+
+import pdfplumber
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import fail, open_pdf  # noqa: E402
+
+JOIN_GAP = 6  # points between two words of the same label
+SAME_LINE = 2  # points of difference in \`top\` within one line
+
+
+def labels_of(page):
+    words = sorted(page.extract_words(), key=lambda w: (round(w["top"]), w["x0"]))
+    labels = []
+    for w in words:
+        last = labels[-1] if labels else None
+        if last and abs(w["top"] - last["top"]) <= SAME_LINE and 0 <= w["x0"] - last["x1"] <= JOIN_GAP:
+            last["text"] += " " + w["text"]
+            last["x1"] = w["x1"]
+            last["bottom"] = max(last["bottom"], w["bottom"])
+        else:
+            labels.append({"text": w["text"], "x0": w["x0"], "top": w["top"], "x1": w["x1"], "bottom": w["bottom"]})
+    return [{k: round(v, 1) if isinstance(v, float) else v for k, v in label.items()} for label in labels]
+
+
+def lines_of(page):
+    out = []
+    for line in page.lines:
+        if abs(line["top"] - line["bottom"]) < 1 and line["x1"] - line["x0"] > 10:
+            out.append({"x0": round(line["x0"], 1), "x1": round(line["x1"], 1), "y": round(line["top"], 1)})
+    for rect in page.rects:  # a rule drawn as a thin rectangle
+        if rect["height"] < 1.5 and rect["width"] > 10:
+            out.append({"x0": round(rect["x0"], 1), "x1": round(rect["x1"], 1), "y": round(rect["top"], 1)})
+    return sorted(out, key=lambda l: (l["y"], l["x0"]))
+
+
+def boxes_of(page):
+    out = []
+    for rect in page.rects:
+        w, h = rect["width"], rect["height"]
+        if 6 <= w <= 20 and 6 <= h <= 20 and abs(w - h) <= 3:
+            out.append({"x0": round(rect["x0"], 1), "top": round(rect["top"], 1), "x1": round(rect["x1"], 1), "bottom": round(rect["bottom"], 1)})
+    return out
+
+
+def main():
+    if len(sys.argv) != 2:
+        fail(1, "Usage: python3 form_layout.py <in.pdf>")
+    path = sys.argv[1]
+    open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
+    pages, has_text = [], False
+    with pdfplumber.open(path) as pdf:
+        for number, page in enumerate(pdf.pages, start=1):
+            has_text = has_text or bool(page.chars)
+            pages.append({
+                "page": number,
+                "width": round(float(page.width), 1),
+                "height": round(float(page.height), 1),
+                "labels": labels_of(page),
+                "lines": lines_of(page),
+                "boxes": boxes_of(page),
+            })
+    print(json.dumps({"pages": pages, "has_text": has_text}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/form_layout.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""The layout of a form without fillable fields (Len's pdf skill, forms.md step 3).
+
+Usage: python3 form_layout.py <in.pdf>
+
+Prints {"pages": [page], "has_text": bool}. A page is
+  {"page": int (from 1), "width", "height",
+   "labels": [{"text", "x0", "top", "x1", "bottom"}],  words of one line next to each other, joined
+   "lines": [{"x0", "x1", "y"}],                       horizontal rules (answers usually sit on one)
+   "boxes": [{"x0", "top", "x1", "bottom"}]}           small squares, 6 to 20 pt (usually checkboxes)
+in PDF points with the origin at the TOP left, the coordinates place_text.py takes. "has_text"
+false means the pages are images (a scan): look at them instead.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pdfplumber.
+"""
+import json
+import os
+import sys
+
+import pdfplumber
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import fail, open_pdf  # noqa: E402
+
+JOIN_GAP = 6  # points between two words of the same label
+SAME_LINE = 2  # points of difference in \`top\` within one line
+
+
+def labels_of(page):
+    words = sorted(page.extract_words(), key=lambda w: (round(w["top"]), w["x0"]))
+    labels = []
+    for w in words:
+        last = labels[-1] if labels else None
+        if last and abs(w["top"] - last["top"]) <= SAME_LINE and 0 <= w["x0"] - last["x1"] <= JOIN_GAP:
+            last["text"] += " " + w["text"]
+            last["x1"] = w["x1"]
+            last["bottom"] = max(last["bottom"], w["bottom"])
+        else:
+            labels.append({"text": w["text"], "x0": w["x0"], "top": w["top"], "x1": w["x1"], "bottom": w["bottom"]})
+    return [{k: round(v, 1) if isinstance(v, float) else v for k, v in label.items()} for label in labels]
+
+
+def lines_of(page):
+    out = []
+    for line in page.lines:
+        if abs(line["top"] - line["bottom"]) < 1 and line["x1"] - line["x0"] > 10:
+            out.append({"x0": round(line["x0"], 1), "x1": round(line["x1"], 1), "y": round(line["top"], 1)})
+    for rect in page.rects:  # a rule drawn as a thin rectangle
+        if rect["height"] < 1.5 and rect["width"] > 10:
+            out.append({"x0": round(rect["x0"], 1), "x1": round(rect["x1"], 1), "y": round(rect["top"], 1)})
+    return sorted(out, key=lambda l: (l["y"], l["x0"]))
+
+
+def boxes_of(page):
+    out = []
+    for rect in page.rects:
+        w, h = rect["width"], rect["height"]
+        if 6 <= w <= 20 and 6 <= h <= 20 and abs(w - h) <= 3:
+            out.append({"x0": round(rect["x0"], 1), "top": round(rect["top"], 1), "x1": round(rect["x1"], 1), "bottom": round(rect["bottom"], 1)})
+    return out
+
+
+def main():
+    if len(sys.argv) != 2:
+        fail(1, "Usage: python3 form_layout.py <in.pdf>")
+    path = sys.argv[1]
+    open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
+    pages, has_text = [], False
+    with pdfplumber.open(path) as pdf:
+        for number, page in enumerate(pdf.pages, start=1):
+            has_text = has_text or bool(page.chars)
+            pages.append({
+                "page": number,
+                "width": round(float(page.width), 1),
+                "height": round(float(page.height), 1),
+                "labels": labels_of(page),
+                "lines": lines_of(page),
+                "boxes": boxes_of(page),
+            })
+    print(json.dumps({"pages": pages, "has_text": has_text}, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/place_text.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Write answers onto a form without fillable fields (Len's pdf skill, forms.md step 3).
+
+Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>
+
+fields.json is
+  {"fields": [{"page": int (from 1), "box": [x0, top, x1, bottom], "text": str, "size": 10}],
+   "images": [{"page": int, "width": int, "height": int}]}
+with each box in PDF points, origin at the top left (what form_layout.py prints). A page listed in
+"images" has its boxes in pixels of a render of that size instead. Each text is stamped into its
+page, left-aligned and centered in its box, so it prints and its text can be extracted.
+
+Refuses (exit 1, nothing written) two boxes that overlap on a page, and a text that does not fit its
+box at its size. Picks the font by the text: Japanese, Korean, Chinese, or the Latin one.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf and reportlab.
+"""
+import io
+import json
+import os
+import re
+import sys
+
+from pypdf import PdfReader, PdfWriter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import fail, open_pdf  # noqa: E402
+
+# The box's TrueType fonts (lib/agent/sandbox/template-files.ts, PDF_FONT_FILES).
+FONT_FILES = {
+    "latin": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "ja": "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+    "ko": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+    "zh": "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+}
+KANA = re.compile("[぀-ヿ]")
+HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏가-힯]")
+HAN = re.compile("[㐀-䶿一-鿿]")
+
+
+def font_for(text):
+    key = "ja" if KANA.search(text) else "ko" if HANGUL.search(text) else "zh" if HAN.search(text) else "latin"
+    name = "Place_" + key
+    if name not in pdfmetrics.getRegisteredFontNames():
+        path = FONT_FILES[key]
+        pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0) if path.endswith(".ttc") else TTFont(name, path))
+    return name
+
+
+def read_fields(path, reader):
+    try:
+        with open(path, encoding="utf-8") as f:
+            spec = json.load(f)
+    except (OSError, ValueError) as e:
+        fail(1, f"Cannot read {path}: {e}")
+    if not isinstance(spec, dict) or not isinstance(spec.get("fields"), list) or not spec["fields"]:
+        fail(1, f'{path} must be {{"fields": [{{"page", "box", "text"}}]}}.')
+    images = {}
+    for image in spec.get("images") or []:
+        try:
+            images[int(image["page"])] = (float(image["width"]), float(image["height"]))
+        except (KeyError, TypeError, ValueError):
+            fail(1, f'Each entry of "images" needs "page", "width" and "height": {image!r}')
+    fields, errors = [], []
+    for n, field in enumerate(spec["fields"], start=1):
+        try:
+            page = int(field["page"])
+            box = [float(v) for v in field["box"]]
+            text = str(field["text"])
+            size = float(field.get("size", 10))
+        except (KeyError, TypeError, ValueError):
+            errors.append(f'field {n} needs "page", "box" ([x0, top, x1, bottom]) and "text": {field!r}')
+            continue
+        if not 1 <= page <= len(reader.pages):
+            errors.append(f"field {n}: page {page} does not exist (the PDF has {len(reader.pages)})")
+            continue
+        if len(box) != 4 or box[0] >= box[2] or box[1] >= box[3] or not text or size <= 0:
+            errors.append(f"field {n}: box must be [x0, top, x1, bottom] with x0 < x1 and top < bottom, and text not empty")
+            continue
+        media = reader.pages[page - 1].mediabox
+        if page in images:
+            sx, sy = float(media.width) / images[page][0], float(media.height) / images[page][1]
+            box = [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy]
+        fields.append({"n": n, "page": page, "box": box, "text": text, "size": size})
+    return fields, errors
+
+
+def check(fields):
+    errors = []
+    for i, a in enumerate(fields):
+        width, height = a["box"][2] - a["box"][0], a["box"][3] - a["box"][1]
+        needed = pdfmetrics.stringWidth(a["text"], font_for(a["text"]), a["size"])
+        if a["size"] > height or needed > width:
+            errors.append(f"field {a['n']}: {a['text']!r} at size {a['size']:g} needs {needed:.0f} x {a['size']:g} pt and its box is {width:.0f} x {height:.0f}: make the box bigger or the size smaller")
+        for b in fields[i + 1:]:
+            if a["page"] == b["page"] and a["box"][0] < b["box"][2] and b["box"][0] < a["box"][2] and a["box"][1] < b["box"][3] and b["box"][1] < a["box"][3]:
+                errors.append(f"fields {a['n']} and {b['n']} overlap on page {a['page']}")
+    return errors
+
+
+def stamp(reader, fields):
+    writer = PdfWriter(clone_from=reader)
+    for number in sorted({f["page"] for f in fields}):
+        media = reader.pages[number - 1].mediabox
+        left, bottom_edge = float(media.left), float(media.bottom)
+        height = float(media.height)
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=(float(media.width), height))
+        for f in (f for f in fields if f["page"] == number):
+            x0, top, _x1, bottom = f["box"]
+            c.setFont(font_for(f["text"]), f["size"])
+            baseline = height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
+            c.drawString(x0 + 1, baseline, f["text"])
+        c.save()
+        overlay = PdfReader(io.BytesIO(buffer.getvalue())).pages[0]
+        if left or bottom_edge:
+            overlay.add_transformation([1, 0, 0, 1, left, bottom_edge])
+        writer.pages[number - 1].merge_page(overlay)
+    return writer
+
+
+def main():
+    if len(sys.argv) != 4:
+        fail(1, "Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>")
+    source, fields_path, target = sys.argv[1:]
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail(1, "Write the filled form to a new file, not over the original.")
+    reader = open_pdf(source)
+    fields, errors = read_fields(fields_path, reader)
+    errors += check(fields)
+    if errors:
+        fail(1, "\\n".join(errors))
+    writer = stamp(reader, fields)
+    try:
+        with open(target, "wb") as f:
+            writer.write(f)
+    except Exception:
+        if os.path.exists(target):
+            os.remove(target)
+        raise
+    print(f"placed {len(fields)} texts -> {target}")
+
+
+if __name__ == "__main__":
+    main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/pdf/scripts/place_text.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Write answers onto a form without fillable fields (Len's pdf skill, forms.md step 3).
+
+Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>
+
+fields.json is
+  {"fields": [{"page": int (from 1), "box": [x0, top, x1, bottom], "text": str, "size": 10}],
+   "images": [{"page": int, "width": int, "height": int}]}
+with each box in PDF points, origin at the top left (what form_layout.py prints). A page listed in
+"images" has its boxes in pixels of a render of that size instead. Each text is stamped into its
+page, left-aligned and centered in its box, so it prints and its text can be extracted.
+
+Refuses (exit 1, nothing written) two boxes that overlap on a page, and a text that does not fit its
+box at its size. Picks the font by the text: Japanese, Korean, Chinese, or the Latin one.
+
+Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pypdf and reportlab.
+"""
+import io
+import json
+import os
+import re
+import sys
+
+from pypdf import PdfReader, PdfWriter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from form_fields import fail, open_pdf  # noqa: E402
+
+# The box's TrueType fonts (lib/agent/sandbox/template-files.ts, PDF_FONT_FILES).
+FONT_FILES = {
+    "latin": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "ja": "/usr/share/fonts/opentype/ipafont-gothic/ipag.ttf",
+    "ko": "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+    "zh": "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+}
+KANA = re.compile("[぀-ヿ]")
+HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏가-힯]")
+HAN = re.compile("[㐀-䶿一-鿿]")
+
+
+def font_for(text):
+    key = "ja" if KANA.search(text) else "ko" if HANGUL.search(text) else "zh" if HAN.search(text) else "latin"
+    name = "Place_" + key
+    if name not in pdfmetrics.getRegisteredFontNames():
+        path = FONT_FILES[key]
+        pdfmetrics.registerFont(TTFont(name, path, subfontIndex=0) if path.endswith(".ttc") else TTFont(name, path))
+    return name
+
+
+def read_fields(path, reader):
+    try:
+        with open(path, encoding="utf-8") as f:
+            spec = json.load(f)
+    except (OSError, ValueError) as e:
+        fail(1, f"Cannot read {path}: {e}")
+    if not isinstance(spec, dict) or not isinstance(spec.get("fields"), list) or not spec["fields"]:
+        fail(1, f'{path} must be {{"fields": [{{"page", "box", "text"}}]}}.')
+    images = {}
+    for image in spec.get("images") or []:
+        try:
+            images[int(image["page"])] = (float(image["width"]), float(image["height"]))
+        except (KeyError, TypeError, ValueError):
+            fail(1, f'Each entry of "images" needs "page", "width" and "height": {image!r}')
+    fields, errors = [], []
+    for n, field in enumerate(spec["fields"], start=1):
+        try:
+            page = int(field["page"])
+            box = [float(v) for v in field["box"]]
+            text = str(field["text"])
+            size = float(field.get("size", 10))
+        except (KeyError, TypeError, ValueError):
+            errors.append(f'field {n} needs "page", "box" ([x0, top, x1, bottom]) and "text": {field!r}')
+            continue
+        if not 1 <= page <= len(reader.pages):
+            errors.append(f"field {n}: page {page} does not exist (the PDF has {len(reader.pages)})")
+            continue
+        if len(box) != 4 or box[0] >= box[2] or box[1] >= box[3] or not text or size <= 0:
+            errors.append(f"field {n}: box must be [x0, top, x1, bottom] with x0 < x1 and top < bottom, and text not empty")
+            continue
+        media = reader.pages[page - 1].mediabox
+        if page in images:
+            sx, sy = float(media.width) / images[page][0], float(media.height) / images[page][1]
+            box = [box[0] * sx, box[1] * sy, box[2] * sx, box[3] * sy]
+        fields.append({"n": n, "page": page, "box": box, "text": text, "size": size})
+    return fields, errors
+
+
+def check(fields):
+    errors = []
+    for i, a in enumerate(fields):
+        width, height = a["box"][2] - a["box"][0], a["box"][3] - a["box"][1]
+        needed = pdfmetrics.stringWidth(a["text"], font_for(a["text"]), a["size"])
+        if a["size"] > height or needed > width:
+            errors.append(f"field {a['n']}: {a['text']!r} at size {a['size']:g} needs {needed:.0f} x {a['size']:g} pt and its box is {width:.0f} x {height:.0f}: make the box bigger or the size smaller")
+        for b in fields[i + 1:]:
+            if a["page"] == b["page"] and a["box"][0] < b["box"][2] and b["box"][0] < a["box"][2] and a["box"][1] < b["box"][3] and b["box"][1] < a["box"][3]:
+                errors.append(f"fields {a['n']} and {b['n']} overlap on page {a['page']}")
+    return errors
+
+
+def stamp(reader, fields):
+    writer = PdfWriter(clone_from=reader)
+    for number in sorted({f["page"] for f in fields}):
+        media = reader.pages[number - 1].mediabox
+        left, bottom_edge = float(media.left), float(media.bottom)
+        height = float(media.height)
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=(float(media.width), height))
+        for f in (f for f in fields if f["page"] == number):
+            x0, top, _x1, bottom = f["box"]
+            c.setFont(font_for(f["text"]), f["size"])
+            baseline = height - bottom + (bottom - top - f["size"]) / 2 + f["size"] * 0.2
+            c.drawString(x0 + 1, baseline, f["text"])
+        c.save()
+        overlay = PdfReader(io.BytesIO(buffer.getvalue())).pages[0]
+        if left or bottom_edge:
+            overlay.add_transformation([1, 0, 0, 1, left, bottom_edge])
+        writer.pages[number - 1].merge_page(overlay)
+    return writer
+
+
+def main():
+    if len(sys.argv) != 4:
+        fail(1, "Usage: python3 place_text.py <in.pdf> <fields.json> <out.pdf>")
+    source, fields_path, target = sys.argv[1:]
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail(1, "Write the filled form to a new file, not over the original.")
+    reader = open_pdf(source)
+    fields, errors = read_fields(fields_path, reader)
+    errors += check(fields)
+    if errors:
+        fail(1, "\\n".join(errors))
+    writer = stamp(reader, fields)
+    try:
+        with open(target, "wb") as f:
+            writer.write(f)
+    except Exception:
+        if os.path.exists(target):
+            os.remove(target)
+        raise
+    print(f"placed {len(fields)} texts -> {target}")
+
+
+if __name__ == "__main__":
+    main()
 "
 `;
 
