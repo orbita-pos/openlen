@@ -2775,6 +2775,24 @@ describe("Read of a box PDF through a terminal that needs its own this", () => {
   });
 });
 
+// Found by the pdf skill's real turn (27/10): its SKILL.md says «Read `forms.md` (relative to this
+// skill's base directory)», and Read answered «There is no file at /.openlen/skills/pdf/forms.md»
+// while the terminal had it. A skill's resources are read like the platform's docs.
+describe("Read of a bundled skill's own files", () => {
+  it("reads a resource of a bundled skill", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.openlen/skills/pdf/forms.md" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.match(String(out.response.tool_result), /Filling a PDF form/);
+  });
+
+  it("refuses to write into a bundled skill", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.openlen/skills/pdf/forms.md", content: "x" });
+    assert.equal(out.response.ok, false);
+  });
+});
+
 // The pdf skill (spec local 2026-10-27-len-pdf-skill, §4.7): Read shows an image made in the box, as
 // Claude Code's Read does; filling a scanned form needs Len to look at a zoomed crop.
 describe("Read of an image made in the box", () => {
