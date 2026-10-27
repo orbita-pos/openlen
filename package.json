@@ -167,7 +167,8 @@
     "crear-writer:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/crear-writer-migrate.ts",
     "perfil:drop-migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/perfil-drop-migrate.ts",
     "credits:centicreditos": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/credits-centicreditos-migrate.ts",
-    "assets:r2": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assets-a-r2.ts"
+    "assets:r2": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/assets-a-r2.ts",
+    "mentions:gate": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/mentions-gate.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "1.11.3",
