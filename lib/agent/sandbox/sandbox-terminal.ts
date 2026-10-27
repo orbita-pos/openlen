@@ -251,12 +251,21 @@ export class SandboxTerminal implements TerminalBackend {
   /** /.openlen in the box, and an app's /node_modules (1,268 files and 7.8 MB of types, measured 21/10):
    *  only what the box doesn't have yet — what went up is remembered IN the box, across turns — and
    *  a large set in one compressed bundle. */
-  /** A file's bytes as the box has it now, or null (not there, a folder, or no box yet). */
+  /** A file's bytes as the box has it now, or null (not there, or a folder). Reading a file of the box
+   *  starts it as a command would: Claude Code's Read reads a disk that is always there (spec local
+   *  2026-10-27-len-pdf-skill), and a file an earlier turn left must not "not exist" until then. */
   async readFileBytes(path: string): Promise<Uint8Array | null> {
-    if (!this.opened || !this.o.handle.readBytes) return null;
-    await this.opened;
+    if (!this.o.handle.readBytes) return null;
+    await this.open();
     const got = await this.o.handle.readBytes([path]).catch(() => ({}) as Record<string, Uint8Array>);
     return got[path] ?? null;
+  }
+
+  /** A regular file's size without reading it, or null; starts the box like `readFileBytes`. */
+  async fileSize(path: string): Promise<number | null> {
+    if (!this.o.handle.fileSize) return null;
+    await this.open();
+    return this.o.handle.fileSize(path);
   }
 
   private async uploadReadOnly(): Promise<void> {

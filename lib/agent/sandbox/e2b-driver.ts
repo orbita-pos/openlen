@@ -62,6 +62,7 @@ export interface E2bSandboxLike {
     read(path: string, o: { format: "bytes" }): Promise<Uint8Array>;
     remove(path: string): Promise<unknown>;
     list(path: string): Promise<{ readonly name: string }[]>;
+    getInfo(path: string): Promise<{ readonly type?: string; readonly size: number }>;
   };
   pause(): Promise<unknown>;
   kill(): Promise<unknown>;
@@ -164,6 +165,14 @@ function wrap(sbx: E2bSandboxLike, now: () => number): SandboxHandle {
         }),
       );
       return out;
+    },
+    async fileSize(path) {
+      try {
+        const info = await sbx.files.getInfo(path);
+        return info.type === "dir" ? null : info.size;
+      } catch {
+        return null; // not there
+      }
     },
     async remove(paths) {
       for (const p of paths) await sbx.files.remove(p).catch(() => undefined);

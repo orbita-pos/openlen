@@ -14,4 +14,7 @@ export interface TerminalBackend {
   /** A file's bytes from the box (spec local 2026-10-26-len-skills: what `present` delivers, a PDF
    *  to read). Only the real terminal has it; null when the file is not there. */
   readFileBytes?(path: string): Promise<Uint8Array | null>;
+  /** A regular file's size without reading it (spec local 2026-10-27-len-pdf-skill: `Read` checks an
+   *  image first, as Claude Code's does). Only the real terminal has it; null when it is not there. */
+  fileSize?(path: string): Promise<number | null>;
 }

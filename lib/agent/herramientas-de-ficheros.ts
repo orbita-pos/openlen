@@ -43,6 +43,8 @@ import {
   sinOpIds,
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from "@/lib/agent/ficheros/resultado";
+import { IMAGE_FILE, MAX_IMAGE_READ_BYTES, imageEmpty, imageTooLarge, imageTypeOf, notAnImage } from "@/lib/agent/image-bytes";
+import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
@@ -72,8 +74,13 @@ import { checkManifestSource } from "@/lib/artifacts/manifest-check";
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
 
-/** The largest image of the box `Read` decodes: the size of an attached file. */
-const MAX_IMAGE_READ_BYTES = 20 * 1024 * 1024;
+/** The turn's terminal for `Read` of a file only the box has: started like `bash` starts it, unless
+ *  the terminal is off. A dynamic import: `bash`'s module brings the whole terminal. */
+async function terminalParaLeer(session: AgentSession, deps: AgentDeps): Promise<AgentSession["terminal"]> {
+  if (session.terminal || !terminalEncendida()) return session.terminal;
+  const { terminalOfTheTurn } = await import("@/lib/agent/terminal/herramienta");
+  return terminalOfTheTurn(session, deps);
+}
 export type HerramientaDeFicheros = (typeof HERRAMIENTAS_DE_FICHEROS)[number];
 
 export function esHerramientaDeFicheros(nombre: string): nombre is HerramientaDeFicheros {
@@ -240,10 +247,15 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // A PDF MADE IN THE BOX (an office file exported to see it, spec local 2026-10-26-len-skills):
   // read by its pages like an attached one. The site's folder never holds a PDF (text only).
   const enLaCaja = resolverRuta(asked);
+  const deLaCaja = !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`);
+  const pdfDeLaCaja = deLaCaja && /\.pdf$/i.test(enLaCaja) && Boolean(deps.pdfPages);
+  const imagenDeLaCaja = deLaCaja && IMAGE_FILE.test(enLaCaja) && Boolean(deps.imageForModel);
+  // A file only the box has: before the turn's first command there is no box yet, and Read starts it
+  // as a command would — Claude Code's Read reads a disk that is always there (27/10).
+  const terminalDelTurno = pdfDeLaCaja || imagenDeLaCaja ? await terminalParaLeer(session, deps) : session.terminal;
   // A través de la terminal, no suelto: su método necesita su `this` (TurnSandbox).
-  const terminalDelTurno = session.terminal;
   const leerDeLaCaja = terminalDelTurno?.readFileBytes ? (p: string) => terminalDelTurno.readFileBytes!(p) : undefined;
-  if (/\.pdf$/i.test(enLaCaja) && !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`) && leerDeLaCaja && deps.pdfPages) {
+  if (pdfDeLaCaja && leerDeLaCaja && deps.pdfPages) {
     const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
     if (bytes) {
       const pdfPages = deps.pdfPages;
@@ -257,13 +269,21 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
     }
   }
   // AN IMAGE MADE IN THE BOX (spec local 2026-10-27-len-pdf-skill, §4.7): shown as an image, like
-  // Claude Code's Read. Filling a scanned form needs Len to look at a zoomed crop.
-  if (/\.(png|jpe?g|webp)$/i.test(enLaCaja) && !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`) && leerDeLaCaja && deps.imageForModel) {
-    const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
-    if (bytes) {
-      if (bytes.byteLength > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(`${enLaCaja} is larger than 20 MB.`)) };
-      const { image, width, height } = await deps.imageForModel(bytes);
-      return { response: respuesta(exito(`Image read: ${enLaCaja} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
+  // Claude Code's Read, with its checks: the size before reading, an empty file, and bytes that are
+  // not an image. Filling a scanned form needs Len to look at a zoomed crop.
+  if (imagenDeLaCaja && leerDeLaCaja && deps.imageForModel) {
+    const size = terminalDelTurno?.fileSize ? await terminalDelTurno.fileSize(enLaCaja).catch(() => null) : undefined;
+    if (size !== null) {
+      if (size !== undefined && size > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(imageTooLarge(enLaCaja, formatoDeBytes(MAX_IMAGE_READ_BYTES)))) };
+      if (size === 0) return { response: respuesta(fallo(imageEmpty(enLaCaja))) };
+      const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
+      if (bytes) {
+        if (bytes.byteLength === 0) return { response: respuesta(fallo(imageEmpty(enLaCaja))) };
+        if (bytes.byteLength > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(imageTooLarge(enLaCaja, formatoDeBytes(MAX_IMAGE_READ_BYTES)))) };
+        if (!imageTypeOf(bytes)) return { response: respuesta(fallo(notAnImage(enLaCaja, bytes))) };
+        const { image, width, height } = await deps.imageForModel(bytes);
+        return { response: respuesta(exito(`Image read: ${enLaCaja} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
+      }
     }
   }
   if (resolverRuta(asked).startsWith(`${ATTACHMENTS_DIR}/`)) {

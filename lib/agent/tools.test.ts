@@ -2797,47 +2797,92 @@ describe("Read of a bundled skill's own files", () => {
 // Claude Code's Read does; filling a scanned form needs Len to look at a zoomed crop.
 describe("Read of an image made in the box", () => {
   const IMG = { mimeType: "image/jpeg", dataBase64: "IMG" };
-  const withImages = (box: Record<string, Uint8Array>, terminal = true) => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46]);
+  const GIF = new TextEncoder().encode("GIF89a\x01\x00\x01\x00");
+  const WEBP = new TextEncoder().encode("RIFF\x24\x00\x00\x00WEBPVP8 ");
+  const withImages = (box: Record<string, Uint8Array>, sizes: Record<string, number> = {}) => {
     const { deps } = makeDeps();
     const session = makeSession();
-    if (terminal) session.terminal = { arrancada: true, readFileBytes: async (p: string) => box[p] ?? null } as unknown as AgentSession["terminal"];
+    const downloaded: string[] = [];
+    session.terminal = {
+      arrancada: true,
+      readFileBytes: async (p: string) => (downloaded.push(p), box[p] ?? null),
+      fileSize: async (p: string) => sizes[p] ?? box[p]?.byteLength ?? null,
+    } as unknown as AgentSession["terminal"];
     const asked: number[] = [];
     const d = { ...deps, imageForModel: async (bytes: Uint8Array) => (asked.push(bytes.byteLength), { image: IMG, width: 300, height: 80 }) } as unknown as AgentDeps;
-    return { d, session, asked };
+    return { d, session, asked, downloaded };
   };
 
   it("Read of a PNG made in the box returns it as an image", async () => {
-    const { d, session } = withImages({ "/tmp/office/crop.png": new Uint8Array([0x89, 0x50, 0x4e, 0x47]) });
+    const { d, session } = withImages({ "/tmp/office/crop.png": PNG });
     const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/crop.png" });
     assert.equal(out.response.ok, true, String(out.response.error));
     assert.deepEqual(out.images, [IMG]);
     assert.match(String(out.response.tool_result), /^Image read: \/tmp\/office\/crop\.png/);
   });
 
-  it(".jpg, .jpeg and .webp too", async () => {
-    const paths = ["/tmp/office/a.jpg", "/tmp/office/b.jpeg", "/tmp/office/c.webp", "/tmp/office/D.PNG"];
-    const { d, session, asked } = withImages(Object.fromEntries(paths.map((p) => [p, new Uint8Array([1])])));
-    for (const p of paths) {
+  // Claude Code's Read takes png, jpg, jpeg, gif and webp; a .bmp is a binary file to it.
+  it(".jpg, .jpeg, .gif and .webp too, and not .bmp", async () => {
+    const files = { "/tmp/office/a.jpg": JPEG, "/tmp/office/b.jpeg": JPEG, "/tmp/office/c.gif": GIF, "/tmp/office/d.webp": WEBP, "/tmp/office/E.PNG": PNG };
+    const { d, session, asked } = withImages({ ...files, "/tmp/office/f.bmp": new TextEncoder().encode("BM") });
+    for (const p of Object.keys(files)) {
       const out = await runAgentTool(session, d, "Read", { file_path: p });
       assert.equal(out.response.ok, true, `${p}: ${String(out.response.error)}`);
     }
-    assert.equal(asked.length, 4);
+    assert.equal(asked.length, 5);
+    const bmp = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/f.bmp" });
+    assert.equal(bmp.images, undefined);
+    assert.equal(asked.length, 5);
   });
 
-  it("an image larger than 20 MB is refused without decoding it", async () => {
-    const { d, session, asked } = withImages({ "/tmp/office/big.png": new Uint8Array(20 * 1024 * 1024 + 1) });
+  // Claude Code stats an image before reading it, and over its limit (128 MB) refuses with these words.
+  it("an image over 128 MB is refused before it is downloaded, as Claude Code's Read does", async () => {
+    const { d, session, asked, downloaded } = withImages({}, { "/tmp/office/big.png": 128 * 1024 * 1024 + 1 });
     const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/big.png" });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /larger than 20 MB/);
+    assert.equal(
+      String(out.response.error),
+      "File is too large to read as an image (the limit is 128MB): /tmp/office/big.png. If it is an image, resize it or export a smaller copy, then read that.",
+    );
+    assert.deepEqual(downloaded, []);
     assert.equal(asked.length, 0);
   });
 
-  it("without a box, an image path is read as before", async () => {
-    const { d, session, asked } = withImages({}, false);
-    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/crop.png" });
-    assert.equal(out.response.ok, false);
-    assert.equal(out.images, undefined);
+  it("an empty image says so, as Claude Code's Read does", async () => {
+    const { d, session, asked } = withImages({ "/tmp/office/e.png": new Uint8Array(0) });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/e.png" });
+    assert.equal(String(out.response.error), "Image file is empty: /tmp/office/e.png");
     assert.equal(asked.length, 0);
+  });
+
+  it("an image name whose bytes are a web page says what they are, as Claude Code's Read does", async () => {
+    const { d, session, asked } = withImages({ "/tmp/office/logo.png": new TextEncoder().encode("<!DOCTYPE html><html><head>") });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/logo.png" });
+    assert.equal(
+      String(out.response.error),
+      'File has an image extension but its content is not a valid PNG/JPEG/GIF/WebP. Detected: HTML document (starts with "<!DOCTYPE html><html><he"). This usually means a download saved an error/login page instead of the image. Use `file "/tmp/office/logo.png"` to confirm, or read it as text with bash (e.g. `head -c 500`).',
+    );
+    assert.equal(asked.length, 0);
+  });
+
+  // Before the turn's first command there is no box yet: Read starts it, as a command would.
+  it("before any command, Read of a box image opens the turn's terminal", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const d = { ...deps, imageForModel: async () => ({ image: IMG, width: 1, height: 1 }) } as unknown as AgentDeps;
+    assert.equal(session.terminal, undefined);
+    await runAgentTool(session, d, "Read", { file_path: "/tmp/office/crop.png" });
+    assert.notEqual(session.terminal, undefined);
+  });
+
+  it("imageForModel reads a GIF", async () => {
+    const { imageForModel } = await import("./image-for-model");
+    const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+    const r = await imageForModel(new Uint8Array(gif));
+    assert.equal(r.width, 1);
+    assert.equal(r.image.mimeType, "image/jpeg");
   });
 
   it("imageForModel shrinks a large image to at most 1000 px wide", async () => {

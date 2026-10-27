@@ -112,6 +112,12 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
           b.binaries.set(p, data.byteLength);
         }
       },
+      async fileSize(path) {
+        const b = box();
+        const data = b.bytes.get(path);
+        if (data) return data.byteLength;
+        return b.files.has(path) ? new TextEncoder().encode(b.files.get(path)!).byteLength : null;
+      },
       async readBytes(paths) {
         const b = box();
         const out: Record<string, Uint8Array> = {};
