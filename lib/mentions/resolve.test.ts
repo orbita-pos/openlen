@@ -86,6 +86,12 @@ describe("resolveMentions", () => {
     expect(r.selecciones).toEqual([{ ruta: "/index.html", pista: "@Sección · A" }]);
   });
 
+  it("lets the last word be cut, as the 40-character text cuts it", async () => {
+    const html = ["<body>", "<h2>Every guardrail your safety team would have</h2>", "</body>"].join("\n");
+    const r = await resolveMentions([el("@Título · x", null, "h2:nth-of-type(1)", "h2", "Every guardrail your safety team would h")], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 2 });
+  });
+
   it("matches whole words: «Pro» is not «Professional»", async () => {
     const html = ["<body>", "<span>Professional</span>", "</body>"].join("\n");
     const r = await resolveMentions([el("@Texto · Pro", null, "span:nth-of-type(1)", "span", "Pro")], { pageHtml: () => html, files: async () => ({}) });

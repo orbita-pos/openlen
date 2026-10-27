@@ -37,4 +37,23 @@ describe("the «@» selects everything", () => {
     expect(failures).toEqual([]);
     expect(report.docs.every((d) => d.checked > 0)).toBe(true);
   }, 600_000);
+
+  it("🔴 catches a highlight that lands on a look-alike a script inserted", async () => {
+    // The page's JS puts an identical <p>Hola</p> before the source one: same tag,
+    // same text, so only the element's own position can tell them apart.
+    const html = [
+      "<!doctype html>",
+      "<html><body>",
+      "<main>",
+      "<p>Hola</p>",
+      "</main>",
+      "<script>document.querySelector('main').insertAdjacentHTML('afterbegin', '<p>Hola</p>');</script>",
+      "</body></html>",
+    ].join("\n");
+    const report = await runMentionsGate([{ name: "look-alike", kind: "page", html }]);
+    // The <p> is outlined on its look-alike: the bug, no known class. (<main> now has
+    // two <p>: its signature no longer fits, and «not on screen now» is honest.)
+    const bugs = report.docs[0]!.failures.filter((f) => f.check === 2 && f.knownClass === null);
+    expect(bugs).toEqual([expect.objectContaining({ key: "/index.html:4:1" })]);
+  }, 120_000);
 });

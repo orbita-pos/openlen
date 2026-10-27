@@ -69,17 +69,18 @@ function textFitsFragment(text: string, fragment: string): boolean {
   const words = ` ${wordsOf(fragment)} `;
   // Punctuation alone («,» between spans) identifies nothing: only real words
   // count, and whole — «Pro» is not «Professional».
-  return text
-    .split(/\s+/)
-    .filter((w) => /[\p{L}\p{N}]/u.test(w))
-    .every((w) => {
-      for (let at = words.indexOf(w); at !== -1; at = words.indexOf(w, at + 1)) {
-        const before = words[at - 1] ?? " ";
-        const after = words[at + w.length] ?? " ";
-        if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true;
-      }
-      return false;
-    });
+  // The stored text is cut at 40 characters, so its last word may be cut too:
+  // that one only has to START a word.
+  const list = text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w));
+  return list.every((w, i) => {
+    const cut = i === list.length - 1 && text.length >= TEXT_MAX;
+    for (let at = words.indexOf(w); at !== -1; at = words.indexOf(w, at + 1)) {
+      const before = words[at - 1] ?? " ";
+      const after = words[at + w.length] ?? " ";
+      if (!/[\p{L}\p{N}]/u.test(before) && (cut || !/[\p{L}\p{N}]/u.test(after))) return true;
+    }
+    return false;
+  });
 }
 
 /** The fragment's root element keeps the identity of a textless mention. */
