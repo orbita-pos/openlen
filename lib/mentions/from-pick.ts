@@ -4,7 +4,7 @@
 import type { DesignSelection } from "@/lib/apps/design/types";
 
 import { humanNameOf, kindOf } from "./naming";
-import type { MentionKind, MentionRef } from "./types";
+import type { MentionKind, MentionRef, MentionSig } from "./types";
 
 const TARGET_TEXT_MAX = 40;
 
@@ -15,6 +15,8 @@ export interface PagePick {
   path: string;
   /** The element's own text, whitespace collapsed, first 40 characters. */
   text: string;
+  /** Its identity when it has no text of its own (`mentionSigOf`). */
+  sig?: MentionSig;
 }
 
 export function mentionLabel(kindWord: string, name: string): string {
@@ -28,7 +30,7 @@ export function mentionFromPagePick(pick: PagePick, page: string | null, labels:
     type: "element",
     label: mentionLabel(labels(kindOf(tag, {})), humanNameOf({ tag, ownText: text, attrs: {} })),
     text,
-    target: { type: "page", page, path: pick.path, tag, ...(text ? { text } : {}) },
+    target: { type: "page", page, path: pick.path, tag, ...(text ? { text } : pick.sig ? { sig: pick.sig } : {}) },
   };
 }
 

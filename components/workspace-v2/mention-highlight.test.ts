@@ -61,6 +61,14 @@ describe("the page canvas answers a highlight", () => {
     expect(replies).toEqual([{ key: "k5", count: 1 }]);
   });
 
+  it("tells a textless element from a same-tag neighbour a script put before it", () => {
+    // Source: one <section class="hero"> with an h2 and a p. The page's JS inserted a banner <section>.
+    document.body.innerHTML = '<section class="banner"><div>x</div></section><section class="hero"><h2>A</h2><p>b</p></section>';
+    send({ type: "openlen:mention-highlight", key: "k6", target: { type: "page", page: null, path: "section:nth-of-type(1)", tag: "section", sig: { cls: "hero", kids: "h2,p" } } });
+    expect(document.querySelector("[data-openlen-mention-hover]")).toBeNull();
+    expect(replies).toEqual([{ key: "k6", count: 0 }]);
+  });
+
   it("clears the outline with a null target", () => {
     document.body.innerHTML = "<p>uno</p>";
     send({ type: "openlen:mention-highlight", key: "k3", target: { type: "page", page: null, path: "p:nth-of-type(1)", tag: "p", text: "uno" } });

@@ -31,6 +31,14 @@ export interface MentionAttrs {
 
 // `text` = the first 40 characters of the element's own text: the canvas checks
 // it before outlining, and the server re-anchors by it.
+/** What identifies an element with no text of its own: its id, its first class
+ *  and the tags of its children (`editChildTags`). Only the fields it has count. */
+export interface MentionSig {
+  id?: string;
+  cls?: string;
+  kids?: string;
+}
+
 /** A page element, named the way the canvas names it (`buildEditPath`). */
 export interface PageTarget {
   type: "page";
@@ -38,6 +46,8 @@ export interface PageTarget {
   path: string;
   tag: string;
   text?: string;
+  /** Set when the element has no text of its own. */
+  sig?: MentionSig;
 }
 
 /** An app element, by the source line the compiler stamps on it. */
@@ -88,4 +98,11 @@ export interface IncomingMention {
   ref: MentionRef;
   id: number;
   labelInDraft?: boolean;
+}
+
+/** A `MentionSig` as it arrives from the canvas or a request: short strings only. */
+export function isMentionSig(x: unknown): x is MentionSig {
+  if (!x || typeof x !== "object") return false;
+  const s = x as Record<string, unknown>;
+  return ["id", "cls", "kids"].every((k) => s[k] === undefined || (typeof s[k] === "string" && (s[k] as string).length <= 400));
 }

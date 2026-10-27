@@ -7,12 +7,12 @@ import "server-only";
 
 import type { SeleccionDelDueno } from "@/lib/agent/context";
 import type { MentionedFile } from "@/lib/agent/context";
-import { parse as parseHtml } from "node-html-parser";
+import { HTMLElement, parse as parseHtml } from "node-html-parser";
 
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 
 import { outlineFile } from "./app-outline";
-import { MAX_MENTIONS, type AppTarget, type MentionRef, type PageTarget } from "./types";
+import { MAX_MENTIONS, isMentionSig, type AppTarget, type MentionRef, type MentionSig, type PageTarget } from "./types";
 
 const LABEL_MAX = 200;
 const PATH_MAX = 2000;
@@ -28,7 +28,8 @@ function parseTarget(raw: unknown): PageTarget | AppTarget | null {
   const t = raw as Record<string, unknown>;
   const text = str(t.text) && t.text ? { text: t.text.slice(0, TEXT_MAX) } : {};
   if (t.type === "page" && str(t.path) && str(t.tag) && PAGE_TAG.test(t.tag) && (t.page === null || str(t.page))) {
-    return { type: "page", page: t.page as string | null, path: t.path.slice(0, PATH_MAX), tag: t.tag.slice(0, 40), ...text };
+    const sig = !t.text && isMentionSig(t.sig) ? { sig: t.sig } : {};
+    return { type: "page", page: t.page as string | null, path: t.path.slice(0, PATH_MAX), tag: t.tag.slice(0, 40), ...text, ...sig };
   }
   if (t.type === "app" && str(t.path) && t.path.startsWith("/") && str(t.tag) && APP_TAG.test(t.tag) && Number.isInteger(t.line) && (t.line as number) > 0) {
     return { type: "app", path: t.path.slice(0, PATH_MAX), line: t.line as number, tag: t.tag.slice(0, 80), ...text };
@@ -65,12 +66,33 @@ function wordsOf(html: string): string {
 /** Every word of the element's own text is in the fragment's text (its own text
  *  can be split by inline children: «Pan <em>de</em> verdad»). */
 function textFitsFragment(text: string, fragment: string): boolean {
-  const words = wordsOf(fragment);
-  // Punctuation alone («,» between spans) identifies nothing: only real words count.
+  const words = ` ${wordsOf(fragment)} `;
+  // Punctuation alone («,» between spans) identifies nothing: only real words
+  // count, and whole — «Pro» is not «Professional».
   return text
     .split(/\s+/)
     .filter((w) => /[\p{L}\p{N}]/u.test(w))
-    .every((w) => words.includes(w));
+    .every((w) => {
+      for (let at = words.indexOf(w); at !== -1; at = words.indexOf(w, at + 1)) {
+        const before = words[at - 1] ?? " ";
+        const after = words[at + w.length] ?? " ";
+        if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true;
+      }
+      return false;
+    });
+}
+
+/** The fragment's root element keeps the identity of a textless mention. */
+function sigFitsFragment(sig: MentionSig, fragment: string): boolean {
+  const root = parseHtml(fragment).childNodes.find((n): n is HTMLElement => n instanceof HTMLElement);
+  if (!root) return false;
+  if (sig.id !== undefined && (root.getAttribute("id") ?? "") !== sig.id) return false;
+  if (sig.cls !== undefined && ((root.getAttribute("class") ?? "").trim().split(/\s+/)[0] ?? "") !== sig.cls) return false;
+  if (sig.kids !== undefined) {
+    const kids = root.childNodes.filter((n): n is HTMLElement => n instanceof HTMLElement).map((n) => n.rawTagName.toLowerCase());
+    if (kids.join(",") !== sig.kids) return false;
+  }
+  return true;
 }
 
 function pageSelection(ref: MentionRef & { type: "element" }, target: PageTarget, html: string | null): SeleccionDelDueno {
@@ -82,7 +104,8 @@ function pageSelection(ref: MentionRef & { type: "element" }, target: PageTarget
   // change under a path; lines of a neighbour would point Len at the wrong thing.
   const opening = `<${target.tag.toLowerCase()}`;
   const sameTag = sel.contenido.slice(0, opening.length).toLowerCase() === opening && /[\s>/]/.test(sel.contenido[opening.length] ?? "");
-  if (!sameTag || (target.text && !textFitsFragment(target.text, sel.contenido))) return { ruta: sel.ruta, pista: ref.label };
+  const fits = target.text ? textFitsFragment(target.text, sel.contenido) : !target.sig || sigFitsFragment(target.sig, sel.contenido);
+  if (!sameTag || !fits) return { ruta: sel.ruta, pista: ref.label };
   return sel;
 }
 
@@ -91,9 +114,14 @@ async function appSelection(ref: MentionRef & { type: "element" }, target: AppTa
   if (source === undefined) return pista;
   const entries = await outlineFile(target.path, source);
   const sameTag = (tag: string) => tag.toLowerCase() === target.tag.toLowerCase();
-  const textFits = (text: string) => !target.text || !text || text.startsWith(target.text);
+  // A mention that had text needs that text: a textless same-tag element that
+  // now sits on the old line is a neighbour, not it.
+  const textFits = (text: string) => !target.text || text.startsWith(target.text);
   const onLine = entries.filter((e) => e.line === target.line);
-  let found = onLine.find((e) => sameTag(e.tag) && textFits(e.text)) ?? (onLine.length === 1 && textFits(onLine[0]!.text) ? onLine[0] : undefined);
+  // The one exception: the line of a component's use (`<Tarjeta />`), whose JSX
+  // tag is not the DOM tag the pick saw and which has no text of its own.
+  const componentUse = onLine.length === 1 && !sameTag(onLine[0]!.tag) && (!onLine[0]!.text || textFits(onLine[0]!.text)) ? onLine[0] : undefined;
+  let found = onLine.find((e) => sameTag(e.tag) && textFits(e.text)) ?? componentUse;
   if (!found) {
     found = entries
       .filter((e) => sameTag(e.tag) && (target.text ? e.text.startsWith(target.text) : true))
