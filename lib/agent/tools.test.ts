@@ -2719,3 +2719,36 @@ describe("Read on an attached office file or CSV", () => {
     assert.match(String(out.response.tool_result), /2\tpan,10/);
   });
 });
+
+// PRESENT AND A PDF MADE IN THE BOX (spec local 2026-10-26-len-skills, §4.7 and §4.9).
+describe("present and a PDF made in the box", () => {
+  const PAGE = { mimeType: "image/jpeg", dataBase64: "PAGE" };
+  const withBox = (box: Record<string, Uint8Array>) => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.turnId = "t1";
+    session.terminal = { arrancada: true, readFileBytes: async (p: string) => box[p] ?? null } as unknown as AgentSession["terminal"];
+    const stored: string[] = [];
+    const d = {
+      ...deps,
+      pdfPages: async () => ({ ok: true, pageCount: 2, first: 1, last: 2, images: [PAGE, PAGE] }),
+      storeDeliverable: async (_p: string, _t: string, name: string) => (stored.push(name), { url: `https://cdn.example/deliveries/p1/t1/${name}` }),
+    } as unknown as AgentDeps;
+    return { d, session, stored };
+  };
+
+  it("runAgentTool dispatches present", async () => {
+    const { d, session, stored } = withBox({ "/tmp/office/carta.docx": new Uint8Array([0x50, 0x4b, 3, 4]) });
+    const out = await runAgentTool(session, d, "present", { files: [{ path: "/tmp/office/carta.docx" }] });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.deepEqual(stored, ["carta.docx"]);
+  });
+
+  it("Read of a pdf made in the box returns its pages as images", async () => {
+    const { d, session } = withBox({ "/tmp/office/render/carta.pdf": new TextEncoder().encode("%PDF-1.7 x") });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/render/carta.pdf", pages: "1-2" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.match(String(out.response.tool_result), /^PDF pages extracted: 2 page\(s\) from \/tmp\/office\/render\/carta\.pdf/);
+    assert.equal(out.images?.length, 2);
+  });
+});

@@ -11,4 +11,7 @@ export interface TerminalBackend {
   refrescarPerezosos(): Promise<void>;
   poner(ficheros: Readonly<Record<string, string | null>>): Promise<void>;
   cerrar(): Promise<void>;
+  /** A file's bytes from the box (spec local 2026-10-26-len-skills: what `present` delivers, a PDF
+   *  to read). Only the real terminal has it; null when the file is not there. */
+  readFileBytes?(path: string): Promise<Uint8Array | null>;
 }

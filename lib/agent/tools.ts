@@ -133,6 +133,7 @@ import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { toolTodoWrite } from "@/lib/agent/todo-write";
 import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
 import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
+import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
@@ -806,6 +807,15 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         const { deleteNote } = await import("@/lib/agent/memory/store");
         return deleteNote(projectId, name);
       },
+    },
+    // `present`: what Len delivers goes to storage, under the project and the turn (spec local
+    // 2026-10-26-len-skills, §4.9). Never the project's folder, never published.
+    async storeDeliverable(projectId, turnId, name, bytes, contentType) {
+      const { getStorage } = await import("@/lib/storage");
+      const safe = name.replace(/[^\p{L}\p{N}._-]/gu, "-").replace(/^[.-]+/, "").slice(0, 100) || "file";
+      const key = `deliveries/${projectId}/${turnId.replace(/[^A-Za-z0-9_-]/g, "") || "turn"}/${safe}`;
+      const r = await getStorage().upload({ key, contentType, body: Buffer.from(bytes) });
+      return { url: r.url };
     },
     // The skills of /.len/skills and ~/.len/skills. Lazy import, like the notes: the database.
     skillStore: {
@@ -2868,6 +2878,8 @@ async function ejecutarHerramienta(
         return toolReadMe(args);
       case SKILL_TOOL:
         return toolSkill(session, args);
+      case PRESENT_TOOL:
+        return await toolPresent(session, deps, args);
       case SHOW_WIDGET:
         return toolShowWidget(args);
       case ASK_USER_QUESTION:

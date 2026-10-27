@@ -16,6 +16,8 @@
     "subtitle": "我能完全掌控你的页面。尽管开口。"
   },
   "turn": {
+    "deliveredFiles": "给你的文件",
+    "download": "下载",
     "imageSent": "图片已发送",
     "imagesSent": "已发送 {count} 张图片",
     "homePage": "首页",

@@ -16,6 +16,8 @@
     "subtitle": "Tengo control total sobre tu página. Pídeme lo que quieras."
   },
   "turn": {
+    "deliveredFiles": "Archivos para ti",
+    "download": "Descargar",
     "imageSent": "Imagen enviada",
     "imagesSent": "{count} imágenes enviadas",
     "homePage": "Inicio",

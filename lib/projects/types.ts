@@ -434,6 +434,8 @@ export interface StoredChatTurn {
     /** En qué punto del texto de Len va ese visual: los caracteres que llevaba
      *  escritos cuando lo dibujó. Sin él (filas de antes), al final. */
     textOffset?: number;
+    /** Lo que entregó `present` (spec local 2026-10-26-len-skills): la tarjeta es su único enlace. */
+    delivered?: readonly { readonly name: string; readonly url: string; readonly size: number; readonly description?: string }[];
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.
      *  Va aquí y no en el turno porque `actions` es la ÚNICA parte del turno
      *  que se guarda como JSON — `appendChatMessage` escribe columnas

@@ -16,6 +16,8 @@
     "subtitle": "I have full control over your page. Ask me anything."
   },
   "turn": {
+    "deliveredFiles": "Files for you",
+    "download": "Download",
     "imageSent": "Image sent",
     "imagesSent": "{count} images sent",
     "homePage": "Home",

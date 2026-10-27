@@ -251,6 +251,14 @@ export class SandboxTerminal implements TerminalBackend {
   /** /.openlen in the box, and an app's /node_modules (1,268 files and 7.8 MB of types, measured 21/10):
    *  only what the box doesn't have yet — what went up is remembered IN the box, across turns — and
    *  a large set in one compressed bundle. */
+  /** A file's bytes as the box has it now, or null (not there, a folder, or no box yet). */
+  async readFileBytes(path: string): Promise<Uint8Array | null> {
+    if (!this.opened || !this.o.handle.readBytes) return null;
+    await this.opened;
+    const got = await this.o.handle.readBytes([path]).catch(() => ({}) as Record<string, Uint8Array>);
+    return got[path] ?? null;
+  }
+
   private async uploadReadOnly(): Promise<void> {
     const files: Record<string, string> = { ...VISITOR_DATA_READMES };
     for (const [path, text] of Object.entries(await this.o.readOnly())) if (!NEVER_IN_BOX.test(path)) files[path] = text;

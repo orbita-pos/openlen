@@ -136,6 +136,13 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     ]);
   });
 
+  it("present: los ficheros entregados LLEGAN a guardarse, y uno mal formado se cae sin 400", async () => {
+    const delivered = [{ name: "inventario.xlsx", url: "https://cdn.example/deliveries/p1/t1/inventario.xlsx", size: 5 }];
+    const res = await guardar(turno([{ tool: "present", status: "done", summary: "", delivered: [...delivered, { name: "x", url: "javascript:1", size: 1 }] }]));
+    expect(res.status).toBe(200);
+    expect(guardada().delivered).toEqual(delivered);
+  });
+
   it("LOS VISUALES: el visual de show_widget y su punto del texto LLEGAN a guardarse", async () => {
     const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };
     const res = await guardar(turno([{ tool: "show_widget", status: "done", summary: "", widget, textOffset: 5 }]));

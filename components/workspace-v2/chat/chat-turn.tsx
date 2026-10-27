@@ -8,6 +8,7 @@
 // lo que dijo, la pregunta si acabó preguntando, lo que cambió, las tarjetas de
 // publicar y de responder, y el cierre. Todo con las piezas y reglas de siempre.
 
+import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { AtSign, Crosshair, CornerDownRight, FileText, Flag } from "lucide-react";
@@ -306,6 +307,7 @@ export function LenTurn({
       <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
       <ArtifactTurnCards actions={turn.actions} />
+      <DeliveredFiles actions={turn.actions} />
       {todos && todos.length > 0 && (
         <TodoListView todos={todos} streaming={streaming} continueWith={offer} {...(onContinue ? { onContinue } : {})} />
       )}

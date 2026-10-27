@@ -10,6 +10,13 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[1]).toMatchObject({ tool: "todo_write", todos: [] });
   });
 
+  it("present: guarda los ficheros entregados en su tarjeta", () => {
+    const r = crearRegistroDelTurno();
+    const delivered = [{ name: "inventario.xlsx", url: "https://cdn.example/deliveries/p1/t1/inventario.xlsx", size: 5 }];
+    r.observar({ type: "action", tool: "present", status: "done", summary: "inventario.xlsx", delivered });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "present", delivered });
+  });
+
   it("LOS VISUALES: guarda el visual de show_widget y en qué punto del texto lo puso Len", () => {
     const r = crearRegistroDelTurno();
     const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };

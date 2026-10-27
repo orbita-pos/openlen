@@ -13,6 +13,7 @@ import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
 import type { TodoItem } from "@/lib/agent/todo-list";
 import type { VisualWidget } from "@/lib/agent/visuals/widget";
+import type { DeliveredFile } from "@/lib/agent/skills/present";
 
 export interface AgentAction {
   tool: string;
@@ -103,6 +104,8 @@ export interface AgentAction {
   /** El visual de `show_widget` (spec local 2026-10-16-len-inline-visuals): se
    *  pinta en la respuesta de Len, no como paso. */
   widget?: VisualWidget;
+  /** The files `present` delivered (spec local 2026-10-26-len-skills). */
+  delivered?: readonly DeliveredFile[];
   /** En qué punto del texto de Len va ese visual (`StoredChatTurn`). */
   textOffset?: number;
   /** Cuántas ediciones aplicó esta llamada. */
@@ -202,8 +205,9 @@ export const KNOWN_TOOLS = new Set([
   // todo_write, no son pasos —el visual va en la respuesta—, pero la barra de
   // «qué hace Len» los nombra mientras corren.
   "read_me",
-  // Skills (spec local 2026-10-26-len-skills): loading one of the catalog.
+  // Skills (spec local 2026-10-26-len-skills): loading one of the catalog, and delivering files.
   "skill",
+  "present",
   "show_widget",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",

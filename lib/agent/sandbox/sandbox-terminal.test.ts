@@ -128,6 +128,15 @@ describe("SandboxTerminal — opening fast", () => {
     expect(writeBytes).not.toHaveBeenCalled();
   });
 
+  it("readFileBytes gives a file the box made, as bytes; nothing for one that is not there", async () => {
+    const { terminal, d, handle } = await open({ projectFiles: { "/index.html": "a" } });
+    await terminal.ejecutar("true");
+    await handle.writeBytes!({ "/tmp/office/a.xlsx": new Uint8Array([1, 2, 3]) });
+    expect([...(await terminal.readFileBytes("/tmp/office/a.xlsx"))!]).toEqual([1, 2, 3]);
+    expect(await terminal.readFileBytes("/tmp/office/nada.xlsx")).toBeNull();
+    expect(d.reads(handle.id)).toBeDefined();
+  });
+
   it("a box just created from the template has nothing of the project: no manifest before the first command", async () => {
     const d = fakeDriver();
     const handle = await d.create({ template: "t", metadata: {} });

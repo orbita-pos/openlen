@@ -16,6 +16,8 @@
     "subtitle": "Ik heb volledige controle over je pagina. Vraag me wat je wilt."
   },
   "turn": {
+    "deliveredFiles": "Bestanden voor jou",
+    "download": "Downloaden",
     "imageSent": "Afbeelding verstuurd",
     "imagesSent": "{count} afbeeldingen verstuurd",
     "homePage": "Home",
