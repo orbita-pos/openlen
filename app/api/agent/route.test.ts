@@ -1997,8 +1997,20 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       );
       const prompt = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
       expect(prompt).toMatch(/\/office-docx hazme una carta\n\n<skill_content name="office-docx">/);
-      const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1];
+      const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string; skillsLoaded?: string[] } | null }])[1];
       expect(guardada.transcript?.sentText).toMatch(/<skill_content name="office-docx">/);
+      // As state, like Claude Code's invokedSkills: the row records that this turn loaded it.
+      expect(guardada.transcript?.skillsLoaded).toEqual(["office-docx"]);
+    });
+
+    it("a skill the history already recorded is not recorded again", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, skillsLoaded: ["office-docx"] } }]);
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "/office-docx otra carta" }) })),
+      );
+      const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skillsLoaded?: string[] } | null }])[1];
+      expect(guardada.transcript?.skillsLoaded).toBeUndefined();
     });
 
     it("/name inside a url invokes nothing", async () => {

@@ -148,6 +148,8 @@ export interface TranscripcionGuardada {
    *  digest of the catalog the model knows from now on (`foldSkillsDigest`). Back in its place. */
   readonly skills?: string;
   readonly skillsDigest?: string;
+  /** The skills THIS turn loaded (with `skill` or /name), as state: `foldLoadedSkills`. */
+  readonly skillsLoaded?: readonly string[];
   /** LEN 3.1 · las fotos de ESTE turno que Len NO vio (no se pudieron bajar):
    *  su nota dijo que no cargaron y no llevaron píxeles. El historial las rehace
    *  igual, aunque ahora sí bajen: si no, el mensaje cambiaba en el turno

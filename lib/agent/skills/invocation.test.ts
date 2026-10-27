@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { invokedSkillNames, withInvokedSkills } from "./invocation";
 import type { ResolvedSkill } from "./registry";
-import { skillsLoadedIn } from "./tool";
 
 const USER = new Set(["office-docx", "office-xlsx", "cotizar"]);
 const skill = (name: string): ResolvedSkill => ({
@@ -44,8 +43,7 @@ describe("withInvokedSkills", () => {
     expect(withInvokedSkills("hola", [])).toBe("hola");
   });
 
-  it("an invoked skill counts as loaded", () => {
-    const text = withInvokedSkills("/office-docx carta", [skill("office-docx")]);
-    expect([...skillsLoadedIn([{ content: text }])]).toEqual(["office-docx"]);
-  });
+  // ⚰️ «an invoked skill counts as loaded» read the injected <skill_content> back from the text. Loaded
+  // skills are state now (foldLoadedSkills, like Claude Code's invokedSkills): the route adds the
+  // invoked names itself, tested in route.test.ts («the row keeps it as sentText»).
 });

@@ -53,7 +53,7 @@ import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "@/lib/agent/skills/catalog-message";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
-import { skillsLoadedIn } from "@/lib/agent/skills/tool";
+import { foldLoadedSkills } from "@/lib/agent/skills/tool";
 import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
@@ -265,6 +265,13 @@ interface AttachedImageBody {
 const SCOPE_OUTER_MAX = 50_000;
 const ATTACHED_URL_MAX = 2_000;
 const ATTACHED_ALT_MAX = 300;
+
+/** The skills this turn loaded that the history didn't already record, for its row (spec local
+ *  2026-10-26-len-skills: loaded skills as state). Nothing when there are none. */
+function cargadasEnEsteTurno(cargadas: ReadonlySet<string> | undefined, conocidas: ReadonlySet<string>): { skillsLoaded?: string[] } {
+  const nuevas = [...(cargadas ?? [])].filter((n) => !conocidas.has(n));
+  return nuevas.length > 0 ? { skillsLoaded: nuevas } : {};
+}
 
 export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   // F4 Task 7 — emergency kill-switch: OPENLEN_AGENT=0 refuses BEFORE any
@@ -1051,6 +1058,7 @@ async function correrTurno(
   // esto (`sentText`) para que el historial lo rehaga tal cual (A7 de Len 3.1).
   // /name (spec local 2026-10-26-len-skills, §4.5): only what the person wrote invokes a skill, never
   // the thread's or the email's context; its content goes after the prompt, as DeepSeek injects it.
+  const skillsConocidas = foldLoadedSkills(filasDelHistorial);
   const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
   const textoEnviado = withInvokedSkills(
     `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
@@ -1204,8 +1212,9 @@ async function correrTurno(
   const ownerEmail = await correoDelUsuario(userId).catch(() => null);
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
-    // A skill the resent history already shows answers «already loaded» (Claude Code).
-    loadedSkills: skillsLoadedIn([...history, { content: textoEnviado }]),
+    // What the conversation already loaded, as state (Claude Code's invokedSkills), and what /name
+    // put in this message: `skill` answers «already loaded» for them.
+    loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
@@ -1460,6 +1469,8 @@ async function correrTurno(
                     ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
                     // Skills: the catalog this turn sent and the digest the model knows from now on.
                     ...(catalogoDelTurno ? { skills: catalogoDelTurno.text, skillsDigest: catalogoDelTurno.digest } : {}),
+                    // And what this turn loaded, as state, for the next ones.
+                    ...cargadasEnEsteTurno(agentSession.loadedSkills, skillsConocidas),
                     // Len 3.1: las fotos que no se vieron y las capturas del modo
                     // Diseño, para que el historial rehaga este mensaje tal cual.
                     ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
