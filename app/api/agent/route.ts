@@ -54,6 +54,7 @@ import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCata
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
 import { skillsLoadedIn } from "@/lib/agent/skills/tool";
+import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
@@ -1045,7 +1046,13 @@ async function correrTurno(
   // hilo o del correo, si lo hay, y lo que pediste. La fila guarda sólo lo escrito
   // (y las correcciones «↳», para el panel); si difiere de esto, guarda también
   // esto (`sentText`) para que el historial lo rehaga tal cual (A7 de Len 3.1).
-  const textoEnviado = `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`;
+  // /name (spec local 2026-10-26-len-skills, §4.5): only what the person wrote invokes a skill, never
+  // the thread's or the email's context; its content goes after the prompt, as DeepSeek injects it.
+  const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
+  const textoEnviado = withInvokedSkills(
+    `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+    skillsInvocadas,
+  );
   const argsDelTurno = {
     mode,
     app: appDelTurno,
@@ -1195,7 +1202,7 @@ async function correrTurno(
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
     // A skill the resent history already shows answers «already loaded» (Claude Code).
-    loadedSkills: skillsLoadedIn(history),
+    loadedSkills: skillsLoadedIn([...history, { content: textoEnviado }]),
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
