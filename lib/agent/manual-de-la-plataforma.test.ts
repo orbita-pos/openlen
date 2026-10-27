@@ -83,7 +83,8 @@ describe("el manual de la plataforma", () => {
   });
 
   it("F4 · la guía y las librerías viven en /.openlen/docs, cada una en su fichero", () => {
-    expect(Object.keys(docs)).toEqual([...RUTAS_DE_DOCS]);
+    // Las skills (/.openlen/skills) no van en el índice de /AGENTS.md: las anuncia su catálogo.
+    expect(Object.keys(docs).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [
       ["DESIGN GUIDE (for the pages you create yourself", RUTA_GUIA],
       ["COLOR, SHAPE AND TYPE", RUTA_GUIA],

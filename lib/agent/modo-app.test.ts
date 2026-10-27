@@ -179,7 +179,8 @@ describe("el manual de una app (/AGENTS.md)", () => {
     expect(textoDeLaPlataforma(RUTA_MANUAL, "len", APP)).toBe(buildManualDeLaPlataforma(process.env, "len", APP));
     expect(textoDeLaPlataforma(RUTA_GUIA, "len", APP)).toBe(GUIA_DE_LA_APP);
     expect(textoDeLaPlataforma(RUTA_LIBRERIAS, "len", APP)).toBeNull();
-    expect(Object.keys(documentosDeLaPlataforma(APP))).toEqual([RUTA_GUIA]);
+    // Las skills (/.openlen/skills) no son del manual de la app: las anuncia su catálogo.
+    expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([RUTA_GUIA]);
     // Y en una página, los de siempre.
     expect(textoDeLaPlataforma(RUTA_LIBRERIAS)).not.toBeNull();
   });
@@ -285,7 +286,8 @@ describe("los nombres que usa el modo app", () => {
     const texto = [
       buildAgentSystemPrompt(ENV, "len", APP),
       buildManualDeLaPlataforma(ENV, "len", APP),
-      ...Object.values(documentosDeLaPlataforma(APP)),
+      // Sin las skills: su código (Python) está lleno de nombres con guiones bajos que no son herramientas.
+      ...Object.entries(documentosDeLaPlataforma(APP)).filter(([r]) => !r.startsWith("/.openlen/skills/")).map(([, t]) => t),
       ...app.map((d) => String(d.description ?? "")),
     ].join("\n");
     // Lo que tiene forma de nombre y NO es una herramienta: un parámetro, un
