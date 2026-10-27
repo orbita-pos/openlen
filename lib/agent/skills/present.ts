@@ -71,7 +71,9 @@ const fail = (error: string): ToolOutcome => ({ response: { ok: false, error } }
 export async function toolPresent(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const files = Array.isArray(args.files) ? args.files : [];
   if (files.length < 1 || files.length > PRESENT_MAX_FILES) return fail(`present accepts 1 to ${PRESENT_MAX_FILES} files`);
-  const read = (session.terminal as { readFileBytes?: (path: string) => Promise<Uint8Array | null> } | undefined)?.readFileBytes;
+  // Called THROUGH the terminal: its method needs its own `this` (TurnSandbox), found by a real turn.
+  const terminal = session.terminal;
+  const read = terminal?.readFileBytes ? (path: string) => terminal.readFileBytes!(path) : undefined;
   if (!read) return fail("There is no file to deliver: no terminal box ran in this turn. Make the file in the terminal first.");
   // Every file is checked before any is uploaded: a refusal uploads nothing.
   const ready: { name: string; bytes: Uint8Array; description?: string }[] = [];

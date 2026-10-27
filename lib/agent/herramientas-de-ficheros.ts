@@ -237,7 +237,9 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // A PDF MADE IN THE BOX (an office file exported to see it, spec local 2026-10-26-len-skills):
   // read by its pages like an attached one. The site's folder never holds a PDF (text only).
   const enLaCaja = resolverRuta(asked);
-  const leerDeLaCaja = (session.terminal as { readFileBytes?: (p: string) => Promise<Uint8Array | null> } | undefined)?.readFileBytes;
+  // A través de la terminal, no suelto: su método necesita su `this` (TurnSandbox).
+  const terminalDelTurno = session.terminal;
+  const leerDeLaCaja = terminalDelTurno?.readFileBytes ? (p: string) => terminalDelTurno.readFileBytes!(p) : undefined;
   if (/\.pdf$/i.test(enLaCaja) && !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`) && leerDeLaCaja && deps.pdfPages) {
     const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
     if (bytes) {

@@ -2752,3 +2752,24 @@ describe("present and a PDF made in the box", () => {
     assert.equal(out.images?.length, 2);
   });
 });
+
+// Found by the real turn of the skills (26/10): the turn's terminal is a class whose method needs its
+// own `this` (TurnSandbox); Read has to call it through the terminal.
+describe("Read of a box PDF through a terminal that needs its own this", () => {
+  it("reads the pages", async () => {
+    class Box {
+      private readonly files = new Map([["/tmp/office/render/x.pdf", new TextEncoder().encode("%PDF-1.7 x")]]);
+      readonly arrancada = true;
+      async readFileBytes(path: string) {
+        return this.files.get(path) ?? null;
+      }
+    }
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.terminal = new Box() as unknown as AgentSession["terminal"];
+    const d = { ...deps, pdfPages: async () => ({ ok: true, pageCount: 1, first: 1, last: 1, images: [{ mimeType: "image/jpeg", dataBase64: "P" }] }) } as unknown as AgentDeps;
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/render/x.pdf" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.equal(out.images?.length, 1);
+  });
+});

@@ -61,6 +61,22 @@ describe("present", () => {
     expect(String(out.response.error)).toMatch(/no file to deliver/i);
   });
 
+  // Found by the real turn (26/10): the turn's terminal is a class (TurnSandbox) whose method uses
+  // `this`; taking the method off the object and calling it bare lost it, and every read said "no file".
+  it("reads through a terminal whose method needs its own this", async () => {
+    class Box {
+      private readonly files = new Map([["/tmp/office/a.xlsx", XLSX]]);
+      readonly arrancada = true;
+      async readFileBytes(path: string) {
+        return this.files.get(path) ?? null;
+      }
+    }
+    const { session, deps } = setup(null);
+    session.terminal = new Box() as unknown as AgentSession["terminal"];
+    const out = await toolPresent(session, deps, { files: [{ path: "/tmp/office/a.xlsx" }] });
+    expect(out.response.ok, String(out.response.error)).toBe(true);
+  });
+
   it("a relative path is the box's root", async () => {
     const { session, deps } = setup({ "/informe.docx": XLSX });
     expect((await toolPresent(session, deps, { files: [{ path: "informe.docx" }] })).response.ok).toBe(true);
