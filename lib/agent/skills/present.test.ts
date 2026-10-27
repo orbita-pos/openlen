@@ -89,4 +89,12 @@ describe("deliveredFrom", () => {
     expect(deliveredFrom([{ name: "a.xlsx", url: "javascript:alert(1)", size: 3 }])).toBeNull();
     expect(deliveredFrom("nope")).toBeNull();
   });
+
+  // Review of the branch (26/10): the chat is shared among a project's members and the browser saves
+  // its own cards, so a card must never link to another site through a protocol-relative URL.
+  it("refuses a protocol-relative url, which leads to another site", () => {
+    expect(deliveredFrom([{ name: "a.xlsx", url: "//evil.example/a.xlsx", size: 3 }])).toBeNull();
+    expect(deliveredFrom([{ name: "a.xlsx", url: "/\\evil.example/a.xlsx", size: 3 }])).toBeNull();
+    expect(deliveredFrom([{ name: "a.xlsx", url: "/uploads/deliveries/p1/t1/a.xlsx", size: 3 }])).toHaveLength(1);
+  });
 });

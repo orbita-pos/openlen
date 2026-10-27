@@ -60,7 +60,9 @@ export function deliveredFrom(v: unknown): DeliveredFile[] | null {
     if (!f || typeof f !== "object") continue;
     const r = f as Record<string, unknown>;
     if (typeof r.name !== "string" || !r.name || typeof r.url !== "string" || typeof r.size !== "number" || !Number.isFinite(r.size) || r.size < 0) continue;
-    if (!/^(https?:\/\/|\/)/.test(r.url) || r.url.length > 500) continue;
+    // An absolute http(s) URL, or a path of THIS site: one "/" and never "//" or "/\", which browsers
+    // read as another site (the chat is shared among the project's members).
+    if (!/^(https?:\/\/|\/(?![/\\]))/.test(r.url) || r.url.length > 500) continue;
     out.push({ name: r.name.slice(0, 120), url: r.url, size: r.size, ...(typeof r.description === "string" && r.description ? { description: r.description.slice(0, 300) } : {}) });
   }
   return out.length > 0 ? out : null;
