@@ -63,7 +63,7 @@ export function elementAtEditPath(path: string, root: Element): Element | null {
     const tag = m[1]!.toUpperCase();
     let count = 0;
     let found: Element | null = null;
-    for (let child = cur.firstElementChild; child; child = child.nextElementSibling) {
+    for (let child: Element | null = cur.firstElementChild; child; child = child.nextElementSibling) {
       if (child.tagName.toUpperCase() === tag && ++count === Number(m[2])) {
         found = child;
         break;

@@ -38,7 +38,9 @@ import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { GoalCardView } from "./goal-card";
 import { isRunning, liveStatus } from "./live-status";
-import { useAgentChat, type PendingAttachments, type ScopedSelection } from "./use-agent-chat";
+import { useAgentChat, type PendingAttachments } from "./use-agent-chat";
+import { useMentionIndex } from "./use-mention-index";
+import type { IncomingMention } from "@/lib/mentions/types";
 import { useConversations } from "./use-conversations";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
@@ -70,8 +72,9 @@ export interface NewChatPanelProps {
   projectLoading?: boolean;
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
-  scopedSelection?: ScopedSelection | null;
-  onClearScope?: () => void;
+  /** A click on the canvas that became a mention (spec local 2026-10-27): the panel puts it in the draft. */
+  incomingMention?: IncomingMention | null;
+  onIncomingMentionConsumed?: () => void;
   pendingDraft?: string | null;
   pendingDraftAutoSend?: boolean;
   onPendingDraftConsumed?: () => void;
@@ -146,8 +149,8 @@ function AgentChatView({
   onDesignSettled,
   sectionSelectMode = false,
   onToggleSectionSelect,
-  scopedSelection = null,
-  onClearScope,
+  incomingMention = null,
+  onIncomingMentionConsumed,
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
@@ -196,14 +199,38 @@ function AgentChatView({
     onRedesigningChange,
     onLatestTurnChange,
     onDesignSettled,
-    scopedSelection,
-    onClearScope,
     pendingDraft,
     pendingDraftAutoSend,
     onPendingDraftConsumed,
     pendingAttachments,
   });
   const { seguirTurnoDelHilo } = chat;
+  // THE CHAT'S «@» (spec local 2026-10-27): the index of what can be pointed at,
+  // revalidated when a turn ends (Len may have changed the files) and when the
+  // box gets focus; and the clicks on the canvas that become mentions.
+  const mentionIdx = useMentionIndex(soloLectura ? null : projectId);
+  const mentionIndex = mentionIdx.ready ? { entries: mentionIdx.entries, files: mentionIdx.files } : null;
+  const refreshMentions = mentionIdx.refresh;
+  const wasBusy = useRef(chat.busy);
+  useEffect(() => {
+    if (wasBusy.current && !chat.busy) refreshMentions();
+    wasBusy.current = chat.busy;
+  }, [chat.busy, refreshMentions]);
+  useEffect(() => {
+    const box = chat.taRef.current;
+    if (!box) return;
+    box.addEventListener("focus", refreshMentions);
+    return () => box.removeEventListener("focus", refreshMentions);
+  }, [chat.taRef, refreshMentions]);
+  const { addMention, setMentions } = chat;
+  useEffect(() => {
+    if (!incomingMention) return;
+    if (incomingMention.labelInDraft) setMentions((m) => [...m, incomingMention.ref]);
+    else addMention(incomingMention.ref);
+    chat.taRef.current?.focus();
+    onIncomingMentionConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingMention?.id]);
   // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): una clave en el mensaje se
   // guarda como secreto en vez de mandársela a Len. Se pregunta UNA vez si el
   // servidor guarda secretos (sin funciones, el compositor manda como siempre).
@@ -373,6 +400,8 @@ function AgentChatView({
         return true;
       }
       chat.setDraft("");
+      // A message to people carries its mentions as their labels, nothing more (spec §6.1).
+      chat.setMentions([]);
       chat.setAttachedImage(null);
       // La firma nueva es nuestra: el sondeo no tiene que releer por ella.
       firmaRef.current = await leerFirma();
@@ -508,8 +537,10 @@ function AgentChatView({
             textareaRef={chat.taRef}
             comments={chat.comentarios}
             onRemoveComment={chat.removeComentario}
-            scopedSelection={scopedSelection}
-            onClearScope={onClearScope}
+            scopedSelection={null}
+            mentionIndex={mentionIndex}
+            mentions={chat.mentions}
+            onMentionsChange={chat.setMentions}
             sectionSelectMode={sectionSelectMode}
             onToggleSectionSelect={onToggleSectionSelect}
             attachedImage={chat.attachedImage}

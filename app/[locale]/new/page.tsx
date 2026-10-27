@@ -26,8 +26,9 @@ import {
   designSummary,
 } from "@/components/workspace-v2/design-mode/design-edits";
 import { isDesignSelection } from "@/lib/apps/design/types";
-import { mentionFromDesignSelection } from "@/lib/mentions/from-pick";
-import type { MentionKind, MentionRef } from "@/lib/mentions/types";
+import { mentionFromDesignSelection, mentionFromPagePick } from "@/lib/mentions/from-pick";
+import { registerMentionCanvas } from "@/components/workspace-v2/mention-highlight";
+import type { IncomingMention, MentionKind } from "@/lib/mentions/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import {
   isGenerationBriefLengthValid,
@@ -608,10 +609,6 @@ function NewV2Inner() {
   // into the iframe and listens for the resulting postMessage at this level
   // (so the captured payload can flow back into the chat composer's chip).
   const [sectionSelectMode, setSectionSelectMode] = useState(false);
-  const [scopedSelection, setScopedSelection] = useState<{
-    hint: string;
-    path: string;
-  } | null>(null);
   // Inspector (Phase 1 properties panel) — right-side drawer. inspectMode
   // gates the iframe's element-inspect script; selection + pageMeta mirror
   // what that script reports back over postMessage.
@@ -629,12 +626,22 @@ function NewV2Inner() {
   const [mentionPick, setMentionPick] = useState(false);
   const mentionPickRef = useRef(false);
   mentionPickRef.current = mentionPick;
-  const [incomingMention, setIncomingMention] = useState<{ ref: MentionRef; id: number } | null>(null);
+  const [incomingMention, setIncomingMention] = useState<IncomingMention | null>(null);
   const tMentions = useTranslations("panelsChat");
   const mentionKindLabelRef = useRef<(k: MentionKind) => string>((k) => k);
   mentionKindLabelRef.current = (k) => tMentions(`mentions.kind.${k}`);
   const cannotPointRef = useRef(() => {});
   cannotPointRef.current = () => toast.error(tMentions("mentions.cannotPoint"));
+  // The chat reaches the canvas through this registration to outline what the
+  // «@» list points at (components/workspace-v2/mention-highlight.ts).
+  useEffect(
+    () =>
+      registerMentionCanvas({
+        window: () => iframeElRef.current?.contentWindow ?? null,
+        page: () => activeSitePageRef.current,
+      }),
+    [],
+  );
   /** Lo último que se mandó al lienzo como vista previa (y lo que se reenvía si recarga). */
   const designPrevRef = useRef(EMPTY_DESIGN_EDITS);
   const [inspectSelection, setInspectSelection] =
@@ -1085,7 +1092,13 @@ function NewV2Inner() {
           typeof data.hint === "string" &&
           typeof data.path === "string"
         ) {
-          setScopedSelection({ hint: data.hint, path: data.path });
+          // A click on the page becomes a mention in the chat (spec local 2026-10-27).
+          const ref = mentionFromPagePick(
+            { hint: data.hint, tag: typeof data.tag === "string" ? data.tag : "div", path: data.path, text: typeof data.text === "string" ? data.text : "" },
+            activeSitePageRef.current,
+            mentionKindLabelRef.current,
+          );
+          setIncomingMention({ ref, id: Date.now() });
         }
         setSectionSelectMode(false);
       } else if (data.type === "openlen:section-select-cancelled") {
@@ -1126,12 +1139,17 @@ function NewV2Inner() {
         // switch to the Chat tab, and push a context-aware draft into the
         // composer. The user can hit Send as-is or edit first.
         setAssetModal(null);
-        setScopedSelection({ hint: data.hint, path: data.path });
+        // The swapped element as a mention (spec local 2026-10-27), its label
+        // already at the start of the proposed draft.
+        const swapped = mentionFromPagePick(
+          { hint: data.hint, tag: typeof data.tag === "string" ? data.tag : kind === "image" ? "img" : "svg", path: data.path, text: "" },
+          activeSitePageRef.current,
+          mentionKindLabelRef.current,
+        );
+        setIncomingMention({ ref: swapped, id: Date.now(), labelInDraft: true });
         setMode("chat");
         setPendingChatDraft(
-          kind === "icon"
-            ? t("chatDraft.iconChanged")
-            : t("chatDraft.imageChanged"),
+          `${swapped.label} ${kind === "icon" ? t("chatDraft.iconChanged") : t("chatDraft.imageChanged")}`,
         );
       } else if (data.type === "openlen:element-selected") {
         if (typeof data.path === "string" && typeof data.tag === "string") {
@@ -2872,7 +2890,7 @@ function NewV2Inner() {
     const newId = loadedProject?.id ?? null;
     if (newId !== prevLoadedIdRef.current) {
       setSectionSelectMode(false);
-      setScopedSelection(null);
+      setIncomingMention(null);
       setAssetModal(null);
       setOriginalModal(null);
       setOriginalRestoring(false);
@@ -3683,8 +3701,8 @@ function NewV2Inner() {
           sectionSelectMode={esApp ? mentionPick : sectionSelectMode}
           onToggleSectionSelect={esApp ? (designAvailable ? (active) => setMentionPick(active) : undefined) : (active) => setSectionSelectMode(active)}
           esApp={esApp}
-          scopedSelection={scopedSelection}
-          onClearScope={() => setScopedSelection(null)}
+          incomingMention={incomingMention}
+          onIncomingMentionConsumed={() => setIncomingMention(null)}
           pendingDraft={pendingChatDraft}
           pendingDraftAutoSend={pendingChatAutoSend}
           pendingAttachments={pendingChatAttachments}
