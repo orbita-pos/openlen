@@ -55,6 +55,8 @@ import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
 import type { MemoryNote } from "@/lib/agent/memory/note";
+import type { SkillScope } from "@/lib/agent/skills/paths";
+import type { StoredSkill } from "@/lib/agent/skills/store";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
@@ -334,6 +336,13 @@ export interface AgentDeps {
     list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
     upsert(projectId: string, note: MemoryNote, authorId: string | null): Promise<{ before: string | null }>;
     remove(projectId: string, name: string): Promise<{ before: string | null }>;
+  };
+  /** The skills of `/.len/skills` and `~/.len/skills` (lib/agent/skills/store.ts). `ownerId` is the
+   *  project for `project` and the person who speaks for `personal`. */
+  skillStore?: {
+    list(scope: SkillScope, ownerId: string): Promise<readonly StoredSkill[]>;
+    upsert(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null): Promise<{ before: string | null }>;
+    remove(scope: SkillScope, ownerId: string, name: string): Promise<{ before: string | null }>;
   };
   /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
    *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
@@ -791,6 +800,21 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       async remove(projectId, name) {
         const { deleteNote } = await import("@/lib/agent/memory/store");
         return deleteNote(projectId, name);
+      },
+    },
+    // The skills of /.len/skills and ~/.len/skills. Lazy import, like the notes: the database.
+    skillStore: {
+      async list(scope, ownerId) {
+        const { listSkills } = await import("@/lib/agent/skills/store");
+        return listSkills(scope, ownerId);
+      },
+      async upsert(scope, ownerId, name, text, authorId) {
+        const { upsertSkill } = await import("@/lib/agent/skills/store");
+        return upsertSkill(scope, ownerId, name, text, authorId);
+      },
+      async remove(scope, ownerId, name) {
+        const { deleteSkill } = await import("@/lib/agent/skills/store");
+        return deleteSkill(scope, ownerId, name);
       },
     },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la

@@ -1475,6 +1475,27 @@ export const lenMemoryNotes = pgTable(
   (t) => [uniqueIndex("lenMemoryNotes_project_name_idx").on(t.projectId, t.name)],
 );
 
+/** Las skills de un proyecto (`/.len/skills`) y de una persona (`~/.len/skills`): spec local
+ *  2026-10-26-len-skills. Sin FK: `ownerId` es un proyecto o una persona, según `scope`.
+ *  La crea `npm run len-skills:migrate` (scripts/len-skills-migrate-sql.ts, mismo SQL). */
+export const lenSkills = pgTable(
+  "lenSkills",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    scope: text("scope").$type<"project" | "personal">().notNull(),
+    ownerId: text("ownerId").notNull(),
+    name: text("name").notNull(),
+    /** El SKILL.md entero, como lo escribió Len. */
+    text: text("text").notNull(),
+    authorId: text("authorId"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    /** Borrada (`rm`): una con el mismo nombre la revive. */
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
+  },
+  (t) => [uniqueIndex("lenSkills_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
+);
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",

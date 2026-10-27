@@ -47,6 +47,9 @@ import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memo
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
 import { findSecret } from "@/lib/agent/memory/secrets";
+import { ONLY_SKILL_MD, isUnderSkillsDir, skillPath, skillPathOf } from "@/lib/agent/skills/paths";
+import { parseSkillFile } from "@/lib/agent/skills/skill-file";
+import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
@@ -103,6 +106,9 @@ interface Virtuales {
   /** La memoria (plans/len-md): `~/.len/LEN.md` (de quien habla), `/LEN.md`
    *  y, si hay notas, `/.len/memory/MEMORY.md` (generado) y cada nota. */
   readonly memoria: ReadonlyMap<string, string>;
+  /** Skills (spec local 2026-10-26-len-skills): the project's `/.len/skills/<name>/SKILL.md` and the
+   *  speaker's `~/.len/skills/<name>/SKILL.md`. Read by their path, like the memory notes. */
+  readonly skills: ReadonlyMap<string, string>;
   /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
   readonly folder: ReadonlyMap<string, string>;
   /** NPM ABIERTO (spec 2026-10-13): el lock de esm.sh, que vive en /.openlen
@@ -143,6 +149,16 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
     console.warn("[agente] no se pudieron leer las notas de memoria", err);
   }
   const indice = buildMemoryIndex(notas, MEMORY_INDEX_MAX);
+  const skills = new Map<string, string>();
+  for (const scope of ["project", "personal"] as const) {
+    try {
+      const owner = scope === "project" ? session.projectId : personOf(session);
+      for (const s of (await deps.skillStore?.list(scope, owner)) ?? []) skills.set(skillPath(scope, s.name), s.text);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[agente] no se pudieron leer las skills (${scope})`, err);
+    }
+  }
   return {
     artifacts: new Map(Object.entries(await deps.artifacts?.files() ?? {})),
     memoria: new Map([
@@ -151,12 +167,13 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
       ...(indice ? [[MEMORY_INDEX, indice] as const] : []),
       ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
     ]),
+    skills,
     folder: new Map(Object.entries(folder).filter(([ruta]) => isFolderPath(ruta))),
     esmLock: folder[ESM_LOCK_PATH] ?? null,
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), folder: new Map(), esmLock: null };
+const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), skills: new Map(), folder: new Map(), esmLock: null };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -175,6 +192,8 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       if (artifact !== undefined) return artifact;
       const memoria = v.memoria.get(ruta);
       if (memoria !== undefined) return memoria;
+      const skill = v.skills.get(ruta);
+      if (skill !== undefined) return skill;
       const fichero = v.folder.get(ruta);
       if (fichero !== undefined) return fichero;
       const html = leerFichero(data, ruta);
@@ -369,6 +388,7 @@ async function aplicarPlan(
     } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact save failed")) }; }
   }
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
+  if (isUnderSkillsDir(plan.ruta)) return await guardarSkill(session, deps, v.skills, plan, herramienta, detalle);
   if (memoryLayerOf(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
@@ -637,6 +657,47 @@ async function guardarMemoria(
   };
 }
 
+/** Skills per scope, as many as memory notes per project. */
+export const MAX_SKILLS_PER_SCOPE = 100;
+
+/**
+ * A USER SKILL IS SAVED (spec local 2026-10-26-len-skills, §4.2): only a SKILL.md that parses, never
+ * with the name of one of OpenLen's (reserved, as Claude Code refuses a skill with a reserved name),
+ * in the project's store or in the speaker's.
+ */
+async function guardarSkill(
+  session: AgentSession,
+  deps: AgentDeps,
+  skills: ReadonlyMap<string, string>,
+  plan: Extract<PlanDeEdit, { ok: true }>,
+  herramienta: "Edit" | "Write" | "bash",
+  detalle: string,
+): Promise<ToolOutcome> {
+  const at = skillPathOf(plan.ruta);
+  if (!at) return { response: respuesta(fallo(ONLY_SKILL_MD)) };
+  if (bundledSkills().some((b) => b.skill.name === at.name)) {
+    return { response: respuesta(fallo(`"${at.name}" is reserved: it is one of OpenLen's own skills. Give yours another name.`)) };
+  }
+  const parsed = parseSkillFile(plan.contenido, at.name);
+  if (!parsed.ok) return { response: respuesta(fallo(parsed.error)) };
+  const before = skills.get(plan.ruta) ?? null;
+  const inScope = [...skills.keys()].filter((r) => skillPathOf(r)?.scope === at.scope).length;
+  if (before === null && inScope >= MAX_SKILLS_PER_SCOPE) {
+    return { response: respuesta(fallo(`There are already ${MAX_SKILLS_PER_SCOPE} skills here. Update or remove one before adding another.`)) };
+  }
+  if (!deps.skillStore) return { response: respuesta(fallo("Skills can't be saved right now.")) };
+  const owner = at.scope === "project" ? session.projectId : personOf(session);
+  await deps.skillStore.upsert(at.scope, owner, at.name, plan.contenido, personOf(session));
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
+  session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
+  const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
+  return {
+    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
+    action: { tool: herramienta, ok: true, summary: detalle, cambio },
+    ...(cambio === "cambio" ? { mutoDurable: true } : {}),
+  };
+}
+
 /**
  * LOS FICHEROS QUE VE LA TERMINAL (F1): los mismos que Read —las páginas sin
  * op-ids, la memoria, la carpeta del proyecto (pieza 9) y el manual—, con su
@@ -649,6 +710,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   const ficheros: Record<string, string> = {};
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
+  for (const [ruta, texto] of v.skills) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
@@ -722,6 +784,19 @@ export async function guardarLoDeLaTerminal(
       continue;
     }
     if (c.tipo === "borrado") {
+      // A SKILL (spec local 2026-10-26-len-skills): `rm` deletes it, like a memory note.
+      const skillAt = skillPathOf(c.ruta);
+      if (skillAt && deps.skillStore) {
+        await deps.skillStore.remove(skillAt.scope, skillAt.scope === "project" ? session.projectId : personOf(session), skillAt.name);
+        enLaTerminal[c.ruta] = null;
+        notas.push(`${rutaRelativa(c.ruta)}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${rutaRelativa(c.ruta)}`, cambio: "cambio" },
+          mutoDurable: true,
+        });
+        continue;
+      }
       // LA MEMORIA (plans/len-md): `rm` de una nota la borra, como en Claude
       // Code; ~/.len/LEN.md, /LEN.md y el índice no se borran (se vacían).
       const capa = memoryLayerOf(c.ruta);
