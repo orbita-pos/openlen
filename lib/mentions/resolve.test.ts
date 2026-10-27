@@ -116,6 +116,13 @@ describe("parseMentions", () => {
     expect(m!.type === "element" && m!.target.path).toHaveLength(2000);
   });
 
+  it("rejects a tag that is not a tag name, so nothing built from it can throw or hang", async () => {
+    const bad = ["(", "(.*)*(.*)*(.*)*!", "a b", "<a>", ""].map((tag) => ({ type: "element", label: "@x", text: "", target: { type: "page", page: null, path: "a:nth-of-type(1)", tag } }));
+    expect(parseMentions(bad)).toEqual([]);
+    expect(parseMentions([{ type: "element", label: "@x", text: "", target: { type: "app", path: "/src/A.tsx", line: 1, tag: "motion.div(" } }])).toEqual([]);
+    expect(parseMentions([{ type: "element", label: "@x", text: "", target: { type: "app", path: "/src/A.tsx", line: 1, tag: "motion.div" } }])).toHaveLength(1);
+  });
+
   it("gives nothing for something that is not a list", () => {
     expect(parseMentions(undefined)).toEqual([]);
     expect(parseMentions({ type: "file" })).toEqual([]);
