@@ -32,6 +32,9 @@ export interface SandboxHandle {
   writeBytes?(files: Readonly<Record<string, Uint8Array>>): Promise<void>;
   /** A file's bytes, binary or not; files that don't exist are left out (what `present` delivers). */
   readBytes?(paths: readonly string[]): Promise<Record<string, Uint8Array>>;
+  /** A regular file's size without reading it (`Read` checks an image first, as Claude Code's does);
+   *  null for a folder or a file that is not there. */
+  fileSize?(path: string): Promise<number | null>;
   /** Each path a file, or a folder with all it holds (E2B's `files.remove`). */
   remove(paths: readonly string[]): Promise<void>;
   /** Files that don't exist are left out; a file that is not UTF-8 is `{ binary, size }`. */

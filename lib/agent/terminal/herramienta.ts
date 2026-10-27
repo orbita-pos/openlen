@@ -25,6 +25,7 @@ import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } 
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
 import { esFalloDeLaTerminal } from "./codigo-de-salida";
 import { resumenDelComando } from "./resumen-del-comando";
+import type { TerminalBackend } from "./backend";
 import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { gitForTerminal } from "./git-option";
@@ -57,50 +58,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     return { response: { ok: false, error, [CLAVE_TOOL_RESULT]: error } };
   }
 
-  // F5 · lo de sólo lectura se lista de nuevo cada vez que arranca una
-  // terminal (también tras un corte duro) y se calcula al leerlo.
-  let soloLectura: Promise<SoloLectura> | null = null;
-  // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B del proyecto
-  // cuando está encendida y se puede; si no, ésta de siempre (`local`).
-  const local = () => new TerminalDeLen({
-    cargarFicheros: async () => {
-      const ficheros = await cargarFicherosDeLaTerminal(session, deps);
-      session.fotoDeLaTerminal = { ...ficheros };
-      return ficheros;
-    },
-    perezosos: {
-      rutas: async () => (await (soloLectura = soloLecturaDeLaTerminal(session, deps))).rutas,
-      leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),
-    },
-    // `supabase …`: lo que crea (una migración nueva) vuelve como cualquier otro
-    // fichero cambiado y se guarda abajo, por el camino de Write.
-    ...(deps.supabaseCli
-      ? {
-          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
-            deps.supabaseCli!(session.projectId, args, ficheros, o),
-        }
-      : {}),
-    // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
-    // writes comes back as any other changed file and is saved below, Write's way.
-    ...((git) => (git ? { git } : {}))(gitForTerminal(session, deps)),
-    // STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` with the project's key, answered here.
-    ...((stripe) => (stripe ? { stripe } : {}))(stripeForTerminal(session, deps)),
-    // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
-    appTools: appToolsFor(session, deps),
-    // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11), y a la
-    // Storefront API de la tienda de Shopify conectada (spec local 2026-10-22-shopify-storefront).
-    ...(deps.functionsCurl || deps.shopifyCurl ? { functionsCurl: () => terminalCurlFor(session, deps) } : {}),
-  });
-  const terminal = (session.terminal ??= await terminalForTurn(session, {
-    local,
-    projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
-    readOnly: () => readOnlyForBox(session, deps),
-    readOnlyBytes: () => attachmentsForBox(session, deps),
-    bridge: () => bridgeHandlersFor(session, deps),
-    network: () => boxNetworkOf(session),
-    baseEnv: () => boxBaseEnvOf(session),
-    signal: deps.turnSignal,
-  }));
+  const terminal = await terminalOfTheTurn(session, deps);
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
@@ -240,6 +198,58 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
  * La copia de la terminal, igual a lo guardado AHORA. La primera vez no hace
  * falta: la terminal carga los ficheros al arrancar. Dice si cambió algo.
  */
+/**
+ * The turn's terminal, started once: the project's E2B box when it is on and can be had, otherwise
+ * today's interpreted one. `bash` starts it, and so does `Read` of a file only the box has (spec
+ * local 2026-10-27-len-pdf-skill): Claude Code's Read reads a disk that is always there.
+ */
+export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps): Promise<TerminalBackend> {
+  // F5 · lo de sólo lectura se lista de nuevo cada vez que arranca una
+  // terminal (también tras un corte duro) y se calcula al leerlo.
+  let soloLectura: Promise<SoloLectura> | null = null;
+  // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B del proyecto
+  // cuando está encendida y se puede; si no, ésta de siempre (`local`).
+  const local = () => new TerminalDeLen({
+    cargarFicheros: async () => {
+      const ficheros = await cargarFicherosDeLaTerminal(session, deps);
+      session.fotoDeLaTerminal = { ...ficheros };
+      return ficheros;
+    },
+    perezosos: {
+      rutas: async () => (await (soloLectura = soloLecturaDeLaTerminal(session, deps))).rutas,
+      leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),
+    },
+    // `supabase …`: lo que crea (una migración nueva) vuelve como cualquier otro
+    // fichero cambiado y se guarda abajo, por el camino de Write.
+    ...(deps.supabaseCli
+      ? {
+          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o),
+        }
+      : {}),
+    // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
+    // writes comes back as any other changed file and is saved below, Write's way.
+    ...((git) => (git ? { git } : {}))(gitForTerminal(session, deps)),
+    // STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` with the project's key, answered here.
+    ...((stripe) => (stripe ? { stripe } : {}))(stripeForTerminal(session, deps)),
+    // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
+    appTools: appToolsFor(session, deps),
+    // EDGE FUNCTIONS: `curl` a las del proyecto, por la puerta (spec local 2026-10-11), y a la
+    // Storefront API de la tienda de Shopify conectada (spec local 2026-10-22-shopify-storefront).
+    ...(deps.functionsCurl || deps.shopifyCurl ? { functionsCurl: () => terminalCurlFor(session, deps) } : {}),
+  });
+  return (session.terminal ??= await terminalForTurn(session, {
+    local,
+    projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
+    readOnly: () => readOnlyForBox(session, deps),
+    readOnlyBytes: () => attachmentsForBox(session, deps),
+    bridge: () => bridgeHandlersFor(session, deps),
+    network: () => boxNetworkOf(session),
+    baseEnv: () => boxBaseEnvOf(session),
+    signal: deps.turnSignal,
+  }));
+}
+
 async function ponerAlDia(sesion: AgentSession, deps: AgentDeps): Promise<boolean> {
   const foto = sesion.fotoDeLaTerminal;
   if (!sesion.terminal || !foto) return false;

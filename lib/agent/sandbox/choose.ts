@@ -121,6 +121,11 @@ export class TurnSandbox implements TerminalBackend {
     return this.diedAt === null ? this.inner.readFileBytes(path) : null;
   }
 
+  /** A file's size in the box without reading it; none once it died. */
+  async fileSize(path: string): Promise<number | null> {
+    return this.diedAt === null ? this.inner.fileSize(path) : null;
+  }
+
   private async answers(): Promise<boolean> {
     try {
       return (await this.ctx.handle.run("true", { timeoutMs: 15_000 })).exitCode === 0;

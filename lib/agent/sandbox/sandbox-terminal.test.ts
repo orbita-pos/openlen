@@ -137,6 +137,19 @@ describe("SandboxTerminal — opening fast", () => {
     expect(d.reads(handle.id)).toBeDefined();
   });
 
+  // Claude Code's Read reads the real disk; Len's reads the box, so reading a file of it starts it
+  // as a command would (spec local 2026-10-27-len-pdf-skill). Before, a file left by an earlier turn
+  // "did not exist" until the first command.
+  it("readFileBytes and fileSize open the box when no command has run yet", async () => {
+    const { terminal, handle } = await open({ projectFiles: { "/index.html": "a" } });
+    await handle.writeBytes!({ "/tmp/office/crop.png": new Uint8Array([1, 2, 3, 4]) });
+    expect(terminal.arrancada).toBe(false);
+    expect(await terminal.fileSize("/tmp/office/crop.png")).toBe(4);
+    expect(terminal.arrancada).toBe(true);
+    expect([...(await terminal.readFileBytes("/tmp/office/crop.png"))!]).toEqual([1, 2, 3, 4]);
+    expect(await terminal.fileSize("/tmp/office/nada.png")).toBeNull();
+  });
+
   it("a box just created from the template has nothing of the project: no manifest before the first command", async () => {
     const d = fakeDriver();
     const handle = await d.create({ template: "t", metadata: {} });

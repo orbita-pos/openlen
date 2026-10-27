@@ -14,6 +14,11 @@ function fakeSdk() {
       read: vi.fn(async (path: string) => (path === "/foto.png" ? new Uint8Array([0xff, 0xfe, 0x00]) : new TextEncoder().encode("ñandú"))),
       remove: vi.fn(async () => undefined),
       list: vi.fn(async () => [{ name: "1.json" }]),
+      getInfo: vi.fn(async (path: string) => {
+        if (path === "/tmp/a.png") return { type: "file", size: 1234 };
+        if (path === "/tmp") return { type: "dir", size: 4096 };
+        throw new Error(`${path}: not found`);
+      }),
     },
     pause: vi.fn(async () => true),
     kill: vi.fn(async () => true),
@@ -150,6 +155,16 @@ describe("e2bDriver", () => {
     const { sdk } = fakeSdk();
     const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
     expect(await box.read(["/a.txt", "/foto.png"])).toEqual({ "/a.txt": { text: "ñandú" }, "/foto.png": { binary: true, size: 3 } });
+  });
+
+  // Like Claude Code's Read, which stats an image before it reads it (spec local 2026-10-27-len-pdf-skill).
+  it("a file's size without reading it; null for a folder or one that is not there", async () => {
+    const { sdk, box: sbx } = fakeSdk();
+    const box = await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {} });
+    expect(await box.fileSize!("/tmp/a.png")).toBe(1234);
+    expect(await box.fileSize!("/tmp")).toBeNull();
+    expect(await box.fileSize!("/tmp/nada.png")).toBeNull();
+    expect(sbx.files.read).not.toHaveBeenCalled();
   });
 
   it("writes many files in one call, resumes by id and pauses", async () => {

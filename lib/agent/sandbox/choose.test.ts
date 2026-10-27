@@ -136,6 +136,8 @@ describe("terminalForTurn", () => {
     await (t as unknown as { inner: { o: { handle: { writeBytes(f: Record<string, Uint8Array>): Promise<void> } } } }).inner.o.handle.writeBytes({ "/tmp/office/a.xlsx": new Uint8Array([7, 8]) });
     expect([...((await t.readFileBytes!("/tmp/office/a.xlsx")) ?? [])]).toEqual([7, 8]);
     expect(await t.readFileBytes!("/tmp/office/nada.xlsx")).toBeNull();
+    expect(await t.fileSize!("/tmp/office/a.xlsx")).toBe(2);
+    expect(await t.fileSize!("/tmp/office/nada.xlsx")).toBeNull();
   });
 
   it("logs how long opening the box and its first sync took, phase by phase", async () => {
