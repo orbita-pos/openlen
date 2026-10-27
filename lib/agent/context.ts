@@ -23,7 +23,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
-import { cortarLinea, formatoCatN, normalizarFinales } from "@/lib/agent/ficheros/read";
+import { TOPE_DE_BYTES, TOPE_DE_TOKENS, cortarLinea, estimarTokens, formatoCatN, normalizarFinales } from "@/lib/agent/ficheros/read";
 import { REGLA_DEL_EQUIPO } from "./equipo";
 
 /**
@@ -246,10 +246,18 @@ const MENTIONED_FILE_LINES = 2000;
 /** A file mentioned with «@» arrives the way Claude Code attaches one: its
  *  contents numbered as Read shows them, from line 1 (wording ours). */
 export function mentionedFilesBlock(files: readonly MentionedFile[]): string {
+  // Read's limits hold here too, for all the mentioned files together: what would
+  // not fit in one Read is named, not attached, and Len reads it in parts.
+  let budget = TOPE_DE_TOKENS;
   return files
     .map((f) => {
       const lines = normalizarFinales(f.contenido).split("\n");
       const shown = lines.slice(0, MENTIONED_FILE_LINES).map(cortarLinea).join("\n");
+      const tokens = estimarTokens(shown);
+      if (Buffer.byteLength(f.contenido, "utf8") > TOPE_DE_BYTES || tokens > budget) {
+        return `<system-reminder>\nThe user mentioned ${f.ruta}. It is too long to attach here: read it with Read, in parts with offset and limit.\n</system-reminder>\n\n`;
+      }
+      budget -= tokens;
       const rest = lines.length - MENTIONED_FILE_LINES;
       const tail = rest > 0 ? `\n[${rest} more lines: read the file for the rest]` : "";
       return `<system-reminder>\nThe user mentioned ${f.ruta}. Its contents, as Read shows them:\n${formatoCatN(shown, 1)}${tail}\n</system-reminder>\n\n`;
