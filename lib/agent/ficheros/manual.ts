@@ -56,6 +56,17 @@ export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS, RUTA
  *  Claude Code los de una skill; sin esto, sólo los veía la terminal (27/10). */
 export const CARPETA_SKILLS = "/.openlen/skills";
 
+/** Los manuales que pasaron a ser skills (spec local 2026-10-27-len-five-skills, §4.2), con las
+ *  skills encendidas: la ruta vieja → la skill. Una charla de antes los pide por la ruta vieja, y
+ *  `Read` le dice adónde se mudaron, como las rutas viejas de la memoria. */
+export const RUTAS_MUDADAS: Readonly<Record<string, string>> = Object.fromEntries(
+  ["dashboard", "slides", "image", "motion", "audio"].map((kind) => [`${CARPETA_DOCS}/artifacts/${kind}.md`, `artifact-${kind}`]),
+);
+
+export function mudanza(ruta: string, skill: string): string {
+  return `${ruta} moved to the skill "${skill}": load it with the skill tool, or read ${CARPETA_SKILLS}/${skill}/SKILL.md.`;
+}
+
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */
 export function esDeLaPlataforma(ruta: string): boolean {

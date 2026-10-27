@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PDF_FONT_FILES } from "@/lib/agent/sandbox/template-files";
+import { artifactManuals } from "@/lib/agent/artifact-manuals";
+import type { AppDeProyecto } from "@/lib/projects/types";
 import { parseSkillFile } from "./skill-file";
-import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkills } from "./bundled";
+import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkillNames, bundledSkills, type BundledContext } from "./bundled";
 
 describe("bundled skills", () => {
   it("ships the seven office skills, pdf and the one that creates skills", () => {
@@ -108,6 +110,52 @@ describe("bundled skills", () => {
 
   it("the office checker is served next to its skill", () => {
     expect(bundledSkillFiles()).toHaveProperty(`${BUNDLED_SKILLS_DIR}/office/scripts/check_office.py`);
+  });
+
+  // GENERATED SKILLS (spec local 2026-10-27-len-five-skills, §4.2): Len's manuals, built from the same
+  // TypeScript as /.openlen/docs, offered by context (a page or an app, the deliverables on or off).
+  describe("generated", () => {
+    const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" } as AppDeProyecto;
+    const PAGE: BundledContext = { app: null, env: {} };
+    const PAGE_ARTIFACTS: BundledContext = { app: null, env: { OPENLEN_ARTIFACTS: "1" } };
+    const APP_CTX: BundledContext = { app: APP, env: {} };
+    const APP_ARTIFACTS: BundledContext = { app: APP, env: { OPENLEN_ARTIFACTS: "1" } };
+    const KINDS = ["dashboard", "slides", "image", "motion", "audio"];
+    const names = (ctx: BundledContext) => bundledSkills(ctx).map((b) => b.skill.name);
+
+    it("artifact skills exist only with OPENLEN_ARTIFACTS=1", () => {
+      for (const kind of KINDS) {
+        expect(names(PAGE_ARTIFACTS)).toContain(`artifact-${kind}`);
+        expect(names(PAGE)).not.toContain(`artifact-${kind}`);
+      }
+    });
+
+    it("a generated skill's SKILL.md is today's manual, with its frontmatter", () => {
+      const text = bundledSkillFiles(PAGE_ARTIFACTS)[`${BUNDLED_SKILLS_DIR}/artifact-slides/SKILL.md`]!;
+      expect(text).toContain(artifactManuals["/.openlen/docs/artifacts/slides.md"]!.slice(0, 200));
+      expect(parseSkillFile(text, "artifact-slides").ok).toBe(true);
+    });
+
+    it("generated names are reserved even when not offered", () => {
+      for (const kind of KINDS) expect(bundledSkillNames().has(`artifact-${kind}`)).toBe(true);
+      expect(bundledSkillNames().has("pdf")).toBe(true);
+    });
+
+    // DeepSeek's rule (creator-skills-progressive-disclosure): a short SKILL.md, the long recipes in
+    // references/, and every file it names exists.
+    it("every bundled skill keeps DeepSeek's shape, in every context", () => {
+      for (const ctx of [PAGE, PAGE_ARTIFACTS, APP_CTX, APP_ARTIFACTS]) {
+        const files = bundledSkillFiles(ctx);
+        for (const b of bundledSkills(ctx)) {
+          const text = files[`${b.baseDir}/SKILL.md`]!;
+          expect(text.length, `${b.skill.name} SKILL.md`).toBeLessThanOrEqual(8192);
+          expect(b.skill.description.length, `${b.skill.name} description`).toBeLessThanOrEqual(500);
+          for (const ref of new Set(text.match(/(?:references|scripts)\/[A-Za-z0-9._/-]+[A-Za-z0-9_]/g) ?? [])) {
+            expect(files, `${b.skill.name} names ${ref}`).toHaveProperty(`${b.baseDir}/${ref}`);
+          }
+        }
+      }
+    });
   });
 
   it("next.config traces the bundled skills", () => {

@@ -11,6 +11,7 @@ import {
   textoDeLaPlataforma,
 } from "./manual-de-la-plataforma";
 import { TOPE_DE_LINEA } from "./ficheros/read";
+import { artifactManuals } from "./artifact-manuals";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -443,5 +444,30 @@ describe("/tests de una página con la caja", () => {
   it("una app no cambia: sus pruebas son las de vitest", () => {
     const app = buildManualDeLaPlataforma(CAJA, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" });
     expect(app).not.toContain("npx playwright test");
+  });
+});
+
+// Spec local 2026-10-27-len-five-skills, §4.2: the deliverables manuals become the artifact-* skills.
+describe("the deliverables manuals as skills", () => {
+  const ON = { OPENLEN_ARTIFACTS: "1" };
+  const OFF = { OPENLEN_ARTIFACTS: "1", OPENLEN_SKILLS: "0" };
+
+  it("the deliverables index points to the skills", () => {
+    const manual = buildManualDeLaPlataforma(ON);
+    expect(manual).toContain("Load the `artifact-<kind>` skill");
+    expect(manual).not.toContain("/.openlen/docs/artifacts");
+  });
+
+  it("the old deliverables paths are not served as docs; the skills' files are", () => {
+    const docs = documentosDeLaPlataforma(null, ON);
+    expect(docs).not.toHaveProperty("/.openlen/docs/artifacts/slides.md");
+    expect(docs).toHaveProperty("/.openlen/skills/artifact-slides/SKILL.md");
+  });
+
+  // 🔴 The switch must not leave Len without its manuals.
+  it("with OPENLEN_SKILLS=0 the deliverables manuals stay where they were", () => {
+    const docs = documentosDeLaPlataforma(null, OFF);
+    expect(docs["/.openlen/docs/artifacts/slides.md"]).toBe(artifactManuals["/.openlen/docs/artifacts/slides.md"]);
+    expect(buildManualDeLaPlataforma(OFF)).toContain("Read /.openlen/docs/artifacts/<kind>.md before authoring that kind");
   });
 });

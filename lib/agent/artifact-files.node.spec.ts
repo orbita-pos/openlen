@@ -89,8 +89,9 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     const previous = process.env.OPENLEN_ARTIFACTS;
     try {
       process.env.OPENLEN_ARTIFACTS = "1";
-      assert.match(textoDeLaPlataforma("/.openlen/docs/artifacts/slides.md")!, /deck.json/);
-      const read = await runAgentTool(session, deps, "Read", { file_path: "/.openlen/docs/artifacts/slides.md" });
+      // Since 27/10 the manual is the artifact-slides skill (spec local 2026-10-27-len-five-skills).
+      assert.match(textoDeLaPlataforma("/.openlen/skills/artifact-slides/SKILL.md")!, /deck.json/);
+      const read = await runAgentTool(session, deps, "Read", { file_path: "/.openlen/skills/artifact-slides/SKILL.md" });
       assert.equal(read.response.ok, true);
     } finally { if (previous === undefined) delete process.env.OPENLEN_ARTIFACTS; else process.env.OPENLEN_ARTIFACTS = previous; }
   } finally { await f.pg.close(); }

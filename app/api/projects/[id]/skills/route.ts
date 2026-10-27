@@ -8,6 +8,7 @@ import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { resolveSkills } from "@/lib/agent/skills/registry";
 import { listSkills } from "@/lib/agent/skills/store";
+import { getProject } from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (acceso instanceof Response) return acceso;
   if (!skillsEnabled()) return json({ skills: [] });
   // Fail-soft, like the turn: without the table, OpenLen's still list.
-  const [project, personal] = await Promise.all([listSkills("project", id).catch(() => []), listSkills("personal", userId).catch(() => [])]);
-  const set = resolveSkills({ bundled: bundledSkills(), project, personal });
+  const [project, personal, owned] = await Promise.all([
+    listSkills("project", id).catch(() => []),
+    listSkills("personal", userId).catch(() => []),
+    // A page or an app: OpenLen's generated skills depend on it (spec local 2026-10-27-len-five-skills).
+    getProject(id, acceso.duenoId).catch(() => null),
+  ]);
+  const set = resolveSkills({ bundled: bundledSkills({ app: owned?.data?.app ?? null, env: process.env }), project, personal });
   return json({ skills: set.userInvocable().map((s) => ({ name: s.skill.name, description: s.skill.description, scope: s.scope })) });
 }

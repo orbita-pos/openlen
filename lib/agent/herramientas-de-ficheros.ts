@@ -51,11 +51,12 @@ import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletio
 import { findSecret } from "@/lib/agent/memory/secrets";
 import { ONLY_SKILL_MD, isUnderSkillsDir, skillPath, skillPathOf } from "@/lib/agent/skills/paths";
 import { parseSkillFile } from "@/lib/agent/skills/skill-file";
-import { bundledSkills } from "@/lib/agent/skills/bundled";
+import { bundledSkillNames, bundledSkills } from "@/lib/agent/skills/bundled";
+import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
-import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL } from "@/lib/agent/ficheros/manual";
+import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL, RUTAS_MUDADAS, mudanza } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
 import { buildManualDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
@@ -244,6 +245,12 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // A FILE THE USER ATTACHED: a PDF's pages, as images, like Claude Code's Read (26/10); a CSV as
   // text; an office file answered as a binary one (spec local 2026-10-26-len-skills).
   const asked = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
+  // A MANUAL THAT BECAME A SKILL (spec local 2026-10-27-len-five-skills, §4.2): a conversation from
+  // before asks for it by its old path; Read says where it moved, as the old memory paths do.
+  const mudadaA = skillsEnabled() ? RUTAS_MUDADAS[resolverRuta(asked)] : undefined;
+  if (mudadaA && bundledSkills({ app: session.app ?? null, env: process.env }).some((b) => b.skill.name === mudadaA)) {
+    return { response: respuesta(fallo(mudanza(resolverRuta(asked), mudadaA))) };
+  }
   // A PDF MADE IN THE BOX (an office file exported to see it, spec local 2026-10-26-len-skills):
   // read by its pages like an attached one. The site's folder never holds a PDF (text only).
   const enLaCaja = resolverRuta(asked);
@@ -728,7 +735,7 @@ async function guardarSkill(
 ): Promise<ToolOutcome> {
   const at = skillPathOf(plan.ruta);
   if (!at) return { response: respuesta(fallo(ONLY_SKILL_MD)) };
-  if (bundledSkills().some((b) => b.skill.name === at.name)) {
+  if (bundledSkillNames().has(at.name)) {
     return { response: respuesta(fallo(`"${at.name}" is reserved: it is one of OpenLen's own skills. Give yours another name.`)) };
   }
   const parsed = parseSkillFile(plan.contenido, at.name);
