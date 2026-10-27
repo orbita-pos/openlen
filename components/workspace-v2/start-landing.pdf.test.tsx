@@ -46,7 +46,7 @@ describe("a PDF from the start screen", () => {
   it("🔴 the + offers it; a picked PDF waits as a chip; its ✕ takes it off", async () => {
     const c = render();
     act(() => c.querySelector<HTMLButtonElement>('[aria-label="newChat.composer.plus"]')!.click());
-    const option = [...c.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.includes("composer.attachPdf"));
+    const option = [...c.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.includes("composer.attachFile"));
     expect(option).toBeDefined();
     const input = c.querySelector<HTMLInputElement>('input[type="file"][accept*="pdf"]')!;
     const pdf = new File(["%PDF-1.7"], "menu.pdf", { type: "application/pdf" });

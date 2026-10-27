@@ -25,7 +25,7 @@ import { useSession } from "next-auth/react";
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
-import { uploadPdf } from "@/lib/workspace-v2/upload-pdf";
+import { ATTACHMENT_ACCEPT, uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
 import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -567,15 +567,15 @@ function AgentChatView({
       <input
         ref={pdfInput}
         type="file"
-        accept="application/pdf,.pdf"
+        accept={ATTACHMENT_ACCEPT}
         className="hidden"
         onChange={async (e) => {
           const picked = e.target.files?.[0];
           e.target.value = "";
           if (!picked) return;
-          if (chat.attachedFiles.length >= MAX_FILES_PER_MESSAGE) return void toast.error(t("composer.pdfLimit"));
-          const r = await uploadPdf(picked, projectId);
-          if (!r.ok) return void toast.error(t(r.reason === "too_big" ? "composer.pdfTooBig" : r.reason === "not_pdf" ? "composer.pdfNotPdf" : "composer.pdfFailed"));
+          if (chat.attachedFiles.length >= MAX_FILES_PER_MESSAGE) return void toast.error(t("composer.fileLimit"));
+          const r = await uploadAttachment(picked, projectId);
+          if (!r.ok) return void toast.error(t(r.reason === "too_big" ? "composer.fileTooBig" : r.reason === "not_supported" ? "composer.fileNotSupported" : "composer.fileFailed"));
           chat.setAttachedFiles([...chat.attachedFiles, r.file]);
         }}
       />

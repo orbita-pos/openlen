@@ -72,7 +72,7 @@ import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
-import { attachmentPath, filesOf, MAX_FILES_PER_MESSAGE, MAX_PDF_BYTES, type AttachedFile } from "@/lib/projects/chat-files";
+import { attachmentPath, filesOf, kindFromName, kindOf, MAX_FILES_PER_MESSAGE, MAX_PDF_BYTES, type AttachedFile } from "@/lib/projects/chat-files";
 import { readAttachmentBytes } from "@/lib/agent/attachment-bytes";
 import { renderPdfPages } from "@/lib/agent/pdf-pages";
 import type { Message } from "@/lib/ai-gateway";
@@ -583,7 +583,7 @@ async function correrTurno(
     // su propio preludio.
     usarPagina,
     // Un PDF adjunto (26/10): sus bytes, y sus páginas dibujadas en los ojos.
-    readAttachment: (file: AttachedFile) => readAttachmentBytes(file.url, { origen: req.url }),
+    readAttachment: (file: AttachedFile) => readAttachmentBytes(file.url, { origen: req.url, kind: kindOf(file) }),
     pdfPages: renderPdfPages,
   };
   // Stripe (spec local 2026-10-21-stripe-integration): live mode is the owner's payments and
@@ -776,8 +776,11 @@ async function correrTurno(
     if (!url || url.length > ATTACHED_URL_MAX || !name || size === null || size > MAX_PDF_BYTES) return null;
     try {
       const parsed = new URL(url, req.url);
-      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !/\.pdf$/i.test(parsed.pathname)) return null;
-      return { url: parsed.href, name, size };
+      // A PDF, an office file or a CSV (spec local 2026-10-26-len-skills, §4.8), by its address.
+      const kind = kindFromName(parsed.pathname);
+      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !kind) return null;
+      // A PDF stays as before, without `kind`: the rows and the history it rebuilds don't change.
+      return { url: parsed.href, name, size, ...(kind !== "pdf" ? { kind } : {}) };
     } catch {
       return null;
     }

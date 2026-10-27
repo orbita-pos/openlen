@@ -387,7 +387,7 @@ export default defineConfig({
       "lib/agent/pdf-pages.browser.test.ts",
       "lib/agent/attachment-bytes.test.ts",
       "app/api/upload/route.test.ts",
-      "lib/workspace-v2/upload-pdf.test.ts",
+      "lib/workspace-v2/upload-attachment.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
       "lib/agent/screenshots-in-context.test.ts",
@@ -707,6 +707,7 @@ export default defineConfig({
       // `include` es LISTA BLANCA: sin esta linea no correria.
       "app/api/projects/[id]/brief/route.test.ts",
       "app/api/projects/[id]/skills/route.test.ts",
+      "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
       "app/api/projects/[id]/chat/route.test.ts",

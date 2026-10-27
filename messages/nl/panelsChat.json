@@ -108,15 +108,15 @@
     "modeDynamisDesc": "Voor grote klussen: denkt voor elke stap zo grondig mogelijk na. Trager en kost meer credits",
     "effortDynamis": "Len Odyssey denkt altijd zo grondig mogelijk na",
     "soloLectura": "Je kunt dit project bekijken, maar niet wijzigen. Vraag de eigenaar om bewerkrechten.",
-    "attachPdf": "Een pdf bijvoegen",
-    "attachPdfHint": "Een menukaart, een cv, een folder: Len leest het wanneer het nodig is",
-    "removeFile": "De pdf verwijderen",
+    "attachFile": "Een bestand bijvoegen",
+    "attachFileHint": "Een pdf, een Excel-, Word- of PowerPoint-bestand: Len leest het wanneer het nodig is",
+    "removeFile": "Het bestand verwijderen",
     "skills": "Skills",
     "noSkills": "Geen skill komt overeen",
-    "pdfLimit": "Maximaal 4 pdf's per bericht.",
-    "pdfTooBig": "Die pdf is groter dan 20 MB.",
-    "pdfNotPdf": "Dat bestand is geen pdf.",
-    "pdfFailed": "De pdf kon niet worden geüpload. Probeer het opnieuw."
+    "fileLimit": "Maximaal 4 bestanden per bericht.",
+    "fileTooBig": "Dat bestand is groter dan 20 MB.",
+    "fileNotSupported": "Len leest pdf-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) en CSV-bestanden.",
+    "fileFailed": "Het bestand kon niet worden geüpload. Probeer het opnieuw."
   },
   "equipo": {
     "paraLen": "Aan Len",

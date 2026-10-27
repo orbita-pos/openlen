@@ -95,6 +95,7 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
     local,
     projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
     readOnly: () => readOnlyForBox(session, deps),
+    readOnlyBytes: () => attachmentsForBox(session, deps),
     bridge: () => bridgeHandlersFor(session, deps),
     network: () => boxNetworkOf(session),
     baseEnv: () => boxBaseEnvOf(session),
@@ -289,6 +290,21 @@ function savePendingThroughGuards(session: AgentSession, deps: AgentDeps) {
 
 /** Lo de /.openlen que va a la caja: nunca lo de los visitantes, y como mucho 20 MB (las versiones, al final). */
 const MAX_SOLO_LECTURA_EN_LA_CAJA = 20 * 1024 * 1024;
+
+/** What the person attached, into the box at the path the message names (spec local
+ *  2026-10-26-len-skills, §4.8): an office skill's Python opens it there. One that can't be had stays
+ *  out; Read says why. */
+async function attachmentsForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, Uint8Array>> {
+  const out: Record<string, Uint8Array> = {};
+  if (!deps.readAttachment) return out;
+  await Promise.all(
+    [...(session.attachments ?? new Map())].map(async ([path, file]) => {
+      const bytes = await deps.readAttachment!(file).catch(() => null);
+      if (bytes) out[path] = bytes;
+    }),
+  );
+  return out;
+}
 
 async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
   const sl = await soloLecturaDeLaTerminal(session, deps);

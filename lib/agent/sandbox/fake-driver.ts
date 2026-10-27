@@ -20,12 +20,15 @@ export type FakeRun = (
 interface FakeBox {
   readonly files: Map<string, string>;
   readonly binaries: Map<string, number>;
+  readonly bytes: Map<string, Uint8Array>;
   paused: boolean;
 }
 
 export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver & {
   files(id: string): Map<string, string>;
   binary(id: string, path: string, size: number): void;
+  /** The binary files written with `writeBytes`. */
+  bytesOf(id: string): Map<string, Uint8Array>;
   paused(id: string): boolean;
   /** Every command a box ran, in order. */
   commands(id: string): string[];
@@ -98,8 +101,26 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
             if (f !== p && !f.startsWith(`${p}/`)) continue;
             b.files.delete(f);
             b.binaries.delete(f);
+            b.bytes.delete(f);
           }
         }
+      },
+      async writeBytes(files) {
+        const b = box();
+        for (const [p, data] of Object.entries(files)) {
+          b.bytes.set(p, data);
+          b.binaries.set(p, data.byteLength);
+        }
+      },
+      async readBytes(paths) {
+        const b = box();
+        const out: Record<string, Uint8Array> = {};
+        for (const p of paths) {
+          const data = b.bytes.get(p);
+          if (data) out[p] = data;
+          else if (b.files.has(p)) out[p] = new TextEncoder().encode(b.files.get(p)!);
+        }
+        return out;
       },
       async read(paths) {
         const b = box();
@@ -128,7 +149,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
   return {
     async create(c) {
       const id = `fake-${++next}`;
-      boxes.set(id, { files: new Map(), binaries: new Map(), paused: false });
+      boxes.set(id, { files: new Map(), binaries: new Map(), bytes: new Map(), paused: false });
       ran.set(id, []);
       read.set(id, []);
       networks.set(id, c.network ?? null);
@@ -146,6 +167,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
     },
     files: (id) => boxes.get(id)!.files,
     binary: (id, path, size) => void boxes.get(id)!.binaries.set(path, size),
+    bytesOf: (id) => boxes.get(id)!.bytes,
     paused: (id) => boxes.get(id)?.paused ?? false,
     commands: (id) => ran.get(id) ?? [],
     reads: (id) => read.get(id) ?? [],

@@ -8,13 +8,11 @@
  */
 import { readFile } from "node:fs/promises";
 
-import { MAX_PDF_BYTES } from "@/lib/projects/chat-files";
+import { MAX_PDF_BYTES, bytesLookLike, type AttachedKind } from "@/lib/projects/chat-files";
 import { validateUrl } from "@/lib/style-match/scrape/validate-url";
 
 import { rutaDeSubidaPropia } from "./fotos-de-la-conversacion";
 
-const PDF_MAGIC = "%PDF-";
-const isPdf = (b: Uint8Array) => b.length >= PDF_MAGIC.length && Buffer.from(b.subarray(0, PDF_MAGIC.length)).toString("latin1") === PDF_MAGIC;
 
 export async function readAttachmentBytes(
   url: string,
@@ -26,11 +24,14 @@ export async function readAttachmentBytes(
     readonly validate?: typeof validateUrl;
     readonly fetchImpl?: typeof fetch;
     readonly maxBytes?: number;
+    /** What the file is (spec local 2026-10-26-len-skills); absent = a PDF. */
+    readonly kind?: AttachedKind;
   },
 ): Promise<Uint8Array | null> {
   const max = o.maxBytes ?? MAX_PDF_BYTES;
   try {
-    const own = rutaDeSubidaPropia(url, o.origen, o.env ?? process.env, [".pdf"]);
+    const kind = o.kind ?? "pdf";
+    const own = rutaDeSubidaPropia(url, o.origen, o.env ?? process.env, [`.${kind}`]);
     let bytes: Uint8Array;
     if (own) {
       bytes = new Uint8Array(await (o.leer ?? ((r: string) => readFile(r)))(own));
@@ -43,7 +44,7 @@ export async function readAttachmentBytes(
       if (declared > max) return null;
       bytes = new Uint8Array(await res.arrayBuffer());
     }
-    if (bytes.length > max || !isPdf(bytes)) return null;
+    if (bytes.length > max || !bytesLookLike(kind, bytes)) return null;
     return bytes;
   } catch {
     return null;

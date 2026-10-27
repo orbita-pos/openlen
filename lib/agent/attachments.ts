@@ -7,9 +7,9 @@
  */
 import type { InlineImage } from "@/lib/ai-gateway";
 
-import { noExiste } from "./ficheros/read";
+import { ejecutarRead, noExiste } from "./ficheros/read";
 import { exito, fallo, formatoDeBytes, type Resultado } from "./ficheros/resultado";
-import { MAX_PDF_PAGES_PER_READ, type AttachedFile } from "@/lib/projects/chat-files";
+import { MAX_PDF_PAGES_PER_READ, kindOf, type AttachedFile } from "@/lib/projects/chat-files";
 
 import type { PdfPages } from "./pdf-pages";
 
@@ -83,4 +83,38 @@ export async function readAttachedPdf(
     text += `. This PDF has ${r.pageCount} pages. These are pages ${r.first}-${r.last}. Use the pages parameter to read other pages (e.g., pages: "${next}").`;
   }
   return { result: exito(text), images: r.images };
+}
+
+/**
+ * `Read` of ANY attached file (spec local 2026-10-26-len-skills, §4.8): a PDF as its pages; a CSV as
+ * the text it is, with Read's line numbers, offset and limit; an office file is binary, and Read
+ * answers it as Claude Code answers any binary file, so Len opens it in the terminal with its skill.
+ */
+export async function readAttachment(
+  path: string,
+  args: { readonly pages?: unknown; readonly offset?: number; readonly limit?: number },
+  attachments: ReadonlyMap<string, AttachedFile>,
+  deps: Parameters<typeof readAttachedPdf>[3],
+): Promise<{ result: Resultado; images?: InlineImage[] }> {
+  const file = attachments.get(path);
+  if (!file) return { result: fallo(noExiste(path, [...attachments.keys()])) };
+  const kind = kindOf(file);
+  if (kind === "pdf") return readAttachedPdf(path, args.pages, attachments, deps);
+  if (kind === "csv") {
+    const bytes = await deps.read(file).catch(() => null);
+    if (!bytes) return { result: fallo("The file couldn't be downloaded this time. Don't take it as empty; you can try again.") };
+    const text = new TextDecoder().decode(bytes);
+    return {
+      result: ejecutarRead(
+        { file_path: path, ...(args.offset !== undefined ? { offset: args.offset } : {}), ...(args.limit !== undefined ? { limit: args.limit } : {}) },
+        { contenido: (r) => (r === path ? text : null), ficheros: [path] },
+        new Map(),
+      ),
+    };
+  }
+  return {
+    result: fallo(
+      `This tool cannot read binary files. The file appears to be a binary .${kind} file. Use a skill for this file type if one is available, or a shell command or script that can read the format.`,
+    ),
+  };
 }

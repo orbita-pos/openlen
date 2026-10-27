@@ -102,6 +102,32 @@ describe("SandboxTerminal — what every opening sets up for Playwright", () => 
 });
 
 describe("SandboxTerminal — opening fast", () => {
+  // OFFICE FILES (spec local 2026-10-26-len-skills, §4.8): what the person attached is in the box,
+  // read-only, at the path the message names, so a skill's Python opens it.
+  it("the box gets the session's attachments as read-only bytes at their path", async () => {
+    const d = fakeDriver();
+    const handle = await d.create({ template: "t", metadata: {} });
+    const bytes = new Uint8Array([0x50, 0x4b, 3, 4, 9, 9]);
+    const terminal = new SandboxTerminal({
+      handle,
+      projectFiles: { "/index.html": "a" },
+      syncedManifest: {},
+      bridge: {},
+      readOnly: async () => ({}),
+      readOnlyBytes: async () => ({ "/.openlen/attachments/abc123/ventas.xlsx": bytes }),
+      startedAt: Date.now(),
+      fresh: true,
+    });
+    await terminal.ejecutar("true");
+    const at = [...d.bytesOf(handle.id).keys()].find((p) => p.endsWith("/.openlen/attachments/abc123/ventas.xlsx"));
+    expect(at).toBeDefined();
+    expect([...d.bytesOf(handle.id).get(at!)!]).toEqual([...bytes]);
+    // A second command does not upload it again.
+    const writeBytes = vi.spyOn(handle, "writeBytes" as never);
+    await terminal.ejecutar("true");
+    expect(writeBytes).not.toHaveBeenCalled();
+  });
+
   it("a box just created from the template has nothing of the project: no manifest before the first command", async () => {
     const d = fakeDriver();
     const handle = await d.create({ template: "t", metadata: {} });

@@ -284,7 +284,7 @@
       "formulario": "전송되지 않았습니다. 게시하면 받은편지함과 이메일로 도착합니다.",
       "navegacion": "페이지가 “{destino}”(으)로 이동하려고 했습니다. 여기서는 편집기를 벗어나지 않으며, 게시하면 이동합니다."
     },
-    "pdfsNotUploaded": "{count, plural, other {PDF #개를 올리지 못했어요}}. 메시지는 PDF 없이 보내져요."
+    "filesNotUploaded": "{count, plural, other {파일 #개를 올리지 못했어요}}. 메시지는 파일 없이 보내져요."
   },
   "whatsapp": {
     "title": "WhatsApp 버튼",

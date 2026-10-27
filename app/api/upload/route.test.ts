@@ -51,3 +51,35 @@ describe("POST /api/upload — a PDF", () => {
     expect(uploads).toHaveLength(0);
   });
 });
+
+// Office files and CSV (spec local 2026-10-26-len-skills, §4.8): the same pass-through, checked by
+// their header (a ZIP for the office ones, UTF-8 text for a CSV), whatever MIME type the browser says.
+describe("POST /api/upload — office files and CSV", () => {
+  const ZIP = Buffer.from([0x50, 0x4b, 0x03, 0x04, 1, 2, 3]);
+
+  it("a .docx is stored with its type, under the project's folder", async () => {
+    const res = await send(new File([ZIP], "Carta.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }));
+    expect(res.status).toBe(200);
+    expect(uploads[0]!.key).toMatch(/^uploads\/p1\/[0-9a-f]{16}\.docx$/);
+    expect(uploads[0]!.contentType).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  });
+
+  it("an .xlsx the browser sends as octet-stream is still an .xlsx", async () => {
+    const res = await send(new File([ZIP], "ventas.xlsx", { type: "application/octet-stream" }));
+    expect(res.status).toBe(200);
+    expect(uploads[0]!.key).toMatch(/\.xlsx$/);
+  });
+
+  it("upload accepts a csv and refuses a .docx that is not a zip", async () => {
+    expect((await send(new File([Buffer.from("producto,precio\npan,10\n")], "lista.csv", { type: "text/csv" }))).status).toBe(200);
+    expect(uploads[0]!.key).toMatch(/\.csv$/);
+    const fake = await send(new File([Buffer.from("<html>")], "x.docx", { type: "application/octet-stream" }));
+    expect(fake.status).toBe(415);
+  });
+
+  it("upload refuses an office file over 20 MB", async () => {
+    const big = await send(new File([Buffer.concat([ZIP, Buffer.alloc(20 * 1024 * 1024)])], "big.pptx", { type: "application/octet-stream" }));
+    expect(big.status).toBe(413);
+    expect(uploads).toHaveLength(0);
+  });
+});

@@ -16,20 +16,62 @@ export const MAX_PDF_PAGES_PER_READ = 20;
 export const MAX_PDF_BYTES = 20 * 1024 * 1024;
 /** Files per message, as many as photos. */
 export const MAX_FILES_PER_MESSAGE = 4;
+/** The largest office file or CSV the chat takes, as a PDF (spec local 2026-10-26-len-skills). */
+export const MAX_OFFICE_BYTES = MAX_PDF_BYTES;
+
+/** What a file attached to a message can be: a PDF, which Read draws as images, and, for the office
+ *  skills (spec local 2026-10-26-len-skills, §4.8), DeepSeek's office formats and a CSV. */
+export const ATTACHMENT_KINDS = {
+  pdf: { mime: "application/pdf" },
+  xlsx: { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+  xlsm: { mime: "application/vnd.ms-excel.sheet.macroEnabled.12" },
+  docx: { mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+  pptx: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+  csv: { mime: "text/csv" },
+} as const;
+export type AttachedKind = keyof typeof ATTACHMENT_KINDS;
 
 /** A file attached to a message, as the chat row keeps it. */
 export interface AttachedFile {
   readonly url: string;
   readonly name: string;
   readonly size: number;
+  /** Absent in the rows from before office files: those are PDFs. */
+  readonly kind?: AttachedKind;
+}
+
+/** The kind of a file by its name's extension, or null if the chat doesn't take it. */
+export function kindFromName(name: string): AttachedKind | null {
+  const ext = /\.([A-Za-z0-9]+)$/.exec(name)?.[1]?.toLowerCase() ?? "";
+  return Object.hasOwn(ATTACHMENT_KINDS, ext) ? (ext as AttachedKind) : null;
+}
+
+export function kindOf(file: Pick<AttachedFile, "kind">): AttachedKind {
+  return file.kind ?? "pdf";
+}
+
+/** What the header says: a PDF starts with `%PDF-`, an office file is a ZIP, a CSV is UTF-8 text
+ *  without NUL bytes. */
+export function bytesLookLike(kind: AttachedKind, bytes: Uint8Array): boolean {
+  const head = (n: number) => Array.from(bytes.subarray(0, n));
+  if (kind === "pdf") return String.fromCharCode(...head(5)) === "%PDF-";
+  if (kind === "csv") {
+    try {
+      return !new TextDecoder("utf-8", { fatal: true }).decode(bytes).includes("\0");
+    } catch {
+      return false;
+    }
+  }
+  return head(4).join(",") === "80,75,3,4";
 }
 
 /** Where Len reads it: `/.openlen/attachments/<upload id>/<name>`. The upload
  *  id keeps two files with the same name apart. */
-export function attachmentPath(file: Pick<AttachedFile, "url" | "name">): string {
+export function attachmentPath(file: Pick<AttachedFile, "url" | "name" | "kind">): string {
   const id = (file.url.split(/[?#]/)[0]!.split("/").pop() ?? "").replace(/\.[^.]*$/, "").replace(/[^A-Za-z0-9_-]/g, "") || "file";
   const base = file.name.replace(/[^\p{L}\p{N}._ -]/gu, "-").replace(/\s+/g, "-").replace(/^[.-]+/, "").slice(0, 80) || "document";
-  return `${ATTACHMENTS_DIR}/${id}/${/\.pdf$/i.test(base) ? base : `${base}.pdf`}`;
+  const ext = kindOf(file);
+  return `${ATTACHMENTS_DIR}/${id}/${new RegExp(`\\.${ext}$`, "i").test(base) ? base : `${base}.${ext}`}`;
 }
 
 /** Sizes as Claude Code writes them: «812 bytes», «256KB», «1.5MB». */
@@ -42,7 +84,7 @@ function size(bytes: number): string {
 
 /** The note that goes with the file in the user's message. */
 export function attachmentNote(file: AttachedFile): string {
-  return `[Attached file: ${attachmentPath(file)} (PDF, ${size(file.size)})]`;
+  return `[Attached file: ${attachmentPath(file)} (${kindOf(file).toUpperCase()}, ${size(file.size)})]`;
 }
 
 /** The column as it comes: a list, or nothing. */
