@@ -111,6 +111,8 @@
     "attachPdf": "附加 PDF",
     "attachPdfHint": "菜单、简历、宣传册：Len 需要时会读取",
     "removeFile": "移除 PDF",
+    "skills": "技能",
+    "noSkills": "没有匹配的技能",
     "pdfLimit": "每条消息最多 4 个 PDF。",
     "pdfTooBig": "该 PDF 超过 20 MB。",
     "pdfNotPdf": "该文件不是 PDF。",

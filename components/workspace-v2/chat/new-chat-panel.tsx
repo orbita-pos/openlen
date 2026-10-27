@@ -18,6 +18,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import type { MenuSkill } from "./skill-menu";
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 
@@ -163,6 +164,20 @@ function AgentChatView({
   const toast = useToast();
   // UN PDF EN EL CHAT (26/10): se elige, se sube y queda como ficha; Len lo lee con Read.
   const pdfInput = useRef<HTMLInputElement | null>(null);
+  // SKILLS (spec local 2026-10-26-len-skills): what the `/` menu offers, asked once per project.
+  const [skills, setSkills] = useState<readonly MenuSkill[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    fetch(`/api/projects/${encodeURIComponent(projectId)}/skills`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { skills?: unknown } | null) => {
+        if (vivo && Array.isArray(j?.skills)) setSkills(j.skills as MenuSkill[]);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [projectId]);
   // `@Len` DESDE UN HILO DEL CÓDIGO: el servidor ya empezó el turno; aquí se
   // pinta en marcha y se sigue (lib/workspace-v2/turnos-del-hilo.ts).
   const turnoDelHilo = useSyncExternalStore(
@@ -484,6 +499,7 @@ function AgentChatView({
           </p>
         ) : (
           <ChatComposer
+            skills={skills}
             value={chat.draft}
             onChange={chat.setDraft}
             onSubmit={() => void enviar()}

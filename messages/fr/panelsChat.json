@@ -111,6 +111,8 @@
     "attachPdf": "Joindre un PDF",
     "attachPdfHint": "Un menu, un CV, une brochure : Len le lit quand il en a besoin",
     "removeFile": "Retirer le PDF",
+    "skills": "Skills",
+    "noSkills": "Aucune skill ne correspond",
     "pdfLimit": "4 PDF maximum par message.",
     "pdfTooBig": "Ce PDF dépasse 20 Mo.",
     "pdfNotPdf": "Ce fichier n'est pas un PDF.",

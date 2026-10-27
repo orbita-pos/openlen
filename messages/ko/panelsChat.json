@@ -111,6 +111,8 @@
     "attachPdf": "PDF 첨부",
     "attachPdfHint": "메뉴판, 이력서, 브로셔 등: 필요할 때 Len이 읽어요",
     "removeFile": "PDF 빼기",
+    "skills": "스킬",
+    "noSkills": "일치하는 스킬이 없습니다",
     "pdfLimit": "메시지당 PDF는 4개까지예요.",
     "pdfTooBig": "그 PDF는 20MB를 넘어요.",
     "pdfNotPdf": "그 파일은 PDF가 아니에요.",

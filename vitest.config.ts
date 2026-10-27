@@ -706,6 +706,8 @@ export default defineConfig({
       // @/lib/projects entero porque su cadena arrastra el binding nativo.
       // `include` es LISTA BLANCA: sin esta linea no correria.
       "app/api/projects/[id]/brief/route.test.ts",
+      "app/api/projects/[id]/skills/route.test.ts",
+      "components/workspace-v2/chat/skill-menu.test.tsx",
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
       "app/api/projects/[id]/chat/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",
