@@ -1,4 +1,4 @@
-import { buildEditPath, elementAtEditPath, mentionSignatureMatches } from "./edit-path";
+import { buildEditPath, editChildTags, elementAtEditPath, isEditorNode, mentionSigOf, mentionSignatureMatches } from "./edit-path";
 import { decl } from "./serializar-al-iframe";
 
 // Section-select injection for the iframe — hover outline + click capture
@@ -27,6 +27,9 @@ const CORE_SRC = [
   decl("buildEditPath", buildEditPath),
   decl("elementAtEditPath", elementAtEditPath),
   decl("mentionSignatureMatches", mentionSignatureMatches),
+  decl("isEditorNode", isEditorNode),
+  decl("editChildTags", editChildTags),
+  decl("mentionSigOf", mentionSigOf),
 ].join("\n");
 
 const SECTION_SELECT_STYLE = `
@@ -128,6 +131,7 @@ ${CORE_SRC}
         tag: t.tagName.toLowerCase(),
         path: buildEditPath(t),
         text: ownTextOf(t),
+        sig: mentionSigOf(t),
       }, '*');
     } catch (_) {}
   }, true);
@@ -144,7 +148,7 @@ ${CORE_SRC}
     mentioned = null;
     if (!d.target) return;
     var el = document.body ? elementAtEditPath(d.target.path, document.body) : null;
-    if (el && !mentionSignatureMatches(el, d.target.tag, d.target.text)) el = null;
+    if (el && !mentionSignatureMatches(el, d.target.tag, d.target.text, d.target.sig)) el = null;
     if (el) {
       mentioned = el;
       el.setAttribute('data-openlen-mention-hover', '');

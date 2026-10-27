@@ -28,7 +28,7 @@ import {
 import { isDesignSelection } from "@/lib/apps/design/types";
 import { mentionFromDesignSelection, mentionFromPagePick } from "@/lib/mentions/from-pick";
 import { registerMentionCanvas } from "@/components/workspace-v2/mention-highlight";
-import type { IncomingMention, MentionKind } from "@/lib/mentions/types";
+import { isMentionSig, type IncomingMention, type MentionKind } from "@/lib/mentions/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
 import {
   isGenerationBriefLengthValid,
@@ -1094,7 +1094,7 @@ function NewV2Inner() {
         ) {
           // A click on the page becomes a mention in the chat (spec local 2026-10-27).
           const ref = mentionFromPagePick(
-            { hint: data.hint, tag: typeof data.tag === "string" ? data.tag : "div", path: data.path, text: typeof data.text === "string" ? data.text : "" },
+            { hint: data.hint, tag: typeof data.tag === "string" ? data.tag : "div", path: data.path, text: typeof data.text === "string" ? data.text : "", ...(isMentionSig(data.sig) ? { sig: data.sig } : {}) },
             activeSitePageRef.current,
             mentionKindLabelRef.current,
           );

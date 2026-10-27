@@ -5,7 +5,7 @@
 // the one the canvas uses — so `buildEditPath` gives the same path the canvas
 // gives when the user clicks that element. Client-safe.
 
-import { buildEditPath } from "@/components/workspace-v2/edit-path";
+import { buildEditPath, mentionSigOf } from "@/components/workspace-v2/edit-path";
 import { posicionDeId } from "@/lib/agent/ficheros/posiciones";
 
 import { humanNameOf, kindOf } from "./naming";
@@ -68,7 +68,7 @@ export function buildPageEntries(
         page,
         path: buildEditPath(el),
         tag,
-        ...(ownText ? { text: ownText.slice(0, TARGET_TEXT_MAX) } : {}),
+        ...(ownText ? { text: ownText.slice(0, TARGET_TEXT_MAX) } : { sig: mentionSigOf(el) }),
       };
       entries.push({
         key,

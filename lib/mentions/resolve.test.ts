@@ -79,6 +79,27 @@ describe("resolveMentions", () => {
     expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 2 });
   });
 
+  it("gives no lines when a same-tag, textless neighbour now sits at the path", async () => {
+    const html = ["<body>", '<section class="nuevo"><div>x</div></section>', '<section class="hero"><h2>A</h2><p>b</p></section>', "</body>"].join("\n");
+    const ref: MentionRef = { type: "element", label: "@Sección · A", text: "", target: { type: "page", page: null, path: "section:nth-of-type(1)", tag: "section", sig: { cls: "hero", kids: "h2,p" } } };
+    const r = await resolveMentions([ref], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones).toEqual([{ ruta: "/index.html", pista: "@Sección · A" }]);
+  });
+
+  it("matches whole words: «Pro» is not «Professional»", async () => {
+    const html = ["<body>", "<span>Professional</span>", "</body>"].join("\n");
+    const r = await resolveMentions([el("@Texto · Pro", null, "span:nth-of-type(1)", "span", "Pro")], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones).toEqual([{ ruta: "/index.html", pista: "@Texto · Pro" }]);
+  });
+
+  it("does not take a textless same-tag element on the old line for a mention that had text", async () => {
+    const moved = APP.replace("    <ul>", "    <ul>\n      <li></li>\n      {/* x */}").replace("    <ul>\n", "    <ul>\n");
+    // Line 4 is now an empty <li>; the real one moved to line 6.
+    const ref: MentionRef = { type: "element", label: "@Lista · Pedido uno", text: "Pedido uno", target: { type: "app", path: "/src/App.tsx", line: 4, tag: "li", text: "Pedido uno" } };
+    const r = await resolveMentions([ref], { pageHtml, files: async () => ({ "/src/App.tsx": moved }) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 6 });
+  });
+
   it("re-anchors an app element by its tag and text when lines were inserted above it", async () => {
     const shifted = APP.replace("    <ul>", "    {/* a */}\n    {/* b */}\n    <ul>");
     const ref: MentionRef = { type: "element", label: "@Lista · Pedido uno", text: "Pedido uno", target: { type: "app", path: "/src/App.tsx", line: 4, tag: "li", text: "Pedido uno" } };
