@@ -17,7 +17,7 @@ import {
   PLAYWRIGHT_BROWSERS,
   PLAYWRIGHT_DIR,
   PLAYWRIGHT_RESOLVER,
-  PLAYWRIGHT_VERSION,
+  OFFICE_PYTHON_PACKAGES, PLAYWRIGHT_VERSION,
   bridgeScript,
   manifestScript,
   playwrightResolverScript,
@@ -142,7 +142,25 @@ describe("the box's scripts", () => {
     expect(install).toContain(`@playwright/test@${PLAYWRIGHT_VERSION}`);
     expect(install).toContain(`PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS}`);
     expect(install).toContain("install --with-deps chromium");
-    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v2");
+    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v3");
+  });
+
+  // OFFICE SKILLS (spec local 2026-10-26-len-skills, §4.7): what DeepSeek's office skills need, in the box.
+  it("the template installs LibreOffice, its Python bridge and poppler", async () => {
+    const { APT_PACKAGES } = await import("@/infra/e2b/openlen-terminal/template");
+    for (const p of ["libreoffice-calc", "libreoffice-writer", "libreoffice-impress", "python3-uno", "poppler-utils", "fonts-dejavu"]) expect(APT_PACKAGES).toContain(p);
+  });
+
+  it("the template pins the office python packages", async () => {
+    const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
+    const ran: string[] = [];
+    const builder: Record<string, (...a: unknown[]) => unknown> = {};
+    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
+    defineTemplate(() => builder as never, "x");
+    const pip = ran.find((c) => c.includes("pip install"))!;
+    for (const [name, version] of Object.entries(OFFICE_PYTHON_PACKAGES)) expect(pip).toContain(`${name}==${version}`);
+    expect(Object.keys(OFFICE_PYTHON_PACKAGES).sort()).toEqual(["openpyxl", "pandas", "python-docx", "python-pptx"]);
   });
 
   it("the box's user can work at / (the project's root), pip installs and npm -g goes to its home", async () => {

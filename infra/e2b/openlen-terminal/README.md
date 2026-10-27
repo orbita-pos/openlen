@@ -10,6 +10,10 @@ and OpenLen's scripts in `/opt/openlen/bin` (generated from `lib/agent/sandbox/t
   `npm`, `npx`, `curl`), through the mailbox in `/run/openlen`.
 - one wrapper per bridged program. The turn puts `/opt/openlen/bin` first in `PATH`.
 
+Since v3 (spec local `2026-10-26-len-skills-design.md`), for the office skills: LibreOffice (Calc,
+Writer, Impress) with its Python bridge (`python3-uno`), poppler-utils, DejaVu fonts, and openpyxl,
+pandas, python-docx and python-pptx at the versions in `OFFICE_PYTHON_PACKAGES`.
+
 Size: 2 vCPU and 4 GiB (`lib/agent/sandbox/size.ts`), fixed at build.
 
 Build (needs the `e2b` package and `E2B_API_KEY`; costs E2B build time):
