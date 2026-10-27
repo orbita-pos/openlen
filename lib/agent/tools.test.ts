@@ -13,6 +13,7 @@ import { loQueCambioElDueno } from "./cambios-del-dueno";
 import { buildFunctionDeclarations } from "./catalog";
 import { resolveSkills } from "./skills/registry";
 import { bundledSkills } from "./skills/bundled";
+import { attachmentsForBox } from "./terminal/herramienta";
 import type { ProjectData } from "@/lib/projects/types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 
@@ -2771,5 +2772,36 @@ describe("Read of a box PDF through a terminal that needs its own this", () => {
     const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/render/x.pdf" });
     assert.equal(out.response.ok, true, String(out.response.error));
     assert.equal(out.images?.length, 1);
+  });
+});
+
+// Review of the branch (26/10): the box's read-only files are refreshed after every command that
+// saves, and each refresh downloaded every attachment of the conversation again. They never change
+// (their URL carries their hash): one download per turn.
+describe("attachments into the box are downloaded once per turn", () => {
+  it("a second refresh reads no attachment again", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.attachments = new Map([
+      ["/.openlen/attachments/a1/ventas.xlsx", { url: "https://cdn.example/uploads/p1/a1.xlsx", name: "ventas.xlsx", size: 4, kind: "xlsx" as const }],
+      ["/.openlen/attachments/b2/menu.pdf", { url: "https://cdn.example/uploads/p1/b2.pdf", name: "menu.pdf", size: 5 }],
+    ]);
+    let reads = 0;
+    const d = { ...deps, readAttachment: async () => (reads++, new Uint8Array([1, 2, 3, 4])) } as unknown as AgentDeps;
+    const first = await attachmentsForBox(session, d);
+    const second = await attachmentsForBox(session, d);
+    assert.equal(Object.keys(first).length, 2);
+    assert.deepEqual(Object.keys(second).sort(), Object.keys(first).sort());
+    assert.equal(reads, 2);
+  });
+
+  it("one that couldn't be had is tried again next time", async () => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    session.attachments = new Map([["/.openlen/attachments/a1/ventas.xlsx", { url: "https://cdn.example/uploads/p1/a1.xlsx", name: "ventas.xlsx", size: 4, kind: "xlsx" as const }]]);
+    let reads = 0;
+    const d = { ...deps, readAttachment: async () => (reads++ === 0 ? null : new Uint8Array([9])) } as unknown as AgentDeps;
+    assert.deepEqual(Object.keys(await attachmentsForBox(session, d)), []);
+    assert.deepEqual(Object.keys(await attachmentsForBox(session, d)), ["/.openlen/attachments/a1/ventas.xlsx"]);
   });
 });

@@ -294,17 +294,27 @@ const MAX_SOLO_LECTURA_EN_LA_CAJA = 20 * 1024 * 1024;
 /** What the person attached, into the box at the path the message names (spec local
  *  2026-10-26-len-skills, §4.8): an office skill's Python opens it there. One that can't be had stays
  *  out; Read says why. */
-async function attachmentsForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, Uint8Array>> {
+export async function attachmentsForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, Uint8Array>> {
   const out: Record<string, Uint8Array> = {};
   if (!deps.readAttachment) return out;
+  // Once per turn: this runs on every refresh of the box (after each command that saves), and an
+  // attachment never changes (its URL carries its hash). One that couldn't be had is tried again.
+  let got = BYTES_OF_THE_TURN.get(session);
+  if (!got) BYTES_OF_THE_TURN.set(session, (got = new Map()));
+  const cache = got;
   await Promise.all(
     [...(session.attachments ?? new Map())].map(async ([path, file]) => {
-      const bytes = await deps.readAttachment!(file).catch(() => null);
-      if (bytes) out[path] = bytes;
+      const bytes = cache.get(path) ?? (await deps.readAttachment!(file).catch(() => null));
+      if (!bytes) return;
+      cache.set(path, bytes);
+      out[path] = bytes;
     }),
   );
   return out;
 }
+
+/** What each turn already downloaded of its attachments, by path. */
+const BYTES_OF_THE_TURN = new WeakMap<AgentSession, Map<string, Uint8Array>>();
 
 async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
   const sl = await soloLecturaDeLaTerminal(session, deps);
