@@ -42,7 +42,7 @@ import {
   rutaRelativa,
   sinOpIds,
 } from "@/lib/agent/ficheros/sitio";
-import { CLAVE_TOOL_RESULT, fallo, type Resultado } from "@/lib/agent/ficheros/resultado";
+import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
@@ -71,6 +71,9 @@ import { checkManifestSource } from "@/lib/artifacts/manifest-check";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
 export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
+
+/** The largest image of the box `Read` decodes: the size of an attached file. */
+const MAX_IMAGE_READ_BYTES = 20 * 1024 * 1024;
 export type HerramientaDeFicheros = (typeof HERRAMIENTAS_DE_FICHEROS)[number];
 
 export function esHerramientaDeFicheros(nombre: string): nombre is HerramientaDeFicheros {
@@ -251,6 +254,16 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
         render: (pdf, range) => visit(() => pdfPages(pdf, range)),
       });
       return { response: respuesta(result), ...(images?.length ? { images } : {}) };
+    }
+  }
+  // AN IMAGE MADE IN THE BOX (spec local 2026-10-27-len-pdf-skill, §4.7): shown as an image, like
+  // Claude Code's Read. Filling a scanned form needs Len to look at a zoomed crop.
+  if (/\.(png|jpe?g|webp)$/i.test(enLaCaja) && !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`) && leerDeLaCaja && deps.imageForModel) {
+    const bytes = await leerDeLaCaja(enLaCaja).catch(() => null);
+    if (bytes) {
+      if (bytes.byteLength > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(`${enLaCaja} is larger than 20 MB.`)) };
+      const { image, width, height } = await deps.imageForModel(bytes);
+      return { response: respuesta(exito(`Image read: ${enLaCaja} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
     }
   }
   if (resolverRuta(asked).startsWith(`${ATTACHMENTS_DIR}/`)) {
