@@ -1,4 +1,4 @@
-import { buildEditPath } from "./edit-path";
+import { buildEditPath, elementAtEditPath, mentionSignatureMatches } from "./edit-path";
 import { decl } from "./serializar-al-iframe";
 
 // Section-select injection for the iframe — hover outline + click capture
@@ -23,7 +23,11 @@ import { decl } from "./serializar-al-iframe";
 // para el servidor— y tenerla dos veces era una verdad duplicada esperando a
 // desincronizarse. Se serializa con `.toString()`, el patrón de CORE_SRC en
 // use-inline-edit.ts.
-const CORE_SRC = decl("buildEditPath", buildEditPath);
+const CORE_SRC = [
+  decl("buildEditPath", buildEditPath),
+  decl("elementAtEditPath", elementAtEditPath),
+  decl("mentionSignatureMatches", mentionSignatureMatches),
+].join("\n");
 
 const SECTION_SELECT_STYLE = `
 [data-openlen-select-hover] {
@@ -39,6 +43,10 @@ body[data-openlen-select-mode] * {
 }
 body[data-openlen-select-mode] a {
   pointer-events: auto !important;
+}
+[data-openlen-mention-hover] {
+  outline: 2px solid rgba(255,90,54,0.85) !important;
+  outline-offset: 2px !important;
 }
 `;
 
@@ -115,6 +123,29 @@ ${CORE_SRC}
       }, '*');
     } catch (_) {}
   }, true);
+
+  // THE CHAT'S «@» (spec local 2026-10-27): the workshop names a page element
+  // the way the index named it from the source; outline it if it is still
+  // that element, and say how many were found (0 = not on screen now).
+  var mentioned = null;
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || d.type !== 'openlen:mention-highlight') return;
+    if (d.target && d.target.type !== 'page') return;
+    if (mentioned) mentioned.removeAttribute('data-openlen-mention-hover');
+    mentioned = null;
+    if (!d.target) return;
+    var el = document.body ? elementAtEditPath(d.target.path, document.body) : null;
+    if (el && !mentionSignatureMatches(el, d.target.tag, d.target.text)) el = null;
+    if (el) {
+      mentioned = el;
+      el.setAttribute('data-openlen-mention-hover', '');
+      try { el.scrollIntoView({ block: 'center', behavior: 'auto' }); } catch (_) {}
+    }
+    try {
+      window.parent.postMessage({ type: 'openlen:mention-highlighted', key: d.key, count: el ? 1 : 0 }, '*');
+    } catch (_) {}
+  });
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
