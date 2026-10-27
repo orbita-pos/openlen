@@ -111,6 +111,8 @@
     "attachPdf": "PDFを添付",
     "attachPdfHint": "メニュー、履歴書、パンフレットなど。Lenが必要なときに読みます",
     "removeFile": "PDFを外す",
+    "skills": "スキル",
+    "noSkills": "一致するスキルはありません",
     "pdfLimit": "1つのメッセージに添付できるPDFは4つまでです。",
     "pdfTooBig": "そのPDFは20MBを超えています。",
     "pdfNotPdf": "そのファイルはPDFではありません。",

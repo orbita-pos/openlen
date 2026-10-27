@@ -12,6 +12,7 @@
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
+import { useSkillSlash, type MenuSkill } from "./skill-menu";
 import { ArrowUp, Crosshair, FileText, Flag, ImageIcon, KeyRound, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
@@ -29,6 +30,8 @@ import { hasLink } from "@/lib/chat/links";
 
 const NADIE: readonly PersonaMencionable[] = [];
 const SIN_COLOR = () => "";
+
+const SIN_SKILLS: readonly MenuSkill[] = [];
 
 export function ChatComposer({
   value,
@@ -68,6 +71,7 @@ export function ChatComposer({
   bloqueado = false,
   secretGuard,
   compacta = false,
+  skills,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -130,6 +134,8 @@ export function ChatComposer({
    *  las pastillas y enviar—, sin marco propio (lo pone la barra) ni el aviso
    *  de abajo. Los mismos botones, sólo otro orden. */
   compacta?: boolean;
+  /** SKILLS (spec local 2026-10-26-len-skills): what the `/` menu offers. Without it, no menu. */
+  skills?: readonly MenuSkill[];
 }) {
   const t = useTranslations("panelsChat");
   const [plusOpen, setPlusOpen] = useState(false);
@@ -141,6 +147,11 @@ export function ChatComposer({
   const typed = value.trim().length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
   const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
+  const barra = useSkillSlash(value, onChange, textareaRef, skills ?? SIN_SKILLS);
+  const alMoverElCursor = (e: { currentTarget: HTMLTextAreaElement }) => {
+    arroba.onSeleccion(e);
+    barra.onSeleccion(e);
+  };
   // La clave que se iba a mandar, a la espera de «Guardar como secreto» o «Mandar igual».
   const [secretoPendiente, setSecretoPendiente] = useState<FoundSecret | null>(null);
   useEffect(() => setSecretoPendiente(null), [value]);
@@ -247,14 +258,16 @@ export function ChatComposer({
             value,
             onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
               onChange(e.target.value);
-              arroba.onSeleccion(e);
+              alMoverElCursor(e);
             },
-            onSelect: arroba.onSeleccion,
-            onClick: arroba.onSeleccion,
-            onKeyUp: arroba.onSeleccion,
+            onSelect: alMoverElCursor,
+            onClick: alMoverElCursor,
+            onKeyUp: alMoverElCursor,
             onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
               // Con el desplegable del @ abierto, Enter/Tab/flechas son suyos.
               if (arroba.tecla(e)) return;
+              // And with the `/` one, its keys are its own too.
+              if (barra.tecla(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 if (!bloqueado) void enviar();
@@ -275,7 +288,7 @@ export function ChatComposer({
           // Lo mismo al escribir una URL, que se pinta de azul (como la caja de Claude).
           return (
             <div className={compacta ? "order-2 min-w-0 flex-1 pt-[7px]" : "mt-0.5"}>
-              {arroba.menu && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu}</div>}
+              {(arroba.menu ?? barra.menu) && <div className="absolute bottom-full left-0 right-0 z-20 mb-1.5">{arroba.menu ?? barra.menu}</div>}
               <CajaConMenciones
                 {...caja}
                 cajaRef={textareaRef}

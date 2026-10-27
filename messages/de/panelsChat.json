@@ -111,6 +111,8 @@
     "attachPdf": "PDF anhängen",
     "attachPdfHint": "Eine Speisekarte, ein Lebenslauf, ein Flyer: Len liest es, wenn es gebraucht wird",
     "removeFile": "PDF entfernen",
+    "skills": "Skills",
+    "noSkills": "Keine Skill passt",
     "pdfLimit": "Bis zu 4 PDFs pro Nachricht.",
     "pdfTooBig": "Dieses PDF ist größer als 20 MB.",
     "pdfNotPdf": "Diese Datei ist kein PDF.",

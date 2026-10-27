@@ -111,6 +111,8 @@
     "attachPdf": "Een pdf bijvoegen",
     "attachPdfHint": "Een menukaart, een cv, een folder: Len leest het wanneer het nodig is",
     "removeFile": "De pdf verwijderen",
+    "skills": "Skills",
+    "noSkills": "Geen skill komt overeen",
     "pdfLimit": "Maximaal 4 pdf's per bericht.",
     "pdfTooBig": "Die pdf is groter dan 20 MB.",
     "pdfNotPdf": "Dat bestand is geen pdf.",

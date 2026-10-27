@@ -111,6 +111,8 @@
     "attachPdf": "Adjuntar un PDF",
     "attachPdfHint": "Un menú, un CV, un folleto: Len lo lee cuando le hace falta",
     "removeFile": "Quitar el PDF",
+    "skills": "Skills",
+    "noSkills": "Ninguna skill coincide",
     "pdfLimit": "Caben 4 PDF por mensaje.",
     "pdfTooBig": "Ese PDF pasa de 20 MB.",
     "pdfNotPdf": "Ese archivo no es un PDF.",
