@@ -52,6 +52,12 @@ describe("buildPageEntries", () => {
     expect(entries[0]!.line).toBe(5);
   });
 
+  it("keeps the words apart across a <br> or an inline child", () => {
+    const entries = entriesOf("<h1>Cada niña<br>que aprende <em>a</em> cambiar</h1>");
+    expect(entries[0]!.name).toBe("Cada niña que aprende cambiar");
+    expect(entries[0]!.target.text).toBe("Cada niña que aprende cambiar");
+  });
+
   it("carries the page it belongs to", () => {
     const entries = entriesOf("<h2>Contacto</h2>", "contacto", "/contacto/index.html");
     expect(entries[0]!.target).toMatchObject({ page: "contacto" });

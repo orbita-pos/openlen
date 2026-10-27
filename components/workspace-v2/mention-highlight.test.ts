@@ -55,6 +55,12 @@ describe("the page canvas answers a highlight", () => {
     expect(replies).toEqual([{ key: "k2", count: 0 }]);
   });
 
+  it("recognises an element whose text a <br> splits, as the index names it", () => {
+    document.body.innerHTML = "<h1>NOVA<br>GAMES</h1>";
+    send({ type: "openlen:mention-highlight", key: "k5", target: { type: "page", page: null, path: "h1:nth-of-type(1)", tag: "h1", text: "NOVA GAMES" } });
+    expect(replies).toEqual([{ key: "k5", count: 1 }]);
+  });
+
   it("clears the outline with a null target", () => {
     document.body.innerHTML = "<p>uno</p>";
     send({ type: "openlen:mention-highlight", key: "k3", target: { type: "page", page: null, path: "p:nth-of-type(1)", tag: "p", text: "uno" } });

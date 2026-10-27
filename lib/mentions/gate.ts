@@ -83,7 +83,7 @@ ${decl("elementAtEditPath", elementAtEditPath)}
 ${decl("mentionSignatureMatches", mentionSignatureMatches)}
 var SKIPPED = ${JSON.stringify(SKIPPED_TAGS)};
 function shown(el) { var r = el.getBoundingClientRect(); var cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden'; }
-function ownText(el) { var s = ''; for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += n.textContent || ''; return s.replace(/\\s+/g, ' ').trim().slice(0, 40); }
+function ownText(el) { var s = ''; for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += ' ' + (n.textContent || ''); return s.replace(/\\s+/g, ' ').trim().slice(0, 40); }
 `;
 
 async function gatePage(browser: Browser, doc: { name: string; html: string }): Promise<{ checked: number; failures: GateFailure[] }> {
