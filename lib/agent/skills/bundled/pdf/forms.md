@@ -32,7 +32,7 @@ It checks every id and every value before writing anything. Fix what it reports 
 python3 <base directory>/scripts/form_layout.py "<form.pdf>"
 ```
 
-For each page it prints `width`, `height`, `labels` (text with `x0`, `top`, `x1`, `bottom`), `lines` (horizontal rules with `x0`, `x1`, `y`), and `boxes` (small squares, usually checkboxes), in PDF points with the origin at the top left. `has_text` says whether the PDF has any text at all.
+For each page it prints `width`, `height`, `labels` (text with `x0`, `top`, `x1`, `bottom`), `lines` (horizontal rules with `x0`, `x1`, `y`), and `boxes` (small squares, usually checkboxes), in PDF points with the origin at the top left of the page as it is shown, also when it is turned. `has_text` says whether the PDF has any text at all.
 
 When `has_text` is true, place each answer from that structure: an answer starts a few points after its label (`x0` = the label's `x1` + 4) and sits just above the line under it; a checkbox answer is an `X` inside its box.
 

@@ -140,6 +140,26 @@ pdfmetrics.registerFont(TTFont("DejaVu", "/usr/share/fonts/truetype/dejavu/DejaV
 rows = [["Fecha", "Concepto", "Importe"]] + [[f"2026-03-{d:02d}", f"Venta mostrador nº {d}", f"{d * 12.5:.2f} €"] for d in range(1, 61)]
 t = Table(rows, repeatRows=1); t.setStyle([("FONTNAME", (0, 0), (-1, -1), "DejaVu"), ("GRID", (0, 0), (-1, -1), 0.5, "#888888")])
 SimpleDocTemplate(D + "extracto.pdf", pagesize=letter).build([t])
+# Stored landscape and turned 90° to be shown portrait (as a phone scan often is): drawn in the shown
+# page's coordinates, so it reads like the form without fields.
+c = canvas.Canvas(D + "rotated.pdf", pagesize=(792, 612))
+c.setPageRotation(90)
+c.transform(0, 1, -1, 0, 792, 0)
+c.drawString(72, 720, "Name:"); c.line(110, 716, 320, 716)
+c.drawString(72, 640, "Notes:"); c.line(110, 636, 520, 636)
+c.save()
+`;
+
+/** The fillable form with "agree" checked through an INDIRECT /V, as some producers write it. */
+const INDIRECT_V_PY = `
+from pypdf import PdfWriter
+from pypdf.generic import NameObject
+w = PdfWriter(clone_from="/tmp/pdf-check/form-fillable.pdf")
+for ref in w.pages[0]["/Annots"]:
+    a = ref.get_object()
+    if a.get("/T") == "agree":
+        a[NameObject("/V")] = w._add_object(NameObject("/Yes"))
+w.write("/tmp/pdf-check/indirect-v.pdf")
 `;
 
 const AES_COPY_PY = `
@@ -175,9 +195,10 @@ async function formScripts(box: Box) {
   }
   await box.files.write(`${D}/fixtures.py`, FIXTURES_PY);
   await box.files.write(`${D}/aes-copy.py`, AES_COPY_PY);
+  await box.files.write(`${D}/indirect-v.py`, INDIRECT_V_PY);
   await box.files.write(`${D}/values.py`, VALUES_PY);
   await box.files.write(`${D}/ink.py`, INK_PY);
-  const made = await run(box, `python3 ${D}/fixtures.py && python3 ${D}/aes-copy.py`);
+  const made = await run(box, `python3 ${D}/fixtures.py && python3 ${D}/aes-copy.py && python3 ${D}/indirect-v.py`);
   check("the test PDFs are made", made.exitCode === 0, short(made));
 
   const fields = await run(box, `python3 ${S}/form_fields.py ${D}/form-fillable.pdf`);
@@ -243,6 +264,47 @@ async function formScripts(box: Box) {
   check("form_layout has_text is false on the scan", scan.exitCode === 0 && /"has_text":\s*false/.test(scan.stdout), short(scan));
   const ocr = await run(box, `tesseract ${D}/scan.png - -l eng`);
   check("tesseract reads Name off the scan", ocr.exitCode === 0 && ocr.stdout.includes("Name"), short(ocr));
+
+  // 27/10, the review's minors: a value given through a reference, a number for a text field, and a
+  // page turned to be shown.
+  const indirect = await run(box, `python3 ${S}/form_fields.py ${D}/indirect-v.pdf`);
+  let agreeValue: unknown;
+  try {
+    agreeValue = (JSON.parse(indirect.stdout).fields as { id: string; value: unknown }[]).find((f) => f.id === "agree")?.value;
+  } catch {
+    /* checked below */
+  }
+  check("form_fields gives a value through a reference without its slash", indirect.exitCode === 0 && agreeValue === "Yes", `${short(indirect)} agree=${JSON.stringify(agreeValue)}`);
+
+  await box.files.write(`${D}/number.json`, JSON.stringify({ name: 25 }));
+  const number = await run(box, `python3 ${S}/fill_form.py ${D}/form-fillable.pdf ${D}/number.json ${D}/number.pdf && python3 ${D}/values.py ${D}/number.pdf`);
+  check("fill_form writes a number in a text field as text", number.exitCode === 0 && number.stdout.includes('"name": "25"'), short(number));
+
+  const turned = await run(box, `python3 ${S}/form_layout.py ${D}/rotated.pdf`);
+  let shown: { width?: number; height?: number; labels?: { text: string; top: number }[] } = {};
+  try {
+    shown = JSON.parse(turned.stdout).pages[0];
+  } catch {
+    /* checked below */
+  }
+  const nameTop = shown.labels?.find((l) => l.text === "Name:")?.top ?? -1;
+  check(
+    "form_layout reads a page turned 90° as it is shown",
+    turned.exitCode === 0 && shown.width === 612 && shown.height === 792 && nameTop > 55 && nameTop < 76,
+    `${short(turned)} width=${shown.width} height=${shown.height} Name: top=${nameTop}`,
+  );
+  await box.files.write(`${D}/place-rotated.json`, JSON.stringify({ fields: [{ page: 1, box: SMITH, text: "Smith" }, { page: 1, box: YAMADA, text: "山田" }] }));
+  const placedTurned = await run(
+    box,
+    `python3 ${S}/place_text.py ${D}/rotated.pdf ${D}/place-rotated.json ${D}/placed-rotated.pdf && pdftoppm -r 72 -png -singlefile ${D}/placed-rotated.pdf ${D}/placed-rotated && pdftoppm -r 72 -png -singlefile ${D}/rotated.pdf ${D}/base-rotated && python3 ${D}/ink.py ${D}/base-rotated.png '${JSON.stringify([SMITH, YAMADA])}' && python3 ${D}/ink.py ${D}/placed-rotated.png '${JSON.stringify([SMITH, YAMADA])}' && pdftotext ${D}/placed-rotated.pdf -`,
+  );
+  const lines = placedTurned.stdout.trim().split("\n");
+  const [turnedBefore, turnedAfter] = lines.filter((l) => l.startsWith("["));
+  check(
+    "place_text writes on a page turned 90° where it is shown",
+    placedTurned.exitCode === 0 && turnedBefore === "[false, false]" && turnedAfter === "[true, true]" && placedTurned.stdout.includes("Smith"),
+    `${short(placedTurned)} before=${turnedBefore} after=${turnedAfter}`,
+  );
 
   const locked = await run(box, `python3 ${S}/form_fields.py ${D}/locked-form.pdf`);
   check(

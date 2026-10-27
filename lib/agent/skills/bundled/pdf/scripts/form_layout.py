@@ -8,8 +8,9 @@ Prints {"pages": [page], "has_text": bool}. A page is
    "labels": [{"text", "x0", "top", "x1", "bottom"}],  words of one line next to each other, joined
    "lines": [{"x0", "x1", "y"}],                       horizontal rules (answers usually sit on one)
    "boxes": [{"x0", "top", "x1", "bottom"}]}           small squares, 6 to 20 pt (usually checkboxes)
-in PDF points with the origin at the TOP left, the coordinates place_text.py takes. "has_text"
-false means the pages are images (a scan): look at them instead.
+in PDF points with the origin at the TOP left of the page as it is shown (also when it is turned with
+/Rotate), the coordinates place_text.py takes. "has_text" false means the pages are images (a scan):
+look at them instead.
 
 Written for OpenLen (spec local 2026-10-27-len-pdf-skill), with pdfplumber.
 """
@@ -64,15 +65,20 @@ def main():
     if len(sys.argv) != 2:
         fail(1, "Usage: python3 form_layout.py <in.pdf>")
     path = sys.argv[1]
-    open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
+    reader = open_pdf(path)  # the same answer as the other scripts for a file that cannot be opened
     pages, has_text = [], False
     with pdfplumber.open(path) as pdf:
         for number, page in enumerate(pdf.pages, start=1):
             has_text = has_text or bool(page.chars)
+            # pdfplumber gives the words and rules of a turned page (/Rotate) as it is shown, but its
+            # width and height as stored: a page turned 90° or 270° is shown with them swapped.
+            width, height = float(page.width), float(page.height)
+            if reader.pages[number - 1].rotation % 180:
+                width, height = height, width
             pages.append({
                 "page": number,
-                "width": round(float(page.width), 1),
-                "height": round(float(page.height), 1),
+                "width": round(width, 1),
+                "height": round(height, 1),
                 "labels": labels_of(page),
                 "lines": lines_of(page),
                 "boxes": boxes_of(page),
