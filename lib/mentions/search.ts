@@ -18,11 +18,11 @@ function isSubsequence(needle: string, hay: string): boolean {
 }
 
 /** How well one query word matches one field, times the field's weight; 0 = no match. */
-function scoreIn(token: string, field: string, weight: number): number {
+function scoreIn(token: string, field: string, weight: number, strict = false): number {
   if (!field) return 0;
   const at = field.indexOf(token);
   if (at !== -1) return weight * 10 + (at === 0 ? 8 : /[^a-z0-9]/.test(field[at - 1]!) ? 5 : 0);
-  return isSubsequence(token, field) ? weight * 3 : 0;
+  return !strict && isSubsequence(token, field) ? weight * 3 : 0;
 }
 
 function fieldsOf(e: MentionEntry): [string, number][] {
@@ -36,14 +36,14 @@ function fieldsOf(e: MentionEntry): [string, number][] {
   ];
 }
 
-function score(tokens: readonly string[], fields: readonly [string, number][]): number {
+function score(tokens: readonly string[], fields: readonly [string, number][], strict = false): number {
   // A field that IS the whole query (a short label: «Pro», «+») beats every
   // field that merely starts with it.
   const whole = tokens.join(" ");
   let total = fields.some(([f]) => f.trim() === whole) ? 100 : 0;
   for (const t of tokens) {
     let best = 0;
-    for (const [f, w] of fields) best = Math.max(best, scoreIn(t, f, w));
+    for (const [f, w] of fields) best = Math.max(best, scoreIn(t, f, w, strict));
     if (best === 0) return 0;
     total += best;
   }
@@ -55,6 +55,9 @@ export function searchMentions(
   files: readonly string[],
   query: string,
   limit: number,
+  /** Only whole appearances of each word count (no scattered subsequence): for a
+   *  search typed with spaces, where prose must not keep matching. */
+  opts: { strict?: boolean } = {},
 ): { items: MentionResult[]; more: number } {
   const tokens = fold(query).split(/\s+/).filter(Boolean);
   let all: MentionResult[];
@@ -66,11 +69,11 @@ export function searchMentions(
   } else {
     const scored: { item: MentionResult; score: number; order: number }[] = [];
     entries.forEach((entry, order) => {
-      const s = score(tokens, fieldsOf(entry));
+      const s = score(tokens, fieldsOf(entry), opts.strict);
       if (s > 0) scored.push({ item: { type: "element", entry }, score: s, order });
     });
     files.forEach((ruta, i) => {
-      const s = score(tokens, [[fold(ruta), 1]]);
+      const s = score(tokens, [[fold(ruta), 1]], opts.strict);
       if (s > 0) scored.push({ item: { type: "file", ruta }, score: s, order: entries.length + i });
     });
     scored.sort((x, y) => y.score - x.score || x.order - y.order);

@@ -55,6 +55,12 @@ describe("searchMentions", () => {
     expect(keys(searchMentions([...others, pro], [], "Pro", 5))[0]).toBe(pro.key);
   });
 
+  it("in strict mode, only whole-word appearances count, never a scattered subsequence", () => {
+    expect(keys(searchMentions(ALL, [], "ver most", 10, { strict: true }))[0]).toBe(LINK.key);
+    expect(searchMentions(ALL, [], "vr mstr", 10, { strict: true }).items).toEqual([]);
+    expect(searchMentions(ALL, [], "vr mstr", 10).items.length).toBeGreaterThan(0);
+  });
+
   it("ignores accents and case", () => {
     expect(keys(searchMentions(ALL, [], "MOSTRÁDOR", 10))).toContain(LINK.key);
   });

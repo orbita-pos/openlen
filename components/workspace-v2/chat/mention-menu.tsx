@@ -40,7 +40,8 @@ function sessionAt(value: string, cursor: number, labels: readonly string[], peo
   const at = value.lastIndexOf("@", cursor - 1);
   if (at === -1 || (at > 0 && !/\s/.test(value[at - 1]!))) return null;
   const query = value.slice(at + 1, cursor);
-  if (query.length > QUERY_MAX || query.includes("\n")) return null;
+  // «@ » is not a mention, like in Claude Code: a space right after it closes it.
+  if (query.length > QUERY_MAX || query.includes("\n") || /^\s/.test(query)) return null;
   const rest = value.slice(at);
   if (labels.some((l) => rest.startsWith(l))) return null;
   if (["Len", ...people.map((p) => p.nombre)].some((n) => rest.toLowerCase().startsWith(`@${n.toLowerCase()} `))) return null;
@@ -125,14 +126,18 @@ export function useMentionMenu(args: {
       walk(null, 0);
       for (const ruta of index.files) out.push({ kind: "file", ruta });
     } else {
-      for (const r of searchMentions(index.entries, index.files, q, SHOWN).items) {
+      // With spaces, every word has to be there whole: otherwise ordinary prose
+      // after an unpicked «@» keeps matching something and Enter would pick it.
+      for (const r of searchMentions(index.entries, index.files, q, SHOWN, { strict: /\s/.test(q.trim()) }).items) {
         out.push(r.type === "element" ? { kind: "element", entry: r.entry, depth: 0, hasChildren: false, open: false } : { kind: "file", ruta: r.ruta });
       }
+      // Nothing real found: the menu closes, so Enter sends what was typed.
+      if (out.length === 0) return [];
     }
     if (onPickOnCanvas) out.push({ kind: "canvas" });
     return out;
   }, [open, index, session?.query, people, withLen, expanded, onPickOnCanvas]); // eslint-disable-line react-hooks/exhaustive-deps
-  const more = open && index && session && session.query.trim() ? searchMentions(index.entries, index.files, session.query, SHOWN).more : 0;
+  const more = open && index && session && session.query.trim() ? searchMentions(index.entries, index.files, session.query, SHOWN, { strict: /\s/.test(session.query.trim()) }).more : 0;
   const atLimit = mentions.length >= MAX_MENTIONS;
 
   useEffect(() => setActive(0), [session?.query, open]);
