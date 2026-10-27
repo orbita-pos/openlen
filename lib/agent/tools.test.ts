@@ -2775,6 +2775,67 @@ describe("Read of a box PDF through a terminal that needs its own this", () => {
   });
 });
 
+// The pdf skill (spec local 2026-10-27-len-pdf-skill, §4.7): Read shows an image made in the box, as
+// Claude Code's Read does; filling a scanned form needs Len to look at a zoomed crop.
+describe("Read of an image made in the box", () => {
+  const IMG = { mimeType: "image/jpeg", dataBase64: "IMG" };
+  const withImages = (box: Record<string, Uint8Array>, terminal = true) => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    if (terminal) session.terminal = { arrancada: true, readFileBytes: async (p: string) => box[p] ?? null } as unknown as AgentSession["terminal"];
+    const asked: number[] = [];
+    const d = { ...deps, imageForModel: async (bytes: Uint8Array) => (asked.push(bytes.byteLength), { image: IMG, width: 300, height: 80 }) } as unknown as AgentDeps;
+    return { d, session, asked };
+  };
+
+  it("Read of a PNG made in the box returns it as an image", async () => {
+    const { d, session } = withImages({ "/tmp/office/crop.png": new Uint8Array([0x89, 0x50, 0x4e, 0x47]) });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/crop.png" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.deepEqual(out.images, [IMG]);
+    assert.match(String(out.response.tool_result), /^Image read: \/tmp\/office\/crop\.png/);
+  });
+
+  it(".jpg, .jpeg and .webp too", async () => {
+    const paths = ["/tmp/office/a.jpg", "/tmp/office/b.jpeg", "/tmp/office/c.webp", "/tmp/office/D.PNG"];
+    const { d, session, asked } = withImages(Object.fromEntries(paths.map((p) => [p, new Uint8Array([1])])));
+    for (const p of paths) {
+      const out = await runAgentTool(session, d, "Read", { file_path: p });
+      assert.equal(out.response.ok, true, `${p}: ${String(out.response.error)}`);
+    }
+    assert.equal(asked.length, 4);
+  });
+
+  it("an image larger than 20 MB is refused without decoding it", async () => {
+    const { d, session, asked } = withImages({ "/tmp/office/big.png": new Uint8Array(20 * 1024 * 1024 + 1) });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/big.png" });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /larger than 20 MB/);
+    assert.equal(asked.length, 0);
+  });
+
+  it("without a box, an image path is read as before", async () => {
+    const { d, session, asked } = withImages({}, false);
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/office/crop.png" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.images, undefined);
+    assert.equal(asked.length, 0);
+  });
+
+  it("imageForModel shrinks a large image to at most 1000 px wide", async () => {
+    const { processImage } = await import("@/lib/images");
+    const { imageForModel } = await import("./image-for-model");
+    const { readFileSync } = await import("node:fs");
+    const icon = readFileSync("public/icon-192.png");
+    const big = (await processImage({ input: icon, variants: [{ width: 5000, format: "png", quality: 100 }], withoutEnlargement: false })).variants[0]!;
+    assert.equal(big.width, 5000);
+    const r = await imageForModel(new Uint8Array(big.bytes));
+    assert.ok(r.width <= 1000, `width ${r.width}`);
+    assert.ok(r.height <= 3000, `height ${r.height}`);
+    assert.equal(r.image.mimeType, "image/jpeg");
+  });
+});
+
 // Review of the branch (26/10): the box's read-only files are refreshed after every command that
 // saves, and each refresh downloaded every attachment of the conversation again. They never change
 // (their URL carries their hash): one download per turn.

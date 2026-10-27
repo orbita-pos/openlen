@@ -360,6 +360,8 @@ export interface AgentDeps {
   storeDeliverable?(projectId: string, turnId: string, name: string, bytes: Uint8Array, contentType: string): Promise<{ url: string }>;
   /** A PDF's pages as images (`renderPdfPages`); a double in the tests. */
   pdfPages?: (pdf: Uint8Array, range: { first: number; last: number } | null) => Promise<PdfPages>;
+  /** An image made in the box, as `Read` shows it (`lib/agent/image-for-model.ts`); a double in the tests. */
+  imageForModel?: (bytes: Uint8Array) => Promise<{ image: InlineImage; width: number; height: number }>;
   loadProject(projectId: string, userId: string): Promise<{
     data: ProjectData;
     title: string;
@@ -820,6 +822,12 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       const where = deliverableLocation(projectId, turnId, name, randomBytes(4).toString("hex"));
       await store.put(where.key, bytes, contentType);
       return { url: where.url };
+    },
+    // `Read` of an image made in the box (spec local 2026-10-27-len-pdf-skill, §4.7). Lazy import: the
+    // native image binding.
+    async imageForModel(bytes) {
+      const { imageForModel } = await import("@/lib/agent/image-for-model");
+      return imageForModel(bytes);
     },
     // The skills of /.len/skills and ~/.len/skills. Lazy import, like the notes: the database.
     skillStore: {
