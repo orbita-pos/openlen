@@ -6,7 +6,7 @@ import { parseSkillFile } from "./skill-file";
 import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkills } from "./bundled";
 
 describe("bundled skills", () => {
-  it("ships the seven office skills", () => {
+  it("ships the seven office skills and the one that creates skills", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
       "office",
       "office-docx",
@@ -15,7 +15,18 @@ describe("bundled skills", () => {
       "office-recalculate",
       "office-render",
       "office-xlsx",
+      "skill-creator",
     ]);
+  });
+
+  // Found by the real turn (26/10): asked to save how the owner quotes as a skill, Len looked in
+  // /.openlen/skills (read-only), decided skills can't be made here and wrote /LEN.md. DeepSeek
+  // ships "creator skills" for what the agent authors; this one says where and how.
+  it("the skill creator says where a user's skill goes and what it looks like", () => {
+    const text = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/skill-creator/SKILL.md`]!;
+    for (const must of ["/.len/skills/<name>/SKILL.md", "~/.len/skills/<name>/SKILL.md", "description:", "/LEN.md", "only its SKILL.md"]) {
+      expect(text, must).toContain(must);
+    }
   });
 
   it("every bundled skill parses and its folder is its name", () => {
