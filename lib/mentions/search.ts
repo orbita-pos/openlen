@@ -37,7 +37,10 @@ function fieldsOf(e: MentionEntry): [string, number][] {
 }
 
 function score(tokens: readonly string[], fields: readonly [string, number][]): number {
-  let total = 0;
+  // A field that IS the whole query (a short label: «Pro», «+») beats every
+  // field that merely starts with it.
+  const whole = tokens.join(" ");
+  let total = fields.some(([f]) => f.trim() === whole) ? 100 : 0;
   for (const t of tokens) {
     let best = 0;
     for (const [f, w] of fields) best = Math.max(best, scoreIn(t, f, w));

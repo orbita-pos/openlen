@@ -50,6 +50,31 @@ export function parseMentions(raw: unknown): MentionRef[] {
   return out;
 }
 
+const ENTITIES: Readonly<Record<string, string>> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+/** The words a person reads in an HTML fragment: tags out, entities decoded. */
+function wordsOf(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) =>
+      e[0] === "#" ? String.fromCodePoint(e[1]?.toLowerCase() === "x" ? parseInt(e.slice(2), 16) : Number(e.slice(1))) : (ENTITIES[e.toLowerCase()] ?? m),
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Every word of the element's own text is in the fragment's text (its own text
+ *  can be split by inline children: «Pan <em>de</em> verdad»). */
+function textFitsFragment(text: string, fragment: string): boolean {
+  const words = wordsOf(fragment);
+  // Punctuation alone («,» between spans) identifies nothing: only real words count.
+  return text
+    .split(/\s+/)
+    .filter((w) => /[\p{L}\p{N}]/u.test(w))
+    .every((w) => words.includes(w));
+}
+
 function pageSelection(ref: MentionRef & { type: "element" }, target: PageTarget, html: string | null): SeleccionDelDueno {
   const pista = { ruta: target.page ? `/${target.page}/index.html` : "/index.html", pista: ref.label };
   if (html === null) return pista;
@@ -58,7 +83,7 @@ function pageSelection(ref: MentionRef & { type: "element" }, target: PageTarget
   // The path still resolves, but is it still THAT element? A page's structure can
   // change under a path; lines of a neighbour would point Len at the wrong thing.
   const sameTag = new RegExp(`^<${target.tag}[\\s>/]`, "i").test(sel.contenido);
-  if (!sameTag || (target.text && !sel.contenido.replace(/\s+/g, " ").includes(target.text))) return { ruta: sel.ruta, pista: ref.label };
+  if (!sameTag || (target.text && !textFitsFragment(target.text, sel.contenido))) return { ruta: sel.ruta, pista: ref.label };
   return sel;
 }
 

@@ -49,6 +49,12 @@ describe("searchMentions", () => {
     expect(r.indexOf(LINK.key)).toBeLessThan(r.indexOf(HERO.key));
   });
 
+  it("puts an exact text first, ahead of texts that only start with it", () => {
+    const pro = entry({ tag: "span", text: "Pro", name: "Pro" });
+    const others = ["Productos", "Proyecto", "Promoción", "Proceso", "Propuesta", "Prólogo"].map((t) => entry({ tag: "p", text: t, name: t }));
+    expect(keys(searchMentions([...others, pro], [], "Pro", 5))[0]).toBe(pro.key);
+  });
+
   it("ignores accents and case", () => {
     expect(keys(searchMentions(ALL, [], "MOSTRÁDOR", 10))).toContain(LINK.key);
   });
