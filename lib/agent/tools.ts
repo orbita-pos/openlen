@@ -57,6 +57,7 @@ import { getUserMemory, setPersonalLenMd } from "@/lib/agent/user-memory";
 import type { MemoryNote } from "@/lib/agent/memory/note";
 import type { SkillScope } from "@/lib/agent/skills/paths";
 import type { StoredSkill } from "@/lib/agent/skills/store";
+import type { SkillSet } from "@/lib/agent/skills/registry";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
@@ -1164,6 +1165,9 @@ export interface AgentSession {
   /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): el turno, para la
    *  caja del proyecto (quién la tiene) y su fila en el libro. */
   turnId?: string;
+  /** SKILLS (spec local 2026-10-26-len-skills): OpenLen's, the project's and the speaker's, resolved
+   *  for this turn (`lib/agent/skills/registry.ts`). Absent = none. */
+  skills?: SkillSet;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;

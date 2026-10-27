@@ -289,6 +289,9 @@ export function buildAgentContext(args: {
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
   artifactIndex?: string | null;
+  /** SKILLS (spec local 2026-10-26-len-skills, §4.3): the speaker's own skills (`personalSkillsReminder`),
+   *  never in the shared durable catalog. Absent/empty ⇒ byte-identical output. */
+  personalSkills?: string | null;
   /** Lo que la ingestión registró como perdido (`data.degradations`).
    *  Ausente/vacío ⇒ salida byte-idéntica. */
   degradaciones?: readonly DegradacionConocida[];
@@ -375,7 +378,7 @@ export function buildAgentContext(args: {
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionBlock(args.seleccion)}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}`;
 }
 
 
@@ -435,6 +438,9 @@ export interface BuildAgentMessagesArgs {
    *  (`lib/git/status-block.ts`). Absent/null ⇒ byte-identical output. */
   gitStatus?: string | null;
   artifactIndex?: string | null;
+  /** SKILLS (spec local 2026-10-26-len-skills, §4.3): the speaker's own skills (`personalSkillsReminder`),
+   *  never in the shared durable catalog. Absent/empty ⇒ byte-identical output. */
+  personalSkills?: string | null;
   /** Ver buildAgentContext.degradaciones. */
   degradaciones?: readonly DegradacionConocida[];
   /**
@@ -445,6 +451,9 @@ export interface BuildAgentMessagesArgs {
    * delante sigue en caché, como en DeepSeek.
    */
   memoryMessage?: string | null;
+  /** SKILLS (spec local 2026-10-26-len-skills, §4.3): this turn's catalog message (first one or a
+   *  replacement), or nothing if it didn't change. Its own message after the memory, as DeepSeek. */
+  skillCatalogMessage?: string | null;
   /** The user's turn prompt (already trimmed/validated by the caller). */
   prompt: string;
   /** Prior turns, ALREADY hardened to {role, content} + capped by the caller
@@ -519,6 +528,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     cambiosDelDueno: args.cambiosDelDueno,
     gitStatus: args.gitStatus,
     artifactIndex: args.artifactIndex,
+    personalSkills: args.personalSkills,
     degradaciones: args.degradaciones,
     attachedImages: args.attachedImages,
     seleccion: args.seleccion,
@@ -547,7 +557,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // proveedor desde tu mensaje y pagaba el turno entero otra vez. Como Claude
   // Code, que anota la imagen pegada en el mismo mensaje en que se pega.
   const peticion = turnRequestText({ prompt: args.prompt, avisos, attachedImages: args.attachedImages, attachedFiles: args.attachedFiles });
-  const fijo = manual + (args.memoryMessage ?? "") + contextBlock + peticion;
+  const fijo = manual + (args.memoryMessage ?? "") + (args.skillCatalogMessage ?? "") + contextBlock + peticion;
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
     args.maxPromptTokens;
@@ -600,6 +610,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     manual,
     history,
     memoryMessage: args.memoryMessage,
+    skillCatalogMessage: args.skillCatalogMessage,
     contextBlock,
     prompt: peticion,
   });
@@ -623,7 +634,7 @@ export function turnRequestText(o: {
 
 /**
  * EL ORDEN DE LA PETICIÓN DE UN TURNO, en un solo sitio: [sistema, manual,
- * …historial, memoria, contexto, petición]. Lo usa `buildAgentMessages` y lo
+ * …historial, memoria, catálogo de skills, contexto, petición]. Lo usa `buildAgentMessages` y lo
  * usan las escenas reales de Len 3.1 (`lib/agent/replay-scenes/`), que
  * reconstruyen turnos de producción con las MISMAS piezas: si el orden cambia
  * aquí, cambia en las dos. `prompt` ya lleva los avisos detrás.
@@ -633,6 +644,7 @@ export function assembleTurnMessages(o: {
   readonly manual: string;
   readonly history: readonly MensajeDelHistorial[];
   readonly memoryMessage?: string | null;
+  readonly skillCatalogMessage?: string | null;
   readonly contextBlock: string;
   readonly prompt: string;
 }): Message[] {
@@ -641,6 +653,7 @@ export function assembleTurnMessages(o: {
     { role: "user", content: o.manual },
     ...o.history,
     ...(o.memoryMessage ? [{ role: "user" as const, content: o.memoryMessage }] : []),
+    ...(o.skillCatalogMessage ? [{ role: "user" as const, content: o.skillCatalogMessage }] : []),
     { role: "user", content: o.contextBlock },
     { role: "user", content: o.prompt },
   ];

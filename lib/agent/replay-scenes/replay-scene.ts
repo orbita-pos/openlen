@@ -110,6 +110,7 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
       manual: MANUAL,
       history,
       memoryMessage: t?.memoria ?? null,
+      skillCatalogMessage: t?.skills ?? null,
       contextBlock,
       prompt: turnRequestText({
         prompt: row.userText,

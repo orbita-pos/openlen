@@ -32,6 +32,8 @@ const mocks = vi.hoisted(() => {
   brainStub,
   // LEN.md (plans/len-md): las notas de /.len/memory que lee la ruta para el índice.
   memoryNotes: { list: vi.fn(async (): Promise<unknown[]> => []), upsert: vi.fn(), remove: vi.fn() },
+  // Skills (spec local 2026-10-26-len-skills): the project's and the person's.
+  skillStore: { list: vi.fn(async (_scope: string, _owner: string): Promise<unknown[]> => []), upsert: vi.fn(), remove: vi.fn() },
   // Compartir el proyecto: lo que un miembro gasta y le queda (lib/projects/miembros.ts).
   cabeEnElTope: vi.fn(async () => true),
   margenDeMiembros: vi.fn(async (): Promise<number | null> => null),
@@ -239,6 +241,7 @@ vi.mock("@/lib/agent/tools", () => ({
       loadBusinessProfile: mocks.loadBusinessProfile,
       projectFiles: mocks.projectFiles,
       memoryNotes: mocks.memoryNotes,
+      skillStore: mocks.skillStore,
       stripeCli: mocks.stripeCli,
     };
   },
@@ -1929,6 +1932,74 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(filaGuardada().transcript?.memoria).toBeUndefined();
     });
   });
+
+  // SKILLS (spec local 2026-10-26-len-skills, §4.3): the catalog is a durable message too, with its
+  // digest in the row; it goes again only when it changes.
+  describe("skills: the catalog as a durable message", () => {
+    const SKILL = (name: string, description = `${name} skill`) => ({ name, text: `---\nname: ${name}\ndescription: ${description}\n---\n\nDo it.\n`, updatedAt: new Date(0) });
+    const turno = () =>
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "listo", turns: 1, toolCalls: 1,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+        terminalError: false, mutoDurable: true,
+        transcripcion: [{ role: "assistant", content: "listo" }],
+      });
+    const argsQueRecibio = () =>
+      (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ skillCatalogMessage?: string | null; personalSkills?: string | null }])[0];
+    const fila = () =>
+      (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skills?: string; skillsDigest?: string } | null }])[1];
+
+    it("the first turn carries the catalog; the second, with nothing changed, none", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/<available_skills>/);
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/- `office-xlsx`: /);
+      expect(fila().transcript?.skills).toBe(argsQueRecibio().skillCatalogMessage);
+      const digest = fila().transcript!.skillsDigest!;
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, skills: "x", skillsDigest: digest } }]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage ?? null).toBeNull();
+      expect(fila().transcript?.skills).toBeUndefined();
+    });
+
+    it("a deleted project skill sends the replacement catalog", async () => {
+      turno();
+      mocks.skillStore.list.mockImplementation(async (scope: string) => (scope === "project" ? [SKILL("cotizar")] : []));
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/- `cotizar`: cotizar skill/);
+      const digest = fila().transcript!.skillsDigest!;
+      mocks.skillStore.list.mockImplementation(async () => []);
+      mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, skills: "x", skillsDigest: digest } }]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/^<system-reminder>\nThe available skill catalog changed\./);
+      expect(argsQueRecibio().skillCatalogMessage).not.toMatch(/cotizar/);
+      mocks.skillStore.list.mockImplementation(async () => []);
+    });
+
+    it("OPENLEN_SKILLS=0 leaves no trace", async () => {
+      vi.stubEnv("OPENLEN_SKILLS", "0");
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage ?? null).toBeNull();
+      expect(argsQueRecibio().personalSkills ?? null).toBeNull();
+      expect(fila().transcript?.skills).toBeUndefined();
+      vi.stubEnv("OPENLEN_SKILLS", "");
+    });
+
+    it("an app's turn carries the same catalog", async () => {
+      turno();
+      mocks.loadProject.mockResolvedValue({
+        title: "App", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+        data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" } },
+      });
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/<available_skills>/);
+    });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2957,6 +3028,26 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     // LIBRO DE GASTO: la fila es del dueño y dice quién lo pidió.
     expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 42, expect.objectContaining({ surface: "agent_turn", actorId: "ana" }));
     expect(mocks.sumarGasto).toHaveBeenCalledWith("p1", "ana", 42);
+  });
+
+  // SKILLS (spec local 2026-10-26-len-skills, §4.3): a member's own skills are theirs. They ride
+  // the turn's context, never the durable catalog the whole project's conversation shares.
+  it("🔴 a member's turn never sees another member's personal skills", async () => {
+    const text = (name: string) => `---\nname: ${name}\ndescription: ${name} skill\n---\n\nDo it.\n`;
+    mocks.skillStore.list.mockImplementation(async (scope: string, owner: string) =>
+      scope === "personal" ? (owner === "ana" ? [{ name: "de-ana", text: text("de-ana"), updatedAt: new Date(0) }] : [{ name: "del-dueno", text: text("del-dueno"), updatedAt: new Date(0) }]) : [],
+    );
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    await readEvents(await pedir());
+    const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ skillCatalogMessage?: string | null; personalSkills?: string | null }])[0];
+    expect(mocks.skillStore.list).not.toHaveBeenCalledWith("personal", "dueno-1");
+    expect(args.personalSkills).toMatch(/- `de-ana`: /);
+    expect(args.skillCatalogMessage).not.toMatch(/de-ana|del-dueno/);
+    mocks.skillStore.list.mockImplementation(async () => []);
   });
 
   it("el techo del turno de un miembro es lo que le queda al proyecto, si es menos", async () => {

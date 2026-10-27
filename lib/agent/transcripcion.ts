@@ -144,6 +144,10 @@ export interface TranscripcionGuardada {
    *  (`memoryMessageForTurn`). Se pliegan juntando las de todas las filas que
    *  el historial reenvía: lo que salió de la ventana vuelve a entrar. */
   readonly memoriaHuellas?: MemoryDigests;
+  /** SKILLS (spec local 2026-10-26-len-skills): the catalog message THIS turn sent, if any, and the
+   *  digest of the catalog the model knows from now on (`foldSkillsDigest`). Back in its place. */
+  readonly skills?: string;
+  readonly skillsDigest?: string;
   /** LEN 3.1 · las fotos de ESTE turno que Len NO vio (no se pudieron bajar):
    *  su nota dijo que no cargaron y no llevaron píxeles. El historial las rehace
    *  igual, aunque ahora sí bajen: si no, el mensaje cambiaba en el turno
@@ -411,6 +415,8 @@ export function historialDesdeLaBase(
     }
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
     if (f.transcript?.memoria) mensajes.push({ role: "user", content: f.transcript.memoria });
+    // Y el catálogo de skills que llevó, detrás (spec local 2026-10-26-len-skills).
+    if (f.transcript?.skills) mensajes.push({ role: "user", content: f.transcript.skills });
     // Y su contexto, en su sitio: lo de delante sigue en caché (ver `contexto`).
     if (f.transcript?.contexto) mensajes.push({ role: "user", content: f.transcript.contexto });
     mensajes.push(mensajeDelDueno(f, fotos));
