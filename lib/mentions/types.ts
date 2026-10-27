@@ -64,6 +64,8 @@ export interface MentionEntry {
   /** Own visible text, whitespace collapsed, at most 120 characters. */
   text: string;
   attrs: MentionAttrs;
+  /** Apps: the line its JSX element closes on. */
+  endLine?: number;
   /** Apps: the component the element is written in. */
   component: string | null;
   parent: string | null;

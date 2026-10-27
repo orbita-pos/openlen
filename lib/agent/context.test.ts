@@ -842,3 +842,31 @@ describe("assembleTurnMessages", () => {
     expect(r.messages.at(-1)!.content).toBe(`hola${r.avisos}`);
   });
 });
+
+// THE CHAT'S «@» (spec local 2026-10-27, §6.8): one IDE-selection block per
+// element mention, in message order, and a mentioned file as Read shows it.
+describe("the «@» mentions in the context", () => {
+  it("one selection block per mention, each with the line it already had", () => {
+    const s = buildAgentContext({
+      state: {},
+      selecciones: [
+        { ruta: "/index.html", desde: 4, hasta: 4, contenido: "<h1>Pan</h1>" },
+        { ruta: "/contacto/index.html", desde: 9, hasta: 10, contenido: "<a>\n  Ir</a>" },
+      ],
+    });
+    expect(s.match(/<system-reminder>/g)).toHaveLength(2);
+    expect(s.match(/It may or may not matter for what you are doing now\./g)).toHaveLength(2);
+    expect(s.indexOf("lines 4-4 of /index.html")).toBeLessThan(s.indexOf("lines 9-10 of /contacto/index.html"));
+  });
+
+  it("a single legacy selection reads exactly as before", () => {
+    const sel = { ruta: "/index.html", desde: 4, hasta: 4, contenido: "<h1>Pan</h1>" };
+    expect(buildAgentContext({ state: {}, selecciones: [sel] })).toBe(buildAgentContext({ state: {}, seleccion: sel }));
+  });
+
+  it("a mentioned file comes numbered like Read, from line 1", () => {
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/LEN.md", contenido: "Tono cercano.\nSin precios." }] });
+    expect(s).toContain("/LEN.md");
+    expect(s).toMatch(/1\tTono cercano\.\n\s*2\tSin precios\./);
+  });
+});
