@@ -2778,6 +2778,33 @@ describe("Read of a box PDF through a terminal that needs its own this", () => {
 // Found by the pdf skill's real turn (27/10): its SKILL.md says «Read `forms.md` (relative to this
 // skill's base directory)», and Read answered «There is no file at /.openlen/skills/pdf/forms.md»
 // while the terminal had it. A skill's resources are read like the platform's docs.
+// Spec local 2026-10-27-len-five-skills, §4.2: Len's manuals become generated skills. An old path says
+// where it moved (a conversation from before reads it), and a generated name is reserved also where it
+// is not offered.
+describe("moved manuals and reserved generated names", () => {
+  it("an old deliverables path says where it moved", async () => {
+    const before = process.env.OPENLEN_ARTIFACTS;
+    process.env.OPENLEN_ARTIFACTS = "1";
+    try {
+      const { deps } = makeDeps();
+      const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.openlen/docs/artifacts/slides.md" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /moved to the skill "artifact-slides"/);
+    } finally {
+      if (before === undefined) delete process.env.OPENLEN_ARTIFACTS;
+      else process.env.OPENLEN_ARTIFACTS = before;
+    }
+  });
+
+  it("a user's skill can't take a generated name, even with the deliverables off", async () => {
+    const { deps } = makeDeps();
+    const text = "---\nname: artifact-slides\ndescription: mine\n---\n\nDo it.\n";
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/skills/artifact-slides/SKILL.md", content: text });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /is reserved/);
+  });
+});
+
 describe("Read of a bundled skill's own files", () => {
   it("reads a resource of a bundled skill", async () => {
     const { deps } = makeDeps();

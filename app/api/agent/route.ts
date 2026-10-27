@@ -1035,7 +1035,7 @@ async function correrTurno(
         conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
       ])
     : [[], []];
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills(), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(

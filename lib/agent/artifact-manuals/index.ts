@@ -10,4 +10,9 @@ Use list_artifacts/inspect_artifact to recover saved ids, versions and real stat
 Write/edit sources with the existing file tools. render_artifact seals the returned revision and queues work; queued is not done. To wait for it, call inspect_artifact with wait_ms (it answers as soon as the job ends), never sleep in the terminal. Only a completed job with verified saved outputs is ready. Preserve successful pieces when another fails. Cancel only the job the user asked to cancel.
 query_artifact_data saves a dated dataset. Hypothetical values are scenario data and must stay labeled as such in charts, CSV and exports. Real owner data is private and read-only, including draft. An unavailable source is not a reason to invent real metrics. Refresh creates another saved dataset/version.
 Do not claim preview/export availability from a chat sentence or show_widget: the durable job and saved outputs are the authority.`;
+/** With skills on, each manual is the `artifact-<kind>` skill (spec local 2026-10-27-len-five-skills). */
+export const ARTIFACT_MANUAL_INDEX_SKILLS = ARTIFACT_MANUAL_INDEX.replace(
+  "Read /.openlen/docs/artifacts/<kind>.md before authoring that kind (dashboard, slides, image, motion, audio).",
+  "Load the `artifact-<kind>` skill before authoring that kind (dashboard, slides, image, motion, audio).",
+);
 export const artifactManuals: Readonly<Record<string, string>> = Object.fromEntries(Object.entries({ dashboard: dashboardManual, slides: slidesManual, image: imageManual, motion: motionManual,audio:audioManual }).map(([kind, content]) => [`/.openlen/docs/artifacts/${kind}.md`, content]));

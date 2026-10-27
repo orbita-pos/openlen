@@ -3,16 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/agent/skills/store", () => ({ listSkills: vi.fn() }));
+vi.mock("@/lib/projects", () => ({ getProject: vi.fn() }));
 
 import { GET } from "./route";
 import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { listSkills } from "@/lib/agent/skills/store";
+import { getProject } from "@/lib/projects";
 
 const text = (name: string) => `---\nname: ${name}\ndescription: ${name} skill\n---\n\nDo it.\n`;
 const pedir = () => GET(new Request("http://localhost/api/projects/p1/skills"), { params: Promise.resolve({ id: "p1" }) });
 
 beforeEach(() => {
+  vi.mocked(getProject).mockResolvedValue(null as never);
   vi.mocked(auth).mockResolvedValue({ user: { id: "ana" } } as never);
   vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "dueno-1" } as never);
   vi.mocked(listSkills).mockImplementation(async (scope, owner) =>
@@ -43,6 +46,16 @@ describe("GET /api/projects/[id]/skills", () => {
   it("401 without a session", async () => {
     vi.mocked(auth).mockResolvedValue(null as never);
     expect((await pedir()).status).toBe(401);
+  });
+
+  // Spec local 2026-10-27-len-five-skills, §4.2: OpenLen's skills depend on whether the project is a
+  // page or an app, and the menu lists what this project offers, read from the owner's project.
+  it("lists the generated skills this project offers, reading the owner's project", async () => {
+    vi.mocked(getProject).mockResolvedValue({ data: { html: "" } } as never);
+    vi.stubEnv("OPENLEN_ARTIFACTS", "1");
+    const names = ((await (await pedir()).json()) as { skills: { name: string }[] }).skills.map((s) => s.name);
+    expect(getProject).toHaveBeenCalledWith("p1", "dueno-1");
+    expect(names).toContain("artifact-slides");
   });
 
   it("empty with OPENLEN_SKILLS=0", async () => {
