@@ -16,6 +16,32 @@ export function highlightMention(win: Window | null | undefined, key: string, ta
   }
 }
 
+/** The canvas the workshop shows: its window, and the page it is on (null = home). */
+export interface MentionCanvas {
+  window: () => Window | null | undefined;
+  page: () => string | null;
+}
+
+// One canvas per workshop: the page registers it, the chat talks to it without
+// threading the iframe through every panel in between.
+let canvas: MentionCanvas | null = null;
+
+export function registerMentionCanvas(c: MentionCanvas): () => void {
+  canvas = c;
+  return () => {
+    if (canvas === c) canvas = null;
+  };
+}
+
+/** The page the canvas shows; `undefined` when no canvas is registered. */
+export function mentionCanvasPage(): string | null | undefined {
+  return canvas ? canvas.page() : undefined;
+}
+
+export function highlightOnCanvas(key: string, target: PageTarget | AppTarget | null): void {
+  highlightMention(canvas?.window(), key, target);
+}
+
 export function onMentionHighlighted(handler: (key: string, count: number) => void): () => void {
   const listener = (e: MessageEvent) => {
     const d = e.data as { type?: unknown; key?: unknown; count?: unknown } | null;

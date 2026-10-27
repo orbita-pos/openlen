@@ -55,16 +55,33 @@ export function opcionesDeMencion(
   return [...empiezan, ...enOtra].slice(0, 8);
 }
 
-/** Un trozo de un comentario: texto llano, `@Len` o la mención de una persona. */
+/** Un trozo de un comentario: texto llano, `@Len`, la mención de una persona o
+ *  (el «@» del chat, 2026-10-27) la de un elemento o fichero. */
 export interface TrozoDeMencion {
   readonly texto: string;
   readonly len?: true;
   readonly userId?: string;
+  readonly elemento?: true;
 }
 
-/** El texto en trozos para pintar cada mención con su color. Los mismos límites que `mencionesDe`. */
-export function trozosConMenciones(texto: string, personas: readonly PersonaMencionable[]): TrozoDeMencion[] {
+/** El texto en trozos para pintar cada mención con su color. Los mismos límites que `mencionesDe`.
+ *  `etiquetas`: las menciones de elementos y ficheros del «@» del chat, por su texto exacto. */
+export function trozosConMenciones(texto: string, personas: readonly PersonaMencionable[], etiquetas: readonly string[] = []): TrozoDeMencion[] {
   if (!texto) return [];
+  const exactas = etiquetas.filter(Boolean);
+  if (exactas.length > 0) {
+    const porLargo = [...exactas].sort((a, b) => b.length - a.length);
+    const re = new RegExp(porLargo.map(escapar).join("|"), "g");
+    const trozos: TrozoDeMencion[] = [];
+    let hasta = 0;
+    for (const m of texto.matchAll(re)) {
+      if (m.index > hasta) trozos.push(...trozosConMenciones(texto.slice(hasta, m.index), personas));
+      trozos.push({ texto: m[0], elemento: true });
+      hasta = m.index + m[0].length;
+    }
+    if (hasta < texto.length) trozos.push(...trozosConMenciones(texto.slice(hasta), personas));
+    return trozos;
+  }
   const conNombre = personas.filter((p) => p.nombre.trim());
   // El nombre más largo primero: «@Luis Mi» no se queda en «@Luis».
   const nombres = ["Len", ...conNombre.map((p) => p.nombre.trim())].sort((a, b) => b.length - a.length);
