@@ -58,6 +58,7 @@ import type { MemoryNote } from "@/lib/agent/memory/note";
 import type { SkillScope } from "@/lib/agent/skills/paths";
 import type { StoredSkill } from "@/lib/agent/skills/store";
 import type { SkillSet } from "@/lib/agent/skills/registry";
+import type { DeliveredFile } from "@/lib/agent/skills/present";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
 import { activeHtml } from "@/lib/page-engine/persist";
@@ -354,6 +355,8 @@ export interface AgentDeps {
   web?: WebDeps;
   /** The bytes of a file the user attached; `null` if they can't be had. */
   readAttachment?: (file: AttachedFile) => Promise<Uint8Array | null>;
+  /** `present` (spec local 2026-10-26-len-skills): stores a delivered file, answers its URL. */
+  storeDeliverable?(projectId: string, turnId: string, name: string, bytes: Uint8Array, contentType: string): Promise<{ url: string }>;
   /** A PDF's pages as images (`renderPdfPages`); a double in the tests. */
   pdfPages?: (pdf: Uint8Array, range: { first: number; last: number } | null) => Promise<PdfPages>;
   loadProject(projectId: string, userId: string): Promise<{
@@ -1203,6 +1206,8 @@ export interface ToolOutcome {
    *  lleva en el evento `action` y la tarjeta guardada es su única copia; el
    *  modelo lee la línea de `response` y su propia llamada en el historial. */
   widget?: VisualWidget;
+  /** The files `present` delivered (spec local 2026-10-26-len-skills), for the chat's card. */
+  delivered?: readonly DeliveredFile[];
   /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
    *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
    *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,
