@@ -870,3 +870,27 @@ describe("the «@» mentions in the context", () => {
     expect(s).toMatch(/1\tTono cercano\.\n\s*2\tSin precios\./);
   });
 });
+
+describe("the «@» mentioned files keep Read's limits", () => {
+  it("a file past Read's size limit is not attached, Len is told to read it in parts", () => {
+    const huge = "x".repeat(300_000);
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/big.html", contenido: huge }] });
+    expect(s.length).toBeLessThan(5_000);
+    expect(s).toContain("/big.html");
+    expect(s).toMatch(/offset and limit/);
+  });
+
+  it("all the mentioned files together stay within one Read's token budget", () => {
+    const fifteenK = Array.from({ length: 1500 }, (_, i) => `line ${i} ${"y".repeat(30)}`).join("\n");
+    const s = buildAgentContext({
+      state: {},
+      mentionedFiles: [
+        { ruta: "/a.md", contenido: fifteenK },
+        { ruta: "/b.md", contenido: fifteenK },
+      ],
+    });
+    expect(s).toContain("1\tline 0");
+    expect(s.match(/\tline 0 /g)).toHaveLength(1);
+    expect(s).toMatch(/\/b\.md[\s\S]*offset and limit/);
+  });
+});
