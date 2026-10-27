@@ -17,7 +17,7 @@ import {
   PLAYWRIGHT_BROWSERS,
   PLAYWRIGHT_DIR,
   PLAYWRIGHT_RESOLVER,
-  OFFICE_PYTHON_PACKAGES, PLAYWRIGHT_VERSION,
+  OFFICE_PYTHON_PACKAGES, PDF_FONT_FILES, PDF_PYTHON_PACKAGES, PLAYWRIGHT_VERSION,
   bridgeScript,
   manifestScript,
   playwrightResolverScript,
@@ -142,7 +142,35 @@ describe("the box's scripts", () => {
     expect(install).toContain(`@playwright/test@${PLAYWRIGHT_VERSION}`);
     expect(install).toContain(`PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS}`);
     expect(install).toContain("install --with-deps chromium");
-    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v3");
+    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v4");
+  });
+
+  // THE PDF SKILL (spec local 2026-10-27-len-pdf-skill, §4.4 and §4.7): qpdf, tesseract in Len's ten
+  // languages, fonts reportlab can embed for Japanese, Korean and Chinese, and the PDF Python packages.
+  it("the template installs qpdf, tesseract with the ten languages and the CJK fonts", async () => {
+    const { APT_PACKAGES } = await import("@/infra/e2b/openlen-terminal/template");
+    for (const p of [
+      "qpdf", "tesseract-ocr", "tesseract-ocr-spa", "tesseract-ocr-por", "tesseract-ocr-fra", "tesseract-ocr-deu", "tesseract-ocr-ita",
+      "tesseract-ocr-jpn", "tesseract-ocr-kor", "tesseract-ocr-chi-sim", "tesseract-ocr-nld",
+      "fonts-ipafont-gothic", "fonts-nanum", "fonts-wqy-zenhei",
+    ]) expect(APT_PACKAGES).toContain(p);
+  });
+
+  it("the template pins the pdf python packages", async () => {
+    const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
+    const ran: string[] = [];
+    const builder: Record<string, (...a: unknown[]) => unknown> = {};
+    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
+    defineTemplate(() => builder as never, "x");
+    const pip = ran.find((c) => c.includes("pip install"))!;
+    for (const [name, version] of Object.entries(PDF_PYTHON_PACKAGES)) expect(pip).toContain(`${name}==${version}`);
+    expect(Object.keys(PDF_PYTHON_PACKAGES).sort()).toEqual(["cryptography", "pdfplumber", "pypdf", "reportlab"]);
+  });
+
+  it("names a font file for every script Len writes in", () => {
+    expect(Object.keys(PDF_FONT_FILES).sort()).toEqual(["ja", "ko", "latin", "zh"]);
+    for (const path of Object.values(PDF_FONT_FILES)) expect(path).toMatch(/^\/usr\/share\/fonts\/.+\.tt[fc]$/);
   });
 
   // OFFICE SKILLS (spec local 2026-10-26-len-skills, §4.7): what DeepSeek's office skills need, in the box.

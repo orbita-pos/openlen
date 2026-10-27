@@ -216,6 +216,8 @@ describe("bash con la terminal real", () => {
     expect(d).toContain("python3 with pip");
     // OFFICE SKILLS (spec local 2026-10-26-len-skills): what is installed for them, named.
     expect(d).toContain("LibreOffice (soffice) and openpyxl, pandas, python-docx and python-pptx");
+    // THE PDF SKILL (spec local 2026-10-27-len-pdf-skill, §4.7).
+    expect(d).toContain("For PDFs it has pypdf, pdfplumber, reportlab, qpdf, poppler (pdftotext, pdftoppm) and tesseract.");
     expect(d).toContain("package registries (npm, PyPI) and GitHub");
   });
 

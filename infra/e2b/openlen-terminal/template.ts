@@ -4,7 +4,7 @@
 // `npm run sandbox:template`, which writes the scripts to `filesDir` first: E2B's `copy` takes local
 // files. API from docs.e2b.dev/template (read 2026-10-21); the SDK is the `e2b` package.
 
-import { OFFICE_PYTHON_PACKAGES, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_VERSION } from "../../../lib/agent/sandbox/template-files";
+import { OFFICE_PYTHON_PACKAGES, PDF_PYTHON_PACKAGES, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_VERSION } from "../../../lib/agent/sandbox/template-files";
 
 /** The parts of E2B's Template builder this file uses. */
 export interface TemplateBuilderLike {
@@ -18,9 +18,14 @@ export interface TemplateBuilderLike {
 // (it differs per box; measured 21/10, docs/superpowers/specs/2026-10-21-playwright-in-the-box-notes.md).
 // The office skills (spec local 2026-10-26-len-skills, §4.7): LibreOffice to recalculate, render and
 // export (its Python bridge, python3-uno, for recalc.py), poppler for page images, and a font family.
+// The pdf skill (spec local 2026-10-27-len-pdf-skill, §4.4 and §4.7): qpdf, tesseract in Len's ten
+// languages (English comes with it), and TrueType fonts for Japanese, Korean and Chinese.
 export const APT_PACKAGES = [
   "ca-certificates", "curl", "git", "ripgrep", "jq", "sqlite3", "unzip", "python3", "python3-pip", "python3-venv", "libnss3-tools",
   "libreoffice-calc", "libreoffice-writer", "libreoffice-impress", "python3-uno", "poppler-utils", "fonts-dejavu",
+  "qpdf", "tesseract-ocr", "tesseract-ocr-spa", "tesseract-ocr-por", "tesseract-ocr-fra", "tesseract-ocr-deu", "tesseract-ocr-ita",
+  "tesseract-ocr-jpn", "tesseract-ocr-kor", "tesseract-ocr-chi-sim", "tesseract-ocr-nld",
+  "fonts-ipafont-gothic", "fonts-nanum", "fonts-wqy-zenhei",
 ];
 
 export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: string): TemplateBuilderLike {
@@ -38,8 +43,9 @@ export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: st
     .runCmd("chown user:user /", { user: "root" })
     // Ubuntu 24.04 refuses pip outside a venv (PEP 668); with this, `pip install` goes to ~/.local.
     .runCmd("printf '[global]\\nbreak-system-packages = true\\n' > /etc/pip.conf", { user: "root" })
-    // The office skills' Python packages, for every user of the box (spec local 2026-10-26-len-skills).
-    .runCmd(`pip install --no-cache-dir ${Object.entries(OFFICE_PYTHON_PACKAGES).map(([n, v]) => `${n}==${v}`).join(" ")}`, { user: "root" })
+    // The office skills' and the pdf skill's Python packages, for every user of the box (spec local
+    // 2026-10-26-len-skills and 2026-10-27-len-pdf-skill).
+    .runCmd(`pip install --no-cache-dir ${Object.entries({ ...OFFICE_PYTHON_PACKAGES, ...PDF_PYTHON_PACKAGES }).map(([n, v]) => `${n}==${v}`).join(" ")}`, { user: "root" })
     // `npm install -g` in the user's home (the box's PATH has its bin, lib/agent/sandbox/sandbox-terminal.ts).
     .runCmd("mkdir -p /home/user/.npm-global && printf 'prefix=/home/user/.npm-global\\n' > /home/user/.npmrc && chown -R user:user /home/user/.npm-global /home/user/.npmrc", {
       user: "root",
