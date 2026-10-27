@@ -53,6 +53,7 @@ import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "@/lib/agent/skills/catalog-message";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
+import { skillsLoadedIn } from "@/lib/agent/skills/tool";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
@@ -1193,6 +1194,8 @@ async function correrTurno(
   const ownerEmail = await correoDelUsuario(userId).catch(() => null);
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
+    // A skill the resent history already shows answers «already loaded» (Claude Code).
+    loadedSkills: skillsLoadedIn(history),
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.

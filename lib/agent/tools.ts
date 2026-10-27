@@ -131,6 +131,7 @@ import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUp
 import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { toolTodoWrite } from "@/lib/agent/todo-write";
 import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
+import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
@@ -1168,6 +1169,9 @@ export interface AgentSession {
   /** SKILLS (spec local 2026-10-26-len-skills): OpenLen's, the project's and the speaker's, resolved
    *  for this turn (`lib/agent/skills/registry.ts`). Absent = none. */
   skills?: SkillSet;
+  /** The skills already in this conversation (loaded with `skill` or invoked with /name): `skill`
+   *  answers Claude Code's «already loaded» line instead of sending them again. */
+  loadedSkills?: Set<string>;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;
@@ -2857,6 +2861,8 @@ async function ejecutarHerramienta(
         return toolTodoWrite(args);
       case READ_ME:
         return toolReadMe(args);
+      case SKILL_TOOL:
+        return toolSkill(session, args);
       case SHOW_WIDGET:
         return toolShowWidget(args);
       case ASK_USER_QUESTION:

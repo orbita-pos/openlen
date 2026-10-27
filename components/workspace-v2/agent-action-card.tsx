@@ -202,6 +202,8 @@ export const KNOWN_TOOLS = new Set([
   // todo_write, no son pasos —el visual va en la respuesta—, pero la barra de
   // «qué hace Len» los nombra mientras corren.
   "read_me",
+  // Skills (spec local 2026-10-26-len-skills): loading one of the catalog.
+  "skill",
   "show_widget",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",

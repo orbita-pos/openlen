@@ -793,6 +793,8 @@ const READ_ONLY_TOOLS = new Set([
   "use_page",
   // Len 2.0: leer ficheros no cambia nada (ver la nota de arriba).
   "Read",
+  // Loading a skill reads its instructions (spec local 2026-10-26-len-skills).
+  "skill",
   "Grep",
   "Glob",
   // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba
