@@ -3096,6 +3096,946 @@ Rules:
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them."
 `;
 
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office
+description: Create, edit, inspect, or convert Office documents, spreadsheets, presentations, and PDFs. Load to choose the relevant workflow.
+---
+
+# Office task routing
+
+Call the \`skill\` tool with the format skill name before creating, reading, or editing Office files. Standalone rendering, PDF export, and recalculation need only their operation skill.
+
+- Create, read, or edit: \`office-docx\` (Word), \`office-pptx\` (PowerPoint), or \`office-xlsx\` (Excel).
+- Images, visual inspection, or tasks primarily about layout, spacing, sizing, or alignment: \`office-render\`, even without an explicit visual-check request.
+- Refresh spreadsheet formula results: \`office-recalculate\`.
+- Export an Office file to PDF: \`office-export-pdf\`.
+
+Honor requests to skip rendering. New files, content edits, formulas, and incidental formatting such as bold headers or number formats need no render unless visual inspection is requested. Do not reload skills.
+
+Office work happens in the terminal. Keep scripts, working files, and outputs in \`/tmp/office\` (create it with \`mkdir -p /tmp/office\`): a file written at the project's root is saved to the project and published with the site, and \`/tmp\` never is. A file the user attached is in \`/.openlen/attachments/\`, read-only; save results as new files in \`/tmp/office\`.
+
+When a saved file will not open, \`python3 scripts/check_office.py <file>\` (relative to this skill's base directory) checks its ZIP, XML, and internal relationships and prints JSON. Do not run it as a routine final check.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office
+description: Create, edit, inspect, or convert Office documents, spreadsheets, presentations, and PDFs. Load to choose the relevant workflow.
+---
+
+# Office task routing
+
+Call the \`skill\` tool with the format skill name before creating, reading, or editing Office files. Standalone rendering, PDF export, and recalculation need only their operation skill.
+
+- Create, read, or edit: \`office-docx\` (Word), \`office-pptx\` (PowerPoint), or \`office-xlsx\` (Excel).
+- Images, visual inspection, or tasks primarily about layout, spacing, sizing, or alignment: \`office-render\`, even without an explicit visual-check request.
+- Refresh spreadsheet formula results: \`office-recalculate\`.
+- Export an Office file to PDF: \`office-export-pdf\`.
+
+Honor requests to skip rendering. New files, content edits, formulas, and incidental formatting such as bold headers or number formats need no render unless visual inspection is requested. Do not reload skills.
+
+Office work happens in the terminal. Keep scripts, working files, and outputs in \`/tmp/office\` (create it with \`mkdir -p /tmp/office\`): a file written at the project's root is saved to the project and published with the site, and \`/tmp\` never is. A file the user attached is in \`/.openlen/attachments/\`, read-only; save results as new files in \`/tmp/office\`.
+
+When a saved file will not open, \`python3 scripts/check_office.py <file>\` (relative to this skill's base directory) checks its ZIP, XML, and internal relationships and prints JSON. Do not run it as a routine final check.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office/scripts/check_office.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Check an Office file's package: the ZIP, every XML part, and every internal relationship.
+
+Usage: python3 check_office.py <file.docx|file.xlsx|file.pptx>
+Prints one JSON object: {"ok": bool, "file": str, "parts": int, "errors": [str, ...]}.
+Only the standard library. It reports the package's integrity, not how the document renders.
+"""
+import json
+import posixpath
+import sys
+import zipfile
+import xml.etree.ElementTree as ET
+
+REL_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+
+
+def check(path):
+    errors = []
+    try:
+        z = zipfile.ZipFile(path)
+    except (zipfile.BadZipFile, OSError) as e:
+        return {"ok": False, "file": path, "parts": 0, "errors": [f"not a readable ZIP package: {e}"]}
+    with z:
+        names = z.namelist()
+        present = set(names)
+        if len(names) != len(present):
+            errors.append("duplicate part names: the package was appended to instead of rewritten")
+        if "[Content_Types].xml" not in present:
+            errors.append("missing [Content_Types].xml")
+        for info in z.infolist():
+            if info.flag_bits & 0x1:
+                errors.append(f"{info.filename}: encrypted part")
+                continue
+            if not (info.filename.endswith(".xml") or info.filename.endswith(".rels")):
+                continue
+            try:
+                data = z.read(info.filename)
+                root = ET.fromstring(data)
+            except (zipfile.BadZipFile, ET.ParseError, RuntimeError) as e:
+                errors.append(f"{info.filename}: invalid XML ({e})")
+                continue
+            if not info.filename.endswith(".rels"):
+                continue
+            # word/_rels/document.xml.rels -> targets resolve against word/
+            folder = posixpath.dirname(posixpath.dirname(info.filename))
+            for rel in root.iter(f"{REL_NS}Relationship"):
+                if rel.get("TargetMode") == "External":
+                    continue
+                target = rel.get("Target") or ""
+                resolved = target.lstrip("/") if target.startswith("/") else posixpath.normpath(posixpath.join(folder, target))
+                if resolved not in present:
+                    errors.append(f"{info.filename}: relationship {rel.get('Id')} points to missing part {resolved}")
+    return {"ok": not errors, "file": path, "parts": len(present), "errors": errors}
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print(json.dumps({"ok": False, "errors": ["usage: check_office.py <file>"]}))
+        sys.exit(2)
+    result = check(sys.argv[1])
+    print(json.dumps(result, ensure_ascii=False))
+    sys.exit(0 if result["ok"] else 1)
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office/scripts/check_office.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Check an Office file's package: the ZIP, every XML part, and every internal relationship.
+
+Usage: python3 check_office.py <file.docx|file.xlsx|file.pptx>
+Prints one JSON object: {"ok": bool, "file": str, "parts": int, "errors": [str, ...]}.
+Only the standard library. It reports the package's integrity, not how the document renders.
+"""
+import json
+import posixpath
+import sys
+import zipfile
+import xml.etree.ElementTree as ET
+
+REL_NS = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+
+
+def check(path):
+    errors = []
+    try:
+        z = zipfile.ZipFile(path)
+    except (zipfile.BadZipFile, OSError) as e:
+        return {"ok": False, "file": path, "parts": 0, "errors": [f"not a readable ZIP package: {e}"]}
+    with z:
+        names = z.namelist()
+        present = set(names)
+        if len(names) != len(present):
+            errors.append("duplicate part names: the package was appended to instead of rewritten")
+        if "[Content_Types].xml" not in present:
+            errors.append("missing [Content_Types].xml")
+        for info in z.infolist():
+            if info.flag_bits & 0x1:
+                errors.append(f"{info.filename}: encrypted part")
+                continue
+            if not (info.filename.endswith(".xml") or info.filename.endswith(".rels")):
+                continue
+            try:
+                data = z.read(info.filename)
+                root = ET.fromstring(data)
+            except (zipfile.BadZipFile, ET.ParseError, RuntimeError) as e:
+                errors.append(f"{info.filename}: invalid XML ({e})")
+                continue
+            if not info.filename.endswith(".rels"):
+                continue
+            # word/_rels/document.xml.rels -> targets resolve against word/
+            folder = posixpath.dirname(posixpath.dirname(info.filename))
+            for rel in root.iter(f"{REL_NS}Relationship"):
+                if rel.get("TargetMode") == "External":
+                    continue
+                target = rel.get("Target") or ""
+                resolved = target.lstrip("/") if target.startswith("/") else posixpath.normpath(posixpath.join(folder, target))
+                if resolved not in present:
+                    errors.append(f"{info.filename}: relationship {rel.get('Id')} points to missing part {resolved}")
+    return {"ok": not errors, "file": path, "parts": len(present), "errors": errors}
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print(json.dumps({"ok": False, "errors": ["usage: check_office.py <file>"]}))
+        sys.exit(2)
+    result = check(sys.argv[1])
+    print(json.dumps(result, ensure_ascii=False))
+    sys.exit(0 if result["ok"] else 1)
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-docx/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-docx
+description: Create, read, edit, and validate Word documents (.docx).
+---
+
+# Word documents
+
+Use \`python-docx\` for DOCX creation and ordinary edits. Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or another library. Otherwise run the terminal's \`python3\`, which has \`python-docx\` installed. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep source scripts, intermediate files, and final documents in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Use the user's requested language and preserve an existing document's design unless a redesign is requested.
+
+Name Python scripts for their task, such as \`edit_docx.py\`; avoid module names such as \`inspect.py\`, \`docx.py\`, or \`zipfile.py\` that shadow imported libraries.
+
+## Create and edit
+
+For text edits, locate the target by its text or position and inspect only its runs and formatting. A title can be an ordinary paragraph without a Title style or document-property title. Update the relevant runs; assigning paragraph \`.text\` destroys run formatting. Save a new file unless an in-place edit is requested. For ordinary text edits, do not unzip the document, enumerate ZIP members, dump raw XML, or inspect core properties, headers, or footers unrelated to the target. Investigate these only for a concrete failure, an ambiguous target, an unsupported feature, or an explicit user requirement. Rebuilding a document can lose unsupported features.
+
+Use paragraph styles for headings and body text. Size tables for the section that contains them, and account for merged cells and nested tables. Chinese, Japanese, and Korean text may need an explicit \`w:eastAsia\` font assignment in addition to \`run.font.name\`; font names alone do not establish glyph availability or rendered appearance.
+
+For a new document:
+
+\`\`\`python
+from docx import Document
+
+document = Document()
+document.add_heading("Project report", level=0)
+document.add_paragraph("Summary", style="Heading 1")
+document.add_paragraph("The requested findings go here.")
+document.save("/tmp/office/report.docx")
+\`\`\`
+
+python-docx does not paginate or render documents. Do not represent ordinary replacement, colored text, or comments as tracked changes. When real revisions or unsupported OOXML features matter, preserve their package parts and verify the requested operation rather than silently discarding them. When writing package parts directly, create a new ZIP and copy each unchanged member once; appending a replacement member duplicates its name and corrupts the package.
+
+## Check and deliver
+
+Reopen the saved document with python-docx and verify the requested content, related formatting, and unchanged content that must be preserved. When these checks pass, stop validation and deliver the file. Do not add ZIP integrity checks, package inventories, or metadata inspection as routine final verification.
+
+Creating a file or changing content with incidental basic formatting does not require additional operations. Load \`office-render\` for requested images or visual inspection. When styling, font color, spacing, sizing, or text alignment is the requested edit, load \`office-render\` and inspect the changed page even without a separate visual-check request, unless the user explicitly skips rendering. For PDF output load \`office-export-pdf\`.
+
+Call \`present({"files":[{"path":"/tmp/office/report.docx"}]})\` with the actual final DOCX path, once it is final: the user gets a copy of the file as it is when you call it. Do not present temporary QA reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-docx/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-docx
+description: Create, read, edit, and validate Word documents (.docx).
+---
+
+# Word documents
+
+Use \`python-docx\` for DOCX creation and ordinary edits. Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or another library. Otherwise run the terminal's \`python3\`, which has \`python-docx\` installed. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep source scripts, intermediate files, and final documents in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Use the user's requested language and preserve an existing document's design unless a redesign is requested.
+
+Name Python scripts for their task, such as \`edit_docx.py\`; avoid module names such as \`inspect.py\`, \`docx.py\`, or \`zipfile.py\` that shadow imported libraries.
+
+## Create and edit
+
+For text edits, locate the target by its text or position and inspect only its runs and formatting. A title can be an ordinary paragraph without a Title style or document-property title. Update the relevant runs; assigning paragraph \`.text\` destroys run formatting. Save a new file unless an in-place edit is requested. For ordinary text edits, do not unzip the document, enumerate ZIP members, dump raw XML, or inspect core properties, headers, or footers unrelated to the target. Investigate these only for a concrete failure, an ambiguous target, an unsupported feature, or an explicit user requirement. Rebuilding a document can lose unsupported features.
+
+Use paragraph styles for headings and body text. Size tables for the section that contains them, and account for merged cells and nested tables. Chinese, Japanese, and Korean text may need an explicit \`w:eastAsia\` font assignment in addition to \`run.font.name\`; font names alone do not establish glyph availability or rendered appearance.
+
+For a new document:
+
+\`\`\`python
+from docx import Document
+
+document = Document()
+document.add_heading("Project report", level=0)
+document.add_paragraph("Summary", style="Heading 1")
+document.add_paragraph("The requested findings go here.")
+document.save("/tmp/office/report.docx")
+\`\`\`
+
+python-docx does not paginate or render documents. Do not represent ordinary replacement, colored text, or comments as tracked changes. When real revisions or unsupported OOXML features matter, preserve their package parts and verify the requested operation rather than silently discarding them. When writing package parts directly, create a new ZIP and copy each unchanged member once; appending a replacement member duplicates its name and corrupts the package.
+
+## Check and deliver
+
+Reopen the saved document with python-docx and verify the requested content, related formatting, and unchanged content that must be preserved. When these checks pass, stop validation and deliver the file. Do not add ZIP integrity checks, package inventories, or metadata inspection as routine final verification.
+
+Creating a file or changing content with incidental basic formatting does not require additional operations. Load \`office-render\` for requested images or visual inspection. When styling, font color, spacing, sizing, or text alignment is the requested edit, load \`office-render\` and inspect the changed page even without a separate visual-check request, unless the user explicitly skips rendering. For PDF output load \`office-export-pdf\`.
+
+Call \`present({"files":[{"path":"/tmp/office/report.docx"}]})\` with the actual final DOCX path, once it is final: the user gets a copy of the file as it is when you call it. Do not present temporary QA reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-export-pdf/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-export-pdf
+description: Convert an Office document to a requested PDF with LibreOffice.
+---
+
+# Export an Office document to PDF
+
+Use LibreOffice through the terminal. Do not install a replacement to work around a failed conversion.
+
+Convert the final saved Office file to a new PDF in \`/tmp/office\`. Preserve the source. Quote each input and output path.
+
+\`\`\`text
+soffice --headless --convert-to pdf --outdir "<output-directory>" "<final-office-file>"
+\`\`\`
+
+The PDF takes the source file's name with \`.pdf\`. Check the command result, nonempty output, and \`%PDF-\` file signature (\`head -c 5 "<file.pdf>"\`), then report that extent of validation. Unless the user requests deeper checks, do not generate images or install tools to validate a conversion. Spreadsheet PDF pages follow workbook print settings; change those settings only when requested. Conversion may differ from the native application's pagination or fonts.
+
+If export fails, preserve the usable source and report the export limitation. Do not repeatedly convert an unchanged source or use conversion to investigate a failed preview. For PDF export alone, stop after these checks. Only a request for images or visual inspection calls for \`office-render\`; load it before that separate operation. Deliver the requested PDF through \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-export-pdf/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-export-pdf
+description: Convert an Office document to a requested PDF with LibreOffice.
+---
+
+# Export an Office document to PDF
+
+Use LibreOffice through the terminal. Do not install a replacement to work around a failed conversion.
+
+Convert the final saved Office file to a new PDF in \`/tmp/office\`. Preserve the source. Quote each input and output path.
+
+\`\`\`text
+soffice --headless --convert-to pdf --outdir "<output-directory>" "<final-office-file>"
+\`\`\`
+
+The PDF takes the source file's name with \`.pdf\`. Check the command result, nonempty output, and \`%PDF-\` file signature (\`head -c 5 "<file.pdf>"\`), then report that extent of validation. Unless the user requests deeper checks, do not generate images or install tools to validate a conversion. Spreadsheet PDF pages follow workbook print settings; change those settings only when requested. Conversion may differ from the native application's pagination or fonts.
+
+If export fails, preserve the usable source and report the export limitation. Do not repeatedly convert an unchanged source or use conversion to investigate a failed preview. For PDF export alone, stop after these checks. Only a request for images or visual inspection calls for \`office-render\`; load it before that separate operation. Deliver the requested PDF through \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-pptx/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-pptx
+description: Create, read, edit, and validate PowerPoint presentations (.pptx).
+---
+
+# PowerPoint presentations
+
+Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or library. Otherwise run the terminal's \`python3\`, which has \`python-pptx\` installed. Do not install npm or pip packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep scripts and output files in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Match the requested slide language and the supplied presentation's design when editing it.
+
+Name Python scripts for their task, such as \`edit_pptx.py\`; avoid module names such as \`inspect.py\`, \`pptx.py\`, or \`zipfile.py\` that shadow imported libraries.
+
+## Create and edit
+
+Use \`python-pptx\` to inspect or modify an existing presentation. Inspect slide layouts, text runs, images, tables, and charts before editing. Change only the requested content, preserve mixed text formatting, and save to a new file unless the user requests an in-place edit. Rebuilding slides can discard unsupported animation, SmartArt, or other extension content.
+
+For a new deck, use \`python-pptx\` with editable text, tables, and charts. Use local image assets rather than network-dependent image URLs. Set slide dimensions, text sizes, and chart data explicitly.
+
+A minimal editable deck:
+
+\`\`\`python
+from pptx import Presentation
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.util import Inches, Pt
+
+presentation = Presentation()
+presentation.slide_width = Inches(13.333)
+presentation.slide_height = Inches(7.5)
+slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+title = slide.shapes.add_textbox(Inches(0.6), Inches(0.4), Inches(12), Inches(0.8))
+run = title.text_frame.paragraphs[0].add_run()
+run.text = "Quarterly report"
+run.font.size = Pt(30)
+data = CategoryChartData()
+data.categories = ["Q1", "Q2"]
+data.add_series("Revenue", [12, 18])
+slide.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
+                       Inches(0.8), Inches(1.6), Inches(11.5), Inches(4.8), data)
+presentation.save("/tmp/office/report.pptx")
+\`\`\`
+
+Use \`Inches\` or \`Cm\` for positions and sizes and \`Pt\` for font sizes. To edit a generated title while retaining its other slides and charts:
+
+\`\`\`python
+from pptx import Presentation
+
+presentation = Presentation("/tmp/office/report.pptx")
+for shape in presentation.slides[0].shapes:
+    if shape.has_text_frame and shape.text == "Quarterly report":
+        shape.text_frame.paragraphs[0].runs[0].text = "Quarterly results"
+presentation.save("/tmp/office/report-edited.pptx")
+\`\`\`
+
+Check that text and images fit the slide dimensions, titles form a useful sequence, and chart labels agree with source values. Paragraph alignment does not move a text box: when a title must be centered on the slide, center both its paragraph and the text box against \`presentation.slide_width\`, then reopen to verify both. A native chart's embedded workbook is part of the deliverable and must contain the intended data. Library support for writing PPTX is not a rendering engine or a guarantee that every PowerPoint feature survives editing.
+
+## Check and deliver
+
+Reopen the saved presentation with python-pptx to verify the requested slide count, content, formatting, chart data, and notes, including unchanged content that must be preserved. These checks do not establish text fit, readable contrast, or rendering fidelity.
+
+Deliver after the requested edits are verified. Creating a file or changing content with incidental basic formatting does not require additional operations. Load \`office-render\` for requested images or visual inspection and for appearance-focused styling, spacing, sizing, or alignment changes unless the user explicitly skips rendering. For PDF output load \`office-export-pdf\`.
+
+Call \`present({"files":[{"path":"/tmp/office/report-edited.pptx"}]})\` with the actual final PPTX path, once it is final: the user gets a copy of the file as it is when you call it. Leave intermediate images and reports out of delivery unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-pptx/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-pptx
+description: Create, read, edit, and validate PowerPoint presentations (.pptx).
+---
+
+# PowerPoint presentations
+
+Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or library. Otherwise run the terminal's \`python3\`, which has \`python-pptx\` installed. Do not install npm or pip packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep scripts and output files in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Match the requested slide language and the supplied presentation's design when editing it.
+
+Name Python scripts for their task, such as \`edit_pptx.py\`; avoid module names such as \`inspect.py\`, \`pptx.py\`, or \`zipfile.py\` that shadow imported libraries.
+
+## Create and edit
+
+Use \`python-pptx\` to inspect or modify an existing presentation. Inspect slide layouts, text runs, images, tables, and charts before editing. Change only the requested content, preserve mixed text formatting, and save to a new file unless the user requests an in-place edit. Rebuilding slides can discard unsupported animation, SmartArt, or other extension content.
+
+For a new deck, use \`python-pptx\` with editable text, tables, and charts. Use local image assets rather than network-dependent image URLs. Set slide dimensions, text sizes, and chart data explicitly.
+
+A minimal editable deck:
+
+\`\`\`python
+from pptx import Presentation
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.util import Inches, Pt
+
+presentation = Presentation()
+presentation.slide_width = Inches(13.333)
+presentation.slide_height = Inches(7.5)
+slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+title = slide.shapes.add_textbox(Inches(0.6), Inches(0.4), Inches(12), Inches(0.8))
+run = title.text_frame.paragraphs[0].add_run()
+run.text = "Quarterly report"
+run.font.size = Pt(30)
+data = CategoryChartData()
+data.categories = ["Q1", "Q2"]
+data.add_series("Revenue", [12, 18])
+slide.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
+                       Inches(0.8), Inches(1.6), Inches(11.5), Inches(4.8), data)
+presentation.save("/tmp/office/report.pptx")
+\`\`\`
+
+Use \`Inches\` or \`Cm\` for positions and sizes and \`Pt\` for font sizes. To edit a generated title while retaining its other slides and charts:
+
+\`\`\`python
+from pptx import Presentation
+
+presentation = Presentation("/tmp/office/report.pptx")
+for shape in presentation.slides[0].shapes:
+    if shape.has_text_frame and shape.text == "Quarterly report":
+        shape.text_frame.paragraphs[0].runs[0].text = "Quarterly results"
+presentation.save("/tmp/office/report-edited.pptx")
+\`\`\`
+
+Check that text and images fit the slide dimensions, titles form a useful sequence, and chart labels agree with source values. Paragraph alignment does not move a text box: when a title must be centered on the slide, center both its paragraph and the text box against \`presentation.slide_width\`, then reopen to verify both. A native chart's embedded workbook is part of the deliverable and must contain the intended data. Library support for writing PPTX is not a rendering engine or a guarantee that every PowerPoint feature survives editing.
+
+## Check and deliver
+
+Reopen the saved presentation with python-pptx to verify the requested slide count, content, formatting, chart data, and notes, including unchanged content that must be preserved. These checks do not establish text fit, readable contrast, or rendering fidelity.
+
+Deliver after the requested edits are verified. Creating a file or changing content with incidental basic formatting does not require additional operations. Load \`office-render\` for requested images or visual inspection and for appearance-focused styling, spacing, sizing, or alignment changes unless the user explicitly skips rendering. For PDF output load \`office-export-pdf\`.
+
+Call \`present({"files":[{"path":"/tmp/office/report-edited.pptx"}]})\` with the actual final PPTX path, once it is final: the user gets a copy of the file as it is when you call it. Leave intermediate images and reports out of delivery unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-recalculate/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-recalculate
+description: Refresh spreadsheet formula caches and verify calculated values with LibreOffice.
+---
+
+# Recalculate spreadsheet formulas
+
+Use LibreOffice through the terminal with this skill's script, relative to its base directory. It starts \`soffice --headless\` with its own profile, recalculates every formula, saves a new workbook, and prints JSON with the number of formulas and every error cell. Do not install a replacement or call another spreadsheet engine to work around a failed recalculation.
+
+Keep the original workbook and write a new file in \`/tmp/office\`. Quote each input and output path.
+
+\`\`\`text
+python3 <base directory>/scripts/recalc.py "<workbook.xlsx>" "<recalculated.xlsx>"
+\`\`\`
+
+The output is \`{"ok": true|false, "formulas": N, "errors": [{"cell": "Sheet!B4", "value": "#REF!"}], "error": "…"}\`. \`ok\` is false when any formula evaluates to an error; \`error\` is present only when nothing could be recalculated. A clean run shows that the formulas evaluate, not that they compute what was requested.
+
+Verify the saved result with openpyxl. Open it with both \`data_only=False\` and \`data_only=True\`. Check that formulas survive and cached results match the requested logic, expected totals, and cell types. Check required unchanged sheets, styles, and data. Recalculation does not validate business logic or guarantee Excel-specific feature compatibility.
+
+If the command fails or prints \`error\`, preserve the workbook and explain that calculated values could not be refreshed. Do not replace requested formulas with constants or present stale/absent caches as fresh results. Deliver the verified output through \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-recalculate/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-recalculate
+description: Refresh spreadsheet formula caches and verify calculated values with LibreOffice.
+---
+
+# Recalculate spreadsheet formulas
+
+Use LibreOffice through the terminal with this skill's script, relative to its base directory. It starts \`soffice --headless\` with its own profile, recalculates every formula, saves a new workbook, and prints JSON with the number of formulas and every error cell. Do not install a replacement or call another spreadsheet engine to work around a failed recalculation.
+
+Keep the original workbook and write a new file in \`/tmp/office\`. Quote each input and output path.
+
+\`\`\`text
+python3 <base directory>/scripts/recalc.py "<workbook.xlsx>" "<recalculated.xlsx>"
+\`\`\`
+
+The output is \`{"ok": true|false, "formulas": N, "errors": [{"cell": "Sheet!B4", "value": "#REF!"}], "error": "…"}\`. \`ok\` is false when any formula evaluates to an error; \`error\` is present only when nothing could be recalculated. A clean run shows that the formulas evaluate, not that they compute what was requested.
+
+Verify the saved result with openpyxl. Open it with both \`data_only=False\` and \`data_only=True\`. Check that formulas survive and cached results match the requested logic, expected totals, and cell types. Check required unchanged sheets, styles, and data. Recalculation does not validate business logic or guarantee Excel-specific feature compatibility.
+
+If the command fails or prints \`error\`, preserve the workbook and explain that calculated values could not be refreshed. Do not replace requested formulas with constants or present stale/absent caches as fresh results. Deliver the verified output through \`present\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-recalculate/scripts/recalc.py) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Recalculate every formula of a workbook with LibreOffice and save the result to a new file.
+
+Usage: python3 recalc.py <input.xlsx> <output.xlsx> [timeout_seconds]
+Prints one JSON object:
+  {"ok": bool, "formulas": int, "errors": [{"cell": "Sheet!B4", "value": "#REF!"}]}
+or, when nothing could be recalculated, {"ok": false, "error": "..."}.
+
+LibreOffice runs headless with a profile of its own, driven through its Python bridge (python3-uno):
+it loads the workbook, calculates all of it, and saves it as Excel 2007+.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+ERROR_VALUES = {"#REF!", "#NAME?", "#VALUE!", "#DIV/0!", "#N/A", "#NUM!", "#NULL!"}
+
+
+def fail(message):
+    print(json.dumps({"ok": False, "error": message}, ensure_ascii=False))
+    sys.exit(1)
+
+
+def file_url(path):
+    import uno
+
+    return uno.systemPathToFileUrl(os.path.abspath(path))
+
+
+def prop(name, value):
+    from com.sun.star.beans import PropertyValue
+
+    p = PropertyValue()
+    p.Name = name
+    p.Value = value
+    return p
+
+
+def recalculate(source, target, timeout):
+    try:
+        import uno
+        from com.sun.star.connection import NoConnectException
+    except ImportError:
+        fail("LibreOffice's Python bridge (python3-uno) is not installed in this terminal")
+    if not shutil.which("soffice"):
+        fail("LibreOffice (soffice) is not installed in this terminal")
+    profile = tempfile.mkdtemp(prefix="lo-profile-", dir="/tmp")
+    pipe = f"recalc{os.getpid()}"
+    office = subprocess.Popen(
+        [
+            "soffice", "--headless", "--invisible", "--nologo", "--norestore", "--nodefault",
+            f"-env:UserInstallation=file://{profile}",
+            f"--accept=pipe,name={pipe};urp;StarOffice.ComponentContext",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        local = uno.getComponentContext()
+        resolver = local.ServiceManager.createInstanceWithContext("com.sun.star.bridge.UnoUrlResolver", local)
+        deadline = time.time() + timeout
+        while True:
+            try:
+                ctx = resolver.resolve(f"uno:pipe,name={pipe};urp;StarOffice.ComponentContext")
+                break
+            except NoConnectException:
+                if time.time() > deadline or office.poll() is not None:
+                    fail("LibreOffice did not start in time")
+                time.sleep(0.3)
+        desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+        doc = desktop.loadComponentFromURL(file_url(source), "_blank", 0, (prop("Hidden", True),))
+        if doc is None:
+            fail(f"LibreOffice could not open {source}")
+        try:
+            doc.calculateAll()
+            doc.storeToURL(file_url(target), (prop("FilterName", "Calc MS Excel 2007 XML"),))
+        finally:
+            doc.close(True)
+    finally:
+        office.terminate()
+        try:
+            office.wait(10)
+        except subprocess.TimeoutExpired:
+            office.kill()
+        shutil.rmtree(profile, ignore_errors=True)
+
+
+def scan(target):
+    from openpyxl import load_workbook
+
+    formulas = 0
+    with_formulas = load_workbook(target, data_only=False)
+    for sheet in with_formulas.worksheets:
+        for row in sheet.iter_rows():
+            formulas += sum(1 for c in row if isinstance(c.value, str) and c.value.startswith("="))
+    errors = []
+    values = load_workbook(target, data_only=True)
+    for sheet in values.worksheets:
+        for row in sheet.iter_rows():
+            for c in row:
+                if isinstance(c.value, str) and c.value in ERROR_VALUES:
+                    errors.append({"cell": f"{sheet.title}!{c.coordinate}", "value": c.value})
+    return formulas, errors
+
+
+if __name__ == "__main__":
+    if len(sys.argv) not in (3, 4):
+        fail("usage: recalc.py <input.xlsx> <output.xlsx> [timeout_seconds]")
+    source, target = sys.argv[1], sys.argv[2]
+    if not os.path.isfile(source):
+        fail(f"{source} does not exist")
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail("write the recalculated workbook to a new file")
+    recalculate(source, target, float(sys.argv[3]) if len(sys.argv) == 4 else 60.0)
+    formulas, errors = scan(target)
+    print(json.dumps({"ok": not errors, "formulas": formulas, "errors": errors}, ensure_ascii=False))
+    sys.exit(0 if not errors else 1)
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-recalculate/scripts/recalc.py, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"#!/usr/bin/env python3
+"""Recalculate every formula of a workbook with LibreOffice and save the result to a new file.
+
+Usage: python3 recalc.py <input.xlsx> <output.xlsx> [timeout_seconds]
+Prints one JSON object:
+  {"ok": bool, "formulas": int, "errors": [{"cell": "Sheet!B4", "value": "#REF!"}]}
+or, when nothing could be recalculated, {"ok": false, "error": "..."}.
+
+LibreOffice runs headless with a profile of its own, driven through its Python bridge (python3-uno):
+it loads the workbook, calculates all of it, and saves it as Excel 2007+.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+ERROR_VALUES = {"#REF!", "#NAME?", "#VALUE!", "#DIV/0!", "#N/A", "#NUM!", "#NULL!"}
+
+
+def fail(message):
+    print(json.dumps({"ok": False, "error": message}, ensure_ascii=False))
+    sys.exit(1)
+
+
+def file_url(path):
+    import uno
+
+    return uno.systemPathToFileUrl(os.path.abspath(path))
+
+
+def prop(name, value):
+    from com.sun.star.beans import PropertyValue
+
+    p = PropertyValue()
+    p.Name = name
+    p.Value = value
+    return p
+
+
+def recalculate(source, target, timeout):
+    try:
+        import uno
+        from com.sun.star.connection import NoConnectException
+    except ImportError:
+        fail("LibreOffice's Python bridge (python3-uno) is not installed in this terminal")
+    if not shutil.which("soffice"):
+        fail("LibreOffice (soffice) is not installed in this terminal")
+    profile = tempfile.mkdtemp(prefix="lo-profile-", dir="/tmp")
+    pipe = f"recalc{os.getpid()}"
+    office = subprocess.Popen(
+        [
+            "soffice", "--headless", "--invisible", "--nologo", "--norestore", "--nodefault",
+            f"-env:UserInstallation=file://{profile}",
+            f"--accept=pipe,name={pipe};urp;StarOffice.ComponentContext",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        local = uno.getComponentContext()
+        resolver = local.ServiceManager.createInstanceWithContext("com.sun.star.bridge.UnoUrlResolver", local)
+        deadline = time.time() + timeout
+        while True:
+            try:
+                ctx = resolver.resolve(f"uno:pipe,name={pipe};urp;StarOffice.ComponentContext")
+                break
+            except NoConnectException:
+                if time.time() > deadline or office.poll() is not None:
+                    fail("LibreOffice did not start in time")
+                time.sleep(0.3)
+        desktop = ctx.ServiceManager.createInstanceWithContext("com.sun.star.frame.Desktop", ctx)
+        doc = desktop.loadComponentFromURL(file_url(source), "_blank", 0, (prop("Hidden", True),))
+        if doc is None:
+            fail(f"LibreOffice could not open {source}")
+        try:
+            doc.calculateAll()
+            doc.storeToURL(file_url(target), (prop("FilterName", "Calc MS Excel 2007 XML"),))
+        finally:
+            doc.close(True)
+    finally:
+        office.terminate()
+        try:
+            office.wait(10)
+        except subprocess.TimeoutExpired:
+            office.kill()
+        shutil.rmtree(profile, ignore_errors=True)
+
+
+def scan(target):
+    from openpyxl import load_workbook
+
+    formulas = 0
+    with_formulas = load_workbook(target, data_only=False)
+    for sheet in with_formulas.worksheets:
+        for row in sheet.iter_rows():
+            formulas += sum(1 for c in row if isinstance(c.value, str) and c.value.startswith("="))
+    errors = []
+    values = load_workbook(target, data_only=True)
+    for sheet in values.worksheets:
+        for row in sheet.iter_rows():
+            for c in row:
+                if isinstance(c.value, str) and c.value in ERROR_VALUES:
+                    errors.append({"cell": f"{sheet.title}!{c.coordinate}", "value": c.value})
+    return formulas, errors
+
+
+if __name__ == "__main__":
+    if len(sys.argv) not in (3, 4):
+        fail("usage: recalc.py <input.xlsx> <output.xlsx> [timeout_seconds]")
+    source, target = sys.argv[1], sys.argv[2]
+    if not os.path.isfile(source):
+        fail(f"{source} does not exist")
+    if os.path.abspath(source) == os.path.abspath(target):
+        fail("write the recalculated workbook to a new file")
+    recalculate(source, target, float(sys.argv[3]) if len(sys.argv) == 4 else 60.0)
+    formulas, errors = scan(target)
+    print(json.dumps({"ok": not errors, "formulas": formulas, "errors": errors}, ensure_ascii=False))
+    sys.exit(0 if not errors else 1)
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-render/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-render
+description: Render requested document images or inspect visual layout with LibreOffice.
+---
+
+# Document images and visual inspection
+
+Use LibreOffice through the terminal: convert the saved file to PDF, then read the PDF's pages as images with \`Read\` and its \`pages\` parameter. Do not install a replacement renderer or build an alternative rendering pipeline to work around a failed render.
+
+## Render the saved deliverable
+
+Keep the saved deliverable in \`/tmp/office\`. For inspection-only previews, create a new directory for each render (\`preview=$(mktemp -d /tmp/office/render.XXXXXXXX)\`) and convert into it. Quote each input and output path. Remove only that directory once image inspection finishes, including after a failed render.
+
+\`\`\`text
+soffice --headless --convert-to pdf --outdir "$preview" "<final-file>"
+\`\`\`
+
+The PDF takes the source file's name with \`.pdf\`. Read it with \`Read\` and \`pages\` ("1-3"; at most 20 pages per call): the pages come back as images. For requested image exports, convert the PDF pages to PNG with \`pdftoppm -png -r 110 "<file.pdf>" "<output-prefix>"\` in the requested directory and keep the images.
+
+For DOCX, PPTX, or PDF, read the requested pages or slides in one call. Inspect all pages only for a requested whole-document review. A worksheet renders by its print settings, so its page numbers are not sheet numbers; change print areas or scaling only when the user requests print layout. Inspect the final saved file, reuse existing images for an unchanged source, and rerender only after requested source changes.
+
+Check clipping, alignment, headings, table widths, contrast, chart labels, and number formats as relevant to the task. A successful command or image read alone does not establish a usable preview; guessed text geometry does not establish overflow.
+
+## Failed or blank previews
+
+For populated content, a fully transparent or uniformly blank image is a renderer failure. Check once and do not reread the same image. Stop visual checks for the task immediately after a blank result: do not render or read images again, even after editing or copying the source, or try another page, sheet, resolution, output format, or print setting. Preserve the usable source and requested outputs and finish applicable content and data checks.
+
+If content and structure checks pass, name the saved file and verified edits as needed, then say in one sentence, in the user's language, that content and structure checks passed and visual inspection was not completed. Do not describe the image or pixels. Report content or structure failures separately; never say all checks passed or claim visual verification.
+
+LibreOffice output can differ from Word, PowerPoint, or Excel. Images do not certify animation or media playback, refresh formula caches in the source workbook, or guarantee native application fidelity. Deliver requested files through \`present\`. Do not deliver inspection images or reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-render/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-render
+description: Render requested document images or inspect visual layout with LibreOffice.
+---
+
+# Document images and visual inspection
+
+Use LibreOffice through the terminal: convert the saved file to PDF, then read the PDF's pages as images with \`Read\` and its \`pages\` parameter. Do not install a replacement renderer or build an alternative rendering pipeline to work around a failed render.
+
+## Render the saved deliverable
+
+Keep the saved deliverable in \`/tmp/office\`. For inspection-only previews, create a new directory for each render (\`preview=$(mktemp -d /tmp/office/render.XXXXXXXX)\`) and convert into it. Quote each input and output path. Remove only that directory once image inspection finishes, including after a failed render.
+
+\`\`\`text
+soffice --headless --convert-to pdf --outdir "$preview" "<final-file>"
+\`\`\`
+
+The PDF takes the source file's name with \`.pdf\`. Read it with \`Read\` and \`pages\` ("1-3"; at most 20 pages per call): the pages come back as images. For requested image exports, convert the PDF pages to PNG with \`pdftoppm -png -r 110 "<file.pdf>" "<output-prefix>"\` in the requested directory and keep the images.
+
+For DOCX, PPTX, or PDF, read the requested pages or slides in one call. Inspect all pages only for a requested whole-document review. A worksheet renders by its print settings, so its page numbers are not sheet numbers; change print areas or scaling only when the user requests print layout. Inspect the final saved file, reuse existing images for an unchanged source, and rerender only after requested source changes.
+
+Check clipping, alignment, headings, table widths, contrast, chart labels, and number formats as relevant to the task. A successful command or image read alone does not establish a usable preview; guessed text geometry does not establish overflow.
+
+## Failed or blank previews
+
+For populated content, a fully transparent or uniformly blank image is a renderer failure. Check once and do not reread the same image. Stop visual checks for the task immediately after a blank result: do not render or read images again, even after editing or copying the source, or try another page, sheet, resolution, output format, or print setting. Preserve the usable source and requested outputs and finish applicable content and data checks.
+
+If content and structure checks pass, name the saved file and verified edits as needed, then say in one sentence, in the user's language, that content and structure checks passed and visual inspection was not completed. Do not describe the image or pixels. Report content or structure failures separately; never say all checks passed or claim visual verification.
+
+LibreOffice output can differ from Word, PowerPoint, or Excel. Images do not certify animation or media playback, refresh formula caches in the source workbook, or guarantee native application fidelity. Deliver requested files through \`present\`. Do not deliver inspection images or reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-xlsx/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-xlsx
+description: Read, create, edit, and validate Excel workbooks, data, and formulas (.xlsx).
+---
+
+# Excel workbooks
+
+Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or library. Otherwise run the terminal's \`python3\`, which has \`openpyxl\` and \`pandas\` installed. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep scripts, working files, and outputs in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Save to a new workbook unless the user requests an in-place edit.
+
+Name Python scripts for their task, such as \`edit_xlsx.py\`; avoid module names such as \`inspect.py\`, \`openpyxl.py\`, or \`pandas.py\` that shadow imported libraries.
+
+## Read and modify
+
+Use \`openpyxl\` for existing XLSX workbooks and targeted cell or style changes. Load with \`data_only=False\` when formulas must survive. Inspect sheet names, the affected cell types, formulas, styles, merged ranges, and referenced ranges before editing. Check the saved file by reopening it, including unchanged content that the request requires preserving.
+
+Use pandas for data analysis and transformations. A DataFrame is not the workbook: exporting it over an existing file can lose sheets, formulas, charts, and formatting. Write analysis results back to the intended ranges with openpyxl.
+
+For a new workbook, write editable values, styles, and formulas directly:
+
+\`\`\`python
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
+workbook = Workbook()
+sheet = workbook.active
+sheet.title = "Revenue"
+for row in [("Quarter", "Revenue"), ("Q1", 12), ("Q2", 18), ("Total", "=SUM(B2:B3)")]:
+    sheet.append(row)
+for cell in sheet[1]:
+    cell.font = Font(bold=True)
+sheet.column_dimensions["A"].width = 18
+sheet.column_dimensions["B"].width = 18
+workbook.save("/tmp/office/report.xlsx")
+\`\`\`
+
+Preserve numbers, dates, booleans, and identifiers as the intended cell types; formatting is not a type conversion. For modifications, load the existing file with \`openpyxl.load_workbook(path, data_only=False)\`, change the requested ranges, and save a separate result. Avoid a DataFrame round trip when workbook features must survive.
+
+Writing a formula does not calculate its result. openpyxl does not evaluate formulas; \`data_only=True\` returns cached values that may be absent or stale. When calculated results must be refreshed, load \`office-recalculate\`. Do not replace requested formulas with constants or report stale values as newly calculated results.
+
+Do not rename \`.xls\`, \`.xlsb\`, encrypted files, or macro-enabled files to \`.xlsx\`. They need an appropriate supported operation. \`keep_vba=True\` can preserve VBA package content in an XLSM workflow, but does not execute or edit macros and does not guarantee every advanced workbook feature survives. Preserve the original and verify such requirements explicitly.
+
+## Formulas that LibreOffice can calculate
+
+The workbook is recalculated with LibreOffice (\`office-recalculate\`), which evaluates fewer functions than Excel. Choose formulas it can calculate:
+
+- Do not use \`XLOOKUP\`, \`XMATCH\`, \`FILTER\`, \`UNIQUE\`, \`SORT\`, or \`SEQUENCE\`. Use \`INDEX\` with \`MATCH\` for lookups, and sort, filter, or remove duplicates in Python before writing the cells.
+- Write \`TEXTJOIN\`, \`CONCAT\`, \`IFS\`, \`SWITCH\`, \`MAXIFS\`, and \`MINIFS\` with the \`_xlfn.\` prefix (for example \`=_xlfn.TEXTJOIN(", ",TRUE,A2:A9)\`): openpyxl writes the formula exactly as given, and Excel files keep these names prefixed.
+- Never save a workbook that was loaded with \`data_only=True\`: it has no formulas left, and saving it replaces every formula with its last value.
+
+## Check and deliver
+
+Reopen the saved workbook with openpyxl and verify the requested sheet names, values, types, formulas, styles, and totals against the source data, including unchanged content that must be preserved. These checks do not calculate formulas or judge workbook appearance.
+
+Load \`office-render\` for requested images or visual inspection and whenever the user's primary task targets appearance, including cell fill colors, text alignment, spacing, or sizing. These appearance changes require rendering even without a separate visual-check request, unless the user explicitly skips it. New workbooks and data or formula edits do not require rendering solely because they include incidental basic formatting. In particular, bold headers and number formats accompanying data edits do not require loading \`office-render\` or running its commands.
+
+Load \`office-recalculate\` when refreshed calculated values are needed and \`office-export-pdf\` for PDF output. Deliver after the requested data checks pass and the required operations finish.
+
+Call \`present({"files":[{"path":"/tmp/office/report.xlsx"}]})\` with the actual final workbook path, once it is final: the user gets a copy of the file as it is when you call it. Do not present intermediate scripts and reports unless requested.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office-xlsx/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: office-xlsx
+description: Read, create, edit, and validate Excel workbooks, data, and formulas (.xlsx).
+---
+
+# Excel workbooks
+
+Follow an explicit requirement from the user, \`/LEN.md\`, or \`~/.len/LEN.md\` for an environment or library. Otherwise run the terminal's \`python3\`, which has \`openpyxl\` and \`pandas\` installed. Do not install packages for the default workflow. If the terminal cannot run Python, report a missing dependency only when it prevents the requested operation.
+
+Keep scripts, working files, and outputs in \`/tmp/office\`: a file written at the project's root is saved to the project and published with the site. A file the user attached is in \`/.openlen/attachments/\`, read-only. Save to a new workbook unless the user requests an in-place edit.
+
+Name Python scripts for their task, such as \`edit_xlsx.py\`; avoid module names such as \`inspect.py\`, \`openpyxl.py\`, or \`pandas.py\` that shadow imported libraries.
+
+## Read and modify
+
+Use \`openpyxl\` for existing XLSX workbooks and targeted cell or style changes. Load with \`data_only=False\` when formulas must survive. Inspect sheet names, the affected cell types, formulas, styles, merged ranges, and referenced ranges before editing. Check the saved file by reopening it, including unchanged content that the request requires preserving.
+
+Use pandas for data analysis and transformations. A DataFrame is not the workbook: exporting it over an existing file can lose sheets, formulas, charts, and formatting. Write analysis results back to the intended ranges with openpyxl.
+
+For a new workbook, write editable values, styles, and formulas directly:
+
+\`\`\`python
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
+workbook = Workbook()
+sheet = workbook.active
+sheet.title = "Revenue"
+for row in [("Quarter", "Revenue"), ("Q1", 12), ("Q2", 18), ("Total", "=SUM(B2:B3)")]:
+    sheet.append(row)
+for cell in sheet[1]:
+    cell.font = Font(bold=True)
+sheet.column_dimensions["A"].width = 18
+sheet.column_dimensions["B"].width = 18
+workbook.save("/tmp/office/report.xlsx")
+\`\`\`
+
+Preserve numbers, dates, booleans, and identifiers as the intended cell types; formatting is not a type conversion. For modifications, load the existing file with \`openpyxl.load_workbook(path, data_only=False)\`, change the requested ranges, and save a separate result. Avoid a DataFrame round trip when workbook features must survive.
+
+Writing a formula does not calculate its result. openpyxl does not evaluate formulas; \`data_only=True\` returns cached values that may be absent or stale. When calculated results must be refreshed, load \`office-recalculate\`. Do not replace requested formulas with constants or report stale values as newly calculated results.
+
+Do not rename \`.xls\`, \`.xlsb\`, encrypted files, or macro-enabled files to \`.xlsx\`. They need an appropriate supported operation. \`keep_vba=True\` can preserve VBA package content in an XLSM workflow, but does not execute or edit macros and does not guarantee every advanced workbook feature survives. Preserve the original and verify such requirements explicitly.
+
+## Formulas that LibreOffice can calculate
+
+The workbook is recalculated with LibreOffice (\`office-recalculate\`), which evaluates fewer functions than Excel. Choose formulas it can calculate:
+
+- Do not use \`XLOOKUP\`, \`XMATCH\`, \`FILTER\`, \`UNIQUE\`, \`SORT\`, or \`SEQUENCE\`. Use \`INDEX\` with \`MATCH\` for lookups, and sort, filter, or remove duplicates in Python before writing the cells.
+- Write \`TEXTJOIN\`, \`CONCAT\`, \`IFS\`, \`SWITCH\`, \`MAXIFS\`, and \`MINIFS\` with the \`_xlfn.\` prefix (for example \`=_xlfn.TEXTJOIN(", ",TRUE,A2:A9)\`): openpyxl writes the formula exactly as given, and Excel files keep these names prefixed.
+- Never save a workbook that was loaded with \`data_only=True\`: it has no formulas left, and saving it replaces every formula with its last value.
+
+## Check and deliver
+
+Reopen the saved workbook with openpyxl and verify the requested sheet names, values, types, formulas, styles, and totals against the source data, including unchanged content that must be preserved. These checks do not calculate formulas or judge workbook appearance.
+
+Load \`office-render\` for requested images or visual inspection and whenever the user's primary task targets appearance, including cell fill colors, text alignment, spacing, or sizing. These appearance changes require rendering even without a separate visual-check request, unless the user explicitly skips it. New workbooks and data or formula edits do not require rendering solely because they include incidental basic formatting. In particular, bold headers and number formats accompanying data edits do not require loading \`office-render\` or running its commands.
+
+Load \`office-recalculate\` when refreshed calculated values are needed and \`office-export-pdf\` for PDF output. Deliver after the requested data checks pass and the required operations finish.
+
+Call \`present({"files":[{"path":"/tmp/office/report.xlsx"}]})\` with the actual final workbook path, once it is final: the user gets a copy of the file as it is when you call it. Do not present intermediate scripts and reports unless requested.
+"
+`;
+
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md) — la salida entera, sin cambios accidentales 1`] = `
 "# OpenLen: how the platform works
 

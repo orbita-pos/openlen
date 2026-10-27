@@ -63,6 +63,8 @@ const nextConfig = {
       "./node_modules/tailwindcss/lib/css/*.css",
       "./node_modules/tailwindcss/stubs/*",
       "./lib/agent/terminal/trabajador.mjs",
+      // Len's own skills, read from disk at /.openlen/skills (lib/agent/skills/bundled.ts).
+      "./lib/agent/skills/bundled/**/*",
       "./node_modules/just-bash/**/*",
       // The apps' type and lint checker (plans/app-catalog-and-bundler/03):
       // `lib/apps/checker/check-app.ts` starts `checker-worker.mjs` by path, and

@@ -50,6 +50,8 @@ import { FUNCTION_LIMITS, FUNCTION_MEMORY_MB, MAX_REQUEST_BYTES } from "@/lib/fu
 import { MAX_FUNCTIONS } from "@/lib/functions/project-files";
 import { ENTRADA } from "@/lib/apps/esqueleto";
 import { ARTIFACT_MANUAL_INDEX, artifactManuals } from "./artifact-manuals";
+import { bundledSkillFiles } from "./skills/bundled";
+import { skillsEnabled } from "./skills/enabled";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -391,9 +393,11 @@ export function documentosDeLaPlataforma(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Readonly<Record<string, string>> {
   const artifacts = env.OPENLEN_ARTIFACTS === "1" ? artifactManuals : {};
-  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP, ...artifacts };
+  // Las skills de Len (spec local 2026-10-26-len-skills): /.openlen/skills, como un documento más.
+  const skills = skillsEnabled(env) ? bundledSkillFiles() : {};
+  if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP, ...artifacts, ...skills };
   const convertir = manualParaConvertir();
-  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir, ...artifacts };
+  return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir, ...artifacts, ...skills };
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */
