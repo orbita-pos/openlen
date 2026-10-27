@@ -50,7 +50,9 @@ async function launch(): Promise<Browser> {
 }
 
 async function parseWithJsdom(html: string): Promise<Document> {
-  const { JSDOM } = await import("jsdom");
+  // jsdom ships no types and the project has no @types/jsdom: only this is used.
+  const name = "jsdom";
+  const { JSDOM } = (await import(name)) as { JSDOM: new (html: string) => { window: { document: Document } } };
   return new JSDOM(html).window.document;
 }
 
