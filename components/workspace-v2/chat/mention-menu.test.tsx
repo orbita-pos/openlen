@@ -56,7 +56,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Box(props: { withPeople?: boolean; initial?: MentionRef[]; initialValue?: string; onMentions: (m: MentionRef[]) => void; onPick: () => void; value: { current: string } }) {
+function Box(props: { withPeople?: boolean; initial?: MentionRef[]; initialValue?: string; onSubmit?: () => void; onMentions: (m: MentionRef[]) => void; onPick: () => void; value: { current: string } }) {
   const [v, setV] = useState(props.initialValue ?? "");
   const [mentions, setMentions] = useState<MentionRef[]>(props.initial ?? []);
   props.value.current = v;
@@ -65,7 +65,7 @@ function Box(props: { withPeople?: boolean; initial?: MentionRef[]; initialValue
     <ChatComposer
       value={v}
       onChange={setV}
-      onSubmit={() => {}}
+      onSubmit={props.onSubmit ?? (() => {})}
       onStop={() => {}}
       busy={false}
       textareaRef={ta}
@@ -93,7 +93,7 @@ function Box(props: { withPeople?: boolean; initial?: MentionRef[]; initialValue
   );
 }
 
-function mount(opts: { withPeople?: boolean; initial?: MentionRef[]; initialValue?: string } = {}) {
+function mount(opts: { withPeople?: boolean; initial?: MentionRef[]; initialValue?: string; onSubmit?: () => void } = {}) {
   const onMentions = vi.fn();
   const onPick = vi.fn();
   const value = { current: "" };
@@ -181,6 +181,26 @@ describe("the «@» menu", () => {
     expect(v.host.querySelector("[data-mention-menu]")!.textContent).toContain("mentions.limit");
     v.key("Enter");
     expect(v.value.current.endsWith("@ver")).toBe(true);
+  });
+
+  it("lets Enter send a message with an unpicked «@» in its prose, text unchanged", () => {
+    const sent = vi.fn();
+    const v = mount({ onSubmit: sent });
+    v.type("Cambia el @ por un icono");
+    v.key("Enter");
+    expect(v.value.current).toBe("Cambia el @ por un icono");
+    expect(v.onPick).not.toHaveBeenCalled();
+    expect(sent).toHaveBeenCalled();
+  });
+
+  it("closes for a word that matches nothing, so Enter sends", () => {
+    const sent = vi.fn();
+    const v = mount({ onSubmit: sent });
+    v.type("@zzzz");
+    expect(v.rows()).toEqual([]);
+    v.key("Enter");
+    expect(sent).toHaveBeenCalled();
+    expect(v.value.current).toBe("@zzzz");
   });
 
   it("ends with «pick on the canvas», which turns pointing on", () => {
