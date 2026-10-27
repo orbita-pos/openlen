@@ -1032,7 +1032,7 @@ async function correrTurno(
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(
-        resolveSkills({ bundled: bundledSkills(), project: skillsDelProyecto, personal: [] }).modelInvocable(),
+        skillsDelTurno.shared(),
         historialDeLaBase ? foldSkillsDigest(filasDelHistorial) : null,
         presupuestoDeSkills,
       )

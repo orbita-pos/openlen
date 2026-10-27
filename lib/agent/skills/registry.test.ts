@@ -54,6 +54,22 @@ describe("resolveSkills", () => {
     expect(set.userInvocable().map((s) => s.skill.name)).toEqual(["both", "user-only"]);
   });
 
+  // Resolved ONCE per turn (DeepSeek's registry caches one completed catalog): the conversation's
+  // shared catalog comes out of the same set, without the personal layer, even where it shadows.
+  it("shared() is ours and the project's, even where a personal one shadows a project one", () => {
+    const set = resolveSkills({ bundled: [bundled("office")], project: [stored("cotizar", "", "project one")], personal: [stored("cotizar", "", "mine"), stored("mia")] });
+    expect(set.get("cotizar")?.skill.description).toBe("mine");
+    expect(set.shared().map((s) => [s.skill.name, s.skill.description])).toEqual([
+      ["cotizar", "project one"],
+      ["office", "office skill"],
+    ]);
+  });
+
+  it("shared() keeps only what the model may invoke", () => {
+    const set = resolveSkills({ bundled: [], project: [stored("both"), stored("user-only", "disable-model-invocation: true\n")], personal: [] });
+    expect(set.shared().map((s) => s.skill.name)).toEqual(["both"]);
+  });
+
   it("all is sorted by name", () => {
     const set = resolveSkills({ bundled: [bundled("office")], project: [stored("zeta"), stored("alfa")], personal: [stored("medio")] });
     expect(set.all.map((s) => s.skill.name)).toEqual(["alfa", "medio", "office", "zeta"]);

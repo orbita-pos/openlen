@@ -33,6 +33,9 @@ export interface SkillSet {
   get(name: string): ResolvedSkill | undefined;
   modelInvocable(): readonly ResolvedSkill[];
   userInvocable(): readonly ResolvedSkill[];
+  /** What the conversation's durable catalog lists: ours and the project's that the model may invoke,
+   *  as they were before the personal layer (a personal one never changes what everyone sees). */
+  shared(): readonly ResolvedSkill[];
 }
 
 export const EMPTY_SKILL_SET: SkillSet = resolveSkills({ bundled: [], project: [], personal: [] });
@@ -42,6 +45,7 @@ export function resolveSkills(o: { bundled: readonly BundledSkill[]; project: re
   const refused: RefusedSkill[] = [];
   for (const b of o.bundled) byName.set(b.skill.name, { skill: b.skill, scope: "bundled", baseDir: b.baseDir });
   const reserved = new Set(byName.keys());
+  let shared: ResolvedSkill[] = [];
   // Project first, then personal: the later one replaces, so personal wins.
   for (const [scope, list, dir] of [
     ["project", o.project, PROJECT_SKILLS_DIR],
@@ -59,6 +63,7 @@ export function resolveSkills(o: { bundled: readonly BundledSkill[]; project: re
       }
       byName.set(stored.name, { skill: parsed.skill, scope, baseDir: `${dir}${stored.name}` });
     }
+    if (scope === "project") shared = [...byName.values()];
   }
   const all = [...byName.values()].sort((a, b) => a.skill.name.localeCompare(b.skill.name));
   return {
@@ -67,5 +72,6 @@ export function resolveSkills(o: { bundled: readonly BundledSkill[]; project: re
     get: (name) => byName.get(name),
     modelInvocable: () => all.filter((s) => s.skill.modelInvocable),
     userInvocable: () => all.filter((s) => s.skill.userInvocable),
+    shared: () => shared.filter((s) => s.skill.modelInvocable).sort((a, b) => a.skill.name.localeCompare(b.skill.name)),
   };
 }
