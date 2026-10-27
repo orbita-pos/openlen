@@ -84,7 +84,7 @@ ${CORE_SRC}
   // The element's own text (not its children's), as the «@» index takes it.
   function ownTextOf(el) {
     var s = '';
-    for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += n.textContent || '';
+    for (var n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) s += ' ' + (n.textContent || '');
     return s.replace(/\\s+/g, ' ').trim().slice(0, 40);
   }
 

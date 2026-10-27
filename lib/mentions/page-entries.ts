@@ -17,7 +17,7 @@ const TARGET_TEXT_MAX = 40;
 
 function ownTextOf(el: Element): string {
   let out = "";
-  for (const n of Array.from(el.childNodes)) if (n.nodeType === 3) out += n.textContent ?? "";
+  for (const n of Array.from(el.childNodes)) if (n.nodeType === 3) out += ` ${n.textContent ?? ""}`;
   return out.replace(/\s+/g, " ").trim();
 }
 

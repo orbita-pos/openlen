@@ -84,7 +84,7 @@ export function mentionSignatureMatches(el: Element, tag: string, text: string |
   if (el.tagName.toLowerCase() !== tag.toLowerCase()) return false;
   if (!text) return true;
   let own = "";
-  for (let n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) own += n.textContent || "";
+  for (let n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) own += " " + (n.textContent || "");
   return own.replace(/\s+/g, " ").trim().indexOf(text) === 0;
 }
 
