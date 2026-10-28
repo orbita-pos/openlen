@@ -31,13 +31,24 @@ export const ATTACHMENT_KINDS = {
 } as const;
 export type AttachedKind = keyof typeof ATTACHMENT_KINDS;
 
+/** A video attached to a message (spec local 2026-10-27-chat-drop-and-images, Part A): Len can't
+ *  watch it, so it travels by URL for him to put on the page, never to `Read` or the box. */
+export const VIDEO_KINDS = {
+  mp4: { mime: "video/mp4" },
+  webm: { mime: "video/webm" },
+  mov: { mime: "video/quicktime" },
+} as const;
+export type VideoKind = keyof typeof VIDEO_KINDS;
+/** The largest video the chat takes: `/api/upload`'s cap. */
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
 /** A file attached to a message, as the chat row keeps it. */
 export interface AttachedFile {
   readonly url: string;
   readonly name: string;
   readonly size: number;
   /** Absent in the rows from before office files: those are PDFs. */
-  readonly kind?: AttachedKind;
+  readonly kind?: AttachedKind | VideoKind;
 }
 
 /** The kind of a file by its name's extension, or null if the chat doesn't take it. */
@@ -46,8 +57,23 @@ export function kindFromName(name: string): AttachedKind | null {
   return Object.hasOwn(ATTACHMENT_KINDS, ext) ? (ext as AttachedKind) : null;
 }
 
-export function kindOf(file: Pick<AttachedFile, "kind">): AttachedKind {
+export function kindOf(file: Pick<AttachedFile, "kind">): AttachedKind | VideoKind {
   return file.kind ?? "pdf";
+}
+
+/** The video kind of a file by its name's extension, or null. */
+export function videoKindFromName(name: string): VideoKind | null {
+  const ext = /\.([A-Za-z0-9]+)$/.exec(name)?.[1]?.toLowerCase() ?? "";
+  return Object.hasOwn(VIDEO_KINDS, ext) ? (ext as VideoKind) : null;
+}
+
+/** The video kind of a MIME type, or null. */
+export function videoKindFromMime(mime: string): VideoKind | null {
+  return (Object.keys(VIDEO_KINDS) as VideoKind[]).find((k) => VIDEO_KINDS[k].mime === mime) ?? null;
+}
+
+export function isVideoFile(file: Pick<AttachedFile, "kind">): boolean {
+  return Object.hasOwn(VIDEO_KINDS, file.kind ?? "");
 }
 
 /** What the header says: a PDF starts with `%PDF-`, an office file is a ZIP, a CSV is UTF-8 text
@@ -84,6 +110,9 @@ function size(bytes: number): string {
 
 /** The note that goes with the file in the user's message. */
 export function attachmentNote(file: AttachedFile): string {
+  if (isVideoFile(file)) {
+    return `[Attached video: ${file.url} (${kindOf(file).toUpperCase()}, ${size(file.size)}). You can't watch it; to put it on the page, use this URL in a <video> element.]`;
+  }
   return `[Attached file: ${attachmentPath(file)} (${kindOf(file).toUpperCase()}, ${size(file.size)})]`;
 }
 
