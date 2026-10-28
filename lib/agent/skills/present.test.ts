@@ -77,6 +77,16 @@ describe("present", () => {
     expect(out.response.ok, String(out.response.error)).toBe(true);
   });
 
+  // Claude Code's verify sends its screenshots to the reader; Len's are kept by view_page and use_page
+  // (lib/agent/tools.ts), and present delivers one even when no box ran this turn.
+  it("present delivers a screenshot the turn kept, without a box", async () => {
+    const { session, deps, stored } = setup(null);
+    session.screenshots = new Map([["/tmp/screenshots/1.jpg", new Uint8Array([0xff, 0xd8, 0xff])]]);
+    const out = await toolPresent(session, deps, { files: [{ path: "/tmp/screenshots/1.jpg", description: "The form after sending it" }] });
+    expect(out.response.ok, String(out.response.error)).toBe(true);
+    expect(stored[0]).toMatchObject({ name: "1.jpg", contentType: "image/jpeg" });
+  });
+
   it("a relative path is the box's root", async () => {
     const { session, deps } = setup({ "/informe.docx": XLSX });
     expect((await toolPresent(session, deps, { files: [{ path: "informe.docx" }] })).response.ok).toBe(true);

@@ -1148,6 +1148,11 @@ export interface AgentSession {
    *  donde la dejó la anterior, como la sesión de navegador de Claude Code. Se
    *  cierra al acabar el turno (`closeBrowserTab`, en la ruta). */
   browserTab?: BrowserTabHolder;
+  /** LAS CAPTURAS DEL TURNO (27/10): cada una de `view_page` y `use_page`, por la ruta que la
+   *  herramienta le dio (`keepScreenshots`), para que `present` la entregue. Empieza vacía. */
+  screenshots?: Map<string, Uint8Array>;
+  /** Cuántas se han guardado en el turno: el número de la siguiente ruta, aunque se suelten viejas. */
+  screenshotsKept?: number;
   /** Miradas `medir` de este turno — Chromium, sin modelo. Tienen tope igual,
    *  pero más alto: lo que acota es el tiempo de render, no el dinero. */
   miradasMedirEsteTurno?: number;
@@ -1756,6 +1761,28 @@ const PHOTO_PIVOT_NOTE =
 const MAX_SCREENSHOTS_PER_TURN = 6;
 const MAX_MIRADAS_MEDIR = 4;
 
+// LA PRUEBA TIENE QUE LLEGAR A QUIEN LEE (27/10): el usuario no ve las capturas que vuelven a Len.
+// Como el browser_take_screenshot de Playwright MCP, que guarda la captura y dice dónde, cada una
+// queda en el turno por una ruta, y `present` la entrega, como el verify de Claude Code manda las
+// suyas con SendUserFile. Las más viejas se sueltan pasado el tope.
+const MAX_KEPT_SCREENSHOTS = 20;
+const SCREENSHOT_EXTENSION: Readonly<Record<string, string>> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+/** Keeps this call's screenshots for the turn and answers their paths, in order. */
+function keepScreenshots(session: AgentSession, images: readonly InlineImage[] | undefined): { screenshots?: string[] } {
+  if (!images?.length) return {};
+  const kept = (session.screenshots ??= new Map());
+  const paths: string[] = [];
+  for (const image of images) {
+    const n = (session.screenshotsKept = (session.screenshotsKept ?? 0) + 1);
+    const path = `/tmp/screenshots/${n}.${SCREENSHOT_EXTENSION[image.mimeType] ?? "jpg"}`;
+    kept.set(path, Buffer.from(image.dataBase64, "base64"));
+    paths.push(path);
+  }
+  while (kept.size > MAX_KEPT_SCREENSHOTS) kept.delete(kept.keys().next().value!);
+  return { screenshots: paths };
+}
+
 /** Pieza 4: visitas de `use_page` a la vez en un turno. Cada una arranca su
  *  Chromium; con herramientas en paralelo, dos llamadas seguras pueden pedir
  *  visita a la vez (§11 de la investigación: tope 2 por la carga del navegador
@@ -1871,7 +1898,7 @@ async function toolMirarPagina(
     }
     const llamadas = await llamadasDelBorrador();
     return {
-      response: { ok: true, screenshot: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) },
+      response: { ok: true, screenshot: visto.informe, ...keepScreenshots(session, visto.images), ...(llamadas ? { edge_function_calls: llamadas } : {}) },
       ...(visto.images?.length ? { images: visto.images } : {}),
     };
   }
@@ -1936,7 +1963,7 @@ async function lookAtAnotherSite(
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const visto = await visitar(() => deps.web!.visit(session.projectId, u.url, [{ screenshot: "screen" }], enTelefono ? "mobile" : "desktop"));
   if (!visto.ok) return { response: { ok: false, error: visto.error } };
-  return { response: { ok: true, screenshot: visto.report }, ...(visto.images?.length ? { images: visto.images } : {}) };
+  return { response: { ok: true, screenshot: visto.report, ...keepScreenshots(session, visto.images) }, ...(visto.images?.length ? { images: visto.images } : {}) };
 }
 
 /** use_page with `url`: the steps on another site (`visitAnotherSite`). */
@@ -1955,7 +1982,7 @@ async function stepsOnAnotherSite(session: AgentSession, deps: AgentDeps, args: 
   const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
   const visto = await visitar(() => deps.web!.visit(session.projectId, u.url, pasos, "desktop"));
   if (!visto.ok) return { response: { ok: false, error: visto.error } };
-  return { response: { ok: true, visit: visto.report }, ...(visto.images?.length ? { images: visto.images } : {}) };
+  return { response: { ok: true, visit: visto.report, ...keepScreenshots(session, visto.images) }, ...(visto.images?.length ? { images: visto.images } : {}) };
 }
 
 // ─── use_page: usarla como un visitante (H9) ──────────────────────────────
@@ -2047,7 +2074,7 @@ async function toolUsarPagina(
   // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
   const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
   return {
-    response: { ok: true, visit: visto.informe, ...(llamadas ? { edge_function_calls: llamadas } : {}) },
+    response: { ok: true, visit: visto.informe, ...keepScreenshots(session, visto.images), ...(llamadas ? { edge_function_calls: llamadas } : {}) },
     ...(visto.images?.length ? { images: visto.images } : {}),
   };
 }
