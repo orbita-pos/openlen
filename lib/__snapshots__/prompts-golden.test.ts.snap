@@ -6271,6 +6271,184 @@ It is in the catalog from the next message, and the user can invoke it with \`/<
 "
 `;
 
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/verify/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: verify
+description: Check that a change to the page or the app actually works by using it in a real browser, the way a visitor would, and report what was seen. Load it when the user asks whether something works, to test it, or when what you changed does something (a form, a cart, a sign-in, a calculation, a game) and you are about to say it is done.
+---
+
+# Checking that it works
+
+Checking is watching the page run. Reading the code, a search, or a test that passes says the code looks right; it does not say the change works. Go through what changed by its interface, the way a visitor would: press the buttons, fill in the fields, never call the backend underneath instead. What you see is the evidence.
+
+## How
+
+Use \`use_page\` on the canvas. Its tab stays open for the whole turn, each call carries on where the last one left the page, and it loads your latest files first. In an app, \`screen\` opens a screen by its hash route (\`"#/sales"\`). To visit signed in, \`sign_in_as\` with a user's email in the test database.
+
+Look before you act, and look again after:
+1. **Look.** A \`screenshot\` step (\`"screen"\`, or a text of the block you care about) or a \`read\` step. If you don't know the button's text or the field's label, read it in the file or on the screen first: steps find things by what a visitor sees, not by CSS.
+2. **Act.** \`click\` with the text on the button, \`type\` with \`into\` the field's label, \`choose\` an option. With several identical buttons, \`within\` a text of the right block.
+3. **Look again.** Did what should happen happen: the message, the new row, the total, the next screen? \`reload\` to check it was saved. \`eval\` reads what has no text: a canvas, a variable, a game's state.
+
+Run the shortest path that makes the change run: the form changed, send it; the cart changed, add a product and go to checkout; the sign-in changed, sign in. Then one odd case: an empty or wrong value, coming back after a reload.
+
+\`view_page mode="measure"\` reports the JavaScript errors, what overflows on a phone and the contrast: an error in the console counts as a failure even when the screen looks right.
+
+## What is never done for real
+
+- To check something, never publish: the canvas is enough.
+- \`use_page\` sends what the page saves to the test database, never to the published site's data, and a form does not reach the user's email.
+- Payments only in test mode: Stripe with the draft's test key and its test cards (4242 4242 4242 4242 pays). Checkout opens outside the canvas; \`use_page\` tells you where the link was going, and \`stripe trigger <event>\` sends the webhook a test event.
+- Emails from the draft reach only the project's team: test with their addresses.
+- Nothing that writes to production data. \`db query --linked\` only reads it.
+
+When there is no safe way to run something, check it as far as you can and say exactly what you did not check.
+
+## A test that runs again
+
+Only when the user wants one: a check you run now is not a test they asked to keep. A page's tests go in \`/tests\` and run with \`npx playwright test\`; an app's run with \`npm test\`. How to write them is in references/playwright.md.
+
+## The answer
+
+Start with one verdict:
+- **works**: what you did and what you saw, with the screenshot that shows it.
+- **fails**: the step where it broke, what happened instead, and the error if there was one.
+- **couldn't verify**: where it got stuck and why, and what the user can try.
+
+Then, briefly, anything you noticed on the way that is not a failure but looked wrong: a slow step, a label cut off, a warning in the console.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/verify/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: verify
+description: Check that a change to the page or the app actually works by using it in a real browser, the way a visitor would, and report what was seen. Load it when the user asks whether something works, to test it, or when what you changed does something (a form, a cart, a sign-in, a calculation, a game) and you are about to say it is done.
+---
+
+# Checking that it works
+
+Checking is watching the page run. Reading the code, a search, or a test that passes says the code looks right; it does not say the change works. Go through what changed by its interface, the way a visitor would: press the buttons, fill in the fields, never call the backend underneath instead. What you see is the evidence.
+
+## How
+
+Use \`use_page\` on the canvas. Its tab stays open for the whole turn, each call carries on where the last one left the page, and it loads your latest files first. In an app, \`screen\` opens a screen by its hash route (\`"#/sales"\`). To visit signed in, \`sign_in_as\` with a user's email in the test database.
+
+Look before you act, and look again after:
+1. **Look.** A \`screenshot\` step (\`"screen"\`, or a text of the block you care about) or a \`read\` step. If you don't know the button's text or the field's label, read it in the file or on the screen first: steps find things by what a visitor sees, not by CSS.
+2. **Act.** \`click\` with the text on the button, \`type\` with \`into\` the field's label, \`choose\` an option. With several identical buttons, \`within\` a text of the right block.
+3. **Look again.** Did what should happen happen: the message, the new row, the total, the next screen? \`reload\` to check it was saved. \`eval\` reads what has no text: a canvas, a variable, a game's state.
+
+Run the shortest path that makes the change run: the form changed, send it; the cart changed, add a product and go to checkout; the sign-in changed, sign in. Then one odd case: an empty or wrong value, coming back after a reload.
+
+\`view_page mode="measure"\` reports the JavaScript errors, what overflows on a phone and the contrast: an error in the console counts as a failure even when the screen looks right.
+
+## What is never done for real
+
+- To check something, never publish: the canvas is enough.
+- \`use_page\` sends what the page saves to the test database, never to the published site's data, and a form does not reach the user's email.
+- Payments only in test mode: Stripe with the draft's test key and its test cards (4242 4242 4242 4242 pays). Checkout opens outside the canvas; \`use_page\` tells you where the link was going, and \`stripe trigger <event>\` sends the webhook a test event.
+- Emails from the draft reach only the project's team: test with their addresses.
+- Nothing that writes to production data. \`db query --linked\` only reads it.
+
+When there is no safe way to run something, check it as far as you can and say exactly what you did not check.
+
+## A test that runs again
+
+Only when the user wants one: a check you run now is not a test they asked to keep. A page's tests go in \`/tests\` and run with \`npx playwright test\`; an app's run with \`npm test\`. How to write them is in references/playwright.md.
+
+## The answer
+
+Start with one verdict:
+- **works**: what you did and what you saw, with the screenshot that shows it.
+- **fails**: the step where it broke, what happened instead, and the error if there was one.
+- **couldn't verify**: where it got stuck and why, and what the user can try.
+
+Then, briefly, anything you noticed on the way that is not a failure but looked wrong: a slow step, a label cut off, a warning in the console.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/verify/references/playwright.md) — la salida entera, sin cambios accidentales 1`] = `
+"# Tests that run again
+
+Write one only when the user wants a check kept, to run again after each change.
+
+## A page: Playwright in /tests
+
+\`npx playwright test\` runs the files in \`/tests\` in the terminal's Chromium, against the saved draft. Playwright is already installed: import from \`@playwright/test\` and don't install it. The draft's address is in \`$BASE_URL\`, so \`/playwright.config.ts\` says:
+
+\`\`\`ts
+import { defineConfig } from "@playwright/test";
+export default defineConfig({ testDir: "tests", use: { baseURL: process.env.BASE_URL } });
+\`\`\`
+
+Look first, then act: read the page's file, or open it once, to learn the texts, labels and roles the test will use. Wait until the page has finished loading before looking for anything that its script builds.
+
+\`\`\`ts
+import { test, expect } from "@playwright/test";
+
+test("the booking form confirms", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Name").fill("Ana");
+  await page.getByLabel("Email").fill("ana@example.com");
+  await page.getByRole("button", { name: "Book" }).click();
+  await expect(page.getByText("See you on")).toBeVisible();
+});
+\`\`\`
+
+- Find elements the way a visitor does: \`getByRole\` with the accessible name, \`getByLabel\`, \`getByText\`. A CSS class or an id only when nothing visible names it.
+- \`expect(...)\` waits by itself: don't add fixed pauses.
+- A test works with the draft's data; it can read the published site but never writes to it.
+- Screenshot comparisons (\`toHaveScreenshot\`) can't be kept: only text files are saved.
+- The tests are kept with the project and never published.
+
+## An app: npm test
+
+In an app, \`npm test\` runs \`*.test.tsx\` files with vitest and Testing Library in the same browser: render a component, act with \`userEvent\`, and assert on what is on screen (\`screen.getByRole\`, \`findByText\`). Put the tests next to the component or in \`/tests\`.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/verify/references/playwright.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"# Tests that run again
+
+Write one only when the user wants a check kept, to run again after each change.
+
+## A page: Playwright in /tests
+
+\`npx playwright test\` runs the files in \`/tests\` in the terminal's Chromium, against the saved draft. Playwright is already installed: import from \`@playwright/test\` and don't install it. The draft's address is in \`$BASE_URL\`, so \`/playwright.config.ts\` says:
+
+\`\`\`ts
+import { defineConfig } from "@playwright/test";
+export default defineConfig({ testDir: "tests", use: { baseURL: process.env.BASE_URL } });
+\`\`\`
+
+Look first, then act: read the page's file, or open it once, to learn the texts, labels and roles the test will use. Wait until the page has finished loading before looking for anything that its script builds.
+
+\`\`\`ts
+import { test, expect } from "@playwright/test";
+
+test("the booking form confirms", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("Name").fill("Ana");
+  await page.getByLabel("Email").fill("ana@example.com");
+  await page.getByRole("button", { name: "Book" }).click();
+  await expect(page.getByText("See you on")).toBeVisible();
+});
+\`\`\`
+
+- Find elements the way a visitor does: \`getByRole\` with the accessible name, \`getByLabel\`, \`getByText\`. A CSS class or an id only when nothing visible names it.
+- \`expect(...)\` waits by itself: don't add fixed pauses.
+- A test works with the draft's data; it can read the published site but never writes to it.
+- Screenshot comparisons (\`toHaveScreenshot\`) can't be kept: only text files are saved.
+- The tests are kept with the project and never published.
+
+## An app: npm test
+
+In an app, \`npm test\` runs \`*.test.tsx\` files with vitest and Testing Library in the same browser: render a component, act with \`userEvent\`, and assert on what is on screen (\`screen.getByRole\`, \`findByText\`). Put the tests next to the component or in \`/tests\`.
+"
+`;
+
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md) — la salida entera, sin cambios accidentales 1`] = `
 "# OpenLen: how the platform works
 

@@ -40,6 +40,15 @@ validator, `dataviz/scripts/validate_palette.mjs`, is our code, written from pub
 OKLab (Björn Ottosson, 2020), Machado, Oliveira and Fernandes (2009) at severity 1.0, and WCAG 2
 contrast. Added on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.3).
 
+`verify` is ours, from the facts of Claude Code's `verify` skill (checking is watching the change run
+through its interface, the destructive rule, a verdict with its evidence), which has no open license,
+and, adapted, Anthropic's `webapp-testing` skill (github.com/anthropics/skills,
+`skills/webapp-testing/SKILL.md`), Apache License 2.0, full text in
+`LICENSES/anthropic-skills.Apache-2.0.txt`. Changes: Len's `use_page` steps instead of a Python script
+for looking and acting; Node's Playwright Test in `/tests` (the one in the box) instead of Python's
+`sync_playwright` and its server helper; the look-then-act order and waiting for the page to load kept.
+Added on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.4).
+
 Generated skills (spec local 2026-10-27-len-five-skills, §4.2), built in `lib/agent/skills/generated.ts`
 from the same TypeScript that served `/.openlen/docs`: `artifact-*` (the deliverables manuals),
 `convert-to-app` (the app manual) and `frontend-design`. `frontend-design` is OpenLen's design guide
