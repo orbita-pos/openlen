@@ -82,18 +82,24 @@ export function targetsOf(path: string, line: number, tag: string, max: number, 
  *  root of a component used there — keeping only the outermost (a component's
  *  insides share its use line). */
 export function outermostAtLine(path: string, line: number, max: number): Element[] {
-  const all = document.body ? document.body.getElementsByTagName("*") : [];
+  // Top-down: an element that matches is taken and its insides are not walked
+  // (a wrapper's line would otherwise match, and be checked, for everything in it).
   const hits: Element[] = [];
-  for (let i = 0; i < all.length; i++) {
-    const chain = sourceChainOf(all[i]!, max);
-    for (let j = 0; j < chain.length; j++) {
-      if (chain[j]!.path === path && chain[j]!.line === line) {
-        hits.push(all[i]!);
-        break;
+  const stack: Element[] = document.body ? [document.body] : [];
+  while (stack.length > 0) {
+    const el = stack.pop()!;
+    if (el !== document.body) {
+      const chain = sourceChainOf(el, max);
+      let hit = false;
+      for (let j = 0; j < chain.length && !hit; j++) hit = chain[j]!.path === path && chain[j]!.line === line;
+      if (hit) {
+        hits.push(el);
+        continue;
       }
     }
+    for (let c = el.lastElementChild; c; c = c.previousElementSibling) stack.push(c);
   }
-  return hits.filter((el) => !hits.some((other) => other !== el && other.contains(el)));
+  return hits;
 }
 
 export function boxOf(path: string, line: number, tag: string, max: number): { x: number; y: number; width: number; height: number } | null {
