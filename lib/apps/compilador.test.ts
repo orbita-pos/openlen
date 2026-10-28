@@ -239,12 +239,11 @@ describe("los imports", () => {
     expect(js).toContain('import menu from "/src/datos/menu.json" with { type: "json" };');
   });
 
-  it("lo que no es código, ni hoja, ni JSON, ni de URL (.svg, .txt, .md) no se importa: se dice que vaya por URL", () => {
-    // Un .svg SÍ se importa desde el plan 02 (es su URL, como en Vite): ver
-    // «ficheros como módulo». Aquí, una extensión que el compilador no conoce.
-    const r = compilarFuente("/src/App.tsx", 'import foto from "./foto.png";\nfoto;', app({ ...CARPETA, "/src/foto.png": "x" }));
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errores[0]!.mensaje).toMatch(/Reference it by its URL/);
+  // Desde el 2026-10-28 (spec local ficheros-al-nivel-de-claude-code, §7) cualquier fichero que no es código, hoja
+  // ni JSON se importa como en Vite: es su URL. Ver «ficheros como módulo».
+  it("una foto se importa como en Vite: es su URL", () => {
+    const js = ok(compilarFuente("/src/App.tsx", 'import foto from "./foto.png";\nfoto;', app({ ...CARPETA, "/src/foto.png": "x" })));
+    expect(js).toContain('const foto = "/src/foto.png";');
   });
 
   it("import(variable) no se toca: no se puede saber aquí", () => {
@@ -438,6 +437,22 @@ describe("ficheros como módulo, como en Vite (plan 02, tarea 2)", () => {
     const js = ok(compilarFuente("/src/App.jsx", 'import logo from "./assets/logo.svg";\nexport const a = logo;', app(carpeta)));
     expect(js).toContain('const logo = "/src/assets/logo.svg";');
     expect(js.split("\n")[1]).toContain("export const a = logo");
+  });
+
+  it("cualquier otro fichero (una imagen, una fuente, un PDF) también es SU URL; con ?url, igual", () => {
+    const puntero = `\uFFFFopenlen-blob:${"a".repeat(64)}:3:${"b".repeat(40)}`;
+    const conBinarios = { ...carpeta, "/src/hero.png": puntero, "/src/fuente.woff2": puntero, "/src/guia.pdf": puntero };
+    const js = ok(compilarFuente("/src/App.jsx", 'import hero from "./hero.png";\nimport f from "./fuente.woff2?url";\nimport g from "./guia.pdf";', app(conBinarios)));
+    expect(js).toContain('const hero = "/src/hero.png";');
+    expect(js).toContain('const f = "/src/fuente.woff2";');
+    expect(js).toContain('const g = "/src/guia.pdf";');
+  });
+
+  it("🔴 ?raw de un binario: un error con su motivo (su texto no existe)", () => {
+    const puntero = `\uFFFFopenlen-blob:${"a".repeat(64)}:3:${"b".repeat(40)}`;
+    const r = compilarFuente("/src/App.jsx", 'import h from "./hero.png?raw";', app({ ...carpeta, "/src/hero.png": puntero }));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.errores[0]!.mensaje).toBe('"./hero.png?raw": ?raw is for text files; this one is binary.');
   });
 
   it("?raw es el TEXTO del fichero; ?url es su ruta (también de un .json)", () => {

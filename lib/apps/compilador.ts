@@ -41,6 +41,7 @@
 // Los mensajes van en inglés: los lee el modelo (como los de folder.ts).
 // Puro: sin disco, sin red, sin `server-only`. Lo prueba vitest.
 
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 import { createHash } from "node:crypto";
 import { transform, type Transform } from "sucrase";
 // La versión en JavaScript del analizador: SÍNCRONA, sin `init` ni wasm. Los
@@ -518,9 +519,15 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
     }
 
     const ext = extensionDe(resuelto);
-    // UN FICHERO COMO MÓDULO, como en Vite: su URL (`?url`, o un .svg/.txt/.md
-    // por defecto) o su texto (`?raw`). Se queda una constante en su línea.
-    if (consulta || (EXTENSIONES_DE_URL as readonly string[]).includes(ext)) {
+    // UN FICHERO COMO MÓDULO, como en Vite: su URL (`?url`, o por defecto cualquiera que no sea código, hoja ni
+    // JSON: un .svg, una imagen, una fuente, un PDF… — spec local 2026-10-28) o su texto (`?raw`). Se queda una
+    // constante en su línea.
+    const esModulo = (EXTENSIONES_RESOLUBLES as readonly string[]).includes(ext) || ext === ".css" || ext === ".json";
+    if (consulta || !esModulo) {
+      if (consulta === "?raw" && isBlobPointer(ctx.carpeta[resuelto] ?? "")) {
+        error(imp.start, `"${especificador}": ?raw is for text files; this one is binary.`);
+        continue;
+      }
       const sentencia = js.slice(imp.importStart, imp.importEnd);
       const nombre = dinamico ? null : nombrePorDefecto(sentencia);
       if (!nombre) {
@@ -561,7 +568,6 @@ function compilarSinCache(ruta: string, codigo: string, ctx: ContextoDeCompilaci
       sustituirEspecificador(resuelto);
       continue;
     }
-    error(imp.start, `${resuelto}: ${ext || "this kind of"} files cannot be imported. Reference it by its URL instead ("${resuelto}").`);
   }
 
   if (errores.length > 0) return { ok: false, errores: errores.sort((a, b) => (a.linea ?? 0) - (b.linea ?? 0)), packages: [...packages] };

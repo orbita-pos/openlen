@@ -69,3 +69,25 @@ describe("invariante 4 con los .html sueltos", () => {
     );
   });
 });
+
+describe("una app que importa una foto, como en Vite", () => {
+  it("🔴 el paquete lleva su URL y la release, la foto con sus bytes", async () => {
+    const { stopBundlerWorker } = await import("@/lib/apps/bundler/bundle-app");
+    try {
+      await publishToDir({
+        subdomain: "app-foto",
+        html: '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>x</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>',
+        app: { catalogo: "2026-11", entrada: "/src/main.jsx" },
+        files: [
+          { path: "/src/main.jsx", content: 'import { createRoot } from "react-dom/client";\nimport hero from "./hero.png";\ncreateRoot(document.getElementById("root")).render(<img src={hero} alt="" />);' },
+          { path: "/src/hero.png", content: makePointer(await putBlob(PNG)) },
+        ],
+      });
+      const rel = releaseViva("app-foto");
+      assert.ok(readFileSync(path.join(rel, "src/main.jsx"), "utf8").includes('"/src/hero.png"'), "the bundle carries the photo's URL");
+      assert.deepEqual(Array.from(readFileSync(path.join(rel, "src/hero.png"))), Array.from(PNG));
+    } finally {
+      stopBundlerWorker();
+    }
+  });
+});
