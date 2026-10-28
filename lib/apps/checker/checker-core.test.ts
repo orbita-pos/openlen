@@ -49,7 +49,8 @@ describe("TypeScript", () => {
   });
 
   it("🔴 un fichero importado como lo entiende el compilador —por su URL (.svg, .txt, .md…, o ?url) o por su texto (?raw)— es un string, no «Cannot find module»", () => {
-    const rutas = [...EXTENSIONES_DE_URL.map((ext) => `./a${ext}`), "./datos.json?url", "./a.svg?raw"];
+    // Como vite/client: también una imagen, una fuente, un vídeo o un PDF (spec local 2026-10-28).
+    const rutas = [...EXTENSIONES_DE_URL.map((ext) => `./a${ext}`), "./datos.json?url", "./a.svg?raw", "./a.png", "./a.jpg", "./a.woff2", "./a.mp4", "./a.pdf"];
     const r = revisar({
       "/src/A.ts": rutas.map((ruta, i) => `import f${i} from "${ruta}";\nexport const n${i}: number = f${i};`).join("\n"),
     });
