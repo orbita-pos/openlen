@@ -150,6 +150,12 @@ describe("bundled skills", () => {
     it("verify answers with one of three verdicts", () => {
       for (const must of ["works", "fails", "couldn't verify"]) expect(text(), must).toContain(must);
     });
+
+    // Claude Code's verify: «Evidence has to reach the reader» — it sends its screenshots. The user
+    // doesn't see Len's; each is kept at the path in the tool's `screenshots`, and present delivers it.
+    it("verify sends the screenshot that shows it with present", () => {
+      for (const must of ["`screenshots`", "present"]) expect(text(), must).toContain(must);
+    });
   });
 
   // SETUP-BRAND (§4.5): Claude's setup-writing-style turned into the business's brand, saved as the

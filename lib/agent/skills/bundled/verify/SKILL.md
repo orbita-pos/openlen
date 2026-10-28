@@ -37,8 +37,10 @@ Only when the user wants one: a check you run now is not a test they asked to ke
 ## The answer
 
 Start with one verdict:
-- **works**: what you did and what you saw, with the screenshot that shows it.
+- **works**: what you did and what you saw.
 - **fails**: the step where it broke, what happened instead, and the error if there was one.
 - **couldn't verify**: where it got stuck and why, and what the user can try.
+
+The evidence has to reach the user, and they don't see the screenshots view_page and use_page show you. Each one is kept for this turn at the path in the tool's `screenshots`: present the one that shows the result (or the failure) and say in one line what it shows. Write what the page said word for word where it matters: the confirmation message, the total, the error.
 
 Then, briefly, anything you noticed on the way that is not a failure but looked wrong: a slow step, a label cut off, a warning in the console.

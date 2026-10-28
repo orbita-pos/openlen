@@ -33,7 +33,7 @@ export const DECLARACION_PRESENT = {
         items: {
           type: "OBJECT",
           properties: {
-            path: { type: "STRING", description: "Path of an existing regular file in the terminal. Relative paths start at /." },
+            path: { type: "STRING", description: "Path of an existing regular file in the terminal, or of a screenshot this turn kept (the `screenshots` of view_page and use_page). Relative paths start at /." },
             description: { type: "STRING", description: "Brief description for the user." },
           },
           required: ["path"],
@@ -94,8 +94,12 @@ export async function toolPresent(session: AgentSession, deps: AgentDeps, args: 
   if (files.length < 1 || files.length > PRESENT_MAX_FILES) return fail(`present accepts 1 to ${PRESENT_MAX_FILES} files`);
   // Called THROUGH the terminal: its method needs its own `this` (TurnSandbox), found by a real turn.
   const terminal = session.terminal;
-  const read = terminal?.readFileBytes ? (path: string) => terminal.readFileBytes!(path) : undefined;
-  if (!read) return fail("There is no file to deliver: no terminal box ran in this turn. Make the file in the terminal first.");
+  const fromBox = terminal?.readFileBytes ? (path: string) => terminal.readFileBytes!(path) : undefined;
+  // A screenshot view_page or use_page kept this turn, by the path it gave (lib/agent/tools.ts): the
+  // evidence reaches the user even when no box ran, as Claude Code's verify sends its screenshots.
+  const kept = session.screenshots;
+  if (!fromBox && !kept?.size) return fail("There is no file to deliver: no terminal box ran in this turn. Make the file in the terminal first.");
+  const read = async (path: string) => kept?.get(path) ?? (fromBox ? fromBox(path) : null);
   // Every file is checked before any is uploaded: a refusal uploads nothing.
   const ready: { name: string; bytes: Uint8Array; description?: string }[] = [];
   for (const f of files) {

@@ -886,6 +886,25 @@ describe("use_page", () => {
     assert.equal(sin.images, undefined);
   });
 
+  // LA PRUEBA TIENE QUE LLEGAR A QUIEN LEE (27/10), como el verify de Claude Code («a file path is only
+  // evidence if the person reading the report can open it»: manda las capturas) y el
+  // browser_take_screenshot de Playwright MCP, que guarda la captura y dice dónde: cada captura queda
+  // en el turno por una ruta, que present entrega.
+  it("each screenshot is kept for the turn at a path, in order, across view_page and use_page", async () => {
+    const { deps } = makeDeps();
+    const captura = { mimeType: "image/jpeg", dataBase64: "SlBFRw==" };
+    const con = { ...deps, usarPagina: async () => ({ informe: "1. screenshot of the screen → attached below as image 1.", images: [captura] }) };
+    const session = makeSession();
+    const vista = await runAgentTool(session, con, "view_page", { mode: "screenshot" });
+    assert.deepEqual(vista.response.screenshots, ["/tmp/screenshots/1.jpg"]);
+    const uso = await runAgentTool(session, con, "use_page", { steps: [{ click: "Play" }, { screenshot: "screen" }] });
+    assert.deepEqual(uso.response.screenshots, ["/tmp/screenshots/2.jpg"]);
+    assert.deepEqual([...(session.screenshots?.keys() ?? [])], ["/tmp/screenshots/1.jpg", "/tmp/screenshots/2.jpg"]);
+    assert.equal(Buffer.from(session.screenshots!.get("/tmp/screenshots/2.jpg")!).toString(), "JPEG");
+    const sin = await runAgentTool(makeSession(), conNavegador(deps, []), "use_page", { steps: [{ click: "Agregar" }] });
+    assert.equal(sin.response.screenshots, undefined);
+  });
+
   it("🔴 una entrada que no valida NO abre el navegador, y dice qué cambiar", async () => {
     const { deps } = makeDeps();
     const visitas: Record<string, unknown>[] = [];
