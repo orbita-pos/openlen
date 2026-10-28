@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { envVarsFor } from "@/lib/apps/env/store";
 import { getEnvironment } from "@/lib/backend/environments";
 import { listProjectFiles } from "@/lib/backend/files";
+import { textFilesOnly } from "@/lib/files/blob-pointer";
 import { backendConfigured } from "@/lib/backend/pg";
 import { adoptLegacyEnvironment, backendProjectFor, getBackendByProject } from "@/lib/backend/registry";
 import type { BackendProject } from "@/lib/backend/router";
@@ -60,7 +61,8 @@ export async function loadReviewInputs(projectId: string): Promise<ReviewInputs 
     app,
     homeHtml: row.data?.html ?? "",
     pages: Object.fromEntries(Object.entries(row.data?.pages ?? {}).map(([slug, p]) => [slug, p.html])),
-    files,
+    // Los binarios no se revisan (spec local 2026-10-28): no son código.
+    files: textFilesOnly(files),
     productionEnv,
     hasBackend: draft.hasBackend,
     schema: schemaDump,

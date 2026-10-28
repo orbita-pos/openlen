@@ -44,3 +44,8 @@ export function isBinaryBytes(bytes: Uint8Array): boolean {
 export function sizeOf(content: string): number {
   return parsePointer(content)?.size ?? encoder.encode(content).byteLength;
 }
+
+/** The text files only: what reads code (the security review) has nothing to read in a binary. */
+export function textFilesOnly(files: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(files).filter(([, content]) => !isBlobPointer(content)));
+}

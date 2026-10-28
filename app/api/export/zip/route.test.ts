@@ -83,3 +83,21 @@ describe("POST /api/export/zip — la carpeta", () => {
     expect(zip.file("memoria/a.md")).toBeNull();
   });
 });
+
+// FICHEROS AL NIVEL DE CLAUDE CODE (spec local 2026-10-28): un binario entra en el zip con sus BYTES.
+describe("POST /api/export/zip — los binarios", () => {
+  it("🔴 una imagen de la carpeta va al zip con sus bytes, nunca con el texto de su puntero", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { __setStorageForTest } = await import("@/lib/storage");
+    const { FilesystemStorage } = await import("@/lib/storage/filesystem");
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-zip-bin-")), publicUrlBase: "/uploads" }));
+    const { makePointer, putBlob } = await import("@/lib/files/blob");
+    const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01]);
+    mocks.carpeta["/img/a.png"] = makePointer(await putBlob(PNG));
+    const zip = await leer(await pide({ html: HTML, projectId: "p1" }));
+    expect(Array.from((await zip.file("img/a.png")?.async("uint8array")) ?? [])).toEqual(Array.from(PNG));
+    __setStorageForTest(null);
+  });
+});
