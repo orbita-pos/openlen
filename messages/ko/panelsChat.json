@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey는 항상 최대한 깊이 생각합니다",
     "soloLectura": "이 프로젝트는 볼 수만 있고 바꿀 수는 없습니다. 소유자에게 편집자 권한을 요청하세요.",
     "attachFile": "파일 첨부",
-    "attachFileHint": "PDF, 엑셀, 워드, 파워포인트 등: 필요할 때 Len이 읽어요",
+    "attachFileHint": "PDF, Excel, Word, PowerPoint 또는 동영상: Len이 필요할 때 문서를 읽고 동영상은 페이지에 넣어요",
     "removeFile": "파일 빼기",
     "skills": "스킬",
     "noSkills": "일치하는 스킬이 없습니다",
     "fileLimit": "메시지당 파일은 4개까지예요.",
     "fileTooBig": "그 파일은 20MB를 넘어요.",
     "fileNotSupported": "Len은 PDF, 엑셀(.xlsx), 워드(.docx), 파워포인트(.pptx), CSV 파일을 읽어요.",
-    "fileFailed": "파일을 올리지 못했어요. 다시 시도해 주세요."
+    "fileFailed": "파일을 올리지 못했어요. 다시 시도해 주세요.",
+    "dropHere": "놓아서 첨부",
+    "uploading": "업로드 중…",
+    "cancelUpload": "업로드 취소",
+    "dropNotSupported": "{names}은(는) 첨부할 수 없어요. OpenLen은 사진, PDF, Excel, Word, PowerPoint, CSV, 동영상을 받아요.",
+    "dropTooBig": "너무 커서 첨부할 수 없어요: {names}",
+    "dropLimit": "{count, plural, other {파일 #개}}는 첨부되지 않았어요. 메시지당 사진 4장, 파일 4개까지예요.",
+    "fileFailedNamed": "{name}을(를) 올리지 못했어요. 다시 시도해 주세요."
   },
   "equipo": {
     "paraLen": "Len에게",

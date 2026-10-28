@@ -13,7 +13,7 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { useSkillSlash, type MenuSkill } from "./skill-menu";
-import { ArrowUp, Crosshair, FileText, Flag, ImageIcon, KeyRound, ListChecks, MessageSquare, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Crosshair, FileText, Film, Flag, ImageIcon, KeyRound, ListChecks, Loader, MessageSquare, Plus, Square, X } from "lucide-react";
 
 import { MandoEsfuerzo } from "../panels/mando-esfuerzo";
 import { ModePicker } from "../panels/mode-picker";
@@ -23,7 +23,9 @@ import { findSecretsInText, type FoundSecret } from "@/lib/apps/env/secret-patte
 import type { EsfuerzoAgente, NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas";
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
-import { kindOf, type AttachedFile } from "@/lib/projects/chat-files";
+import { isVideoFile, kindOf, type AttachedFile } from "@/lib/projects/chat-files";
+import type { PendingUpload } from "./use-chat-attachments";
+import { pastedFiles } from "@/lib/workspace-v2/classify-dropped-files";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
@@ -52,6 +54,11 @@ export function ChatComposer({
   attachedFiles = [],
   onAttachPdf,
   onRemoveFile,
+  attachedImages,
+  onRemoveImage,
+  pendingUploads = [],
+  onCancelUpload,
+  onPasteFiles,
   effort,
   effortLevels,
   effortResolvesTo,
@@ -93,6 +100,14 @@ export function ChatComposer({
   attachedFiles?: readonly AttachedFile[];
   onAttachPdf?: () => void;
   onRemoveFile?: (url: string) => void;
+  /** DROP AND PASTE (spec local 2026-10-27-chat-drop-and-images): the message's photos, one chip
+   *  each (without it, the one `attachedImage`); the uploads still on their way, which hold the
+   *  message until they land; and the files a paste brings, for whoever uploads them. */
+  attachedImages?: readonly AttachedImage[];
+  onRemoveImage?: (url: string) => void;
+  pendingUploads?: readonly PendingUpload[];
+  onCancelUpload?: (id: string) => void;
+  onPasteFiles?: (files: File[]) => void;
   effort: EsfuerzoAgente;
   effortLevels: readonly NivelEsfuerzo[];
   effortResolvesTo: NivelEsfuerzo;
@@ -145,6 +160,9 @@ export function ChatComposer({
   // Con comentarios esperando se puede mandar sin escribir nada más.
   const hasContent = value.trim().length > 0 || comments.length > 0;
   const typed = value.trim().length > 0;
+  const images = attachedImages ?? (attachedImage ? [attachedImage] : []);
+  // A message waits for its uploads: what's still uploading would be left behind.
+  const uploading = pendingUploads.length > 0;
   const tr = t as unknown as (k: string, v?: Record<string, string>) => string;
   const arroba = useArroba(value, onChange, textareaRef, mencionables?.gente ?? NADIE, mencionables?.conLen ?? false, mencionables?.colorDe);
   const barra = useSkillSlash(value, onChange, textareaRef, skills ?? SIN_SKILLS);
@@ -157,6 +175,7 @@ export function ChatComposer({
   useEffect(() => setSecretoPendiente(null), [value]);
   /** Mandar (o dirigir), salvo que lleve una clave y el servidor guarde secretos. */
   const enviar = async () => {
+    if (uploading) return;
     if (secretGuard) {
       const found = findSecretsInText(value);
       if (found.length > 0 && (await secretGuard.available())) {
@@ -202,7 +221,7 @@ export function ChatComposer({
             </button>
           </div>
         )}
-        {(comments.length > 0 || scopedSelection || attachedImage || attachedFiles.length > 0 || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
+        {(comments.length > 0 || scopedSelection || images.length > 0 || attachedFiles.length > 0 || uploading || (planMode && onTogglePlan) || (goalChip && onToggleGoal)) && (
           <div className="mb-1 flex basis-full flex-wrap gap-1.5">
             {/* PIEZA 7 · LA FICHA «PLAN», la de DeepSeek: está mientras dura el
                 modo plan y su ✕ lo apaga. Mientras Len trabaja no se toca (se
@@ -237,19 +256,31 @@ export function ChatComposer({
                 <span className="min-w-0 truncate font-mono text-[11px]">{scopedSelection.hint}</span>
               </Chip>
             )}
-            {attachedImage && (
-              <Chip onRemove={onClearAttachedImage} removeLabel={t("composer.removeImage")}>
+            {images.map((img) => (
+              <Chip key={img.url} onRemove={onRemoveImage ? () => onRemoveImage(img.url) : onClearAttachedImage} removeLabel={t("composer.removeImage")}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={attachedImage.url} alt="" className="h-[18px] w-[18px] rounded object-cover" />
+                <img src={img.url} alt="" className="h-[18px] w-[18px] rounded object-cover" />
                 <b className="shrink-0 font-semibold">{t("composer.image")}</b>
-                <span className="min-w-0 truncate">{attachedImage.alt || hostOf(attachedImage.url)}</span>
+                <span className="min-w-0 truncate">{img.alt || hostOf(img.url)}</span>
               </Chip>
-            )}
+            ))}
             {attachedFiles.map((f) => (
               <Chip key={f.url} title={f.name} {...(onRemoveFile ? { onRemove: () => onRemoveFile(f.url) } : {})} removeLabel={t("composer.removeFile")}>
-                <FileText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                {isVideoFile(f) ? (
+                  <Film size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                ) : (
+                  <FileText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+                )}
                 <b className="shrink-0 font-semibold">{kindOf(f).toUpperCase()}</b>
                 <span className="min-w-0 max-w-[200px] truncate">{f.name}</span>
+              </Chip>
+            ))}
+            {pendingUploads.map((u) => (
+              <Chip key={u.id} title={u.name} {...(onCancelUpload ? { onRemove: () => onCancelUpload(u.id) } : {})} removeLabel={t("composer.cancelUpload")}>
+                <span role="status" className="inline-flex min-w-0 items-center gap-1.5">
+                  <Loader size={12} className="shrink-0 animate-spin text-[var(--nc-accent-text)] motion-reduce:animate-none" aria-label={t("composer.uploading")} />
+                  <span className="min-w-0 max-w-[200px] truncate">{u.name}</span>
+                </span>
               </Chip>
             ))}
           </div>
@@ -264,6 +295,16 @@ export function ChatComposer({
             onSelect: alMoverElCursor,
             onClick: alMoverElCursor,
             onKeyUp: alMoverElCursor,
+            // A screenshot or a copied photo is attached; the text, if any, still pastes.
+            ...(onPasteFiles
+              ? {
+                  onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+                    const { files, text } = pastedFiles(e.clipboardData);
+                    if (files.length > 0) onPasteFiles(files);
+                    if (files.length > 0 && !text) e.preventDefault();
+                  },
+                }
+              : {}),
             onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
               // Con el desplegable del @ abierto, Enter/Tab/flechas son suyos.
               if (arroba.tecla(e)) return;
@@ -271,7 +312,7 @@ export function ChatComposer({
               if (barra.tecla(e)) return;
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (!bloqueado) void enviar();
+                if (!bloqueado && !uploading) void enviar();
               }
             },
             rows: 1,
@@ -441,7 +482,7 @@ export function ChatComposer({
           <button
             type="button"
             onClick={busy && !typed ? onStop : () => void enviar()}
-            disabled={(!busy && !hasContent) || (bloqueado && typed)}
+            disabled={(!busy && !hasContent) || (bloqueado && typed) || (uploading && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             className={`order-4 ml-1 flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${

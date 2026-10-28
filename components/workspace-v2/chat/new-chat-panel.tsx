@@ -25,8 +25,11 @@ import { useSession } from "next-auth/react";
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
-import { ATTACHMENT_ACCEPT, uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
-import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
+import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
+import { useChatAttachments, type ChatAttachmentMessages } from "./use-chat-attachments";
+import { useFileDrop } from "./use-file-drop";
+import { DropOverlay } from "./drop-overlay";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
@@ -204,6 +207,26 @@ function AgentChatView({
     pendingAttachments,
   });
   const { seguirTurnoDelHilo } = chat;
+  // DROP, PASTE OR PICK (spec local 2026-10-27-chat-drop-and-images): every way in uploads the same way.
+  const attachMessages = useMemo<ChatAttachmentMessages>(
+    () => ({
+      notSupported: (names) => t("composer.dropNotSupported", { names }),
+      tooBig: (names) => t("composer.dropTooBig", { names }),
+      limit: (count) => t("composer.dropLimit", { count }),
+      failed: (name) => t("composer.fileFailedNamed", { name }),
+    }),
+    [t],
+  );
+  const attach = useChatAttachments({
+    projectId,
+    images: chat.attachedImages,
+    setImages: chat.setAttachedImages,
+    files: chat.attachedFiles,
+    setFiles: chat.setAttachedFiles,
+    notify: toast.error,
+    messages: attachMessages,
+  });
+  const drop = useFileDrop({ enabled: !soloLectura, onFiles: attach.addFiles });
   // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): una clave en el mensaje se
   // guarda como secreto en vez de mandársela a Len. Se pregunta UNA vez si el
   // servidor guarda secretos (sin funciones, el compositor manda como siempre).
@@ -365,7 +388,7 @@ function AgentChatView({
           menciones: destino.personas.map((p) => p.userId),
           idioma: document.documentElement.lang || undefined,
           // La foto adjunta viaja con el mensaje, como un adjunto en Slack.
-          ...(chat.attachedImage ? { fotos: [chat.attachedImage] } : {}),
+          ...(chat.attachedImages.length > 0 ? { fotos: chat.attachedImages } : {}),
         }),
       }).catch(() => null);
       if (!r?.ok) {
@@ -395,7 +418,8 @@ function AgentChatView({
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
   const body = (
-    <div className={`nc flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`}>
+    <div className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`} {...drop.handlers}>
+      {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
       <ChatHeader
         layout={layout}
         onLayout={setChatLayout}
@@ -515,9 +539,14 @@ function AgentChatView({
             attachedImage={chat.attachedImage}
             onAttachImage={() => chat.setImageModalOpen(true)}
             onClearAttachedImage={() => chat.setAttachedImage(null)}
+            attachedImages={chat.attachedImages}
+            onRemoveImage={(url) => chat.setAttachedImages((prev) => prev.filter((i) => i.url !== url))}
             attachedFiles={chat.attachedFiles}
             {...(soloLectura ? {} : { onAttachPdf: () => pdfInput.current?.click() })}
             onRemoveFile={(url) => chat.setAttachedFiles(chat.attachedFiles.filter((f) => f.url !== url))}
+            pendingUploads={attach.pending}
+            onCancelUpload={attach.cancel}
+            {...(soloLectura ? {} : { onPasteFiles: attach.addFiles })}
             effort={chat.esfuerzo}
             effortLevels={chat.esfuerzoNiveles}
             effortResolvesTo={chat.esfuerzoResuelveA}
@@ -567,16 +596,13 @@ function AgentChatView({
       <input
         ref={pdfInput}
         type="file"
+        multiple
         accept={ATTACHMENT_ACCEPT}
         className="hidden"
-        onChange={async (e) => {
-          const picked = e.target.files?.[0];
+        onChange={(e) => {
+          const picked = Array.from(e.target.files ?? []);
           e.target.value = "";
-          if (!picked) return;
-          if (chat.attachedFiles.length >= MAX_FILES_PER_MESSAGE) return void toast.error(t("composer.fileLimit"));
-          const r = await uploadAttachment(picked, projectId);
-          if (!r.ok) return void toast.error(t(r.reason === "too_big" ? "composer.fileTooBig" : r.reason === "not_supported" ? "composer.fileNotSupported" : "composer.fileFailed"));
-          chat.setAttachedFiles([...chat.attachedFiles, r.file]);
+          attach.addFiles(picked);
         }}
       />
       <ReplaceAssetModal
@@ -585,7 +611,11 @@ function AgentChatView({
         projectId={projectId}
         onClose={() => chat.setImageModalOpen(false)}
         onPick={(payload) => {
-          if (payload.url) chat.setAttachedImage({ url: payload.url, alt: payload.alt });
+          // One more photo for the message, up to the limit.
+          if (payload.url) {
+            const img = { url: payload.url, ...(payload.alt ? { alt: payload.alt } : {}) };
+            chat.setAttachedImages((prev) => [...prev.filter((i) => i.url !== img.url), img].slice(0, MAX_PHOTOS_PER_MESSAGE));
+          }
           chat.setImageModalOpen(false);
         }}
       />

@@ -60,6 +60,30 @@ async function render(props: Record<string, unknown>, capturar: (c: ReturnType<t
 }
 const tick = () => act(async () => void (await new Promise((r) => setTimeout(r, 50))));
 
+describe("several photos attached in the chat (spec local 2026-10-27-chat-drop-and-images)", () => {
+  it("sends every attached photo, up to 4, and clears them", async () => {
+    const cuerpos = stubAgent([TURNO, ERROR]);
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render({}, (c) => (chat = c));
+    await act(async () => chat!.setAttachedImages([{ url: "https://u/1.jpg" }, { url: "https://u/2.jpg" }]));
+    expect(chat!.attachedImage).toEqual({ url: "https://u/1.jpg" });
+    await act(async () => void chat!.send("ponlas"));
+    await tick();
+    expect(cuerpos[0]!.attachedImages).toEqual([{ url: "https://u/1.jpg" }, { url: "https://u/2.jpg" }]);
+    expect(chat!.attachedImages).toEqual([]);
+    expect(chat!.turns.at(-1)!.attachedImages).toEqual([{ url: "https://u/1.jpg" }, { url: "https://u/2.jpg" }]);
+  });
+
+  it("the old one-photo setter still works", async () => {
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render({}, (c) => (chat = c));
+    await act(async () => chat!.setAttachedImage({ url: "https://u/a.jpg" }));
+    expect(chat!.attachedImages).toEqual([{ url: "https://u/a.jpg" }]);
+    await act(async () => chat!.setAttachedImage(null));
+    expect(chat!.attachedImages).toEqual([]);
+  });
+});
+
 describe("a PDF attached in the chat", () => {
   it("🔴 goes with the message as attachedFiles, stays on the turn and leaves the composer; Retry resends it", async () => {
     const cuerpos = stubAgent([TURNO, ERROR]);

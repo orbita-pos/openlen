@@ -39,3 +39,12 @@ describe("a PDF in the user's bubble", () => {
     expect(pintar({}).querySelector("a[href$='.pdf']")).toBeNull();
   });
 });
+
+describe("a video in the user's bubble (spec local 2026-10-27-chat-drop-and-images)", () => {
+  it("links to it with a film icon, not a document one", () => {
+    const host = pintar({ attachedFiles: [{ url: "/uploads/uploads/p1/vid.mp4", name: "hero.mp4", size: 3_000_000, kind: "mp4" }] });
+    const a = host.querySelector<HTMLAnchorElement>('a[href="/uploads/uploads/p1/vid.mp4"]');
+    expect(a?.textContent).toContain("hero.mp4");
+    expect(a?.querySelector("svg")?.getAttribute("class")).toContain("lucide-film");
+  });
+});

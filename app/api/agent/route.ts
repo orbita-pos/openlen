@@ -72,7 +72,7 @@ import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
 import { MAX_PHOTOS_PER_MESSAGE, photosForRow, photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
-import { attachmentPath, filesOf, kindFromName, kindOf, MAX_FILES_PER_MESSAGE, MAX_PDF_BYTES, type AttachedFile } from "@/lib/projects/chat-files";
+import { attachmentPath, filesOf, isVideoFile, kindFromName, kindOf, MAX_FILES_PER_MESSAGE, MAX_PDF_BYTES, MAX_VIDEO_BYTES, videoKindFromName, type AttachedFile, type AttachedKind } from "@/lib/projects/chat-files";
 import { readAttachmentBytes } from "@/lib/agent/attachment-bytes";
 import { renderPdfPages } from "@/lib/agent/pdf-pages";
 import type { Message } from "@/lib/ai-gateway";
@@ -590,7 +590,9 @@ async function correrTurno(
     // su propio preludio.
     usarPagina,
     // Un PDF adjunto (26/10): sus bytes, y sus páginas dibujadas en los ojos.
-    readAttachment: (file: AttachedFile) => readAttachmentBytes(file.url, { origen: req.url, kind: kindOf(file) }),
+    // A video is never read (it isn't in `attachments`); the guard keeps it that way.
+    readAttachment: (file: AttachedFile) =>
+      isVideoFile(file) ? Promise.resolve(null) : readAttachmentBytes(file.url, { origen: req.url, kind: kindOf(file) as AttachedKind }),
     pdfPages: renderPdfPages,
   };
   // Stripe (spec local 2026-10-21-stripe-integration): live mode is the owner's payments and
@@ -771,21 +773,23 @@ async function correrTurno(
   }
   attachedImages.splice(MAX_PHOTOS_PER_MESSAGE);
 
-  // LOS PDF DEL MENSAJE (26/10): ficheros que Len lee con Read cuando decide,
-  // como en Claude Code. Sólo direcciones http(s) que acaban en .pdf, con su
-  // nombre y su tamaño; uno inválido se descarta en silencio, como una foto.
+  // LOS FICHEROS DEL MENSAJE (26/10): ficheros que Len lee con Read cuando decide,
+  // como en Claude Code — un PDF, uno de oficina o un CSV —, y un vídeo (27/10), que
+  // sólo viaja por su dirección para ponerlo en la página. Direcciones http(s) con su
+  // extensión, su nombre y su tamaño; uno inválido se descarta en silencio, como una foto.
   const leerFicheroAdjunto = (raw: unknown): AttachedFile | null => {
     if (!raw || typeof raw !== "object") return null;
     const r = raw as { url?: unknown; name?: unknown; size?: unknown };
     const url = typeof r.url === "string" ? r.url.trim() : "";
     const name = typeof r.name === "string" ? r.name.trim().slice(0, 120) : "";
     const size = typeof r.size === "number" && Number.isFinite(r.size) && r.size >= 0 ? Math.round(r.size) : null;
-    if (!url || url.length > ATTACHED_URL_MAX || !name || size === null || size > MAX_PDF_BYTES) return null;
+    if (!url || url.length > ATTACHED_URL_MAX || !name || size === null) return null;
     try {
       const parsed = new URL(url, req.url);
-      // A PDF, an office file or a CSV (spec local 2026-10-26-len-skills, §4.8), by its address.
-      const kind = kindFromName(parsed.pathname);
+      // A PDF, an office file or a CSV (spec local 2026-10-26-len-skills, §4.8), or a video, by its address.
+      const kind = kindFromName(parsed.pathname) ?? videoKindFromName(parsed.pathname);
       if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !kind) return null;
+      if (size > (videoKindFromName(parsed.pathname) ? MAX_VIDEO_BYTES : MAX_PDF_BYTES)) return null;
       // A PDF stays as before, without `kind`: the rows and the history it rebuilds don't change.
       return { url: parsed.href, name, size, ...(kind !== "pdf" ? { kind } : {}) };
     } catch {
@@ -1226,7 +1230,10 @@ async function correrTurno(
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
     // Los PDF de la conversación (26/10), por la ruta con la que Read los abre:
     // los de este mensaje y los de los turnos que Len ve.
-    attachments: new Map([...attachedFiles, ...filasDelHistorial.flatMap((f) => filesOf(f.attachedFiles))].map((f) => [attachmentPath(f), f] as const)),
+    // A video only travels by its URL: never to Read nor to the box.
+    attachments: new Map(
+      [...attachedFiles, ...filasDelHistorial.flatMap((f) => filesOf(f.attachedFiles))].filter((f) => !isVideoFile(f)).map((f) => [attachmentPath(f), f] as const),
+    ),
     // H3 — la memoria que va en el contexto cuenta como LEÍDA, como el CLAUDE.md
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([

@@ -1811,6 +1811,36 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(typeof deps.pdfPages).toBe("function");
   });
 
+  // A VIDEO ATTACHED (27/10, spec local 2026-10-27-chat-drop-and-images): it goes on
+  // the row and in the message by its URL, up to 50 MB, but never to Read or the box.
+  it("a video attached: on the row and in the message, never among the files Read opens", async () => {
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({
+            projectId: "p1",
+            prompt: "ponlo de fondo",
+            attachedFiles: [
+              { url: "/uploads/p1/vid777.mp4", name: "hero.mp4", size: 30 * 1024 * 1024, kind: "mp4" },
+              { url: "/uploads/p1/big888.mov", name: "big.mov", size: 51 * 1024 * 1024, kind: "mov" },
+              { url: "/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 },
+            ],
+          }),
+        }),
+      ),
+    );
+    const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedFiles: unknown }])[1];
+    expect(fila.attachedFiles).toEqual([
+      { url: "http://localhost/uploads/p1/vid777.mp4", name: "hero.mp4", size: 30 * 1024 * 1024, kind: "mp4" },
+      { url: "http://localhost/uploads/p1/abc123.pdf", name: "menu.pdf", size: 2048 },
+    ]);
+    const args = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [{ runTool(n: string, a: unknown): Promise<unknown> }])[0];
+    await args.runTool("Read", { file_path: "/.openlen/attachments/abc123/menu.pdf" });
+    const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ attachments: Map<string, unknown> }];
+    expect([...session.attachments.keys()]).toEqual(["/.openlen/attachments/abc123/menu.pdf"]);
+  });
+
   // The URL chip is gone (26/10): a URL is text in the message and Len looks at
   // it with `view_page url`. A tab still open from before the deploy may send
   // the old `styleDirection`; it reaches nothing the model reads.
