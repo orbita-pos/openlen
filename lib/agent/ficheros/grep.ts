@@ -7,6 +7,7 @@
  * `multiline`, `glob`, `type`— y la salida que Claude Code le da. Dicho en voz
  * alta: la sintaxis es la de JavaScript, no la de Rust; casi siempre coinciden.
  */
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 import { CWD, alcanceDeBusqueda, rutaRelativa, sugerirRuta } from "./sitio";
 import { normalizarFinales, type SitioLegible } from "./read";
 import { partirGlobs, pasaLosGlobs } from "./patron-glob";
@@ -138,10 +139,13 @@ export function ejecutarGrep(entrada: EntradaGrep, sitio: SitioBuscable): Result
   }
   const ordenados = [...candidatos].sort((a, b) => a.localeCompare(b));
 
-  const porFichero = ordenados.map((ruta) => ({
-    ruta,
-    lineas: lineasQueCasan(normalizarFinales(sitio.contenido(ruta) ?? ""), expresion, entrada.multiline === true),
-  }));
+  // Un binario no se busca, como en ripgrep sin -a (spec local 2026-10-28): su puntero no es su texto.
+  const porFichero = ordenados
+    .filter((ruta) => !isBlobPointer(sitio.contenido(ruta) ?? ""))
+    .map((ruta) => ({
+      ruta,
+      lineas: lineasQueCasan(normalizarFinales(sitio.contenido(ruta) ?? ""), expresion, entrada.multiline === true),
+    }));
   const conAlgo = porFichero.filter((f) => f.lineas.size > 0);
 
   if (modo === "files_with_matches") {

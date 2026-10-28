@@ -220,6 +220,9 @@ export interface AgentDeps {
    *  páginas —`/supabase/`, `/tests/`, `js/`, `css/`, `data/`…—, por ruta.
    *  Opcional: sin él no hay carpeta. */
   projectFiles?(projectId: string): Promise<Record<string, string>>;
+  /** Lo que ocupa el proyecto entero en su «disco» (spec local 2026-10-28): páginas, carpeta e historial
+   *  de git (lib/files/quota.ts). Sin él, la carpeta cuenta sola. */
+  projectUsageBytes?(projectId: string): Promise<number>;
   /** OPEN NPM (spec 2026-10-13): install packages for an app; returns the files to save and notes for Len. */
   installPackages?(files: Readonly<Record<string, string>>, app: AppDeProyecto, request: InstallRequest): Promise<InstallOutcome>;
   /** APPS WEB (spec local 2026-10-07-apps): lo que vale `import.meta.env` en la
@@ -638,6 +641,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async projectFiles(projectId) {
       const { listProjectFiles } = await import("@/lib/backend/files");
       return listProjectFiles(projectId);
+    },
+    async projectUsageBytes(projectId) {
+      const { projectUsageBytes } = await import("@/lib/files/quota");
+      return projectUsageBytes(projectId);
     },
     async entornoDeLaApp(projectId) {
       const { entornoPublicoDeLaApp } = await import("@/lib/apps/entorno");
