@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey denkt altijd zo grondig mogelijk na",
     "soloLectura": "Je kunt dit project bekijken, maar niet wijzigen. Vraag de eigenaar om bewerkrechten.",
     "attachFile": "Een bestand bijvoegen",
-    "attachFileHint": "Een pdf, een Excel-, Word- of PowerPoint-bestand: Len leest het wanneer het nodig is",
+    "attachFileHint": "Een pdf, een Excel-, Word- of PowerPoint-bestand of een video: Len leest documenten wanneer nodig en zet video's op je pagina",
     "removeFile": "Het bestand verwijderen",
     "skills": "Skills",
     "noSkills": "Geen skill komt overeen",
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",
     "fileNotSupported": "Len leest pdf-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) en CSV-bestanden.",
-    "fileFailed": "Het bestand kon niet worden geüpload. Probeer het opnieuw."
+    "fileFailed": "Het bestand kon niet worden geüpload. Probeer het opnieuw.",
+    "dropHere": "Loslaten om toe te voegen",
+    "uploading": "Uploaden…",
+    "cancelUpload": "Upload annuleren",
+    "dropNotSupported": "{names} kan niet worden toegevoegd: OpenLen neemt foto's, pdf, Excel, Word, PowerPoint, CSV en video's.",
+    "dropTooBig": "Te groot om toe te voegen: {names}.",
+    "dropLimit": "{count, plural, one {# bestand is} other {# bestanden zijn}} niet toegevoegd: maximaal 4 foto's en 4 bestanden per bericht.",
+    "fileFailedNamed": "{name} kon niet worden geüpload. Probeer het opnieuw."
   },
   "equipo": {
     "paraLen": "Aan Len",

@@ -11,7 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AtSign, Crosshair, CornerDownRight, FileText, Flag } from "lucide-react";
+import { AtSign, Crosshair, CornerDownRight, FileText, Film, Flag } from "lucide-react";
+import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
@@ -144,7 +145,11 @@ export function UserMessage({
               rel="noopener noreferrer"
               className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted hover:fg"
             >
-              <FileText size={13} className="shrink-0 text-[var(--nc-accent-text)]" />
+              {isVideoFile(f) ? (
+                <Film size={13} className="shrink-0 text-[var(--nc-accent-text)]" />
+              ) : (
+                <FileText size={13} className="shrink-0 text-[var(--nc-accent-text)]" />
+              )}
               <span className="min-w-0 truncate">{f.name}</span>
             </a>
           ))}

@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey denkt immer so gründlich wie möglich",
     "soloLectura": "Du kannst dieses Projekt ansehen, aber nicht ändern. Bitte den Eigentümer um Bearbeitungszugriff.",
     "attachFile": "Datei anhängen",
-    "attachFileHint": "Ein PDF, eine Excel-, Word- oder PowerPoint-Datei: Len liest sie, wenn es gebraucht wird",
+    "attachFileHint": "Ein PDF, eine Excel-, Word- oder PowerPoint-Datei oder ein Video: Len liest Dokumente, wenn es gebraucht wird, und setzt Videos auf deine Seite",
     "removeFile": "Datei entfernen",
     "skills": "Skills",
     "noSkills": "Keine Skill passt",
     "fileLimit": "Bis zu 4 Dateien pro Nachricht.",
     "fileTooBig": "Diese Datei ist größer als 20 MB.",
     "fileNotSupported": "Len liest PDF-, Excel- (.xlsx), Word- (.docx), PowerPoint- (.pptx) und CSV-Dateien.",
-    "fileFailed": "Die Datei konnte nicht hochgeladen werden. Versuch es noch einmal."
+    "fileFailed": "Die Datei konnte nicht hochgeladen werden. Versuch es noch einmal.",
+    "dropHere": "Zum Anhängen loslassen",
+    "uploading": "Wird hochgeladen…",
+    "cancelUpload": "Hochladen abbrechen",
+    "dropNotSupported": "{names} kann nicht angehängt werden: OpenLen nimmt Fotos, PDF, Excel, Word, PowerPoint, CSV und Videos.",
+    "dropTooBig": "Zu groß zum Anhängen: {names}.",
+    "dropLimit": "{count, plural, one {# Datei wurde} other {# Dateien wurden}} nicht angehängt: höchstens 4 Fotos und 4 Dateien pro Nachricht.",
+    "fileFailedNamed": "{name} konnte nicht hochgeladen werden. Versuch es noch einmal."
   },
   "equipo": {
     "paraLen": "An Len",
