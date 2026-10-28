@@ -22,6 +22,9 @@ export const IMAGE_SEARCH = "image_search";
 export const IMAGE_SEARCHES_PER_TURN = 5;
 export const MAX_PHOTOS = 6;
 const TIMEOUT_MS = 15_000;
+/** A busy Commons (rate limit, maintenance) is tried once more after this. */
+const RETRY_AFTER_MS = 1_500;
+const BUSY = /HTTP (?:429|502|503|504)\b/;
 const MAX_QUERY = 200;
 /** Where the copies live in the uploads storage: the chat loads only what is under it. */
 export const COMMONS_PREFIX = "commons/";
@@ -36,7 +39,7 @@ export const IMAGE_SEARCH_DECLARATION = {
     "Searches Wikimedia Commons for real, freely licensed photos of a real thing: an animal, a place, a building, a person, an artwork, a dish. " +
     "Use it when a photo helps the answer (the user asks what something looks like) or when the user wants a real photo of something specific on their page; for generic page imagery use find_photo first. " +
     "It returns up to 6 photos, each with its URL and credit, and shows them to you, numbered in the same order: look at them and use only the ones that fit. " +
-    "To show photos in your reply, write them as Markdown images, ![title](url), with the URLs exactly as given, one after another for a gallery. " +
+    "To show photos in your reply, put them as Markdown images, ![title](url), with the URLs exactly as given, one after another with nothing between them: the chat shows them as a gallery and shows each photo's credit itself, so no captions or credits in the reply. " +
     "A photo you put on the user's page must carry its credit line next to it or in the footer. " +
     "Phrase the query as you would on Commons, in English when the subject has an English name. At most 5 searches per turn.",
   parameters: {
@@ -105,7 +108,16 @@ export async function toolImageSearch(session: AgentSession, deps: AgentDeps, ar
   try {
     let body: unknown;
     try {
-      body = await commons.search(commonsSearchUrl(query, MAX_PHOTOS + 2), control.signal);
+      const url = commonsSearchUrl(query, MAX_PHOTOS + 2);
+      try {
+        body = await commons.search(url, control.signal);
+      } catch (e) {
+        // Measured 28/10: Commons answers 503 («come back in ~30 s») to one search in two at times;
+        // a second try a moment later usually gets through. Once, and within the 15 s.
+        if (control.signal.aborted || !(e instanceof Error && BUSY.test(e.message))) throw e;
+        await new Promise((resolve) => setTimeout(resolve, RETRY_AFTER_MS));
+        body = await commons.search(url, control.signal);
+      }
     } catch (e) {
       const why = control.signal.aborted ? `no answer in ${TIMEOUT_MS / 1000} s` : e instanceof Error ? e.message : String(e);
       return fail(`Wikimedia Commons didn't answer (${why}). Try again later, or go on without photos.`);
@@ -136,6 +148,11 @@ export async function toolImageSearch(session: AgentSession, deps: AgentDeps, ar
     const text = [
       `Wikimedia Commons results for "${query}" (${kept.length} photo${kept.length === 1 ? "" : "s"}; each image below is numbered in this order):`,
       lines.join("\n"),
+      // Real turn, 28/10: with the credits in front of him Len captioned every photo, and the chat
+      // showed them one by one. The credit lines are for a page.
+      `For your reply, the ones that fit go one after another with nothing between them, like this; the chat shows each photo's credit itself:\n${kept
+        .map((k) => `![${md(k.photo.title)}](${k.url})`)
+        .join("\n")}`,
       NOTICE,
     ].join("\n\n");
     return { response: { ok: true, [CLAVE_TOOL_RESULT]: text }, images: kept.map((k) => k.image), action };
