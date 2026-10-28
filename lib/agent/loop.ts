@@ -335,6 +335,11 @@ export interface AgentLoopArgs {
    * 2.1, §3.1). Sin cliente delante —el turno ya no muere con él— no hay ni un ■
    * que lo pare. Es el `maxBudgetUsd` del SDK de Claude Code.
    *
+   * Y como él, se mira ENTRE llamadas: una sola respuesta larga puede pasarlo (27/10: un `Write` de
+   * 520 s dejó un turno en 6,37 con techo de 5). Claude Code hace lo mismo —su motor lo comprueba con
+   * cada mensaje que llega (`budget_exhausted`)—, DeepSeek no tiene techo, y lo que acota una
+   * respuesta es su `max_tokens`. El saldo nunca baja de 0 (`GREATEST(0, …)`).
+   *
    * La cuenta en créditos la hace quien llama (la tarifa es del cerebro, no del
    * bucle). Ausente ⇒ sin techo, como las evals y las pruebas.
    */

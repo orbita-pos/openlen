@@ -7,6 +7,11 @@
  *
  * `bundled.ts` adds the frontmatter and serves the files at /.openlen/skills/<name>/, like the skills
  * read from disk.
+ *
+ * Not cached, on purpose: the skills on disk are (`load()` in `bundled.ts`, as Claude Code loads its
+ * own once); these are built from code in about 0.5 ms (measured 27/10), and their text depends on
+ * the environment (`OPENLEN_MIN_CONTRACT` through the manual, the deliverables' renderers), which a
+ * cache would freeze.
  */
 import { artifactManuals } from "@/lib/agent/artifact-manuals";
 import { RUTA_GUIA, RUTA_LIBRERIAS } from "@/lib/agent/ficheros/manual";
