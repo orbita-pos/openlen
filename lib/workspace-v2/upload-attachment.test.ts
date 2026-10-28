@@ -3,7 +3,7 @@
 // carries (`attachedFiles`). Checked before sending a byte: a kind the chat takes, up to 20 MB.
 import { describe, expect, it, vi } from "vitest";
 
-import { ATTACHMENT_ACCEPT, uploadAttachment } from "./upload-attachment";
+import { ATTACHMENT_ACCEPT, uploadAttachment, uploadChatPhoto } from "./upload-attachment";
 
 const file = (bytes: number, name = "Menú.pdf", type = "application/pdf") => new File([new Uint8Array(bytes)], name, { type });
 
@@ -36,6 +36,47 @@ describe("uploadAttachment", () => {
   });
 
   it("the file pickers accept every kind the chat takes", () => {
-    for (const ext of [".pdf", ".xlsx", ".xlsm", ".docx", ".pptx", ".csv"]) expect(ATTACHMENT_ACCEPT).toContain(ext);
+    for (const ext of [".pdf", ".xlsx", ".xlsm", ".docx", ".pptx", ".csv", ".mp4", ".webm", ".mov"]) expect(ATTACHMENT_ACCEPT).toContain(ext);
+  });
+
+  it("a video uploads with its own type and comes back with its kind", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ url: "/uploads/uploads/p1/vid.mov", size: 4096 })));
+    const r = await uploadAttachment(file(4096, "clip.mov", ""), "p1", fetchImpl as never);
+    expect(r).toEqual({ ok: true, file: { url: "/uploads/uploads/p1/vid.mov", name: "clip.mov", size: 4096, kind: "mov" } });
+    const form = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1].body as FormData;
+    expect((form.get("file") as File).type).toBe("video/quicktime");
+  });
+
+  it("a video over 50 MB is refused before sending", async () => {
+    const fetchImpl = vi.fn(async () => new Response("{}"));
+    expect(await uploadAttachment(file(50 * 1024 * 1024 + 1, "big.mp4", "video/mp4"), "p1", fetchImpl as never)).toEqual({ ok: false, reason: "too_big" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("uploadChatPhoto", () => {
+  const ok = () => vi.fn(async (input: RequestInfo | URL) => (String(input).startsWith("data:") ? fetch(String(input)) : new Response(JSON.stringify({ url: "https://u/p.jpg" }))));
+
+  it("a GIF goes as is, without being reduced", async () => {
+    const reduce = vi.fn();
+    const fetchImpl = ok();
+    expect(await uploadChatPhoto(file(100, "risa.gif", "image/gif"), "p1", { reduce, fetchImpl: fetchImpl as never })).toEqual({ ok: true, image: { url: "https://u/p.jpg" } });
+    expect(reduce).not.toHaveBeenCalled();
+    const form = (fetchImpl.mock.calls.at(-1) as unknown as [string, RequestInit])[1].body as FormData;
+    expect((form.get("file") as File).type).toBe("image/gif");
+  });
+
+  it("a JPEG goes reduced", async () => {
+    const reduce = vi.fn(async () => ({ dataUrl: "data:image/jpeg;base64,/9j/" }));
+    const fetchImpl = ok();
+    expect(await uploadChatPhoto(file(100, "foto.jpg", "image/jpeg"), "p1", { reduce, fetchImpl: fetchImpl as never })).toEqual({ ok: true, image: { url: "https://u/p.jpg" } });
+    expect(reduce).toHaveBeenCalledTimes(1);
+  });
+
+  it("a photo that can't be read is not_supported; a GIF over 5 MB is too_big; a failed upload is failed", async () => {
+    const fetchImpl = vi.fn(async () => new Response("{}", { status: 500 }));
+    expect(await uploadChatPhoto(file(100, "rota.png", "image/png"), "p1", { reduce: async () => null, fetchImpl: fetchImpl as never })).toEqual({ ok: false, reason: "not_supported" });
+    expect(await uploadChatPhoto(file(5 * 1024 * 1024 + 1, "big.gif", "image/gif"), "p1", { fetchImpl: fetchImpl as never })).toEqual({ ok: false, reason: "too_big" });
+    expect(await uploadChatPhoto(file(100, "a.gif", "image/gif"), "p1", { fetchImpl: fetchImpl as never })).toEqual({ ok: false, reason: "failed" });
   });
 });
