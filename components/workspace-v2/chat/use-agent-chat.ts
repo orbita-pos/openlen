@@ -420,7 +420,12 @@ export function useAgentChat({
       /* storage blocked — default stays agent */
     }
   }, []);
-  const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
+  // The composer's photos (up to `MAX_PHOTOS_PER_MESSAGE`, spec local
+  // 2026-10-27-chat-drop-and-images); `attachedImage`/`setAttachedImage` stay for
+  // the callers that only know one.
+  const [attachedImages, setAttachedImages] = useState<readonly AttachedImage[]>([]);
+  const attachedImage = attachedImages[0] ?? null;
+  const setAttachedImage = useCallback((img: AttachedImage | null) => setAttachedImages(img ? [img] : []), []);
   /** Los PDF del compositor (26/10): Len los lee con Read cuando decide. */
   const [attachedFiles, setAttachedFiles] = useState<readonly AttachedFile[]>([]);
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -1241,12 +1246,13 @@ export function useAgentChat({
 
       // imageOverride lets Retry re-send the failed turn's original image;
       // undefined = use the live composer image, null = explicitly none.
-      const img = imageOverride !== undefined ? imageOverride : attachedImage;
       const imgs: readonly AttachedImage[] = opciones?.images?.length
         ? opciones.images.slice(0, MAX_PHOTOS_PER_MESSAGE)
-        : img
-          ? [img]
-          : [];
+        : imageOverride !== undefined
+          ? imageOverride
+            ? [imageOverride]
+            : []
+          : attachedImages.slice(0, MAX_PHOTOS_PER_MESSAGE);
       const files: readonly AttachedFile[] = (opciones?.files ?? attachedFiles).slice(0, MAX_FILES_PER_MESSAGE);
       // Snapshot the page scope at send time — preEditHtml is THIS page's
       // document, and the drip / apply / revert / undo legs must all write
@@ -2200,7 +2206,7 @@ export function useAgentChat({
     },
     [
       appendReasoning,
-      attachedImage,
+      attachedImages,
       attachedFiles,
       // El esfuerzo y el modo viajan en el cuerpo: sin ellos aquí, `send`
       // mandaba los de cuando se creó (el `auto` del arranque, antes de que el
@@ -2633,6 +2639,8 @@ export function useAgentChat({
     scrollRef,
     attachedImage,
     setAttachedImage,
+    attachedImages,
+    setAttachedImages,
     attachedFiles,
     setAttachedFiles,
     imageModalOpen,
