@@ -44,6 +44,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const tc = useTranslations("movil.chat");
   const te = useTranslations("movil.entrega");
   const tq = useTranslations("movil.equipo");
+  const ta = useTranslations("movil.adjuntos");
   const [lista, setLista] = useState<ProyectoEnLista[] | null>(null);
   const [sinRed, setSinRed] = useState(false);
   const [id, setId] = useState<string | null>(() => localStorage.getItem(ULTIMO));
@@ -158,6 +159,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     historial: p?.historial ?? SIN_HISTORIAL,
     alCambiarLaPagina: recargar,
     textoDeFotoSola: tc("fotoSola"),
+    textoDeArchivoSolo: ta("archivoSolo"),
   });
   const equipo = useEquipo({
     cliente, projectId: id, idioma, activo: panel === "equipo",
