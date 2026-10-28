@@ -5,6 +5,7 @@ import { documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PDF_FONT_FILES } from "@/lib/agent/sandbox/template-files";
 import { artifactManuals } from "@/lib/agent/artifact-manuals";
 import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
+import { findSecret } from "@/lib/agent/memory/secrets";
 import { CENTICREDITOS_POR_CONSULTA } from "@/lib/agent/web/buscar";
 import { CONSULTAS_POR_TURNO, PAGINAS_POR_TURNO } from "@/lib/agent/web/herramientas";
 import { skillCatalogMessage } from "./catalog-message";
@@ -28,6 +29,7 @@ describe("bundled skills", () => {
       "office-render",
       "office-xlsx",
       "pdf",
+      "setup-brand",
       "skill-creator",
       "verify",
     ]);
@@ -79,6 +81,7 @@ describe("bundled skills", () => {
         "researcher.md", "report-writer.md", "Coordinating Deep Research", "research_notes/", "Executing Research",
         "validate_palette.js", "design-system-agnostic", "read by people and executed by you",
         "Verification is runtime observation", "verifier-", "run-skill-generator",
+        "stylometry.py", "my-writing-style", "Voice is constant",
       ];
       for (const ctx of [{ app: null, env: { OPENLEN_ARTIFACTS: "1" } }, { app: null, env: {} }] as const) {
         for (const [path, text] of Object.entries(bundledSkillFiles(ctx))) {
@@ -133,6 +136,31 @@ describe("bundled skills", () => {
 
     it("verify answers with one of three verdicts", () => {
       for (const must of ["works", "fails", "couldn't verify"]) expect(text(), must).toContain(must);
+    });
+  });
+
+  // SETUP-BRAND (§4.5): Claude's setup-writing-style turned into the business's brand, saved as the
+  // project's own `brand` skill, from what the owner wrote and with their consent.
+  describe("setup-brand", () => {
+    const files = () => bundledSkillFiles();
+    // What makes Len load the saved skill by itself (spec §4.5).
+    const BRAND_DESCRIPTION =
+      "The business's own brand: its colors, type, logo and voice. Load it before making anything that shows the business's look or speaks in its voice: a page, a document, an email, a deliverable.";
+
+    it("setup-brand writes the project's brand skill", () => {
+      const text = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/SKILL.md`]!;
+      for (const must of ["/.len/skills/brand/SKILL.md", "consent", "never the texts you wrote"]) expect(text, must).toContain(must);
+    });
+
+    it("the brand template parses as a skill and has no example personal data", () => {
+      const template = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/references/brand-skill.md`]!;
+      const filled = template.replace(/\[\[[^\]]*\]\]/g, "Example");
+      const parsed = parseSkillFile(filled, "brand");
+      expect(parsed.ok, parsed.ok ? "" : parsed.error).toBe(true);
+      if (parsed.ok) expect(parsed.skill.description).toBe(BRAND_DESCRIPTION);
+      expect(findSecret(template)).toBeNull();
+      expect(template).not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
+      expect(template).not.toMatch(/\+?\d[\d\s().-]{7,}\d/);
     });
   });
 

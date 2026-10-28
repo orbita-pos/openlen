@@ -49,6 +49,16 @@ for looking and acting; Node's Playwright Test in `/tests` (the one in the box) 
 `sync_playwright` and its server helper; the look-then-act order and waiting for the page to load kept.
 Added on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.4).
 
+`setup-brand` is ours, from the facts of Anthropic's `setup-writing-style` skill (ask before reading,
+only what the user wrote shows their voice, a voice that stays and a tone per audience, no personal
+data: the pattern and never the value, saved as a skill), which has no open license; and, adapted, the
+structure of Anthropic's `brand-guidelines` (colors with their role, type, the brand as a skill) and the
+"create your own theme" step of `theme-factory` (github.com/anthropics/skills), Apache License 2.0,
+full text in `LICENSES/anthropic-skills.Apache-2.0.txt`. Changes: the brand is the business's, saved as
+the project's skill `brand`; it is read from the page, the project's memory and the owner's own texts;
+none of theme-factory's ready-made themes. Added on 2026-10-27 (spec local 2026-10-27-len-five-skills,
+§4.5).
+
 Generated skills (spec local 2026-10-27-len-five-skills, §4.2), built in `lib/agent/skills/generated.ts`
 from the same TypeScript that served `/.openlen/docs`: `artifact-*` (the deliverables manuals),
 `convert-to-app` (the app manual) and `frontend-design`. `frontend-design` is OpenLen's design guide

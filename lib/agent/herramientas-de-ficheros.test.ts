@@ -7,6 +7,8 @@
 // proyecto de verdad —los ficheros viven en `data.html` y `data.pages`— y cada
 // escritura por el camino de guardado de siempre.
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import assert from "node:assert/strict";
 import { runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "./tools";
@@ -832,6 +834,28 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.equal(out.response.ok, true, texto(out));
     assert.deepEqual(estado.upserts, [["project", s.projectId, "cotizar", SKILL, s.userId]]);
     assert.equal(out.mutoDurable, true);
+  });
+
+  // setup-brand (spec local 2026-10-27-len-five-skills, §4.5): the brand Len writes is an ordinary
+  // project skill, checked for credentials like any other.
+  const BRAND = readFileSync(join(__dirname, "skills/bundled/setup-brand/references/brand-skill.md"), "utf8").replace(/\[\[[^\]]*\]\]/g, "Example");
+
+  it("Write of the filled brand template saves the project's brand skill", async () => {
+    const { deps, estado } = depsConSkills();
+    const s = makeSession();
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/skills/brand/SKILL.md", content: BRAND });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.deepEqual(estado.upserts, [["project", s.projectId, "brand", BRAND, s.userId]]);
+  });
+
+  it("a brand skill with a credential in it is refused and nothing is saved", async () => {
+    const { deps, estado } = depsConSkills();
+    const leaked = BRAND.replace("## Voice", "Payments key: sk-live_0123456789abcdefghijKLMN\n\n## Voice");
+    assert.notEqual(leaked, BRAND);
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/skills/brand/SKILL.md", content: leaked });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /Never save credentials in a skill/);
+    assert.equal(estado.upserts.length, 0);
   });
 
   it("a bad SKILL.md is refused with parseSkillFile's error and nothing is saved", async () => {
