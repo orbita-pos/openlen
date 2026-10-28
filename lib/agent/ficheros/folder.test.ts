@@ -300,3 +300,13 @@ describe("what a remix takes", () => {
     expect(isRemixedFolderPath("/supabase/migrations/1_a.sql")).toBe(false);
   });
 });
+
+describe("invariante 4: data-slot-path no se guarda en un .html de la carpeta", () => {
+  it("se dice al guardar, como en las páginas", () => {
+    expect(folderSaveProblem("/legal.html", '<p data-slot-path="a">x</p>', new Map())).toMatch(/data-slot-path/);
+    expect(folderSaveProblem("/legal.html", "<p>x</p>", new Map())).toBeNull();
+    // En un fichero que no es HTML no significa nada: no se mira.
+    expect(folderSaveProblem("/notas.md", "data-slot-path=", new Map())).toBeNull();
+    expect(folderSaveProblem("/xhtml", "data-slot-path=", new Map())).toBeNull();
+  });
+});

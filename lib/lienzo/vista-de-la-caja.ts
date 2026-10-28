@@ -11,6 +11,7 @@ import "server-only";
 import { contentTypeFor, isCompileInputPath } from "@/lib/agent/ficheros/folder";
 import { esFuenteCompilable } from "@/lib/apps/compilador";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 
 import { carpetaServida, documentoDeVista, vistaParaMedir } from "./documento";
 import { frameAncestors } from "./host";
@@ -49,8 +50,10 @@ export async function servirVistaDeLaCaja(projectId: string, ruta: string): Prom
   if (ruta !== "/" && Object.keys(inputs).length > 0) {
     const entorno = app ? await (await import("@/lib/apps/entorno")).entornoPublicoDeLaApp(projectId, "draft").catch(() => undefined) : undefined;
     const served = (await carpetaServida(inputs, app, entorno)).files;
-    const body = served[ruta];
-    if (body !== undefined) {
+    const guardado = served[ruta];
+    if (guardado !== undefined) {
+      // Un binario (spec local 2026-10-28): sus bytes, nunca el texto de su puntero.
+      const body = isBlobPointer(guardado) ? new Uint8Array(await (await import("@/lib/files/blob")).getBlob(guardado)) : guardado;
       return new Response(body, {
         status: 200,
         headers: {

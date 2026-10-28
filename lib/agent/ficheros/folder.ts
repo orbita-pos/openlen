@@ -166,6 +166,8 @@ export const enospc = (path: string) => `ENOSPC: no space left on device, write 
 export function folderSaveProblem(path: string, content: string, existing: ReadonlyMap<string, string>, usage?: number): string | null {
   const c = classifyFolderPath(path);
   if (!c.ok) return c.reason;
+  // Invariante 4: el marcador del editor no entra en un .html de la carpeta, como en una página.
+  if (/\.html?$/i.test(path) && content.includes("data-slot-path=")) return `${path}: data-slot-path is reserved for OpenLen's editor and can't be saved.`;
   const creates = !existing.has(path);
   if (c.kind === "manifest") {
     let parsed: unknown;

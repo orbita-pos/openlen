@@ -41,6 +41,8 @@ import { buildLlmsTxt, pageTitle } from "@/lib/publish/llms-txt";
 import { detectSiteAccent } from "@/lib/publish/site-accent";
 import { validatePageSlug } from "@/lib/projects/site-pages";
 import { isCompileInputPath, isPublishableFolderPath, publishableFolderFiles } from "@/lib/agent/ficheros/folder";
+import { getBlob } from "@/lib/files/blob";
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 import { SELF_UNREGISTERING_SW, serviceWorkerPaths } from "@/lib/publish/service-worker";
 import type {
   AppDeProyecto,
@@ -1121,6 +1123,13 @@ export async function publishToDir(
   const folder = publishableFolderFiles(
     app && paquete?.ok ? ficherosDeLaApp(carpetaPublicable, app, paquete.js) : (compilada?.ficheros ?? {}),
   );
+  // Invariante 4 también para un .html suelto de la carpeta (spec local 2026-10-28): el marcador del editor nunca
+  // llega al disco, como en el documento y las páginas.
+  for (const f of folder) {
+    if (/\.html?$/i.test(f.path) && !isBlobPointer(f.content) && gateReservedMarker(f.content).html === null) {
+      throw new Error(`publishToDir: refusing to write /${f.path} containing data-slot-path`);
+    }
+  }
   const own = new Set(folder.map((f) => f.path));
   const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
@@ -1158,7 +1167,10 @@ export async function publishToDir(
       for (const f of tree) {
         const dst = safeJoin(tmpDir, f.path);
         await mkdir(path.dirname(dst), { recursive: true });
-        await writeFile(dst, f.content, "utf8");
+        // Un binario de la carpeta (spec local 2026-10-28): sus bytes, del almacén. Su puntero sí entra en el sha
+        // de la release: lleva el sha256 de los bytes, así que la release sigue direccionada por contenido.
+        if (isBlobPointer(f.content)) await writeFile(dst, await getBlob(f.content));
+        else await writeFile(dst, f.content, "utf8");
       }
       await rename(tmpDir, releaseDir);
       written = true;
