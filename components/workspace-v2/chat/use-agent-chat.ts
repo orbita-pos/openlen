@@ -45,6 +45,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { MAX_FILES_PER_MESSAGE, type AttachedFile } from "@/lib/projects/chat-files";
+import { liveMentions, sameMention } from "@/lib/mentions/in-text";
 import { MAX_MENTIONS, type MentionRef } from "@/lib/mentions/types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
@@ -365,9 +366,12 @@ export function useAgentChat({
   const mentionsRef = useRef(mentions);
   mentionsRef.current = mentions;
   const addMention = useCallback((ref: MentionRef): boolean => {
-    if (mentionsRef.current.length >= MAX_MENTIONS) return false;
-    mentionsRef.current = [...mentionsRef.current, ref];
-    setMentions(mentionsRef.current);
+    const already = mentionsRef.current.some((m) => sameMention(m, ref));
+    if (!already && mentionsRef.current.length >= MAX_MENTIONS) return false;
+    if (!already) {
+      mentionsRef.current = [...mentionsRef.current, ref];
+      setMentions(mentionsRef.current);
+    }
     setDraft((d) => `${d && !/\s$/.test(d) ? `${d} ` : d}${ref.label} `);
     return true;
   }, []);
@@ -1278,10 +1282,7 @@ export function useAgentChat({
       if (opciones?.design) designTurnRef.current = turnId;
       // THE «@» MENTIONS whose label is still in the message, in the order they
       // appear in it (spec local 2026-10-27, §6.7).
-      const turnMentions = mentionsRef.current
-        .filter((m) => prompt.includes(m.label))
-        .sort((a, b) => prompt.indexOf(a.label) - prompt.indexOf(b.label))
-        .slice(0, MAX_MENTIONS);
+      const turnMentions = liveMentions(prompt, mentionsRef.current).slice(0, MAX_MENTIONS);
 
       const newTurn: DesignTurn = {
         id: turnId,

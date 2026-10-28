@@ -93,6 +93,16 @@ describe("mentions in the chat", () => {
     expect(chat!.mentions).toHaveLength(20);
   });
 
+  it("sends a mention once even if its label appears twice", async () => {
+    const bodies = stubAgent();
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render((c) => (chat = c));
+    await act(async () => chat!.setMentions([LINK, { ...LINK }]));
+    await act(async () => void chat!.send(`${LINK.label} y ${LINK.label}`));
+    await tick();
+    expect(bodies[0]!.mentions).toEqual([LINK]);
+  });
+
   it("a message without mentions sends none, as before", async () => {
     const bodies = stubAgent();
     let chat: ReturnType<typeof useAgentChat> | null = null;
