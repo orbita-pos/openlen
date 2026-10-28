@@ -1,7 +1,7 @@
 /* La app sin el marco del teléfono del prototipo: el lienzo ES la pantalla.
    lienzo.ts calcula la escala (ancho del teléfono / 390) y el alto estirado;
    las posiciones en px del prototipo siguen valiendo dentro. */
-html, body, #raiz { margin: 0; height: 100%; overflow: hidden; background: #000; }
+html, body, #raiz { margin: 0; height: 100%; overflow: hidden; overscroll-behavior-x: none; background: #000; }
 body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
 .app-lienzo { position: fixed; top: 0; left: 0; width: 390px; transform-origin: 0 0; }
 /* El lienzo no es un scrollport: el navegador no debe moverlo para enfocar

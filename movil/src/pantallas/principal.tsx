@@ -274,7 +274,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         onEquipo={() => setPanel("equipo")}
       />
 
-      <PanelAnimado contexto={id} nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
+      <PanelAnimado contexto={id}
+        paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel ?? ""}
+        onVolver={() => { if (panel === "equipo" && equipo.hilo) equipo.cerrarHilo(); else setPanel(null); }}
+        nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
         {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />
           : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
           : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
