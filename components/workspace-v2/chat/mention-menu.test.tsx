@@ -182,14 +182,16 @@ describe("the «@» menu", () => {
     expect(v.onMentions).toHaveBeenLastCalledWith([]);
   });
 
-  it("refuses a mention past the limit and says so", () => {
+  it("past the limit, says so and lets Enter send instead of picking", () => {
     const full = Array.from({ length: MAX_MENTIONS }, (_, i): MentionRef => ({ type: "file", label: `@/f${i}.md`, ruta: `/f${i}.md` }));
     const text = full.map((m) => m.label).join(" ");
-    const v = mount({ initial: full, initialValue: text });
+    const sent = vi.fn();
+    const v = mount({ initial: full, initialValue: text, onSubmit: sent });
     v.type(`${text} @ver`);
     expect(v.host.querySelector("[data-mention-menu]")!.textContent).toContain("mentions.limit");
     v.key("Enter");
     expect(v.value.current.endsWith("@ver")).toBe(true);
+    expect(sent).toHaveBeenCalled();
   });
 
   it("lets Enter send a message with an unpicked «@» in its prose, text unchanged", () => {
