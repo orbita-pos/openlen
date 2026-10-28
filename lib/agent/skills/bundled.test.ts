@@ -120,6 +120,13 @@ describe("bundled skills", () => {
     it("when the budget runs out it says so and offers another turn", () => {
       expect(text()).toContain("another turn");
     });
+
+    // Claude's researcher: fetch the promising pages («snippets from search are easy to take out of
+    // context») and give every fact its source URL — a search result is one; without one, it's a gap.
+    it("deep-research reads the key pages and cites search results too, as Claude's researcher", () => {
+      for (const must of ["out of context", "a search result", "what is missing"]) expect(text(), must).toContain(must);
+      expect(text()).not.toContain("A snippet is not a source");
+    });
   });
 
   // DATAVIZ (§4.3): Claude's procedure in our words, with our own validator, and where each chart is drawn.
