@@ -92,7 +92,8 @@
       "refresh": "Vorschau aktualisieren",
       "openNewTab": "In neuem Tab öffnen",
       "viewCode": "Code ansehen",
-      "viewData": "Daten ansehen"
+      "viewData": "Daten ansehen",
+      "designShort": "Design"
     },
     "banner": {
       "sectionSelect": "Klicke auf einen Abschnitt, um deinen nächsten Chat darauf zu beziehen · <kbd></kbd> zum Abbrechen",

@@ -100,7 +100,8 @@
       "refresh": "Atualizar pré-visualização",
       "openNewTab": "Abrir em nova aba",
       "viewCode": "Ver o código",
-      "viewData": "Ver dados"
+      "viewData": "Ver dados",
+      "designShort": "Design"
     },
     "banner": {
       "sectionSelect": "Clique em qualquer seção para direcionar seu próximo chat · <kbd></kbd> para cancelar",

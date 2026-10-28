@@ -58,6 +58,8 @@ export default defineConfig({
       "components/community/**/*.test.ts",
       "components/community/**/*.test.tsx",
       "lib/workspace-v2/**/*.test.ts",
+      // El «@» del chat (spec local 2026-10-27-at-mentions). LISTA BLANCA.
+      "lib/mentions/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       // Len sabe de tus resultados (plans/len-resultados/).
@@ -708,6 +710,7 @@ export default defineConfig({
       // `include` es LISTA BLANCA: sin esta linea no correria.
       "app/api/projects/[id]/brief/route.test.ts",
       "app/api/projects/[id]/skills/route.test.ts",
+      "app/api/projects/[id]/mention-index/route.test.ts",
       "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
       "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",

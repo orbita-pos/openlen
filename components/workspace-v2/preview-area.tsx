@@ -29,7 +29,7 @@ import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios
 import { abrirEnElCodigo, abrirFicheroDelTurno } from "@/lib/workspace-v2/abrir-fichero";
 import { useTerminalDeLen } from "./use-terminal-de-len";
 import { useTerminalDelUsuario } from "./use-terminal-del-usuario";
-import { IconBtn, Segmented } from "./ui";
+import { IconBtn, Segmented, Tooltip } from "./ui";
 import { injectDropPlace } from "./use-drop-place";
 import { injectPageLinks } from "./use-page-links";
 import { injectDesignMode } from "./design-mode/inject-design-mode";
@@ -123,6 +123,9 @@ interface PreviewAreaProps {
   appName?: string;
   /** EL MODO DISEÑO (sólo apps, spec local 2026-10-11): el script del lienzo elige y pinta la vista previa. */
   designMode?: boolean;
+  /** THE CHAT'S «@» (spec local 2026-10-27): picking on an app canvas for a mention —
+   *  the Design mode's picking without its panel. */
+  designPick?: boolean;
   onToggleDesign?: () => void;
   /** Lo que ocupa a la derecha un panel abierto (el de diseño): el lienzo se estrecha y se
    *  reescala en vez de quedar tapado, para que todo lo que hay en él se pueda elegir. */
@@ -289,6 +292,7 @@ export function PreviewArea({
   appBirth = null,
   appName = "",
   designMode = false,
+  designPick = false,
   onToggleDesign,
   reservaDerecha = 0,
   onEnvVars,
@@ -633,14 +637,14 @@ export function PreviewArea({
     editMode: editingActive,
     selectMode: sectionSelectMode,
     dropEnabled,
-    designMode,
+    designMode: designMode || designPick,
   });
   useEffect(() => {
     modesRef.current = {
       editMode: editingActive,
       selectMode: sectionSelectMode,
       dropEnabled,
-      designMode,
+      designMode: designMode || designPick,
     };
     const iframe = iframeLocalRef.current;
     if (!iframe?.contentWindow) return;
@@ -648,7 +652,7 @@ export function PreviewArea({
       { type: "openlen:set-mode", ...modesRef.current },
       "*",
     );
-  }, [editingActive, sectionSelectMode, dropEnabled, designMode]);
+  }, [editingActive, sectionSelectMode, dropEnabled, designMode, designPick]);
 
   // MOTION, MÚSICA Y 3D RETIRADOS el 2026-08-26 — el inyector de la vista
   // previa se va con su horneado. Los tres eran presets nuestros que suplían
@@ -977,15 +981,22 @@ export function PreviewArea({
               <Pencil size={ICONO_BARRA} />
             </IconBtn>
           )}
+          {/* Its name on the button, not only in the tooltip: with the icon alone
+              nobody found it (spec local 2026-10-27). */}
           {lente === "pagina" && esApp && onToggleDesign && (
-            <IconBtn
-              label={designMode ? t("preview.toolbar.exitDesign") : t("preview.toolbar.design")}
-              size="sm"
-              active={designMode}
-              onClick={onToggleDesign}
-            >
-              <MousePointerClick size={ICONO_BARRA} />
-            </IconBtn>
+            <Tooltip label={designMode ? t("preview.toolbar.exitDesign") : t("preview.toolbar.design")}>
+              <button
+                type="button"
+                onClick={onToggleDesign}
+                aria-pressed={designMode}
+                className={`inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] font-medium transition ${
+                  designMode ? "bg-[var(--accent-strong)] text-white" : "fg-muted hover:fg hover:bg-hover"
+                }`}
+              >
+                <MousePointerClick size={ICONO_BARRA} />
+                {t("preview.toolbar.designShort")}
+              </button>
+            </Tooltip>
           )}
           {lente === "pagina" && (
             <IconBtn

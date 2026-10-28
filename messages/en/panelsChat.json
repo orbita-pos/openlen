@@ -125,7 +125,8 @@
     "dropNotSupported": "Can't attach {names}: OpenLen takes photos, PDF, Excel, Word, PowerPoint, CSV and videos.",
     "dropTooBig": "Too big to attach: {names}.",
     "dropLimit": "{count, plural, one {# file was} other {# files were}} left out: up to 4 photos and 4 files per message.",
-    "fileFailedNamed": "{name} couldn't be uploaded. Try again."
+    "fileFailedNamed": "{name} couldn't be uploaded. Try again.",
+    "pointLabel": "Point"
   },
   "equipo": {
     "paraLen": "To Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "by {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Section",
+      "heading": "Heading",
+      "text": "Text",
+      "button": "Button",
+      "link": "Link",
+      "image": "Image",
+      "form": "Form",
+      "input": "Field",
+      "list": "List",
+      "media": "Media",
+      "embed": "Embed",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Pick on the canvas…",
+    "notOnScreen": "not on screen now",
+    "onPage": "on page {page}",
+    "more": "{count} more — keep typing",
+    "limit": "Up to {max} mentions per message",
+    "cannotPoint": "That element has no line in the code to point at.",
+    "files": "Files",
+    "people": "People",
+    "onScreen": "on screen {screen}"
   }
 }

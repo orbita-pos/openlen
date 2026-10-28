@@ -125,7 +125,8 @@
     "dropNotSupported": "No se puede adjuntar {names}: OpenLen acepta fotos, PDF, Excel, Word, PowerPoint, CSV y vídeos.",
     "dropTooBig": "Demasiado grande para adjuntar: {names}.",
     "dropLimit": "{count, plural, one {# archivo se quedó} other {# archivos se quedaron}} fuera: hasta 4 fotos y 4 archivos por mensaje.",
-    "fileFailedNamed": "No se pudo subir {name}. Inténtalo de nuevo."
+    "fileFailedNamed": "No se pudo subir {name}. Inténtalo de nuevo.",
+    "pointLabel": "Señalar"
   },
   "equipo": {
     "paraLen": "Para Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "de {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Sección",
+      "heading": "Título",
+      "text": "Texto",
+      "button": "Botón",
+      "link": "Enlace",
+      "image": "Foto",
+      "form": "Formulario",
+      "input": "Campo",
+      "list": "Lista",
+      "media": "Multimedia",
+      "embed": "Incrustado",
+      "element": "Elemento"
+    },
+    "pickOnCanvas": "Elegir en el lienzo…",
+    "notOnScreen": "no está en pantalla ahora",
+    "onPage": "en la página {page}",
+    "more": "{count} más — sigue escribiendo",
+    "limit": "Hasta {max} menciones por mensaje",
+    "cannotPoint": "Ese elemento no tiene una línea en el código a la que señalar.",
+    "files": "Ficheros",
+    "people": "Personas",
+    "onScreen": "en la pantalla {screen}"
   }
 }

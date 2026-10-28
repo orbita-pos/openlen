@@ -125,7 +125,8 @@
     "dropNotSupported": "Impossible de joindre {names} : OpenLen accepte les photos, PDF, Excel, Word, PowerPoint, CSV et vidéos.",
     "dropTooBig": "Trop volumineux pour être joint : {names}.",
     "dropLimit": "{count, plural, one {# fichier n'a pas été joint} other {# fichiers n'ont pas été joints}} : 4 photos et 4 fichiers au maximum par message.",
-    "fileFailedNamed": "{name} n'a pas pu être envoyé. Réessayez."
+    "fileFailedNamed": "{name} n'a pas pu être envoyé. Réessayez.",
+    "pointLabel": "Pointer"
   },
   "equipo": {
     "paraLen": "À Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "par {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Section",
+      "heading": "Titre",
+      "text": "Texte",
+      "button": "Bouton",
+      "link": "Lien",
+      "image": "Image",
+      "form": "Formulaire",
+      "input": "Champ",
+      "list": "Liste",
+      "media": "Média",
+      "embed": "Intégration",
+      "element": "Élément"
+    },
+    "pickOnCanvas": "Choisir sur le canevas…",
+    "notOnScreen": "pas à l'écran pour l'instant",
+    "onPage": "sur la page {page}",
+    "more": "{count} de plus — continuez à taper",
+    "limit": "Jusqu'à {max} mentions par message",
+    "cannotPoint": "Cet élément n'a pas de ligne dans le code à désigner.",
+    "files": "Fichiers",
+    "people": "Personnes",
+    "onScreen": "sur l'écran {screen}"
   }
 }

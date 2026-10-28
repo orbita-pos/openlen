@@ -92,7 +92,8 @@
       "refresh": "刷新预览",
       "openNewTab": "在新标签页中打开",
       "viewCode": "查看代码",
-      "viewData": "查看数据"
+      "viewData": "查看数据",
+      "designShort": "设计"
     },
     "banner": {
       "sectionSelect": "点击任意区块，为下一次对话指定范围 · 按 <kbd></kbd> 取消",

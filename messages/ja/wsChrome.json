@@ -92,7 +92,8 @@
       "refresh": "プレビューを更新",
       "openNewTab": "新しいタブで開く",
       "viewCode": "コードを見る",
-      "viewData": "データを見る"
+      "viewData": "データを見る",
+      "designShort": "デザイン"
     },
     "banner": {
       "sectionSelect": "任意のセクションをクリックして次のチャットの対象に設定 · <kbd></kbd> でキャンセル",

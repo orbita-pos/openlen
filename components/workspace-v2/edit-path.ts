@@ -50,6 +50,69 @@ export function buildEditPath(el: Element): string {
 }
 
 /**
+ * The way back: the element a `buildEditPath` path names under `root`, or null.
+ * Used by the chat's «@» to find on the canvas what the index named from the
+ * source. Self-contained, like the rest: it travels with `.toString()`.
+ */
+export function elementAtEditPath(path: string, root: Element): Element | null {
+  let cur: Element | null = root;
+  const segs = path.split(" > ");
+  for (let i = 0; i < segs.length && cur; i++) {
+    const m = /^([a-z0-9-]+):nth-of-type\((\d+)\)$/i.exec(segs[i]!.trim());
+    if (!m) return null;
+    const tag = m[1]!.toUpperCase();
+    let count = 0;
+    let found: Element | null = null;
+    for (let child: Element | null = cur.firstElementChild; child; child = child.nextElementSibling) {
+      if (child.tagName.toUpperCase() === tag && ++count === Number(m[2])) {
+        found = child;
+        break;
+      }
+    }
+    cur = found;
+  }
+  return cur;
+}
+
+/**
+ * Is `el` still the element the source named? Same tag and, when the source
+ * had text of its own, the same start of it. A page's JS can move siblings
+ * around, and then a path lands on a NEIGHBOUR: outlining that would point at
+ * the wrong thing, so the «@» says «not on screen now» instead.
+ */
+export function mentionSignatureMatches(
+  el: Element,
+  tag: string,
+  text: string | undefined,
+  sig?: { id?: string; cls?: string; kids?: string },
+): boolean {
+  if (el.tagName.toLowerCase() !== tag.toLowerCase()) return false;
+  if (!text) {
+    // No text of its own (a section, a photo, a wrapper): its id, first class
+    // and children's tags tell it from a same-tag neighbour.
+    if (!sig) return true;
+    if (sig.id !== undefined && (el.getAttribute("id") || "") !== sig.id) return false;
+    if (sig.cls !== undefined && ((el.getAttribute("class") || "").trim().split(/\s+/)[0] || "") !== sig.cls) return false;
+    if (sig.kids !== undefined && editChildTags(el).join(",") !== sig.kids) return false;
+    return true;
+  }
+  let own = "";
+  for (let n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === 3) own += " " + (n.textContent || "");
+  return own.replace(/\s+/g, " ").trim().indexOf(text) === 0;
+}
+
+/** The identity `mentionSignatureMatches` compares for an element without text
+ *  of its own. Self-contained, like the rest (needs `editChildTags`). */
+export function mentionSigOf(el: Element): { id?: string; cls?: string; kids: string } {
+  const out: { id?: string; cls?: string; kids: string } = { kids: editChildTags(el).join(",") };
+  const id = el.getAttribute("id");
+  const cls = (el.getAttribute("class") || "").trim().split(/\s+/)[0];
+  if (id) out.id = id;
+  if (cls) out.cls = cls;
+  return out;
+}
+
+/**
  * Las etiquetas de los hijos directos, en orden. LA FIRMA.
  *
  * La ruta de arriba es posicional, y ahí está su punto débil: si el JavaScript

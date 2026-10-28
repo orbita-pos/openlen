@@ -24,6 +24,7 @@ import {
 } from "./panels/chat-panel";
 import { useIsMobile } from "./use-is-mobile";
 import { NewChatPanel } from "./chat/new-chat-panel";
+import type { IncomingMention } from "@/lib/mentions/types";
 import type { PendingAttachments } from "./chat/use-agent-chat";
 import { CHAT_WIDTH_DEFAULT, setChatLayout, useChatLayout, useChatVersion, useChatWidth } from "./chat/use-chat-version";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
@@ -253,8 +254,9 @@ interface LeftSidebarProps {
    *  so the iframe (in PreviewArea) and the chat composer stay in sync. */
   sectionSelectMode?: boolean;
   onToggleSectionSelect?: (active: boolean) => void;
-  scopedSelection?: ScopedSelection | null;
-  onClearScope?: () => void;
+  /** A click on the canvas that became a mention (spec local 2026-10-27): the chat puts it in its draft. */
+  incomingMention?: IncomingMention | null;
+  onIncomingMentionConsumed?: () => void;
   /** When set, ChatPanel applies this string to its draft on the next
    *  effect run. Used by the post-swap "Update copy?" chip to push a
    *  context-aware prompt into the composer. The parent must clear via
@@ -324,8 +326,8 @@ export function LeftSidebar({
   onPrepareSnapshot,
   sectionSelectMode = false,
   onToggleSectionSelect,
-  scopedSelection = null,
-  onClearScope,
+  incomingMention = null,
+  onIncomingMentionConsumed,
   pendingDraft = null,
   pendingDraftAutoSend = false,
   onPendingDraftConsumed,
@@ -347,6 +349,11 @@ export function LeftSidebar({
   // cabecera y un panel más ancho que se estira desde su borde, como en el mock.
   const chatVersion = useChatVersion();
   const newChat = chatVersion === "new" && mode === "chat" && entryMode !== "paste" && entryMode !== "ai";
+  // The old chat (`?chat=old`) knows one scope: a page mention becomes it.
+  const legacyScope: ScopedSelection | null =
+    incomingMention?.ref.type === "element" && incomingMention.ref.target.type === "page"
+      ? { hint: incomingMention.ref.label, path: incomingMention.ref.target.path }
+      : null;
   // EL CHAT FLOTANDO O MINIMIZADO: sigue montado aquí (no se mueve en el árbol,
   // ver use-chat-version.ts) pero el panel no ocupa sitio, y el lienzo se queda
   // con él. Por eso, mientras flota, la barra se pinta abierta aunque esté
@@ -556,8 +563,8 @@ export function LeftSidebar({
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
                 onToggleSectionSelect={onToggleSectionSelect}
-                scopedSelection={scopedSelection}
-                onClearScope={onClearScope}
+                incomingMention={incomingMention}
+                {...(onIncomingMentionConsumed ? { onIncomingMentionConsumed } : {})}
                 pendingDraft={pendingDraft}
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}
@@ -580,8 +587,8 @@ export function LeftSidebar({
                 projectLoading={projectLoading}
                 sectionSelectMode={sectionSelectMode}
                 onToggleSectionSelect={onToggleSectionSelect}
-                scopedSelection={scopedSelection}
-                onClearScope={onClearScope}
+                scopedSelection={legacyScope}
+                onClearScope={onIncomingMentionConsumed}
                 pendingDraft={pendingDraft}
                 pendingDraftAutoSend={pendingDraftAutoSend}
                 onPendingDraftConsumed={onPendingDraftConsumed}

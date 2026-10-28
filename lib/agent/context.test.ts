@@ -842,3 +842,70 @@ describe("assembleTurnMessages", () => {
     expect(r.messages.at(-1)!.content).toBe(`hola${r.avisos}`);
   });
 });
+
+// THE CHAT'S «@» (spec local 2026-10-27, §6.8): one IDE-selection block per
+// element mention, in message order, and a mentioned file as Read shows it.
+describe("the «@» mentions in the context", () => {
+  it("one selection block per mention, each with the line it already had", () => {
+    const s = buildAgentContext({
+      state: {},
+      selecciones: [
+        { ruta: "/index.html", desde: 4, hasta: 4, contenido: "<h1>Pan</h1>" },
+        { ruta: "/contacto/index.html", desde: 9, hasta: 10, contenido: "<a>\n  Ir</a>" },
+      ],
+    });
+    expect(s.match(/<system-reminder>/g)).toHaveLength(2);
+    expect(s.match(/It may or may not matter for what you are doing now\./g)).toHaveLength(2);
+    expect(s.indexOf("lines 4-4 of /index.html")).toBeLessThan(s.indexOf("lines 9-10 of /contacto/index.html"));
+  });
+
+  it("a single legacy selection reads exactly as before", () => {
+    const sel = { ruta: "/index.html", desde: 4, hasta: 4, contenido: "<h1>Pan</h1>" };
+    expect(buildAgentContext({ state: {}, selecciones: [sel] })).toBe(buildAgentContext({ state: {}, seleccion: sel }));
+  });
+
+  it("a mentioned file comes numbered like Read, from line 1", () => {
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/LEN.md", contenido: "Tono cercano.\nSin precios." }] });
+    expect(s).toContain("/LEN.md");
+    expect(s).toMatch(/1\tTono cercano\.\n\s*2\tSin precios\./);
+  });
+});
+
+describe("the «@» mentioned files keep Read's limits", () => {
+  it("a file past Read's size limit is not attached, Len is told to read it in parts", () => {
+    const huge = "x".repeat(300_000);
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/big.html", contenido: huge }] });
+    expect(s.length).toBeLessThan(5_000);
+    expect(s).toContain("/big.html");
+    expect(s).toMatch(/offset and limit/);
+  });
+
+  it("all the mentioned files together stay within one Read's token budget", () => {
+    const fifteenK = Array.from({ length: 1500 }, (_, i) => `line ${i} ${"y".repeat(30)}`).join("\n");
+    const s = buildAgentContext({
+      state: {},
+      mentionedFiles: [
+        { ruta: "/a.md", contenido: fifteenK },
+        { ruta: "/b.md", contenido: fifteenK },
+      ],
+    });
+    expect(s).toContain("1\tline 0");
+    expect(s.match(/\tline 0 /g)).toHaveLength(1);
+    expect(s).toMatch(/\/b\.md[\s\S]*offset and limit/);
+  });
+});
+
+describe("a mentioned file that does not exist", () => {
+  it("reaches Len with Read's own words, not silence", () => {
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/nada.md", contenido: "", missing: "There is no file at /nada.md. Paths start at the site root, /." }] });
+    expect(s).toContain("The user mentioned /nada.md");
+    expect(s).toContain("There is no file at /nada.md.");
+  });
+});
+
+describe("a selection with a note", () => {
+  it("adds the note after the selected lines", () => {
+    const s = buildAgentContext({ state: {}, selecciones: [{ ruta: "/src/App.tsx", desde: 4, hasta: 4, contenido: "<li>x</li>", nota: "On the canvas it repeats 12 times, on screen #/ventas." }] });
+    expect(s).toMatch(/<li>x<\/li>\nOn the canvas it repeats 12 times, on screen #\/ventas\./);
+  });
+});
