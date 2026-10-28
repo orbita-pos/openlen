@@ -80,4 +80,18 @@ describe("PhotoGallery", () => {
     expect(page.rel).toContain("noopener");
     expect(dialog.querySelector("a[download]")).toBeNull();
   });
+
+  // Review of the branch: Next becomes disabled on the last photo and the browser drops focus.
+  it("Esc still closes once focus has left the big view", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 404 })));
+    const host = paint(2);
+    act(() => host.querySelector<HTMLButtonElement>("[data-photo-gallery] button")!.click());
+    const next = document.querySelector<HTMLButtonElement>('[role="dialog"] [aria-label="photos.next"]')!;
+    act(() => next.click());
+    (document.activeElement as HTMLElement | null)?.blur();
+    act(() => void document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await tick();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
 });
+

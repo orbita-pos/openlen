@@ -181,4 +181,24 @@ Y ![rastreador](https://evil.example/commons/${SHA}-960.jpg)`);
     expect(galleries).toHaveLength(1);
     expect(galleries[0]!.querySelectorAll("img")).toHaveLength(3);
   });
+
+  // Review of the branch: models put each image on its own paragraph, or copy the tool's numbered list.
+  it("photos in paragraphs one after another, or in a list of only photos, are one gallery", () => {
+    const apart = md(`![a](${ours(1)})
+
+![b](${ours(2)})
+
+![c](${ours(3)})
+
+Y eso es todo.`);
+    expect(apart.querySelectorAll("[data-photo-gallery]")).toHaveLength(1);
+    expect(apart.querySelectorAll("[data-photo-gallery] img")).toHaveLength(3);
+    expect(apart.textContent).toContain("Y eso es todo.");
+    const lista = md(`1. ![a](${ours(1)})
+2. ![b](${ours(2)})`);
+    expect(lista.querySelectorAll("[data-photo-gallery]")).toHaveLength(1);
+    expect(lista.querySelectorAll("[data-photo-gallery] img")).toHaveLength(2);
+    expect(lista.querySelector("ol")).toBeNull();
+  });
 });
+

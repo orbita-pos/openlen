@@ -11,7 +11,7 @@
 // sigue siendo su línea (`whitespace-pre-wrap` en cada bloque), como antes.
 
 import { createElement, Fragment, type ReactNode } from "react";
-import type { Definition, ListItem, Nodes, PhrasingContent, Root, RootContent } from "mdast";
+import type { Definition, ListItem, Nodes, Paragraph, PhrasingContent, Root, RootContent } from "mdast";
 
 import { parseLenMarkdown, safeHref, wholeHttpUrl } from "@/lib/chat/markdown-de-len";
 import { isCommonsCopy } from "@/lib/chat/commons-image";
@@ -158,6 +158,26 @@ function parrafoConFotos(nodos: readonly PhrasingContent[], p: Pintar, cola: Rea
       {cola}
     </div>
   );
+}
+
+/** A paragraph that is only our photos (and the spaces between them). */
+const soloFotos = (n: RootContent): n is Paragraph => n.type === "paragraph" && n.children.some((c) => fotoNuestra(c)) && n.children.every((c) => !!fotoNuestra(c) || soloEspacio(c));
+
+/** Photos one after another are ONE gallery however Len spaced them: in paragraphs in a row (each
+ *  image on its own, with blank lines), or as a list of only photos (the tool's numbered result
+ *  copied). Merged here into one paragraph, which `parrafoConFotos` paints. */
+function juntarFotos(bloques: readonly RootContent[]): RootContent[] {
+  const out: RootContent[] = [];
+  for (const n of bloques) {
+    const comoParrafo =
+      n.type === "list" && n.children.length > 0 && n.children.every((it) => it.children.length === 1 && soloFotos(it.children[0]!))
+        ? ({ type: "paragraph", children: n.children.flatMap((it) => (it.children[0] as Paragraph).children) } as Paragraph)
+        : n;
+    const previo = out[out.length - 1];
+    if (soloFotos(comoParrafo) && previo && soloFotos(previo)) out[out.length - 1] = { ...previo, children: [...previo.children, ...comoParrafo.children] };
+    else out.push(comoParrafo);
+  }
+  return out;
 }
 
 function bloque(n: RootContent, p: Pintar, cola?: ReactNode): ReactNode {
@@ -310,7 +330,7 @@ export function TextoDeLen({
 }) {
   const raiz = parseLenMarkdown(texto);
   const p: Pintar = { rutas, onAbrir, definiciones: definicionesDe(raiz) };
-  const bloques = raiz.children.filter((n) => n.type !== "definition");
+  const bloques = juntarFotos(raiz.children.filter((n) => n.type !== "definition"));
   if (soloEnLinea) {
     return (
       <>
