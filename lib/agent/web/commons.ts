@@ -19,6 +19,8 @@ const PHOTO_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif
 const MAX_DESCRIPTION = 200;
 
 export interface CommonsPhoto {
+  /** Commons' own name of the file, `File:…`: what identifies it. */
+  readonly fileTitle: string;
   readonly title: string;
   readonly thumbUrl: string;
   readonly width: number;
@@ -96,6 +98,7 @@ export function photosFromCommons(body: unknown): CommonsPhoto[] {
     const licenseUrl = meta(m, "LicenseUrl");
     const description = meta(m, "ImageDescription");
     out.push({
+      fileTitle: rawTitle,
       title: rawTitle.replace(/^File:/, "").replace(/\.[^.]+$/, ""),
       thumbUrl: withoutTracking(thumb),
       width: Number(info.thumbwidth) || 0,

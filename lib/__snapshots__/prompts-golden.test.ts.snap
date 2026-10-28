@@ -607,6 +607,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "image_search",
+    "description": "Searches Wikimedia Commons for real, freely licensed photos of a real thing: an animal, a place, a building, a person, an artwork, a dish. Use it when a photo helps the answer (the user asks what something looks like) or when the user wants a real photo of something specific on their page; for generic page imagery use find_photo first. It returns up to 6 photos, each with its URL and credit, and shows them to you, numbered in the same order: look at them and use only the ones that fit. To show photos in your reply, write them as Markdown images, ![title](url), with the URLs exactly as given, one after another for a gallery. A photo you put on the user's page must carry its credit line next to it or in the footer. Phrase the query as you would on Commons, in English when the subject has an English name. At most 5 searches per turn.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "query": {
+          "type": "STRING",
+          "description": "What the photos should show, e.g. axolotl, Sagrada Familia interior, paella valenciana."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
     "name": "todo_write",
     "description": "Record and update a task list to plan multi-step work and show progress; skip it for trivial single-step tasks. Add one todo per concrete step before you start. While work remains, keep exactly one todo \`in_progress\`. Mark each todo \`completed\` as soon as it is done. The user sees this list in the chat: write each step in their language, in words someone who doesn't code understands.",
     "parameters": {
@@ -1533,6 +1549,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "image_search",
+    "description": "Searches Wikimedia Commons for real, freely licensed photos of a real thing: an animal, a place, a building, a person, an artwork, a dish. Use it when a photo helps the answer (the user asks what something looks like) or when the user wants a real photo of something specific on their page; for generic page imagery use find_photo first. It returns up to 6 photos, each with its URL and credit, and shows them to you, numbered in the same order: look at them and use only the ones that fit. To show photos in your reply, write them as Markdown images, ![title](url), with the URLs exactly as given, one after another for a gallery. A photo you put on the user's page must carry its credit line next to it or in the footer. Phrase the query as you would on Commons, in English when the subject has an English name. At most 5 searches per turn.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "query": {
+          "type": "STRING",
+          "description": "What the photos should show, e.g. axolotl, Sagrada Familia interior, paella valenciana."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
     "name": "todo_write",
     "description": "Record and update a task list to plan multi-step work and show progress; skip it for trivial single-step tasks. Add one todo per concrete step before you start. While work remains, keep exactly one todo \`in_progress\`. Mark each todo \`completed\` as soon as it is done. The user sees this list in the chat: write each step in their language, in words someone who doesn't code understands.",
     "parameters": {
@@ -2449,6 +2481,22 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
       },
       "required": [
         "url"
+      ]
+    }
+  },
+  {
+    "name": "image_search",
+    "description": "Searches Wikimedia Commons for real, freely licensed photos of a real thing: an animal, a place, a building, a person, an artwork, a dish. Use it when a photo helps the answer (the user asks what something looks like) or when the user wants a real photo of something specific on their page; for generic page imagery use find_photo first. It returns up to 6 photos, each with its URL and credit, and shows them to you, numbered in the same order: look at them and use only the ones that fit. To show photos in your reply, write them as Markdown images, ![title](url), with the URLs exactly as given, one after another for a gallery. A photo you put on the user's page must carry its credit line next to it or in the footer. Phrase the query as you would on Commons, in English when the subject has an English name. At most 5 searches per turn.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "query": {
+          "type": "STRING",
+          "description": "What the photos should show, e.g. axolotl, Sagrada Familia interior, paella valenciana."
+        }
+      },
+      "required": [
+        "query"
       ]
     }
   },
