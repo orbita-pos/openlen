@@ -2606,6 +2606,46 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     expect(extra.filaId).toBe(TURNO);
   });
 
+  // Como Claude Code (transcripción entrada a entrada) y DeepSeek («Model-visible ⟺ durably
+  // referenced»): la fila en curso lleva lo que el modelo lleva visto, marcado `partial`, con el
+  // mismo latido que el texto y las tarjetas. El cierre la sustituye por la final.
+  const LO_VISTO: Message[] = [
+    { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/index.html" } }] },
+    { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "1\t<h1>hola</h1>" } }] },
+  ];
+
+  it("🔴 mientras trabaja, la fila en curso guarda lo que vio el modelo, marcado partial, y sólo cuando cambia; el cierre, sin la marca", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.liveTranscript?.(() => LO_VISTO);
+      args.emit({ type: "action", tool: "Read", status: "done", summary: "/index.html" });
+      await new Promise((r) => setTimeout(r, 2_300));
+      // Len sigue hablando y no hay nada nuevo que ver: el latido no la reescribe.
+      args.emit({ type: "text", text: "Ya la leí." });
+      await new Promise((r) => setTimeout(r, 2_300));
+      return { ...(await limpio()(args)), transcripcion: [...LO_VISTO, { role: "assistant", content: "Listo." }] };
+    });
+    await readEvents(await pedir());
+    const avances = mocks.avanceDelTurno.mock.calls as unknown as [string, string, { transcript?: { mensajes: Message[]; partial?: true } }][];
+    expect(avances.length).toBeGreaterThanOrEqual(2);
+    expect(avances[0]![2].transcript).toMatchObject({ mensajes: LO_VISTO, partial: true });
+    expect(avances.slice(1).every((a) => a[2].transcript === undefined)).toBe(true);
+    const cierre = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: Record<string, unknown> }])[1].transcript;
+    expect(cierre.mensajes).toHaveLength(3);
+    expect(cierre).not.toHaveProperty("partial");
+  });
+
+  it("un bucle que revienta tras trabajar: la fila guarda lo que vio, no sólo la foto del estado", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.liveTranscript?.(() => LO_VISTO);
+      args.emit({ type: "text", text: "Voy." });
+      throw new Error("se cayó el proveedor");
+    });
+    await readEvents(await pedir());
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: Record<string, unknown> | null }])[1].transcript;
+    expect(fila).toMatchObject({ mensajes: LO_VISTO });
+    expect(fila).not.toHaveProperty("partial");
+  });
+
   it("sin créditos no se abre fila", async () => {
     mocks.getCreditState.mockResolvedValue({ plan: "free", balance: 0, allotment: 2_000, refillsAt: null });
     mocks.noCreditsMessage.mockReturnValue("sin créditos");

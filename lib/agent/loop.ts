@@ -249,6 +249,14 @@ export interface AgentLoopArgs {
    *  tool batch, summarized (name, args hash, ok, error code), right after its
    *  responses are pushed. Telemetry only: if it throws, the turn goes on. */
   onStepTools?: (batch: readonly ToolOutcomeSummary[]) => void;
+  /** LEN 3.1 · como Claude Code (su transcripción se escribe entrada a entrada) y
+   *  DeepSeek («Model-visible ⟺ durably referenced»): al empezar, el bucle da a
+   *  quien lo corre un lector de lo que el turno lleva, para guardarlo mientras
+   *  trabaja; si el proceso muere, la fila se queda con eso. Va equilibrado como
+   *  A6: la tanda que corre, con `TOOL_OUTCOME_UNKNOWN` en cada llamada que aún no
+   *  tiene respuesta (nunca `TOOL_NOT_STARTED`: un guardado cada pocos segundos
+   *  no prueba que una llamada no hubiera empezado). */
+  liveTranscript?: (read: () => Message[]) => void;
   /** Para las pruebas: la espera entre reintentos. Por defecto, `sleepAbortable`. */
   sleep?(ms: number, signal?: AbortSignal): Promise<void>;
   /** El reloj del recordatorio de tiempo (A3); `Date.now` por defecto. Inyectable para las pruebas. */
@@ -954,6 +962,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (texto.trim() && !yaEsta) propios.push({ role: "assistant", content: texto });
     return propios;
   };
+  /** La tanda que está corriendo, ya equilibrada (ver `liveTranscript`); `null`
+   *  fuera de ella. Sus llamadas entran en `messages` al terminar la tanda. */
+  let inFlightBatch: (() => Message[]) | null = null;
+  args.liveTranscript?.(() => [...ownArchived, ...messages.slice(ownStart), ...(inFlightBatch?.() ?? [])]);
   let finalText = "";
   let inputTokens = 0;
   let outputTokens = 0;
@@ -1851,6 +1863,17 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
     /** Las que se despacharon, con su tarjeta: si el paso falla, ésas pudieron tener efecto (A6). */
     const empezadas = new Map<number, { tool: string; summary: string }>();
+    inFlightBatch = () => [
+      delAsistente(turnText, calls),
+      {
+        role: "user",
+        content: "",
+        functionResponses: [
+          ...functionResponses,
+          ...calls.slice(functionResponses.length).map((c) => ({ name: nombreDe(c), response: { ok: false, error: TOOL_OUTCOME_UNKNOWN } })),
+        ],
+      },
+    ];
     const ronda = await scheduleToolCalls<PendingCall, Rechazo | Ejecutada>({
       calls,
       maxParallel: args.maxParallelToolCalls ?? DEFAULT_MAX_PARALLEL_TOOL_CALLS,
@@ -2093,6 +2116,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         functionResponses.push({ name: nombreDe(original), response: { ok: false, error: TOOL_ABORTED_BEFORE_DISPATCH } });
       },
     }).catch((fallo: unknown) => ({ fallo }));
+    // La tanda acabó: lo que sigue la empuja a `messages` (o cierra), y contarla
+    // aquí además la duplicaría.
+    inFlightBatch = null;
     if ("fallo" in ronda) {
       const err = ronda.fallo;
       // 🔴 A6 · EL PASO FALLÓ CON LLAMADAS SIN RESPUESTA (DeepSeek

@@ -25,7 +25,7 @@
  * Puro salvo la huella (`node:crypto`).
  */
 
-// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos; la marca de un turno cortado sale del estado de su fila, igual en cada turno; sólo cambia si se deshace ese turno, y entonces se paga desde ahí una vez.
+// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos; la copia de mitad de turno (`partial`) es lo que el modelo vio más una respuesta sintética por llamada sin la suya (A6), así que un turno que muere con su proceso vuelve igual en cada turno siguiente; su marca sale del estado de la fila, igual en cada turno, y sólo cambia si se deshace ese turno (se paga desde ahí una vez).
 import { createHash } from "node:crypto";
 
 import type { InlineImage, Message } from "@/lib/ai-gateway";
@@ -124,6 +124,10 @@ export interface TranscripcionGuardada {
   /** El dueño paró el turno con ■ antes de que terminara (el `interrupted` de
    *  DeepSeek). El historial lo dice con `MARCA_DE_TURNO_DETENIDO`. */
   readonly detenido?: true;
+  /** LEN 3.1 · la copia de MITAD de turno (`liveTranscript` del bucle), que la
+   *  ruta guarda en la fila en curso; el cierre la sustituye por la final. Si se
+   *  queda así, el proceso murió antes de cerrar (`CUT_OFF_TURN_MARK`). */
+  readonly partial?: true;
   /** Los avisos del turno (`avisosDelTurno`), tal y como fueron detrás de las
    *  palabras del dueño. Como DeepSeek, que guarda en la sesión el contexto con
    *  el que el modelo razonó: el razonamiento de este turno vuelve en el
@@ -188,8 +192,9 @@ export interface FilaDelHistorial {
    *  que hubo antes de este turno y quién lo pidió, ya en su sobre. Sólo en
    *  proyectos con miembros; ausente = el mensaje de siempre, byte a byte. */
   readonly prefijoDelEquipo?: string;
-  /** La fila quedó CORTADA (`ESTADO_CORTADO`). Si además no guardó mensajes, el
-   *  historial lo dice detrás (`CUT_OFF_TURN_MARK`). Ausente = la de siempre. */
+  /** La fila quedó CORTADA (`ESTADO_CORTADO`). Si además su transcripción es la
+   *  de mitad de turno, o no tiene, el historial lo dice detrás
+   *  (`CUT_OFF_TURN_MARK`). Ausente = la de siempre. */
   readonly cutOff?: boolean;
 }
 
@@ -416,7 +421,7 @@ export function historialDesdeLaBase(
       const cola = enElHistorial((f.transcript?.mensajes ?? []).slice(f.compaction.fromTranscript));
       mensajes.push(...marca, ...cola);
       if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
-      if (lostItsCalls(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
+      if (diedMidTurn(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
       continue;
     }
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
@@ -432,16 +437,16 @@ export function historialDesdeLaBase(
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }
     if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
-    if (lostItsCalls(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
+    if (diedMidTurn(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
   }
   return microcompactarASaltos(mensajes, presupuesto);
 }
 
-/** Un turno cortado que no guardó sus llamadas: el proceso murió antes de
- *  escribir la transcripción. El que las guardó ya las enseña, y el que paró el
- *  dueño lleva su propia marca. */
-function lostItsCalls(f: FilaDelHistorial): boolean {
-  return f.cutOff === true && !f.transcript?.mensajes.length && !f.transcript?.detenido;
+/** Un turno cortado que murió con su proceso: su fila se quedó con la copia de
+ *  mitad de turno, o sin ninguna. El que cerró su proceso tiene la final, y el
+ *  que paró el dueño lleva su propia marca. */
+function diedMidTurn(f: FilaDelHistorial): boolean {
+  return f.cutOff === true && (f.transcript === null || f.transcript.partial === true) && !f.transcript?.detenido;
 }
 
 /** Mensajes del bucle tal y como vuelven en el historial. Del bucle sólo salen

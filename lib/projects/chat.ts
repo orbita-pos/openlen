@@ -605,12 +605,19 @@ export async function abrirFilaDelTurno(
   await pruneOldConversations(projectId);
 }
 
-/** Lo que el turno lleva: su texto y sus tarjetas. Sólo si la fila SIGUE en
- *  curso — un avance que llegue tarde no puede reabrir un turno cerrado. */
+/** Lo que el turno lleva: su texto, sus tarjetas y —LEN 3.1— lo que lleva visto
+ *  el modelo (`partial`), que se queda si el proceso muere antes del cierre. Sólo
+ *  si la fila SIGUE en curso — un avance que llegue tarde no puede reabrir un
+ *  turno cerrado. */
 export async function avanceDelTurno(
   projectId: string,
   id: string,
-  avance: { readonly userText: string; readonly assistantReasoning: string; readonly actions: StoredChatTurn["actions"] },
+  avance: {
+    readonly userText: string;
+    readonly assistantReasoning: string;
+    readonly actions: StoredChatTurn["actions"];
+    readonly transcript?: TranscripcionGuardada;
+  },
 ): Promise<void> {
   await db
     .update(schema.projectChatMessages)
@@ -618,6 +625,7 @@ export async function avanceDelTurno(
       userText: avance.userText.slice(0, 4000),
       assistantReasoning: avance.assistantReasoning.slice(0, 20_000),
       actions: avance.actions ?? null,
+      ...(avance.transcript ? { transcript: avance.transcript } : {}),
     })
     .where(
       and(

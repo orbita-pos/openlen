@@ -182,16 +182,16 @@ export const MARCA_DE_TURNO_DETENIDO =
   "[Request interrupted by the owner (■): this turn did not finish, and only what is above got done.]";
 
 /**
- * LO QUE EL MODELO LEE DETRÁS DE UN TURNO CORTADO QUE NO GUARDÓ SUS LLAMADAS.
- * La transcripción se escribe al cerrar el turno; si el proceso muere antes (un
- * deploy, un reinicio), la fila sólo tiene el texto que fue saliendo y el
- * reenganche la pasa a cortada. Sin marca se leía como un turno que terminó y
- * sólo habló —el H05 de la auditoría del 2026-09-22—, aunque sus escrituras ya
- * estuvieran en el proyecto. libfx (fx.sh) le dice al modelo que el turno se
- * interrumpió; aquí igual. Sólo el hecho, como la de detenido.
+ * LO QUE EL MODELO LEE DETRÁS DE UN TURNO QUE MURIÓ CON SU PROCESO (un deploy,
+ * un reinicio): la fila se quedó con la copia de mitad de turno (`partial`) o
+ * sin ninguna, y el reenganche la pasó a cortada. Sin marca se leía como un
+ * turno que terminó —el H05 de la auditoría del 2026-09-22—. Es el texto de
+ * Claude Code (binario 2.1.309) para una sesión que se acabó sin que nadie lo
+ * pidiera, letra por letra; las llamadas sin respuesta llevan las de DeepSeek
+ * (`TOOL_OUTCOME_UNKNOWN`, como A6).
  */
 export const CUT_OFF_TURN_MARK =
-  "[Turn cut off before it finished: its tool calls were not saved, but what they changed in the project may already be there.]";
+  "[Request interrupted: the session ended before this agent finished. Nobody asked it to stop.]";
 
 /** ⚰️ `turnoAnteriorMudoDe` decidía el aviso de turno mudo de `context.ts`,
  *  retirado el 2026-10-17 (ver allí). Ya había fallado dos veces: avisaba tras

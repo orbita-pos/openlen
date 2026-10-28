@@ -66,6 +66,7 @@ import {
   compactionMarkForStorage,
   type FilaDelHistorial,
   type MensajeDelHistorial,
+  type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
 import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
@@ -93,7 +94,7 @@ import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
-import { runAgentLoop, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
+import { runAgentLoop, TOOL_OUTCOME_UNKNOWN, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
 import { randomUUID } from "node:crypto";
 import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
@@ -1380,6 +1381,10 @@ async function correrTurno(
       const registro = crearRegistroDelTurno();
       /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
       let transcripcionDelTurno: Message[] | null = null;
+      /** LEN 3.1 · lo que el turno lleva visto, mientras corre (`liveTranscript`
+       *  del bucle): va a la fila en curso con el avance, y la fila se queda con
+       *  ello si el proceso muere antes de cerrar. */
+      let readLiveTranscript: (() => Message[]) | null = null;
       /** A11 · la marca del último resumen del turno (`compactionMark`), para la fila. */
       let marcaDelTurno: CompactionMark | null = null;
       // ⚰️ Aquí se recogía `suiteDelTurno`, CÓMO QUEDABA LA SUITE DE LA PÁGINA
@@ -1410,13 +1415,67 @@ async function correrTurno(
       const textoDelUsuario = () => [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n");
       let filaAbierta = false;
       let filaCerrada = false;
+      /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
+       *  historial del turno siguiente. Lo usan el cierre y, a mitad de turno, el
+       *  avance (con `partial`). */
+      const transcriptForRow = (mensajes: readonly Message[]): TranscripcionGuardada => ({
+        ...transcripcionParaGuardar(mensajes, agentSession.leidos ?? new Map()),
+        // Quién atendió el final del turno y cuándo: el siguiente lo
+        // prefiere mientras su caché siga caliente (spec §3.4).
+        provider: { id: brain.lastProvider(), at: new Date().toISOString() },
+        // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
+        // estado del turno siguiente.
+        ...(planActivo ? { planMode: true as const } : {}),
+        // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
+        ...(goalActual ? { goal: goalActual } : {}),
+        // El ■ del dueño, para que el turno siguiente lo sepa.
+        ...(detenido ? { detenido: true as const } : {}),
+        // Los avisos con los que razonó este turno, para que su
+        // razonamiento (que vuelve en el historial) tenga su aviso al
+        // lado y no se lea como de AHORA. Como DeepSeek.
+        ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
+        // Y el contexto con el que se mandó, que vuelve en su sitio:
+        // sin él la petición siguiente dejaba de coincidir con ésta
+        // justo donde empezaba este turno (sin caché).
+        ...(built.ok && built.contextBlock ? { contexto: built.contextBlock } : {}),
+        // LEN.md: la memoria del proyecto que llevó este turno y lo que
+        // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
+        ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
+        // Skills: the catalog this turn sent and the digest the model knows from now on.
+        ...(catalogoDelTurno ? { skills: catalogoDelTurno.text, skillsDigest: catalogoDelTurno.digest } : {}),
+        // And what this turn loaded, as state, for the next ones.
+        ...cargadasEnEsteTurno(agentSession.loadedSkills, skillsConocidas),
+        // Len 3.1: las fotos que no se vieron y las capturas del modo
+        // Diseño, para que el historial rehaga este mensaje tal cual.
+        ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
+        ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
+        // Y tu mensaje como se mandó, si no es lo que guarda la fila:
+        // una corrección «↳» es su propio mensaje en la transcripción, y
+        // el mensaje que abrió el turno no se reescribe (DeepSeek, `steering/message`).
+        ...(textoEnviado !== textoDelUsuario() ? { sentText: textoEnviado } : {}),
+      });
+      /** Qué copia de lo visto tiene ya la fila: el latido corre cada 2 s mientras
+       *  Len habla, y reescribir la transcripción entera sin que haya cambiado
+       *  sería pagar la misma escritura una y otra vez. Cambia con cada mensaje y
+       *  con cada respuesta que llega en la tanda (las que faltan llevan
+       *  `TOOL_OUTCOME_UNKNOWN`). */
+      let vistoGuardado = "";
+      const huellaDeLoVisto = (m: readonly Message[]): string =>
+        `${m.length}:${m.at(-1)?.functionResponses?.filter((f) => f.response.error !== TOOL_OUTCOME_UNKNOWN).length ?? 0}`;
       const avance = crearAvance(async () => {
         try {
+          // LEN 3.1 · y lo que lleva visto el modelo, como Claude Code escribe su
+          // transcripción entrada a entrada: si el proceso muere, queda esto.
+          const visto = readLiveTranscript?.() ?? [];
+          const huella = huellaDeLoVisto(visto);
+          const nuevo = visto.length > 0 && huella !== vistoGuardado;
           await avanceDelTurno(projectId, filaId, {
             userText: textoDelUsuario(),
             assistantReasoning: registro.texto,
             actions: registro.tarjetas,
+            ...(nuevo ? { transcript: { ...transcriptForRow(visto), partial: true as const } } : {}),
           });
+          if (nuevo) vistoGuardado = huella;
         } catch (err) {
           console.warn("[agent] no se pudo guardar el avance del turno", err);
         }
@@ -1443,6 +1502,10 @@ async function correrTurno(
         // A11 · y siempre que resumió: sin la fila se perdería la marca (un
         // `/compact` no escribe nada más).
         if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado()) || marcaDelTurno !== null) {
+          // Lo que vio el modelo: lo que devolvió el bucle; si reventó, lo que
+          // llevaba visto, ya equilibrado (como en DeepSeek, no se pierde).
+          const enVivo = transcripcionDelTurno ? [] : (readLiveTranscript?.() ?? []);
+          const visto = transcripcionDelTurno ?? (enVivo.length > 0 ? enVivo : null);
           try {
             await registrarTurnoDelServidor(projectId, {
               ...registro.fila({
@@ -1467,45 +1530,12 @@ async function correrTurno(
               // H4 · lo que vio el modelo; de aquí sale el historial del turno siguiente.
               // Pieza 7: y si cerró en modo plan, que es de donde se pliega el
               // estado del turno siguiente.
-              transcript: transcripcionDelTurno
-                ? {
-                    ...transcripcionParaGuardar(transcripcionDelTurno, agentSession.leidos ?? new Map()),
-                    // Quién atendió el final del turno y cuándo: el siguiente lo
-                    // prefiere mientras su caché siga caliente (spec §3.4).
-                    provider: { id: brain.lastProvider(), at: new Date().toISOString() },
-                    ...(planActivo ? { planMode: true as const } : {}),
-                    // Pieza 8: y el encargo como queda, que es de donde lo pliega el siguiente.
-                    ...(goalActual ? { goal: goalActual } : {}),
-                    // El ■ del dueño, para que el turno siguiente lo sepa.
-                    ...(detenido ? { detenido: true as const } : {}),
-                    // Los avisos con los que razonó este turno, para que su
-                    // razonamiento (que vuelve en el historial) tenga su aviso al
-                    // lado y no se lea como de AHORA. Como DeepSeek.
-                    ...(built.ok && built.avisos ? { avisos: built.avisos } : {}),
-                    // Y el contexto con el que se mandó, que vuelve en su sitio:
-                    // sin él la petición siguiente dejaba de coincidir con ésta
-                    // justo donde empezaba este turno (sin caché).
-                    ...(built.ok && built.contextBlock ? { contexto: built.contextBlock } : {}),
-                    // LEN.md: la memoria del proyecto que llevó este turno y lo que
-                    // el modelo conoce desde ahora (plans/len-md). Vuelve en su sitio.
-                    ...(memoriaDelTurno ? { memoria: memoriaDelTurno.text, memoriaHuellas: memoriaDelTurno.digests } : {}),
-                    // Skills: the catalog this turn sent and the digest the model knows from now on.
-                    ...(catalogoDelTurno ? { skills: catalogoDelTurno.text, skillsDigest: catalogoDelTurno.digest } : {}),
-                    // And what this turn loaded, as state, for the next ones.
-                    ...cargadasEnEsteTurno(agentSession.loadedSkills, skillsConocidas),
-                    // Len 3.1: las fotos que no se vieron y las capturas del modo
-                    // Diseño, para que el historial rehaga este mensaje tal cual.
-                    ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
-                    ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
-                    // Y tu mensaje como se mandó, si no es lo que guarda la fila:
-                    // una corrección «↳» es su propio mensaje en la transcripción, y
-                    // el mensaje que abrió el turno no se reescribe (DeepSeek, `steering/message`).
-                    ...(textoEnviado !== textoDelUsuario() ? { sentText: textoEnviado } : {}),
-                  }
-                : // LOTE 7-8: sin transcripción (el bucle reventó), la foto del
-                  // estado si el turno lo cambió —lo plegado es de ANTES de la
-                  // puerta del dueño—; si no, NULL como siempre. `goalActual`
-                  // sólo se reasigna en una transición (ronda o `commit`).
+              transcript: visto
+                ? transcriptForRow(visto)
+                : // LOTE 7-8: sin nada visto, la foto del estado si el turno lo
+                  // cambió —lo plegado es de ANTES de la puerta del dueño—; si no,
+                  // NULL como siempre. `goalActual` sólo se reasigna en una
+                  // transición (ronda o `commit`).
                   stateOnlyTranscript({
                     folded: { planMode: planPlegado, goal: goalPlegado },
                     now: { planMode: planActivo, goal: goalActual },
@@ -1742,6 +1772,10 @@ async function correrTurno(
           messages,
           tools,
           ...(stepRecorder ? { onStepTools: stepRecorder.onStepTools } : {}),
+          // Lo que lleva visto, para la fila en curso (ver `readLiveTranscript`).
+          liveTranscript: (read) => {
+            readLiveTranscript = read;
+          },
           // La página a medias de un `Write` que aún no dijo su ruta se pinta
           // en la que el turno tiene abierta (`lib/agent/write-preview.ts`).
           activePage: () => agentSession.page,
