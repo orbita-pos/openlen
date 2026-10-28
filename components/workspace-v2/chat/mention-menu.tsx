@@ -210,6 +210,9 @@ export function useMentionMenu(args: {
       return true;
     }
     if (e.key === "Enter" || e.key === "Tab") {
+      // Past the limit an element or a file cannot be picked: the menu only
+      // says so, and Enter does what it does without a menu — it sends.
+      if (atLimit && (current?.kind === "element" || current?.kind === "file")) return false;
       e.preventDefault();
       if (current) pick(current);
       return true;
