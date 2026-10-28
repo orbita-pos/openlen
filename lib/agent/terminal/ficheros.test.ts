@@ -37,7 +37,7 @@ describe("salidaDeLaTerminal — lo que la terminal real no pudo guardar", () =>
           { ruta: "/data/big.csv", motivo: "too_large" },
         ],
       }).texto,
-    ).toBe("ok\n/data/x.zip: not saved — binary file\n/data/big.csv: not saved — larger than 1 MB");
+    ).toBe("ok\n/data/x.zip: not saved — binary file\n/data/big.csv: not saved — larger than 50 MB");
   });
 });
 

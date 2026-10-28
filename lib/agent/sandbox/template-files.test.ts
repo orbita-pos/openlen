@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { MAX_FILE_BYTES } from "@/lib/files/limits";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,7 +22,6 @@ import {
   manifestScript,
   playwrightResolverScript,
   templateFiles,
-  BOX_TEXT_FILE_BYTES,
   wrapperScript,
 } from "./template-files";
 
@@ -239,12 +239,12 @@ describe("the box's scripts", () => {
   });
 
   it.skipIf(!PYTHON)("a file over the cap is not read: its entry says so, with its size", () => {
-    const big = "x".repeat(BOX_TEXT_FILE_BYTES + 1);
+    const big = "x".repeat(MAX_FILE_BYTES + 1);
     const root = tempRoot({ "/data/big.csv": big, "/index.html": "a" });
     const r = spawnSync(PYTHON!, ["-c", manifestScript()], { encoding: "utf8", env: { ...process.env, OPENLEN_ROOT: root } });
     expect(r.status, r.stderr).toBe(0);
     const manifest = JSON.parse(r.stdout) as Record<string, string>;
-    expect(manifest["/data/big.csv"]).toMatch(new RegExp(`^${BIG_FILE_PREFIX}${BOX_TEXT_FILE_BYTES + 1}:`));
+    expect(manifest["/data/big.csv"]).toMatch(new RegExp(`^${BIG_FILE_PREFIX}${MAX_FILE_BYTES + 1}:`));
     expect(manifest["/index.html"]).toBe("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb");
   });
 
