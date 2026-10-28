@@ -32,4 +32,10 @@ export interface UploadResult {
 export interface StorageAdapter {
   upload(args: UploadArgs): Promise<UploadResult>;
   delete(key: string): Promise<void>;
+  /** The object's bytes, or null if there is none (spec local 2026-10-28-ficheros-al-nivel-de-claude-code:
+   *  a project's binary files live here, read back by the canvas, the publisher and the box). Optional:
+   *  only the adapters that hold blobs need it. */
+  read?(key: string): Promise<Buffer | null>;
+  /** Whether the object is there, without reading it. */
+  exists?(key: string): Promise<boolean>;
 }

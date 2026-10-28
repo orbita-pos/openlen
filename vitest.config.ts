@@ -101,6 +101,8 @@ export default defineConfig({
       // GIT FOR LEN (spec local 2026-10-15-git-for-len): the repository, its commands and the
       // differential tests against the real git binary. WHITELIST: without this line they never run.
       "lib/git/**/*.test.ts",
+      // Ficheros al nivel de Claude Code (spec local 2026-10-28). LISTA BLANCA.
+      "lib/files/**/*.test.ts",
       // Buscar y leer en internet (plans/len-agente-2026, F2).
       "lib/agent/web/**/*.test.ts",
       // LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): la caja de E2B, su
