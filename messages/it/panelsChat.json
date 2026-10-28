@@ -425,5 +425,15 @@
       "generic": "Qualcosa è andato storto. Riprova tra un momento."
     },
     "liveWaiting": "Len aspetta che tu colleghi il dominio email"
+  },
+  "photos": {
+    "gallery": "Foto",
+    "open": "Apri la foto {number}",
+    "previous": "Foto precedente",
+    "next": "Foto successiva",
+    "close": "Chiudi",
+    "source": "Wikimedia Commons",
+    "by": "di {author}",
+    "more": "+{count}"
   }
 }

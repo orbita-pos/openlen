@@ -425,5 +425,15 @@
       "generic": "Something went wrong. Try again in a moment."
     },
     "liveWaiting": "Len is waiting for you to connect the email domain"
+  },
+  "photos": {
+    "gallery": "Photos",
+    "open": "Open photo {number}",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "close": "Close",
+    "source": "Wikimedia Commons",
+    "by": "by {author}",
+    "more": "+{count}"
   }
 }

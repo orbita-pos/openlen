@@ -1,0 +1,85 @@
+{
+  "batchcomplete": true,
+  "query": {
+    "pages": [
+      {
+        "pageid": 2,
+        "ns": 6,
+        "title": "File:Axolotl diagram.svg",
+        "index": 2,
+        "imageinfo": [
+          {
+            "size": 9000,
+            "width": 800,
+            "height": 600,
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Axolotl_diagram.svg/960px-Axolotl_diagram.svg.png",
+            "thumbwidth": 960,
+            "thumbheight": 720,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Axolotl_diagram.svg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Axolotl_diagram.svg",
+            "mime": "image/svg+xml",
+            "extmetadata": {
+              "Artist": { "value": "Someone" },
+              "LicenseShortName": { "value": "CC0" }
+            }
+          }
+        ]
+      },
+      {
+        "pageid": 439347,
+        "ns": 6,
+        "title": "File:Ambystoma mexicanum 1.jpg",
+        "index": 1,
+        "imageinfo": [
+          {
+            "size": 214547,
+            "width": 1200,
+            "height": 1079,
+            "thumburl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Ambystoma_mexicanum_1.jpg/960px-Ambystoma_mexicanum_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+            "thumbwidth": 960,
+            "thumbheight": 863,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Ambystoma_mexicanum_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Ambystoma_mexicanum_1.jpg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=439347",
+            "extmetadata": {
+              "ImageDescription": {
+                "value": "Photo of <i><a href=\"//commons.wikimedia.org/wiki/Ambystoma_mexicanum\" title=\"Ambystoma mexicanum\">Ambystoma mexicanum</a></i> (axolotl) at the <a href=\"//commons.wikimedia.org/w/index.php?title=Steinhart_Aquarium&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"Steinhart Aquarium (page does not exist)\">Steinhart Aquarium</a> in San Francisco",
+                "source": "commons-desc-page"
+              },
+              "Artist": {
+                "value": "<a href=\"//commons.wikimedia.org/wiki/User:Stan_Shebs\" title=\"User:Stan Shebs\">Stan Shebs</a>",
+                "source": "commons-desc-page"
+              },
+              "LicenseShortName": { "value": "CC BY-SA 3.0", "source": "commons-desc-page", "hidden": "" },
+              "LicenseUrl": { "value": "https://creativecommons.org/licenses/by-sa/3.0", "source": "commons-desc-page" }
+            },
+            "mime": "image/jpeg"
+          }
+        ]
+      },
+      {
+        "pageid": 3,
+        "ns": 6,
+        "title": "File:Axolotl en el acuario.webp",
+        "index": 3,
+        "imageinfo": [
+          {
+            "size": 50000,
+            "width": 1600,
+            "height": 900,
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Axolotl_en_el_acuario.webp/960px-Axolotl_en_el_acuario.webp",
+            "thumbwidth": 960,
+            "thumbheight": 540,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Axolotl_en_el_acuario.webp",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Axolotl_en_el_acuario.webp",
+            "mime": "image/webp",
+            "extmetadata": {
+              "Artist": { "value": "" },
+              "LicenseShortName": { "value": "Public domain" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

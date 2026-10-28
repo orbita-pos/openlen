@@ -29,6 +29,7 @@ const STATION_OF: Readonly<Record<string, WorkshopStation>> = {
   web_search: "files",
   web_fetch: "files",
   find_photo: "files",
+  image_search: "files",
   session_search: "files",
   // Writing the app.
   Write: "desk",

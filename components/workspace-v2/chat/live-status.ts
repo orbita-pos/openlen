@@ -67,6 +67,7 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   quitar_dato: "editing",
   bash: "terminal",
   find_photo: "photos",
+  image_search: "photos",
   edit_image: "image",
   web_search: "web",
   web_fetch: "web",

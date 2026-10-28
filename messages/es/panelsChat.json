@@ -425,5 +425,15 @@
       "generic": "Algo salió mal. Inténtalo en un momento."
     },
     "liveWaiting": "Len espera que conectes el dominio del correo"
+  },
+  "photos": {
+    "gallery": "Fotos",
+    "open": "Abrir la foto {number}",
+    "previous": "Foto anterior",
+    "next": "Foto siguiente",
+    "close": "Cerrar",
+    "source": "Wikimedia Commons",
+    "by": "de {author}",
+    "more": "+{count}"
   }
 }

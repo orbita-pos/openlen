@@ -425,5 +425,15 @@
       "generic": "Etwas ist schiefgelaufen. Versuche es gleich noch einmal."
     },
     "liveWaiting": "Len wartet darauf, dass du die E-Mail-Domain verbindest"
+  },
+  "photos": {
+    "gallery": "Fotos",
+    "open": "Foto {number} öffnen",
+    "previous": "Vorheriges Foto",
+    "next": "Nächstes Foto",
+    "close": "Schließen",
+    "source": "Wikimedia Commons",
+    "by": "von {author}",
+    "more": "+{count}"
   }
 }

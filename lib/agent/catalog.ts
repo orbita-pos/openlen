@@ -22,6 +22,7 @@
 // Efecto en la caché: el prompt de sistema y las herramientas son el principio del prefijo: cambiar su texto, su orden o una herramienta invalida la caché de TODAS las conversaciones a la vez.
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { DECLARACION_WEB_FETCH, DECLARACION_WEB_SEARCH } from "@/lib/agent/web/herramientas";
+import { IMAGE_SEARCH, IMAGE_SEARCH_DECLARATION } from "@/lib/agent/web/image-search";
 // El dominio de publicación NO se escribe a mano en ningún sitio: CLAUDE.md lo
 // prohíbe y `base-host.ts` es la única fuente. Aquí estaba cableado
 // «.openlen.com» dentro de la descripción de `publicar`, y el modelo repetía
@@ -188,6 +189,8 @@ function declaracionesDelModo(
   }
   // SHOPIFY (spec local 2026-10-22-shopify-storefront, §6.9): on unless OPENLEN_SHOPIFY=0, per server.
   if (!shopifyEnabledIn(_env)) fuera.add(CONNECT_SHOPIFY_STORE);
+  // IMAGE SEARCH (spec local 2026-10-27-chat-drop-and-images): on unless OPENLEN_IMAGE_SEARCH=0.
+  if (_env.OPENLEN_IMAGE_SEARCH === "0") fuera.add(IMAGE_SEARCH);
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
@@ -402,6 +405,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // ⚰️ Sustituyen a `leer_de_internet` (3 URLs, 4.000 caracteres de texto).
     DECLARACION_WEB_SEARCH,
     DECLARACION_WEB_FETCH,
+    // Photos for the chat, from Wikimedia Commons (spec local 2026-10-27-chat-drop-and-images).
+    IMAGE_SEARCH_DECLARATION,
     // ⚰️ Aquí iba TodoWrite, la lista de tareas de Claude Code (23 reglas,
     // 1.383 tokens). Retirada en F4 (plans/len-agente-2026), y sigue fuera:
     // Claude Code tampoco se la da a los modelos nuevos. Vuelve la de DeepSeek,

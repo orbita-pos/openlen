@@ -46,6 +46,8 @@ const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   Glob: always,
   web_search: always,
   web_fetch: always,
+  // Its per-turn count is taken before it awaits, so parallel calls can't pass the cap.
+  image_search: always,
   get_visits: always,
   list_form_submissions: always,
   list_messages: always,

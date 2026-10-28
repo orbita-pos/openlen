@@ -425,5 +425,15 @@
       "generic": "Algo deu errado. Tente novamente em um momento."
     },
     "liveWaiting": "Len está esperando você conectar o domínio de e-mail"
+  },
+  "photos": {
+    "gallery": "Fotos",
+    "open": "Abrir a foto {number}",
+    "previous": "Foto anterior",
+    "next": "Próxima foto",
+    "close": "Fechar",
+    "source": "Wikimedia Commons",
+    "by": "de {author}",
+    "more": "+{count}"
   }
 }

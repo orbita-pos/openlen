@@ -425,5 +425,15 @@
       "generic": "問題が発生しました。少し待ってからもう一度お試しください。"
     },
     "liveWaiting": "Len はメールドメインの接続を待っています"
+  },
+  "photos": {
+    "gallery": "写真",
+    "open": "写真 {number} を開く",
+    "previous": "前の写真",
+    "next": "次の写真",
+    "close": "閉じる",
+    "source": "Wikimedia Commons",
+    "by": "撮影: {author}",
+    "more": "+{count}"
   }
 }

@@ -61,6 +61,7 @@ import type { SkillSet } from "@/lib/agent/skills/registry";
 import type { DeliveredFile } from "@/lib/agent/skills/present";
 import { webDelServidor, type WebDeps } from "@/lib/agent/web/buscar";
 import { NOMBRE_WEB_FETCH, NOMBRE_WEB_SEARCH, toolWebFetch, toolWebSearch } from "@/lib/agent/web/herramientas";
+import { IMAGE_SEARCH, commonsDelServidor, toolImageSearch, type CommonsDeps } from "@/lib/agent/web/image-search";
 import { activeHtml } from "@/lib/page-engine/persist";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import { adoptPlaceholderTitle, leerCambiosSinPublicar, renameProject, setProjectUserBrief } from "@/lib/projects";
@@ -354,6 +355,8 @@ export interface AgentDeps {
   /** F2 · buscar y leer en internet (`lib/agent/web/buscar.ts`). Opcional: sin
    *  él, `web_search` y `web_fetch` lo dicen. */
   web?: WebDeps;
+  /** `image_search`: Wikimedia Commons, our storage for the copies, and the small images Len sees. */
+  commons?: CommonsDeps;
   /** The bytes of a file the user attached; `null` if they can't be had. */
   readAttachment?: (file: AttachedFile) => Promise<Uint8Array | null>;
   /** `present` (spec local 2026-10-26-len-skills): stores a delivered file, answers its URL. */
@@ -618,6 +621,7 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     // F2 · la web: la de prueba en Len-Bench, Exa y `fetchRaw` fuera de él.
     // Lo buscado de verdad se cobra aparte del turno, como editar una imagen.
     web: webDelServidor(debit),
+    commons: commonsDelServidor(),
     // LA CARPETA (lib/backend/files.ts): import perezoso, es server-only. Cada
     // cambio archiva su «antes» para deshacer; si archivar falla, el cambio
     // se guarda igual y el turno no ofrecerá deshacerlo (`versionPrevia` nulo).
@@ -1160,6 +1164,8 @@ export interface AgentSession {
    *  sus topes (`lib/agent/web/herramientas.ts`) son para que «investiga esto»
    *  no se convierta en un rastreador. */
   consultasWebEsteTurno?: number;
+  /** `image_search`s done in this turn (cap `IMAGE_SEARCHES_PER_TURN`). */
+  imageSearchesThisTurn?: number;
   paginasWebEsteTurno?: number;
   /** LEN 2.0 · lo leído en este turno, por ruta, como lo apunta Claude
    *  Code. Sin leer no se edita, y «cambió desde que lo leíste» se decide
@@ -2957,6 +2963,8 @@ async function ejecutarHerramienta(
         return await toolWebSearch(session, deps, args);
       case NOMBRE_WEB_FETCH:
         return await toolWebFetch(session, deps, args);
+      case IMAGE_SEARCH:
+        return await toolImageSearch(session, deps, args);
       case "undo_last_change":
         return await toolRevertirUltimoCambio(session, deps, args);
       case "get_visits":
