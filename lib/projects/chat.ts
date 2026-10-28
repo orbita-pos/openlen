@@ -20,6 +20,7 @@ import { ESTADO_CORTADO } from "@/lib/agent/registro-del-turno";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import type { AgentErrorCode } from "@/lib/agent/loop";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -700,13 +701,18 @@ export async function guardarMarcaDelTurno(projectId: string, id: string, compac
     .where(and(eq(t.id, id), eq(t.projectId, projectId), eq(t.status, ESTADO_EN_CURSO)));
 }
 
+/** Cómo queda una fila huérfana (nadie la corre: el proceso murió): cortada y
+ *  con su motivo, `interrupted` —no `cancelled`: nadie la paró—, que es lo que
+ *  pinta el chat al reengancharse o al recargar (`avisoDelTurno`). */
+const ORPHAN_CLOSE = { status: ESTADO_CORTADO, endReason: "interrupted" satisfies AgentErrorCode };
+
 /** Una fila que se quedó en curso sin nadie que la corra (el servidor se
  *  reinició a mitad, y su `finally` no llegó) pasa a cortada. Sólo si sigue en
  *  curso: si el turno la cerró entre medias, manda lo suyo. */
 export async function marcarCortadaSiSigueEnCurso(id: string): Promise<void> {
   await db
     .update(schema.projectChatMessages)
-    .set({ status: "cortado" })
+    .set(ORPHAN_CLOSE)
     .where(and(eq(schema.projectChatMessages.id, id), eq(schema.projectChatMessages.status, ESTADO_EN_CURSO)));
 }
 
@@ -723,7 +729,7 @@ export async function cutOffRowsOpenedBeforeBoot(secondsSinceBoot: number): Prom
   const t = schema.projectChatMessages;
   const cortadas = await db
     .update(t)
-    .set({ status: ESTADO_CORTADO })
+    .set(ORPHAN_CLOSE)
     .where(and(eq(t.status, ESTADO_EN_CURSO), sql`${t.createdAt} < now() - (${secondsSinceBoot}::double precision * interval '1 second')`))
     .returning({ id: t.id });
   return cortadas.length;

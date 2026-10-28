@@ -83,14 +83,15 @@ export const GET = paraLaApp(async (
   // Lo corre otra persona del proyecto: se mira, no se toca.
   if (filaEnMarcha(fila)) return json({ turno });
 
-  // Huérfana: nadie la corre. Se cierra como cortada, y se dice ya así.
+  // Huérfana: nadie la corre. Se cierra como cortada, con su motivo
+  // (`interrupted`: el servidor se reinició, nadie la paró), y se dice ya así.
   try {
     await marcarCortadaSiSigueEnCurso(fila);
   } catch (err) {
     console.warn("[agent/turno] no se pudo cerrar la fila huérfana", err);
   }
   const { enCurso: _sigue, ...resto } = turno;
-  return json({ turno: { ...resto, cortado: true } });
+  return json({ turno: { ...resto, cortado: true, endReason: "interrupted" } });
 });
 
 export const OPTIONS = respuestaPrevia;

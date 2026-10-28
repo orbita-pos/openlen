@@ -82,6 +82,14 @@ describe("why a turn stopped, after a reload", () => {
     expect(reloaded({ endReason: "turn_limit" })).not.toContain("cutShort");
   });
 
+  // Box rehearsal, 28/10: a turn a restart killed said «The turn was cancelled.», and nobody stopped it.
+  // The reattach and the boot close such a row with `interrupted` (DeepSeek's `turn/end {interrupted}`).
+  it("a turn a restart cut off says the server restarted, not «cancelled»", () => {
+    const text = reloaded({ status: "cortado", endReason: "interrupted" });
+    expect(text).toContain('cutShort {"reason":"errors.interrupted"}');
+    expect(text).not.toContain("errors.cancelled");
+  });
+
   it("CONTROL: an old cut row without a reason keeps the generic notice", () => {
     expect(reloaded({ status: "cortado" })).toContain('cutShort {"reason":"errors.cancelled"}');
   });
