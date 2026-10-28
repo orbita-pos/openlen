@@ -153,8 +153,9 @@ it("declares only wired formats when enabled and exposes manuals by Read path", 
   const create = on.find((t) => t.name === "create_artifact")!;
   expect(JSON.stringify(create)).toContain('"enum":["slides"]');
   expect(on.some((t) => t.name === "ToolSearch")).toBe(false);
-  // With skills on, each manual is its artifact-<kind> skill (spec local 2026-10-27-len-five-skills); off, at its old path.
-  const docs = documentosDeLaPlataforma(null, { OPENLEN_ARTIFACTS: "1" });
+  // With skills on, each manual is its artifact-<kind> skill (spec local 2026-10-27-len-five-skills),
+  // for a kind the server can render; off, at its old path.
+  const docs = documentosDeLaPlataforma(null, { OPENLEN_ARTIFACTS: "1", OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2", OPENLEN_ARTIFACT_MOTION_VERIFIED: "1" });
   expect(docs["/.openlen/skills/artifact-slides/SKILL.md"]).toContain("deck.json");
   expect(docs["/.openlen/skills/artifact-motion/SKILL.md"]).toContain("without voice");
   const docsOff = documentosDeLaPlataforma(null, { OPENLEN_ARTIFACTS: "1", OPENLEN_SKILLS: "0" });

@@ -12,6 +12,8 @@ import { artifactManuals } from "@/lib/agent/artifact-manuals";
 import { RUTA_GUIA, RUTA_LIBRERIAS } from "@/lib/agent/ficheros/manual";
 import { guiaParaConvertir, partirElManual } from "@/lib/agent/manual-de-la-plataforma";
 import { GUIA_DE_LA_APP } from "@/lib/agent/modo-app";
+import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
+import type { ArtifactKind } from "@/lib/artifacts/types";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
 import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
@@ -30,10 +32,8 @@ export interface GeneratedSkill {
   readonly files: (ctx: BundledContext) => Readonly<Record<string, string>>;
 }
 
-const artifactsOn = (ctx: BundledContext) => ctx.env.OPENLEN_ARTIFACTS === "1";
-
 /** What each deliverable's manual covers, for its catalog line. */
-const ARTIFACT_KINDS: Readonly<Record<string, string>> = {
+const ARTIFACT_KINDS: Readonly<Record<ArtifactKind, string>> = {
   dashboard: "a dashboard deliverable (its data, layout, charts and checks)",
   slides: "a slide deck deliverable (its deck file, the 1920x1080 canvas, layout and checks)",
   image: "a promotional image deliverable (its prompt, sizes and reuse)",
@@ -41,10 +41,12 @@ const ARTIFACT_KINDS: Readonly<Record<string, string>> = {
   audio: "an audio or narration deliverable (its voice, takes and reuse)",
 };
 
-const artifactSkills: GeneratedSkill[] = Object.entries(ARTIFACT_KINDS).map(([kind, what]) => ({
+// Only for a kind this server can render, like create_artifact's kinds: the switch alone never
+// advertises a renderer the deployment can't run (lib/artifacts/capabilities.ts).
+const artifactSkills: GeneratedSkill[] = (Object.entries(ARTIFACT_KINDS) as [ArtifactKind, string][]).map(([kind, what]) => ({
   name: `artifact-${kind}`,
   description: `How to author ${what} with create_artifact. Load it before writing a ${kind} deliverable.`,
-  when: artifactsOn,
+  when: (ctx) => availableArtifactKinds(ctx.env).includes(kind),
   files: () => ({ "SKILL.md": artifactManuals[`/.openlen/docs/artifacts/${kind}.md`]! }),
 }));
 
