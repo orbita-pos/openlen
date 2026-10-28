@@ -77,6 +77,31 @@ export function targetsOf(path: string, line: number, tag: string, max: number, 
   return out;
 }
 
+/** THE CHAT'S «@» (spec local 2026-10-27): every element on the screen whose
+ *  source chain passes through that line — the element written there, or the
+ *  root of a component used there — keeping only the outermost (a component's
+ *  insides share its use line). */
+export function outermostAtLine(path: string, line: number, max: number): Element[] {
+  // Top-down: an element that matches is taken and its insides are not walked
+  // (a wrapper's line would otherwise match, and be checked, for everything in it).
+  const hits: Element[] = [];
+  const stack: Element[] = document.body ? [document.body] : [];
+  while (stack.length > 0) {
+    const el = stack.pop()!;
+    if (el !== document.body) {
+      const chain = sourceChainOf(el, max);
+      let hit = false;
+      for (let j = 0; j < chain.length && !hit; j++) hit = chain[j]!.path === path && chain[j]!.line === line;
+      if (hit) {
+        hits.push(el);
+        continue;
+      }
+    }
+    for (let c = el.lastElementChild; c; c = c.previousElementSibling) stack.push(c);
+  }
+  return hits;
+}
+
 export function boxOf(path: string, line: number, tag: string, max: number): { x: number; y: number; width: number; height: number } | null {
   const t = targetsOf(path, line, tag, max);
   if (t.length === 0) return null;

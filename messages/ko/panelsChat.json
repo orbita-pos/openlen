@@ -125,7 +125,8 @@
     "dropNotSupported": "{names}은(는) 첨부할 수 없어요. OpenLen은 사진, PDF, Excel, Word, PowerPoint, CSV, 동영상을 받아요.",
     "dropTooBig": "너무 커서 첨부할 수 없어요: {names}",
     "dropLimit": "{count, plural, other {파일 #개}}는 첨부되지 않았어요. 메시지당 사진 4장, 파일 4개까지예요.",
-    "fileFailedNamed": "{name}을(를) 올리지 못했어요. 다시 시도해 주세요."
+    "fileFailedNamed": "{name}을(를) 올리지 못했어요. 다시 시도해 주세요.",
+    "pointLabel": "가리키기"
   },
   "equipo": {
     "paraLen": "Len에게",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "촬영: {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "섹션",
+      "heading": "제목",
+      "text": "텍스트",
+      "button": "버튼",
+      "link": "링크",
+      "image": "이미지",
+      "form": "양식",
+      "input": "입력란",
+      "list": "목록",
+      "media": "미디어",
+      "embed": "임베드",
+      "element": "요소"
+    },
+    "pickOnCanvas": "캔버스에서 고르기…",
+    "notOnScreen": "지금 화면에 없음",
+    "onPage": "{page} 페이지",
+    "more": "{count}개 더 — 계속 입력하세요",
+    "limit": "메시지당 최대 {max}개까지",
+    "cannotPoint": "이 요소에는 가리킬 코드 줄이 없습니다.",
+    "files": "파일",
+    "people": "사람",
+    "onScreen": "{screen} 화면"
   }
 }

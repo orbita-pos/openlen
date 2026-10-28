@@ -125,7 +125,8 @@
     "dropNotSupported": "无法添加 {names}：OpenLen 支持照片、PDF、Excel、Word、PowerPoint、CSV 和视频。",
     "dropTooBig": "文件太大，无法添加：{names}。",
     "dropLimit": "{count, plural, other {有 # 个文件}}未添加：每条消息最多 4 张照片和 4 个文件。",
-    "fileFailedNamed": "{name} 上传失败，请重试。"
+    "fileFailedNamed": "{name} 上传失败，请重试。",
+    "pointLabel": "指向"
   },
   "equipo": {
     "paraLen": "发给 Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "作者：{author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "区块",
+      "heading": "标题",
+      "text": "文本",
+      "button": "按钮",
+      "link": "链接",
+      "image": "图片",
+      "form": "表单",
+      "input": "输入框",
+      "list": "列表",
+      "media": "媒体",
+      "embed": "嵌入",
+      "element": "元素"
+    },
+    "pickOnCanvas": "在画布上选择…",
+    "notOnScreen": "当前不在屏幕上",
+    "onPage": "在 {page} 页面",
+    "more": "还有 {count} 个 — 继续输入",
+    "limit": "每条消息最多 {max} 个",
+    "cannotPoint": "该元素在代码中没有可指向的行。",
+    "files": "文件",
+    "people": "成员",
+    "onScreen": "在 {screen} 屏幕"
   }
 }

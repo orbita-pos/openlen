@@ -125,7 +125,8 @@
     "dropNotSupported": "{names} kan niet worden toegevoegd: OpenLen neemt foto's, pdf, Excel, Word, PowerPoint, CSV en video's.",
     "dropTooBig": "Te groot om toe te voegen: {names}.",
     "dropLimit": "{count, plural, one {# bestand is} other {# bestanden zijn}} niet toegevoegd: maximaal 4 foto's en 4 bestanden per bericht.",
-    "fileFailedNamed": "{name} kon niet worden geüpload. Probeer het opnieuw."
+    "fileFailedNamed": "{name} kon niet worden geüpload. Probeer het opnieuw.",
+    "pointLabel": "Aanwijzen"
   },
   "equipo": {
     "paraLen": "Aan Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "door {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Sectie",
+      "heading": "Kop",
+      "text": "Tekst",
+      "button": "Knop",
+      "link": "Link",
+      "image": "Afbeelding",
+      "form": "Formulier",
+      "input": "Veld",
+      "list": "Lijst",
+      "media": "Media",
+      "embed": "Insluiting",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Kies op het canvas…",
+    "notOnScreen": "nu niet in beeld",
+    "onPage": "op pagina {page}",
+    "more": "nog {count} — typ verder",
+    "limit": "Maximaal {max} vermeldingen per bericht",
+    "cannotPoint": "Dit element heeft geen regel in de code om naar te wijzen.",
+    "files": "Bestanden",
+    "people": "Mensen",
+    "onScreen": "op scherm {screen}"
   }
 }

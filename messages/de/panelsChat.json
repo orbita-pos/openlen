@@ -125,7 +125,8 @@
     "dropNotSupported": "{names} kann nicht angehängt werden: OpenLen nimmt Fotos, PDF, Excel, Word, PowerPoint, CSV und Videos.",
     "dropTooBig": "Zu groß zum Anhängen: {names}.",
     "dropLimit": "{count, plural, one {# Datei wurde} other {# Dateien wurden}} nicht angehängt: höchstens 4 Fotos und 4 Dateien pro Nachricht.",
-    "fileFailedNamed": "{name} konnte nicht hochgeladen werden. Versuch es noch einmal."
+    "fileFailedNamed": "{name} konnte nicht hochgeladen werden. Versuch es noch einmal.",
+    "pointLabel": "Zeigen"
   },
   "equipo": {
     "paraLen": "An Len",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "von {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "Abschnitt",
+      "heading": "Überschrift",
+      "text": "Text",
+      "button": "Button",
+      "link": "Link",
+      "image": "Bild",
+      "form": "Formular",
+      "input": "Feld",
+      "list": "Liste",
+      "media": "Medien",
+      "embed": "Einbettung",
+      "element": "Element"
+    },
+    "pickOnCanvas": "Auf der Leinwand wählen…",
+    "notOnScreen": "gerade nicht sichtbar",
+    "onPage": "auf der Seite {page}",
+    "more": "{count} weitere — weiter tippen",
+    "limit": "Bis zu {max} Erwähnungen pro Nachricht",
+    "cannotPoint": "Dieses Element hat keine Codezeile, auf die man zeigen kann.",
+    "files": "Dateien",
+    "people": "Personen",
+    "onScreen": "auf dem Bildschirm {screen}"
   }
 }

@@ -45,6 +45,8 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { MAX_FILES_PER_MESSAGE, type AttachedFile } from "@/lib/projects/chat-files";
+import { liveMentions, sameMention } from "@/lib/mentions/in-text";
+import { MAX_MENTIONS, type MentionRef } from "@/lib/mentions/types";
 import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
@@ -128,6 +130,8 @@ export interface DesignTurn {
    * no hay forma de saber si viajó. Aquí queda escrito lo que se mandó.
    */
   scope?: ScopedSelection;
+  /** The «@» mentions that went with the message (spec local 2026-10-27). */
+  mentions?: readonly MentionRef[];
   assistantReasoning: string;
   status: TurnStatus;
   /** Un reintento del proveedor en curso (`retry` del bucle). `until` = cuándo
@@ -356,6 +360,21 @@ export function useAgentChat({
     (initialChat ?? []).map(restoreTurn),
   );
   const [draft, setDraft] = useState("");
+  // THE CHAT'S «@» (spec local 2026-10-27): what the message points at. A mention
+  // lives while its label is in the draft; it goes with the turn that carries it.
+  const [mentions, setMentions] = useState<MentionRef[]>([]);
+  const mentionsRef = useRef(mentions);
+  mentionsRef.current = mentions;
+  const addMention = useCallback((ref: MentionRef): boolean => {
+    const already = mentionsRef.current.some((m) => sameMention(m, ref));
+    if (!already && mentionsRef.current.length >= MAX_MENTIONS) return false;
+    if (!already) {
+      mentionsRef.current = [...mentionsRef.current, ref];
+      setMentions(mentionsRef.current);
+    }
+    setDraft((d) => `${d && !/\s$/.test(d) ? `${d} ` : d}${ref.label} `);
+    return true;
+  }, []);
   // CUÁNTO PIENSA LEN. Vive en el PADRE porque lo necesitan dos sitios: el
   // mando que lo pinta y el `send` que lo fija en el turno. `auto` hasta que la
   // carga diga otra cosa — es el mismo estado que `null` en la base.
@@ -1267,6 +1286,9 @@ export function useAgentChat({
           : `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       // EL MODO DISEÑO: se vigila este turno para vaciar los pendientes al acabar entero.
       if (opciones?.design) designTurnRef.current = turnId;
+      // THE «@» MENTIONS whose label is still in the message, in the order they
+      // appear in it (spec local 2026-10-27, §6.7).
+      const turnMentions = liveMentions(prompt, mentionsRef.current).slice(0, MAX_MENTIONS);
 
       const newTurn: DesignTurn = {
         id: turnId,
@@ -1279,6 +1301,7 @@ export function useAgentChat({
         // prueba que la imagen. Se lee AQUÍ, antes de que el envío lo suelte
         // del compositor unas líneas más abajo.
         scope: scopedSelection ?? undefined,
+        ...(turnMentions.length > 0 ? { mentions: turnMentions } : {}),
         assistantReasoning: "",
         status: "streaming",
         preEditHtml,
@@ -1289,6 +1312,8 @@ export function useAgentChat({
 
       setTurns((prev) => [...prev, newTurn]);
       setDraft("");
+      mentionsRef.current = [];
+      setMentions([]);
       // The attached image flows into this request via turnImage; clearing
       // here means the next prompt starts fresh. Users can re-attach if they
       // want the same image again.
@@ -1323,12 +1348,16 @@ export function useAgentChat({
       // Snapshot the scope at send time — if the user clears or re-picks
       // mid-stream, the in-flight request keeps the original target. Shared
       // by both the agent and ai-design branches (F2 Task 8 parity).
+      // The ai-design fallback knows one scope only: the first page mention.
+      const firstPageMention = turnMentions.find((m) => m.type === "element" && m.target.type === "page");
       const turnScope = scopedSelection
         ? {
             hint: scopedSelection.hint,
             path: scopedSelection.path,
           }
-        : null;
+        : firstPageMention?.type === "element" && firstPageMention.target.type === "page"
+          ? { hint: firstPageMention.label, path: firstPageMention.target.path }
+          : null;
       // Same snapshot discipline for any attached image — the in-flight
       // request keeps the one that was set when Send fired.
       const turnImage = imgs[0] ? { url: imgs[0].url, alt: imgs[0].alt } : null;
@@ -1490,7 +1519,8 @@ export function useAgentChat({
               // Same value + same conditional shape ai-design sends below —
               // absent/empty means home, cloned for parity.
               ...(turnPage ? { page: turnPage } : {}),
-              ...(turnScope ? { scope: turnScope } : {}),
+              // THE «@» MENTIONS (spec local 2026-10-27); the old single scope only without them.
+              ...(turnMentions.length > 0 ? { mentions: turnMentions } : turnScope ? { scope: turnScope } : {}),
               ...(turnImages.length > 0 ? { attachedImages: turnImages } : {}),
               ...(files.length > 0 ? { attachedFiles: files } : {}),
               // EL MODO DISEÑO: los cambios del panel (`lib/agent/design-request.ts`).
@@ -2625,6 +2655,10 @@ export function useAgentChat({
     turns,
     draft,
     setDraft,
+    /** The «@» mentions of the draft (spec local 2026-10-27). */
+    mentions,
+    setMentions,
+    addMention,
     /** Un turno propio en vuelo. */
     sending,
     /** El id de la fila de un turno que sigue en el servidor sin stream aquí. */

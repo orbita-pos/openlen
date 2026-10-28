@@ -125,7 +125,8 @@
     "dropNotSupported": "{names} は添付できません。OpenLen で添付できるのは写真、PDF、Excel、Word、PowerPoint、CSV、動画です。",
     "dropTooBig": "大きすぎて添付できません: {names}",
     "dropLimit": "{count, plural, other {# 件のファイル}}は添付されませんでした。1 つのメッセージにつき写真 4 枚、ファイル 4 件までです。",
-    "fileFailedNamed": "{name} をアップロードできませんでした。もう一度お試しください。"
+    "fileFailedNamed": "{name} をアップロードできませんでした。もう一度お試しください。",
+    "pointLabel": "指す"
   },
   "equipo": {
     "paraLen": "Len へ",
@@ -435,5 +436,30 @@
     "source": "Wikimedia Commons",
     "by": "撮影: {author}",
     "more": "+{count}"
+  },
+  "mentions": {
+    "kind": {
+      "section": "セクション",
+      "heading": "見出し",
+      "text": "テキスト",
+      "button": "ボタン",
+      "link": "リンク",
+      "image": "画像",
+      "form": "フォーム",
+      "input": "入力欄",
+      "list": "リスト",
+      "media": "メディア",
+      "embed": "埋め込み",
+      "element": "要素"
+    },
+    "pickOnCanvas": "キャンバスで選ぶ…",
+    "notOnScreen": "今は画面にありません",
+    "onPage": "{page} ページ",
+    "more": "ほか {count} 件 — 続けて入力",
+    "limit": "1 メッセージにつき最大 {max} 件まで",
+    "cannotPoint": "その要素には指せるコードの行がありません。",
+    "files": "ファイル",
+    "people": "メンバー",
+    "onScreen": "{screen} の画面"
   }
 }

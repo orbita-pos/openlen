@@ -100,7 +100,8 @@
       "refresh": "Voorbeeld vernieuwen",
       "openNewTab": "Openen in nieuw tabblad",
       "viewCode": "Bekijk de code",
-      "viewData": "Gegevens bekijken"
+      "viewData": "Gegevens bekijken",
+      "designShort": "Ontwerp"
     },
     "banner": {
       "sectionSelect": "Klik op een sectie om je volgende chat erop te richten · <kbd></kbd> om te annuleren",

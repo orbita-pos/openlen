@@ -228,3 +228,105 @@ describe("el modo Diseño en el lienzo de una app", () => {
     }
   }, 90_000);
 });
+
+// THE CHAT'S «@» on an app canvas (spec local 2026-10-27, §6.5): the workshop
+// names an element by its source line; the canvas outlines every copy on
+// screen and says how many there are.
+const LISTA_TSX = [
+  "export default function App() {", // 1
+  "  const items = [1, 2, 3];", // 2
+  "  return (", // 3
+  "    <ul>", // 4
+  "      {items.map((i) => (", // 5
+  '        <li key={i} className="fila">Pedido {i}</li>', // 6
+  "      ))}", // 7
+  "    </ul>", // 8
+  "  );", // 9
+  "}", // 10
+].join("\n");
+
+describe("the «@» highlight on an app canvas", () => {
+  it("🔴 outlines every copy a loop renders and answers how many", async () => {
+    const v = await abrir({ ...CARPETA, "/src/App.tsx": LISTA_TSX }, "li.fila");
+    try {
+      await v.enviar({ type: "openlen:mention-highlight", key: "k1", target: { type: "app", path: "/src/App.tsx", line: 6, tag: "li", text: "Pedido" } });
+      await new Promise((r) => setTimeout(r, 150));
+      expect(await v.recibidos("openlen:mention-highlighted")).toEqual([{ type: "openlen:mention-highlighted", key: "k1", count: 3 }]);
+      expect(await v.page.evaluate(() => document.querySelectorAll("[data-openlen-mention-hover]").length)).toBe(3);
+      await v.enviar({ type: "openlen:mention-highlight", key: "k1", target: null });
+      await new Promise((r) => setTimeout(r, 100));
+      expect(await v.page.evaluate(() => document.querySelectorAll("[data-openlen-mention-hover]").length)).toBe(0);
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+
+  it("🔴 with the app broken (error overlay) answers 0", async () => {
+    const v = await abrir({ ...CARPETA, "/src/App.tsx": "export default function App() { return <div>; }\n" }, null);
+    try {
+      await v.enviar({ type: "openlen:mention-highlight", key: "k2", target: { type: "app", path: "/src/App.tsx", line: 1, tag: "div" } });
+      await new Promise((r) => setTimeout(r, 150));
+      expect(await v.recibidos("openlen:mention-highlighted")).toEqual([{ type: "openlen:mention-highlighted", key: "k2", count: 0 }]);
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+});
+
+const TARJETAS_TSX = [
+  "function Tarjeta() {", // 1
+  '  return <div className="tarjeta"><p>Pan</p></div>;', // 2
+  "}", // 3
+  "export default function App() {", // 4
+  "  return (", // 5
+  "    <main>", // 6
+  "      <Tarjeta />", // 7
+  "      <Tarjeta />", // 8
+  "    </main>", // 9
+  "  );", // 10
+  "}", // 11
+].join("\n");
+
+describe("the «@» highlight of a component and of where it is used", () => {
+  it("🔴 a use line outlines that copy's root; the definition line outlines every copy", async () => {
+    const v = await abrir({ ...CARPETA, "/src/App.tsx": TARJETAS_TSX }, "div.tarjeta");
+    try {
+      await v.enviar({ type: "openlen:mention-highlight", key: "use", target: { type: "app", path: "/src/App.tsx", line: 8, tag: "Tarjeta" } });
+      await new Promise((r) => setTimeout(r, 150));
+      await v.enviar({ type: "openlen:mention-highlight", key: "def", target: { type: "app", path: "/src/App.tsx", line: 2, tag: "div" } });
+      await new Promise((r) => setTimeout(r, 150));
+      const got = (await v.recibidos("openlen:mention-highlighted")) as { key: string; count: number }[];
+      expect(got.map((m) => [m.key, m.count])).toEqual([["use", 1], ["def", 2]]);
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+});
+
+const ENVOLTORIO_TSX = [
+  "function Layout({ children }) {", // 1
+  '  return <div className="layout">{children}</div>;', // 2
+  "}", // 3
+  "export default function App() {", // 4
+  "  const items = Array.from({ length: 200 }, (_, i) => i);", // 5
+  "  return (", // 6
+  "    <Layout>", // 7
+  '      {items.map((i) => <p key={i} className="fila">Fila {i}</p>)}', // 8
+  "    </Layout>", // 9
+  "  );", // 10
+  "}", // 11
+].join("\n");
+
+describe("the «@» highlight of a wrapper's line", () => {
+  it("outlines the wrapper alone, not everything inside it", async () => {
+    const v = await abrir({ ...CARPETA, "/src/App.tsx": ENVOLTORIO_TSX }, "p.fila");
+    try {
+      await v.enviar({ type: "openlen:mention-highlight", key: "w", target: { type: "app", path: "/src/App.tsx", line: 7, tag: "Layout" } });
+      await new Promise((r) => setTimeout(r, 200));
+      expect((await v.recibidos("openlen:mention-highlighted")).map((m) => (m as { count: number }).count)).toEqual([1]);
+      expect(await v.page.evaluate(() => document.querySelector("[data-openlen-mention-hover]")?.className)).toBe("layout");
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+});
