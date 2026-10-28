@@ -92,6 +92,13 @@ describe("resolveMentions", () => {
     expect(r.selecciones[0]).toMatchObject({ desde: 2 });
   });
 
+  it("reads the children of a <pre> for a textless mention's signature", async () => {
+    const html = ["<body>", '<pre class="mono"><span class="k">{</span>', '  <span class="v">"a"</span></pre>', "</body>"].join("\n");
+    const ref: MentionRef = { type: "element", label: "@Elemento · pre", text: "", target: { type: "page", page: null, path: "pre:nth-of-type(1)", tag: "pre", sig: { cls: "mono", kids: "span,span" } } };
+    const r = await resolveMentions([ref], { pageHtml: () => html, files: async () => ({}) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 2, hasta: 3 });
+  });
+
   it("matches whole words: «Pro» is not «Professional»", async () => {
     const html = ["<body>", "<span>Professional</span>", "</body>"].join("\n");
     const r = await resolveMentions([el("@Texto · Pro", null, "span:nth-of-type(1)", "span", "Pro")], { pageHtml: () => html, files: async () => ({}) });
