@@ -197,6 +197,36 @@ ${texto}
     expect(filas.at(-1)!.cutOff).toBe(true);
   });
 
+  // El chat decía «El turno fue cancelado.» de un turno que mató un reinicio
+  // (ensayo de caja, 28/10): los dos cierres de una huérfana guardan el motivo.
+  it("🔴 la huérfana se cierra con `interrupted`, por el arranque y por el reenganche, y el panel la lee así", async () => {
+    await abrirFilaDelTurno("p1", { id: "al-arrancar", userText: "@Len pon el horario", page: null });
+    await pg.query(`update "projectChatMessages" set "createdAt" = "createdAt" - interval '10 minutes' where id = 'al-arrancar'`);
+    expect(await cutOffRowsOpenedBeforeBoot(60)).toBe(1);
+    await abrirFilaDelTurno("p1", { id: "al-reengancharse", userText: "cambia el título", page: null });
+    await marcarCortadaSiSigueEnCurso("al-reengancharse");
+    const filas = await pg.query<{ id: string; status: string; endReason: string | null }>(`select id, status, "endReason" from "projectChatMessages" order by id`);
+    expect(filas.rows).toEqual([
+      { id: "al-arrancar", status: "cortado", endReason: "interrupted" },
+      { id: "al-reengancharse", status: "cortado", endReason: "interrupted" },
+    ]);
+    const panel = await getChatMessages("p1");
+    expect(panel.map((t) => [t.id, t.cortado, t.endReason])).toEqual([
+      ["al-arrancar", true, "interrupted"],
+      ["al-reengancharse", true, "interrupted"],
+    ]);
+  });
+
+  it("brazo de control: un turno que se cerró solo conserva su motivo; el cierre de huérfanas no lo toca", async () => {
+    await abrirFilaDelTurno("p1", { id: "parado", userText: "hola", page: null });
+    await registrarTurnoDelServidor("p1", { id: "parado", userText: "hola", assistantReasoning: "", status: "cortado", endReason: "cancelled" } as Parameters<typeof registrarTurnoDelServidor>[1]);
+    await pg.query(`update "projectChatMessages" set "createdAt" = "createdAt" - interval '10 minutes' where id = 'parado'`);
+    expect(await cutOffRowsOpenedBeforeBoot(60)).toBe(0);
+    await marcarCortadaSiSigueEnCurso("parado");
+    const r = await pg.query<{ status: string; endReason: string | null }>(`select status, "endReason" from "projectChatMessages" where id = 'parado'`);
+    expect(r.rows[0]).toEqual({ status: "cortado", endReason: "cancelled" });
+  });
+
   it("🔴 el corte va con el reloj de la base: con la base en otra zona, la fila que se acaba de abrir sigue viva", async () => {
     await pg.exec(`set time zone 'America/Mexico_City'`);
     await abrirFilaDelTurno("p1", { id: "recien", userText: "hola", page: null });

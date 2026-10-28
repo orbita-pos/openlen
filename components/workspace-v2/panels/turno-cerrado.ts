@@ -80,13 +80,14 @@ export function cierreDeTurno(args: {
  * avisan desde la fila (`endReason`): las de error. Un tope no: su cierre ya lo
  * cuenta —lo redacta el modelo con los hechos y el cliente guarda su línea—.
  */
-export type ParadaConAviso = "cancelled" | "upstream" | "truncated" | "no_credits" | "context_too_long" | "compact_failed";
-const PARADAS_CON_AVISO: ReadonlySet<string> = new Set<ParadaConAviso>(["cancelled", "upstream", "truncated", "no_credits", "context_too_long", "compact_failed"]);
+export type ParadaConAviso = "cancelled" | "upstream" | "truncated" | "no_credits" | "context_too_long" | "compact_failed" | "interrupted";
+const PARADAS_CON_AVISO: ReadonlySet<string> = new Set<ParadaConAviso>(["cancelled", "upstream", "truncated", "no_credits", "context_too_long", "compact_failed", "interrupted"]);
 
 /** El aviso de un turno: el de vivo (`avisoTurno`) o, al recargar, el que sale
  *  de la fila. `cortado` = va con la plantilla «se cortó antes de terminar».
- *  `null` = sin aviso. Una fila cortada sin motivo (anterior a `endReason`, o
- *  huérfana tras reiniciar el servidor) conserva el genérico. */
+ *  `null` = sin aviso. La huérfana tras reiniciar el servidor trae
+ *  `interrupted` (la cierran el reenganche y el arranque); una fila cortada sin
+ *  motivo, anterior a eso, conserva el genérico. */
 export function avisoDelTurno(
   t: { readonly avisoTurno?: string | undefined; readonly cortado?: boolean | undefined; readonly endReason?: string | undefined },
   porCodigo: (code: ParadaConAviso) => string,
