@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Len</string>
+    <string name="title_activity_main">Len</string>
+    <string name="package_name">app.openlen.len</string>
+    <string name="custom_url_scheme">app.openlen.len</string>
+</resources>

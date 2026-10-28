@@ -79,7 +79,7 @@ export interface NotificationPrefs {
 export type DeliveryResult = "sent" | "skipped" | "failed";
 
 export interface NotificationChannel {
-  id: "webpush" | "email";
+  id: "webpush" | "fcm" | "email";
   isEnabled(prefs: NotificationPrefs): boolean;
   send(event: NotificationEvent): Promise<DeliveryResult>;
 }

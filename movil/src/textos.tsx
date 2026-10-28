@@ -3,6 +3,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { IntlProvider } from "use-intl";
 import type { Idioma } from "./config";
+import { textosGestion } from "./textos-gestion";
+import { textosAvisos } from "./textos-avisos";
+import { textosPersonalizacion } from "./textos-personalizacion";
+import { textosEntrega } from "./textos-entrega";
+import { textosEquipo } from "./textos-equipo";
 
 const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada}.json");
 
@@ -11,13 +16,15 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/movil.json`]!(),
     cargas[`../../messages/${idioma}/llamada.json`]!(),
   ]);
-  return { movil: movil.default, llamada: llamada.default };
+  return { movil: { ...movil.default, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma] }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {
   const [m, setM] = useState<Record<string, unknown> | null>(null);
   useEffect(() => {
-    void mensajesDe(idioma).then(setM);
+    let vigente = true;
+    void mensajesDe(idioma).then((m) => { if (vigente) setM(m); });
+    return () => { vigente = false; };
   }, [idioma]);
   if (!m) return null;
   return (

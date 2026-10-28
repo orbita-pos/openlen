@@ -123,6 +123,7 @@ const targets = [
   // 🔴 Cambiarles una COLUMNA después pide su propio ALTER: el IF NOT EXISTS
   // no toca una tabla que ya existe, y el cambio no llegaría nunca a prod.
   "movil-migrate",
+  "movil-avisos-migrate",
   // El backend de las páginas (plans/pages-backend/design.md): la tabla
   // projectBackends. Tabla NUEVA con IF NOT EXISTS. 🔴 OBLIGATORIA antes que el
   // código: las rutas /rest/v1 y /auth/v1 la leen en cada petición.

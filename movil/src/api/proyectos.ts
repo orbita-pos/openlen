@@ -32,9 +32,12 @@ export async function leerProyecto(c: ClienteDeOpenLen, id: string): Promise<Pro
 }
 
 export async function enlaceDeVistaPrevia(c: ClienteDeOpenLen, base: string, id: string): Promise<string> {
-  const j = await json<{ enabled: boolean; token: string }>(
+  const j = await json<{ enabled: boolean; token: string; __muestraHtml?: string }>(
     c.pedir(`/api/projects/${encodeURIComponent(id)}/preview`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }),
   );
+  // Exclusivo del cliente de muestra en desarrollo; Vite elimina esta rama
+  // del APK. Permite revisar las pantallas sin servidor ni llamadas a IA.
+  if (import.meta.env.DEV && j.__muestraHtml) return `data:text/html;charset=utf-8,${encodeURIComponent(j.__muestraHtml)}`;
   return `${base}/p/${encodeURIComponent(id)}?t=${encodeURIComponent(j.token)}`;
 }
 

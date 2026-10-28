@@ -175,7 +175,7 @@ export class TerminalDeLen {
       if (m.ok) p.resolve(m);
       else p.reject(new Error(m.error ?? "the terminal failed"));
     });
-    hilo.on("error", (e) => this.fallarTodo(e));
+    hilo.on("error", (e) => this.fallarTodo(e instanceof Error ? e : new Error(String(e))));
     hilo.on("exit", () => {
       if (this.hilo === hilo) this.hilo = null;
       this.fallarTodo(new Error("the terminal closed"));
