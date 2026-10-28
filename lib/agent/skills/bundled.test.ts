@@ -5,6 +5,8 @@ import { documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PDF_FONT_FILES } from "@/lib/agent/sandbox/template-files";
 import { artifactManuals } from "@/lib/agent/artifact-manuals";
 import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
+import { CENTICREDITOS_POR_CONSULTA } from "@/lib/agent/web/buscar";
+import { CONSULTAS_POR_TURNO, PAGINAS_POR_TURNO } from "@/lib/agent/web/herramientas";
 import { skillCatalogMessage } from "./catalog-message";
 import { resolveSkills } from "./registry";
 import type { AppDeProyecto } from "@/lib/projects/types";
@@ -12,9 +14,10 @@ import { parseSkillFile } from "./skill-file";
 import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkillNames, bundledSkills, type BundledContext } from "./bundled";
 
 describe("bundled skills", () => {
-  it("ships the seven office skills, pdf, the one that creates skills and, in a page, the page guides", () => {
+  it("ships the seven office skills, pdf, research, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
       "convert-to-app",
+      "deep-research",
       "frontend-design",
       "office",
       "office-docx",
@@ -65,14 +68,37 @@ describe("bundled skills", () => {
 
     // Anthropic's pdf skill: «All rights reserved». Only its technical facts are used, never its text
     // or its scripts.
-    it("no bundled skill copies Anthropic's pdf skill", () => {
+    // Anthropic's skills without an open license (pdf, deep-research, dataviz, Claude Code's verify,
+    // setup-writing-style): only their technical facts, never their text or their scripts.
+    it("no bundled skill copies an Anthropic skill without an open license", () => {
       const theirs = [
         "fill_fillable_fields", "check_bounding_boxes", "extract_form_field_info", "convert_pdf_to_images",
         "fill_pdf_form_with_annotations", "extract_form_structure", "check_fillable_fields", "PDF Processing Guide",
+        "researcher.md", "report-writer.md", "Coordinating Deep Research", "research_notes/", "Executing Research",
       ];
-      for (const [path, text] of Object.entries(bundledSkillFiles())) {
-        for (const t of theirs) expect(text, `${path} has ${t}`).not.toContain(t);
+      for (const ctx of [{ app: null, env: { OPENLEN_ARTIFACTS: "1" } }, { app: null, env: {} }] as const) {
+        for (const [path, text] of Object.entries(bundledSkillFiles(ctx))) {
+          for (const t of theirs) expect(text, `${path} has ${t}`).not.toContain(t);
+        }
       }
+    });
+  });
+
+  // DEEP-RESEARCH (spec local 2026-10-27-len-five-skills, §4.1): Claude's method with one researcher —
+  // Len has no subagents — within Len's real search budget, read from the code, never written by hand.
+  describe("deep-research", () => {
+    const text = () => bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/deep-research/SKILL.md`]!;
+
+    it("deep-research names Len's real limits", () => {
+      for (const must of [
+        "web_search", "web_fetch", "present", "references/report.md",
+        `${CENTICREDITOS_POR_CONSULTA / 100} credits`,
+        `${CONSULTAS_POR_TURNO} queries`, `${PAGINAS_POR_TURNO} pages`,
+      ]) expect(text(), must).toContain(must);
+    });
+
+    it("when the budget runs out it says so and offers another turn", () => {
+      expect(text()).toContain("another turn");
     });
   });
 

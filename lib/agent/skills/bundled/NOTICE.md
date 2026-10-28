@@ -27,6 +27,12 @@ what breaks), without its text or its scripts (its license reserves all rights).
 (`pdf/scripts/`) are ours too. Added on 2026-10-27 (spec local 2026-10-27-len-pdf-skill); checked in a
 real box by `npm run pdf-skill:box-check`.
 
+`deep-research` is ours, written from the method of Anthropic's `deep-research` skill (subtopics,
+short queries that never repeat, reading the promising pages, primary sources, a report that answers
+first), facts only: it has no open license. Claude coordinates research subagents; Len has none, so one
+researcher follows the same loop within Len's search limits (`lib/agent/web/herramientas.ts`). Added
+on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.1).
+
 Generated skills (spec local 2026-10-27-len-five-skills, §4.2), built in `lib/agent/skills/generated.ts`
 from the same TypeScript that served `/.openlen/docs`: `artifact-*` (the deliverables manuals),
 `convert-to-app` (the app manual) and `frontend-design`. `frontend-design` is OpenLen's design guide
