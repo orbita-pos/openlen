@@ -8,7 +8,9 @@ import { gunzipSync } from "node:zlib";
 import type { BoxNetwork } from "./box-network";
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 import { isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX, BOX_TEXT_FILE_BYTES } from "./template-files";
+import { MAX_FILE_BYTES } from "@/lib/files/limits";
+
+import { BIG_FILE_PREFIX } from "./template-files";
 
 export type FakeRun = (
   command: string,
@@ -65,11 +67,12 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
         }
         if (command === "openlen-manifest" || command.endsWith("/openlen-manifest")) {
           const manifest: Record<string, string> = {};
-          for (const [path, text] of b.files) {
+          const entries: [string, Uint8Array][] = [...b.files].map(([path, text]) => [path, new TextEncoder().encode(text)]);
+          for (const [path, data] of b.bytes) entries.push([path, data]);
+          for (const [path, data] of entries) {
             if (!isSyncedPath(path)) continue;
-            const size = Buffer.byteLength(text, "utf8");
             // Like the template's script: a file over the cap is listed by its size, never read.
-            manifest[path] = size > BOX_TEXT_FILE_BYTES ? `${BIG_FILE_PREFIX}${size}:0` : createHash("sha256").update(text).digest("hex");
+            manifest[path] = data.byteLength > MAX_FILE_BYTES ? `${BIG_FILE_PREFIX}${data.byteLength}:0` : createHash("sha256").update(data).digest("hex");
           }
           return { stdout: JSON.stringify(manifest), stderr: "", exitCode: 0, timedOut: false };
         }
@@ -90,6 +93,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
         for (const [path, text] of Object.entries(files)) {
           b.files.set(path, text);
           b.binaries.delete(path);
+          b.bytes.delete(path);
         }
       },
       async remove(paths) {
@@ -107,6 +111,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       async writeBytes(files) {
         const b = box();
         for (const [p, data] of Object.entries(files)) {
+          b.files.delete(p);
           b.bytes.set(p, data);
           b.binaries.set(p, data.byteLength);
         }

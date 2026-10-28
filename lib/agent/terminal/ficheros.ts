@@ -1,4 +1,5 @@
 import { formatFileSize, persistedOutput } from "./formato";
+import { MAX_FILE_BYTES } from "@/lib/files/limits";
 /**
  * LOS FICHEROS DE LA TERMINAL DE LEN (F1 de plans/len-agente-2026).
  *
@@ -115,7 +116,7 @@ export function salidaDeLaTerminal(r: {
   const cuerpo = partes.join(partes[0]?.endsWith("\n") ? "" : "\n");
   const notas = [
     ...(r.guardado ?? []),
-    ...(r.noGuardados ?? []).map((n) => `${n.ruta}: not saved — ${n.motivo === "binary" ? "binary file" : "larger than 1 MB"}`),
+    ...(r.noGuardados ?? []).map((n) => `${n.ruta}: not saved — ${n.motivo === "binary" ? "binary file" : `larger than ${MAX_FILE_BYTES / 1024 / 1024} MB`}`),
     ...(r.reiniciada ? [r.reiniciada] : []),
   ];
   if (fallo) {

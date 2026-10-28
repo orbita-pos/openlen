@@ -5,7 +5,10 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+import { __setStorageForTest } from "@/lib/storage";
+import { FilesystemStorage } from "@/lib/storage/filesystem";
 
 import type { BridgeHandlers } from "./bridge";
 import type { SandboxHandle } from "./driver";
@@ -13,6 +16,10 @@ import { fakeDriver, type FakeRun } from "./fake-driver";
 import { NEVER_IN_BOX } from "./paths";
 import { BASE_ENV_FILE, SandboxTerminal, readOnlySource } from "./sandbox-terminal";
 import { PLAYWRIGHT_RESOLVER } from "./template-files";
+
+// A binary that comes back from the box goes to storage (spec local 2026-10-28): a temporary one here.
+beforeAll(() => __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-box-store-")), publicUrlBase: "/uploads" })));
+afterAll(() => __setStorageForTest(null));
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 // A POSIX shell, as the box's (Git's on Windows); without one, the shell test is skipped.
@@ -255,8 +262,10 @@ describe("SandboxTerminal", () => {
     expect(r.stderr).toContain("/index.html: kept the saved version; the box's change was dropped");
   });
 
-  it("a binary or oversized file is not saved, is listed in noGuardados, and the rest still syncs", async () => {
-    const big = "x".repeat(1024 * 1024 + 1);
+  // Since 2026-10-28 (spec local ficheros-al-nivel-de-claude-code) a binary comes back as a blob pointer; only
+  // what is over the folder's own limit, 50 MB, is not saved.
+  it("an oversized file is not saved, is listed in noGuardados, and the rest —a binary too— still syncs", async () => {
+    const big = "x".repeat(50 * 1024 * 1024 + 1);
     const { terminal, d, handle } = await open({
       projectFiles: { "/index.html": "a" },
       onRun: (cmd, files) => {
@@ -271,11 +280,10 @@ describe("SandboxTerminal", () => {
     // The fake has to know which files are binary before they are read.
     d.binary(handle.id, "/data/x.zip", 4);
     const r = await ran;
-    expect(r.ficheros).toEqual({ "/index.html": "a", "/data/ok.csv": "a,b\n" });
-    expect(r.noGuardados).toEqual([
-      { ruta: "/data/big.csv", motivo: "too_large" },
-      { ruta: "/data/x.zip", motivo: "binary" },
-    ]);
+    const { "/data/x.zip": zip, ...rest } = r.ficheros ?? {};
+    expect(rest).toEqual({ "/index.html": "a", "/data/ok.csv": "a,b\n" });
+    expect(zip).toMatch(/^\uFFFFopenlen-blob:[0-9a-f]{64}:4:/);
+    expect(r.noGuardados).toEqual([{ ruta: "/data/big.csv", motivo: "too_large" }]);
     // A file over the cap is never downloaded into the app's process: one of gigabytes would take it down.
     expect(d.reads(handle.id)).not.toContain("/data/big.csv");
   });

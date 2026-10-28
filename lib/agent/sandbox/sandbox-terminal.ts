@@ -23,7 +23,10 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX, BOX_BIN, BOX_TEXT_FILE_BYTES, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_RESOLVER } from "./template-files";
+import ignore from "ignore";
+import { getBlob, parsePointer, putBlob, makePointer } from "@/lib/files/blob";
+import { MAX_FILE_BYTES, REGENERABLE_DEFAULTS } from "@/lib/files/limits";
+import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_RESOLVER } from "./template-files";
 
 const REQUESTS = `${BRIDGE_DIR}/requests`;
 const RESPONSES = `${BRIDGE_DIR}/responses`;
@@ -144,7 +147,7 @@ const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 function manifestOf(tree: Readonly<Record<string, string>>): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [path, text] of Object.entries(tree)) if (isSyncedPath(path)) out[path] = sha256(text);
+  for (const [path, text] of Object.entries(tree)) if (isSyncedPath(path)) out[path] = parsePointer(text)?.sha256 ?? sha256(text);
   return out;
 }
 
@@ -226,6 +229,7 @@ export class SandboxTerminal implements TerminalBackend {
       if (c.kind === "deleted") removes.push(c.path);
       else writes[c.path] = this.tree[c.path]!;
     }
+    const { text: textWrites, bytes: byteWrites } = await this.split(writes);
     // The base environment rides along with the project's files: rewritten each turn (BASE_URL may change).
     writes[BASE_ENV_FILE] = baseEnvScript(this.o.baseEnv ?? {});
     // The project's files and /.openlen go up at the same time.
@@ -233,7 +237,8 @@ export class SandboxTerminal implements TerminalBackend {
     let readOnly = t1;
     await Promise.all([
       (async () => {
-        await box.write(writes);
+        await box.write({ ...textWrites, [BASE_ENV_FILE]: writes[BASE_ENV_FILE]! });
+        if (Object.keys(byteWrites).length > 0) await box.writeBytes!(byteWrites);
         await box.remove(removes);
         uploaded = this.now();
       })(),
@@ -336,6 +341,35 @@ export class SandboxTerminal implements TerminalBackend {
     this.mounted.set(root, r.exitCode === 0);
   }
 
+  /** What goes into the box: text as text, a blob pointer as its bytes (spec local 2026-10-28). */
+  private async split(files: Record<string, string>): Promise<{ text: Record<string, string>; bytes: Record<string, Uint8Array> }> {
+    const text: Record<string, string> = {};
+    const bytes: Record<string, Uint8Array> = {};
+    for (const [path, content] of Object.entries(files)) {
+      if (parsePointer(content) && this.o.handle.writeBytes) bytes[path] = await getBlob(content);
+      else text[path] = content;
+    }
+    return { text, bytes };
+  }
+
+  /** The pointers already known by their bytes' hash: a binary seen once is never read from the box again. */
+  private readonly known = new Map<string, string>();
+
+  /** A binary the box made or changed, as the project stores it (a pointer), or null if the box can't give
+   *  its bytes. Read once per content: the bridge looks at the box on every request. */
+  private async binaryFromBox(path: string, hash: string): Promise<string | null> {
+    const fromTree = parsePointer(this.tree[path] ?? "");
+    if (fromTree?.sha256 === hash) return this.tree[path]!;
+    const seen = this.known.get(hash);
+    if (seen) return seen;
+    if (!this.o.handle.readBytes) return null;
+    const data = (await this.o.handle.readBytes([path]))[path];
+    if (!data) return null;
+    const pointer = makePointer(await putBlob(data));
+    this.known.set(hash, pointer);
+    return pointer;
+  }
+
   /** `before`: a command to run first, in the same round trip. */
   private async boxManifest(before?: string): Promise<Record<string, string>> {
     const r = await this.o.handle.run(`${before ? `${before} && ` : ""}${BOX_BIN}/openlen-manifest`, { timeoutMs: 60_000 });
@@ -352,7 +386,11 @@ export class SandboxTerminal implements TerminalBackend {
     const changes = diffManifests(this.synced, box);
     // A file over the cap is never downloaded into this process (one of gigabytes would take it down): the manifest says its size.
     const isBig = (path: string) => box[path]?.startsWith(BIG_FILE_PREFIX) ?? false;
-    const read = await this.o.handle.read(changes.filter((c) => c.kind !== "deleted" && !isBig(c.path)).map((c) => c.path));
+    // Like git: what the project's .gitignore ignores (or, without one, what a package manager or an
+    // interpreter regenerates) is not the project's, unless it already was.
+    const ignored = ignore().add(this.tree["/.gitignore"] ?? REGENERABLE_DEFAULTS.join("\n"));
+    const regenerable = (path: string) => !(path in this.tree) && ignored.ignores(path.slice(1));
+    const read = await this.o.handle.read(changes.filter((c) => c.kind !== "deleted" && !isBig(c.path) && !regenerable(c.path)).map((c) => c.path));
     const tree = { ...this.tree };
     const notSaved: NotSaved[] = [];
     const changed: Record<string, string | null> = {};
@@ -362,14 +400,21 @@ export class SandboxTerminal implements TerminalBackend {
         changed[c.path] = null;
         continue;
       }
+      if (regenerable(c.path)) continue;
       if (isBig(c.path)) {
         notSaved.push({ ruta: c.path, motivo: "too_large" });
         continue;
       }
       const f = read[c.path];
       if (!f) continue; // gone between the manifest and the read
-      if ("binary" in f) notSaved.push({ ruta: c.path, motivo: "binary" });
-      else if (Buffer.byteLength(f.text, "utf8") > BOX_TEXT_FILE_BYTES) notSaved.push({ ruta: c.path, motivo: "too_large" });
+      if ("binary" in f) {
+        const pointer = await this.binaryFromBox(c.path, box[c.path]!);
+        if (pointer === null) notSaved.push({ ruta: c.path, motivo: "binary" });
+        else {
+          tree[c.path] = pointer;
+          changed[c.path] = pointer;
+        }
+      } else if (Buffer.byteLength(f.text, "utf8") > MAX_FILE_BYTES) notSaved.push({ ruta: c.path, motivo: "too_large" });
       else {
         tree[c.path] = f.text;
         changed[c.path] = f.text;
@@ -442,7 +487,9 @@ export class SandboxTerminal implements TerminalBackend {
           const writes: Record<string, string> = {};
           const removes: string[] = [];
           for (const [p, c] of Object.entries(answer.files)) (c === null ? removes.push(p) : (writes[p] = c));
-          await box.write(writes);
+          const parts = await this.split(writes);
+          await box.write(parts.text);
+          if (Object.keys(parts.bytes).length > 0) await box.writeBytes!(parts.bytes);
           await box.remove(removes);
           response = { stdout: answer.stdout, stderr: answer.stderr, exitCode: answer.exitCode };
         }
