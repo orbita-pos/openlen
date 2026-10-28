@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey réfléchit toujours au maximum",
     "soloLectura": "Vous pouvez voir ce projet, mais pas le modifier. Demandez au propriétaire un accès éditeur.",
     "attachFile": "Joindre un fichier",
-    "attachFileHint": "Un PDF, un Excel, un Word ou un PowerPoint : Len le lit quand il en a besoin",
+    "attachFileHint": "Un PDF, un Excel, un Word, un PowerPoint ou une vidéo : Len lit les documents quand il en a besoin et met les vidéos sur votre page",
     "removeFile": "Retirer le fichier",
     "skills": "Skills",
     "noSkills": "Aucune skill ne correspond",
     "fileLimit": "4 fichiers maximum par message.",
     "fileTooBig": "Ce fichier dépasse 20 Mo.",
     "fileNotSupported": "Len lit les fichiers PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) et CSV.",
-    "fileFailed": "Le fichier n'a pas pu être envoyé. Réessayez."
+    "fileFailed": "Le fichier n'a pas pu être envoyé. Réessayez.",
+    "dropHere": "Déposez pour joindre",
+    "uploading": "Envoi…",
+    "cancelUpload": "Annuler l'envoi",
+    "dropNotSupported": "Impossible de joindre {names} : OpenLen accepte les photos, PDF, Excel, Word, PowerPoint, CSV et vidéos.",
+    "dropTooBig": "Trop volumineux pour être joint : {names}.",
+    "dropLimit": "{count, plural, one {# fichier n'a pas été joint} other {# fichiers n'ont pas été joints}} : 4 photos et 4 fichiers au maximum par message.",
+    "fileFailedNamed": "{name} n'a pas pu être envoyé. Réessayez."
   },
   "equipo": {
     "paraLen": "À Len",

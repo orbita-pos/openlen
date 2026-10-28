@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey pensa sempre il più possibile",
     "soloLectura": "Puoi vedere questo progetto, ma non modificarlo. Chiedi al proprietario l’accesso da editor.",
     "attachFile": "Allega un file",
-    "attachFileHint": "Un PDF, un Excel, un Word o un PowerPoint: Len lo legge quando serve",
+    "attachFileHint": "Un PDF, un Excel, un Word, un PowerPoint o un video: Len legge i documenti quando serve e mette i video nella tua pagina",
     "removeFile": "Rimuovi il file",
     "skills": "Skill",
     "noSkills": "Nessuna skill corrisponde",
     "fileLimit": "Massimo 4 file per messaggio.",
     "fileTooBig": "Quel file supera i 20 MB.",
     "fileNotSupported": "Len legge file PDF, Excel (.xlsx), Word (.docx), PowerPoint (.pptx) e CSV.",
-    "fileFailed": "Non è stato possibile caricare il file. Riprova."
+    "fileFailed": "Non è stato possibile caricare il file. Riprova.",
+    "dropHere": "Rilascia per allegare",
+    "uploading": "Caricamento…",
+    "cancelUpload": "Annulla il caricamento",
+    "dropNotSupported": "Impossibile allegare {names}: OpenLen accetta foto, PDF, Excel, Word, PowerPoint, CSV e video.",
+    "dropTooBig": "Troppo grande da allegare: {names}.",
+    "dropLimit": "{count, plural, one {# file è rimasto} other {# file sono rimasti}} fuori: massimo 4 foto e 4 file per messaggio.",
+    "fileFailedNamed": "Impossibile caricare {name}. Riprova."
   },
   "equipo": {
     "paraLen": "A Len",

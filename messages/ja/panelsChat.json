@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey は常に限界まで考えます",
     "soloLectura": "このプロジェクトは閲覧のみ可能です。編集するにはオーナーに編集者権限を依頼してください。",
     "attachFile": "ファイルを添付",
-    "attachFileHint": "PDF、Excel、Word、PowerPointなど。Lenが必要なときに読みます",
+    "attachFileHint": "PDF、Excel、Word、PowerPoint、動画: Len は必要なときに資料を読み、動画はページに配置します",
     "removeFile": "ファイルを外す",
     "skills": "スキル",
     "noSkills": "一致するスキルはありません",
     "fileLimit": "1つのメッセージに添付できるファイルは4つまでです。",
     "fileTooBig": "そのファイルは20MBを超えています。",
     "fileNotSupported": "LenはPDF、Excel（.xlsx）、Word（.docx）、PowerPoint（.pptx）、CSVファイルを読めます。",
-    "fileFailed": "ファイルをアップロードできませんでした。もう一度お試しください。"
+    "fileFailed": "ファイルをアップロードできませんでした。もう一度お試しください。",
+    "dropHere": "ドロップして添付",
+    "uploading": "アップロード中…",
+    "cancelUpload": "アップロードを取り消す",
+    "dropNotSupported": "{names} は添付できません。OpenLen で添付できるのは写真、PDF、Excel、Word、PowerPoint、CSV、動画です。",
+    "dropTooBig": "大きすぎて添付できません: {names}",
+    "dropLimit": "{count, plural, other {# 件のファイル}}は添付されませんでした。1 つのメッセージにつき写真 4 枚、ファイル 4 件までです。",
+    "fileFailedNamed": "{name} をアップロードできませんでした。もう一度お試しください。"
   },
   "equipo": {
     "paraLen": "Len へ",
