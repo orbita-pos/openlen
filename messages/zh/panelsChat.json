@@ -111,14 +111,21 @@
     "effortDynamis": "Len Odyssey 始终尽全力思考",
     "soloLectura": "你可以查看此项目，但不能修改。请向所有者申请编辑权限。",
     "attachFile": "附加文件",
-    "attachFileHint": "PDF、Excel、Word 或 PowerPoint：Len 需要时会读取",
+    "attachFileHint": "PDF、Excel、Word、PowerPoint 或视频：Len 需要时会读取文档，并把视频放到你的页面上",
     "removeFile": "移除文件",
     "skills": "技能",
     "noSkills": "没有匹配的技能",
     "fileLimit": "每条消息最多 4 个文件。",
     "fileTooBig": "该文件超过 20 MB。",
     "fileNotSupported": "Len 可以读取 PDF、Excel（.xlsx）、Word（.docx）、PowerPoint（.pptx）和 CSV 文件。",
-    "fileFailed": "文件上传失败，请重试。"
+    "fileFailed": "文件上传失败，请重试。",
+    "dropHere": "松开即可添加附件",
+    "uploading": "正在上传…",
+    "cancelUpload": "取消上传",
+    "dropNotSupported": "无法添加 {names}：OpenLen 支持照片、PDF、Excel、Word、PowerPoint、CSV 和视频。",
+    "dropTooBig": "文件太大，无法添加：{names}。",
+    "dropLimit": "{count, plural, other {有 # 个文件}}未添加：每条消息最多 4 张照片和 4 个文件。",
+    "fileFailedNamed": "{name} 上传失败，请重试。"
   },
   "equipo": {
     "paraLen": "发给 Len",
