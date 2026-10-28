@@ -153,9 +153,12 @@ it("declares only wired formats when enabled and exposes manuals by Read path", 
   const create = on.find((t) => t.name === "create_artifact")!;
   expect(JSON.stringify(create)).toContain('"enum":["slides"]');
   expect(on.some((t) => t.name === "ToolSearch")).toBe(false);
+  // With skills on, each manual is its artifact-<kind> skill (spec local 2026-10-27-len-five-skills); off, at its old path.
   const docs = documentosDeLaPlataforma(null, { OPENLEN_ARTIFACTS: "1" });
-  expect(docs["/.openlen/docs/artifacts/slides.md"]).toContain("deck.json");
-  expect(docs["/.openlen/docs/artifacts/motion.md"]).toContain("without voice");
+  expect(docs["/.openlen/skills/artifact-slides/SKILL.md"]).toContain("deck.json");
+  expect(docs["/.openlen/skills/artifact-motion/SKILL.md"]).toContain("without voice");
+  const docsOff = documentosDeLaPlataforma(null, { OPENLEN_ARTIFACTS: "1", OPENLEN_SKILLS: "0" });
+  expect(docsOff["/.openlen/docs/artifacts/slides.md"]).toContain("deck.json");
   expect(buildManualDeLaPlataforma({ OPENLEN_ARTIFACTS: "1" })).toContain("create_artifact");
   expect(isConcurrencySafe("list_artifacts", {})).toBe(true);
   expect(isConcurrencySafe("query_artifact_data", {})).toBe(false);

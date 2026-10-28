@@ -198,7 +198,7 @@ const INDICE = `MORE, IN ${CARPETA_DOCS} (read them when you need them):
 
 /** /.openlen/docs/apps.md en una página: el manual de una app recién
  *  convertida, para escribirla en /src antes de `convert_to_app`. */
-function manualParaConvertir(): string {
+export function manualParaConvertir(): string {
   return `# HOW A WEB APP IS BUILT HERE (for converting this page into an app with convert_to_app)
 Convert only after the user accepted. Build the whole app in /src FIRST, with the pages still in place —read each one—, and then call convert_to_app, which swaps the pages for the app in one step. The app keeps the page's look (its colors, fonts and texts): the pages become screens (/menu/index.html → /src/screens/Menu.tsx at the route #/menu, the home at #/), what repeats in every page (the header, the menu, the footer) becomes a component in /src/components, the loose JavaScript becomes React state, and each form saves to a table (a migration in /supabase/migrations, and the form inserts into it with supabase-js) instead of going to the Inbox. Below, the rules every app follows once converted.
 
@@ -230,8 +230,10 @@ interface ManualPartido {
   readonly docs: Readonly<Record<string, string>>;
 }
 
-/** Corta el manual entero en /AGENTS.md y dos ficheros de /.openlen/docs. */
-export function partirElManual(entero: string = manualSinPartir()): ManualPartido {
+/** Corta el manual entero en /AGENTS.md y dos ficheros de /.openlen/docs. Con las skills
+ *  encendidas (spec local 2026-10-27-len-five-skills), /AGENTS.md va sin el índice —lo anuncia el
+ *  catálogo— y el acabado apunta a la skill `frontend-design`; los dos ficheros son los mismos. */
+export function partirElManual(entero: string = manualSinPartir(), conSkills = false): ManualPartido {
   // La guía: su cabecera, lo que IMPONE (se queda) y el gusto (se va).
   const iGuia = encontrar(entero, MARCA_GUIA);
   const finCabecera = encontrar(entero, "\n", iGuia);
@@ -248,11 +250,11 @@ export function partirElManual(entero: string = manualSinPartir()): ManualPartid
     impone = contrato.slice(0, iGusto).trimEnd();
     gusto = contrato.slice(iGusto + 1);
     encontrar(impone, PROMESA_DEL_ACABADO);
-    impone = impone.replace(PROMESA_DEL_ACABADO, `; the level of finish is in ${RUTA_GUIA}.`);
+    impone = impone.replace(PROMESA_DEL_ACABADO, `; the level of finish is in ${conSkills ? "the frontend-design skill" : RUTA_GUIA}.`);
   }
 
   const antes = entero.slice(0, iGuia).trimEnd();
-  const agents = [antes, ...(impone ? [impone] : []), INDICE].join("\n\n");
+  const agents = [antes, ...(impone ? [impone] : []), ...(conSkills ? [] : [INDICE])].join("\n\n");
   return {
     agents,
     docs: {
@@ -375,8 +377,9 @@ export function buildManualDeLaPlataforma(
   /** Whether this turn's terminal is the box (`realTerminalFor` its owner, as bash's description). */
   realTerminal: boolean = realTerminalFor(null, env),
 ): string {
-  const page = partirElManual().agents;
-  const base = app ? manualDeLaApp(manualSinPartir(), app) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
+  const conSkills = skillsEnabled(env);
+  const page = partirElManual(manualSinPartir(), conSkills).agents;
+  const base = app ? manualDeLaApp(manualSinPartir(), app, conSkills) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
   const withFunctions = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
@@ -398,9 +401,19 @@ export function documentosDeLaPlataforma(
   const artifacts = env.OPENLEN_ARTIFACTS === "1" && !skillsOn ? artifactManuals : {};
   // Las skills de Len (spec local 2026-10-26-len-skills): /.openlen/skills, como un documento más.
   const skills = skillsOn ? bundledSkillFiles({ app, env }) : {};
+  // Con las skills encendidas, las guías también son skills (`frontend-design`, `convert-to-app`):
+  // /.openlen/docs se queda sin nada que servir.
+  if (skillsOn) return skills;
   if (app) return { [RUTA_GUIA]: GUIA_DE_LA_APP, ...artifacts, ...skills };
   const convertir = manualParaConvertir();
   return { ...partirElManual().docs, [RUTA_APPS]: functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir, ...artifacts, ...skills };
+}
+
+/** Lo que dice la skill `convert-to-app` (spec local 2026-10-27-len-five-skills): el /.openlen/docs/apps.md
+ *  de siempre, con las Edge Functions cuando están. */
+export function guiaParaConvertir(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  const convertir = manualParaConvertir();
+  return functionsEnabledIn(env) ? conEdgeFunctions(convertir, env) : convertir;
 }
 
 /** El texto de un fichero del manual por su ruta, o `null` si no es ninguno. */

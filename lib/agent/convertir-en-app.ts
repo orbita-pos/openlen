@@ -68,6 +68,12 @@ export function dataConvertida(data: ProjectData, cascaron: string, app: AppDePr
  */
 export const LA_PAGINA_QUE_CRECE = `- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read ${RUTA_APPS}, build the app in /src and then call ${CONVERTIR_EN_APP}. Never convert without their yes.`;
 
+/** La misma viñeta con las skills encendidas: la guía de apps es la skill `convert-to-app` (spec local
+ *  2026-10-27-len-five-skills). Apagadas, la de siempre. */
+export function laPaginaQueCrece(conSkills: boolean): string {
+  return conSkills ? LA_PAGINA_QUE_CRECE.replace(`read ${RUTA_APPS}`, "load the convert-to-app skill") : LA_PAGINA_QUE_CRECE;
+}
+
 export const DECLARACION_CONVERTIR_EN_APP = {
   name: CONVERTIR_EN_APP,
   description:
