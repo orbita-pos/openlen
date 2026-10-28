@@ -3,10 +3,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { makePointer } from "@/lib/files/blob-pointer";
+import { MAX_FILE_BYTES, MAX_PROJECT_BYTES, MAX_PROJECT_FILES } from "@/lib/files/limits";
 import {
-  MAX_FOLDER_BYTES,
-  MAX_FOLDER_FILE_BYTES,
-  MAX_FOLDER_FILES,
   RESERVED_ROOTS,
   classifyFolderPath,
   contentTypeFor,
@@ -84,29 +83,41 @@ describe("qué rutas son de la carpeta", () => {
     }
   });
 
-  it("🔴 rechaza `..`, dotfiles, extensiones de fuera y rutas raras", () => {
+  it("🔴 rechaza `..`, rutas vacías o sin barra y lo que es de git o de Len", () => {
     for (const p of [
       "/js/../index.html",
-      "/.envrc",
-      "/js/.secreto.js",
-      "/logo.png",
-      "/js/app.py",
-      "/fuente.woff2",
+      "/js/./app.js",
       "/js//app.js",
       "/js/app.js/",
       "js/app.js",
-      "/js/a b.js",
-      `/${"a/".repeat(9)}x.js`,
-      `/${"x".repeat(201)}.js`,
+      "/.git/config",
+      "/.git",
+      "/.len/memory/x.md",
+      "/js/a.js",
+      `/${"a/".repeat(32)}x.js`,
+      `/${"x".repeat(1025)}.js`,
     ]) {
       expect(classifyFolderPath(p).ok, p).toBe(false);
     }
   });
 
-  it("el motivo de una extensión de fuera nombra las que valen (es lo que lee Len)", () => {
-    const c = classifyFolderPath("/logo.png");
-    expect(c.ok).toBe(false);
-    if (!c.ok) expect(c.reason).toContain(".js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md");
+  it("como en un disco (spec local 2026-10-28): cualquier fichero, ocultos, espacios y rutas largas", () => {
+    // Las extensiones web siguen siendo "web"; todo lo demás es "file".
+    for (const p of ["/logo.png", "/fonts/x.woff2", "/js/app.py", "/doc/guia.pdf", "/data/x.bin", "/video/intro.mp4", "/app.wasm"]) {
+      expect(kind(p), p).toBe("file");
+      expect(isPublishableFolderPath(p), p).toBe(true);
+    }
+    for (const p of ["/.envrc", "/js/.secreto.js", "/.well-known/security.txt", "/.gitignore", "/js/a b.js", `/${"a/".repeat(31)}x.js`, `/${"x".repeat(1000)}.js`]) {
+      expect(classifyFolderPath(p).ok, p).toBe(true);
+    }
+    expect(kind("/.well-known/security.txt")).toBe("web");
+  });
+
+  it("un .html que no es una página es un fichero y se publica tal cual", () => {
+    expect(kind("/legal.html")).toBe("file");
+    expect(kind("/blog/post/index.html")).toBe("file");
+    expect(kind("/docs/a.htm")).toBe("file");
+    expect(isPublishableFolderPath("/legal.html")).toBe(true);
   });
 
   it("los fuentes de una app (.jsx, .tsx, .ts) son de la carpeta y se publican; se sirven como JavaScript", () => {
@@ -130,24 +141,34 @@ describe("qué rutas son de la carpeta", () => {
 describe("cuánto cabe", () => {
   const vacio = new Map<string, string>();
 
-  it("un fichero de más de 1 MiB no", () => {
-    expect(folderSaveProblem("/data/big.json", "x".repeat(MAX_FOLDER_FILE_BYTES + 1), vacio)).toMatch(/1024 KB/);
-    expect(folderSaveProblem("/data/ok.json", "x".repeat(MAX_FOLDER_FILE_BYTES), vacio)).toBeNull();
+  const blob = (size: number) => makePointer({ sha256: "a".repeat(64), size, gitOid: "b".repeat(40) });
+
+  it("un fichero de más de 50 MB no; uno de 50 MB, sí", () => {
+    expect(folderSaveProblem("/video/big.mp4", blob(MAX_FILE_BYTES + 1), vacio)).toMatch(/File too large: \/video\/big\.mp4 .* the maximum is 50 MB/);
+    expect(folderSaveProblem("/video/ok.mp4", blob(MAX_FILE_BYTES), vacio)).toBeNull();
+    expect(folderSaveProblem("/data/ok.json", "x".repeat(2 * 1024 * 1024), vacio)).toBeNull();
   });
 
   it("una prueba de más de 256 KiB no", () => {
     expect(folderSaveProblem("/tests/a.spec.ts", "x".repeat(256 * 1024 + 1), vacio)).toMatch(/256 KB/);
   });
 
-  it("🔴 la carpeta entera: ni más de 500 ficheros ni más de 10 MiB; sustituir uno no cuenta doble", () => {
-    const llenos = new Map(Array.from({ length: MAX_FOLDER_FILES }, (_, i) => [`/data/${i}.json`, "{}"] as const));
-    expect(folderSaveProblem("/data/otro.json", "{}", llenos)).toMatch(/500 files/);
+  it("🔴 lleno = ENOSPC, como un disco: el fichero 20.001 o pasar de 1 GB; sustituir uno no cuenta doble", () => {
+    const llenos = new Map(Array.from({ length: MAX_PROJECT_FILES }, (_, i) => [`/data/${i}.json`, "{}"] as const));
+    expect(folderSaveProblem("/data/otro.json", "{}", llenos)).toBe("ENOSPC: no space left on device, write '/data/otro.json'");
     expect(folderSaveProblem("/data/0.json", '{"a":1}', llenos)).toBeNull();
-    const pesados = new Map(
-      Array.from({ length: 10 }, (_, i) => [`/data/${i}.json`, "x".repeat(MAX_FOLDER_BYTES / 10)] as const),
-    );
-    expect(folderSaveProblem("/data/mas.json", "x", pesados)).toMatch(/10 MB/);
-    expect(folderSaveProblem("/data/0.json", "x", pesados)).toBeNull();
+    const pesados = new Map(Array.from({ length: 21 }, (_, i) => [`/v/${i}.mp4`, blob(Math.floor(MAX_PROJECT_BYTES / 21))] as const));
+    expect(folderSaveProblem("/v/mas.mp4", blob(MAX_FILE_BYTES), pesados)).toMatch(/^ENOSPC/);
+    expect(folderSaveProblem("/v/0.mp4", blob(1), pesados)).toBeNull();
+  });
+
+  it("con el uso del proyecto entero (páginas e historial de git), cuenta ése", () => {
+    expect(folderSaveProblem("/a.png", blob(10), vacio, MAX_PROJECT_BYTES - 5)).toMatch(/^ENOSPC/);
+    expect(folderSaveProblem("/a.png", blob(10), vacio, MAX_PROJECT_BYTES - 10)).toBeNull();
+    // Sustituir: el uso ya incluye el fichero de antes.
+    const uno = new Map([["/a.png", blob(10)]]);
+    expect(folderSaveProblem("/a.png", blob(12), uno, MAX_PROJECT_BYTES - 2)).toBeNull();
+    expect(folderSaveProblem("/a.png", blob(12), uno, MAX_PROJECT_BYTES - 1)).toMatch(/^ENOSPC/);
   });
 
   it("una migración sigue con su tope de /supabase", () => {
@@ -156,8 +177,9 @@ describe("cuánto cabe", () => {
 });
 
 describe("lo que se publica", () => {
-  it("sólo lo de la web, sin la barra, en orden", () => {
+  it("todo lo que no es reservado, pruebas, /supabase ni manifiesto, sin la barra, en orden", () => {
     const files = {
+      "/img/logo.png": "￿openlen-blob:" + "a".repeat(64) + ":3:" + "b".repeat(40),
       "/js/b.js": "b",
       "/tests/a.spec.ts": "t",
       "/supabase/migrations/1_a.sql": "s",
@@ -166,6 +188,7 @@ describe("lo que se publica", () => {
     };
     expect(publishableFolderFiles(files)).toEqual([
       { path: "a.css", content: "a" },
+      { path: "img/logo.png", content: files["/img/logo.png"] },
       { path: "js/b.js", content: "b" },
     ]);
   });
@@ -179,6 +202,15 @@ describe("lo que se publica", () => {
     expect(contentTypeFor("/css/a.css")).toBe("text/css; charset=utf-8");
     expect(contentTypeFor("/a.md")).toBe("text/markdown; charset=utf-8");
     expect(contentTypeFor("/robots.txt")).toBe("text/plain; charset=utf-8");
+    expect(contentTypeFor("/img/a.png")).toBe("image/png");
+    expect(contentTypeFor("/img/a.JPG")).toBe("image/jpeg");
+    expect(contentTypeFor("/fonts/x.woff2")).toBe("font/woff2");
+    expect(contentTypeFor("/doc/a.pdf")).toBe("application/pdf");
+    expect(contentTypeFor("/app.wasm")).toBe("application/wasm");
+    expect(contentTypeFor("/v/a.mp4")).toBe("video/mp4");
+    expect(contentTypeFor("/legal.html")).toBe("text/html; charset=utf-8");
+    expect(contentTypeFor("/data/x.bin")).toBe("application/octet-stream");
+    expect(contentTypeFor("/Makefile")).toBe("application/octet-stream");
   });
 });
 

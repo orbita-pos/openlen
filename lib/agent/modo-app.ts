@@ -28,6 +28,7 @@
 
 // Efecto en la caché: en una app el prompt, el manual y las herramientas son otros: convertir una página en app cambia el prefijo una vez; dentro de la app es fijo.
 
+import { MAX_FILE_BYTES, MAX_PROJECT_BYTES } from "@/lib/files/limits";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
@@ -36,9 +37,6 @@ import { MIN_PACKAGE_AGE_DAYS, MIN_VERSION_AGE_DAYS } from "@/lib/apps/npm/gate"
 import { ICONOS_DE_LAS_APPS } from "@/lib/apps/iconos";
 import { RUTA_GUIA } from "@/lib/agent/ficheros/manual";
 import {
-  MAX_FOLDER_BYTES,
-  MAX_FOLDER_FILE_BYTES,
-  MAX_FOLDER_FILES,
   MAX_TEST_FILE_BYTES,
   RESERVED_ROOTS,
 } from "@/lib/agent/ficheros/folder";
@@ -188,9 +186,9 @@ When the user adjusts elements in the canvas's Design panel and applies them, a 
 - Then check the result with view_page on that screen.`;
 
 const LA_CARPETA = (app: AppDeProyecto) => `THE PROJECT'S FOLDER:
-Besides /src, the folder takes any other text file —/data/*.json, /manifest.json, /sw.js, images as .svg— anywhere except the reserved roots (${RAICES_DEL_SITIO}), and publishing ships them next to the app. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
+Besides /src, the folder takes any other file —/data/*.json, /manifest.json, /sw.js, images, fonts, PDFs, video, hidden ones too— anywhere except the reserved roots (${RAICES_DEL_SITIO}), and publishing ships them next to the app, each at its path. /tests holds tests too (vitest, like the ones next to the code; never published); /supabase holds the backend's migrations.
 - view_page and use_page run the app the way it is published, starting at ${app.entrada}. Their browser does not run service workers: offline mode cannot be checked there — say so instead of claiming it works.
-- Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).
+- Up to ${MAX_FILE_BYTES / 1024 / 1024} MB per file and ${MAX_PROJECT_BYTES / 1024 / 1024 / 1024} GB for the whole project, git history included (${MAX_TEST_FILE_BYTES / 1024} KB per test file); a full project answers ENOSPC, like a full disk.
 Before you say a change is done, check it: view_page mode="measure" is free and tells you what overflows, the contrast and the JavaScript errors, with their file and line; view_page mode="screenshot" shows it to you as an image; use_page tries it like a user, screen by screen, and can take a screenshot after a step or inspect it with eval. Nothing checks it for you. If you couldn't check it, say so instead of claiming it works.`;
 
 const EN_LA_PAGINA_SUPABASE_INICIO = "- In the page, supabase-js as usual:";

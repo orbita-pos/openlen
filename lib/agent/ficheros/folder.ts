@@ -17,10 +17,14 @@
  *   · `manifest` /package.json: the app's packages (lib/apps/npm/); read by the
  *                compiler, never published.
  *
- * Cualquier carpeta vale, también la raíz, como en Vercel: el modelo escribe
- * `/app.js` y `/style.css` por costumbre, y OpenLen se adapta a Len. Se prohíbe
- * sólo lo que nunca se vería —lo que Caddy manda a otra parte en el host de la
- * página, atado al Caddyfile por folder.test.ts— y lo que es de la plataforma.
+ *   · `file`     todo lo demás (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): imágenes,
+ *                fuentes, PDF, vídeo, `.wasm`, un `.html` que no es una página… Se publica y se sirve
+ *                tal cual; un binario vive aquí como PUNTERO (`lib/files/blob.ts`).
+ *
+ * Cualquier carpeta vale, también la raíz, y cualquier fichero, como en un disco con Claude Code
+ * encima: ocultos, espacios, cualquier extensión. Se prohíbe sólo lo que nunca se vería —lo que Caddy
+ * manda a otra parte en el host de la página, atado al Caddyfile por folder.test.ts—, lo que es de la
+ * plataforma, de git o de Len, y las rutas de las páginas, que siguen su camino.
  *
  * Los mensajes van en inglés: los lee el modelo, como los de Claude Code.
  * Sin imports pesados: lo prueba vitest y lo puede importar el cliente.
@@ -29,8 +33,11 @@ import { esFicheroDeSupabase, motivoParaNoGuardar as supabaseSaveProblem } from 
 import { DOTENV_PATH } from "@/lib/apps/env/rules";
 import { dotEnvSaveProblem } from "@/lib/apps/env/dotenv";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
+import { sizeOf } from "@/lib/files/blob-pointer";
+import { contentTypeOf } from "@/lib/files/content-types";
+import { MAX_FILE_BYTES, MAX_PATH_CHARS, MAX_PATH_DEPTH, MAX_PROJECT_BYTES, MAX_PROJECT_FILES } from "@/lib/files/limits";
 
-export type FolderFileKind = "web" | "tests" | "supabase" | "env" | "manifest";
+export type FolderFileKind = "web" | "tests" | "supabase" | "env" | "manifest" | "file";
 
 /** `.jsx`, `.tsx` y `.ts` son FUENTES (apps web, spec local 2026-10-07-apps):
  *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
@@ -39,12 +46,7 @@ export const WEB_EXTENSIONS = [".js", ".mjs", ".jsx", ".tsx", ".ts", ".css", ".j
 // `.tsx` y `.jsx`: las pruebas de vitest de una app (plan 04) también pueden vivir aquí.
 const TEST_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json", ".md", ".txt"] as const;
 
-export const MAX_FOLDER_FILE_BYTES = 1024 * 1024;
 export const MAX_TEST_FILE_BYTES = 256 * 1024;
-export const MAX_FOLDER_BYTES = 10 * 1024 * 1024;
-export const MAX_FOLDER_FILES = 500;
-const MAX_PATH_LENGTH = 200;
-const MAX_DEPTH = 8;
 
 /** Primeras carpetas que no pueden ser del proyecto. Las de la primera línea
  *  son cada `handle` del bloque `*.openlen.app` del Caddyfile —un fichero ahí
@@ -53,16 +55,21 @@ const MAX_DEPTH = 8;
  *  la plataforma sirve las dependencias de las apps (`lib/apps/dependencias.ts`);
  *  las de la segunda, las carpetas de Len y de su terminal. */
 export const RESERVED_ROOTS: readonly string[] = [
-  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "ai", "openlen",
+  "api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "ai", "email", "openlen",
   "memoria", "ajustes", "tmp", "bin", "usr", "dev", "proc", "home",
 ];
 /** Ficheros sueltos que no son de la carpeta: el manual de Len y el LEN.md
  *  del proyecto (su memoria, `len-md.ts`), que con `.md` se PUBLICARÍA. */
 const RESERVED_FILES: readonly string[] = ["/AGENTS.md", "/LEN.md"];
+/** Las carpetas ocultas que no son del proyecto: el git de Len (que no es un fichero de la carpeta, como
+ *  en un repo) y la de Len (su memoria, sus skills). `.openlen` es de la plataforma, aparte. */
+const HIDDEN_ROOTS: readonly string[] = [".git", ".len"];
 const PLAYWRIGHT_CONFIG = /^\/playwright\.config\.(?:ts|js|mjs)$/;
-/** Un trozo de ruta: letras, dígitos, `-`, `_` y `.`, sin empezar por punto
- *  (ni ficheros ocultos ni `..`). */
-const SEGMENT = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
+/** Un trozo de ruta, como en un disco: cualquier cosa menos vacío, `.`, `..`, una barra invertida o
+ *  caracteres de control. */
+const SEGMENT_PROBLEM = /[\u0000-\u001f\u007f\\]/;
+/** Las rutas de las páginas, `/index.html` y `/<slug>/index.html`: son del motor de páginas. */
+const PAGE_PATH = /^\/(?:[^/]+\/)?index\.html$/;
 
 function extensionOf(path: string): string {
   const name = path.slice(path.lastIndexOf("/") + 1);
@@ -95,17 +102,20 @@ export function classifyFolderPath(path: string): FolderPathClass {
   }
   if (
     !path.startsWith("/") ||
-    path.length > MAX_PATH_LENGTH ||
-    segments.length > MAX_DEPTH ||
-    !segments.every((s) => SEGMENT.test(s))
+    path.length > MAX_PATH_CHARS ||
+    segments.length > MAX_PATH_DEPTH ||
+    !segments.every((s) => s !== "" && s !== "." && s !== ".." && !SEGMENT_PROBLEM.test(s))
   ) {
     return {
       ok: false,
-      reason: `${path} is not a valid file path: use /folder/name.ext with letters, digits, "-", "_" and ".", no hidden files or "..", up to ${MAX_DEPTH} levels and ${MAX_PATH_LENGTH} characters.`,
+      reason: `${path} is not a valid file path: no empty, "." or ".." parts, backslashes or control characters, up to ${MAX_PATH_DEPTH} levels and ${MAX_PATH_CHARS} characters.`,
     };
   }
-  if (extensionOf(path) === ".html" || extensionOf(path) === ".htm") {
-    return { ok: false, reason: `${path}: pages are /index.html and /<slug>/index.html; other HTML files are not part of the site.` };
+  if (HIDDEN_ROOTS.includes(segments[0]!)) {
+    return { ok: false, reason: `${path}: /${segments[0]} is not part of the project's files (${segments[0] === ".git" ? "it is git's own folder" : "it is Len's"}).` };
+  }
+  if (PAGE_PATH.test(path)) {
+    return { ok: false, reason: `${path} is a page: pages are /index.html and /<slug>/index.html.` };
   }
   if (RESERVED_ROOTS.includes(segments[0]!) && segments.length > 1) {
     return {
@@ -118,10 +128,7 @@ export function classifyFolderPath(path: string): FolderPathClass {
     return { ok: false, reason: `${path}: test files are ${TEST_EXTENSIONS.join(" ")}.` };
   }
   if ((WEB_EXTENSIONS as readonly string[]).includes(extensionOf(path))) return { ok: true, kind: "web" };
-  return {
-    ok: false,
-    reason: `${path}: the project's folder holds text files only (${WEB_EXTENSIONS.join(" ")}); pages are /index.html and /<slug>/index.html, and images are uploaded, not written.`,
-  };
+  return { ok: true, kind: "file" };
 }
 
 export function isFolderPath(path: string): boolean {
@@ -130,7 +137,7 @@ export function isFolderPath(path: string): boolean {
 
 export function isPublishableFolderPath(path: string): boolean {
   const c = classifyFolderPath(path);
-  return c.ok && c.kind === "web";
+  return c.ok && (c.kind === "web" || c.kind === "file");
 }
 
 /** Lo que entra a CONSTRUIR el sitio: lo que se publica, `/.env`, que el
@@ -149,13 +156,14 @@ export function isRemixedFolderPath(path: string): boolean {
   return path === PACKAGE_JSON_PATH || path === ESM_LOCK_PATH || isPublishableFolderPath(path);
 }
 
-function bytes(s: string): number {
-  return Buffer.byteLength(s, "utf8");
-}
+/** Lleno, como lo dice un disco (spec local 2026-10-28, §4). */
+export const enospc = (path: string) => `ENOSPC: no space left on device, write '${path}'`;
 
 /** Por qué no se guarda, o `null` si cabe. `existing` es la carpeta de AHORA:
- *  sustituir un fichero no lo cuenta dos veces. */
-export function folderSaveProblem(path: string, content: string, existing: ReadonlyMap<string, string>): string | null {
+ *  sustituir un fichero no lo cuenta dos veces. `usage`, si se sabe, es lo que ocupa el proyecto
+ *  entero —páginas, carpeta e historial de git (`lib/files/quota.ts`)— con el fichero de antes dentro;
+ *  sin él, cuenta sólo la carpeta. */
+export function folderSaveProblem(path: string, content: string, existing: ReadonlyMap<string, string>, usage?: number): string | null {
   const c = classifyFolderPath(path);
   if (!c.ok) return c.reason;
   const creates = !existing.has(path);
@@ -175,14 +183,20 @@ export function folderSaveProblem(path: string, content: string, existing: Reado
   } else if (c.kind === "env") {
     const problem = dotEnvSaveProblem(content);
     if (problem) return problem;
-  } else {
-    const max = c.kind === "tests" ? MAX_TEST_FILE_BYTES : MAX_FOLDER_FILE_BYTES;
-    if (bytes(content) > max) return `${path} is larger than ${max / 1024} KB.`;
+  } else if (c.kind === "tests") {
+    if (sizeOf(content) > MAX_TEST_FILE_BYTES) return `${path} is larger than ${MAX_TEST_FILE_BYTES / 1024} KB.`;
+  } else if (sizeOf(content) > MAX_FILE_BYTES) {
+    return `File too large: ${path} is ${(sizeOf(content) / 1024 / 1024).toFixed(1)} MB, the maximum is ${MAX_FILE_BYTES / 1024 / 1024} MB.`;
   }
-  if (creates && existing.size >= MAX_FOLDER_FILES) return `the project's folder already has ${MAX_FOLDER_FILES} files.`;
-  let total = bytes(content);
-  for (const [p, t] of existing) if (p !== path) total += bytes(t);
-  if (total > MAX_FOLDER_BYTES) return `the project's folder would go over ${MAX_FOLDER_BYTES / 1024 / 1024} MB.`;
+  if (creates && existing.size >= MAX_PROJECT_FILES) return enospc(path);
+  const before = existing.has(path) ? sizeOf(existing.get(path)!) : 0;
+  let total: number;
+  if (usage !== undefined) total = usage - before + sizeOf(content);
+  else {
+    total = sizeOf(content);
+    for (const [p, t] of existing) if (p !== path) total += sizeOf(t);
+  }
+  if (total > MAX_PROJECT_BYTES) return enospc(path);
   return null;
 }
 
@@ -194,7 +208,7 @@ export function publishableFolderFiles(files: Readonly<Record<string, string>>):
     .map((p) => ({ path: p.slice(1), content: files[p]! }));
 }
 
-const CONTENT_TYPES: Readonly<Record<string, string>> = {
+const TEXT_CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".js": "text/javascript",
   ".mjs": "text/javascript",
   // Los fuentes se sirven COMPILADOS: un <script type="module"> exige un tipo
@@ -210,7 +224,10 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".md": "text/markdown",
 };
 
-/** El tipo con el que se sirve, como lo haría un servidor de estáticos. */
+/** El tipo con el que se sirve, como lo haría un servidor de estáticos: el de la web con su charset,
+ *  y cualquier otro por su extensión (`lib/files/content-types.ts`). */
 export function contentTypeFor(path: string): string {
-  return `${CONTENT_TYPES[extensionOf(path)] ?? "text/plain"}; charset=utf-8`;
+  const text = TEXT_CONTENT_TYPES[extensionOf(path)];
+  if (text) return `${text}; charset=utf-8`;
+  return contentTypeOf(path);
 }

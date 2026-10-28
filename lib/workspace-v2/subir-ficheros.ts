@@ -5,8 +5,12 @@
  * Markdown— y páginas (`/<slug>/index.html`); una foto no se escribe, se sube a
  * Imágenes. Puro: lo prueba vitest y lo importa el cliente.
  */
-import { MAX_FOLDER_FILE_BYTES, WEB_EXTENSIONS } from "@/lib/agent/ficheros/folder";
+import { WEB_EXTENSIONS } from "@/lib/agent/ficheros/folder";
 import { nombreValido, rutaDentro } from "./explorador";
+
+/** El tamaño de un archivo soltado: el de antes del 2026-10-28 hasta que la Tarea 3 del plan
+ *  files-cc-level deje entrar binarios por aquí. */
+const MAX_SOLTADO = 1024 * 1024;
 
 /** Como mucho, de una vez: soltar un `node_modules` por error no puede tardar una hora. */
 export const MAX_SUBIDA = 100;
@@ -40,7 +44,7 @@ export function planDeSubida(soltados: readonly Soltado[], carpeta: string, exis
   for (const s of soltados) {
     const nombre = s.relativa.replace(/^\/+/, "");
     if (!extensionPermitida(nombre)) saltados.push({ nombre, motivo: "tipo" });
-    else if (s.tamano > MAX_FOLDER_FILE_BYTES) saltados.push({ nombre, motivo: "grande" });
+    else if (s.tamano > MAX_SOLTADO) saltados.push({ nombre, motivo: "grande" });
     else if (!nombreValido(nombre)) saltados.push({ nombre, motivo: "nombre" });
     else if (subir.length >= MAX_SUBIDA) saltados.push({ nombre, motivo: "demasiados" });
     else {

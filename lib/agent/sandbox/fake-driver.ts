@@ -4,12 +4,11 @@
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 
-import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 
 import type { BoxNetwork } from "./box-network";
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 import { isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX } from "./template-files";
+import { BIG_FILE_PREFIX, BOX_TEXT_FILE_BYTES } from "./template-files";
 
 export type FakeRun = (
   command: string,
@@ -70,7 +69,7 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
             if (!isSyncedPath(path)) continue;
             const size = Buffer.byteLength(text, "utf8");
             // Like the template's script: a file over the cap is listed by its size, never read.
-            manifest[path] = size > MAX_FOLDER_FILE_BYTES ? `${BIG_FILE_PREFIX}${size}:0` : createHash("sha256").update(text).digest("hex");
+            manifest[path] = size > BOX_TEXT_FILE_BYTES ? `${BIG_FILE_PREFIX}${size}:0` : createHash("sha256").update(text).digest("hex");
           }
           return { stdout: JSON.stringify(manifest), stderr: "", exitCode: 0, timedOut: false };
         }

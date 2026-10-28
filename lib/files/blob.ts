@@ -11,29 +11,9 @@ import { createHash } from "node:crypto";
 import { hashObject } from "@/lib/git/objects";
 import { getStorage } from "@/lib/storage";
 
-export const BLOB_PREFIX = "￿openlen-blob:";
+import { isBlobPointer, makePointer, parsePointer, type BlobRef } from "./blob-pointer";
 
-export interface BlobRef {
-  readonly sha256: string;
-  readonly size: number;
-  /** Git's id for these bytes as a blob: what `git status` compares without downloading them. */
-  readonly gitOid: string;
-}
-
-const POINTER = /^￿openlen-blob:([0-9a-f]{64}):(\d+):([0-9a-f]{40})$/;
-
-export function isBlobPointer(content: string): boolean {
-  return content.startsWith(BLOB_PREFIX);
-}
-
-export function makePointer(r: BlobRef): string {
-  return `${BLOB_PREFIX}${r.sha256}:${r.size}:${r.gitOid}`;
-}
-
-export function parsePointer(content: string): BlobRef | null {
-  const m = POINTER.exec(content);
-  return m ? { sha256: m[1]!, size: Number(m[2]), gitOid: m[3]! } : null;
-}
+export { BLOB_PREFIX, isBlobPointer, makePointer, parsePointer, sizeOf, type BlobRef } from "./blob-pointer";
 
 const strictUtf8 = new TextDecoder("utf-8", { fatal: true });
 
@@ -48,11 +28,6 @@ export function isBinaryBytes(bytes: Uint8Array): boolean {
   } catch {
     return true;
   }
-}
-
-/** The file's size in bytes: a pointer's own, a text's in UTF-8. */
-export function sizeOf(content: string): number {
-  return parsePointer(content)?.size ?? Buffer.byteLength(content, "utf8");
 }
 
 const keyOf = (sha256: string) => `blobs/${sha256}`;

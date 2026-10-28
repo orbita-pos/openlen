@@ -81,13 +81,21 @@ describe("Write", () => {
     }
   });
 
-  it("un fichero que no cabe en la carpeta no se crea, dice qué vale y no se inventa una sugerencia", () => {
-    const r = planearWrite({ file_path: "/logo.png", content: "x" }, sitio({ "/index.html": "x" }), new Map());
+  // Como en un disco (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): Write escribe texto en
+  // cualquier ruta que no sea reservada, como el de Claude Code. Antes la carpeta sólo admitía texto web.
+  it("cualquier ruta del proyecto se crea, como en un disco", () => {
+    for (const ruta of ["/logo.png", "/scripts/build.py", "/.well-known/security.txt"]) {
+      const r = planearWrite({ file_path: ruta, content: "x" }, sitio({ "/index.html": "x" }), new Map());
+      expect(r, ruta).toMatchObject({ ok: true, ruta, crea: true });
+    }
+  });
+
+  it("lo que no es del proyecto no se crea y dice por qué", () => {
+    const r = planearWrite({ file_path: "/.git/config", content: "x" }, sitio({ "/index.html": "x" }), new Map());
     expect(r.ok).toBe(false);
     if (r.ok) return;
-    expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /logo.png: ")).toBe(true);
-    expect(r.resultado.texto).toContain("text files only (.js .mjs .jsx .tsx .ts .css .json .webmanifest .txt .svg .md)");
-    expect(r.resultado.texto).not.toContain("Did you mean");
+    expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /.git/config: ")).toBe(true);
+    expect(r.resultado.texto).toContain("it is git's own folder");
   });
 
   // El backend del proyecto (plans/pages-backend/design.md): sus migraciones son
@@ -101,18 +109,14 @@ describe("Write", () => {
     expect(r).toMatchObject({ ok: true, ruta: "/supabase/migrations/20261004120000_init.sql", crea: true });
   });
 
-  it("BRAZO DE CONTROL: fuera de /supabase/, un .sql no se crea", () => {
+  it("BRAZO DE CONTROL: fuera de /supabase/, un .sql es un fichero más (no una migración)", () => {
     const r = planearWrite({ file_path: "/migrations/x.sql", content: "x" }, sitio({ "/index.html": "x" }), new Map());
-    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({ ok: true, ruta: "/migrations/x.sql", crea: true });
   });
 
-  it("una página con forma de fichero suelto no se crea, y se sugiere la que sí", () => {
+  it("un .html suelto es un fichero que se publica tal cual, no una página", () => {
     const r = planearWrite({ file_path: "/menu.html", content: "x" }, sitio({ "/index.html": "x" }), new Map());
-    expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.resultado.texto.startsWith("<tool_use_error>Cannot create /menu.html: ")).toBe(true);
-    expect(r.resultado.texto).toContain("pages are /index.html and /<slug>/index.html");
-    expect(r.resultado.texto).toContain("Did you mean /menu/index.html?");
+    expect(r).toMatchObject({ ok: true, ruta: "/menu.html", crea: true });
   });
 });
 

@@ -15,7 +15,6 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 
-import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import { DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, type SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
@@ -24,7 +23,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
-import { BIG_FILE_PREFIX, BOX_BIN, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_RESOLVER } from "./template-files";
+import { BIG_FILE_PREFIX, BOX_BIN, BOX_TEXT_FILE_BYTES, BRIDGE_DIR, PLAYWRIGHT_BROWSERS, PLAYWRIGHT_DIR, PLAYWRIGHT_RESOLVER } from "./template-files";
 
 const REQUESTS = `${BRIDGE_DIR}/requests`;
 const RESPONSES = `${BRIDGE_DIR}/responses`;
@@ -370,7 +369,7 @@ export class SandboxTerminal implements TerminalBackend {
       const f = read[c.path];
       if (!f) continue; // gone between the manifest and the read
       if ("binary" in f) notSaved.push({ ruta: c.path, motivo: "binary" });
-      else if (Buffer.byteLength(f.text, "utf8") > MAX_FOLDER_FILE_BYTES) notSaved.push({ ruta: c.path, motivo: "too_large" });
+      else if (Buffer.byteLength(f.text, "utf8") > BOX_TEXT_FILE_BYTES) notSaved.push({ ruta: c.path, motivo: "too_large" });
       else {
         tree[c.path] = f.text;
         changed[c.path] = f.text;
