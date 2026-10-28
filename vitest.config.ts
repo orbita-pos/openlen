@@ -727,6 +727,9 @@ export default defineConfig({
       "app/api/projects/[id]/terminal/route.test.ts",
       // Editar a mano en la lente «Código» (la #18).
       "app/api/projects/[id]/ficheros/route.test.ts",
+      // Ficheros al nivel de Claude Code (spec local 2026-10-28): subir y leer bytes. LISTA BLANCA.
+      "app/api/projects/[id]/ficheros/upload/route.test.ts",
+      "app/api/projects/[id]/ficheros/raw/route.test.ts",
       // Las variables de entorno de las apps (spec local 2026-10-10). LISTA BLANCA.
       "app/api/projects/[id]/env/route.test.ts",
       // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.

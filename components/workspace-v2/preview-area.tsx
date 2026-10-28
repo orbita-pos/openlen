@@ -1337,13 +1337,14 @@ export function PreviewArea({
                 subidos: (count: number) => t("preview.ide.subidos", { count }),
                 noSubidos: t("preview.ide.noSubidos"),
                 motivo: {
-                  tipo: t("preview.ide.motivoTipo"),
                   grande: t("preview.ide.motivoGrande"),
                   nombre: t("preview.ide.motivoNombre"),
                   demasiados: t("preview.ide.motivoDemasiados", { max: MAX_SUBIDA }),
                 },
                 reemplazar: (count: number, lista: string) => t("preview.ide.reemplazar", { count, lista }),
                 subiendo: t("preview.ide.subiendo"),
+                binario: (size: string) => t("preview.ide.binario", { size }),
+                descargar: t("preview.ide.descargar"),
                 hilos: {
                   placeholder: t("preview.ide.hilos.placeholder"),
                   comentar: t("preview.ide.hilos.comentar"),

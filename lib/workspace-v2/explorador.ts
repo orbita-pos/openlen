@@ -3,15 +3,17 @@
  * qué carpeta nace un archivo nuevo, adónde va cada ruta al renombrar una
  * carpeta y qué es una página. Puro: lo prueba vitest y lo importa el cliente.
  */
+import { MAX_PATH_DEPTH } from "@/lib/files/limits";
 
-/** Un trozo de ruta: letras, dígitos, `-`, `_` y `.`, sin empezar por punto —
- *  la misma regla que la carpeta del proyecto (`lib/agent/ficheros/folder.ts`). */
-const SEGMENTO = /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/;
+/** Un trozo de ruta, como en un disco: no vacío, ni `.` ni `..`, sin barra invertida ni caracteres de
+ *  control — la misma regla que la carpeta del proyecto (`lib/agent/ficheros/folder.ts`). */
+const MAL_SEGMENTO = /[\u0000-\u001f\u007f\\]/;
+const segmentoValido = (p: string) => p.trim() !== "" && p !== "." && p !== ".." && !MAL_SEGMENTO.test(p);
 
 /** ¿Vale como nombre de un archivo o una carpeta? Se admite `a/b.js`: crea las carpetas de en medio, como VS Code. */
 export function nombreValido(nombre: string): boolean {
   const partes = nombre.trim().split("/");
-  return partes.length > 0 && partes.length <= 8 && partes.every((p) => SEGMENTO.test(p));
+  return partes.length > 0 && partes.length <= MAX_PATH_DEPTH && partes.every(segmentoValido);
 }
 
 /** La carpeta de una ruta (`""` es la raíz). */

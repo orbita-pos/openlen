@@ -48,6 +48,19 @@ export async function saveProjectFile(projectId: string, path: string, content: 
   despuesDeCambiar(projectId, [path]);
 }
 
+/** A folder file's bytes (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): a text's in UTF-8, a
+ *  binary's from storage by its pointer. `null` if there is no such file. */
+export async function readProjectFileBytes(projectId: string, path: string): Promise<Uint8Array | null> {
+  const [row] = await db
+    .select({ content: schema.projectFiles.content })
+    .from(schema.projectFiles)
+    .where(and(eq(schema.projectFiles.projectId, projectId), eq(schema.projectFiles.path, path)))
+    .limit(1);
+  if (!row) return null;
+  const { getBlob, isBlobPointer } = await import("@/lib/files/blob");
+  return isBlobPointer(row.content) ? getBlob(row.content) : new TextEncoder().encode(row.content);
+}
+
 /** Borra un fichero. `false` si no existía. */
 export async function deleteProjectFile(projectId: string, path: string): Promise<boolean> {
   const gone = await db

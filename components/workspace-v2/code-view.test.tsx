@@ -104,14 +104,16 @@ const labels = {
     abrirAlLado: "Abrir al lado",
     subidos: (n: number) => `${n} subidos.`,
     noSubidos: "No se subieron:",
-    motivo: { tipo: "tipo", grande: "grande", nombre: "nombre", demasiados: "demasiados" },
+    motivo: { grande: "grande", nombre: "nombre", demasiados: "demasiados" },
     reemplazar: (n: number, lista: string) => `¿Reemplazar ${lista}?`,
     subiendo: "Subiendo…",
+    binario: (tamano: string) => `Archivo binario · ${tamano}`,
+    descargar: "Descargar",
   },
 };
 
 /** El servidor de mentira: la lista, y lo que le llega por cada método. */
-let LISTA: { ficheros: { ruta: string; contenido: string }[]; perezosos: string[] };
+let LISTA: { ficheros: ({ ruta: string; contenido: string } | { ruta: string; binario: { size: number; tipo: string } })[]; perezosos: string[] };
 let llamadas: { metodo: string; url: string; cuerpo: unknown }[];
 let respuesta: (metodo: string, url: string, cuerpo: unknown) => Response | null;
 
@@ -339,7 +341,7 @@ describe("CodeView — el explorador: crear, renombrar, borrar", () => {
     const caja = el.querySelector<HTMLInputElement>('nav input[aria-label="Nombre"]')!;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
     act(() => {
-      setter.call(caja, "con espacio.js");
+      setter.call(caja, "a//b.js");
       caja.dispatchEvent(new Event("input", { bubbles: true }));
     });
     expect(el.textContent).toContain("Nombre no válido");
@@ -646,8 +648,13 @@ describe("CodeView — dos editores lado a lado", () => {
 });
 
 describe("CodeView — subir archivos soltándolos desde tu ordenador", () => {
-  // El `File` de jsdom no tiene `text()`.
-  const archivo = (contenido: string, nombre: string) => Object.assign(new File([contenido], nombre), { text: async () => contenido });
+  // El `File` de jsdom no tiene `text()` ni `arrayBuffer()`.
+  const archivo = (contenido: string | Uint8Array, nombre: string) =>
+    Object.assign(new File([contenido as BlobPart], nombre), {
+      text: async () => (typeof contenido === "string" ? contenido : ""),
+      arrayBuffer: async () => (typeof contenido === "string" ? new TextEncoder().encode(contenido) : contenido).buffer,
+    });
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
   const dice = (el: HTMLElement) => el.textContent ?? "";
   const soltarDelOrdenador = (hasta: Element, archivos: File[]) => {
     const dt = { types: ["Files"], items: [], files: archivos, dropEffect: "none" };
@@ -660,12 +667,14 @@ describe("CodeView — subir archivos soltándolos desde tu ordenador", () => {
     }
   };
 
-  it("🔴 lo nuevo se crea en la carpeta donde se suelta; lo que existe se reemplaza tras preguntar; una foto, no", async () => {
+  it("🔴 lo nuevo se crea en la carpeta donde se suelta; lo que existe se reemplaza tras preguntar; una foto sube en bytes", async () => {
+    respuesta = (metodo, url) =>
+      metodo === "POST" && url.endsWith("/ficheros/upload") ? new Response(JSON.stringify({ guardados: ["/datos/foto.jpg"], rechazados: [] })) : null;
     const { el } = await pintar();
     soltarDelOrdenador(botonDelArbol(el, "datos").parentElement!, [
       archivo("body{}", "base.css"),
       archivo('[{"nombre":"Luis"}]', "reservas.json"),
-      archivo("x", "foto.jpg"),
+      archivo(PNG, "foto.jpg"),
     ]);
     await esperar(() => dice(el).includes("subidos"));
     expect(window.confirm).toHaveBeenCalledWith("¿Reemplazar /datos/reservas.json?");
@@ -675,8 +684,29 @@ describe("CodeView — subir archivos soltándolos desde tu ordenador", () => {
       contenido: '[{"nombre":"Luis"}]',
       base: '[{"nombre":"Ana"}]',
     });
-    expect(dice(el)).toContain("2 subidos.");
-    expect(dice(el)).toContain("foto.jpg — tipo");
+    const subida = llamadas.find((l) => l.url.endsWith("/ficheros/upload"));
+    expect(subida?.metodo).toBe("POST");
+    expect(dice(el)).toContain("3 subidos.");
+  });
+
+  it("un binario que el servidor rechaza se dice con su motivo", async () => {
+    respuesta = (metodo, url) =>
+      metodo === "POST" && url.endsWith("/ficheros/upload")
+        ? new Response(JSON.stringify({ guardados: [], rechazados: [{ ruta: "/v.mp4", motivo: "ENOSPC: no space left on device, write '/v.mp4'" }] }))
+        : null;
+    const { el } = await pintar();
+    soltarDelOrdenador(el.querySelector("nav")!, [archivo(PNG, "v.mp4")]);
+    await esperar(() => dice(el).includes("No se subieron"));
+    expect(dice(el)).toContain("v.mp4 — ENOSPC: no space left on device");
+  });
+
+  it("un binario abierto: una imagen se ve; otro, su tamaño y «Descargar»", async () => {
+    LISTA.ficheros.push({ ruta: "/img/logo.png", binario: { size: 2048, tipo: "image/png" } }, { ruta: "/doc/guia.pdf", binario: { size: 3 * 1024 * 1024, tipo: "application/pdf" } });
+    const { el } = await pintar({ peticion: { ruta: "/img/logo.png", n: 1 } });
+    await esperar(() => el.querySelector("img"));
+    expect(el.querySelector("img")!.getAttribute("src")).toBe(`/api/projects/${proyecto}/ficheros/raw?ruta=%2Fimg%2Flogo.png`);
+    expect(dice(el)).toContain("Archivo binario · 2KB");
+    expect(el.querySelector("a[download]")!.getAttribute("download")).toBe("logo.png");
   });
 
   it("si no quieres reemplazar, sólo se sube lo nuevo", async () => {
