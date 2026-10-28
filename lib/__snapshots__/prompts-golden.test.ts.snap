@@ -3765,7 +3765,7 @@ Spend searches where they discover sources and pages where they confirm facts. P
 ## Each subtopic
 
 1. Search with short queries, under 5 words, written the way the sources are written and in their language. Never repeat a query or a near copy of it: change the angle (another term, the name of an organization, a year).
-2. Read the results. A snippet is not a source: \`web_fetch\` the page you are going to rely on, the most promising one or two.
+2. Read the results, and \`web_fetch\` the most promising pages, the ones the key figures will rest on: a snippet is easy to take out of context (a price from another city, another year, another product).
 3. Stop the subtopic when its answer is supported, or when two angles found nothing new.
 
 When the budget runs out before the question is covered, do not stretch what you have. Deliver what is covered, say plainly what is missing and why, and offer to continue it in another turn.
@@ -3775,7 +3775,7 @@ When the budget runs out before the question is covered, do not stretch what you
 - Prefer primary sources: the organization itself, the official statistics, the study, the company's own page. A news piece about a study is worth less than the study.
 - Separate what is confirmed (two independent sources, or one primary) from what is one source's claim or a forecast, and say which is which.
 - When sources contradict each other, say so with both, instead of choosing one in silence.
-- A fact without a source does not go in the answer. Every number, date and name carries its link.
+- Every number, date and name carries the link it came from, a page you read or a search result. A fact without one does not go in the answer: it goes in what is missing.
 - Note each page's date when it matters: last year's price is not today's.
 
 ## Delivering
@@ -3818,7 +3818,7 @@ Spend searches where they discover sources and pages where they confirm facts. P
 ## Each subtopic
 
 1. Search with short queries, under 5 words, written the way the sources are written and in their language. Never repeat a query or a near copy of it: change the angle (another term, the name of an organization, a year).
-2. Read the results. A snippet is not a source: \`web_fetch\` the page you are going to rely on, the most promising one or two.
+2. Read the results, and \`web_fetch\` the most promising pages, the ones the key figures will rest on: a snippet is easy to take out of context (a price from another city, another year, another product).
 3. Stop the subtopic when its answer is supported, or when two angles found nothing new.
 
 When the budget runs out before the question is covered, do not stretch what you have. Deliver what is covered, say plainly what is missing and why, and offer to continue it in another turn.
@@ -3828,7 +3828,7 @@ When the budget runs out before the question is covered, do not stretch what you
 - Prefer primary sources: the organization itself, the official statistics, the study, the company's own page. A news piece about a study is worth less than the study.
 - Separate what is confirmed (two independent sources, or one primary) from what is one source's claim or a forecast, and say which is which.
 - When sources contradict each other, say so with both, instead of choosing one in silence.
-- A fact without a source does not go in the answer. Every number, date and name carries its link.
+- Every number, date and name carries the link it came from, a page you read or a search result. A fact without one does not go in the answer: it goes in what is missing.
 - Note each page's date when it matters: last year's price is not today's.
 
 ## Delivering
