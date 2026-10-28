@@ -68,6 +68,7 @@ describe("what an app pick tells about where the element is", () => {
       key: "k", chain: [{ path: "/src/Ventas.tsx", line: 4, component: "Ventas" }], primary: 0, tag: "li", text: "Pedido", textEditable: true,
       copies: 12, screen: "#/ventas", styles: {} as DesignSelection["styles"], image: null, designId: null, fonts: [],
     } as DesignSelection;
-    expect(mentionFromDesignSelection(s, labels)!.type === "element" && mentionFromDesignSelection(s, labels)!.target).toMatchObject({ copies: 12, screen: "#/ventas" });
+    const m = mentionFromDesignSelection(s, labels)!;
+    expect(m.type === "element" && m.target).toMatchObject({ copies: 12, screen: "#/ventas" });
   });
 });
