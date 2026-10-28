@@ -161,6 +161,21 @@ ${texto}
     expect(filas.map((f) => f.fila.userText)).toEqual(["turno m", "nuevo", "turno b"]);
   });
 
+  // Lo que el historial necesita para decirle a Len que un turno se cortó
+  // (`CUT_OFF_TURN_MARK`). Sólo en la cortada: las demás filas, como antes.
+  it("🔴 la fila cortada llega marcada al historial, también con miembros; las demás, sin la propiedad", async () => {
+    await turno({ id: "bien", minuto: 0 });
+    // Como la deja el reenganche cuando nadie la corre (GET /api/agent/turno/[fila]).
+    await abrirFilaDelTurno("p1", { id: "muerta", userText: "hazme la carta", page: null });
+    await marcarCortadaSiSigueEnCurso("muerta");
+    const filas = await turnosParaElHistorial("p1");
+    expect(filas.map((f) => f.userText)).toEqual(["turno bien", "hazme la carta"]);
+    expect(filas[0]).not.toHaveProperty("cutOff");
+    expect(filas[1]!.cutOff).toBe(true);
+    const conEquipo = await filasParaElHistorialConEquipo("p1");
+    expect(conEquipo.map((f) => f.fila.cutOff ?? false)).toEqual(filas.map((f) => f.cutOff ?? false));
+  });
+
   it("🔴 al reabrir una charla archivada, su historial arranca en SU marca", async () => {
     await turno({ id: "x1", minuto: 0, conversation: "c1" });
     await turno({ id: "x2", minuto: 1, conversation: "c1", compaction: marca("de c1") });

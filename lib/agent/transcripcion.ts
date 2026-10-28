@@ -25,7 +25,7 @@
  * Puro salvo la huella (`node:crypto`).
  */
 
-// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos.
+// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos; la marca de un turno cortado sale del estado de su fila, igual en cada turno; sólo cambia si se deshace ese turno, y entonces se paga desde ahí una vez.
 import { createHash } from "node:crypto";
 
 import type { InlineImage, Message } from "@/lib/ai-gateway";
@@ -34,7 +34,7 @@ import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "@/lib/agent/terminal/cambios-del-comando";
 import { NO_SUCH_TOOL, currentToolCall, currentToolName } from "@/lib/agent/tool-renames";
-import { MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
+import { CUT_OFF_TURN_MARK, MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historial-saneado";
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
@@ -169,7 +169,7 @@ export interface TranscripcionGuardada {
 
 // La marca que va detrás de un turno que el dueño paró vive en
 // `historial-saneado.ts`, que es puro.
-export { MARCA_DE_TURNO_DETENIDO };
+export { CUT_OFF_TURN_MARK, MARCA_DE_TURNO_DETENIDO };
 
 /** Una fila de `projectChatMessages`, con lo que hace falta para el historial. */
 export interface FilaDelHistorial {
@@ -188,6 +188,9 @@ export interface FilaDelHistorial {
    *  que hubo antes de este turno y quién lo pidió, ya en su sobre. Sólo en
    *  proyectos con miembros; ausente = el mensaje de siempre, byte a byte. */
   readonly prefijoDelEquipo?: string;
+  /** La fila quedó CORTADA (`ESTADO_CORTADO`). Si además no guardó mensajes, el
+   *  historial lo dice detrás (`CUT_OFF_TURN_MARK`). Ausente = la de siempre. */
+  readonly cutOff?: boolean;
 }
 
 /**
@@ -413,6 +416,7 @@ export function historialDesdeLaBase(
       const cola = enElHistorial((f.transcript?.mensajes ?? []).slice(f.compaction.fromTranscript));
       mensajes.push(...marca, ...cola);
       if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+      if (lostItsCalls(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
       continue;
     }
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
@@ -428,8 +432,16 @@ export function historialDesdeLaBase(
       mensajes.push({ role: "assistant", content: f.assistantReasoning });
     }
     if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+    if (lostItsCalls(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
   }
   return microcompactarASaltos(mensajes, presupuesto);
+}
+
+/** Un turno cortado que no guardó sus llamadas: el proceso murió antes de
+ *  escribir la transcripción. El que las guardó ya las enseña, y el que paró el
+ *  dueño lleva su propia marca. */
+function lostItsCalls(f: FilaDelHistorial): boolean {
+  return f.cutOff === true && !f.transcript?.mensajes.length && !f.transcript?.detenido;
 }
 
 /** Mensajes del bucle tal y como vuelven en el historial. Del bucle sólo salen

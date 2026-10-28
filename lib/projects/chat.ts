@@ -16,6 +16,7 @@ import { TODO_WRITE, latestTodosOfActions, type TodoItem } from "@/lib/agent/tod
 import { photosForRow, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
 import { ESTADO_EN_CURSO, storedTurnFromRow } from "@/lib/projects/stored-turn";
+import { ESTADO_CORTADO } from "@/lib/agent/registro-del-turno";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
@@ -246,6 +247,8 @@ export async function turnosParaElHistorial(projectId: string): Promise<FilaDelH
       attachedImage: schema.projectChatMessages.attachedImage,
       // Y sus PDF (26/10): su nota, y Read los abre (`session.attachments`).
       attachedFiles: schema.projectChatMessages.attachedFiles,
+      // Y si se cortó: sin transcripción, el historial lo dice (`CUT_OFF_TURN_MARK`).
+      status: schema.projectChatMessages.status,
     })
     .from(schema.projectChatMessages)
     .where(and(turnoDeLaHistoria(projectId), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
@@ -257,7 +260,13 @@ export async function turnosParaElHistorial(projectId: string): Promise<FilaDelH
     compaction: r.compaction ?? null,
     attachedImage: r.attachedImage ?? null,
     attachedFiles: r.attachedFiles ?? null,
+    ...cutOffOf(r.status),
   }));
+}
+
+/** `cutOff` sólo en la fila cortada: las demás salen como antes, byte a byte. */
+function cutOffOf(status: string): { cutOff?: true } {
+  return status === ESTADO_CORTADO ? { cutOff: true } : {};
 }
 
 /**
@@ -309,6 +318,7 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
     compaction: t.compaction,
     attachedImage: t.attachedImage,
     attachedFiles: t.attachedFiles,
+    status: t.status,
   };
   // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
   // equipo NO cuentan para la marca —si contaran, una charla larga entre
@@ -341,6 +351,7 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
         compaction: r.compaction ?? null,
         attachedImage: r.attachedImage ?? null,
         attachedFiles: r.attachedFiles ?? null,
+        ...cutOffOf(r.status),
       },
     }));
 }
