@@ -3,6 +3,7 @@
 // pointer, and a drag of text or of something inside the page is none of its business.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 
 import { useFileDrop } from "./use-file-drop";
@@ -18,12 +19,15 @@ afterEach(() => {
 
 function mount(o: { enabled: boolean; onFiles: (f: File[]) => void }) {
   let dragging = false;
+  const portalHost = document.createElement("div");
+  document.body.appendChild(portalHost);
   function Zone() {
     const d = useFileDrop(o);
     dragging = d.dragging;
     return (
       <div data-zone="" {...d.handlers}>
         <span data-child="" />
+        {createPortal(<div data-portaled="" />, portalHost)}
       </div>
     );
   }
@@ -31,7 +35,12 @@ function mount(o: { enabled: boolean; onFiles: (f: File[]) => void }) {
   document.body.appendChild(host);
   root = createRoot(host);
   act(() => root!.render(<Zone />));
-  return { zone: host.querySelector("[data-zone]")!, child: host.querySelector("[data-child]")!, dragging: () => dragging };
+  return {
+    zone: host.querySelector("[data-zone]")!,
+    child: host.querySelector("[data-child]")!,
+    portaled: portalHost.querySelector("[data-portaled]")!,
+    dragging: () => dragging,
+  };
 }
 
 function drag(target: Element, type: string, types: string[], files: File[] = []) {
@@ -84,5 +93,33 @@ describe("useFileDrop", () => {
     drag(z.zone, "drop", ["Files"], [png]);
     expect(z.dragging()).toBe(false);
     expect(onFiles).not.toHaveBeenCalled();
+  });
+
+  // Review of the branch: a dialog portaled from the chat (the image picker) has its own drop zone.
+  it("a drop inside a portaled dialog, or one a child already handled, is not the chat's", () => {
+    const onFiles = vi.fn();
+    const z = mount({ enabled: true, onFiles });
+    drag(z.portaled, "dragenter", ["Files"]);
+    expect(z.dragging()).toBe(false);
+    drag(z.portaled, "drop", ["Files"], [png]);
+    const handled = new Event("drop", { bubbles: true, cancelable: true }) as Event & { dataTransfer: unknown };
+    handled.dataTransfer = { types: ["Files"], files: [png], dropEffect: "none" };
+    handled.preventDefault();
+    act(() => void z.child.dispatchEvent(handled));
+    expect(onFiles).not.toHaveBeenCalled();
+  });
+
+  // Review of the branch: Chromium lists "Files" when an <img> of the page itself is dragged.
+  it("a drag that started in the page (a thumbnail, a photo in a reply) is ignored", () => {
+    const onFiles = vi.fn();
+    const z = mount({ enabled: true, onFiles });
+    act(() => void z.child.dispatchEvent(new Event("dragstart", { bubbles: true })));
+    drag(z.zone, "dragenter", ["Files"]);
+    expect(z.dragging()).toBe(false);
+    drag(z.zone, "drop", ["Files"], [png]);
+    expect(onFiles).not.toHaveBeenCalled();
+    act(() => void z.child.dispatchEvent(new Event("dragend", { bubbles: true })));
+    drag(z.zone, "dragenter", ["Files"]);
+    expect(z.dragging()).toBe(true);
   });
 });
