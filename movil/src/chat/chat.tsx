@@ -31,12 +31,14 @@ interface Props {
   onCerrar: () => void;
   onLlamar: () => void;
   onVerPagina: () => void;
+  onEquipo?: () => void;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
+  const tq = useTranslations("movil.equipo");
   const [texto, setTexto] = useState("");
   // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
   // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
@@ -197,6 +199,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
         <button type="button" className="ch-btn" aria-label={tp("llamar")} onClick={onLlamar}>
           <Icono nombre="phone" />
         </button>
+        {onEquipo && <button type="button" className="ch-equipo" onClick={onEquipo}>@ {tq("titulo")}</button>}
       </header>
 
       <div className="ch-log" ref={log} aria-live="polite">

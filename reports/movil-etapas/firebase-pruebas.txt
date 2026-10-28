@@ -1,0 +1,14 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v2.1.9 C:/Users/jesus/Desktop/inari-pages
+
+◇ injected env (52) from .env.local // tip: ⌁ auth for agents [www.vestauth.com]
+ ✓ movil/src/avisos/controlador.test.ts (10 tests) 36ms
+ ✓ lib/notifications/fcm.test.ts (7 tests) 35ms
+ ✓ app/api/movil/avisos/route.test.ts (5 tests) 16ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  10:39:59
+   Duration  3.19s (transform 313ms, setup 0ms, collect 517ms, tests 87ms, environment 1ms, prepare 2.30s)
+

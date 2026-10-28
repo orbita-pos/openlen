@@ -28,6 +28,8 @@ import {
   type TurnoEnVivo,
 } from "./hilo";
 import type { NotaGrabada } from "./use-nota";
+import { pasosDelTrabajo } from "../entrega/progreso";
+import { ultimoTurnoDeLen } from "../hoja";
 
 export interface OpcionesDelChat {
   cliente: ClienteDeOpenLen;
@@ -49,7 +51,13 @@ export function useChat(o: OpcionesDelChat) {
   const op = useRef(o);
   const [locales, setLocales] = useState<ElementoDelHilo[]>([]);
   const [vivo, setVivo] = useState<TurnoEnVivo | null>(null);
-  const [reenganche, setReenganche] = useState<{ fila: string; turnoId: string | null; texto: string } | null>(null);
+  const [reenganche, setReenganche] = useState<{ fila: string; turnoId: string | null; texto: string; acciones?: StoredChatTurn["actions"] } | null>(null);
+  const epoca = useRef(0);
+  useLayoutEffect(() => {
+    const contador = epoca;
+    contador.current++;
+    return () => { contador.current++; };
+  }, [o.projectId]);
   const vivoRef = useRef(vivo);
   const reengancheRef = useRef(reenganche);
   const localesRef = useRef(locales);
@@ -78,11 +86,16 @@ export function useChat(o: OpcionesDelChat) {
     setLocales((ls) => sinLoEnviado(ls, o.historial));
   }, [o.historial]);
 
-  const correr = useCallback(async (prompt: string, fila: string, foto?: string): Promise<boolean> => {
+  const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume"): Promise<boolean> => {
     const { cliente, projectId } = op.current;
     if (!projectId) return false;
-    setVivo(turnoNuevo(fila));
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, turnId: fila }, (e) => setVivo((v) => (v ? conEvento(v, e) : v)));
+    const actual = epoca.current;
+    vivoRef.current = turnoNuevo(fila);
+    setVivo(vivoRef.current);
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, turnId: fila, goal }, (e) => {
+      if (actual === epoca.current) setVivo((v) => (v ? conEvento(v, e) : v));
+    });
+    if (actual !== epoca.current) return true;
     if (fin === "sinRed" || typeof fin === "object") {
       setVivo(null);
       return false;
@@ -95,16 +108,19 @@ export function useChat(o: OpcionesDelChat) {
   }, []);
 
   const enviar = useCallback(
-    async (k: string, texto: string, foto?: Blob) => {
+    async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume") => {
       const { cliente, base, textoDeFotoSola } = op.current;
+      const actual = epoca.current;
       setLocales((ls) => marcar(ls, k, { estado: "enviando" }));
       const v = vivoRef.current;
       const r = reengancheRef.current;
       if ((v && !v.terminado) || r) {
+        if (goal) { setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" })); return; }
         // Len trabaja: lo que escribes le corrige el rumbo, sin pararlo.
         const turnoId = v?.turnoId ?? r?.turnoId ?? null;
         const fila = v?.fila ?? r?.fila;
         const ok = turnoId ? await dirigirA(cliente, turnoId, texto) : false;
+        if (actual !== epoca.current) return;
         setLocales((ls) => marcar(ls, k, ok ? { estado: "ok", fila, correccion: true } : { estado: "noSeEnvio" }));
         return;
       }
@@ -113,15 +129,17 @@ export function useChat(o: OpcionesDelChat) {
         try {
           url = await subirFoto(cliente, base, await achicarFoto(foto));
         } catch {
+          if (actual !== epoca.current) return;
           setLocales((ls) => marcar(ls, k, { estado: "noSeSubio" }));
           return;
         }
       }
+      if (actual !== epoca.current) return;
       // El id de la fila lo pone la app, como la web: así sabe cuándo la
       // conversación releída ya trae este mensaje.
       const fila = crypto.randomUUID();
       setLocales((ls) => marcar(ls, k, { estado: "ok", fila }));
-      if (!(await correr(texto || textoDeFotoSola, fila, url))) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
+      if (!(await correr(texto || textoDeFotoSola, fila, url, goal)) && actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
     },
     [correr],
   );
@@ -140,13 +158,22 @@ export function useChat(o: OpcionesDelChat) {
     [enviar],
   );
 
+  const mandarEncargo = useCallback(async (texto: string, modo: "create" | "resume") => {
+    if (!op.current.projectId || (vivoRef.current && !vivoRef.current.terminado) || reengancheRef.current) return;
+    const k = nuevaClave("encargo");
+    setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, goal: modo, estado: "enviando" }]);
+    await enviar(k, texto, undefined, modo);
+  }, [enviar]);
+
   const transcribirYMandar = useCallback(
     async (k: string) => {
       const n = notas.current.get(k);
       const { cliente, projectId, idioma } = op.current;
+      const actual = epoca.current;
       if (!n || !projectId) return;
       setLocales((ls) => marcar(ls, k, { estado: "transcribiendo" }));
       const r = await transcribir(cliente, { audio: n.audio, projectId, idioma, segundos: n.segundos });
+      if (actual !== epoca.current) return;
       if ("error" in r) {
         const aviso: ElementoDelHilo[] = r.error === "tope" ? [{ clave: nuevaClave("aviso"), t: Date.now(), tipo: "aviso", aviso: "tope" }] : [];
         setLocales((ls) => [...marcar(ls, k, { estado: "noSeEntendio" }), ...aviso]);
@@ -174,7 +201,7 @@ export function useChat(o: OpcionesDelChat) {
       if (e?.tipo === "voz") {
         if (e.transcripcion) void enviar(k, e.transcripcion);
         else void transcribirYMandar(k);
-      } else if (e?.tipo === "tu") void enviar(k, e.texto, fotos.current.get(k));
+      } else if (e?.tipo === "tu") void enviar(k, e.texto, fotos.current.get(k), e.goal);
     },
     [enviar, transcribirYMandar],
   );
@@ -198,7 +225,7 @@ export function useChat(o: OpcionesDelChat) {
 
   // Volver con Len trabajando (cerraste la app, se cortó la red): el turno
   // sigue en el servidor y su fila se va llenando. Cada 4 s, como la hoja.
-  const ultimo = o.historial.at(-1);
+  const ultimo = ultimoTurnoDeLen(o.historial);
   const filaEnCurso = ultimo?.enCurso ? ultimo.id : null;
   const hayVivo = vivo !== null;
   useEffect(() => {
@@ -211,7 +238,7 @@ export function useChat(o: OpcionesDelChat) {
       void leerTurno(op.current.cliente, filaEnCurso)
         .then((r) => {
           if (!vigente) return;
-          if (r.turno.enCurso) setReenganche({ fila: filaEnCurso, turnoId: r.turnoId ?? null, texto: r.turno.assistantReasoning });
+          if (r.turno.enCurso) setReenganche({ fila: filaEnCurso, turnoId: r.turnoId ?? null, texto: r.turno.assistantReasoning, acciones: r.turno.actions });
           else {
             setReenganche(null);
             op.current.alCambiarLaPagina();
@@ -225,7 +252,7 @@ export function useChat(o: OpcionesDelChat) {
       vigente = false;
       clearInterval(reloj);
     };
-  }, [filaEnCurso, hayVivo]);
+  }, [filaEnCurso, hayVivo, o.projectId]);
 
   const elementos = useMemo(() => {
     const ahora = Date.now();
@@ -262,8 +289,11 @@ export function useChat(o: OpcionesDelChat) {
     encargo,
     dichoAlTerminar,
     avance: vivo?.avance ?? null,
+    progreso: pasosDelTrabajo(vivo ? vivo.acciones ?? [] : reenganche ? reenganche.acciones ?? [] : ultimo?.actions ?? []),
+    turnoId: turnoIdEnCurso,
     pregunta: vivo ? vivo.pregunta : terminaEnPregunta(o.historial),
     mandar,
+    mandarEncargo,
     mandarNota,
     reintentar,
     borrar,

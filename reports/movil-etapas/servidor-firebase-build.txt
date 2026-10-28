@@ -1,0 +1,500 @@
+
+> openlen@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.23
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings in 103s
+
+./node_modules/jose/dist/webapi/lib/deflate.js
+A Node.js API is used (CompressionStream at line: 10) which is not supported in the Edge Runtime.
+Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+
+Import trace for requested module:
+./node_modules/jose/dist/webapi/lib/deflate.js
+./node_modules/jose/dist/webapi/lib/jwe_decrypt.js
+./node_modules/jose/dist/webapi/jwt/decrypt.js
+./node_modules/jose/dist/webapi/index.js
+./node_modules/@auth/core/jwt.js
+./node_modules/@auth/core/lib/init.js
+./node_modules/@auth/core/lib/index.js
+./node_modules/@auth/core/index.js
+./node_modules/next-auth/index.js
+
+./node_modules/jose/dist/webapi/lib/deflate.js
+A Node.js API is used (DecompressionStream at line: 26) which is not supported in the Edge Runtime.
+Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+
+Import trace for requested module:
+./node_modules/jose/dist/webapi/lib/deflate.js
+./node_modules/jose/dist/webapi/lib/jwe_decrypt.js
+./node_modules/jose/dist/webapi/jwt/decrypt.js
+./node_modules/jose/dist/webapi/index.js
+./node_modules/@auth/core/jwt.js
+./node_modules/@auth/core/lib/init.js
+./node_modules/@auth/core/lib/index.js
+./node_modules/@auth/core/index.js
+./node_modules/next-auth/index.js
+
+   Linting and checking validity of types ...
+
+./app/[locale]/new/page.tsx
+163:7  Warning: Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+1972:6  Warning: React Hook useEffect has a missing dependency: 'loadedProject'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+2109:6  Warning: React Hook useEffect has missing dependencies: 'loadedProject' and 't'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+2637:6  Warning: React Hook useEffect has missing dependencies: 'loadedProject', 'pedirAncla', and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/community/explore-card.tsx
+58:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+97:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/community/explore-view.tsx
+222:13  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+266:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/inbox/inbox-desk.tsx
+286:31  Warning: The ref value 'typingPing.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'typingPing.current' to a variable inside the effect, and use that variable in the cleanup function.  react-hooks/exhaustive-deps
+
+./components/workspace/publish-modal.tsx
+172:6  Warning: React Hook useEffect has a missing dependency: 'project.languages'. Either include it or remove the dependency array. If 'setLangs' needs the current value of 'project.languages', you can also switch to useReducer instead of useState and read 'project.languages' in the reducer.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/autofill-modal.tsx
+242:6  Warning: React Hook useCallback has an unnecessary dependency: 'tab'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+308:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/workspace-v2/chat/use-agent-chat.ts
+1122:5  Warning: React Hook useCallback has missing dependencies: 'locale' and 'tAgent'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+2151:5  Warning: React Hook useCallback has a missing dependency: 'locale'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/panels/insights-panel.tsx
+82:6  Warning: React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/panels/pages-panel.tsx
+97:6  Warning: React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/panels/submissions-panel.tsx
+52:6  Warning: React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/panels/versions-panel.tsx
+133:6  Warning: React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/workspace-v2/preview-area.tsx
+377:6  Warning: React Hook useEffect has a missing dependency: 'setLente'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+627:6  Warning: React Hook useEffect has a missing dependency: 'derive'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/4889) ...
+   Generating static pages (388/4889) 
+   Generating static pages (1222/4889) 
+   Generating static pages (2444/4889) 
+   Generating static pages (3666/4889) 
+ ✓ Generating static pages (4889/4889)
+   Finalizing page optimization ...
+   Collecting build traces ...
+ ⚠ Failed to copy traced files for C:\Users\jesus\Desktop\inari-pages\.next\server\app\[locale]\admin\reports\page.js [Error: EPERM: operation not permitted, symlink 'C:\Users\jesus\Desktop\inari-pages\crates\html-engine' -> 'C:\Users\jesus\Desktop\inari-pages\.next\standalone\node_modules\@openlen\html-engine'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'symlink',
+  path: 'C:\\Users\\jesus\\Desktop\\inari-pages\\crates\\html-engine',
+  dest: 'C:\\Users\\jesus\\Desktop\\inari-pages\\.next\\standalone\\node_modules\\@openlen\\html-engine'
+}
+
+Route (app)                                                     Size  First Load JS  Revalidate  Expire
+┌ ○ /_not-found                                                453 B         103 kB
+├ ● /[locale]                                                5.01 kB         153 kB
+├   ├ /en
+├   ├ /es
+├   ├ /pt
+├   └ [+7 more paths]
+├ ƒ /[locale]/[...rest]                                        453 B         103 kB
+├ ƒ /[locale]/[handle]                                       22.6 kB         144 kB
+├ ● /[locale]/acceptable-use                                 2.11 kB         120 kB
+├   ├ /en/acceptable-use
+├   ├ /es/acceptable-use
+├   ├ /pt/acceptable-use
+├   └ [+7 more paths]
+├ ● /[locale]/admin/reports                                    764 B         115 kB
+├   ├ /en/admin/reports
+├   ├ /es/admin/reports
+├   ├ /pt/admin/reports
+├   └ [+7 more paths]
+├ ● /[locale]/analytics                                      2.11 kB         120 kB
+├   ├ /en/analytics
+├   ├ /es/analytics
+├   ├ /pt/analytics
+├   └ [+7 more paths]
+├ ● /[locale]/blog                                           1.05 kB         136 kB
+├   ├ /en/blog
+├   ├ /es/blog
+├   ├ /pt/blog
+├   └ [+7 more paths]
+├ ● /[locale]/blog/[slug]                                    1.05 kB         136 kB
+├   ├ /en/blog/the-models-behind-your-page
+├   ├ /es/blog/the-models-behind-your-page
+├   ├ /pt/blog/the-models-behind-your-page
+├   └ [+7 more paths]
+├ ● /[locale]/business                                       2.11 kB         120 kB
+├   ├ /en/business
+├   ├ /es/business
+├   ├ /pt/business
+├   └ [+7 more paths]
+├ ● /[locale]/cookie-policy                                  2.11 kB         120 kB
+├   ├ /en/cookie-policy
+├   ├ /es/cookie-policy
+├   ├ /pt/cookie-policy
+├   └ [+7 more paths]
+├ ● /[locale]/dev/artifacts                                  11.7 kB         137 kB
+├   ├ /en/dev/artifacts
+├   ├ /es/dev/artifacts
+├   ├ /pt/dev/artifacts
+├   └ [+7 more paths]
+├ ● /[locale]/dev/artifacts/history                          2.58 kB         137 kB
+├   ├ /en/dev/artifacts/history
+├   ├ /es/dev/artifacts/history
+├   ├ /pt/dev/artifacts/history
+├   └ [+7 more paths]
+├ ● /[locale]/dev/chat                                       15.2 kB         251 kB
+├   ├ /en/dev/chat
+├   ├ /es/dev/chat
+├   ├ /pt/dev/chat
+├   └ [+7 more paths]
+├ ● /[locale]/dev/crear                                      6.74 kB         172 kB
+├   ├ /en/dev/crear
+├   ├ /es/dev/crear
+├   ├ /pt/dev/crear
+├   └ [+7 more paths]
+├ ● /[locale]/dev/diseno                                     3.99 kB         144 kB
+├   ├ /en/dev/diseno
+├   ├ /es/dev/diseno
+├   ├ /pt/dev/diseno
+├   └ [+7 more paths]
+├ ● /[locale]/dev/loader                                     4.64 kB         119 kB
+├   ├ /en/dev/loader
+├   ├ /es/dev/loader
+├   ├ /pt/dev/loader
+├   └ [+7 more paths]
+├ ● /[locale]/dev/taller                                     4.16 kB         125 kB
+├   ├ /en/dev/taller
+├   ├ /es/dev/taller
+├   ├ /pt/dev/taller
+├   └ [+7 more paths]
+├ ● /[locale]/dev/terminal                                   6.58 kB         347 kB
+├   ├ /en/dev/terminal
+├   ├ /es/dev/terminal
+├   ├ /pt/dev/terminal
+├   └ [+7 more paths]
+├ ● /[locale]/docs                                           2.11 kB         120 kB
+├   ├ /en/docs
+├   ├ /es/docs
+├   ├ /pt/docs
+├   └ [+7 more paths]
+├ ● /[locale]/explore                                        4.21 kB         122 kB
+├   ├ /en/explore
+├   ├ /es/explore
+├   ├ /pt/explore
+├   └ [+7 more paths]
+├ ● /[locale]/forgot                                          3.9 kB         134 kB
+├   ├ /en/forgot
+├   ├ /es/forgot
+├   ├ /pt/forgot
+├   └ [+7 more paths]
+├ ● /[locale]/inbox                                          5.19 kB         133 kB
+├   ├ /en/inbox
+├   ├ /es/inbox
+├   ├ /pt/inbox
+├   └ [+7 more paths]
+├ ● /[locale]/llamada                                         8.1 kB         142 kB
+├   ├ /en/llamada
+├   ├ /es/llamada
+├   ├ /pt/llamada
+├   └ [+7 more paths]
+├ ● /[locale]/login                                           1.5 kB         139 kB
+├   ├ /en/login
+├   ├ /es/login
+├   ├ /pt/login
+├   └ [+7 more paths]
+├ ● /[locale]/mcp                                            2.32 kB         120 kB
+├   ├ /en/mcp
+├   ├ /es/mcp
+├   ├ /pt/mcp
+├   └ [+7 more paths]
+├ ƒ /[locale]/mcp/approve/[id]                               2.58 kB         121 kB
+├ ● /[locale]/mcp/connections                                4.54 kB         122 kB
+├   ├ /en/mcp/connections
+├   ├ /es/mcp/connections
+├   ├ /pt/mcp/connections
+├   └ [+7 more paths]
+├ ● /[locale]/me                                             3.87 kB         122 kB
+├   ├ /en/me
+├   ├ /es/me
+├   ├ /pt/me
+├   └ [+7 more paths]
+├ ● /[locale]/messages                                       2.11 kB         120 kB
+├   ├ /en/messages
+├   ├ /es/messages
+├   ├ /pt/messages
+├   └ [+7 more paths]
+├ ● /[locale]/movil/entrar                                   2.46 kB         120 kB
+├   ├ /en/movil/entrar
+├   ├ /es/movil/entrar
+├   ├ /pt/movil/entrar
+├   └ [+7 more paths]
+├ ● /[locale]/new                                             119 kB         558 kB
+├   ├ /en/new
+├   ├ /es/new
+├   ├ /pt/new
+├   └ [+7 more paths]
+├ ƒ /[locale]/oauth/consent/[id]                             3.01 kB         121 kB
+├ ● /[locale]/privacy                                        2.11 kB         120 kB
+├   ├ /en/privacy
+├   ├ /es/privacy
+├   ├ /pt/privacy
+├   └ [+7 more paths]
+├ ● /[locale]/projects                                       2.11 kB         120 kB
+├   ├ /en/projects
+├   ├ /es/projects
+├   ├ /pt/projects
+├   └ [+7 more paths]
+├ ƒ /[locale]/projects/[id]/artifacts                          365 B         135 kB
+├ ● /[locale]/refund                                         2.11 kB         120 kB
+├   ├ /en/refund
+├   ├ /es/refund
+├   ├ /pt/refund
+├   └ [+7 more paths]
+├ ● /[locale]/register                                        1.9 kB         139 kB
+├   ├ /en/register
+├   ├ /es/register
+├   ├ /pt/register
+├   └ [+7 more paths]
+├ ● /[locale]/report-abuse                                   3.23 kB         121 kB
+├   ├ /en/report-abuse
+├   ├ /es/report-abuse
+├   ├ /pt/report-abuse
+├   └ [+7 more paths]
+├ ƒ /[locale]/reset/[token]                                  4.34 kB         138 kB
+├ ● /[locale]/subprocessors                                  2.11 kB         120 kB
+├   ├ /en/subprocessors
+├   ├ /es/subprocessors
+├   ├ /pt/subprocessors
+├   └ [+7 more paths]
+├ ● /[locale]/support                                        2.11 kB         120 kB
+├   ├ /en/support
+├   ├ /es/support
+├   ├ /pt/support
+├   └ [+7 more paths]
+├ ● /[locale]/templates                                      2.34 kB         144 kB
+├   ├ /en/templates
+├   ├ /es/templates
+├   ├ /pt/templates
+├   └ [+7 more paths]
+├ ● /[locale]/templates/[slug]                                1.2 kB         142 kB          1m      1y
+├   ├ /en/templates/mirror                                                                   1m      1y
+├   ├ /en/templates/anchor                                                                   1m      1y
+├   ├ /en/templates/pulse                                                                    1m      1y
+├   └ [+4497 more paths]
+├ ● /[locale]/terms                                          2.11 kB         120 kB
+├   ├ /en/terms
+├   ├ /es/terms
+├   ├ /pt/terms
+├   └ [+7 more paths]
+├ ƒ /ai/v1/[[...path]]                                         511 B         115 kB
+├ ƒ /api/admin/explore-seed                                    511 B         115 kB
+├ ƒ /api/admin/projects/[id]/visibility                        511 B         115 kB
+├ ƒ /api/admin/quality-metrics                                 453 B         103 kB
+├ ƒ /api/admin/republish-all                                   511 B         115 kB
+├ ƒ /api/admin/templates                                       453 B         103 kB
+├ ƒ /api/admin/templates/[id]                                  453 B         103 kB
+├ ƒ /api/agent                                                 511 B         115 kB
+├ ƒ /api/agent/cancelar                                        453 B         103 kB
+├ ƒ /api/agent/dirigir                                         453 B         103 kB
+├ ƒ /api/agent/encargo                                         511 B         115 kB
+├ ƒ /api/agent/esfuerzo                                        453 B         103 kB
+├ ƒ /api/agent/responder                                       453 B         103 kB
+├ ƒ /api/agent/turno/[fila]                                    511 B         115 kB
+├ ƒ /api/agents/accept                                         453 B         103 kB
+├ ƒ /api/analytics                                             511 B         115 kB
+├ ƒ /api/assistant/[sub]                                       511 B         115 kB
+├ ƒ /api/auth/[...nextauth]                                    453 B         103 kB
+├ ƒ /api/auth/forgot                                           511 B         115 kB
+├ ƒ /api/auth/register                                         453 B         103 kB
+├ ƒ /api/auth/reset                                            453 B         103 kB
+├ ƒ /api/billing/checkout                                      453 B         103 kB
+├ ƒ /api/billing/portal                                        453 B         103 kB
+├ ƒ /api/billing/webhook                                       453 B         103 kB
+├ ƒ /api/chat/[sub]/auth/guest                                 453 B         103 kB
+├ ƒ /api/chat/[sub]/auth/login                                 453 B         103 kB
+├ ƒ /api/chat/[sub]/auth/logout                                453 B         103 kB
+├ ƒ /api/chat/[sub]/auth/register                              453 B         103 kB
+├ ƒ /api/chat/[sub]/conversations                              453 B         103 kB
+├ ƒ /api/chat/[sub]/conversations/owner                        453 B         103 kB
+├ ƒ /api/chat/[sub]/handoff                                    511 B         115 kB
+├ ƒ /api/chat/[sub]/me                                         453 B         103 kB
+├ ƒ /api/chat/[sub]/messages                                   511 B         115 kB
+├ ƒ /api/chat/[sub]/stream                                     453 B         103 kB
+├ ƒ /api/chat/[sub]/typing                                     453 B         103 kB
+├ ƒ /api/chat/[sub]/users/search                               453 B         103 kB
+├ ƒ /api/domains/lookup                                        453 B         103 kB
+├ ƒ /api/explore                                               511 B         115 kB
+├ ƒ /api/explore/report                                        511 B         115 kB
+├ ƒ /api/export/zip                                            511 B         115 kB
+├ ƒ /api/f/[sub]                                               511 B         115 kB
+├ ƒ /api/inbox                                                 453 B         103 kB
+├ ƒ /api/inbox/[conversationId]/assign                         453 B         103 kB
+├ ƒ /api/inbox/[conversationId]/messages                       453 B         103 kB
+├ ƒ /api/inbox/[conversationId]/reply                          453 B         103 kB
+├ ƒ /api/inbox/[conversationId]/stream                         453 B         103 kB
+├ ƒ /api/inbox/[conversationId]/typing                         453 B         103 kB
+├ ƒ /api/inbox/badge                                           453 B         103 kB
+├ ƒ /api/inbox/badge/seen                                      453 B         103 kB
+├ ƒ /api/inbox/push/state                                      453 B         103 kB
+├ ƒ /api/inbox/push/subscribe                                  453 B         103 kB
+├ ƒ /api/inbox/push/unsubscribe                                453 B         103 kB
+├ ƒ /api/integrations/[provider]                               453 B         103 kB
+├ ƒ /api/integrations/[provider]/callback                      453 B         103 kB
+├ ƒ /api/integrations/[provider]/start                         453 B         103 kB
+├ ƒ /api/internal/republish                                    511 B         115 kB
+├ ƒ /api/internal/republish-templates                          453 B         103 kB
+├ ƒ /api/len-email/inbound                                     511 B         115 kB
+├ ƒ /api/lienzo                                                511 B         115 kB
+├ ƒ /api/lienzo/[docId]                                        453 B         103 kB
+├ ƒ /api/lienzo/site/[[...path]]                               511 B         115 kB
+├ ƒ /api/mcp                                                   511 B         115 kB
+├ ƒ /api/mcp/approvals/[id]                                    453 B         103 kB
+├ ƒ /api/mcp/capture/[id]                                      453 B         103 kB
+├ ƒ /api/mcp/connections                                       453 B         103 kB
+├ ƒ /api/mcp/connections/[id]                                  453 B         103 kB
+├ ƒ /api/mcp/connections/[id]/activity                         453 B         103 kB
+├ ƒ /api/mcp/registry-auth                                     453 B         103 kB
+├ ƒ /api/mcp/resource-metadata                                 453 B         103 kB
+├ ƒ /api/mcp/tokens                                            453 B         103 kB
+├ ƒ /api/me/avatar                                             453 B         103 kB
+├ ƒ /api/me/handle                                             453 B         103 kB
+├ ƒ /api/me/profile                                            453 B         103 kB
+├ ƒ /api/messages                                              453 B         103 kB
+├ ƒ /api/miembros/aceptar                                      453 B         103 kB
+├ ƒ /api/movil/avisos                                          453 B         103 kB
+├ ƒ /api/movil/entrega                                         511 B         115 kB
+├ ƒ /api/movil/llave                                           453 B         103 kB
+├ ƒ /api/oauth/authorize                                       453 B         103 kB
+├ ƒ /api/oauth/consent/[id]                                    453 B         103 kB
+├ ƒ /api/oauth/metadata                                        453 B         103 kB
+├ ƒ /api/oauth/register                                        453 B         103 kB
+├ ƒ /api/oauth/revoke                                          453 B         103 kB
+├ ƒ /api/oauth/token                                           453 B         103 kB
+├ ƒ /api/projects                                              511 B         115 kB
+├ ƒ /api/projects/[id]                                         511 B         115 kB
+├ ƒ /api/projects/[id]/agents                                  511 B         115 kB
+├ ƒ /api/projects/[id]/agents/[agentId]                        453 B         103 kB
+├ ƒ /api/projects/[id]/ai-edit-image                           453 B         103 kB
+├ ƒ /api/projects/[id]/app-ai                                  453 B         103 kB
+├ ƒ /api/projects/[id]/apply-template                          511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts                               511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/[artifactId]                  511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/[artifactId]/files/[index]    511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/[artifactId]/jobs/[jobId]     511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/[artifactId]/preview          511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/[artifactId]/refresh          511 B         115 kB
+├ ƒ /api/projects/[id]/artifacts/events                        511 B         115 kB
+├ ƒ /api/projects/[id]/assets                                  453 B         103 kB
+├ ƒ /api/projects/[id]/assets/[filename]                       453 B         103 kB
+├ ƒ /api/projects/[id]/assistant                               511 B         115 kB
+├ ƒ /api/projects/[id]/backend                                 511 B         115 kB
+├ ƒ /api/projects/[id]/backend/environments                    511 B         115 kB
+├ ƒ /api/projects/[id]/backend/reset                           511 B         115 kB
+├ ƒ /api/projects/[id]/backend/storage                         511 B         115 kB
+├ ƒ /api/projects/[id]/backend/tables/[table]                  511 B         115 kB
+├ ƒ /api/projects/[id]/backend/users                           511 B         115 kB
+├ ƒ /api/projects/[id]/backend/users/[userId]                  511 B         115 kB
+├ ƒ /api/projects/[id]/brief                                   511 B         115 kB
+├ ƒ /api/projects/[id]/chat                                    511 B         115 kB
+├ ƒ /api/projects/[id]/chat/conversations                      511 B         115 kB
+├ ƒ /api/projects/[id]/chat/feedback                           511 B         115 kB
+├ ƒ /api/projects/[id]/chat/mensajes                           511 B         115 kB
+├ ƒ /api/projects/[id]/chat/mensajes/vistas                    511 B         115 kB
+├ ƒ /api/projects/[id]/domains                                 453 B         103 kB
+├ ƒ /api/projects/[id]/domains/[domain]                        453 B         103 kB
+├ ƒ /api/projects/[id]/domains/[domain]/connect-url            453 B         103 kB
+├ ƒ /api/projects/[id]/domains/[domain]/verify                 453 B         103 kB
+├ ƒ /api/projects/[id]/duplicate                               511 B         115 kB
+├ ƒ /api/projects/[id]/env                                     511 B         115 kB
+├ ƒ /api/projects/[id]/ficheros                                511 B         115 kB
+├ ƒ /api/projects/[id]/ficheros/versions/[vid]/restore         511 B         115 kB
+├ ƒ /api/projects/[id]/flight-report                           453 B         103 kB
+├ ƒ /api/projects/[id]/forms/test-email                        511 B         115 kB
+├ ƒ /api/projects/[id]/function-secrets                        511 B         115 kB
+├ ƒ /api/projects/[id]/functions                               511 B         115 kB
+├ ƒ /api/projects/[id]/funnel                                  453 B         103 kB
+├ ƒ /api/projects/[id]/hilos                                   511 B         115 kB
+├ ƒ /api/projects/[id]/hilos/[hiloId]                          511 B         115 kB
+├ ƒ /api/projects/[id]/hilos/vistas                            511 B         115 kB
+├ ƒ /api/projects/[id]/html                                    453 B         103 kB
+├ ƒ /api/projects/[id]/insights                                453 B         103 kB
+├ ƒ /api/projects/[id]/integrations/[provider]                 453 B         103 kB
+├ ƒ /api/projects/[id]/integrations/[provider]/deploy          453 B         103 kB
+├ ƒ /api/projects/[id]/miembros                                511 B         115 kB
+├ ƒ /api/projects/[id]/pages                                   453 B         103 kB
+├ ƒ /api/projects/[id]/pages/[slug]                            453 B         103 kB
+├ ƒ /api/projects/[id]/preview                                 453 B         103 kB
+├ ƒ /api/projects/[id]/proxy-image                             453 B         103 kB
+├ ƒ /api/projects/[id]/publish                                 511 B         115 kB
+├ ƒ /api/projects/[id]/raw                                     511 B         115 kB
+├ ƒ /api/projects/[id]/releases                                453 B         103 kB
+├ ƒ /api/projects/[id]/remix                                   511 B         115 kB
+├ ƒ /api/projects/[id]/rollback                                511 B         115 kB
+├ ƒ /api/projects/[id]/security-review                         511 B         115 kB
+├ ƒ /api/projects/[id]/settings                                453 B         103 kB
+├ ƒ /api/projects/[id]/submissions                             453 B         103 kB
+├ ƒ /api/projects/[id]/terminal                                511 B         115 kB
+├ ƒ /api/projects/[id]/turnos/[turnId]/deshacer                511 B         115 kB
+├ ƒ /api/projects/[id]/versions                                453 B         103 kB
+├ ƒ /api/projects/[id]/versions/[vid]                          453 B         103 kB
+├ ƒ /api/projects/[id]/versions/[vid]/raw                      453 B         103 kB
+├ ƒ /api/projects/[id]/versions/[vid]/restore                  453 B         103 kB
+├ ƒ /api/projects/[id]/visibility                              511 B         115 kB
+├ ƒ /api/projects/from-html                                    453 B         103 kB
+├ ƒ /api/projects/from-template                                453 B         103 kB
+├ ƒ /api/report-abuse                                          511 B         115 kB
+├ ƒ /api/style-reference                                       453 B         103 kB
+├ ƒ /api/subdomains/check                                      453 B         103 kB
+├ ƒ /api/templates                                             453 B         103 kB
+├ ƒ /api/templates/[id]                                        453 B         103 kB
+├ ƒ /api/templates/ai-design                                   453 B         103 kB
+├ ƒ /api/templates/autofill                                    453 B         103 kB
+├ ƒ /api/unsplash/search                                       453 B         103 kB
+├ ƒ /api/unsplash/track-download                               453 B         103 kB
+├ ƒ /api/upload                                                453 B         103 kB
+├ ƒ /api/usage                                                 453 B         103 kB
+├ ƒ /api/uso                                                   453 B         103 kB
+├ ƒ /api/visual-frame                                          453 B         103 kB
+├ ƒ /api/visual-frame-url                                      453 B         103 kB
+├ ƒ /api/voz/nota                                              453 B         103 kB
+├ ƒ /api/voz/sesion                                            453 B         103 kB
+├ ƒ /api/voz/uso                                               453 B         103 kB
+├ ƒ /api/voz/visitas                                           453 B         103 kB
+├ ƒ /auth/v1/[[...path]]                                       511 B         115 kB
+├ ƒ /c/[projectId]                                             453 B         103 kB
+├ ƒ /functions/v1/[[...path]]                                  511 B         115 kB
+├ ○ /icon.svg                                                    0 B            0 B
+├ ○ /manifest.webmanifest                                      453 B         103 kB
+├ ƒ /p/[id]                                                    453 B         103 kB
+├ ƒ /rest/v1/[[...path]]                                       511 B         115 kB
+├ ○ /robots.txt                                                453 B         103 kB
+├ ƒ /served/[host]/[[...path]]                                 453 B         103 kB
+├ ○ /sitemap.xml                                               453 B         103 kB
+├ ƒ /storage/v1/[[...path]]                                    511 B         115 kB
+└ ƒ /uploads/[...path]                                         453 B         103 kB
++ First Load JS shared by all                                 103 kB
+  ├ chunks/1255-72e1643fc28e6b63.js                            46 kB
+  ├ chunks/4bd1b696-182b6b13bdad92e3.js                      54.3 kB
+  └ other shared chunks (total)                              2.34 kB
+
+
+ƒ Middleware                                                 97.7 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+
