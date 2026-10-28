@@ -16,7 +16,7 @@ Say in one or two lines what you will read to build it, and wait for the user's 
 
 Only the owner's own words show their voice: take those, and never the texts you wrote for the page, a document or a post, even when they were approved, because they are your words. If the page's texts may be the owner's, ask.
 
-With fewer than five pieces of the owner's own writing, a voice would be a guess: say so, and offer two ways. They paste a few things they wrote (messages to customers, posts, emails they sent), and you build it from those; or you save the brand now with a voice holding only what the owner told you directly ("short, no exclamation marks"), and its line says it was built from none of their texts. Either way, colors, type and logo are saved now.
+With fewer than five pieces of the owner's own writing, a voice would be a guess: say so, and offer two ways. They paste a few things they wrote (messages to customers, posts, emails they sent), and you build it from those; or you save the brand now with a voice holding only what the owner told you directly about how they speak, and nothing of yours: no default style, no traits you would like them to have. Its line says it was built from none of their texts. Either way, colors, type and logo are saved now.
 
 ## 2. Write it
 
