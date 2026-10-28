@@ -26,6 +26,7 @@ import { ControlAvisos } from "../avisos/control-avisos";
 import { useAvisos } from "../avisos/use-avisos";
 import { Comparacion, EntregaVisual, Progreso } from "../entrega/entrega";
 import { Equipo } from "../equipo/equipo";
+import { PanelAnimado } from "../panel-animado";
 import { useEquipo } from "../equipo/use-equipo";
 
 const ULTIMO = "len-proyecto";
@@ -271,10 +272,12 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         onEquipo={() => setPanel("equipo")}
       />
 
-      {panel === "gestion" && <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />}
-      {panel === "look" && <TuLen onCerrar={() => setPanel(null)} />}
-      {panel === "comparar" && <Comparacion cliente={cliente} projectId={id} page={p?.historial.at(-1)?.page} onCerrar={() => setPanel(null)} />}
-      {panel === "equipo" && <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />}
+      <PanelAnimado contexto={id} nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
+        {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />
+          : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
+          : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
+          : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} /> : null}
+      </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
 
       {llamada && (

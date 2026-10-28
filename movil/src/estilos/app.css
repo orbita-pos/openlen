@@ -4,7 +4,9 @@
 html, body, #raiz { margin: 0; height: 100%; overflow: hidden; background: #000; }
 body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
 .app-lienzo { position: fixed; top: 0; left: 0; width: 390px; transform-origin: 0 0; }
-.app-lienzo > .lm-screen { width: 390px; height: 100%; border-radius: 0; }
+/* El lienzo no es un scrollport: el navegador no debe moverlo para enfocar
+   campos de paneles o del chat. Cada historial conserva su scroll interno. */
+.app-lienzo > .lm-screen { width: 390px; height: 100%; border-radius: 0; overflow: clip; }
 /* La barra del prototipo mide 98 px porque deja 47 arriba para la barra de
    estado del iPhone; en el teléfono eso era hueco vacío (Jesús, 01/10: «el
    cabecero abarca mucho»). Aquí el hueco es el que pida el teléfono: 0 en
@@ -94,3 +96,14 @@ a.nx-act { text-decoration: none; }
 .app-lienzo .con-teclado .ch-face { width: 28px; height: 28px; }
 .app-lienzo .con-teclado .ch-name { margin-top: 0; }
 .app-lienzo .con-teclado .ch-st { flex-basis: 100%; text-align: center; }
+
+/* El ajuste del sistema cubre también efectos heredados y transiciones inline
+   de los gestos. El movimiento directo del dedo sigue siendo interactivo. */
+@media (prefers-reduced-motion: reduce) {
+  .app-lienzo *, .app-lienzo *::before, .app-lienzo *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .app-lienzo .lm-halo { transform: none !important; }
+}

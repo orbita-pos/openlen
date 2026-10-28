@@ -6,6 +6,7 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import type { Idioma } from "../config";
 import { useAtras } from "../atras";
+import { devolverFoco } from "../foco";
 import { cargarGestion, comprobarNombre, publicar, leerVisitas, quitarEncargo, pausarEncargo, ErrorGestion, urlPublicada, type ProyectoGestion, type ConfirmacionPublicar } from "./api";
 import "./gestion.css";
 
@@ -47,7 +48,7 @@ function Contenido({ cliente, projectId, idioma, trabajando, turnoId, onCerrar, 
     vivo.current = true;
     const previo = document.activeElement as HTMLElement | null;
     panel.current?.focus();
-    return () => { vivo.current = false; previo?.focus(); };
+    return () => { vivo.current = false; devolverFoco(previo); };
   }, []);
   useEffect(() => {
     const controller = new AbortController();

@@ -8,7 +8,12 @@ const fs = require('node:fs'); const path = require('node:path');
       const context = await browser.newContext({ viewport: { width, height }, isMobile: true, hasTouch: true, locale: 'es-MX' });
       const page = await context.newPage(); const errores = [];
       page.on('pageerror', error => errores.push(error.message));
-      const foto = nombre => page.screenshot({ path: path.join(dir, `${width}-${nombre}.png`), animations: 'disabled' });
+      const foto = async nombre => {
+        await page.locator('.app-panel-motion').evaluate(async el => { await Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))); });
+        const limites = await panel.evaluate(el => { const p=el.getBoundingClientRect(), raiz=document.querySelector('.app-lienzo').getBoundingClientRect(); return {x:p.x-raiz.x,y:p.y-raiz.y}; });
+        expect(Math.abs(limites.x)).toBeLessThan(1); expect(Math.abs(limites.y)).toBeLessThan(1);
+        await page.screenshot({ path: path.join(dir, `${width}-${nombre}.png`), animations: 'disabled' });
+      };
       await page.goto('http://127.0.0.1:5175/?muestra=1');
       await page.getByRole('button', { name: 'Equipo e hilos', exact: true }).tap();
       const panel = page.getByRole('dialog', { name: 'Equipo e hilos', exact: true });
