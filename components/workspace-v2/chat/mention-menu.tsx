@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 
 import { arrobaEnCurso, opcionesDeMencion, type PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { mentionLabel } from "@/lib/mentions/from-pick";
+import { liveMentions, sameMention } from "@/lib/mentions/in-text";
 import { searchMentions } from "@/lib/mentions/search";
 import { MAX_MENTIONS, type MentionEntry, type MentionRef } from "@/lib/mentions/types";
 import { highlightOnCanvas, mentionCanvasPage, onMentionHighlighted } from "../mention-highlight";
@@ -84,7 +85,7 @@ export function useMentionMenu(args: {
   useEffect(() => onMentionHighlighted((key, count) => setCounts((c) => (c[key] === count ? c : { ...c, [key]: count }))), []);
   // A mention whose label is no longer in the text is gone.
   useEffect(() => {
-    const still = mentions.filter((m) => value.includes(m.label));
+    const still = liveMentions(value, mentions);
     if (still.length !== mentions.length) onMentionsChange(still);
   }, [value, mentions, onMentionsChange]);
 
@@ -181,7 +182,8 @@ export function useMentionMenu(args: {
         ? { type: "file", label: `@${row.ruta}`, ruta: row.ruta }
         : { type: "element", label: mentionLabel(t(`mentions.kind.${row.entry.kind}`), row.entry.name), text: row.entry.text.slice(0, 40), target: row.entry.target };
     replaceQuery(`${ref.label} `);
-    onMentionsChange([...mentions, ref]);
+    // The same thing picked again: its label goes in the text, the mention stays one.
+    if (!mentions.some((m) => sameMention(m, ref))) onMentionsChange([...mentions, ref]);
   };
 
   const key = (e: ReactKeyboardEvent<HTMLTextAreaElement>): boolean => {

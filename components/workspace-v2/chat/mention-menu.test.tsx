@@ -165,6 +165,15 @@ describe("the «@» menu", () => {
     expect(v.onMentions).not.toHaveBeenCalled();
   });
 
+  it("picking the same element twice keeps one mention", () => {
+    const v = mount();
+    v.type("@ver");
+    v.key("Enter");
+    v.type(`${v.value.current}y @ver`);
+    v.key("Enter");
+    expect(v.onMentions.mock.calls.at(-1)![0]).toHaveLength(1);
+  });
+
   it("drops a mention whose label was deleted from the text", () => {
     const v = mount();
     v.type("@ver");
