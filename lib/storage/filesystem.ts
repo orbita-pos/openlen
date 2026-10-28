@@ -1,4 +1,4 @@
-import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { StorageAdapter, UploadArgs, UploadResult } from "./types";
 
@@ -43,5 +43,23 @@ export class FilesystemStorage implements StorageAdapter {
     await unlink(filepath).catch(() => {
       // File may already be gone — idempotent delete.
     });
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    if (key.includes("..") || key.startsWith("/")) return null;
+    try {
+      return await readFile(join(this.opts.rootDir, key));
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw e;
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    if (key.includes("..") || key.startsWith("/")) return false;
+    return stat(join(this.opts.rootDir, key)).then(
+      (s) => s.isFile(),
+      () => false,
+    );
   }
 }

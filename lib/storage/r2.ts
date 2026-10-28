@@ -29,6 +29,14 @@ interface AwsSdkModule {
   S3Client: new (config: unknown) => S3LikeClient;
   PutObjectCommand: new (params: unknown) => unknown;
   DeleteObjectCommand: new (params: unknown) => unknown;
+  GetObjectCommand: new (params: unknown) => unknown;
+  HeadObjectCommand: new (params: unknown) => unknown;
+}
+
+/** S3's «not there», by name or by status (R2 answers HEAD with a bare 404). */
+function isNotFound(e: unknown): boolean {
+  const err = e as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number } } | null;
+  return err?.name === "NoSuchKey" || err?.name === "NotFound" || err?.Code === "NoSuchKey" || err?.$metadata?.httpStatusCode === 404;
 }
 
 export class R2Storage implements StorageAdapter {
@@ -96,5 +104,29 @@ export class R2Storage implements StorageAdapter {
     await client.send(
       new sdk.DeleteObjectCommand({ Bucket: this.opts.bucket, Key: key }),
     );
+  }
+
+  async read(key: string): Promise<Buffer | null> {
+    const { client, sdk } = await this.getClient();
+    try {
+      const out = (await client.send(new sdk.GetObjectCommand({ Bucket: this.opts.bucket, Key: key }))) as {
+        Body?: { transformToByteArray(): Promise<Uint8Array> };
+      };
+      return out.Body ? Buffer.from(await out.Body.transformToByteArray()) : null;
+    } catch (e) {
+      if (isNotFound(e)) return null;
+      throw e;
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    const { client, sdk } = await this.getClient();
+    try {
+      await client.send(new sdk.HeadObjectCommand({ Bucket: this.opts.bucket, Key: key }));
+      return true;
+    } catch (e) {
+      if (isNotFound(e)) return false;
+      throw e;
+    }
   }
 }
