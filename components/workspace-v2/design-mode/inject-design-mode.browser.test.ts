@@ -302,3 +302,31 @@ describe("the «@» highlight of a component and of where it is used", () => {
     }
   }, 90_000);
 });
+
+const ENVOLTORIO_TSX = [
+  "function Layout({ children }) {", // 1
+  '  return <div className="layout">{children}</div>;', // 2
+  "}", // 3
+  "export default function App() {", // 4
+  "  const items = Array.from({ length: 200 }, (_, i) => i);", // 5
+  "  return (", // 6
+  "    <Layout>", // 7
+  '      {items.map((i) => <p key={i} className="fila">Fila {i}</p>)}', // 8
+  "    </Layout>", // 9
+  "  );", // 10
+  "}", // 11
+].join("\n");
+
+describe("the «@» highlight of a wrapper's line", () => {
+  it("outlines the wrapper alone, not everything inside it", async () => {
+    const v = await abrir({ ...CARPETA, "/src/App.tsx": ENVOLTORIO_TSX }, "p.fila");
+    try {
+      await v.enviar({ type: "openlen:mention-highlight", key: "w", target: { type: "app", path: "/src/App.tsx", line: 7, tag: "Layout" } });
+      await new Promise((r) => setTimeout(r, 200));
+      expect((await v.recibidos("openlen:mention-highlighted")).map((m) => (m as { count: number }).count)).toEqual([1]);
+      expect(await v.page.evaluate(() => document.querySelector("[data-openlen-mention-hover]")?.className)).toBe("layout");
+    } finally {
+      await v.cerrar();
+    }
+  }, 90_000);
+});
