@@ -1,0 +1,32 @@
+.tu-len{position:absolute;inset:0;z-index:70;display:flex;flex-direction:column;overflow:hidden;padding-top:var(--app-arriba,0px)}
+.tu-len-top{display:flex;align-items:center;gap:12px;padding:18px 20px 12px;flex:none}
+.tu-len-top h1{font-size:18px;font-weight:650;margin:0}
+.tu-len-top p{font-size:12px;margin:3px 0 0;color:var(--m-dim)}
+.tu-len button{cursor:pointer;border:0;color:var(--m-ink);background:var(--m-glass);-webkit-tap-highlight-color:transparent}
+.tu-len button:focus-visible{outline:3px solid var(--m-ink);outline-offset:3px}
+.tu-len button:disabled{opacity:.45;cursor:default}
+.tu-len-close,.tu-len-arrow{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:28px;line-height:1}
+.tu-len-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 0 20px}
+.tu-len-hero{display:flex;align-items:center;justify-content:space-between;padding:26px 22px 14px;min-height:220px;gap:12px}
+.tu-len-personaje{position:relative;width:156px;height:156px;isolation:isolate}
+.tu-len-personaje::before{content:"";position:absolute;inset:-24px;border-radius:50%;background:var(--m-halo);opacity:.22;filter:blur(28px);z-index:-1}
+.tu-len-personaje::after{content:"";position:absolute;bottom:-14px;left:20px;right:20px;height:14px;border-radius:50%;background:var(--m-shadow);filter:blur(6px);z-index:-1}
+.tu-len-preview{width:100%;height:100%}
+.tu-len-name{text-align:center;font:italic 400 50px/1 "Instrument Serif",Georgia,serif;margin:5px 0 12px}
+.tu-len-tag{margin:0 auto 12px;text-align:center;color:var(--m-key);background:var(--m-key-bg);width:max-content;max-width:90%;padding:3px 12px;border-radius:20px;font-size:14px;font-weight:650}
+.tu-len-cards{display:flex;gap:9px;overflow-x:auto;padding:14px 22px 14px;scroll-padding-inline:22px;scrollbar-width:thin}
+.tu-len-card{flex:0 0 82px;min-height:104px;display:grid;justify-items:center;align-content:center;gap:4px;border-radius:20px;padding:12px 4px 9px;font-size:12px;font-weight:600;word-break:normal}
+.tu-len-icon{display:block;width:48px;height:52px;pointer-events:none}
+.tu-len-icon svg{width:100%;height:100%}
+.tu-len button[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--m-ink)}
+.tu-len-card[aria-pressed="true"]{transform:translateY(-3px)}
+.tu-len-options{border:0;padding:0;margin:14px 0 0;min-width:0}
+.tu-len-options legend{padding:0 22px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:650;color:var(--m-dim)}
+.tu-len-row{display:flex;gap:8px;overflow-x:auto;padding:4px 22px 8px;scrollbar-width:thin}
+.tu-len-row button{width:50px;height:50px;flex:none;border-radius:16px;padding:3px 6px}
+.tu-len-row svg{width:38px;height:44px}
+.tu-len-footer{padding:12px 22px calc(20px + var(--app-abajo,0px));flex:none;background:linear-gradient(transparent,var(--m-shadow))}
+.tu-len .tu-len-apply{display:block;width:100%;min-height:50px;border-radius:18px;background:var(--m-solid);color:var(--m-solid-ink);font-size:16px;font-weight:700}
+.tu-len-message{margin:30px 22px;text-align:center;font-size:14px}
+.tu-len-message button{min-height:44px;padding:8px 20px;border-radius:16px}
+@media(prefers-reduced-motion:reduce){.tu-len *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

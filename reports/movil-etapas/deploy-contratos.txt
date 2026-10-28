@@ -1,0 +1,14 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v2.1.9 C:/Users/jesus/Desktop/inari-pages
+
+◇ injected env (52) from .env.local // tip: ⌘ override existing { override: true }
+ ✓ lib/page-engine/sin-perfil.test.ts (8 tests) 43ms
+ ✓ lib/generation/fable-parity-runbook-contract.test.ts (32 tests) 795ms
+ ✓ lib/generation/deploy-native-crates-contract.test.ts (2 tests) 7ms
+
+ Test Files  3 passed (3)
+      Tests  42 passed (42)
+   Start at  11:00:53
+   Duration  23.54s (transform 535ms, setup 0ms, collect 724ms, tests 845ms, environment 38.14s, prepare 779ms)
+

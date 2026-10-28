@@ -262,7 +262,7 @@ export async function runJob(jobId: string): Promise<void> {
   }
 
   // 3. Channel dispatch — push-first policy:
-  //    • Try web push first.
+  //    • Try web and native push first (all subscribed devices).
   //    • If push returns 'sent'  → skip email (avoid double-notify).
   //    • If push returns 'skipped' (no subscriptions) or throws → fall through to email.
   //    A channel throw = transient failure → retry; a 'skipped' return = clean skip.
@@ -271,31 +271,29 @@ export async function runJob(jobId: string): Promise<void> {
   let delivered = false;
   let lastError: string | null = null;
 
-  const webpushCh = CHANNELS.find((c) => c.id === "webpush");
+  const pushChannels = CHANNELS.filter((c) => c.id === "webpush" || c.id === "fcm");
   const emailCh = CHANNELS.find((c) => c.id === "email");
 
-  // Step A: web push
-  let webpushResult: "sent" | "skipped" | "failed" | "error" | null = null;
-
-  if (webpushCh && prefs.webPushEnabled) {
+  // Step A: push. Both use the existing preference and quiet-hours gate.
+  let pushSent = false;
+  for (const push of prefs.webPushEnabled ? pushChannels : []) {
     try {
-      const r = await webpushCh.send(event);
-      webpushResult = r;
-      if (r === "sent") delivered = true;
+      const r = await push.send(event);
+      if (r === "sent") { delivered = true; pushSent = true; }
+      if (r === "failed") { retryNeeded = true; lastError ??= `${push.id} failed`; }
       await logDelivery({
         userId: event.recipientUserId,
-        channel: "webpush",
+        channel: push.id,
         status: r,
         eventType: event.type,
         conversationId: event.type === "chat_message" ? event.conversationId : null,
       });
     } catch (err) {
-      webpushResult = "error";
       retryNeeded = true;
       lastError = (err as Error)?.message ?? String(err);
       await logDelivery({
         userId: event.recipientUserId,
-        channel: "webpush",
+        channel: push.id,
         status: "failed",
         eventType: event.type,
         conversationId: event.type === "chat_message" ? event.conversationId : null,
@@ -306,7 +304,7 @@ export async function runJob(jobId: string): Promise<void> {
 
   // Step B: email — gate on whether push already sent
   if (emailCh && prefs.emailEnabled) {
-    if (webpushResult === "sent") {
+    if (pushSent) {
       // Push delivered: log email as intentionally skipped (no double-notify)
       await logDelivery({
         userId: event.recipientUserId,

@@ -1,0 +1,7 @@
+
+> openlen@0.1.0 infra:huerfanos
+> node scripts/qa/infra-huerfanos.mjs
+
+  (caja) omitida — pasa --box para comprobarla
+
+  sin deriva: todo lo que el repo nombra existe.

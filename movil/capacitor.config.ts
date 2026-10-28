@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
   webDir: "dist",
   ...(dev ? { server: { url: dev, cleartext: true } } : {}),
   android: { allowMixedContent: false },
+  plugins: {
+    SystemBars: { style: "LIGHT", insetsHandling: "css", initialViewportFitValueHint: "cover" },
+  },
 };
 
 export default config;

@@ -30,6 +30,9 @@ describe("parrafos", () => {
 });
 
 describe("hiloDesdeElHistorial", () => {
+  it("los mensajes entre personas van al panel de equipo, sin fingir una respuesta o entrega de Len", () => {
+    expect(hiloDesdeElHistorial([turno({ id: "equipo", tipo: "persona", userText: "@Ana revisa", autorId: "otro" })], 1)).toEqual([]);
+  });
   it("tu mensaje, lo que dijo Len y «Ver en tu página» si cambió la página", () => {
     const h = hiloDesdeElHistorial([turno({ id: "a", userText: "Pon mi horario", assistantReasoning: "Hecho.\n\nLo puse abajo.", appliedAt: 1000 })], 9999);
     expect(tipos(h)).toEqual(["tu", "len", "len", "verEnTuPagina"]);
@@ -56,6 +59,9 @@ describe("hiloDesdeElHistorial", () => {
 });
 
 describe("terminaEnPregunta", () => {
+  it("una mención entre personas no borra una pregunta pendiente de Len", () => {
+    expect(terminaEnPregunta([turno({ id: "len", actions: [{ tool: "ask_user_question", status: "done", summary: "" }] }), turno({ id: "equipo", tipo: "persona" })])).toBe(true);
+  });
   const pregunta = { tool: "preguntar", status: "done" as const, summary: "" };
   it("el último turno cerró con `preguntar`", () => {
     expect(terminaEnPregunta([turno({ id: "a", actions: [pregunta] })])).toBe(true);
@@ -65,6 +71,18 @@ describe("terminaEnPregunta", () => {
   });
   it("sigue trabajando: aún no pregunta", () => {
     expect(terminaEnPregunta([turno({ id: "a", actions: [pregunta], enCurso: true })])).toBe(false);
+  });
+  it("reconoce las preguntas actuales guardadas", () => {
+    expect(terminaEnPregunta([turno({ id: "a", actions: [{ ...pregunta, tool: "ask_user_question" }] })])).toBe(true);
+  });
+  it("una pregunta fallida no espera respuesta", () => {
+    expect(terminaEnPregunta([turno({ id: "a", actions: [{ ...pregunta, status: "error" }] })])).toBe(false);
+  });
+  it("una pregunta descartada en la web no vuelve a pedir respuesta en el móvil", () => {
+    expect(terminaEnPregunta([turno({ id: "a", actions: [{ ...pregunta, tool: "ask_user_question", dismissed: true }] })])).toBe(false);
+  });
+  it("una pregunta ya contestada no espera otra respuesta", () => {
+    expect(terminaEnPregunta([turno({ id: "a", actions: [{ ...pregunta, tool: "ask_user_question", respuesta: "Azul" }] })])).toBe(false);
   });
 });
 
@@ -96,6 +114,19 @@ describe("el turno en vivo", () => {
   it("`preguntar` marca la pregunta y quita la línea", () => {
     const v = conEvento(conEvento(turnoNuevo(), ev("action", { tool: "Read", status: "running", summary: "" })), ev("action", { tool: "preguntar", status: "done", summary: "" }));
     expect(v).toMatchObject({ pregunta: true, avance: null });
+  });
+  it("ask_user_question marca la pregunta actual y quita la línea", () => {
+    const v = conEvento(turnoNuevo(), ev("action", { tool: "ask_user_question", status: "done", summary: "¿Qué color?" }));
+    expect(v).toMatchObject({ pregunta: true, avance: null });
+  });
+  it("una pregunta que falla no deja el indicador esperando respuesta", () => {
+    let v = conEvento(turnoNuevo(), ev("action", { tool: "preguntar", status: "running" }));
+    v = conEvento(v, ev("action", { tool: "preguntar", status: "error" }));
+    expect(v.pregunta).toBe(false);
+  });
+  it("descartar una pregunta actual quita el indicador", () => {
+    const v = conEvento(turnoNuevo(), ev("action", { tool: "ask_user_question", status: "done", dismissed: true }));
+    expect(v.pregunta).toBe(false);
   });
   it("las tarjetas que prepara: el borrador y «Publicar»", () => {
     let v = conEvento(turnoNuevo(), ev("confirm", { action: "responder", canal: "correo", texto: "Hola" }));

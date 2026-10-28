@@ -5,6 +5,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { IDIOMAS } from "./config";
+import { textosEntrega } from "./textos-entrega";
+import { textosGestion } from "./textos-gestion";
+import { textosAvisos } from "./textos-avisos";
+import { textosPersonalizacion } from "./textos-personalizacion";
+import { textosEquipo } from "./textos-equipo";
 
 const claves = (o: unknown, p = ""): string[] =>
   typeof o === "object" && o !== null ? Object.entries(o).flatMap(([k, v]) => claves(v, p ? `${p}.${k}` : k)) : [p];
@@ -22,3 +27,14 @@ describe("los textos de la app", () => {
     expect(es).toContain("chat.avance.trabajando");
   });
 });
+
+for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo })) {
+  for (const idioma of IDIOMAS) it(`${nombre}: ${idioma} completo`, () => {
+    expect(claves(mapa[idioma]).sort()).toEqual(claves(mapa.es).sort());
+    const validar = (o: unknown): void => {
+      if (o && typeof o === "object") Object.values(o).forEach(validar);
+      else expect(typeof o === "string" && o.trim().length > 0).toBe(true);
+    };
+    validar(mapa[idioma]);
+  });
+}

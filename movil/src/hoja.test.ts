@@ -5,6 +5,9 @@ import { loQueDijoLen } from "./hoja";
 const turno = (o: Partial<StoredChatTurn>): StoredChatTurn => ({ id: "t", userText: "", assistantReasoning: "", status: "applied", ...o });
 
 describe("lo último que dijo Len, para la hoja", () => {
+  it("una conversación de equipo no sustituye el resumen de Len", () => {
+    expect(loQueDijoLen([turno({ id: "len", assistantReasoning: "Página lista" }), turno({ id: "persona", tipo: "persona", userText: "@Ana revisa" })])?.texto).toBe("Página lista");
+  });
   it("el último párrafo del último turno con texto", () => {
     const r = loQueDijoLen([turno({ id: "1", assistantReasoning: "viejo" }), turno({ id: "2", assistantReasoning: "Primero.\n\nLe puse tus horarios." })]);
     expect(r).toEqual({ texto: "Le puse tus horarios.", enCurso: false, fila: "2" });

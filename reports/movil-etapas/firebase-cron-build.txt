@@ -1,0 +1,29 @@
+
+> openlen@0.1.0 cron:bundle
+> node scripts/build-cron.mjs
+
+
+  .next\standalone\cron\analytics-rollup.mjs  685.8kb
+
+Done in 230ms
+bundled scripts/analytics/rollup-daily.ts -> .next/standalone/cron/analytics-rollup.mjs
+
+  .next\standalone\cron\notifications-drain.mjs  1.8mb
+
+Done in 1811ms
+bundled scripts/notifications-drain.ts -> .next/standalone/cron/notifications-drain.mjs
+
+  .next\standalone\cron\renewal-reminders.mjs  1.1mb
+
+Done in 744ms
+bundled scripts/renewal-reminders.ts -> .next/standalone/cron/renewal-reminders.mjs
+
+  .next\standalone\cron\mcp-cleanup.mjs  686.3kb
+
+Done in 252ms
+bundled scripts/mcp-cleanup.ts -> .next/standalone/cron/mcp-cleanup.mjs
+
+  .next\standalone\realtime\server.mjs  1.0mb
+
+Done in 407ms
+bundled scripts/realtime-server.ts -> .next/standalone/realtime/server.mjs

@@ -1,0 +1,58 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+ RUN  v2.1.9 C:/Users/jesus/Desktop/inari-pages
+
+◇ injected env (51) from .env.local // tip: ⌘ enable debugging { debug: true }
+ ✓ movil/src/chat/hilo.test.ts (33 tests) 51ms
+ ✓ components/llamada/puente-a-len.test.ts (18 tests) 63ms
+ ✓ movil/src/gestion/gestion.test.tsx (8 tests) 552ms
+ ✓ movil/src/personalizacion/tu-len.test.tsx (7 tests) 3026ms
+   ✓ Tu Len con el motor real > previsualiza sin cambiar otras caras y cancelar no persiste 963ms
+   ✓ Tu Len con el motor real > aplica accesorios mezclados y actualiza todas las caras 733ms
+   ✓ Tu Len con el motor real > mantiene abierto el borrador y avisa si guardar falla 696ms
+   ✓ Tu Len con el motor real > cierra con Escape sin guardar y mantiene el foco en el diálogo 463ms
+ ✓ components/llamada/tarjeta-de-confirmacion.test.ts (6 tests) 20ms
+ ✓ movil/src/entrega/entrega.test.tsx (4 tests) 313ms
+ ✓ movil/src/chat/use-chat.test.tsx (4 tests) 113ms
+ ✓ components/llamada/tarjetas.test.tsx (3 tests) 109ms
+ ✓ movil/src/gestion/api.test.ts (7 tests) 56ms
+ ✓ movil/src/sesion/entrada.test.ts (6 tests) 25ms
+ ✓ app/api/movil/entrega/route.test.ts (5 tests) 502ms
+   ✓ entrega móvil > conserva los estilos Tailwind sin ejecutar el CDN en la app 447ms
+ ✓ movil/src/chat/grabadora.test.ts (7 tests) 21ms
+ ✓ movil/src/pantallas/principal.test.tsx (3 tests) 585ms
+ ✓ movil/src/api/cliente.test.ts (4 tests) 28ms
+ ✓ movil/src/api/proyectos.test.ts (4 tests) 68ms
+ ✓ components/llamada/eventos-de-voz.test.ts (2 tests) 21ms
+ ✓ movil/src/personalizacion/preferencia.test.ts (4 tests) 24ms
+ ✓ components/llamada/topes.test.ts (4 tests) 27ms
+ ✓ components/llamada/cliente.test.ts (3 tests) 33ms
+ ✓ movil/src/lienzo.test.ts (4 tests) 12ms
+ ✓ movil/src/hoja.test.ts (4 tests) 12ms
+ ✓ movil/src/config.test.ts (3 tests) 37ms
+ ✓ lib/movil/regreso.test.ts (3 tests) 24ms
+ ✓ movil/src/llamada/barras.test.ts (2 tests) 8ms
+ ✓ movil/src/entrega/progreso.test.ts (3 tests) 23ms
+ ✓ movil/src/tema.test.ts (2 tests) 20ms
+ ✓ movil/src/llamada/subtitulo.test.ts (2 tests) 14ms
+ ✓ movil/src/chat/foto.test.ts (2 tests) 23ms
+ ✓ movil/src/api/chat.test.ts (11 tests) 132ms
+ ✓ movil/src/avisos/controlador.test.ts (10 tests) 53ms
+ ✓ movil/src/llamada/halo.test.ts (2 tests) 18ms
+ ✓ lib/notifications/fcm.test.ts (7 tests) 44ms
+ ✓ lib/notifications/dispatch-fcm.test.ts (4 tests) 121ms
+ ✓ app/api/movil/avisos/route.test.ts (5 tests) 40ms
+ ✓ movil/src/muestra.test.ts (4 tests) 263ms
+ ✓ app/api/movil/llave/route.test.ts (6 tests) 44ms
+ ✓ lib/movil/cors.test.ts (5 tests) 34ms
+ ✓ lib/movil/avisos.test.ts (5 tests) 8082ms
+ ✓ lib/movil/quien.test.ts (5 tests) 34ms
+ ✓ movil/src/textos.test.ts (51 tests) 140ms
+ ✓ lib/movil/secreto.test.ts (4 tests) 14ms
+ ✓ lib/movil/rutas-de-la-app.test.ts (20 tests) 65ms
+
+ Test Files  42 passed (42)
+      Tests  296 passed (296)
+   Start at  21:59:57
+   Duration  120.84s (transform 5.78s, setup 0ms, collect 20.09s, tests 14.89s, environment 153.61s, prepare 20.63s)
+
