@@ -14,6 +14,8 @@ import { createElement, Fragment, type ReactNode } from "react";
 import type { Definition, ListItem, Nodes, PhrasingContent, Root, RootContent } from "mdast";
 
 import { parseLenMarkdown, safeHref, wholeHttpUrl } from "@/lib/chat/markdown-de-len";
+import { isCommonsCopy } from "@/lib/chat/commons-image";
+import { PhotoGallery, type GalleryPhoto } from "./chat/photo-gallery";
 import { rutaMencionada } from "@/lib/workspace-v2/abrir-fichero";
 
 const CODE_CLASS = "font-mono text-[11.5px] rounded px-1 border bd";
@@ -114,9 +116,54 @@ function delElemento(item: ListItem, p: Pintar): ReactNode[] {
   );
 }
 
+/** A photo `image_search` copied to our storage, the one remote image the chat loads (spec local
+ *  2026-10-27-chat-drop-and-images); any other stays a link (`frase`). */
+function fotoNuestra(n: PhrasingContent): GalleryPhoto | null {
+  return n.type === "image" && isCommonsCopy(n.url) ? { url: n.url, alt: n.alt ?? "" } : null;
+}
+const soloEspacio = (n: PhrasingContent) => n.type === "break" || (n.type === "text" && !n.value.trim());
+
+/** A paragraph with our photos: each run of them (spaces and line breaks between don't count) is
+ *  one gallery, where it was written; the text around stays text. A `div`, since a gallery can't
+ *  live in a `<p>`. */
+function parrafoConFotos(nodos: readonly PhrasingContent[], p: Pintar, cola: ReactNode): ReactNode {
+  const piezas: ReactNode[] = [];
+  let texto: PhrasingContent[] = [];
+  let fotos: GalleryPhoto[] = [];
+  const cerrarTexto = () => {
+    if (texto.some((n) => !soloEspacio(n))) piezas.push(<span key={piezas.length} className={LINEAS}>{enLinea(texto, p)}</span>);
+    texto = [];
+  };
+  const cerrarFotos = () => {
+    if (fotos.length) piezas.push(<PhotoGallery key={piezas.length} photos={fotos} />);
+    fotos = [];
+  };
+  for (const n of nodos) {
+    const foto = fotoNuestra(n);
+    if (foto) {
+      cerrarTexto();
+      fotos.push(foto);
+    } else if (fotos.length && soloEspacio(n)) {
+      continue;
+    } else {
+      cerrarFotos();
+      texto.push(n);
+    }
+  }
+  cerrarFotos();
+  cerrarTexto();
+  return (
+    <div className={`m-0 ${BLOQUE}`}>
+      {piezas}
+      {cola}
+    </div>
+  );
+}
+
 function bloque(n: RootContent, p: Pintar, cola?: ReactNode): ReactNode {
   switch (n.type) {
     case "paragraph":
+      if (n.children.some((c) => fotoNuestra(c))) return parrafoConFotos(n.children, p, cola);
       return <p className={`m-0 ${BLOQUE} ${LINEAS}`}>{enLinea(n.children, p)}{cola}</p>;
     case "heading":
       // En el chat un título es una línea fuerte, no un cartel: h3 hacia abajo.
