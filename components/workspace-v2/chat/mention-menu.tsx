@@ -95,8 +95,9 @@ export function useMentionMenu(args: {
     if (dismissedAt !== null && value[dismissedAt] !== "@") setDismissedAt(null);
   }, [value, dismissedAt]);
 
-  const rows: Row[] = useMemo(() => {
-    if (!open || !index || !session) return [];
+  const { rows, more } = useMemo((): { rows: Row[]; more: number } => {
+    let more = 0;
+    if (!open || !index || !session) return { rows: [], more };
     const q = session.query;
     const out: Row[] = [];
     if ((people.length > 0 || withLen) && !q.includes(" ")) {
@@ -129,16 +130,17 @@ export function useMentionMenu(args: {
     } else {
       // With spaces, every word has to be there whole: otherwise ordinary prose
       // after an unpicked «@» keeps matching something and Enter would pick it.
-      for (const r of searchMentions(index.entries, index.files, q, SHOWN, { strict: /\s/.test(q.trim()) }).items) {
+      const found = searchMentions(index.entries, index.files, q, SHOWN, { strict: /\s/.test(q.trim()) });
+      more = found.more;
+      for (const r of found.items) {
         out.push(r.type === "element" ? { kind: "element", entry: r.entry, depth: 0, hasChildren: false, open: false } : { kind: "file", ruta: r.ruta });
       }
       // Nothing real found: the menu closes, so Enter sends what was typed.
-      if (out.length === 0) return [];
+      if (out.length === 0) return { rows: [], more: 0 };
     }
     if (onPickOnCanvas) out.push({ kind: "canvas" });
-    return out;
+    return { rows: out, more };
   }, [open, index, session?.query, people, withLen, expanded, onPickOnCanvas]); // eslint-disable-line react-hooks/exhaustive-deps
-  const more = open && index && session && session.query.trim() ? searchMentions(index.entries, index.files, session.query, SHOWN, { strict: /\s/.test(session.query.trim()) }).more : 0;
   const atLimit = mentions.length >= MAX_MENTIONS;
 
   useEffect(() => setActive(0), [session?.query, open]);

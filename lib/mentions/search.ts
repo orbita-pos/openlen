@@ -25,7 +25,19 @@ function scoreIn(token: string, field: string, weight: number, strict = false): 
   return !strict && isSubsequence(token, field) ? weight * 3 : 0;
 }
 
+// An index's entries do not change between keystrokes: their folded fields are
+// computed once per entry object and reused by every search.
+const folded = new WeakMap<MentionEntry, [string, number][]>();
+
 function fieldsOf(e: MentionEntry): [string, number][] {
+  const cached = folded.get(e);
+  if (cached) return cached;
+  const fields = foldFields(e);
+  folded.set(e, fields);
+  return fields;
+}
+
+function foldFields(e: MentionEntry): [string, number][] {
   const a = e.attrs;
   return [
     [fold(e.text), 5],
