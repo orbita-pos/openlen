@@ -63,7 +63,11 @@ export async function GET(
       // against the request origin, same as POST does.
       url: /^https?:\/\//i.test(a.url) ? a.url : new URL(a.url, req.url).href,
     }));
-    return json({ assets }, 200);
+    // Lo que el modal sube desde el 2026-10-28 vive en la CARPETA (img/…): va aquí también, con su ruta desde
+    // la raíz, que es la que la página referencia en cualquier dominio.
+    const { listFolderMedia } = await import("@/lib/backend/files");
+    const deLaCarpeta = await listFolderMedia(id).catch(() => []);
+    return json({ assets: [...deLaCarpeta, ...assets].sort((a, b) => b.uploadedAt - a.uploadedAt) }, 200);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[projects/assets] list failed", err);

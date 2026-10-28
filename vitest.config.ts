@@ -730,6 +730,7 @@ export default defineConfig({
       // Ficheros al nivel de Claude Code (spec local 2026-10-28): subir y leer bytes. LISTA BLANCA.
       "app/api/projects/[id]/ficheros/upload/route.test.ts",
       "app/api/projects/[id]/ficheros/raw/route.test.ts",
+      "app/api/projects/[id]/assets/route.test.ts",
       // Las variables de entorno de las apps (spec local 2026-10-10). LISTA BLANCA.
       "app/api/projects/[id]/env/route.test.ts",
       // Los secretos de las Edge Functions (spec local 2026-10-11, Parte 4). LISTA BLANCA.

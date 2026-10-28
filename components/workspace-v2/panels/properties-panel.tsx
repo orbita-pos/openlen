@@ -12,6 +12,7 @@
 
 "use client";
 
+import { uploadEndpointFor } from "@/lib/files/image-paths";
 import {
   useCallback,
   useEffect,
@@ -1924,7 +1925,8 @@ function TematicaSection({
         const fd = new FormData();
         fd.append("file", file);
         const [res, derived] = await Promise.all([
-          fetch(`/api/projects/${projectId}/assets`, { method: "POST", body: fd }),
+          // A la carpeta del proyecto (spec local 2026-10-28), optimizada como siempre.
+          fetch(uploadEndpointFor(projectId), { method: "POST", body: fd }),
           deriveWorldFromFile(file).catch(() => ({
             mode: "light" as const,
             accent: FALLBACK_ACCENT,
