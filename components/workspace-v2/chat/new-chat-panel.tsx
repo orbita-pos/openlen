@@ -25,8 +25,8 @@ import { useSession } from "next-auth/react";
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
-import { ATTACHMENT_ACCEPT, uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
-import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
+import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
+import { useChatAttachments, type ChatAttachmentMessages } from "./use-chat-attachments";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -205,6 +205,25 @@ function AgentChatView({
     pendingAttachments,
   });
   const { seguirTurnoDelHilo } = chat;
+  // DROP, PASTE OR PICK (spec local 2026-10-27-chat-drop-and-images): every way in uploads the same way.
+  const attachMessages = useMemo<ChatAttachmentMessages>(
+    () => ({
+      notSupported: (names) => t("composer.dropNotSupported", { names }),
+      tooBig: (names) => t("composer.dropTooBig", { names }),
+      limit: (count) => t("composer.dropLimit", { count }),
+      failed: (name) => t("composer.fileFailedNamed", { name }),
+    }),
+    [t],
+  );
+  const attach = useChatAttachments({
+    projectId,
+    images: chat.attachedImages,
+    setImages: chat.setAttachedImages,
+    files: chat.attachedFiles,
+    setFiles: chat.setAttachedFiles,
+    notify: toast.error,
+    messages: attachMessages,
+  });
   // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): una clave en el mensaje se
   // guarda como secreto en vez de mandársela a Len. Se pregunta UNA vez si el
   // servidor guarda secretos (sin funciones, el compositor manda como siempre).
@@ -521,6 +540,9 @@ function AgentChatView({
             attachedFiles={chat.attachedFiles}
             {...(soloLectura ? {} : { onAttachPdf: () => pdfInput.current?.click() })}
             onRemoveFile={(url) => chat.setAttachedFiles(chat.attachedFiles.filter((f) => f.url !== url))}
+            pendingUploads={attach.pending}
+            onCancelUpload={attach.cancel}
+            {...(soloLectura ? {} : { onPasteFiles: attach.addFiles })}
             effort={chat.esfuerzo}
             effortLevels={chat.esfuerzoNiveles}
             effortResolvesTo={chat.esfuerzoResuelveA}
@@ -570,16 +592,13 @@ function AgentChatView({
       <input
         ref={pdfInput}
         type="file"
+        multiple
         accept={ATTACHMENT_ACCEPT}
         className="hidden"
-        onChange={async (e) => {
-          const picked = e.target.files?.[0];
+        onChange={(e) => {
+          const picked = Array.from(e.target.files ?? []);
           e.target.value = "";
-          if (!picked) return;
-          if (chat.attachedFiles.length >= MAX_FILES_PER_MESSAGE) return void toast.error(t("composer.fileLimit"));
-          const r = await uploadAttachment(picked, projectId);
-          if (!r.ok) return void toast.error(t(r.reason === "too_big" ? "composer.fileTooBig" : r.reason === "not_supported" ? "composer.fileNotSupported" : "composer.fileFailed"));
-          chat.setAttachedFiles([...chat.attachedFiles, r.file]);
+          attach.addFiles(picked);
         }}
       />
       <ReplaceAssetModal

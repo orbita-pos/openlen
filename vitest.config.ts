@@ -388,7 +388,6 @@ export default defineConfig({
       "lib/agent/attachment-bytes.test.ts",
       "app/api/upload/route.test.ts",
       "lib/workspace-v2/upload-attachment.test.ts",
-      "lib/workspace-v2/classify-dropped-files.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
       "lib/agent/screenshots-in-context.test.ts",
