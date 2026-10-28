@@ -8,6 +8,7 @@ import { textosAvisos } from "./textos-avisos";
 import { textosPersonalizacion } from "./textos-personalizacion";
 import { textosEntrega } from "./textos-entrega";
 import { textosEquipo } from "./textos-equipo";
+import { textosAdjuntos } from "./textos-adjuntos";
 
 const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada}.json");
 
@@ -16,7 +17,7 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/movil.json`]!(),
     cargas[`../../messages/${idioma}/llamada.json`]!(),
   ]);
-  return { movil: { ...movil.default, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma] }, llamada: llamada.default };
+  return { movil: { ...movil.default, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma] }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {

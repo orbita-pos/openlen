@@ -1,3 +1,4 @@
+import { archivosDelHistorial, tipoArchivo, type ArchivoAdjunto } from "./chat/archivos";
 // SÓLO DEV: un cliente de mentira con datos fijos, para revisar las pantallas
 // en el navegador sin entrar, sin servidor y sin gastar (`?muestra=1`). Nunca
 // se empaqueta: main.tsx sólo lo usa con `import.meta.env.DEV`.
@@ -38,7 +39,7 @@ const espera = (ms: number) => new Promise((r) => setTimeout(r, ms * RITMO.x));
 /** Lo que le escribes al turno que corre; va a su fila con «↳», como en el servidor. */
 let correcciones: string[] = [];
 
-function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "create" | "resume"): Response {
+function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "create" | "resume", archivos: readonly ArchivoAdjunto[] = []): Response {
   // Con una foto, Len pregunta dónde la pone antes de ponerla (Jesús, 01/10):
   // mira la página, pregunta, y no la cambia.
   const dicho = foto
@@ -76,6 +77,7 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "
         // Como el servidor: lo que se le mandó a Len es tu mensaje (con la foto sola, lo que la app le pidió de tu parte).
         userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
         ...(foto ? { attachedImage: { url: foto }, noDocChange: true, actions: [{ tool: "preguntar", status: "done" as const, summary: "" }] } : {}),
+        ...(archivos.length ? {attachedFiles: archivos} : {}),
         assistantReasoning: dicho,
         status: "applied",
         appliedAt: Date.now(),
@@ -129,12 +131,13 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
     if (ruta === "/api/agent/cancelar") return Response.json({ ok: true });
     if (ruta.startsWith("/api/voz/visitas")) return Response.json(VISITAS);
     if (ruta === "/api/agent") {
-      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown }; turnId?: unknown; goal?: "create" | "resume" };
+      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown }; attachedFiles?: unknown; turnId?: unknown; goal?: "create" | "resume" };
       return turnoDeMentira(
         String(b.prompt ?? ""),
         typeof b.attachedImage?.url === "string" ? b.attachedImage.url : undefined,
         typeof b.turnId === "string" ? b.turnId : undefined,
         b.goal,
+        archivosDelHistorial(b.attachedFiles),
       );
     }
     if (ruta === "/api/agent/dirigir") {
@@ -142,7 +145,12 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
       correcciones.push(String(b.texto ?? ""));
       return Response.json({ ok: true, maximo: 2000 });
     }
-    if (ruta === "/api/upload") return Response.json({ url: FOTO });
+    if (ruta === "/api/upload") {
+      const form=init?.body instanceof FormData?init.body:null;
+      const file=form?.get("file");
+      if(file instanceof File && tipoArchivo(file.name)) return Response.json({url:`https://uploads.example.test/uploads/${form?.get("generationId")??"m1"}/${encodeURIComponent(file.name)}`,size:file.size});
+      return Response.json({url:FOTO});
+    }
     if (ruta === "/api/voz/nota") {
       await espera(900);
       return Response.json({ texto: "Pon el horario de la tarde, de cinco a ocho." });

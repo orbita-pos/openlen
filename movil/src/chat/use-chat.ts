@@ -14,6 +14,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { dirigirA, mandarALen, subirFoto, transcribir } from "../api/chat";
 import { leerTurno } from "../api/proyectos";
 import { achicarFoto } from "./foto";
+import { subirArchivo, validarArchivos, tipoArchivo, type ArchivoAdjunto } from "./archivos";
 import {
   conEvento,
   diaLocal,
@@ -42,6 +43,7 @@ export interface OpcionesDelChat {
   alCambiarLaPagina: () => void;
   /** Lo que se le manda a Len con una foto sin texto: que diga dónde la pondría antes de ponerla. */
   textoDeFotoSola: string;
+  textoDeArchivoSolo: string;
 }
 
 let contador = 0;
@@ -68,31 +70,49 @@ export function useChat(o: OpcionesDelChat) {
     localesRef.current = locales;
   });
   const fotos = useRef(new Map<string, Blob>());
+  const vistasFoto = useRef(new Map<string,string>());
+  const fotosSubidas = useRef(new Map<string,string>());
+  const archivos = useRef(new Map<string, readonly File[]>());
+  const subidos = useRef(new Map<string, ArchivoAdjunto[]>());
+  const subiendoRef = useRef(false);
+  const [subiendo, setSubiendo] = useState(false);
   const notas = useRef(new Map<string, NotaGrabada>());
+
+  const limpiarAdjuntos = useCallback((k: string) => {
+    const url=vistasFoto.current.get(k);if(url)URL.revokeObjectURL(url);
+    vistasFoto.current.delete(k);fotos.current.delete(k);fotosSubidas.current.delete(k);archivos.current.delete(k);subidos.current.delete(k);
+  }, []);
+  useEffect(()=>()=>{
+    for(const k of new Set([...fotos.current.keys(),...archivos.current.keys()]))limpiarAdjuntos(k);
+  },[limpiarAdjuntos]);
 
   // Otra página, otra conversación.
   useEffect(() => {
     setLocales([]);
     setVivo(null);
     setReenganche(null);
+    for(const k of new Set([...fotos.current.keys(),...archivos.current.keys()]))limpiarAdjuntos(k);
     fotos.current.clear();
+    archivos.current.clear(); subidos.current.clear(); subiendoRef.current = false; setSubiendo(false);
     notas.current.clear();
-  }, [o.projectId]);
+  }, [o.projectId, limpiarAdjuntos]);
 
   // Releída la conversación (al acabar un turno): lo enviado que ya trae, lo
   // pinta ella.
   useEffect(() => {
+    const guardados=new Set(o.historial.map(t=>t.id));
+    for(const e of localesRef.current)if("fila" in e && e.fila && guardados.has(e.fila))limpiarAdjuntos(e.clave);
     setVivo((v) => (v?.terminado ? null : v));
     setLocales((ls) => sinLoEnviado(ls, o.historial));
-  }, [o.historial]);
+  }, [o.historial, limpiarAdjuntos]);
 
-  const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume"): Promise<boolean> => {
+  const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume", documentos?: readonly ArchivoAdjunto[]): Promise<boolean> => {
     const { cliente, projectId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
     vivoRef.current = turnoNuevo(fila);
     setVivo(vivoRef.current);
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, turnId: fila, goal }, (e) => {
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal }, (e) => {
       if (actual === epoca.current) setVivo((v) => (v ? conEvento(v, e) : v));
     });
     if (actual !== epoca.current) return true;
@@ -108,14 +128,15 @@ export function useChat(o: OpcionesDelChat) {
   }, []);
 
   const enviar = useCallback(
-    async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume") => {
-      const { cliente, base, textoDeFotoSola } = op.current;
+    async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume", documentos: readonly File[] = []) => {
+      const { cliente, base, projectId, textoDeFotoSola } = op.current;
       const actual = epoca.current;
       setLocales((ls) => marcar(ls, k, { estado: "enviando" }));
+      if (!projectId || subiendoRef.current || validarArchivos(documentos)) { setLocales(ls => marcar(ls,k,{estado:"noSeEnvio"})); return; }
       const v = vivoRef.current;
       const r = reengancheRef.current;
       if ((v && !v.terminado) || r) {
-        if (goal) { setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" })); return; }
+        if (goal || foto || documentos.length) { setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" })); return; }
         // Len trabaja: lo que escribes le corrige el rumbo, sin pararlo.
         const turnoId = v?.turnoId ?? r?.turnoId ?? null;
         const fila = v?.fila ?? r?.fila;
@@ -124,14 +145,27 @@ export function useChat(o: OpcionesDelChat) {
         setLocales((ls) => marcar(ls, k, ok ? { estado: "ok", fila, correccion: true } : { estado: "noSeEnvio" }));
         return;
       }
-      let url: string | undefined;
-      if (foto) {
+      let url = fotosSubidas.current.get(k);
+      const enviados = subidos.current.get(k) ?? [];
+      if (foto || documentos.length) {
+        subiendoRef.current = true; setSubiendo(true);
         try {
-          url = await subirFoto(cliente, base, await achicarFoto(foto));
+          if (foto && !url) {
+            url = await subirFoto(cliente, base, await achicarFoto(foto), projectId);
+            if(actual!==epoca.current)return;
+            fotosSubidas.current.set(k,url);
+          }
+          for (let i=enviados.length;i<documentos.length;i++) {
+            if (actual !== epoca.current) return;
+            const archivo = await subirArchivo(cliente,base,projectId,documentos[i]!);
+            if (actual !== epoca.current) return;
+            enviados.push(archivo); subidos.current.set(k,enviados);
+          }
         } catch {
-          if (actual !== epoca.current) return;
-          setLocales((ls) => marcar(ls, k, { estado: "noSeSubio" }));
+          if (actual === epoca.current) setLocales(ls=>marcar(ls,k,{estado:"noSeSubio"}));
           return;
+        } finally {
+          if (actual === epoca.current) { subiendoRef.current=false; setSubiendo(false); }
         }
       }
       if (actual !== epoca.current) return;
@@ -139,21 +173,24 @@ export function useChat(o: OpcionesDelChat) {
       // conversación releída ya trae este mensaje.
       const fila = crypto.randomUUID();
       setLocales((ls) => marcar(ls, k, { estado: "ok", fila }));
-      if (!(await correr(texto || textoDeFotoSola, fila, url, goal)) && actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
+      if (!(await correr(texto || textoDeFotoSola, fila, url, goal, enviados)) && actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
     },
     [correr],
   );
 
   const mandar = useCallback(
-    (escrito: string, foto?: Blob) => {
+    (escrito: string, foto?: Blob, documentos: readonly File[] = []) => {
       const k = nuevaClave("tu");
       if (foto) fotos.current.set(k, foto);
+      if(documentos.length) archivos.current.set(k,documentos);
       // La foto sola va con lo que la app le pide a Len de tu parte («¿dónde
       // la pondrías?…»), y tu burbuja lo enseña ya: es lo que el servidor
       // guarda como tu mensaje, y al releer no cambia.
-      const texto = escrito || (foto ? op.current.textoDeFotoSola : "");
-      setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, foto: foto ? URL.createObjectURL(foto) : undefined, estado: "enviando" }]);
-      void enviar(k, texto, foto);
+      const vistaFoto=foto?URL.createObjectURL(foto):undefined;
+      if(vistaFoto)vistasFoto.current.set(k,vistaFoto);
+      const texto = escrito || (documentos.length ? op.current.textoDeArchivoSolo : foto ? op.current.textoDeFotoSola : "");
+      setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, foto: vistaFoto, archivos: documentos.map(f=>({name:f.name,size:f.size,kind:tipoArchivo(f.name)??undefined})), estado: "enviando" }]);
+      void enviar(k, texto, foto, undefined, documentos);
     },
     [enviar],
   );
@@ -201,16 +238,16 @@ export function useChat(o: OpcionesDelChat) {
       if (e?.tipo === "voz") {
         if (e.transcripcion) void enviar(k, e.transcripcion);
         else void transcribirYMandar(k);
-      } else if (e?.tipo === "tu") void enviar(k, e.texto, fotos.current.get(k), e.goal);
+      } else if (e?.tipo === "tu") void enviar(k, e.texto, fotos.current.get(k), e.goal, archivos.current.get(k));
     },
     [enviar, transcribirYMandar],
   );
 
   const borrar = useCallback((k: string) => {
     notas.current.delete(k);
-    fotos.current.delete(k);
+    limpiarAdjuntos(k);
     setLocales((ls) => ls.filter((e) => e.clave !== k));
-  }, []);
+  }, [limpiarAdjuntos]);
 
   const agregarLlamada = useCallback((segundos: number | null, tarjetas: TarjetaDeLlamada[]) => {
     const t = Date.now();
@@ -262,7 +299,7 @@ export function useChat(o: OpcionesDelChat) {
 
   // Para la llamada (use-llamada: seguirEncargo): si llamas con Len
   // trabajando, la voz sabe en qué, y lo que le pides corrige ese turno.
-  const trabajando = (vivo !== null && !vivo.terminado) || reenganche !== null;
+  const trabajando = (vivo !== null && !vivo.terminado) || reenganche !== null || subiendo;
   const turnoIdEnCurso = vivo?.turnoId ?? reenganche?.turnoId ?? null;
   const pedido = useMemo(() => {
     for (let i = elementos.length - 1; i >= 0; i--) {

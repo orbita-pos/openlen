@@ -15,6 +15,8 @@ import { claveDeAvance, cualDia, diaLocal, type ElementoDelHilo } from "./hilo";
 import { conGesto, type Gesto, type Micro } from "./grabadora";
 import { useNota } from "./use-nota";
 import type { Chat } from "./use-chat";
+import { ElegirAdjunto } from "./elegir-adjunto";
+import { tamanoArchivo } from "./archivos";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -39,6 +41,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
   const tq = useTranslations("movil.equipo");
+  const ta = useTranslations("movil.adjuntos");
   const [texto, setTexto] = useState("");
   // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
   // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
@@ -48,7 +51,9 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const microRef = useRef<Micro>({ fase: "quieto" });
   const [arrastre, setArrastre] = useState(0);
   const log = useRef<HTMLDivElement>(null);
-  const archivo = useRef<HTMLInputElement>(null);
+  const [archivos,setArchivos] = useState<File[]>([]);
+  const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
+  useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
   const vistos = useRef(chat.elementos.length);
   const deslizar = useDeslizar({ hacia: "derecha", alSoltar: onCerrar });
   useAtras(abierto, onCerrar);
@@ -118,19 +123,20 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   };
   const mandarTexto = () => {
     const x = texto.trim();
-    if (!x && !adjunta) return;
+    if (!x && !adjunta && !archivos.length) return;
     setTexto("");
-    chat.mandar(x, adjunta?.foto);
+    chat.mandar(x, adjunta?.foto, archivos);
+    setArchivos([]);setErrorAdjunto(null);
     quitarAdjunta();
   };
   // Con la foto puesta, el pie crece: lo último del hilo no debe quedar debajo.
   useEffect(() => {
     const l = log.current;
     if (l) l.scrollTop = l.scrollHeight;
-  }, [adjunta]);
+  }, [adjunta, archivos.length, errorAdjunto]);
 
   // Con texto o con una foto puesta, el botón envía (no graba).
-  const hayTexto = texto.trim().length > 0 || adjunta !== null;
+  const hayTexto = texto.trim().length > 0 || adjunta !== null || archivos.length > 0;
   const grabando = micro.fase === "grabando";
   const fija = micro.fase === "grabando" && micro.fijo;
   const avance = claveDeAvance(chat.avance);
@@ -186,7 +192,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   });
 
   return (
-    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta ? " con-adjunta" : ""}`} aria-hidden={!abierto}>
+    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto}>
       <header className="ch-top">
         <button type="button" className="ch-btn" aria-label={t("volver")} onClick={onCerrar}>
           <Icono nombre="back" />
@@ -216,32 +222,17 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       </div>
 
       <div className="ch-foot" data-no-deslizar>
-        {adjunta && (
-          <div className="app-adjunta">
-            {/* eslint-disable-next-line @next/next/no-img-element -- la app es Vite, no hay next/image */}
-            <img src={adjunta.url} alt="" />
-            <button type="button" aria-label={t("quitarFoto")} onClick={quitarAdjunta}>
-              <Icono nombre="x" />
-            </button>
-          </div>
-        )}
+        {errorAdjunto && <p className="app-adjuntos-error" role="alert">{ta(errorAdjunto)}</p>}
+        {(adjunta || archivos.length>0) && <div className="app-pendientes" data-no-deslizar>
+          {adjunta && <div className="app-adjunta">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={adjunta.url} alt=""/>
+            <button type="button" onClick={quitarAdjunta} aria-label={t("quitarFoto")}><Icono nombre="x"/></button>
+          </div>}
+          {archivos.map((f,i)=><div className="app-archivo-pendiente" key={`${i}:${f.name}`}><b>{f.name}</b><small>{tamanoArchivo(f.size)}</small><button type="button" aria-label={ta("quitar",{nombre:f.name})} onClick={()=>setArchivos(fs=>fs.filter((_,j)=>j!==i))}>×</button></div>)}
+        </div>}
         <div className="lm-comp">
-          <input
-            ref={archivo}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (!f) return;
-              if (adjunta) URL.revokeObjectURL(adjunta.url);
-              setAdjunta({ foto: f, url: URL.createObjectURL(f) });
-            }}
-          />
-          <button type="button" className="ch-plus" aria-label={t("mandarFoto")} disabled={chat.trabajando || grabando} onClick={() => archivo.current?.click()}>
-            <Icono nombre="plus" />
-          </button>
+          <ElegirAdjunto key={projectId} cantidad={archivos.length} disabled={chat.trabajando || grabando} onError={setErrorAdjunto} onArchivos={fs=>setArchivos(xs=>[...xs,...fs])} onFoto={f=>{setAdjunta({foto:f,url:URL.createObjectURL(f)});}}/>
           <div className={`lm-field${grabando ? " is-rec" : ""}`}>
             {/* textarea y no input: en un <input> Chrome pone encima del
                 teclado su barra negra de autocompletar (contraseñas,
@@ -319,6 +310,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
   onVerPagina: () => void;
 }) {
   const t = useTranslations("movil.chat");
+  const ta = useTranslations("movil.adjuntos");
   const otraVez = (
     <>
       {" "}
@@ -342,10 +334,11 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
               <img src={e.foto} alt="" />
             </div>
           )}
+          {e.archivos?.map((f,i)=><div className="ch-b ch-file" key={`${i}:${f.name}`}><b>{f.name}</b><small>{(f.kind??"pdf").toUpperCase()} · {tamanoArchivo(f.size)}</small></div>)}
           {e.texto && <div className="ch-b">{e.texto}</div>}
           {(e.estado === "noSeEnvio" || e.estado === "noSeSubio") && (
             <span className="ch-rcpt">
-              {t(e.estado)}
+              {e.estado === "noSeSubio" ? ta("subida") : t(e.estado)}
               {otraVez}
             </span>
           )}
