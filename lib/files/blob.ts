@@ -1,6 +1,7 @@
 // A project's binary files (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §4). A binary still lives
-// in `projectFiles.content`, as a POINTER: NUL + "openlen-blob:" + its sha256, size and git blob id. Real text
-// never starts with NUL (that would make it binary), so the two can't be confused, and every place that
+// in `projectFiles.content`, as a POINTER: U+FFFF + "openlen-blob:" + its sha256, size and git blob id. U+FFFF
+// is a Unicode noncharacter (Postgres text can't hold the NUL a binary would start with), and a text that does
+// start with the prefix is stored as a blob itself, so the two can never be confused. Every place that
 // passes a project's files as `Record<string, string>` keeps working; only what touches bytes resolves it.
 // The bytes go to the uploads storage under `blobs/<sha256>`: content-addressed, so the same file twice (a
 // copy, a move, a remix, a commit) is stored once, and nothing here deletes one (another path may hold it).
@@ -10,7 +11,7 @@ import { createHash } from "node:crypto";
 import { hashObject } from "@/lib/git/objects";
 import { getStorage } from "@/lib/storage";
 
-export const BLOB_PREFIX = "\u0000openlen-blob:";
+export const BLOB_PREFIX = "￿openlen-blob:";
 
 export interface BlobRef {
   readonly sha256: string;
@@ -19,7 +20,7 @@ export interface BlobRef {
   readonly gitOid: string;
 }
 
-const POINTER = /^\u0000openlen-blob:([0-9a-f]{64}):(\d+):([0-9a-f]{40})$/;
+const POINTER = /^￿openlen-blob:([0-9a-f]{64}):(\d+):([0-9a-f]{40})$/;
 
 export function isBlobPointer(content: string): boolean {
   return content.startsWith(BLOB_PREFIX);
@@ -110,6 +111,9 @@ export async function getBlob(ref: BlobRef | string): Promise<Uint8Array> {
 
 /** What goes into `projectFiles.content` for these bytes: the text itself, or a pointer. */
 export async function toStoredContent(bytes: Uint8Array): Promise<string> {
-  if (!isBinaryBytes(bytes)) return strictUtf8.decode(bytes);
+  if (!isBinaryBytes(bytes)) {
+    const text = strictUtf8.decode(bytes);
+    if (!isBlobPointer(text)) return text;
+  }
   return makePointer(await putBlob(bytes));
 }

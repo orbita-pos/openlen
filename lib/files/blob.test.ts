@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { __setStorageForTest } from "@/lib/storage";
 import { FilesystemStorage } from "@/lib/storage/filesystem";
 
-import { getBlob, isBinaryBytes, isBlobPointer, makePointer, parsePointer, putBlob, sizeOf, toStoredContent } from "./blob";
+import { BLOB_PREFIX, getBlob, isBinaryBytes, isBlobPointer, makePointer, parsePointer, putBlob, sizeOf, toStoredContent } from "./blob";
 
 // A real PNG header + a little IHDR: binary by the NUL rule.
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01]);
@@ -43,6 +43,17 @@ describe("isBinaryBytes", () => {
 });
 
 describe("pointers", () => {
+  it("never holds a NUL: Postgres text can't store one", () => {
+    expect(makePointer({ sha256: "a".repeat(64), size: 1, gitOid: "b".repeat(40) })).not.toContain("\u0000");
+  });
+
+  it("a text that happens to start like a pointer is kept as a blob, so the two never mix", async () => {
+    const tricky = new TextEncoder().encode(`${BLOB_PREFIX}${"a".repeat(64)}:1:${"b".repeat(40)}`);
+    const stored = await toStoredContent(tricky);
+    expect(parsePointer(stored)?.size).toBe(tricky.byteLength);
+    expect(Array.from(await getBlob(stored))).toEqual(Array.from(tricky));
+  });
+
   it("round-trips and is told apart from text", () => {
     const ref = { sha256: "a".repeat(64), size: 20, gitOid: "b".repeat(40) };
     const p = makePointer(ref);
