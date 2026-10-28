@@ -25,6 +25,7 @@ import type { ComentarioDeLinea } from "@/lib/workspace-v2/comentarios-de-lineas
 import type { AttachedImage, ScopedSelection } from "./use-agent-chat";
 import { isVideoFile, kindOf, type AttachedFile } from "@/lib/projects/chat-files";
 import type { PendingUpload } from "./use-chat-attachments";
+import { pastedFiles } from "@/lib/workspace-v2/classify-dropped-files";
 import { CajaConMenciones, useArroba } from "../hilos-del-codigo";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
@@ -298,10 +299,9 @@ export function ChatComposer({
             ...(onPasteFiles
               ? {
                   onPaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-                    const files = Array.from(e.clipboardData?.files ?? []);
-                    if (files.length === 0) return;
-                    onPasteFiles(files);
-                    if (!e.clipboardData.getData("text/plain")) e.preventDefault();
+                    const { files, text } = pastedFiles(e.clipboardData);
+                    if (files.length > 0) onPasteFiles(files);
+                    if (files.length > 0 && !text) e.preventDefault();
                   },
                 }
               : {}),

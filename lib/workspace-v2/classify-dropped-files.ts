@@ -40,3 +40,12 @@ export function classifyDroppedFiles(dropped: readonly File[], room: { readonly 
   }
   return out;
 }
+
+/** What a paste attaches. Copying from Excel, Word or a web page puts the text AND a picture of it
+ *  on the clipboard: then the text is what was meant, and only real files (not images) attach. A
+ *  screenshot or a copied photo, with no text, attaches. */
+export function pastedFiles(clipboard: Pick<DataTransfer, "files" | "getData"> | null): { files: File[]; text: string } {
+  const files = Array.from(clipboard?.files ?? []);
+  const text = clipboard?.getData("text/plain") ?? "";
+  return { files: text ? files.filter((f) => !f.type.startsWith("image/")) : files, text };
+}

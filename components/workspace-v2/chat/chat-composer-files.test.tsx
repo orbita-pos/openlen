@@ -143,4 +143,17 @@ describe("photos, uploads and paste in the chat composer", () => {
     expect(onPasteFiles).not.toHaveBeenCalled();
     expect(soloTexto.defaultPrevented).toBe(false);
   });
+
+  // Review of the branch: copying cells in Excel puts their text AND a picture of them on the clipboard.
+  it("text with a picture of it (Excel, Word) pastes the text only; a real file still attaches", () => {
+    const onPasteFiles = vi.fn();
+    const host = montar({ ...nada, onPasteFiles });
+    const ta = host.querySelector("textarea")!;
+    const celdas = new File([new Uint8Array(1)], "image.png", { type: "image/png" });
+    expect(pegar(ta, [celdas], "Ventas	120").defaultPrevented).toBe(false);
+    expect(onPasteFiles).not.toHaveBeenCalled();
+    const pdf = new File([new Uint8Array(1)], "menu.pdf", { type: "application/pdf" });
+    pegar(ta, [celdas, pdf], "menu.pdf");
+    expect(onPasteFiles).toHaveBeenCalledWith([pdf]);
+  });
 });

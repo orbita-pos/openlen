@@ -33,7 +33,7 @@ import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import { MAX_FILES_PER_MESSAGE, videoKindFromMime, videoKindFromName } from "@/lib/projects/chat-files";
 import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
-import { classifyDroppedFiles } from "@/lib/workspace-v2/classify-dropped-files";
+import { classifyDroppedFiles, pastedFiles } from "@/lib/workspace-v2/classify-dropped-files";
 import { useFileDrop } from "./chat/use-file-drop";
 import { DropOverlay } from "./chat/drop-overlay";
 import { useToast } from "./toast";
@@ -516,10 +516,10 @@ export function HeroComposer({
             }}
             onPaste={(e) => {
               // A screenshot or a copied file is attached; the text, if any, still pastes.
-              const files = Array.from(e.clipboardData?.files ?? []);
+              const { files, text } = pastedFiles(e.clipboardData);
               if (files.length > 0) {
                 sumarFicheros(files);
-                if (!e.clipboardData.getData("text/plain")) return void e.preventDefault();
+                if (!text) return void e.preventDefault();
               }
               marcarEscrito();
               briefLimit.onPaste(e);
