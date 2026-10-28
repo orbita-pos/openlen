@@ -33,6 +33,13 @@ first), facts only: it has no open license. Claude coordinates research subagent
 researcher follows the same loop within Len's search limits (`lib/agent/web/herramientas.ts`). Added
 on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.1).
 
+`dataviz` is ours, from the facts of Claude Code's `dataviz` skill (the procedure with color last, the
+four jobs of color, the fixed rules, the color-blindness thresholds: ΔE 8 as the target, 6 as the floor
+with a second encoding, under 15 for normal vision a failure), facts only: it has no open license. Its
+validator, `dataviz/scripts/validate_palette.mjs`, is our code, written from public definitions: sRGB to
+OKLab (Björn Ottosson, 2020), Machado, Oliveira and Fernandes (2009) at severity 1.0, and WCAG 2
+contrast. Added on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.3).
+
 Generated skills (spec local 2026-10-27-len-five-skills, §4.2), built in `lib/agent/skills/generated.ts`
 from the same TypeScript that served `/.openlen/docs`: `artifact-*` (the deliverables manuals),
 `convert-to-app` (the app manual) and `frontend-design`. `frontend-design` is OpenLen's design guide
