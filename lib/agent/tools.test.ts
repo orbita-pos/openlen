@@ -2783,16 +2783,17 @@ describe("Read of a box PDF through a terminal that needs its own this", () => {
 // is not offered.
 describe("moved manuals and reserved generated names", () => {
   it("an old deliverables path says where it moved", async () => {
-    const before = process.env.OPENLEN_ARTIFACTS;
-    process.env.OPENLEN_ARTIFACTS = "1";
+    // The deliverables on, with the renderer that makes slides (lib/artifacts/capabilities.ts).
+    const set = { OPENLEN_ARTIFACTS: "1", OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2" };
+    const before = Object.fromEntries(Object.keys(set).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, set);
     try {
       const { deps } = makeDeps();
       const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.openlen/docs/artifacts/slides.md" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /moved to the skill "artifact-slides"/);
     } finally {
-      if (before === undefined) delete process.env.OPENLEN_ARTIFACTS;
-      else process.env.OPENLEN_ARTIFACTS = before;
+      for (const [k, v] of Object.entries(before)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
     }
   });
 

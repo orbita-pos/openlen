@@ -459,8 +459,9 @@ describe("/tests de una página con la caja", () => {
 
 // Spec local 2026-10-27-len-five-skills, §4.2: the deliverables manuals become the artifact-* skills.
 describe("the deliverables manuals as skills", () => {
-  const ON = { OPENLEN_ARTIFACTS: "1" };
-  const OFF = { OPENLEN_ARTIFACTS: "1", OPENLEN_SKILLS: "0" };
+  // With the renderer image, the server has dashboards and slides (lib/artifacts/capabilities.ts).
+  const ON = { OPENLEN_ARTIFACTS: "1", OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2" };
+  const OFF = { ...ON, OPENLEN_SKILLS: "0" };
 
   it("the deliverables index points to the skills", () => {
     const manual = buildManualDeLaPlataforma(ON);

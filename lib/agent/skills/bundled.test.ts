@@ -14,6 +14,19 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { parseSkillFile } from "./skill-file";
 import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkillNames, bundledSkills, type BundledContext } from "./bundled";
 
+// The deliverables on with every renderer available (lib/artifacts/capabilities.ts), so each
+// artifact-<kind> skill is offered. Test values only.
+const ALL_ARTIFACT_KINDS = {
+  OPENLEN_ARTIFACTS: "1",
+  OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2",
+  OPENLEN_ARTIFACT_MOTION_VERIFIED: "1",
+  OPENLEN_ARTIFACT_AUDIO_VERIFIED: "1",
+  OPENAI_API_KEY: "test-key",
+  OPENLEN_ARTIFACT_IMAGE_CENTICREDITS: "100",
+  OPENLEN_ARTIFACT_RENDER_CENTICREDITS: "100",
+  OPENLEN_ARTIFACT_AUDIO_CENTICREDITS: "100",
+};
+
 describe("bundled skills", () => {
   it("ships the seven office skills, pdf, research, charts, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
@@ -83,7 +96,7 @@ describe("bundled skills", () => {
         "Verification is runtime observation", "verifier-", "run-skill-generator",
         "stylometry.py", "my-writing-style", "Voice is constant",
       ];
-      for (const ctx of [{ app: null, env: { OPENLEN_ARTIFACTS: "1" } }, { app: null, env: {} }] as const) {
+      for (const ctx of [{ app: null, env: ALL_ARTIFACT_KINDS }, { app: null, env: {} }] as const) {
         for (const [path, text] of Object.entries(bundledSkillFiles(ctx))) {
           for (const t of theirs) expect(text, `${path} has ${t}`).not.toContain(t);
         }
@@ -210,17 +223,25 @@ describe("bundled skills", () => {
   describe("generated", () => {
     const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" } as AppDeProyecto;
     const PAGE: BundledContext = { app: null, env: {} };
-    const PAGE_ARTIFACTS: BundledContext = { app: null, env: { OPENLEN_ARTIFACTS: "1" } };
+    const PAGE_ARTIFACTS: BundledContext = { app: null, env: ALL_ARTIFACT_KINDS };
     const APP_CTX: BundledContext = { app: APP, env: {} };
-    const APP_ARTIFACTS: BundledContext = { app: APP, env: { OPENLEN_ARTIFACTS: "1" } };
+    const APP_ARTIFACTS: BundledContext = { app: APP, env: ALL_ARTIFACT_KINDS };
     const KINDS = ["dashboard", "slides", "image", "motion", "audio"];
     const names = (ctx: BundledContext) => bundledSkills(ctx).map((b) => b.skill.name);
 
-    it("artifact skills exist only with OPENLEN_ARTIFACTS=1", () => {
+    it("artifact skills exist only with the deliverables on", () => {
       for (const kind of KINDS) {
         expect(names(PAGE_ARTIFACTS)).toContain(`artifact-${kind}`);
         expect(names(PAGE)).not.toContain(`artifact-${kind}`);
       }
+    });
+
+    // The switch alone never advertises a renderer this server can't run (lib/artifacts/capabilities.ts):
+    // a skill for a kind create_artifact doesn't offer would invite Len to promise it.
+    it("an artifact skill is offered only for a renderer this server has", () => {
+      const artifacts = (env: Record<string, string>) => names({ app: null, env }).filter((n) => n.startsWith("artifact-"));
+      expect(artifacts({ OPENLEN_ARTIFACTS: "1" })).toEqual([]);
+      expect(artifacts({ OPENLEN_ARTIFACTS: "1", OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2" })).toEqual(["artifact-dashboard", "artifact-slides"]);
     });
 
     it("a generated skill's SKILL.md is today's manual, with its frontmatter", () => {

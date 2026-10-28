@@ -86,13 +86,15 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     assert.equal(queued.updatedHtml, undefined);
     assert.equal(queued.appCambiada, undefined);
     assert.equal(queued.mutoDurable, true);
-    const previous = process.env.OPENLEN_ARTIFACTS;
+    // The deliverables on, with the renderer that makes slides (lib/artifacts/capabilities.ts).
+    const set = { OPENLEN_ARTIFACTS: "1", OPENLEN_ARTIFACT_RENDERER_IMAGE: "openlen/artifact-renderer:2" };
+    const previous = Object.fromEntries(Object.keys(set).map((k) => [k, process.env[k]]));
     try {
-      process.env.OPENLEN_ARTIFACTS = "1";
+      Object.assign(process.env, set);
       // Since 27/10 the manual is the artifact-slides skill (spec local 2026-10-27-len-five-skills).
       assert.match(textoDeLaPlataforma("/.openlen/skills/artifact-slides/SKILL.md")!, /deck.json/);
       const read = await runAgentTool(session, deps, "Read", { file_path: "/.openlen/skills/artifact-slides/SKILL.md" });
       assert.equal(read.response.ok, true);
-    } finally { if (previous === undefined) delete process.env.OPENLEN_ARTIFACTS; else process.env.OPENLEN_ARTIFACTS = previous; }
+    } finally { for (const [k, v] of Object.entries(previous)) if (v === undefined) delete process.env[k]; else process.env[k] = v; }
   } finally { await f.pg.close(); }
 });

@@ -53,6 +53,7 @@ describe("GET /api/projects/[id]/skills", () => {
   it("lists the generated skills this project offers, reading the owner's project", async () => {
     vi.mocked(getProject).mockResolvedValue({ data: { html: "" } } as never);
     vi.stubEnv("OPENLEN_ARTIFACTS", "1");
+    vi.stubEnv("OPENLEN_ARTIFACT_RENDERER_IMAGE", "openlen/artifact-renderer:2");
     const names = ((await (await pedir()).json()) as { skills: { name: string }[] }).skills.map((s) => s.name);
     expect(getProject).toHaveBeenCalledWith("p1", "dueno-1");
     expect(names).toContain("artifact-slides");
