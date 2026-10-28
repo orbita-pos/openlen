@@ -163,6 +163,12 @@ describe("bundled skills", () => {
     it("verify sends the screenshot that shows it with present", () => {
       for (const must of ["`screenshots`", "present"]) expect(text(), must).toContain(must);
     });
+
+    // Real turn (27/10): Len took its one screenshot BEFORE sending the form, so it had no frame of the
+    // result to present. Claude Code's verify: «the one frame a reviewer looks at to see the feature».
+    it("verify takes its screenshot after acting, the frame it presents", () => {
+      expect(text()).toContain("after acting");
+    });
   });
 
   // SETUP-BRAND (§4.5): Claude's setup-writing-style turned into the business's brand, saved as the
@@ -183,7 +189,10 @@ describe("bundled skills", () => {
     // with only what the user said, under a line that says so).
     it("setup-brand builds the voice only from the owner's texts, and says so when they are few", () => {
       const text = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/SKILL.md`]!;
-      for (const must of ["a quote of theirs", "fewer than five pieces", "only what the owner told you"]) expect(text, must).toContain(must);
+      for (const must of ["a quote of theirs", "fewer than five pieces", "only what the owner told you", "nothing of yours"]) expect(text, must).toContain(must);
+      // Real turn (27/10): the sentence's example («short, no exclamation marks») read as a suggestion,
+      // and Len wrote it as a default style the owner never said.
+      expect(text).not.toContain("no exclamation marks");
       const template = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/references/brand-skill.md`]!;
       expect(template).toContain("of the owner's own texts");
     });

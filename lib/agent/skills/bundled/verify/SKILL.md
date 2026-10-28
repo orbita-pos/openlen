@@ -14,7 +14,7 @@ Use `use_page` on the canvas. Its tab stays open for the whole turn, each call c
 Look before you act, and look again after:
 1. **Look.** A `screenshot` step (`"screen"`, or a text of the block you care about) or a `read` step. If you don't know the button's text or the field's label, read it in the file or on the screen first: steps find things by what a visitor sees, not by CSS.
 2. **Act.** `click` with the text on the button, `type` with `into` the field's label, `choose` an option. With several identical buttons, `within` a text of the right block.
-3. **Look again.** Did what should happen happen: the message, the new row, the total, the next screen? `reload` to check it was saved. `eval` reads what has no text: a canvas, a variable, a game's state.
+3. **Look again.** Did what should happen happen: the message, the new row, the total, the next screen? Take a `screenshot` here, after acting: that frame of the result is the one you present at the end. `reload` to check it was saved. `eval` reads what has no text: a canvas, a variable, a game's state.
 
 Run the shortest path that makes the change run: the form changed, send it; the cart changed, add a product and go to checkout; the sign-in changed, sign in. Then one odd case: an empty or wrong value, coming back after a reload.
 
