@@ -40,7 +40,7 @@ const LINK = entry(4, {
   text: "Ver el mostrador",
   target: { type: "page", page: null, path: "a:nth-of-type(1)", tag: "a", text: "Ver el mostrador" },
 });
-const INDEX = { entries: [HERO, LINK], files: ["/LEN.md"] };
+const INDEX: { entries: MentionEntry[]; files: string[] } = { entries: [HERO, LINK], files: ["/LEN.md"] };
 const ELI = { userId: "u-eli", nombre: "Eli Editor" };
 
 const roots: Root[] = [];
@@ -172,6 +172,30 @@ describe("the «@» menu", () => {
     v.type(`${v.value.current}y @ver`);
     v.key("Enter");
     expect(v.onMentions.mock.calls.at(-1)![0]).toHaveLength(1);
+  });
+
+  it("for an app element: says which screen it is on when it is not on this one, and the mention carries its copies", () => {
+    const li = entry(9, {
+      tag: "li",
+      kind: "list",
+      name: "Pedido",
+      text: "Pedido",
+      ruta: "/src/Ventas.tsx",
+      screen: "#/ventas",
+      target: { type: "app", path: "/src/Ventas.tsx", line: 9, tag: "li", text: "Pedido" },
+    });
+    INDEX.entries = [HERO, LINK, li];
+    try {
+      const v = mount();
+      v.type("@pedido");
+      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 0 } })));
+      expect(v.rows()[0]).toContain('mentions.onScreen:{"screen":"#/ventas"}');
+      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 3 } })));
+      v.key("Enter");
+      expect(v.onMentions.mock.calls.at(-1)![0][0].target).toMatchObject({ copies: 3, screen: "#/ventas" });
+    } finally {
+      INDEX.entries = [HERO, LINK];
+    }
   });
 
   it("drops a mention whose label was deleted from the text", () => {

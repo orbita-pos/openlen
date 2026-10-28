@@ -442,6 +442,7 @@
     "limit": "Fino a {max} menzioni per messaggio",
     "cannotPoint": "Questo elemento non ha una riga nel codice da indicare.",
     "files": "File",
-    "people": "Persone"
+    "people": "Persone",
+    "onScreen": "nella schermata {screen}"
   }
 }

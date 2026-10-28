@@ -58,6 +58,10 @@ export interface AppTarget {
   line: number;
   tag: string;
   text?: string;
+  /** How many copies the canvas shows (a loop, a reused component), when more than one. */
+  copies?: number;
+  /** The screen it is on (`#/ventas`), when known. */
+  screen?: string;
 }
 
 export interface MentionEntry {
@@ -74,6 +78,8 @@ export interface MentionEntry {
   /** Own visible text, whitespace collapsed, at most 120 characters. */
   text: string;
   attrs: MentionAttrs;
+  /** Apps: the screen it is written for, from the routes (`#/ventas`). */
+  screen?: string;
   /** Apps: the line its JSX element closes on. */
   endLine?: number;
   /** Apps: the component the element is written in. */

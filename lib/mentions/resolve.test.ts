@@ -165,3 +165,16 @@ describe("parseMentions", () => {
     expect(parseMentions({ type: "file" })).toEqual([]);
   });
 });
+
+describe("where an app element is, for Len", () => {
+  it("tells Len it repeats and which screen it is on", async () => {
+    const ref: MentionRef = { type: "element", label: "@Lista · Pedido uno", text: "Pedido uno", target: { type: "app", path: "/src/App.tsx", line: 4, tag: "li", text: "Pedido uno", copies: 12, screen: "#/ventas" } };
+    const r = await resolveMentions([ref], { pageHtml, files: async () => ({ "/src/App.tsx": APP }) });
+    expect(r.selecciones[0]).toMatchObject({ desde: 4, nota: "On the canvas it repeats 12 times, on screen #/ventas." });
+  });
+
+  it("drops copies and a screen that are not what they claim", () => {
+    const [m] = parseMentions([{ type: "element", label: "@x", text: "", target: { type: "app", path: "/src/A.tsx", line: 1, tag: "li", copies: -3, screen: "javascript:alert(1)" } }]);
+    expect(m!.type === "element" && m!.target).toEqual({ type: "app", path: "/src/A.tsx", line: 1, tag: "li" });
+  });
+});

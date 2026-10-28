@@ -442,6 +442,7 @@
     "limit": "Maximaal {max} vermeldingen per bericht",
     "cannotPoint": "Dit element heeft geen regel in de code om naar te wijzen.",
     "files": "Bestanden",
-    "people": "Mensen"
+    "people": "Mensen",
+    "onScreen": "op scherm {screen}"
   }
 }

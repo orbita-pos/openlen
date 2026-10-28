@@ -902,3 +902,10 @@ describe("a mentioned file that does not exist", () => {
     expect(s).toContain("There is no file at /nada.md.");
   });
 });
+
+describe("a selection with a note", () => {
+  it("adds the note after the selected lines", () => {
+    const s = buildAgentContext({ state: {}, selecciones: [{ ruta: "/src/App.tsx", desde: 4, hasta: 4, contenido: "<li>x</li>", nota: "On the canvas it repeats 12 times, on screen #/ventas." }] });
+    expect(s).toMatch(/<li>x<\/li>\nOn the canvas it repeats 12 times, on screen #\/ventas\./);
+  });
+});
