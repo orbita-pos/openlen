@@ -61,6 +61,21 @@ describe("searchMentions", () => {
     expect(searchMentions(ALL, [], "vr mstr", 10).items.length).toBeGreaterThan(0);
   });
 
+  it("folds an entry's fields once, not on every search", () => {
+    let reads = 0;
+    const base = entry({ tag: "a", text: "Ver el mostrador", name: "Ver el mostrador" });
+    const watched = new Proxy(base, {
+      get(t, k, r) {
+        if (k === "text") reads += 1;
+        return Reflect.get(t, k, r);
+      },
+    });
+    searchMentions([watched], [], "ver", 5);
+    searchMentions([watched], [], "most", 5);
+    searchMentions([watched], [], "el", 5);
+    expect(reads).toBe(1);
+  });
+
   it("ignores accents and case", () => {
     expect(keys(searchMentions(ALL, [], "MOSTRÁDOR", 10))).toContain(LINK.key);
   });
