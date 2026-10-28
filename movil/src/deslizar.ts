@@ -9,6 +9,7 @@
 // quedaría enganchado al elemento viejo o a ninguno.
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
+import { movimientoReducido } from "./movimiento";
 
 export interface Deslizar {
   /** hacia dónde se cierra: «abajo» la quita o la encoge; «arriba» la abre; «derecha» la quita (el chat) */
@@ -49,6 +50,13 @@ export function useDeslizar(op: Deslizar) {
     let crudo = 0; // px del lienzo hacia donde cierra, sin resistencia
     let tope = 0; // px del lienzo hasta donde termina el gesto (se mide al empezar a arrastrar)
     let muestras: { t: number; d: number }[] = [];
+    let vivo = true;
+    const tiempos = new Set<ReturnType<typeof setTimeout>>();
+    const limpiezas = new Set<() => void>();
+    const luego = (hacer: () => void, demora: number) => {
+      const id = setTimeout(() => { tiempos.delete(id); if (vivo) hacer(); }, demora);
+      tiempos.add(id);
+    };
 
     const recorridoDe = (x: HTMLElement) => {
       const { hacia, recorrido } = ultimo.current;
@@ -73,12 +81,14 @@ export function useDeslizar(op: Deslizar) {
         e.preventDefault();
       };
       el.addEventListener("click", tragar, { capture: true, once: true });
-      setTimeout(() => el.removeEventListener("click", tragar, { capture: true }), 0);
+      const limpiar = () => el.removeEventListener("click", tragar, { capture: true });
+      limpiezas.add(limpiar);
+      luego(() => { limpiar(); limpiezas.delete(limpiar); }, 0);
     };
     const volver = () => {
-      el.style.transition = VUELTA;
+      el.style.transition = movimientoReducido() ? "none" : VUELTA;
       el.style.transform = "";
-      setTimeout(() => {
+      luego(() => {
         if (arrastrando) return;
         el.style.transition = "";
         el.style.willChange = "";
@@ -88,6 +98,11 @@ export function useDeslizar(op: Deslizar) {
     // donde el dedo la dejó, sin salto.
     const completar = (d: number) => {
       const { hacia, alSoltar } = ultimo.current;
+      if (movimientoReducido()) {
+        el.style.transition = "none"; el.style.transform = ""; el.style.willChange = "";
+        flushSync(alSoltar);
+        return;
+      }
       if (hacia !== "arriba") {
         el.style.transition = SALIDA;
         poner(tope);
@@ -95,7 +110,7 @@ export function useDeslizar(op: Deslizar) {
         const fin = (e?: TransitionEvent) => {
           if (hecho || (e && (e.target !== el || e.propertyName !== "transform"))) return;
           hecho = true;
-          el.removeEventListener("transitionend", fin);
+          limpiarFin();
           flushSync(() => ultimo.current.alSoltar());
           el.style.transition = "none";
           el.style.transform = "";
@@ -103,8 +118,10 @@ export function useDeslizar(op: Deslizar) {
           el.style.transition = "";
           el.style.willChange = "";
         };
+        const limpiarFin = () => { el.removeEventListener("transitionend", fin); limpiezas.delete(limpiarFin); };
+        limpiezas.add(limpiarFin);
         el.addEventListener("transitionend", fin);
-        setTimeout(fin, 280);
+        luego(fin, 280);
       } else {
         flushSync(alSoltar);
         // Ya abierta, la capa creció hacia arriba: se coloca donde estaba y sube.
@@ -113,7 +130,7 @@ export function useDeslizar(op: Deslizar) {
         void el.offsetHeight;
         el.style.transition = VUELTA;
         el.style.transform = "";
-        setTimeout(() => {
+        luego(() => {
           el.style.transition = "";
           el.style.willChange = "";
         }, 340);
@@ -180,6 +197,8 @@ export function useDeslizar(op: Deslizar) {
     el.addEventListener("pointerup", suelta);
     el.addEventListener("pointercancel", suelta);
     return () => {
+      vivo = false;
+      tiempos.forEach(clearTimeout); limpiezas.forEach(limpiar => limpiar());
       el.removeEventListener("pointerdown", baja);
       el.removeEventListener("pointermove", mueve);
       el.removeEventListener("pointerup", suelta);

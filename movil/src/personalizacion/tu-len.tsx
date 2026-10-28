@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslations } from "use-intl";
 import { Cara } from "../cara";
 import { useAtras } from "../atras";
+import { devolverFoco } from "../foco";
 import { aplicarLook, leerLook, type Look } from "./preferencia";
 import "./tu-len.css";
 
@@ -29,7 +30,7 @@ export function TuLen({ onCerrar }: { onCerrar: () => void }) {
   useEffect(() => {
     const previo = document.activeElement as HTMLElement | null;
     dialogo.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    return () => { if (previo?.isConnected) previo.focus(); };
+    return () => devolverFoco(previo);
   }, []);
   const teclado = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onCerrar(); }

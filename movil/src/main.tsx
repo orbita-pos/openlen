@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import "./estilos/prototipo.css";
 import "./estilos/app.css";
 import { App } from "./app";
+import { seguirMovimientoDelTelefono } from "./movimiento";
 import { Textos } from "./textos";
 import { idiomaDelTelefono } from "./config";
 import { medidasDelLienzo } from "./lienzo";
@@ -17,6 +18,7 @@ const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has(
 
 // El tema: naranja por defecto; el oscuro, si se eligió en «Tus páginas» (ver tema.ts).
 aplicarTema(temaGuardado());
+seguirMovimientoDelTelefono();
 plataforma.atrasEnElTelefono();
 
 // Acostado lo dice la pantalla, no la ventana: con el teclado abierto la
