@@ -92,7 +92,9 @@ export async function POST(req: Request): Promise<Response> {
         zip.file(`${slug}/index.html`, pageHtml);
       }
     }
-    for (const [ruta, contenido] of carpeta) zip.file(ruta.slice(1), contenido);
+    // Un binario (spec local 2026-10-28): sus bytes, nunca el texto de su puntero.
+    const { getBlob, isBlobPointer } = await import("@/lib/files/blob");
+    for (const [ruta, contenido] of carpeta) zip.file(ruta.slice(1), isBlobPointer(contenido) ? await getBlob(contenido) : contenido);
     // El README del dueño, si lo tiene, es suyo: el nuestro va aparte.
     const conCarpeta = { supabase: carpeta.some(([r]) => r.startsWith("/supabase/")), tests: carpeta.some(([r]) => r.startsWith("/tests/")) };
     zip.file(
