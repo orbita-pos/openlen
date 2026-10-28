@@ -29,7 +29,7 @@
 // Efecto en la caché: en una app el prompt, el manual y las herramientas son otros: convertir una página en app cambia el prefijo una vez; dentro de la app es fijo.
 
 import type { AppDeProyecto } from "@/lib/projects/types";
-import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE } from "@/lib/agent/convertir-en-app";
+import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
 import { appFileNames } from "@/lib/apps/esqueleto";
 import { MIN_PACKAGE_AGE_DAYS, MIN_VERSION_AGE_DAYS } from "@/lib/apps/npm/gate";
@@ -120,7 +120,8 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   p = p.slice(0, i) + LO_QUE_PUEDE_LA_APP + p.slice(fin);
   p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY — ", SUS_DATOS_EN_LA_APP);
   // Convertir en app es de una página: en una app, la viñeta sobra.
-  p = cambiar(p, `\n${LA_PAGINA_QUE_CRECE}`, "");
+  // Con skills o sin ellas, su frase nombra la guía de apps de un modo u otro: se quita la que esté.
+  p = cambiar(p, `\n${p.includes(laPaginaQueCrece(true)) ? laPaginaQueCrece(true) : LA_PAGINA_QUE_CRECE}`, "");
   return p;
 }
 
@@ -217,7 +218,9 @@ const INDICE_DE_LA_APP = `MORE, IN /.openlen/docs (read them when you need them)
 - ${RUTA_GUIA}: the design guide for an app —what it opens on, its states, its numbers, color and type—; read it BEFORE building an app from scratch or a redesign. What you add to an app that already exists is written the way that app is.`;
 
 /** /AGENTS.md de una app, antes de las palancas de la terminal. */
-export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto): string {
+/** `conSkills`: con las skills encendidas, sin el índice —la guía es la skill `frontend-design`, y la
+ *  anuncia el catálogo (spec local 2026-10-27-len-five-skills)—. */
+export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto, conSkills = false): string {
   return [
     "# OpenLen: how the platform works",
     seccionDeLaApp(app),
@@ -227,7 +230,7 @@ export function manualDeLaApp(manualDePagina: string, app: AppDeProyecto): strin
     LA_CARPETA(app),
     elBackend(manualDePagina, app),
     QUE_PIDE_PUBLICAR,
-    INDICE_DE_LA_APP,
+    ...(conSkills ? [] : [INDICE_DE_LA_APP]),
   ].join("\n\n");
 }
 

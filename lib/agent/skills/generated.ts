@@ -9,7 +9,12 @@
  * read from disk.
  */
 import { artifactManuals } from "@/lib/agent/artifact-manuals";
+import { RUTA_GUIA, RUTA_LIBRERIAS } from "@/lib/agent/ficheros/manual";
+import { guiaParaConvertir, partirElManual } from "@/lib/agent/manual-de-la-plataforma";
+import { GUIA_DE_LA_APP } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
+
+import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
 
 export interface BundledContext {
   readonly app: AppDeProyecto | null;
@@ -43,4 +48,40 @@ const artifactSkills: GeneratedSkill[] = Object.entries(ARTIFACT_KINDS).map(([ki
   files: () => ({ "SKILL.md": artifactManuals[`/.openlen/docs/artifacts/${kind}.md`]! }),
 }));
 
-export const GENERATED_SKILLS: readonly GeneratedSkill[] = [...artifactSkills];
+const LIBRARIES_POINTER =
+  "The libraries that survive publishing (charts, carousels, galleries), with their exact tags, are in references/libraries.md: read it before adding one.";
+
+/** The design guide: a page's or an app's, then what Claude's frontend-design adds. */
+const frontendDesign: GeneratedSkill = {
+  name: "frontend-design",
+  description:
+    "OpenLen's design guide for color, type, dark mode and finish, with Claude's frontend-design method. Load it before writing a page or an app from scratch, or a redesign. What you add to something that already exists is written the way it already is.",
+  when: () => true,
+  files: (ctx): Record<string, string> => {
+    if (ctx.app) return { "SKILL.md": `${GUIA_DE_LA_APP}\n\n${FROM_CLAUDE_FRONTEND_DESIGN}` };
+    const docs = partirElManual().docs;
+    return {
+      "SKILL.md": `${docs[RUTA_GUIA]}\n\n${FROM_CLAUDE_FRONTEND_DESIGN}\n\n${LIBRARIES_POINTER}`,
+      "references/libraries.md": docs[RUTA_LIBRERIAS]!,
+    };
+  },
+};
+
+/** How a page becomes an app: the procedure in SKILL.md and, because it is long (19.6 KB), the rules
+ *  of an app once converted in references/ — DeepSeek's rule of a short SKILL.md. */
+const convertToApp: GeneratedSkill = {
+  name: "convert-to-app",
+  description:
+    "How a web app is built here (React in /src, its packages, its screens, its data). Load it before converting a page into an app with convert_to_app, and only after the user said yes.",
+  when: (ctx) => ctx.app === null,
+  files: (ctx) => {
+    const whole = guiaParaConvertir(ctx.env);
+    const cut = whole.indexOf("\n\n");
+    return {
+      "SKILL.md": `${whole.slice(0, cut)}\n\nThe rules every app follows once converted are in references/app-manual.md: read it before writing /src.`,
+      "references/app-manual.md": whole.slice(cut + 2),
+    };
+  },
+};
+
+export const GENERATED_SKILLS: readonly GeneratedSkill[] = [frontendDesign, convertToApp, ...artifactSkills];

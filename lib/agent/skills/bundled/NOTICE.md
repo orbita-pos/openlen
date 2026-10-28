@@ -27,6 +27,14 @@ what breaks), without its text or its scripts (its license reserves all rights).
 (`pdf/scripts/`) are ours too. Added on 2026-10-27 (spec local 2026-10-27-len-pdf-skill); checked in a
 real box by `npm run pdf-skill:box-check`.
 
+Generated skills (spec local 2026-10-27-len-five-skills, §4.2), built in `lib/agent/skills/generated.ts`
+from the same TypeScript that served `/.openlen/docs`: `artifact-*` (the deliverables manuals),
+`convert-to-app` (the app manual) and `frontend-design`. `frontend-design` is OpenLen's design guide
+followed by `lib/agent/skills/frontend-design.ts`, adapted from Anthropic's `frontend-design` skill
+(github.com/anthropics/skills, `skills/frontend-design/SKILL.md`), Apache License 2.0, full text in
+`LICENSES/anthropic-skills.Apache-2.0.txt`. Changes: shortened; only what doesn't contradict OpenLen's
+guide, which comes first and wins where they differ; the critique uses Len's `view_page`.
+
 `skill-creator` is ours, after DeepSeek's idea of shipping "creator skills" for what the agent authors
 (`.agents/notes/archived/architecture/2026-09-21-creator-skills-progressive-disclosure.md`): added on
 2026-10-26 when a real turn showed Len did not know where a user's skill goes.

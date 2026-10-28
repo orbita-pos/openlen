@@ -59,9 +59,14 @@ export const CARPETA_SKILLS = "/.openlen/skills";
 /** Los manuales que pasaron a ser skills (spec local 2026-10-27-len-five-skills, §4.2), con las
  *  skills encendidas: la ruta vieja → la skill. Una charla de antes los pide por la ruta vieja, y
  *  `Read` le dice adónde se mudaron, como las rutas viejas de la memoria. */
-export const RUTAS_MUDADAS: Readonly<Record<string, string>> = Object.fromEntries(
-  ["dashboard", "slides", "image", "motion", "audio"].map((kind) => [`${CARPETA_DOCS}/artifacts/${kind}.md`, `artifact-${kind}`]),
-);
+export const RUTAS_MUDADAS: Readonly<Record<string, string>> = {
+  [RUTA_GUIA]: "frontend-design",
+  [RUTA_LIBRERIAS]: "frontend-design",
+  [RUTA_APPS]: "convert-to-app",
+  ...Object.fromEntries(
+    ["dashboard", "slides", "image", "motion", "audio"].map((kind) => [`${CARPETA_DOCS}/artifacts/${kind}.md`, `artifact-${kind}`]),
+  ),
+};
 
 export function mudanza(ruta: string, skill: string): string {
   return `${ruta} moved to the skill "${skill}": load it with the skill tool, or read ${CARPETA_SKILLS}/${skill}/SKILL.md.`;

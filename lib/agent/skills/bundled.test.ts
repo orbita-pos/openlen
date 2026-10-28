@@ -4,13 +4,18 @@ import { describe, expect, it } from "vitest";
 import { documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PDF_FONT_FILES } from "@/lib/agent/sandbox/template-files";
 import { artifactManuals } from "@/lib/agent/artifact-manuals";
+import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
+import { skillCatalogMessage } from "./catalog-message";
+import { resolveSkills } from "./registry";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { parseSkillFile } from "./skill-file";
 import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkillNames, bundledSkills, type BundledContext } from "./bundled";
 
 describe("bundled skills", () => {
-  it("ships the seven office skills, pdf and the one that creates skills", () => {
+  it("ships the seven office skills, pdf, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
+      "convert-to-app",
+      "frontend-design",
       "office",
       "office-docx",
       "office-export-pdf",
@@ -134,6 +139,41 @@ describe("bundled skills", () => {
       const text = bundledSkillFiles(PAGE_ARTIFACTS)[`${BUNDLED_SKILLS_DIR}/artifact-slides/SKILL.md`]!;
       expect(text).toContain(artifactManuals["/.openlen/docs/artifacts/slides.md"]!.slice(0, 200));
       expect(parseSkillFile(text, "artifact-slides").ok).toBe(true);
+    });
+
+    // Task 2: the design guide is frontend-design (ours, with Claude's frontend-design adapted, Apache
+    // 2.0); the app guide is convert-to-app, only in a page.
+    it("frontend-design is offered in a page and in an app, each with its own guide", () => {
+      const page = bundledSkillFiles(PAGE)[`${BUNDLED_SKILLS_DIR}/frontend-design/SKILL.md`]!;
+      const app = bundledSkillFiles(APP_CTX)[`${BUNDLED_SKILLS_DIR}/frontend-design/SKILL.md`]!;
+      expect(page).toContain("DESIGN GUIDE (for the pages you create yourself");
+      expect(page).toContain("references/libraries.md");
+      expect(bundledSkillFiles(PAGE)[`${BUNDLED_SKILLS_DIR}/frontend-design/references/libraries.md`]).toContain("AVAILABLE LIBRARIES");
+      expect(app).toContain("DESIGN GUIDE (for the apps you create yourself");
+      for (const text of [page, app]) expect(text).toContain(FROM_CLAUDE_FRONTEND_DESIGN.slice(0, 120));
+    });
+
+    it("convert-to-app only in a page, with the app manual in references", () => {
+      expect(names(PAGE)).toContain("convert-to-app");
+      expect(names(APP_CTX)).not.toContain("convert-to-app");
+      const files = bundledSkillFiles(PAGE);
+      expect(files[`${BUNDLED_SKILLS_DIR}/convert-to-app/SKILL.md`]).toContain("HOW A WEB APP IS BUILT HERE");
+    });
+
+    it("the Apache license of what is adapted from Claude ships, and NOTICE says what came from where", () => {
+      expect(readFileSync("LICENSES/anthropic-skills.Apache-2.0.txt", "utf8")).toContain("Apache License");
+      expect(readFileSync("lib/agent/skills/bundled/NOTICE.md", "utf8")).toContain("frontend-design");
+    });
+
+    // Converting a page into an app mid-conversation changes what is offered: the catalog goes again
+    // as DeepSeek's replacement message (the durable one above stays, so the cache holds).
+    it("converting changes the catalog the right way", () => {
+      const shared = (ctx: BundledContext) => resolveSkills({ bundled: bundledSkills(ctx), project: [], personal: [] }).shared();
+      const first = skillCatalogMessage(shared(PAGE), null, 100_000)!;
+      const after = skillCatalogMessage(shared(APP_CTX), first.digest, 100_000)!;
+      expect(after.digest).not.toBe(first.digest);
+      expect(after.text).toContain("`frontend-design`");
+      expect(after.text).not.toContain("`convert-to-app`");
     });
 
     it("generated names are reserved even when not offered", () => {

@@ -58,6 +58,14 @@ describe("GET /api/projects/[id]/skills", () => {
     expect(names).toContain("artifact-slides");
   });
 
+  it("a page offers convert-to-app; an app doesn't", async () => {
+    const list = async () => ((await (await pedir()).json()) as { skills: { name: string }[] }).skills.map((s) => s.name);
+    vi.mocked(getProject).mockResolvedValue({ data: { html: "" } } as never);
+    expect(await list()).toContain("convert-to-app");
+    vi.mocked(getProject).mockResolvedValue({ data: { html: "", app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } } as never);
+    expect(await list()).not.toContain("convert-to-app");
+  });
+
   it("empty with OPENLEN_SKILLS=0", async () => {
     vi.stubEnv("OPENLEN_SKILLS", "0");
     expect(await (await pedir()).json()).toEqual({ skills: [] });

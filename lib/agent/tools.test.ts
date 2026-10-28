@@ -2796,6 +2796,13 @@ describe("moved manuals and reserved generated names", () => {
     }
   });
 
+  it("the old design guide path says it moved to frontend-design", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.openlen/docs/guia-de-diseno.md" });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /moved to the skill "frontend-design"/);
+  });
+
   it("a user's skill can't take a generated name, even with the deliverables off", async () => {
     const { deps } = makeDeps();
     const text = "---\nname: artifact-slides\ndescription: mine\n---\n\nDo it.\n";

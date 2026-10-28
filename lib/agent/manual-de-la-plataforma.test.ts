@@ -6,12 +6,14 @@ import {
   adjuntoDelManual,
   buildManualDeLaPlataforma,
   documentosDeLaPlataforma,
+  guiaParaConvertir,
   manualSinPartir,
   partirElManual,
   textoDeLaPlataforma,
 } from "./manual-de-la-plataforma";
 import { TOPE_DE_LINEA } from "./ficheros/read";
 import { artifactManuals } from "./artifact-manuals";
+import { GUIA_DE_LA_APP } from "./modo-app";
 import {
   MAX_FOLDER_BYTES,
   MAX_FOLDER_FILE_BYTES,
@@ -28,8 +30,13 @@ import { clauseMarker } from "@/lib/ai/js-clause";
 // muda a /.openlen/docs y se lee a demanda. Estas pruebas fijan el REPARTO; el texto
 // entero lo fija el golden (`prompts-golden.test.ts`).
 
+// Con las skills APAGADAS (OPENLEN_SKILLS=0), el reparto de siempre: el índice y /.openlen/docs. Con
+// ellas encendidas, las guías son skills (spec local 2026-10-27-len-five-skills): abajo.
+const SIN_SKILLS = { ...process.env, OPENLEN_SKILLS: "0" };
+
 describe("el manual de la plataforma", () => {
-  const manual = buildManualDeLaPlataforma();
+  const manual = buildManualDeLaPlataforma(SIN_SKILLS);
+  afterEach(() => vi.unstubAllEnvs());
 
   // Las pruebas de /tests en una página se guardan y viajan al exportar, pero
   // aquí no hay Playwright (la terminal de una página no tiene npx): decir sólo
@@ -38,8 +45,8 @@ describe("el manual de la plataforma", () => {
     expect(manual).toMatch(/\/tests holds Playwright tests, which are not run here/);
     expect(manual).toMatch(/they go with the project when it is exported/);
   });
-  const docs = documentosDeLaPlataforma();
-  const prompt = buildAgentSystemPrompt();
+  const docs = documentosDeLaPlataforma(null, SIN_SKILLS);
+  const prompt = buildAgentSystemPrompt(SIN_SKILLS);
 
   it("/AGENTS.md lleva lo que vale para cualquier edición, y el prompt no", () => {
     for (const seccion of [
@@ -145,6 +152,7 @@ describe("el manual de la plataforma", () => {
   });
 
   it("Read encuentra cada uno por su ruta, y nada más", () => {
+    vi.stubEnv("OPENLEN_SKILLS", "0");
     expect(textoDeLaPlataforma(RUTA_MANUAL)).toBe(manual);
     for (const ruta of RUTAS_DE_DOCS) expect(textoDeLaPlataforma(ruta)).toBe(docs[ruta]);
     expect(textoDeLaPlataforma(`${CARPETA_DOCS}/otro.md`)).toBeNull();
@@ -238,16 +246,18 @@ describe("cómo se adjunta", () => {
 
 describe("crear desde cero vive en la guía de diseño (plans/crear-es-len)", () => {
   it("la guía trae lo que sabía Crear: la forma no viene dada, el <title> y el <head> enteros", () => {
-    const guia = documentosDeLaPlataforma()[RUTA_GUIA]!;
+    const guia = partirElManual().docs[RUTA_GUIA]!;
     expect(guia).toContain("WHEN THE PAGE IS EMPTY");
     expect(guia).toContain("There is no default shape.");
     expect(guia).toContain("a descriptive <title> that names the product");
   });
 
   it("/AGENTS.md no lo carga en cada vuelta: sólo dice cuándo leerlo", () => {
-    const agents = buildManualDeLaPlataforma({});
+    // Con las skills apagadas lo dice el índice; encendidas, la descripción de frontend-design.
+    const agents = buildManualDeLaPlataforma({ OPENLEN_SKILLS: "0" });
     expect(agents).not.toContain("There is no default shape.");
     expect(agents).toContain("an empty /index.html is one");
+    expect(buildManualDeLaPlataforma({})).not.toContain("There is no default shape.");
   });
 });
 
@@ -396,8 +406,8 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
   });
 
   it("🔴 la guía para convertir una página en app (apps.md) dice lo mismo que el manual", () => {
-    expect(documentosDeLaPlataforma(null, {})[RUTA_APPS]).toContain("Edge Functions don't exist here yet");
-    const con = documentosDeLaPlataforma(null, CON)[RUTA_APPS]!;
+    expect(guiaParaConvertir({})).toContain("Edge Functions don't exist here yet");
+    const con = guiaParaConvertir(CON)!;
     expect(con).not.toContain("Edge Functions don't exist here yet");
     expect(con).toContain("Deno.serve(async (req) => …)");
   });
@@ -411,7 +421,7 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
     expect(m).toContain("never call it from the page");
     expect(m).toContain("must keep working without it");
     expect(m).toContain("too many from one visitor");
-    expect(documentosDeLaPlataforma(null, CON)[RUTA_APPS]).toContain("/ai/v1/chat/completions");
+    expect(guiaParaConvertir(CON)).toContain("/ai/v1/chat/completions");
     expect(buildManualDeLaPlataforma({ ...CON, OPENLEN_APP_AI: "0" })).not.toContain("/ai/v1/chat/completions");
     expect(buildManualDeLaPlataforma({})).not.toContain("/ai/v1/chat/completions");
   });
@@ -469,5 +479,57 @@ describe("the deliverables manuals as skills", () => {
     const docs = documentosDeLaPlataforma(null, OFF);
     expect(docs["/.openlen/docs/artifacts/slides.md"]).toBe(artifactManuals["/.openlen/docs/artifacts/slides.md"]);
     expect(buildManualDeLaPlataforma(OFF)).toContain("Read /.openlen/docs/artifacts/<kind>.md before authoring that kind");
+  });
+});
+
+// Spec local 2026-10-27-len-five-skills, §4.2: with skills on, the guides are skills and /AGENTS.md
+// loses its index; the catalog announces them. With OPENLEN_SKILLS=0, the block above: as always.
+describe("the guides as skills", () => {
+  const ON = { ...process.env, OPENLEN_SKILLS: "1" };
+  const APP = { catalogo: "2026-11", entrada: "/src/main.jsx" } as const;
+
+  it("the manual no longer carries the index, with skills on, in a page and in an app", () => {
+    expect(buildManualDeLaPlataforma(ON)).not.toContain("MORE, IN /.openlen/docs");
+    expect(buildManualDeLaPlataforma(ON, "len", APP)).not.toContain("MORE, IN /.openlen/docs");
+  });
+
+  it("the finish and the prompt point to the frontend-design skill", () => {
+    expect(buildManualDeLaPlataforma(ON)).toContain("; the level of finish is in the frontend-design skill.");
+    expect(buildAgentSystemPrompt(ON)).toContain("DESIGN GUIDE in the frontend-design skill");
+  });
+
+  it("the guides are skill files, not docs", () => {
+    const page = documentosDeLaPlataforma(null, ON);
+    for (const ruta of RUTAS_DE_DOCS) expect(page).not.toHaveProperty(ruta);
+    expect(page).toHaveProperty("/.openlen/skills/frontend-design/SKILL.md");
+    expect(page).toHaveProperty("/.openlen/skills/frontend-design/references/libraries.md");
+    expect(page).toHaveProperty("/.openlen/skills/convert-to-app/SKILL.md");
+    const app = documentosDeLaPlataforma(APP, ON);
+    expect(app).not.toHaveProperty(RUTA_GUIA);
+    expect(app).toHaveProperty("/.openlen/skills/frontend-design/SKILL.md");
+    expect(app).not.toHaveProperty("/.openlen/skills/convert-to-app/SKILL.md");
+  });
+
+  it("no line is lost: each line of the whole manual is in /AGENTS.md or in a skill's file", () => {
+    const juntos = [buildManualDeLaPlataforma(ON), ...Object.values(documentosDeLaPlataforma(null, ON))].join("\n");
+    const perdidas = manualSinPartir()
+      .split("\n")
+      .filter((l) => l.trim() !== "" && !juntos.includes(l))
+      .filter((l) => !l.includes("and at the end the level of finish that is expected"));
+    expect(perdidas).toEqual([]);
+  });
+
+  it("no line of a skill's file passes Read's cut", () => {
+    for (const [ruta, texto] of Object.entries(documentosDeLaPlataforma(null, ON))) {
+      if (!ruta.startsWith("/.openlen/skills/")) continue;
+      for (const l of texto.split("\n")) expect(l.length, `${ruta}: ${l.slice(0, 60)}`).toBeLessThanOrEqual(TOPE_DE_LINEA);
+    }
+  });
+
+  // 🔴 The switch must not leave Len without its design guide, in an app either.
+  it("with OPENLEN_SKILLS=0 an app keeps its index and its guide at its path", () => {
+    const OFF = { ...process.env, OPENLEN_SKILLS: "0" };
+    expect(buildManualDeLaPlataforma(OFF, "len", APP)).toContain("MORE, IN /.openlen/docs");
+    expect(documentosDeLaPlataforma(APP, OFF)[RUTA_GUIA]).toBe(GUIA_DE_LA_APP);
   });
 });

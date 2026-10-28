@@ -448,10 +448,15 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
   it("🔴 F4 · Read abre los ficheros de /.openlen/docs sin la terminal, y el índice de /AGENTS.md los nombra", async (t) => {
     // Encendida por defecto desde N45: «sin la terminal» es el literal "0".
     const antes = process.env.OPENLEN_TERMINAL;
+    const skills = process.env.OPENLEN_SKILLS;
     process.env.OPENLEN_TERMINAL = "0";
+    // Con las skills apagadas, el reparto de siempre (spec local 2026-10-27-len-five-skills).
+    process.env.OPENLEN_SKILLS = "0";
     t.after(() => {
       if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
       else process.env.OPENLEN_TERMINAL = antes;
+      if (skills === undefined) delete process.env.OPENLEN_SKILLS;
+      else process.env.OPENLEN_SKILLS = skills;
     });
     const { deps } = makeDeps({ html: HOME });
     const s = makeSession();
@@ -470,6 +475,27 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     const retirado = await runAgentTool(s, deps, "Read", { file_path: "/.openlen/docs/api-d.md" });
     assert.equal(retirado.response.ok, false, "api-d.md se retiró con data-ol-stores");
     assert.ok(!manual.includes("api-d.md"), "el índice no nombra lo retirado");
+  });
+
+  it("🔴 the design guide and the libraries are skill files: Read opens them without the terminal", async (t) => {
+    const antes = process.env.OPENLEN_TERMINAL;
+    process.env.OPENLEN_TERMINAL = "0";
+    t.after(() => {
+      if (antes === undefined) delete process.env.OPENLEN_TERMINAL;
+      else process.env.OPENLEN_TERMINAL = antes;
+    });
+    const { deps } = makeDeps({ html: HOME });
+    const s = makeSession();
+    for (const [ruta, se] of [
+      ["/.openlen/skills/frontend-design/SKILL.md", /COLOR, SHAPE AND TYPE/],
+      ["/.openlen/skills/frontend-design/references/libraries.md", /libs\.openlen\.com/],
+      ["/.openlen/skills/convert-to-app/SKILL.md", /HOW A WEB APP IS BUILT HERE/],
+    ] as const) {
+      const out = await runAgentTool(s, deps, "Read", { file_path: ruta });
+      assert.equal(out.response.ok, true, ruta);
+      assert.match(texto(out), se, ruta);
+    }
+    assert.ok(!texto(await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" })).includes("MORE, IN /.openlen/docs"));
   });
 
   it("🔴 F4 · Grep y Glob no ven /.openlen/docs, y Edit y Write lo rechazan como al manual", async () => {
@@ -1096,6 +1122,8 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
   it("F4 · /.openlen/docs está en la terminal: se lista y se lee con cat, y escribir ahí falla", async () => {
     const { deps } = makeDeps({ html: HOME });
     const session = makeSession();
+    const skills = process.env.OPENLEN_SKILLS;
+    process.env.OPENLEN_SKILLS = "0";
     try {
       const ls = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "ls /.openlen/docs" }));
       assert.match(texto(ls), /^apps\.md\nguia-de-diseno\.md\nlibrerias\.md(?:\n|$)/);
@@ -1105,6 +1133,23 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       assert.equal(escribe.response.ok, false);
       // Como lo demás de /.openlen: el hilo contesta EROFS y no se guarda nada.
       assert.match(texto(escribe), /EROFS: read-only file system, '\/\.openlen\/docs\/librerias\.md'/);
+    } finally {
+      if (skills === undefined) delete process.env.OPENLEN_SKILLS;
+      else process.env.OPENLEN_SKILLS = skills;
+      await cerrarTerminalDeLaSesion(session);
+    }
+  });
+
+  it("the guide skills are in the terminal: listed and read with cat, and writing there fails", async () => {
+    const { deps } = makeDeps({ html: HOME });
+    const session = makeSession();
+    try {
+      const ls = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "ls /.openlen/skills/frontend-design" }));
+      assert.match(texto(ls), /^SKILL\.md\nreferences(?:\n|$)/);
+      const cat = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "grep -c var /.openlen/skills/frontend-design/SKILL.md" }));
+      assert.match(texto(cat), /^[1-9]/);
+      const escribe = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "echo x >> /.openlen/skills/frontend-design/SKILL.md" }));
+      assert.equal(escribe.response.ok, false);
     } finally {
       await cerrarTerminalDeLaSesion(session);
     }

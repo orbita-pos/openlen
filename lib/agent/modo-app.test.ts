@@ -1,7 +1,7 @@
 // @vitest-environment node
 // LEN EN UNA APP WEB (F3 de la spec local 2026-10-07-apps): lo que lee cuando el
 // proyecto es una app, y que lo de una página no se mueve por ello.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "./catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma, textoDeLaPlataforma } from "./manual-de-la-plataforma";
 import { GUIA_DE_LA_APP, HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP, promptDeLaApp } from "./modo-app";
@@ -177,12 +177,20 @@ describe("el manual de una app (/AGENTS.md)", () => {
 
   it("Read de /AGENTS.md y de la guía devuelve los de la app; la de librerías no existe en una app", () => {
     expect(textoDeLaPlataforma(RUTA_MANUAL, "len", APP)).toBe(buildManualDeLaPlataforma(process.env, "len", APP));
-    expect(textoDeLaPlataforma(RUTA_GUIA, "len", APP)).toBe(GUIA_DE_LA_APP);
-    expect(textoDeLaPlataforma(RUTA_LIBRERIAS, "len", APP)).toBeNull();
-    // Las skills (/.openlen/skills) no son del manual de la app: las anuncia su catálogo.
-    expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([RUTA_GUIA]);
-    // Y en una página, los de siempre.
-    expect(textoDeLaPlataforma(RUTA_LIBRERIAS)).not.toBeNull();
+    // Con las skills encendidas, la guía de la app es la skill frontend-design (spec local
+    // 2026-10-27-len-five-skills): /.openlen/docs no sirve nada.
+    expect(textoDeLaPlataforma("/.openlen/skills/frontend-design/SKILL.md", "len", APP)).toContain(GUIA_DE_LA_APP);
+    expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith("/.openlen/skills/"))).toEqual([]);
+    // Con ellas apagadas, como siempre.
+    vi.stubEnv("OPENLEN_SKILLS", "0");
+    try {
+      expect(textoDeLaPlataforma(RUTA_GUIA, "len", APP)).toBe(GUIA_DE_LA_APP);
+      expect(textoDeLaPlataforma(RUTA_LIBRERIAS, "len", APP)).toBeNull();
+      expect(Object.keys(documentosDeLaPlataforma(APP))).toEqual([RUTA_GUIA]);
+      expect(textoDeLaPlataforma(RUTA_LIBRERIAS)).not.toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
