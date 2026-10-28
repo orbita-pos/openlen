@@ -12,7 +12,9 @@
 // Python 3 because the box has it and it writes JSON without surprises. `OPENLEN_ROOT` and
 // `OPENLEN_BRIDGE_DIR` exist for the tests; in the box they are unset.
 
-import { MAX_FOLDER_FILE_BYTES } from "@/lib/agent/ficheros/folder";
+/** What comes back from the box as text today (spec local 2026-10-21-real-terminal-e2b, §5): 1 MB. The
+ *  folder takes more since 2026-10-28; the box's byte sync (plan files-cc-level, Task 5) lifts this. */
+export const BOX_TEXT_FILE_BYTES = 1024 * 1024;
 
 import { NEVER_SYNCED_ANYWHERE, SYSTEM_TOP_LEVEL } from "./paths";
 
@@ -29,7 +31,7 @@ export function manifestScript(): string {
 
 EXCLUDED = set(${JSON.stringify([...SYSTEM_TOP_LEVEL, ".openlen"])})
 ANYWHERE = set(${JSON.stringify(NEVER_SYNCED_ANYWHERE)})
-MAX_BYTES = ${MAX_FOLDER_FILE_BYTES}
+MAX_BYTES = ${BOX_TEXT_FILE_BYTES}
 ROOT = os.environ.get("OPENLEN_ROOT", "/")
 MEMORY = os.path.join(ROOT, "home", "user", ".len")
 out = {}

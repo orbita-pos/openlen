@@ -14,14 +14,8 @@ import {
 import { TOPE_DE_LINEA } from "./ficheros/read";
 import { artifactManuals } from "./artifact-manuals";
 import { GUIA_DE_LA_APP } from "./modo-app";
-import {
-  MAX_FOLDER_BYTES,
-  MAX_FOLDER_FILE_BYTES,
-  MAX_FOLDER_FILES,
-  MAX_TEST_FILE_BYTES,
-  RESERVED_ROOTS,
-  WEB_EXTENSIONS,
-} from "./ficheros/folder";
+import { MAX_TEST_FILE_BYTES, RESERVED_ROOTS } from "./ficheros/folder";
+import { MAX_FILE_BYTES, MAX_PROJECT_BYTES } from "@/lib/files/limits";
 import { clauseMarker } from "@/lib/ai/js-clause";
 
 // /AGENTS.md (paso 7 de 2.5): lo que es de la plataforma sale del prompt de Len
@@ -162,15 +156,15 @@ describe("el manual de la plataforma", () => {
   it("LA CARPETA (pieza 9 de 2.5): /AGENTS.md la explica con las cifras y las rutas de folder.ts, no con unas copiadas", () => {
     expect(manual).toContain("THE PROJECT'S FOLDER");
     expect(prompt).not.toContain("THE PROJECT'S FOLDER");
-    for (const ext of WEB_EXTENSIONS) expect(manual, ext).toContain(ext);
+    expect(manual).toContain("any file, hidden ones too");
     // Las raíces que el sitio publicado contesta con otra cosa; las de Len y su
     // terminal (`memoria`, `tmp`…) no son cosa del manual.
-    const delSitio = ["api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "ai", "openlen"];
+    const delSitio = ["api", "c", "assets", "uploads", "rest", "auth", "storage", "functions", "realtime", "ai", "email", "openlen"];
     expect(RESERVED_ROOTS).toEqual(expect.arrayContaining(delSitio));
     expect(manual).toContain(`except the reserved roots (${delSitio.map((r) => `/${r}`).join(", ")})`);
     expect(manual).not.toContain("/memoria,");
     expect(manual).toContain(
-      `Up to ${MAX_FOLDER_FILES} files and ${MAX_FOLDER_BYTES / 1024 / 1024} MB; ${MAX_FOLDER_FILE_BYTES / 1024 / 1024} MB per file (${MAX_TEST_FILE_BYTES / 1024} KB per test file).`,
+      `Up to ${MAX_FILE_BYTES / 1024 / 1024} MB per file and ${MAX_PROJECT_BYTES / 1024 / 1024 / 1024} GB for the whole project, pages and git history included (${MAX_TEST_FILE_BYTES / 1024} KB per test file); a full project answers ENOSPC, like a full disk.`,
     );
     // Lo que sus ojos no pueden comprobar lo dice, en vez de darlo por bueno.
     expect(manual).toContain("offline mode cannot be checked there");
