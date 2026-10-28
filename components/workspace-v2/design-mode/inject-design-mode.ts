@@ -217,6 +217,7 @@ const SCRIPT = `(function () {
     } else if (d.type === 'openlen:mention-highlight') {
       // THE CHAT'S «@» (spec local 2026-10-27): every copy of that source line
       // on this screen, outlined; the answer says how many (0 = not on screen).
+      if (e.source !== window.parent) return;
       if (d.target && d.target.type !== 'app') return;
       for (var m = 0; m < mentioned.length; m++) mentioned[m].removeAttribute('data-openlen-mention-hover');
       mentioned = [];

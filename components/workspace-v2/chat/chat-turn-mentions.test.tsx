@@ -15,7 +15,8 @@ import type { MentionRef } from "@/lib/mentions/types";
 
 const roots: Root[] = [];
 const posted: unknown[] = [];
-const off = registerMentionCanvas({ window: () => ({ postMessage: (m: unknown) => posted.push(m) }) as unknown as Window, page: () => null });
+vi.spyOn(window, "postMessage").mockImplementation(((m: unknown) => void posted.push(m)) as never);
+const off = registerMentionCanvas({ window: () => window, page: () => null });
 afterEach(() => {
   for (const r of roots.splice(0)) act(() => r.unmount());
   document.body.innerHTML = "";

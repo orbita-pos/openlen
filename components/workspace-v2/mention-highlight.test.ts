@@ -3,7 +3,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { elementAtEditPath } from "./edit-path";
-import { highlightMention, onMentionHighlighted } from "./mention-highlight";
+import { highlightMention, onMentionHighlighted, registerMentionCanvas } from "./mention-highlight";
 import { injectSectionSelect } from "./use-section-select";
 
 function injectedSource(): string {
@@ -27,7 +27,8 @@ afterEach(() => {
 });
 
 function send(data: unknown) {
-  window.dispatchEvent(new MessageEvent("message", { data }));
+  // From the workshop: in this test the canvas IS the page, so its parent is itself.
+  window.dispatchEvent(new MessageEvent("message", { data, source: window }));
 }
 
 describe("elementAtEditPath", () => {
@@ -104,13 +105,26 @@ describe("the parent-side helpers", () => {
     expect(() => highlightMention(null, "k", null)).not.toThrow();
   });
 
-  it("onMentionHighlighted hands over only the canvas's answers, until unsubscribed", () => {
+  it("onMentionHighlighted hands over only the registered canvas's answers, until unsubscribed", () => {
+    const unregister = registerMentionCanvas({ window: () => window, page: () => null });
     const seen: [string, number][] = [];
     const off = onMentionHighlighted((k, c) => seen.push([k, c]));
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: "a", count: 2 } }));
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:other", key: "b", count: 1 } }));
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: "a", count: 2 }, source: window }));
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:other", key: "b", count: 1 }, source: window }));
+    // Another window (or none) cannot speak for the canvas.
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: "x", count: 9 } }));
     off();
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: "c", count: 1 } }));
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: "c", count: 1 }, source: window }));
+    unregister();
     expect(seen).toEqual([["a", 2]]);
+  });
+});
+
+describe("the page canvas listens to its parent only", () => {
+  it("ignores a highlight request that does not come from the workshop", () => {
+    document.body.innerHTML = "<p>uno</p>";
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlight", key: "k9", target: { type: "page", page: null, path: "p:nth-of-type(1)", tag: "p", text: "uno" } } }));
+    expect(document.querySelector("[data-openlen-mention-hover]")).toBeNull();
+    expect(replies).toEqual([]);
   });
 });

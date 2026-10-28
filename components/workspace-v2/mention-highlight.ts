@@ -44,6 +44,9 @@ export function highlightOnCanvas(key: string, target: PageTarget | AppTarget | 
 
 export function onMentionHighlighted(handler: (key: string, count: number) => void): () => void {
   const listener = (e: MessageEvent) => {
+    // Only the registered canvas speaks for the canvas.
+    const from = canvas?.window();
+    if (!from || e.source !== from) return;
     const d = e.data as { type?: unknown; key?: unknown; count?: unknown } | null;
     if (d && d.type === "openlen:mention-highlighted" && typeof d.key === "string" && typeof d.count === "number") {
       handler(d.key, d.count);

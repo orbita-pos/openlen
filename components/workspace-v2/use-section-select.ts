@@ -143,6 +143,8 @@ ${CORE_SRC}
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || d.type !== 'openlen:mention-highlight') return;
+    // Only the workshop that holds this canvas may ask it to outline something.
+    if (e.source !== window.parent) return;
     if (d.target && d.target.type !== 'page') return;
     if (mentioned) mentioned.removeAttribute('data-openlen-mention-hover');
     mentioned = null;
