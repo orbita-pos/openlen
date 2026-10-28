@@ -2,9 +2,11 @@
 // CommonMark blocks plus GFM tables, task lists, strikethrough and autolinks — with no raw HTML, links
 // only to absolute http(s) and mailto, and no remote images loaded. Until now a hand formatter painted
 // bold, italics, code and links, and lists (44 % of Len's turns in October) came out as raw text.
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
+
+vi.mock("next-intl", () => ({ useTranslations: () => (k: string) => k }));
 
 import { TextoDeLen } from "./texto-de-len";
 
@@ -152,5 +154,31 @@ describe("what the old formatter guaranteed, still true", () => {
       "Voy a ver qué hay ya en el proyecto antes de construir.",
       "El proyecto está vacío.",
     ]);
+  });
+});
+
+// Photos `image_search` copied to our storage (spec local 2026-10-27-chat-drop-and-images, Part B).
+describe("Len's Commons photos", () => {
+  const SHA = "0123456789abcdef0123456789abcdef01234567";
+  const ours = (i: number) => `/uploads/commons/${SHA.slice(0, 39)}${i}-960.jpg`;
+
+  it("an image of our Commons copies renders as a photo; any other stays a link", () => {
+    const el = md(`Mira:
+
+![Axolotl](${ours(1)})
+
+Y ![rastreador](https://evil.example/commons/${SHA}-960.jpg)`);
+    expect(el.querySelector(`img[src="${ours(1)}"]`)).not.toBeNull();
+    expect(el.querySelector('img[src^="https://evil"]')).toBeNull();
+    expect(el.querySelector<HTMLAnchorElement>('a[href^="https://evil"]')?.textContent).toBe("rastreador");
+  });
+
+  it("images in a row are one gallery", () => {
+    const el = md(`![a](${ours(1)})
+![b](${ours(2)})
+![c](${ours(3)})`);
+    const galleries = el.querySelectorAll("[data-photo-gallery]");
+    expect(galleries).toHaveLength(1);
+    expect(galleries[0]!.querySelectorAll("img")).toHaveLength(3);
   });
 });

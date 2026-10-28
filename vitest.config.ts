@@ -387,6 +387,7 @@ export default defineConfig({
       "lib/agent/pdf-pages.browser.test.ts",
       "lib/agent/attachment-bytes.test.ts",
       "app/api/upload/route.test.ts",
+      "app/api/commons-credit/route.test.ts",
       "lib/workspace-v2/upload-attachment.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
