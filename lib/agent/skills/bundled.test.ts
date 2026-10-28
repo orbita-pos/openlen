@@ -29,6 +29,7 @@ describe("bundled skills", () => {
       "office-xlsx",
       "pdf",
       "skill-creator",
+      "verify",
     ]);
   });
 
@@ -77,6 +78,7 @@ describe("bundled skills", () => {
         "fill_pdf_form_with_annotations", "extract_form_structure", "check_fillable_fields", "PDF Processing Guide",
         "researcher.md", "report-writer.md", "Coordinating Deep Research", "research_notes/", "Executing Research",
         "validate_palette.js", "design-system-agnostic", "read by people and executed by you",
+        "Verification is runtime observation", "verifier-", "run-skill-generator",
       ];
       for (const ctx of [{ app: null, env: { OPENLEN_ARTIFACTS: "1" } }, { app: null, env: {} }] as const) {
         for (const [path, text] of Object.entries(bundledSkillFiles(ctx))) {
@@ -113,6 +115,24 @@ describe("bundled skills", () => {
       const where = files[`${BUNDLED_SKILLS_DIR}/dataviz/references/where.md`]!;
       for (const must of ["Chart.js", "recharts"]) expect(where, must).toContain(must);
       expect(files[`${BUNDLED_SKILLS_DIR}/dataviz/scripts/validate_palette.mjs`]).toContain("export function validatePalette");
+    });
+  });
+
+  // VERIFY (§4.4): Claude Code's verify — drive the running page through its interface — with Len's
+  // tools, the destructive rule, and its three verdicts.
+  describe("verify", () => {
+    const text = () => bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/verify/SKILL.md`]!;
+
+    it("verify drives the page with Len's tools", () => {
+      for (const must of ["use_page", "screenshot", "view_page"]) expect(text(), must).toContain(must);
+    });
+
+    it("verify never does the destructive thing for real", () => {
+      for (const must of ["never publish", "test mode", "/tests"]) expect(text(), must).toContain(must);
+    });
+
+    it("verify answers with one of three verdicts", () => {
+      for (const must of ["works", "fails", "couldn't verify"]) expect(text(), must).toContain(must);
     });
   });
 
