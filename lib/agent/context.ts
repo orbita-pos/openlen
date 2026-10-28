@@ -238,6 +238,8 @@ export function seleccionesBlock(sels: readonly SeleccionDelDueno[]): string {
 export interface MentionedFile {
   readonly ruta: string;
   readonly contenido: string;
+  /** The file is not there: what Read says about it. */
+  readonly missing?: string;
 }
 
 /** The lines a mentioned file brings, as Read's default does. */
@@ -251,6 +253,7 @@ export function mentionedFilesBlock(files: readonly MentionedFile[]): string {
   let budget = TOPE_DE_TOKENS;
   return files
     .map((f) => {
+      if (f.missing) return `<system-reminder>\nThe user mentioned ${f.ruta}, but: ${f.missing}\n</system-reminder>\n\n`;
       const lines = normalizarFinales(f.contenido).split("\n");
       const shown = lines.slice(0, MENTIONED_FILE_LINES).map(cortarLinea).join("\n");
       const tokens = estimarTokens(shown);

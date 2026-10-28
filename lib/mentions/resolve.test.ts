@@ -122,7 +122,7 @@ describe("resolveMentions", () => {
     expect(gone.selecciones).toEqual([{ ruta: "/src/App.tsx", pista: "@Lista · Pedido uno" }]);
   });
 
-  it("brings a mentioned file and drops one that does not exist", async () => {
+  it("brings a mentioned file and says, as Read would, that another does not exist", async () => {
     const r = await resolveMentions(
       [
         { type: "file", label: "@/LEN.md", ruta: "/LEN.md" },
@@ -130,7 +130,10 @@ describe("resolveMentions", () => {
       ],
       { pageHtml, files: async () => ({ "/LEN.md": "Tono cercano." }) },
     );
-    expect(r.ficheros).toEqual([{ ruta: "/LEN.md", contenido: "Tono cercano." }]);
+    expect(r.ficheros).toEqual([
+      { ruta: "/LEN.md", contenido: "Tono cercano." },
+      { ruta: "/nada.md", contenido: "", missing: "There is no file at /nada.md. Paths start at the site root, /." },
+    ]);
     expect(r.selecciones).toEqual([]);
   });
 });
