@@ -75,6 +75,12 @@ describe("buildFunctionDeclarations", () => {
     expect(buildFunctionDeclarations({ OPENLEN_SHOPIFY: "0" }).map((d) => d.name)).not.toContain("connect_shopify_store");
   });
 
+  it("IMAGE SEARCH: image_search by default, after web_fetch; not with OPENLEN_IMAGE_SEARCH=0", () => {
+    const names = buildFunctionDeclarations({}).map((d) => d.name);
+    expect(names[names.indexOf("web_fetch") + 1]).toBe("image_search");
+    expect(buildFunctionDeclarations({ OPENLEN_IMAGE_SEARCH: "0" }).map((d) => d.name)).not.toContain("image_search");
+  });
+
   it("EDGE FUNCTIONS: sin motor de funciones (functionSecrets: false), request_secrets no se declara", () => {
     expect(buildFunctionDeclarations(undefined, { functionSecrets: false }).some((d) => d.name === "request_secrets")).toBe(false);
     expect(buildFunctionDeclarations().some((d) => d.name === "request_secrets")).toBe(true);
@@ -98,6 +104,8 @@ describe("buildFunctionDeclarations", () => {
       "publish",
       "web_search",
       "web_fetch",
+      // Photos for the chat, from Wikimedia Commons (spec local 2026-10-27-chat-drop-and-images).
+      "image_search",
       // ⚰️ TodoWrite, retirada en F4 (plans/len-agente-2026). La lista de
       // progreso del usuario es la de DeepSeek (spec local 2026-10-15).
       "todo_write",

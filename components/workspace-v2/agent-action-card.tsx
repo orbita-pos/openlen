@@ -186,6 +186,7 @@ export const KNOWN_TOOLS = new Set([
   // F2: buscar y leer en internet, como DeepSeek.
   "web_search",
   "web_fetch",
+  "image_search",
   "declarar_tareas",
   // Se queda por lo guardado: pasó a llamarse ask_user_question (pieza 3).
   "preguntar",
