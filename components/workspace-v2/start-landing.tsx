@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
@@ -31,8 +31,12 @@ import { useMandoDesplegable } from "./use-mando-desplegable";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
-import { MAX_FILES_PER_MESSAGE, kindFromName } from "@/lib/projects/chat-files";
+import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
 import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
+import { classifyDroppedFiles } from "@/lib/workspace-v2/classify-dropped-files";
+import { useFileDrop } from "./chat/use-file-drop";
+import { DropOverlay } from "./chat/drop-overlay";
+import { useToast } from "./toast";
 import { registrarUso } from "@/lib/uso/cliente";
 import { TarjetasNaceComo, type NaceComo } from "./tarjetas-nace-como";
 import { CajaConMenciones } from "./hilos-del-codigo";
@@ -74,6 +78,11 @@ export function StartLanding({
   const tw = useTranslations("wsChrome");
   const tp = useTranslations("panelsA");
   const tf = useTranslations("families");
+  const tch = useTranslations("panelsChat");
+  // DROP ANYWHERE ON THE START SCREEN (spec local 2026-10-27-chat-drop-and-images): the composer
+  // below owns the photos and files, and lends its way in here.
+  const addFilesRef = useRef<((files: File[]) => void) | null>(null);
+  const drop = useFileDrop({ enabled: !generating, onFiles: (files) => addFilesRef.current?.(files) });
 
   const { templates, isLoading, error } = useTemplates();
   const [familyFilter, setFamilyFilter] = useState<TemplateFamily | "all">(
@@ -123,7 +132,12 @@ export function StartLanding({
   }, [templates, familyFilter, query]);
 
   return (
-    <section className="flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app">
+    <section className="relative flex-1 min-w-0 min-h-0 overflow-y-auto nice-scroll bg-app" {...drop.handlers}>
+      {drop.dragging && (
+        <div className="nc">
+          <DropOverlay label={tch("composer.dropHere")} />
+        </div>
+      )}
       <div className="mx-auto max-w-5xl px-6 py-10 sm:py-12">
         {/* Hero copy */}
         <div className="text-center mb-6">
@@ -146,6 +160,7 @@ export function StartLanding({
             generating={generating}
             effort={effort}
             onEffortChange={onEffortChange}
+            addFilesRef={addFilesRef}
             {...(naceComo === "app" ? { placeholder: tw("start.kind.appPlaceholder") } : {})}
           />
           {/* Pegar HTML y la galería son de PÁGINAS: con App elegida no hay
@@ -317,6 +332,7 @@ export function HeroComposer({
   effort,
   onEffortChange,
   placeholder,
+  addFilesRef,
 }: {
   state: BriefFormState;
   onGenerate: () => void;
@@ -325,6 +341,8 @@ export function HeroComposer({
   onEffortChange: (effort: PageEffort) => void;
   /** Lo que se lee en la caja vacía; sin él, el de una página. */
   placeholder?: string;
+  /** Where the composer lends its way in to a drop zone around it (the start screen). */
+  addFilesRef?: MutableRefObject<((files: File[]) => void) | null>;
 }) {
   const t = useTranslations("panelsA");
   const tm = useTranslations("marketing");
@@ -382,7 +400,7 @@ export function HeroComposer({
 
   // Hasta `MAX_REFERENCIAS`, igual que en el heroe y por los mismos motivos —
   // ver el comentario largo del estado en `hero-prompt-input.tsx`.
-  const elegirFotos = async (files: FileList | null) => {
+  const elegirFotos = async (files: FileList | readonly File[] | null) => {
     if (!files || files.length === 0) return;
     const hueco = MAX_REFERENCIAS - state.fotos.length;
     if (hueco <= 0) return;
@@ -409,6 +427,24 @@ export function HeroComposer({
   };
 
   const canGenerate = briefLimit.isValid && !generating;
+
+  // DROP OR PASTE (spec local 2026-10-27-chat-drop-and-images): photos to the photos, files (and
+  // videos) to the files, uploaded with the first message as before; what doesn't go is said.
+  const toast = useToast();
+  const sumarFicheros = (files: readonly File[]) => {
+    if (generating || files.length === 0) return;
+    const c = classifyDroppedFiles(files, {
+      photos: Math.max(0, MAX_REFERENCIAS - state.fotos.length),
+      files: state.setPdfs ? Math.max(0, MAX_FILES_PER_MESSAGE - pdfs.length) : 0,
+    });
+    const nombres = (reason: string) => c.rejected.filter((r) => r.reason === reason).map((r) => r.name);
+    if (nombres("not_supported").length) toast.error(tc("composer.dropNotSupported", { names: nombres("not_supported").join(", ") }));
+    if (nombres("too_big").length) toast.error(tc("composer.dropTooBig", { names: nombres("too_big").join(", ") }));
+    if (nombres("limit").length) toast.error(tc("composer.dropLimit", { count: nombres("limit").length }));
+    if (c.files.length > 0) state.setPdfs?.([...pdfs, ...c.files].slice(0, MAX_FILES_PER_MESSAGE));
+    if (c.photos.length > 0) void elegirFotos(c.photos);
+  };
+  if (addFilesRef) addFilesRef.current = sumarFicheros;
 
   // Enviar es UN evento aunque haya dos caminos, Enter y el botón. Lleva sólo
   // la forma del encargo —cuántas imágenes—, nunca el brief.
@@ -472,6 +508,12 @@ export function HeroComposer({
               briefLimit.onChange(e);
             }}
             onPaste={(e) => {
+              // A screenshot or a copied file is attached; the text, if any, still pastes.
+              const files = Array.from(e.clipboardData?.files ?? []);
+              if (files.length > 0) {
+                sumarFicheros(files);
+                if (!e.clipboardData.getData("text/plain")) return void e.preventDefault();
+              }
               marcarEscrito();
               briefLimit.onPaste(e);
             }}
@@ -537,9 +579,9 @@ export function HeroComposer({
               className="sr-only"
               tabIndex={-1}
               onChange={(e) => {
-                const picked = [...(e.target.files ?? [])].filter((f) => f.type === "application/pdf" || kindFromName(f.name) !== null);
+                const picked = [...(e.target.files ?? [])];
                 e.target.value = "";
-                if (picked.length > 0) state.setPdfs!([...pdfs, ...picked].slice(0, MAX_FILES_PER_MESSAGE));
+                sumarFicheros(picked);
               }}
             />
           )}

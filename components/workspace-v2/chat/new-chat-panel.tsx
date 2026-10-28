@@ -27,6 +27,8 @@ import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
 import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
 import { useChatAttachments, type ChatAttachmentMessages } from "./use-chat-attachments";
+import { useFileDrop } from "./use-file-drop";
+import { DropOverlay } from "./drop-overlay";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -224,6 +226,7 @@ function AgentChatView({
     notify: toast.error,
     messages: attachMessages,
   });
+  const drop = useFileDrop({ enabled: !soloLectura, onFiles: attach.addFiles });
   // EDGE FUNCTIONS (spec local 2026-10-11, Parte 4): una clave en el mensaje se
   // guarda como secreto en vez de mandársela a Len. Se pregunta UNA vez si el
   // servidor guarda secretos (sin funciones, el compositor manda como siempre).
@@ -415,7 +418,8 @@ function AgentChatView({
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
   const body = (
-    <div className={`nc flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`}>
+    <div className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`} {...drop.handlers}>
+      {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
       <ChatHeader
         layout={layout}
         onLayout={setChatLayout}
