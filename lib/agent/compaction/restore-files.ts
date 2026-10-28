@@ -4,6 +4,8 @@
 // most, `klr` = 50,000 in all; a file that is too large comes back as its
 // `compact_file_reference` note). DeepSeek's harness has no such piece, so the
 // texts are Claude Code's, verbatim. Pure.
+
+// Cache effect: only right after a summary, which already rebuilds the prefix; the message goes into the compaction mark and comes back from it byte for byte on later turns.
 import type { Message } from "@/lib/ai-gateway";
 
 export const POST_COMPACT_MAX_FILES = 5;

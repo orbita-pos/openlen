@@ -13,6 +13,8 @@
  *
  * Pure.
  */
+
+// Cache effect: the catalog is saved in the transcript and replayed as sent; a change is a NEW message further down (by digest), never an edit of the one above, so the prefix before it stays cached. The personal reminder rides the turn's context, at the end.
 import { createHash } from "node:crypto";
 
 import type { ResolvedSkill } from "./registry";
