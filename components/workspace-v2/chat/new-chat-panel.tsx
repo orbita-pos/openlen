@@ -27,6 +27,7 @@ import { ReplaceAssetModal } from "../replace-asset-modal";
 import { useToast } from "../toast";
 import { ATTACHMENT_ACCEPT, uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
 import { MAX_FILES_PER_MESSAGE } from "@/lib/projects/chat-files";
+import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import type { EtiquetasDeRespuesta } from "../agent-reply-card";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { ChatComposer } from "./chat-composer";
@@ -365,7 +366,7 @@ function AgentChatView({
           menciones: destino.personas.map((p) => p.userId),
           idioma: document.documentElement.lang || undefined,
           // La foto adjunta viaja con el mensaje, como un adjunto en Slack.
-          ...(chat.attachedImage ? { fotos: [chat.attachedImage] } : {}),
+          ...(chat.attachedImages.length > 0 ? { fotos: chat.attachedImages } : {}),
         }),
       }).catch(() => null);
       if (!r?.ok) {
@@ -515,6 +516,8 @@ function AgentChatView({
             attachedImage={chat.attachedImage}
             onAttachImage={() => chat.setImageModalOpen(true)}
             onClearAttachedImage={() => chat.setAttachedImage(null)}
+            attachedImages={chat.attachedImages}
+            onRemoveImage={(url) => chat.setAttachedImages((prev) => prev.filter((i) => i.url !== url))}
             attachedFiles={chat.attachedFiles}
             {...(soloLectura ? {} : { onAttachPdf: () => pdfInput.current?.click() })}
             onRemoveFile={(url) => chat.setAttachedFiles(chat.attachedFiles.filter((f) => f.url !== url))}
@@ -585,7 +588,11 @@ function AgentChatView({
         projectId={projectId}
         onClose={() => chat.setImageModalOpen(false)}
         onPick={(payload) => {
-          if (payload.url) chat.setAttachedImage({ url: payload.url, alt: payload.alt });
+          // One more photo for the message, up to the limit.
+          if (payload.url) {
+            const img = { url: payload.url, ...(payload.alt ? { alt: payload.alt } : {}) };
+            chat.setAttachedImages((prev) => [...prev.filter((i) => i.url !== img.url), img].slice(0, MAX_PHOTOS_PER_MESSAGE));
+          }
           chat.setImageModalOpen(false);
         }}
       />
