@@ -21,6 +21,11 @@ export interface Deslizar {
   recorrido?: (el: HTMLElement) => number;
   /** Una zona de agarre deja que el resto de la hoja se desplace normalmente. */
   desde?: string;
+  /** Salidas de navegación breves; las hojas conservan su ritmo. */
+  rapido?: boolean;
+  activo?: boolean;
+  /** Cancela un arrastre al navegar a otro paso sin remontar su contenido. */
+  clave?: string;
 }
 
 const ARRANQUE = 8; // px del teléfono: menos que esto es un toque, no un arrastre
@@ -41,21 +46,28 @@ export function useDeslizar(op: Deslizar) {
   return useCallback((el: HTMLElement | null) => {
     if (!el) return;
     // Vertical: Chrome no se queda nada (ni recargar ni desplazar). Hacia la
-    // derecha: el hilo del chat sí se desplaza en vertical, así que sólo se
-    // le quita lo horizontal.
-    el.style.touchAction = vertical(ultimo.current.hacia) && !ultimo.current.desde ? "none" : "pan-y";
+    // derecha: permite scroll nativo (incluidos carruseles); touchmove sólo
+    // lo cancela cuando ya ganó el gesto de navegación.
+    el.style.touchAction = vertical(ultimo.current.hacia) && !ultimo.current.desde ? "none" : vertical(ultimo.current.hacia) ? "pan-y" : "auto";
     let inicio: { id: number; x: number; y: number } | null = null;
     let arrastrando = false;
+    let finalizando = false;
     let escala = 1;
     let crudo = 0; // px del lienzo hacia donde cierra, sin resistencia
     let tope = 0; // px del lienzo hasta donde termina el gesto (se mide al empezar a arrastrar)
     let muestras: { t: number; d: number }[] = [];
     let vivo = true;
     const tiempos = new Set<ReturnType<typeof setTimeout>>();
+    let vuelta: ReturnType<typeof setTimeout> | undefined;
     const limpiezas = new Set<() => void>();
     const luego = (hacer: () => void, demora: number) => {
       const id = setTimeout(() => { tiempos.delete(id); if (vivo) hacer(); }, demora);
       tiempos.add(id);
+      return id;
+    };
+    const cancelarVuelta = () => {
+      if (vuelta === undefined) return;
+      clearTimeout(vuelta); tiempos.delete(vuelta); vuelta = undefined;
     };
 
     const recorridoDe = (x: HTMLElement) => {
@@ -86,30 +98,34 @@ export function useDeslizar(op: Deslizar) {
       luego(() => { limpiar(); limpiezas.delete(limpiar); }, 0);
     };
     const volver = () => {
-      el.style.transition = movimientoReducido() ? "none" : VUELTA;
+      cancelarVuelta();
+      el.style.transition = movimientoReducido() ? "none" : ultimo.current.rapido ? "transform .18s cubic-bezier(.2,.85,.25,1)" : VUELTA;
       el.style.transform = "";
-      luego(() => {
+      vuelta = luego(() => {
+        vuelta = undefined;
         if (arrastrando) return;
         el.style.transition = "";
         el.style.willChange = "";
-      }, 340);
+      }, ultimo.current.rapido ? 200 : 340);
     };
     // Al terminar: React pinta el nuevo estado YA (flushSync) y la capa queda
     // donde el dedo la dejó, sin salto.
     const completar = (d: number) => {
-      const { hacia, alSoltar } = ultimo.current;
+      const { hacia, alSoltar, rapido } = ultimo.current;
       if (movimientoReducido()) {
         el.style.transition = "none"; el.style.transform = ""; el.style.willChange = "";
         flushSync(alSoltar);
         return;
       }
       if (hacia !== "arriba") {
-        el.style.transition = SALIDA;
+        finalizando = true;
+        el.style.transition = rapido ? "transform .16s cubic-bezier(.4,0,1,1)" : SALIDA;
         poner(tope);
         let hecho = false;
         const fin = (e?: TransitionEvent) => {
           if (hecho || (e && (e.target !== el || e.propertyName !== "transform"))) return;
           hecho = true;
+          finalizando = false;
           limpiarFin();
           flushSync(() => ultimo.current.alSoltar());
           el.style.transition = "none";
@@ -121,7 +137,7 @@ export function useDeslizar(op: Deslizar) {
         const limpiarFin = () => { el.removeEventListener("transitionend", fin); limpiezas.delete(limpiarFin); };
         limpiezas.add(limpiarFin);
         el.addEventListener("transitionend", fin);
-        luego(fin, 280);
+        luego(fin, rapido ? 210 : 280);
       } else {
         flushSync(alSoltar);
         // Ya abierta, la capa creció hacia arriba: se coloca donde estaba y sube.
@@ -138,10 +154,16 @@ export function useDeslizar(op: Deslizar) {
     };
 
     const baja = (e: PointerEvent) => {
-      if (inicio || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (ultimo.current.activo === false || finalizando || inicio || (e.pointerType === "mouse" && e.button !== 0)) return;
       if (ultimo.current.desde && !(e.target as Element | null)?.closest?.(ultimo.current.desde!)) return;
       // Lo que tiene su propio gesto (el micrófono, el campo de texto) no arrastra la capa.
-      if ((e.target as Element | null)?.closest?.("[data-no-deslizar]")) return;
+      const objetivo = e.target as Element | null;
+      if (objetivo?.closest?.('[data-no-deslizar],input,textarea,select,[contenteditable]:not([contenteditable="false"]),iframe')) return;
+      if (!vertical(ultimo.current.hacia)) {
+        for (let nodo = objetivo; nodo && nodo !== el; nodo = nodo.parentElement) {
+          if (nodo.scrollWidth > nodo.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(nodo).overflowX)) return;
+        }
+      }
       inicio = { id: e.pointerId, x: e.clientX, y: e.clientY };
       arrastrando = false;
       crudo = 0;
@@ -158,6 +180,7 @@ export function useDeslizar(op: Deslizar) {
           return;
         }
         if (Math.abs(d1) < ARRANQUE) return;
+        cancelarVuelta();
         arrastrando = true;
         escala = el.getBoundingClientRect().width / el.offsetWidth || 1;
         tope = recorridoDe(el);
@@ -192,17 +215,28 @@ export function useDeslizar(op: Deslizar) {
       else volver();
     };
 
+    // touch-action:auto permite carruseles dentro de la pantalla. Sólo se
+    // cancela el desplazamiento nativo cuando ya ganó el gesto horizontal.
+    const tactil = (e: TouchEvent) => {
+      if (arrastrando && !vertical(ultimo.current.hacia) && e.cancelable) e.preventDefault();
+    };
+    el.addEventListener("touchmove", tactil, { passive: false });
     el.addEventListener("pointerdown", baja);
     el.addEventListener("pointermove", mueve);
     el.addEventListener("pointerup", suelta);
     el.addEventListener("pointercancel", suelta);
     return () => {
       vivo = false;
+      el.style.transform = ""; el.style.transition = ""; el.style.willChange = ""; el.style.touchAction = "";
       tiempos.forEach(clearTimeout); limpiezas.forEach(limpiar => limpiar());
+      el.removeEventListener("touchmove", tactil);
       el.removeEventListener("pointerdown", baja);
       el.removeEventListener("pointermove", mueve);
       el.removeEventListener("pointerup", suelta);
       el.removeEventListener("pointercancel", suelta);
     };
-  }, []);
+  // Cambiar de paso/actividad reinstala el ref y cancela sus gestos pendientes.
+  // Los handlers leen ultimo para no reinstalarlo al cambiar sólo el callback.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [op.clave, op.activo]);
 }

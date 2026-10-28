@@ -55,7 +55,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
   useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
   const vistos = useRef(chat.elementos.length);
-  const deslizar = useDeslizar({ hacia: "derecha", alSoltar: onCerrar });
+  const deslizar = useDeslizar({ hacia: "derecha", rapido: true, activo: abierto, clave: projectId, alSoltar: onCerrar });
   useAtras(abierto, onCerrar);
 
   const limite = useRef<() => void>(() => {});
