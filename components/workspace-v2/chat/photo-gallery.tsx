@@ -128,6 +128,30 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: readonly Galler
   useEffect(() => closeRef.current?.focus(), []);
   const prev = index > 0 ? () => onIndex(index - 1) : null;
   const next = index < photos.length - 1 ? () => onIndex(index + 1) : null;
+  // On the document, not the dialog: a disabled arrow or a click on the photo drops focus to
+  // <body>, and Esc must still close. Tab stays inside the dialog.
+  const keys = useRef({ prev, next, onClose });
+  keys.current = { prev, next, onClose };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = keys.current;
+      if (e.key === "Escape") k.onClose();
+      else if (e.key === "ArrowLeft") k.prev?.();
+      else if (e.key === "ArrowRight") k.next?.();
+      else if (e.key === "Tab") {
+        const dialog = closeRef.current?.closest('[role="dialog"]');
+        const focusable = dialog ? [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")] : [];
+        if (focusable.length === 0) return;
+        const i = focusable.indexOf(document.activeElement as HTMLElement);
+        const to = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : i === focusable.length - 1 ? 0 : i + 1;
+        focusable[to]!.focus();
+      } else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, []);
   const link = "underline-offset-2 hover:underline";
 
   return createPortal(
@@ -135,14 +159,6 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: readonly Galler
       role="dialog"
       aria-modal="true"
       aria-label={credit?.title ?? photo.alt}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-        else if (e.key === "ArrowLeft") prev?.();
-        else if (e.key === "ArrowRight") next?.();
-        else return;
-        e.preventDefault();
-        e.stopPropagation();
-      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/85 p-4 text-white backdrop-blur-sm"
     >

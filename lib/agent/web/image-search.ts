@@ -111,7 +111,13 @@ export async function toolImageSearch(session: AgentSession, deps: AgentDeps, ar
       return fail(`Wikimedia Commons didn't answer (${why}). Try again later, or go on without photos.`);
     }
     const found = photosFromCommons(body).slice(0, MAX_PHOTOS);
-    const kept = (await Promise.all(found.map((p) => keep(p, commons, control.signal)))).filter((k): k is Kept => k !== null);
+    // The same 15 s bound the downloads and the copies (storage ignores the signal).
+    const outOfTime = new Promise<null>((resolve) => control.signal.addEventListener("abort", () => resolve(null), { once: true }));
+    const all = await Promise.race([Promise.all(found.map((p) => keep(p, commons, control.signal))), outOfTime]);
+    if (all === null || control.signal.aborted) {
+      return fail(`Wikimedia Commons didn't answer (no answer in ${TIMEOUT_MS / 1000} s). Try again later, or go on without photos.`);
+    }
+    const kept = all.filter((k): k is Kept => k !== null);
     const action = { tool: IMAGE_SEARCH, ok: true, summary: query.slice(0, 60) };
     if (kept.length === 0) {
       return {

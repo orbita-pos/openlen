@@ -104,4 +104,20 @@ describe("image_search", () => {
     const out = await toolImageSearch(session(), {} as AgentDeps, { query: "axolotl" });
     expect(out.response.ok).toBe(false);
   });
+
+  // Review of the branch: the 15 s also bound the copies, and running out isn't "no photos".
+  it("a storage that never answers: an error at 15 s, not a hang nor «no photos»", async () => {
+    vi.useFakeTimers();
+    try {
+      const { deps } = fakeCommons({ store: vi.fn(() => new Promise<{ url: string }>(() => {})) });
+      const pending = toolImageSearch(session(), deps, { query: "axolotl" });
+      await vi.advanceTimersByTimeAsync(15_000);
+      const out = await pending;
+      expect(out.response.ok).toBe(false);
+      expect(text(out)).toMatch(/^Error: Wikimedia Commons didn't answer/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
