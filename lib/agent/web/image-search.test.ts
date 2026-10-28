@@ -119,5 +119,40 @@ describe("image_search", () => {
       vi.useRealTimers();
     }
   });
+
+  // Real turn, 28/10: Commons answered 503 («come back in ~30 s») to one search in two.
+  it("Wikimedia busy once (503): tries again after a moment, within the 15 s", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const { deps, commons } = fakeCommons({ search: vi.fn(async () => (++calls === 1 ? Promise.reject(new Error("HTTP 503")) : axolotl)) });
+      const pending = toolImageSearch(session(), deps, { query: "axolotl" });
+      await vi.advanceTimersByTimeAsync(2_000);
+      const out = await pending;
+      expect(commons.search).toHaveBeenCalledTimes(2);
+      expect(out.response.ok).toBe(true);
+      expect(out.images).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a 404 or a broken answer is not retried", async () => {
+    const { deps, commons } = fakeCommons({ search: vi.fn(async () => Promise.reject(new Error("HTTP 404"))) });
+    expect((await toolImageSearch(session(), deps, { query: "axolotl" })).response.ok).toBe(false);
+    expect(commons.search).toHaveBeenCalledTimes(1);
+  });
+
+  // Real turn, 28/10: Len wrote each photo with a credit caption, so the chat showed five loose
+  // photos instead of a gallery. The chat shows the credit itself; the result says so and hands
+  // him the gallery ready to use.
+  it("the result ends with the photos ready for the reply, one after another, with no captions", async () => {
+    const { deps } = fakeCommons();
+    const t = text(await toolImageSearch(session(), deps, { query: "axolotl" }));
+    const k1 = `commons/${sha1("File:Ambystoma mexicanum 1.jpg")}-960`;
+    expect(t).toContain(`![Ambystoma mexicanum 1](https://uploads.openlen.com/${k1}.jpg)
+![Axolotl en el acuario](`);
+    expect(t).toMatch(/the chat shows each photo's credit itself/);
+  });
 });
 
