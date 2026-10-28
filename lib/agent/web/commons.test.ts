@@ -14,6 +14,7 @@ describe("photosFromCommons", () => {
   it("gives each photo its credit as plain text, the thumbnail without tracking, and the Commons page", () => {
     const [p] = photosFromCommons(axolotl);
     expect(p).toEqual({
+      fileTitle: "File:Ambystoma mexicanum 1.jpg",
       title: "Ambystoma mexicanum 1",
       thumbUrl: "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Ambystoma_mexicanum_1.jpg/960px-Ambystoma_mexicanum_1.jpg",
       width: 960,
