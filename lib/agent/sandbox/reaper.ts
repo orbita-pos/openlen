@@ -59,7 +59,7 @@ export async function reapSandboxes(o: {
   let failed = 0;
   for (const { projectId, sandboxId, pausedAt } of await store.idleBefore(cutoff)) {
     // Held like a turn holds it, so no turn resumes the box while it is being killed.
-    const reaperId = `reaper-${randomUUID()}`;
+    const reaperId = `${rows.REAPER_HOLD_PREFIX}${randomUUID()}`;
     if (!(await store.hold(projectId, reaperId))) continue;
     // A turn that used it between the list and the hold paused it again: a newer pausedAt.
     const now = await store.get(projectId);

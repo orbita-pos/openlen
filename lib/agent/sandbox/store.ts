@@ -62,6 +62,24 @@ export async function saveProjectSandbox(row: {
     .onConflictDoUpdate({ target: schema.projectSandboxes.projectId, set: values });
 }
 
+/** How the reaper's holds start. It runs in its own process (a systemd timer), so the app restarting does not
+ *  end them. */
+export const REAPER_HOLD_PREFIX = "reaper-";
+
+/** At boot: lets go of every box a turn of the previous process held — a deploy or a crash killed it before its
+ *  `finally` — which is what STALE_HOLD does two hours later, at once. A hold from before this process booted is
+ *  nobody's here (ONE Next process, like the turn rows); the reaper's stay. The cut is on the database's clock
+ *  (now minus how long this process has lived), the clock `updatedAt` is written with. Returns how many. */
+export async function releaseHoldsFromBeforeBoot(secondsSinceBoot: number): Promise<number> {
+  const r = (await db.execute(sql`
+    UPDATE "projectSandboxes" SET "heldBy" = NULL, "updatedAt" = now()
+    WHERE "heldBy" IS NOT NULL AND "heldBy" NOT LIKE ${`${REAPER_HOLD_PREFIX}%`}
+      AND "updatedAt" < now() - (${secondsSinceBoot}::double precision * interval '1 second')
+    RETURNING "projectId"
+  `)) as unknown as { rows?: unknown[] } | unknown[];
+  return (Array.isArray(r) ? r : (r.rows ?? [])).length;
+}
+
 /** Lets go of the box, only if `turnId` is the one holding it. */
 export async function releaseProjectSandbox(projectId: string, turnId: string): Promise<void> {
   await db.execute(sql`

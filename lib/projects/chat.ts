@@ -710,6 +710,25 @@ export async function marcarCortadaSiSigueEnCurso(id: string): Promise<void> {
     .where(and(eq(schema.projectChatMessages.id, id), eq(schema.projectChatMessages.status, ESTADO_EN_CURSO)));
 }
 
+/** AL ARRANCAR, las filas que el proceso anterior dejó en curso (un deploy, un
+ *  reinicio) pasan a cortadas de una vez, como las cierra el reenganche —
+ *  también las que nadie vuelve a mirar: un `@Len` de un hilo, un correo, la
+ *  ronda de un encargo—. Una fila abierta antes de que este proceso arrancara
+ *  no la corre nadie de aquí: supone UN proceso de Next, como el reenganche y
+ *  `retomarPedidosDelHilo`. El corte se calcula con el reloj de la base (ahora
+ *  menos lo que lleva vivo el proceso): `createdAt` es un `timestamp` sin zona
+ *  que escribe su `now()`, y una fecha de Node se desfasaría con la zona de la
+ *  base. Devuelve cuántas cerró. */
+export async function cutOffRowsOpenedBeforeBoot(secondsSinceBoot: number): Promise<number> {
+  const t = schema.projectChatMessages;
+  const cortadas = await db
+    .update(t)
+    .set({ status: ESTADO_CORTADO })
+    .where(and(eq(t.status, ESTADO_EN_CURSO), sql`${t.createdAt} < now() - (${secondsSinceBoot}::double precision * interval '1 second')`))
+    .returning({ id: t.id });
+  return cortadas.length;
+}
+
 /** Flip a turn's status — the Undo path (applied → reverted). Scoped by
  *  projectId so a turn id from another project can't be touched. */
 export async function updateChatMessageStatus(
