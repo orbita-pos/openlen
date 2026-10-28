@@ -1,0 +1,43 @@
+
+> openlen@0.1.0 migrations:bundle
+> node scripts/build-migrations.mjs
+
+bundled scripts/billing-migrate.ts -> .next/standalone/migrations/01-billing-migrate.mjs
+bundled scripts/community-migrate.ts -> .next/standalone/migrations/02-community-migrate.mjs
+bundled scripts/chat-migrate.ts -> .next/standalone/migrations/03-chat-migrate.mjs
+bundled scripts/inbox-migrate.ts -> .next/standalone/migrations/04-inbox-migrate.mjs
+bundled scripts/publish-hash-migrate.ts -> .next/standalone/migrations/05-publish-hash-migrate.mjs
+bundled scripts/versions-baseline-migrate.ts -> .next/standalone/migrations/06-versions-baseline-migrate.mjs
+bundled scripts/template-visual-metadata-migrate.ts -> .next/standalone/migrations/07-template-visual-metadata-migrate.mjs
+bundled scripts/visual-engine-pilot-migrate.ts -> .next/standalone/migrations/08-visual-engine-pilot-migrate.mjs
+bundled scripts/user-memory-migrate.ts -> .next/standalone/migrations/09-user-memory-migrate.mjs
+bundled scripts/perfil-drop-migrate.ts -> .next/standalone/migrations/10-perfil-drop-migrate.mjs
+bundled scripts/diario-turno-migrate.ts -> .next/standalone/migrations/11-diario-turno-migrate.mjs
+bundled scripts/agent-effort-migrate.ts -> .next/standalone/migrations/12-agent-effort-migrate.mjs
+bundled scripts/usage-events-migrate.ts -> .next/standalone/migrations/13-usage-events-migrate.mjs
+bundled scripts/crear-writer-migrate.ts -> .next/standalone/migrations/14-crear-writer-migrate.mjs
+bundled scripts/transcripcion-migrate.ts -> .next/standalone/migrations/15-transcripcion-migrate.mjs
+bundled scripts/formularios-visto-migrate.ts -> .next/standalone/migrations/16-formularios-visto-migrate.mjs
+bundled scripts/chat-conversations-migrate.ts -> .next/standalone/migrations/17-chat-conversations-migrate.mjs
+bundled scripts/movil-migrate.ts -> .next/standalone/migrations/18-movil-migrate.mjs
+bundled scripts/movil-avisos-migrate.ts -> .next/standalone/migrations/19-movil-avisos-migrate.mjs
+bundled scripts/pages-backend-migrate.ts -> .next/standalone/migrations/20-pages-backend-migrate.mjs
+bundled scripts/renewal-reminders-migrate.ts -> .next/standalone/migrations/21-renewal-reminders-migrate.mjs
+bundled scripts/folder-migrate.ts -> .next/standalone/migrations/22-folder-migrate.mjs
+bundled scripts/turn-changes-migrate.ts -> .next/standalone/migrations/23-turn-changes-migrate.mjs
+bundled scripts/miembros-migrate.ts -> .next/standalone/migrations/24-miembros-migrate.mjs
+bundled scripts/hilos-migrate.ts -> .next/standalone/migrations/25-hilos-migrate.mjs
+bundled scripts/chat-equipo-migrate.ts -> .next/standalone/migrations/26-chat-equipo-migrate.mjs
+bundled scripts/len-memory-migrate.ts -> .next/standalone/migrations/27-len-memory-migrate.mjs
+bundled scripts/len-email-migrate.ts -> .next/standalone/migrations/28-len-email-migrate.mjs
+bundled scripts/backend-environments-migrate.ts -> .next/standalone/migrations/29-backend-environments-migrate.mjs
+bundled scripts/profile-migrate.ts -> .next/standalone/migrations/30-profile-migrate.mjs
+bundled scripts/env-vars-migrate.ts -> .next/standalone/migrations/31-env-vars-migrate.mjs
+bundled scripts/mcp-migrate.ts -> .next/standalone/migrations/32-mcp-migrate.mjs
+bundled scripts/functions-migrate.ts -> .next/standalone/migrations/33-functions-migrate.mjs
+bundled scripts/git-migrate.ts -> .next/standalone/migrations/34-git-migrate.mjs
+bundled scripts/app-ai-migrate.ts -> .next/standalone/migrations/35-app-ai-migrate.mjs
+bundled scripts/security-review-migrate.ts -> .next/standalone/migrations/36-security-review-migrate.mjs
+bundled scripts/credit-ledger-migrate.ts -> .next/standalone/migrations/37-credit-ledger-migrate.mjs
+bundled scripts/artifacts-migrate.ts -> .next/standalone/migrations/38-artifacts-migrate.mjs
+wrote .next/standalone/migrations/run.sh (LF, self-contained)

@@ -24,6 +24,11 @@ const sinRed = async (): Promise<Response> => {
 };
 
 describe("mandarALen", () => {
+  it("un encargo conserva create/resume en la petición", async () => {
+    const { c, pedir } = cliente(async () => trozos(""));
+    await mandarALen(c, { projectId: "p1", prompt: "Termina mi página", goal: "create" }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body)).goal).toBe("create");
+  });
   it("manda el pedido con la zona horaria y entrega los eventos aunque vengan partidos", async () => {
     const { c, pedir } = cliente(async () => trozos('event: turno\ndata: {"turnoId":"x1"}\n\nevent: te', 'xt\ndata: {"text":"Hola"}\n\n', "event: done\ndata: {}\n\n"));
     const eventos: EventoSse[] = [];

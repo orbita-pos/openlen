@@ -7,6 +7,7 @@ import { crearEntrada } from "./sesion/entrada";
 import { plataforma } from "./sesion/plataforma";
 import { PantallaEntrar } from "./pantallas/entrar";
 import { PantallaPrincipal } from "./pantallas/principal";
+import { abandonarAvisos, cerrarAvisos } from "./avisos/use-avisos";
 
 type Vista = "cargando" | "entrar" | "principal";
 
@@ -23,6 +24,7 @@ export function App() {
         base: BASE,
         llave: () => llave.current,
         alNoAutorizado: () => {
+          abandonarAvisos(cliente);
           llave.current = null;
           void plataforma.borrarLlave();
           setVista("entrar");
@@ -78,6 +80,7 @@ export function App() {
   }, [entrada]);
 
   const salir = async () => {
+    await cerrarAvisos(cliente).catch(() => null);
     await cliente.pedir("/api/movil/llave", { method: "DELETE" }).catch(() => null);
     llave.current = null;
     await plataforma.borrarLlave();

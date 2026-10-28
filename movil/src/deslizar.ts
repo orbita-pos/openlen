@@ -18,6 +18,8 @@ export interface Deslizar {
   /** px del lienzo que se mueve la capa al completar: por defecto, su alto
    *  (su ancho hacia la derecha). Con «arriba» se mide DESPUÉS de abrir (lo que creció). */
   recorrido?: (el: HTMLElement) => number;
+  /** Una zona de agarre deja que el resto de la hoja se desplace normalmente. */
+  desde?: string;
 }
 
 const ARRANQUE = 8; // px del teléfono: menos que esto es un toque, no un arrastre
@@ -40,7 +42,7 @@ export function useDeslizar(op: Deslizar) {
     // Vertical: Chrome no se queda nada (ni recargar ni desplazar). Hacia la
     // derecha: el hilo del chat sí se desplaza en vertical, así que sólo se
     // le quita lo horizontal.
-    el.style.touchAction = vertical(ultimo.current.hacia) ? "none" : "pan-y";
+    el.style.touchAction = vertical(ultimo.current.hacia) && !ultimo.current.desde ? "none" : "pan-y";
     let inicio: { id: number; x: number; y: number } | null = null;
     let arrastrando = false;
     let escala = 1;
@@ -120,6 +122,7 @@ export function useDeslizar(op: Deslizar) {
 
     const baja = (e: PointerEvent) => {
       if (inicio || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (ultimo.current.desde && !(e.target as Element | null)?.closest?.(ultimo.current.desde!)) return;
       // Lo que tiene su propio gesto (el micrófono, el campo de texto) no arrastra la capa.
       if ((e.target as Element | null)?.closest?.("[data-no-deslizar]")) return;
       inicio = { id: e.pointerId, x: e.clientX, y: e.clientY };

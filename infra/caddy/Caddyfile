@@ -69,6 +69,14 @@ openlen.com, www.openlen.com {
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
+	# Las vistas previas con token también se enmarcan desde la APK (Android)
+	# y Capacitor (iOS). CSP limita los padres sin sustituir el sandbox que
+	# envía Next para el HTML del creador. El resto conserva SAMEORIGIN.
+	header /p/* {
+		-X-Frame-Options
+		+Content-Security-Policy "frame-ancestors 'self' https://localhost capacitor://localhost http://localhost:5173"
+	}
+
 	# Next.js build-time static — content-hashed by Next, immutable.
 	handle_path /_next/static/* {
 		root * /opt/openlen-app/.next/static

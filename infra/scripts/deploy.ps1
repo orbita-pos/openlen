@@ -13,6 +13,7 @@
 #
 # Usage (from repo root):
 #   npm run deploy:prod
+#   npm run deploy:prod -- -PreserveCaddy  # app-only release; preserve live proxy config
 #
 # Override defaults via env vars:
 #   $env:OPENLEN_HOST = "openlen"          # ssh alias from ~/.ssh/config
@@ -30,6 +31,8 @@
 #                                          # back. Without it prod crashes with
 #                                          # MODULE_NOT_FOUND at runtime.
 #                                          # Only set when you're sure (rare).
+
+param([switch]$PreserveCaddy)
 
 $ErrorActionPreference = "Stop"
 
@@ -632,6 +635,9 @@ if ($LASTEXITCODE -ne 0) { throw "Swap or restart failed (exit $LASTEXITCODE)" }
 # solo entonces se mueve encima. `apply-404.ps1` pisa primero y valida despues;
 # asi un config malo deja el fichero vivo ya reemplazado. `reload` no corta
 # trafico.
+if ($PreserveCaddy) {
+  Write-Host "8. Caddyfile de produccion conservado (release de la app)." -ForegroundColor Cyan
+} else {
 Write-Host ""
 Write-Host "8. Caddyfile -> /etc/caddy/Caddyfile" -ForegroundColor Cyan
 & scp -q "infra/caddy/Caddyfile" "${host_}:/etc/caddy/Caddyfile.nuevo"
@@ -645,6 +651,7 @@ if ($LASTEXITCODE -ne 0) {
   throw "Caddy no acepto el config o no recargo (exit $LASTEXITCODE) - la app YA esta desplegada y Caddy sigue con el ANTERIOR (no se ha pisado). Mira el motivo arriba."
 }
 Write-Host "   validado en la caja y recargado (sin corte)" -ForegroundColor DarkGray
+}
 
 # --- Cleanup local tarball --------------------------------------------
 Remove-Item -Force $tarballName

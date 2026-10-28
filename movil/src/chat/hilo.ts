@@ -5,6 +5,7 @@
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import type { EventoSse } from "@/lib/len-bench/sse";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
@@ -18,7 +19,7 @@ interface Enviado {
 }
 
 export type ElementoDelHilo =
-  | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; estado: EstadoLocal } & Enviado)
+  | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; estado: EstadoLocal; goal?: "create" | "resume" } & Enviado)
   | ({ clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal } & Enviado)
   | { clave: string; t: number; tipo: "len"; texto: string }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
@@ -29,6 +30,7 @@ export type ElementoDelHilo =
   | { clave: string; t: number; tipo: "dia"; dia: string };
 
 export interface TurnoEnVivo {
+  acciones?: NonNullable<StoredChatTurn["actions"]>;
   /** La fila de la conversación: el id que la app le da al turno al mandarlo. */
   fila: string | null;
   /** El del servidor, para corregirle el rumbo (`dirigir`): no es el de la fila. */
@@ -63,6 +65,7 @@ export function parrafos(texto: string): string[] {
 export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): ElementoDelHilo[] {
   const salida: ElementoDelHilo[] = [];
   for (const turno of turnos) {
+    if (turno.tipo === "persona") continue;
     const t = turno.appliedAt ?? ahora;
     if (turno.userText.trim() || turno.attachedImage) {
       salida.push({ clave: `${turno.id}:tu`, t, tipo: "tu", texto: turno.userText.trim(), foto: turno.attachedImage?.url, estado: "ok" });
@@ -76,10 +79,10 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
   return salida;
 }
 
-/** Len cerró su último turno preguntándote algo (la herramienta `preguntar`) y aún no le contestas. */
+/** Len cerró su último turno preguntándote algo y aún no le contestas. */
 export function terminaEnPregunta(turnos: StoredChatTurn[]): boolean {
-  const u = turnos.at(-1);
-  return !!u && !u.enCurso && (u.actions ?? []).some((a) => a.tool === "preguntar");
+  const u = [...turnos].reverse().find(t => t.tipo !== "persona");
+  return !!u && !u.enCurso && (u.actions ?? []).some((a) => currentToolName(a.tool) === ASK_USER_QUESTION && a.status === "done" && !a.respuesta && !a.dismissed);
 }
 
 export function turnoNuevo(fila: string | null = null): TurnoEnVivo {
@@ -96,7 +99,18 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
       return typeof d.text === "string" ? { ...v, texto: v.texto + d.text } : v;
     case "action": {
       if (typeof d.tool !== "string") return v;
-      if (d.tool === "preguntar") return { ...v, pregunta: true, avance: null };
+      const status = d.status === "running" || d.status === "error" || d.status === "warning" ? d.status : "done";
+      const accion: NonNullable<StoredChatTurn["actions"]>[number] = {
+        tool: d.tool, status, summary: typeof d.summary === "string" ? d.summary : "",
+        ...(Array.isArray(d.todos) ? { todos: d.todos.filter((x): x is { content: string; status: "pending" | "in_progress" | "completed" } => !!x && typeof x === "object" && typeof x.content === "string" && ["pending", "in_progress", "completed"].includes(x.status)) } : {}),
+      };
+      const acciones = [...(v.acciones ?? [])];
+      let i = acciones.length - 1;
+      while (i >= 0 && !(acciones[i].tool === accion.tool && acciones[i].status === "running")) i--;
+      if (i >= 0) acciones[i] = accion;
+      else acciones.push(accion);
+      v = { ...v, acciones };
+      if (currentToolName(d.tool) === ASK_USER_QUESTION) return { ...v, pregunta: d.status !== "error" && !d.respuesta && !d.dismissed, avance: null };
       // La línea la cambia la siguiente herramienta, no el final de ésta: así no parpadea vacía entre una y otra.
       return d.status === "running" || v.avance === null ? { ...v, avance: d.tool } : v;
     }

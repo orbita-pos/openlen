@@ -10,7 +10,7 @@ body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-hig
    cabecero abarca mucho»). Aquí el hueco es el que pida el teléfono: 0 en
    Chrome, el de la barra de estado de Android en la app instalada. Igual
    abajo: la hoja dejaba 34 px para la rayita del iPhone. */
-.app-lienzo { --app-arriba: env(safe-area-inset-top, 0px); --app-abajo: env(safe-area-inset-bottom, 0px); --app-barra: calc(54px + var(--app-arriba)); }
+.app-lienzo { --app-arriba: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --app-abajo: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); --app-barra: calc(54px + var(--app-arriba)); }
 .app-lienzo .lm-bar { height: var(--app-barra); padding-top: var(--app-arriba); }
 .app-lienzo .lm-dvmenu { top: calc(var(--app-barra) - 4px); }
 .app-lienzo .lm-sheet { padding-bottom: calc(18px + var(--app-abajo)); }
@@ -28,6 +28,19 @@ a.nx-act { text-decoration: none; }
 /* «Tus páginas» y la hoja de Len se turnan en el mismo sitio: la que entra
    sube desde abajo, para que al cerrar una deslizando la otra no salga de golpe. */
 .app-lienzo .lm-sheet { animation: app-sube .45s cubic-bezier(.2,.85,.25,1); }
+.app-lienzo .app-selector, .app-lienzo .app-main-sheet { max-height: calc(100% - var(--app-barra)); display: flex; flex-direction: column; }
+.app-selector .lm-grab, .app-main-sheet .lm-grab, .app-main-sheet .lm-who { flex-shrink: 0; touch-action: none; }
+.app-selector .lm-body, .app-main-sheet .lm-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+/* La principal se pliega por posición, manteniendo el cuerpo montado. Así
+   sus botones acompañan al dedo en lugar de desaparecer al cambiar de clase. */
+.app-lienzo .app-main-sheet { transform: translateY(var(--hoja-y, 0px)); animation: none; transition: transform .32s cubic-bezier(.2,.85,.25,1); touch-action: pan-y; }
+.app-lienzo .app-main-sheet.is-min { padding-bottom: calc(18px + var(--app-abajo)); }
+.app-lienzo .app-main-sheet .lm-body { display: block; transition: opacity .32s cubic-bezier(.2,.85,.25,1); }
+.app-main-sheet[data-arrastrando] { transition: none; user-select: none; will-change: transform; }
+.app-lienzo .app-main-sheet[data-arrastrando] .lm-body { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .app-lienzo .app-main-sheet, .app-lienzo .app-main-sheet .lm-body { transition: none; }
+}
 @keyframes app-sube { from { transform: translateY(105%); } }
 /* Al subir la hoja encogida con el dedo, se levanta entera y el hueco de abajo
    dejaba ver la página en blanco (Jesús, 01/10: «ese blanco se ve feo»). Este
@@ -40,8 +53,13 @@ a.nx-act { text-decoration: none; }
 :root[data-theme="dark"] .app-lienzo .lm-sheet::after { background: #070504; }
 /* El chat (pieza 2). La cabecera y el pie del prototipo dejan sitio para el
    iPhone (46 px arriba, 30 abajo); aquí, lo que pida el teléfono, como la barra. */
-.app-lienzo .ch-top { padding-top: calc(var(--app-arriba) + 6px); }
-.app-lienzo .ch-log { padding-top: calc(var(--app-arriba) + 78px); padding-bottom: calc(92px + var(--app-abajo)); touch-action: pan-y; }
+/* La cabecera ocupa su altura real en el flujo: su estado y los insets no
+   pueden tapar la fecha. El historial tiene su propio viewport debajo. */
+.app-lienzo .lm-chat { display: flex; flex-direction: column; }
+.app-lienzo .ch-top { position: relative; flex-shrink: 0; padding-top: calc(var(--app-arriba) + 6px); }
+.app-lienzo .ch-equipo { grid-column: 1 / -1; justify-self: center; border: 1px solid var(--c-line); border-radius: 20px; background: var(--c-qr-bg); color: var(--c-ink); font: 600 11px Inter,sans-serif; min-height: 36px; padding: 6px 14px; margin-top: 6px; }
+.app-lienzo .ch-log { position: relative; inset: auto; flex: 1; min-height: 0; padding-top: 10px; padding-bottom: calc(92px + var(--app-abajo)); touch-action: pan-y; }
+.app-lienzo .lm-chat.has-pip .ch-top { height: 0; padding: 0; border: 0; }
 .app-lienzo .lm-chat.has-pip .ch-log { padding-top: calc(var(--app-arriba) + 190px); }
 .app-lienzo .ch-foot { padding-bottom: calc(12px + var(--app-abajo)); }
 /* lo que dice Len puede traer saltos de línea (una lista): se respetan */
@@ -76,4 +94,3 @@ a.nx-act { text-decoration: none; }
 .app-lienzo .con-teclado .ch-face { width: 28px; height: 28px; }
 .app-lienzo .con-teclado .ch-name { margin-top: 0; }
 .app-lienzo .con-teclado .ch-st { flex-basis: 100%; text-align: center; }
-.app-lienzo .con-teclado .ch-log { padding-top: calc(var(--app-arriba) + 50px); }

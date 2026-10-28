@@ -1,0 +1,50 @@
+
+> openlen@0.1.0 i18n:gate
+> npm run i18n:parity && npm run i18n:placeholders && npm run i18n:compile
+
+
+> openlen@0.1.0 i18n:parity
+> node scripts/i18n-parity.mjs
+
+✓ de     all 21 namespaces match (3123 keys)
+✓ es     all 21 namespaces match (3123 keys)
+✓ fr     all 21 namespaces match (3123 keys)
+✓ it     all 21 namespaces match (3123 keys)
+✓ ja     all 21 namespaces match (3123 keys)
+✓ ko     all 21 namespaces match (3123 keys)
+✓ nl     all 21 namespaces match (3123 keys)
+✓ pt     all 21 namespaces match (3123 keys)
+✓ zh     all 21 namespaces match (3123 keys)
+
+ALL MATCH — 9 locale(s) vs en × 21 namespaces
+
+> openlen@0.1.0 i18n:placeholders
+> node scripts/i18n-placeholders.mjs
+
+✓ de     args + tags match en
+✓ es     args + tags match en
+✓ fr     args + tags match en
+✓ it     args + tags match en
+✓ ja     args + tags match en
+✓ ko     args + tags match en
+✓ nl     args + tags match en
+✓ pt     args + tags match en
+✓ zh     args + tags match en
+
+ALL CLEAN — 9 locales vs en
+
+> openlen@0.1.0 i18n:compile
+> node scripts/i18n-compile.mjs
+
+✓ de     all messages compile
+✓ en     all messages compile
+✓ es     all messages compile
+✓ fr     all messages compile
+✓ it     all messages compile
+✓ ja     all messages compile
+✓ ko     all messages compile
+✓ nl     all messages compile
+✓ pt     all messages compile
+✓ zh     all messages compile
+
+ALL COMPILE — 31230 messages across 10 locales

@@ -2090,7 +2090,15 @@ export const movilLlaves = pgTable("movilLlaves", {
   nombre: text("nombre"),
   creadoEn: timestamp("creadoEn", { mode: "date" }).notNull().defaultNow(),
   ultimoUso: timestamp("ultimoUso", { mode: "date" }),
-}, (t) => [index("movilLlaves_userId_idx").on(t.userId)]);
+}, (t) => [index("movilLlaves_userId_idx").on(t.userId), uniqueIndex("movilLlaves_huella_userId_uidx").on(t.huella, t.userId)]);
+
+// Token FCM por llave del teléfono: revocar la llave borra también su aviso.
+export const movilAvisos = pgTable("movilAvisos", {
+  llaveHuella: text("llaveHuella").primaryKey(),
+  userId: text("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  actualizadoEn: timestamp("actualizadoEn", { mode: "date" }).notNull().defaultNow(),
+}, (t) => [index("movilAvisos_userId_idx").on(t.userId), foreignKey({ name: "movilAvisos_llave_usuario_fk", columns: [t.llaveHuella, t.userId], foreignColumns: [movilLlaves.huella, movilLlaves.userId] }).onDelete("cascade")]);
 
 // LOS TOKENS DEL SERVIDOR MCP (plans/mcp-de-openlen): los personales (`olp_`,
 // creados por la persona) y, desde la Parte 3, los de acceso OAuth (`ola_`).

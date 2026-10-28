@@ -3,9 +3,10 @@
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 const MAX = 400;
+export const ultimoTurnoDeLen = (historial: StoredChatTurn[]): StoredChatTurn | undefined => [...historial].reverse().find(t => t.tipo !== "persona");
 
 export function loQueDijoLen(historial: StoredChatTurn[]): { texto: string; enCurso: boolean; fila: string } | null {
-  const t = historial.at(-1);
+  const t = ultimoTurnoDeLen(historial);
   if (!t) return null;
   const parrafos = t.assistantReasoning.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
   const texto = (parrafos.at(-1) ?? "").slice(0, MAX);

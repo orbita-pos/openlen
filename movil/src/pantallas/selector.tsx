@@ -1,24 +1,24 @@
 // La hoja con tus páginas (tocar el nombre en la barra); reutiliza .lm-sheet
 // y .lm-btn del prototipo. Aquí viven también el modo oscuro y «Salir».
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "use-intl";
 import type { ProyectoEnLista } from "../api/proyectos";
 import { aplicarTema, temaGuardado, type Tema } from "../tema";
 import { useDeslizar } from "../deslizar";
 
-export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir }: {
-  proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void;
+export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, children }: {
+  proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void; children?: ReactNode;
 }) {
   const t = useTranslations("movil.principal");
   const [tema, setTema] = useState<Tema>(temaGuardado);
-  const deslizar = useDeslizar({ hacia: "abajo", alSoltar: onCerrar });
+  const deslizar = useDeslizar({ hacia: "abajo", alSoltar: onCerrar, desde: ".lm-grab" });
   const cambiarTema = () => {
     const otro: Tema = tema === "dark" ? "light" : "dark";
     aplicarTema(otro);
     setTema(otro);
   };
   return (
-    <div ref={deslizar} className="lm-sheet lm-m lm-marca is-on" data-kind="listo" role="dialog" aria-label={t("tusPaginas")}>
+    <div ref={deslizar} className="lm-sheet lm-m lm-marca is-on app-selector" data-kind="listo" role="dialog" aria-label={t("tusPaginas")}>
       <button type="button" className="lm-grab" onClick={onCerrar} aria-label={t("encoger")} />
       <div className="lm-body">
         <p className="lm-msg">{t("tusPaginas")}</p>
@@ -29,6 +29,7 @@ export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir }: {
             </button>
           ))}
           <button type="button" className="lm-btn lm-sec" onClick={cambiarTema}>{tema === "dark" ? t("modoClaro") : t("modoOscuro")}</button>
+          {children}
           <button type="button" className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button>
         </div>
       </div>
