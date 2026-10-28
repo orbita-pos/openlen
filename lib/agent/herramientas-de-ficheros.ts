@@ -56,6 +56,8 @@ import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
+import { binaryReadError, encodingWriteError, readOfBytes } from "@/lib/agent/ficheros/binarios";
+import { parsePointer } from "@/lib/files/blob-pointer";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL, RUTAS_MUDADAS, mudanza } from "@/lib/agent/ficheros/manual";
 import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { guardarAjustes, RUTA_AJUSTES, textoDeAjustes } from "@/lib/agent/terminal/ajustes";
@@ -241,6 +243,59 @@ function booleano(v: unknown): boolean | undefined {
   return undefined;
 }
 
+const bytesDelBlob = async (puntero: string) => (await import("@/lib/files/blob")).getBlob(puntero);
+
+/** Read de un BINARIO DE LA CARPETA (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §5), como el Read de
+ *  Claude Code: una imagen se le enseña a Len, un PDF por sus páginas, un texto que no es UTF-8 con U+FFFD y su
+ *  nota, y cualquier otro binario dice que no. Sus bytes salen del almacén, sin caja. */
+async function leerBinarioDeLaCarpeta(
+  session: AgentSession,
+  deps: AgentDeps,
+  ruta: string,
+  puntero: string,
+  args: Record<string, unknown>,
+  sitio: SitioBuscable | null,
+): Promise<ToolOutcome> {
+  const size = parsePointer(puntero)?.size ?? 0;
+  if (IMAGE_FILE.test(ruta) && deps.imageForModel) {
+    if (size > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(imageTooLarge(ruta, formatoDeBytes(MAX_IMAGE_READ_BYTES)))) };
+    if (size === 0) return { response: respuesta(fallo(imageEmpty(ruta))) };
+    const bytes = await bytesDelBlob(puntero);
+    if (!imageTypeOf(bytes)) return { response: respuesta(fallo(notAnImage(ruta, bytes))) };
+    const { image, width, height } = await deps.imageForModel(bytes);
+    return { response: respuesta(exito(`Image read: ${ruta} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
+  }
+  if (/\.pdf$/i.test(ruta) && deps.pdfPages) {
+    const pdfPages = deps.pdfPages;
+    const visit = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
+    const file = { url: ruta, name: ruta.split("/").pop()!, size };
+    const { result, images } = await readAttachment(ruta, { pages: args.pages }, new Map([[ruta, file]]), {
+      read: () => bytesDelBlob(puntero),
+      render: (pdf, range) => visit(() => pdfPages(pdf, range)),
+    });
+    return { response: respuesta(result), ...(images?.length ? { images } : {}) };
+  }
+  const leido = readOfBytes(await bytesDelBlob(puntero));
+  if (leido.kind === "binary") return { response: respuesta(fallo(binaryReadError(ruta))) };
+  const base = sitio ?? { ficheros: [ruta], contenido: () => null };
+  const r = ejecutarRead(
+    {
+      file_path: ruta,
+      ...(numero(args.offset) !== undefined ? { offset: numero(args.offset) } : {}),
+      ...(numero(args.limit) !== undefined ? { limit: numero(args.limit) } : {}),
+    },
+    { ...base, contenido: (r2) => (r2 === ruta ? leido.text : base.contenido(r2)) },
+    leidosDe(session),
+  );
+  return { response: respuesta(r.ok && leido.note ? exito(`${r.texto}\n\n${leido.note}`) : r) };
+}
+
+/** El binario de la carpeta en `ruta`, si lo hay: su puntero. */
+const punteroEn = (folder: ReadonlyMap<string, string>, ruta: string) => {
+  const c = folder.get(ruta);
+  return c !== undefined && parsePointer(c) ? c : null;
+};
+
 export async function toolRead(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   // A FILE THE USER ATTACHED: a PDF's pages, as images, like Claude Code's Read (26/10); a CSV as
   // text; an office file answered as a binary one (spec local 2026-10-26-len-skills).
@@ -255,6 +310,11 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // read by its pages like an attached one. The site's folder never holds a PDF (text only).
   const enLaCaja = resolverRuta(asked);
   const deLaCaja = !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`);
+  // UNA IMAGEN O UN PDF DE LA CARPETA (spec local 2026-10-28): de sus bytes, antes de mirar la caja.
+  if (deLaCaja && (IMAGE_FILE.test(enLaCaja) || /\.pdf$/i.test(enLaCaja)) && deps.projectFiles) {
+    const enCarpeta = (await deps.projectFiles(session.projectId).catch(() => null))?.[enLaCaja];
+    if (enCarpeta !== undefined && parsePointer(enCarpeta)) return await leerBinarioDeLaCarpeta(session, deps, enLaCaja, enCarpeta, args, null);
+  }
   const pdfDeLaCaja = deLaCaja && /\.pdf$/i.test(enLaCaja) && Boolean(deps.pdfPages);
   const imagenDeLaCaja = deLaCaja && IMAGE_FILE.test(enLaCaja) && Boolean(deps.imageForModel);
   // A file only the box has: before the turn's first command there is no box yet, and Read starts it
@@ -311,6 +371,8 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   const file_path = typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
   if (isLegacyMemoryPath(resolverRuta(file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const sitio = sitioDe(row.data, session, v);
+  const binario = punteroEn(v.folder, resolverRuta(file_path));
+  if (binario) return await leerBinarioDeLaCarpeta(session, deps, resolverRuta(file_path), binario, args, sitio);
   // NPM ABIERTO: en una app, /node_modules se abre por su ruta, como en Claude
   // Code (lo mismo que `cat` en la terminal, `lib/apps/npm/node-modules.ts`).
   const enNodeModules = session.app && deps.projectFiles && resolverRuta(file_path).startsWith(`${NODE_MODULES}/`) ? resolverRuta(file_path) : null;
@@ -379,6 +441,8 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
+  const binarioE = punteroEn(v.folder, resolverRuta(entrada.file_path));
+  if (binarioE) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioE)))) };
   const plan = planearEdit(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}: «${recorte(entrada.old_string)}» → «${recorte(entrada.new_string)}»`;
   return await aplicarPlan(session, deps, row.data, v, plan, "Edit", detalle, undefined, {
@@ -395,6 +459,8 @@ export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Re
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: respuesta(fallo("project not found")) };
   const v = await virtualesDe(session, deps, row.userBrief);
+  const binarioW = punteroEn(v.folder, resolverRuta(entrada.file_path));
+  if (binarioW) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioW)))) };
   const plan = planearWrite(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea && paginaDeRuta(plan.ruta) ? NEW_PAGE_MARK : ""}`;
   return await aplicarPlan(session, deps, row.data, v, plan, "Write", detalle, nota);
@@ -575,8 +641,11 @@ async function guardarEnLaCarpeta(
   cascaron: string,
 ): Promise<ToolOutcome> {
   if (!deps.saveProjectFile) return { response: respuesta(fallo(`${plan.ruta}: this project cannot save files here.`)) };
-  const motivo = folderSaveProblem(plan.ruta, plan.contenido, folder);
-  if (motivo) return { response: respuesta(fallo(motivo.startsWith("Cannot") ? motivo : `Cannot save ${plan.ruta}: ${motivo}`)) };
+  // El proyecto entero cuenta contra su «disco» (spec local 2026-10-28): páginas, carpeta e historial de git.
+  const usage = deps.projectUsageBytes ? await deps.projectUsageBytes(session.projectId).catch(() => undefined) : undefined;
+  const motivo = folderSaveProblem(plan.ruta, plan.contenido, folder, usage);
+  // ENOSPC y «File too large» van tal cual, como los da un disco.
+  if (motivo) return { response: respuesta(fallo(/^(Cannot|ENOSPC|File too large)/.test(motivo) ? motivo : `Cannot save ${plan.ruta}: ${motivo}`)) };
   const previo = folder.get(plan.ruta) ?? null;
   // UNA APP: la carpeta de antes de la primera escritura del turno.
   if (session.app) session.carpetaAlEmpezar ??= new Map(folder);

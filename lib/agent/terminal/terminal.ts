@@ -76,6 +76,9 @@ export class TerminalDeLen implements TerminalBackend {
     private readonly o: {
       /** Los ficheros del proyecto, tal como están AHORA (se piden al arrancar y tras un reinicio). */
       readonly cargarFicheros: () => Promise<Record<string, string>>;
+      /** Los bytes de un binario del proyecto, por su puntero (spec local 2026-10-28): el hilo los pide
+       *  cuando un comando lo lee. Sin él, leer un binario en la terminal falla. */
+      readonly leerBlob?: (puntero: string) => Promise<Uint8Array>;
       /** F5 · los ficheros de sólo lectura, que se calculan cuando un comando
        *  los lee por primera vez (ver la cabecera de `trabajador.mjs`). */
       readonly perezosos?: {
@@ -155,16 +158,20 @@ export class TerminalDeLen implements TerminalBackend {
         void this.servirPerezoso(hilo, m.perezoso, String(m.ruta ?? ""));
         return;
       }
+      if (typeof m.blob === "number") {
+        void this.servirBlob(hilo, m.blob, String(m.puntero ?? ""));
+        return;
+      }
       if (typeof m.funcion === "number") {
         void this.servirFuncion(hilo, m.funcion, m.peticion as CurlRequest);
         return;
       }
       if (typeof m.supabase === "number") {
-        void this.servirSupabase(hilo, m.supabase, m.args as string[], m.ficheros as Record<string, string>);
+        void this.aPunteros(m.ficheros).then((f) => this.servirSupabase(hilo, m.supabase as number, m.args as string[], f));
         return;
       }
       if (typeof m.git === "number") {
-        void this.servirGit(hilo, m.git, m.args as string[], String(m.cwd ?? "/"), m.ficheros as Record<string, string>);
+        void this.aPunteros(m.ficheros).then((f) => this.servirGit(hilo, m.git as number, m.args as string[], String(m.cwd ?? "/"), f));
         return;
       }
       if (typeof m.stripe === "number") {
@@ -176,7 +183,9 @@ export class TerminalDeLen implements TerminalBackend {
         return;
       }
       if (typeof m.app === "number") {
-        void this.servirAppTools(hilo, m.app, m.program as AppProgram, m.args as string[], m.ficheros as Record<string, string>, Number(m.tiempoQueQueda ?? this.limite));
+        void this.aPunteros(m.ficheros).then((f) =>
+          this.servirAppTools(hilo, m.app as number, m.program as AppProgram, m.args as string[], f, Number(m.tiempoQueQueda ?? this.limite)),
+        );
         return;
       }
       if (typeof m.cancelSupabase === "number") {
@@ -298,6 +307,27 @@ export class TerminalDeLen implements TerminalBackend {
     if (this.hilo === hilo) hilo.postMessage(respuesta);
   }
 
+  /** Los bytes de un binario que un comando lee (spec local 2026-10-28). */
+  private async servirBlob(hilo: Worker, pid: number, puntero: string): Promise<void> {
+    try {
+      if (!this.o.leerBlob) throw new Error("binary files can't be read in this terminal");
+      hilo.postMessage({ tipo: "blob", pid, bytes: await this.o.leerBlob(puntero) });
+    } catch (e) {
+      hilo.postMessage({ tipo: "blob", pid, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  /** Lo que el hilo manda de los ficheros, como los guarda el proyecto: los bytes de un binario nuevo o
+   *  cambiado, a su puntero (el mismo si son los mismos bytes: nada se sube dos veces). */
+  private async aPunteros(f: unknown): Promise<Record<string, string>> {
+    const entrada = (f ?? {}) as Record<string, string | Uint8Array>;
+    if (!Object.values(entrada).some((c) => c instanceof Uint8Array)) return entrada as Record<string, string>;
+    const { toStoredContent } = await import("@/lib/files/blob");
+    const out: Record<string, string> = {};
+    for (const [ruta, c] of Object.entries(entrada)) out[ruta] = c instanceof Uint8Array ? await toStoredContent(c) : c;
+    return out;
+  }
+
   /** Un fichero de sólo lectura que el hilo necesita: se calcula aquí y se le devuelve. */
   private async servirPerezoso(hilo: Worker, pid: number, ruta: string): Promise<void> {
     this.cargados.push(ruta);
@@ -353,7 +383,7 @@ export class TerminalDeLen implements TerminalBackend {
         stdout: String(r.stdout ?? ""),
         stderr: String(r.stderr ?? ""),
         exitCode: Number(r.exitCode ?? 1),
-        ficheros: (r.ficheros as Record<string, string>) ?? null,
+        ficheros: r.ficheros ? await this.aPunteros(r.ficheros) : null,
         ...(this.cargados.length > 0 ? { cargados: [...this.cargados] } : {}),
         ...(this.fallidos.length > 0 ? { fallidos: [...this.fallidos] } : {}),
       };

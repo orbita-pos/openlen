@@ -215,6 +215,8 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
       session.fotoDeLaTerminal = { ...ficheros };
       return ficheros;
     },
+    // Los binarios del proyecto (spec local 2026-10-28): sus bytes, cuando un comando los lee.
+    leerBlob: async (puntero) => (await import("@/lib/files/blob")).getBlob(puntero),
     perezosos: {
       rutas: async () => (await (soloLectura = soloLecturaDeLaTerminal(session, deps))).rutas,
       leer: async (ruta) => (await (soloLectura ??= soloLecturaDeLaTerminal(session, deps))).leer(ruta),

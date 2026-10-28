@@ -23,6 +23,11 @@ import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from ".
 import { guardarAMano } from "./terminal/editar-a-mano";
 import { operarAMano } from "./terminal/operar-a-mano";
 import { makePointer } from "@/lib/files/blob-pointer";
+import { putBlob } from "@/lib/files/blob";
+import { __setStorageForTest } from "@/lib/storage";
+import { FilesystemStorage } from "@/lib/storage/filesystem";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { runCli } from "@/lib/backend/cli-core";
 import { memoryStore } from "@/lib/git/memory-store";
 import { runGit } from "@/lib/git/run";
@@ -1017,19 +1022,21 @@ describe("guardarLoDeLaTerminal — lo que escribe la terminal, por el camino de
     assert.match(r.notas[0]!, /^menu\/index\.html: not saved — /);
   });
 
-  it("un fichero nuevo que no es página ni cabe en la carpeta no se guarda y desaparece; una página nueva, sí", async () => {
+  // Desde el 2026-10-28 la carpeta admite cualquier fichero (spec local ficheros-al-nivel-de-claude-code):
+  // lo que no cabe es lo reservado, no una extensión.
+  it("un fichero nuevo en una ruta reservada no se guarda y desaparece; una página nueva, sí", async () => {
     const { deps, store } = makeDeps(sitio());
     const r = await guardarLoDeLaTerminal(
       makeSession(),
       deps,
       [
-        { tipo: "escrito", ruta: "/foto.png", contenido: "x", crea: true },
+        { tipo: "escrito", ruta: "/assets/foto.png", contenido: "x", crea: true },
         { tipo: "escrito", ruta: "/clases/index.html", contenido: MENU.replace("<h1>Menú</h1>", "<h1>Clases</h1>"), crea: true },
       ],
       antes,
     );
-    assert.equal(r.enLaTerminal["/foto.png"], null);
-    assert.match(r.notas[0]!, /^foto\.png: not saved — .*text files only.*It was removed\.$/);
+    assert.equal(r.enLaTerminal["/assets/foto.png"], null);
+    assert.match(r.notas[0]!, /^assets\/foto\.png: not saved — .*reserved.*It was removed\.$/);
     assert.equal(r.notas[1], "clases/index.html: saved (new page).");
     assert.match(store.data.pages?.clases?.html ?? "", /<h1>Clases<\/h1>/);
   });
@@ -1667,6 +1674,61 @@ describe("la carpeta con binarios", () => {
     assert.equal(versiones.length, 1);
   });
 
+  // Las herramientas, como las de Claude Code (spec §5): Read ve una imagen y dice que no con un binario;
+  // un texto que no es UTF-8 sale con U+FFFD y su nota; Edit y Write no lo tocan; Glob lo lista.
+  const conBlobs = async (ficheros: Record<string, Uint8Array>) => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-bin-")), publicUrlBase: "/uploads" }));
+    const c = conCarpeta({ html: HOME });
+    for (const [ruta, bytes] of Object.entries(ficheros)) c.archivos[ruta] = makePointer(await putBlob(bytes));
+    const vistas: number[] = [];
+    const deps = { ...c.deps, imageForModel: async (b: Uint8Array) => (vistas.push(b.byteLength), { image: { type: "image", source: { type: "base64", media_type: "image/png", data: "x" } }, width: 4, height: 3 }) } as unknown as AgentDeps;
+    return { ...c, deps, vistas };
+  };
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 4, 0, 0, 0, 3]);
+
+  it("Read de una imagen de la carpeta: se le enseña a Len como imagen, sin caja", async () => {
+    const { deps, vistas } = await conBlobs({ "/img/a.png": PNG });
+    const r = await runAgentTool(makeSession(), deps, "Read", { file_path: "/img/a.png" });
+    assert.match(texto(r), /^Image read: \/img\/a\.png \(\d+ bytes, 4×3\)/);
+    assert.equal(r.images?.length, 1);
+    assert.deepEqual(vistas, [PNG.byteLength]);
+  });
+
+  it("Read de otro binario: el error de Claude Code; de un Latin-1: su texto con U+FFFD y la nota", async () => {
+    const { deps } = await conBlobs({ "/data/x.bin": Uint8Array.from([0, 1, 2]), "/viejo.txt": Uint8Array.from([0x63, 0x61, 0x66, 0xe9, 0x0a]) });
+    const bin = await runAgentTool(makeSession(), deps, "Read", { file_path: "/data/x.bin" });
+    assert.match(texto(bin), /This tool cannot read binary files\. The file appears to be a binary \.bin file\./);
+    const latin = await runAgentTool(makeSession(), deps, "Read", { file_path: "/viejo.txt" });
+    assert.match(texto(latin), /caf\uFFFD/);
+    assert.match(texto(latin), /\[This file is not valid UTF-8: it uses a legacy encoding/);
+  });
+
+  it("Edit y Write sobre un binario no escriben nada y dicen por qué", async () => {
+    const { deps, archivos } = await conBlobs({ "/img/a.png": PNG });
+    const antes = archivos["/img/a.png"];
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "/img/a.png" });
+    const e = await runAgentTool(s, deps, "Edit", { file_path: "/img/a.png", old_string: "PNG", new_string: "JPG" });
+    assert.match(texto(e), /File has NUL bytes in its first 8 KB/);
+    const w = await runAgentTool(s, deps, "Write", { file_path: "/img/a.png", content: "texto" });
+    assert.match(texto(w), /To replace the whole file with new UTF-8 text anyway, delete it first, then Write it\./);
+    assert.equal(archivos["/img/a.png"], antes);
+  });
+
+  it("lleno = ENOSPC: el proyecto entero (páginas e historial) cuenta contra 1 GB, como un disco", async () => {
+    const c = conCarpeta({ html: HOME });
+    const deps = { ...c.deps, projectUsageBytes: async () => 1024 * 1024 * 1024 - 1 } as unknown as AgentDeps;
+    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/notas.txt", content: "dos" });
+    assert.match(texto(w), /ENOSPC: no space left on device, write '\/notas\.txt'/);
+    assert.equal(c.archivos["/notas.txt"], undefined);
+  });
+
+  it("Glob lista los binarios", async () => {
+    const { deps } = await conBlobs({ "/img/a.png": PNG });
+    const g = await runAgentTool(makeSession(), deps, "Glob", { pattern: "**/*.png" });
+    assert.match(texto(g), /img\/a\.png/);
+  });
+
   it("renombrar una carpeta con un binario mueve el puntero, sin cambiarlo", async () => {
     const { deps, archivos } = conCarpeta({ html: HOME });
     await operarAMano("p-editor", "u1", { tipo: "crear", ruta: "/img/logo.png", contenido: PUNTERO }, deps);
@@ -1839,15 +1901,18 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     );
   });
 
-  it("🔴 una ruta reservada o una extensión de fuera se rechaza diciendo qué vale", async () => {
+  it("🔴 una ruta reservada o la de git se rechaza diciendo por qué; cualquier otra extensión se crea", async () => {
     const { deps, archivos } = conCarpeta({ html: HOME });
     const a = await runAgentTool(makeSession(), deps, "Write", { file_path: "/assets/x.js", content: "1" });
     assert.equal(a.response.ok, false);
     assert.match(texto(a), /reserved/);
-    const b = await runAgentTool(makeSession(), deps, "Write", { file_path: "/logo.png", content: "1" });
-    assert.equal(b.response.ok, false);
-    assert.match(texto(b), /\.js \.mjs \.jsx \.tsx \.ts \.css/);
+    const g = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.git/config", content: "1" });
+    assert.equal(g.response.ok, false);
+    assert.match(texto(g), /it is git's own folder/);
     assert.deepEqual(archivos, {});
+    const b = await runAgentTool(makeSession(), deps, "Write", { file_path: "/logo.png", content: "1" });
+    assert.equal(b.response.ok, true, texto(b));
+    assert.deepEqual(archivos, { "/logo.png": "1" });
   });
 
   it("🔴 la terminal la ve; sed -i la cambia y rm la borra (archivando); rm de la portada, no", async () => {
@@ -1907,10 +1972,11 @@ describe("la carpeta del proyecto (pieza 9)", () => {
     assert.match(versiones.at(-1)?.label ?? "", /^Code editor: /);
   });
 
-  it("BRAZO DE CONTROL: un fichero de más de 1 MiB no se guarda", async () => {
+  it("BRAZO DE CONTROL: un fichero de más de 50 MB no se guarda", async () => {
     const { deps, archivos } = conCarpeta({ html: HOME });
-    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/data/x.json", content: "x".repeat(1024 * 1024 + 1) });
+    const w = await runAgentTool(makeSession(), deps, "Write", { file_path: "/data/x.json", content: "x".repeat(50 * 1024 * 1024 + 1) });
     assert.equal(w.response.ok, false);
+    assert.match(texto(w), /File too large: \/data\/x\.json is 50\.0 MB, the maximum is 50 MB\./);
     assert.deepEqual(archivos, {});
   });
 });
