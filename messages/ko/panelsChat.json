@@ -418,5 +418,15 @@
       "generic": "문제가 발생했습니다. 잠시 후 다시 시도해 주세요."
     },
     "liveWaiting": "Len이 이메일 도메인 연결을 기다리고 있습니다"
+  },
+  "photos": {
+    "gallery": "사진",
+    "open": "사진 {number} 열기",
+    "previous": "이전 사진",
+    "next": "다음 사진",
+    "close": "닫기",
+    "source": "Wikimedia Commons",
+    "by": "촬영: {author}",
+    "more": "+{count}"
   }
 }
