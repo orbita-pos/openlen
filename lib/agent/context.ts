@@ -208,7 +208,7 @@ ${roto}${lista}`;
  * lienzo) sin inventar números. Decisión nuestra, dicha en voz alta.
  */
 export type SeleccionDelDueno =
-  | { readonly ruta: string; readonly desde: number; readonly hasta: number; readonly contenido: string }
+  | { readonly ruta: string; readonly desde: number; readonly hasta: number; readonly contenido: string; readonly nota?: string }
   | { readonly ruta: string; readonly pista: string };
 
 /** El mismo tope de caracteres que Claude Code pone a una selección. */
@@ -222,7 +222,7 @@ export function seleccionBlock(sel: SeleccionDelDueno | null | undefined): strin
           sel.contenido.length > TOPE_DE_SELECCION
             ? `${sel.contenido.slice(0, TOPE_DE_SELECCION)}\n[cut here]`
             : sel.contenido
-        }`
+        }${sel.nota ? `\n${sel.nota}` : ""}`
       : `On the canvas, the user pointed at an element of ${sel.ruta}: ${sel.pista}`;
   return `<system-reminder>\n${cuerpo}\n\nIt may or may not matter for what you are doing now.\n</system-reminder>\n\n`;
 }

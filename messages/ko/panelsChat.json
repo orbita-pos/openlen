@@ -442,6 +442,7 @@
     "limit": "메시지당 최대 {max}개까지",
     "cannotPoint": "이 요소에는 가리킬 코드 줄이 없습니다.",
     "files": "파일",
-    "people": "사람"
+    "people": "사람",
+    "onScreen": "{screen} 화면"
   }
 }

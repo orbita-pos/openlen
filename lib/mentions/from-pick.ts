@@ -42,6 +42,14 @@ export function mentionFromDesignSelection(s: DesignSelection, labels: (kind: Me
     type: "element",
     label: mentionLabel(labels(kindOf(s.tag, {})), humanNameOf({ tag: s.tag, ownText: text, attrs: {}, component: link.component })),
     text,
-    target: { type: "app", path: link.path, line: link.line, tag: s.tag, ...(text ? { text } : {}) },
+    target: {
+      type: "app",
+      path: link.path,
+      line: link.line,
+      tag: s.tag,
+      ...(text ? { text } : {}),
+      ...(s.copies > 1 ? { copies: s.copies } : {}),
+      ...(s.screen ? { screen: s.screen } : {}),
+    },
   };
 }

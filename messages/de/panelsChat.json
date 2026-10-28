@@ -442,6 +442,7 @@
     "limit": "Bis zu {max} Erwähnungen pro Nachricht",
     "cannotPoint": "Dieses Element hat keine Codezeile, auf die man zeigen kann.",
     "files": "Dateien",
-    "people": "Personen"
+    "people": "Personen",
+    "onScreen": "auf dem Bildschirm {screen}"
   }
 }

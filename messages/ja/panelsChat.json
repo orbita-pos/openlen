@@ -442,6 +442,7 @@
     "limit": "1 メッセージにつき最大 {max} 件まで",
     "cannotPoint": "その要素には指せるコードの行がありません。",
     "files": "ファイル",
-    "people": "メンバー"
+    "people": "メンバー",
+    "onScreen": "{screen} の画面"
   }
 }

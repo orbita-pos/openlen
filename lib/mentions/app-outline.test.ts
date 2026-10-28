@@ -102,3 +102,23 @@ describe("outlineApp", () => {
     expect(entries.at(-1)!.ruta).toBe("/src/components/ui/button.tsx");
   });
 });
+
+describe("the screen an element lives on", () => {
+  it("comes from the routes: what a routed component writes is on its #/ screen", async () => {
+    const files = {
+      "/src/App.tsx": [
+        'import { Routes, Route } from "react-router-dom";',
+        'import Ventas from "./Ventas";',
+        "function Inicio() { return <h1>Hola</h1>; }",
+        "export default function App() {",
+        '  return <Routes><Route path="/" element={<Inicio />} /><Route path="/ventas" element={<Ventas />} /></Routes>;',
+        "}",
+      ].join("\n"),
+      "/src/Ventas.tsx": "export default function Ventas() {\n  return <table><tbody><tr><td>1</td></tr></tbody></table>;\n}\n",
+    };
+    const entries = await outlineApp(files);
+    expect(entries.find((e) => e.tag === "h1")!.screen).toBe("#/");
+    expect(entries.find((e) => e.tag === "table")!.screen).toBe("#/ventas");
+    expect(entries.find((e) => e.tag === "Routes")!.screen).toBeUndefined();
+  });
+});

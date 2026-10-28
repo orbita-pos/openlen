@@ -33,7 +33,9 @@ function parseTarget(raw: unknown): PageTarget | AppTarget | null {
     return { type: "page", page: t.page as string | null, path: t.path.slice(0, PATH_MAX), tag: t.tag.slice(0, 40), ...text, ...sig };
   }
   if (t.type === "app" && str(t.path) && t.path.startsWith("/") && str(t.tag) && APP_TAG.test(t.tag) && Number.isInteger(t.line) && (t.line as number) > 0) {
-    return { type: "app", path: t.path.slice(0, PATH_MAX), line: t.line as number, tag: t.tag.slice(0, 80), ...text };
+    const copies = Number.isInteger(t.copies) && (t.copies as number) > 1 && (t.copies as number) <= 100_000 ? { copies: t.copies as number } : {};
+    const screen = str(t.screen) && /^#\/[\w\-/.~%]{0,200}$/.test(t.screen) ? { screen: t.screen } : {};
+    return { type: "app", path: t.path.slice(0, PATH_MAX), line: t.line as number, tag: t.tag.slice(0, 80), ...text, ...copies, ...screen };
   }
   return null;
 }
@@ -133,7 +135,9 @@ async function appSelection(ref: MentionRef & { type: "element" }, target: AppTa
   if (!found) return pista;
   const hasta = found.endLine ?? found.line;
   const contenido = source.replace(/\r\n/g, "\n").split("\n").slice(found.line - 1, hasta).join("\n");
-  return { ruta: target.path, desde: found.line, hasta, contenido };
+  // Where it is on the canvas, when the pick or the highlight knew it.
+  const where = [target.copies ? `it repeats ${target.copies} times` : "", target.screen ? `on screen ${target.screen}` : ""].filter(Boolean).join(", ");
+  return { ruta: target.path, desde: found.line, hasta, contenido, ...(where ? { nota: `On the canvas ${where}.` } : {}) };
 }
 
 export async function resolveMentions(

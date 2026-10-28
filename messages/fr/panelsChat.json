@@ -442,6 +442,7 @@
     "limit": "Jusqu'à {max} mentions par message",
     "cannotPoint": "Cet élément n'a pas de ligne dans le code à désigner.",
     "files": "Fichiers",
-    "people": "Personnes"
+    "people": "Personnes",
+    "onScreen": "sur l'écran {screen}"
   }
 }

@@ -442,6 +442,7 @@
     "limit": "Hasta {max} menciones por mensaje",
     "cannotPoint": "Ese elemento no tiene una línea en el código a la que señalar.",
     "files": "Ficheros",
-    "people": "Personas"
+    "people": "Personas",
+    "onScreen": "en la pantalla {screen}"
   }
 }

@@ -442,6 +442,7 @@
     "limit": "Up to {max} mentions per message",
     "cannotPoint": "That element has no line in the code to point at.",
     "files": "Files",
-    "people": "People"
+    "people": "People",
+    "onScreen": "on screen {screen}"
   }
 }

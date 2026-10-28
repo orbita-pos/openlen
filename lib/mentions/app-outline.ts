@@ -48,7 +48,29 @@ function componentOf(ts: TypeScript, node: TS.Node): string | null {
   return null;
 }
 
-export async function outlineFile(path: string, source: string): Promise<MentionEntry[]> {
+/** `<Route path="/ventas" element={<Ventas />} />` (or `Component={Ventas}`, or
+ *  `index`): which component a screen shows. Only the route's own path: a
+ *  nested route's parent prefix is not added. */
+function routeOf(ts: TypeScript, sf: TS.SourceFile, opening: TS.JsxOpeningLikeElement): { component: string; screen: string } | null {
+  let screen: string | null = null;
+  let component: string | null = null;
+  for (const p of opening.attributes.properties) {
+    if (!ts.isJsxAttribute(p)) continue;
+    const name = p.name.getText(sf);
+    if (name === "index") screen = "/";
+    else if (name === "path" && p.initializer && ts.isStringLiteral(p.initializer)) screen = p.initializer.text;
+    else if ((name === "element" || name === "Component") && p.initializer && ts.isJsxExpression(p.initializer) && p.initializer.expression) {
+      const e = p.initializer.expression;
+      if (ts.isJsxSelfClosingElement(e)) component = e.tagName.getText(sf);
+      else if (ts.isJsxElement(e)) component = e.openingElement.tagName.getText(sf);
+      else if (ts.isIdentifier(e)) component = e.text;
+    }
+  }
+  if (screen === null || !component || screen.includes("*")) return null;
+  return { component, screen: `#${screen.startsWith("/") ? screen : `/${screen}`}` };
+}
+
+export async function outlineFile(path: string, source: string, routes?: Map<string, string>): Promise<MentionEntry[]> {
   const ts = await typescript();
   const kind = path.endsWith("x") ? ts.ScriptKind.TSX : path.endsWith(".js") ? ts.ScriptKind.JSX : ts.ScriptKind.TS;
   const sf = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, kind);
@@ -74,6 +96,10 @@ export async function outlineFile(path: string, source: string): Promise<Mention
         ? node.children.filter(ts.isJsxText).map((c) => c.text).join(" ").replace(/\s+/g, " ").trim()
         : "";
       const component = componentOf(ts, node);
+      if (routes && tag === "Route") {
+        const r = routeOf(ts, sf, opening);
+        if (r) routes.set(r.component, r.screen);
+      }
       const key = `${path}:${line}:${at.character + 1}`;
       entries.push({
         key,
@@ -104,6 +130,12 @@ export async function outlineApp(files: Readonly<Record<string, string>>): Promi
   // shadcn's components/ui go after everything else: what the user wrote first.
   const ordered = [...paths.filter((p) => !p.startsWith(UI)), ...paths.filter((p) => p.startsWith(UI))];
   const out: MentionEntry[] = [];
-  for (const p of ordered) out.push(...(await outlineFile(p, files[p]!)));
+  const routes = new Map<string, string>();
+  for (const p of ordered) out.push(...(await outlineFile(p, files[p]!, routes)));
+  // What a routed component writes is on that route's screen.
+  for (const e of out) {
+    const screen = e.component ? routes.get(e.component) : undefined;
+    if (screen) e.screen = screen;
+  }
   return out;
 }

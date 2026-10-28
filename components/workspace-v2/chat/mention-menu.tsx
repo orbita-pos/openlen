@@ -182,7 +182,20 @@ export function useMentionMenu(args: {
     const ref: MentionRef =
       row.kind === "file"
         ? { type: "file", label: `@${row.ruta}`, ruta: row.ruta }
-        : { type: "element", label: mentionLabel(t(`mentions.kind.${row.entry.kind}`), row.entry.name), text: row.entry.text.slice(0, 40), target: row.entry.target };
+        : {
+            type: "element",
+            label: mentionLabel(t(`mentions.kind.${row.entry.kind}`), row.entry.name),
+            text: row.entry.text.slice(0, 40),
+            target:
+              row.entry.target.type === "app"
+                ? {
+                    ...row.entry.target,
+                    // What the canvas counted (a loop, a reused component) and the screen from the routes.
+                    ...((counts[row.entry.key] ?? 0) > 1 ? { copies: counts[row.entry.key] } : {}),
+                    ...(row.entry.screen ? { screen: row.entry.screen } : {}),
+                  }
+                : row.entry.target,
+          };
     replaceQuery(`${ref.label} `);
     // The same thing picked again: its label goes in the text, the mention stays one.
     if (!mentions.some((m) => sameMention(m, ref))) onMentionsChange([...mentions, ref]);
@@ -227,7 +240,7 @@ export function useMentionMenu(args: {
       return t("mentions.onPage", { page: entry.target.page ? `/${entry.target.page}` : "/" });
     }
     const c = counts[entry.key];
-    if (c === 0) return t("mentions.notOnScreen");
+    if (c === 0) return entry.screen ? t("mentions.onScreen", { screen: entry.screen }) : t("mentions.notOnScreen");
     if (c !== undefined && c > 1) return `×${c}`;
     return null;
   };
