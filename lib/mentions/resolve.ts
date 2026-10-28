@@ -85,7 +85,8 @@ function textFitsFragment(text: string, fragment: string): boolean {
 
 /** The fragment's root element keeps the identity of a textless mention. */
 function sigFitsFragment(sig: MentionSig, fragment: string): boolean {
-  const root = parseHtml(fragment).childNodes.find((n): n is HTMLElement => n instanceof HTMLElement);
+  // `pre` parsed as markup, not as raw text: its children are part of the identity.
+  const root = parseHtml(fragment, { blockTextElements: { script: true, noscript: true, style: true } }).childNodes.find((n): n is HTMLElement => n instanceof HTMLElement);
   if (!root) return false;
   if (sig.id !== undefined && (root.getAttribute("id") ?? "") !== sig.id) return false;
   if (sig.cls !== undefined && ((root.getAttribute("class") ?? "").trim().split(/\s+/)[0] ?? "") !== sig.cls) return false;

@@ -23,7 +23,7 @@ import { resolveMentions } from "./resolve";
 import { searchMentions } from "./search";
 import type { MentionEntry, MentionRef } from "./types";
 
-export type KnownClass = "script-created" | "library-created" | "duplicate-text" | "canvas" | "embed" | "svg-internal" | "shadow-dom";
+export type KnownClass = "script-created" | "script-rerendered" | "library-created" | "duplicate-text" | "canvas" | "embed" | "svg-internal" | "shadow-dom";
 
 export type GateDoc =
   | { name: string; kind: "page"; html: string }
@@ -137,15 +137,20 @@ async function gatePage(browser: Browser, doc: { name: string; html: string }): 
       `(function (list) {
         return list.map(function (p) {
           var el = document.body ? elementAtEditPath(p.path, document.body) : null;
-          return { key: p.key, shown: !!el && shown(el), same: !!el && mentionSignatureMatches(el, p.tag, p.text || undefined, p.sig || undefined), opId: el ? el.getAttribute('data-op-id') : null, want: p.opId };
+          return { key: p.key, shown: !!el && shown(el), same: !!el && mentionSignatureMatches(el, p.tag, p.text || undefined, p.sig || undefined), opId: el ? el.getAttribute('data-op-id') : null, want: p.opId, gone: !document.querySelector('[data-op-id="' + p.opId + '"]') };
         });
       })(${JSON.stringify(probes)})`,
-    )) as { key: string; shown: boolean; same: boolean; opId: string | null; want: string }[];
+    )) as { key: string; shown: boolean; same: boolean; opId: string | null; want: string; gone: boolean }[];
     for (const o of outlined) {
       if (!o.shown) continue;
       // The canvas would outline it (signature fits) but it is ANOTHER source
       // element: the person would be pointed at the wrong thing. That is the bug.
-      if (o.same && o.opId !== o.want) failures.push({ check: 2, key: o.key, reason: `outlines ${o.opId ?? "an element the script made"}, not ${o.want}`, knownClass: null });
+      // Unless the source element no longer exists and a script-made one stands in
+      // its place (a countdown rewriting its innerHTML): that is it, re-rendered.
+      if (o.same && o.opId !== o.want) {
+        const rerendered = o.gone && o.opId === null;
+        failures.push({ check: 2, key: o.key, reason: `outlines ${o.opId ?? "an element the script made"}, not ${o.want}`, knownClass: rerendered ? "script-rerendered" : null });
+      }
       // A signature that no longer fits: the canvas says «not on screen now», which is honest.
       else if (!o.same) failures.push({ check: 2, key: o.key, reason: "not on screen: a script changed what is at its path", knownClass: "script-created" });
     }

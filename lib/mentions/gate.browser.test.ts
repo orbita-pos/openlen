@@ -38,6 +38,23 @@ describe("the «@» selects everything", () => {
     expect(report.docs.every((d) => d.checked > 0)).toBe(true);
   }, 600_000);
 
+  it("a script that re-renders an element in place (a countdown) is a known class, not a bug", async () => {
+    const html = [
+      "<!doctype html>",
+      "<html><body>",
+      '<div id="t">',
+      "  028 <span>d</span>",
+      "</div>",
+      "<script>document.getElementById('t').innerHTML = '027 <span>d</span>';</script>",
+      "</body></html>",
+    ].join("\n");
+    const report = await runMentionsGate([{ name: "countdown", kind: "page", html }]);
+    const check2 = report.docs[0]!.failures.filter((f) => f.check === 2);
+    expect(check2.filter((f) => f.knownClass === null)).toEqual([]);
+    // The <span> is outlined as its re-render; the <div>, whose text changed, reads «not on screen now».
+    expect(check2).toContainEqual(expect.objectContaining({ key: "/index.html:4:7", knownClass: "script-rerendered" }));
+  }, 120_000);
+
   it("🔴 catches a highlight that lands on a look-alike a script inserted", async () => {
     // The page's JS puts an identical <p>Hola</p> before the source one: same tag,
     // same text, so only the element's own position can tell them apart.
