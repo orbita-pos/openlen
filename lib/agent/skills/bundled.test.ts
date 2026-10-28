@@ -14,9 +14,10 @@ import { parseSkillFile } from "./skill-file";
 import { BUNDLED_SKILLS_DIR, bundledSkillFiles, bundledSkillNames, bundledSkills, type BundledContext } from "./bundled";
 
 describe("bundled skills", () => {
-  it("ships the seven office skills, pdf, research, the one that creates skills and, in a page, the page guides", () => {
+  it("ships the seven office skills, pdf, research, charts, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
       "convert-to-app",
+      "dataviz",
       "deep-research",
       "frontend-design",
       "office",
@@ -75,6 +76,7 @@ describe("bundled skills", () => {
         "fill_fillable_fields", "check_bounding_boxes", "extract_form_field_info", "convert_pdf_to_images",
         "fill_pdf_form_with_annotations", "extract_form_structure", "check_fillable_fields", "PDF Processing Guide",
         "researcher.md", "report-writer.md", "Coordinating Deep Research", "research_notes/", "Executing Research",
+        "validate_palette.js", "design-system-agnostic", "read by people and executed by you",
       ];
       for (const ctx of [{ app: null, env: { OPENLEN_ARTIFACTS: "1" } }, { app: null, env: {} }] as const) {
         for (const [path, text] of Object.entries(bundledSkillFiles(ctx))) {
@@ -99,6 +101,18 @@ describe("bundled skills", () => {
 
     it("when the budget runs out it says so and offers another turn", () => {
       expect(text()).toContain("another turn");
+    });
+  });
+
+  // DATAVIZ (§4.3): Claude's procedure in our words, with our own validator, and where each chart is drawn.
+  describe("dataviz", () => {
+    it("dataviz runs its validator and says where each chart is drawn", () => {
+      const files = bundledSkillFiles();
+      const text = files[`${BUNDLED_SKILLS_DIR}/dataviz/SKILL.md`]!;
+      for (const must of ["scripts/validate_palette.mjs", "references/where.md"]) expect(text, must).toContain(must);
+      const where = files[`${BUNDLED_SKILLS_DIR}/dataviz/references/where.md`]!;
+      for (const must of ["Chart.js", "recharts"]) expect(where, must).toContain(must);
+      expect(files[`${BUNDLED_SKILLS_DIR}/dataviz/scripts/validate_palette.mjs`]).toContain("export function validatePalette");
     });
   });
 
