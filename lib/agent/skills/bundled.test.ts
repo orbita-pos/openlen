@@ -178,6 +178,16 @@ describe("bundled skills", () => {
       for (const must of ["/.len/skills/brand/SKILL.md", "consent", "never the texts you wrote"]) expect(text, must).toContain(must);
     });
 
+    // Claude's setup-writing-style: every trait traces to the user's real writing, tone only where the
+    // samples show it, and a thin corpus is said, never distilled in silence (more samples, or a start
+    // with only what the user said, under a line that says so).
+    it("setup-brand builds the voice only from the owner's texts, and says so when they are few", () => {
+      const text = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/SKILL.md`]!;
+      for (const must of ["a quote of theirs", "fewer than five pieces", "only what the owner told you"]) expect(text, must).toContain(must);
+      const template = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/references/brand-skill.md`]!;
+      expect(template).toContain("of the owner's own texts");
+    });
+
     it("the brand template parses as a skill and has no example personal data", () => {
       const template = files()[`${BUNDLED_SKILLS_DIR}/setup-brand/references/brand-skill.md`]!;
       const filled = template.replace(/\[\[[^\]]*\]\]/g, "Example");

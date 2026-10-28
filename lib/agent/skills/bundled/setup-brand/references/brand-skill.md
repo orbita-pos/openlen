@@ -30,16 +30,19 @@ Where this brand and a design guide differ, the brand wins. Built on [[date]] fr
 
 ## Voice
 
+> Built from [[N]] of the owner's own texts[[, or: none yet, only what the owner said]] · updated [[month and year]].
+
 What stays the same whenever the business speaks:
-- [[A trait, with a short sentence that shows it]]
-- [[A trait, with a short sentence that shows it]]
-- [[A trait, with a short sentence that shows it]]
+- [[A trait, with a quote of the owner's that shows it]]
+- [[A trait, with a quote of the owner's that shows it]]
+- [[A trait, with a quote of the owner's that shows it]]
 
 ## Tone by audience
 
-- Customers: [[how it sounds to them]]
-- Suppliers and partners: [[how it sounds to them]]
-- Social media: [[how it sounds there]]
+Only for the audiences the owner's texts write to:
+- Customers: [[how it sounds to them, with a quote]]
+- Suppliers and partners: [[how it sounds to them, with a quote]]
+- Social media: [[how it sounds there, with a quote]]
 
 ## Never
 
