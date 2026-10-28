@@ -894,3 +894,11 @@ describe("the «@» mentioned files keep Read's limits", () => {
     expect(s).toMatch(/\/b\.md[\s\S]*offset and limit/);
   });
 });
+
+describe("a mentioned file that does not exist", () => {
+  it("reaches Len with Read's own words, not silence", () => {
+    const s = buildAgentContext({ state: {}, mentionedFiles: [{ ruta: "/nada.md", contenido: "", missing: "There is no file at /nada.md. Paths start at the site root, /." }] });
+    expect(s).toContain("The user mentioned /nada.md");
+    expect(s).toContain("There is no file at /nada.md.");
+  });
+});

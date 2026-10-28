@@ -9,6 +9,7 @@ import type { SeleccionDelDueno } from "@/lib/agent/context";
 import type { MentionedFile } from "@/lib/agent/context";
 import { HTMLElement, parse as parseHtml } from "node-html-parser";
 
+import { noExiste } from "@/lib/agent/ficheros/read";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 
 import { outlineFile } from "./app-outline";
@@ -151,7 +152,9 @@ export async function resolveMentions(
   for (const ref of refs) {
     if (ref.type === "file") {
       const contenido = (await loadFiles())[ref.ruta];
+      // A file that is not there reaches Len with Read's own words, not silence.
       if (contenido !== undefined) ficheros.push({ ruta: ref.ruta, contenido });
+      else ficheros.push({ ruta: ref.ruta, contenido: "", missing: noExiste(ref.ruta, Object.keys(await loadFiles())) });
     } else if (ref.target.type === "page") {
       selecciones.push(pageSelection(ref, ref.target, ctx.pageHtml(ref.target.page)));
     } else {
