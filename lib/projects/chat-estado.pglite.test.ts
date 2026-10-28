@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { abrirFilaDelTurno, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { abrirFilaDelTurno, cutOffRowsOpenedBeforeBoot, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -174,6 +174,40 @@ ${texto}
     expect(filas[1]!.cutOff).toBe(true);
     const conEquipo = await filasParaElHistorialConEquipo("p1");
     expect(conEquipo.map((f) => f.fila.cutOff ?? false)).toEqual(filas.map((f) => f.cutOff ?? false));
+  });
+
+  // AL ARRANCAR (lib/agent/close-dead-turns.ts): lo que el proceso anterior dejó
+  // en curso se corta de una vez, aunque nadie lo vuelva a mirar.
+  it("🔴 al arrancar, la fila en curso del proceso anterior pasa a cortada y llega al historial; la de este proceso y las cerradas no se tocan", async () => {
+    await turno({ id: "cerrada", minuto: 0 });
+    // Un `@Len` de un hilo que un deploy mató: nadie la reengancha.
+    await abrirFilaDelTurno("p1", { id: "del-hilo", userText: "@Len pon el horario", page: null });
+    await pg.query(`update "projectChatMessages" set "createdAt" = "createdAt" - interval '10 minutes' where id = 'del-hilo'`);
+    await abrirFilaDelTurno("p1", { id: "viva", userText: "sigue", page: null });
+    // Este proceso arrancó hace 60 s.
+    expect(await cutOffRowsOpenedBeforeBoot(60)).toBe(1);
+    const estados = await pg.query<{ id: string; status: string }>(`select id, status from "projectChatMessages" order by id`);
+    expect(estados.rows).toEqual([
+      { id: "cerrada", status: "applied" },
+      { id: "del-hilo", status: "cortado" },
+      { id: "viva", status: "en_curso" },
+    ]);
+    const filas = await turnosParaElHistorial("p1");
+    expect(filas.map((f) => f.userText)).toEqual(["turno cerrada", "@Len pon el horario"]);
+    expect(filas.at(-1)!.cutOff).toBe(true);
+  });
+
+  it("🔴 el corte va con el reloj de la base: con la base en otra zona, la fila que se acaba de abrir sigue viva", async () => {
+    await pg.exec(`set time zone 'America/Mexico_City'`);
+    await abrirFilaDelTurno("p1", { id: "recien", userText: "hola", page: null });
+    expect(await cutOffRowsOpenedBeforeBoot(60)).toBe(0);
+    // Brazo de control: con la hora de arranque de Node (como manda Drizzle una
+    // fecha a un `timestamp` sin zona) se la llevaría — `createdAt` es la hora local de la base.
+    const conFechaDeNode = await pg.query<{ cortaria: boolean }>(
+      `select "createdAt" < $1::timestamp as cortaria from "projectChatMessages" where id = 'recien'`,
+      [new Date(Date.now() - 60_000).toISOString()],
+    );
+    expect(conFechaDeNode.rows[0]?.cortaria).toBe(true);
   });
 
   it("🔴 al reabrir una charla archivada, su historial arranca en SU marca", async () => {

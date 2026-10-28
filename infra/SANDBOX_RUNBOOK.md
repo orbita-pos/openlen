@@ -80,9 +80,10 @@ DELETE FROM "projectSandboxes" WHERE "projectId" = '<id>' AND "heldBy" IS NULL;
 ```
 
 El siguiente turno del proyecto crea una nueva desde los ficheros de Postgres. Si `heldBy` no es nulo y no hay
-ningún turno de ese proyecto en marcha (la app se cayó a media vuelta, p. ej. en un deploy), la reserva quedó
-colgada: se suelta sola a las 2 horas (el siguiente turno la toma) y mientras tanto cada turno de ese proyecto cae
-a la terminal de siempre con `reason=held`. Para no esperar:
+ningún turno de ese proyecto en marcha, la reserva quedó colgada. Si la app se cayó a media vuelta (un deploy, un
+reinicio), la suelta ella misma al arrancar (`lib/agent/close-dead-turns.ts`, línea `[dead-turns]` en el diario),
+menos las del barrendero (`reaper-…`). Si no, se suelta sola a las 2 horas (el siguiente turno la toma) y mientras
+tanto cada turno de ese proyecto cae a la terminal de siempre con `reason=held`. Para no esperar:
 
 ```sql
 UPDATE "projectSandboxes" SET "heldBy" = NULL WHERE "projectId" = '<id>';

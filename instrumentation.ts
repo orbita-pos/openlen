@@ -17,6 +17,14 @@ export async function register() {
     } catch {
       // Filesystem may be read-only in some test or CI envs — ignore.
     }
+    // Lo que el proceso anterior dejó a medio turno (un deploy, un reinicio):
+    // sus filas «en curso» pasan a cortadas —también las que nadie reengancha—
+    // y sus cajas de E2B se sueltan. Ya, sin esperar: un turno nuevo no puede
+    // encontrarse la caja retenida por uno muerto. Lo abierto después de
+    // arrancar no se toca. Nunca lanza.
+    void import("@/lib/agent/close-dead-turns")
+      .then((m) => m.closeTurnsOfThePreviousProcess())
+      .catch((err) => console.error("[dead-turns] no se pudo cerrar lo que dejó el proceso anterior", err));
     // Los pedidos a `@Len` desde un hilo del código que un reinicio dejó sin
     // contestar: se retoman en cuanto el servidor está en pie (unos segundos
     // después, para no cargar la ruta de Len en el arranque). Si esto falla, la
