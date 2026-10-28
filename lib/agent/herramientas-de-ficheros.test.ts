@@ -21,6 +21,8 @@ import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
+import { operarAMano } from "./terminal/operar-a-mano";
+import { makePointer } from "@/lib/files/blob-pointer";
 import { runCli } from "@/lib/backend/cli-core";
 import { memoryStore } from "@/lib/git/memory-store";
 import { runGit } from "@/lib/git/run";
@@ -1651,6 +1653,28 @@ const conTerminal = async <T>(f: () => Promise<T>): Promise<T> => {
     else process.env.OPENLEN_TERMINAL = antes;
   }
 };
+
+// FICHEROS AL NIVEL DE CLAUDE CODE (spec local 2026-10-28): un binario entra en la carpeta como PUNTERO
+// por el camino de siempre, con su versión, y moverlo no toca sus bytes.
+describe("la carpeta con binarios", () => {
+  const PUNTERO = makePointer({ sha256: "a".repeat(64), size: 1234, gitOid: "b".repeat(40) });
+
+  it("crear a mano un puntero lo guarda tal cual, con su versión", async () => {
+    const { deps, archivos, versiones } = conCarpeta({ html: HOME });
+    const r = await operarAMano("p-editor", "u1", { tipo: "crear", ruta: "/img/logo.png", contenido: PUNTERO }, deps);
+    assert.deepEqual(r, { ok: true, rutas: ["/img/logo.png"] });
+    assert.equal(archivos["/img/logo.png"], PUNTERO);
+    assert.equal(versiones.length, 1);
+  });
+
+  it("renombrar una carpeta con un binario mueve el puntero, sin cambiarlo", async () => {
+    const { deps, archivos } = conCarpeta({ html: HOME });
+    await operarAMano("p-editor", "u1", { tipo: "crear", ruta: "/img/logo.png", contenido: PUNTERO }, deps);
+    const r = await operarAMano("p-editor", "u1", { tipo: "renombrar", de: "/img", a: "/imagenes" }, deps);
+    assert.equal(r.ok, true);
+    assert.deepEqual(archivos, { "/imagenes/logo.png": PUNTERO });
+  });
+});
 
 // EL BACKEND DEL PROYECTO (plans/pages-backend/design.md): sus migraciones son
 // ficheros de /supabase/, como en cualquier proyecto con la CLI de Supabase.

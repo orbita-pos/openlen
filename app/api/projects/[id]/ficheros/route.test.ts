@@ -198,3 +198,25 @@ describe("la lente Código y la memoria personal de un miembro", () => {
     expect(sesion).toMatchObject({ userId: "dueno", personId: "lector" });
   });
 });
+
+// FICHEROS AL NIVEL DE CLAUDE CODE (spec local 2026-10-28): un binario no viaja en el árbol; la lente lo
+// pinta por su tamaño y su tipo, y sus bytes los pide a /ficheros/raw.
+describe("GET — un binario va sin contenido", () => {
+  beforeEach(() => {
+    vi.mocked(auth).mockReset();
+    vi.mocked(soloLecturaDeLaTerminal).mockReset().mockResolvedValue({ rutas: [], leer: async () => "" } as never);
+  });
+
+  it("sale con { size, tipo } y sin contenido; el texto sigue igual", async () => {
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
+    comoUsuario("u1");
+    const puntero = `￿openlen-blob:${"a".repeat(64)}:2048:${"b".repeat(40)}`;
+    vi.mocked(cargarFicherosDeLaTerminal).mockReset().mockResolvedValue({ "/img/a.png": puntero, "/js/app.js": "x" });
+    const r = await GET(new Request("http://x/api/projects/p1/ficheros"), { params: Promise.resolve({ id: "p1" }) });
+    const { ficheros } = (await r.json()) as { ficheros: unknown[] };
+    expect(ficheros).toEqual([
+      { ruta: "/img/a.png", binario: { size: 2048, tipo: "image/png" } },
+      { ruta: "/js/app.js", contenido: "x" },
+    ]);
+  });
+});

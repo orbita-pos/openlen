@@ -22,6 +22,8 @@ import { realDeps, type AgentSession } from "@/lib/agent/tools";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { soloLecturaDeLaTerminal } from "@/lib/agent/terminal/solo-lectura";
 import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
+import { contentTypeFor } from "@/lib/agent/ficheros/folder";
+import { parsePointer } from "@/lib/files/blob-pointer";
 import { guardarAMano } from "@/lib/agent/terminal/editar-a-mano";
 import { operarAMano, type ResultadoAMano } from "@/lib/agent/terminal/operar-a-mano";
 import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
@@ -71,7 +73,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const [todos, soloLectura] = await Promise.all([cargarFicherosDeLaTerminal(sesion, deps), soloLecturaDeLaTerminal(sesion, deps)]);
   const ficheros = Object.entries(todos)
     .filter(([r]) => !esDeLaPlataforma(r))
-    .map(([r, contenido]) => ({ ruta: r, contenido }));
+    .map(([r, contenido]) => {
+      // Un binario no viaja en el árbol (spec local 2026-10-28): la lente lo pinta por su tamaño y su tipo,
+      // y pide sus bytes a /ficheros/raw.
+      const blob = parsePointer(contenido);
+      return blob ? { ruta: r, binario: { size: blob.size, tipo: contentTypeFor(r) } } : { ruta: r, contenido };
+    });
   return json({ ficheros, perezosos: soloLectura.rutas.filter((r) => !esDeLaPlataforma(r)) });
 }
 

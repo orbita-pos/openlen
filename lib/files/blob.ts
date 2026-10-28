@@ -11,24 +11,11 @@ import { createHash } from "node:crypto";
 import { hashObject } from "@/lib/git/objects";
 import { getStorage } from "@/lib/storage";
 
-import { isBlobPointer, makePointer, parsePointer, type BlobRef } from "./blob-pointer";
+import { isBinaryBytes, isBlobPointer, makePointer, parsePointer, type BlobRef } from "./blob-pointer";
 
-export { BLOB_PREFIX, isBlobPointer, makePointer, parsePointer, sizeOf, type BlobRef } from "./blob-pointer";
+export { BLOB_PREFIX, isBinaryBytes, isBlobPointer, makePointer, parsePointer, sizeOf, type BlobRef } from "./blob-pointer";
 
 const strictUtf8 = new TextDecoder("utf-8", { fatal: true });
-
-/** Git's rule (a NUL in the first 8000 bytes), plus bytes that aren't UTF-8: `projectFiles.content` is
- *  UTF-8 text, so Latin-1 or UTF-16 text is kept as a blob to keep every byte. */
-export function isBinaryBytes(bytes: Uint8Array): boolean {
-  const head = bytes.subarray(0, 8000);
-  if (head.includes(0)) return true;
-  try {
-    strictUtf8.decode(bytes);
-    return false;
-  } catch {
-    return true;
-  }
-}
 
 const keyOf = (sha256: string) => `blobs/${sha256}`;
 

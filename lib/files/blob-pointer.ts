@@ -26,6 +26,19 @@ export function parsePointer(content: string): BlobRef | null {
 }
 
 const encoder = new TextEncoder();
+const strictUtf8 = new TextDecoder("utf-8", { fatal: true });
+
+/** Git's rule (a NUL in the first 8000 bytes), plus bytes that aren't UTF-8: `projectFiles.content` is
+ *  UTF-8 text, so Latin-1 or UTF-16 text is kept as a blob to keep every byte. */
+export function isBinaryBytes(bytes: Uint8Array): boolean {
+  if (bytes.subarray(0, 8000).includes(0)) return true;
+  try {
+    strictUtf8.decode(bytes);
+    return false;
+  } catch {
+    return true;
+  }
+}
 
 /** The file's size in bytes: a pointer's own, a text's in UTF-8. */
 export function sizeOf(content: string): number {

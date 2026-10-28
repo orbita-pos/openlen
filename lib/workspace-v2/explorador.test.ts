@@ -3,9 +3,9 @@ import { carpetaDe, carpetaDestino, estaDentro, moverRuta, nombreValido, paginaD
 import { arbolDeFicheros } from "./arbol-de-ficheros";
 
 describe("el explorador como el de VS Code — lo que no es pintar", () => {
-  it("los nombres que valen son los de la carpeta del proyecto; `a/b.js` crea las de en medio", () => {
-    for (const n of ["app.js", "util", "a/b.js", "Fecha_2.tsx", "datos.json"]) expect(nombreValido(n), n).toBe(true);
-    for (const n of ["", " ", ".env", "con espacio.js", "a//b", "../x", "ñ.js", "a/"]) expect(nombreValido(n), n).toBe(false);
+  it("los nombres que valen son los de la carpeta del proyecto, como en un disco; `a/b.js` crea las de en medio", () => {
+    for (const n of ["app.js", "util", "a/b.js", "Fecha_2.tsx", "datos.json", ".env", "con espacio.js", "ñ.js", "foto.jpg"]) expect(nombreValido(n), n).toBe(true);
+    for (const n of ["", " ", "a//b", "../x", "a/./b", "a/", "a\\b", "a\u0001b", `${"a/".repeat(32)}x`]) expect(nombreValido(n), n).toBe(false);
   });
 
   it("lo nuevo nace dentro de la carpeta elegida, junto al archivo elegido o en la raíz", () => {

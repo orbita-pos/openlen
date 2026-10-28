@@ -86,6 +86,8 @@ import {
 } from "@/lib/workspace-v2/grupos-de-editores";
 import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/colorear";
 import { MAX_SUBIDA, planDeSubida, type MotivoDeSalto } from "@/lib/workspace-v2/subir-ficheros";
+import { isBinaryBytes } from "@/lib/files/blob-pointer";
+import { formatFileSize } from "@/lib/agent/terminal/formato";
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { copiar } from "./copiar";
@@ -148,12 +150,31 @@ export interface EtiquetasDelIde {
   readonly motivo: Readonly<Record<MotivoDeSalto, string>>;
   readonly reemplazar: (n: number, lista: string) => string;
   readonly subiendo: string;
+  /** Un archivo binario abierto: «Archivo binario · 2 KB». */
+  readonly binario: (tamano: string) => string;
+  readonly descargar: string;
   /** Las frases del editor (buscar y reemplazar, plegar), por su texto en inglés. */
   readonly frasesDelEditor?: Readonly<Record<string, string>>;
   /** Los hilos en el código (`@Len`, `@persona`). Sin ellos, comentar sólo espera al chat. */
   readonly hilos?: EtiquetasDeHilos;
   /** El título de la marca «@» de un fichero donde te mencionaron y aún no lo viste. */
   readonly mencionado?: string;
+}
+
+/** UN ARCHIVO BINARIO ABIERTO (spec local 2026-10-28): una imagen se ve; lo demás, su tamaño y
+ *  «Descargar», como hace VS Code con lo que no es texto. */
+function VistaDeBinario({ projectId, ruta, binario, labels }: { projectId: string; ruta: string; binario: Binario; labels: EtiquetasDelIde }) {
+  const url = `/api/projects/${encodeURIComponent(projectId)}/ficheros/raw?ruta=${encodeURIComponent(ruta)}`;
+  const tamano = formatFileSize(binario.size);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-auto p-4 text-[12px] fg-muted">
+      {binario.tipo.startsWith("image/") && <img src={url} alt={nombreDe(ruta)} className="max-h-[70vh] max-w-full object-contain" />}
+      <p>{labels.binario(tamano)}</p>
+      <a href={url} download={nombreDe(ruta)} className="underline">
+        {labels.descargar}
+      </a>
+    </div>
+  );
 }
 
 interface CodeViewProps {
@@ -207,8 +228,15 @@ interface CodeViewProps {
 /** Sin turnos con cambios (y en el servidor, donde el almacén no existe). */
 const SIN_CAMBIOS: readonly CambiosDeUnTurno[] = [];
 
+/** Un binario no viaja en la lista (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): su tamaño y
+ *  su tipo; sus bytes, de /ficheros/raw. */
+interface Binario {
+  readonly size: number;
+  readonly tipo: string;
+}
+
 interface ListaDeFicheros {
-  readonly ficheros: readonly { readonly ruta: string; readonly contenido: string }[];
+  readonly ficheros: readonly ({ readonly ruta: string; readonly contenido: string } | { readonly ruta: string; readonly binario: Binario })[];
   readonly perezosos: readonly string[];
   /** Cuándo se PIDIÓ (no cuándo llegó): ver `guardadoEn`. */
   readonly pedidaEn?: number;
@@ -440,7 +468,11 @@ function Explorador({
   }, [projectId, recarga, turnosConCambios]);
 
   const guardados = useMemo(
-    () => new Map(typeof lista === "string" ? [] : lista.ficheros.map((f) => [f.ruta, f.contenido] as const)),
+    () => new Map(typeof lista === "string" ? [] : lista.ficheros.flatMap((f) => ("contenido" in f ? [[f.ruta, f.contenido] as const] : []))),
+    [lista],
+  );
+  const binarios = useMemo(
+    () => new Map(typeof lista === "string" ? [] : lista.ficheros.flatMap((f) => ("binario" in f ? [[f.ruta, f.binario] as const] : []))),
     [lista],
   );
   // LO QUE CAMBIÓ POR FUERA llega a las pestañas SIN cambios: las que tienen
@@ -740,7 +772,8 @@ function Explorador({
   const buscables = useMemo<FicheroBuscable[]>(() => {
     if (typeof lista === "string") return [];
     return [
-      ...lista.ficheros.map((f) => ({ ruta: f.ruta, contenido: buffers[f.ruta]?.texto ?? f.contenido })),
+      // Un binario no se busca, como en ripgrep.
+      ...lista.ficheros.map((f) => ({ ruta: f.ruta, contenido: "contenido" in f ? (buffers[f.ruta]?.texto ?? f.contenido) : null })),
       ...lista.perezosos.map((ruta) => {
         const p = perezosos[ruta];
         return { ruta, contenido: p === undefined || p === "cargando" || p === "error" ? null : p };
@@ -951,7 +984,7 @@ function Explorador({
     const plan = planDeSubida(
       soltados.map((s) => ({ relativa: s.relativa, tamano: s.archivo.size })),
       carpeta,
-      new Set(guardados.keys()),
+      new Set([...guardados.keys(), ...binarios.keys()]),
     );
     const reemplazos = plan.subir.filter((x) => x.reemplaza);
     const lista = reemplazos.map((x) => x.ruta).join(", ");
@@ -961,6 +994,21 @@ function Explorador({
     for (const x of subir) {
       const archivo = porRelativa.get(x.origen.relativa);
       if (!archivo) continue;
+      // UN BINARIO (una foto, una fuente, un PDF) sube en bytes, por su ruta (spec local 2026-10-28).
+      const bytes = await Promise.resolve()
+        .then(() => archivo.arrayBuffer())
+        .then((b) => new Uint8Array(b))
+        .catch(() => null);
+      if (bytes && isBinaryBytes(bytes)) {
+        const form = new FormData();
+        form.set("dir", carpetaDe(x.ruta));
+        form.append("file", archivo, nombreDe(x.ruta));
+        const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros/upload`, { method: "POST", body: form }).catch(() => null);
+        const j = r?.ok ? ((await r.json().catch(() => null)) as { guardados?: string[]; rechazados?: { motivo: string }[] } | null) : null;
+        if (j?.guardados?.includes(x.ruta)) hechos.push(x.ruta);
+        else fallos.push(`${x.origen.relativa} — ${j?.rechazados?.[0]?.motivo ?? (r ? await explicar(r) : labels.editar.error)}`);
+        continue;
+      }
       const contenido = await Promise.resolve()
         .then(() => archivo.text())
         .catch(() => null);
@@ -1208,7 +1256,9 @@ function Explorador({
                 aceptaSoltar={aceptaEditor}
                 onSoltarSobre={(e, r) => soltarEnGrupo(e, g, r)}
               />
-              {!ruta || contenido === null ? (
+              {ruta && binarios.has(ruta) ? (
+                <VistaDeBinario key={ruta} projectId={projectId} ruta={ruta} binario={binarios.get(ruta)!} labels={ide} />
+              ) : !ruta || contenido === null ? (
                 <p className="p-4 text-[12px] fg-muted">{ide.vacio}</p>
               ) : contenido === "cargando" ? (
                 <p className="p-3 text-[12px] fg-muted">{labels.loading}</p>
