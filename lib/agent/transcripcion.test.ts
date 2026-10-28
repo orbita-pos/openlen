@@ -163,11 +163,16 @@ describe("historialDesdeLaBase", () => {
     expect(h.some((m) => m.content === MARCA_DE_TURNO_DETENIDO)).toBe(false);
   });
 
-  // Comparado con libfx (fx.sh, 28/10), que le dice al modelo que el turno se
-  // interrumpió: un turno que muere a medias —un deploy mata el proceso— deja
-  // su fila cortada y SIN transcripción (sólo se guarda al cerrar). El historial
-  // la leía como un turno que terminó y sólo habló (el H05 de la auditoría del
-  // 22/09), aunque sus escrituras ya estuvieran en el proyecto.
+  // Un turno que muere a medias —un deploy mata el proceso— deja su fila
+  // cortada; sin transcripción (filas de antes, o muerto antes del primer
+  // guardado) el historial la leía como un turno que terminó y sólo habló (el
+  // H05 de la auditoría del 22/09), aunque sus escrituras ya estuvieran en el
+  // proyecto. La marca es la de Claude Code para una sesión que se acabó sin que
+  // nadie lo pidiera, letra por letra: no se reescribe.
+  it("la marca es la de Claude Code (2.1.309), tal cual", () => {
+    expect(CUT_OFF_TURN_MARK).toBe("[Request interrupted: the session ended before this agent finished. Nobody asked it to stop.]");
+  });
+
   it("🔴 un turno cortado sin transcripción lleva la marca detrás de lo que alcanzó a decir", () => {
     const h = historialDesdeLaBase([
       { userText: "hazme la carta", assistantReasoning: "Voy a montar la carta y la galería.", transcript: null, cutOff: true },
@@ -181,22 +186,35 @@ describe("historialDesdeLaBase", () => {
     ]);
   });
 
-  it("también sin una palabra, y con sólo la foto del estado (transcripción sin mensajes)", () => {
+  it("también sin una palabra", () => {
     expect(historialDesdeLaBase([{ userText: "hazme la carta", assistantReasoning: "", transcript: null, cutOff: true }])).toEqual([
       { role: "user", content: "hazme la carta", opensTurn: true },
       { role: "user", content: CUT_OFF_TURN_MARK },
     ]);
-    const conFoto = historialDesdeLaBase([
-      { userText: "planéalo", assistantReasoning: "", transcript: { mensajes: [], leidos: [], planMode: true }, cutOff: true },
-    ]);
-    expect(conFoto.at(-1)).toEqual({ role: "user", content: CUT_OFF_TURN_MARK });
   });
 
-  it("BRAZO DE CONTROL: ni el cortado que guardó sus llamadas (las ve), ni el que paró el dueño (lleva la suya), ni el que terminó", () => {
+  // Como Claude Code y DeepSeek, el turno se guarda mientras corre (`partial`,
+  // `liveTranscript` del bucle): si el proceso muere, lo que vio el modelo
+  // vuelve entero —cada llamada con su respuesta— y la marca va detrás.
+  it("🔴 la copia guardada a mitad de turno vuelve con sus llamadas, y la marca detrás", () => {
+    const h = historialDesdeLaBase([
+      { userText: "cambia el título", assistantReasoning: "Leo la página.", transcript: { mensajes: leer("/index.html", PAGINA), leidos: [], partial: true }, cutOff: true },
+    ]);
+    expect(h[1]!.functionCalls![0]!.name).toBe("Read");
+    expect(h[2]!.functionResponses).toHaveLength(1);
+    expect(h.at(-1)).toEqual({ role: "user", content: CUT_OFF_TURN_MARK });
+    expect(h.some((m) => m.content === "Leo la página.")).toBe(false);
+  });
+
+  it("BRAZO DE CONTROL: ni el cortado que cerró su proceso (su transcripción es la final), ni el que paró el dueño (lleva la suya), ni el que terminó", () => {
     const conLlamadas = historialDesdeLaBase([
       { userText: "cambia el título", assistantReasoning: "", transcript: { mensajes: leer("/index.html", PAGINA), leidos: [] }, cutOff: true },
     ]);
     expect(conLlamadas.some((m) => m.content === CUT_OFF_TURN_MARK)).toBe(false);
+    const soloLaFoto = historialDesdeLaBase([
+      { userText: "planéalo", assistantReasoning: "", transcript: { mensajes: [], leidos: [], planMode: true }, cutOff: true },
+    ]);
+    expect(soloLaFoto.some((m) => m.content === CUT_OFF_TURN_MARK)).toBe(false);
     const parado = historialDesdeLaBase([
       { userText: "reescribe", assistantReasoning: "La escribo.", transcript: { mensajes: [], leidos: [], detenido: true }, cutOff: true },
     ]);

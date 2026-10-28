@@ -4355,6 +4355,83 @@ describe("a step that fails with calls unanswered", () => {
   });
 });
 
+// Like Claude Code (its transcript is written entry by entry) and DeepSeek («Model-visible ⟺ durably
+// referenced»): the route saves the turn while it runs, so a process that dies mid-turn — a deploy —
+// leaves what the model saw. `liveTranscript` hands the route a reader of the turn so far, balanced the
+// way A6 balances a failed step: the batch that is running, each call still without its result given
+// DeepSeek's TOOL_OUTCOME_UNKNOWN. Never TOOL_NOT_STARTED: a save every few seconds cannot prove that a
+// call had not started.
+describe("the live transcript", () => {
+  const twoWrites: StreamEvent[] = [
+    { type: "function_call", name: "Write", args: { file_path: "/a.html", content: "a" } },
+    { type: "function_call", name: "Write", args: { file_path: "/b.html", content: "b" } },
+    done,
+  ];
+
+  it("🔴 mid-batch: the calls, the results so far and an unknown outcome for the rest; afterwards, each call once", async () => {
+    let read: (() => Message[]) | null = null;
+    const seen: Message[][] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(twoWrites, [{ type: "text_delta", text: "Listo." }, done]),
+      runTool: async (_name, args) => {
+        seen.push(read!());
+        return { response: { ok: true, tool_result: String(args.file_path) } };
+      },
+      emit: () => {},
+      liveTranscript: (reader) => {
+        read = reader;
+      },
+    });
+    expect(seen[0]!.at(-2)!.functionCalls!.map((c) => c.args.file_path)).toEqual(["/a.html", "/b.html"]);
+    expect(seen[0]!.at(-1)!.functionResponses!.map((f) => f.response)).toEqual([
+      { ok: false, error: TOOL_OUTCOME_UNKNOWN },
+      { ok: false, error: TOOL_OUTCOME_UNKNOWN },
+    ]);
+    expect(seen[1]!.at(-1)!.functionResponses!.map((f) => f.response)).toEqual([
+      { ok: true, tool_result: "/a.html" },
+      { ok: false, error: TOOL_OUTCOME_UNKNOWN },
+    ]);
+    // After the turn: what the loop returns, minus the closing text that never became a message.
+    const after = read!();
+    expect(after.filter((m) => m.functionCalls?.length)).toHaveLength(1);
+    expect(r.transcripcion).toEqual([...after, { role: "assistant", content: "Listo." }]);
+  });
+
+  it("a cap reached mid-batch: while the turn closes, the calls that ran are there once", async () => {
+    let read: (() => Message[]) | null = null;
+    let atClose: Message[] | null = null;
+    const closing = scripted([{ type: "text_delta", text: "Hice una." }, done]);
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      maxToolCalls: 1,
+      openStream: scripted(twoWrites),
+      closeOut: (m) => {
+        atClose = read!();
+        return closing(m);
+      },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      liveTranscript: (reader) => {
+        read = reader;
+      },
+    });
+    const asked = atClose!.filter((m) => m.functionCalls?.length);
+    expect(asked).toHaveLength(1);
+    expect(asked[0]!.functionCalls!.map((c) => c.args.file_path)).toEqual(["/a.html"]);
+  });
+
+  it("CONTROL ARM: without the argument the turn is the same as always", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(twoWrites, [{ type: "text_delta", text: "Listo." }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.transcripcion!.filter((m) => m.functionResponses?.length)).toHaveLength(1);
+  });
+});
+
 // A3 of Len 3.1, Claude Code's `elapsed_time_reminder` (binary 2.1.304): after every round of tools the
 // model reads how long the turn has been running, in a <system-reminder> at the end of the step — never
 // in the system prompt, so the cached prefix stays. The clock starts with the user's message and starts
