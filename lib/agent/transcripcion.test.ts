@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
 import {
+  CUT_OFF_TURN_MARK,
   MARCA_DE_TURNO_DETENIDO,
   NO_CABE,
   RESULTADO_VACIADO,
@@ -160,6 +161,48 @@ describe("historialDesdeLaBase", () => {
   it("BRAZO DE CONTROL: un turno que terminó no lleva marca", () => {
     const h = historialDesdeLaBase([fila("hola", null, "Hola.")]);
     expect(h.some((m) => m.content === MARCA_DE_TURNO_DETENIDO)).toBe(false);
+  });
+
+  // Comparado con libfx (fx.sh, 28/10), que le dice al modelo que el turno se
+  // interrumpió: un turno que muere a medias —un deploy mata el proceso— deja
+  // su fila cortada y SIN transcripción (sólo se guarda al cerrar). El historial
+  // la leía como un turno que terminó y sólo habló (el H05 de la auditoría del
+  // 22/09), aunque sus escrituras ya estuvieran en el proyecto.
+  it("🔴 un turno cortado sin transcripción lleva la marca detrás de lo que alcanzó a decir", () => {
+    const h = historialDesdeLaBase([
+      { userText: "hazme la carta", assistantReasoning: "Voy a montar la carta y la galería.", transcript: null, cutOff: true },
+      fila("¿ya quedó?", null, "Sí."),
+    ]);
+    expect(h.slice(0, 4)).toEqual([
+      { role: "user", content: "hazme la carta", opensTurn: true },
+      { role: "assistant", content: "Voy a montar la carta y la galería." },
+      { role: "user", content: CUT_OFF_TURN_MARK },
+      { role: "user", content: "¿ya quedó?", opensTurn: true },
+    ]);
+  });
+
+  it("también sin una palabra, y con sólo la foto del estado (transcripción sin mensajes)", () => {
+    expect(historialDesdeLaBase([{ userText: "hazme la carta", assistantReasoning: "", transcript: null, cutOff: true }])).toEqual([
+      { role: "user", content: "hazme la carta", opensTurn: true },
+      { role: "user", content: CUT_OFF_TURN_MARK },
+    ]);
+    const conFoto = historialDesdeLaBase([
+      { userText: "planéalo", assistantReasoning: "", transcript: { mensajes: [], leidos: [], planMode: true }, cutOff: true },
+    ]);
+    expect(conFoto.at(-1)).toEqual({ role: "user", content: CUT_OFF_TURN_MARK });
+  });
+
+  it("BRAZO DE CONTROL: ni el cortado que guardó sus llamadas (las ve), ni el que paró el dueño (lleva la suya), ni el que terminó", () => {
+    const conLlamadas = historialDesdeLaBase([
+      { userText: "cambia el título", assistantReasoning: "", transcript: { mensajes: leer("/index.html", PAGINA), leidos: [] }, cutOff: true },
+    ]);
+    expect(conLlamadas.some((m) => m.content === CUT_OFF_TURN_MARK)).toBe(false);
+    const parado = historialDesdeLaBase([
+      { userText: "reescribe", assistantReasoning: "La escribo.", transcript: { mensajes: [], leidos: [], detenido: true }, cutOff: true },
+    ]);
+    expect(parado.at(-1)).toEqual({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+    expect(parado.some((m) => m.content === CUT_OFF_TURN_MARK)).toBe(false);
+    expect(historialDesdeLaBase([fila("hola", null, "Hola.")]).some((m) => m.content === CUT_OFF_TURN_MARK)).toBe(false);
   });
 
   // COMO DEEPSEEK, LO QUE SE LE DIJO AL MODELO SE QUEDA EN SU SITIO. DeepSeek
@@ -555,6 +598,13 @@ describe("A11 · el historial desde la marca del resumen", () => {
       compaction: marca([RESUMEN], 1),
     };
     expect(historialDesdeLaBase([conMarca]).at(-1)).toEqual({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
+  });
+
+  // La marca de resumen se guarda a mitad de turno (`guardarMarcaDelTurno`): si
+  // el proceso muere después, la fila cortada tiene marca y no transcripción.
+  it("un turno cortado después de resumir, sin transcripción, lleva su marca de corte al final", () => {
+    const cortado: FilaDelHistorial = { userText: "x", assistantReasoning: "", transcript: null, compaction: marca([RESUMEN, CONSERVADO], 1), cutOff: true };
+    expect(historialDesdeLaBase([cortado])).toEqual([RESUMEN, CONSERVADO, { role: "user", content: CUT_OFF_TURN_MARK }]);
   });
 
   it("🔴 la marca se guarda limpia, como una transcripción: sin píxeles ni memoria personal", () => {
