@@ -48,10 +48,14 @@ const posted: unknown[] = [];
 let unregister: () => void = () => {};
 beforeEach(() => {
   posted.splice(0);
-  unregister = registerMentionCanvas({ window: () => ({ postMessage: (m: unknown) => posted.push(m) }) as unknown as Window, page: () => null });
+  // The page itself plays the canvas: what the chat posts to it is captured, and
+  // its answers come from it (the source the workshop checks).
+  vi.spyOn(window, "postMessage").mockImplementation(((m: unknown) => void posted.push(m)) as never);
+  unregister = registerMentionCanvas({ window: () => window, page: () => null });
 });
 afterEach(() => {
   unregister();
+  vi.restoreAllMocks();
   for (const r of roots.splice(0)) act(() => r.unmount());
   document.body.innerHTML = "";
 });
@@ -188,9 +192,9 @@ describe("the «@» menu", () => {
     try {
       const v = mount();
       v.type("@pedido");
-      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 0 } })));
+      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 0 }, source: window })));
       expect(v.rows()[0]).toContain('mentions.onScreen:{"screen":"#/ventas"}');
-      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 3 } })));
+      act(() => void window.dispatchEvent(new MessageEvent("message", { data: { type: "openlen:mention-highlighted", key: li.key, count: 3 }, source: window })));
       v.key("Enter");
       expect(v.onMentions.mock.calls.at(-1)![0][0].target).toMatchObject({ copies: 3, screen: "#/ventas" });
     } finally {
