@@ -1,0 +1,22 @@
+{
+  "pagina": {
+    "css/site.css": "24a94f927ca85b761430eccf85c5a28668b10e2975216268c92424402d61c44c",
+    "data/menu.json": "0583ccefe4d1606f55e0ed62ccb2ac7edd97fd1535ec0cdc8d54089aa748453d",
+    "img/logo.svg": "c93d3514feb5f23e7d77daed8f603228a9462e261f2a408d61e541efa42672a0",
+    "index.html": "01250a9bc3e0cbde1d17b9b0a9a0cd7353c8b975a7a9cf80f873ba5a0e54ec41",
+    "js/app.js": "1c286ef9962be04ae5d6de66148be7693e33411c3bf1c6bf9c8942d898c8a97a",
+    "llms.txt": "4a952e6f182f03333ee65aea5a0cd108a56acd6f898550f44fd87b905a7c0d17",
+    "robots.txt": "d36571407fece324ab7997085a6edfe0b9b8aea2e537d171bcc841d66bf5d2ce",
+    "sitemap.xml": "(fecha)",
+    "sw.js": "f3b9de0ad2092c80aee477e7d1e08469fe0c0badbcf5b33664dce11c35f7fd55"
+  },
+  "app": {
+    "index.html": "a75967ce49f9bc12a23450050c30bee5b66abebf216292f158938c8a960a7a01",
+    "llms.txt": "14df77e751f2538701cfc97c8156c793dcf6bf0f04c5e19eb11fcf14d7b200d7",
+    "robots.txt": "462148d14425ae4e16c346626e77d0095917fcad8f344e8222d44c0d003963c3",
+    "sitemap.xml": "(fecha)",
+    "src/logo.svg": "dddb08aff273a151e0c2161e07a6e28c3e6fb3e0a5975849dd71b08b0e72c9a4",
+    "src/main.jsx": "ce61ee934e390000321be48057a13eaefdc3647def85aae423ff9fbb51f2242f",
+    "sw.js": "f3b9de0ad2092c80aee477e7d1e08469fe0c0badbcf5b33664dce11c35f7fd55"
+  }
+}

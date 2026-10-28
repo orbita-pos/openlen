@@ -245,3 +245,46 @@ describe("GET /api/lienzo/site — la vista del borrador para la caja", () => {
     expect((await pide(host(P1), "/")).status).toBe(404);
   });
 });
+
+// FICHEROS AL NIVEL DE CLAUDE CODE (spec local 2026-10-28, §7): un binario de la carpeta se sirve con sus
+// BYTES y su tipo, en el lienzo y en la vista de la caja; nunca el texto de su puntero.
+describe("GET /api/lienzo/site — los binarios de la carpeta", () => {
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+  const FUENTE = Uint8Array.from([0x77, 0x4f, 0x46, 0x32, 0x00, 0x01]);
+  beforeEach(async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { __setStorageForTest } = await import("@/lib/storage");
+    const { FilesystemStorage } = await import("@/lib/storage/filesystem");
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-lienzo-bin-")), publicUrlBase: "/uploads" }));
+    const { makePointer, putBlob } = await import("@/lib/files/blob");
+    mocks.carpetas[P1]!["/img/logo.png"] = makePointer(await putBlob(PNG));
+    mocks.carpetas[P1]!["/fonts/x.woff2"] = makePointer(await putBlob(FUENTE));
+    mocks.carpetas[P1]!["/legal.html"] = "<p>legal</p>";
+    mocks.proyectos[P1] = { title: "P", subdomain: "p", data: { html: "<p>home</p>" } };
+  });
+
+  it("en el lienzo, con un documento vivo: los bytes y su tipo", async () => {
+    guardarDocumento({ html: "<p>home</p>", projectId: P1, userId: "u1", pagina: null });
+    const png = await pide(host(P1), "/img/logo.png");
+    expect(png.status).toBe(200);
+    expect(png.headers.get("content-type")).toBe("image/png");
+    expect(Array.from(new Uint8Array(await png.arrayBuffer()))).toEqual(Array.from(PNG));
+    const fuente = await pide(host(P1), "/fonts/x.woff2");
+    expect(fuente.headers.get("content-type")).toBe("font/woff2");
+    expect(Array.from(new Uint8Array(await fuente.arrayBuffer()))).toEqual(Array.from(FUENTE));
+    const legal = await pide(host(P1), "/legal.html");
+    expect(legal.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(await legal.text()).toBe("<p>legal</p>");
+  });
+
+  it("en la vista de la caja: los mismos bytes", async () => {
+    const res = await GET(new Request(new URL("/img/logo.png", `https://${host(P1)}`), { headers: { host: host(P1), "x-openlen-caja": boxMarker(P1, { AUTH_SECRET: SECRETO })! } }), {
+      params: Promise.resolve({ path: ["img", "logo.png"] }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(Array.from(new Uint8Array(await res.arrayBuffer()))).toEqual(Array.from(PNG));
+  });
+});

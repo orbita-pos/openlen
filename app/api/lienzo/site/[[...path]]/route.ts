@@ -6,6 +6,7 @@ import { bundleApp } from "@/lib/apps/bundler/bundle-app";
 import { leerDocumento, proyectoDeEtiqueta } from "@/lib/lienzo/almacen";
 import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lienzo/site/<ruta> — EL SITIO ENTERO DEL LIENZO (pieza 9 de Len 2.5).
@@ -109,8 +110,10 @@ export async function GET(
     if (!dueno) return noEncontrado();
     const { listProjectFiles } = await import("@/lib/backend/files");
     const files = await listProjectFiles(dueno.projectId, ruta).catch(() => null);
-    const body = files?.[ruta];
-    if (body === undefined) return noEncontrado();
+    const guardado = files?.[ruta];
+    if (guardado === undefined) return noEncontrado();
+    // Un binario (spec local 2026-10-28): sus bytes, nunca el texto de su puntero.
+    const body = isBlobPointer(guardado) ? new Uint8Array(await (await import("@/lib/files/blob")).getBlob(guardado)) : guardado;
     return new Response(body, {
       status: 200,
       headers: {
