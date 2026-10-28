@@ -418,5 +418,15 @@
       "generic": "Une erreur s'est produite. Réessayez dans un instant."
     },
     "liveWaiting": "Len attend que vous connectiez le domaine e-mail"
+  },
+  "photos": {
+    "gallery": "Photos",
+    "open": "Ouvrir la photo {number}",
+    "previous": "Photo précédente",
+    "next": "Photo suivante",
+    "close": "Fermer",
+    "source": "Wikimedia Commons",
+    "by": "par {author}",
+    "more": "+{count}"
   }
 }

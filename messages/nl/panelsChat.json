@@ -418,5 +418,15 @@
       "generic": "Er ging iets mis. Probeer het zo opnieuw."
     },
     "liveWaiting": "Len wacht tot je het e-maildomein verbindt"
+  },
+  "photos": {
+    "gallery": "Foto's",
+    "open": "Foto {number} openen",
+    "previous": "Vorige foto",
+    "next": "Volgende foto",
+    "close": "Sluiten",
+    "source": "Wikimedia Commons",
+    "by": "door {author}",
+    "more": "+{count}"
   }
 }
