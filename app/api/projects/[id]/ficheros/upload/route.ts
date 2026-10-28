@@ -6,11 +6,16 @@
 //   multipart: dir (the folder, "" or "/" for the root) + file … (its name may carry a relative path)
 //   → 200 { guardados: [ruta], rechazados: [{ ruta, motivo }] }
 //
+// ?optimize=image is the image modal (Jesús's decision 4 of the spec): a JPG/PNG/WebP is optimized as the modal
+// always did (2000 px, WebP 85) and named `<dir>/<name>.webp` (-2, -3 when taken); a GIF, an SVG or a video as it
+// is; without a dir, each kind to its folder (/img, /video…). The answer adds `url`: what the page references.
+//
 // 401 without a session, 404 if you can't open the project, 403 for a viewer, 400 without files, 429 over
 // the upload budget shared with the other upload routes.
 
 import { auth } from "@/auth";
 import { uploadProjectFile } from "@/lib/files/upload";
+import { folderFor, imagePathFor } from "@/lib/files/image-paths";
 import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { consumeToken, RATE_LIMITS, rateLimitedResponse } from "@/lib/rate-limit";
@@ -51,6 +56,22 @@ export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(re
 
   const guardados: string[] = [];
   const rechazados: { ruta: string; motivo: string }[] = [];
+  if (new URL(req.url).searchParams.get("optimize") === "image") {
+    const { listProjectFiles } = await import("@/lib/backend/files");
+    const { optimizeImageForWeb } = await import("@/lib/files/image-upload");
+    const existentes = new Set(Object.keys(await listProjectFiles(id).catch(() => ({}))));
+    for (const file of files) {
+      const original = new Uint8Array(await file.arrayBuffer());
+      const optimizada = await optimizeImageForWeb(original, file.type);
+      const ext = optimizada?.ext ?? (/\.([A-Za-z0-9]+)$/.exec(file.name)?.[1]?.toLowerCase() || "bin");
+      const ruta = imagePathFor(file.name, existentes, ext, dir ? `/${dir}` : folderFor(file.type));
+      existentes.add(ruta);
+      const r = await uploadProjectFile({ projectId: id, ownerId: acceso.duenoId, personId: quien, ruta, bytes: optimizada?.bytes ?? original });
+      if (r.ok) guardados.push(r.ruta);
+      else rechazados.push({ ruta, motivo: r.motivo });
+    }
+    return json({ guardados, rechazados, ...(guardados[0] ? { url: guardados[0] } : {}) });
+  }
   for (const file of files) {
     const nombre = nombreRelativo(file.name);
     if (!nombre) {

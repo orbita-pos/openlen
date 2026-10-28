@@ -1,5 +1,6 @@
 "use client";
 
+import { uploadEndpointFor } from "@/lib/files/image-paths";
 import {
   useCallback,
   useEffect,
@@ -1371,7 +1372,8 @@ function UploadTab({
     // XHR rather than fetch so we can surface upload progress while large
     // files are streaming.
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/projects/${projectId}/assets`);
+    // A la CARPETA del proyecto (spec local 2026-10-28): img/<nombre>.webp, optimizada como siempre.
+    xhr.open("POST", uploadEndpointFor(projectId));
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(e.loaded / e.total);

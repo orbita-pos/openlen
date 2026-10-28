@@ -13,6 +13,11 @@ vi.mock("@/lib/db", () => {
   };
 });
 vi.mock("@/lib/files/upload", () => ({ uploadProjectFile: vi.fn() }));
+vi.mock("@/lib/files/image-upload", () => ({
+  optimizeImageForWeb: vi.fn(async (_b: Uint8Array, mime: string) => (mime === "image/jpeg" ? { bytes: Uint8Array.from([0x52, 0x49, 0x46, 0x46]), ext: "webp", width: 2000, height: 1000 } : null)),
+}));
+const existentes: Record<string, string> = {};
+vi.mock("@/lib/backend/files", () => ({ listProjectFiles: vi.fn(async () => existentes) }));
 vi.mock("@/lib/rate-limit", () => ({ consumeToken: () => ({ allowed: true }), RATE_LIMITS: { upload: {} }, rateLimitedResponse: () => new Response(null, { status: 429 }) }));
 
 import { auth } from "@/auth";
@@ -22,11 +27,11 @@ import { POST } from "./route";
 
 const comoUsuario = (userId: string | null) => vi.mocked(auth).mockResolvedValue((userId ? { user: { id: userId } } : null) as never);
 
-function subir(dir: string, files: Record<string, Uint8Array | string>, id = "p1") {
+function subir(dir: string, files: Record<string, Uint8Array | string>, id = "p1", o: { optimize?: boolean; tipos?: Record<string, string> } = {}) {
   const form = new FormData();
   form.set("dir", dir);
-  for (const [name, body] of Object.entries(files)) form.append("file", new File([body as BlobPart], name));
-  return POST(new Request(`http://x/api/projects/${id}/ficheros/upload`, { method: "POST", body: form }), { params: Promise.resolve({ id }) });
+  for (const [name, body] of Object.entries(files)) form.append("file", new File([body as BlobPart], name, { type: o.tipos?.[name] ?? "" }));
+  return POST(new Request(`http://x/api/projects/${id}/ficheros/upload${o.optimize ? "?optimize=image" : ""}`, { method: "POST", body: form }), { params: Promise.resolve({ id }) });
 }
 
 describe("POST /api/projects/[id]/ficheros/upload", () => {
@@ -70,5 +75,39 @@ describe("POST /api/projects/[id]/ficheros/upload", () => {
   it("400 without files", async () => {
     comoUsuario("u1");
     expect((await subir("/img", {})).status).toBe(400);
+  });
+});
+
+// EL MODAL DE IMÁGENES (spec local 2026-10-28, §6): con ?optimize=image, una JPG/PNG/WebP se optimiza y se guarda
+// como `img/<nombre>.webp`, con -2 si ya existe; un GIF o un SVG, tal cual. La respuesta trae la `url` que el modal
+// pone en la página.
+describe("POST …/ficheros/upload?optimize=image — el modal de imágenes", () => {
+  beforeEach(() => {
+    propios.splice(0, propios.length, { duenoId: "u1", rol: null });
+    vi.mocked(auth).mockReset();
+    vi.mocked(uploadProjectFile).mockReset().mockImplementation(async (p) => ({ ok: true, ruta: p.ruta }));
+    for (const k of Object.keys(existentes)) delete existentes[k];
+  });
+
+  it("una JPG se optimiza y va a /img/<nombre>.webp; la url vuelve para la página", async () => {
+    comoUsuario("u1");
+    const r = await subir("/img", { "Foto Playa.JPG": "jpg" }, "p1", { optimize: true, tipos: { "Foto Playa.JPG": "image/jpeg" } });
+    expect(await r.json()).toEqual({ guardados: ["/img/foto-playa.webp"], rechazados: [], url: "/img/foto-playa.webp" });
+    const llamada = vi.mocked(uploadProjectFile).mock.calls[0]![0];
+    expect(llamada.ruta).toBe("/img/foto-playa.webp");
+    expect(Array.from(llamada.bytes)).toEqual([0x52, 0x49, 0x46, 0x46]);
+  });
+
+  it("un GIF se guarda tal cual; un nombre que ya existe lleva -2", async () => {
+    comoUsuario("u1");
+    existentes["/img/anim.gif"] = "x";
+    const r = await subir("/img", { "anim.gif": "GIF89a" }, "p1", { optimize: true, tipos: { "anim.gif": "image/gif" } });
+    expect((await r.json()).guardados).toEqual(["/img/anim-2.gif"]);
+  });
+
+  it("sin dir, cada tipo a su carpeta: un vídeo a /video", async () => {
+    comoUsuario("u1");
+    const r = await subir("", { "Intro.MP4": "v" }, "p1", { optimize: true, tipos: { "Intro.MP4": "video/mp4" } });
+    expect((await r.json()).guardados).toEqual(["/video/intro.mp4"]);
   });
 });

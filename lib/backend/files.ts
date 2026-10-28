@@ -7,7 +7,7 @@
 // lo publicable: así «cambios sin publicar» se entera de un `js/app.js` nuevo.
 
 import "server-only";
-import { and, asc, eq, like } from "drizzle-orm";
+import { and, asc, desc, eq, like, or } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
@@ -59,6 +59,23 @@ export async function readProjectFileBytes(projectId: string, path: string): Pro
   if (!row) return null;
   const { getBlob, isBlobPointer } = await import("@/lib/files/blob");
   return isBlobPointer(row.content) ? getBlob(row.content) : new TextEncoder().encode(row.content);
+}
+
+/** The folder's images and videos, newest first (spec local 2026-10-28): what the image modal lists among
+ *  «your uploads», by the root-relative path the page references (it works on every page and domain). */
+export async function listFolderMedia(projectId: string): Promise<
+  { filename: string; contentType: string; size: number; url: string; uploadedAt: number }[]
+> {
+  const rows = await db
+    .select({ path: schema.projectFiles.path, content: schema.projectFiles.content, updatedAt: schema.projectFiles.updatedAt })
+    .from(schema.projectFiles)
+    .where(and(eq(schema.projectFiles.projectId, projectId), or(like(schema.projectFiles.path, "/img/%"), like(schema.projectFiles.path, "/video/%"))))
+    .orderBy(desc(schema.projectFiles.updatedAt));
+  const { contentTypeFor } = await import("@/lib/agent/ficheros/folder");
+  const { sizeOf } = await import("@/lib/files/blob-pointer");
+  return rows
+    .map((r) => ({ filename: r.path.slice(r.path.lastIndexOf("/") + 1), contentType: contentTypeFor(r.path).split(";")[0]!, size: sizeOf(r.content), url: r.path, uploadedAt: r.updatedAt.getTime() }))
+    .filter((m) => m.contentType.startsWith("image/") || m.contentType.startsWith("video/"));
 }
 
 /** Borra un fichero. `false` si no existía. */
