@@ -16,6 +16,8 @@ Say in one or two lines what you will read to build it, and wait for the user's 
 
 Only the owner's own words show their voice: take those, and never the texts you wrote for the page, a document or a post, even when they were approved, because they are your words. If the page's texts may be the owner's, ask.
 
+With fewer than five pieces of the owner's own writing, a voice would be a guess: say so, and offer two ways. They paste a few things they wrote (messages to customers, posts, emails they sent), and you build it from those; or you save the brand now with a voice holding only what the owner told you directly ("short, no exclamation marks"), and its line says it was built from none of their texts. Either way, colors, type and logo are saved now.
+
 ## 2. Write it
 
 Start from references/brand-skill.md and write `/.len/skills/brand/SKILL.md` with `Write`. Fill every `[[…]]` with what you found, or remove the line when there is nothing for it; never fill one with a guess. Keep its frontmatter exactly as it is: that description is what makes you load it by yourself later.
@@ -23,8 +25,8 @@ Start from references/brand-skill.md and write `/.len/skills/brand/SKILL.md` wit
 - **Colors:** in hex, each with its role (background, text, accent), as they are used, not as you would choose them.
 - **Type:** each family with its role and where it is loaded from.
 - **Logo:** where the file is and when it is used.
-- **Voice:** the traits that hold whenever the business speaks, each with a short sentence that shows it.
-- **Tone by audience:** customers, suppliers, social media.
+- **Voice:** the traits that hold whenever the business speaks, each with a quote of theirs that shows it (cut short, without names or numbers), and the line saying how many of their texts it came from. A trait no text of theirs shows is not written.
+- **Tone by audience:** only for the audiences their texts write to (customers, suppliers, social media); leave out the others.
 - **Never:** what the business would never say or promise.
 
 ## 3. No personal data, no secrets
