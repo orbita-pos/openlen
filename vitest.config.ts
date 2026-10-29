@@ -110,6 +110,8 @@ export default defineConfig({
       "lib/agent/sandbox/**/*.test.ts",
       // Len por correo (infra/len-email-worker/README.md).
       "lib/len-email/**/*.test.ts",
+      // Las tareas programadas de Len (spec local 2026-10-29-tareas-programadas). LISTA BLANCA.
+      "lib/scheduled-tasks/**/*.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
