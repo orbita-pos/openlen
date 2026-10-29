@@ -50,5 +50,29 @@
     "exchange": "연결을 완료하지 못했습니다. 다시 시도하세요.",
     "not_configured": "이 OpenLen 인스턴스에는 해당 배포 대상이 설정되어 있지 않습니다."
   },
-  "confirmDisconnect": "{provider} 연결을 해제할까요? 배포된 페이지는 그대로 게시된 상태로 유지되며, 다시 배포하려면 재연결만 하면 됩니다."
+  "confirmDisconnect": "{provider} 연결을 해제할까요? 배포된 페이지는 그대로 게시된 상태로 유지되며, 다시 배포하려면 재연결만 하면 됩니다.",
+  "githubApp": {
+    "title": "GitHub 연결",
+    "subtitle": "Len이 이 프로젝트를 내 저장소에 push합니다.",
+    "close": "닫기",
+    "lead": "GitHub 계정을 연결하고 OpenLen이 사용할 저장소를 고르세요. 그다음 Len에게 “GitHub에 올려줘”라고 요청하세요.",
+    "connect": "GitHub 연결",
+    "privacy": "OpenLen은 선택한 저장소만 볼 수 있고 GitHub 토큰을 저장하지 않습니다. 접근 권한을 완전히 없애려면 GitHub에서 앱을 제거하세요.",
+    "connectedAs": "{account}(으)로 연결됨",
+    "repository": "이 프로젝트의 저장소",
+    "noRepository": "아직 저장소가 없습니다. Len에게 “GitHub에 올려줘”라고 하면 만들어 줍니다.",
+    "manage": "GitHub에서 관리",
+    "addAccount": "다른 계정 추가",
+    "disconnect": "연결 해제",
+    "confirmDisconnect": "GitHub 연결을 해제할까요? Len이 push도 pull도 할 수 없게 됩니다. 앱은 GitHub에서 제거할 때까지 설치된 상태로 남습니다.",
+    "notConfigured": {
+      "title": "아직 사용할 수 없음",
+      "body": "이 OpenLen 인스턴스에는 GitHub가 설정되어 있지 않습니다."
+    },
+    "errors": {
+      "load": "GitHub 연결 정보를 불러오지 못했습니다.",
+      "denied": "GitHub 연결이 취소되었습니다.",
+      "exchange": "GitHub 연결을 마치지 못했습니다. 다시 시도하세요."
+    }
+  }
 }

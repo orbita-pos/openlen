@@ -36,7 +36,9 @@
       "vercel": "Vercel에 배포",
       "github": "GitHub에 푸시",
       "vercelSubtitle": "내 전용 *.vercel.app URL",
-      "githubSubtitle": "GitHub Pages 저장소"
+      "githubSubtitle": "GitHub Pages 저장소",
+      "githubApp": "GitHub 연결",
+      "githubAppSubtitle": "Len이 내 저장소에 push합니다"
     },
     "previousDeploys": "이전 배포",
     "noPriorDeploys": "아직 이전 배포가 없습니다.",

@@ -36,7 +36,9 @@
       "vercel": "Implementeren naar Vercel",
       "github": "Pushen naar GitHub",
       "vercelSubtitle": "Je eigen *.vercel.app-URL",
-      "githubSubtitle": "Een GitHub Pages-repo"
+      "githubSubtitle": "Een GitHub Pages-repo",
+      "githubApp": "GitHub koppelen",
+      "githubAppSubtitle": "Len pusht naar je repository"
     },
     "previousDeploys": "Eerdere implementaties",
     "noPriorDeploys": "Nog geen eerdere implementaties.",

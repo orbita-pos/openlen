@@ -46,7 +46,20 @@ async function main() {
   // Remotes (same spec, §8): the remotes and each branch's upstream.
   await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "remotes" jsonb NOT NULL DEFAULT '{}'`);
   await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "upstreams" jsonb NOT NULL DEFAULT '{}'`);
-  console.log("[git:migrate] projectGitObjects and projectGitRepos ready");
+  // The GitHub App (same spec, §9): which installations each person connected. No token is ever stored.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "githubAppInstallations" (
+      "userId" text NOT NULL,
+      "installationId" bigint NOT NULL,
+      "accountLogin" text NOT NULL,
+      "accountType" text NOT NULL,
+      "createdAt" timestamp NOT NULL DEFAULT now(),
+      CONSTRAINT "githubAppInstallations_userId_installationId_pk" PRIMARY KEY ("userId", "installationId"),
+      CONSTRAINT "githubAppInstallations_userId_users_id_fk"
+        FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE
+    );
+  `);
+  console.log("[git:migrate] projectGitObjects, projectGitRepos and githubAppInstallations ready");
   process.exit(0);
 }
 

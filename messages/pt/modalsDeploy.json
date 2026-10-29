@@ -50,5 +50,29 @@
     "exchange": "Não foi possível concluir a conexão. Tente novamente.",
     "not_configured": "Este destino de publicação não está configurado nesta instância do OpenLen."
   },
-  "confirmDisconnect": "Desconectar {provider}? Sua página publicada continua no ar — você só vai precisar reconectar para publicar de novo."
+  "confirmDisconnect": "Desconectar {provider}? Sua página publicada continua no ar — você só vai precisar reconectar para publicar de novo.",
+  "githubApp": {
+    "title": "Conectar GitHub",
+    "subtitle": "O Len envia este projeto para o seu repositório.",
+    "close": "Fechar",
+    "lead": "Conecte sua conta do GitHub e escolha quais repositórios o OpenLen pode usar. Depois peça ao Len “coloque no GitHub”.",
+    "connect": "Conectar GitHub",
+    "privacy": "O OpenLen só vê os repositórios que você escolher e nunca guarda um token do GitHub. Para remover o acesso por completo, desinstale o app no GitHub.",
+    "connectedAs": "Conectado como {account}",
+    "repository": "Repositório deste projeto",
+    "noRepository": "Ainda não há repositório. Peça ao Len “coloque no GitHub” e ele cria um.",
+    "manage": "Gerenciar no GitHub",
+    "addAccount": "Adicionar outra conta",
+    "disconnect": "Desconectar",
+    "confirmDisconnect": "Desconectar o GitHub? O Len não poderá fazer push nem pull. O app continua instalado no GitHub até você removê-lo lá.",
+    "notConfigured": {
+      "title": "Ainda não disponível",
+      "body": "O GitHub não está configurado nesta instância do OpenLen."
+    },
+    "errors": {
+      "load": "Não foi possível carregar a conexão com o GitHub.",
+      "denied": "A conexão com o GitHub foi cancelada.",
+      "exchange": "Não foi possível concluir a conexão com o GitHub. Tente de novo."
+    }
+  }
 }

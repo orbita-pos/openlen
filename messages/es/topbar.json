@@ -36,7 +36,9 @@
       "vercel": "Desplegar en Vercel",
       "github": "Subir a GitHub",
       "vercelSubtitle": "Tu propia URL *.vercel.app",
-      "githubSubtitle": "Un repo de GitHub Pages"
+      "githubSubtitle": "Un repo de GitHub Pages",
+      "githubApp": "Conectar GitHub",
+      "githubAppSubtitle": "Len hace push a tu repositorio"
     },
     "previousDeploys": "Despliegues anteriores",
     "noPriorDeploys": "Aún no hay despliegues anteriores.",

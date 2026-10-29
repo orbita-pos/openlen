@@ -1823,6 +1823,23 @@ export const userConnections = pgTable(
   ],
 );
 
+// OpenLen's GitHub App (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): the installations a person
+// connected — their account, or an organization of theirs. No token: the server asks GitHub for one per request.
+// SQL in scripts/git-migrate.ts.
+export const githubAppInstallations = pgTable(
+  "githubAppInstallations",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    installationId: bigint("installationId", { mode: "number" }).notNull(),
+    accountLogin: text("accountLogin").notNull(),
+    accountType: text("accountType").$type<"User" | "Organization">().notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.installationId] })],
+);
+
 // Per-project external-deploy result — one row per (project, provider). Tracks
 // where this project was last pushed (repo / Vercel project name), its live
 // URL, and a content hash for drift detection ("Re-deploy" vs "up to date").

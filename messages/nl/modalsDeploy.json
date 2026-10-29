@@ -50,5 +50,29 @@
     "exchange": "Kon de koppeling niet voltooien. Probeer het opnieuw.",
     "not_configured": "Deze implementatiebestemming is niet ingesteld op deze OpenLen-instance."
   },
-  "confirmDisconnect": "{provider} ontkoppelen? Je geïmplementeerde pagina blijft live — je hoeft alleen opnieuw te koppelen om weer te implementeren."
+  "confirmDisconnect": "{provider} ontkoppelen? Je geïmplementeerde pagina blijft live — je hoeft alleen opnieuw te koppelen om weer te implementeren.",
+  "githubApp": {
+    "title": "GitHub koppelen",
+    "subtitle": "Len pusht dit project naar je repository.",
+    "close": "Sluiten",
+    "lead": "Koppel je GitHub-account en kies welke repositories OpenLen mag gebruiken. Vraag Len daarna om het “op GitHub te zetten”.",
+    "connect": "GitHub koppelen",
+    "privacy": "OpenLen ziet alleen de repositories die je kiest en bewaart nooit een GitHub-token. Wil je de toegang helemaal intrekken, verwijder dan de app op GitHub.",
+    "connectedAs": "Gekoppeld als {account}",
+    "repository": "Repository van dit project",
+    "noRepository": "Nog geen repository. Vraag Len om het “op GitHub te zetten” en hij maakt er een.",
+    "manage": "Beheren op GitHub",
+    "addAccount": "Nog een account toevoegen",
+    "disconnect": "Ontkoppelen",
+    "confirmDisconnect": "GitHub ontkoppelen? Len kan dan niet meer pushen of pullen. De app blijft op GitHub geïnstalleerd tot je hem daar verwijdert.",
+    "notConfigured": {
+      "title": "Nog niet beschikbaar",
+      "body": "GitHub is niet ingesteld op deze OpenLen-instantie."
+    },
+    "errors": {
+      "load": "Kon de GitHub-koppeling niet laden.",
+      "denied": "De koppeling met GitHub is geannuleerd.",
+      "exchange": "Kon de koppeling met GitHub niet voltooien. Probeer het opnieuw."
+    }
+  }
 }

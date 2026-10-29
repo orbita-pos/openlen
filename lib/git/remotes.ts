@@ -24,7 +24,7 @@ export async function refusedRemoteUrl(raw: string): Promise<string | null> {
   if (u.protocol !== "https:" && !(u.protocol === "http:" && u.hostname === "127.0.0.1")) {
     return `fatal: OpenLen's git talks to remotes over https:// only, not ${u.protocol.replace(/:$/, "")}: ${raw}\n`;
   }
-  if (u.username || u.password) return "fatal: a remote's URL can't carry credentials here; connect GitHub in the project's Integrations instead.\n";
+  if (u.username || u.password) return "fatal: a remote's URL can't carry credentials here; connect GitHub instead (Publish → Export → Connect GitHub).\n";
   const port = u.port ? Number(u.port) : u.protocol === "https:" ? 443 : 80;
   if (!(await decideEgress(u.hostname, port)).ok) return `fatal: OpenLen's server doesn't connect to private or internal addresses: ${u.hostname}\n`;
   return null;
@@ -34,6 +34,9 @@ export async function refusedRemoteUrl(raw: string): Promise<string | null> {
 export function displayUrl(url: string): string {
   return url.replace(/\/+$/, "").replace(/\.git$/, "");
 }
+
+/** Where the owner connects GitHub, for the messages that need it. */
+export const CONNECT_GITHUB = "To connect GitHub: Publish → Export → Connect GitHub (the project's owner).\n";
 
 const isGitHub = (url: string) => {
   try {
@@ -53,7 +56,7 @@ export function remoteFatal(e: unknown, url: string, hadAuth: boolean): GitFatal
       return url;
     }
   })();
-  const connect = isGitHub(url) ? "Connect GitHub in the project's Integrations.\n" : "";
+  const connect = isGitHub(url) ? CONNECT_GITHUB : "";
   switch (e.kind) {
     case "auth":
       return new GitFatal(hadAuth ? `fatal: Authentication failed for '${url}/'\n${connect}` : `fatal: could not read Username for '${origin}': terminal prompts disabled\n${connect}`);

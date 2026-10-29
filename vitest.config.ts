@@ -134,6 +134,10 @@ export default defineConfig({
       "lib/security-review/**/*.test.ts",
       // Stripe (spec local 2026-10-21-stripe-integration).
       "lib/stripe/**/*.test.ts",
+      // GitHub: the App and `gh` (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9).
+      "lib/integrations/github-app*.test.ts",
+      "app/api/integrations/github-app/**/*.test.ts",
+      "lib/gh/**/*.test.ts",
       // Project email (spec local 2026-10-22-email-integration).
       "lib/project-email/**/*.test.ts",
       // Shopify without a key (spec local 2026-10-22-shopify-storefront).

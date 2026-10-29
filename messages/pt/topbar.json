@@ -36,7 +36,9 @@
       "vercel": "Publicar na Vercel",
       "github": "Enviar para o GitHub",
       "vercelSubtitle": "Sua própria URL *.vercel.app",
-      "githubSubtitle": "Um repositório do GitHub Pages"
+      "githubSubtitle": "Um repositório do GitHub Pages",
+      "githubApp": "Conectar GitHub",
+      "githubAppSubtitle": "O Len faz push no seu repositório"
     },
     "previousDeploys": "Publicações anteriores",
     "noPriorDeploys": "Ainda não há publicações anteriores.",

@@ -50,5 +50,29 @@
     "exchange": "Couldn't complete the connection. Try again.",
     "not_configured": "This deploy target isn't set up on this OpenLen instance."
   },
-  "confirmDisconnect": "Disconnect {provider}? Your deployed page stays live — you'll just need to reconnect to deploy again."
+  "confirmDisconnect": "Disconnect {provider}? Your deployed page stays live — you'll just need to reconnect to deploy again.",
+  "githubApp": {
+    "title": "Connect GitHub",
+    "subtitle": "Len pushes this project to your repository.",
+    "close": "Close",
+    "lead": "Connect your GitHub account and choose which repositories OpenLen can use. Then ask Len to “put it on GitHub”.",
+    "connect": "Connect GitHub",
+    "privacy": "OpenLen only sees the repositories you choose and never stores a GitHub token. To remove its access entirely, uninstall the app on GitHub.",
+    "connectedAs": "Connected as {account}",
+    "repository": "This project's repository",
+    "noRepository": "No repository yet. Ask Len to “put it on GitHub” and it creates one.",
+    "manage": "Manage on GitHub",
+    "addAccount": "Add an account",
+    "disconnect": "Disconnect",
+    "confirmDisconnect": "Disconnect GitHub? Len won't be able to push or pull. The app stays installed on GitHub until you remove it there.",
+    "notConfigured": {
+      "title": "Not available yet",
+      "body": "GitHub isn't set up on this OpenLen instance."
+    },
+    "errors": {
+      "load": "Couldn't load the GitHub connection.",
+      "denied": "The GitHub connection was cancelled.",
+      "exchange": "Couldn't finish connecting GitHub. Try again."
+    }
+  }
 }

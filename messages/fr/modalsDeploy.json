@@ -50,5 +50,29 @@
     "exchange": "Impossible de finaliser la connexion. Réessayez.",
     "not_configured": "Cette cible de déploiement n'est pas configurée sur cette instance OpenLen."
   },
-  "confirmDisconnect": "Déconnecter {provider} ? Votre page déployée reste en ligne — vous devrez simplement vous reconnecter pour déployer à nouveau."
+  "confirmDisconnect": "Déconnecter {provider} ? Votre page déployée reste en ligne — vous devrez simplement vous reconnecter pour déployer à nouveau.",
+  "githubApp": {
+    "title": "Connecter GitHub",
+    "subtitle": "Len pousse ce projet vers votre dépôt.",
+    "close": "Fermer",
+    "lead": "Connectez votre compte GitHub et choisissez les dépôts qu'OpenLen peut utiliser. Ensuite, demandez à Len de « le mettre sur GitHub ».",
+    "connect": "Connecter GitHub",
+    "privacy": "OpenLen ne voit que les dépôts que vous choisissez et ne stocke jamais de jeton GitHub. Pour retirer complètement son accès, désinstallez l'application sur GitHub.",
+    "connectedAs": "Connecté en tant que {account}",
+    "repository": "Dépôt de ce projet",
+    "noRepository": "Pas encore de dépôt. Demandez à Len de « le mettre sur GitHub » et il en crée un.",
+    "manage": "Gérer sur GitHub",
+    "addAccount": "Ajouter un compte",
+    "disconnect": "Déconnecter",
+    "confirmDisconnect": "Déconnecter GitHub ? Len ne pourra plus faire de push ni de pull. L'application reste installée sur GitHub jusqu'à ce que vous la retiriez là-bas.",
+    "notConfigured": {
+      "title": "Pas encore disponible",
+      "body": "GitHub n'est pas configuré sur cette instance d'OpenLen."
+    },
+    "errors": {
+      "load": "Impossible de charger la connexion GitHub.",
+      "denied": "La connexion à GitHub a été annulée.",
+      "exchange": "Impossible de terminer la connexion à GitHub. Réessayez."
+    }
+  }
 }

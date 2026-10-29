@@ -50,5 +50,29 @@
     "exchange": "接続を完了できませんでした。もう一度お試しください。",
     "not_configured": "このデプロイ先は、この OpenLen インスタンスでは設定されていません。"
   },
-  "confirmDisconnect": "{provider} の接続を解除しますか？ デプロイ済みのページは公開されたままです。再びデプロイするには再接続が必要になるだけです。"
+  "confirmDisconnect": "{provider} の接続を解除しますか？ デプロイ済みのページは公開されたままです。再びデプロイするには再接続が必要になるだけです。",
+  "githubApp": {
+    "title": "GitHub を接続",
+    "subtitle": "Len がこのプロジェクトをあなたのリポジトリに push します。",
+    "close": "閉じる",
+    "lead": "GitHub アカウントを接続し、OpenLen が使えるリポジトリを選んでください。そのあと Len に「GitHub に上げて」と頼んでください。",
+    "connect": "GitHub を接続",
+    "privacy": "OpenLen が見られるのは選んだリポジトリだけで、GitHub のトークンを保存することはありません。アクセスを完全に取り消すには、GitHub でアプリをアンインストールしてください。",
+    "connectedAs": "{account} として接続中",
+    "repository": "このプロジェクトのリポジトリ",
+    "noRepository": "まだリポジトリがありません。Len に「GitHub に上げて」と頼めば作成します。",
+    "manage": "GitHub で管理",
+    "addAccount": "別のアカウントを追加",
+    "disconnect": "接続を解除",
+    "confirmDisconnect": "GitHub の接続を解除しますか？ Len は push も pull もできなくなります。アプリは GitHub で削除するまでインストールされたままです。",
+    "notConfigured": {
+      "title": "まだ利用できません",
+      "body": "この OpenLen では GitHub が設定されていません。"
+    },
+    "errors": {
+      "load": "GitHub の接続を読み込めませんでした。",
+      "denied": "GitHub への接続がキャンセルされました。",
+      "exchange": "GitHub の接続を完了できませんでした。もう一度お試しください。"
+    }
+  }
 }

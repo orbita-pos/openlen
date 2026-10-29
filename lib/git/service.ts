@@ -4,6 +4,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { githubCredentials } from "@/lib/integrations/github-app-store";
 import type { GitIdentity, GitRunResult } from "./command";
 import { gitIdentity } from "./identity";
 import { postgresStore } from "./postgres-store";
@@ -21,7 +22,7 @@ export interface GitCliInput {
   readonly files: Readonly<Record<string, string>>;
   /** Why the terminal won't delete a file, or null: see GitRunInput.undeletable. */
   readonly undeletable?: (absolutePath: string) => string | null;
-  /** A remote's credentials, the server's (GitRunInput.remoteAuth): the GitHub App's installation token. */
+  /** A remote's credentials (GitRunInput.remoteAuth); by default the owner's GitHub App installation token. */
   readonly remoteAuth?: (url: string) => Promise<string | null>;
 }
 
@@ -47,7 +48,8 @@ export async function gitCli(p: GitCliInput): Promise<GitRunResult> {
         owner,
         now: () => new Date(),
         ...(p.undeletable ? { undeletable: p.undeletable } : {}),
-        ...(p.remoteAuth ? { remoteAuth: p.remoteAuth } : {}),
+        // GitHub (§9): the owner's installation token, the same whoever runs the command.
+        remoteAuth: p.remoteAuth ?? githubCredentials(p.ownerId),
       },
       p.args,
     );

@@ -133,6 +133,8 @@ interface TopBarProps {
   onDeployVercel?: () => void;
   /** Open the "Push to GitHub" modal. Undefined hides the entry. */
   onDeployGitHub?: () => void;
+  /** Open «Conectar GitHub» (the GitHub App: Len pushes to the person's repository). Undefined hides the entry. */
+  onConnectGitHub?: () => void;
   /** LA BARRA DE LA PANTALLA DE INICIO. Presente = no hay proyecto abierto, y
    *  entonces esta barra es OTRA: sin nombre de proyecto, sin guardado y sin
    *  Deploy —no hay nada de eso—, con las tres superficies globales en el
@@ -172,6 +174,7 @@ export function TopBar({
   onCustomDomain,
   onDeployVercel,
   onDeployGitHub,
+  onConnectGitHub,
   inicio,
   onMiembros,
   onEnvVars,
@@ -1104,6 +1107,12 @@ export function TopBar({
                     label: t("deploy.providers.github"),
                     subtitle: t("deploy.providers.githubSubtitle"),
                     onClick: onDeployGitHub,
+                  },
+                  {
+                    id: "githubApp",
+                    label: t("deploy.providers.githubApp"),
+                    subtitle: t("deploy.providers.githubAppSubtitle"),
+                    onClick: onConnectGitHub,
                   },
                 ] as const
               )
