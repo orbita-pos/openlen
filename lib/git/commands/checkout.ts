@@ -1,8 +1,9 @@
 // `git checkout [<commit>] -- <paths>`: files back from the index or a commit (overlay: nothing
 // is removed). Switching branches or commits doesn't exist here: one branch, main (spec §4).
+import { oidOfContent } from "../content";
 import type { Command, CommandContext } from "../command";
 import { abbrev } from "../diff";
-import { blobOf, compareNames } from "../objects";
+import { compareNames } from "../objects";
 import { GitFatal, INDEX_LOCKED, notAvailable, pathspecDidNotMatch } from "../errors";
 import { parseOptions } from "../options";
 import { matchesPathspec, resolveFromCwd, toAbsolute } from "../paths";
@@ -20,7 +21,7 @@ async function localChanges(ctx: CommandContext): Promise<string> {
     const inHead = head.get(p);
     if (inHead === undefined) lines.push(`A\t${p}`);
     else if (content === undefined) lines.push(`D\t${p}`);
-    else if (blobOf(content).oid !== inHead) lines.push(`M\t${p}`);
+    else if (oidOfContent(content) !== inHead) lines.push(`M\t${p}`);
   }
   return lines.map((l) => `${l}\n`).join("");
 }

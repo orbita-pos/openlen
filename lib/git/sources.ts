@@ -1,8 +1,10 @@
 // The sides a diff compares (a commit's tree, the index, the working tree) and how a list of
 // changed files is printed, the same for diff, log, show and commit.
+import { sizeOf } from "@/lib/files/blob-pointer";
+import { oidOfContent } from "./content";
 import type { CommandContext } from "./command";
 import { fileDiff, formatStat, summaryLine, type DiffSide } from "./diff";
-import { blobOf, compareNames } from "./objects";
+import { compareNames } from "./objects";
 import type { Options } from "./options";
 import { matchesPathspec, quotePath } from "./paths";
 
@@ -26,7 +28,7 @@ export function workSource(ctx: CommandContext, paths: Iterable<string>): Source
   const files = new Map<string, string>();
   for (const p of paths) {
     const content = ctx.tree.files.get(p);
-    if (content !== undefined) files.set(p, blobOf(content).oid);
+    if (content !== undefined) files.set(p, oidOfContent(content));
   }
   return { files, text: async (p) => ctx.tree.files.get(p) ?? "" };
 }
@@ -84,9 +86,15 @@ export function renderChanges(files: readonly ChangedFile[], o: DiffOutput): str
   if (o.nameOnly) return files.map((f) => `${quotePath(f.path)}\n`).join("");
   if (o.nameStatus) return files.map((f) => `${f.from.oid === null ? "A" : f.to.oid === null ? "D" : "M"}\t${quotePath(f.path)}\n`).join("");
   const diffs = files.map((f) => ({ f, d: fileDiff(f.from, f.to, o.context) }));
-  const entries = diffs.map(({ f, d }) => ({ path: f.path, added: d.added, deleted: d.deleted }));
+  const size = (text: string | null) => (text === null ? 0 : sizeOf(text));
+  const entries = diffs.map(({ f, d }) => ({
+    path: f.path,
+    added: d.added,
+    deleted: d.deleted,
+    ...(d.binary ? { binary: { from: size(f.from.text), to: size(f.to.text) } } : {}),
+  }));
   let out = "";
-  if (o.numstat) out += entries.map((e) => `${e.added}\t${e.deleted}\t${quotePath(e.path)}\n`).join("");
+  if (o.numstat) out += entries.map((e) => (e.binary ? `-\t-\t${quotePath(e.path)}\n` : `${e.added}\t${e.deleted}\t${quotePath(e.path)}\n`)).join("");
   if (o.stat) out += formatStat(entries);
   else if (o.shortstat && entries.length > 0) out += `${summaryLine(entries)}\n`;
   if (o.patch && diffs.length > 0) out += `${out ? "\n" : ""}${diffs.map(({ d }) => d.text).join("")}`;

@@ -36,6 +36,8 @@ async function main() {
         FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE
     );
   `);
+  // Binaries (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): a blob pointer instead of the bytes.
+  await db.execute(sql`ALTER TABLE "projectGitObjects" ADD COLUMN IF NOT EXISTS "blobPointer" text`);
   console.log("[git:migrate] projectGitObjects and projectGitRepos ready");
   process.exit(0);
 }

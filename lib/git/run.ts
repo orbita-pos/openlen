@@ -1,10 +1,11 @@
 // `git …` as the binary reads it: global options, the repository created on first use with an
 // "Initial commit" of the current files (spec §1), then the subcommand.
+import { blobForContent } from "./content";
 import path from "node:path";
 import { signatureOf, type CommandContext, type GitIdentity, type GitRunInput, type GitRunResult } from "./command";
 import { COMMANDS, NOT_AVAILABLE } from "./commands";
 import { GitFatal, notAvailable } from "./errors";
-import { blobOf, encodeCommit, makeObject, type GitObject } from "./objects";
+import { encodeCommit, makeObject, type GitObject } from "./objects";
 import { UnknownOption } from "./options";
 import { repoDir } from "./paths";
 import { Repository, buildTree } from "./repository";
@@ -27,7 +28,7 @@ export async function ensureRepository(store: GitStore, tree: WorkingTree, owner
   const blobs: GitObject[] = [];
   for (const [p, content] of tree.files) {
     if (tree.isIgnored(p)) continue;
-    const blob = blobOf(content);
+    const blob = blobForContent(content);
     blobs.push(blob);
     index[p] = blob.oid;
   }

@@ -1,11 +1,12 @@
 // `git commit`: what's staged (or -a, or only the named paths), the message cleaned up like -m,
 // the person as author and committer, and git's summary. Never --amend (spec §4).
+import { blobForContent } from "../content";
 import path from "node:path";
 import { signatureOf, type Command, type CommandContext } from "../command";
 import { abbrev, fileDiff, summaryLine } from "../diff";
 import { GitFatal, INDEX_LOCKED, notAvailable, pathspecDidNotMatch } from "../errors";
 import { cleanupMessage, subjectOf, withSignoff } from "../format";
-import { blobOf, encodeCommit, makeObject, type GitObject } from "../objects";
+import { encodeCommit, makeObject, type GitObject } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, resolveFromCwd } from "../paths";
 import { buildTree } from "../repository";
@@ -61,7 +62,7 @@ export const commit: Command = async (ctx, args) => {
           delete committed[p];
           delete nextIndex[p];
         } else {
-          const blob = blobOf(content);
+          const blob = blobForContent(content);
           blobs.push(blob);
           committed[p] = blob.oid;
           nextIndex[p] = blob.oid;
@@ -75,7 +76,7 @@ export const commit: Command = async (ctx, args) => {
         const content = ctx.tree.files.get(p);
         if (content === undefined) delete nextIndex[p];
         else {
-          const blob = blobOf(content);
+          const blob = blobForContent(content);
           if (blob.oid !== nextIndex[p]) {
             blobs.push(blob);
             nextIndex[p] = blob.oid;

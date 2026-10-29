@@ -2706,6 +2706,9 @@ export const projectGitObjects = pgTable(
     oid: text("oid").notNull(),
     type: text("type").notNull(),
     content: bytea("content").notNull(),
+    /** A binary of the folder (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): its blob pointer; then
+     *  `content` is empty, the bytes are in storage. */
+    blobPointer: text("blobPointer"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.projectId, t.oid] })],

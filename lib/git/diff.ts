@@ -2,6 +2,7 @@
 // with the indent heuristic, hunks with their context, and the default funcname after "@@".
 // The compaction and the hunk emission are ported from git's xdiff/xdiffi.c and xdiff/xemit.c,
 // which are LGPL-2.1-or-later (compatible with this repository's AGPL-3.0).
+import { isBlobPointer } from "@/lib/files/blob-pointer";
 import { diffArrays } from "diff";
 import { NULL_OID } from "./objects";
 import { quotePath } from "./paths";
@@ -340,7 +341,7 @@ export function fileDiff(from: DiffSide, to: DiffSide, context = 3): { text: str
   text += `index ${abbrev(from.oid ?? NULL_OID)}..${abbrev(to.oid ?? NULL_OID)}${from.oid !== null && to.oid !== null ? " 100644" : ""}\n`;
   const oldText = from.text ?? "";
   const newText = to.text ?? "";
-  if (oldText.includes("\0") || newText.includes("\0")) {
+  if (oldText.includes("\0") || newText.includes("\0") || isBlobPointer(oldText) || isBlobPointer(newText)) {
     text += `Binary files ${from.oid === null ? "/dev/null" : quotePath(pa)} and ${to.oid === null ? "/dev/null" : quotePath(pb)} differ\n`;
     return { text, added: 0, deleted: 0, binary: true };
   }
@@ -358,6 +359,8 @@ export interface StatEntry {
   readonly path: string;
   readonly added: number;
   readonly deleted: number;
+  /** A binary file: its size before and after, as git prints it (`Bin 19 -> 21 bytes`). */
+  readonly binary?: { readonly from: number; readonly to: number };
 }
 
 export function summaryLine(entries: readonly StatEntry[]): string {
@@ -375,7 +378,8 @@ export function formatStat(entries: readonly StatEntry[], width = 80): string {
   if (entries.length === 0) return "";
   const names = entries.map((e) => quotePath(e.path));
   const maxChange = Math.max(...entries.map((e) => e.added + e.deleted));
-  const numberWidth = String(maxChange).length;
+  // Like git's diffstat: a binary's "Bin" takes the number's column.
+  const numberWidth = Math.max(String(maxChange).length, entries.some((e) => e.binary) ? 3 : 0);
   let nameWidth = Math.max(...names.map((n) => n.length));
   let graphWidth = maxChange;
   if (nameWidth + numberWidth + 6 + graphWidth > width) {
@@ -394,6 +398,10 @@ export function formatStat(entries: readonly StatEntry[], width = 80): string {
       const slash = tail.indexOf("/");
       if (slash >= 0) tail = tail.slice(slash);
       name = `...${tail}`;
+    }
+    if (e.binary) {
+      out += ` ${name.padEnd(nameWidth)} | ${"Bin".padStart(numberWidth)} ${e.binary.from} -> ${e.binary.to} bytes\n`;
+      return;
     }
     const total = e.added + e.deleted;
     const add = graphWidth < maxChange ? scale(e.added) : e.added;

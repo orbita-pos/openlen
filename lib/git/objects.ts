@@ -3,12 +3,18 @@
 import { createHash } from "node:crypto";
 
 export type ObjectType = "blob" | "tree" | "commit";
-export type EntryMode = "100644" | "40000";
+/** A regular file, an executable, a symbolic link, a submodule (a commit of another repository), a folder. */
+export type EntryMode = "100644" | "100755" | "120000" | "160000" | "40000";
+/** The modes a file can have other than the regular one. */
+export type SpecialMode = "100755" | "120000" | "160000";
 
 export interface GitObject {
   readonly oid: string;
   readonly type: ObjectType;
+  /** Empty for an external blob: its bytes are in storage (./content.ts). */
   readonly content: Uint8Array;
+  /** A binary of the project's folder (spec local 2026-10-28): the blob pointer to its bytes. */
+  readonly external?: { readonly sha256: string; readonly size: number; readonly gitOid: string };
 }
 
 export interface TreeEntry {
