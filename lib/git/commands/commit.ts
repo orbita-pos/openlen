@@ -127,7 +127,7 @@ export const commit: Command = async (ctx, args) => {
   const parents = merging ? [ctx.state.head, merging.theirs] : [ctx.state.head];
   const created = makeObject("commit", encodeCommit({ tree: root, parents, author: sig, committer: sig, message }));
   await ctx.repo.store.writeObjects([...blobs, ...objects, created]);
-  if (!(await ctx.save(created.oid, nextIndex, undefined, merging ? null : undefined))) throw new GitFatal(INDEX_LOCKED);
+  if (!(await ctx.save(created.oid, nextIndex, merging ? { merge: null } : {}))) throw new GitFatal(INDEX_LOCKED);
   if (o.has("-q") || o.has("--quiet")) return { stdout: "", stderr: "", exitCode: 0 };
   // git shows no diff for a merge commit: only its line.
   if (merging) return { stdout: `[${ctx.state.branch} ${abbrev(created.oid)}] ${subjectOf(message)}\n`, stderr: "", exitCode: 0 };

@@ -98,7 +98,7 @@ export const log: Command = async (ctx, args) => {
     }
   }
   // --all: every branch, as git starts from every ref.
-  if (o.has("--all")) starts.push(ctx.state.head, ...Object.values(ctx.state.refs));
+  if (o.has("--all")) starts.push(ctx.state.head, ...Object.values(ctx.state.refs), ...Object.values(ctx.state.remotes).flatMap((r) => Object.values(r.refs)));
   if (starts.length === 0) starts.push(ctx.state.head);
   const author = o.value("--author");
   const grep = o.value("--grep");

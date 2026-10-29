@@ -48,7 +48,7 @@ Files:
 // changes with git" (binary 2.1.296) goes at the end, without what doesn't exist here (hooks,
 // --no-verify, force push, --amend, gh and pull requests, -uall, rebase --no-edit, TodoWrite).
 const WITHOUT_GIT = "no network, no node, npm, pip or git, but grep,";
-const WITH_GIT = "no network, no node, npm or pip, but git (this project's repository, with branches, no remote yet), grep,";
+const WITH_GIT = "no network, no node, npm or pip, but git (this project's repository, with branches and remotes), grep,";
 const AFTER_VERSIONS = "(diff /.openlen/versiones/<id>/index.html /index.html).";
 const VERSIONS_AND_COMMITS = " These versions are automatic checkpoints the person can restore; git commits exist only when someone asks for one.";
 
@@ -112,7 +112,7 @@ export function withGit(description: string): string {
 const INTERPRETER = /It interprets commands without running real programs: [\s\S]*?python3 with only its standard library\./;
 const REAL_PROGRAMS =
   "It runs real programs on an isolated Linux computer: node, npm, python3 with pip, curl, grep, sed, awk, jq, find, diff and the usual tools; its network reaches only the package registries (npm, PyPI) and GitHub. For office files it has LibreOffice (soffice) and openpyxl, pandas, python-docx and python-pptx installed. For PDFs it has pypdf, pdfplumber, reportlab, qpdf, poppler (pdftotext, pdftoppm) and tesseract.The site's files are at / next to the computer's own folders (/usr, /proc…), so search the site by naming its files and folders, not with grep -r /, which walks the whole computer.";
-const REAL_GIT = " git works on this project's repository (branches, no remote yet).";
+const REAL_GIT = " git works on this project's repository (branches and remotes; fetch, pull and push go through OpenLen).";
 const REAL_APP_TOOLS =
   " In this app, npm install, npm uninstall, npm test, npm run build, npm run lint and npx tsc are OpenLen's (/AGENTS.md says how): they give what the canvas and the publish give.";
 const SEARCH_SKIPS_OPENLEN = " (a search of the site, like grep -r /, does not enter it)";

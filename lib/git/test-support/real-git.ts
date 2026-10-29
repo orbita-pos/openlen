@@ -1,6 +1,6 @@
 // The real git binary in a throwaway repository, with a fixed author and clock: what every
 // differential test compares our git against (spec local 2026-10-15-git-for-len, "Pruebas").
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -76,6 +76,19 @@ export class RealRepo {
       encoding: "utf8",
     });
     return { stdout: r.stdout, stderr: r.stderr, exitCode: r.status ?? 1 };
+  }
+
+  /** git that talks to a test server in this same process (fetch, pull, push): `git` blocks the event loop the
+   *  server needs, this doesn't. */
+  remoteGit(args: readonly string[]): Promise<GitOutput> {
+    return new Promise((resolve) => {
+      const child = spawn("git", [...args], { cwd: this.dir, env: this.env() });
+      const out: Buffer[] = [];
+      const err: Buffer[] = [];
+      child.stdout.on("data", (c: Buffer) => out.push(c));
+      child.stderr.on("data", (c: Buffer) => err.push(c));
+      child.on("close", (code) => resolve({ stdout: Buffer.concat(out).toString("utf8"), stderr: Buffer.concat(err).toString("utf8"), exitCode: code ?? 1 }));
+    });
   }
 
   /** Repository paths ("src/App.tsx"); `null` deletes the file. */

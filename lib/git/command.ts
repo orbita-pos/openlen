@@ -1,7 +1,7 @@
 // What a git subcommand gets and gives back.
 import type { Signature } from "./objects";
 import type { Repository } from "./repository";
-import type { Branching, GitStore, Index, MergeState, RepoState } from "./store";
+import type { GitStore, Index, RepoChanges, RepoState } from "./store";
 import type { WorkingTree } from "./worktree";
 
 export interface GitIdentity {
@@ -37,6 +37,8 @@ export interface GitRunInput {
   /** Why the terminal won't delete a file (absolute path), or null if it can. A revert that would
    *  delete such a file is refused whole: the history must not say a page is gone while it stays. */
   readonly undeletable?: (absolutePath: string) => string | null;
+  /** The credentials for a remote ("x-access-token:<token>" for GitHub), or null: the server's, never Len's. */
+  readonly remoteAuth?: (url: string) => Promise<string | null>;
 }
 
 export interface CommandContext {
@@ -51,9 +53,11 @@ export interface CommandContext {
   readonly now: Date;
   /** See GitRunInput.undeletable. */
   readonly undeletable?: (absolutePath: string) => string | null;
+  /** See GitRunInput.remoteAuth. */
+  readonly remoteAuth?: (url: string) => Promise<string | null>;
   /** Compare-and-swap of the current branch's commit and the index (and with `branching`, the branches): false if
    *  someone wrote the repository first. `merge`: undefined keeps the merge in progress, null ends it. */
-  save(head: string, index: Index, branching?: Branching, merge?: MergeState | null): Promise<boolean>;
+  save(head: string, index: Index, changes?: RepoChanges): Promise<boolean>;
 }
 
 export type Command = (ctx: CommandContext, args: readonly string[]) => Promise<GitRunResult>;

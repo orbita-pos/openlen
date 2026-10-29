@@ -1,15 +1,25 @@
-// Revisions as git reads them in OpenLen's one-line history: HEAD, @, main, a hash prefix (4+),
-// ~N and ^ suffixes, a..b and a...b; and which arguments are revisions and which are paths.
+// Revisions as git reads them: HEAD, @, a branch, a remote-tracking branch (origin/main), a hash prefix (4+), ~N and
+// ^ suffixes, a..b and a...b; and which arguments are revisions and which are paths.
 import type { CommandContext } from "./command";
 import { GitFatal, unknownRevision } from "./errors";
 import { matchesPathspec, resolveFromCwd } from "./paths";
 
 const HEAD_NAMES = new Set(["HEAD", "@"]);
 
-/** A branch by its name, `heads/<name>` or `refs/heads/<name>`. */
-function branchOf(state: CommandContext["state"], name: string): string | null {
+/** A branch by its name, `heads/<name>` or `refs/heads/<name>`; then a remote-tracking one, `origin/main`,
+ *  `remotes/origin/main` or `refs/remotes/origin/main`. */
+export function branchOf(state: CommandContext["state"], name: string): string | null {
   const bare = name.replace(/^(?:refs\/)?heads\//, "");
-  return Object.hasOwn(state.refs, bare) ? state.refs[bare]! : null;
+  if (Object.hasOwn(state.refs, bare)) return state.refs[bare]!;
+  return remoteBranchOf(state, name);
+}
+
+/** A remote-tracking branch (`origin/main`, `remotes/origin/main`, `refs/remotes/origin/main`), or null. */
+export function remoteBranchOf(state: CommandContext["state"], name: string): string | null {
+  const m = /^(?:(?:refs\/)?remotes\/)?([^/]+)\/(.+)$/.exec(name);
+  if (!m) return null;
+  const refs = state.remotes[m[1]!]?.refs;
+  return refs && Object.hasOwn(refs, m[2]!) ? refs[m[2]!]! : null;
 }
 
 type Ctx = Pick<CommandContext, "repo" | "state">;

@@ -2,7 +2,7 @@
 // forward when it can, else a three-way merge — a two-parent commit, or the conflicts left in the tree with git's
 // markers until `git add` and `git commit` conclude it (or `git merge --abort` undoes it).
 import { oidOfContent } from "../content";
-import { signatureOf, type Command, type CommandContext } from "../command";
+import { signatureOf, type Command, type CommandContext, type GitRunResult } from "../command";
 import { abbrev } from "../diff";
 import { GitFatal, INDEX_LOCKED, notAvailable } from "../errors";
 import { cleanupMessage } from "../format";
@@ -11,9 +11,9 @@ import { compareNames, encodeCommit, makeObject } from "../objects";
 import { parseOptions } from "../options";
 import { toAbsolute } from "../paths";
 import { buildTree } from "../repository";
-import { resolveRevision } from "../revisions";
+import { remoteBranchOf, resolveRevision } from "../revisions";
 import { changedFiles, renderChanges } from "../sources";
-import type { Index } from "../store";
+import type { Index, RepoChanges } from "../store";
 import { twoWay, wouldOverwrite } from "./switch";
 import { onlyChanged } from "./writes";
 
@@ -26,7 +26,7 @@ export function unmergedFiles(doing: "Committing" | "Merging"): string {
 
 /** fmt-merge-msg: "Merge branch 'x'", plus " into <branch>" unless that is main or master. */
 function mergeMessage(ctx: CommandContext, name: string): string {
-  const what = Object.hasOwn(ctx.state.refs, name) ? `branch '${name}'` : `commit '${name}'`;
+  const what = Object.hasOwn(ctx.state.refs, name) ? `branch '${name}'` : remoteBranchOf(ctx.state, name) ? `remote-tracking branch '${name}'` : `commit '${name}'`;
   const into = ctx.state.branch === "main" || ctx.state.branch === "master" ? "" : ` into ${ctx.state.branch}`;
   return `Merge ${what}${into}\n`;
 }
@@ -55,7 +55,7 @@ async function abort(ctx: CommandContext) {
     const oid = head.get(p);
     write[toAbsolute(p)] = oid === undefined ? null : await ctx.repo.text(oid);
   }
-  if (!(await ctx.save(ctx.state.head, index, undefined, null))) throw new GitFatal(INDEX_LOCKED);
+  if (!(await ctx.save(ctx.state.head, index, { merge: null }))) throw new GitFatal(INDEX_LOCKED);
   const changed = onlyChanged(ctx, write);
   return { stdout: "", stderr: "", exitCode: 0, ...(changed ? { write: changed } : {}) };
 }
@@ -79,36 +79,69 @@ export const merge: Command = async (ctx, args) => {
   if (o.positional.length > 1) return notAvailable("merge with several branches (an octopus)", "merge them one at a time.");
   const theirs = await resolveRevision(ctx, name);
   if (!theirs) return { stdout: "", stderr: `merge: ${name} - not something we can merge\n`, exitCode: 1 };
-  const quiet = o.has("-q") || o.has("--quiet");
-  const showStat = !(o.has("-n") || o.has("--no-stat")) && !quiet;
   const typed = [...o.all("-m"), ...o.all("--message")];
+  const r = await mergeCommit(ctx, theirs, {
+    name,
+    message: typed.length > 0 ? cleanupMessage(typed.join("\n\n")) : mergeMessage(ctx, name),
+    noFf: o.has("--no-ff"),
+    ffOnly: o.has("--ff-only"),
+    noCommit: o.has("--no-commit"),
+    quiet: o.has("-q") || o.has("--quiet"),
+    showStat: !(o.has("-n") || o.has("--no-stat")),
+    allowUnrelated: o.has("--allow-unrelated-histories"),
+  });
+  return r.result;
+};
 
-  if (await ctx.repo.isAncestor(theirs, ctx.state.head)) return { stdout: quiet ? "" : "Already up to date.\n", stderr: "", exitCode: 0 };
+export interface MergeOptions {
+  /** What the markers and ort's messages call the other side: the branch as typed, or (for pull) the commit's id. */
+  readonly name: string;
+  /** The merge commit's message (and MERGE_MSG's first line). */
+  readonly message: string;
+  readonly noFf?: boolean;
+  readonly ffOnly?: boolean;
+  readonly noCommit?: boolean;
+  readonly quiet?: boolean;
+  readonly showStat?: boolean;
+  readonly allowUnrelated?: boolean;
+  /** More to save in the same write (pull's remote-tracking branches): a command writes the repository once. */
+  readonly changes?: RepoChanges;
+}
+
+/** git merge of `theirs` into the current branch. `saved`: whether it wrote the repository (if not, a caller with
+ *  `changes` still has to). */
+export async function mergeCommit(ctx: CommandContext, theirs: string, m: MergeOptions): Promise<{ result: GitRunResult; saved: boolean }> {
+  const quiet = m.quiet ?? false;
+  const showStat = (m.showStat ?? true) && !quiet;
+  const extra = m.changes ?? {};
+  if (await ctx.repo.isAncestor(theirs, ctx.state.head)) return { result: { stdout: quiet ? "" : "Already up to date.\n", stderr: "", exitCode: 0 }, saved: false };
 
   const head = ctx.state.head;
   const theirsFiles = await ctx.repo.filesOfCommit(theirs);
-  const canFastForward = await ctx.repo.isAncestor(head, theirs);
-  if (canFastForward && !o.has("--no-ff")) {
+  if (!m.noFf && (await ctx.repo.isAncestor(head, theirs))) {
     const updating = quiet ? "" : `Updating ${abbrev(head)}..${abbrev(theirs)}\n`;
     const moved = await twoWay(ctx, theirsFiles);
-    if (!moved.ok) return { stdout: updating, stderr: wouldOverwrite(moved, "merge"), exitCode: 1 };
+    if (!moved.ok) return { result: { stdout: updating, stderr: wouldOverwrite(moved, "merge"), exitCode: 1 }, saved: false };
     const stat = showStat ? await mergeStat(ctx, Object.fromEntries(theirsFiles)) : "";
-    if (!(await ctx.save(theirs, moved.index))) throw new GitFatal(INDEX_LOCKED);
+    if (!(await ctx.save(theirs, moved.index, extra))) throw new GitFatal(INDEX_LOCKED);
     const changed = onlyChanged(ctx, moved.write);
-    return { stdout: `${updating}${quiet ? "" : "Fast-forward\n"}${stat}`, stderr: "", exitCode: 0, ...(changed ? { write: changed } : {}) };
+    return { result: { stdout: `${updating}${quiet ? "" : "Fast-forward\n"}${stat}`, stderr: "", exitCode: 0, ...(changed ? { write: changed } : {}) }, saved: true };
   }
-  if (o.has("--ff-only")) throw new GitFatal("fatal: Not possible to fast-forward, aborting.\n");
+  if (m.ffOnly) throw new GitFatal("fatal: Not possible to fast-forward, aborting.\n");
 
   // ort refuses with anything staged.
   const ours = await ctx.repo.filesOfCommit(head);
   const staged = [...new Set([...ours.keys(), ...Object.keys(ctx.state.index)])].filter((p) => ours.get(p) !== ctx.state.index[p]).sort(compareNames);
   if (staged.length > 0) {
-    return { stdout: "", stderr: `error: Your local changes to the following files would be overwritten by merge:\n${staged.map((p) => `  ${p}\n`).join("")}Merge with strategy ort failed.\n`, exitCode: 2 };
+    return {
+      result: { stdout: "", stderr: `error: Your local changes to the following files would be overwritten by merge:\n${staged.map((p) => `  ${p}\n`).join("")}Merge with strategy ort failed.\n`, exitCode: 2 },
+      saved: false,
+    };
   }
   const base = await ctx.repo.mergeBase(head, theirs);
-  if (base === null && !o.has("--allow-unrelated-histories")) throw new GitFatal("fatal: refusing to merge unrelated histories\n");
+  if (base === null && !m.allowUnrelated) throw new GitFatal("fatal: refusing to merge unrelated histories\n");
   const baseFiles = base === null ? new Map<string, string>() : await ctx.repo.filesOfCommit(base);
-  const result = await mergeTrees(baseFiles, ours, theirsFiles, (oid) => ctx.repo.text(oid), name);
+  const result = await mergeTrees(baseFiles, ours, theirsFiles, (oid) => ctx.repo.text(oid), m.name);
 
   // Then ort checks the working tree out from HEAD to the result: a file it would write must have no local change.
   const overwritten: string[] = [];
@@ -122,34 +155,31 @@ export const merge: Command = async (ctx, args) => {
     } else if (oidOfContent(content) !== was) overwritten.push(p);
   }
   if (overwritten.length > 0 || untracked.length > 0) {
-    return { stdout: "", stderr: `${wouldOverwrite({ overwritten, untracked }, "merge")}Merge with strategy ort failed.\n`, exitCode: 2 };
+    return { result: { stdout: "", stderr: `${wouldOverwrite({ overwritten, untracked }, "merge")}Merge with strategy ort failed.\n`, exitCode: 2 }, saved: false };
   }
 
   await ctx.repo.store.writeObjects(result.blobs);
   const write = onlyChanged(ctx, Object.fromEntries([...result.write].map(([p, c]) => [toAbsolute(p), c])));
   const conflicted = Object.keys(result.conflicts).sort(compareNames);
-  const message = typed.length > 0 ? cleanupMessage(typed.join("\n\n")) : mergeMessage(ctx, name);
-  if (conflicted.length > 0 || o.has("--no-commit")) {
+  if (conflicted.length > 0 || m.noCommit) {
     const merging = {
       theirs,
-      message: conflicted.length > 0 ? `${message}\n# Conflicts:\n${conflicted.map((p) => `#\t${p}\n`).join("")}` : message,
+      message: conflicted.length > 0 ? `${m.message}\n# Conflicts:\n${conflicted.map((p) => `#\t${p}\n`).join("")}` : m.message,
       conflicts: result.conflicts,
     };
-    if (!(await ctx.save(head, result.index, undefined, merging))) throw new GitFatal(INDEX_LOCKED);
+    if (!(await ctx.save(head, result.index, { ...extra, merge: merging }))) throw new GitFatal(INDEX_LOCKED);
     const ending = conflicted.length > 0 ? "Automatic merge failed; fix conflicts and then commit the result.\n" : "Automatic merge went well; stopped before committing as requested\n";
-    return { stdout: `${result.messages}${ending}`, stderr: "", exitCode: conflicted.length > 0 ? 1 : 0, ...(write ? { write } : {}) };
+    return { result: { stdout: `${result.messages}${ending}`, stderr: "", exitCode: conflicted.length > 0 ? 1 : 0, ...(write ? { write } : {}) }, saved: true };
   }
 
   const { root, objects } = buildTree(result.index);
   const sig = signatureOf(ctx.identity, ctx.now);
-  const created = makeObject("commit", encodeCommit({ tree: root, parents: [head, theirs], author: sig, committer: sig, message }));
+  const created = makeObject("commit", encodeCommit({ tree: root, parents: [head, theirs], author: sig, committer: sig, message: m.message }));
   await ctx.repo.store.writeObjects([...objects, created]);
   const stat = showStat ? await mergeStat(ctx, result.index) : "";
-  if (!(await ctx.save(created.oid, result.index, undefined, null))) throw new GitFatal(INDEX_LOCKED);
+  if (!(await ctx.save(created.oid, result.index, { ...extra, merge: null }))) throw new GitFatal(INDEX_LOCKED);
   return {
-    stdout: quiet ? "" : `${result.messages}Merge made by the 'ort' strategy.\n${stat}`,
-    stderr: "",
-    exitCode: 0,
-    ...(write ? { write } : {}),
+    result: { stdout: quiet ? "" : `${result.messages}Merge made by the 'ort' strategy.\n${stat}`, stderr: "", exitCode: 0, ...(write ? { write } : {}) },
+    saved: true,
   };
-};
+}

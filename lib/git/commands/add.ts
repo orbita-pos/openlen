@@ -67,7 +67,7 @@ export const add: Command = async (ctx, args) => {
   const nextMerge = merge && resolved.length > 0 ? { ...merge, conflicts: Object.fromEntries(Object.entries(merge.conflicts).filter(([p]) => !resolved.includes(p))) } : undefined;
   if (!dryRun && (blobs.length > 0 || lines.length > 0 || nextMerge)) {
     await ctx.repo.store.writeObjects(blobs);
-    if (!(await ctx.save(ctx.state.head, index, undefined, nextMerge))) throw new GitFatal(INDEX_LOCKED);
+    if (!(await ctx.save(ctx.state.head, index, nextMerge ? { merge: nextMerge } : {}))) throw new GitFatal(INDEX_LOCKED);
   }
   if (ignored.length > 0) {
     return {
