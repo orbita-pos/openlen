@@ -8,7 +8,9 @@ import { GitFatal, INDEX_LOCKED } from "../errors";
 import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { toAbsolute, toRepoPath } from "../paths";
+import { tracking } from "../remotes";
 import { resolveCommit } from "../revisions";
+import { trackingText } from "./status";
 import { onlyChanged } from "./writes";
 
 /** git check-ref-format's rules for a branch name, the ones a person or a model can trip on. */
@@ -111,6 +113,12 @@ export function afterWrite(ctx: CommandContext, write: Readonly<Record<string, s
   return files;
 }
 
+/** What git says after a checkout about the branch and its upstream (status's lines, without the blank one). */
+async function trackingAfter(ctx: CommandContext, target: string, refs: Readonly<Record<string, string>>): Promise<string> {
+  const t = await tracking({ ...ctx, state: { ...ctx.state, branch: target, refs } }, target);
+  return trackingText(t).replace(/\n\n$/, "\n");
+}
+
 /** git's refusal to move while a merge has unmerged paths. */
 export function unmergedIndex(ctx: CommandContext): GitRunResult | null {
   const conflicts = Object.keys(ctx.state.merge?.conflicts ?? {}).sort(compareNames);
@@ -127,7 +135,7 @@ export async function switchTo(ctx: CommandContext, target: string, o: { readonl
   if (refused) return refused;
   if (!o.create && target === ctx.state.branch) {
     const head = await ctx.repo.filesOfCommit(ctx.state.head);
-    return { stdout: carriedChanges(head, ctx.state.index, ctx.tree.files), stderr: `Already on '${target}'\n`, exitCode: 0 };
+    return { stdout: `${carriedChanges(head, ctx.state.index, ctx.tree.files)}${await trackingAfter(ctx, target, ctx.state.refs)}`, stderr: `Already on '${target}'\n`, exitCode: 0 };
   }
   const targetOid = o.create ? (o.startPoint ? await resolveCommit(ctx, o.startPoint) : ctx.state.head) : ctx.state.refs[target]!;
   const after = await ctx.repo.filesOfCommit(targetOid);
@@ -137,7 +145,7 @@ export async function switchTo(ctx: CommandContext, target: string, o: { readonl
   if (!(await ctx.save(targetOid, moved.index, { branch: target, refs }))) throw new GitFatal(INDEX_LOCKED);
   const changed = onlyChanged(ctx, moved.write);
   return {
-    stdout: carriedChanges(after, moved.index, afterWrite(ctx, changed)),
+    stdout: `${carriedChanges(after, moved.index, afterWrite(ctx, changed))}${await trackingAfter(ctx, target, refs)}`,
     stderr: o.create ? `Switched to a new branch '${target}'\n` : `Switched to branch '${target}'\n`,
     exitCode: 0,
     ...(changed ? { write: changed } : {}),
