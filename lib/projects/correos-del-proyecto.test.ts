@@ -2,7 +2,7 @@
 // EL CORREO DE LA INVITACIÓN, en el idioma de quien invita.
 import { describe, expect, it } from "vitest";
 
-import { correoDeInvitacion, correoDeMencion, fraseDeFalloDelHilo, idiomaDelCorreo } from "./correos-del-proyecto";
+import { correoDeInvitacion, correoDeMencion, fraseDeFalloDelHilo, idiomaDelCorreo, scheduledTaskEmail, scheduledTaskPhrase } from "./correos-del-proyecto";
 
 const DATOS = { projectTitle: "Café <Sol>", inviterName: "Jesús", rol: "editor" as const, acceptUrl: "https://openlen.com/api/miembros/aceptar?token=abc&x=1" };
 
@@ -57,5 +57,47 @@ describe("el correo de una mención en el chat (el chat del equipo)", () => {
     expect(c.text).toContain("En el chat del proyecto:");
     expect(c.html).toContain("Abrir el chat");
     expect(c.text).not.toContain("línea");
+  });
+});
+
+describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §7.7)", () => {
+  const DATA = {
+    projectTitle: "Café <Sol>",
+    title: "PDF de resultados",
+    occurrenceAt: "2026-11-02T15:03:00.000Z",
+    timeZone: "America/Mexico_City",
+    texto: "Listo: 412 visitas (+18 %).",
+    waiting: [] as string[],
+    canReply: true,
+    chatUrl: "https://openlen.com/es/new?project=p1",
+    removeUrl: "https://openlen.com/es/scheduled-tasks/remove?task=schedule-1&token=abc",
+  };
+
+  it("subject is the title and the local date; body, reply line, chat button and removal link", () => {
+    const es = scheduledTaskEmail(DATA, "es");
+    expect(es.subject).toBe("PDF de resultados · lunes, 2 de noviembre de 2026");
+    expect(es.text).toContain("Listo: 412 visitas (+18 %).");
+    expect(es.text).toContain("contesta este correo");
+    expect(es.html).toContain('href="https://openlen.com/es/scheduled-tasks/remove?task=schedule-1&amp;token=abc"');
+    expect(es.html).toContain("Quitar esta tarea");
+    expect(es.html).toContain("Café &lt;Sol&gt;");
+    expect(es.html).not.toContain("<Sol>");
+  });
+
+  it("without a reply address there is no «reply to this email» line", () => {
+    expect(scheduledTaskEmail({ ...DATA, canReply: false }, "es").text).not.toContain("contesta este correo");
+  });
+
+  it("what waits for the person goes under its own heading", () => {
+    const es = scheduledTaskEmail({ ...DATA, waiting: ["¿Lo publico ya?", "Publicar en cafe.openlen.app"] }, "es");
+    expect(es.text).toContain("Te espera en OpenLen:");
+    expect(es.text).toContain("¿Lo publico ya?");
+    expect(es.text).toContain("Publicar en cafe.openlen.app");
+  });
+
+  it("the three refusals of a task, translated", () => {
+    expect(scheduledTaskPhrase("es", "plan_required")).toMatch(/plan de pago/);
+    expect(scheduledTaskPhrase("es", "no_access")).toBeTruthy();
+    expect(scheduledTaskPhrase("en", "missed")).toBeTruthy();
   });
 });

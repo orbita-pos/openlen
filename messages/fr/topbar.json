@@ -195,6 +195,17 @@
       "abrir": "Ouvrir le projet",
       "falloSinMotivo": "Je n'ai pas pu le faire. Répondez à cet e-mail pour me le redemander.",
       "interrumpido": "Le serveur a redémarré pendant que je le faisais, ce n'est peut-être fait qu'à moitié. Regardez les changements et, si besoin, répondez à cet e-mail pour me le redemander."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "Pour changer quelque chose, répondez à cet e-mail et Len s'en occupe.",
+      "abrir": "Ouvrir le chat dans OpenLen",
+      "pie": "Tâche planifiée «{title}» de {proyecto}.",
+      "quitar": "Supprimer cette tâche",
+      "esperando": "Vous attend dans OpenLen :",
+      "planGratis": "Je ne l'ai pas faite : les tâches planifiées font partie des forfaits payants et le compte du propriétaire du projet est en Gratuit. La tâche est arrêtée ; avec un forfait payant, redemandez-la à Len.",
+      "sinAcceso": "Je ne l'ai pas faite : la personne qui a créé cette tâche ne peut plus travailler avec Len sur ce projet. La tâche est arrêtée.",
+      "perdida": "Je ne l'ai pas faite : OpenLen n'était pas disponible à l'heure prévue et plus d'un jour est passé. Si vous en avez encore besoin, demandez-la à Len."
     }
   },
   "envVars": {

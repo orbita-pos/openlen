@@ -195,6 +195,17 @@
       "abrir": "Open the project",
       "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again.",
       "interrumpido": "The server restarted while I was working on it, so it may be half done. Check the changes and, if needed, reply to this email to ask me again."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "If you want anything changed, reply to this email and Len will do it.",
+      "abrir": "Open the chat in OpenLen",
+      "pie": "Scheduled task «{title}» of {proyecto}.",
+      "quitar": "Remove this task",
+      "esperando": "Waiting for you in OpenLen:",
+      "planGratis": "I didn't do it: scheduled tasks are part of the paid plans and the project owner's account is on Free. The task is stopped; with a paid plan, ask Len for it again.",
+      "sinAcceso": "I didn't do it: whoever created this task can no longer work with Len in this project. The task is stopped.",
+      "perdida": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask Len."
     }
   },
   "envVars": {

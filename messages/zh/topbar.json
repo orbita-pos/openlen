@@ -195,6 +195,17 @@
       "abrir": "打开项目",
       "falloSinMotivo": "我没能完成。回复这封邮件再让我做一次。",
       "interrumpido": "我做到一半时服务器重启了，所以可能只完成了一部分。看看改动，如有需要，回复这封邮件再让我做一次。"
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "如需修改，回复这封邮件，Len 会处理。",
+      "abrir": "在 OpenLen 中打开聊天",
+      "pie": "{proyecto} 的定时任务「{title}」。",
+      "quitar": "删除此任务",
+      "esperando": "在 OpenLen 等你处理：",
+      "planGratis": "没有执行：定时任务属于付费套餐，而项目所有者的账户是免费套餐。任务已停止；升级到付费套餐后，请再请 Len 设置一次。",
+      "sinAcceso": "没有执行：创建此任务的人已无法在此项目中与 Len 协作。任务已停止。",
+      "perdida": "没有执行：预定时间 OpenLen 不可用，且已超过一天。如果仍需要，请让 Len 再做一次。"
     }
   },
   "envVars": {

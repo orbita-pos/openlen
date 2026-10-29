@@ -46,6 +46,11 @@ export async function register() {
       void import("@/lib/len-email/run")
         .then((m) => m.resumeEmailRequests())
         .catch((err) => console.error("[len-email] no se pudieron retomar los correos a Len", err));
+      // Len's scheduled tasks (spec local 2026-10-29-tareas-programadas): what a restart left, then a
+      // pass every 30 s. OPENLEN_SCHEDULE=0 leaves it off.
+      void import("@/lib/scheduled-tasks/scheduler")
+        .then((m) => m.startScheduler())
+        .catch((err) => console.error("[schedule] no se pudo arrancar el planificador", err));
     }, 10_000).unref?.();
   }
 }

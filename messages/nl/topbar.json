@@ -195,6 +195,17 @@
       "abrir": "Project openen",
       "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen.",
       "interrumpido": "De server is herstart terwijl ik ermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en beantwoord zo nodig deze e-mail om het opnieuw te vragen."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "Wil je iets veranderen? Beantwoord deze e-mail en Len regelt het.",
+      "abrir": "Chat openen in OpenLen",
+      "pie": "Geplande taak «{title}» van {proyecto}.",
+      "quitar": "Deze taak verwijderen",
+      "esperando": "Wacht op je in OpenLen:",
+      "planGratis": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en het account van de projecteigenaar is Gratis. De taak is gestopt; vraag het Len opnieuw met een betaald abonnement.",
+      "sinAcceso": "Niet gedaan: wie deze taak heeft gemaakt, kan in dit project niet meer met Len werken. De taak is gestopt.",
+      "perdida": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag voorbij. Heb je het nog nodig, vraag het dan aan Len."
     }
   },
   "envVars": {
