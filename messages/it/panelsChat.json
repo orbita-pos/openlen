@@ -136,7 +136,8 @@
       "artifact-slides": "Creare una presentazione",
       "artifact-image": "Creare un'immagine promozionale",
       "artifact-motion": "Creare un video animato",
-      "artifact-audio": "Creare un audio o una narrazione"
+      "artifact-audio": "Creare un audio o una narrazione",
+      "schedule": "Programmare un'attività che Len farà a un'ora precisa"
     },
     "fileLimit": "Massimo 4 file per messaggio.",
     "fileTooBig": "Quel file supera i 20 MB.",

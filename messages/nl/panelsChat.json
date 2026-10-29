@@ -136,7 +136,8 @@
       "artifact-slides": "Een presentatie maken",
       "artifact-image": "Een promotieafbeelding maken",
       "artifact-motion": "Een geanimeerde video maken",
-      "artifact-audio": "Een audio of voice-over maken"
+      "artifact-audio": "Een audio of voice-over maken",
+      "schedule": "Een taak plannen die Len op een vast tijdstip doet"
     },
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",
