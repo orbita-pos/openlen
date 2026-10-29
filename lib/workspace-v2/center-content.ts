@@ -5,11 +5,16 @@
  * a video or a voice.
  *
  * Pure: `/new` decides with it, and the chat's deliverable card reads which pieces a turn touched.
+ *
+ * `null` is "not known yet": the project has not arrived (`hasPage`), or its deliverables have not (`deliverables`).
+ * Until the answer is known the center is `pending` and shows neither layout: drawing the docked chat beside a
+ * canvas and then jumping to the conversation alone was the flash on every reload of a project with no page.
  */
-export type CenterContent = "conversation" | "deliverable" | "canvas";
+export type CenterContent = "pending" | "conversation" | "deliverable" | "canvas";
 
-export function centerContent(p: { readonly hasPage: boolean; readonly isApp: boolean; readonly deliverables: number }): CenterContent {
+export function centerContent(p: { readonly hasPage: boolean | null; readonly isApp: boolean; readonly deliverables: number | null }): CenterContent {
   if (p.hasPage || p.isApp) return "canvas";
+  if (p.hasPage === null || p.deliverables === null) return "pending";
   return p.deliverables > 0 ? "deliverable" : "conversation";
 }
 
