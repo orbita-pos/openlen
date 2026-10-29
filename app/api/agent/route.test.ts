@@ -230,7 +230,7 @@ vi.mock("@/lib/agent/loop", async (real) => ({
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 // La capa 0 de Len 3.1: las filas de cada llamada, a una base de mentira.
-const stepDb = vi.hoisted(() => ({ insert: vi.fn(async () => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
+const stepDb = vi.hoisted(() => ({ upsert: vi.fn(async (_rows: unknown[]) => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
 vi.mock("@/lib/agent/telemetry/step-store-db", () => ({ drizzleStepStoreDb: stepDb }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: (cobro?: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>) => {
@@ -514,7 +514,8 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
   });
 
   // LA CAPA 0 DE LEN 3.1: el cerebro avisa de cada llamada, el bucle de cada
-  // tanda de herramientas, y las filas se escriben al cerrar el turno.
+  // tanda de herramientas, y cada fila se escribe a medida que pasa (y otra vez,
+  // por su id, cuando cambia): cuenta la última copia de cada una.
   describe("las filas de cada llamada (capa 0)", () => {
     const turno = async () =>
       readEvents(
@@ -527,7 +528,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       );
     afterEach(() => {
       vi.unstubAllEnvs();
-      stepDb.insert.mockClear();
+      stepDb.upsert.mockClear();
       mocks.runAgentLoop.mockReset();
     });
 
@@ -544,8 +545,10 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
         return { turns: 1, toolCalls: 1, usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0 }, terminalError: false, topeAlcanzado: null, errorCode: null };
       });
       await turno();
-      expect(stepDb.insert).toHaveBeenCalledTimes(1);
-      const rows = (stepDb.insert.mock.calls[0] as unknown as [{ projectId: string; tools: unknown[]; endReason: string }[]])[0];
+      await vi.waitFor(() => expect(stepDb.upsert.mock.calls.flatMap(([r]) => r as { endReason: string | null }[]).some((r) => r.endReason === "completed")).toBe(true));
+      const latest = new Map<string, { projectId: string; tools: unknown[]; endReason: string | null }>();
+      for (const [batch] of stepDb.upsert.mock.calls) for (const r of batch as { id: string; projectId: string; tools: unknown[]; endReason: string | null }[]) latest.set(r.id, r);
+      const rows = [...latest.values()];
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ projectId: "p1", tools: [{ name: "Read", argsHash: "h", ok: true }], endReason: "completed" });
     });
@@ -566,7 +569,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       await turno();
       expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onCall");
       expect((mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onStepTools");
-      expect(stepDb.insert).not.toHaveBeenCalled();
+      expect(stepDb.upsert).not.toHaveBeenCalled();
     });
   });
 
