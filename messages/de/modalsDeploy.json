@@ -50,5 +50,29 @@
     "exchange": "Die Verbindung konnte nicht abgeschlossen werden. Versuche es erneut.",
     "not_configured": "Dieses Veröffentlichungsziel ist auf dieser OpenLen-Instanz nicht eingerichtet."
   },
-  "confirmDisconnect": "{provider} trennen? Deine veröffentlichte Seite bleibt live — du musst dich nur erneut verbinden, um wieder zu veröffentlichen."
+  "confirmDisconnect": "{provider} trennen? Deine veröffentlichte Seite bleibt live — du musst dich nur erneut verbinden, um wieder zu veröffentlichen.",
+  "githubApp": {
+    "title": "GitHub verbinden",
+    "subtitle": "Len pusht dieses Projekt in dein Repository.",
+    "close": "Schließen",
+    "lead": "Verbinde dein GitHub-Konto und wähle, welche Repositories OpenLen nutzen darf. Bitte Len dann, „es auf GitHub zu stellen“.",
+    "connect": "GitHub verbinden",
+    "privacy": "OpenLen sieht nur die Repositories, die du auswählst, und speichert nie ein GitHub-Token. Um den Zugriff ganz zu entfernen, deinstalliere die App auf GitHub.",
+    "connectedAs": "Verbunden als {account}",
+    "repository": "Repository dieses Projekts",
+    "noRepository": "Noch kein Repository. Bitte Len, „es auf GitHub zu stellen“, dann legt er eins an.",
+    "manage": "Auf GitHub verwalten",
+    "addAccount": "Weiteres Konto hinzufügen",
+    "disconnect": "Trennen",
+    "confirmDisconnect": "GitHub trennen? Len kann dann weder pushen noch pullen. Die App bleibt auf GitHub installiert, bis du sie dort entfernst.",
+    "notConfigured": {
+      "title": "Noch nicht verfügbar",
+      "body": "GitHub ist auf dieser OpenLen-Instanz nicht eingerichtet."
+    },
+    "errors": {
+      "load": "Die GitHub-Verbindung konnte nicht geladen werden.",
+      "denied": "Die Verbindung mit GitHub wurde abgebrochen.",
+      "exchange": "Die Verbindung mit GitHub konnte nicht abgeschlossen werden. Versuch es noch einmal."
+    }
+  }
 }

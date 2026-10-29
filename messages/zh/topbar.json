@@ -36,7 +36,9 @@
       "vercel": "部署到 Vercel",
       "github": "推送到 GitHub",
       "vercelSubtitle": "你专属的 *.vercel.app 网址",
-      "githubSubtitle": "一个 GitHub Pages 仓库"
+      "githubSubtitle": "一个 GitHub Pages 仓库",
+      "githubApp": "连接 GitHub",
+      "githubAppSubtitle": "Len 推送到你的仓库"
     },
     "previousDeploys": "历史发布记录",
     "noPriorDeploys": "暂无历史发布记录。",

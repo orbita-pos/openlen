@@ -50,5 +50,29 @@
     "exchange": "无法完成连接，请重试。",
     "not_configured": "此 OpenLen 实例尚未配置该部署目标。"
   },
-  "confirmDisconnect": "要断开 {provider} 的连接吗？你已部署的页面将保持上线——只是下次部署时需要重新连接。"
+  "confirmDisconnect": "要断开 {provider} 的连接吗？你已部署的页面将保持上线——只是下次部署时需要重新连接。",
+  "githubApp": {
+    "title": "连接 GitHub",
+    "subtitle": "Len 会把这个项目推送到你的仓库。",
+    "close": "关闭",
+    "lead": "连接你的 GitHub 账号，并选择 OpenLen 可以使用哪些仓库。然后让 Len “把它放到 GitHub 上”。",
+    "connect": "连接 GitHub",
+    "privacy": "OpenLen 只能看到你选择的仓库，也从不保存 GitHub 令牌。要彻底撤销访问权限，请在 GitHub 上卸载该应用。",
+    "connectedAs": "已连接为 {account}",
+    "repository": "这个项目的仓库",
+    "noRepository": "还没有仓库。让 Len “把它放到 GitHub 上”，它会创建一个。",
+    "manage": "在 GitHub 上管理",
+    "addAccount": "添加其他账号",
+    "disconnect": "断开连接",
+    "confirmDisconnect": "要断开 GitHub 吗？Len 将无法再 push 或 pull。在你从 GitHub 上移除之前，该应用会一直保持安装。",
+    "notConfigured": {
+      "title": "暂不可用",
+      "body": "此 OpenLen 实例未配置 GitHub。"
+    },
+    "errors": {
+      "load": "无法加载 GitHub 连接。",
+      "denied": "已取消连接 GitHub。",
+      "exchange": "无法完成 GitHub 连接，请重试。"
+    }
+  }
 }

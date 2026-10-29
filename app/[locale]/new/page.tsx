@@ -45,6 +45,7 @@ import type {
 } from "@/lib/projects/types";
 import { CustomDomainModal } from "@/components/workspace-v2/custom-domain-modal";
 import { DeployIntegrationModal } from "@/components/workspace-v2/deploy-integration-modal";
+import { GitHubAppModal } from "@/components/workspace-v2/github-app-modal";
 import { InboxHub } from "@/components/inbox/inbox-hub";
 import { FranjaDeEstado, type OnAjustesGuardados } from "@/components/inbox/franja-de-estado";
 import { ExploreView } from "@/components/community/explore-view";
@@ -586,12 +587,25 @@ function NewV2Inner() {
   const [envVarsOpen, setEnvVarsOpen] = useState(false);
   const [vercelOpen, setVercelOpen] = useState(false);
   const [githubOpen, setGithubOpen] = useState(false);
+  // «Conectar GitHub» (the GitHub App, spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9).
+  const [githubAppOpen, setGithubAppOpen] = useState(false);
+  const [githubAppErrorKey, setGithubAppErrorKey] = useState<string | null>(null);
   const [deployErrorKey, setDeployErrorKey] = useState<string | null>(null);
 
   // OAuth round-trip return — the integration callback redirects back here with
   // ?connected=<provider> (success) or ?connect_error=<key>&provider=<provider>.
   // Open the matching deploy modal, surface any error, then strip the params so
   // a refresh doesn't re-open it.
+  // The GitHub App's way back: ?github=connected or ?github_error=<key>. Reopen «Conectar GitHub», then strip them.
+  useEffect(() => {
+    const ok = searchParams.get("github");
+    const err = searchParams.get("github_error");
+    if (ok !== "connected" && !err) return;
+    setGithubAppErrorKey(err);
+    setGithubAppOpen(true);
+    router.replace(projectParam ? `/new?project=${projectParam}` : "/new");
+  }, [searchParams, projectParam, router]);
+
   useEffect(() => {
     const connected = searchParams.get("connected");
     const connectError = searchParams.get("connect_error");
@@ -3582,6 +3596,14 @@ function NewV2Inner() {
               }
             : undefined
         }
+        onConnectGitHub={
+          loadedProject?.rol === "dueno"
+            ? () => {
+                setGithubAppErrorKey(null);
+                setGithubAppOpen(true);
+              }
+            : undefined
+        }
         // SIN PROYECTO ABIERTO LA BARRA ES OTRA, Y EL RAIL NO EXISTE.
         //
         // El rail entero actúa SOBRE una página —Chat, Resultados, Mensajes,
@@ -4383,6 +4405,14 @@ function NewV2Inner() {
           provider="github"
           projectId={loadedProject.id}
           initialErrorKey={deployErrorKey}
+        />
+      )}
+      {loadedProject && (
+        <GitHubAppModal
+          open={githubAppOpen}
+          onClose={() => setGithubAppOpen(false)}
+          projectId={loadedProject.id}
+          initialErrorKey={githubAppErrorKey}
         />
       )}
       {loadedProject && (

@@ -36,7 +36,9 @@
       "vercel": "Pubblica su Vercel",
       "github": "Invia a GitHub",
       "vercelSubtitle": "Il tuo URL *.vercel.app personale",
-      "githubSubtitle": "Un repository GitHub Pages"
+      "githubSubtitle": "Un repository GitHub Pages",
+      "githubApp": "Collega GitHub",
+      "githubAppSubtitle": "Len fa push sul tuo repository"
     },
     "previousDeploys": "Pubblicazioni precedenti",
     "noPriorDeploys": "Ancora nessuna pubblicazione precedente.",

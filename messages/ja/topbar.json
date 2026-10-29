@@ -36,7 +36,9 @@
       "vercel": "Vercel にデプロイ",
       "github": "GitHub にプッシュ",
       "vercelSubtitle": "あなた専用の *.vercel.app URL",
-      "githubSubtitle": "GitHub Pages リポジトリ"
+      "githubSubtitle": "GitHub Pages リポジトリ",
+      "githubApp": "GitHub を接続",
+      "githubAppSubtitle": "Len があなたのリポジトリに push します"
     },
     "previousDeploys": "過去のデプロイ",
     "noPriorDeploys": "過去のデプロイはまだありません。",

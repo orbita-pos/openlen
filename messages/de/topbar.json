@@ -36,7 +36,9 @@
       "vercel": "Auf Vercel veröffentlichen",
       "github": "Auf GitHub übertragen",
       "vercelSubtitle": "Deine eigene *.vercel.app-URL",
-      "githubSubtitle": "Ein GitHub-Pages-Repo"
+      "githubSubtitle": "Ein GitHub-Pages-Repo",
+      "githubApp": "GitHub verbinden",
+      "githubAppSubtitle": "Len pusht in dein Repository"
     },
     "previousDeploys": "Frühere Deployments",
     "noPriorDeploys": "Noch keine früheren Deployments.",
