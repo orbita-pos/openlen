@@ -100,6 +100,15 @@ npm run sandbox:template
 y después el deploy. La caja de cada proyecto nacida de la plantilla vieja se mata y se cambia por una nueva en su
 siguiente turno; las que no vuelven a usarse, las mata el reaper.
 
+`lib/agent/sandbox/template-files.test.ts` fija una huella de los ficheros de la plantilla junto a su nombre:
+cambiar un fichero sin subir el nombre hace fallar esa prueba.
+
+🔴 **v5 (2026-10-28, spec local `2026-10-28-ficheros-al-nivel-de-claude-code`)**: el manifiesto admite ficheros de
+hasta 50 MB (los binarios y los grandes vuelven de la caja) y `gh` va por el buzón como `git`. Hay que construirla
+(`npm run sandbox:template`) ANTES del deploy que lleve esa rama: sin ella, la caja no existe con ese nombre y cada
+turno cae a la terminal de siempre. Cómo responde `gh`: la GitHub App del dueño (`GITHUB_APP_*` en
+`/etc/openlen/openlen.env`, ver `infra/app/env.example`); el token nunca entra en la caja.
+
 ## 7. El temporizador de las cajas viejas
 
 `openlen-sandbox-reaper.timer` corre a diario (10:00 UTC) y mata las cajas sin usar desde hace más de 7 días (pausadas, o que un turno caído dejó «running»). Instalarlo
