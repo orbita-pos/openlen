@@ -43,6 +43,7 @@ function driverKilling(kill: (id: string) => Promise<void>): SandboxDriver & { k
     killed,
     create: async () => Promise.reject(new Error("not here")),
     resume: async () => Promise.reject(new Error("not here")),
+    pause: async () => Promise.reject(new Error("not here")),
     kill: async (id) => {
       await kill(id);
       killed.push(id);

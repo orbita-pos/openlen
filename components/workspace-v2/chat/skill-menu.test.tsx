@@ -7,7 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (clave: string) => clave }));
 
-import { skillOptions, slashInProgress, useSkillSlash } from "./skill-menu";
+import { menuDescription, skillOptions, slashInProgress, useSkillSlash } from "./skill-menu";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -116,5 +116,20 @@ describe("useSkillSlash", () => {
     m.type("/off");
     expect(m.host.querySelector('[role="listbox"]')).toBeNull();
     expect(m.host.textContent).not.toContain("composer.noSkills");
+  });
+});
+
+describe("menuDescription", () => {
+  const lines: Record<string, string> = { "composer.skillDescriptions.pdf": "Crear PDF y trabajar con los que ya tienes" };
+  const t = Object.assign((k: string) => lines[k] ?? k, { has: (k: string) => k in lines });
+  it("OpenLen's own skill says it in the person's language", () => {
+    expect(menuDescription({ name: "pdf", description: "Create PDF files and work on existing ones…", scope: "bundled" }, t)).toBe("Crear PDF y trabajar con los que ya tienes");
+  });
+  it("a skill of the project or the person shows its own description, as its author wrote it (Claude Code's menu)", () => {
+    expect(menuDescription({ name: "cotizar", description: "Cómo cotizo pasteles.", scope: "project" }, t)).toBe("Cómo cotizo pasteles.");
+    expect(menuDescription({ name: "cotizar", description: "Cómo cotizo pasteles." }, t)).toBe("Cómo cotizo pasteles.");
+  });
+  it("an OpenLen skill without its line falls back to its own description", () => {
+    expect(menuDescription({ name: "brand-new", description: "Do the new thing.", scope: "bundled" }, t)).toBe("Do the new thing.");
   });
 });

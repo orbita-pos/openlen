@@ -38,7 +38,7 @@ export function sandboxCleanupDriver(env: Readonly<Record<string, string | undef
 }
 
 /** E2B answers that it doesn't have the box (killed, reclaimed): there is nothing left to kill. */
-function isNotFound(e: unknown): boolean {
+export function isNotFound(e: unknown): boolean {
   const err = e as { name?: string; message?: string; status?: number } | null;
   return err?.name === "NotFoundError" || err?.status === 404 || /not found|404/i.test(err?.message ?? "");
 }
@@ -59,7 +59,7 @@ export async function reapSandboxes(o: {
   let failed = 0;
   for (const { projectId, sandboxId, pausedAt } of await store.idleBefore(cutoff)) {
     // Held like a turn holds it, so no turn resumes the box while it is being killed.
-    const reaperId = `reaper-${randomUUID()}`;
+    const reaperId = `${rows.REAPER_HOLD_PREFIX}${randomUUID()}`;
     if (!(await store.hold(projectId, reaperId))) continue;
     // A turn that used it between the list and the hold paused it again: a newer pausedAt.
     const now = await store.get(projectId);
