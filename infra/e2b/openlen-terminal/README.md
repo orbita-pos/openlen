@@ -19,7 +19,8 @@ Len's ten languages, TrueType fonts for Japanese, Korean and Chinese (`PDF_FONT_
 pdfplumber, reportlab and cryptography at the versions in `PDF_PYTHON_PACKAGES`. Check a built
 template with `npm run pdf-skill:box-check`.
 
-Since v5 (spec local `2026-10-28-ficheros-al-nivel-de-claude-code-design.md`): the manifest takes files up to
+Since v5 (spec local `2026-10-28-ficheros-al-nivel-de-claude-code-design.md`): built FROM Canonical's mirror
+`public.ecr.aws/ubuntu/ubuntu:24.04` (E2B's builder was denied Docker Hub's `ubuntu:24.04` on 2026-10-29); the manifest takes files up to
 50 MB (`MAX_FILE_BYTES`), so binaries and large files come back from the box, and `gh` is a bridged program
 (answered by OpenLen with the owner's GitHub App; no token in the box).
 

@@ -8,7 +8,7 @@ import { OFFICE_PYTHON_PACKAGES, PDF_PYTHON_PACKAGES, PLAYWRIGHT_BROWSERS, PLAYW
 
 /** The parts of E2B's Template builder this file uses. */
 export interface TemplateBuilderLike {
-  fromUbuntuImage(version: string): TemplateBuilderLike;
+  fromImage(image: string): TemplateBuilderLike;
   aptInstall(packages: string[]): TemplateBuilderLike;
   runCmd(command: string, o?: { user?: string }): TemplateBuilderLike;
   copy(from: string, to: string): TemplateBuilderLike;
@@ -20,6 +20,8 @@ export interface TemplateBuilderLike {
 // export (its Python bridge, python3-uno, for recalc.py), poppler for page images, and a font family.
 // The pdf skill (spec local 2026-10-27-len-pdf-skill, §4.4 and §4.7): qpdf, tesseract in Len's ten
 // languages (English comes with it), and TrueType fonts for Japanese, Korean and Chinese.
+export const UBUNTU_IMAGE = "public.ecr.aws/ubuntu/ubuntu:24.04";
+
 export const APT_PACKAGES = [
   "ca-certificates", "curl", "git", "ripgrep", "jq", "sqlite3", "unzip", "python3", "python3-pip", "python3-venv", "libnss3-tools",
   "libreoffice-calc", "libreoffice-writer", "libreoffice-impress", "python3-uno", "poppler-utils", "fonts-dejavu",
@@ -30,7 +32,9 @@ export const APT_PACKAGES = [
 
 export function defineTemplate(Template: () => TemplateBuilderLike, filesDir: string): TemplateBuilderLike {
   return Template()
-    .fromUbuntuImage("24.04")
+    // Ubuntu 24.04 from Canonical's own mirror on AWS (the same image as Docker Hub's ubuntu:24.04, which E2B's
+    // builder was denied on 2026-10-29: «access denied … you don't have permission to pull this image»).
+    .fromImage(UBUNTU_IMAGE)
     .aptInstall(APT_PACKAGES)
     .runCmd("curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs", { user: "root" })
     .copy(filesDir, "/opt/openlen/bin")
