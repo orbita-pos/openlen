@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
+import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { GENERATED_SKILLS, type BundledContext } from "./generated";
 import { parseSkillFile, type SkillDefinition } from "./skill-file";
 
@@ -77,14 +78,22 @@ function generated(ctx: BundledContext): { skills: BundledSkill[]; files: Record
 
 const DEFAULT_CONTEXT = (): BundledContext => ({ app: null, env: process.env });
 
+/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off (OPENLEN_SCHEDULE=0). */
+function offHere(ctx: BundledContext): ReadonlySet<string> {
+  return new Set(scheduleEnabled(ctx.env) ? [] : ["schedule"]);
+}
+
 /** OpenLen's skills in this context: the ones on disk and the generated ones it offers, by name. */
 export function bundledSkills(ctx: BundledContext = DEFAULT_CONTEXT()): readonly BundledSkill[] {
-  return [...load().skills, ...generated(ctx).skills].sort((a, b) => a.skill.name.localeCompare(b.skill.name));
+  const off = offHere(ctx);
+  return [...load().skills.filter((b) => !off.has(b.skill.name)), ...generated(ctx).skills].sort((a, b) => a.skill.name.localeCompare(b.skill.name));
 }
 
 /** Every file of every bundled skill in this context, by the path Len reads it at. */
 export function bundledSkillFiles(ctx: BundledContext = DEFAULT_CONTEXT()): Readonly<Record<string, string>> {
-  return { ...load().files, ...generated(ctx).files };
+  const off = offHere(ctx);
+  const files = Object.entries(load().files).filter(([p]) => ![...off].some((name) => p.startsWith(`${BUNDLED_SKILLS_DIR}/${name}/`)));
+  return { ...Object.fromEntries(files), ...generated(ctx).files };
 }
 
 /** Every name OpenLen's skills can have, in any context: none of them is the user's to take. */

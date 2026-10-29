@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { documentosDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { PDF_FONT_FILES } from "@/lib/agent/sandbox/template-files";
@@ -42,10 +42,33 @@ describe("bundled skills", () => {
       "office-render",
       "office-xlsx",
       "pdf",
+      "schedule",
       "setup-brand",
       "skill-creator",
       "verify",
     ]);
+  });
+
+  // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.1): `/schedule`, from Claude Code's.
+  describe("schedule", () => {
+    it("is offered unless OPENLEN_SCHEDULE=0, and its name stays reserved", () => {
+      const skill = bundledSkills().find((b) => b.skill.name === "schedule")!.skill;
+      expect(skill.description).toMatch(/scheduled task/i);
+      vi.stubEnv("OPENLEN_SCHEDULE", "0");
+      expect(bundledSkills().map((b) => b.skill.name)).not.toContain("schedule");
+      expect(Object.keys(bundledSkillFiles()).some((p) => p.includes("/schedule/"))).toBe(false);
+      expect(bundledSkillNames().has("schedule")).toBe(true);
+      vi.unstubAllEnvs();
+    });
+
+    it("says what Claude Code's says: self-contained prompt, the real time, the floor, paid plans, what waits", () => {
+      const text = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/schedule/SKILL.md`]!;
+      expect(text).toMatch(/self-contained/);
+      expect(text).toMatch(/scheduledAtLocal/);
+      expect(text).toMatch(/1 hour/);
+      expect(text).toMatch(/paid plans/);
+      expect(text).toMatch(/publish/i);
+    });
   });
 
   // THE PDF SKILL (spec local 2026-10-27-len-pdf-skill): ours, from how Claude and DeepSeek handle PDFs.

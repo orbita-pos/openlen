@@ -27,6 +27,11 @@ what breaks), without its text or its scripts (its license reserves all rights).
 (`pdf/scripts/`) are ours too. Added on 2026-10-27 (spec local 2026-10-27-len-pdf-skill); checked in a
 real box by `npm run pdf-skill:box-check`.
 
+`schedule` is ours (spec local 2026-10-29-tareas-programadas), from the facts of Claude Code's
+`/schedule` skill (binary 2.1.304: the prompt must be self-contained, confirm the user's local time, a
+one-hour minimum), which has no open license, and DeepSeek Harness's schedule tools
+(`packages/schedule/tool-schedule`, MIT, read at `00d5414`). Added on 2026-10-29.
+
 `deep-research` is ours, written from the method of Anthropic's `deep-research` skill (subtopics,
 short queries that never repeat, reading the promising pages, primary sources, a report that answers
 first), facts only: it has no open license. Claude coordinates research subagents; Len has none, so one

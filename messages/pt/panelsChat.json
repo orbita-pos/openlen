@@ -136,7 +136,8 @@
       "artifact-slides": "Fazer uma apresentação",
       "artifact-image": "Fazer uma imagem promocional",
       "artifact-motion": "Fazer um vídeo animado",
-      "artifact-audio": "Fazer um áudio ou uma narração"
+      "artifact-audio": "Fazer um áudio ou uma narração",
+      "schedule": "Agendar uma tarefa para o Len fazer em um horário"
     },
     "fileLimit": "Cabem 4 arquivos por mensagem.",
     "fileTooBig": "Esse arquivo passa de 20 MB.",

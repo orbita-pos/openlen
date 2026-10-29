@@ -136,7 +136,8 @@
       "artifact-slides": "スライドを作る",
       "artifact-image": "宣伝用の画像を作る",
       "artifact-motion": "モーション動画を作る",
-      "artifact-audio": "音声やナレーションを作る"
+      "artifact-audio": "音声やナレーションを作る",
+      "schedule": "Len に決まった時刻に実行させるタスクを予約する"
     },
     "fileLimit": "1つのメッセージに添付できるファイルは4つまでです。",
     "fileTooBig": "そのファイルは20MBを超えています。",

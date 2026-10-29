@@ -136,7 +136,8 @@
       "artifact-slides": "制作演示文稿",
       "artifact-image": "制作宣传图片",
       "artifact-motion": "制作动态视频",
-      "artifact-audio": "制作音频或旁白"
+      "artifact-audio": "制作音频或旁白",
+      "schedule": "预约一个让 Len 在指定时间完成的任务"
     },
     "fileLimit": "每条消息最多 4 个文件。",
     "fileTooBig": "该文件超过 20 MB。",

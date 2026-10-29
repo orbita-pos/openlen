@@ -136,7 +136,8 @@
       "artifact-slides": "Eine Präsentation erstellen",
       "artifact-image": "Ein Werbebild erstellen",
       "artifact-motion": "Ein animiertes Video erstellen",
-      "artifact-audio": "Ein Audio oder eine Sprachaufnahme erstellen"
+      "artifact-audio": "Ein Audio oder eine Sprachaufnahme erstellen",
+      "schedule": "Eine Aufgabe planen, die Len zu einer Uhrzeit erledigt"
     },
     "fileLimit": "Bis zu 4 Dateien pro Nachricht.",
     "fileTooBig": "Diese Datei ist größer als 20 MB.",
