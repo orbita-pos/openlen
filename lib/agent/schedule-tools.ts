@@ -91,7 +91,6 @@ const SELECTOR_PARAMETERS = {
   },
   daily: {
     type: "OBJECT",
-    additionalProperties: false,
     description: "Every day at a local time.",
     properties: {
       time: { type: "STRING", description: "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00." },
@@ -101,7 +100,6 @@ const SELECTOR_PARAMETERS = {
   },
   weekly: {
     type: "OBJECT",
-    additionalProperties: false,
     description: "On the given weekdays at a local time.",
     properties: {
       time: { type: "STRING", description: "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00." },
@@ -112,7 +110,6 @@ const SELECTOR_PARAMETERS = {
   },
   cron: {
     type: "OBJECT",
-    additionalProperties: false,
     description: "Five-field Vixie cron expression in a time zone.",
     properties: {
       expression: {
@@ -123,17 +120,11 @@ const SELECTOR_PARAMETERS = {
     },
     required: ["expression", "time_zone"],
   },
+  // DeepSeek declares `at` as a string OR a local {date, time, time_zone}; providers get only the string
+  // (no `oneOf` in any of Len's schemas), and the parser still takes both.
   at: {
-    description: "Absolute target: an RFC 3339 date-time with offset, or a local date, time, and IANA time_zone.",
-    oneOf: [
-      { type: "STRING" },
-      {
-        type: "OBJECT",
-        additionalProperties: false,
-        properties: { date: { type: "STRING" }, time: { type: "STRING" }, time_zone: { type: "STRING" } },
-        required: ["date", "time", "time_zone"],
-      },
-    ],
+    type: "STRING",
+    description: "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00.",
   },
 } as const;
 
