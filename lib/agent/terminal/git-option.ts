@@ -31,7 +31,8 @@ export type TerminalGh = (
 ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
 
 /** `gh` (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9) wherever there is git: with the owner's GitHub App,
- *  run by whoever speaks — a turn of Len's is someone who can edit (the route lets no viewer start one). */
+ *  run by whoever speaks — always someone who can edit: neither Len's route nor the Code lens terminal's
+ *  (app/api/projects/[id]/terminal, POST asks "editar") lets a viewer run a command. */
 export function ghForTerminal(
   session: Pick<AgentSession, "projectId" | "userId" | "personId">,
   deps: Pick<AgentDeps, "ghCli">,
