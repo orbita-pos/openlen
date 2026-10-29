@@ -122,7 +122,7 @@ describe("terminalForTurn", () => {
     const { s, o, store } = setup();
     const t = await terminalForTurn(s, o);
     expect(t).not.toBeInstanceOf(LocalTerminal);
-    expect(store.rows.p).toMatchObject({ state: "running", template: "openlen-terminal-v4", heldBy: "turn-1" });
+    expect(store.rows.p).toMatchObject({ state: "running", template: "openlen-terminal-v5", heldBy: "turn-1" });
     expect(s.fotoDeLaTerminal).toEqual({ "/index.html": "a" });
     expect((await t.ejecutar("true")).ficheros).toEqual({ "/index.html": "a" });
   });

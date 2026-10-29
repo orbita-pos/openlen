@@ -142,7 +142,17 @@ describe("the box's scripts", () => {
     expect(install).toContain(`@playwright/test@${PLAYWRIGHT_VERSION}`);
     expect(install).toContain(`PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS}`);
     expect(install).toContain("install --with-deps chromium");
-    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v4");
+    expect(SANDBOX_TEMPLATE).toBe("openlen-terminal-v5");
+  });
+
+  // 🔴 A box born from an old template keeps its old files (runbook §6): files that change need a NEW template name,
+  // or production goes on with the old ones. v5 (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): the
+  // manifest takes files up to 50 MB (binaries come back) and `gh` is bridged. Changing a file here changes this
+  // fingerprint: bump SANDBOX_TEMPLATE, then update both.
+  it("🔴 the template's files are the ones its name was built with", async () => {
+    const { createHash } = await import("node:crypto");
+    const fingerprint = createHash("sha256").update(JSON.stringify(templateFiles())).digest("hex").slice(0, 16);
+    expect({ template: SANDBOX_TEMPLATE, fingerprint }).toEqual({ template: "openlen-terminal-v5", fingerprint: "3bc31bffaba62fd4" });
   });
 
   // THE PDF SKILL (spec local 2026-10-27-len-pdf-skill, §4.4 and §4.7): qpdf, tesseract in Len's ten
