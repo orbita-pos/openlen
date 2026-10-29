@@ -12,6 +12,17 @@ import { useTranslations } from "next-intl";
 export interface MenuSkill {
   readonly name: string;
   readonly description: string;
+  /** Whose it is (`GET /api/projects/[id]/skills`): `bundled` is OpenLen's own. */
+  readonly scope?: string;
+}
+
+/** What the menu says of a skill. Like Claude Code's `/` menu, its own description, as its author wrote it;
+ *  OpenLen's own skills, whose descriptions are written for Len (in English), say it in the person's language
+ *  (`composer.skillDescriptions`, one line per skill). Their names are reserved, so a project's skill never
+ *  borrows one. */
+export function menuDescription(s: MenuSkill, t: { has(key: string): boolean; (key: string): string }): string {
+  const key = `composer.skillDescriptions.${s.name}`;
+  return s.scope === "bundled" && t.has(key) ? t(key) : s.description;
 }
 
 /** The `/word` being typed at the cursor: a `/` at the start or after a space, and what follows. */
@@ -91,7 +102,7 @@ export function useSkillSlash(text: string, setText: (t: string) => void, ref: R
           className={`flex w-full items-baseline gap-2 px-2 py-1 text-left text-[11.5px] ${i === chosen ? "bg-hover fg" : "fg-muted"}`}
         >
           <span className="shrink-0 font-medium text-accent">/{o.name}</span>
-          <span className="min-w-0 truncate">{o.description}</span>
+          <span className="min-w-0 truncate">{menuDescription(o, t)}</span>
         </button>
       ))}
     </span>
