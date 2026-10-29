@@ -40,6 +40,7 @@ import {
   terminalEncendida,
   terminalOnly,
   withGit,
+  withGitRemote,
 } from "@/lib/agent/terminal/declaracion";
 import { gitEnabled } from "@/lib/git/enabled";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
@@ -153,6 +154,9 @@ export interface CapacidadesDelEntorno {
   /** Whether this turn's bash is the box's (`realTerminalFor` its owner). Absent: whether it would be
    *  for anyone, that is, with no rollout. */
   readonly realTerminal?: boolean;
+  /** Whether the project's repository has a remote (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): bash
+   *  then carries Claude Code's push and pull request protocol. Absent: no remote, today's description. */
+  readonly gitRemote?: boolean;
 }
 
 export function buildFunctionDeclarations(
@@ -169,7 +173,10 @@ export function buildFunctionDeclarations(
   const forTheProject = app ? declaracionesDeLaApp(withArtifacts) : withArtifacts;
   // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b, §11): last, over the page's or the app's bash.
   const real = capacidades.realTerminal ?? realTerminalFor(null, _env);
-  return real ? forTheProject.map((d) => (d.name === NOMBRE_BASH ? bashWithSandbox(d) : d)) : forTheProject;
+  const withBox = real ? forTheProject.map((d) => (d.name === NOMBRE_BASH ? bashWithSandbox(d) : d)) : forTheProject;
+  // WITH A REMOTE: Claude Code's push and pull request protocol, over whichever bash this turn has.
+  if (!capacidades.gitRemote || !gitEnabled(_env)) return withBox;
+  return withBox.map((d) => (d.name === NOMBRE_BASH && typeof d.description === "string" ? { ...d, description: withGitRemote(d.description) } : d));
 }
 
 function declaracionesDelModo(

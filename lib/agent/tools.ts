@@ -313,6 +313,8 @@ export interface AgentDeps {
     cwd: string;
     files: Readonly<Record<string, string>>;
   }): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+  /** GIT: whether the project's repository has a remote (bash then carries Claude Code's push and PR protocol). */
+  gitHasRemote?(projectId: string): Promise<boolean>;
   /** GIT: Claude Code's git status block for the start of a turn; null if git can't answer. */
   gitStatusForTurn?(p: { projectId: string; ownerId: string; personId: string; loadFiles: () => Promise<Record<string, string>> }): Promise<string | null>;
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
@@ -717,6 +719,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async stripeCli(projectId, args, o) {
       const { runStripeCliFor } = await import("@/lib/stripe/cli/real");
       return runStripeCliFor(projectId, args, o);
+    },
+    async gitHasRemote(projectId) {
+      const { projectHasRemote } = await import("@/lib/git/service");
+      return projectHasRemote(projectId);
     },
     async gitStatusForTurn(p) {
       const { gitStatusForTurn } = await import("@/lib/git/service");

@@ -73,5 +73,31 @@ export async function gitStatusForTurn(p: {
   const log = await runGit(input, ["--no-optional-locks", "log", "--oneline", "-n", "5"]);
   const branch = await runGit(input, ["--no-optional-locks", "branch", "--show-current"]);
   if (status.exitCode !== 0 || log.exitCode !== 0) return null;
-  return formatGitStatusBlock({ branch: branch.stdout.trim() || "main", user: who.identity.name, status: status.stdout.trimEnd(), recentCommits: log.stdout.trimEnd() });
+  const mainBranch = await mainBranchOf(input);
+  return formatGitStatusBlock({ branch: branch.stdout.trim() || "main", mainBranch, user: who.identity.name, status: status.stdout.trimEnd(), recentCommits: log.stdout.trimEnd() });
+}
+
+/**
+ * With a remote, the branch pull requests usually go into, as Claude Code picks it: the remote's main or master,
+ * else the local one; null without a remote (the status block then stays as it was).
+ */
+async function mainBranchOf(input: Parameters<typeof runGit>[0]): Promise<string | null> {
+  const remotes = (await runGit(input, ["--no-optional-locks", "remote"])).stdout.split("\n").filter(Boolean);
+  if (remotes.length === 0) return null;
+  const remote = remotes.includes("origin") ? "origin" : remotes[0]!;
+  const tracked = (await runGit(input, ["--no-optional-locks", "branch", "-r"])).stdout.split("\n").map((l) => l.trim());
+  const local = (await runGit(input, ["--no-optional-locks", "branch"])).stdout.split("\n").map((l) => l.replace(/^[* ]\s*/, "").trim());
+  for (const name of ["main", "master"]) if (tracked.includes(`${remote}/${name}`)) return name;
+  for (const name of ["main", "master"]) if (local.includes(name)) return name;
+  return null;
+}
+
+/** Whether the project's repository has a remote: bash then carries Claude Code's push and PR protocol. Fail-soft. */
+export async function projectHasRemote(projectId: string): Promise<boolean> {
+  try {
+    const [row] = await db.select({ remotes: schema.projectGitRepos.remotes }).from(schema.projectGitRepos).where(eq(schema.projectGitRepos.projectId, projectId)).limit(1);
+    return Object.keys(row?.remotes ?? {}).length > 0;
+  } catch {
+    return false;
+  }
 }
