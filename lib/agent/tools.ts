@@ -130,6 +130,17 @@ import { SET_FORM_AUTO_REPLY, toolSetFormAutoReply } from "@/lib/agent/form-auto
 import type { FunctionsReleasePreview } from "@/lib/functions/publish-errors";
 import type { GoalActivation, GoalSnapshot } from "@/lib/agent/goal";
 import { CREATE_GOAL, GET_GOAL, UPDATE_GOAL, toolCreateGoal, toolGetGoal, toolUpdateGoal } from "@/lib/agent/goal-tools";
+import {
+  SCHEDULE_CREATE,
+  SCHEDULE_DELETE,
+  SCHEDULE_LIST,
+  SCHEDULE_UPDATE,
+  toolScheduleCreate,
+  toolScheduleDelete,
+  toolScheduleList,
+  toolScheduleUpdate,
+  type ScheduledTasksDeps,
+} from "@/lib/agent/schedule-tools";
 import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { toolTodoWrite } from "@/lib/agent/todo-write";
 import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
@@ -198,6 +209,9 @@ export interface AgentDeps {
    *  ruta; sólo `enter_plan_mode` y `exit_plan_mode` lo cambian. Sin él, el
    *  modo plan no existe y las dos lo dicen. */
   planMode?: { active(): boolean; set(active: boolean): void };
+  /** Scheduled tasks (spec local 2026-10-29-tareas-programadas): the project's store and the owner's
+   *  plan. Without it, the four tools answer `internal_error`. */
+  scheduledTasks?: ScheduledTasksDeps;
   /** Pieza 8: el encargo del turno (`lib/agent/goal.ts`). Lo guarda la ruta: la
    *  foto que se escribe al cerrar y la activación del proceso. Sin él, las
    *  tres herramientas dicen que no hay turno abierto. */
@@ -2980,6 +2994,15 @@ async function ejecutarHerramienta(
         return await toolCreateGoal(session, deps, args);
       case UPDATE_GOAL:
         return await toolUpdateGoal(session, deps, args);
+      // Scheduled tasks, as DeepSeek.
+      case SCHEDULE_CREATE:
+        return await toolScheduleCreate(session, deps, args);
+      case SCHEDULE_LIST:
+        return await toolScheduleList(session, deps, args);
+      case SCHEDULE_DELETE:
+        return await toolScheduleDelete(session, deps, args);
+      case SCHEDULE_UPDATE:
+        return await toolScheduleUpdate(session, deps, args);
       // Pieza 5: buscar en las charlas pasadas, como DeepSeek.
       case SESSION_SEARCH:
         return await toolSessionSearch(session, deps, args);
