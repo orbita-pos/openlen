@@ -14,6 +14,21 @@ export interface RepoState {
   readonly branch: string;
   /** Every local branch → its commit, the current one included. */
   readonly refs: Readonly<Record<string, string>>;
+  /** A merge in progress (git's MERGE_HEAD and MERGE_MSG), or null. */
+  readonly merge: MergeState | null;
+}
+
+/** How a path stayed unmerged, as `git status --short` writes it: both modified, both added, deleted by them, deleted
+ *  by us. */
+export type ConflictKind = "UU" | "AA" | "UD" | "DU";
+
+export interface MergeState {
+  /** The commit being merged in: the merge commit's second parent. */
+  readonly theirs: string;
+  /** What `git commit --no-edit` writes. */
+  readonly message: string;
+  /** The paths still unmerged; `git add` marks one resolved. */
+  readonly conflicts: Readonly<Record<string, ConflictKind>>;
 }
 
 /** A write that moves between branches or changes them: the branch checked out after it, and every branch. */
@@ -33,6 +48,7 @@ export interface GitStore {
   /** Up to two oids starting with `prefix`: two is enough to call it ambiguous. */
   findByPrefix(prefix: string): Promise<readonly string[]>;
   /** Compare-and-swap of the current branch's commit and the index (and, with `branching`, of which branch is
-   *  checked out and every branch): `null` if someone wrote first. */
-  updateRepo(expectedVersion: number, head: string, index: Index, branching?: Branching): Promise<RepoState | null>;
+   *  checked out and every branch; with `merge`, of the merge in progress — `null` ends it, `undefined` keeps it):
+   *  `null` if someone wrote first. */
+  updateRepo(expectedVersion: number, head: string, index: Index, branching?: Branching, merge?: MergeState | null): Promise<RepoState | null>;
 }

@@ -94,8 +94,7 @@ export async function revisionsAndPaths(
   return { revisions, paths };
 }
 
-/** In a line of history, the older of two commits (the one the other descends from). */
+/** git merge-base of two commits (every project's history starts at one "Initial commit", so there always is one). */
 export async function mergeBase(ctx: Ctx, a: string, b: string): Promise<string> {
-  for await (const { oid } of ctx.repo.history(b)) if (oid === a) return a;
-  return b;
+  return (await ctx.repo.mergeBase(a, b)) ?? b;
 }

@@ -216,17 +216,19 @@ export function commitHeader(oid: string, c: Commit, d: Display): string {
   const decor = d.decorate && decoration ? ` (${decoration})` : "";
   const who = (s: Signature) => `${s.name} <${s.email}>`;
   const date = (s: Signature) => formatDate(s, d.date, d.now);
+  // A merge: git names its parents under the commit line.
+  const merge = c.parents.length > 1 ? `Merge: ${c.parents.map(abbrev).join(" ")}\n` : "";
   switch (d.pretty.kind) {
     case "oneline":
       return `${shown}${decor} ${subjectOf(c.message)}\n`;
     case "short":
-      return `commit ${shown}${decor}\nAuthor: ${who(c.author)}\n\n${indentMessage(c.message, true)}`;
+      return `commit ${shown}${decor}\n${merge}Author: ${who(c.author)}\n\n${indentMessage(c.message, true)}`;
     case "medium":
-      return `commit ${shown}${decor}\nAuthor: ${who(c.author)}\nDate:   ${date(c.author)}\n\n${indentMessage(c.message)}`;
+      return `commit ${shown}${decor}\n${merge}Author: ${who(c.author)}\nDate:   ${date(c.author)}\n\n${indentMessage(c.message)}`;
     case "full":
-      return `commit ${shown}${decor}\nAuthor: ${who(c.author)}\nCommit: ${who(c.committer)}\n\n${indentMessage(c.message)}`;
+      return `commit ${shown}${decor}\n${merge}Author: ${who(c.author)}\nCommit: ${who(c.committer)}\n\n${indentMessage(c.message)}`;
     case "fuller":
-      return `commit ${shown}${decor}\nAuthor:     ${who(c.author)}\nAuthorDate: ${date(c.author)}\nCommit:     ${who(c.committer)}\nCommitDate: ${date(c.committer)}\n\n${indentMessage(c.message)}`;
+      return `commit ${shown}${decor}\n${merge}Author:     ${who(c.author)}\nAuthorDate: ${date(c.author)}\nCommit:     ${who(c.committer)}\nCommitDate: ${date(c.committer)}\n\n${indentMessage(c.message)}`;
     case "format":
     case "tformat":
       return expandFormat(d.pretty.template, oid, c, { now: d.now, date: d.date, ...(d.decorations.has(oid) ? { decoration: d.decorations.get(oid)! } : {}) });

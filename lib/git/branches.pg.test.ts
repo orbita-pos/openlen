@@ -41,6 +41,15 @@ describe("branches in Postgres", () => {
     const committed = await postgresStore(PROJECT).updateRepo(switched!.version, B, { "x.txt": C });
     expect(committed).toMatchObject({ head: B, branch: "nueva", refs: { main: A, nueva: B } });
     const back = await postgresStore(PROJECT).readRepo();
-    expect(back).toMatchObject({ head: B, branch: "nueva", refs: { main: A, nueva: B }, index: { "x.txt": C } });
+    expect(back).toMatchObject({ head: B, branch: "nueva", refs: { main: A, nueva: B }, index: { "x.txt": C }, merge: null });
+
+    // A merge in progress survives a fresh store; a write without `merge` keeps it; null ends it.
+    const merging = { theirs: A, message: "Merge branch 'main' into nueva\n", conflicts: { "x.txt": "UU" as const } };
+    const started = await postgresStore(PROJECT).updateRepo(back!.version, B, back!.index, undefined, merging);
+    const kept = await postgresStore(PROJECT).updateRepo(started!.version, B, back!.index);
+    expect(kept?.merge).toEqual(merging);
+    expect((await postgresStore(PROJECT).readRepo())?.merge).toEqual(merging);
+    await postgresStore(PROJECT).updateRepo(kept!.version, B, back!.index, undefined, null);
+    expect((await postgresStore(PROJECT).readRepo())?.merge).toBeNull();
   });
 });

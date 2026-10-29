@@ -16,7 +16,7 @@ import { longStatus, readStatus } from "./status";
 import { onlyChanged } from "./writes";
 
 export const REVERT_CONFLICT_NOTE =
-  "Nothing was changed: OpenLen's git does not leave conflict markers. Edit the files by hand, or bring a version back with git checkout <commit> -- <path>.\n";
+  "Nothing was changed: a revert here does not leave conflict markers. Edit the files by hand, or bring a version back with git checkout <commit> -- <path>.\n";
 
 type Merged = { readonly conflict: false; readonly text: string | null } | { readonly conflict: "content" | "modify/delete" };
 

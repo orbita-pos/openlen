@@ -2722,6 +2722,8 @@ export const projectGitRepos = pgTable("projectGitRepos", {
   refs: jsonb("refs").$type<Record<string, string>>().notNull().default({}),
   /** The checked-out branch: `head` is its commit. */
   currentBranch: text("currentBranch").notNull().default("main"),
+  /** A merge in progress (same spec, §8): the commit merged in, its message and the unmerged paths; null = none. */
+  mergeState: jsonb("mergeState").$type<{ theirs: string; message: string; conflicts: Record<string, "UU" | "AA" | "UD" | "DU"> }>(),
   version: integer("version").notNull().default(0),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),

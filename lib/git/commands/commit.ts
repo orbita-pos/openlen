@@ -6,12 +6,13 @@ import { signatureOf, type Command, type CommandContext } from "../command";
 import { abbrev, fileDiff, summaryLine } from "../diff";
 import { GitFatal, INDEX_LOCKED, notAvailable, pathspecDidNotMatch } from "../errors";
 import { cleanupMessage, subjectOf, withSignoff } from "../format";
-import { encodeCommit, makeObject, type GitObject } from "../objects";
+import { compareNames, encodeCommit, makeObject, type GitObject } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, resolveFromCwd } from "../paths";
 import { buildTree } from "../repository";
 import { changedFiles } from "../sources";
 import type { Index } from "../store";
+import { unmergedFiles } from "./merge";
 import { REWRITE } from "./reset";
 import { longStatus, readStatus } from "./status";
 
@@ -47,6 +48,13 @@ export const commit: Command = async (ctx, args) => {
   const nextIndex: Record<string, string> = { ...ctx.state.index };
   const blobs: GitObject[] = [];
   const typed = [...o.positional, ...(o.afterDashDash ?? [])];
+  const merging = ctx.state.merge;
+  if (merging) {
+    if (typed.length > 0) throw new GitFatal("fatal: cannot do a partial commit during a merge.\n");
+    // -a stages every tracked file, which resolves them; otherwise each unmerged path needs its git add first.
+    const unmerged = o.has("-a") || o.has("--all") ? [] : Object.keys(merging.conflicts).sort(compareNames);
+    if (unmerged.length > 0) throw new GitFatal(unmergedFiles("Committing"), 128, unmerged.map((p) => `U\t${p}\n`).join(""));
+  }
   let committed: Record<string, string>;
   if (typed.length > 0) {
     // Only the named tracked paths, as they are in the working tree; other staged changes stay staged.
@@ -90,7 +98,8 @@ export const commit: Command = async (ctx, args) => {
   const { root, objects } = buildTree(committed);
   const withIndex = { ...ctx, state: { ...ctx.state, index: nextIndex } };
   if (o.has("--dry-run")) return { stdout: longStatus(withIndex, await readStatus(withIndex)), stderr: "", exitCode: 0 };
-  if (root === (await ctx.repo.commit(ctx.state.head)).tree && !o.has("--allow-empty")) {
+  // A merge commit can keep HEAD's tree: it records that the other side is in.
+  if (!merging && root === (await ctx.repo.commit(ctx.state.head)).tree && !o.has("--allow-empty")) {
     // Nothing to commit: git prints the status and exits 1 — before it looks at the message.
     return { stdout: longStatus(withIndex, await readStatus(withIndex)), stderr: "", exitCode: 1 };
   }
@@ -104,6 +113,9 @@ export const commit: Command = async (ctx, args) => {
     const content = ctx.absoluteFiles[path.posix.resolve("/", ctx.cwd, file)];
     if (content === undefined) throw new GitFatal(`fatal: could not read log file '${file}': No such file or directory\n`);
     text = content;
+  } else if (merging && o.has("--no-edit")) {
+    // git's MERGE_MSG, cleaned up like -m: its "# Conflicts:" lines stay, as they do in git without an editor.
+    text = merging.message;
   } else {
     return { stdout: "", stderr: "error: there is no editor here.\nPlease supply the message using either -m or -F option.\n", exitCode: 1 };
   }
@@ -112,9 +124,12 @@ export const commit: Command = async (ctx, args) => {
   if (!message) return { stdout: "", stderr: "Aborting commit due to empty commit message.\n", exitCode: 1 };
 
   const sig = signatureOf(ctx.identity, ctx.now);
-  const created = makeObject("commit", encodeCommit({ tree: root, parents: [ctx.state.head], author: sig, committer: sig, message }));
+  const parents = merging ? [ctx.state.head, merging.theirs] : [ctx.state.head];
+  const created = makeObject("commit", encodeCommit({ tree: root, parents, author: sig, committer: sig, message }));
   await ctx.repo.store.writeObjects([...blobs, ...objects, created]);
-  if (!(await ctx.save(created.oid, nextIndex))) throw new GitFatal(INDEX_LOCKED);
+  if (!(await ctx.save(created.oid, nextIndex, undefined, merging ? null : undefined))) throw new GitFatal(INDEX_LOCKED);
   if (o.has("-q") || o.has("--quiet")) return { stdout: "", stderr: "", exitCode: 0 };
+  // git shows no diff for a merge commit: only its line.
+  if (merging) return { stdout: `[${ctx.state.branch} ${abbrev(created.oid)}] ${subjectOf(message)}\n`, stderr: "", exitCode: 0 };
   return { stdout: await commitSummary(ctx, head, committed, created.oid, message), stderr: "", exitCode: 0 };
 };

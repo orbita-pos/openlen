@@ -16,7 +16,7 @@ const VERSION = "git version (OpenLen's own git: the subset its bash tool's desc
 const HELP =
   "usage: git [-C <path>] [-c <name>=<value>] [--no-pager] <command> [<args>]\n\n" +
   "OpenLen's git has: status, diff, log, show, blame, grep, ls-files, rev-parse, branch, config,\n" +
-  "add, reset, restore, checkout, switch, commit, revert, init. Branches; no remote yet.\n";
+  "add, reset, restore, checkout, switch, merge, commit, revert, init. Branches; no remote yet.\n";
 /** The commands whose unknown options git reports as "unrecognized argument". */
 const REVISION_COMMANDS = new Set(["log", "show", "diff"]);
 
@@ -113,7 +113,7 @@ export async function runGit(input: GitRunInput, argv: readonly string[]): Promi
     identity: input.identity,
     now,
     ...(input.undeletable ? { undeletable: input.undeletable } : {}),
-    save: async (head, index, branching) => (await input.store.updateRepo(state.version, head, index, branching)) !== null,
+    save: async (head, index, branching, merge) => (await input.store.updateRepo(state.version, head, index, branching, merge)) !== null,
   };
   try {
     return await command(ctx, args);

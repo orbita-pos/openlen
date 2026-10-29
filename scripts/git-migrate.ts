@@ -41,6 +41,8 @@ async function main() {
   // Branches (same spec, §8): every branch and which one is checked out.
   await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "refs" jsonb NOT NULL DEFAULT '{}'`);
   await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "currentBranch" text NOT NULL DEFAULT 'main'`);
+  // Merge (same spec, §8): the merge in progress, git's MERGE_HEAD and MERGE_MSG.
+  await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "mergeState" jsonb`);
   console.log("[git:migrate] projectGitObjects and projectGitRepos ready");
   process.exit(0);
 }
