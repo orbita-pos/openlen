@@ -597,14 +597,21 @@ export class SandboxTerminal implements TerminalBackend {
         delete this.tree[path];
         delete this.synced[path];
       } else {
-        writes[path] = text;
+        // A binary is saved as its pointer, and the box keeps its BYTES: the box that already has them (the
+        // command that made it) gets nothing, and an older one a guard puts back goes in as bytes. Writing the
+        // pointer's text left the PDF a command had just made as 126 bytes of pointer for the rest of the turn
+        // (`present` delivered that), until the next turn's sync wrote the bytes again.
+        const hash = parsePointer(text)?.sha256 ?? sha256(text);
+        if (!(parsePointer(text) && this.synced[path] === hash)) writes[path] = text;
         if (isSyncedPath(path)) {
           this.tree[path] = text;
-          this.synced[path] = sha256(text);
+          this.synced[path] = hash;
         }
       }
     }
-    await this.o.handle.write(writes);
+    const { text: textWrites, bytes: byteWrites } = await this.split(writes);
+    await this.o.handle.write(textWrites);
+    if (Object.keys(byteWrites).length > 0) await this.o.handle.writeBytes!(byteWrites);
     await this.o.handle.remove(removes);
   }
 
