@@ -343,3 +343,18 @@ describe("bundled skills", () => {
     expect(readFileSync("next.config.ts", "utf8")).toContain("lib/agent/skills/bundled");
   });
 });
+
+// The chat's `/` menu shows OpenLen's own skills in the person's language (`composer.skillDescriptions`): their
+// descriptions are written for Len, in English. A skill added without its line would show in English.
+describe("OpenLen's skills in the / menu", () => {
+  const LOCALES = ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"];
+  it("every one has its line in the 10 locales, and there is no line for a skill that is gone", () => {
+    const names = [...bundledSkillNames()].sort();
+    for (const loc of LOCALES) {
+      const chat = JSON.parse(readFileSync(`messages/${loc}/panelsChat.json`, "utf8")) as { composer: { skillDescriptions?: Record<string, string> } };
+      const lines = chat.composer.skillDescriptions ?? {};
+      expect(Object.keys(lines).sort(), loc).toEqual(names);
+      for (const n of names) expect(lines[n]!.trim().length, `${loc} ${n}`).toBeGreaterThan(0);
+    }
+  });
+});

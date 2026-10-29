@@ -716,6 +716,7 @@ export default defineConfig({
       "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
       "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",
+      "components/workspace-v2/chat/skill-menu-locale.test.tsx",
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
       "app/api/projects/[id]/chat/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",
