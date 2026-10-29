@@ -219,6 +219,8 @@ vi.mock("@/lib/projects/chat", () => ({
   // La lista de progreso (spec local 2026-10-15): la ruta lee la última del
   // proyecto al empezar el turno. Sin lista, como un proyecto nuevo.
   latestTodoListForChat: vi.fn(async () => null),
+  // Len's time context (spec local 2026-10-29-tareas-programadas): no turn before.
+  lastTurnOfTheConversation: vi.fn(async () => null),
 }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));

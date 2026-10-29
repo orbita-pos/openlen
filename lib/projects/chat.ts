@@ -229,6 +229,17 @@ async function desdeLaUltimaMarca(projectId: string): Promise<Date | null> {
   return fila?.at ?? null;
 }
 
+/** The last finished turn of the current conversation, for Len's time context (lib/agent/time-context.ts). */
+export async function lastTurnOfTheConversation(projectId: string): Promise<{ createdAt: Date; durationMs: number | null } | null> {
+  const [fila] = await db
+    .select({ createdAt: schema.projectChatMessages.createdAt, durationMs: schema.projectChatMessages.durationMs })
+    .from(schema.projectChatMessages)
+    .where(turnoDeLaHistoria(projectId))
+    .orderBy(desc(schema.projectChatMessages.createdAt))
+    .limit(1);
+  return fila ?? null;
+}
+
 /**
  * LA CHARLA ENTERA PARA EL HISTORIAL DEL AGENTE (H4; A11: sin ventana, como
  * Claude Code), de la más vieja a la más reciente, con su transcripción: desde
