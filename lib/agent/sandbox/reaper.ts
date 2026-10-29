@@ -38,7 +38,7 @@ export function sandboxCleanupDriver(env: Readonly<Record<string, string | undef
 }
 
 /** E2B answers that it doesn't have the box (killed, reclaimed): there is nothing left to kill. */
-function isNotFound(e: unknown): boolean {
+export function isNotFound(e: unknown): boolean {
   const err = e as { name?: string; message?: string; status?: number } | null;
   return err?.name === "NotFoundError" || err?.status === 404 || /not found|404/i.test(err?.message ?? "");
 }

@@ -171,6 +171,11 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
     async kill(sandboxId) {
       boxes.delete(sandboxId);
     },
+    async pause(sandboxId) {
+      const b = boxes.get(sandboxId);
+      if (!b) throw new Error(`sandbox ${sandboxId} not found`);
+      b.paused = true;
+    },
     files: (id) => boxes.get(id)!.files,
     binary: (id, path, size) => void boxes.get(id)!.binaries.set(path, size),
     bytesOf: (id) => boxes.get(id)!.bytes,

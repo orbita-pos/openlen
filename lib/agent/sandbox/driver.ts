@@ -51,4 +51,6 @@ export interface SandboxDriver {
   /** With `network`, the box's network is set again (the project may have gained hosts since it paused). */
   resume(sandboxId: string, network?: BoxNetwork | null): Promise<SandboxHandle>;
   kill(sandboxId: string): Promise<void>;
+  /** Pauses a box nobody has open (the turn that had it died with the process). Already paused is done too. */
+  pause(sandboxId: string): Promise<void>;
 }

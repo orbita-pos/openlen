@@ -30,6 +30,7 @@ function fakeSdk() {
       create: vi.fn(async () => box),
       connect: vi.fn(async () => box),
       kill: vi.fn(async () => true),
+      pause: vi.fn(async () => true),
     },
   };
   return { sdk, box };
@@ -38,6 +39,13 @@ function fakeSdk() {
 const config = { apiKey: "k", template: "openlen-terminal-v1", dailyUsd: 5, onlyUsers: null };
 
 describe("e2bDriver", () => {
+  it("pauses a box by its id, with the key, without connecting to it (the boot, for a turn that died)", async () => {
+    const { sdk } = fakeSdk();
+    await e2bDriver(config, async () => sdk).pause("sbx-1");
+    expect(sdk.Sandbox.pause).toHaveBeenCalledWith("sbx-1", { apiKey: "k" });
+    expect(sdk.Sandbox.connect).not.toHaveBeenCalled();
+  });
+
   it("the network's allow list: package registries, GitHub and the CDNs pages use", () => {
     // E2B doesn't cap allowOut (docs.e2b.dev, 21/10); the cap of 10 is for header rules.
     for (const h of ["registry.npmjs.org", "pypi.org", "github.com", "esm.sh", ...PAGE_CDNS]) expect(BOX_ALLOW_OUT).toContain(h);
