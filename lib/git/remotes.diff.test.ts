@@ -152,6 +152,11 @@ describe("remotes, against the real git", { timeout: 60_000 }, () => {
     sameFiles();
     await same(["push", "origin", "--delete", "nueva"]);
     await same(["branch", "-vv"]);
+    // Deleting a branch deletes its upstream too: one made again with that name starts without it.
+    await same(["switch", "main"]);
+    await same(["branch", "-D", "nueva"]);
+    await same(["branch", "nueva"]);
+    await same(["branch", "-vv"]);
   });
 
   it("🔴 a remote that wants credentials: without them git's message; with the server's token it works", async () => {

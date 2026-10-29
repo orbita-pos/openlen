@@ -36,7 +36,7 @@ function untrackedShown(ctx: CommandContext, s: Status, mode: Untracked): string
 }
 
 /** wt-status's lines on how the branch compares with its upstream. */
-function trackingText(t: FullStatus["tracking"]): string {
+export function trackingText(t: FullStatus["tracking"]): string {
   if (!t) return "";
   const commits = (n: number) => `${n} commit${n === 1 ? "" : "s"}`;
   if (t.gone) return `Your branch is based on '${t.upstream}', but the upstream is gone.\n  (use "git branch --unset-upstream" to fixup)\n\n`;

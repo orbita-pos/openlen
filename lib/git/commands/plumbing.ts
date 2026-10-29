@@ -130,7 +130,9 @@ export const branch: Command = async (ctx, args) => {
         stdout += `Deleted branch ${name} (was ${abbrev(oid)}).\n`;
       }
     }
-    if (stdout && !(await ctx.save(ctx.state.head, ctx.state.index, { branch: ctx.state.branch, refs }))) throw new GitFatal(INDEX_LOCKED);
+    // Like git, deleting a branch deletes its configuration: its upstream goes with it.
+    const upstreams = Object.fromEntries(Object.entries(ctx.state.upstreams).filter(([b]) => Object.hasOwn(refs, b)));
+    if (stdout && !(await ctx.save(ctx.state.head, ctx.state.index, { branch: ctx.state.branch, refs, upstreams }))) throw new GitFatal(INDEX_LOCKED);
     return { stdout, stderr, exitCode };
   }
 
