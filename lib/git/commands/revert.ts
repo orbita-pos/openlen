@@ -1,11 +1,12 @@
 // `git revert <commit>...`: a new commit that undoes one, with a three-way merge per file. Where
 // git would stop with conflict markers, ours changes nothing and says so (spec §4).
+import { blobForContent } from "../content";
 import { merge as diff3Merge } from "node-diff3";
 import { signatureOf, type Command } from "../command";
 import { abbrev, records } from "../diff";
 import { GitFatal, INDEX_LOCKED, notAvailable } from "../errors";
 import { formatDate, subjectOf } from "../format";
-import { blobOf, compareNames, encodeCommit, makeObject, type GitObject } from "../objects";
+import { compareNames, encodeCommit, makeObject, type GitObject } from "../objects";
 import { parseOptions } from "../options";
 import { toAbsolute } from "../paths";
 import { buildTree } from "../repository";
@@ -51,7 +52,7 @@ export const revert: Command = async (ctx, args) => {
     const touched = [...new Set([...theirs.keys(), ...base.keys()])].filter((p) => theirs.get(p) !== base.get(p)).sort(compareNames);
     const dirty = touched.filter((p) => {
       const content = ctx.tree.files.get(p);
-      return (content === undefined ? undefined : blobOf(content).oid) !== index[p];
+      return (content === undefined ? undefined : blobForContent(content).oid) !== index[p];
     });
     if (dirty.length > 0) {
       throw new GitFatal(`error: Your local changes to the following files would be overwritten by merge:\n${dirty.map((p) => `\t${p}`).join("\n")}\nPlease commit your changes or stash them before you merge.\nAborting\nfatal: revert failed\n`);
@@ -75,7 +76,7 @@ export const revert: Command = async (ctx, args) => {
         delete next[p];
         write[toAbsolute(p)] = null;
       } else {
-        const blob = blobOf(r.text);
+        const blob = blobForContent(r.text);
         objects.push(blob);
         next[p] = blob.oid;
         write[toAbsolute(p)] = r.text;

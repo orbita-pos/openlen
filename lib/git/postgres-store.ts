@@ -3,6 +3,7 @@
 import "server-only";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { makePointer, parsePointer } from "@/lib/files/blob-pointer";
 import { ObjectCache } from "./object-cache";
 import type { GitObject, ObjectType } from "./objects";
 import type { GitStore, Index, RepoState } from "./store";
@@ -38,11 +39,12 @@ export function postgresStore(projectId: string): GitStore {
       }
       for (let i = 0; i < missing.length; i += 500) {
         const rows = await db
-          .select({ oid: schema.projectGitObjects.oid, type: schema.projectGitObjects.type, content: schema.projectGitObjects.content })
+          .select({ oid: schema.projectGitObjects.oid, type: schema.projectGitObjects.type, content: schema.projectGitObjects.content, blobPointer: schema.projectGitObjects.blobPointer })
           .from(schema.projectGitObjects)
           .where(and(eq(schema.projectGitObjects.projectId, projectId), inArray(schema.projectGitObjects.oid, missing.slice(i, i + 500))));
         for (const r of rows) {
-          const o: GitObject = { oid: r.oid, type: r.type as ObjectType, content: new Uint8Array(r.content) };
+          const external = r.blobPointer ? parsePointer(r.blobPointer) : null;
+          const o: GitObject = { oid: r.oid, type: r.type as ObjectType, content: new Uint8Array(r.content), ...(external ? { external } : {}) };
           remember(projectId, o);
           out.set(r.oid, o);
         }
@@ -56,7 +58,7 @@ export function postgresStore(projectId: string): GitStore {
         if (chunk.length === 0) continue;
         await db
           .insert(schema.projectGitObjects)
-          .values(chunk.map((o) => ({ projectId, oid: o.oid, type: o.type, content: o.content })))
+          .values(chunk.map((o) => ({ projectId, oid: o.oid, type: o.type, content: o.content, blobPointer: o.external ? makePointer(o.external) : null })))
           .onConflictDoNothing();
         for (const o of chunk) remember(projectId, o);
       }

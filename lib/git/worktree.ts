@@ -1,7 +1,8 @@
 // The working tree as git sees it (spec §3): which of the terminal's files are versioned, which
 // untracked ones a .gitignore hides, and the status against HEAD and the index.
+import { oidOfContent } from "./content";
 import ignore, { type Ignore } from "ignore";
-import { blobOf, compareNames } from "./objects";
+import { compareNames } from "./objects";
 import { toRepoPath } from "./paths";
 import type { Index } from "./store";
 
@@ -60,7 +61,7 @@ export function computeStatus(head: ReadonlyMap<string, string>, index: Index, t
     const i = index[p];
     const content = tree.files.get(p);
     const staged: IndexState = h === undefined ? (i === undefined ? " " : "A") : i === undefined ? "D" : h !== i ? "M" : " ";
-    const unstaged: WorkState = i === undefined ? " " : content === undefined ? "D" : blobOf(content).oid !== i ? "M" : " ";
+    const unstaged: WorkState = i === undefined ? " " : content === undefined ? "D" : oidOfContent(content) !== i ? "M" : " ";
     if (staged !== " " || unstaged !== " ") tracked.push({ path: p, staged, unstaged });
   }
   const untracked = [...tree.files.keys()].filter((p) => index[p] === undefined && !tree.isIgnored(p)).sort(compareNames);

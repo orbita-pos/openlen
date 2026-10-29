@@ -1,8 +1,9 @@
 // `git reset` that only unstages (all, or some paths, from HEAD or another commit). Moving `main`
 // back (--soft, --hard, reset <commit>) rewrites history: not here (spec §4).
+import { oidOfContent } from "../content";
 import type { Command } from "../command";
 import { GitFatal, INDEX_LOCKED, notAvailable } from "../errors";
-import { blobOf, compareNames } from "../objects";
+import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, resolveFromCwd } from "../paths";
 import { resolveRevision } from "../revisions";
@@ -41,7 +42,7 @@ export const reset: Command = async (ctx, args) => {
   for (const p of Object.keys(index).sort(compareNames)) {
     const content = ctx.tree.files.get(p);
     if (content === undefined) lines.push(`D\t${p}`);
-    else if (blobOf(content).oid !== index[p]) lines.push(`M\t${p}`);
+    else if (oidOfContent(content) !== index[p]) lines.push(`M\t${p}`);
   }
   return { stdout: lines.length > 0 ? `Unstaged changes after reset:\n${lines.join("\n")}\n` : "", stderr: "", exitCode: 0 };
 };

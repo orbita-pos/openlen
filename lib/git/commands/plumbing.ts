@@ -1,9 +1,10 @@
 // The small ones: ls-files, rev-parse, branch, config, init, remote, and push/pull/fetch with no remote.
+import { oidOfContent } from "../content";
 import type { Command } from "../command";
 import { abbrev } from "../diff";
 import { notAvailable, unknownRevision } from "../errors";
 import { subjectOf } from "../format";
-import { blobOf, compareNames } from "../objects";
+import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, relativeToCwd, resolveFromCwd } from "../paths";
 import { resolveRevision } from "../revisions";
@@ -22,7 +23,7 @@ export const lsFiles: Command = async (ctx, args) => {
   } else if (o.has("-m") || o.has("--modified")) {
     paths = tracked.filter((p) => {
       const c = ctx.tree.files.get(p);
-      return c === undefined || blobOf(c).oid !== ctx.state.index[p];
+      return c === undefined || oidOfContent(c) !== ctx.state.index[p];
     });
   } else if (o.has("-d") || o.has("--deleted")) {
     paths = tracked.filter((p) => !ctx.tree.files.has(p));

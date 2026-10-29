@@ -1,7 +1,8 @@
 // `git add`: stage new, changed and deleted files by pathspec; -A, -u, -n, -v; an ignored file needs -f.
+import { blobForContent } from "../content";
 import type { Command } from "../command";
 import { GitFatal, INDEX_LOCKED } from "../errors";
-import { blobOf, type GitObject } from "../objects";
+import { type GitObject } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, relativeToCwd, resolveFromCwd } from "../paths";
 
@@ -38,7 +39,7 @@ export const add: Command = async (ctx, args) => {
         }
       }
       matched = true;
-      const blob = blobOf(content);
+      const blob = blobForContent(content);
       if (index[p] !== blob.oid) {
         index[p] = blob.oid;
         blobs.push(blob);

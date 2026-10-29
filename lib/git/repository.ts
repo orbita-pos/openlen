@@ -11,7 +11,9 @@ import {
   type GitObject,
   type TreeEntry,
 } from "./objects";
+import { contentOfBlob } from "./content";
 import type { GitStore, Index } from "./store";
+import type { SpecialMode } from "./objects";
 
 export class Repository {
   private readonly cache = new Map<string, GitObject>();
@@ -40,8 +42,10 @@ export class Repository {
     return decodeCommit(o.content);
   }
 
+  /** What the blob is in the working tree: its text, or an external blob's pointer (./content.ts). */
   async text(oid: string): Promise<string> {
-    return fromUtf8((await this.object(oid)).content);
+    const o = await this.object(oid);
+    return o.external ? contentOfBlob(o) : fromUtf8(o.content);
   }
 
   /** Every file under a tree: repository path → blob oid, in git's order. */
@@ -76,8 +80,11 @@ export class Repository {
 
 type Dir = Map<string, Dir | string>;
 
-/** The tree objects for a set of files (path → blob oid). Pure. */
-export function buildTree(files: Index | ReadonlyMap<string, string>): { root: string; objects: GitObject[] } {
+/** The tree objects for a set of files (path → blob oid), each a regular file unless `modes` says otherwise. Pure. */
+export function buildTree(
+  files: Index | ReadonlyMap<string, string>,
+  modes: Readonly<Record<string, SpecialMode>> = {},
+): { root: string; objects: GitObject[] } {
   const root: Dir = new Map();
   const entries = files instanceof Map ? [...files] : Object.entries(files as Index);
   for (const [p, oid] of entries) {
@@ -94,13 +101,15 @@ export function buildTree(files: Index | ReadonlyMap<string, string>): { root: s
     dir.set(parts.at(-1)!, oid);
   }
   const objects: GitObject[] = [];
-  const write = (dir: Dir): string => {
+  const write = (dir: Dir, prefix: string): string => {
     const tree: TreeEntry[] = [...dir].map(([name, v]) =>
-      typeof v === "string" ? { name, mode: "100644" as const, oid: v } : { name, mode: "40000" as const, oid: write(v) },
+      typeof v === "string"
+        ? { name, mode: modes[`${prefix}${name}`] ?? ("100644" as const), oid: v }
+        : { name, mode: "40000" as const, oid: write(v, `${prefix}${name}/`) },
     );
     const obj = makeObject("tree", encodeTree(tree));
     objects.push(obj);
     return obj.oid;
   };
-  return { root: write(root), objects };
+  return { root: write(root, ""), objects };
 }
