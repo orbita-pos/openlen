@@ -164,8 +164,16 @@ export interface Display {
 
 /** Git's decorations: "HEAD -> <current>" first, then the other branches at that commit, as git lists them
  *  (by name, Z to A). */
-export function decorationsOf(state: { readonly head: string; readonly branch: string; readonly refs: Readonly<Record<string, string>> }): Map<string, string> {
+export function decorationsOf(state: {
+  readonly head: string;
+  readonly branch: string;
+  readonly refs: Readonly<Record<string, string>>;
+  readonly remotes?: Readonly<Record<string, { readonly refs: Readonly<Record<string, string>> }>>;
+}): Map<string, string> {
   const byCommit = new Map<string, string[]>();
+  // git lists the remote-tracking branches before the local ones (both Z to A).
+  const remote = Object.entries(state.remotes ?? {}).flatMap(([r, rem]) => Object.entries(rem.refs).map(([b, oid]) => [`${r}/${b}`, oid] as const));
+  for (const [name, oid] of remote.sort(([a], [b]) => compareNames(b, a))) byCommit.set(oid, [...(byCommit.get(oid) ?? []), name]);
   for (const name of Object.keys(state.refs).sort((a, b) => compareNames(b, a))) {
     if (name === state.branch) continue;
     const oid = state.refs[name]!;

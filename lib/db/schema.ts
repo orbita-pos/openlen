@@ -2724,6 +2724,10 @@ export const projectGitRepos = pgTable("projectGitRepos", {
   currentBranch: text("currentBranch").notNull().default("main"),
   /** A merge in progress (same spec, §8): the commit merged in, its message and the unmerged paths; null = none. */
   mergeState: jsonb("mergeState").$type<{ theirs: string; message: string; conflicts: Record<string, "UU" | "AA" | "UD" | "DU"> }>(),
+  /** The remotes (same spec, §8): name → its URL, never with credentials, and its remote-tracking branches. */
+  remotes: jsonb("remotes").$type<Record<string, { url: string; refs: Record<string, string> }>>().notNull().default({}),
+  /** Each local branch's upstream: branch → the remote and its branch there. */
+  upstreams: jsonb("upstreams").$type<Record<string, { remote: string; branch: string }>>().notNull().default({}),
   version: integer("version").notNull().default(0),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),

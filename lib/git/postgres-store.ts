@@ -6,7 +6,7 @@ import { db, schema } from "@/lib/db";
 import { makePointer, parsePointer } from "@/lib/files/blob-pointer";
 import { ObjectCache } from "./object-cache";
 import type { GitObject, ObjectType } from "./objects";
-import type { Branching, GitStore, Index, MergeState, RepoState } from "./store";
+import { applyChanges, type GitStore, type Index, type MergeState, type Remote, type RepoState, type Upstream } from "./store";
 
 /** 64 MB for the whole process: a page can weigh half a megabyte, and the box has 3.8 GB. */
 const cache = new ObjectCache(64 * 1024 * 1024);
@@ -22,7 +22,16 @@ export function postgresStore(projectId: string): GitStore {
     if (!r) return null;
     const branch = r.currentBranch || "main";
     const refs = r.refs && Object.keys(r.refs).length > 0 ? r.refs : { [branch]: r.head };
-    return { head: r.head, index: r.index as Index, version: r.version, branch, refs, merge: (r.mergeState as MergeState | null) ?? null };
+    return {
+      head: r.head,
+      index: r.index as Index,
+      version: r.version,
+      branch,
+      refs,
+      merge: (r.mergeState as MergeState | null) ?? null,
+      remotes: (r.remotes as Record<string, Remote> | null) ?? {},
+      upstreams: (r.upstreams as Record<string, Upstream> | null) ?? {},
+    };
   };
   return {
     readRepo,
@@ -74,17 +83,26 @@ export function postgresStore(projectId: string): GitStore {
         .limit(2);
       return rows.map((r) => r.oid);
     },
-    async updateRepo(expectedVersion, head, index, branching?: Branching, merge?: MergeState | null) {
-      const before = branching && merge !== undefined ? null : await readRepo();
-      const mergeState = merge === undefined ? (before?.merge ?? null) : merge;
-      const branch = branching?.branch ?? before?.branch ?? "main";
-      const refs = { ...(branching?.refs ?? before?.refs ?? {}), [branch]: head };
+    async updateRepo(expectedVersion, head, index, changes) {
+      const before = await readRepo();
+      if (!before || before.version !== expectedVersion) return null;
+      const next = applyChanges(before, head, index, expectedVersion + 1, changes);
       const rows = await db
         .update(schema.projectGitRepos)
-        .set({ head, index: { ...index }, refs, currentBranch: branch, mergeState, version: sql`${schema.projectGitRepos.version} + 1`, updatedAt: new Date() })
+        .set({
+          head,
+          index: { ...index },
+          refs: next.refs,
+          currentBranch: next.branch,
+          mergeState: next.merge,
+          remotes: next.remotes,
+          upstreams: next.upstreams,
+          version: sql`${schema.projectGitRepos.version} + 1`,
+          updatedAt: new Date(),
+        })
         .where(and(eq(schema.projectGitRepos.projectId, projectId), eq(schema.projectGitRepos.version, expectedVersion)))
         .returning({ version: schema.projectGitRepos.version });
-      return rows[0] ? { head, index, version: rows[0].version, branch, refs, merge: mergeState } : null;
+      return rows[0] ? { ...next, version: rows[0].version } : null;
     },
   };
 }

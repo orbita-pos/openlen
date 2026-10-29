@@ -21,6 +21,8 @@ export interface GitCliInput {
   readonly files: Readonly<Record<string, string>>;
   /** Why the terminal won't delete a file, or null: see GitRunInput.undeletable. */
   readonly undeletable?: (absolutePath: string) => string | null;
+  /** A remote's credentials, the server's (GitRunInput.remoteAuth): the GitHub App's installation token. */
+  readonly remoteAuth?: (url: string) => Promise<string | null>;
 }
 
 export async function identityOf(userId: string): Promise<GitIdentity> {
@@ -37,7 +39,16 @@ export async function gitCli(p: GitCliInput): Promise<GitRunResult> {
   try {
     const { identity, owner } = await identities(p.ownerId, p.personId);
     return await runGit(
-      { store: postgresStore(p.projectId), files: p.files, cwd: p.cwd, identity, owner, now: () => new Date(), ...(p.undeletable ? { undeletable: p.undeletable } : {}) },
+      {
+        store: postgresStore(p.projectId),
+        files: p.files,
+        cwd: p.cwd,
+        identity,
+        owner,
+        now: () => new Date(),
+        ...(p.undeletable ? { undeletable: p.undeletable } : {}),
+        ...(p.remoteAuth ? { remoteAuth: p.remoteAuth } : {}),
+      },
       p.args,
     );
   } catch (err) {

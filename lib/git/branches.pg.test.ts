@@ -45,11 +45,11 @@ describe("branches in Postgres", () => {
 
     // A merge in progress survives a fresh store; a write without `merge` keeps it; null ends it.
     const merging = { theirs: A, message: "Merge branch 'main' into nueva\n", conflicts: { "x.txt": "UU" as const } };
-    const started = await postgresStore(PROJECT).updateRepo(back!.version, B, back!.index, undefined, merging);
+    const started = await postgresStore(PROJECT).updateRepo(back!.version, B, back!.index, { merge: merging });
     const kept = await postgresStore(PROJECT).updateRepo(started!.version, B, back!.index);
     expect(kept?.merge).toEqual(merging);
     expect((await postgresStore(PROJECT).readRepo())?.merge).toEqual(merging);
-    await postgresStore(PROJECT).updateRepo(kept!.version, B, back!.index, undefined, null);
+    await postgresStore(PROJECT).updateRepo(kept!.version, B, back!.index, { merge: null });
     expect((await postgresStore(PROJECT).readRepo())?.merge).toBeNull();
   });
 });

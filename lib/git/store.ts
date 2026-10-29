@@ -1,4 +1,5 @@
-// Where a project's repository lives: its objects, `main` and the index (spec §2).
+// Where a project's repository lives: its objects, its branches, the index and its remotes (spec §2; spec local
+// 2026-10-28-ficheros-al-nivel-de-claude-code, §8).
 import type { GitObject } from "./objects";
 
 /** The staging area: repository path (no leading "/") → blob oid. Every file is 100644. */
@@ -10,12 +11,16 @@ export interface RepoState {
   readonly index: Index;
   /** Bumped on every write: the compare-and-swap token. */
   readonly version: number;
-  /** The checked-out branch (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8). */
+  /** The checked-out branch. */
   readonly branch: string;
   /** Every local branch → its commit, the current one included. */
   readonly refs: Readonly<Record<string, string>>;
   /** A merge in progress (git's MERGE_HEAD and MERGE_MSG), or null. */
   readonly merge: MergeState | null;
+  /** The remotes by name (`origin`), each with its remote-tracking branches (`refs/remotes/origin/*`). */
+  readonly remotes: Readonly<Record<string, Remote>>;
+  /** Each local branch's upstream (git's branch.<name>.remote and .merge). */
+  readonly upstreams: Readonly<Record<string, Upstream>>;
 }
 
 /** How a path stayed unmerged, as `git status --short` writes it: both modified, both added, deleted by them, deleted
@@ -31,10 +36,44 @@ export interface MergeState {
   readonly conflicts: Readonly<Record<string, ConflictKind>>;
 }
 
-/** A write that moves between branches or changes them: the branch checked out after it, and every branch. */
-export interface Branching {
-  readonly branch: string;
+export interface Remote {
+  /** Never with credentials: a token is the server's, given per request. */
+  readonly url: string;
+  /** The remote's branches as last fetched or pushed: name → commit. */
   readonly refs: Readonly<Record<string, string>>;
+}
+
+export interface Upstream {
+  readonly remote: string;
+  /** The branch on the remote ("main", not "refs/heads/main"). */
+  readonly branch: string;
+}
+
+/** What a write changes besides the current branch's commit and the index; what it leaves out stays as it is. */
+export interface RepoChanges {
+  /** The branch checked out after the write. */
+  readonly branch?: string;
+  /** Every local branch (the current one is set to the new head anyway). */
+  readonly refs?: Readonly<Record<string, string>>;
+  /** The merge in progress; null ends it. */
+  readonly merge?: MergeState | null;
+  readonly remotes?: Readonly<Record<string, Remote>>;
+  readonly upstreams?: Readonly<Record<string, Upstream>>;
+}
+
+/** A write's state from the one before it and its changes. */
+export function applyChanges(before: RepoState, head: string, index: Index, version: number, c: RepoChanges = {}): RepoState {
+  const branch = c.branch ?? before.branch;
+  return {
+    head,
+    index,
+    version,
+    branch,
+    refs: { ...(c.refs ?? before.refs), [branch]: head },
+    merge: c.merge === undefined ? before.merge : c.merge,
+    remotes: c.remotes ?? before.remotes,
+    upstreams: c.upstreams ?? before.upstreams,
+  };
 }
 
 export interface GitStore {
@@ -47,8 +86,6 @@ export interface GitStore {
   writeObjects(objects: readonly GitObject[]): Promise<void>;
   /** Up to two oids starting with `prefix`: two is enough to call it ambiguous. */
   findByPrefix(prefix: string): Promise<readonly string[]>;
-  /** Compare-and-swap of the current branch's commit and the index (and, with `branching`, of which branch is
-   *  checked out and every branch; with `merge`, of the merge in progress — `null` ends it, `undefined` keeps it):
-   *  `null` if someone wrote first. */
-  updateRepo(expectedVersion: number, head: string, index: Index, branching?: Branching, merge?: MergeState | null): Promise<RepoState | null>;
+  /** Compare-and-swap of the current branch's commit, the index and `changes`: `null` if someone wrote first. */
+  updateRepo(expectedVersion: number, head: string, index: Index, changes?: RepoChanges): Promise<RepoState | null>;
 }

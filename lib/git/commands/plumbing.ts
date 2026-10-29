@@ -1,4 +1,4 @@
-// The small ones: ls-files, rev-parse, branch, config, init, remote, and push/pull/fetch with no remote.
+// The small ones: ls-files, rev-parse, branch, config, init.
 import { oidOfContent } from "../content";
 import type { Command } from "../command";
 import { abbrev } from "../diff";
@@ -7,10 +7,9 @@ import { subjectOf } from "../format";
 import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, relativeToCwd, resolveFromCwd } from "../paths";
+import { tracking } from "../remotes";
 import { resolveCommit, resolveRevision } from "../revisions";
 import { validBranchName } from "./switch";
-
-const NO_REMOTE = "GitHub isn't connected yet: this repository has no remote.";
 
 export const lsFiles: Command = async (ctx, args) => {
   const o = parseOptions(args, { flags: ["-c", "--cached", "-m", "--modified", "-d", "--deleted", "-o", "--others", "--exclude-standard"] });
@@ -69,7 +68,7 @@ function matchesBranchPattern(pattern: string, name: string): boolean {
 
 export const branch: Command = async (ctx, args) => {
   const o = parseOptions(args, {
-    flags: ["-a", "--all", "-l", "--list", "-v", "-vv", "--verbose", "--show-current", "-r", "--remotes", "--no-color", "-d", "-D", "--delete", "-f", "--force", "-m", "-M", "-c", "-C", "--move", "--copy"],
+    flags: ["-a", "--all", "-l", "--list", "-v", "-vv", "--verbose", "--show-current", "-r", "--remotes", "--no-color", "-d", "-D", "--delete", "-f", "--force", "-m", "-M", "-c", "-C", "--move", "--copy", "--unset-upstream"],
     values: ["-u", "--set-upstream-to"],
   });
   for (const f of ["-m", "-M", "-c", "-C", "--move", "--copy"]) {
@@ -77,9 +76,33 @@ export const branch: Command = async (ctx, args) => {
       return notAvailable(`branch ${f}`, "renaming or copying a branch isn't available here yet: create the new one with git branch <new> <old>, then delete the old one with git branch -d <old>.");
     }
   }
-  if (o.has("-u") || o.has("--set-upstream-to")) return notAvailable("branch --set-upstream-to", NO_REMOTE);
+  const upstreamTo = o.value("-u") ?? o.value("--set-upstream-to");
+  if (upstreamTo !== undefined || o.has("--unset-upstream")) {
+    const local = o.positional[0] ?? ctx.state.branch;
+    if (!Object.hasOwn(ctx.state.refs, local)) throw new GitFatal(`fatal: branch '${local}' does not exist\n`);
+    const upstreams = { ...ctx.state.upstreams };
+    let stdout = "";
+    if (upstreamTo === undefined) {
+      if (!upstreams[local]) throw new GitFatal(`fatal: branch '${local}' has no upstream information\n`);
+      delete upstreams[local];
+    } else {
+      const slash = upstreamTo.indexOf("/");
+      const remoteName = upstreamTo.slice(0, slash);
+      const theirs = upstreamTo.slice(slash + 1);
+      if (slash < 0 || !ctx.state.remotes[remoteName]?.refs[theirs]) {
+        throw new GitFatal(`fatal: the requested upstream branch '${upstreamTo}' does not exist\nhint: \nhint: If you are planning on basing your work on an upstream\nhint: branch that already exists at the remote, you may need to\nhint: run "git fetch" to retrieve it.\nhint: \nhint: If you are planning to push out a new local branch that\nhint: will track its remote counterpart, you may want to use\nhint: "git push -u" to set the upstream config as you push.\nhint: Disable this message with "git config advice.setUpstreamFailure false"\n`);
+      }
+      upstreams[local] = { remote: remoteName, branch: theirs };
+      stdout = `branch '${local}' set up to track '${upstreamTo}'.\n`;
+    }
+    if (!(await ctx.save(ctx.state.head, ctx.state.index, { upstreams }))) throw new GitFatal(INDEX_LOCKED);
+    return { stdout, stderr: "", exitCode: 0 };
+  }
   if (o.has("--show-current")) return { stdout: `${ctx.state.branch}\n`, stderr: "", exitCode: 0 };
-  if (o.has("-r") || o.has("--remotes")) return { stdout: "", stderr: "", exitCode: 0 };
+  const remoteBranches = Object.entries(ctx.state.remotes)
+    .flatMap(([r, rem]) => Object.keys(rem.refs).map((b) => ({ name: `${r}/${b}`, oid: rem.refs[b]! })))
+    .sort((a, b) => compareNames(a.name, b.name));
+  if (o.has("-r") || o.has("--remotes")) return { stdout: remoteBranches.map((r) => `  ${r.name}\n`).join(""), stderr: "", exitCode: 0 };
 
   if (o.has("-d") || o.has("-D") || o.has("--delete")) {
     const force = o.has("-D") || o.has("-f") || o.has("--force");
@@ -128,60 +151,48 @@ export const branch: Command = async (ctx, args) => {
   const names = Object.keys(ctx.state.refs).sort(compareNames);
   const shown = o.positional.length > 0 ? names.filter((n) => o.positional.some((p) => matchesBranchPattern(p, n))) : names;
   const mark = (n: string) => (n === ctx.state.branch ? "* " : "  ");
-  if (o.has("-v") || o.has("-vv") || o.has("--verbose")) {
-    const width = Math.max(0, ...shown.map((n) => n.length));
+  const all = o.has("-a") || o.has("--all");
+  const remoteShown = all ? remoteBranches.map((r) => ({ ...r, name: `remotes/${r.name}` })) : [];
+  const verbose = o.has("-v") || o.has("-vv") || o.has("--verbose");
+  if (verbose) {
+    const veryVerbose = args.some((a) => /^-vv+$/.test(a)) || args.filter((a) => a === "-v" || a === "--verbose").length > 1;
+    const width = Math.max(0, ...shown.map((n) => n.length), ...remoteShown.map((r) => r.name.length));
     const lines: string[] = [];
     for (const n of shown) {
       const oid = ctx.state.refs[n]!;
-      lines.push(`${mark(n)}${n.padEnd(width)} ${abbrev(oid)} ${subjectOf((await ctx.repo.commit(oid)).message)}\n`);
+      let up = "";
+      const t = veryVerbose ? await tracking(ctx, n) : null;
+      if (t) {
+        const where = t.gone ? "gone" : [t.ahead ? `ahead ${t.ahead}` : "", t.behind ? `behind ${t.behind}` : ""].filter(Boolean).join(", ");
+        up = `[${t.upstream}${where ? `: ${where}` : ""}] `;
+      }
+      lines.push(`${mark(n)}${n.padEnd(width)} ${abbrev(oid)} ${up}${subjectOf((await ctx.repo.commit(oid)).message)}\n`);
     }
+    for (const r of remoteShown) lines.push(`  ${r.name.padEnd(width)} ${abbrev(r.oid)} ${subjectOf((await ctx.repo.commit(r.oid)).message)}\n`);
     return { stdout: lines.join(""), stderr: "", exitCode: 0 };
   }
-  return { stdout: shown.map((n) => `${mark(n)}${n}\n`).join(""), stderr: "", exitCode: 0 };
+  return { stdout: [...shown.map((n) => `${mark(n)}${n}\n`), ...remoteShown.map((r) => `  ${r.name}\n`)].join(""), stderr: "", exitCode: 0 };
 };
 
 export const config: Command = async (ctx, args) => {
   const o = parseOptions(args, { flags: ["--get", "-l", "--list", "--global", "--local", "--system", "--unset", "--add", "--replace-all", "--show-origin", "--bool", "--int"] });
   const keys = o.positional[0] === "get" ? o.positional.slice(1) : o.positional;
   if (o.has("--unset") || o.has("--add") || o.has("--replace-all") || keys.length >= 2 || o.positional[0] === "set") {
-    return notAvailable("config", "the configuration is fixed here: the author of a commit is the person who asks for it, and there is no remote yet.");
+    return notAvailable("config", "the configuration is fixed here: the author of a commit is the person who asks for it; add remotes with git remote add.");
   }
-  const values: Readonly<Record<string, string>> = { "user.name": ctx.identity.name, "user.email": ctx.identity.email, "init.defaultbranch": "main", "core.bare": "false" };
+  // Fixed, as if set: pull merges (pull.rebase=false), push.default=simple; each remote and upstream as git keeps them.
+  const values: Record<string, string> = { "user.name": ctx.identity.name, "user.email": ctx.identity.email, "init.defaultbranch": "main", "core.bare": "false", "pull.rebase": "false", "push.default": "simple" };
+  for (const [name, rem] of Object.entries(ctx.state.remotes)) {
+    values[`remote.${name}.url`.toLowerCase()] = rem.url;
+    values[`remote.${name}.fetch`.toLowerCase()] = `+refs/heads/*:refs/remotes/${name}/*`;
+  }
+  for (const [b, up] of Object.entries(ctx.state.upstreams)) {
+    values[`branch.${b}.remote`.toLowerCase()] = up.remote;
+    values[`branch.${b}.merge`.toLowerCase()] = `refs/heads/${up.branch}`;
+  }
   if (o.has("-l") || o.has("--list")) return { stdout: `user.name=${ctx.identity.name}\nuser.email=${ctx.identity.email}\n`, stderr: "", exitCode: 0 };
   const value = keys[0] === undefined ? undefined : values[keys[0].toLowerCase()];
   return value === undefined ? { stdout: "", stderr: "", exitCode: 1 } : { stdout: `${value}\n`, stderr: "", exitCode: 0 };
 };
 
 export const init: Command = async () => ({ stdout: "Reinitialized existing Git repository in /.git/\n", stderr: "", exitCode: 0 });
-
-export const remote: Command = async (_ctx, args) => {
-  const [sub] = args.filter((a) => !a.startsWith("-"));
-  if (sub === undefined) return { stdout: "", stderr: "", exitCode: 0 };
-  return notAvailable(`remote ${sub}`, NO_REMOTE);
-};
-
-export const push: Command = async () => ({
-  stdout: "",
-  stderr:
-    "fatal: No configured push destination.\n" +
-    "Either specify the URL from the command-line or configure a remote repository using\n\n" +
-    "    git remote add <name> <url>\n\n" +
-    "and then push using the remote name\n\n" +
-    "    git push <name>\n\n",
-  exitCode: 128,
-});
-
-/** With no remote, git fetch has nothing to do and says nothing. */
-export const fetch: Command = async () => ({ stdout: "", stderr: "", exitCode: 0 });
-
-export const pull: Command = async () => ({
-  stdout: "",
-  stderr:
-    "There is no tracking information for the current branch.\n" +
-    "Please specify which branch you want to merge with.\n" +
-    "See git-pull(1) for details.\n\n" +
-    "    git pull <remote> <branch>\n\n" +
-    "If you wish to set tracking information for this branch you can do so with:\n\n" +
-    "    git branch --set-upstream-to=<remote>/<branch> main\n\n",
-  exitCode: 1,
-});

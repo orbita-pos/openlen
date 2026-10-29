@@ -41,10 +41,13 @@ export class GitHttpServer {
   port = 0;
   /** "user:password" the server demands in Basic auth, or null for none. */
   requireAuth: string | null = null;
+  /** One URL, two repositories: OpenLen's git (its User-Agent says "OpenLen") is served from `<root>/ours`, the real
+   *  git from `<root>/real`. Commits that carry the URL (a pull's merge) then come out the same on both sides. */
+  splitByAgent = false;
 
   /** A bare repository `<name>.git`, with receive-pack on. */
-  bare(name: string): string {
-    const dir = path.join(this.root, `${name}.git`);
+  bare(name: string, side?: "real" | "ours"): string {
+    const dir = path.join(this.root, ...(side ? [side] : []), `${name}.git`);
     this.git(["init", "-q", "--bare", "-b", "main", dir]);
     this.git(["config", "http.receivepack", "true"], dir);
     return dir;
@@ -89,7 +92,7 @@ export class GitHttpServer {
         const body = Buffer.concat(chunks);
         const env: NodeJS.ProcessEnv = {
           ...cleanEnv(this.home),
-          GIT_PROJECT_ROOT: this.root,
+          GIT_PROJECT_ROOT: this.splitByAgent ? path.join(this.root, String(req.headers["user-agent"] ?? "").includes("OpenLen") ? "ours" : "real") : this.root,
           GIT_HTTP_EXPORT_ALL: "1",
           PATH_INFO: decodeURIComponent(u.pathname),
           QUERY_STRING: u.search.replace(/^\?/, ""),

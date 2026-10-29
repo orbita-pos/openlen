@@ -4,6 +4,7 @@ import { GitFatal } from "../errors";
 import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, relativeToCwd, resolveFromCwd } from "../paths";
+import { tracking } from "../remotes";
 import type { ConflictKind } from "../store";
 import { collapseUntracked, computeStatus, type Status } from "../worktree";
 
@@ -13,15 +14,20 @@ const UNMERGED: Readonly<Record<ConflictKind, string>> = { UU: "both modified:  
 
 type Untracked = "no" | "normal" | "all";
 
-export async function readStatus(ctx: CommandContext, specs: readonly string[] = []): Promise<Status> {
+/** The status, and where the branch stands against its upstream (null without one). */
+export interface FullStatus extends Status {
+  readonly tracking: Awaited<ReturnType<typeof tracking>>;
+}
+
+export async function readStatus(ctx: CommandContext, specs: readonly string[] = []): Promise<FullStatus> {
   const head = await ctx.repo.filesOfCommit(ctx.state.head);
   const computed = computeStatus(head, ctx.state.index, ctx.tree);
   // An unmerged path is neither staged nor changed: status lists it apart.
   const conflicts = ctx.state.merge?.conflicts ?? {};
-  const all = { ...computed, tracked: computed.tracked.filter((c) => !Object.hasOwn(conflicts, c.path)) };
+  const all = { ...computed, tracked: computed.tracked.filter((c) => !Object.hasOwn(conflicts, c.path)), tracking: await tracking(ctx, ctx.state.branch) };
   if (specs.length === 0) return all;
   const keep = (p: string) => specs.some((s) => matchesPathspec(s, p));
-  return { tracked: all.tracked.filter((t) => keep(t.path)), untracked: all.untracked.filter(keep) };
+  return { tracked: all.tracked.filter((t) => keep(t.path)), untracked: all.untracked.filter(keep), tracking: all.tracking };
 }
 
 function untrackedShown(ctx: CommandContext, s: Status, mode: Untracked): string[] {
@@ -29,12 +35,25 @@ function untrackedShown(ctx: CommandContext, s: Status, mode: Untracked): string
   return mode === "all" ? [...s.untracked] : collapseUntracked(s.untracked, ctx.state.index);
 }
 
-export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "normal"): string {
+/** wt-status's lines on how the branch compares with its upstream. */
+function trackingText(t: FullStatus["tracking"]): string {
+  if (!t) return "";
+  const commits = (n: number) => `${n} commit${n === 1 ? "" : "s"}`;
+  if (t.gone) return `Your branch is based on '${t.upstream}', but the upstream is gone.\n  (use "git branch --unset-upstream" to fixup)\n\n`;
+  if (t.ahead && t.behind) {
+    return `Your branch and '${t.upstream}' have diverged,\nand have ${t.ahead} and ${t.behind} different commits each, respectively.\n  (use "git pull" if you want to integrate the remote branch with yours)\n\n`;
+  }
+  if (t.ahead) return `Your branch is ahead of '${t.upstream}' by ${commits(t.ahead)}.\n  (use "git push" to publish your local commits)\n\n`;
+  if (t.behind) return `Your branch is behind '${t.upstream}' by ${commits(t.behind)}, and can be fast-forwarded.\n  (use "git pull" to update your local branch)\n\n`;
+  return `Your branch is up to date with '${t.upstream}'.\n\n`;
+}
+
+export function longStatus(ctx: CommandContext, s: FullStatus, mode: Untracked = "normal"): string {
   const show = (p: string) => quotePath(relativeToCwd(ctx.cwd, p));
   const staged = s.tracked.filter((t) => t.staged !== " ");
   const unstaged = s.tracked.filter((t) => t.unstaged !== " ");
   const untracked = untrackedShown(ctx, s, mode);
-  let out = `On branch ${ctx.state.branch}\n`;
+  let out = `On branch ${ctx.state.branch}\n${trackingText(s.tracking)}`;
   const merge = ctx.state.merge;
   const unmerged = Object.entries(merge?.conflicts ?? {}).sort(([a], [b]) => compareNames(a, b));
   if (merge && unmerged.length > 0) out += 'You have unmerged paths.\n  (fix conflicts and run "git commit")\n  (use "git merge --abort" to abort the merge)\n\n';
@@ -71,9 +90,11 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
   return out;
 }
 
-export function shortStatus(ctx: CommandContext, s: Status, o: { readonly porcelain: boolean; readonly branch: boolean; readonly untracked: Untracked }): string {
+export function shortStatus(ctx: CommandContext, s: FullStatus, o: { readonly porcelain: boolean; readonly branch: boolean; readonly untracked: Untracked }): string {
   const show = (p: string) => quotePath(o.porcelain ? p : relativeToCwd(ctx.cwd, p), true);
-  let out = o.branch ? `## ${ctx.state.branch}\n` : "";
+  const t = s.tracking;
+  const where = t ? (t.gone ? " [gone]" : [t.ahead ? `ahead ${t.ahead}` : "", t.behind ? `behind ${t.behind}` : ""].filter(Boolean).join(", ").replace(/^(.+)$/, " [$1]")) : "";
+  let out = o.branch ? `## ${ctx.state.branch}${t ? `...${t.upstream}${where}` : ""}\n` : "";
   const lines = s.tracked.map((t) => ({ path: t.path, code: `${t.staged}${t.unstaged}` }));
   for (const [path, code] of Object.entries(ctx.state.merge?.conflicts ?? {})) lines.push({ path, code });
   for (const l of lines.sort((a, b) => compareNames(a.path, b.path))) out += `${l.code} ${show(l.path)}\n`;
