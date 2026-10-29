@@ -108,6 +108,13 @@ export class TerminalDeLen implements TerminalBackend {
         cwd: string,
         files: Readonly<Record<string, string>>,
       ) => Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
+      /** GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): `gh …` with the owner's GitHub App,
+       *  answered here like `git` (it pushes with git); the token never reaches the worker. Without it, no `gh`. */
+      readonly gh?: (
+        args: readonly string[],
+        cwd: string,
+        files: Readonly<Record<string, string>>,
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
       /** UNA APP (plan 03): `tsc` y `eslint` de verdad, que corren aquí
        *  (`lib/apps/checker/`), y lo que ofrece su catálogo, para `npm install`.
        *  Sin él, la terminal no tiene `tsc`, `eslint`, `npx` ni `npm`. */
@@ -174,6 +181,10 @@ export class TerminalDeLen implements TerminalBackend {
         void this.aPunteros(m.ficheros).then((f) => this.servirGit(hilo, m.git as number, m.args as string[], String(m.cwd ?? "/"), f));
         return;
       }
+      if (typeof m.gh === "number") {
+        void this.aPunteros(m.ficheros).then((f) => this.serveGh(hilo, m.gh as number, m.args as string[], String(m.cwd ?? "/"), f));
+        return;
+      }
       if (typeof m.stripe === "number") {
         void this.serveStripe(hilo, m.stripe, m.args as string[], typeof m.stdin === "string" ? m.stdin : "");
         return;
@@ -217,6 +228,7 @@ export class TerminalDeLen implements TerminalBackend {
       perezosos,
       supabase: Boolean(this.o.supabase),
       git: Boolean(this.o.git),
+      gh: Boolean(this.o.gh),
       stripe: Boolean(this.o.stripe),
       functions: this.curl ? { prefixes: [...this.curl.prefixes], ...(this.curl.reaches ? { reaches: this.curl.reaches } : {}) } : undefined,
       app: this.o.appTools
@@ -293,6 +305,18 @@ export class TerminalDeLen implements TerminalBackend {
       respuesta = { tipo: "git", pid, error: e instanceof Error ? e.message : String(e) };
     }
     if (this.hilo === hilo) hilo.postMessage(respuesta);
+  }
+
+  /** `gh …`: answered here and sent back to the worker, like `git`. */
+  private async serveGh(hilo: Worker, pid: number, args: string[], cwd: string, files: Record<string, string>): Promise<void> {
+    let answer: Record<string, unknown>;
+    try {
+      if (!this.o.gh) throw new Error("this terminal has no gh");
+      answer = { tipo: "gh", pid, resultado: await this.o.gh(args, cwd, files) };
+    } catch (e) {
+      answer = { tipo: "gh", pid, error: e instanceof Error ? e.message : String(e) };
+    }
+    if (this.hilo === hilo) hilo.postMessage(answer);
   }
 
   /** `curl` a una función del proyecto: lo resuelve la puerta, aquí. */

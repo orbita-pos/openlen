@@ -362,6 +362,27 @@ describe("TerminalDeLen", () => {
     }, 20_000);
   });
 
+  describe("gh, answered by the app's thread (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9)", () => {
+    it("gets the args, the cwd and the files; its output comes back with its exit code", async () => {
+      const calls: { args: readonly string[]; cwd: string; files: Readonly<Record<string, string>> }[] = [];
+      const { t } = terminal({
+        gh: async (args, cwd, files) => {
+          calls.push({ args, cwd, files });
+          return { stdout: "", stderr: "To get started with GitHub CLI…\n", exitCode: 4 };
+        },
+      });
+      const r = await t.ejecutar('gh pr create --title "Arreglo del menú" --body "Cuerpo"');
+      expect(calls[0]!.args).toEqual(["pr", "create", "--title", "Arreglo del menú", "--body", "Cuerpo"]);
+      expect(calls[0]!.cwd).toBe("/");
+      expect(r.exitCode).toBe(4);
+    }, 20_000);
+
+    it("without it there is no gh", async () => {
+      const { t } = terminal({});
+      expect((await t.ejecutar("gh auth status")).exitCode).toBe(127);
+    }, 20_000);
+  });
+
   describe("stripe, answered by the app's thread (spec local 2026-10-21-stripe-integration)", () => {
     it("gets the args and its output comes back with its exit code", async () => {
       const calls: (readonly string[])[] = [];

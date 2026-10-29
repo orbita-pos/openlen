@@ -28,7 +28,7 @@ import { resumenDelComando } from "./resumen-del-comando";
 import type { TerminalBackend } from "./backend";
 import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
-import { gitForTerminal } from "./git-option";
+import { ghForTerminal, gitForTerminal } from "./git-option";
 import { stripeEnabled } from "@/lib/stripe/enabled";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
@@ -232,6 +232,8 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
     // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
     // writes comes back as any other changed file and is saved below, Write's way.
     ...((git) => (git ? { git } : {}))(gitForTerminal(session, deps)),
+    // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): `gh …` with the owner's GitHub App.
+    ...((gh) => (gh ? { gh } : {}))(ghForTerminal(session, deps)),
     // STRIPE (spec local 2026-10-21-stripe-integration): `stripe …` with the project's key, answered here.
     ...((stripe) => (stripe ? { stripe } : {}))(stripeForTerminal(session, deps)),
     // UNA APP (plan 03): `tsc`, `eslint`, `npx` y `npm`, con el comprobador de verdad.
@@ -408,11 +410,13 @@ async function terminalCurlFor(session: AgentSession, deps: AgentDeps): Promise<
 /** Los mismos manejadores que recibe la terminal de siempre, para el puente de la caja. */
 async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promise<BridgeHandlers> {
   const git = gitForTerminal(session, deps);
+  const gh = ghForTerminal(session, deps);
   const stripe = stripeForTerminal(session, deps);
   const appTools = appToolsFor(session, deps);
   const curl = await terminalCurlFor(session, deps);
   return {
     ...(git ? { git } : {}),
+    ...(gh ? { gh } : {}),
     ...(stripe ? { stripe } : {}),
     ...(deps.supabaseCli
       ? {
