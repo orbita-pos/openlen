@@ -155,6 +155,11 @@ describe("the catalog", () => {
     for (const n of SCHEDULE_TOOL_NAMES) expect(names).not.toContain(n);
   });
 
+  it("the schemas use only what Len's other tools already send the providers (no oneOf/anyOf/additionalProperties)", () => {
+    // These four are always loaded: a construct a provider rejects would break every turn.
+    expect(JSON.stringify(SCHEDULE_DECLARATIONS)).not.toMatch(/"(oneOf|anyOf|allOf|additionalProperties)"/);
+  });
+
   it("schedule_create carries Claude Code's minute advice and the one-hour floor", () => {
     const create = SCHEDULE_DECLARATIONS.find((d) => d.name === "schedule_create")!;
     expect(String(create.description)).toMatch(/Minimum interval is 1 hour\./);
