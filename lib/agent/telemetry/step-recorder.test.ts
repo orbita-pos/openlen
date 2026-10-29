@@ -23,11 +23,18 @@ function call(msgs: string[], cached: number, o: Partial<BrainCall> = {}): Brain
     stop: "end_turn", wire: wire(msgs), ...o,
   };
 }
+/** Keeps the latest copy of each row, like the upsert by id. */
 function fakeStore(baseline: CallSnapshot | null | "never" = null) {
   const rows: StepRow[] = [];
   let loads = 0;
   const store: StepStore = {
-    write: (r) => { rows.push(...r); },
+    write: async (r) => {
+      for (const x of r) {
+        const i = rows.findIndex((y) => y.id === x.id);
+        if (i === -1) rows.push(x);
+        else rows[i] = x;
+      }
+    },
     loadBaseline: async () => {
       loads++;
       if (baseline === "never") return new Promise<CallSnapshot | null>(() => {});
@@ -166,15 +173,16 @@ describe("createStepRecorder", () => {
 // each call (raw), and a Read that repeats one already done in the turn with no write to that file since
 // (`tengu_file_read_reread`). The path never leaves: only its hash.
 describe("createStepRecorder: first byte, stalls and rereads", () => {
-  it("each row carries the call's time to first event and longest gap", () => {
+  it("each row carries the call's time to first event and longest gap", async () => {
     const { store, rows } = fakeStore();
     const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
     rec.onCall(call(["a"], 0, { firstEventMs: 820, longestGapMs: 4_100 }));
     rec.finish({ endReason: "completed" });
+    await rec.flush();
     expect(rows[0]).toMatchObject({ firstByteMs: 820, longestGapMs: 4_100 });
   });
 
-  it("a Read repeated with no write to that file since is a reread; after an Edit of it, it is not", () => {
+  it("a Read repeated with no write to that file since is a reread; after an Edit of it, it is not", async () => {
     const { store, rows } = fakeStore();
     const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
     const read = { name: "Read", argsHash: "r1", pathHash: "p1", ok: true };
@@ -183,6 +191,99 @@ describe("createStepRecorder: first byte, stalls and rereads", () => {
       rec.onStepTools(batch);
     }
     rec.finish({ endReason: "completed" });
+    await rec.flush();
     expect(rows.map((r) => r.tools[0]!.reread ?? false)).toEqual([false, true, false, false]);
+  });
+});
+
+// Rows as they happen, like Claude Code's per-call telemetry and DeepSeek's durable log: a deploy that kills the
+// turn before its end leaves the calls it already made, and the next turn still finds its baseline.
+describe("createStepRecorder: rows as the turn goes", () => {
+  it("a turn killed after two calls leaves both rows with their tools, the second one with the hashes", async () => {
+    const f = fakeStore(null);
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store: f.store, log: () => {} });
+    const read = { name: "Read", argsHash: "r1", ok: true };
+    rec.onCall(call(["a"], 1000));
+    rec.onStepTools([read]);
+    rec.onCall(call(["a", "b"], 1500));
+    rec.onStepTools([read, read]);
+    await rec.flush();
+    expect(f.rows.map((r) => [r.step, r.tools.length, r.messageHashes !== null, r.endReason])).toEqual([
+      [0, 1, false, null],
+      [1, 2, true, null],
+    ]);
+  });
+
+  it("the store sees each change when it happens: the call's row, then the same row with its tools", async () => {
+    const writes: string[][] = [];
+    const store: StepStore = {
+      write: async (rows) => {
+        writes.push(rows.map((r) => `${r.step}:${r.tools.length}:${r.messageHashes ? "h" : "-"}:${r.endReason ?? ""}`));
+      },
+      loadBaseline: async () => null,
+    };
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
+    rec.onCall(call(["a"], 1000));
+    await rec.flush();
+    rec.onStepTools([{ name: "Read", argsHash: "r1", ok: true }]);
+    await rec.flush();
+    rec.onCall(call(["a", "b"], 1500));
+    await rec.flush();
+    rec.finish({ endReason: "completed" });
+    await rec.flush();
+    // The second call takes the hashes from the first, which is rewritten without them; unchanged rows are not resent.
+    expect(writes).toEqual([["0:0:h:"], ["0:1:h:"], ["0:1:-:", "1:0:h:"], ["1:0:h:completed"]]);
+  });
+
+  it("one write at a time: what changes while a write is out goes in the next, so an older copy never lands last", async () => {
+    const writes: StepRow[][] = [];
+    const answers: (() => void)[] = [];
+    const store: StepStore = {
+      write: (rows) => {
+        writes.push([...rows]);
+        return new Promise<void>((r) => answers.push(r));
+      },
+      loadBaseline: async () => null,
+    };
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
+    rec.onCall(call(["a"], 1000));
+    rec.onStepTools([{ name: "Read", argsHash: "r1", ok: true }]);
+    rec.onCall(call(["a", "b"], 1500));
+    rec.finish({ endReason: "completed" });
+    expect(writes).toHaveLength(1);
+    let flushed = false;
+    const flushing = rec.flush().then(() => (flushed = true));
+    answers.shift()!();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(writes).toHaveLength(2);
+    expect(writes[1]!.map((r) => [r.step, r.tools.length, r.messageHashes !== null, r.endReason])).toEqual([
+      [0, 1, false, null],
+      [1, 0, true, "completed"],
+    ]);
+    expect(flushed).toBe(false);
+    answers.shift()!();
+    await flushing;
+    expect(writes).toHaveLength(2);
+  });
+
+  it("a store that throws or rejects never reaches the turn, and the next write still goes", async () => {
+    let n = 0;
+    const store: StepStore = {
+      write: (rows) => {
+        n++;
+        if (n === 1) throw new Error("sync boom");
+        if (n === 2) return Promise.reject(new Error("async boom"));
+        return Promise.resolve(void rows);
+      },
+      loadBaseline: async () => null,
+    };
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store, log: () => {} });
+    expect(() => rec.onCall(call(["a"], 1000))).not.toThrow();
+    await rec.flush();
+    expect(() => rec.onStepTools([{ name: "Read", argsHash: "r1", ok: true }])).not.toThrow();
+    await rec.flush();
+    rec.finish({ endReason: "completed" });
+    await rec.flush();
+    expect(n).toBe(3);
   });
 });

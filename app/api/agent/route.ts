@@ -11,6 +11,7 @@ import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
+import { flushOnExit } from "@/lib/agent/exit-flush";
 import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-store";
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
@@ -1483,6 +1484,22 @@ async function correrTurno(
           console.warn("[agent] no se pudo guardar el avance del turno", err);
         }
       });
+      // LEN 3.1 · LO QUE VIO EL MODELO, EN CUANTO CAMBIA. Claude Code escribe cada
+      // entrada de su transcripción con una cola que vacía cada 100 ms; aquí se
+      // mira cada 100 ms si cambió y, si cambió, la fila sale ya (`soon`), sin
+      // esperar la ventana de 2 s del texto. Un proceso que muere de golpe pierde
+      // como mucho eso; uno que se apaga (SIGTERM) escribe antes lo que lleva.
+      const LIVE_TRANSCRIPT_POLL_MS = 100;
+      let vistoPedido = "";
+      const liveTranscriptWatch = setInterval(() => {
+        const visto = readLiveTranscript?.() ?? [];
+        if (visto.length === 0) return;
+        const huella = huellaDeLoVisto(visto);
+        if (huella === vistoGuardado || huella === vistoPedido) return;
+        vistoPedido = huella;
+        avance.soon();
+      }, LIVE_TRANSCRIPT_POLL_MS);
+      (liveTranscriptWatch as { unref?: () => void }).unref?.();
       /**
        * 🔴 LA FILA DEL TURNO, PASE LO QUE PASE, y UNA vez: la llaman el final
        * bueno y el malo antes de avisar al cliente, y el `finally` por si
@@ -1496,9 +1513,10 @@ async function correrTurno(
        * nadie. La verdad de lo que falló va en el diario (`toolResults`); ver
        * el comentario de `registrarTurnoDelServidor`.
        */
-      const cerrarFila = async (): Promise<void> => {
+      const closeRowOnce = async (): Promise<void> => {
         if (filaCerrada) return;
         filaCerrada = true;
+        clearInterval(liveTranscriptWatch);
         await avance.parar();
         // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
         // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
@@ -1568,6 +1586,18 @@ async function correrTurno(
           }
         }
       };
+      let closingRow: Promise<void> | null = null;
+      const cerrarFila = (): Promise<void> => (closingRow ??= closeRowOnce());
+      // Y SI EL PROCESO SE VA (un deploy): antes del `process.exit` de Next, el
+      // turno escribe lo que lleva (lib/agent/exit-flush.ts) — su cierre si ya
+      // cerraba, si no la fila con lo visto — y sus filas de la capa 0; y su caja
+      // se cierra como al acabar, pero sin guardar lo pendiente (se queda en la
+      // caja, para el turno siguiente): se pausa, se suelta y se cobra hasta ahora.
+      let closingTerminal: Promise<unknown> | null = null;
+      const stopFlushOnExit = flushOnExit(async () => {
+        closingTerminal ??= cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
+        await Promise.all([closingRow ?? avance.flush(), stepRecorder?.flush(), closingTerminal]);
+      });
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
       // el HTML de la página y el mensaje del usuario. Sin la variable no se
@@ -2303,7 +2333,7 @@ async function correrTurno(
         // `await` el cierre del navegador de abajo llegaba tarde (lo cazó
         // route.test.ts, «el navegador del turno se cierra al acabar»).
         // Con la caja (LA TERMINAL REAL), además guarda lo pendiente, la pausa y la cobra: por eso los deps.
-        void cerrarTerminalDeLaSesion(agentSession, deps).catch(() => undefined);
+        closingTerminal ??= cerrarTerminalDeLaSesion(agentSession, deps).catch(() => undefined);
         // Y LA PESTAÑA DEL TURNO (`use_page`, 14/10): su Chromium muere con él.
         void closeBrowserTab(agentSession.browserTab).catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
@@ -2311,6 +2341,9 @@ async function correrTurno(
         // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva
         // (`turnoDeLaFila`); fuera de él, como huérfana y cortada.
         await cerrarFila();
+        // Lo último que el turno escribe ya salió o está saliendo: al apagarse, el
+        // proceso ya no tiene que esperarlo por él.
+        void Promise.all([stepRecorder?.flush(), closingTerminal]).finally(stopFlushOnExit);
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);

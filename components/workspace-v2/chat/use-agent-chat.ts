@@ -2813,6 +2813,7 @@ const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   agent_off: true,
   context_too_long: true,
   compact_failed: true,
+  interrupted: true,
 };
 
 function isAgentErrorCode(value: unknown): value is AgentErrorCode {

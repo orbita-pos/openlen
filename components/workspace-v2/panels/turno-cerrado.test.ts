@@ -233,3 +233,24 @@ describe("A11 · conversación demasiado larga", () => {
     }
   });
 });
+
+// Un turno que un reinicio dejó huérfano: lo cierran el reenganche o el arranque
+// con `interrupted` (el `turn/end {interrupted}` de DeepSeek). Decía «El turno
+// fue cancelado.», y nadie lo paró (ensayo de caja, 28/10).
+describe("el turno que cortó un reinicio", () => {
+  it("🔴 la huérfana cerrada con `interrupted` dice que se reinició el servidor, no que se canceló", () => {
+    expect(avisoDelTurno({ cortado: true, endReason: "interrupted" }, (code) => `errors.${code}`)).toEqual({ motivo: "errors.interrupted", cortado: true });
+  });
+  it("brazo de control: el ■ sigue diciendo cancelado, y una cortada sin motivo (anterior) conserva el genérico", () => {
+    expect(avisoDelTurno({ cortado: true, endReason: "cancelled" }, (code) => `errors.${code}`)?.motivo).toBe("errors.cancelled");
+    expect(avisoDelTurno({ cortado: true }, (code) => `errors.${code}`)?.motivo).toBe("errors.cancelled");
+  });
+  it("🔴 y su texto existe en los 10 idiomas, sin la palabra de cancelar", () => {
+    for (const l of ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"]) {
+      const m = JSON.parse(readFileSync(`messages/${l}/wsPage.json`, "utf8")) as Record<string, Record<string, Record<string, string>>>;
+      const errores = Object.values(m).find((v) => v && typeof v === "object" && "errors" in v)?.errors;
+      expect(typeof errores?.interrupted, l).toBe("string");
+      expect(errores?.interrupted, l).not.toBe(errores?.cancelled);
+    }
+  });
+});

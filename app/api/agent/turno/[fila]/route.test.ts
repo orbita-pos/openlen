@@ -75,6 +75,8 @@ describe("GET /api/agent/turno/[fila] — volver a mirar un turno que sigue", ()
     expect(mocks.marcarCortadaSiSigueEnCurso).toHaveBeenCalledWith("fila-1");
     const turno = cuerpo.turno as Record<string, unknown>;
     expect(turno.cortado).toBe(true);
+    // Con su motivo: el chat dice que se reinició el servidor, no «cancelado».
+    expect(turno.endReason).toBe("interrupted");
     expect(turno.enCurso).toBeUndefined();
     expect(cuerpo.turnoId).toBeUndefined();
   });

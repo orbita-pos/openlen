@@ -510,6 +510,9 @@ export default defineConfig({
       // es LISTA BLANCA: sin esta linea no corre nunca.
       "lib/generation/model-policy-sin-huerfanas.test.ts",
       "lib/agent/loop.test.ts",
+      // Al arrancar, lo que el proceso anterior dejó a medio turno. LISTA BLANCA.
+      "lib/agent/close-dead-turns.test.ts",
+      "lib/agent/exit-flush.test.ts",
       "lib/agent/repeat-reminder.test.ts",
       "lib/agent/cache-effect-declared.test.ts",
       "lib/agent/silent-turn-reminder.test.ts",
@@ -720,6 +723,7 @@ export default defineConfig({
       "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
       "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",
+      "components/workspace-v2/chat/skill-menu-locale.test.tsx",
       // El esquema del guardado del chat: qué campos de la tarjeta sobreviven.
       "app/api/projects/[id]/chat/route.test.ts",
       "app/api/projects/[id]/apply-template/route.test.ts",

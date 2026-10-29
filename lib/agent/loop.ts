@@ -76,7 +76,12 @@ export type AgentErrorCode =
   | "context_too_long"
   /** A11 · `/compact` y no salió resumen: la charla es demasiado corta (el «Not
    *  enough messages to compact.» de Claude Code) o el resumen falló. */
-  | "compact_failed";
+  | "compact_failed"
+  /** El proceso murió a mitad (un deploy, un reinicio): no lo emite el bucle, lo
+   *  escribe en la fila quien la cierra huérfana (el reenganche y el arranque),
+   *  como el `turn/end {interrupted}` del cierre de DeepSeek. No es «cancelled»:
+   *  nadie lo paró. */
+  | "interrupted";
 
 export type AgentStreamEvent =
   | { type: "text"; text: string }

@@ -62,6 +62,60 @@ export async function saveProjectSandbox(row: {
     .onConflictDoUpdate({ target: schema.projectSandboxes.projectId, set: values });
 }
 
+/** How the reaper's holds start. It runs in its own process (a systemd timer), so the app restarting does not
+ *  end them. */
+export const REAPER_HOLD_PREFIX = "reaper-";
+
+/** A box a turn of the previous process held when it died, as the boot found it. */
+export interface DeadHold {
+  readonly projectId: string;
+  readonly sandboxId: string | null;
+  /** The dead turn (`session.turnId`, the ledger's refId of its box charge). */
+  readonly turnId: string;
+  /** Who pays the box: the project's owner; `null` if the project is gone. */
+  readonly ownerId: string | null;
+  /** How long the box ran for that turn: from when the turn opened it (the row says `running` from then) up to
+   *  this boot, the closest to its death the database knows. 0 if the turn died before opening it. */
+  readonly secondsRun: number;
+}
+
+/** At boot: takes over, for `token`, every box a turn of the previous process held — a deploy or a crash killed
+ *  it before its `finally` — so no new turn resumes one while the boot pauses it (the reaper's way). A hold from
+ *  before this process booted is nobody's here (ONE Next process, like the turn rows); the reaper's stay. The cut is
+ *  on the database's clock (now minus how long this process has lived), the clock `updatedAt` is written with. */
+export async function takeOverHoldsFromBeforeBoot(secondsSinceBoot: number, token: string): Promise<DeadHold[]> {
+  type Row = { projectId: string; sandboxId: string | null; turnId: string; ownerId: string | null; secondsRun: string | number };
+  const bootedAt = sql`now() - (${secondsSinceBoot}::double precision * interval '1 second')`;
+  const r = (await db.execute(sql`
+    WITH dead AS (
+      SELECT "projectId", "sandboxId", "heldBy", "state", "updatedAt" FROM "projectSandboxes"
+      WHERE "heldBy" IS NOT NULL AND "heldBy" NOT LIKE ${`${REAPER_HOLD_PREFIX}%`} AND "updatedAt" < ${bootedAt}
+      FOR UPDATE
+    )
+    UPDATE "projectSandboxes" AS b SET "heldBy" = ${token}, "updatedAt" = now()
+    FROM dead WHERE b."projectId" = dead."projectId"
+    RETURNING dead."projectId", dead."sandboxId", dead."heldBy" AS "turnId",
+      (SELECT p."userId" FROM "projects" AS p WHERE p."id" = dead."projectId") AS "ownerId",
+      CASE WHEN dead."state" = 'running' AND dead."sandboxId" IS NOT NULL
+        THEN GREATEST(0, EXTRACT(EPOCH FROM ${bootedAt} - dead."updatedAt")) ELSE 0 END AS "secondsRun"
+  `)) as unknown as { rows?: Row[] } | Row[];
+  return (Array.isArray(r) ? r : (r.rows ?? [])).map((x) => ({
+    projectId: x.projectId,
+    sandboxId: x.sandboxId,
+    turnId: x.turnId,
+    ownerId: x.ownerId,
+    secondsRun: Number(x.secondsRun),
+  }));
+}
+
+/** The boot paused the dead turn's box: the row says so, and lets it go. Only while `token` holds it. */
+export async function releasePausedBox(projectId: string, token: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE "projectSandboxes" SET "state" = 'paused', "pausedAt" = now(), "heldBy" = NULL, "updatedAt" = now()
+    WHERE "projectId" = ${projectId} AND "heldBy" = ${token}
+  `);
+}
+
 /** Lets go of the box, only if `turnId` is the one holding it. */
 export async function releaseProjectSandbox(projectId: string, turnId: string): Promise<void> {
   await db.execute(sql`

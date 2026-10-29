@@ -10,6 +10,7 @@ import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-m
 import { createGoal, goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
 import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
 import { _resetProviderHealth, isCooling } from "@/lib/agent/provider-health";
+import { flushLiveTurns } from "@/lib/agent/exit-flush";
 
 // ⚰️ Aquí vivía `veredicto()`, la factoría tipada de los veredictos de los ojos
 // al cerrar (`verifyEditedPage`), que se fueron con `verifyTurn` el 2026-10-06
@@ -230,7 +231,7 @@ vi.mock("@/lib/agent/loop", async (real) => ({
 }));
 vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 // La capa 0 de Len 3.1: las filas de cada llamada, a una base de mentira.
-const stepDb = vi.hoisted(() => ({ insert: vi.fn(async () => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
+const stepDb = vi.hoisted(() => ({ upsert: vi.fn(async (_rows: unknown[]) => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
 vi.mock("@/lib/agent/telemetry/step-store-db", () => ({ drizzleStepStoreDb: stepDb }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: (cobro?: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>) => {
@@ -514,7 +515,8 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
   });
 
   // LA CAPA 0 DE LEN 3.1: el cerebro avisa de cada llamada, el bucle de cada
-  // tanda de herramientas, y las filas se escriben al cerrar el turno.
+  // tanda de herramientas, y cada fila se escribe a medida que pasa (y otra vez,
+  // por su id, cuando cambia): cuenta la última copia de cada una.
   describe("las filas de cada llamada (capa 0)", () => {
     const turno = async () =>
       readEvents(
@@ -527,7 +529,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       );
     afterEach(() => {
       vi.unstubAllEnvs();
-      stepDb.insert.mockClear();
+      stepDb.upsert.mockClear();
       mocks.runAgentLoop.mockReset();
     });
 
@@ -544,8 +546,10 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
         return { turns: 1, toolCalls: 1, usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0 }, terminalError: false, topeAlcanzado: null, errorCode: null };
       });
       await turno();
-      expect(stepDb.insert).toHaveBeenCalledTimes(1);
-      const rows = (stepDb.insert.mock.calls[0] as unknown as [{ projectId: string; tools: unknown[]; endReason: string }[]])[0];
+      await vi.waitFor(() => expect(stepDb.upsert.mock.calls.flatMap(([r]) => r as { endReason: string | null }[]).some((r) => r.endReason === "completed")).toBe(true));
+      const latest = new Map<string, { projectId: string; tools: unknown[]; endReason: string | null }>();
+      for (const [batch] of stepDb.upsert.mock.calls) for (const r of batch as { id: string; projectId: string; tools: unknown[]; endReason: string | null }[]) latest.set(r.id, r);
+      const rows = [...latest.values()];
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ projectId: "p1", tools: [{ name: "Read", argsHash: "h", ok: true }], endReason: "completed" });
     });
@@ -566,7 +570,7 @@ describe("POST /api/agent — la postura guardada llega al cerebro", () => {
       await turno();
       expect((mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onCall");
       expect((mocks.runAgentLoop.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0]).not.toHaveProperty("onStepTools");
-      expect(stepDb.insert).not.toHaveBeenCalled();
+      expect(stepDb.upsert).not.toHaveBeenCalled();
     });
   });
 
@@ -2644,6 +2648,40 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: Record<string, unknown> | null }])[1].transcript;
     expect(fila).toMatchObject({ mensajes: LO_VISTO });
     expect(fila).not.toHaveProperty("partial");
+  });
+
+  // Claude Code vacía la cola de su transcripción cada 100 ms: lo visto no espera la ventana de 2 s del texto.
+  type Avances = [string, string, { transcript?: { mensajes: Message[]; partial?: true } }][];
+  it("🔴 lo que vio el modelo sale en cuanto cambia, sin esperar los 2 s del latido", async () => {
+    let enLaFila: Message[] | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      let visto: Message[] = [];
+      args.liveTranscript?.(() => visto);
+      await new Promise((r) => setTimeout(r, 50));
+      visto = [...LO_VISTO];
+      await new Promise((r) => setTimeout(r, 400));
+      enLaFila = (mocks.avanceDelTurno.mock.calls as unknown as Avances).find((a) => a[2].transcript)?.[2].transcript?.mensajes;
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    expect(enLaFila).toEqual(LO_VISTO);
+  });
+
+  it("🔴 un deploy (SIGTERM) a mitad del turno: antes de salir, la fila guarda lo último que vio; acabado el turno, ya no espera por él", async () => {
+    let antesDeSalir: Message[] | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.liveTranscript?.(() => LO_VISTO);
+      // Lo que hace el `process.exit` de Next tras el SIGTERM (lib/agent/exit-flush.ts), sin esperar al vigía.
+      await flushLiveTurns(1000);
+      antesDeSalir = (mocks.avanceDelTurno.mock.calls as unknown as Avances).at(-1)?.[2].transcript?.mensajes;
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    expect(antesDeSalir).toEqual(LO_VISTO);
+    await new Promise((r) => setTimeout(r, 0));
+    const llamadas = mocks.avanceDelTurno.mock.calls.length;
+    await flushLiveTurns(100);
+    expect(mocks.avanceDelTurno.mock.calls.length).toBe(llamadas);
   });
 
   it("sin créditos no se abre fila", async () => {
