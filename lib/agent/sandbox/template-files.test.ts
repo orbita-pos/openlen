@@ -102,10 +102,12 @@ describe("the box's scripts", () => {
     const { defineTemplate, APT_PACKAGES } = await import("@/infra/e2b/openlen-terminal/template");
     const calls: [string, unknown[]][] = [];
     const builder: Record<string, (...a: unknown[]) => unknown> = {};
-    for (const m of ["fromUbuntuImage", "aptInstall", "runCmd", "copy"]) builder[m] = (...a: unknown[]) => (calls.push([m, a]), builder);
+    for (const m of ["fromImage", "aptInstall", "runCmd", "copy"]) builder[m] = (...a: unknown[]) => (calls.push([m, a]), builder);
     defineTemplate(() => builder as never, "infra/e2b/openlen-terminal/.build");
     for (const p of ["python3", "python3-pip", "git", "ripgrep", "jq", "sqlite3", "curl", "unzip"]) expect(APT_PACKAGES).toContain(p);
     expect(calls).toContainEqual(["copy", ["infra/e2b/openlen-terminal/.build", "/opt/openlen/bin"]]);
+    // Ubuntu 24.04 from Canonical's own mirror on AWS: E2B's builder is denied Docker Hub's ubuntu:24.04 (29/10).
+    expect(calls[0]).toEqual(["fromImage", ["public.ecr.aws/ubuntu/ubuntu:24.04"]]);
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("setup_22.x"))).toBe(true);
     expect(calls.some(([m, a]) => m === "runCmd" && String(a[0]).includes("/run/openlen/requests"))).toBe(true);
   });
@@ -134,7 +136,7 @@ describe("the box's scripts", () => {
     const { defineTemplate, APT_PACKAGES } = await import("@/infra/e2b/openlen-terminal/template");
     const ran: string[] = [];
     const builder: Record<string, (...a: unknown[]) => unknown> = {};
-    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    for (const m of ["fromImage", "aptInstall", "copy"]) builder[m] = () => builder;
     builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
     defineTemplate(() => builder as never, "x");
     expect(APT_PACKAGES).toContain("libnss3-tools");
@@ -170,7 +172,7 @@ describe("the box's scripts", () => {
     const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
     const ran: string[] = [];
     const builder: Record<string, (...a: unknown[]) => unknown> = {};
-    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    for (const m of ["fromImage", "aptInstall", "copy"]) builder[m] = () => builder;
     builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
     defineTemplate(() => builder as never, "x");
     const pip = ran.find((c) => c.includes("pip install"))!;
@@ -193,7 +195,7 @@ describe("the box's scripts", () => {
     const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
     const ran: string[] = [];
     const builder: Record<string, (...a: unknown[]) => unknown> = {};
-    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    for (const m of ["fromImage", "aptInstall", "copy"]) builder[m] = () => builder;
     builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
     defineTemplate(() => builder as never, "x");
     const pip = ran.find((c) => c.includes("pip install"))!;
@@ -205,7 +207,7 @@ describe("the box's scripts", () => {
     const { defineTemplate } = await import("@/infra/e2b/openlen-terminal/template");
     const ran: string[] = [];
     const builder: Record<string, (...a: unknown[]) => unknown> = {};
-    for (const m of ["fromUbuntuImage", "aptInstall", "copy"]) builder[m] = () => builder;
+    for (const m of ["fromImage", "aptInstall", "copy"]) builder[m] = () => builder;
     builder.runCmd = (c: unknown) => (ran.push(String(c)), builder);
     defineTemplate(() => builder as never, "x");
     const all = ran.join("\n");
