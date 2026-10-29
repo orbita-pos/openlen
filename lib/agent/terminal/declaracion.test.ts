@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit, withSandbox } from "./declaracion";
+import { COMMITTING_WITH_GIT, DECLARACION_BASH, NOMBRE_BASH, PARA_LA_TERMINAL, PARA_SOLO_LA_TERMINAL, terminalEncendida, terminalOnly, withGit, withGitRemote, withSandbox } from "./declaracion";
 
 const CON = { OPENLEN_TERMINAL: "1" };
 const SIN = { OPENLEN_TERMINAL: "0" };
@@ -180,6 +180,39 @@ describe("git in the bash description (spec local 2026-10-15-git-for-len, §5)",
   it("withGit finds its sentence (a substitution that finds nothing is a lever to nowhere)", () => {
     expect(() => withGit("nothing to replace")).toThrow();
     expect(withGit(String(DECLARACION_BASH.description))).not.toBe(String(DECLARACION_BASH.description));
+  });
+});
+
+describe("Claude Code's git protocol when the project has a remote (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8)", () => {
+  const bash = (caps: Parameters<typeof buildFunctionDeclarations>[1], env: Record<string, string> = { OPENLEN_TERMINAL: "1" }) =>
+    String(buildFunctionDeclarations(env, caps).find((d) => d.name === "bash")!.description);
+
+  it("🔴 without a remote, the description is byte for byte today's (the cached prefix doesn't move)", () => {
+    expect(bash({ gitRemote: false })).toBe(bash({}));
+    expect(bash({ gitRemote: false, realTerminal: true })).toBe(bash({ realTerminal: true }));
+  });
+
+  it("🔴 with one: pull requests with gh pr create, no push unless asked, never a force push to main/master", () => {
+    for (const realTerminal of [false, true]) {
+      const d = bash({ gitRemote: true, realTerminal });
+      expect(d).toContain("# Creating pull requests");
+      expect(d).toContain('gh pr create --title "the pr title" --body "$(cat <<\'EOF\'');
+      expect(d).toContain("- NEVER run force push to main/master, warn the user if they request it");
+      expect(d).toContain("- DO NOT push to the remote repository unless the user explicitly asks you to do so");
+      expect(d).toContain("(push --force, checkout ., restore ., branch -D)");
+      expect(d).toContain("GitHub notifies the owner of any `@name` written in a PR, issue, or comment.");
+      expect(d).toContain("🤖 Generated with [Len](https://openlen.com)");
+      // What doesn't exist here stays out: hooks, gh api, the Task tools.
+      expect(d).not.toMatch(/--no-verify|gh api|TodoWrite/);
+    }
+  });
+
+  it("only where there is git", () => {
+    expect(bash({ gitRemote: true }, { OPENLEN_TERMINAL: "1", OPENLEN_GIT: "0" })).not.toContain("# Creating pull requests");
+  });
+
+  it("withGitRemote finds every sentence it changes", () => {
+    expect(() => withGitRemote("nothing to replace")).toThrow();
   });
 });
 

@@ -646,7 +646,10 @@ async function correrTurno(
   // LA TERMINAL REAL: lo que bash y el manual dicen de la terminal sigue a la caja del dueño (en un
   // despliegue por fases, quien no está en la lista tiene la de siempre: terminalForTurn).
   const realTerminal = realTerminalFor(userId);
-  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal }, mode, appDelTurno);
+  // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
+  // and pull request protocol; without one it stays byte for byte as before.
+  const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
+  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote }, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una

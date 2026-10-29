@@ -104,6 +104,69 @@ export function withGit(description: string): string {
   return description.replace(WITHOUT_GIT, WITH_GIT).replace(AFTER_VERSIONS, `${AFTER_VERSIONS}${VERSIONS_AND_COMMITS}`) + COMMITTING_WITH_GIT;
 }
 
+// WITH A REMOTE (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): what COMMITTING_WITH_GIT left out
+// because there was nowhere to push comes back, word for word from Claude Code's binary (2.1.309): the destructive
+// commands that now exist (push --force, branch -D), never a force push to main/master, never push unless asked, and
+// «# Creating pull requests» with gh (lib/gh/run.ts) in its default variant. Still left out what doesn't exist here:
+// hooks and --no-verify, gh api, the Task/TodoWrite tools. Only for a project with a remote, decided per turn: one
+// without keeps today's description byte for byte, so its cached prefix doesn't move.
+const DESTRUCTIVE = "- NEVER run destructive git commands (checkout ., restore .) unless";
+const DESTRUCTIVE_WITH_REMOTE = "- NEVER run destructive git commands (push --force, checkout ., restore ., branch -D) unless";
+const AFTER_DESTRUCTIVE = "it's best to ONLY run these commands when given direct instructions\n";
+const NO_FORCE_TO_MAIN = "- NEVER run force push to main/master, warn the user if they request it\n";
+const AFTER_EXPLORE = "- NEVER run additional commands to read or explore code, besides git bash commands\n";
+const NO_PUSH_UNLESS_ASKED = "- DO NOT push to the remote repository unless the user explicitly asks you to do so\n";
+
+export const CREATING_PULL_REQUESTS = `
+
+# Creating pull requests
+Use the gh command via the bash tool for ALL GitHub-related tasks including working with issues, pull requests, checks, and releases. If given a Github URL use the gh command to get the information needed.
+
+GitHub notifies the owner of any \`@name\` written in a PR, issue, or comment. Write a bare \`@name\` only for a real login you mean to notify. Put roles, placeholders, and code (\`@human\`, \`@reviewer\`, \`@types/node\`) in backticks or drop the \`@\`, even when copied from project files.
+
+IMPORTANT: When the user asks you to create a pull request, follow these steps carefully:
+
+1. Run the following bash commands in parallel using the bash tool, in order to understand the current state of the branch since it diverged from the main branch:
+   - Run a git status command to see all untracked files (never use -uall flag)
+   - Run a git diff command to see both staged and unstaged changes that will be committed
+   - Check if the current branch tracks a remote branch and is up to date with the remote, so you know if you need to push to the remote
+   - Run a git log command and \`git diff [base-branch]...HEAD\` to understand the full commit history for the current branch (from the time it diverged from the base branch)
+2. Analyze all changes that will be included in the pull request, making sure to look at all relevant commits (NOT just the latest commit, but ALL commits that will be included in the pull request!!!), and draft a pull request title and summary:
+   - Keep the PR title short (under 70 characters)
+   - Use the description/body for details, not the title
+3. Run the following commands in parallel:
+   - Create new branch if needed
+   - Push to remote with -u flag if needed
+   - Create PR using gh pr create with the format below. Use a HEREDOC to pass the body to ensure correct formatting.
+<example>
+gh pr create --title "the pr title" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points>
+
+## Test plan
+[Bulleted markdown checklist of TODOs for testing the pull request...]
+
+🤖 Generated with [Len](https://openlen.com)
+EOF
+)"
+</example>
+
+Important:
+- Return the PR URL when you're done, so the user can see it`;
+
+/** The bash description of a project with a remote (after withGit). Each sentence it changes must be there: throws otherwise. */
+export function withGitRemote(description: string): string {
+  for (const needle of [DESTRUCTIVE, AFTER_DESTRUCTIVE, AFTER_EXPLORE]) {
+    if (!description.includes(needle)) throw new Error(`withGitRemote: the bash description no longer says "${needle}"`);
+  }
+  return (
+    description
+      .replace(DESTRUCTIVE, DESTRUCTIVE_WITH_REMOTE)
+      .replace(AFTER_DESTRUCTIVE, `${AFTER_DESTRUCTIVE}${NO_FORCE_TO_MAIN}`)
+      .replace(AFTER_EXPLORE, `${AFTER_EXPLORE}${NO_PUSH_UNLESS_ASKED}`) + CREATING_PULL_REQUESTS
+  );
+}
+
 // THE REAL TERMINAL (spec local 2026-10-21-real-terminal-e2b, §11): with the box on, bash says
 // it runs real programs, where its network reaches, that the visitors' data is read with its tools
 // and that a command can go on in the background. Decided per process, never per turn: the
