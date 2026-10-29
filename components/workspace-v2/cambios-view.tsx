@@ -31,7 +31,7 @@ import type { CambiosDeUnTurno, PeticionDeCambios } from "@/lib/workspace-v2/cam
 import { diffDeFichero, filasLadoALado, type LineaDelDiff, type TrozoDelDiff } from "@/lib/workspace-v2/diff-de-ficheros";
 import { colorearLineas, lenguajeDe, type Trozo } from "@/lib/workspace-v2/colorear";
 
-import { cuentasDe, MasMenos } from "./ficheros-del-turno";
+import { binStat, cuentasDe, MasMenos } from "./ficheros-del-turno";
 import { useIsMobile } from "./use-is-mobile";
 import { claveDeLinea, DebajoDeLaLinea, NumeroComentable, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
 import { LineaColoreada } from "./linea-coloreada";
@@ -313,6 +313,7 @@ export function CambiosView({
                     {c.nuevo && <span className="shrink-0 text-[10.5px] text-emerald-600 dark:text-emerald-400">{t("preview.cambios.nuevo")}</span>}
                     {c.borrado && <span className="shrink-0 text-[10.5px] text-red-600 dark:text-red-400">{t("preview.cambios.borrado")}</span>}
                     {c.grande && <span className="shrink-0 text-[10.5px] fg-faint">{t("preview.cambios.grandeCorto")}</span>}
+                    {c.binario && <span className="shrink-0 text-[10.5px] fg-faint tabular-nums">{c.binario}</span>}
                     <span className="ml-auto pl-2 text-[10.5px]">
                       <MasMenos anadidas={c.anadidas} quitadas={c.quitadas} />
                     </span>
@@ -341,6 +342,7 @@ export function CambiosView({
                           c.nuevo ? t("preview.cambios.nuevo") : null,
                           c.borrado ? t("preview.cambios.borrado") : null,
                           c.grande ? t("preview.cambios.grandeCorto") : null,
+                          c.binario ?? null,
                           c.anadidas !== null && c.quitadas !== null ? `+${c.anadidas} −${c.quitadas}` : null,
                         ]
                           .filter(Boolean)
@@ -384,6 +386,13 @@ export function CambiosView({
             )}
             {elegido?.tipo === "grande" ? (
               <p className="p-3 text-[12px] fg-muted ui-small">{t("preview.cambios.grande")}</p>
+            ) : elegido?.tipo === "binario" ? (
+              // git diff's own words for a binary, and its --stat line.
+              <p className="p-3 font-mono text-[11.5px] fg-muted">
+                {`Binary files ${elegido.nuevo ? "/dev/null" : `a${elegido.ruta}`} and ${elegido.borrado ? "/dev/null" : `b${elegido.ruta}`} differ`}
+                <br />
+                {binStat(elegido.bytesAntes, elegido.bytesDespues)}
+              </p>
             ) : (
               diff &&
               pintado && (

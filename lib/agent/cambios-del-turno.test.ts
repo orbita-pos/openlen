@@ -2,6 +2,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { cambiosEntreFotos, MAX_BYTES_POR_FICHERO } from "./cambios-del-turno";
+import { makePointer } from "@/lib/files/blob-pointer";
 
 const ANTES = {
   "/index.html": "<h1>Marejada</h1>\n",
@@ -44,5 +45,18 @@ describe("cambiosEntreFotos — lo que cambió entre el principio y el final del
     expect(cambiosEntreFotos(ANTES, { ...ANTES, "/index.html": grande })).toEqual([
       { ruta: "/index.html", tipo: "grande", nuevo: false, borrado: false },
     ]);
+  });
+});
+
+describe("a binary in the turn's changes (spec local 2026-10-28-ficheros-al-nivel-de-claude-code)", () => {
+  it("🔴 never travels as text (its pointer): «binario» with its bytes before and after", () => {
+    const png = makePointer({ sha256: "a".repeat(64), size: 74, gitOid: "b".repeat(40) });
+    const otro = makePointer({ sha256: "c".repeat(64), size: 90, gitOid: "d".repeat(40) });
+    const c = cambiosEntreFotos({ "/img/b.png": png }, { "/img/a.png": png, "/img/b.png": otro });
+    expect(c).toEqual([
+      { ruta: "/img/a.png", tipo: "binario", nuevo: true, borrado: false, bytesAntes: 0, bytesDespues: 74 },
+      { ruta: "/img/b.png", tipo: "binario", nuevo: false, borrado: false, bytesAntes: 74, bytesDespues: 90 },
+    ]);
+    expect(JSON.stringify(c)).not.toContain("openlen-blob");
   });
 });

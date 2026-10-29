@@ -20,6 +20,7 @@
  * Puro: dos fotos dentro, la lista fuera. Lo prueba vitest.
  */
 import { esDelProyecto } from "@/lib/agent/terminal/ficheros";
+import { isBlobPointer, sizeOf } from "@/lib/files/blob-pointer";
 import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 
 /** Por encima de esto, un lado no viaja: «demasiado grande para compararlo»
@@ -40,6 +41,16 @@ export type FicheroCambiado =
       readonly tipo: "grande";
       readonly nuevo: boolean;
       readonly borrado: boolean;
+    }
+  | {
+      /** A binary (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): it is its pointer here, never shown as
+       *  text; its bytes, for git's «Bin 0 -> 74 bytes». */
+      readonly ruta: string;
+      readonly tipo: "binario";
+      readonly nuevo: boolean;
+      readonly borrado: boolean;
+      readonly bytesAntes: number;
+      readonly bytesDespues: number;
     };
 
 /** Los ficheros que cambiaron entre las dos fotos, por ruta (orden de código, como allí). */
@@ -55,6 +66,10 @@ export function cambiosEntreFotos(
     const a = Object.hasOwn(antes, ruta) ? antes[ruta]! : null;
     const d = Object.hasOwn(despues, ruta) ? despues[ruta]! : null;
     if (a === d) continue;
+    if ((a !== null && isBlobPointer(a)) || (d !== null && isBlobPointer(d))) {
+      out.push({ ruta, tipo: "binario", nuevo: a === null, borrado: d === null, bytesAntes: a === null ? 0 : sizeOf(a), bytesDespues: d === null ? 0 : sizeOf(d) });
+      continue;
+    }
     if ((a?.length ?? 0) > MAX_BYTES_POR_FICHERO || (d?.length ?? 0) > MAX_BYTES_POR_FICHERO) {
       out.push({ ruta, tipo: "grande", nuevo: a === null, borrado: d === null });
     } else {

@@ -27,11 +27,19 @@ export interface CuentaDeFichero {
   readonly nuevo: boolean;
   readonly borrado: boolean;
   readonly grande: boolean;
+  /** A binary: git's «Bin 0 -> 74 bytes» instead of +N −M. */
+  readonly binario?: string;
 }
+
+/** git diff --stat's words for a binary. */
+export const binStat = (antes: number, despues: number) => `Bin ${antes} -> ${despues} bytes`;
 
 /** Las líneas de cada fichero, con la MISMA cuenta que la lente. */
 export function cuentasDe(ficheros: readonly FicheroCambiado[]): CuentaDeFichero[] {
   return ficheros.map((f) => {
+    if (f.tipo === "binario") {
+      return { ruta: f.ruta, anadidas: null, quitadas: null, nuevo: f.nuevo, borrado: f.borrado, grande: false, binario: binStat(f.bytesAntes, f.bytesDespues) };
+    }
     if (f.tipo === "grande") {
       return { ruta: f.ruta, anadidas: null, quitadas: null, nuevo: f.nuevo, borrado: f.borrado, grande: true };
     }
@@ -99,6 +107,7 @@ export function FicherosDelTurno({
               {c.nuevo && <span className="shrink-0 text-emerald-700 dark:text-emerald-400">{t("preview.cambios.nuevo")}</span>}
               {c.borrado && <span className="shrink-0 text-red-700 dark:text-red-400">{t("preview.cambios.borrado")}</span>}
               {c.grande && <span className="shrink-0">{t("preview.cambios.grandeCorto")}</span>}
+              {c.binario && <span className="shrink-0 tabular-nums">{c.binario}</span>}
               <span className="ml-auto pl-2">
                 <MasMenos anadidas={c.anadidas} quitadas={c.quitadas} />
               </span>
