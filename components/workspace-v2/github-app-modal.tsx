@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertCircle, CheckCircle2, ExternalLink, GitBranch, Loader2, Unplug, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ExternalLink, GitBranch, Loader2, Unplug } from "lucide-react";
 
-import { useFocusTrap } from "./use-focus-trap";
+import { ModalShell } from "./modal-shell";
 
 // «Conectar GitHub» (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): the owner connects OpenLen's GitHub
 // App and sees which repository the project pushes to. No git buttons — like Claude Code, git is asked of Len or typed
@@ -30,7 +30,6 @@ export function GitHubAppModal({ open, onClose, projectId, initialErrorKey }: Gi
   const [status, setStatus] = useState<GitHubAppStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const trapRef = useFocusTrap(open);
 
   const refresh = useCallback(async () => {
     try {
@@ -60,29 +59,24 @@ export function GitHubAppModal({ open, onClose, projectId, initialErrorKey }: Gi
     await refresh();
   };
 
-  if (!open) return null;
   const connected = (status?.accounts.length ?? 0) > 0;
   const origin = status?.origin?.replace(/^https:\/\/github\.com\//, "").replace(/\.git$/, "") ?? null;
 
   return (
-    <div ref={trapRef} role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-elev border bd shadow-elev">
-        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b bd bg-elev rounded-t-2xl">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md ring-1 ring-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-[var(--accent)]">
-              <GitBranch size={14} />
-            </span>
-            <div>
-              <h2 className="text-[14px] font-semibold tracking-tight fg">{t("title")}</h2>
-              <p className="text-[11px] fg-faint">{t("subtitle")}</p>
-            </div>
-          </div>
-          <button type="button" onClick={onClose} className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-hover transition fg-muted" aria-label={t("close")}>
-            <X size={14} />
-          </button>
-        </div>
-
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      titleId="github-app-modal-title"
+      size="lg"
+      closeLabel={t("close")}
+      title={
+        <span className="inline-flex items-center gap-2">
+          <GitBranch size={15} className="text-[var(--accent)]" />
+          {t("title")}
+        </span>
+      }
+      subtitle={t("subtitle")}
+    >
         <div className="p-5 space-y-4">
           {error && (
             <div className="flex items-start gap-2 rounded-md ring-1 ring-red-200 dark:ring-red-500/30 bg-red-50/60 dark:bg-red-500/5 px-3 py-2 text-[12px] text-red-800 dark:text-red-300">
@@ -157,7 +151,6 @@ export function GitHubAppModal({ open, onClose, projectId, initialErrorKey }: Gi
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
