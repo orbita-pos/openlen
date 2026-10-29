@@ -70,7 +70,8 @@ import {
   type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
-import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { neutralizarMarcas, quienPide } from "@/lib/agent/equipo";
@@ -1078,7 +1079,8 @@ async function correrTurno(
   // Con el HOY en UTC, a las 19:25 de México Len llamó «ayer» a un mensaje de
   // ese día (plans/len-2/corridas/2026-10-01-resultados-humo). Leer la
   // guardada tampoco tumba el turno: si la base falla, UTC, y la herramienta lo dice.
-  const zonaDelTurno = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null)) ?? ZONA_SIN_DATO;
+  const zonaConocida = zonaDelCuerpo ?? (await leerZona(userId).catch(() => null));
+  const zonaDelTurno = zonaConocida ?? ZONA_SIN_DATO;
   // LO QUE SE MANDA COMO TU MENSAJE, detrás del sobre del equipo: el contexto del
   // hilo o del correo, si lo hay, y lo que pediste. La fila guarda sólo lo escrito
   // (y las correcciones «↳», para el panel); si difiere de esto, guarda también
@@ -1091,11 +1093,21 @@ async function correrTurno(
     `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     skillsInvocadas,
   );
+  // LEN READS THE TIME (spec local 2026-10-29-tareas-programadas, §7.3): DeepSeek's time context.
+  // Without a zone from the browser or saved, the reading says so instead of guessing one.
+  const ahoraDelTurno = new Date();
+  const timeContextDelTurno = timeContext({
+    turn: filasDelHistorial.length + 1,
+    now: ahoraDelTurno,
+    zone: zonaConocida,
+    sinceLast: sinceLastTurn(await lastTurnOfTheConversation(projectId).catch(() => null), ahoraDelTurno),
+  });
   const argsDelTurno = {
     mode,
     app: appDelTurno,
     realTerminal,
     zona: zonaDelTurno,
+    timeContext: timeContextDelTurno,
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),

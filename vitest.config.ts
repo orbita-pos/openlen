@@ -545,6 +545,7 @@ export default defineConfig({
       "lib/agent/goal-activation.test.ts",
       "lib/agent/goal-tools.test.ts",
       "lib/agent/schedule-tools.test.ts",
+      "lib/agent/time-context.test.ts",
       // La lista de progreso del usuario (spec local 2026-10-15).
       "lib/agent/todo-list.test.ts",
       "lib/agent/todo-write.test.ts",
