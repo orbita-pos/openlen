@@ -70,7 +70,12 @@ export function CambiosDelComandoView({
               ) : (
                 <span className="min-w-0 truncate font-medium fg">{ruta}</span>
               )}
-              <MasMenos anadidas={f.anadidas} quitadas={f.quitadas} />
+              {f.binario ? (
+                // A binary has no lines: its bytes, in git diff --stat's words.
+                <span className="shrink-0 fg-faint tabular">{`Bin ${f.binario.antes} -> ${f.binario.despues} bytes`}</span>
+              ) : (
+                <MasMenos anadidas={f.anadidas} quitadas={f.quitadas} />
+              )}
             </div>
             {conLineas && f.trozos.length > 0 && (
               <div className="mt-0.5 overflow-x-auto nice-scroll rounded-md border bd">

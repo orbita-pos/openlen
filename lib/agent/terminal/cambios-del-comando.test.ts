@@ -8,6 +8,7 @@ import {
   leerCambiosDelComando,
   MAX_FICHEROS,
 } from "./cambios-del-comando";
+import { makePointer } from "@/lib/files/blob-pointer";
 
 const lineas = (n: number, p = "l") => Array.from({ length: n }, (_, i) => `${p}${i + 1}`).join("\n") + "\n";
 const cuantas = (c: ReturnType<typeof cambiosDelComando>, i = 0) =>
@@ -32,6 +33,21 @@ describe("cambiosDelComando — lo que cambió un `bash`, por fichero (la #10)",
     const lin = c.ficheros[1]!.trozos[0]!.lineas;
     expect(lin.find((l) => l.tipo === "quitada")).toMatchObject({ texto: "<p>Calle Marea 12</p>", antes: 2, despues: null });
     expect(lin.find((l) => l.tipo === "anadida")).toMatchObject({ texto: "<p>Calle Gaviotas 7</p>", antes: null, despues: 2 });
+  });
+
+  it("🔴 un binario no se pinta como texto (su puntero): «Bin 0 -> 74 bytes», como git diff --stat", () => {
+    const png = makePointer({ sha256: "a".repeat(64), size: 74, gitOid: "b".repeat(40) });
+    const otro = makePointer({ sha256: "c".repeat(64), size: 90, gitOid: "d".repeat(40) });
+    const c = cambiosDelComando({ "/img/b.png": png, "/img/c.png": png }, { "/img/a.png": png, "/img/b.png": otro })!;
+    expect(c.ficheros.map((f) => [f.ruta, f.tipo, f.binario, f.anadidas, f.quitadas, f.trozos.length])).toEqual([
+      ["/img/a.png", "creado", { antes: 0, despues: 74 }, 0, 0, 0],
+      ["/img/b.png", "actualizado", { antes: 74, despues: 90 }, 0, 0, 0],
+      ["/img/c.png", "borrado", { antes: 74, despues: 0 }, 0, 0, 0],
+    ]);
+    expect(JSON.stringify(c)).not.toContain("openlen-blob");
+    expect(leerCambiosDelComando(JSON.parse(JSON.stringify(c)))).toEqual(c);
+    // A text file stays as it was: no binario field.
+    expect(cambiosDelComando({}, { "/a.txt": "x\n" })!.ficheros[0]).not.toHaveProperty("binario");
   });
 
   it("40 líneas por fichero, como Claude Code; el resto se cuenta", () => {
