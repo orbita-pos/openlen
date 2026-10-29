@@ -133,6 +133,25 @@ describe("remotes, against the real git", { timeout: 60_000 }, () => {
     await same(["push"]);
   });
 
+  it("🔴 pull with uncommitted changes it would overwrite: git's refusal, nothing written (fast-forward and merge)", async () => {
+    await same(["remote", "add", "origin", "{url}"]);
+    await same(["push", "-u", "origin", "main"]);
+    await someoneElsePushes({ "index.html": "<h1>Hola</h1>\n<p>uno de otra</p>\n<p>dos</p>\n" }, "de otra");
+    pair.write({ "index.html": "<h1>Hola</h1>\n<p>uno sin guardar</p>\n<p>dos</p>\n" });
+    await same(["pull"]);
+    sameFiles();
+    await same(["status"]);
+    // Diverged: a commit of mine on another file, the same uncommitted change.
+    pair.tick();
+    pair.write({ "mio.txt": "m\n" });
+    await same(["add", "mio.txt"]);
+    await same(["commit", "-m", "mío"]);
+    pair.tick();
+    await same(["pull"]);
+    sameFiles();
+    await same(["status"]);
+  });
+
   it("a branch without upstream: push and pull say so; push -u and pull origin <branch> work", async () => {
     await same(["remote", "add", "origin", "{url}"]);
     await same(["push", "-u", "origin", "main"]);
