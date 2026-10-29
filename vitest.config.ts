@@ -506,6 +506,7 @@ export default defineConfig({
       "lib/agent/loop.test.ts",
       // Al arrancar, lo que el proceso anterior dejó a medio turno. LISTA BLANCA.
       "lib/agent/close-dead-turns.test.ts",
+      "lib/agent/exit-flush.test.ts",
       "lib/agent/repeat-reminder.test.ts",
       "lib/agent/cache-effect-declared.test.ts",
       "lib/agent/silent-turn-reminder.test.ts",

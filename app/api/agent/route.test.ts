@@ -10,6 +10,7 @@ import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, PLAN_POLICY } from "@/lib/agent/plan-m
 import { createGoal, goalRoundPrompt, type GoalSnapshot } from "@/lib/agent/goal";
 import { _resetGoalActivation, armGoal, goalActivation } from "@/lib/agent/goal-activation";
 import { _resetProviderHealth, isCooling } from "@/lib/agent/provider-health";
+import { flushLiveTurns } from "@/lib/agent/exit-flush";
 
 // ⚰️ Aquí vivía `veredicto()`, la factoría tipada de los veredictos de los ojos
 // al cerrar (`verifyEditedPage`), que se fueron con `verifyTurn` el 2026-10-06
@@ -2647,6 +2648,40 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: Record<string, unknown> | null }])[1].transcript;
     expect(fila).toMatchObject({ mensajes: LO_VISTO });
     expect(fila).not.toHaveProperty("partial");
+  });
+
+  // Claude Code vacía la cola de su transcripción cada 100 ms: lo visto no espera la ventana de 2 s del texto.
+  type Avances = [string, string, { transcript?: { mensajes: Message[]; partial?: true } }][];
+  it("🔴 lo que vio el modelo sale en cuanto cambia, sin esperar los 2 s del latido", async () => {
+    let enLaFila: Message[] | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      let visto: Message[] = [];
+      args.liveTranscript?.(() => visto);
+      await new Promise((r) => setTimeout(r, 50));
+      visto = [...LO_VISTO];
+      await new Promise((r) => setTimeout(r, 400));
+      enLaFila = (mocks.avanceDelTurno.mock.calls as unknown as Avances).find((a) => a[2].transcript)?.[2].transcript?.mensajes;
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    expect(enLaFila).toEqual(LO_VISTO);
+  });
+
+  it("🔴 un deploy (SIGTERM) a mitad del turno: antes de salir, la fila guarda lo último que vio; acabado el turno, ya no espera por él", async () => {
+    let antesDeSalir: Message[] | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.liveTranscript?.(() => LO_VISTO);
+      // Lo que hace el `process.exit` de Next tras el SIGTERM (lib/agent/exit-flush.ts), sin esperar al vigía.
+      await flushLiveTurns(1000);
+      antesDeSalir = (mocks.avanceDelTurno.mock.calls as unknown as Avances).at(-1)?.[2].transcript?.mensajes;
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    expect(antesDeSalir).toEqual(LO_VISTO);
+    await new Promise((r) => setTimeout(r, 0));
+    const llamadas = mocks.avanceDelTurno.mock.calls.length;
+    await flushLiveTurns(100);
+    expect(mocks.avanceDelTurno.mock.calls.length).toBe(llamadas);
   });
 
   it("sin créditos no se abre fila", async () => {

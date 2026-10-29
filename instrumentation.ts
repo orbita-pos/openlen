@@ -17,6 +17,15 @@ export async function register() {
     } catch {
       // Filesystem may be read-only in some test or CI envs — ignore.
     }
+    // Y lo que ESTE proceso deje: un deploy lo para con SIGTERM, y antes del
+    // `process.exit` de Next cada turno vivo escribe lo que lleva, como Claude
+    // Code vacía su transcripción al apagarse (lib/agent/exit-flush.ts).
+    try {
+      const { installExitFlush } = await import("@/lib/agent/exit-flush");
+      installExitFlush();
+    } catch (err) {
+      console.error("[exit] no se pudo armar el vaciado al apagarse", err);
+    }
     // Lo que el proceso anterior dejó a medio turno (un deploy, un reinicio):
     // sus filas «en curso» pasan a cortadas —también las que nadie reengancha—
     // y sus cajas de E2B se sueltan. Ya, sin esperar: un turno nuevo no puede

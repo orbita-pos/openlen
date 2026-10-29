@@ -80,6 +80,8 @@ export interface E2bSdkLike {
     create(template: string, o: Record<string, unknown>): Promise<E2bSandboxLike>;
     connect(sandboxId: string, o: Record<string, unknown>): Promise<E2bSandboxLike>;
     kill(sandboxId: string, o: Record<string, unknown>): Promise<unknown>;
+    /** `false` when it was already paused (E2B's 409). */
+    pause(sandboxId: string, o: Record<string, unknown>): Promise<unknown>;
   };
 }
 
@@ -244,6 +246,10 @@ export function e2bDriver(config: SandboxConfig, loadSdk: () => Promise<E2bSdkLi
     async kill(sandboxId) {
       const { Sandbox } = await loadSdk();
       await Sandbox.kill(sandboxId, { apiKey: config.apiKey });
+    },
+    async pause(sandboxId) {
+      const { Sandbox } = await loadSdk();
+      await Sandbox.pause(sandboxId, { apiKey: config.apiKey });
     },
   };
 }
