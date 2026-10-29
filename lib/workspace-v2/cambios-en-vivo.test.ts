@@ -14,6 +14,9 @@ describe("esFicheroCambiado — lo que llega por el evento `cambios`", () => {
     expect(esFicheroCambiado({ ...UNO, ruta: "index.html" })).toBe(false);
     expect(esFicheroCambiado({ ...UNO, despues: 3 })).toBe(false);
     expect(esFicheroCambiado({ ruta: "/x", tipo: "otro" })).toBe(false);
+    // A binary (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): its bytes, never its pointer.
+    expect(esFicheroCambiado({ ruta: "/img/a.png", tipo: "binario", nuevo: true, borrado: false, bytesAntes: 0, bytesDespues: 74 })).toBe(true);
+    expect(esFicheroCambiado({ ruta: "/img/a.png", tipo: "binario", nuevo: true, borrado: false, bytesAntes: 0, bytesDespues: -1 })).toBe(false);
     expect(esFicheroCambiado(null)).toBe(false);
   });
 });

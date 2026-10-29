@@ -36,6 +36,8 @@ export function esFicheroCambiado(x: unknown): x is FicheroCambiado {
   if (typeof f.ruta !== "string" || !f.ruta.startsWith("/")) return false;
   const textoONulo = (v: unknown) => v === null || typeof v === "string";
   if (f.tipo === "texto") return textoONulo(f.antes) && textoONulo(f.despues) && !(f.antes === null && f.despues === null);
+  const bytes = (v: unknown) => typeof v === "number" && Number.isInteger(v) && v >= 0;
+  if (f.tipo === "binario") return typeof f.nuevo === "boolean" && typeof f.borrado === "boolean" && bytes(f.bytesAntes) && bytes(f.bytesDespues);
   return f.tipo === "grande" && typeof f.nuevo === "boolean" && typeof f.borrado === "boolean";
 }
 
