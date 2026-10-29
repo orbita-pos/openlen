@@ -38,6 +38,9 @@ async function main() {
   `);
   // Binaries (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): a blob pointer instead of the bytes.
   await db.execute(sql`ALTER TABLE "projectGitObjects" ADD COLUMN IF NOT EXISTS "blobPointer" text`);
+  // Branches (same spec, §8): every branch and which one is checked out.
+  await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "refs" jsonb NOT NULL DEFAULT '{}'`);
+  await db.execute(sql`ALTER TABLE "projectGitRepos" ADD COLUMN IF NOT EXISTS "currentBranch" text NOT NULL DEFAULT 'main'`);
   console.log("[git:migrate] projectGitObjects and projectGitRepos ready");
   process.exit(0);
 }

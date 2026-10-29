@@ -67,6 +67,32 @@ export class Repository {
     return this.files((await this.commit(commitOid)).tree);
   }
 
+  /** Every commit reachable from `starts`, newest first by committer date, as `git log` lists them (a merge's
+   *  parents too); none of `exclude`'s ancestors. */
+  async *walk(starts: readonly string[], exclude: ReadonlySet<string> = new Set()): AsyncGenerator<{ oid: string; commit: Commit }> {
+    const seen = new Set<string>(exclude);
+    const queue: { oid: string; commit: Commit; order: number }[] = [];
+    let order = 0;
+    const push = async (oid: string) => {
+      if (seen.has(oid)) return;
+      seen.add(oid);
+      queue.push({ oid, commit: await this.commit(oid), order: order++ });
+    };
+    for (const s of starts) await push(s);
+    while (queue.length > 0) {
+      queue.sort((a, b) => b.commit.committer.timestamp - a.commit.committer.timestamp || a.order - b.order);
+      const next = queue.shift()!;
+      yield { oid: next.oid, commit: next.commit };
+      for (const p of next.commit.parents) await push(p);
+    }
+  }
+
+  /** Is `ancestor` `descendant` itself or one of its ancestors? */
+  async isAncestor(ancestor: string, descendant: string): Promise<boolean> {
+    for await (const { oid } of this.walk([descendant])) if (oid === ancestor) return true;
+    return false;
+  }
+
   /** `from` and its ancestors, newest first. OpenLen's history is a line: one parent each. */
   async *history(from: string): AsyncGenerator<{ oid: string; commit: Commit }> {
     let oid: string | undefined = from;

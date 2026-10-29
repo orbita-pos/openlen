@@ -5,11 +5,21 @@ import type { GitObject } from "./objects";
 export type Index = Readonly<Record<string, string>>;
 
 export interface RepoState {
-  /** The commit `main` points at. */
+  /** The commit the current branch points at. */
   readonly head: string;
   readonly index: Index;
   /** Bumped on every write: the compare-and-swap token. */
   readonly version: number;
+  /** The checked-out branch (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8). */
+  readonly branch: string;
+  /** Every local branch → its commit, the current one included. */
+  readonly refs: Readonly<Record<string, string>>;
+}
+
+/** A write that moves between branches or changes them: the branch checked out after it, and every branch. */
+export interface Branching {
+  readonly branch: string;
+  readonly refs: Readonly<Record<string, string>>;
 }
 
 export interface GitStore {
@@ -22,6 +32,7 @@ export interface GitStore {
   writeObjects(objects: readonly GitObject[]): Promise<void>;
   /** Up to two oids starting with `prefix`: two is enough to call it ambiguous. */
   findByPrefix(prefix: string): Promise<readonly string[]>;
-  /** Compare-and-swap of `main` and the index: `null` if someone wrote first. */
-  updateRepo(expectedVersion: number, head: string, index: Index): Promise<RepoState | null>;
+  /** Compare-and-swap of the current branch's commit and the index (and, with `branching`, of which branch is
+   *  checked out and every branch): `null` if someone wrote first. */
+  updateRepo(expectedVersion: number, head: string, index: Index, branching?: Branching): Promise<RepoState | null>;
 }

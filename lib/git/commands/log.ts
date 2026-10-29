@@ -1,7 +1,7 @@
 // `git log`: the history from HEAD (or a commit, or a range), filtered by path, author or
 // message, in git's formats, with -p / --stat / --name-only / --name-status.
 import type { Command, CommandContext } from "../command";
-import { commitHeader, normalizeLogArgs, parseDateMode, parsePretty, type Display } from "../format";
+import { commitHeader, normalizeLogArgs, parseDateMode, parsePretty, type Display, decorationsOf } from "../format";
 import type { Commit } from "../objects";
 import { parseOptions, type Options } from "../options";
 import { matchesPathspec } from "../paths";
@@ -19,7 +19,7 @@ export function displayOf(ctx: CommandContext, o: Options): Display {
     date: parseDateMode(o.value("--date")),
     decorate: o.has("--decorate") && !o.has("--no-decorate"),
     now: ctx.now,
-    head: ctx.state.head,
+    decorations: decorationsOf(ctx.state),
   };
 }
 
@@ -77,22 +77,24 @@ export const log: Command = async (ctx, args) => {
   const o = parseOptions(normalizeLogArgs(args), { flags: LOG_FLAGS, values: LOG_VALUES });
   const display = displayOf(ctx, o);
   const { revisions, paths } = await revisionsAndPaths(ctx, o.positional, o.afterDashDash);
-  let start = ctx.state.head;
+  const starts: string[] = [];
   const exclude = new Set<string>();
   for (const r of revisions) {
-    if (r.kind === "single") start = r.oid;
+    if (r.kind === "single") starts.push(r.oid);
     else {
-      start = r.to;
-      if (!r.symmetric) for await (const { oid } of ctx.repo.history(r.from)) exclude.add(oid);
+      starts.push(r.to);
+      if (!r.symmetric) for await (const { oid } of ctx.repo.walk([r.from])) exclude.add(oid);
     }
   }
+  // --all: every branch, as git starts from every ref.
+  if (o.has("--all")) starts.push(ctx.state.head, ...Object.values(ctx.state.refs));
+  if (starts.length === 0) starts.push(ctx.state.head);
   const author = o.value("--author");
   const grep = o.value("--grep");
   const authorRe = author !== undefined ? grepRegExp([author], {}) : null;
   const grepRe = grep !== undefined ? grepRegExp([grep], {}) : null;
   let entries: { oid: string; commit: Commit }[] = [];
-  for await (const entry of ctx.repo.history(start)) {
-    if (exclude.has(entry.oid)) break;
+  for await (const entry of ctx.repo.walk(starts, exclude)) {
     if (authorRe && !authorRe.test(`${entry.commit.author.name} <${entry.commit.author.email}>`)) continue;
     if (grepRe && !grepRe.test(entry.commit.message)) continue;
     if (!(await touches(ctx, entry.commit, paths))) continue;

@@ -67,7 +67,7 @@ describe("the small commands, against the real git", () => {
     await same(["frobnicate"]);
     const stash = await pair.ours.git(["stash"]);
     expect(stash).toEqual({ stdout: "", stderr: "git stash: not available here: this project's repository keeps no stash; to set changes aside, commit them.\n", exitCode: 1 });
-    expect((await pair.ours.git(["branch", "feature"])).stderr).toMatch(/^git branch feature: not available here: /);
+    expect((await pair.ours.git(["branch", "-m", "feature"])).stderr).toMatch(/^git branch -m: not available here: /);
     expect((await pair.ours.git(["config", "user.name", "X"])).stderr).toMatch(/^git config: not available here: /);
     expect((await pair.ours.git(["init"])).stdout).toBe("Reinitialized existing Git repository in /.git/\n");
     expect((await pair.ours.git(["rev-parse", "--show-toplevel"])).stdout).toBe("/\n");

@@ -1,4 +1,5 @@
 // How git writes and reads commit messages.
+import { compareNames } from "./objects";
 import type { GitIdentity } from "./command";
 import { abbrev } from "./diff";
 import { GitFatal } from "./errors";
@@ -157,11 +158,24 @@ export interface Display {
   readonly date: DateMode;
   readonly decorate: boolean;
   readonly now: Date;
-  /** The commit `main` points at, for (HEAD -> main). */
-  readonly head: string;
+  /** What each commit is decorated with (`HEAD -> main, otra`), from `decorationsOf`. */
+  readonly decorations: ReadonlyMap<string, string>;
 }
 
-export function expandFormat(template: string, oid: string, c: Commit, o: { readonly now: Date; readonly date: DateMode; readonly head: boolean }): string {
+/** Git's decorations: "HEAD -> <current>" first, then the other branches at that commit, as git lists them
+ *  (by name, Z to A). */
+export function decorationsOf(state: { readonly head: string; readonly branch: string; readonly refs: Readonly<Record<string, string>> }): Map<string, string> {
+  const byCommit = new Map<string, string[]>();
+  for (const name of Object.keys(state.refs).sort((a, b) => compareNames(b, a))) {
+    if (name === state.branch) continue;
+    const oid = state.refs[name]!;
+    byCommit.set(oid, [...(byCommit.get(oid) ?? []), name]);
+  }
+  byCommit.set(state.head, [`HEAD -> ${state.branch}`, ...(byCommit.get(state.head) ?? [])]);
+  return new Map([...byCommit].map(([oid, names]) => [oid, names.join(", ")]));
+}
+
+export function expandFormat(template: string, oid: string, c: Commit, o: { readonly now: Date; readonly date: DateMode; readonly decoration?: string }): string {
   return template.replace(/%(%|n|H|h|T|t|P|p|an|ae|ad|ar|as|ai|at|cn|ce|cd|cr|cs|ci|ct|s|b|B|d|D|x[0-9a-fA-F]{2})/g, (_m, k: string) => {
     switch (k) {
       case "%": return "%";
@@ -189,8 +203,8 @@ export function expandFormat(template: string, oid: string, c: Commit, o: { read
       case "s": return subjectOf(c.message);
       case "b": return bodyOf(c.message);
       case "B": return c.message;
-      case "d": return o.head ? " (HEAD -> main)" : "";
-      case "D": return o.head ? "HEAD -> main" : "";
+      case "d": return o.decoration ? ` (${o.decoration})` : "";
+      case "D": return o.decoration ?? "";
       default: return String.fromCharCode(parseInt(k.slice(1), 16));
     }
   });
@@ -198,7 +212,8 @@ export function expandFormat(template: string, oid: string, c: Commit, o: { read
 
 export function commitHeader(oid: string, c: Commit, d: Display): string {
   const shown = d.abbrevCommit ? abbrev(oid) : oid;
-  const decor = d.decorate && oid === d.head ? " (HEAD -> main)" : "";
+  const decoration = d.decorations.get(oid);
+  const decor = d.decorate && decoration ? ` (${decoration})` : "";
   const who = (s: Signature) => `${s.name} <${s.email}>`;
   const date = (s: Signature) => formatDate(s, d.date, d.now);
   switch (d.pretty.kind) {
@@ -214,6 +229,6 @@ export function commitHeader(oid: string, c: Commit, d: Display): string {
       return `commit ${shown}${decor}\nAuthor:     ${who(c.author)}\nAuthorDate: ${date(c.author)}\nCommit:     ${who(c.committer)}\nCommitDate: ${date(c.committer)}\n\n${indentMessage(c.message)}`;
     case "format":
     case "tformat":
-      return expandFormat(d.pretty.template, oid, c, { now: d.now, date: d.date, head: oid === d.head });
+      return expandFormat(d.pretty.template, oid, c, { now: d.now, date: d.date, ...(d.decorations.has(oid) ? { decoration: d.decorations.get(oid)! } : {}) });
   }
 }

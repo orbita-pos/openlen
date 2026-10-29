@@ -1,6 +1,6 @@
 // A GitStore in memory, for tests and for the differential harness.
 import type { GitObject } from "./objects";
-import type { GitStore, Index, RepoState } from "./store";
+import type { Branching, GitStore, Index, RepoState } from "./store";
 
 export function memoryStore(): GitStore & { readonly objects: ReadonlyMap<string, GitObject> } {
   const objects = new Map<string, GitObject>();
@@ -11,7 +11,7 @@ export function memoryStore(): GitStore & { readonly objects: ReadonlyMap<string
       return repo;
     },
     async createRepo(head: string, index: Index) {
-      repo ??= { head, index, version: 0 };
+      repo ??= { head, index, version: 0, branch: "main", refs: { main: head } };
       return repo;
     },
     async readObjects(oids: readonly string[]) {
@@ -28,9 +28,10 @@ export function memoryStore(): GitStore & { readonly objects: ReadonlyMap<string
     async findByPrefix(prefix: string) {
       return [...objects.keys()].filter((oid) => oid.startsWith(prefix)).slice(0, 2);
     },
-    async updateRepo(expectedVersion: number, head: string, index: Index) {
+    async updateRepo(expectedVersion: number, head: string, index: Index, branching?: Branching) {
       if (!repo || repo.version !== expectedVersion) return null;
-      repo = { head, index, version: expectedVersion + 1 };
+      const branch = branching?.branch ?? repo.branch;
+      repo = { head, index, version: expectedVersion + 1, branch, refs: { ...(branching?.refs ?? repo.refs), [branch]: head } };
       return repo;
     },
   };

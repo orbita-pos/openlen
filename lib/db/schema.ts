@@ -2718,6 +2718,10 @@ export const projectGitRepos = pgTable("projectGitRepos", {
   projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
   head: text("head").notNull(),
   index: jsonb("index").$type<Record<string, string>>().notNull(),
+  /** Every local branch → its commit (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8); empty = only main. */
+  refs: jsonb("refs").$type<Record<string, string>>().notNull().default({}),
+  /** The checked-out branch: `head` is its commit. */
+  currentBranch: text("currentBranch").notNull().default("main"),
   version: integer("version").notNull().default(0),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),

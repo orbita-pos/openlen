@@ -27,7 +27,7 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
   const staged = s.tracked.filter((t) => t.staged !== " ");
   const unstaged = s.tracked.filter((t) => t.unstaged !== " ");
   const untracked = untrackedShown(ctx, s, mode);
-  let out = "On branch main\n";
+  let out = `On branch ${ctx.state.branch}\n`;
   if (staged.length > 0) {
     out += 'Changes to be committed:\n  (use "git restore --staged <file>..." to unstage)\n';
     for (const t of staged) out += `\t${LABELS[t.staged]}${show(t.path)}\n`;
@@ -55,7 +55,7 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
 
 export function shortStatus(ctx: CommandContext, s: Status, o: { readonly porcelain: boolean; readonly branch: boolean; readonly untracked: Untracked }): string {
   const show = (p: string) => quotePath(o.porcelain ? p : relativeToCwd(ctx.cwd, p), true);
-  let out = o.branch ? "## main\n" : "";
+  let out = o.branch ? `## ${ctx.state.branch}\n` : "";
   for (const t of s.tracked) out += `${t.staged}${t.unstaged} ${show(t.path)}\n`;
   for (const p of untrackedShown(ctx, s, o.untracked)) out += `?? ${show(p)}\n`;
   return out;

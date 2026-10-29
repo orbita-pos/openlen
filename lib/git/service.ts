@@ -58,6 +58,7 @@ export async function gitStatusForTurn(p: {
   const input = { store: postgresStore(p.projectId), files, cwd: "/", identity: who.identity, owner: who.owner, now: () => new Date() };
   const status = await runGit(input, ["--no-optional-locks", "status", "--short"]);
   const log = await runGit(input, ["--no-optional-locks", "log", "--oneline", "-n", "5"]);
+  const branch = await runGit(input, ["--no-optional-locks", "branch", "--show-current"]);
   if (status.exitCode !== 0 || log.exitCode !== 0) return null;
-  return formatGitStatusBlock({ branch: "main", user: who.identity.name, status: status.stdout.trimEnd(), recentCommits: log.stdout.trimEnd() });
+  return formatGitStatusBlock({ branch: branch.stdout.trim() || "main", user: who.identity.name, status: status.stdout.trimEnd(), recentCommits: log.stdout.trimEnd() });
 }

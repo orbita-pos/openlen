@@ -23,7 +23,7 @@ export async function commitSummary(ctx: CommandContext, before: ReadonlyMap<str
     const d = fileDiff(f.from, f.to);
     return { path: f.path, added: d.added, deleted: d.deleted };
   });
-  let out = `[main ${abbrev(oid)}] ${subjectOf(message)}\n`;
+  let out = `[${ctx.state.branch} ${abbrev(oid)}] ${subjectOf(message)}\n`;
   if (authorDate !== undefined) out += ` Date: ${authorDate}\n`;
   if (entries.length > 0) out += `${summaryLine(entries)}\n`;
   for (const f of files) {

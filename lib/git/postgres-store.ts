@@ -6,7 +6,7 @@ import { db, schema } from "@/lib/db";
 import { makePointer, parsePointer } from "@/lib/files/blob-pointer";
 import { ObjectCache } from "./object-cache";
 import type { GitObject, ObjectType } from "./objects";
-import type { GitStore, Index, RepoState } from "./store";
+import type { Branching, GitStore, Index, RepoState } from "./store";
 
 /** 64 MB for the whole process: a page can weigh half a megabyte, and the box has 3.8 GB. */
 const cache = new ObjectCache(64 * 1024 * 1024);
@@ -19,12 +19,15 @@ function remember(projectId: string, o: GitObject): void {
 export function postgresStore(projectId: string): GitStore {
   const readRepo = async (): Promise<RepoState | null> => {
     const [r] = await db.select().from(schema.projectGitRepos).where(eq(schema.projectGitRepos.projectId, projectId)).limit(1);
-    return r ? { head: r.head, index: r.index as Index, version: r.version } : null;
+    if (!r) return null;
+    const branch = r.currentBranch || "main";
+    const refs = r.refs && Object.keys(r.refs).length > 0 ? r.refs : { [branch]: r.head };
+    return { head: r.head, index: r.index as Index, version: r.version, branch, refs };
   };
   return {
     readRepo,
     async createRepo(head, index) {
-      await db.insert(schema.projectGitRepos).values({ projectId, head, index: { ...index }, version: 0 }).onConflictDoNothing();
+      await db.insert(schema.projectGitRepos).values({ projectId, head, index: { ...index }, version: 0, refs: { main: head }, currentBranch: "main" }).onConflictDoNothing();
       const repo = await readRepo();
       if (!repo) throw new Error("the repository could not be created");
       return repo;
@@ -71,13 +74,16 @@ export function postgresStore(projectId: string): GitStore {
         .limit(2);
       return rows.map((r) => r.oid);
     },
-    async updateRepo(expectedVersion, head, index) {
+    async updateRepo(expectedVersion, head, index, branching?: Branching) {
+      const before = branching ? null : await readRepo();
+      const branch = branching?.branch ?? before?.branch ?? "main";
+      const refs = { ...(branching?.refs ?? before?.refs ?? {}), [branch]: head };
       const rows = await db
         .update(schema.projectGitRepos)
-        .set({ head, index: { ...index }, version: sql`${schema.projectGitRepos.version} + 1`, updatedAt: new Date() })
+        .set({ head, index: { ...index }, refs, currentBranch: branch, version: sql`${schema.projectGitRepos.version} + 1`, updatedAt: new Date() })
         .where(and(eq(schema.projectGitRepos.projectId, projectId), eq(schema.projectGitRepos.version, expectedVersion)))
         .returning({ version: schema.projectGitRepos.version });
-      return rows[0] ? { head, index, version: rows[0].version } : null;
+      return rows[0] ? { head, index, version: rows[0].version, branch, refs } : null;
     },
   };
 }

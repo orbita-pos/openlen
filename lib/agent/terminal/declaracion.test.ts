@@ -165,7 +165,7 @@ describe("git in the bash description (spec local 2026-10-15-git-for-len, §5)",
   const bash = (env: Record<string, string>) => String(buildFunctionDeclarations(env).find((d) => d.name === "bash")!.description);
   it("says git works, keeps the versions apart from commits, and carries Claude Code's commit section", () => {
     const d = bash({ OPENLEN_TERMINAL: "1" });
-    expect(d).toContain("no network, no node, npm or pip, but git (this project's repository: one branch, main, no remote yet), grep,");
+    expect(d).toContain("no network, no node, npm or pip, but git (this project's repository, with branches, no remote yet), grep,");
     expect(d).not.toContain("no node, npm, pip or git");
     expect(d).toContain("These versions are automatic checkpoints the person can restore; git commits exist only when someone asks for one.");
     expect(d.endsWith(COMMITTING_WITH_GIT)).toBe(true);
@@ -238,7 +238,7 @@ describe("bash con la terminal real", () => {
   it("con git, en una app, también", () => {
     const d = String(bashDe({ E2B_API_KEY: "k" }, APP).description);
     expect(d).toContain("isolated Linux computer");
-    expect(d).toContain("this project's repository (one branch, main, no remote yet)");
+    expect(d).toContain("this project's repository (branches, no remote yet)");
     expect(d).toContain("npm test, npm run build");
   });
 
