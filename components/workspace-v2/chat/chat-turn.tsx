@@ -11,7 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AtSign, Crosshair, CornerDownRight, FileText, Film, Flag } from "lucide-react";
+import { AlarmClock, AtSign, Crosshair, CornerDownRight, FileText, Film, Flag } from "lucide-react";
+import { isScheduledOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -162,10 +163,23 @@ export function UserMessage({
               <span className="min-w-0 truncate font-mono">{turn.scope.hint}</span>
             </div>
           )}
-          {turn.origen && (
+          {turn.origen && isScheduledOrigin(turn.origen) ? (
+            // A SCHEDULED TASK'S RUN (spec local 2026-10-29-tareas-programadas, §7.5): its prompt, as
+            // the person's message, with when it ran in the reader's own clock.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-scheduled-turn="">
+              <AlarmClock size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">
+                {t("turn.scheduled", {
+                  title: turn.origen.title,
+                  // In the interface's language (the layout's `<html lang>`), in the reader's own clock.
+                  when: new Intl.DateTimeFormat(document.documentElement.lang || undefined, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(turn.origen.occurrenceAt)),
+                })}
+              </span>
+            </div>
+          ) : turn.origen && (
             <button
               type="button"
-              onClick={() => onAbrirOrigen?.(turn.origen!.ruta)}
+              onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}
               className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-left text-[11.5px] fg-muted hover:fg"
               data-origen-del-turno=""
             >

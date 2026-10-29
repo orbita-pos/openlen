@@ -21,7 +21,8 @@
     "imageSent": "Image sent",
     "imagesSent": "{count} images sent",
     "homePage": "Home",
-    "desdeElHilo": "from the thread · {donde}"
+    "desdeElHilo": "from the thread · {donde}",
+    "scheduled": "Scheduled task «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",

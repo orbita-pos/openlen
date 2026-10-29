@@ -20,7 +20,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import type { ProjectData } from "@/lib/projects/types";
+import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
 import type { ScheduleRecord } from "@/lib/scheduled-tasks/deepseek/types";
@@ -440,7 +440,7 @@ export const projectChatMessages = pgTable(
     // Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
     // hilo, el fichero y la línea, para la etiqueta del chat. NULL = desde el chat.
     // `npm run hilos:migrate`.
-    origen: jsonb("origen").$type<{ hiloId: string; ruta: string; linea: number }>(),
+    origen: jsonb("origen").$type<TurnOrigin>(),
     // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
     // NULL = un turno con Len (todo lo de siempre); "persona" = un mensaje entre
     // personas del proyecto, sin respuesta de Len. Sin migración de datos: las

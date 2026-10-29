@@ -21,7 +21,8 @@
     "imageSent": "Bild gesendet",
     "imagesSent": "{count} Bilder gesendet",
     "homePage": "Startseite",
-    "desdeElHilo": "aus der Unterhaltung · {donde}"
+    "desdeElHilo": "aus der Unterhaltung · {donde}",
+    "scheduled": "Geplante Aufgabe «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",

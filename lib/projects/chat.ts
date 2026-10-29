@@ -7,7 +7,7 @@
 
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import type { StoredChatTurn } from "@/lib/projects/types";
+import type { StoredChatTurn, TurnOrigin } from "@/lib/projects/types";
 import type { FilaDelHistorial, TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import { parseGoalSnapshot, type GoalSnapshot } from "@/lib/agent/goal";
@@ -596,7 +596,7 @@ export async function abrirFilaDelTurno(
     /** Quién lo pidió, si no fue el dueño (compartir el proyecto). */
     readonly autorId?: string | null;
     /** Pedido con `@Len` desde un hilo del código: de dónde (el chat lo enseña). */
-    readonly origen?: { hiloId: string; ruta: string; linea: number } | null;
+    readonly origen?: TurnOrigin | null;
   },
 ): Promise<void> {
   await db

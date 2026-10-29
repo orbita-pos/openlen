@@ -21,7 +21,8 @@
     "imageSent": "이미지 전송됨",
     "imagesSent": "이미지 {count}개 전송됨",
     "homePage": "홈",
-    "desdeElHilo": "스레드에서 · {donde}"
+    "desdeElHilo": "스레드에서 · {donde}",
+    "scheduled": "예약 작업 «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",

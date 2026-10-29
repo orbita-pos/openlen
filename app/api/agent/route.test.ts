@@ -3287,6 +3287,33 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 5, expect.anything());
   });
 
+  it("🔴 a scheduled task's run: the model reads DeepSeek's framing, the row keeps the prompt with its origin, and the reply gets the text and cards", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Listo, tu PDF.", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+      transcripcion: [{ role: "assistant", content: "Listo, tu PDF." }],
+    });
+    mocks.creditsForUsage.mockReturnValue(5);
+    const fila = "22222222-2222-4222-8222-222222222222";
+    const framing = '[SCHEDULE REMINDER BATCH]\nThis is a scheduled message from the user\nreminders_json: [{"schedule_id":"schedule-1"}]';
+    const origin = { kind: "scheduled" as const, taskId: "schedule-1", title: "PDF de resultados", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+    const onReply = vi.fn(async () => {});
+    const corredor = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+    const res = await corredor("ana", { projectId: "p1", prompt: "Make the PDF", turnId: fila, zonaHoraria: "America/Mexico_City" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing, origin, onReply } });
+    await readEvents(res);
+    const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
+    expect(paraElModelo.prompt).toBe(framing);
+    const filaAbierta = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { userText: string; origen?: unknown }])[1];
+    expect(filaAbierta).toMatchObject({ userText: "Make the PDF", origen: origin });
+    // The mocked loop emits no text events, so the record's text is empty here; what matters is that
+    // the reply goes once, with the turn's cards.
+    expect(onReply).toHaveBeenCalledTimes(1);
+    expect(onReply).toHaveBeenCalledWith(expect.any(String), expect.any(Array));
+    const cerrada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } }])[1];
+    expect(cerrada.transcript.sentText).toBe(framing);
+  });
+
   it("🔴 con miembros, Len recibe lo que el equipo se dijo desde el último turno, quién pide y la regla; sin miembros, el prompt de siempre", async () => {
     mocks.runAgentLoop.mockResolvedValue({
       finalText: "Hecho.", turns: 1, toolCalls: 0,
