@@ -1,0 +1,38 @@
+[
+  {
+    "state": "cargando",
+    "text": "Avisos de Len\nUn momento…\n\nComprobando los avisos…",
+    "disabled": true,
+    "pressed": "false"
+  },
+  {
+    "state": "desactivados",
+    "text": "Avisos de Len\nPermitir avisos\n\nLen puede avisarte cuando termine o necesite una respuesta.",
+    "disabled": false,
+    "pressed": "false"
+  },
+  {
+    "state": "activando",
+    "text": "Avisos de Len\nUn momento…\n\nActualizando los avisos del teléfono…",
+    "disabled": true,
+    "pressed": "false"
+  },
+  {
+    "state": "activos",
+    "text": "Avisos de Len\nDesactivar\n\nAvisos activados. Se respeta tu horario de silencio.",
+    "disabled": false,
+    "pressed": "true"
+  },
+  {
+    "state": "denegados",
+    "text": "Avisos de Len\nPermitir avisos\n\nLos avisos están bloqueados. Puedes permitirlos en los ajustes de Android.",
+    "disabled": false,
+    "pressed": "false"
+  },
+  {
+    "state": "error",
+    "text": "Avisos de Len\nPermitir avisos\n\nNo se pudieron actualizar los avisos. Vuelve a intentarlo.",
+    "disabled": false,
+    "pressed": "false"
+  }
+]

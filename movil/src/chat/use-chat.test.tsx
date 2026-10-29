@@ -81,3 +81,16 @@ it("una subida del proyecto anterior no envía archivos al proyecto nuevo", asyn
   await act(async()=>terminar({url:"https://x/a.pdf",name:"a.pdf",size:1}));
   expect(m.mandar).not.toHaveBeenCalled();expect(chat.elementos.some(e=>e.tipo==="tu")).toBe(false);
 });
+
+it("mantiene enviando hasta que el servidor confirma el turno", async () => {
+  let terminar!: (v: string) => void;
+  m.mandar.mockImplementation(() => new Promise(r => { terminar = r; }));
+  await act(async () => root.render(<Pantalla id="a" />));
+  await act(async () => chat.mandar("Cambio pendiente"));
+  try {
+    expect(chat.elementos.find(e => e.tipo === "tu")).toMatchObject({ estado: "enviando" });
+    const evento = m.mandar.mock.calls[0][2];
+    await act(async () => evento({ nombre: "turno", datos: { turnoId: "servidor" } }));
+    expect(chat.elementos.find(e => e.tipo === "tu")).toMatchObject({ estado: "ok" });
+  } finally { await act(async () => terminar("terminado")); }
+});

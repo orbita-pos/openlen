@@ -10,6 +10,7 @@ import { textosGestion } from "./textos-gestion";
 import { textosAvisos } from "./textos-avisos";
 import { textosPersonalizacion } from "./textos-personalizacion";
 import { textosEquipo } from "./textos-equipo";
+import { textosInterfaz } from "./textos-interfaz";
 import { textosAdjuntos } from "./textos-adjuntos";
 
 const claves = (o: unknown, p = ""): string[] =>
@@ -29,7 +30,7 @@ describe("los textos de la app", () => {
   });
 });
 
-for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo, adjuntos: textosAdjuntos })) {
+for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo, adjuntos: textosAdjuntos, interfaz: textosInterfaz })) {
   for (const idioma of IDIOMAS) it(`${nombre}: ${idioma} completo`, () => {
     expect(claves(mapa[idioma]).sort()).toEqual(claves(mapa.es).sort());
     const validar = (o: unknown): void => {

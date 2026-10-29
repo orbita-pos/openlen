@@ -1,0 +1,1354 @@
+[
+  {
+    "name": "390x844-light-publicar",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-light-numeros",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-light-encargos",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-light-comparar",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-light-tu-len",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 468
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 451
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 451
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 437.8333435058594
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 440.6190490722656
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 441.547607421875
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 441.547607421875
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 441.547607421875
+        }
+      ]
+    }
+  },
+  {
+    "name": "390x844-dark-publicar",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-dark-numeros",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-dark-encargos",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-dark-comparar",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x844-dark-tu-len",
+    "metrics": {
+      "viewport": [
+        390,
+        844
+      ],
+      "dialog": {
+        "scroll": 844,
+        "client": 844,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 468
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 451
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 451
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 437.8333435058594
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 440.6190490722656
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 441.547607421875
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 441.547607421875
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 441.547607421875
+        }
+      ]
+    }
+  },
+  {
+    "name": "360x640-light-publicar",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-light-numeros",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-light-encargos",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-light-comparar",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-light-tu-len",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 429.8857116699219
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 414.3428649902344
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 414.3428649902344
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 402.3047790527344
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 404.8517150878906
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 405.70068359375
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 405.70068359375
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 405.70068359375
+        }
+      ]
+    }
+  },
+  {
+    "name": "360x640-dark-publicar",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-dark-numeros",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-dark-encargos",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-dark-comparar",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "360x640-dark-tu-len",
+    "metrics": {
+      "viewport": [
+        360,
+        640
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 356.5714416503906,
+          "height": 640,
+          "top": 0,
+          "right": 358.5714416503906,
+          "bottom": 640,
+          "left": 2
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 429.8857116699219
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 414.3428649902344
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 414.3428649902344
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 402.3047790527344
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 404.8517150878906
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 405.70068359375
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 405.70068359375
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 405.70068359375
+        }
+      ]
+    }
+  },
+  {
+    "name": "320x568-light-publicar",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-light-numeros",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-light-encargos",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-light-comparar",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-light-tu-len",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 381.7485656738281
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 367.95428466796875
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 367.95428466796875
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 357.2704772949219
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 359.5308837890625
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 360.2843322753906
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 360.2843322753906
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 360.2843322753906
+        }
+      ]
+    }
+  },
+  {
+    "name": "320x568-dark-publicar",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-dark-numeros",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-dark-encargos",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-dark-comparar",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "320x568-dark-tu-len",
+    "metrics": {
+      "viewport": [
+        320,
+        568
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 2,
+          "y": 0,
+          "width": 316.4571228027344,
+          "height": 568,
+          "top": 0,
+          "right": 318.4571228027344,
+          "bottom": 568,
+          "left": 2
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \nCool",
+          "right": 381.7485656738281
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 367.95428466796875
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n      \n        \n      \n      \n      \n  \n",
+          "right": 367.95428466796875
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 357.2704772949219
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 359.5308837890625
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 360.2843322753906
+        },
+        {
+          "tag": "g",
+          "cls": {},
+          "text": "\n      \n        \n      \n      \n      ",
+          "right": 360.2843322753906
+        },
+        {
+          "tag": "path",
+          "cls": {},
+          "text": "",
+          "right": 360.2843322753906
+        }
+      ]
+    }
+  },
+  {
+    "name": "390x400-light-publicar",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-light-numeros",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-light-encargos",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-light-comparar",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-light-tu-len",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 403.4285888671875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 393.71429443359375
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 393.71429443359375
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Vaquero",
+          "right": 392.9107360839844
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 455.4285888671875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 445.71429443359375
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 445.71429443359375
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 438.19049072265625
+        }
+      ]
+    }
+  },
+  {
+    "name": "390x400-dark-publicar",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-dark-numeros",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-dark-encargos",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-dark-comparar",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": []
+    }
+  },
+  {
+    "name": "390x400-dark-tu-len",
+    "metrics": {
+      "viewport": [
+        390,
+        400
+      ],
+      "dialog": {
+        "scroll": 700,
+        "client": 700,
+        "rect": {
+          "x": 84,
+          "y": 0,
+          "width": 222.85714721679688,
+          "height": 400.0000305175781,
+          "top": 0,
+          "right": 306.8571472167969,
+          "bottom": 400.0000305175781,
+          "left": 84
+        }
+      },
+      "overflow": [
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 403.4285888671875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 393.71429443359375
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 393.71429443359375
+        },
+        {
+          "tag": "SPAN",
+          "cls": "",
+          "text": "Vaquero",
+          "right": 392.9107360839844
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tu-len-card",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 455.4285888671875
+        },
+        {
+          "tag": "SPAN",
+          "cls": "tu-len-icon",
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 445.71429443359375
+        },
+        {
+          "tag": "svg",
+          "cls": {},
+          "text": "\n  \n  \n  \n  \n  \n  \n      \n      \n      \n      \n      \n      ",
+          "right": 445.71429443359375
+        },
+        {
+          "tag": "circle",
+          "cls": {},
+          "text": "",
+          "right": 438.19049072265625
+        }
+      ]
+    }
+  }
+]

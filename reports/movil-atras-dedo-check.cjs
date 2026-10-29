@@ -14,8 +14,9 @@ const fs=require('node:fs'),path=require('node:path');
   const quieto=async()=>{await p.locator('.app-panel-motion').evaluate(async e=>Promise.all(e.getAnimations().map(a=>a.finished.catch(()=>{}))));};
   const capa=p.locator('.app-panel-gesture');
   const xactual=()=>capa.evaluate(e=>e.getBoundingClientRect().x);
-  const empezar=async()=>{await touch('touchStart',25,110);await touch('touchMove',50,110);await touch('touchMove',100,110);await expect.poll(xactual).toBeGreaterThan(50);};
-  const terminar=async()=>{await touch('touchMove',230,110);await touch('touchEnd');};
+  let yGesto=110;
+  const empezar=async()=>{const h=await p.locator('.app-panel-gesture h1').boundingBox();yGesto=h.y+h.height/2;await touch('touchStart',25,yGesto);await touch('touchMove',50,yGesto);await touch('touchMove',100,yGesto);await expect.poll(xactual).toBeGreaterThan(50);};
+  const terminar=async()=>{await touch('touchMove',230,yGesto);await touch('touchEnd');};
   const cerrado=async()=>{await expect(capa).toHaveCount(0);await expect.poll(()=>p.evaluate(()=>history.state?.lenCapa??0)).toBe(0);};
   for(const nombre of ['Publicar y gestionar','Tu Len','Antes / Ahora','Equipo e hilos']){
    await p.getByRole('button',{name:nombre,exact:true}).tap();await expect(capa).toBeVisible();await quieto();
