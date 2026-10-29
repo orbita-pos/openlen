@@ -7,6 +7,7 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { makePointer, putBlob } from "@/lib/files/blob";
 import { __setStorageForTest } from "@/lib/storage";
 import { FilesystemStorage } from "@/lib/storage/filesystem";
 
@@ -286,6 +287,53 @@ describe("SandboxTerminal", () => {
     expect(r.noGuardados).toEqual([{ ruta: "/data/big.csv", motivo: "too_large" }]);
     // A file over the cap is never downloaded into the app's process: one of gigabytes would take it down.
     expect(d.reads(handle.id)).not.toContain("/data/big.csv");
+  });
+
+  // Production 29/10: Len made a PDF in the box and delivered it in the same turn; the delivery was the pointer's
+  // 126 bytes. After each command herramienta.ts puts back what the guards saved (`poner`), and for a binary that is
+  // its pointer: it went into the box as text, over the PDF.
+  it("🔴 a binary a command made keeps its bytes in the box after the turn saves it as a pointer", async () => {
+    const pdf = "%PDF-1.4 made in the box";
+    const { terminal, d, handle, box } = await open({
+      projectFiles: { "/index.html": "a" },
+      onRun: (cmd, files) => {
+        if (cmd.includes("make-pdf")) files.set("/prueba.pdf", pdf);
+      },
+    });
+    const ran = terminal.ejecutar("make-pdf");
+    d.binary(handle.id, "/prueba.pdf", pdf.length);
+    const r = await ran;
+    const pointer = r.ficheros!["/prueba.pdf"]!;
+    expect(pointer).toMatch(/^￿openlen-blob:/);
+    const write = vi.spyOn(handle, "write");
+    // What herramienta.ts does once the guards saved it.
+    await terminal.poner({ "/prueba.pdf": pointer });
+    expect(box().get("/prueba.pdf")).not.toBe(pointer);
+    expect(new TextDecoder().decode((await terminal.readFileBytes("/prueba.pdf"))!)).toBe(pdf);
+    // The box already had those bytes: nothing went in.
+    expect(write.mock.calls.flatMap((c) => Object.keys(c[0]))).not.toContain("/prueba.pdf");
+    // And the next command does not see it as changed.
+    const r2 = await terminal.ejecutar("ls");
+    expect(r2.ficheros!["/prueba.pdf"]).toBe(pointer);
+    expect(d.reads(handle.id).filter((p) => p === "/prueba.pdf")).toHaveLength(1);
+  });
+
+  it("an older binary a guard puts back goes into the box as its bytes, never as its pointer", async () => {
+    const old = new TextEncoder().encode("PNG v1");
+    const before = makePointer(await putBlob(old));
+    const { terminal, d, handle, box } = await open({
+      projectFiles: { "/index.html": "a", "/img/a.png": before },
+      onRun: (cmd, files) => {
+        if (cmd.includes("redraw")) files.set("/img/a.png", "PNG v2");
+      },
+    });
+    const ran = terminal.ejecutar("redraw");
+    d.binary(handle.id, "/img/a.png", 6);
+    await ran;
+    // The guard refused the change: the saved one goes back.
+    await terminal.poner({ "/img/a.png": before });
+    expect(box().get("/img/a.png")).not.toBe(before);
+    expect(new TextDecoder().decode((await terminal.readFileBytes("/img/a.png"))!)).toBe("PNG v1");
   });
 
   it("the read-only folder goes up once; after that only what changed, and what is gone is removed", async () => {
