@@ -186,11 +186,13 @@ export function startScheduler(): { stop(): void } {
   void defaultDeps()
     .then(async (deps) => {
       await resumeAfterRestart(deps);
+      console.log(`[schedule] scheduler on: a pass every ${TICK_MS / 1000} s`);
       const pass = async () => {
         if (ticking) return;
         ticking = true;
         try {
-          await tick(deps);
+          const launched = await tick(deps);
+          if (launched > 0) console.log(`[schedule] launched ${launched} scheduled task(s)`);
           if (Date.now() - lastPurge > DAY_MS) {
             lastPurge = Date.now();
             await deps.store.purgeOld(deps.now());

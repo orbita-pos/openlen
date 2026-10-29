@@ -128,6 +128,14 @@ describe("dueTasks / claimDue", () => {
     expect(after?.lastRunId).toBe("run-1");
   });
 
+  it("claims a task whose time was written with microseconds (by SQL, not by JS)", async () => {
+    await store.createTask(input("t1"));
+    await (base.pg as PGlite).query(`UPDATE "scheduledTasks" SET "scheduledAt" = '2026-11-02 15:03:00.862681+00'`);
+    const [task] = await store.dueTasks(new Date("2026-11-02T15:04:00Z"), 20);
+    expect(await claim(task!, "run-us", "2026-11-09T15:03:00.000Z")).toMatchObject({ id: "run-us" });
+    expect(await claim(task!, "run-us-2", "2026-11-09T15:03:00.000Z")).toBeNull();
+  });
+
   it("a one-shot claim leaves the task inactive", async () => {
     const at = createAtScheduleRecord(ScheduleId("o1"), "p", "2026-11-02T09:03:00-06:00", NOW, "Una vez");
     const task = await store.createTask({ ...input("o1"), record: at });
