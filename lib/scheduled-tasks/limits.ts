@@ -7,6 +7,19 @@ import { ScheduleInputError } from "./deepseek/domain";
 import type { ScheduleRecord } from "./deepseek/types";
 
 export const OPENLEN_MIN_INTERVAL_SECONDS = 3600;
+/** Active tasks a project may hold (spec §7.2). */
+export const MAX_ACTIVE_TASKS_PER_PROJECT = 10;
+
+/** OpenLen's refusals that DeepSeek has no code for; the tools answer them as `{ code, message }` like theirs. */
+export class OpenLenScheduleError extends Error {
+  constructor(
+    readonly code: "too_many_schedules" | "plan_required",
+    message: string,
+  ) {
+    super(message);
+    this.name = "OpenLenScheduleError";
+  }
+}
 
 /** Throws DeepSeek's `ScheduleInputError` when a rule could run Len more often than once an hour. */
 export function checkOpenLenLimits(record: ScheduleRecord): void {

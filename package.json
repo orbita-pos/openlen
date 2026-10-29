@@ -99,6 +99,7 @@
     "test:flaky": "node scripts/flaky-hunt.mjs",
     "hilos:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/hilos-migrate.ts",
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
+    "scheduled-tasks:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/scheduled-tasks-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
     "len-skills:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-skills-migrate.ts",
     "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",

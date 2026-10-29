@@ -23,6 +23,7 @@ import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData } from "@/lib/projects/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
+import type { ScheduleRecord } from "@/lib/scheduled-tasks/deepseek/types";
 import type { TranscripcionGuardada } from "@/lib/agent/transcripcion";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { Finding, ReviewStatus } from "@/lib/security-review/types";
@@ -2308,6 +2309,59 @@ export const lenEmailRequests = pgTable(
     index("lenEmailRequests_project_createdAt_idx").on(t.projectId, t.createdAt),
   ],
 );
+
+// LEN'S SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.4). A task is DeepSeek's
+// ScheduleRecord (lib/scheduled-tasks/deepseek/) plus who asked, in which project, language and zone;
+// `scheduledAt` mirrors `record.scheduledAt` so the scheduler can index it. Created by
+// `npm run scheduled-tasks:migrate` (scripts/scheduled-tasks-migrate-sql.ts).
+export const scheduledTasks = pgTable(
+  "scheduledTasks",
+  {
+    /** DeepSeek's schedule id: the same one the model reads. */
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** Who asked Len for it: the turn runs as them and the email goes to them. The owner pays. */
+    createdBy: text("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** Their interface language, for the email. */
+    locale: text("locale").notNull(),
+    /** The zone of the turn that created it, for rules that carry none. */
+    timeZone: text("timeZone").notNull(),
+    record: jsonb("record").$type<ScheduleRecord>().notNull(),
+    scheduledAt: timestamp("scheduledAt", { mode: "date", withTimezone: true }).notNull(),
+    status: text("status").$type<"active" | "inactive">().notNull().default("active"),
+    lastRunId: text("lastRunId"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("scheduledTasks_status_scheduledAt_idx").on(t.status, t.scheduledAt),
+    index("scheduledTasks_projectId_idx").on(t.projectId),
+  ],
+);
+
+/** One run of a scheduled task: its id is the chat row's, so the turn, its email and this row match. */
+export const scheduledTaskRuns = pgTable(
+  "scheduledTaskRuns",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("taskId").notNull().references(() => scheduledTasks.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull(),
+    occurrenceAt: timestamp("occurrenceAt", { mode: "date", withTimezone: true }).notNull(),
+    claimedAt: timestamp("claimedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    /** When the process that claimed it started: a run left unfinished by another process was cut. */
+    processStartedAt: timestamp("processStartedAt", { mode: "date", withTimezone: true }).notNull(),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }),
+    finishedAt: timestamp("finishedAt", { mode: "date", withTimezone: true }),
+    outcome: text("outcome").$type<ScheduledRunOutcome>(),
+    reason: text("reason"),
+    /** What Len said at the end, saved BEFORE the email goes: a failed send is resent, never re-run. */
+    reply: text("reply"),
+    emailedAt: timestamp("emailedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [index("scheduledTaskRuns_claimedAt_idx").on(t.claimedAt)],
+);
+
+export type ScheduledRunOutcome = "done" | "no_credits" | "member_cap" | "cut" | "failed" | "missed" | "plan_required" | "no_access";
 
 // LAS EDGE FUNCTIONS (spec local docs/superpowers/specs/2026-10-11-edge-functions-design.md):
 // lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el
