@@ -134,4 +134,17 @@ describe("the GitHub App", () => {
     expect(await userInstallation("ghu_tok", 99)).toBeNull();
     expect(String((calls[0]!.init.headers as Record<string, string>).Authorization)).toBe("Bearer ghu_tok");
   });
+
+  it("🔴 an organization's installation only for one of its admins (a member would push beyond their role)", async () => {
+    let role = "member";
+    answer = (url) =>
+      url.startsWith("https://api.github.com/user/installations")
+        ? json(200, { installations: [{ id: 88, account: { login: "acme", type: "Organization" } }] })
+        : url === "https://api.github.com/user/memberships/orgs/acme"
+          ? json(200, { state: "active", role })
+          : json(404, {});
+    expect(await userInstallation("ghu_tok", 88)).toBeNull();
+    role = "admin";
+    expect(await userInstallation("ghu_tok", 88)).toEqual({ installationId: 88, accountLogin: "acme", accountType: "Organization" });
+  });
 });
