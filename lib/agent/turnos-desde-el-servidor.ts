@@ -25,6 +25,14 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
+import type { ScheduledOrigin, StoredChatTurn } from "@/lib/projects/types";
+
+/** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
+export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
+
+function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+}
 import { fraseDeFalloDelHilo, fraseDeInterrupcionDelHilo, idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 import { contextoParaLen, hiloTieneRespuestaDe, listarHilos, pedidosALenSinContestar, respuestaDeLen } from "@/lib/projects/hilos";
 
@@ -48,11 +56,20 @@ export interface EmailRequest {
   readonly onReply: (text: string) => Promise<void>;
 }
 
+/** A SCHEDULED TASK's run (spec local 2026-10-29-tareas-programadas, §7.5): the model reads DeepSeek's
+ *  `[SCHEDULE REMINDER]` framing instead of the prompt; the row keeps the prompt with its origin. */
+export interface ScheduledRequest {
+  readonly framing: string;
+  readonly origin: ScheduledOrigin;
+  /** What Len said at the end and the turn's cards (their `present` files go in the email). */
+  readonly onReply: (text: string, cards: Tarjetas) => Promise<void>;
+}
+
 type Corredor = (
   userId: string,
   body: Record<string, unknown>,
   req: { url: string; signal: AbortSignal },
-  opts: { hilo?: PedidoDelHilo; email?: EmailRequest },
+  opts: { hilo?: PedidoDelHilo; email?: EmailRequest; scheduled?: ScheduledRequest },
 ) => Promise<Response>;
 
 let corredor: Corredor | null = null;
@@ -115,13 +132,13 @@ async function erroresDelStream(res: Response): Promise<FalloDelTurno[]> {
 /** Corre el turno y devuelve sus fallos (el HTTP que no fue 200, o los `error` del SSE). */
 async function runTurn(
   correr: Corredor,
-  p: { userId: string; projectId: string; texto: string; filaId: string; origen: string },
-  opts: { hilo?: PedidoDelHilo; email?: EmailRequest },
+  p: { userId: string; projectId: string; texto: string; filaId: string; origen: string; body?: Record<string, unknown> },
+  opts: { hilo?: PedidoDelHilo; email?: EmailRequest; scheduled?: ScheduledRequest },
 ): Promise<FalloDelTurno[]> {
   try {
     const res = await correr(
       p.userId,
-      { projectId: p.projectId, prompt: p.texto, turnId: p.filaId, answersQuestions: false },
+      { projectId: p.projectId, prompt: p.texto, turnId: p.filaId, answersQuestions: false, ...p.body },
       { url: p.origen, signal: new AbortController().signal },
       opts,
     );
@@ -233,6 +250,57 @@ export async function launchEmailTurn(p: {
     "len-email",
   );
   return { filaId };
+}
+
+/**
+ * A SCHEDULED TASK (spec local 2026-10-29-tareas-programadas, §7.5): the same road as an email to
+ * Len, started by the scheduler (lib/scheduled-tasks/scheduler.ts) instead of a person. It runs as
+ * whoever created the task, in the task's zone and language, and waits its turn in the project's
+ * queue. `reply` gets what Len said and the turn's cards; with no reply (no credits, the members'
+ * cap, a failure, Len busy for too long) `fail` gets the reason — never silence. Returns at once.
+ */
+export function launchScheduledTurn(p: {
+  readonly userId: string;
+  readonly projectId: string;
+  readonly texto: string;
+  readonly framing: string;
+  readonly origin: ScheduledOrigin;
+  readonly timeZone: string;
+  readonly locale: string;
+  /** The chat row's id: the run's id. */
+  readonly filaId: string;
+  readonly reply: (text: string, cards: Tarjetas) => Promise<void>;
+  readonly fail: (fallo: FalloDelTurno | null, cut: boolean) => Promise<void>;
+  readonly onStart: () => Promise<void>;
+}): void {
+  enqueue(
+    p.projectId,
+    async () => {
+      const correr = await corredorCargado();
+      if (!correr) throw new Error("la ruta de Len no se registró");
+      if (!(await esperarALen(p.projectId))) {
+        await p.fail(null, false);
+        return;
+      }
+      await p.onStart();
+      let replied = false;
+      const scheduled: ScheduledRequest = {
+        framing: p.framing,
+        origin: p.origin,
+        onReply: async (text, cards) => {
+          replied = true;
+          await p.reply(text, cards);
+        },
+      };
+      const errores = await runTurn(
+        correr,
+        { userId: p.userId, projectId: p.projectId, texto: p.texto, filaId: p.filaId, origen: `${siteUrl()}/api/agent`, body: { zonaHoraria: p.timeZone, idioma: p.locale } },
+        { scheduled },
+      );
+      if (!replied) await p.fail(errores.at(-1) ?? null, false);
+    },
+    "scheduled-task",
+  );
 }
 
 /** Cuándo arrancó este proceso: lo pedido antes, nadie de aquí lo corre. */

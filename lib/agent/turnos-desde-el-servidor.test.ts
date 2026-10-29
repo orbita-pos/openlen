@@ -23,7 +23,15 @@ vi.mock("@/lib/projects/hilos", () => ({
   },
 }));
 
-import { launchEmailTurn, lanzarTurnoDelHilo, registrarCorredorDeTurnos, retomarPedidosDelHilo, type EmailRequest } from "./turnos-desde-el-servidor";
+import {
+  launchEmailTurn,
+  launchScheduledTurn,
+  lanzarTurnoDelHilo,
+  registrarCorredorDeTurnos,
+  retomarPedidosDelHilo,
+  type EmailRequest,
+  type ScheduledRequest,
+} from "./turnos-desde-el-servidor";
 
 const sse = (eventos: [string, unknown][]) =>
   new Response(eventos.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join(""), {
@@ -172,5 +180,70 @@ describe("un pedido por correo (Len por correo)", () => {
     await lanzarCorreo(async (t) => void enviados.push(t));
     await hasta(() => enviados.length > 0);
     expect(enviados).toEqual(["No pude: no_credits"]);
+  });
+});
+
+describe("a scheduled task's turn, on the server (spec local 2026-10-29-tareas-programadas, §7.5)", () => {
+  const origin = { kind: "scheduled" as const, taskId: "schedule-1", title: "PDF de resultados", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+  const launch = (o: { reply?: (t: string, c: unknown) => Promise<void>; fail?: (f: unknown, cut: boolean) => Promise<void>; onStart?: () => Promise<void> } = {}) =>
+    launchScheduledTurn({
+      userId: "ana",
+      projectId: "p-prog",
+      texto: "Make the PDF",
+      framing: "[SCHEDULE REMINDER BATCH]\nThis is a scheduled message from the user",
+      origin,
+      timeZone: "America/Mexico_City",
+      locale: "es",
+      filaId: "run-1",
+      reply: o.reply ?? (async () => {}),
+      fail: o.fail ?? (async () => {}),
+      onStart: o.onStart ?? (async () => {}),
+    });
+
+  it("runs as whoever asked, in the task's zone and language, with the framing for the model", async () => {
+    const started: string[] = [];
+    const corredor = vi.fn(async (_u: string, _b: Record<string, unknown>, _r: unknown, opts: { scheduled?: ScheduledRequest }) => {
+      await opts.scheduled!.onReply("Listo, aquí está el PDF.", []);
+      return sse([["done", {}]]);
+    });
+    registrarCorredorDeTurnos(corredor);
+    const replies: string[] = [];
+    launch({ reply: async (t) => void replies.push(t), onStart: async () => void started.push("start") });
+    await hasta(() => replies.length > 0);
+    expect(started).toEqual(["start"]);
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      { projectId: "p-prog", prompt: "Make the PDF", turnId: "run-1", answersQuestions: false, zonaHoraria: "America/Mexico_City", idioma: "es" },
+      expect.anything(),
+      { scheduled: expect.objectContaining({ framing: "[SCHEDULE REMINDER BATCH]\nThis is a scheduled message from the user", origin }) },
+    );
+    expect(replies).toEqual(["Listo, aquí está el PDF."]);
+  });
+
+  it("waits while Len is working in the project, then runs (nothing is dropped)", async () => {
+    mocks.vivo = true;
+    const corredor = vi.fn(async (_u: string, _b: Record<string, unknown>, _r: unknown, opts: { scheduled?: ScheduledRequest }) => {
+      await opts.scheduled!.onReply("ok", []);
+      return sse([["done", {}]]);
+    });
+    registrarCorredorDeTurnos(corredor);
+    const replies: string[] = [];
+    launch({ reply: async (t) => void replies.push(t) });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(corredor).not.toHaveBeenCalled();
+    mocks.vivo = false;
+    // The queue looks again every 2 s (`esperarALen`).
+    for (let i = 0; i < 100 && replies.length === 0; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(replies).toEqual(["ok"]);
+  }, 10_000);
+
+  it("without a reply (no credits), fails with the reason and never replies", async () => {
+    registrarCorredorDeTurnos(async () => sse([["error", { message: "sin créditos", code: "no_credits" }]]));
+    const fails: unknown[] = [];
+    const replies: string[] = [];
+    launch({ reply: async (t) => void replies.push(t), fail: async (f, cut) => void fails.push({ f, cut }) });
+    await hasta(() => fails.length > 0);
+    expect(fails).toEqual([{ f: { motivo: "sin créditos", code: "no_credits" }, cut: false }]);
+    expect(replies).toEqual([]);
   });
 });

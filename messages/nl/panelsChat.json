@@ -21,7 +21,8 @@
     "imageSent": "Afbeelding verstuurd",
     "imagesSent": "{count} afbeeldingen verstuurd",
     "homePage": "Home",
-    "desdeElHilo": "vanuit de draad · {donde}"
+    "desdeElHilo": "vanuit de draad · {donde}",
+    "scheduled": "Geplande taak «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",

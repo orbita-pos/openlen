@@ -41,7 +41,7 @@ import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { cierreDeTurno, laPaginaNoCambio, lineaGuardadaDelCierre } from "../panels/turno-cerrado";
 import { NIVEL_POR_DEFECTO, type EsfuerzoAgente, type NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import type { AgentMode } from "@/lib/agent/dynamis";
-import type { StoredChatTurn } from "@/lib/projects/types";
+import type { StoredChatTurn, TurnOrigin } from "@/lib/projects/types";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { MAX_FILES_PER_MESSAGE, type AttachedFile } from "@/lib/projects/chat-files";
@@ -99,7 +99,7 @@ export interface DesignTurn {
   id: string;
   userText: string;
   /** Pedido con `@Len` desde un hilo del código: la etiqueta «desde el hilo». */
-  origen?: { hiloId: string; ruta: string; linea: number };
+  origen?: TurnOrigin;
   /** Quién lo pidió, si viene del servidor (`StoredChatTurn.autor`). Sin él,
    *  es de quien mira: lo acaba de mandar desde aquí. */
   autor?: string;

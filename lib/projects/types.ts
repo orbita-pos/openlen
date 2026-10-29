@@ -313,12 +313,36 @@ export type DegradationCode =
 // unmounts the panel — restores the conversation instead of an empty
 // composer. HTML revisions are NOT stored here — those live in
 // `projectVersions`.
+/** Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts). */
+export interface ThreadOrigin {
+  hiloId: string;
+  ruta: string;
+  linea: number;
+}
+
+/** A scheduled task's run (spec local 2026-10-29-tareas-programadas, §7.5). */
+export interface ScheduledOrigin {
+  kind: "scheduled";
+  taskId: string;
+  title: string;
+  /** The occurrence it ran for, UTC ISO. */
+  occurrenceAt: string;
+}
+
+/** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin;
+
+export function isScheduledOrigin(o: TurnOrigin): o is ScheduledOrigin {
+  return "kind" in o && o.kind === "scheduled";
+}
+
 export interface StoredChatTurn {
   id: string;
   userText: string;
   /** Pedido con `@Len` desde un hilo del código (lib/projects/hilos.ts): el
-   *  chat lo marca «desde el hilo · fichero:línea» y lo abre al pulsarlo. */
-  origen?: { hiloId: string; ruta: string; linea: number };
+   *  chat lo marca «desde el hilo · fichero:línea» y lo abre al pulsarlo. O una
+   *  tarea programada: «⏰ Tarea programada · …». */
+  origen?: TurnOrigin;
   /** Quién lo pidió (su nombre, o su correo): el dueño o un miembro del
    *  proyecto. El chat pinta su inicial en la burbuja, no la de quien mira. */
   autor?: string;

@@ -21,7 +21,8 @@
     "imageSent": "Imagen enviada",
     "imagesSent": "{count} imágenes enviadas",
     "homePage": "Inicio",
-    "desdeElHilo": "desde el hilo · {donde}"
+    "desdeElHilo": "desde el hilo · {donde}",
+    "scheduled": "Tarea programada «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",

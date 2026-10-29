@@ -21,7 +21,8 @@
     "imageSent": "Imagem enviada",
     "imagesSent": "{count} imagens enviadas",
     "homePage": "Início",
-    "desdeElHilo": "da conversa · {donde}"
+    "desdeElHilo": "da conversa · {donde}",
+    "scheduled": "Tarefa agendada «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Concluído em <d>{duracion}</d>",

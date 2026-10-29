@@ -5,7 +5,7 @@ import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
 import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
-import { registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo } from "@/lib/agent/turnos-desde-el-servidor";
+import { registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo, type ScheduledRequest } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -382,7 +382,7 @@ async function correrTurno(
   userId: string,
   body: CuerpoDelTurno | null,
   req: { url: string; signal: AbortSignal },
-  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo; email?: EmailRequest } = {},
+  opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo; email?: EmailRequest; scheduled?: ScheduledRequest } = {},
 ): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
   // `let`: en una ronda del encargo (pieza 8) el mensaje del turno es el de
@@ -462,6 +462,8 @@ async function correrTurno(
   // LEN POR CORREO (lib/len-email): lo lanza el servidor, igual que un hilo;
   // al cerrar, lo que Len dijo se le manda por correo a quien escribió.
   const correoDelTurno = opts.email ?? null;
+  // A scheduled task's run (spec local 2026-10-29-tareas-programadas, §7.5).
+  const programadaDelTurno = opts.scheduled ?? null;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -1089,8 +1091,12 @@ async function correrTurno(
   // the thread's or the email's context; its content goes after the prompt, as DeepSeek injects it.
   const skillsConocidas = foldLoadedSkills(filasDelHistorial);
   const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
+  // A scheduled task: the model reads DeepSeek's `[SCHEDULE REMINDER]` message, which carries the
+  // prompt inside it; the row keeps the prompt (and `sentText`, this).
   const textoEnviado = withInvokedSkills(
-    `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+    programadaDelTurno
+      ? programadaDelTurno.framing
+      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     skillsInvocadas,
   );
   // LEN READS THE TIME (spec local 2026-10-29-tareas-programadas, §7.3): DeepSeek's time context.
@@ -1594,6 +1600,12 @@ async function correrTurno(
               console.warn("[agent] no se pudo contestar por correo", err),
             );
           }
+          // A scheduled task: its email (with the files Len presented) goes to whoever created it.
+          if (programadaDelTurno) {
+            await programadaDelTurno.onReply(registro.texto, registro.tarjetas).catch((err: unknown) =>
+              console.warn("[agent] no se pudo entregar la tarea programada", err),
+            );
+          }
         } else if (filaAbierta) {
           try {
             await quitarFilaDelTurno(projectId, filaId);
@@ -1724,7 +1736,11 @@ async function correrTurno(
             attachedImage: photosForRow(attachedImages),
             ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
             autorId: miembro ? quien : null,
-            ...(hiloDelTurno ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } } : {}),
+            ...(hiloDelTurno
+              ? { origen: { hiloId: hiloDelTurno.hiloId, ruta: hiloDelTurno.ruta, linea: hiloDelTurno.linea } }
+              : programadaDelTurno
+                ? { origen: programadaDelTurno.origin }
+                : {}),
           });
           filaAbierta = true;
           // EL CHAT DEL EQUIPO: «@Len y @Eli …» es un turno que además avisa a

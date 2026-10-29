@@ -21,7 +21,8 @@
     "imageSent": "Immagine inviata",
     "imagesSent": "{count} immagini inviate",
     "homePage": "Home",
-    "desdeElHilo": "dalla conversazione · {donde}"
+    "desdeElHilo": "dalla conversazione · {donde}",
+    "scheduled": "Attività programmata «{title}» · {when}"
   },
   "proceso": {
     "completadoEn": "Completato in <d>{duracion}</d>",
