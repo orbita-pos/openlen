@@ -59,7 +59,18 @@ export function correoDeInvitacion(
 /** El marco de los correos del proyecto: la marca, un título, párrafos, un botón y su enlace. */
 function marco(
   idioma: IdiomaDelCorreo,
-  c: { titulo: string; parrafos: readonly string[]; cita?: string; cuerpo?: string; boton: string; url: string; pegar: string; pie?: string },
+  c: {
+    titulo: string;
+    parrafos: readonly string[];
+    cita?: string;
+    cuerpo?: string;
+    boton: string;
+    url: string;
+    pegar: string;
+    pie?: string;
+    /** A link after the footer (a scheduled task's «Quitar esta tarea»). */
+    pieEnlace?: { texto: string; url: string };
+  },
 ): string {
   const url = escapar(c.url);
   const parrafos = c.parrafos
@@ -90,6 +101,7 @@ function marco(
       <p style="font-size:12px; color:#737373; margin:0 0 8px;">${escapar(c.pegar)}</p>
       <p style="font-size:12px; color:#525252; word-break:break-all; margin:0 0 24px;">${url}</p>
       ${c.pie ? `<p style="font-size:12px; color:#a3a3a3; margin:0;">${escapar(c.pie)}</p>` : ""}
+      ${c.pieEnlace ? `<p style="font-size:12px; margin:6px 0 0;"><a href="${escapar(c.pieEnlace.url)}" style="color:#737373;">${escapar(c.pieEnlace.texto)}</a></p>` : ""}
     </td></tr>
   </table>
 </body>
@@ -189,4 +201,53 @@ export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: 
 export function fraseDeInterrupcionPorCorreo(idioma: IdiomaDelCorreo): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
   return t("interrumpido");
+}
+
+// ─── A scheduled task's email (spec local 2026-10-29-tareas-programadas, §7.7) ───
+
+export interface DatosDeLaTareaProgramada {
+  readonly projectTitle: string;
+  /** The task's title. */
+  readonly title: string;
+  /** The occurrence it ran for (UTC ISO), written as a date in `timeZone`. */
+  readonly occurrenceAt: string;
+  readonly timeZone: string;
+  /** What Len said at the end, or why the task was not done. */
+  readonly texto: string;
+  /** What waits for the person in OpenLen (a question, the publish card…). */
+  readonly waiting: readonly string[];
+  /** The email has Len's address as Reply-To: replying talks to Len. */
+  readonly canReply: boolean;
+  readonly chatUrl: string;
+  /** «Quitar esta tarea», signed; null without a secret. */
+  readonly removeUrl: string | null;
+}
+
+export function scheduledTaskEmail(
+  d: DatosDeLaTareaProgramada,
+  idioma: IdiomaDelCorreo,
+): { readonly subject: string; readonly html: string; readonly text: string } {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });
+  const fecha = new Intl.DateTimeFormat(idioma, { dateStyle: "full", timeZone: d.timeZone }).format(new Date(d.occurrenceAt));
+  const subject = t("asunto", { title: d.title, fecha });
+  const cuerpo = [d.texto.trim(), ...(d.waiting.length > 0 ? ["", t("esperando"), ...d.waiting.map((w) => `· ${w}`)] : []), ...(d.canReply ? ["", t("contesta")] : [])].join("\n");
+  const pie = t("pie", { title: d.title, proyecto: d.projectTitle.trim() || "OpenLen" });
+  const html = marco(idioma, {
+    titulo: d.title,
+    parrafos: [],
+    cuerpo,
+    boton: t("abrir"),
+    url: d.chatUrl,
+    pegar: createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros" })("email.pegar"),
+    pie,
+    ...(d.removeUrl ? { pieEnlace: { texto: t("quitar"), url: d.removeUrl } } : {}),
+  });
+  const text = [cuerpo, "", "—", pie, d.chatUrl, ...(d.removeUrl ? [`${t("quitar")}: ${d.removeUrl}`] : [])].join("\n");
+  return { subject, html, text };
+}
+
+/** Why a scheduled task was not done, when it never reached Len. */
+export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed"): string {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });
+  return t(why === "plan_required" ? "planGratis" : why === "no_access" ? "sinAcceso" : "perdida");
 }

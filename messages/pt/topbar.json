@@ -195,6 +195,17 @@
       "abrir": "Abrir o projeto",
       "falloSinMotivo": "Não consegui fazer. Responda a este e-mail para me pedir de novo.",
       "interrumpido": "O servidor reiniciou enquanto eu fazia isso, então pode ter ficado pela metade. Veja as mudanças e, se precisar, responda a este e-mail para me pedir de novo."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "Se quiser mudar algo, responda a este e-mail e o Len faz.",
+      "abrir": "Abrir o chat no OpenLen",
+      "pie": "Tarefa agendada «{title}» de {proyecto}.",
+      "quitar": "Remover esta tarefa",
+      "esperando": "Esperando por você no OpenLen:",
+      "planGratis": "Não fiz: as tarefas agendadas são dos planos pagos e a conta do dono do projeto está no plano Grátis. A tarefa ficou parada; com um plano pago, peça de novo ao Len.",
+      "sinAcceso": "Não fiz: quem criou esta tarefa já não pode trabalhar com o Len neste projeto. A tarefa ficou parada.",
+      "perdida": "Não fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça ao Len."
     }
   },
   "envVars": {

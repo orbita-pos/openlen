@@ -27,6 +27,7 @@ import {
 import { sendProjectInviteEmail } from "@/lib/email";
 import { lenEmailAddress } from "@/lib/len-email/address";
 import { avatarOf } from "@/lib/profile/avatar";
+import { deleteTasksByCreator } from "@/lib/scheduled-tasks/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -149,5 +150,9 @@ export async function DELETE(req: Request, ctx: Ctx): Promise<Response> {
   // Un miembro puede irse; quitar a OTRO es del dueño.
   if (q.acceso.rol !== "dueno" && userId !== q.userId) return soloDueno();
   const ok = await quitarMiembro(q.id, userId);
-  return ok ? json({ ok: true }) : json({ error: "not_found" }, 404);
+  if (!ok) return json({ error: "not_found" }, 404);
+  // Their scheduled tasks go with them (spec local 2026-10-29-tareas-programadas, §7.4): they can no
+  // longer talk to Len here, nor should its email reach them.
+  await deleteTasksByCreator(q.id, userId);
+  return json({ ok: true });
 }

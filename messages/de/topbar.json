@@ -195,6 +195,17 @@
       "abrir": "Projekt öffnen",
       "falloSinMotivo": "Ich bin nicht dazu gekommen. Antworte auf diese E-Mail, um mich noch einmal zu fragen.",
       "interrumpido": "Der Server wurde neu gestartet, während ich daran gearbeitet habe, es könnte also nur halb fertig sein. Sieh dir die Änderungen an und antworte bei Bedarf auf diese E-Mail, um mich noch einmal zu fragen."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "Wenn du etwas ändern möchtest, antworte auf diese E-Mail und Len erledigt es.",
+      "abrir": "Chat in OpenLen öffnen",
+      "pie": "Geplante Aufgabe «{title}» von {proyecto}.",
+      "quitar": "Diese Aufgabe entfernen",
+      "esperando": "Wartet in OpenLen auf dich:",
+      "planGratis": "Nicht erledigt: Geplante Aufgaben gehören zu den bezahlten Tarifen, und das Konto des Projektinhabers ist im Gratis-Tarif. Die Aufgabe ist angehalten; mit einem bezahlten Tarif bitte Len erneut darum.",
+      "sinAcceso": "Nicht erledigt: Wer diese Aufgabe erstellt hat, kann in diesem Projekt nicht mehr mit Len arbeiten. Die Aufgabe ist angehalten.",
+      "perdida": "Nicht erledigt: OpenLen war zur geplanten Zeit nicht erreichbar, und es ist mehr als ein Tag vergangen. Wenn du sie noch brauchst, bitte Len darum."
     }
   },
   "envVars": {

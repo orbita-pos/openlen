@@ -195,6 +195,17 @@
       "abrir": "Apri il progetto",
       "falloSinMotivo": "Non sono riuscito a farlo. Rispondi a questa e-mail per chiedermelo di nuovo.",
       "interrumpido": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere rimasto a metà. Controlla le modifiche e, se serve, rispondi a questa e-mail per chiedermelo di nuovo."
+    },
+    "programada": {
+      "asunto": "{title} · {fecha}",
+      "contesta": "Se vuoi cambiare qualcosa, rispondi a questa email e Len se ne occupa.",
+      "abrir": "Apri la chat in OpenLen",
+      "pie": "Attività programmata «{title}» di {proyecto}.",
+      "quitar": "Rimuovi questa attività",
+      "esperando": "Ti aspetta in OpenLen:",
+      "planGratis": "Non l'ho fatta: le attività programmate fanno parte dei piani a pagamento e l'account del proprietario del progetto è nel piano Gratis. L'attività è ferma; con un piano a pagamento, chiedila di nuovo a Len.",
+      "sinAcceso": "Non l'ho fatta: chi ha creato questa attività non può più lavorare con Len in questo progetto. L'attività è ferma.",
+      "perdida": "Non l'ho fatta: OpenLen non era disponibile all'ora prevista ed è passato più di un giorno. Se ti serve ancora, chiedila a Len."
     }
   },
   "envVars": {

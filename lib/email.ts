@@ -4,9 +4,11 @@ import {
   correoDeLen,
   correoDeMencion,
   idiomaDelCorreo,
+  scheduledTaskEmail,
   type DatosDeLaInvitacion,
   type DatosDeLaMencion,
   type DatosDeLaRespuestaDeLen,
+  type DatosDeLaTareaProgramada,
   type IdiomaDelCorreo,
 } from "@/lib/projects/correos-del-proyecto";
 
@@ -687,6 +689,40 @@ export async function sendLenReplyEmail(
     replyTo: input.replyTo,
     ...correo,
     ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
+  });
+}
+
+/**
+ * A SCHEDULED TASK'S RESULT (spec local 2026-10-29-tareas-programadas, §7.7): from «Len», with the
+ * files Len presented attached, to whoever created the task. With the project's Len address as
+ * Reply-To, replying is talking to Len again (lib/len-email); without it, a plain email.
+ */
+export async function sendScheduledTaskEmail(
+  input: DatosDeLaTareaProgramada & {
+    to: string;
+    replyTo: string | null;
+    idioma: IdiomaDelCorreo;
+    attachments: readonly { filename: string; content: Buffer }[];
+  },
+): Promise<void> {
+  const correo = scheduledTaskEmail(input, input.idioma);
+  const live = liveClientOrWarn("scheduled task email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(
+        `\n  📧 [DEV] ${correo.subject} → ${input.to}${input.replyTo ? ` (reply-to: ${input.replyTo})` : ""}${input.attachments.length ? ` [${input.attachments.map((a) => a.filename).join(", ")}]` : ""}\n     ${correo.text.split("\n").join("\n     ")}\n`,
+      );
+    }
+    return;
+  }
+  const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
+  await enviar(live, "scheduled task email", {
+    from: `Len <${address}>`,
+    to: input.to,
+    ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+    ...correo,
+    ...(input.attachments.length > 0 ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
   });
 }
 
