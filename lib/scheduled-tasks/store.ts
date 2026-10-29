@@ -5,7 +5,7 @@
 // can never run the same occurrence twice.
 import "server-only";
 
-import { and, asc, count, eq, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, count, eq, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { ScheduleRecord } from "./deepseek/types";
@@ -123,7 +123,15 @@ export async function claimDue(
           ? { record: { ...task.record, scheduledAt: claim.nextScheduledAt } as ScheduleRecord, scheduledAt: new Date(claim.nextScheduledAt), lastRunId: claim.runId, updatedAt: new Date() }
           : { status: "inactive", lastRunId: claim.runId, updatedAt: new Date() },
       )
-      .where(and(eq(schema.scheduledTasks.id, task.id), eq(schema.scheduledTasks.scheduledAt, task.scheduledAt), eq(schema.scheduledTasks.status, "active")))
+      // In milliseconds, JS's precision: a time written by SQL with microseconds must still match the
+      // row as read, or that task would never be claimed (found by the end-to-end test, 29/10).
+      .where(
+        and(
+          eq(schema.scheduledTasks.id, task.id),
+          sql`date_trunc('milliseconds', ${schema.scheduledTasks.scheduledAt}) = ${task.scheduledAt}`,
+          eq(schema.scheduledTasks.status, "active"),
+        ),
+      )
       .returning({ id: schema.scheduledTasks.id });
     if (moved.length === 0) return null;
     const [run] = await tx
