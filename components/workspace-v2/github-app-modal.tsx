@@ -136,21 +136,21 @@ export function GitHubAppModal({ open, onClose, projectId, initialErrorKey }: Gi
                 )}
               </div>
               <p className="text-[10.5px] fg-faint">{t("privacy")}</p>
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <a
                     href="https://github.com/settings/installations"
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11.5px] font-medium fg-muted hover:bg-hover transition"
+                    className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md whitespace-nowrap text-[11.5px] font-medium fg-muted hover:bg-hover transition"
                   >
                     <ExternalLink size={12} /> {t("manage")}
                   </a>
-                  <button type="button" onClick={connect} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11.5px] font-medium fg-muted hover:bg-hover transition">
+                  <button type="button" onClick={connect} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md whitespace-nowrap text-[11.5px] font-medium fg-muted hover:bg-hover transition">
                     <GitBranch size={12} /> {t("addAccount")}
                   </button>
                 </div>
-                <button type="button" onClick={() => void disconnect()} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[11.5px] font-medium fg-muted hover:bg-hover transition">
+                <button type="button" onClick={() => void disconnect()} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md whitespace-nowrap text-[11.5px] font-medium fg-muted hover:bg-hover transition">
                   <Unplug size={12} /> {t("disconnect")}
                 </button>
               </div>
