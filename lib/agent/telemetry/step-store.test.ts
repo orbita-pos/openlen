@@ -19,7 +19,7 @@ function fakeDb(over: Partial<StepStoreDb> = {}) {
   const inserted: StepRow[] = [];
   const cutoffs: Date[] = [];
   const db: StepStoreDb = {
-    insert: async (rows) => { inserted.push(...rows); },
+    upsert: async (rows) => { inserted.push(...rows); },
     lastWithHashes: async () => null,
     deleteOlderThan: async (cutoff) => { cutoffs.push(cutoff); return 0; },
     ...over,
@@ -30,14 +30,28 @@ function fakeDb(over: Partial<StepStoreDb> = {}) {
 afterEach(() => vi.useRealTimers());
 
 describe("createStepStore", () => {
-  it("write never throws when the db rejects, and logs once", async () => {
+  it("write never throws nor rejects when the db rejects, and logs once", async () => {
     const logs: string[] = [];
-    const { db } = fakeDb({ insert: async () => { throw new Error("db down"); } });
+    const { db } = fakeDb({ upsert: async () => { throw new Error("db down"); } });
     const store = createStepStore(db, { now: () => T0, log: (l) => logs.push(l) });
-    expect(() => store.write([row()])).not.toThrow();
-    await new Promise((r) => setTimeout(r, 0));
+    let written: Promise<void> | undefined;
+    expect(() => (written = store.write([row()]))).not.toThrow();
+    await expect(written).resolves.toBeUndefined();
     expect(logs).toHaveLength(1);
     expect(logs[0]).toContain("db down");
+  });
+
+  it("write resolves only once the db has the rows", async () => {
+    let finish!: () => void;
+    const { db } = fakeDb({ upsert: () => new Promise<void>((r) => (finish = r)) });
+    const store = createStepStore(db, { now: () => T0 });
+    let done = false;
+    const written = store.write([row()]).then(() => (done = true));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(done).toBe(false);
+    finish();
+    await written;
+    expect(done).toBe(true);
   });
 
   it("prunes rows older than 90 days at most once per 24 h", async () => {

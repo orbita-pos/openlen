@@ -1,7 +1,7 @@
 // The real database behind the step store (layer 0 of Len 3.1). Kept apart from
 // `step-store.ts` so the store's tests never import `lib/db` (on the development
 // machine `.env.local` points at production).
-import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { agentRequestSteps } from "@/lib/db/schema";
@@ -42,14 +42,26 @@ function fromDb(r: DbRow): StepRow {
 }
 
 export const drizzleStepStoreDb: StepStoreDb = {
-  async insert(rows) {
-    await db.insert(agentRequestSteps).values(
-      rows.map((r) => ({
-        ...r,
-        messageHashes: r.messageHashes ? [...r.messageHashes] : null,
-        tools: [...r.tools],
-      })),
-    );
+  async upsert(rows) {
+    await db
+      .insert(agentRequestSteps)
+      .values(
+        rows.map((r) => ({
+          ...r,
+          messageHashes: r.messageHashes ? [...r.messageHashes] : null,
+          tools: [...r.tools],
+        })),
+      )
+      // What a row's later writes change (`versionOf` in step-recorder.ts); createdAt stays the first one.
+      .onConflictDoUpdate({
+        target: agentRequestSteps.id,
+        set: {
+          messageHashes: sql`excluded."messageHashes"`,
+          tools: sql`excluded."tools"`,
+          repeats: sql`excluded."repeats"`,
+          endReason: sql`excluded."endReason"`,
+        },
+      });
   },
   async lastWithHashes(projectId, kind) {
     const rows = await db
