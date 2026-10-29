@@ -1,7 +1,7 @@
 // What a git subcommand gets and gives back.
 import type { Signature } from "./objects";
 import type { Repository } from "./repository";
-import type { GitStore, Index, RepoState } from "./store";
+import type { Branching, GitStore, Index, RepoState } from "./store";
 import type { WorkingTree } from "./worktree";
 
 export interface GitIdentity {
@@ -51,8 +51,9 @@ export interface CommandContext {
   readonly now: Date;
   /** See GitRunInput.undeletable. */
   readonly undeletable?: (absolutePath: string) => string | null;
-  /** Compare-and-swap of `main` and the index: false if someone wrote the repository first. */
-  save(head: string, index: Index): Promise<boolean>;
+  /** Compare-and-swap of the current branch's commit and the index (and with `branching`, the branches): false if
+   *  someone wrote the repository first. */
+  save(head: string, index: Index, branching?: Branching): Promise<boolean>;
 }
 
 export type Command = (ctx: CommandContext, args: readonly string[]) => Promise<GitRunResult>;

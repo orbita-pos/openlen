@@ -1,30 +1,17 @@
 // `git checkout [<commit>] -- <paths>`: files back from the index or a commit (overlay: nothing
-// is removed). Switching branches or commits doesn't exist here: one branch, main (spec §4).
-import { oidOfContent } from "../content";
+// is removed). `git checkout [-b] <branch>` moves between branches, through switch's steps. A detached HEAD doesn't
+// exist here.
 import type { Command, CommandContext } from "../command";
 import { abbrev } from "../diff";
-import { compareNames } from "../objects";
 import { GitFatal, INDEX_LOCKED, notAvailable, pathspecDidNotMatch } from "../errors";
 import { parseOptions } from "../options";
 import { matchesPathspec, resolveFromCwd, toAbsolute } from "../paths";
 import { resolveCommit, resolveRevision } from "../revisions";
+import { switchTo, validBranchName } from "./switch";
 import { onlyChanged } from "./writes";
 
-export const ONE_BRANCH = "this project's repository has one branch, main. To bring files back from a commit: git checkout <commit> -- <path>.";
-
-/** What `git checkout <current branch>` lists: HEAD against the working tree (M, D, A). */
-async function localChanges(ctx: CommandContext): Promise<string> {
-  const head = await ctx.repo.filesOfCommit(ctx.state.head);
-  const lines: string[] = [];
-  for (const p of [...new Set([...head.keys(), ...Object.keys(ctx.state.index)])].sort(compareNames)) {
-    const content = ctx.tree.files.get(p);
-    const inHead = head.get(p);
-    if (inHead === undefined) lines.push(`A\t${p}`);
-    else if (content === undefined) lines.push(`D\t${p}`);
-    else if (oidOfContent(content) !== inHead) lines.push(`M\t${p}`);
-  }
-  return lines.map((l) => `${l}\n`).join("");
-}
+export const NO_DETACHED =
+  "a detached HEAD isn't available here: work on a branch (git switch -c <name> <commit>), or bring files back with git checkout <commit> -- <path>.";
 
 function isKnownPath(ctx: CommandContext, arg: string): boolean {
   const p = resolveFromCwd(ctx.cwd, arg);
@@ -33,7 +20,13 @@ function isKnownPath(ctx: CommandContext, arg: string): boolean {
 
 export const checkout: Command = async (ctx, args) => {
   const o = parseOptions(args, { flags: ["-q", "--quiet", "-f", "--force", "--overlay", "-p", "--patch", "--detach"], values: ["-b", "-B", "--orphan"] });
-  if (o.has("-b") || o.has("-B") || o.has("--orphan") || o.has("--detach")) return notAvailable("checkout -b", ONE_BRANCH);
+  for (const f of ["-B", "--orphan", "--detach"]) if (o.has(f)) return notAvailable(`checkout ${f}`, NO_DETACHED);
+  const created = o.value("-b");
+  if (created !== undefined) {
+    if (!validBranchName(created)) throw new GitFatal(`fatal: '${created}' is not a valid branch name\n`);
+    if (Object.hasOwn(ctx.state.refs, created)) throw new GitFatal(`fatal: a branch named '${created}' already exists\n`);
+    return switchTo(ctx, created, { create: true, ...(o.positional[0] ? { startPoint: o.positional[0] } : {}) });
+  }
   if (o.has("-p") || o.has("--patch")) return notAvailable("checkout --patch", "it is interactive; bring whole files back.");
   let rev: string | null = null;
   let typed: string[];
@@ -44,10 +37,11 @@ export const checkout: Command = async (ctx, args) => {
   } else {
     const first = o.positional[0];
     if (first === undefined) return { stdout: "", stderr: "", exitCode: 0 };
-    if (first === "main" && o.positional.length === 1) return { stdout: await localChanges(ctx), stderr: "Already on 'main'\n", exitCode: 0 };
+    // A branch wins over a path of the same name, as in git.
+    if (o.positional.length === 1 && Object.hasOwn(ctx.state.refs, first)) return switchTo(ctx, first, { create: false });
     const asRevision = await resolveRevision(ctx, first);
     if (asRevision && !isKnownPath(ctx, first)) {
-      if (o.positional.length === 1) return notAvailable(`checkout ${first}`, ONE_BRANCH);
+      if (o.positional.length === 1) return notAvailable(`checkout ${first}`, NO_DETACHED);
       rev = asRevision;
       typed = o.positional.slice(1);
     } else typed = [...o.positional];

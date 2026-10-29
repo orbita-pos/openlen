@@ -4,7 +4,13 @@ import type { CommandContext } from "./command";
 import { GitFatal, unknownRevision } from "./errors";
 import { matchesPathspec, resolveFromCwd } from "./paths";
 
-const HEAD_NAMES = new Set(["HEAD", "@", "main", "heads/main", "refs/heads/main"]);
+const HEAD_NAMES = new Set(["HEAD", "@"]);
+
+/** A branch by its name, `heads/<name>` or `refs/heads/<name>`. */
+function branchOf(state: CommandContext["state"], name: string): string | null {
+  const bare = name.replace(/^(?:refs\/)?heads\//, "");
+  return Object.hasOwn(state.refs, bare) ? state.refs[bare]! : null;
+}
 
 type Ctx = Pick<CommandContext, "repo" | "state">;
 
@@ -15,6 +21,7 @@ export async function resolveRevision(ctx: Ctx, spec: string): Promise<string | 
   const base = m[1]!;
   let oid: string | null = null;
   if (HEAD_NAMES.has(base)) oid = ctx.state.head;
+  else if (branchOf(ctx.state, base)) oid = branchOf(ctx.state, base);
   else if (/^[0-9a-fA-F]{4,40}$/.test(base)) {
     const found = await ctx.repo.store.findByPrefix(base.toLowerCase());
     if (found.length === 1 && (await ctx.repo.object(found[0]!)).type === "commit") oid = found[0]!;

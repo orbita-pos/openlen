@@ -2,13 +2,13 @@
 import { oidOfContent } from "../content";
 import type { Command } from "../command";
 import { abbrev } from "../diff";
-import { notAvailable, unknownRevision } from "../errors";
+import { GitFatal, INDEX_LOCKED, notAvailable, unknownRevision } from "../errors";
 import { subjectOf } from "../format";
 import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, relativeToCwd, resolveFromCwd } from "../paths";
-import { resolveRevision } from "../revisions";
-import { ONE_BRANCH } from "./checkout";
+import { resolveCommit, resolveRevision } from "../revisions";
+import { validBranchName } from "./switch";
 
 const NO_REMOTE = "GitHub isn't connected yet: this repository has no remote.";
 
@@ -47,7 +47,8 @@ export const revParse: Command = async (ctx, args) => {
     else if (a === "--abbrev-ref") abbrevRef = true;
     else if (a === "--verify" || a === "-q" || a === "--quiet") verify = true;
     else if (a.startsWith("-")) out.push(a);
-    else if (abbrevRef && (a === "HEAD" || a === "@" || a === "main")) out.push("main");
+    else if (abbrevRef && (a === "HEAD" || a === "@")) out.push(ctx.state.branch);
+    else if (abbrevRef && Object.hasOwn(ctx.state.refs, a)) out.push(a);
     else {
       const oid = await resolveRevision(ctx, a);
       if (!oid) {
@@ -60,17 +61,83 @@ export const revParse: Command = async (ctx, args) => {
   return { stdout: out.map((l) => `${l}\n`).join(""), stderr: "", exitCode: 0 };
 };
 
+/** A `branch --list` pattern: git's fnmatch, * and ? included. */
+function matchesBranchPattern(pattern: string, name: string): boolean {
+  const re = pattern.replace(/[.+^${}()|\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  return new RegExp(`^${re}$`).test(name);
+}
+
 export const branch: Command = async (ctx, args) => {
-  const o = parseOptions(args, { flags: ["-a", "--all", "-l", "--list", "-v", "--verbose", "--show-current", "-r", "--remotes", "--no-color", "-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "-u", "--set-upstream-to"] });
-  for (const f of ["-d", "-D", "-m", "-M", "-c", "-C", "--delete", "--move", "--copy", "-u", "--set-upstream-to"]) if (o.has(f)) return notAvailable(`branch ${f}`, ONE_BRANCH);
-  if (o.positional.length > 0 && !o.has("-l") && !o.has("--list")) return notAvailable(`branch ${o.positional[0]}`, ONE_BRANCH);
-  if (o.has("--show-current")) return { stdout: "main\n", stderr: "", exitCode: 0 };
-  if (o.has("-r") || o.has("--remotes")) return { stdout: "", stderr: "", exitCode: 0 };
-  if (o.has("-v") || o.has("--verbose")) {
-    const subject = subjectOf((await ctx.repo.commit(ctx.state.head)).message);
-    return { stdout: `* main ${abbrev(ctx.state.head)} ${subject}\n`, stderr: "", exitCode: 0 };
+  const o = parseOptions(args, {
+    flags: ["-a", "--all", "-l", "--list", "-v", "-vv", "--verbose", "--show-current", "-r", "--remotes", "--no-color", "-d", "-D", "--delete", "-f", "--force", "-m", "-M", "-c", "-C", "--move", "--copy"],
+    values: ["-u", "--set-upstream-to"],
+  });
+  for (const f of ["-m", "-M", "-c", "-C", "--move", "--copy"]) {
+    if (o.has(f)) {
+      return notAvailable(`branch ${f}`, "renaming or copying a branch isn't available here yet: create the new one with git branch <new> <old>, then delete the old one with git branch -d <old>.");
+    }
   }
-  return { stdout: "* main\n", stderr: "", exitCode: 0 };
+  if (o.has("-u") || o.has("--set-upstream-to")) return notAvailable("branch --set-upstream-to", NO_REMOTE);
+  if (o.has("--show-current")) return { stdout: `${ctx.state.branch}\n`, stderr: "", exitCode: 0 };
+  if (o.has("-r") || o.has("--remotes")) return { stdout: "", stderr: "", exitCode: 0 };
+
+  if (o.has("-d") || o.has("-D") || o.has("--delete")) {
+    const force = o.has("-D") || o.has("-f") || o.has("--force");
+    if (o.positional.length === 0) throw new GitFatal("fatal: branch name required\n");
+    const refs: Record<string, string> = { ...ctx.state.refs };
+    let stdout = "";
+    let stderr = "";
+    let exitCode = 0;
+    for (const name of o.positional) {
+      const oid = Object.hasOwn(refs, name) ? refs[name] : undefined;
+      if (oid === undefined) {
+        stderr += `error: branch '${name}' not found.\n`;
+        exitCode = 1;
+      } else if (name === ctx.state.branch) {
+        stderr += `error: cannot delete branch '${name}' used by worktree at '/'\n`;
+        exitCode = 1;
+      } else if (!force && !(await ctx.repo.isAncestor(oid, ctx.state.head))) {
+        stderr +=
+          `error: the branch '${name}' is not fully merged\n` +
+          `hint: If you are sure you want to delete it, run 'git branch -D ${name}'\n` +
+          'hint: Disable this message with "git config advice.forceDeleteBranch false"\n';
+        exitCode = 1;
+      } else {
+        delete refs[name];
+        stdout += `Deleted branch ${name} (was ${abbrev(oid)}).\n`;
+      }
+    }
+    if (stdout && !(await ctx.save(ctx.state.head, ctx.state.index, { branch: ctx.state.branch, refs }))) throw new GitFatal(INDEX_LOCKED);
+    return { stdout, stderr, exitCode };
+  }
+
+  const listing = ["-l", "--list", "-a", "--all", "-v", "-vv", "--verbose"].some((f) => o.has(f));
+  if (o.positional.length > 0 && !listing) {
+    const name = o.positional[0]!;
+    const start = o.positional[1];
+    if (!validBranchName(name)) throw new GitFatal(`fatal: '${name}' is not a valid branch name\n`);
+    const force = o.has("-f") || o.has("--force");
+    if (Object.hasOwn(ctx.state.refs, name) && !force) throw new GitFatal(`fatal: a branch named '${name}' already exists\n`);
+    if (name === ctx.state.branch) throw new GitFatal(`fatal: cannot force update the branch '${name}' used by worktree at '/'\n`);
+    const oid = start === undefined ? ctx.state.head : await resolveCommit(ctx, start);
+    const refs = { ...ctx.state.refs, [name]: oid };
+    if (!(await ctx.save(ctx.state.head, ctx.state.index, { branch: ctx.state.branch, refs }))) throw new GitFatal(INDEX_LOCKED);
+    return { stdout: "", stderr: "", exitCode: 0 };
+  }
+
+  const names = Object.keys(ctx.state.refs).sort(compareNames);
+  const shown = o.positional.length > 0 ? names.filter((n) => o.positional.some((p) => matchesBranchPattern(p, n))) : names;
+  const mark = (n: string) => (n === ctx.state.branch ? "* " : "  ");
+  if (o.has("-v") || o.has("-vv") || o.has("--verbose")) {
+    const width = Math.max(0, ...shown.map((n) => n.length));
+    const lines: string[] = [];
+    for (const n of shown) {
+      const oid = ctx.state.refs[n]!;
+      lines.push(`${mark(n)}${n.padEnd(width)} ${abbrev(oid)} ${subjectOf((await ctx.repo.commit(oid)).message)}\n`);
+    }
+    return { stdout: lines.join(""), stderr: "", exitCode: 0 };
+  }
+  return { stdout: shown.map((n) => `${mark(n)}${n}\n`).join(""), stderr: "", exitCode: 0 };
 };
 
 export const config: Command = async (ctx, args) => {

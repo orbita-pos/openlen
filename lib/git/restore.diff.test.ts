@@ -61,11 +61,11 @@ describe("bringing files back, against the real git", () => {
     await same(["checkout", "HEAD~2", "index.html"]);
   });
 
-  it("checkout <commit> (switching) is not available here", async () => {
+  it("checkout <commit> (a detached HEAD) is not available here", async () => {
     await threeCommits();
     const r = await pair.ours.git(["checkout", "HEAD~1"]);
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toBe("git checkout HEAD~1: not available here: this project's repository has one branch, main. To bring files back from a commit: git checkout <commit> -- <path>.\n");
+    expect(r.stderr).toBe("git checkout HEAD~1: not available here: a detached HEAD isn't available here: work on a branch (git switch -c <name> <commit>), or bring files back with git checkout <commit> -- <path>.\n");
   });
 
   it("revert: a commit in the middle, -n, and a dirty file", async () => {
