@@ -129,6 +129,11 @@ describe("buildFunctionDeclarations", () => {
       "get_goal",
       "create_goal",
       "update_goal",
+      // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four, in its order.
+      "schedule_create",
+      "schedule_list",
+      "schedule_delete",
+      "schedule_update",
       "undo_last_change",
       // F4 de las apps: convertir una página en app (sólo en una página).
       "convert_to_app",

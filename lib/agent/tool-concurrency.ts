@@ -55,6 +55,8 @@ const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   use_page: visitWithoutClicks,
   // Pieza 5: como DeepSeek, leer un evento es seguro; las dos búsquedas no.
   session_event_read: always,
+  // Scheduled tasks: listing only reads.
+  schedule_list: always,
 };
 
 export function isConcurrencySafe(name: string, args: Record<string, unknown>): boolean {

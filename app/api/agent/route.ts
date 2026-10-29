@@ -92,6 +92,10 @@ import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion
 import { getEsfuerzoGuardado } from "@/lib/agent/esfuerzo-guardado";
 import { ZONA_SIN_DATO, zonaValida } from "@/lib/resultados/zona";
 import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
+import { getUserPlan } from "@/lib/limits";
+import type { ScheduledTasksDeps } from "@/lib/agent/schedule-tools";
+import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
+import { createTask, deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
@@ -1788,11 +1792,17 @@ async function correrTurno(
         const stillWorking = reloj.vivo;
         // A tool that waits (inspect_artifact's wait_ms) stops waiting when the turn is stopped.
         const turnSignal = upstreamAbort.signal;
+        // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): the project's, paid by its owner.
+        const ownerId = userId;
+        const scheduledTasks: ScheduledTasksDeps | undefined = scheduleEnabled()
+          ? { ownerPlan: () => getUserPlan(ownerId), create: createTask, list: listTasks, update: updateTask, remove: deleteTask, now: () => Date.now() }
+          : undefined;
         const depsDelTurno = answersQuestions
           ? {
               ...deps,
               planMode,
               goal,
+              scheduledTasks,
               stillWorking,
               turnSignal,
               askUser: async (questions: UserQuestion[]) => {
@@ -1800,7 +1810,7 @@ async function correrTurno(
                 return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal, preguntas: questions });
               },
             }
-          : { ...deps, planMode, goal, stillWorking, turnSignal };
+          : { ...deps, planMode, goal, scheduledTasks, stillWorking, turnSignal };
         const result = await runAgentLoop({
           messages,
           tools,

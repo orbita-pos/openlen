@@ -58,6 +58,8 @@ import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/se
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
+import { SCHEDULE_DECLARATIONS, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
+import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
@@ -198,6 +200,8 @@ function declaracionesDelModo(
   if (!shopifyEnabledIn(_env)) fuera.add(CONNECT_SHOPIFY_STORE);
   // IMAGE SEARCH (spec local 2026-10-27-chat-drop-and-images): on unless OPENLEN_IMAGE_SEARCH=0.
   if (_env.OPENLEN_IMAGE_SEARCH === "0") fuera.add(IMAGE_SEARCH);
+  // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): on unless OPENLEN_SCHEDULE=0, per server.
+  if (!scheduleEnabled(_env)) for (const n of SCHEDULE_TOOL_NAMES) fuera.add(n);
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
@@ -501,6 +505,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     // `update_goal` de DeepSeek (`lib/agent/goal-tools.ts`). Siempre
     // declaradas: el catálogo no cambia entre turnos (la caché).
     ...GOAL_DECLARATIONS,
+    // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four.
+    ...SCHEDULE_DECLARATIONS,
     {
       name: "undo_last_change",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El
