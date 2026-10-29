@@ -63,6 +63,12 @@ export async function getTask(projectId: string, id: string): Promise<TaskRow | 
   return row ?? null;
 }
 
+/** A task by its id alone: the signed «Quitar esta tarea» link carries no project. */
+export async function getTaskById(id: string): Promise<TaskRow | null> {
+  const [row] = await db.select().from(schema.scheduledTasks).where(eq(schema.scheduledTasks.id, id)).limit(1);
+  return row ?? null;
+}
+
 /** Replaces the record (and its next run). With `expectedUpdatedAt`, only if nobody changed it since. */
 export async function updateTask(projectId: string, id: string, next: ScheduleRecord, expectedUpdatedAt?: Date): Promise<TaskRow | "not_found" | "conflict"> {
   const where = and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id));

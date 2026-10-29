@@ -724,6 +724,8 @@ export default defineConfig({
       "app/api/projects/[id]/brief/route.test.ts",
       "app/api/projects/[id]/skills/route.test.ts",
       "app/api/projects/[id]/miembros/route.test.ts",
+      "app/api/projects/[id]/scheduled-tasks/route.test.ts",
+      "app/api/scheduled-tasks/remove/route.test.ts",
       "app/api/projects/[id]/mention-index/route.test.ts",
       "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
       "lib/projects/chat-files.test.ts",

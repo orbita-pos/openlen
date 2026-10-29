@@ -45,6 +45,7 @@ import { useAgentChat, type PendingAttachments } from "./use-agent-chat";
 import { useMentionIndex } from "./use-mention-index";
 import type { IncomingMention } from "@/lib/mentions/types";
 import { useConversations } from "./use-conversations";
+import { useScheduledTasks } from "./use-scheduled-tasks";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
 import { useIsMobile } from "../use-is-mobile";
@@ -276,6 +277,8 @@ function AgentChatView({
   }, [turnoDelHilo, projectId, seguirTurnoDelHilo]);
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
+  // The clock of the project's scheduled tasks (spec local 2026-10-29-tareas-programadas, §7.8).
+  const scheduled = useScheduledTasks(projectId, chat.busy);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
   const initial = useMemo(
@@ -459,6 +462,7 @@ function AgentChatView({
         relativeTime={relativeTime}
         esApp={esApp}
         noFloat={centered}
+        scheduled={scheduled}
       />
       {equipo.compartido && !plegado && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
