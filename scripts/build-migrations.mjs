@@ -157,6 +157,9 @@ const targets = [
   "len-skills-migrate",
   // Len por correo: los correos a Len, guardados antes de su turno (lenEmailRequests).
   "len-email-migrate",
+  // Las tareas programadas de Len: scheduledTasks y scheduledTaskRuns (spec local
+  // 2026-10-29-tareas-programadas). Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código.
+  "scheduled-tasks-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴
