@@ -2,7 +2,7 @@
 // differential tests check every hash against the real git binary.
 import { createHash } from "node:crypto";
 
-export type ObjectType = "blob" | "tree" | "commit";
+export type ObjectType = "blob" | "tree" | "commit" | "tag";
 /** A regular file, an executable, a symbolic link, a submodule (a commit of another repository), a folder. */
 export type EntryMode = "100644" | "100755" | "120000" | "160000" | "40000";
 /** The modes a file can have other than the regular one. */
