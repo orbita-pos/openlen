@@ -60,15 +60,16 @@ a.nx-act { text-decoration: none; }
 .app-lienzo .lm-chat { display: flex; flex-direction: column; }
 .app-lienzo .ch-top { position: relative; flex-shrink: 0; padding-top: calc(var(--app-arriba) + 6px); }
 .app-lienzo .ch-equipo { grid-column: 1 / -1; justify-self: center; border: 1px solid var(--c-line); border-radius: 20px; background: var(--c-qr-bg); color: var(--c-ink); font: 600 11px Inter,sans-serif; min-height: 36px; padding: 6px 14px; margin-top: 6px; }
-.app-lienzo .ch-log { position: relative; inset: auto; flex: 1; min-height: 0; padding-top: 10px; padding-bottom: calc(92px + var(--app-abajo)); touch-action: pan-y; }
+.app-lienzo .ch-log { position: relative; inset: auto; flex: 1; min-height: 0; padding-top: 10px; padding-bottom: 16px; touch-action: pan-y; }
 .app-lienzo .lm-chat.has-pip .ch-top { height: 0; padding: 0; border: 0; }
 .app-lienzo .lm-chat.has-pip .ch-log { padding-top: calc(var(--app-arriba) + 190px); }
-.app-lienzo .ch-foot { padding-bottom: calc(12px + var(--app-abajo)); }
+.app-lienzo .ch-foot { position:relative; flex-shrink:0; padding-bottom:calc(12px + var(--app-abajo)); }
 /* lo que dice Len puede traer saltos de línea (una lista): se respetan */
 .app-lienzo .is-len .ch-b { white-space: pre-line; }
 .app-lienzo .ch-plus:disabled { opacity: .4; }
 /* El campo es un textarea (ver chat.tsx): lo mismo que el input del prototipo. */
-.app-lienzo .lm-field textarea { display: block; width: 100%; height: 100%; border: 0; background: transparent; padding: 12px 16px; font: 16px/20px Inter, sans-serif; color: var(--c-ink); outline: none; resize: none; overflow: hidden; }
+.app-lienzo .lm-field { height:auto; min-height:44px; align-self:flex-end; }
+.app-lienzo .lm-field textarea { display: block; width: 100%; height:44px; min-height:44px; max-height:132px; border: 0; background: transparent; padding: 12px 16px; font: 16px/20px Inter, sans-serif; color: var(--c-ink); outline: none; resize: none; overflow-y:auto; }
 .app-lienzo .lm-field textarea::placeholder { color: var(--c-dim); }
 .app-lienzo .lm-field.is-rec textarea { visibility: hidden; }
 /* Los subtítulos de verdad son largos, y en un teléfono más bajo que el
@@ -86,7 +87,7 @@ a.nx-act { text-decoration: none; }
 .app-adjunta img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .app-adjunta button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; display: grid; place-items: center; cursor: pointer; }
 .app-adjunta button svg { width: 12px; height: 12px; }
-.app-lienzo .lm-chat.con-adjunta .ch-log { padding-bottom: calc(176px + var(--app-abajo)); }
+
 /* Con el teclado abierto (main.tsx: .con-teclado) el hilo se queda con poco
    sitio: la cabecera se encoge en una fila, la cara pequeña junto a «Len»,
    como WhatsApp. */
@@ -107,3 +108,46 @@ a.nx-act { text-decoration: none; }
   }
   .app-lienzo .lm-halo { transform: none !important; }
 }
+
+/* El historial y el pie se reparten el alto real, incluso con varios adjuntos. */
+.ch-historial{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.ch-contenido{display:flex;flex-direction:column;min-height:100%}
+.ch-volver-final{position:absolute;bottom:12px;right:18px;z-index:2;display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--c-line);border-radius:50%;background:var(--c-field);color:var(--c-ink);box-shadow:0 3px 12px #0002;cursor:pointer}
+.ch-volver-final svg{width:20px;height:20px;transform:rotate(90deg)}
+.ch-volver-final:focus-visible{outline:2px solid var(--c-qr);outline-offset:3px}
+
+.app-lienzo .app-cargando{align-items:center;justify-content:center;gap:18px;padding:28px;text-align:center}
+.app-cargando-cara{width:64px;height:64px;flex-shrink:0}
+.app-cargando p{margin:0;font-size:15px;color:var(--c-dim)}
+.app-lienzo .ent-empty{justify-content:center;gap:16px;padding:40px 28px;overflow-y:auto}
+.app-lienzo .ent-empty p{font-size:18px;line-height:1.5;margin:0}
+.app-vista-estado{position:absolute;top:calc(var(--app-barra) + 28px);left:24px;right:24px;display:flex;align-items:center;flex-direction:column;gap:14px;text-align:center;color:var(--lm-ink)}
+.app-vista-estado p{font-size:15px;line-height:1.5;margin:0}
+.app-vista-estado button{min-height:44px;padding:10px 20px;border-radius:16px;border:1px solid var(--lm-line);background:var(--lm-soft);color:inherit}
+.app-selector .lm-actions button{overflow-wrap:anywhere;white-space:normal}
+.app-selector .lm-grab,.app-main-sheet .lm-grab{position:relative;width:64px;height:44px;margin:-10px auto 0;background:transparent;border-radius:12px}
+.app-selector .lm-grab::before,.app-main-sheet .lm-grab::before{content:"";position:absolute;width:40px;height:5px;left:12px;top:16px;background:var(--m-faint);border-radius:3px}
+.app-lienzo .lm-dvbtn,.app-lienzo .ent-face-button{width:44px;height:44px;display:grid;place-items:center}
+.app-lienzo .lm-bar{gap:7px;padding-left:8px;padding-right:8px}
+.app-lienzo .lm-bar-t{min-height:44px}
+.app-selector :focus-visible,.app-lienzo .lm-dvmenu button:focus-visible,.app-lienzo .lm-bar button:focus-visible{outline:2px solid var(--lm-ink);outline-offset:2px}
+
+/* La tinta de la marca mantiene contraste sobre todo el degradado naranja. */
+:root:not([data-theme="dark"]) .app-lienzo .lm-m{--m-ink:#2B1405;--m-dim:#2B1405;--m-faint:rgba(43,20,5,.25);--m-ring:rgba(43,20,5,.4)}
+.app-lienzo .lm-chat{--c-me:linear-gradient(160deg,#CF4808 0%,#C7460A 100%)}
+:root:not([data-theme="dark"]) .app-lienzo .lm-chat{--c-dim:#756050}
+.app-lienzo .ent-progreso li[data-estado="error"]{color:var(--m-ink)}
+
+.app-lienzo .ent-empty > .lm-btn{background:var(--c-field);color:var(--c-ink);border:1px solid var(--c-line)}
+
+.app-lienzo .ch-plus,.app-lienzo .lm-vn-play{width:44px;height:44px}
+.app-lienzo .ch-rcpt .lm-link,.app-lienzo .ch-tr .lm-link{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:6px 4px}
+.app-lienzo .ent-shortcuts button{min-height:44px}
+.app-adjunta button{width:44px;height:44px;background:transparent;isolation:isolate;top:0;right:0}
+.app-adjunta button::before{content:"";position:absolute;inset:8px;border-radius:50%;background:#000b;z-index:-1}
+
+.app-lienzo .nx textarea{background:var(--m-card,var(--c-field,#fff));color:var(--m-card-ink,var(--c-ink,#2B1A10))}
+
+.app-vacio-acciones{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+.app-vacio-acciones button{min-height:44px;border:1px solid var(--c-line);border-radius:16px;padding:10px 16px;background:var(--c-field);color:var(--c-ink);font-weight:600;margin:0}
+.app-vacio-acciones .app-vacio-abrir{background:var(--c-me);color:var(--c-me-ink);border-color:transparent}

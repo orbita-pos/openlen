@@ -1,0 +1,338 @@
+[
+  {
+    "w": 390,
+    "call": {
+      "text": "Len\n1:05\n?\n¡Hola!\nz\nz\nZ\n1\n\nEstasemanaentraron312personasatupáginayseisdecadadiezllegandeInstagram.Tupáginavamuybien,yyapuseloshorariosquemepediste.Siquierespodemosrevisarelrestodeloscambiosjuntos.Tú¿Cómo va mi página?\n\nAudio\nColgar\nSilenciar",
+      "subs": {
+        "x": 26,
+        "y": 448,
+        "width": 338,
+        "height": 236,
+        "top": 448,
+        "right": 364,
+        "bottom": 684,
+        "left": 26
+      },
+      "actions": {
+        "x": 0,
+        "y": 701.875,
+        "width": 390,
+        "height": 92.125,
+        "top": 701.875,
+        "right": 390,
+        "bottom": 794,
+        "left": 0
+      },
+      "buttons": [
+        {
+          "text": "",
+          "pressed": null,
+          "label": "Hacer pequeña la llamada"
+        },
+        {
+          "text": "Audio",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Colgar",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Silenciar",
+          "pressed": null,
+          "label": null
+        }
+      ]
+    }
+  },
+  {
+    "w": 390,
+    "pip": {
+      "text": "?\n¡Hola!\nz\nz\nZ\n1\nLen\n1:04",
+      "buttons": [
+        {
+          "label": "Llamada en pantalla completa",
+          "pressed": null,
+          "box": {
+            "x": 336,
+            "y": 62,
+            "width": 32,
+            "height": 32,
+            "top": 62,
+            "right": 368,
+            "bottom": 94,
+            "left": 336
+          }
+        },
+        {
+          "label": "Audio",
+          "pressed": null,
+          "box": {
+            "x": 26,
+            "y": 158.125,
+            "width": 106,
+            "height": 42,
+            "top": 158.125,
+            "right": 132,
+            "bottom": 200.125,
+            "left": 26
+          }
+        },
+        {
+          "label": "Colgar",
+          "pressed": null,
+          "box": {
+            "x": 142,
+            "y": 158.125,
+            "width": 106,
+            "height": 42,
+            "top": 158.125,
+            "right": 248,
+            "bottom": 200.125,
+            "left": 142
+          }
+        },
+        {
+          "label": "Silenciar",
+          "pressed": null,
+          "box": {
+            "x": 258,
+            "y": 158.125,
+            "width": 106,
+            "height": 42,
+            "top": 158.125,
+            "right": 364,
+            "bottom": 200.125,
+            "left": 258
+          }
+        }
+      ]
+    }
+  },
+  {
+    "w": 360,
+    "call": {
+      "text": "Len\n1:05\n?\n¡Hola!\nz\nz\nZ\n1\n\nEstasemanaentraron312personasatupáginayseisdecadadiezllegandeInstagram.Tupáginavamuybien,yyapuseloshorariosquemepediste.Siquierespodemosrevisarelrestodeloscambiosjuntos.Tú¿Cómo va mi página?\n\nAudio\nColgar\nSilenciar",
+      "subs": {
+        "x": 24,
+        "y": 413.5384521484375,
+        "width": 312,
+        "height": 78.4615478515625,
+        "top": 413.5384521484375,
+        "right": 336,
+        "bottom": 492,
+        "left": 24
+      },
+      "actions": {
+        "x": 0,
+        "y": 508.5,
+        "width": 360,
+        "height": 85.0384521484375,
+        "top": 508.5,
+        "right": 360,
+        "bottom": 593.5384521484375,
+        "left": 0
+      },
+      "buttons": [
+        {
+          "text": "",
+          "pressed": null,
+          "label": "Hacer pequeña la llamada"
+        },
+        {
+          "text": "Audio",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Colgar",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Silenciar",
+          "pressed": null,
+          "label": null
+        }
+      ]
+    }
+  },
+  {
+    "w": 360,
+    "pip": {
+      "text": "?\n¡Hola!\nz\nz\nZ\n1\nLen\n1:04",
+      "buttons": [
+        {
+          "label": "Llamada en pantalla completa",
+          "pressed": null,
+          "box": {
+            "x": 310.1538391113281,
+            "y": 57.230770111083984,
+            "width": 29.538482666015625,
+            "height": 29.538463592529297,
+            "top": 57.230770111083984,
+            "right": 339.69232177734375,
+            "bottom": 86.76923370361328,
+            "left": 310.1538391113281
+          }
+        },
+        {
+          "label": "Audio",
+          "pressed": null,
+          "box": {
+            "x": 24,
+            "y": 145.96153259277344,
+            "width": 97.84615325927734,
+            "height": 38.76924133300781,
+            "top": 145.96153259277344,
+            "right": 121.84615325927734,
+            "bottom": 184.73077392578125,
+            "left": 24
+          }
+        },
+        {
+          "label": "Colgar",
+          "pressed": null,
+          "box": {
+            "x": 131.07691955566406,
+            "y": 145.96153259277344,
+            "width": 97.84616088867188,
+            "height": 38.76924133300781,
+            "top": 145.96153259277344,
+            "right": 228.92308044433594,
+            "bottom": 184.73077392578125,
+            "left": 131.07691955566406
+          }
+        },
+        {
+          "label": "Silenciar",
+          "pressed": null,
+          "box": {
+            "x": 238.1538543701172,
+            "y": 145.96153259277344,
+            "width": 97.84614562988281,
+            "height": 38.76924133300781,
+            "top": 145.96153259277344,
+            "right": 336,
+            "bottom": 184.73077392578125,
+            "left": 238.1538543701172
+          }
+        }
+      ]
+    }
+  },
+  {
+    "w": 320,
+    "call": {
+      "text": "Len\n1:05\n?\n¡Hola!\nz\nz\nZ\n1\n\nEstasemanaentraron312personasatupáginayseisdecadadiezllegandeInstagram.Tupáginavamuybien,yyapuseloshorariosquemepediste.Siquierespodemosrevisarelrestodeloscambiosjuntos.Tú¿Cómo va mi página?\n\nAudio\nColgar\nSilenciar",
+      "subs": {
+        "x": 21.33333396911621,
+        "y": 367.5897521972656,
+        "width": 277.33331298828125,
+        "height": 68.92306518554688,
+        "top": 367.5897521972656,
+        "right": 298.66664695739746,
+        "bottom": 436.5128173828125,
+        "left": 21.33333396911621
+      },
+      "actions": {
+        "x": 0,
+        "y": 451.17950439453125,
+        "width": 320,
+        "height": 75.5897216796875,
+        "top": 451.17950439453125,
+        "right": 320,
+        "bottom": 526.7692260742188,
+        "left": 0
+      },
+      "buttons": [
+        {
+          "text": "",
+          "pressed": null,
+          "label": "Hacer pequeña la llamada"
+        },
+        {
+          "text": "Audio",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Colgar",
+          "pressed": null,
+          "label": null
+        },
+        {
+          "text": "Silenciar",
+          "pressed": null,
+          "label": null
+        }
+      ]
+    }
+  },
+  {
+    "w": 320,
+    "pip": {
+      "text": "?\n¡Hola!\nz\nz\nZ\n1\nLen\n1:04",
+      "buttons": [
+        {
+          "label": "Llamada en pantalla completa",
+          "pressed": null,
+          "box": {
+            "x": 275.69232177734375,
+            "y": 50.871795654296875,
+            "width": 26.25640869140625,
+            "height": 26.25640869140625,
+            "top": 50.871795654296875,
+            "right": 301.94873046875,
+            "bottom": 77.12820434570312,
+            "left": 275.69232177734375
+          }
+        },
+        {
+          "label": "Audio",
+          "pressed": null,
+          "box": {
+            "x": 21.33333396911621,
+            "y": 129.74359130859375,
+            "width": 86.97435760498047,
+            "height": 34.46153259277344,
+            "top": 129.74359130859375,
+            "right": 108.30769157409668,
+            "bottom": 164.2051239013672,
+            "left": 21.33333396911621
+          }
+        },
+        {
+          "label": "Colgar",
+          "pressed": null,
+          "box": {
+            "x": 116.51282501220703,
+            "y": 129.74359130859375,
+            "width": 86.97435760498047,
+            "height": 34.46153259277344,
+            "top": 129.74359130859375,
+            "right": 203.4871826171875,
+            "bottom": 164.2051239013672,
+            "left": 116.51282501220703
+          }
+        },
+        {
+          "label": "Silenciar",
+          "pressed": null,
+          "box": {
+            "x": 211.6923065185547,
+            "y": 129.74359130859375,
+            "width": 86.97434997558594,
+            "height": 34.46153259277344,
+            "top": 129.74359130859375,
+            "right": 298.6666564941406,
+            "bottom": 164.2051239013672,
+            "left": 211.6923065185547
+          }
+        }
+      ]
+    }
+  }
+]

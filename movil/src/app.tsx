@@ -5,6 +5,7 @@ import { BASE, idiomaDelTelefono } from "./config";
 import { crearClienteDeLaApp } from "./api/cliente";
 import { crearEntrada } from "./sesion/entrada";
 import { plataforma } from "./sesion/plataforma";
+import { Cargando } from "./pantallas/cargando";
 import { PantallaEntrar } from "./pantallas/entrar";
 import { PantallaPrincipal } from "./pantallas/principal";
 import { abandonarAvisos, cerrarAvisos } from "./avisos/use-avisos";
@@ -87,7 +88,7 @@ export function App() {
     setVista("entrar");
   };
 
-  if (vista === "cargando") return null;
+  if (vista === "cargando") return <Cargando />;
   if (vista === "entrar")
     return (
       <PantallaEntrar

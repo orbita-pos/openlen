@@ -19,14 +19,20 @@ function Visitas({ cliente, projectId, idioma }: { cliente: ClienteDeOpenLen; pr
   const t = useTranslations("movil.tarjetas");
   const [d, setD] = useState<DatosDeVisitas | null>(null);
   const [entra, setEntra] = useState("");
+  const [estado, setEstado] = useState<"cargando" | "listo" | "error">("cargando");
+  const [intento, setIntento] = useState(0);
+  const tg = useTranslations("movil.gestion");
   useEffect(() => {
+    let vigente = true;
+    setD(null); setEstado("cargando");
     const zona = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone);
     void cliente
       .pedir(`/api/voz/visitas?project=${encodeURIComponent(projectId)}&zona=${zona}`)
-      .then((r) => (r.ok ? (r.json() as Promise<DatosDeVisitas>) : null))
-      .then(setD)
-      .catch(() => setD(null));
-  }, [cliente, projectId]);
+      .then(r => { if (!r.ok) throw new Error("visitas"); return r.json() as Promise<DatosDeVisitas>; })
+      .then(x => { if (vigente) { setD(x); setEstado("listo"); } })
+      .catch(() => { if (vigente) setEstado("error"); });
+    return () => { vigente = false; };
+  }, [cliente, projectId, intento]);
   // Como el prototipo: la tarjeta entra (is-in), luego crecen las barras
   // (is-grown) y sale la pastilla de dónde llegan (su propio is-in).
   useEffect(() => {
@@ -38,7 +44,10 @@ function Visitas({ cliente, projectId, idioma }: { cliente: ClienteDeOpenLen; pr
       clearTimeout(b);
     };
   }, [d]);
-  if (!d) return null;
+  if (!d) return <div className="nx is-in"><div className="nx-cap">{t("visitas")}</div>
+    <p className="nx-vs" role={estado === "error" ? "alert" : "status"}>{tg(estado === "error" ? "error" : "cargando")}</p>
+    {estado === "error" && <button type="button" className="nx-act" onClick={() => setIntento(x => x + 1)}>{tg("reintentar")}</button>}
+  </div>;
   const barras = barrasDeVisitas(d.porDia);
   return (
     <div className={`nx is-live${entra}`}>
@@ -71,6 +80,7 @@ type Respuesta = Extract<TarjetaDeLlamada, { tipo: "respuesta" }>["respuesta"];
 function Borrador({ cliente, r }: { cliente: ClienteDeOpenLen; r: Respuesta }) {
   const t = useTranslations("movil.tarjetas");
   const [texto, setTexto] = useState(r.texto);
+  const tg = useTranslations("movil.gestion");
   const [estado, setEstado] = useState<"listo" | "enviando" | "enviado" | "copiado" | "error">("listo");
   const enviar = async () => {
     if (estado === "enviando" || estado === "enviado" || !texto.trim()) return;
@@ -101,13 +111,14 @@ function Borrador({ cliente, r }: { cliente: ClienteDeOpenLen; r: Respuesta }) {
         className="nx-what"
         style={{ width: "100%", minHeight: 72, border: 0, borderRadius: 12, padding: 10, font: "500 15px Inter, sans-serif", boxSizing: "border-box" }}
         value={texto}
-        disabled={estado === "enviado"}
-        onChange={(e) => setTexto(e.target.value)}
+        aria-label={r.con ? t("borrador", { con:r.con }) : t("borradorSinNombre")}
+        disabled={estado === "enviado" || estado === "enviando"}
+        onChange={(e) => { setTexto(e.target.value); setEstado("listo"); }}
       />
-      <div className="nx-vs">{estado === "error" ? (r.botones.includes("enviar") ? t("error") : null) : t("nota")}</div>
+      <div className="nx-vs" role={estado === "error" ? "alert" : "status"}>{estado === "error" ? (r.botones.includes("enviar") ? t("error") : tg("error")) : estado === "enviado" ? t("enviado") : t("nota")}</div>
       <div className="nx-acts" style={{ flexWrap: "wrap" }}>
         {r.botones.includes("enviar") && (
-          <button type="button" className="nx-act" onClick={() => void enviar()} disabled={estado === "enviando" || estado === "enviado"}>
+          <button type="button" className="nx-act" onClick={() => void enviar()} disabled={estado === "enviando" || estado === "enviado" || !texto.trim()}>
             {estado === "enviando" ? t("enviando") : estado === "enviado" ? t("enviado") : t("enviar")}
           </button>
         )}
@@ -143,7 +154,7 @@ function Publicar({ cliente, projectId, confirm }: { cliente: ClienteDeOpenLen; 
   return (
     <div className="nx">
       <div className="nx-cap">{estado === "hecho" ? t("publicadaEn", { url: direccion }) : direccion}</div>
-      {estado === "error" && <div className="nx-vs">{t("noPublicada")}</div>}
+      {estado === "error" && <div className="nx-vs" role="alert">{t("noPublicada")}</div>}
       {estado !== "hecho" && (
         <div className="nx-acts">
           <button type="button" className="nx-act" onClick={() => void publicar()} disabled={estado === "publicando"}>

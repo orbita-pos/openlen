@@ -113,7 +113,11 @@ export function useChat(o: OpcionesDelChat) {
     vivoRef.current = turnoNuevo(fila);
     setVivo(vivoRef.current);
     const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal }, (e) => {
-      if (actual === epoca.current) setVivo((v) => (v ? conEvento(v, e) : v));
+      if (actual !== epoca.current) return;
+      setVivo((v) => (v ? conEvento(v, e) : v));
+      if (e.nombre === "turno" && typeof (e.datos as { turnoId?: unknown } | null)?.turnoId === "string") {
+        setLocales(ls => ls.map(x => (x.tipo === "tu" || x.tipo === "voz") && x.fila === fila && x.estado === "enviando" ? { ...x, estado: "ok" } : x));
+      }
     });
     if (actual !== epoca.current) return true;
     if (fin === "sinRed" || typeof fin === "object") {
@@ -172,8 +176,9 @@ export function useChat(o: OpcionesDelChat) {
       // El id de la fila lo pone la app, como la web: así sabe cuándo la
       // conversación releída ya trae este mensaje.
       const fila = crypto.randomUUID();
-      setLocales((ls) => marcar(ls, k, { estado: "ok", fila }));
-      if (!(await correr(texto || textoDeFotoSola, fila, url, goal, enviados)) && actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: "noSeEnvio" }));
+      setLocales((ls) => marcar(ls, k, { estado: "enviando", fila }));
+      const ok = await correr(texto || textoDeFotoSola, fila, url, goal, enviados);
+      if (actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
     },
     [correr],
   );

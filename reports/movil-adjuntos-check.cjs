@@ -32,7 +32,7 @@ try{for(const [width,height] of [[390,844],[360,640]]){
  await expect(chat.locator('.app-archivo-pendiente')).toHaveCount(2);
  await p.screenshot({path:path.join(dir,`${width}-previa.png`),animations:'disabled'});
  await p.setViewportSize({width,height:400});await expect(chat.locator('.app-pendientes')).toBeVisible();
- const pie=await chat.locator('.ch-foot').boundingBox();expect(pie.y+pie.height).toBeLessThanOrEqual(401);
+ await expect.poll(async()=>{const pie=await chat.locator('.ch-foot').boundingBox();return pie.y+pie.height;}).toBeLessThanOrEqual(401);
  await plus.tap();const menu=await chat.getByRole('dialog',{name:'Adjuntar'}).boundingBox();expect(menu.y).toBeGreaterThanOrEqual(0);
  await chat.getByRole('button',{name:'Cancelar',exact:true}).tap();await p.setViewportSize({width,height});
 
