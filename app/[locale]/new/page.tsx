@@ -1544,10 +1544,13 @@ function NewV2Inner() {
     setCenterArtifactId(null);
     setViewerArtifact(null);
   }, [loadedProject?.id]);
+  // `null` = todavía no se sabe: sin el proyecto, o sin la primera respuesta de la lista de piezas (si falla,
+  // `loading` vuelve a false y cuenta como ninguna).
   const centro = centerContent({
-    hasPage: activeDoc.trim() !== "" || Object.keys(loadedProject?.pages ?? {}).length > 0,
+    hasPage: loadedProject ? activeDoc.trim() !== "" || Object.keys(loadedProject.pages ?? {}).length > 0 : null,
     isApp: esApp || naceComo === "app",
-    deliverables: artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
+    deliverables:
+      artifactsOn && artifacts.enabled === null && artifacts.loading ? null : artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
   });
   const openArtifact = useCallback(
     (item: ArtifactSummary) => {
@@ -3549,6 +3552,18 @@ function NewV2Inner() {
     mode === "chat" &&
     !leftCollapsed &&
     !previewingTemplate;
+  // Mientras no se sabe qué va en el centro, ni el chat a su ancho ni el lienzo: sólo el rail y un fondo neutro.
+  // Antes se pintaba el chat a la izquierda con un «Cargando…» color lienzo y, si el proyecto no tenía página, el
+  // chat saltaba a ocupar todo: el parpadeo de cada recarga (Jesús, 29/10).
+  const centroPorSaber =
+    entryMode === "editing" &&
+    !pantallaDeInicio &&
+    !proyectoEnBlanco &&
+    !projectUnavailable &&
+    centro === "pending" &&
+    normalizedCenterView === "page" &&
+    mode === "chat" &&
+    !previewingTemplate;
   return (
     <WorkspaceArtifactsContext.Provider value={workspaceArtifacts}>
     <div className="workspace-v2 h-full flex flex-col">
@@ -3642,7 +3657,7 @@ function NewV2Inner() {
           soundVolume={soundVolume}
           onSoundVolume={setSoundVolume}
           onToggleSoundMute={toggleSoundMute}
-          collapsed={leftCollapsed}
+          collapsed={leftCollapsed || centroPorSaber}
           fillWidth={chatEnElCentro}
           onToggleCollapse={() => setLeftCollapsed((c) => !c)}
           activeSection={normalizedCenterView}
@@ -3897,7 +3912,7 @@ function NewV2Inner() {
         {entryMode === "editing" && !proyectoEnBlanco && !previewingTemplate &&
           // Con el primer mensaje mandado, el lienzo aparece VACÍO y se va
           // llenando con la página a medias que Len escribe (`page_preview`).
-          (loadedProject && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
+          (loadedProject && !centroPorSaber && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
             centro === "deliverable" && workspaceArtifacts ? (
               <ArtifactStage
                 projectId={loadedProject.id}
@@ -4306,9 +4321,10 @@ function NewV2Inner() {
               onRetry={() => void openProjectFromUrl(projectParam)}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-preview-a">
+            // Cargando, el fondo del rail y no el del lienzo: todavía no se sabe si habrá lienzo.
+            <div className={`flex-1 flex items-center justify-center ${loadedProject && !centroPorSaber ? "bg-preview-a" : "bg-side"}`}>
               <div className="text-[12px] fg-faint">
-                {loadedProject
+                {loadedProject && !centroPorSaber
                   ? t("editing.noHtml")
                   : t("editing.loading")}
               </div>

@@ -15,6 +15,20 @@ it("keeps the canvas for a page or an app, with or without deliverables", () => 
   expect(centerContent({ hasPage: false, isApp: true, deliverables: 1 })).toBe("canvas");
 });
 
+it("waits, choosing neither the conversation nor the canvas, while the project has not arrived", () => {
+  expect(centerContent({ hasPage: null, isApp: false, deliverables: 0 })).toBe("pending");
+  expect(centerContent({ hasPage: null, isApp: false, deliverables: null })).toBe("pending");
+});
+
+it("waits while it does not know yet whether a project with no page has deliverables", () => {
+  expect(centerContent({ hasPage: false, isApp: false, deliverables: null })).toBe("pending");
+});
+
+it("does not wait for the deliverables when there is a page or an app", () => {
+  expect(centerContent({ hasPage: true, isApp: false, deliverables: null })).toBe("canvas");
+  expect(centerContent({ hasPage: false, isApp: true, deliverables: null })).toBe("canvas");
+});
+
 it("names the pieces a turn created or rendered, once each and in order", () => {
   const a = "11111111-1111-4111-8111-111111111111", b = "22222222-2222-4222-8222-222222222222";
   expect(artifactIdsOfTurn([
