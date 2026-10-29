@@ -45,20 +45,26 @@ describe("the exit after a SIGTERM waits for the live turns", () => {
     landed();
     await new Promise((r) => setTimeout(r, 0));
     expect(exits).toEqual([0]);
-    expect(order).toEqual(["turn wrote", "[exit] 1 live turn(s) wrote what they had before the exit"]);
+    expect(order).toHaveLength(2);
+    expect(order[0]).toBe("turn wrote");
+    // The deploy log says it finished, and how long it took.
+    expect(order[1]).toMatch(/^\[exit\] 1 live turn\(s\) wrote what they had before the exit \(\d+ ms\)$/);
   });
 
   it("a turn that never answers holds the exit back only up to the limit", async () => {
     vi.useFakeTimers();
     const { proc, exits, signal } = fakeProcess();
     register(() => new Promise<void>(() => {}));
-    installExitFlush({ proc, timeoutMs: 2000, log: () => {} });
+    const lines: string[] = [];
+    installExitFlush({ proc, timeoutMs: 2000, log: (l) => lines.push(l) });
     signal("SIGTERM");
     proc.exit(0);
     await vi.advanceTimersByTimeAsync(1999);
     expect(exits).toEqual([]);
     await vi.advanceTimersByTimeAsync(1);
     expect(exits).toEqual([0]);
+    // And the deploy log says the limit cut it, not that it wrote.
+    expect(lines).toEqual(["[exit] 1 live turn(s) were still writing after 2000 ms: exiting anyway; the next boot closes what they left"]);
   });
 
   it("with no live turn the exit is the one it always was, at once", () => {
