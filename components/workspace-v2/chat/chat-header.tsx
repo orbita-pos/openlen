@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { History, MessageSquarePlus, Minimize2, PanelLeft, PictureInPicture2, X } from "lucide-react";
 
 import { useMandoDesplegable } from "../use-mando-desplegable";
+import { ScheduledTasksMenu, type ScheduledTasks } from "./scheduled-tasks-menu";
 import type { ConversationActionResult, useConversations } from "./use-conversations";
 import type { ChatLayout } from "./use-chat-version";
 
@@ -26,7 +27,10 @@ export function ChatHeader({
   relativeTime,
   esApp = false,
   noFloat = false,
+  scheduled,
 }: {
+  /** The project's scheduled tasks: the clock shows only when there are some. */
+  scheduled?: ScheduledTasks;
   /** Anclado, flotante o minimizado (del mock). */
   layout: ChatLayout;
   onLayout: (l: ChatLayout) => void;
@@ -60,6 +64,7 @@ export function ChatHeader({
         {t.rich("newChat.header.line", { b: (chunks) => <b className="font-semibold fg">{chunks}</b> })}
       </span>
       <span className="ml-auto" />
+      {scheduled && <ScheduledTasksMenu scheduled={scheduled} />}
       <div className="relative" ref={menu.refContenedor} onKeyDown={menu.alPulsarTecla}>
         <button
           type="button"

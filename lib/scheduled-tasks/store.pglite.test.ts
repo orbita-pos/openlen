@@ -81,6 +81,12 @@ describe("updateTask / deleteTask", () => {
     expect(await store.updateTask("p2", "t1", next)).toBe("not_found");
   });
 
+  it("finds a task by its id alone", async () => {
+    await store.createTask(input("t1"));
+    expect((await store.getTaskById("t1"))?.projectId).toBe("p1");
+    expect(await store.getTaskById("nope")).toBeNull();
+  });
+
   it("deletes only within its project", async () => {
     await store.createTask(input("t1"));
     expect(await store.deleteTask("p2", "t1")).toBe(false);

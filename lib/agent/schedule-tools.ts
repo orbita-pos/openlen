@@ -32,9 +32,9 @@ import {
   scheduleTitle,
 } from "@/lib/scheduled-tasks/deepseek/domain";
 import type { AtInput, CronInput, DailyInput, ScheduleRecord, ScheduleTimingChange, WeeklyInput } from "@/lib/scheduled-tasks/deepseek/types";
-import { resolveScheduleUpdate } from "@/lib/scheduled-tasks/deepseek/update";
 import { checkOpenLenLimits, OPENLEN_MIN_INTERVAL_SECONDS, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
 import type { createTask, deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
+import { invalidInterval, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
 
 export const SCHEDULE_CREATE = "schedule_create";
@@ -202,13 +202,6 @@ function depsOf(deps: AgentDeps): ScheduledTasksDeps | null {
 
 const SELECTORS = ["after_seconds", "at", "every_seconds", "daily", "weekly", "cron"] as const;
 
-/** DeepSeek's `invalidInterval`, without the floor (that is `checkOpenLenLimits`, one place). */
-function invalidInterval(everySeconds: unknown): ToolError | undefined {
-  if (everySeconds === undefined) return undefined;
-  if (!Number.isSafeInteger(everySeconds)) return { code: "invalid_rule", message: "every_seconds must be a safe integer." };
-  return undefined;
-}
-
 /** DeepSeek's `validateCreateArgs`. */
 function validateCreateArgs(args: Record<string, unknown>): ToolError | undefined {
   const keys = Object.keys(args);
@@ -223,35 +216,6 @@ function validateCreateArgs(args: Record<string, unknown>): ToolError | undefine
     return { code: "invalid_rule", message: "after_seconds must be a positive safe integer." };
   }
   return invalidInterval(args.every_seconds);
-}
-
-/** DeepSeek's `validateUpdateArgs`. */
-function validateUpdateArgs(args: Record<string, unknown>): ToolError | undefined {
-  const timing = ["at", "every_seconds", "daily", "weekly", "cron"] as const;
-  const selectors = timing.filter((k) => args[k] !== undefined).length;
-  if (Object.keys(args).some((k) => k !== "id" && k !== "title" && k !== "prompt" && !(timing as readonly string[]).includes(k)) || selectors > 1) {
-    return { code: "invalid_selector", message: "schedule_update accepts at most one of at, every_seconds, daily, weekly, or cron." };
-  }
-  if (typeof args.id !== "string" || args.id.length === 0 || args.id.trim() !== args.id) {
-    return { code: "invalid_rule", message: "schedule_update id must be non-empty without surrounding whitespace." };
-  }
-  if (selectors === 0 && args.title === undefined && args.prompt === undefined) {
-    return { code: "invalid_selector", message: "schedule_update needs a new title, prompt, or one of at, every_seconds, daily, weekly, or cron." };
-  }
-  if (args.title !== undefined && (typeof args.title !== "string" || args.title.trim().length === 0)) return { code: "invalid_prompt", message: REQUIRED_TITLE_MESSAGE };
-  if (typeof args.title === "string" && args.title.trim().length > MAX_TITLE_LENGTH) return { code: "invalid_prompt", message: `title must be at most ${MAX_TITLE_LENGTH} characters.` };
-  if (args.prompt !== undefined && (typeof args.prompt !== "string" || args.prompt.trim().length === 0)) return { code: "invalid_prompt", message: "prompt must be non-empty after trimming." };
-  return invalidInterval(args.every_seconds);
-}
-
-/** DeepSeek's `timingChangeFrom`. */
-function timingChangeFrom(args: Record<string, unknown>): ScheduleTimingChange | undefined {
-  if (args.at !== undefined) return { kind: "at", at: args.at as AtInput };
-  if (args.every_seconds !== undefined) return { kind: "every", every_seconds: args.every_seconds as number };
-  if (args.daily !== undefined) return { kind: "daily", daily: args.daily as DailyInput };
-  if (args.weekly !== undefined) return { kind: "weekly", weekly: args.weekly as WeeklyInput };
-  if (args.cron !== undefined) return { kind: "cron", cron: args.cron as CronInput };
-  return undefined;
 }
 
 /** The record DeepSeek's host builds in `create` (`packages/schedule/schedule/src/index.ts`). */
@@ -319,24 +283,6 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
   return guarded(async () => {
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    const invalid = validateUpdateArgs(args);
-    if (invalid) return invalid;
-    const id = args.id as string;
-    const expected = (await sd.list(session.projectId, { includeInactive: true })).find((row) => row.id === id);
-    if (!expected) return { id, updated: false, code: "schedule_not_found" };
-    if (expected.status !== "active") return { id, updated: false, code: "schedule_ended" };
-    const now = sd.now();
-    const change = timingChangeFrom(args);
-    const result = resolveScheduleUpdate(expected.record, expected.record, change, now, {
-      ...(args.title === undefined ? {} : { title: args.title as string }),
-      ...(args.prompt === undefined ? {} : { prompt: args.prompt as string }),
-    });
-    if (!("record" in result)) return result;
-    if (!result.updated) return viewForModel(expected.record, now, expected.timeZone);
-    checkOpenLenLimits(result.record);
-    const saved = await sd.update(session.projectId, id, result.record, expected.updatedAt);
-    if (saved === "not_found") return { id, updated: false, code: "schedule_not_found" };
-    if (saved === "conflict") return { id, updated: false, code: "schedule_conflict" };
-    return viewForModel(saved.record, now, saved.timeZone);
+    return updateScheduledTask(session.projectId, args, sd);
   });
 }
