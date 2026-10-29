@@ -174,7 +174,12 @@ export async function userInstallation(userToken: string, installationId: number
     const list = body.installations ?? [];
     const found = list.find((i) => i.id === installationId);
     if (found?.account?.login) {
-      return { installationId, accountLogin: found.account.login, accountType: found.account.type === "Organization" ? "Organization" : "User" };
+      if (found.account.type !== "Organization") return { installationId, accountLogin: found.account.login, accountType: "User" };
+      // An organization's installation is listed to its members too; OpenLen pushes with the App's write access, so
+      // only an admin of the organization may connect it — a member would get more than their role on GitHub.
+      const m = await fetch(`${GITHUB_API}/user/memberships/orgs/${encodeURIComponent(found.account.login)}`, { headers: headers(userToken) });
+      const membership = m.ok ? ((await m.json()) as { state?: string; role?: string }) : null;
+      return membership?.state === "active" && membership.role === "admin" ? { installationId, accountLogin: found.account.login, accountType: "Organization" } : null;
     }
     if (list.length < 100) return null;
   }
