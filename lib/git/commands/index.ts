@@ -7,6 +7,7 @@ import { commit } from "./commit";
 import { diff } from "./diff";
 import { grep } from "./grep";
 import { log } from "./log";
+import { merge } from "./merge";
 import { branch, config, fetch, init, lsFiles, pull, push, remote, revParse } from "./plumbing";
 import { REWRITE, reset } from "./reset";
 import { restore } from "./restore";
@@ -17,13 +18,12 @@ import { switchCommand } from "./switch";
 
 export const COMMANDS: Readonly<Record<string, Command>> = {
   status, diff, log, show, blame, grep, "ls-files": lsFiles, "rev-parse": revParse, branch, config,
-  add, reset, restore, checkout, switch: switchCommand, commit, revert, init, remote, push, pull, fetch,
+  add, reset, restore, checkout, switch: switchCommand, merge, commit, revert, init, remote, push, pull, fetch,
 };
 
 /** git commands that exist elsewhere and not here: why, and what to do instead. */
 export const NOT_AVAILABLE: Readonly<Record<string, string>> = {
   stash: "this project's repository keeps no stash; to set changes aside, commit them.",
-  merge: "merging isn't available here yet.",
   rebase: REWRITE,
   "cherry-pick": "it isn't available here yet; bring a commit's files with git checkout <commit> -- <path>, or undo one with git revert <commit>.",
   tag: "tags aren't available here yet.",

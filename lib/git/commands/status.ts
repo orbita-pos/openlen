@@ -1,17 +1,24 @@
 // `git status`: long, short (-s, -b) and porcelain v1, as git prints them.
 import type { Command, CommandContext } from "../command";
 import { GitFatal } from "../errors";
+import { compareNames } from "../objects";
 import { parseOptions } from "../options";
 import { matchesPathspec, quotePath, relativeToCwd, resolveFromCwd } from "../paths";
+import type { ConflictKind } from "../store";
 import { collapseUntracked, computeStatus, type Status } from "../worktree";
 
 const LABELS: Readonly<Record<string, string>> = { M: "modified:   ", A: "new file:   ", D: "deleted:    " };
+/** wt-status's labels for an unmerged path, padded like git's. */
+const UNMERGED: Readonly<Record<ConflictKind, string>> = { UU: "both modified:   ", AA: "both added:      ", UD: "deleted by them: ", DU: "deleted by us:   " };
 
 type Untracked = "no" | "normal" | "all";
 
 export async function readStatus(ctx: CommandContext, specs: readonly string[] = []): Promise<Status> {
   const head = await ctx.repo.filesOfCommit(ctx.state.head);
-  const all = computeStatus(head, ctx.state.index, ctx.tree);
+  const computed = computeStatus(head, ctx.state.index, ctx.tree);
+  // An unmerged path is neither staged nor changed: status lists it apart.
+  const conflicts = ctx.state.merge?.conflicts ?? {};
+  const all = { ...computed, tracked: computed.tracked.filter((c) => !Object.hasOwn(conflicts, c.path)) };
   if (specs.length === 0) return all;
   const keep = (p: string) => specs.some((s) => matchesPathspec(s, p));
   return { tracked: all.tracked.filter((t) => keep(t.path)), untracked: all.untracked.filter(keep) };
@@ -28,9 +35,20 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
   const unstaged = s.tracked.filter((t) => t.unstaged !== " ");
   const untracked = untrackedShown(ctx, s, mode);
   let out = `On branch ${ctx.state.branch}\n`;
+  const merge = ctx.state.merge;
+  const unmerged = Object.entries(merge?.conflicts ?? {}).sort(([a], [b]) => compareNames(a, b));
+  if (merge && unmerged.length > 0) out += 'You have unmerged paths.\n  (fix conflicts and run "git commit")\n  (use "git merge --abort" to abort the merge)\n\n';
+  else if (merge) out += 'All conflicts fixed but you are still merging.\n  (use "git commit" to conclude merge)\n\n';
   if (staged.length > 0) {
-    out += 'Changes to be committed:\n  (use "git restore --staged <file>..." to unstage)\n';
+    // During a merge git leaves the hint out.
+    out += merge ? "Changes to be committed:\n" : 'Changes to be committed:\n  (use "git restore --staged <file>..." to unstage)\n';
     for (const t of staged) out += `\t${LABELS[t.staged]}${show(t.path)}\n`;
+    out += "\n";
+  }
+  if (unmerged.length > 0) {
+    const verb = unmerged.some(([, k]) => k === "UD" || k === "DU") ? 'git add/rm <file>..." as appropriate' : 'git add <file>..."';
+    out += `Unmerged paths:\n  (use "${verb} to mark resolution)\n`;
+    for (const [p, k] of unmerged) out += `\t${UNMERGED[k]}${show(p)}\n`;
     out += "\n";
   }
   if (unstaged.length > 0) {
@@ -45,7 +63,7 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
     out += "\n";
   }
   if (staged.length === 0) {
-    if (unstaged.length > 0) out += 'no changes added to commit (use "git add" and/or "git commit -a")\n';
+    if (unstaged.length > 0 || unmerged.length > 0) out += 'no changes added to commit (use "git add" and/or "git commit -a")\n';
     else if (untracked.length > 0) out += 'nothing added to commit but untracked files present (use "git add" to track)\n';
     else if (mode === "no" && s.untracked.length > 0) out += "nothing to commit (use -u to show untracked files)\n";
     else out += "nothing to commit, working tree clean\n";
@@ -56,7 +74,9 @@ export function longStatus(ctx: CommandContext, s: Status, mode: Untracked = "no
 export function shortStatus(ctx: CommandContext, s: Status, o: { readonly porcelain: boolean; readonly branch: boolean; readonly untracked: Untracked }): string {
   const show = (p: string) => quotePath(o.porcelain ? p : relativeToCwd(ctx.cwd, p), true);
   let out = o.branch ? `## ${ctx.state.branch}\n` : "";
-  for (const t of s.tracked) out += `${t.staged}${t.unstaged} ${show(t.path)}\n`;
+  const lines = s.tracked.map((t) => ({ path: t.path, code: `${t.staged}${t.unstaged}` }));
+  for (const [path, code] of Object.entries(ctx.state.merge?.conflicts ?? {})) lines.push({ path, code });
+  for (const l of lines.sort((a, b) => compareNames(a.path, b.path))) out += `${l.code} ${show(l.path)}\n`;
   for (const p of untrackedShown(ctx, s, o.untracked)) out += `?? ${show(p)}\n`;
   return out;
 }

@@ -167,8 +167,9 @@ function scoreCmp(s1: Score, s2: Score): number {
   return INDENT_WEIGHT * cmpIndents + (s1.penalty - s2.penalty);
 }
 
-/** xdl_change_compact: slide each group of changes to where git puts it. */
-function compact(f: Side, o: Side): void {
+/** xdl_change_compact: slide each group of changes to where git puts it (the indent heuristic is XDF_INDENT_HEURISTIC:
+ *  on for diffs, off for merges). */
+function compact(f: Side, o: Side, indentHeuristic: boolean): void {
   const g = groupInit(f);
   const go = groupInit(o);
   for (;;) {
@@ -195,7 +196,7 @@ function compact(f: Side, o: Side): void {
           if (!slideUp(f, g)) throw new Error("match disappeared");
           if (!groupPrevious(o, go)) throw new Error("group sync broken sliding to match");
         }
-      } else {
+      } else if (indentHeuristic) {
         let shift = earliestEnd;
         if (g.end - groupsize - 1 > shift) shift = g.end - groupsize - 1;
         if (g.end - INDENT_HEURISTIC_MAX_SLIDING > shift) shift = g.end - INDENT_HEURISTIC_MAX_SLIDING;
@@ -222,7 +223,7 @@ function compact(f: Side, o: Side): void {
 }
 
 /** Which lines changed on each side, placed where git places them; null if too large to diff. */
-export function changedLines(a: readonly string[], b: readonly string[]): ChangedLines | null {
+export function changedLines(a: readonly string[], b: readonly string[], o: { readonly indentHeuristic?: boolean } = {}): ChangedLines | null {
   const parts = diffArrays([...a], [...b], { maxEditLength: MAX_EDIT_LENGTH });
   if (!parts) return null;
   const ca: boolean[] = [];
@@ -239,19 +240,21 @@ export function changedLines(a: readonly string[], b: readonly string[]): Change
   }
   const fa = new Side(a, ca);
   const fb = new Side(b, cb);
-  compact(fa, fb);
-  compact(fb, fa);
+  const heuristic = o.indentHeuristic ?? true;
+  compact(fa, fb, heuristic);
+  compact(fb, fa, heuristic);
   return { a: fa.changed(), b: fb.changed() };
 }
 
-interface Block {
+export interface Block {
   readonly i1: number;
   readonly n1: number;
   readonly i2: number;
   readonly n2: number;
 }
 
-function blocks(ch: ChangedLines): Block[] {
+/** The changes as xdiff's script: each run of changed lines, at i1 (n1 lines) in a and i2 (n2 lines) in b. */
+export function blocks(ch: ChangedLines): Block[] {
   const out: Block[] = [];
   let i = 0;
   let j = 0;

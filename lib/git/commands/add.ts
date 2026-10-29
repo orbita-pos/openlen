@@ -61,9 +61,13 @@ export const add: Command = async (ctx, args) => {
     throw new GitFatal(`fatal: pathspec '${typed[k] ?? ""}' did not match any files\n`);
   });
   const stdout = verbose && lines.length > 0 ? `${lines.join("\n")}\n` : "";
-  if (!dryRun && (blobs.length > 0 || lines.length > 0)) {
+  // In a merge, adding an unmerged path marks it resolved, whatever its content.
+  const merge = ctx.state.merge;
+  const resolved = Object.keys(merge?.conflicts ?? {}).filter((p) => specs.some((s) => matchesPathspec(s, p)));
+  const nextMerge = merge && resolved.length > 0 ? { ...merge, conflicts: Object.fromEntries(Object.entries(merge.conflicts).filter(([p]) => !resolved.includes(p))) } : undefined;
+  if (!dryRun && (blobs.length > 0 || lines.length > 0 || nextMerge)) {
     await ctx.repo.store.writeObjects(blobs);
-    if (!(await ctx.save(ctx.state.head, index))) throw new GitFatal(INDEX_LOCKED);
+    if (!(await ctx.save(ctx.state.head, index, undefined, nextMerge))) throw new GitFatal(INDEX_LOCKED);
   }
   if (ignored.length > 0) {
     return {

@@ -48,7 +48,7 @@ export const show: Command = async (ctx, args) => {
     }
     const oid = await resolveCommit(ctx, target);
     const entry = { oid, commit: await ctx.repo.commit(oid) };
-    out += await renderEntries(ctx, [entry], display, output, o.afterDashDash?.map((a) => resolveFromCwd(ctx.cwd, a)) ?? [], false);
+    out += await renderEntries(ctx, [entry], display, output, o.afterDashDash?.map((a) => resolveFromCwd(ctx.cwd, a)) ?? [], false, true);
   }
   return { stdout: out, stderr: "", exitCode: 0 };
 };

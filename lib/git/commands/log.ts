@@ -33,18 +33,26 @@ async function touches(ctx: CommandContext, c: Commit, specs: readonly string[])
   return false;
 }
 
-export async function changesText(ctx: CommandContext, c: Commit, out: DiffOutput, specs: readonly string[]): Promise<string> {
+export async function changesText(ctx: CommandContext, c: Commit, wanted: DiffOutput, specs: readonly string[], isShow = false): Promise<string> {
+  let out = wanted;
+  // A merge: git log shows no diff for it; git show its combined diff (--cc), whose stats are against the first parent
+  // and whose patch and names are empty when each file came whole from one side. A merge that resolved a conflict by
+  // hand would show a --cc hunk in git: not here.
+  if (c.parents.length > 1) {
+    if (!isShow) return "";
+    out = { ...out, patch: false, nameOnly: false, nameStatus: false };
+  }
   if (!(out.patch || out.stat || out.numstat || out.shortstat || out.nameOnly || out.nameStatus)) return "";
   const files = await changedFiles(await commitSource(ctx, c.parents[0] ?? null), { files: await ctx.repo.files(c.tree), text: (_p, oid) => ctx.repo.text(oid) }, specs);
   return renderChanges(files, out);
 }
 
 /** One entry per commit, joined the way git joins each format. */
-export async function renderEntries(ctx: CommandContext, entries: readonly { oid: string; commit: Commit }[], d: Display, out: DiffOutput, specs: readonly string[], graph: boolean): Promise<string> {
+export async function renderEntries(ctx: CommandContext, entries: readonly { oid: string; commit: Commit }[], d: Display, out: DiffOutput, specs: readonly string[], graph: boolean, isShow = false): Promise<string> {
   const texts: string[] = [];
   for (const { oid, commit } of entries) {
     const header = commitHeader(oid, commit, d);
-    const changes = await changesText(ctx, commit, out, specs);
+    const changes = await changesText(ctx, commit, out, specs, isShow);
     switch (d.pretty.kind) {
       case "oneline":
         texts.push(`${header}${changes}`);
@@ -55,8 +63,11 @@ export async function renderEntries(ctx: CommandContext, entries: readonly { oid
       case "format":
         texts.push(`${header}${changes ? `\n\n${changes}` : ""}`);
         break;
-      default:
-        texts.push(`${header}${changes ? `\n${changes}` : ""}`);
+      default: {
+        // git show of a merge keeps the blank line before its (empty) combined diff.
+        const emptyCombined = isShow && commit.parents.length > 1 && !changes && (out.patch || out.nameOnly || out.nameStatus);
+        texts.push(`${header}${changes ? `\n${changes}` : emptyCombined ? "\n" : ""}`);
+      }
     }
   }
   const separator = d.pretty.kind === "format" || (d.pretty.kind !== "oneline" && d.pretty.kind !== "tformat") ? "\n" : "";

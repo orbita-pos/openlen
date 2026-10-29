@@ -36,7 +36,12 @@ export const reset: Command = async (ctx, args) => {
       else index[p] = oid;
     }
   }
-  if (!(await ctx.save(ctx.state.head, index))) throw new GitFatal(INDEX_LOCKED);
+  // Like git: a reset without paths ends a merge in progress; one with paths resolves the unmerged ones it names.
+  const merge = ctx.state.merge;
+  let nextMerge: typeof merge | undefined;
+  if (merge && typed.length === 0) nextMerge = null;
+  else if (merge) nextMerge = { ...merge, conflicts: Object.fromEntries(Object.entries(merge.conflicts).filter(([p]) => !specs.some((spec) => matchesPathspec(spec, p)))) };
+  if (!(await ctx.save(ctx.state.head, index, undefined, nextMerge))) throw new GitFatal(INDEX_LOCKED);
   if (o.has("-q") || o.has("--quiet")) return { stdout: "", stderr: "", exitCode: 0 };
   const lines: string[] = [];
   for (const p of Object.keys(index).sort(compareNames)) {

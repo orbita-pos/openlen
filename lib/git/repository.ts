@@ -87,6 +87,16 @@ export class Repository {
     }
   }
 
+  /** git merge-base: the newest commit both reach that no other common one descends from; null if they share none.
+   *  Walking by date, the first common commit has no common descendant (barring skewed clocks). With several (a
+   *  criss-cross), the newest — git's ort would merge them first. */
+  async mergeBase(a: string, b: string): Promise<string | null> {
+    const fromA = new Set<string>();
+    for await (const { oid } of this.walk([a])) fromA.add(oid);
+    for await (const { oid } of this.walk([b])) if (fromA.has(oid)) return oid;
+    return null;
+  }
+
   /** Is `ancestor` `descendant` itself or one of its ancestors? */
   async isAncestor(ancestor: string, descendant: string): Promise<boolean> {
     for await (const { oid } of this.walk([descendant])) if (oid === ancestor) return true;
