@@ -20,6 +20,7 @@
  * Puro: lo prueba vitest, y el navegador lee con `leerCambiosDelComando`.
  */
 import { diffDeFichero, type LineaDelDiff, type TrozoDelDiff } from "@/lib/workspace-v2/diff-de-ficheros";
+import { isBlobPointer, sizeOf } from "@/lib/files/blob-pointer";
 import { cambiosDeLaTerminal } from "./ficheros";
 
 /** La clave en la respuesta guardada del `bash`. */
@@ -42,6 +43,9 @@ export interface FicheroDelComando {
   readonly trozos: readonly TrozoDelDiff[];
   /** Líneas del diff que no caben en las 40. */
   readonly ocultas: number;
+  /** Un binario (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): sin líneas, sus bytes antes y después,
+   *  para decir «Bin 0 -> 74 bytes» como `git diff --stat`. Ausente en un fichero de texto. */
+  readonly binario?: { readonly antes: number; readonly despues: number };
 }
 
 export interface CambiosDelComando {
@@ -86,7 +90,16 @@ export function cambiosDelComando(
       masFicheros++;
       continue;
     }
-    const d = diffDeFichero(Object.hasOwn(antes, c.ruta) ? antes[c.ruta]! : null, c.tipo === "borrado" ? null : c.contenido);
+    const previo = Object.hasOwn(antes, c.ruta) ? antes[c.ruta]! : null;
+    const nuevo = c.tipo === "borrado" ? null : c.contenido;
+    const tipo: TipoDeCambio = c.tipo === "borrado" ? "borrado" : c.crea ? "creado" : "actualizado";
+    // A binary is its pointer here: no lines to show, its bytes as git's --stat says them.
+    if ((previo !== null && isBlobPointer(previo)) || (nuevo !== null && isBlobPointer(nuevo))) {
+      const binario = { antes: previo === null ? 0 : sizeOf(previo), despues: nuevo === null ? 0 : sizeOf(nuevo) };
+      ficheros.push({ ruta: c.ruta, tipo, anadidas: 0, quitadas: 0, trozos: [], ocultas: 0, binario });
+      continue;
+    }
+    const d = diffDeFichero(previo, nuevo);
     if (d.trozos.reduce((n, t) => n + t.lineas.length, 0) >= DIFF_DEMASIADO_GRANDE) {
       masFicheros++;
       continue;
@@ -94,7 +107,7 @@ export function cambiosDelComando(
     const { trozos, ocultas } = recortar(d.trozos, LINEAS_POR_FICHERO);
     ficheros.push({
       ruta: c.ruta,
-      tipo: c.tipo === "borrado" ? "borrado" : c.crea ? "creado" : "actualizado",
+      tipo,
       anadidas: d.anadidas,
       quitadas: d.quitadas,
       trozos,
@@ -128,7 +141,9 @@ function fichero(x: unknown): FicheroDelComando | null {
     if (lineas.some((l) => l === null)) return null;
     trozos.push({ saltadas: tr.saltadas, lineas: lineas as LineaDelDiff[] });
   }
-  return { ruta: f.ruta, tipo: f.tipo!, anadidas: f.anadidas, quitadas: f.quitadas, trozos, ocultas: f.ocultas };
+  const b = f.binario as { antes?: unknown; despues?: unknown } | undefined;
+  if (b !== undefined && (!b || !entero(b.antes) || !entero(b.despues))) return null;
+  return { ruta: f.ruta, tipo: f.tipo!, anadidas: f.anadidas, quitadas: f.quitadas, trozos, ocultas: f.ocultas, ...(b ? { binario: { antes: b.antes as number, despues: b.despues as number } } : {}) };
 }
 
 /**
