@@ -21,12 +21,12 @@ export function flushOnExit(flush: Flush): () => void {
   };
 }
 
-/** Every live turn writes now; resolves when all did, or after `timeoutMs`. Never rejects. */
-export async function flushLiveTurns(timeoutMs: number): Promise<void> {
-  if (live.size === 0) return;
+/** Every live turn writes now; resolves when all did (`true`), or after `timeoutMs` (`false`). Never rejects. */
+export async function flushLiveTurns(timeoutMs: number): Promise<boolean> {
+  if (live.size === 0) return true;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const limit = new Promise<void>((resolve) => {
-    timer = setTimeout(resolve, timeoutMs);
+  const limit = new Promise<false>((resolve) => {
+    timer = setTimeout(() => resolve(false), timeoutMs);
   });
   const all = Promise.all(
     [...live].map(async (flush) => {
@@ -34,9 +34,9 @@ export async function flushLiveTurns(timeoutMs: number): Promise<void> {
         await flush();
       } catch {}
     }),
-  );
+  ).then(() => true as const);
   try {
-    await Promise.race([all, limit]);
+    return await Promise.race([all, limit]);
   } finally {
     clearTimeout(timer);
   }
@@ -77,10 +77,17 @@ export function installExitFlush(o: { proc?: ExitingProcess; timeoutMs?: number;
       if (live.size === 0 && exiting === null) return exit(code);
       if (exiting === null) {
         const turns = live.size;
-        exiting = flushLiveTurns(timeoutMs).finally(() => {
-          log(`[exit] ${turns} live turn(s) wrote what they had before the exit`);
-          exit(code);
-        });
+        const from = Date.now();
+        // What the deploy's log has to say: whether the turns finished writing, or the limit cut them.
+        exiting = flushLiveTurns(timeoutMs)
+          .then((all) =>
+            log(
+              all
+                ? `[exit] ${turns} live turn(s) wrote what they had before the exit (${Date.now() - from} ms)`
+                : `[exit] ${turns} live turn(s) were still writing after ${timeoutMs} ms: exiting anyway; the next boot closes what they left`,
+            ),
+          )
+          .finally(() => exit(code));
       }
       return undefined as never;
     }) as ExitingProcess["exit"];
