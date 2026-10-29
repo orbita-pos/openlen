@@ -6,7 +6,7 @@ What the box has: Ubuntu 24.04, Node 22, Python 3 with pip, git, ripgrep, jq, sq
 and OpenLen's scripts in `/opt/openlen/bin` (generated from `lib/agent/sandbox/template-files.ts`):
 
 - `openlen-manifest`: path → sha256 of the project's files, as JSON.
-- `openlen-bridge`: the commands OpenLen answers (`git`, `supabase`, `tsc`, `eslint`, `vitest`,
+- `openlen-bridge`: the commands OpenLen answers (`git`, `gh`, `supabase`, `stripe`, `tsc`, `eslint`, `vitest`,
   `npm`, `npx`, `curl`), through the mailbox in `/run/openlen`.
 - one wrapper per bridged program. The turn puts `/opt/openlen/bin` first in `PATH`.
 
@@ -18,6 +18,10 @@ Since v4 (spec local `2026-10-27-len-pdf-skill-design.md`), for the pdf skill: q
 Len's ten languages, TrueType fonts for Japanese, Korean and Chinese (`PDF_FONT_FILES`), and pypdf,
 pdfplumber, reportlab and cryptography at the versions in `PDF_PYTHON_PACKAGES`. Check a built
 template with `npm run pdf-skill:box-check`.
+
+Since v5 (spec local `2026-10-28-ficheros-al-nivel-de-claude-code-design.md`): the manifest takes files up to
+50 MB (`MAX_FILE_BYTES`), so binaries and large files come back from the box, and `gh` is a bridged program
+(answered by OpenLen with the owner's GitHub App; no token in the box).
 
 Size: 2 vCPU and 4 GiB (`lib/agent/sandbox/size.ts`), fixed at build.
 
