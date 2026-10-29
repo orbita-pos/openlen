@@ -159,6 +159,21 @@ describe("remotes, against the real git", { timeout: 60_000 }, () => {
     await same(["branch", "-vv"]);
   });
 
+  it("🔴 push [-u] origin HEAD: the current branch, as `gh repo create --push` and Claude Code push", async () => {
+    await same(["remote", "add", "origin", "{url}"]);
+    await same(["push", "origin", "HEAD"]);
+    await same(["status", "-sb"]);
+    await same(["switch", "-c", "nueva"]);
+    pair.tick();
+    pair.write({ "n.txt": "n\n" });
+    await same(["add", "-A"]);
+    await same(["commit", "-m", "n"]);
+    await same(["push", "-u", "origin", "HEAD"]);
+    await same(["branch", "-vv"]);
+    await same(["push", "origin", "HEAD:otra"]);
+    await same(["log", "--oneline", "--decorate", "--all"]);
+  });
+
   it("🔴 a remote that wants credentials: without them git's message; with the server's token it works", async () => {
     await same(["remote", "add", "origin", "{url}"]);
     server.requireAuth = "x-access-token:secreto";

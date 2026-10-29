@@ -23,3 +23,21 @@ export function gitForTerminal(
   return (args, cwd, files) =>
     gitCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), args, cwd, files, undeletable: deletionRefusal });
 }
+
+export type TerminalGh = (
+  args: readonly string[],
+  cwd: string,
+  files: Readonly<Record<string, string>>,
+) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+
+/** `gh` (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9) wherever there is git: with the owner's GitHub App,
+ *  run by whoever speaks — a turn of Len's is someone who can edit (the route lets no viewer start one). */
+export function ghForTerminal(
+  session: Pick<AgentSession, "projectId" | "userId" | "personId">,
+  deps: Pick<AgentDeps, "ghCli">,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): TerminalGh | undefined {
+  const ghCli = deps.ghCli;
+  if (!gitEnabled(env) || !ghCli) return undefined;
+  return (args, cwd, files) => ghCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), canEdit: true, args, cwd, files });
+}

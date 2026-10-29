@@ -302,6 +302,17 @@ export interface AgentDeps {
     /** Why the terminal won't delete a file, or null (`lib/agent/terminal/deletion-rule.ts`). */
     undeletable?: (absolutePath: string) => string | null;
   }): Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
+  /** GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): `gh …` with the owner's GitHub App
+   *  (`lib/gh/real.ts`); the token never leaves the server. */
+  ghCli?(p: {
+    projectId: string;
+    ownerId: string;
+    personId: string;
+    canEdit: boolean;
+    args: readonly string[];
+    cwd: string;
+    files: Readonly<Record<string, string>>;
+  }): Promise<{ stdout: string; stderr: string; exitCode: number }>;
   /** GIT: Claude Code's git status block for the start of a turn; null if git can't answer. */
   gitStatusForTurn?(p: { projectId: string; ownerId: string; personId: string; loadFiles: () => Promise<Record<string, string>> }): Promise<string | null>;
   /** EDGE FUNCTIONS (spec local 2026-10-11): `curl` a las funciones del
@@ -698,6 +709,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async gitCli(p) {
       const { gitCli } = await import("@/lib/git/service");
       return gitCli(p);
+    },
+    async ghCli(p) {
+      const { ghCliFor } = await import("@/lib/gh/real");
+      return ghCliFor(p);
     },
     async stripeCli(projectId, args, o) {
       const { runStripeCliFor } = await import("@/lib/stripe/cli/real");

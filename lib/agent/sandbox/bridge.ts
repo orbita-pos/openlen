@@ -23,6 +23,7 @@ export interface BridgeRequest {
 
 export type BoxRoute =
   | { readonly kind: "git" }
+  | { readonly kind: "gh" }
   | { readonly kind: "supabase" }
   | { readonly kind: "stripe" }
   | { readonly kind: "functions-curl" }
@@ -52,6 +53,8 @@ export function routeBoxCommand(
   o: { readonly isApp: boolean; readonly functionsUrls: readonly string[] },
 ): BoxRoute {
   if (program === "git") return { kind: "git" };
+  // GitHub (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §9): the token stays on the server.
+  if (program === "gh") return { kind: "gh" };
   if (program === "supabase") return { kind: "supabase" };
   // Stripe (spec local 2026-10-21-stripe-integration): never a real CLI in the box, the key stays out of it.
   if (program === "stripe") return { kind: "stripe" };
@@ -89,6 +92,12 @@ export interface BridgeHandlers {
     cwd: string,
     files: Readonly<Record<string, string>>,
   ) => Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
+  /** `gh …` with the owner's GitHub App, answered by OpenLen (lib/gh/run.ts). */
+  readonly gh?: (
+    args: readonly string[],
+    cwd: string,
+    files: Readonly<Record<string, string>>,
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
   readonly supabase?: (
     args: readonly string[],
     files: Readonly<Record<string, string>>,
@@ -146,6 +155,11 @@ export async function answerBridgeRequest(
       if (!handlers.git) return { passthrough: true };
       const r = await abortable(handlers.git(req.args, req.cwd, files), o.signal);
       return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: { ...(r.write ?? {}) } };
+    }
+    case "gh": {
+      if (!handlers.gh) return { stdout: "", stderr: "gh: not available in this project\n", exitCode: 127, files: {} };
+      const r = await abortable(handlers.gh(req.args, req.cwd, files), o.signal);
+      return { stdout: r.stdout, stderr: r.stderr, exitCode: r.exitCode, files: {} };
     }
     case "supabase": {
       if (!handlers.supabase) return { passthrough: true };

@@ -45,22 +45,28 @@ function noUpstream(branch: string, remote: string): GitFatal {
 const line = (flag: string, summary: string, refs: string, suffix = "") => ` ${flag} ${summary.padEnd(17)} ${refs}${suffix}\n`;
 
 interface Planned {
+  /** As written: a branch, or HEAD. */
   readonly src: string | null;
   readonly dst: string;
   readonly local: string;
+  /** The local branch it pushes (HEAD is the current one): the one -u sets up. */
+  readonly branch: string | null;
 }
 
 async function plan(ctx: CommandContext, remoteName: string, specs: readonly string[], del: boolean): Promise<Planned[]> {
   const out: Planned[] = [];
   for (const spec of specs) {
     if (del || spec.startsWith(":")) {
-      out.push({ src: null, dst: spec.replace(/^:/, ""), local: NULL_OID });
+      out.push({ src: null, dst: spec.replace(/^:/, ""), local: NULL_OID, branch: null });
       continue;
     }
-    const [src, dst = src] = spec.replace(/^\+/, "").split(":") as [string, string?];
-    const local = ctx.state.refs[src];
+    const [src, given] = spec.replace(/^\+/, "").split(":") as [string, string?];
+    // HEAD is the current branch, and lands on a branch of its name: git push -u origin HEAD.
+    const branch = src === "HEAD" ? ctx.state.branch : src;
+    const dst = given ?? branch;
+    const local = src === "HEAD" ? ctx.state.head : ctx.state.refs[src];
     if (local === undefined) throw new GitFatal(`error: src refspec ${src} does not match any\nerror: failed to push some refs to '${ctx.state.remotes[remoteName]!.url}'\n`, 1);
-    out.push({ src, dst: dst ?? src, local });
+    out.push({ src, dst, local, branch });
   }
   return out;
 }
@@ -98,7 +104,7 @@ export const push: Command = async (ctx, args) => {
   let out = "";
   let rejected: "fetch first" | "non-fast-forward" | "stale info" | null = null;
   let rejectedCurrent = false;
-  const updates: (RefUpdate & { src: string | null; dst: string; text: string })[] = [];
+  const updates: (RefUpdate & { src: string | null; branch: string | null; dst: string; text: string })[] = [];
   for (const p of planned) {
     const old = remoteHeads.get(p.dst) ?? NULL_OID;
     const refs = p.src === null ? p.dst : `${p.src} -> ${p.dst}`;
@@ -108,12 +114,12 @@ export const push: Command = async (ctx, args) => {
         rejected ??= "stale info";
         continue;
       }
-      updates.push({ ref: `refs/heads/${p.dst}`, old, new: NULL_OID, src: null, dst: p.dst, text: line("-", "[deleted]", p.dst) });
+      updates.push({ ref: `refs/heads/${p.dst}`, old, new: NULL_OID, src: null, branch: null, dst: p.dst, text: line("-", "[deleted]", p.dst) });
       continue;
     }
     if (old === p.local) continue;
     if (old === NULL_OID) {
-      updates.push({ ref: `refs/heads/${p.dst}`, old, new: p.local, src: p.src, dst: p.dst, text: line("*", "[new branch]", refs) });
+      updates.push({ ref: `refs/heads/${p.dst}`, old, new: p.local, src: p.src, branch: p.branch, dst: p.dst, text: line("*", "[new branch]", refs) });
       continue;
     }
     const known = remote.refs[p.dst];
@@ -127,11 +133,11 @@ export const push: Command = async (ctx, args) => {
       const why = have.has(old) ? "non-fast-forward" : "fetch first";
       out += line("!", "[rejected]", refs, ` (${why})`);
       rejected ??= why;
-      if (p.src === branch) rejectedCurrent = true;
+      if (p.branch === branch) rejectedCurrent = true;
       continue;
     }
     const text = fastForward ? line(" ", `${abbrev(old)}..${abbrev(p.local)}`, refs) : line("+", `${abbrev(old)}...${abbrev(p.local)}`, refs, " (forced update)");
-    updates.push({ ref: `refs/heads/${p.dst}`, old, new: p.local, src: p.src, dst: p.dst, text });
+    updates.push({ ref: `refs/heads/${p.dst}`, old, new: p.local, src: p.src, branch: p.branch, dst: p.dst, text });
   }
 
   if (updates.length === 0 && rejected === null) return { stdout: "", stderr: "Everything up-to-date\n", exitCode: 0 };
@@ -162,9 +168,9 @@ export const push: Command = async (ctx, args) => {
         tracked = rest;
       } else {
         tracked[u.dst] = u.new;
-        if (setUpstream && u.src !== null) {
-          upstreams[u.src] = { remote: remoteName, branch: u.dst };
-          stdout += `branch '${u.src}' set up to track '${remoteName}/${u.dst}'.\n`;
+        if (setUpstream && u.branch !== null) {
+          upstreams[u.branch] = { remote: remoteName, branch: u.dst };
+          stdout += `branch '${u.branch}' set up to track '${remoteName}/${u.dst}'.\n`;
         }
       }
     }

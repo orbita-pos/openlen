@@ -8,6 +8,7 @@ describe("routeBoxCommand", () => {
   it.each([
     ["git", ["status"], true, { kind: "git" }],
     ["git", ["log"], false, { kind: "git" }],
+    ["gh", ["pr", "create"], false, { kind: "gh" }],
     ["supabase", ["db", "push"], true, { kind: "supabase" }],
     ["stripe", ["products", "list"], false, { kind: "stripe" }],
     ["stripe", ["trigger", "invoice.paid"], true, { kind: "stripe" }],
@@ -74,6 +75,14 @@ describe("answerBridgeRequest", () => {
       exitCode: 127,
       files: {},
     });
+  });
+
+  it("gh is answered by OpenLen with the tree (its --push is a git push); the token never enters the box", async () => {
+    const gh = vi.fn(async () => ({ stdout: "https://github.com/ana/web\n", stderr: "", exitCode: 0 }));
+    const r = await answerBridgeRequest({ id: "1", program: "gh", args: ["repo", "create", "web", "--private"], cwd: "/src" }, { gh }, files);
+    expect(gh).toHaveBeenCalledWith(["repo", "create", "web", "--private"], "/src", files);
+    expect(r).toEqual({ stdout: "https://github.com/ana/web\n", stderr: "", exitCode: 0, files: {} });
+    expect(await answerBridgeRequest({ id: "2", program: "gh", args: ["auth", "status"], cwd: "/" }, {}, files)).toEqual({ stdout: "", stderr: "gh: not available in this project\n", exitCode: 127, files: {} });
   });
 
   it("an app check runs OpenLen's checker with the tree", async () => {
