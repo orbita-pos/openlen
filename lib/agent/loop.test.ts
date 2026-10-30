@@ -4242,6 +4242,68 @@ describe("el encargo en el bucle", () => {
     expect(conRespuestas.content).not.toContain("Screenshots below");
   });
 
+  // LO QUE VIO LEN, EN EL CHAT (como Claude Code: la imagen es el resultado del
+  // paso y la pinta la pantalla). Las mismas capturas, guardadas, en su tarjeta.
+  it("🔴 las capturas de una herramienta llegan a su tarjeta como las URLs que guardó storeScreenshots", async () => {
+    const vistos: Message[][] = [];
+    const events: AgentStreamEvent[] = [];
+    const captura = { mimeType: "image/jpeg", dataBase64: "JPEG" };
+    const guardadas: (readonly unknown[])[] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, done],
+      [{ type: "text_delta", text: "La vi." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "mírala" }], tools: [],
+      openStream: (m) => { vistos.push([...m]); return stream(m); },
+      runTool: async () => ({ response: { ok: true, screenshot: "attached below as image 1." }, images: [captura] }),
+      storeScreenshots: async (images) => {
+        guardadas.push(images);
+        return ["https://cdn.test/uploads/p/screenshot-1.jpg"];
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(guardadas).toEqual([[captura]]);
+    const tarjeta = events.find((e) => e.type === "action" && e.status === "done");
+    expect(tarjeta).toMatchObject({ tool: "view_page", screenshots: ["https://cdn.test/uploads/p/screenshot-1.jpg"] });
+    // Y el modelo sigue viendo los mismos bytes.
+    expect(vistos[1]!.at(-1)!.images).toEqual([captura]);
+  });
+
+  it("si guardar las capturas falla, la tarjeta sale sin ellas y el turno sigue", async () => {
+    const events: AgentStreamEvent[] = [];
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "mírala" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, done], [{ type: "text_delta", text: "La vi." }, done]),
+      runTool: async () => ({ response: { ok: true }, images: [{ mimeType: "image/jpeg", dataBase64: "JPEG" }] }),
+      storeScreenshots: async () => {
+        throw new Error("R2 caído");
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(r.terminalError).toBe(false);
+    const tarjeta = events.find((e) => e.type === "action" && e.status === "done");
+    expect(tarjeta).toMatchObject({ tool: "view_page", status: "done" });
+    expect(tarjeta).not.toHaveProperty("screenshots");
+  });
+
+  it("BRAZO DE CONTROL: un paso sin capturas no llama a storeScreenshots ni lleva el campo", async () => {
+    const events: AgentStreamEvent[] = [];
+    let llamadas = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "mídela" }], tools: [],
+      openStream: scripted([{ type: "function_call", name: "view_page", args: { mode: "measure" } }, done], [{ type: "text_delta", text: "Ok." }, done]),
+      runTool: async () => ({ response: { ok: true, answer: "medido" } }),
+      storeScreenshots: async () => {
+        llamadas += 1;
+        return [];
+      },
+      emit: (e) => events.push(e),
+    });
+    expect(llamadas).toBe(0);
+    expect(events.find((e) => e.type === "action" && e.status === "done")).not.toHaveProperty("screenshots");
+  });
+
   it("get_goal, create_goal y update_goal no gastan presupuesto de acciones", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [], maxToolCalls: 1,

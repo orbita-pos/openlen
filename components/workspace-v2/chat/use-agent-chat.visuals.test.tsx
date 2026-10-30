@@ -84,6 +84,16 @@ describe("useAgentChat — Len's visuals", () => {
     expect(turn.liveWidget).toBeUndefined();
   });
 
+  it("what Len saw: a step's card keeps its screenshots, and only ours", async () => {
+    const url = "https://uploads.openlen.com/uploads/p1/screenshot-0123456789abcdef0123456789abcdef.jpg";
+    const turn = await lastTurn([
+      sse("turno", { turnoId: "t1" }),
+      sse("action", { type: "action", tool: "view_page", status: "done", summary: "", screenshots: [url, "javascript:1"] }),
+      sse("done", { turns: 1, toolCalls: 1 }),
+    ]);
+    expect(turn.actions?.find((a) => a.tool === "view_page")?.screenshots).toEqual([url]);
+  });
+
   it("without a preview, the card's point is the text written so far", async () => {
     const turn = await lastTurn([
       sse("turno", { turnoId: "t1" }),

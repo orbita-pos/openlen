@@ -143,6 +143,16 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardada().delivered).toEqual(delivered);
   });
 
+  it("lo que vio Len: las capturas del paso LLEGAN a guardarse, y una que no es nuestra se cae sin 400", async () => {
+    const screenshots = [
+      "https://uploads.openlen.com/uploads/p1/screenshot-0123456789abcdef0123456789abcdef.jpg",
+      "/uploads/uploads/p1/screenshot-fedcba9876543210fedcba9876543210.jpg",
+    ];
+    const res = await guardar(turno([{ tool: "view_page", status: "done", summary: "", screenshots: [...screenshots, "javascript:1", "https://evil.test/x.jpg"] }]));
+    expect(res.status).toBe(200);
+    expect(guardada().screenshots).toEqual(screenshots);
+  });
+
   it("LOS VISUALES: el visual de show_widget y su punto del texto LLEGAN a guardarse", async () => {
     const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };
     const res = await guardar(turno([{ tool: "show_widget", status: "done", summary: "", widget, textOffset: 5 }]));

@@ -116,6 +116,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           ...(ev.todos ? { todos: ev.todos.map((t) => ({ content: t.content, status: t.status })) } : {}),
           // Y LO QUE ENTREGÓ `present` (spec local 2026-10-26-len-skills): la tarjeta es su único enlace.
           ...(ev.delivered?.length ? { delivered: ev.delivered.map((f) => ({ ...f })) } : {}),
+          // Y LO QUE VIO LEN: las capturas del paso, que sólo el modelo veía.
+          ...(ev.screenshots?.length ? { screenshots: [...ev.screenshots] } : {}),
           // Y EL VISUAL de `show_widget` (spec local 2026-10-16-len-inline-visuals),
           // con el punto del texto donde lo puso Len: lo que lleva escrito AHORA,
           // ya sin lo que descartó un reintento. Su única copia, como la lista.

@@ -145,6 +145,7 @@ import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
 import { captureDesignElements, storeDesignCaptures } from "@/lib/agent/design-screenshots";
+import { storeStepScreenshots } from "@/lib/agent/capture-storage";
 import { vistaConCarpeta, vistaParaMedir } from "@/lib/lienzo/documento";
 import { observarPagina } from "@/lib/agent/verify";
 import { closeBrowserTab, usarPagina } from "@/lib/agent/usar-pagina";
@@ -1855,6 +1856,8 @@ async function correrTurno(
           lateDiagnostics: () => takeTypesAndLint(agentSession),
           // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground() : []),
+          // Lo que vio Len, en el chat: las capturas de un paso, guardadas para su tarjeta.
+          storeScreenshots: (images) => storeStepScreenshots(projectId, images),
           // El ■ también corta la espera entre reintentos del proveedor
           // (`lib/agent/retry-policy.ts`).
           signal: upstreamAbort.signal,

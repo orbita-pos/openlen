@@ -229,7 +229,10 @@
     },
     "steps": {
       "running": "Len이 작업 중",
-      "done": "{count, plural, other {Len이 #단계를 진행함}}"
+      "done": "{count, plural, other {Len이 #단계를 진행함}}",
+      "screenshots": "Len이 본 화면",
+      "openScreenshot": "스크린샷 {number} 열기",
+      "screenshotCaption": "{total, plural, =1 {Len이 본 화면} other {Len이 본 화면 · {number}/{total}}}"
     },
     "activity": {
       "reading": "페이지를 읽는 중",

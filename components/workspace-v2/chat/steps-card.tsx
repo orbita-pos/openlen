@@ -41,6 +41,7 @@ import { avisoDelTurno } from "../panels/turno-cerrado";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { duracionLegible, procesoDelTurno } from "@/lib/workspace-v2/proceso-del-turno";
 import { activityOf, openQuestionIndex, type Activity } from "./live-status";
+import { Lightbox, type GalleryPhoto } from "./photo-gallery";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { TODO_WRITE } from "@/lib/agent/todo-list";
@@ -181,6 +182,56 @@ export function StepsCard({
           </div>
         </div>
       </div>
+      <StepScreenshots urls={steps.flatMap((a) => a.screenshots ?? [])} />
+    </div>
+  );
+}
+
+/** LO QUE VIO LEN: las capturas de sus pasos, fuera del pliegue (Jesús, 29/10:
+ *  «que se vea siempre»). Como en Claude Code, son las mismas que recibió el
+ *  modelo; una miniatura la abre en grande. */
+function StepScreenshots({ urls }: { urls: readonly string[] }) {
+  const t = useTranslations("panelsChat");
+  const [open, setOpen] = useState<number | null>(null);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  if (urls.length === 0) return null;
+  const photos: GalleryPhoto[] = urls.map((url, i) => ({ url, alt: t("newChat.steps.screenshotCaption", { number: i + 1, total: urls.length }) }));
+  return (
+    <div data-step-screenshots="" role="group" aria-label={t("newChat.steps.screenshots")} className="flex flex-wrap gap-1.5 px-3 pb-3">
+      {photos.map((p, i) => (
+        <button
+          key={`${p.url}-${i}`}
+          type="button"
+          aria-label={t("newChat.steps.openScreenshot", { number: i + 1 })}
+          onClick={(e) => {
+            opener.current = e.currentTarget;
+            setOpen(i);
+          }}
+          className="group overflow-hidden rounded-[9px] border bd bg-app"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={p.url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            className="block h-[72px] w-auto max-w-[160px] object-cover object-top transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
+          />
+        </button>
+      ))}
+      {open !== null && (
+        <Lightbox
+          photos={photos}
+          index={open}
+          onIndex={setOpen}
+          withCredit={false}
+          onClose={() => {
+            setOpen(null);
+            queueMicrotask(() => opener.current?.focus());
+          }}
+        />
+      )}
     </div>
   );
 }
