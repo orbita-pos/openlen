@@ -229,7 +229,10 @@
     },
     "steps": {
       "running": "Len が作業中",
-      "done": "{count, plural, other {Len が # ステップ実行}}"
+      "done": "{count, plural, other {Len が # ステップ実行}}",
+      "screenshots": "Len が見たもの",
+      "openScreenshot": "スクリーンショット {number} を開く",
+      "screenshotCaption": "{total, plural, =1 {Len が見たもの} other {Len が見たもの · {number}/{total}}}"
     },
     "activity": {
       "reading": "ページを読んでいます",

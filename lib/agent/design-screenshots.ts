@@ -3,7 +3,6 @@
 // en el texto). Con el Chromium y el origen de los ojos (`usar-pagina.ts`), y
 // el elemento se encuentra por su origen con las mismas funciones que el
 // lienzo (`lib/apps/design/canvas-functions.ts`). Una que falla no tumba nada.
-import { createHash } from "node:crypto";
 import type { Browser } from "puppeteer";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { esperarALaRed, origenDeMedida } from "@/lib/ai/origen-de-medida";
@@ -15,6 +14,7 @@ import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { decl } from "@/components/workspace-v2/serializar-al-iframe";
 import { getStorage } from "@/lib/storage";
 import type { StorageAdapter } from "@/lib/storage/types";
+import { storeCaptures } from "@/lib/agent/capture-storage";
 
 const FUNCIONES = [decl("sourceChainOf", sourceChainOf), decl("primaryOf", primaryOf), decl("targetsOf", targetsOf), decl("boxOf", boxOf)].join("\n");
 // Las capturas van antes de que Len empiece: a la vez, con un plazo corto, y se
@@ -33,19 +33,7 @@ export async function storeDesignCaptures(
   capturas: readonly InlineImage[],
   storage: StorageAdapter = getStorage(),
 ): Promise<string[]> {
-  const urls = await Promise.all(
-    capturas.map(async (c) => {
-      const body = Buffer.from(c.dataBase64, "base64");
-      const hash = createHash("sha256").update(body).digest("hex").slice(0, 32);
-      const ext = c.mimeType === "image/jpeg" ? "jpg" : c.mimeType === "image/webp" ? "webp" : "png";
-      try {
-        return (await storage.upload({ key: `uploads/${projectId}/design-${hash}.${ext}`, contentType: c.mimeType, body })).url;
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return urls.every((u): u is string => u !== null) ? urls : [];
+  return storeCaptures(projectId, capturas, "design", storage);
 }
 const MARGEN = 8;
 

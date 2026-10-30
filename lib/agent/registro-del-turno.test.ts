@@ -17,6 +17,13 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[0]).toMatchObject({ tool: "present", delivered });
   });
 
+  it("lo que vio Len: guarda las capturas del paso en su tarjeta", () => {
+    const r = crearRegistroDelTurno();
+    const screenshots = ["https://u/uploads/p1/screenshot-1.jpg"];
+    r.observar({ type: "action", tool: "view_page", status: "done", summary: "", screenshots });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "view_page", screenshots });
+  });
+
   it("LOS VISUALES: guarda el visual de show_widget y en qué punto del texto lo puso Len", () => {
     const r = crearRegistroDelTurno();
     const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };

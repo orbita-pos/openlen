@@ -103,6 +103,7 @@ const mocks = vi.hoisted(() => {
   registrarTurnoDelServidor: vi.fn(async () => {}),
   captureDesignElements: vi.fn(async (): Promise<unknown[]> => []),
   storeDesignCaptures: vi.fn(async (): Promise<string[]> => []),
+  storeStepScreenshots: vi.fn(async (): Promise<string[]> => []),
   // Len 2.1: la fila del turno se abre al empezar y se va llenando.
   abrirFilaDelTurno: vi.fn(async () => {}),
   avanceDelTurno: vi.fn(async () => {}),
@@ -208,6 +209,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
+vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
@@ -1725,6 +1727,17 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
     expect(tuMensaje.content).toContain(`[Attached photo: ${URL_ROTA} (it couldn't be loaded to see it)]`);
     expect(tuMensaje.images).toBeUndefined();
+  });
+
+  // Lo que vio Len, en el chat: las capturas de un paso se guardan en ESTE proyecto.
+  it("el bucle recibe storeScreenshots, que guarda las capturas de un paso en el proyecto del turno", async () => {
+    const CAPTURA = { mimeType: "image/jpeg", dataBase64: "Q0FQ" };
+    mocks.storeStepScreenshots.mockResolvedValueOnce(["https://u/uploads/p1/screenshot-1.jpg"]);
+    turnoQueEscribe();
+    await readEvents(await pedir());
+    const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as AgentLoopArgs;
+    expect(await args.storeScreenshots!([CAPTURA])).toEqual(["https://u/uploads/p1/screenshot-1.jpg"]);
+    expect(mocks.storeStepScreenshots).toHaveBeenCalledWith("p1", [CAPTURA]);
   });
 
   it("Len 3.1 · modo Diseño: las capturas se guardan y el turno siguiente pega las MISMAS detrás de las fotos", async () => {

@@ -11,7 +11,7 @@
 // cannot load — see loop.test.ts's header comment for the same constraint.
 
 // Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and screenshots dropped in jumps (A7), and a correction is a new message.
-import type { Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
+import type { InlineImage, Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
 import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import type { ToolOutcome } from "@/lib/agent/tools";
@@ -171,6 +171,8 @@ export type AgentStreamEvent =
       widget?: VisualWidget;
       /** The files `present` delivered (spec local 2026-10-26-len-skills): the card is their only link. */
       delivered?: readonly DeliveredFile[];
+      /** What Len saw: the URLs of this step's screenshots, the same images the model got (`storeScreenshots`). */
+      screenshots?: readonly string[];
     }
   // F4 Task 4 — the ONLY SSE protocol change this task makes: `html` gains
   // `page` (the slot this document belongs to — null for home). Needed
@@ -250,6 +252,11 @@ export interface AgentLoopArgs {
   /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): los comandos de la caja
    *  que terminaron en segundo plano, recogidos igual, antes de cada llamada al modelo. */
   lateNotices?: () => Promise<readonly string[]>;
+  /** LO QUE VIO LEN, EN EL CHAT (como Claude Code: la imagen es el resultado del
+   *  paso y la pantalla la pinta). Guarda las capturas de una herramienta y da
+   *  sus URLs, en orden, para la tarjeta del paso. Si falla, la tarjeta sale sin
+   *  ellas: el modelo las recibe igual, y el turno no se entera. */
+  storeScreenshots?: (images: readonly InlineImage[]) => Promise<readonly string[]>;
   /** LAYER 0 OF LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §4.3): each
    *  tool batch, summarized (name, args hash, ok, error code), right after its
    *  responses are pushed. Telemetry only: if it throws, the turn goes on. */
@@ -1974,6 +1981,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // el `ownerReason` que la herramienta declaró, o nada.
         const descartada = avisoParaElDueno(outcome.response);
         if (!ok) failedSignatures.set(sig, (failedSignatures.get(sig) ?? 0) + 1);
+        // Lo que vio Len, guardado para su tarjeta. Un fallo al guardar no toca el turno.
+        const screenshots =
+          outcome.images?.length && args.storeScreenshots ? await args.storeScreenshots(outcome.images).catch(() => []) : [];
         args.emit({
           type: "action",
           tool: call.name,
@@ -2002,6 +2012,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.widget ? { widget: outcome.widget } : {}),
           // Y lo que entregó `present`: sin esto el enlace de descarga no llega a la tarjeta.
           ...(outcome.delivered?.length ? { delivered: outcome.delivered } : {}),
+          // Y lo que vio: sin esto la captura sólo la ve el modelo.
+          ...(screenshots.length ? { screenshots } : {}),
         });
         if (outcome.terminal) args.emit({ type: "terminal", ...outcome.terminal });
 
