@@ -64,7 +64,11 @@
       "connect_shopify_store": "Shopify ストアを接続しています",
       "get_goal": "ゴールを確認",
       "create_goal": "ゴールを作成",
-      "update_goal": "ゴールを更新"
+      "update_goal": "ゴールを更新",
+      "schedule_create": "予定タスクを作成",
+      "schedule_list": "予定タスクを確認",
+      "schedule_delete": "予定タスクを削除",
+      "schedule_update": "予定タスクを更新"
     },
     "toolApp": {
       "Read": "コードを読み込み中",
