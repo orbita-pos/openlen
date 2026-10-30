@@ -83,7 +83,7 @@ const PUB_SQL = `SELECT
     LIMIT 1`;
 
 /** El `rls_filtered` de su `list_changes` con la proyección de su
- *  `replications.ex`, sobre los `data` que ya leyó el WalReader. */
+ *  `replications.ex`, sobre UN `data` de los que ya leyó el WalReader. */
 const APPLY_SQL = `SELECT xyz.wal->>'type' as type,
        xyz.wal->>'schema' as schema,
        xyz.wal->>'table' as table,
@@ -93,10 +93,8 @@ const APPLY_SQL = `SELECT xyz.wal->>'type' as type,
        xyz.wal->>'commit_timestamp' as commit_timestamp,
        xyz.subscription_ids,
        xyz.errors
-  FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY d(data, n),
-       realtime.apply_rls(wal := d.data, max_record_bytes := $2) xyz(wal, is_rls_enabled, subscription_ids, errors)
- WHERE xyz.subscription_ids[1] IS NOT NULL
- ORDER BY d.n`;
+  FROM realtime.apply_rls(wal := $1::jsonb, max_record_bytes := $2) xyz(wal, is_rls_enabled, subscription_ids, errors)
+ WHERE xyz.subscription_ids[1] IS NOT NULL`;
 
 const asRealtimeAdmin = `select set_config('role', 'supabase_realtime_admin', true)`;
 
@@ -122,9 +120,19 @@ export function changeSource(db: ProjectDatabase, reader: WalReader): ChangeSour
       if (!pub || pub.w2j_add_tables === "") return null;
       const datas = await reader.read({ maxChanges: o.maxChanges, actions: pub.w2j_actions, addTables: pub.w2j_add_tables });
       if (datas.length === 0) return { rows: [], slotChangesCount: 0 };
+      // 🔴 Una llamada por cambio, cada una como `supabase_realtime_admin`:
+      // `apply_rls` lee realtime.subscription en su DECLARE y luego vuelve al
+      // usuario de la sesión (`set_config('role', null)`). En Supabase ese
+      // usuario es el dueño de la tabla; aquí es `authenticator`, que no la lee,
+      // y en una sola consulta el segundo cambio fallaba y se llevaba el
+      // sondeo entero (production-roles.pglite.test.ts).
       const rows = await db.transaction(async (q) => {
-        await q(asRealtimeAdmin);
-        return (await q(APPLY_SQL, [`[${datas.join(",")}]`, o.maxRecordBytes])).rows;
+        const out: Record<string, unknown>[] = [];
+        for (const data of datas) {
+          await q(asRealtimeAdmin);
+          out.push(...(await q(APPLY_SQL, [data, o.maxRecordBytes])).rows);
+        }
+        return out;
       });
       return {
         slotChangesCount: datas.length,

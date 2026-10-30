@@ -97,7 +97,9 @@ export async function initRealtimeSchema(db: SqlRunner, opts: { devRole: string 
   // NOINHERIT: no le llega el USAGE de anon), y es el pool del servicio (ver la
   // decisión de `list_changes` partida en d-tiempo-real.md). Las suscripciones
   // NO hace falta que las lea: `apply_rls` las lee en su DECLARE, aún como
-  // `supabase_realtime_admin`. Medido con production-roles.pglite.test.ts.
+  // `supabase_realtime_admin`, porque poller.ts lo vuelve a poner antes de CADA
+  // cambio (tras la primera llamada ya es `authenticator`). Medido con
+  // production-roles.pglite.test.ts.
   await db.exec(`
     grant supabase_realtime_admin to ${dev} with inherit true, set false;
     grant usage on schema realtime to authenticator;
