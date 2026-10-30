@@ -96,7 +96,8 @@ describe.skipIf(!URL)("the fix's worktree against real Postgres", () => {
     expect((await listProjects(OWNER)).map((p) => p.id)).not.toContain(w.copyId);
     const { accesoAlProyecto } = await import("@/lib/projects/acceso");
     expect((await accesoAlProyecto(w.copyId, EDITOR))?.rol).toBe("editor");
-  });
+    // @/lib/projects takes seconds to import, more with the other suites running alongside.
+  }, 30_000);
 
   it("in the copy, the backend and its variables are the parent's", async () => {
     const w = (await wt.addWorktree({ parentId: PARENT, ownerId: OWNER, incidentId: `i5-${RUN}` }))!;
