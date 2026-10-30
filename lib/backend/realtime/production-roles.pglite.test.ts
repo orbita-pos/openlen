@@ -47,6 +47,18 @@ vi.mock("../pg", () => ({
 const { provisionDatabase } = await import("../provision");
 const { ensureRealtimeProvisioned, forgetRealtimeProvisioned } = await import("./provision");
 
+/** El pool del servicio de Realtime: una sesión de `authenticator`, como en producción. */
+const authenticatorDb: ProjectDatabase = {
+  transaction: async (fn) => {
+    await as("authenticator");
+    try {
+      return await pgliteProjectDatabase(db.pg).transaction(fn);
+    } finally {
+      await as("postgres");
+    }
+  },
+};
+
 /** Un clúster nuevo con el administrador de setup-pages-cluster.sh y la base
  *  del proyecto creada. `rootGrants`: lo que root le concede además. */
 async function cluster(rootGrants: string): Promise<void> {
@@ -103,16 +115,6 @@ describe("Realtime con los roles de producción (sin superusuario)", () => {
     await as("postgres");
     await installWalCapture(db.pg, ["public.mensajes"]);
 
-    const authenticatorDb: ProjectDatabase = {
-      transaction: async (fn) => {
-        await as("authenticator");
-        try {
-          return await pgliteProjectDatabase(db.pg).transaction(fn);
-        } finally {
-          await as("postgres");
-        }
-      },
-    };
     const U1 = "11111111-1111-4111-8111-111111111111";
     const U2 = "22222222-2222-4222-8222-222222222222";
     const parsed = parseSubscriptionParams({ event: "INSERT", schema: "public", table: "mensajes" });
@@ -134,6 +136,40 @@ describe("Realtime con los roles de producción (sin superusuario)", () => {
     await as("postgres");
     await db.pg.query(`insert into public.mensajes (user_id, texto) values ($1, 'otra')`, [U1]);
     await expect(queueChangeSource(db.pg, authenticatorDb).listChanges({ maxChanges: 100, maxRecordBytes: 1_048_576 })).rejects.toThrow(/permission denied for schema realtime/);
+    await db.pg.close();
+  });
+
+  // 🔴 `apply_rls` vuelve al usuario de la sesión nada más pasar su DECLARE. En
+  // Supabase ese usuario es el dueño de realtime.subscription; aquí es
+  // `authenticator`, que no la lee: el SEGUNDO cambio de un sondeo fallaba y se
+  // llevaba el sondeo entero (medido en producción el 29/10: un pedido es un
+  // insert más el update de su total, y no llegó ningún cambio).
+  it("dos cambios en el mismo sondeo llegan los dos a su suscriptor", async () => {
+    await cluster(`grant set on parameter log_min_messages to ${ADMIN};`);
+    await ensureRealtimeProvisioned({ scope: REF, ref: REF });
+    await as(DEV);
+    await db.pg.exec(`
+      create table public.orders (id bigint generated always as identity primary key, total int not null default 0);
+      alter table public.orders enable row level security;
+      create policy "anyone reads" on public.orders for select to anon using (true);
+      grant select on public.orders to anon;
+      alter publication supabase_realtime add table public.orders;
+    `);
+    await as("postgres");
+    await installWalCapture(db.pg, ["public.orders"]);
+
+    const SUB = "bbbbbbbb-0000-4000-8000-000000000001";
+    const parsed = parseSubscriptionParams({ event: "*", schema: "public", table: "orders" });
+    if (!parsed.ok) throw new Error(parsed.error);
+    await createSubscriptions(authenticatorDb, [{ id: SUB, claims: { role: "anon" }, params: parsed.params }]);
+    await db.pg.exec(`insert into public.orders default values; update public.orders set total = 50;`);
+
+    const listed = await queueChangeSource(db.pg, authenticatorDb).listChanges({ maxChanges: 100, maxRecordBytes: 1_048_576 });
+    expect(listed!.rows.map((r) => [r.type, r.subscription_ids])).toEqual([
+      ["INSERT", [SUB]],
+      ["UPDATE", [SUB]],
+    ]);
+    expect(JSON.parse(listed!.rows[1]!.record)).toMatchObject({ total: 50 });
     await db.pg.close();
   });
 
