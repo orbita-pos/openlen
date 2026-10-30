@@ -115,6 +115,7 @@ export default defineConfig({
       // Len Watch (spec local 2026-10-30-len-watch). LISTA BLANCA.
       "lib/len-watch/**/*.test.ts",
       "lib/len-watch/**/*.test.tsx",
+      "app/c/**/*.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
