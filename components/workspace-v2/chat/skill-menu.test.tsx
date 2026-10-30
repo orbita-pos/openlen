@@ -98,6 +98,27 @@ describe("useSkillSlash", () => {
     expect(m.values.at(-1)).toBe("/cotizar ");
   });
 
+  // Jesús, 29/10: with more skills than fit, going down with the arrow lost the highlighted one below the
+  // list's edge. Like Claude Code's `/` menu, the visible window follows the selection.
+  it("the arrows keep the chosen skill in view, also when they wrap around", () => {
+    const m = mount();
+    m.type("/");
+    const list = m.host.querySelector<HTMLElement>('[role="listbox"]')!;
+    Object.defineProperty(list, "clientHeight", { configurable: true, get: () => 40 });
+    [...list.querySelectorAll<HTMLElement>('[role="option"]')].forEach((o, i) => {
+      Object.defineProperty(o, "offsetTop", { configurable: true, get: () => i * 20 });
+      Object.defineProperty(o, "offsetHeight", { configurable: true, get: () => 20 });
+    });
+    m.key("ArrowDown");
+    expect(list.scrollTop).toBe(0);
+    m.key("ArrowDown");
+    expect(list.scrollTop).toBe(20);
+    m.key("ArrowDown");
+    expect(list.scrollTop).toBe(0);
+    m.key("ArrowUp");
+    expect(list.scrollTop).toBe(20);
+  });
+
   it("Escape closes", () => {
     const m = mount();
     m.type("/off");
