@@ -46,6 +46,7 @@ function toIncident(row: IncidentRow): Incident {
     updatedAt: row.updatedAt,
     resolvedAt: row.resolvedAt ?? null,
     resolution: row.resolution ?? null,
+    fixStamp: row.fixStamp ?? null,
   };
 }
 
@@ -81,16 +82,17 @@ export async function openIncident(projectId: string, sample: WatchReport): Prom
   return rows[0] ? toIncident(rows[0]) : null;
 }
 
-export async function countReport(incidentId: string): Promise<void> {
+/** Adds `n` visitor reports to the incident (the ingester counts some in memory and adds them at once). */
+export async function countReport(incidentId: string, n = 1): Promise<void> {
   await db
     .update(schema.lenWatchIncidents)
-    .set({ reports: sql`${schema.lenWatchIncidents.reports} + 1` })
+    .set({ reports: sql`${schema.lenWatchIncidents.reports} + ${n}` })
     .where(eq(schema.lenWatchIncidents.id, incidentId));
 }
 
 export async function updateIncident(
   id: string,
-  patch: Partial<{ status: Exclude<IncidentStatus, "resolved">; summary: string | null; reason: string | null; shipsUnpublished: boolean; turnRowId: string | null }>,
+  patch: Partial<{ status: Exclude<IncidentStatus, "resolved">; summary: string | null; reason: string | null; shipsUnpublished: boolean; turnRowId: string | null; fixStamp: string | null }>,
 ): Promise<void> {
   await db
     .update(schema.lenWatchIncidents)

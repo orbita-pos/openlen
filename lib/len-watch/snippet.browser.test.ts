@@ -14,6 +14,7 @@ import { parseWatchReport } from "./report";
 import { injectWatchSnippet } from "./snippet";
 
 const CRASHED = injectWatchSnippet('<!doctype html><html><head><title>x</title></head><body><div id="root"></div><script>throw new Error("kaput at https://a.b/c?token=1")</script></body></html>', "p1", null);
+const MISSING_BUNDLE = injectWatchSnippet('<!doctype html><html><head><title>x</title><script type="module" src="/assets/index-abc.js"></script></head><body><div id="root"></div></body></html>', "p1", null);
 const WORKING = injectWatchSnippet('<!doctype html><html><head><title>x</title></head><body><div id="root"><h1>Hola</h1></div></body></html>', "p1", null);
 
 let server: http.Server;
@@ -31,7 +32,8 @@ beforeAll(async () => {
       });
       return;
     }
-    res.writeHead(200, { "content-type": "text/html" }).end(req.url === "/rota" ? CRASHED : WORKING);
+    if (req.url === "/assets/index-abc.js") return void res.writeHead(404).end();
+    res.writeHead(200, { "content-type": "text/html" }).end(req.url === "/rota" ? CRASHED : req.url === "/sin-paquete" ? MISSING_BUNDLE : WORKING);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   hostPort = `127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -65,6 +67,13 @@ describe("the snippet in a visitor's browser", () => {
     expect(report).toMatchObject({ message: "Uncaught Error: kaput at https://a.b/c", file: "/rota", page: null });
     // The line of the document as served, snippet included (it goes first in <head>).
     expect(report?.line).toBeGreaterThan(1);
+  }, 60_000);
+
+  it("🔴 an app whose bundle isn't there (a deploy gone wrong) says which file failed", async () => {
+    beacons.length = 0;
+    await visit("/sin-paquete");
+    expect(beacons).toHaveLength(1);
+    expect(parseWatchReport(beacons[0])).toMatchObject({ message: `failed to load http://${hostPort}/assets/index-abc.js`, file: "/assets/index-abc.js" });
   }, 60_000);
 
   it("a working app sends nothing", async () => {

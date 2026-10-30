@@ -50,8 +50,8 @@ export function lenWatchAjustes(c: ClienteDeOpenLen, id: string, cambio: Partial
 export function lenWatchArreglar(c: ClienteDeOpenLen, id: string) {
   return pedir<{ status: "fixing" }>(c, rutaLenWatch(id, "/fix"), post({}));
 }
-export function lenWatchAprobar(c: ClienteDeOpenLen, id: string) {
-  return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post({}));
+export function lenWatchAprobar(c: ClienteDeOpenLen, id: string, confirmarCambios = false) {
+  return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post(confirmarCambios ? { confirmChanged: true } : {}));
 }
 export function leerVisitas(c: ClienteDeOpenLen, id: string, zona: string, signal?: AbortSignal) {
   return pedir<DatosDeVisitas>(c, `/api/voz/visitas?project=${encodeURIComponent(id)}&zona=${encodeURIComponent(zona)}`, { signal });

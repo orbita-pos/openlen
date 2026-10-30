@@ -25,7 +25,7 @@ const ctx = { params: Promise.resolve({ id: "p1" }) };
 const SETTINGS = { autoFix: false, autoPublish: false, muted: false, locale: null };
 const PROJECT = { projectId: "p1", ownerId: "owner", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "UTC" };
 const now = new Date("2026-10-30T12:00:00Z");
-const incident = (status: Incident["status"]): Incident => ({ id: "i1", projectId: "p1", status, sample: { message: "boom", file: null, line: null, col: null, page: null }, reports: 3, summary: "Arreglado.", reason: null, shipsUnpublished: false, turnRowId: "row-1", createdAt: now, updatedAt: now, resolvedAt: null, resolution: null });
+const incident = (status: Incident["status"]): Incident => ({ id: "i1", projectId: "p1", status, sample: { message: "boom", file: null, line: null, col: null, page: null }, reports: 3, summary: "Arreglado.", reason: null, shipsUnpublished: false, turnRowId: "row-1", createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null });
 
 const req = (method: string, body?: unknown) => new Request("https://openlen.com/api/projects/p1/len-watch", { method, ...(body ? { body: JSON.stringify(body) } : {}) });
 
@@ -91,15 +91,23 @@ describe("POST fix", () => {
     const res = await FIX(req("POST"), ctx);
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ status: "fixing" });
-    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ id: "i1" }), PROJECT);
+    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ id: "i1" }), PROJECT, undefined, { actorId: "owner" });
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "owner", "editar");
+  });
+
+  it("an editor's press runs as the editor", async () => {
+    vi.mocked(usuarioDeLaPeticion).mockResolvedValue("editor-1");
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" });
+    vi.mocked(activeIncident).mockResolvedValue(incident("open"));
+    expect((await FIX(req("POST"), ctx)).status).toBe(202);
+    expect(startFix).toHaveBeenCalledWith(expect.anything(), PROJECT, undefined, { actorId: "editor-1" });
   });
 
   it("a fix cut by a restart is recovered first, so the owner can start it again", async () => {
     vi.mocked(activeIncident).mockResolvedValue(incident("fixing"));
     vi.mocked(recoverIfStale).mockImplementationOnce(async (i) => ({ ...i, status: "needs_owner", reason: "interrupted" }));
     expect((await FIX(req("POST"), ctx)).status).toBe(202);
-    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ status: "needs_owner" }), PROJECT);
+    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ status: "needs_owner" }), PROJECT, undefined, { actorId: "owner" });
   });
 
   it("nothing to fix, or already at it: 409", async () => {
@@ -119,6 +127,15 @@ describe("POST approve", () => {
     const res = await APPROVE(req("POST"), ctx);
     expect(res.status).toBe(428);
     expect(await res.json()).toEqual({ error: "security_findings" });
+  });
+
+  it("passes on who approves and whether they confirmed what came after the fix", async () => {
+    vi.mocked(activeIncident).mockResolvedValue(incident("fix_ready"));
+    vi.mocked(approveFix).mockResolvedValue({ status: 200, body: {} });
+    await APPROVE(req("POST", { confirmChanged: true }), ctx);
+    expect(approveFix).toHaveBeenCalledWith(expect.anything(), PROJECT, undefined, { actorId: "owner", confirmChanged: true });
+    await APPROVE(req("POST"), ctx);
+    expect(approveFix).toHaveBeenLastCalledWith(expect.anything(), PROJECT, undefined, { actorId: "owner", confirmChanged: false });
   });
 
   it("no incident: 409", async () => {

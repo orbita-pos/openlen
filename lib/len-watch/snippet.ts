@@ -5,6 +5,10 @@
 // What it sends, once per page load:
 //   POST /c/<projectId> { t:"f", m:<first startup error>, f:<its script>, l, c, p:<page slug> }
 //
+// The cause it keeps is the FIRST of: an uncaught error or rejection, or a script/stylesheet that
+// failed to load (the usual blank page after a deploy: a bundle that isn't there). A broken image
+// isn't a cause and doesn't take the slot.
+//
 // It goes FIRST in <head> so it hears the errors of the scripts after it; it is an IIFE in a
 // try/catch, so it can never break or slow the page. It does nothing in an automated browser
 // (`navigator.webdriver`): OpenLen's own check opens the page in one, and so do bots.
@@ -30,6 +34,7 @@ var P=${JSON.stringify(projectId)},G=${JSON.stringify(page)},E="/c/"+P,F=null,D=
 function u(s){return String(s).replace(/(https?:\\/\\/[^\\s?#]+)[?#]\\S*/g,"$1");}
 function k(m,f,l,c){if(F||!m)return;F={m:u(m).slice(0,300),f:f?String(f).split(/[?#]/)[0]:null,l:typeof l==="number"?l:null,c:typeof c==="number"?c:null};}
 addEventListener("error",function(e){if(e)k(e.message,e.filename,e.lineno,e.colno);});
+addEventListener("error",function(e){var t=e&&e.target,s=t&&(t.tagName==="SCRIPT"?t.src:t.tagName==="LINK"&&t.rel==="stylesheet"?t.href:"");if(s)k("failed to load "+s,s,null,null);},true);
 addEventListener("unhandledrejection",function(e){var r=e&&e.reason;k(r&&r.message?r.message:r==null?null:String(r));});
 function check(){if(D)return;D=true;try{if(!B())return;var d=F||{m:null,f:null,l:null,c:null};
 var b=JSON.stringify({t:"f",m:d.m,f:d.f,l:d.l,c:d.c,p:G});

@@ -44,6 +44,30 @@ describe("the snippet in the page", () => {
     expect(JSON.parse(body as string)).toEqual({ t: "f", m: "boom at https://a.b/c", f: "https://s.openlen.app/assets/i.js", l: 3, c: 9, p: "menu" });
   });
 
+  it("🔴 a bundle that failed to load (the usual blank after a deploy) is reported as such", () => {
+    document.body.innerHTML = '<div id="root"></div>';
+    run(injectWatchSnippet(PAGE, "p1", null));
+    const script = document.createElement("script");
+    script.src = "https://s.openlen.app/assets/index-abc.js?v=1";
+    document.head.appendChild(script);
+    script.dispatchEvent(new Event("error"));
+    vi.advanceTimersByTime(WATCH_SETTLE_MS + 10);
+    expect(JSON.parse(beacon.mock.calls[0]![1] as string)).toMatchObject({ m: "failed to load https://s.openlen.app/assets/index-abc.js", f: "https://s.openlen.app/assets/index-abc.js" });
+  });
+
+  it("a broken image doesn't take the place of the real cause", () => {
+    document.body.innerHTML = '<div id="root"></div>';
+    run(injectWatchSnippet(PAGE, "p1", null));
+    const img = document.createElement("img");
+    img.src = "https://s.openlen.app/logo.png";
+    document.body.appendChild(img);
+    img.dispatchEvent(new Event("error"));
+    window.dispatchEvent(new ErrorEvent("error", { message: "boom" }));
+    document.body.removeChild(img);
+    vi.advanceTimersByTime(WATCH_SETTLE_MS + 10);
+    expect((JSON.parse(beacon.mock.calls[0]![1] as string) as { m: string }).m).toBe("boom");
+  });
+
   it("stays quiet when the app painted something", () => {
     document.body.innerHTML = '<div id="root"><h1>Hola</h1></div>';
     run(injectWatchSnippet(PAGE, "p1", null));

@@ -49,6 +49,11 @@ describe("the len_watch notice", () => {
     expect(lenWatchPush(EVENT)).toEqual({ title: EVENT.title, body: EVENT.body, url: urlDelChat("p1") });
   });
 
+  it("on the phone, a site down that needs a person is high priority; Len at work is normal", () => {
+    expect(mensajeFcm({ ...EVENT, phase: "needs_owner" }, "tok").message.android.priority).toBe("high");
+    expect(mensajeFcm(EVENT, "tok").message.android.priority).toBe("normal");
+  });
+
   it("goes to the phone with its title and body", () => {
     const m = mensajeFcm(EVENT, "tok").message;
     expect(m.notification).toEqual({ title: EVENT.title, body: EVENT.body });

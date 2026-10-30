@@ -14,18 +14,25 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
   const t = useTranslations("panelsChat");
   const { status, reload } = useLenWatch(projectId);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<"review" | "failed" | null>(null);
+  const [note, setNote] = useState<"review" | "failed" | "changed" | null>(null);
   const view = bannerState(status?.incident ?? null);
   if (view.kind === "hidden") return null;
 
-  const act = async (path: "fix" | "approve") => {
+  const act = async (path: "fix" | "approve", confirmChanged = false) => {
     setBusy(true);
     setNote(null);
-    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/len-watch/${path}`, { method: "POST" }).catch(() => null);
+    const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/len-watch/${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(confirmChanged ? { confirmChanged: true } : {}),
+    }).catch(() => null);
     setBusy(false);
     if (r?.status === 428) {
       setNote("review");
       onOpenPublish?.();
+    } else if (r?.status === 409 && ((await r.json().catch(() => null)) as { error?: string } | null)?.error === "changed_since_fix") {
+      // The draft moved after Len's fix: publishing would carry those edits too. Ask, don't guess.
+      setNote("changed");
     } else if (!r?.ok) {
       setNote("failed");
     }
@@ -49,6 +56,14 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
           </button>
           {note === "review" && <span className="fg-muted">{t("lenWatch.review")}</span>}
           {note === "failed" && <span className="fg-muted">{t("lenWatch.failed")}</span>}
+        </div>
+      )}
+      {!soloLectura && note === "changed" && (
+        <div className="flex flex-col items-start gap-1.5 pl-[22px]">
+          <span className="fg-muted">{t("lenWatch.changed")}</span>
+          <button type="button" disabled={busy} onClick={() => void act("approve", true)} className="rounded-lg border bd px-2.5 py-1 font-medium fg disabled:opacity-60">
+            {t("lenWatch.publishAnyway")}
+          </button>
         </div>
       )}
     </div>

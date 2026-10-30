@@ -533,6 +533,8 @@
     "fix": "Arreglar con Len",
     "approve": "Publicar el arreglo",
     "review": "La publicación necesita tu revisión.",
-    "failed": "No se pudo. Prueba otra vez."
+    "failed": "No se pudo. Prueba otra vez.",
+    "changed": "El borrador cambió después del arreglo de Len: esos cambios saldrían también.",
+    "publishAnyway": "Publicar igual"
   }
 }

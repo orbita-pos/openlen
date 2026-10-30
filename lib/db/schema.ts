@@ -2392,6 +2392,7 @@ export const lenWatchIncidents = pgTable(
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp("resolvedAt", { mode: "date", withTimezone: true }),
     resolution: text("resolution").$type<Resolution>(),
+    fixStamp: text("fixStamp"),
   },
   // Its indexes live in the migration's SQL (scripts/len-watch-migrate-sql.ts), the partial unique
   // one on "projectId" WHERE status <> 'resolved' among them: it is the lock of «one active incident

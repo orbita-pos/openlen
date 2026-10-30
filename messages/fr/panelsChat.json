@@ -533,6 +533,8 @@
     "fix": "Réparer avec Len",
     "approve": "Publier la correction",
     "review": "La publication demande votre vérification.",
-    "failed": "Ça n'a pas marché. Réessayez."
+    "failed": "Ça n'a pas marché. Réessayez.",
+    "changed": "Le brouillon a changé après la correction de Len : ces modifications seraient publiées aussi.",
+    "publishAnyway": "Publier quand même"
   }
 }

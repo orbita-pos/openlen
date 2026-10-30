@@ -533,6 +533,8 @@
     "fix": "Repareren met Len",
     "approve": "Oplossing publiceren",
     "review": "Publiceren heeft je controle nodig.",
-    "failed": "Dat lukte niet. Probeer het opnieuw."
+    "failed": "Dat lukte niet. Probeer het opnieuw.",
+    "changed": "Het concept is gewijzigd na de oplossing van Len: die wijzigingen gaan ook live.",
+    "publishAnyway": "Toch publiceren"
   }
 }

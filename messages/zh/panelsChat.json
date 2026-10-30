@@ -533,6 +533,8 @@
     "fix": "让 Len 修复",
     "approve": "发布修复",
     "review": "发布前需要你检查。",
-    "failed": "没有成功，请重试。"
+    "failed": "没有成功，请重试。",
+    "changed": "Len 修复后草稿又有改动：这些改动也会一起发布。",
+    "publishAnyway": "仍然发布"
   }
 }
