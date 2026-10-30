@@ -11,7 +11,7 @@ const { htmlLang, noticeFor, noticeKey, pageUrl } = await import("./owner");
 
 const P = { projectId: "p1", ownerId: "u1", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "UTC" };
 const now = new Date();
-const I = { id: "i1", projectId: "p1", status: "open" as const, sample: { message: null, file: null, line: null, col: null, page: "menu" }, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null };
+const I = { id: "i1", projectId: "p1", status: "open" as const, sample: { message: null, file: null, line: null, col: null, page: "menu" }, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null };
 
 describe("owner", () => {
   it("reads the page's language when it's one of ours", () => {

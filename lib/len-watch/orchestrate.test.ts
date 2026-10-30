@@ -48,7 +48,7 @@ function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; 
   };
   const open = (status: Incident["status"] = "open"): Incident => {
     const now = new Date();
-    const i: Incident = { id: "i1", projectId: "p1", status, sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null };
+    const i: Incident = { id: "i1", projectId: "p1", status, sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null };
     incidents.set(i.id, i);
     return i;
   };
@@ -160,6 +160,21 @@ describe("startFix by the owner", () => {
     expect(w.launched).toHaveLength(0);
     expect(w.current()).toMatchObject({ status: "resolved", resolution: "recovered" });
   });
+
+  it("🔴 pressed by an editor, the turn is the editor's: it counts against the members' cap (the owner still pays)", async () => {
+    const w = world({ checks: [DOWN] });
+    await startFix(w.open("needs_owner"), P, w.deps, { actorId: "editor-1" });
+    expect(w.launched[0]).toMatchObject({ userId: "editor-1", projectId: "p1" });
+  });
+});
+
+describe("the fix's fingerprint", () => {
+  it("is kept when the fix is ready, to see later what came after it", async () => {
+    const w = world({ settings: { autoFix: true }, checks: [DOWN], stamps: ["before", "after"] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect(w.current()).toMatchObject({ status: "fix_ready", fixStamp: "after" });
+  });
 });
 
 describe("approveFix", () => {
@@ -175,6 +190,26 @@ describe("approveFix", () => {
     expect(r.status).toBe(200);
     expect(w.current()).toMatchObject({ status: "resolved", resolution: "fixed" });
     expect(w.notices).toEqual(["fixed"]);
+  });
+
+  it("publishes as whoever approved", async () => {
+    const w = world({ checks: [UP] });
+    await approveFix(w.open("fix_ready"), P, w.deps, { actorId: "editor-1" });
+    expect(w.deps.publish).toHaveBeenCalledWith(expect.objectContaining({ actorId: "editor-1", ownerId: "u1" }));
+  });
+
+  it("🔴 the draft changed after Len's fix: asks before publishing what came after, then publishes on confirm", async () => {
+    const w = world({ checks: [UP], stamps: ["edited-later"] });
+    const i = { ...w.open("fix_ready"), fixStamp: "after-fix" };
+    expect(await approveFix(i, P, w.deps)).toEqual({ status: 409, body: { error: "changed_since_fix" } });
+    expect(w.deps.publish).not.toHaveBeenCalled();
+    expect((await approveFix(i, P, w.deps, { confirmChanged: true })).status).toBe(200);
+    expect(w.deps.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("the draft as Len left it: no question", async () => {
+    const w = world({ checks: [UP], stamps: ["after-fix"] });
+    expect((await approveFix({ ...w.open("fix_ready"), fixStamp: "after-fix" }, P, w.deps)).status).toBe(200);
   });
 
   it("a gate answers as it is, and the incident waits", async () => {

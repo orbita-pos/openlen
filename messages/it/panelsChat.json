@@ -533,6 +533,8 @@
     "fix": "Sistema con Len",
     "approve": "Pubblica la correzione",
     "review": "La pubblicazione richiede la tua revisione.",
-    "failed": "Non è andata. Riprova."
+    "failed": "Non è andata. Riprova.",
+    "changed": "La bozza è cambiata dopo la correzione di Len: usciranno anche quelle modifiche.",
+    "publishAnyway": "Pubblica comunque"
   }
 }

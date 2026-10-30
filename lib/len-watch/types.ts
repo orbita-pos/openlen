@@ -66,4 +66,7 @@ export interface Incident {
   updatedAt: Date;
   resolvedAt: Date | null;
   resolution: Resolution | null;
+  /** What the project's content looked like when Len's fix was ready: Approve compares against it to
+   *  ask before publishing edits that came after (like a review dismissed by new commits). */
+  fixStamp: string | null;
 }

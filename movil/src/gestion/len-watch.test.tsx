@@ -47,6 +47,15 @@ it("un arreglo listo: dice qué saldría, y un 428 manda a revisar", async () =>
   expect(host.textContent).toContain("review");
 });
 
+it("el borrador cambió tras el arreglo: lo dice y «Publicar igual» lo confirma", async () => {
+  const { c, llamadas } = cliente({ incident: READY, approve: { status: 409, body: { error: "changed_since_fix" } } });
+  await montar(c);
+  await act(async () => boton("approve")!.click());
+  expect(host.textContent).toContain("changed");
+  await act(async () => boton("publishAnyway")!.click());
+  expect(llamadas.filter((l) => l.ruta.endsWith("/approve")).map((l) => l.cuerpo)).toEqual([{}, { confirmChanged: true }]);
+});
+
 it("caído y sin nadie: «Arreglar con Len» pide el arreglo", async () => {
   const { c, llamadas } = cliente({ incident: { ...READY, status: "open", shipsUnpublished: false } });
   await montar(c);

@@ -1,5 +1,6 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import type { NotificationEvent } from "../types";
+import { breaksQuietHours } from "../urgency";
 
 interface CuentaFcm { project_id: string; client_email: string; private_key: string }
 export function configuracionFcm(valor: string | undefined): CuentaFcm | null {
@@ -28,7 +29,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "email_quota": title = "Email"; body = `${evento.percent}% · ${evento.sent} / ${evento.included}`; break;
     case "len_watch": title = evento.title; body = evento.body; break;
   }
-  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId }, android: { priority: "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
+  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
 }
 
 /** FCM HTTP v1: JWT firmado localmente. Nunca se imprimen respuestas ni claves. */

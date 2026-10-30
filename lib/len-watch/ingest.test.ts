@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { LoadCheck } from "./check";
-import { CHECK_INTERVAL_MS, createIngester, MAX_PENDING_CHECKS, type IngestDeps } from "./ingest";
+import { ACTIVE_CACHE_MS, CHECK_INTERVAL_MS, createIngester, MAX_PENDING_CHECKS, type IngestDeps } from "./ingest";
 import type { ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, WatchReport } from "./types";
 
@@ -12,7 +12,7 @@ const PROJECT: ProjectForWatch = { projectId: "p1", ownerId: "u1", title: "Holi"
 
 function incident(over: Partial<Incident> = {}): Incident {
   const now = new Date();
-  return { id: "i1", projectId: "p1", status: "open", sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, ...over };
+  return { id: "i1", projectId: "p1", status: "open", sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null, ...over };
 }
 
 function fakeDeps(o: { active?: Incident | null; settings?: Partial<LenWatchSettings>; project?: ProjectForWatch | null; check?: LoadCheck; clock?: { t: number } } = {}) {
@@ -58,9 +58,24 @@ describe("ingestWatchReport", () => {
   it("an incident that stands (even a failed fix) only counts the report", async () => {
     const { deps } = fakeDeps({ active: incident({ status: "fix_failed" }) });
     await createIngester(deps)("p1", REPORT);
-    expect(deps.store.countReport).toHaveBeenCalledWith("i1");
+    expect(deps.store.countReport).toHaveBeenCalledWith("i1", 1);
     expect(deps.check).not.toHaveBeenCalled();
     expect(deps.onOpened).not.toHaveBeenCalled();
+  });
+
+  it(`🔴 while an incident stands, the database is read once per ${ACTIVE_CACHE_MS / 1000} s, not once per visitor`, async () => {
+    const clock = { t: 1_000_000 };
+    const { deps } = fakeDeps({ active: incident({ status: "fixing" }), clock });
+    const ingest = createIngester(deps);
+    for (let n = 0; n < 100; n++) await ingest("p1", REPORT);
+    expect(deps.project).toHaveBeenCalledTimes(1);
+    expect(deps.store.activeIncident).toHaveBeenCalledTimes(1);
+    expect(deps.store.countReport).toHaveBeenCalledTimes(1);
+    clock.t += ACTIVE_CACHE_MS + 1;
+    await ingest("p1", REPORT);
+    // The 99 counted in memory go in with the one that reads again.
+    expect(deps.store.countReport).toHaveBeenLastCalledWith("i1", 100);
+    expect(deps.store.activeIncident).toHaveBeenCalledTimes(2);
   });
 
   it("muted or not published: no check", async () => {

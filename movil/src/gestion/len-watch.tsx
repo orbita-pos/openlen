@@ -13,7 +13,7 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
   const t = useTranslations("movil.lenWatch");
   const [estado, setEstado] = useState<LenWatchStatus | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [nota, setNota] = useState<"review" | "failed" | null>(null);
+  const [nota, setNota] = useState<"review" | "failed" | "changed" | null>(null);
   const cargar = async (signal?: AbortSignal) => {
     const e = await lenWatchEstado(cliente, projectId, signal).catch(() => null);
     if (!signal?.aborted && e?.enabled) setEstado(e);
@@ -27,13 +27,14 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
   if (!estado) return null;
 
   const vista = bannerState(estado.incident);
-  const actuar = async (accion: "fix" | "approve") => {
+  const actuar = async (accion: "fix" | "approve", confirmarCambios = false) => {
     setOcupado(true);
     setNota(null);
     try {
-      await (accion === "fix" ? lenWatchArreglar(cliente, projectId) : lenWatchAprobar(cliente, projectId));
+      await (accion === "fix" ? lenWatchArreglar(cliente, projectId) : lenWatchAprobar(cliente, projectId, confirmarCambios));
     } catch (e) {
-      setNota(e instanceof ErrorGestion && e.status === 428 ? "review" : "failed");
+      // 409 changed_since_fix: el borrador cambió tras el arreglo de Len; se pregunta antes de publicarlo.
+      setNota(e instanceof ErrorGestion && e.status === 428 ? "review" : e instanceof ErrorGestion && e.codigo === "changed_since_fix" ? "changed" : "failed");
     }
     setOcupado(false);
     await cargar();
@@ -54,6 +55,7 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
       {vista.kind !== "working" && <button className="gestion-principal" disabled={ocupado} onClick={() => void actuar(vista.kind === "ready" ? "approve" : "fix")}>{vista.kind === "ready" ? t("approve") : t("fix")}</button>}
       {nota === "review" && <p>{t("review")}</p>}
       {nota === "failed" && <p>{t("failed")}</p>}
+      {nota === "changed" && <><p>{t("changed")}</p><button className="gestion-texto" disabled={ocupado} onClick={() => void actuar("approve", true)}>{t("publishAnyway")}</button></>}
     </div>}
     <p>{t("intro")}</p>
     {settingsRows(estado.settings, estado.isOwner).map((fila) => <label key={fila.key} className="gestion-len-watch-interruptor">

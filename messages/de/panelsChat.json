@@ -533,6 +533,8 @@
     "fix": "Mit Len reparieren",
     "approve": "Korrektur veröffentlichen",
     "review": "Die Veröffentlichung braucht deine Prüfung.",
-    "failed": "Das hat nicht geklappt. Versuch es noch einmal."
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "changed": "Der Entwurf hat sich nach Lens Korrektur geändert: Diese Änderungen gingen auch online.",
+    "publishAnyway": "Trotzdem veröffentlichen"
   }
 }

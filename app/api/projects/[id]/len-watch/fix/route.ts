@@ -21,7 +21,8 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   if (!FIXABLE.includes(incident.status)) return Response.json({ error: "busy" }, { status: 409 });
   const project = await projectForWatch(id);
   if (!project?.url) return Response.json({ error: "no_incident" }, { status: 409 });
-  void startFix(incident, project).catch((err: unknown) => console.warn("[len-watch] the fix couldn't start", err));
+  // The turn is whoever pressed: an editor's counts against the members' monthly cap.
+  void startFix(incident, project, undefined, { actorId: who.userId }).catch((err: unknown) => console.warn("[len-watch] the fix couldn't start", err));
   return Response.json({ status: "fixing" }, { status: 202 });
 });
 

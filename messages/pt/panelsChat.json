@@ -533,6 +533,8 @@
     "fix": "Corrigir com o Len",
     "approve": "Publicar a correção",
     "review": "A publicação precisa da sua revisão.",
-    "failed": "Não deu certo. Tente de novo."
+    "failed": "Não deu certo. Tente de novo.",
+    "changed": "O rascunho mudou depois da correção do Len: essas alterações também sairiam.",
+    "publishAnyway": "Publicar mesmo assim"
   }
 }

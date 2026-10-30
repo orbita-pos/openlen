@@ -16,7 +16,9 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   const incident = await standingIncident(id);
   const project = incident ? await projectForWatch(id) : null;
   if (!incident || !project?.url) return Response.json({ error: "no_incident" }, { status: 409 });
-  const r = await approveFix(incident, project);
+  // `confirmChanged`: the person saw that the draft moved after Len's fix and publishes anyway.
+  const body = (await req.json().catch(() => null)) as { confirmChanged?: unknown } | null;
+  const r = await approveFix(incident, project, undefined, { actorId: who.userId, confirmChanged: body?.confirmChanged === true });
   return Response.json(r.body, { status: r.status });
 });
 

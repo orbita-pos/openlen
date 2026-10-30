@@ -80,6 +80,18 @@ describe("the Len Watch notice", () => {
     expect(host.textContent).toContain(panelsChat.lenWatch.review);
   });
 
+  it("🔴 the draft changed after Len's fix: says so, and «Publish anyway» confirms it", async () => {
+    const calls = fakeFetch(status(READY), { status: 409, body: { error: "changed_since_fix" } });
+    const host = await mount(<LenWatchBanner projectId="p1" />);
+    await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === panelsChat.lenWatch.approve)!.click());
+    await act(async () => new Promise((r) => setTimeout(r, 0)));
+    expect(host.textContent).toContain(panelsChat.lenWatch.changed);
+    await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === panelsChat.lenWatch.publishAnyway)!.click());
+    await act(async () => new Promise((r) => setTimeout(r, 0)));
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts.map((c) => c.body && JSON.parse(c.body))).toEqual([{}, { confirmChanged: true }]);
+  });
+
   it("a reader sees the notice but no button", async () => {
     fakeFetch(status({ ...READY, status: "needs_owner" }));
     const host = await mount(<LenWatchBanner projectId="p1" soloLectura />);

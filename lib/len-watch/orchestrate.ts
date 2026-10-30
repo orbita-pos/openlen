@@ -32,7 +32,7 @@ export interface OrchestratorDeps {
     getSettings(projectId: string): Promise<LenWatchSettings>;
     activeIncident(projectId: string): Promise<Incident | null>;
     incidentById(id: string): Promise<Incident | null>;
-    updateIncident(id: string, patch: Partial<Pick<Incident, "summary" | "reason" | "shipsUnpublished" | "turnRowId">> & { status?: Exclude<Incident["status"], "resolved"> }): Promise<void>;
+    updateIncident(id: string, patch: Partial<Pick<Incident, "summary" | "reason" | "shipsUnpublished" | "turnRowId" | "fixStamp">> & { status?: Exclude<Incident["status"], "resolved"> }): Promise<void>;
     resolveIncident(id: string, resolution: Resolution): Promise<void>;
   };
   project(projectId: string): Promise<ProjectForWatch | null>;
@@ -78,16 +78,17 @@ async function tell(deps: OrchestratorDeps, p: ProjectForWatch, i: Incident, pha
 /** A crash was confirmed. With «fix on its own», Len starts now; otherwise the owner hears it's down. */
 export async function onIncidentOpened(i: Incident, p: ProjectForWatch, check: LoadCheck, deps?: OrchestratorDeps): Promise<void> {
   const d = deps ?? (await defaultDeps());
-  if ((await d.store.getSettings(p.projectId)).autoFix) await startFix(i, p, d, check);
+  if ((await d.store.getSettings(p.projectId)).autoFix) await startFix(i, p, d, { check });
   else await tell(d, p, i, "down");
 }
 
-/** Len starts on the crash. From the owner's «Fix with Len» it checks first: a site that loads again
- *  needs no turn and costs no credits. */
-export async function startFix(i: Incident, p: ProjectForWatch, deps?: OrchestratorDeps, check?: LoadCheck): Promise<void> {
+/** Len starts on the crash. From «Fix with Len» it checks first: a site that loads again needs no turn
+ *  and costs no credits. The turn is WHOEVER pressed it (`actorId`): an editor's counts against the
+ *  members' monthly cap and the owner pays, as any Len turn of a member; on its own, it's the owner's. */
+export async function startFix(i: Incident, p: ProjectForWatch, deps?: OrchestratorDeps, o: { check?: LoadCheck; actorId?: string } = {}): Promise<void> {
   const d = deps ?? (await defaultDeps());
   const url = pageUrl(p, i.sample.page);
-  const now = check ?? (await d.check(url));
+  const now = o.check ?? (await d.check(url));
   if (now.loads) {
     await d.store.resolveIncident(i.id, "recovered");
     await tell(d, p, i, "recovered");
@@ -98,7 +99,7 @@ export async function startFix(i: Incident, p: ProjectForWatch, deps?: Orchestra
   await d.store.updateIncident(i.id, { status: "fixing", turnRowId: filaId, reason: null });
   await tell(d, p, i, "fixing");
   d.launch({
-    userId: p.ownerId,
+    userId: o.actorId ?? p.ownerId,
     projectId: p.projectId,
     texto: d.turnPrompt(p.locale),
     framing: watchFraming({ url, reports: [i.sample], check: now, hadUnpublishedChanges: before.hadUnpublished }),
@@ -122,23 +123,24 @@ async function onFixReply(i: Incident, p: ProjectForWatch, before: { stamp: stri
     await tell(d, p, withSummary, "recovered", summary);
     return;
   }
-  if ((await d.contentStamp(p.projectId)) === before.stamp) {
+  const fixStamp = await d.contentStamp(p.projectId);
+  if (fixStamp === before.stamp) {
     await d.store.updateIncident(i.id, { status: "needs_owner", reason: "no_change", summary });
     await tell(d, p, withSummary, "needs_owner", summary);
     return;
   }
   const settings = await d.store.getSettings(p.projectId);
   if (settings.autoPublish && !before.hadUnpublished) {
-    await d.store.updateIncident(i.id, { summary });
-    const r = await publishAndCheck(withSummary, p, d);
+    await d.store.updateIncident(i.id, { summary, fixStamp });
+    const r = await publishAndCheck(withSummary, p, d, p.ownerId);
     if (r.status !== 200) {
       await d.store.updateIncident(i.id, { status: "fix_ready", reason: String(r.body.error ?? r.status), summary });
       await tell(d, p, withSummary, "fix_ready", summary);
     }
     return;
   }
-  const ready: Incident = { ...withSummary, shipsUnpublished: before.hadUnpublished };
-  await d.store.updateIncident(i.id, { status: "fix_ready", shipsUnpublished: before.hadUnpublished, reason: null, summary });
+  const ready: Incident = { ...withSummary, shipsUnpublished: before.hadUnpublished, fixStamp };
+  await d.store.updateIncident(i.id, { status: "fix_ready", shipsUnpublished: before.hadUnpublished, reason: null, summary, fixStamp });
   await tell(d, p, ready, "fix_ready", summary);
 }
 
@@ -148,8 +150,8 @@ async function onFixFailed(i: Incident, p: ProjectForWatch, fallo: FalloDelTurno
 }
 
 /** Publishes the fix through the gates and, if it went out, opens the site again to see it load. */
-async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorDeps): Promise<GatedPublishResult> {
-  const r = await d.publish({ projectId: p.projectId, actorId: p.ownerId, ownerId: p.ownerId, subdomain: p.subdomain ?? "", locale: p.locale, source: "len_watch" });
+async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorDeps, actorId: string): Promise<GatedPublishResult> {
+  const r = await d.publish({ projectId: p.projectId, actorId, ownerId: p.ownerId, subdomain: p.subdomain ?? "", locale: p.locale, source: "len_watch" });
   if (r.status !== 200) return r;
   await d.store.updateIncident(i.id, { status: "publishing" });
   if ((await d.check(pageUrl(p, i.sample.page))).loads) {
@@ -162,11 +164,15 @@ async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorD
   return r;
 }
 
-/** The owner pressed Approve. A gate (428) answers as it is and the incident waits for them. */
-export async function approveFix(i: Incident, p: ProjectForWatch, deps?: OrchestratorDeps): Promise<GatedPublishResult> {
+/** Someone pressed Approve. A gate (428) answers as it is and the incident waits for them. If the draft
+ *  moved after Len's fix, publishing would carry those edits too: it asks first (409
+ *  `changed_since_fix`), the way a review is dismissed when new commits land, and goes on with
+ *  `confirmChanged`. */
+export async function approveFix(i: Incident, p: ProjectForWatch, deps?: OrchestratorDeps, o: { actorId?: string; confirmChanged?: boolean } = {}): Promise<GatedPublishResult> {
   const d = deps ?? (await defaultDeps());
   if (i.status !== "fix_ready") return { status: 409, body: { error: "not_ready" } };
-  return publishAndCheck(i, p, d);
+  if (i.fixStamp && !o.confirmChanged && (await d.contentStamp(p.projectId)) !== i.fixStamp) return { status: 409, body: { error: "changed_since_fix" } };
+  return publishAndCheck(i, p, d, o.actorId ?? p.ownerId);
 }
 
 /** A person published the project: if an incident stands (and Len isn't mid-turn), check whether the
