@@ -524,5 +524,15 @@
     "removeDone": "Fatto: non riceverai più questa email.",
     "removeInvalid": "Questo link non è valido.",
     "removeGone": "Questa attività non esiste più."
+  },
+  "lenWatch": {
+    "working": "Il tuo sito pubblicato non si carica. Len ci sta lavorando.",
+    "down": "Il tuo sito pubblicato non si carica.",
+    "ready": "Len ha sistemato il tuo sito. La correzione non è ancora pubblicata.",
+    "shipsUnpublished": "Usciranno anche le tue modifiche non pubblicate.",
+    "fix": "Sistema con Len",
+    "approve": "Pubblica la correzione",
+    "review": "La pubblicazione richiede la tua revisione.",
+    "failed": "Non è andata. Riprova."
   }
 }

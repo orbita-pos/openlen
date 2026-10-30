@@ -31,6 +31,24 @@ export const ACTIVE_STATUSES: readonly IncidentStatus[] = ["open", "fixing", "fi
 
 export type Resolution = "fixed" | "recovered" | "owner_published";
 
+/** An incident as the web and Len mobile read it (GET /api/projects/[id]/len-watch). */
+export interface IncidentView {
+  id: string;
+  status: IncidentStatus;
+  reason: string | null;
+  summary: string | null;
+  shipsUnpublished: boolean;
+  createdAt: string;
+}
+
+/** What GET /api/projects/[id]/len-watch answers. */
+export interface LenWatchStatus {
+  enabled: boolean;
+  isOwner: boolean;
+  settings: LenWatchSettings;
+  incident: IncidentView | null;
+}
+
 export interface Incident {
   id: string;
   projectId: string;

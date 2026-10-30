@@ -74,5 +74,15 @@
       "denied": "De koppeling met GitHub is geannuleerd.",
       "exchange": "Kon de koppeling met GitHub niet voltooien. Probeer het opnieuw."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "Als je gepubliceerde site niet meer laadt, laten we het je weten.",
+    "watch": "Bewaken en melden",
+    "autoFix": "Zelf repareren",
+    "autoFixHint": "Len begint met repareren zodra hij plat gaat. Dit gebruikt je credits.",
+    "autoPublish": "Zelf publiceren",
+    "autoPublishHint": "Publiceert de oplossing zonder op je te wachten, tenzij de beveiligingscontrole of een datawijziging het tegenhoudt.",
+    "ownerOnly": "Alleen de eigenaar van het project kan dit wijzigen."
   }
 }

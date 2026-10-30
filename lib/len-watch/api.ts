@@ -6,16 +6,7 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso, type AccesoAlProyecto, type Permiso } from "@/lib/projects/acceso";
 
 import { lenWatchEnabled } from "./enabled";
-import type { Incident } from "./types";
-
-export interface IncidentView {
-  id: string;
-  status: Incident["status"];
-  reason: string | null;
-  summary: string | null;
-  shipsUnpublished: boolean;
-  createdAt: string;
-}
+import type { Incident, IncidentView } from "./types";
 
 export function incidentView(i: Incident): IncidentView {
   return { id: i.id, status: i.status, reason: i.reason, summary: i.summary, shipsUnpublished: i.shipsUnpublished, createdAt: i.createdAt.toISOString() };
