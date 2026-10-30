@@ -27,9 +27,27 @@ describe("los proyectos desde la app", () => {
     expect(c.pedir).toHaveBeenCalledWith("/api/projects/b");
   });
 
-  it("la vista previa: activa el enlace (idempotente) y arma /p/<id>?t=", async () => {
-    const c = cliente(Response.json({ enabled: true, token: "tok" }));
-    expect(await enlaceDeVistaPrevia(c, "http://localhost:3007", "b")).toBe("http://localhost:3007/p/b?t=tok");
-    expect(c.pedir).toHaveBeenCalledWith("/api/projects/b/preview", expect.objectContaining({ method: "POST" }));
+  it("🔴 la vista previa es el lienzo, como en la web: ahí corre una app", async () => {
+    const c = cliente(Response.json({ url: "https://lienzo-abc.openlen.app/?__lienzo=d" }));
+    expect(await enlaceDeVistaPrevia(c, "http://localhost:3007", "b")).toBe("https://lienzo-abc.openlen.app/?__lienzo=d");
+    expect(c.pedir).toHaveBeenCalledWith("/api/movil/canvas", expect.objectContaining({ method: "POST", body: JSON.stringify({ projectId: "b" }) }));
+    expect(c.pedir).not.toHaveBeenCalledWith("/api/projects/b/preview", expect.anything());
+  });
+
+  it("sin lienzo (un servidor de antes, o apagado): activa el enlace (idempotente) y arma /p/<id>?t=", async () => {
+    for (const sinLienzo of [new Response(null, { status: 404 }), new Response(null, { status: 503 })]) {
+      const c: ClienteDeOpenLen & { pedir: ReturnType<typeof vi.fn> } = {
+        pedir: vi.fn().mockImplementation((ruta: string) =>
+          Promise.resolve(ruta === "/api/movil/canvas" ? sinLienzo.clone() : Response.json({ enabled: true, token: "tok" })),
+        ),
+        avisarAlCerrar: vi.fn(),
+      };
+      expect(await enlaceDeVistaPrevia(c, "http://localhost:3007", "b")).toBe("http://localhost:3007/p/b?t=tok");
+      expect(c.pedir).toHaveBeenCalledWith("/api/projects/b/preview", expect.objectContaining({ method: "POST" }));
+    }
+  });
+
+  it("sin red no se inventa un enlace: SinRed, y la pantalla ofrece reintentar", async () => {
+    await expect(enlaceDeVistaPrevia(cliente(new TypeError("Failed to fetch")), "http://localhost:3007", "b")).rejects.toBeInstanceOf(SinRed);
   });
 });

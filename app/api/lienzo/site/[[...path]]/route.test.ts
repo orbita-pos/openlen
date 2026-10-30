@@ -62,6 +62,23 @@ describe("GET /api/lienzo/site — el documento en su ruta", () => {
     expect(res.headers.get("permissions-policy")).toBe(PAGE_PERMISSIONS_POLICY);
   });
 
+  it("🔴 un documento abierto para la app del teléfono deja que ésta lo enmarque, y sólo ése", async () => {
+    const forThePhone = guardarDocumento({
+      html: "<p>app</p>",
+      projectId: P1,
+      userId: "u1",
+      pagina: null,
+      framedBy: ["https://localhost", "capacitor://localhost"],
+    });
+    const forTheWorkspace = guardarDocumento({ html: "<p>taller</p>", projectId: P1, userId: "u1", pagina: null });
+    expect((await pide(host(P1), `/?__lienzo=${forThePhone}`)).headers.get("content-security-policy")).toBe(
+      "frame-ancestors https://openlen.com https://localhost capacitor://localhost",
+    );
+    expect((await pide(host(P1), `/?__lienzo=${forTheWorkspace}`)).headers.get("content-security-policy")).toBe(
+      "frame-ancestors https://openlen.com",
+    );
+  });
+
   it("una página en `/<slug>/index.html`; en otra ruta, 404", async () => {
     const doc = guardarDocumento({ html: "<p>menu</p>", projectId: P1, userId: "u1", pagina: "menu" });
     expect((await pide(host(P1), `/menu/index.html?__lienzo=${doc}`)).status).toBe(200);
