@@ -1,0 +1,88 @@
+// FROM A VISITOR'S REPORT TO AN INCIDENT (spec local 2026-10-30-len-watch, §5.2). A report alone proves
+// nothing — one visitor's broken extension blanks a page too — so OpenLen opens the page in its own
+// browser before anyone hears of it. One check per project every CHECK_INTERVAL_MS, claimed BEFORE
+// any await so 500 visitors at once make one; one Chromium at a time for the whole process (the box
+// is small). While an incident stands, reports are only counted: no check, no turn.
+import "server-only";
+
+import type { LoadCheck } from "./check";
+import { pageUrl, type ProjectForWatch } from "./owner";
+import type { Incident, LenWatchSettings, WatchReport } from "./types";
+
+export const CHECK_INTERVAL_MS = 300_000;
+
+export interface IngestDeps {
+  store: {
+    getSettings(projectId: string): Promise<LenWatchSettings>;
+    activeIncident(projectId: string): Promise<Incident | null>;
+    countReport(incidentId: string): Promise<void>;
+    openIncident(projectId: string, sample: WatchReport): Promise<Incident | null>;
+  };
+  project(projectId: string): Promise<ProjectForWatch | null>;
+  check(url: string): Promise<LoadCheck>;
+  onOpened(incident: Incident, project: ProjectForWatch, check: LoadCheck): Promise<void>;
+  now(): number;
+}
+
+export type Ingest = (projectId: string, report: WatchReport) => Promise<void>;
+
+export function createIngester(deps: IngestDeps): Ingest {
+  const lastAttempt = new Map<string, number>();
+  let chromium: Promise<unknown> = Promise.resolve();
+  const oneAtATime = <T>(f: () => Promise<T>): Promise<T> => {
+    const run = chromium.then(f, f);
+    chromium = run.catch(() => undefined);
+    return run;
+  };
+
+  return async (projectId, report) => {
+    const now = deps.now();
+    const last = lastAttempt.get(projectId);
+    const recent = last !== undefined && now - last < CHECK_INTERVAL_MS;
+    if (!recent) lastAttempt.set(projectId, now);
+
+    const project = await deps.project(projectId);
+    if (!project?.url) return;
+    if ((await deps.store.getSettings(projectId)).muted) return;
+    const active = await deps.store.activeIncident(projectId);
+    if (active) {
+      await deps.store.countReport(active.id);
+      return;
+    }
+    if (recent) return;
+
+    const check = await oneAtATime(() => deps.check(pageUrl(project, report.page)));
+    if (check.loads) return;
+    const incident = await deps.store.openIncident(projectId, report);
+    if (!incident) return;
+    await deps.onOpened(incident, project, check);
+  };
+}
+
+let ingester: Ingest | null = null;
+
+async function defaultDeps(): Promise<IngestDeps> {
+  const [store, owner, { checkPublishedLoads }, { scheduleNotification }] = await Promise.all([
+    import("./store"),
+    import("./owner"),
+    import("./check"),
+    import("@/lib/notifications/dispatch"),
+  ]);
+  return {
+    store,
+    project: owner.projectForWatch,
+    check: (url) => checkPublishedLoads(url),
+    // Until Len fixes things (the orchestrator), an opened incident tells the owner it's down.
+    onOpened: async (incident, project) => {
+      const event = owner.noticeFor(project, incident, "down");
+      await scheduleNotification(event, owner.noticeKey(event));
+    },
+    now: Date.now,
+  };
+}
+
+/** What `/c` calls with a parsed report. Fails soft: the beacon has already answered. */
+export async function ingestWatchReport(projectId: string, report: WatchReport): Promise<void> {
+  ingester ??= createIngester(await defaultDeps());
+  await ingester(projectId, report);
+}

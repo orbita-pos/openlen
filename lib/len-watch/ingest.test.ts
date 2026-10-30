@@ -1,0 +1,92 @@
+// From a visitor's report to an incident: one check per project at a time, none while an incident
+// stands, nothing for a project that is muted or not published.
+import { describe, expect, it, vi } from "vitest";
+
+import type { LoadCheck } from "./check";
+import { CHECK_INTERVAL_MS, createIngester, type IngestDeps } from "./ingest";
+import type { ProjectForWatch } from "./owner";
+import type { Incident, LenWatchSettings, WatchReport } from "./types";
+
+const REPORT: WatchReport = { message: "boom", file: null, line: null, col: null, page: null };
+const PROJECT: ProjectForWatch = { projectId: "p1", ownerId: "u1", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "America/Mexico_City" };
+
+function incident(over: Partial<Incident> = {}): Incident {
+  const now = new Date();
+  return { id: "i1", projectId: "p1", status: "open", sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, ...over };
+}
+
+function fakeDeps(o: { active?: Incident | null; settings?: Partial<LenWatchSettings>; project?: ProjectForWatch | null; check?: LoadCheck; clock?: { t: number } } = {}) {
+  let opened: Incident | null = null;
+  const clock = o.clock ?? { t: 1_000_000 };
+  const deps = {
+    store: {
+      getSettings: vi.fn(async () => ({ autoFix: false, autoPublish: false, muted: false, locale: null, ...o.settings })),
+      activeIncident: vi.fn(async () => o.active ?? opened),
+      countReport: vi.fn(async () => undefined),
+      openIncident: vi.fn(async () => {
+        if (opened) return null;
+        opened = incident();
+        return opened;
+      }),
+    },
+    project: vi.fn(async () => (o.project === undefined ? PROJECT : o.project)),
+    check: vi.fn(async (_url: string): Promise<LoadCheck> => o.check ?? { loads: false, reason: "blank", errors: ["kaput"] }),
+    onOpened: vi.fn(async () => undefined),
+    now: () => clock.t,
+  };
+  return { deps: deps as unknown as IngestDeps & typeof deps, clock };
+}
+
+describe("ingestWatchReport", () => {
+  it("500 visitors at once: one check, one incident, one notice", async () => {
+    const { deps } = fakeDeps();
+    const ingest = createIngester(deps);
+    await Promise.all(Array.from({ length: 500 }, () => ingest("p1", REPORT)));
+    expect(deps.check).toHaveBeenCalledTimes(1);
+    expect(deps.store.openIncident).toHaveBeenCalledTimes(1);
+    expect(deps.onOpened).toHaveBeenCalledTimes(1);
+    expect(deps.onOpened).toHaveBeenCalledWith(expect.objectContaining({ id: "i1" }), PROJECT, { loads: false, reason: "blank", errors: ["kaput"] });
+  });
+
+  it("our browser sees it load: nothing opens", async () => {
+    const { deps } = fakeDeps({ check: { loads: true, reason: "ok", errors: [] } });
+    await createIngester(deps)("p1", REPORT);
+    expect(deps.store.openIncident).not.toHaveBeenCalled();
+    expect(deps.onOpened).not.toHaveBeenCalled();
+  });
+
+  it("an incident that stands (even a failed fix) only counts the report", async () => {
+    const { deps } = fakeDeps({ active: incident({ status: "fix_failed" }) });
+    await createIngester(deps)("p1", REPORT);
+    expect(deps.store.countReport).toHaveBeenCalledWith("i1");
+    expect(deps.check).not.toHaveBeenCalled();
+    expect(deps.onOpened).not.toHaveBeenCalled();
+  });
+
+  it("muted or not published: no check", async () => {
+    const muted = fakeDeps({ settings: { muted: true } }).deps;
+    await createIngester(muted)("p1", REPORT);
+    expect(muted.check).not.toHaveBeenCalled();
+    const unpublished = fakeDeps({ project: { ...PROJECT, subdomain: null, url: null } }).deps;
+    await createIngester(unpublished)("p1", REPORT);
+    expect(unpublished.check).not.toHaveBeenCalled();
+  });
+
+  it(`one check per project every ${CHECK_INTERVAL_MS / 60_000} minutes`, async () => {
+    const { deps, clock } = fakeDeps({ check: { loads: true, reason: "ok", errors: [] } });
+    const ingest = createIngester(deps);
+    await ingest("p1", REPORT);
+    clock.t += 4 * 60_000;
+    await ingest("p1", REPORT);
+    expect(deps.check).toHaveBeenCalledTimes(1);
+    clock.t += 2 * 60_000;
+    await ingest("p1", REPORT);
+    expect(deps.check).toHaveBeenCalledTimes(2);
+  });
+
+  it("checks the page that was reported, not always the home", async () => {
+    const { deps } = fakeDeps({ check: { loads: true, reason: "ok", errors: [] } });
+    await createIngester(deps)("p1", { ...REPORT, page: "menu" });
+    expect(deps.check.mock.calls[0]![0]).toMatch(/\/menu\/$/);
+  });
+});
