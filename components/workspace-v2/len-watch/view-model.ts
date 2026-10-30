@@ -6,9 +6,20 @@ export type BannerState =
   | { kind: "hidden" }
   | { kind: "working" }
   | { kind: "down"; action: "fix" }
-  | { kind: "ready"; action: "approve"; shipsUnpublished: boolean };
+  | { kind: "ready"; action: "approve"; shipsUnpublished: boolean }
+  /** Spec §5.5: a fix published from its branch that the draft doesn't have yet — «Traer el arreglo». */
+  | { kind: "bring"; incidentId: string };
 
-export function bannerState(incident: { status: IncidentStatus; shipsUnpublished: boolean } | null): BannerState {
+export function bannerState(
+  incident: { status: IncidentStatus; shipsUnpublished: boolean } | null,
+  pendingFix: { incidentId: string } | null = null,
+): BannerState {
+  // What is going on with the site comes first; a fix to bring shows once nothing else does.
+  const site = siteState(incident);
+  return site.kind === "hidden" && pendingFix ? { kind: "bring", incidentId: pendingFix.incidentId } : site;
+}
+
+function siteState(incident: { status: IncidentStatus; shipsUnpublished: boolean } | null): BannerState {
   if (!incident) return { kind: "hidden" };
   switch (incident.status) {
     case "fixing":

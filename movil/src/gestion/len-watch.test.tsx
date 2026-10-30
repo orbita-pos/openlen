@@ -79,3 +79,22 @@ it("quien no es el dueño no puede tocarlos", async () => {
   expect([...host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].every((b) => b.disabled)).toBe(true);
   expect(host.textContent).toContain("ownerOnly");
 });
+
+// Spec §5.5: Len published a fix from its branch; the draft doesn't have it until the owner brings it in.
+it("un arreglo por traer: «Traer el arreglo» lo pide, y si choca dice que lo trae Len", async () => {
+  const llamadas: { ruta: string; metodo: string; cuerpo?: unknown }[] = [];
+  const c: ClienteDeOpenLen = {
+    avisarAlCerrar: vi.fn(),
+    pedir: async (ruta, init) => {
+      const metodo = init?.method ?? "GET";
+      llamadas.push({ ruta, metodo, ...(init?.body ? { cuerpo: JSON.parse(String(init.body)) } : {}) });
+      if (metodo === "GET") return Response.json({ enabled: true, isOwner: true, settings: SETTINGS, incident: null, pendingFix: { incidentId: "i1", branch: "len-watch/i1" } });
+      return Response.json({ status: "handed_to_len" });
+    },
+  };
+  await montar(c);
+  expect(host.textContent).toContain("bringTitle");
+  await act(async () => boton("bring")!.click());
+  expect(llamadas.find((l) => l.metodo === "POST")).toEqual({ ruta: "/api/projects/p/len-watch/bring", metodo: "POST", cuerpo: { incidentId: "i1" } });
+  expect(host.textContent).toContain("handedToLen");
+});

@@ -100,6 +100,50 @@ describe("the Len Watch notice", () => {
   });
 });
 
+// Spec §5.5: Len published a fix from its branch; the draft doesn't have it until the owner brings it in.
+describe("«Traer el arreglo» over the chat", () => {
+  const FIX = modalsDeploy.lenWatch.fixPending;
+  /** The state answers with the pending fix until it has been brought. */
+  function bringFetch(answer: string) {
+    let brought = false;
+    const calls: { url: string; method: string; body?: string }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url, method: init?.method ?? "GET", body: init?.body as string | undefined });
+        if ((init?.method ?? "GET") === "GET") return new Response(JSON.stringify({ ...status(null), pendingFix: brought ? null : { incidentId: "i1", branch: "len-watch/i1" } }), { status: 200 });
+        if (answer === "brought") brought = true;
+        return new Response(JSON.stringify({ status: answer }), { status: 200 });
+      }),
+    );
+    return calls;
+  }
+  const bringButton = (host: HTMLElement) => [...host.querySelectorAll("button")].find((b) => b.textContent === FIX.bring)!;
+
+  it("with a fix to bring, the banner offers «Traer el arreglo», and once brought, it goes", async () => {
+    const calls = bringFetch("brought");
+    const host = await mount(<LenWatchBanner projectId="p1" />);
+    expect(host.querySelector('[data-len-watch-banner="bring"]')).toBeTruthy();
+    expect(host.textContent).toContain(FIX.title);
+    await act(async () => {
+      bringButton(host).click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(calls.find((c) => c.method === "POST")).toEqual({ url: "/api/projects/p1/len-watch/bring", method: "POST", body: JSON.stringify({ incidentId: "i1" }) });
+    expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+  });
+
+  it("handed to Len: the banner says Len is bringing it in", async () => {
+    bringFetch("handed_to_len");
+    const host = await mount(<LenWatchBanner projectId="p1" />);
+    await act(async () => {
+      bringButton(host).click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(host.textContent).toContain(FIX.handedToLen);
+  });
+});
+
 describe("the Len Watch switches", () => {
   it("publishing alone stays off until fixing alone is on; a change goes out with the interface language", async () => {
     const calls = fakeFetch(status(null));

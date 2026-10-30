@@ -12,11 +12,50 @@ import { bannerState } from "./view-model";
 
 export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { projectId: string; soloLectura?: boolean; onOpenPublish?: () => void }) {
   const t = useTranslations("panelsChat");
+  const tFix = useTranslations("modalsDeploy.lenWatch.fixPending");
   const { status, reload } = useLenWatch(projectId);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<"review" | "failed" | "changed" | null>(null);
-  const view = bannerState(status?.incident ?? null);
+  const [bringNote, setBringNote] = useState<"handedToLen" | "queued" | "failed" | null>(null);
+  const view = bannerState(status?.incident ?? null, status?.pendingFix ?? null);
   if (view.kind === "hidden") return null;
+
+  // «Traer el arreglo» (spec §5.5): the fix Len published from its branch comes into the draft.
+  if (view.kind === "bring") {
+    const bring = async () => {
+      setBusy(true);
+      setBringNote(null);
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/len-watch/bring`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incidentId: view.incidentId }),
+      }).catch(() => null);
+      const answer = r && (r.ok || r.status === 202) ? (((await r.json().catch(() => null)) as { status?: string } | null)?.status ?? null) : null;
+      setBusy(false);
+      if (answer === "handed_to_len") setBringNote("handedToLen");
+      else if (answer === "queued") setBringNote("queued");
+      else if (answer !== "brought" && answer !== "nothing") setBringNote("failed");
+      await reload();
+    };
+    return (
+      <div className="mx-4 mt-3 flex shrink-0 flex-col gap-2 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px]" role="status" data-len-watch-banner="bring">
+        <div className="flex items-start gap-2">
+          <ShieldAlert size={14} className="mt-0.5 shrink-0 text-[var(--nc-accent-text)]" />
+          <span className="fg">
+            {tFix("title")}. {tFix("body")}
+          </span>
+        </div>
+        {!soloLectura && (
+          <div className="flex flex-col items-start gap-1.5 pl-[22px]">
+            <button type="button" disabled={busy} onClick={() => void bring()} className="inline-flex h-7 items-center rounded-md bg-[var(--accent-strong)] px-3 text-[11.5px] font-medium text-white shadow-coral transition hover:brightness-105 disabled:opacity-50">
+              {busy ? tFix("bringing") : tFix("bring")}
+            </button>
+            {bringNote && <span className="fg-muted">{tFix(bringNote)}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const act = async (path: "fix" | "approve", confirmChanged = false) => {
     setBusy(true);
