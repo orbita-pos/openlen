@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from "next-intl";
 import modalsDeploy from "@/messages/es/modalsDeploy.json";
 import panelsChat from "@/messages/es/panelsChat.json";
 import type { LenWatchStatus } from "@/lib/len-watch/types";
+import { notifyFolderChanged, onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { LenWatchBanner } from "./len-watch-banner";
 import { LenWatchSettings } from "./len-watch-settings";
@@ -120,17 +121,24 @@ describe("«Traer el arreglo» over the chat", () => {
   }
   const bringButton = (host: HTMLElement) => [...host.querySelectorAll("button")].find((b) => b.textContent === FIX.bring)!;
 
-  it("with a fix to bring, the banner offers «Traer el arreglo», and once brought, it goes", async () => {
+  it("with a fix to bring, the banner offers «Traer el arreglo», and once brought, it goes and the canvas hears of it", async () => {
     const calls = bringFetch("brought");
-    const host = await mount(<LenWatchBanner projectId="p1" />);
-    expect(host.querySelector('[data-len-watch-banner="bring"]')).toBeTruthy();
-    expect(host.textContent).toContain(FIX.title);
-    await act(async () => {
-      bringButton(host).click();
-      await new Promise((r) => setTimeout(r, 0));
-    });
-    expect(calls.find((c) => c.method === "POST")).toEqual({ url: "/api/projects/p1/len-watch/bring", method: "POST", body: JSON.stringify({ incidentId: "i1" }) });
-    expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+    const changed = vi.fn();
+    const stop = onFolderChanged("p1", changed);
+    try {
+      const host = await mount(<LenWatchBanner projectId="p1" />);
+      expect(host.querySelector('[data-len-watch-banner="bring"]')).toBeTruthy();
+      expect(host.textContent).toContain(FIX.title);
+      await act(async () => {
+        bringButton(host).click();
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(calls.find((c) => c.method === "POST")).toEqual({ url: "/api/projects/p1/len-watch/bring", method: "POST", body: JSON.stringify({ incidentId: "i1" }) });
+      expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+      expect(changed).toHaveBeenCalledTimes(1);
+    } finally {
+      stop();
+    }
   });
 
   it("handed to Len: the banner says Len is bringing it in", async () => {
@@ -141,6 +149,44 @@ describe("«Traer el arreglo» over the chat", () => {
       await new Promise((r) => setTimeout(r, 0));
     });
     expect(host.textContent).toContain(FIX.handedToLen);
+  });
+
+  /** The pending fix, brought somewhere else (the publish modal, the phone, Len's turn) when `gone` says so. */
+  function pendingUntil(gone: () => boolean) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ ...status(null), pendingFix: gone() ? null : { incidentId: "i1", branch: "len-watch/i1" } }), { status: 200 })),
+    );
+  }
+
+  it("🔴 brought from the publish modal: the banner goes as soon as the folder changes", async () => {
+    let brought = false;
+    pendingUntil(() => brought);
+    const host = await mount(<LenWatchBanner projectId="p1" />);
+    expect(host.querySelector('[data-len-watch-banner="bring"]')).toBeTruthy();
+    brought = true;
+    await act(async () => {
+      notifyFolderChanged("p1");
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+  });
+
+  it("🔴 while a fix waits, it looks again every 30 s (Len bringing it, the phone)", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      let brought = false;
+      pendingUntil(() => brought);
+      const host = await mount(<LenWatchBanner projectId="p1" />);
+      brought = true;
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

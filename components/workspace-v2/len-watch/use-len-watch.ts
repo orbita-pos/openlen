@@ -1,10 +1,13 @@
 "use client";
 
 // Len Watch's state for one project (GET /api/projects/[id]/len-watch), looked at again every 30 s
-// while an incident stands — the notice moves on its own (Len working → ready → fixed).
+// while an incident stands or a fix waits to be brought — the notice moves on its own (Len working →
+// ready → fixed; the fix brought by Len or from the phone) — and whenever the project's folder changes
+// (the publish modal brought the fix).
 import { useCallback, useEffect, useState } from "react";
 
 import type { LenWatchStatus } from "@/lib/len-watch/types";
+import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 const POLL_MS = 30_000;
 
@@ -19,7 +22,8 @@ export function useLenWatch(projectId: string | undefined): { status: LenWatchSt
   useEffect(() => {
     void reload();
   }, [reload]);
-  const active = status?.incident != null;
+  useEffect(() => (projectId ? onFolderChanged(projectId, () => void reload()) : undefined), [projectId, reload]);
+  const active = status?.incident != null || status?.pendingFix != null;
   useEffect(() => {
     if (!active) return;
     const id = setInterval(() => void reload(), POLL_MS);

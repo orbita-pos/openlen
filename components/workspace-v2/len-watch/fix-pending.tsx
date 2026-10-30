@@ -8,6 +8,8 @@ import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+
 type Note = "bringing" | "handedToLen" | "queued" | "failed" | null;
 
 export function LenWatchFixPending({
@@ -42,6 +44,7 @@ export function LenWatchFixPending({
       if (!res.ok && res.status !== 202) return setNote("failed");
       if (data.status === "brought" || data.status === "nothing") {
         setNote(null);
+        if (data.status === "brought") notifyFolderChanged(projectId);
         onPublishAgain();
         return;
       }
