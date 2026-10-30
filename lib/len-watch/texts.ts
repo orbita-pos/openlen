@@ -33,6 +33,12 @@ export function lenWatchTurnPrompt(locale: string): string {
   return (createTranslator({ locale: l, messages: MESSAGES[l] }) as unknown as Translate)("lenWatch.turnPrompt");
 }
 
+/** The row's message when «Traer el arreglo» collides and Len brings the fix in by hand (spec §5.5). */
+export function lenWatchBringPrompt(locale: string): string {
+  const l = idiomaDelCorreo(locale);
+  return (createTranslator({ locale: l, messages: MESSAGES[l] }) as unknown as Translate)("lenWatch.bringPrompt");
+}
+
 export function lenWatchTexts(
   phase: LenWatchPhase,
   locale: string,

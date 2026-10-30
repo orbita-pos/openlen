@@ -16,6 +16,17 @@ function reportLine(r: WatchReport): string {
   return `${r.message ?? "no error"} · ${where} · ${r.page ?? "home"}`;
 }
 
+/** «Traer el arreglo» that didn't go in on its own (spec §5.5 step 5): the owner asked; Len brings the fix in by hand,
+ *  keeping everything they changed. `notes`: what a guard refused, if that's why. */
+export function bringFraming(i: { branch: string; base: string; paths: readonly string[]; notes: readonly string[]; language: string }): string {
+  return [
+    `[LEN WATCH] The fix for the published site is on branch ${i.branch}, already published. The owner asked to bring it into their draft, and it didn't go in on its own: they changed the same lines meanwhile in ${i.paths.join(", ")}.`,
+    ...(i.notes.length > 0 ? ["What was refused, and why:", ...i.notes.map((n) => `- ${n}`)] : []),
+    `See the fix with \`git diff ${i.base} ${i.branch}\` and apply it by hand on top of their changes, keeping everything they changed. Do not commit and do not publish: the draft is theirs.`,
+    `Write to the owner in ${i.language}.`,
+  ].join("\n");
+}
+
 /** `publishesAlone`: OpenLen publishes the fix the moment Len finishes (so Len's last words match what
  *  happens next). `language`: the owner's, in English — this message being English must not read as
  *  the owner switching language, which the turn's LANGUAGE line tells Len to follow. */

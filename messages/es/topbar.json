@@ -391,6 +391,7 @@
       },
       "shipsUnpublished": "Al publicarlo saldrán también los cambios que aún no habías publicado."
     },
-    "turnPrompt": "Tu sitio publicado no carga. Averigua por qué y arréglalo."
+    "turnPrompt": "Tu sitio publicado no carga. Averigua por qué y arréglalo.",
+    "bringPrompt": "Trae a mi borrador el arreglo que publicaste, sin perder lo que estaba editando."
   }
 }

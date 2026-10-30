@@ -391,6 +391,7 @@
       },
       "shipsUnpublished": "En le publiant, vos modifications pas encore publiées seront publiées aussi."
     },
-    "turnPrompt": "Votre site publié ne se charge pas. Trouvez pourquoi et réparez-le."
+    "turnPrompt": "Votre site publié ne se charge pas. Trouvez pourquoi et réparez-le.",
+    "bringPrompt": "Apportez dans mon brouillon la correction que vous avez publiée, sans perdre ce que j'étais en train de modifier."
   }
 }

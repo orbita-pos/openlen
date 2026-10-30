@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { watchFraming } from "./framing";
+import { bringFraming, watchFraming } from "./framing";
 import type { WatchReport } from "./types";
 
 const REPORT: WatchReport = { message: "TypeError: x is undefined", file: "/assets/index.js", line: 3, col: 9, page: null };
@@ -51,5 +51,23 @@ describe("watchFraming", () => {
     const line = "The project has changes the owner has not published yet; keep them and fix on top.";
     expect(watchFraming(BASE)).not.toContain(line);
     expect(watchFraming({ ...BASE, hadUnpublishedChanges: true })).toContain(line);
+  });
+});
+
+describe("bringFraming", () => {
+  const B = { branch: "len-watch/i1", base: "abc1234", paths: ["/src/App.tsx"], notes: [], language: "Spanish" };
+
+  it("names the branch, the paths that collided and how to see the fix; never commit or publish", () => {
+    const f = bringFraming(B);
+    expect(f.startsWith("[LEN WATCH] The fix for the published site is on branch len-watch/i1")).toBe(true);
+    expect(f).toContain("/src/App.tsx");
+    expect(f).toContain("`git diff abc1234 len-watch/i1`");
+    expect(f).toContain("Do not commit and do not publish");
+    expect(f).toContain("in Spanish.");
+  });
+
+  it("says what a guard refused only when one did", () => {
+    expect(bringFraming(B)).not.toContain("What was refused");
+    expect(bringFraming({ ...B, notes: ["index.html: not saved — the home page can't be deleted."] })).toContain("- index.html: not saved");
   });
 });

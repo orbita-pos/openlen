@@ -391,6 +391,7 @@
       },
       "shipsUnpublished": "Bij het publiceren gaan ook je nog niet gepubliceerde wijzigingen live."
     },
-    "turnPrompt": "Je gepubliceerde site laadt niet. Zoek uit waarom en repareer het."
+    "turnPrompt": "Je gepubliceerde site laadt niet. Zoek uit waarom en repareer het.",
+    "bringPrompt": "Breng de gepubliceerde fix naar mijn concept, zonder kwijt te raken wat ik aan het bewerken was."
   }
 }
