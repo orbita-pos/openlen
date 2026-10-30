@@ -22,6 +22,7 @@ import { duracionLegible } from "@/lib/workspace-v2/proceso-del-turno";
 import type { FeedbackReason, TurnFeedback } from "@/lib/chat/feedback-reasons";
 import { avisoDelTurno } from "../panels/turno-cerrado";
 import { ofreceDeshacer, planDeUndo, textoDelFallo, type FalloDeUndo } from "../panels/undo-turn";
+import { isLenWatchOrigin } from "@/lib/projects/types";
 import { isPublishNote } from "./publish-note";
 import { editsOfTurn } from "./turn-changes";
 import { FeedbackButtons, FeedbackForm } from "./turn-feedback";
@@ -116,6 +117,8 @@ export function TurnClose({
   };
 
   const plan = turn.status === "applied" && !turn.noDocChange ? planDeUndo(turn, currentPage) : null;
+  // Len Watch fixed it in a worktree (spec local 2026-10-30-len-watch, §5.5): nothing of the draft to undo here.
+  const enUnWorktree = turn.origen !== undefined && isLenWatchOrigin(turn.origen) && turn.origen.worktree === true;
   const edits = editsOfTurn(turn);
   // CORTADO a medias (tras cambiar algo): «se cortó antes de terminar…». Un
   // aviso SIN corte —el tope o la conversación que no cabe— no se cortó: se
@@ -142,7 +145,7 @@ export function TurnClose({
             <>
               <Sparkles size={12} className="text-[var(--accent)]" />
               {edits > 0 ? t("newChat.close.appliedEdits", { count: edits }) : t("newChat.close.applied")}
-              {onUndo && ofreceDeshacer(plan) && (
+              {onUndo && !enUnWorktree && ofreceDeshacer(plan) && (
                 <button
                   type="button"
                   onClick={() => onUndo(turn)}

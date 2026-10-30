@@ -465,6 +465,9 @@ async function correrTurno(
   const correoDelTurno = opts.email ?? null;
   // A scheduled task's run (spec local 2026-10-29-tareas-programadas, §7.5).
   const programadaDelTurno = opts.scheduled ?? null;
+  // Whose chat the row lives in: a Len Watch worktree's turn acts on the copy and writes in its parent's chat (spec
+  // local 2026-10-30-len-watch, §5.5). Its history is still the copy's, empty: it starts fresh, like a new session.
+  const proyectoDelChat = programadaDelTurno?.chatProjectId ?? projectId;
   // F4 Task 1 — multi-page base: page slug, validated CLONED from
   // app/api/templates/ai-design/route.ts (read that file first if editing
   // this block). Absent/empty ⇒ home; a non-empty slug MUST already exist in
@@ -1496,7 +1499,7 @@ async function correrTurno(
           const visto = readLiveTranscript?.() ?? [];
           const huella = huellaDeLoVisto(visto);
           const nuevo = visto.length > 0 && huella !== vistoGuardado;
-          await avanceDelTurno(projectId, filaId, {
+          await avanceDelTurno(proyectoDelChat, filaId, {
             userText: textoDelUsuario(),
             assistantReasoning: registro.texto,
             actions: registro.tarjetas,
@@ -1551,7 +1554,7 @@ async function correrTurno(
           const enVivo = transcripcionDelTurno ? [] : (readLiveTranscript?.() ?? []);
           const visto = transcripcionDelTurno ?? (enVivo.length > 0 ? enVivo : null);
           try {
-            await registrarTurnoDelServidor(projectId, {
+            await registrarTurnoDelServidor(proyectoDelChat, {
               ...registro.fila({
                 id: filaId,
                 userText: textoDelUsuario(),
@@ -1610,7 +1613,7 @@ async function correrTurno(
           }
         } else if (filaAbierta) {
           try {
-            await quitarFilaDelTurno(projectId, filaId);
+            await quitarFilaDelTurno(proyectoDelChat, filaId);
           } catch (err) {
             console.warn("[agent] no se pudo quitar la fila vacía del turno", err);
           }
@@ -1713,7 +1716,8 @@ async function correrTurno(
             // vez y se niegue si el dueño tocó después lo mismo
             // (`lib/projects/deshacer-turno.ts`). Fail-soft: sin esto no hay
             // Deshacer de servidor, y el chat usa el de siempre.
-            try {
+            // Not in a Len Watch worktree: its row lives in the parent's chat and the draft wasn't touched.
+            if (proyectoDelChat === projectId) try {
               // Con LA FORMA (`RUTA_FORMA`): `data.app` y los títulos de las
               // páginas, para que deshacer una conversión en app la deshaga
               // entera. La de antes, de la fila con la que empezó el turno.
@@ -1731,7 +1735,7 @@ async function correrTurno(
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
         try {
-          await abrirFilaDelTurno(projectId, {
+          await abrirFilaDelTurno(proyectoDelChat, {
             id: filaId,
             userText: prompt,
             page: pageSlug,
@@ -1886,7 +1890,7 @@ async function correrTurno(
             // A11 · la marca, a la fila en cuanto existe (ver `guardarMarcaDelTurno`).
             saveMark: async (mark) => {
               marcaDelTurno = mark;
-              if (filaAbierta) await guardarMarcaDelTurno(projectId, filaId, compactionMarkForStorage(mark));
+              if (filaAbierta) await guardarMarcaDelTurno(proyectoDelChat, filaId, compactionMarkForStorage(mark));
             },
             restoreFiles: async (paths) => {
               const files = [];
