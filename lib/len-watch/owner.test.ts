@@ -7,7 +7,7 @@ vi.mock("@/lib/db", async () => {
   return { schema: s, db: {} };
 });
 
-const { htmlLang, noticeFor, noticeKey, pageUrl } = await import("./owner");
+const { allowedCheckOrigins, htmlLang, noticeFor, noticeKey, pageUrl } = await import("./owner");
 
 const P = { projectId: "p1", ownerId: "u1", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "UTC" };
 const now = new Date();
@@ -24,6 +24,20 @@ describe("owner", () => {
   it("the reported page's address", () => {
     expect(pageUrl(P, "menu")).toMatch(/^https:\/\/holi\..+\/menu\/$/);
     expect(pageUrl(P, null)).toMatch(/^https:\/\/holi\.[^/]+$/);
+  });
+
+  it("OPENLEN_WATCH_PUBLISHED_ORIGIN points the check at a local or staging copy, never production's", () => {
+    process.env.OPENLEN_WATCH_PUBLISHED_ORIGIN = "http://127.0.0.1:4567/";
+    try {
+      expect(pageUrl(P, "menu")).toBe("http://127.0.0.1:4567/menu/");
+      expect(pageUrl(P, null)).toBe("http://127.0.0.1:4567");
+      expect(allowedCheckOrigins()).toEqual(["127.0.0.1:4567"]);
+      process.env.OPENLEN_WATCH_PUBLISHED_ORIGIN = "http://{sub}.localhost:4567";
+      expect(pageUrl(P, null)).toBe("http://holi.localhost:4567");
+    } finally {
+      delete process.env.OPENLEN_WATCH_PUBLISHED_ORIGIN;
+    }
+    expect(allowedCheckOrigins()).toEqual([]);
   });
 
   it("a notice goes to the owner, in their language, once per phase", () => {

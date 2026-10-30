@@ -1558,6 +1558,7 @@ async function correrTurno(
                 page: pageSlug,
                 toolResults: diario.entradas(),
                 corte,
+                mutoDurable,
               }),
               // `undefined` y no `null`: el tipo de la fila (`StoredChatTurn`) no
               // admite `null` y cruzado con el de la función gana él. Se guarda
@@ -1603,7 +1604,7 @@ async function correrTurno(
           }
           // A scheduled task: its email (with the files Len presented) goes to whoever created it.
           if (programadaDelTurno) {
-            await programadaDelTurno.onReply(registro.texto, registro.tarjetas).catch((err: unknown) =>
+            await programadaDelTurno.onReply(registro.texto, registro.tarjetas, registro.finalText).catch((err: unknown) =>
               console.warn("[agent] no se pudo entregar la tarea programada", err),
             );
           }

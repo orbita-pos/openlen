@@ -19,6 +19,7 @@ import { createHash } from "node:crypto";
 import type { FalloDelTurno, launchLenWatchTurn } from "@/lib/agent/turnos-desde-el-servidor";
 import type { LenWatchEvent, LenWatchPhase } from "@/lib/notifications/types";
 import type { GatedPublishInput, GatedPublishResult } from "@/lib/projects/publish-through-gates";
+import { LOCALE_ENGLISH_NAMES } from "@/lib/publish/publish-locales";
 
 import type { LoadCheck } from "./check";
 import { watchFraming } from "./framing";
@@ -95,6 +96,8 @@ export async function startFix(i: Incident, p: ProjectForWatch, deps?: Orchestra
     return;
   }
   const before = { stamp: await d.contentStamp(p.projectId), hadUnpublished: await d.hasUnpublished(p.projectId, p.ownerId) };
+  // What `onFixReply` will decide, told to Len up front so its last words match what happens.
+  const publishesAlone = (await d.store.getSettings(p.projectId)).autoPublish && !before.hadUnpublished;
   const filaId = d.newId();
   await d.store.updateIncident(i.id, { status: "fixing", turnRowId: filaId, reason: null });
   await tell(d, p, i, "fixing");
@@ -102,13 +105,21 @@ export async function startFix(i: Incident, p: ProjectForWatch, deps?: Orchestra
     userId: o.actorId ?? p.ownerId,
     projectId: p.projectId,
     texto: d.turnPrompt(p.locale),
-    framing: watchFraming({ url, reports: [i.sample], check: now, hadUnpublishedChanges: before.hadUnpublished }),
+    framing: watchFraming({
+      url,
+      reports: [i.sample],
+      check: now,
+      hadUnpublishedChanges: before.hadUnpublished,
+      publishesAlone,
+      language: LOCALE_ENGLISH_NAMES[p.locale] ?? "English",
+    }),
     origin: { kind: "len_watch", incidentId: i.id },
     timeZone: p.timeZone,
     locale: p.locale,
     filaId,
     onStart: async () => undefined,
-    reply: (text) => onFixReply(i, p, before, text, d),
+    // The owner hears Len's final message, not the notes between its steps.
+    reply: (text, _cards, finalText) => onFixReply(i, p, before, finalText?.trim() ? finalText : text, d),
     fail: (fallo) => onFixFailed(i, p, fallo, d),
   });
 }
@@ -217,7 +228,7 @@ async function defaultDeps(): Promise<OrchestratorDeps> {
   defaults = {
     store,
     project: owner.projectForWatch,
-    check: (url) => checkPublishedLoads(url),
+    check: (url) => checkPublishedLoads(url, { allowOrigins: owner.allowedCheckOrigins() }),
     notify: (event, key) => scheduleNotification(event, key),
     launch: turns.launchLenWatchTurn,
     publish: gates.publishThroughGates,

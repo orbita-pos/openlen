@@ -101,7 +101,7 @@ async function defaultDeps(): Promise<IngestDeps> {
       return i ? recoverIfStale(i) : null;
     } },
     project: owner.projectForWatch,
-    check: (url) => checkPublishedLoads(url),
+    check: (url) => checkPublishedLoads(url, { allowOrigins: owner.allowedCheckOrigins() }),
     onOpened: (incident, project, check) => onIncidentOpened(incident, project, check),
     now: Date.now,
   };
