@@ -26,6 +26,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "app_ai_cap": title = "Len · AI"; body = `${evento.percent}% · ${evento.spent} / ${evento.cap}`; break;
     case "email_domain": title = "Email"; body = `${evento.domain} · ${evento.status === "ready" ? "✓" : "✕"}`; break;
     case "email_quota": title = "Email"; body = `${evento.percent}% · ${evento.sent} / ${evento.included}`; break;
+    case "len_watch": title = evento.title; body = evento.body; break;
   }
   return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId }, android: { priority: "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
 }

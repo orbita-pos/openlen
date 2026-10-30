@@ -344,5 +344,52 @@
       "continueBody": "Carica i risultati precedenti per continuare la ricerca.",
       "date": "Data"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} non si carica",
+        "body": "L'abbiamo aperto ed è rimasto vuoto. Chiedi a Len di sistemarlo dalla chat.",
+        "subject": "{project} non si carica",
+        "text": "Abbiamo aperto {url} nel nostro browser ed è rimasto vuoto, come lo vedono i tuoi visitatori.\n\nChiedi a Len di sistemarlo dalla chat del progetto:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} non si carica",
+        "body": "Len ci sta già lavorando.",
+        "subject": "{project} non si carica: Len ci sta già lavorando",
+        "text": "Abbiamo aperto {url} nel nostro browser ed è rimasto vuoto. Len sta già cercando la causa; ti scriviamo di nuovo quando ha finito.\n\nSeguilo nella chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len ha sistemato {project}",
+        "body": "Manca da pubblicare la correzione.",
+        "subject": "La correzione di Len per {project} è pronta da pubblicare",
+        "text": "Len ha trovato perché {url} non si caricava e l'ha sistemato. Non è ancora pubblicato: apri il progetto e pubblica la correzione.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} si carica di nuovo",
+        "body": "Len l'ha sistemato e ha pubblicato la correzione.",
+        "subject": "{project} si carica di nuovo",
+        "text": "Len ha sistemato {url} e pubblicato la correzione. L'abbiamo riaperto e si carica.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} continua a non caricarsi",
+        "body": "La correzione di Len non è bastata.",
+        "subject": "{project} continua a non caricarsi",
+        "text": "Len ha pubblicato una correzione, ma {url} resta vuoto quando lo apriamo. Len non ci riproverà da solo: guarda nella chat cosa ha fatto e digli come procedere.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len non è riuscito a sistemare {project}",
+        "body": "Len ha bisogno di te.",
+        "subject": "Len non è riuscito a sistemare {project}",
+        "text": "{url} non si carica e Len non è riuscito a sistemarlo da solo.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} si carica di nuovo",
+        "body": "Si carica di nuovo da solo.",
+        "subject": "{project} si carica di nuovo",
+        "text": "{url} si carica di nuovo: è tornato da solo mentre Len lo guardava. Non è stato pubblicato niente.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Pubblicandolo usciranno anche le modifiche che non avevi ancora pubblicato."
+    }
   }
 }
