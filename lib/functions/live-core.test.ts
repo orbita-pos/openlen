@@ -62,6 +62,14 @@ function montar(o: { bundle?: () => FunctionsBundle | null } = {}) {
 }
 
 describe("prepareLiveRelease", () => {
+  it("a Len Watch branch's functions come from its copy (sourcesFrom); where they deploy stays the project's", async () => {
+    const m = montar();
+    const asked: string[] = [];
+    const deps: DeployDeps = { ...m.deps, loadFiles: async (id: string) => (asked.push(id), m.deps.loadFiles(id)) };
+    await prepareLiveRelease("p", deps, { ...OWNER, skipMissingSecrets: true, sourcesFrom: "copy-1" });
+    expect(asked).toEqual(["copy-1"]);
+  });
+
   it("compila para PRODUCCIÓN; lo que no compila, o el empaquetador mudo, no se publica", async () => {
     const m = montar();
     m.secretos.live.STRIPE_SECRET_KEY = "sk_live_1";

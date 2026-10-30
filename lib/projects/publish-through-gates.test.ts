@@ -70,6 +70,15 @@ describe("publishThroughGates", () => {
     expect(mocks.afterOwnerPublish).not.toHaveBeenCalled();
   });
 
+  it("publishing a Len Watch branch reads its sources from the copy, skips the data changes and reviews against the parent's base", async () => {
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "holi" });
+    const r = await publishThroughGates({ ...INPUT, source: "len_watch", sourcesFrom: "copy-1" });
+    expect(r.status).toBe(200);
+    expect(mocks.gate).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", sourcesFrom: "copy-1" }));
+    expect(mocks.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", sourcesFrom: "copy-1", dataChanges: { mode: "skip" } });
+    expect(mocks.markPublished).toHaveBeenCalledWith("p1", VIEW.fingerprint, "copy-1");
+  });
+
   it("a failed publish doesn't tell Len Watch", async () => {
     mocks.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
     expect((await publishThroughGates(INPUT)).status).toBe(500);

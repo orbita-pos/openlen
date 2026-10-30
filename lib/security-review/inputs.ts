@@ -32,16 +32,22 @@ async function draftDatabase(projectId: string, subdomain: string | null): Promi
   return { hasBackend: true, project: backendProjectFor({ record, pageSub: subdomain }, environment) };
 }
 
-export async function loadReviewInputs(projectId: string): Promise<ReviewInputs | null> {
+/** `sourcesFrom`: a Len Watch branch's copy (spec local 2026-10-30-len-watch, §5.5) — its pages and files are what is
+ *  reviewed; the owner, the variables and the database stay `projectId`'s. */
+export async function loadReviewInputs(projectId: string, sourcesFrom?: string): Promise<ReviewInputs | null> {
   const [row] = await db
     .select({ userId: schema.projects.userId, data: schema.projects.data, subdomain: schema.projects.subdomain })
     .from(schema.projects)
     .where(eq(schema.projects.id, projectId))
     .limit(1);
   if (!row) return null;
-  const app = row.data?.app ?? null;
+  const sources = sourcesFrom
+    ? (await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, sourcesFrom)).limit(1))[0]
+    : row;
+  if (!sources) return null;
+  const app = sources.data?.app ?? null;
   const [files, productionEnv, draft] = await Promise.all([
-    listProjectFiles(projectId),
+    listProjectFiles(sourcesFrom ?? projectId),
     app ? envVarsFor(projectId, "production") : Promise.resolve({}),
     draftDatabase(projectId, row.subdomain ?? null).catch((err: unknown) => {
       console.warn("[security-review] the draft database didn't answer; reviewing without it", err);
@@ -59,8 +65,8 @@ export async function loadReviewInputs(projectId: string): Promise<ReviewInputs 
     projectId,
     ownerId: row.userId,
     app,
-    homeHtml: row.data?.html ?? "",
-    pages: Object.fromEntries(Object.entries(row.data?.pages ?? {}).map(([slug, p]) => [slug, p.html])),
+    homeHtml: sources.data?.html ?? "",
+    pages: Object.fromEntries(Object.entries(sources.data?.pages ?? {}).map(([slug, p]) => [slug, p.html])),
     // Los binarios no se revisan (spec local 2026-10-28): no son código.
     files: textFilesOnly(files),
     productionEnv,

@@ -26,7 +26,9 @@ import { buildView } from "./view";
 
 export interface ReviewDeps {
   readonly store: SecurityReviewStore;
-  loadInputs(projectId: string): Promise<ReviewInputs | null>;
+  /** `sourcesFrom`: a Len Watch branch's copy — its files are what is reviewed, the rest is `projectId`'s (spec local
+   *  2026-10-30-len-watch, §5.5). */
+  loadInputs(projectId: string, sourcesFrom?: string): Promise<ReviewInputs | null>;
   modelReview(o: {
     readonly inputs: ReviewInputs;
     readonly context: string;
@@ -51,11 +53,13 @@ export interface SecurityReviewer {
   start(projectId: string, locale: string): Promise<ReviewView | null>;
   view(projectId: string, fingerprint: string): Promise<ReviewView | null>;
   wait(projectId: string, fingerprint: string, timeoutMs: number): Promise<ReviewView | null>;
-  gate(o: { readonly projectId: string; readonly accept?: string; readonly actorId: string; readonly locale: string }): Promise<Gate>;
+  /** `sourcesFrom`: publishing a Len Watch branch — its copy's files are reviewed; the record, the budget and the
+   *  published base stay `projectId`'s, so the diff is just the fix. */
+  gate(o: { readonly projectId: string; readonly accept?: string; readonly actorId: string; readonly locale: string; readonly sourcesFrom?: string }): Promise<Gate>;
   forAgent(projectId: string, locale: string, waitMs?: number): Promise<AgentReview | null>;
   /** The project was just published with the review of this fingerprint: what it reviewed becomes the base the next
    *  review is a diff against. Nothing happens if the project changed since, or if that review isn't `done`. */
-  markPublished(projectId: string, fingerprint: string): Promise<void>;
+  markPublished(projectId: string, fingerprint: string, sourcesFrom?: string): Promise<void>;
 }
 
 /** Shorter than the agent route's silence clock (180 s). A review still running then reaches the owner through the
@@ -131,9 +135,9 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     inFlight.set(projectId, { fingerprint, controller, done });
   }
 
-  async function startRecord(projectId: string, locale: string): Promise<ReviewRecord | null> {
+  async function startRecord(projectId: string, locale: string, sourcesFrom?: string): Promise<ReviewRecord | null> {
     if (!securityReviewEnabled(deps.env)) return null;
-    const inputs = await deps.loadInputs(projectId);
+    const inputs = await (sourcesFrom ? deps.loadInputs(projectId, sourcesFrom) : deps.loadInputs(projectId));
     if (!inputs) return null;
     const fingerprint = fingerprintOf(inputs);
     const inScope = inputs.hasBackend || hasFunctions(inputs.files);
@@ -180,8 +184,8 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     },
     view,
     wait,
-    async gate({ projectId, accept, actorId, locale }) {
-      const r = await startRecord(projectId, locale);
+    async gate({ projectId, accept, actorId, locale, sourcesFrom }) {
+      const r = await startRecord(projectId, locale, sourcesFrom);
       if (!r) return { kind: "open", view: null };
       const v = await viewOf(r);
       if (r.status === "running") return { kind: "pending", view: v };
@@ -200,8 +204,8 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
       const firstTimeForAgent = v.status !== "running" && v.blocking.length > 0 ? await deps.store.claimShownToAgent(projectId, v.fingerprint, deps.now()) : false;
       return { view: v, firstTimeForAgent };
     },
-    async markPublished(projectId, fingerprint) {
-      const inputs = await deps.loadInputs(projectId);
+    async markPublished(projectId, fingerprint, sourcesFrom) {
+      const inputs = await (sourcesFrom ? deps.loadInputs(projectId, sourcesFrom) : deps.loadInputs(projectId));
       // Changed between the gate and the publish: what was published isn't what was reviewed.
       if (!inputs || fingerprintOf(inputs) !== fingerprint) return;
       await deps.store.markPublished(projectId, fingerprint, reviewedTexts(inputs), deps.now());

@@ -793,10 +793,16 @@ interface PublishParams {
   /** Qué hacer con los cambios de tablas del borrador (spec local 2026-10-09).
    *  Sin esto, `system`: nunca se aplica nada sin el dueño. Sólo la ruta de
    *  publicar del dueño pasa `owner`. */
-  dataChanges?: { mode: "owner" | "system"; confirmFingerprint?: string; copyDraftData?: boolean };
+  /** `skip`: a Len Watch branch (spec local 2026-10-30-len-watch, §5.5) — no data changes at all: the draft's
+   *  migrations are the owner's, half done. */
+  dataChanges?: { mode: "owner" | "system" | "skip"; confirmFingerprint?: string; copyDraftData?: boolean };
   /** Las Edge Functions (spec local 2026-10-11): «Publicar igual» aunque falten
    *  secretos en producción (el 428). Sólo la ruta del dueño lo pasa. */
   functions?: { skipMissingSecrets?: boolean };
+  /** A Len Watch branch: the SOURCES (`data` with its pages, app and settings, the folder, the functions) are this
+   *  worktree copy's; everything else (ownership, subdomain, backend, Stripe, releases, published hashes) the
+   *  project's. The project's draft is never written. */
+  sourcesFrom?: string;
 }
 interface PublishResult {
   subdomain: string;
@@ -849,6 +855,19 @@ export async function publishProject(
     .limit(1);
   const project = projects[0];
   if (!project) throw new ProjectNotFoundError();
+  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
+  // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
+  // is never written (see `persistLanguages` below).
+  let branchFolder: Record<string, string> | null = null;
+  if (params.sourcesFrom) {
+    const { copySources } = await import("@/lib/len-watch/worktree");
+    const src = await copySources(params.sourcesFrom);
+    project.data = src.data;
+    branchFolder = src.folder;
+  }
+  const dataMode = params.dataChanges?.mode ?? "system";
+  // Functions and Stripe know an owner's publish or a system one; a branch is the owner's (its fix may change them).
+  const ownerOrSystem: "owner" | "system" = dataMode === "system" ? "system" : "owner";
 
   // 3. tier limit — counts the user's OTHER active subdomains; updating
   // the same project (keeping its subdomain or renaming) doesn't count
@@ -882,9 +901,10 @@ export async function publishProject(
   const { swapTwins } = await import("@/lib/stripe/twins/swap");
   const twinsSoFar = await stripeModule.storedTwins(params.projectId);
   const funciones = await prepareFunctionsForPublish(params.projectId, {
-    mode: params.dataChanges?.mode ?? "system",
+    mode: ownerOrSystem,
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
     ...(twinsSoFar.size > 0 ? { swap: (t: string) => swapTwins(t, twinsSoFar) } : {}),
+    ...(params.sourcesFrom ? { sourcesFrom: params.sourcesFrom } : {}),
   });
 
   // Born-complete the <head> at publish too, so even legacy projects (and
@@ -941,12 +961,12 @@ export async function publishProject(
   // publicar» son las mismas.
   const app = project.data?.app ?? null;
   const ownProductionEnv = app ? await envVarsFor(params.projectId, "production") : {};
-  const projectFiles = await listProjectFiles(params.projectId);
+  const projectFiles = branchFolder ?? (await listProjectFiles(params.projectId));
 
   // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): before claiming anything, what would go
   // to live mode; no live key → the functions' 428, keys of two accounts → 422.
   const stripe = await stripeModule.prepareStripeForPublish(params.projectId, {
-    mode: params.dataChanges?.mode ?? "system",
+    mode: ownerOrSystem,
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
     texts: [html, ...splitPagesForPublish(project.data).publicPages.map((p) => p.html), ...Object.values(projectFiles)],
     liveFunctions: funciones?.functions ?? [],
@@ -986,7 +1006,8 @@ export async function publishProject(
         // `data` sólo cuando cambian los idiomas. (Desde el 2026-08-29 se
         // escribía en cada publicación para guardar los almacenes declarados;
         // se retiraron el 2026-10-04.)
-        ...(project.data && persistLanguages
+        // 🔴 Never for a Len Watch branch: `project.data` is the copy's, and this would write it over the draft.
+        ...(project.data && persistLanguages && !params.sourcesFrom
           ? { data: { ...project.data, settings: ajustesPublicados } }
           : {}),
       })
@@ -1086,9 +1107,10 @@ export async function publishProject(
       // pide confirmación, la release no se activa y el catch de abajo deshace la fila.
       beforeSwap: async () => {
         const { backendConfigured } = await import("@/lib/backend/pg");
-        if (backendConfigured()) {
+        // A Len Watch branch carries no data changes (§5.5): the draft's migrations are the owner's, half done.
+        if (dataMode !== "skip" && backendConfigured()) {
           const { publishDataChanges } = await import("@/lib/backend/data-changes");
-          await publishDataChanges({ projectId: params.projectId, ...(params.dataChanges ?? { mode: "system" }) });
+          await publishDataChanges({ projectId: params.projectId, ...params.dataChanges, mode: dataMode });
         }
         await funciones?.deploy(toLive ?? undefined);
       },

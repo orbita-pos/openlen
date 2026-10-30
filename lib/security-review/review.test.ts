@@ -298,3 +298,24 @@ describe("forAgent", () => {
     expect(await reviewer.forAgent("p", "es", 1_000)).toMatchObject({ firstTimeForAgent: false, view: { status: "skipped_scope", blocking: [] } });
   });
 });
+
+// Len Watch publishes a branch (spec local 2026-10-30-len-watch, §5.5): what is reviewed is the copy's files, and the
+// record, the budget and the published base stay the parent's — so the diff is just the fix.
+describe("a Len Watch branch's review", () => {
+  it("reads the copy's files and keeps its record on the parent", async () => {
+    const asked: unknown[][] = [];
+    const store = memorySecurityReviewStore();
+    const reviewer = createSecurityReviewer({
+      store,
+      loadInputs: async (...args: unknown[]) => (asked.push(args), page()),
+      modelReview: () => new Promise(() => undefined),
+      now: () => new Date("2026-10-16T12:00:00Z"),
+      env: {},
+    });
+    const g = await reviewer.gate({ projectId: "parent", sourcesFrom: "copy-1", actorId: "u1", locale: "es" });
+    expect(asked[0]).toEqual(["parent", "copy-1"]);
+    expect(await store.get("parent", g.view!.fingerprint)).not.toBeNull();
+    await reviewer.markPublished("parent", g.view!.fingerprint, "copy-1");
+    expect(asked.at(-1)).toEqual(["parent", "copy-1"]);
+  });
+});
