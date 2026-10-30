@@ -64,7 +64,11 @@
       "connect_shopify_store": "Conectando la tienda de Shopify",
       "get_goal": "Mirando el encargo",
       "create_goal": "Creando el encargo",
-      "update_goal": "Actualizando el encargo"
+      "update_goal": "Actualizando el encargo",
+      "schedule_create": "Programando una tarea",
+      "schedule_list": "Mirando las tareas programadas",
+      "schedule_delete": "Borrando una tarea programada",
+      "schedule_update": "Actualizando una tarea programada"
     },
     "toolApp": {
       "Read": "Leyendo el código",

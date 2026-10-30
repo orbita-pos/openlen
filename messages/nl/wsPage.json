@@ -64,7 +64,11 @@
       "connect_shopify_store": "Verbindt de Shopify-winkel",
       "get_goal": "Doel bekijken",
       "create_goal": "Doel aanmaken",
-      "update_goal": "Doel bijwerken"
+      "update_goal": "Doel bijwerken",
+      "schedule_create": "Taak plannen",
+      "schedule_list": "Geplande taken bekijken",
+      "schedule_delete": "Geplande taak verwijderen",
+      "schedule_update": "Geplande taak bijwerken"
     },
     "toolApp": {
       "Read": "De code lezen",

@@ -64,7 +64,11 @@
       "connect_shopify_store": "Shopify 스토어 연결 중",
       "get_goal": "목표 확인",
       "create_goal": "목표 만들기",
-      "update_goal": "목표 업데이트"
+      "update_goal": "목표 업데이트",
+      "schedule_create": "예약 작업 만들기",
+      "schedule_list": "예약 작업 확인",
+      "schedule_delete": "예약 작업 삭제",
+      "schedule_update": "예약 작업 업데이트"
     },
     "toolApp": {
       "Read": "코드를 읽는 중",

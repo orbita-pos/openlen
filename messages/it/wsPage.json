@@ -64,7 +64,11 @@
       "connect_shopify_store": "Collega il negozio Shopify",
       "get_goal": "Controllo l'obiettivo",
       "create_goal": "Creo l'obiettivo",
-      "update_goal": "Aggiorno l'obiettivo"
+      "update_goal": "Aggiorno l'obiettivo",
+      "schedule_create": "Programmo un'attività",
+      "schedule_list": "Controllo le attività programmate",
+      "schedule_delete": "Elimino un'attività programmata",
+      "schedule_update": "Aggiorno un'attività programmata"
     },
     "toolApp": {
       "Read": "Lettura del codice",

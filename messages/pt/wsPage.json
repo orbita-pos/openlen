@@ -64,7 +64,11 @@
       "connect_shopify_store": "Conectando a loja da Shopify",
       "get_goal": "Vendo o objetivo",
       "create_goal": "Criando o objetivo",
-      "update_goal": "Atualizando o objetivo"
+      "update_goal": "Atualizando o objetivo",
+      "schedule_create": "Agendando uma tarefa",
+      "schedule_list": "Vendo as tarefas agendadas",
+      "schedule_delete": "Apagando uma tarefa agendada",
+      "schedule_update": "Atualizando uma tarefa agendada"
     },
     "toolApp": {
       "Read": "Lendo o código",
