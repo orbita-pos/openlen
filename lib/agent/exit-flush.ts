@@ -4,7 +4,8 @@
 // had saved up to then. Claude Code drains its transcript queue on the way out (its graceful shutdown, with a
 // time limit), and so does this: once a SIGTERM or SIGINT arrived, the exit waits until every live turn wrote
 // what it has — its row, what the model saw, its layer-0 rows — or `timeoutMs` passed. What the process could
-// not write, the next boot closes (close-dead-turns.ts).
+// not write, the next boot closes (close-dead-turns.ts). And because Next's close waits for every open
+// connection, the exit does not wait for it forever either (`EXIT_GRACE_MS`).
 type Flush = () => Promise<void>;
 
 // On `globalThis`, like the open turns of direcciones.ts: instrumentation.ts arms the exit and the agent route
@@ -45,6 +46,15 @@ export async function flushLiveTurns(timeoutMs: number): Promise<boolean> {
 /** Enough for a row, the layer-0 rows and a box's pause; systemd waits 90 s before its SIGKILL. */
 export const EXIT_FLUSH_TIMEOUT_MS = 5_000;
 
+/**
+ * How long Next may take to exit on its own after the signal. It exits only once `server.close()` ends, and that
+ * waits for EVERY open connection: a workspace left open with its stream, or a live turn's own response, held it
+ * until systemd's SIGKILL at 90 s (deploy of 30/10, 04:17:58 → 04:19:28), and a SIGKILL runs nothing — the flush
+ * above included. Enough for an ordinary request in flight to finish; past it, the exit happens anyway, through
+ * the same flush.
+ */
+export const EXIT_GRACE_MS = 10_000;
+
 const INSTALLED = Symbol.for("openlen.agent.exitFlushInstalled");
 type InstalledGlobal = typeof globalThis & { [INSTALLED]?: WeakSet<object> };
 const installedOn: WeakSet<object> = (globalThis as InstalledGlobal)[INSTALLED] ?? ((globalThis as InstalledGlobal)[INSTALLED] = new WeakSet());
@@ -55,16 +65,19 @@ interface ExitingProcess {
   readonly env: Readonly<Record<string, string | undefined>>;
 }
 
-/** From the first SIGTERM or SIGINT on, `exit` waits for `flushLiveTurns` first. Only for the exit that follows a
- *  signal: until one arrives nothing changes. With `NEXT_MANUAL_SIG_HANDLE` someone else handles the signals, and
- *  this stays out. */
-export function installExitFlush(o: { proc?: ExitingProcess; timeoutMs?: number; log?: (line: string) => void } = {}): void {
+/** From the first SIGTERM or SIGINT on, `exit` waits for `flushLiveTurns` first, and if Next has not exited
+ *  `graceMs` later, the exit happens anyway (`EXIT_GRACE_MS`). Only for the exit that follows a signal: until one
+ *  arrives nothing changes. With `NEXT_MANUAL_SIG_HANDLE` someone else handles the signals, and this stays out. */
+export function installExitFlush(
+  o: { proc?: ExitingProcess; timeoutMs?: number; graceMs?: number; log?: (line: string) => void } = {},
+): void {
   const proc = o.proc ?? (process as unknown as ExitingProcess);
   if (proc.env.NEXT_MANUAL_SIG_HANDLE) return;
   // Once per process: in development `register()` can run again.
   if (installedOn.has(proc)) return;
   installedOn.add(proc);
   const timeoutMs = o.timeoutMs ?? EXIT_FLUSH_TIMEOUT_MS;
+  const graceMs = o.graceMs ?? EXIT_GRACE_MS;
   const log = o.log ?? ((line: string) => console.log(line));
   let armed = false;
   const arm = () => {
@@ -72,7 +85,14 @@ export function installExitFlush(o: { proc?: ExitingProcess; timeoutMs?: number;
     armed = true;
     const exit = proc.exit.bind(proc);
     let exiting: Promise<void> | null = null;
+    // Unref'd: it never keeps alive a process that is leaving on its own.
+    const deadline = setTimeout(() => {
+      log(`[exit] connections still open ${graceMs} ms after the signal: exiting without waiting for them`);
+      proc.exit(0);
+    }, graceMs);
+    deadline.unref?.();
     proc.exit = ((code?: number | string | null) => {
+      clearTimeout(deadline);
       // Nothing to write: the exit is the one it always was.
       if (live.size === 0 && exiting === null) return exit(code);
       if (exiting === null) {
