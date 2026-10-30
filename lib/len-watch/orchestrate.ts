@@ -46,7 +46,28 @@ export interface OrchestratorDeps {
   failPhrase(locale: string, fallo: FalloDelTurno | null): string;
   /** What the chat row shows as the message of a Len Watch turn, in the owner's language. */
   turnPrompt(locale: string): string;
+  /** That Len's turn was cut (a restart, a crash), in the owner's language. */
+  interruptedPhrase(locale: string): string;
+  /** A Len turn is running in the project right now (this process). */
+  liveTurn(projectId: string): boolean;
+  now(): number;
   newId(): string;
+}
+
+/** Past the queue's longest wait (30 min) with no live turn, a fix still marked as running was cut. */
+export const STALE_FIX_MS = 35 * 60_000;
+
+/** A fix or publish cut by a restart would leave the incident «fixing» forever and Len Watch blocked
+ *  on the project: once it's clearly dead, it goes back to the owner, who hears why. */
+export async function recoverIfStale(i: Incident, deps?: OrchestratorDeps): Promise<Incident> {
+  if (i.status !== "fixing" && i.status !== "publishing") return i;
+  const d = deps ?? (await defaultDeps());
+  if (d.now() - i.updatedAt.getTime() < STALE_FIX_MS || d.liveTurn(i.projectId)) return i;
+  const next: Incident = { ...i, status: "needs_owner", reason: "interrupted" };
+  await d.store.updateIncident(i.id, { status: "needs_owner", reason: "interrupted" });
+  const p = await d.project(i.projectId);
+  if (p) await tell(d, p, next, "needs_owner", d.interruptedPhrase(p.locale));
+  return next;
 }
 
 async function tell(deps: OrchestratorDeps, p: ProjectForWatch, i: Incident, phase: LenWatchPhase, detail: string | null = null): Promise<void> {
@@ -175,7 +196,7 @@ let defaults: OrchestratorDeps | null = null;
 
 async function defaultDeps(): Promise<OrchestratorDeps> {
   if (defaults) return defaults;
-  const [store, owner, { checkPublishedLoads }, { scheduleNotification }, turns, gates, { leerCambiosSinPublicar }, correos, { lenWatchTurnPrompt }] = await Promise.all([
+  const [store, owner, { checkPublishedLoads }, { scheduleNotification }, turns, gates, { leerCambiosSinPublicar }, correos, { lenWatchTurnPrompt }, { hayTurnoVivoEnElProyecto }] = await Promise.all([
     import("./store"),
     import("./owner"),
     import("./check"),
@@ -185,6 +206,7 @@ async function defaultDeps(): Promise<OrchestratorDeps> {
     import("@/lib/projects"),
     import("@/lib/projects/correos-del-proyecto"),
     import("./texts"),
+    import("@/lib/agent/direcciones"),
   ]);
   defaults = {
     store,
@@ -197,6 +219,9 @@ async function defaultDeps(): Promise<OrchestratorDeps> {
     contentStamp,
     failPhrase: (locale, fallo) => correos.fraseDeFalloDelHilo(correos.idiomaDelCorreo(locale), fallo),
     turnPrompt: lenWatchTurnPrompt,
+    interruptedPhrase: (locale) => correos.fraseDeInterrupcionDelHilo(correos.idiomaDelCorreo(locale)),
+    liveTurn: hayTurnoVivoEnElProyecto,
+    now: Date.now,
     newId: () => crypto.randomUUID(),
   };
   return defaults;

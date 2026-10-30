@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 
 import type { LoadCheck } from "./check";
 import { createIngester } from "./ingest";
-import { afterOwnerPublish, approveFix, onIncidentOpened, startFix, type OrchestratorDeps } from "./orchestrate";
+import { afterOwnerPublish, approveFix, onIncidentOpened, recoverIfStale, STALE_FIX_MS, startFix, type OrchestratorDeps } from "./orchestrate";
 import type { ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, Resolution, WatchReport } from "./types";
 
@@ -18,7 +18,7 @@ const UP: LoadCheck = { loads: true, reason: "ok", errors: [] };
 
 type Launched = Parameters<OrchestratorDeps["launch"]>[0];
 
-function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; stamps?: string[]; unpublished?: boolean; publish?: { status: number; body: Record<string, unknown> } } = {}) {
+function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; stamps?: string[]; unpublished?: boolean; publish?: { status: number; body: Record<string, unknown> }; live?: boolean; now?: number } = {}) {
   const incidents = new Map<string, Incident>();
   const notices: string[] = [];
   const launched: Launched[] = [];
@@ -41,6 +41,9 @@ function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; 
     contentStamp: async () => stamps.shift() ?? "same",
     failPhrase: (_l, f) => `No pude: ${f?.code ?? "?"}`,
     turnPrompt: () => "Tu sitio publicado no carga. Averigua por qué y arréglalo.",
+    interruptedPhrase: () => "Len se interrumpió.",
+    liveTurn: () => o.live ?? false,
+    now: () => o.now ?? Date.now(),
     newId: () => "row-1",
   };
   const open = (status: Incident["status"] = "open"): Incident => {
@@ -179,6 +182,42 @@ describe("approveFix", () => {
     expect(await approveFix(w.open("fix_ready"), P, w.deps)).toEqual({ status: 428, body: { error: "confirmation_required" } });
     expect(w.current().status).toBe("fix_ready");
     expect(w.notices).toEqual([]);
+  });
+});
+
+describe("recoverIfStale", () => {
+  const minutesAgo = (w: ReturnType<typeof world>, status: Incident["status"], minutes: number) => {
+    const i = w.open(status);
+    const updatedAt = new Date(Date.parse("2026-10-30T12:00:00Z") - minutes * 60_000);
+    void w.deps.store.updateIncident(i.id, {});
+    return { ...i, updatedAt };
+  };
+  const NOW = Date.parse("2026-10-30T12:00:00Z");
+
+  it("🔴 a fix cut by a restart (no live turn, long past the queue's wait) goes back to the owner", async () => {
+    const w = world({ now: NOW });
+    const r = await recoverIfStale(minutesAgo(w, "fixing", STALE_FIX_MS / 60_000 + 1), w.deps);
+    expect(r).toMatchObject({ status: "needs_owner", reason: "interrupted" });
+    expect(w.current()).toMatchObject({ status: "needs_owner", reason: "interrupted" });
+    expect(w.notices).toEqual(["needs_owner"]);
+  });
+
+  it("a publish cut the same way too", async () => {
+    const w = world({ now: NOW });
+    expect((await recoverIfStale(minutesAgo(w, "publishing", STALE_FIX_MS / 60_000 + 1), w.deps)).status).toBe("needs_owner");
+  });
+
+  it("a recent fix, or one whose turn is alive, is left alone", async () => {
+    const recent = world({ now: NOW });
+    expect((await recoverIfStale(minutesAgo(recent, "fixing", 5), recent.deps)).status).toBe("fixing");
+    const alive = world({ now: NOW, live: true });
+    expect((await recoverIfStale(minutesAgo(alive, "fixing", 120), alive.deps)).status).toBe("fixing");
+    expect(alive.notices).toEqual([]);
+  });
+
+  it("only fixing and publishing can be stale", async () => {
+    const w = world({ now: NOW });
+    expect((await recoverIfStale(minutesAgo(w, "fix_ready", 600), w.deps)).status).toBe("fix_ready");
   });
 });
 

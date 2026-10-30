@@ -10,6 +10,9 @@ import { pageUrl, type ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, WatchReport } from "./types";
 
 export const CHECK_INTERVAL_MS = 300_000;
+/** Checks waiting (or running) at once, across projects. Anyone can post a report for any published
+ *  project; past this, a report is dropped WITHOUT claiming the project, so it is checked next time. */
+export const MAX_PENDING_CHECKS = 5;
 
 export interface IngestDeps {
   store: {
@@ -28,6 +31,7 @@ export type Ingest = (projectId: string, report: WatchReport) => Promise<void>;
 
 export function createIngester(deps: IngestDeps): Ingest {
   const lastAttempt = new Map<string, number>();
+  let pending = 0;
   let chromium: Promise<unknown> = Promise.resolve();
   const oneAtATime = <T>(f: () => Promise<T>): Promise<T> => {
     const run = chromium.then(f, f);
@@ -50,8 +54,18 @@ export function createIngester(deps: IngestDeps): Ingest {
       return;
     }
     if (recent) return;
+    if (pending >= MAX_PENDING_CHECKS) {
+      if (lastAttempt.get(projectId) === now) lastAttempt.delete(projectId);
+      return;
+    }
 
-    const check = await oneAtATime(() => deps.check(pageUrl(project, report.page)));
+    pending++;
+    let check: LoadCheck;
+    try {
+      check = await oneAtATime(() => deps.check(pageUrl(project, report.page)));
+    } finally {
+      pending--;
+    }
     if (check.loads) return;
     const incident = await deps.store.openIncident(projectId, report);
     if (!incident) return;
@@ -62,14 +76,18 @@ export function createIngester(deps: IngestDeps): Ingest {
 let ingester: Ingest | null = null;
 
 async function defaultDeps(): Promise<IngestDeps> {
-  const [store, owner, { checkPublishedLoads }, { onIncidentOpened }] = await Promise.all([
+  const [store, owner, { checkPublishedLoads }, { onIncidentOpened, recoverIfStale }] = await Promise.all([
     import("./store"),
     import("./owner"),
     import("./check"),
     import("./orchestrate"),
   ]);
   return {
-    store,
+    // A fix cut by a restart is handed back to the owner before the report is weighed.
+    store: { ...store, activeIncident: async (projectId) => {
+      const i = await store.activeIncident(projectId);
+      return i ? recoverIfStale(i) : null;
+    } },
     project: owner.projectForWatch,
     check: (url) => checkPublishedLoads(url),
     onOpened: (incident, project, check) => onIncidentOpened(incident, project, check),

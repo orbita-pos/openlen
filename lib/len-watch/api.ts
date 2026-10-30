@@ -6,7 +6,15 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso, type AccesoAlProyecto, type Permiso } from "@/lib/projects/acceso";
 
 import { lenWatchEnabled } from "./enabled";
+import { recoverIfStale } from "./orchestrate";
+import { activeIncident } from "./store";
 import type { Incident, IncidentView } from "./types";
+
+/** The project's incident as it stands — a fix cut by a restart already handed back to the owner. */
+export async function standingIncident(projectId: string): Promise<Incident | null> {
+  const i = await activeIncident(projectId);
+  return i ? recoverIfStale(i) : null;
+}
 
 export function incidentView(i: Incident): IncidentView {
   return { id: i.id, status: i.status, reason: i.reason, summary: i.summary, shipsUnpublished: i.shipsUnpublished, createdAt: i.createdAt.toISOString() };
