@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
 
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+
 import { useLenWatch } from "./use-len-watch";
 import { bannerState } from "./view-model";
 
@@ -35,7 +37,9 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       if (answer === "handed_to_len") setBringNote("handedToLen");
       else if (answer === "queued") setBringNote("queued");
       else if (answer !== "brought" && answer !== "nothing") setBringNote("failed");
-      await reload();
+      // The draft has the fix now: the canvas reloads it (and this notice looks again, through the same event).
+      if (answer === "brought") notifyFolderChanged(projectId);
+      else await reload();
     };
     return (
       <div className="mx-4 mt-3 flex shrink-0 flex-col gap-2 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px]" role="status" data-len-watch-banner="bring">

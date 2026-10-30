@@ -7,6 +7,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 
 import modalsDeploy from "@/messages/es/modalsDeploy.json";
+import { onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { LenWatchFixPending } from "./fix-pending";
 
@@ -69,6 +70,19 @@ describe("the publish that waits for the Len Watch fix", () => {
     await click(button(host, T.bring));
     expect(calls[0]).toEqual({ url: "/api/projects/p1/len-watch/bring", method: "POST", body: JSON.stringify({ incidentId: "i1" }) });
     expect(p.onPublishAgain).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 a fix brought in tells the workspace its folder changed (the canvas, the notice over the chat)", async () => {
+    answer({ status: "brought" });
+    const changed = vi.fn();
+    const stop = onFolderChanged("p1", changed);
+    try {
+      const { host } = await mount();
+      await click(button(host, T.bring));
+      expect(changed).toHaveBeenCalledTimes(1);
+    } finally {
+      stop();
+    }
   });
 
   it("it collided: Len brings it in, and nothing is published yet", async () => {
