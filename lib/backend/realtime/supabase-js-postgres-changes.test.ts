@@ -49,6 +49,11 @@ let latenciaMs = 0;
 let cierreLentoMs = 0;
 let vivas = 0;
 let maxVivas = 0;
+// Aperturas que fallan (crear el slot por red, que tarda y no sale), cuántas
+// salieron bien y cuándo empezó cada una.
+let failingOpens = 0;
+let goodOpens = 0;
+const openStarts: number[] = [];
 
 beforeAll(async () => {
   t = await newRealtimeTestProject(MIGRACION);
@@ -70,7 +75,14 @@ beforeAll(async () => {
         open: async () => {
           fuentes.abiertas++;
           maxVivas = Math.max(maxVivas, ++vivas);
+          openStarts.push(Date.now());
+          if (failingOpens > 0) {
+            failingOpens--;
+            await espera(200);
+            throw new Error("no se pudo crear el slot");
+          }
           await s.open();
+          goodOpens++;
         },
         listChanges: (o) => s.listChanges(o),
         close: async () => {
@@ -230,6 +242,45 @@ describe("postgres_changes como Supabase Realtime", () => {
     await inserta(U2, "tras el relevo");
     await espera(400);
     expect(b.vistos.map((v) => v.new.texto)).toEqual(["tras el relevo"]);
+  });
+
+  it("🔴 no dice «Subscribed to PostgreSQL» hasta que el sondeo abrió la fuente; la que falla se reintenta", async () => {
+    for (const c of clientes.splice(0)) await c.removeAllChannels();
+    await espera(400);
+    failingOpens = 1;
+    onTestFinished(() => {
+      failingOpens = 0;
+    });
+    const before = goodOpens;
+    const r = await escucha(await cliente(U1), "tras-un-fallo", { event: "INSERT" });
+    expect(goodOpens).toBe(before + 1);
+    await inserta(U1, "tras el reintento");
+    await espera(400);
+    expect(r.vistos.map((v) => v.new.texto)).toEqual(["tras el reintento"]);
+  });
+
+  // Su ReplicationPoller se rinde tras 6 reintentos y se lleva el árbol de
+  // cdc_rls; cada canal oye `postgres_cdc_down` y vuelve a darse de alta a los
+  // 1–3 s (`postgres_subscribe()`), con un sondeo nuevo.
+  it("🔴 un sondeo que se rinde suelta el proyecto y el canal vuelve a darse de alta, y oye", async () => {
+    for (const c of clientes.splice(0)) await c.removeAllChannels();
+    await espera(400);
+    // El azar en su suelo: 100 ms entre reintentos, 1 s hasta darse de alta otra vez.
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    failingOpens = 7;
+    onTestFinished(() => {
+      failingOpens = 0;
+      vi.restoreAllMocks();
+    });
+    const from = openStarts.length;
+    const r = await escucha(await cliente(U1), "tras-rendirse", { event: "INSERT" });
+    const starts = openStarts.slice(from);
+    expect(starts).toHaveLength(8);
+    // La 8.ª ya no es un reintento del sondeo: es el alta otra vez del canal.
+    expect(starts[7]! - starts[6]!).toBeGreaterThanOrEqual(1000);
+    await inserta(U1, "tras rendirse");
+    await espera(400);
+    expect(r.vistos.map((v) => v.new.texto)).toEqual(["tras rendirse"]);
   });
 
   it("🔴 al irse el último, el sondeo suelta la fuente y no quedan suscripciones", async () => {

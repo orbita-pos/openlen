@@ -216,13 +216,27 @@ export class Session {
     // En orden por tema: un join con su espera no frena el latido ni otros
     // canales, y dos broadcasts del mismo canal no se adelantan.
     const decoded = frame;
-    const prev = this.chains.get(decoded.topic) ?? Promise.resolve();
-    const next = prev.then(() => this.handle(decoded)).catch((err: unknown) => console.error("[realtime] mensaje", this.project.ref, err));
-    this.chains.set(decoded.topic, next);
+    await this.inTopicOrder(decoded.topic, () => this.handle(decoded));
+  }
+
+  private inTopicOrder(topic: string, run: () => Promise<void>): Promise<void> {
+    const prev = this.chains.get(topic) ?? Promise.resolve();
+    const next = prev.then(run).catch((err: unknown) => console.error("[realtime] mensaje", this.project.ref, err));
+    this.chains.set(topic, next);
     void next.finally(() => {
-      if (this.chains.get(decoded.topic) === next) this.chains.delete(decoded.topic);
+      if (this.chains.get(topic) === next) this.chains.delete(topic);
     });
-    await next;
+    return next;
+  }
+
+  /** Su `postgres_subscribe()` al oír `postgres_cdc_down` (el sondeo del
+   *  proyecto se rindió): el alta otra vez, en la cola del tema y si el canal
+   *  sigue. */
+  resubscribePostgresChanges(ch: Channel): void {
+    void this.inTopicOrder(ch.topic, async () => {
+      if (this.closed || this.channels.get(ch.topic) !== ch) return;
+      await this.hub.changes.subscribe(ch);
+    });
   }
 
   private async handle(frame: PhxMessage | UserBroadcastPush): Promise<void> {

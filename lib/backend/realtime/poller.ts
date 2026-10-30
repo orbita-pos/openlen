@@ -18,6 +18,7 @@
 //     por SU `realtime.apply_rls`, con la proyección de su `replications.ex`.
 
 import type { ProjectDatabase } from "../db";
+import { randBetween, RandExpBackoff } from "./backoff";
 import { PUBLICATION } from "./subscriptions";
 
 /** Una fila como las de su `Replications.list_changes`. */
@@ -190,67 +191,171 @@ export const DEFAULT_POLLER_TIMING: PollerTiming = { pollIntervalMs: 100, maxCha
 /** Su `@idle_multiplier`. */
 const IDLE_MULTIPLIER = 5;
 
+/** Su `@max_retries`: los reintentos seguidos antes de rendirse. */
+const MAX_RETRIES = 6;
+
+/** Su backoff de reintentos: `Backoff.new(backoff_min: 100, backoff_max:
+ *  5_000, backoff_type: :rand_exp)`. */
+const RETRY_BACKOFF_MIN_MS = 100;
+const RETRY_BACKOFF_MAX_MS = 5_000;
+
+/** El `shutdown` por defecto de un hijo de OTP (5 s): lo que su supervisor
+ *  espera a que pare antes de matarlo. Aquí no se puede matar una apertura en
+ *  marcha: se deja de esperar y se suelta lo que abra al acabar. */
+const SHUTDOWN_MS = 5_000;
+
+export interface PollerEvents {
+  /** La fuente abrió y el sondeo empieza (su `prepare_replication` bueno). */
+  readonly onRunning?: () => void;
+  /** Se rindió tras sus reintentos (su `{:shutdown, :max_retries_reached}`),
+   *  con la fuente ya cerrada. */
+  readonly onGaveUp?: () => void;
+}
+
 /** El sondeo de UN proyecto (su ReplicationPoller): abre la fuente, sondea con
- *  su cadencia y entrega cada fila. `stop` suelta la fuente (y con ella el slot
- *  temporal). */
+ *  su cadencia y entrega cada fila. Una apertura o una lectura que falla se
+ *  reintenta con su backoff (`retry_or_stop`) y, tras sus reintentos, se rinde.
+ *  `stop` suelta la fuente (y con ella el slot temporal). */
 export class ProjectPoller {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
-  private opened: Promise<void> | null = null;
+  private running = false;
+  /** La apertura en marcha, para que `stop` la espere (con tope). */
+  private opening: Promise<void> | null = null;
+  /** `stop` dejó de esperar la apertura: lo que abra al acabar se suelta. */
+  private abandoned = false;
+  /** Se pidió abrir desde el último cierre: puede haber algo que soltar. */
+  private held = false;
+  /** Su `backoff` y su `retry_count`. */
+  private readonly backoff = new RandExpBackoff(RETRY_BACKOFF_MIN_MS, RETRY_BACKOFF_MAX_MS);
+  private retryCount = 0;
 
   constructor(
     private readonly source: ChangeSource,
     private readonly onRow: (row: ChangeRow) => void,
     private readonly timing: PollerTiming,
     private readonly onError: (err: unknown) => void,
+    private readonly events: PollerEvents = {},
   ) {}
+
+  /** La fuente está abierta y se sondea (ni abriendo, ni reintentando, ni parado). */
+  get isRunning(): boolean {
+    return this.running;
+  }
 
   start(): void {
     // Parado antes de arrancar (esperaba a que el anterior soltara el slot).
     if (this.stopped) return;
-    this.opened = this.source.open().then(
-      () => this.schedule(0),
-      (err: unknown) => this.onError(err),
-    );
+    void this.prepare();
   }
 
-  private schedule(ms: number): void {
+  private schedule(ms: number, next: () => Promise<void> = () => this.poll()): void {
     if (this.stopped) return;
-    this.timer = setTimeout(() => void this.poll(), ms);
+    this.timer = setTimeout(() => void next(), ms);
     this.timer.unref?.();
   }
 
+  /** Su `prepare_replication`: abre la fuente y, si sale, sondea ya. */
+  private async prepare(): Promise<void> {
+    this.timer = null;
+    if (this.stopped) return;
+    this.held = true;
+    const opening = this.source.open();
+    this.opening = opening.then(
+      () => {},
+      () => {},
+    );
+    let failure: { err: unknown } | null = null;
+    try {
+      await opening;
+    } catch (err) {
+      failure = { err };
+    }
+    this.opening = null;
+    if (this.stopped) {
+      if (this.abandoned) await this.release();
+      return;
+    }
+    if (failure) {
+      this.onError(failure.err);
+      // Lo que quedara a medias (la conexión sin su slot) se suelta antes de reintentar.
+      await this.release();
+      return this.retryOrStop();
+    }
+    this.retryCount = 0;
+    this.backoff.reset();
+    this.running = true;
+    this.events.onRunning?.();
+    this.schedule(0);
+  }
+
+  /** Su `retry_or_stop`: otra apertura tras su backoff o, con sus
+   *  `@max_retries` seguidos ya gastados, se rinde. */
+  private retryOrStop(): void {
+    if (this.stopped) return;
+    if (this.retryCount >= MAX_RETRIES) {
+      this.stopped = true;
+      this.events.onGaveUp?.();
+      return;
+    }
+    this.retryCount++;
+    this.schedule(this.backoff.next(), () => this.prepare());
+  }
+
+  private async release(): Promise<void> {
+    this.running = false;
+    this.held = false;
+    try {
+      await this.source.close();
+    } catch (err) {
+      this.onError(err);
+    }
+  }
+
   private async poll(): Promise<void> {
+    this.timer = null;
     if (this.stopped) return;
     let listed: Listed;
     try {
       listed = await this.source.listChanges({ maxChanges: this.timing.maxChanges, maxRecordBytes: this.timing.maxRecordBytes });
     } catch (err) {
+      if (this.stopped) return;
       this.onError(err);
       // Si fue la conexión del slot, el slot temporal se fue con ella: se
-      // cierra y se abre otra vez (su `retry_or_stop` reconecta igual).
-      try {
-        await this.source.close();
-        if (!this.stopped) await this.source.open();
-      } catch (reopen) {
-        this.onError(reopen);
-      }
-      return this.schedule(this.timing.pollIntervalMs * IDLE_MULTIPLIER);
+      // suelta y, tras su backoff, se abre otra vez (su `retry_or_stop`).
+      await this.release();
+      return this.retryOrStop();
     }
     if (this.stopped) return;
+    // Un sondeo bueno acaba la racha (su `Backoff.reset` y `retry_count: 0`).
+    this.retryCount = 0;
+    this.backoff.reset();
     if (listed === null) return this.schedule(this.timing.pollIntervalMs * IDLE_MULTIPLIER);
     for (const row of listed.rows) this.onRow(row);
     // Su cadencia: con filas, otra vez ya; con cambios para nadie, el
     // intervalo (+ 50–100 ms); en reposo, ×5.
     if (listed.rows.length > 0) return this.schedule(0);
-    if (listed.slotChangesCount > 0) return this.schedule(this.timing.pollIntervalMs + 50 + Math.floor(Math.random() * 51));
+    if (listed.slotChangesCount > 0) return this.schedule(this.timing.pollIntervalMs + randBetween(50, 100));
     return this.schedule(this.timing.pollIntervalMs * IDLE_MULTIPLIER);
   }
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.running = false;
     if (this.timer) clearTimeout(this.timer);
-    await this.opened?.catch(() => {});
-    await this.source.close();
+    this.timer = null;
+    if (this.opening) {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const settled = await Promise.race([
+        this.opening.then(() => true),
+        new Promise<false>((r) => {
+          timeout = setTimeout(() => r(false), SHUTDOWN_MS);
+          timeout.unref?.();
+        }),
+      ]);
+      clearTimeout(timeout);
+      if (!settled) this.abandoned = true;
+    }
+    if (this.held) await this.release();
   }
 }
