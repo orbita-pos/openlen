@@ -344,5 +344,52 @@
       "continueBody": "Chargez les éléments précédents pour poursuivre la recherche.",
       "date": "Date"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} ne se charge pas",
+        "body": "Nous l'avons ouvert et il est resté vide. Demandez à Len de le réparer depuis le chat.",
+        "subject": "{project} ne se charge pas",
+        "text": "Nous avons ouvert {url} dans notre navigateur et il est resté vide, comme le voient vos visiteurs.\n\nDemandez à Len de le réparer depuis le chat du projet :\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} ne se charge pas",
+        "body": "Len s'en occupe déjà.",
+        "subject": "{project} ne se charge pas : Len s'en occupe",
+        "text": "Nous avons ouvert {url} dans notre navigateur et il est resté vide. Len cherche déjà la cause ; nous vous écrirons quand ce sera fait.\n\nSuivez-le dans le chat :\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len a réparé {project}",
+        "body": "Il reste à publier la correction.",
+        "subject": "La correction de Len pour {project} est prête à être publiée",
+        "text": "Len a trouvé pourquoi {url} ne se chargeait pas et l'a réparé. Ce n'est pas encore publié : ouvrez le projet et publiez la correction.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} se charge à nouveau",
+        "body": "Len l'a réparé et a publié la correction.",
+        "subject": "{project} se charge à nouveau",
+        "text": "Len a réparé {url} et publié la correction. Nous l'avons rouvert et il se charge.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} ne se charge toujours pas",
+        "body": "La correction de Len n'a pas suffi.",
+        "subject": "{project} ne se charge toujours pas",
+        "text": "Len a publié une correction, mais {url} reste vide quand nous l'ouvrons. Len ne réessaiera pas tout seul : regardez ce qu'il a fait dans le chat et dites-lui quoi faire.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len n'a pas pu réparer {project}",
+        "body": "Len a besoin de vous.",
+        "subject": "Len n'a pas pu réparer {project}",
+        "text": "{url} ne se charge pas et Len n'a pas pu le réparer seul.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} se charge à nouveau",
+        "body": "Il se charge à nouveau tout seul.",
+        "subject": "{project} se charge à nouveau",
+        "text": "{url} se charge à nouveau : il est revenu tout seul pendant que Len le regardait. Rien n'a été publié.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "En le publiant, vos modifications pas encore publiées seront publiées aussi."
+    }
   }
 }

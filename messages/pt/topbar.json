@@ -344,5 +344,52 @@
       "continueBody": "Carregue os anteriores para continuar buscando.",
       "date": "Data"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} não carrega",
+        "body": "Abrimos e ficou em branco. Peça ao Len para corrigir pelo chat.",
+        "subject": "{project} não carrega",
+        "text": "Abrimos {url} no nosso navegador e ficou em branco, do jeito que seus visitantes estão vendo.\n\nPeça ao Len para corrigir pelo chat do projeto:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} não carrega",
+        "body": "O Len já está cuidando disso.",
+        "subject": "{project} não carrega: o Len já está cuidando disso",
+        "text": "Abrimos {url} no nosso navegador e ficou em branco. O Len já está procurando a causa; escrevemos de novo quando terminar.\n\nAcompanhe no chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "O Len corrigiu {project}",
+        "body": "Falta publicar a correção.",
+        "subject": "A correção do Len para {project} está pronta para publicar",
+        "text": "O Len descobriu por que {url} não carregava e corrigiu. Ainda não foi publicado: abra o projeto e publique a correção.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} voltou a carregar",
+        "body": "O Len corrigiu e publicou a correção.",
+        "subject": "{project} voltou a carregar",
+        "text": "O Len corrigiu {url} e publicou a correção. Abrimos de novo e carrega.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} continua sem carregar",
+        "body": "A correção do Len não bastou.",
+        "subject": "{project} continua sem carregar",
+        "text": "O Len publicou uma correção, mas {url} continua ficando em branco quando abrimos. O Len não vai tentar de novo sozinho: veja no chat o que ele fez e diga o que fazer.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "O Len não conseguiu corrigir {project}",
+        "body": "O Len precisa de você.",
+        "subject": "O Len não conseguiu corrigir {project}",
+        "text": "{url} não carrega e o Len não conseguiu corrigir sozinho.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} voltou a carregar",
+        "body": "Voltou a carregar sozinho.",
+        "subject": "{project} voltou a carregar",
+        "text": "{url} voltou a carregar: voltou sozinho enquanto o Len olhava. Nada foi publicado.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Ao publicar, também sairão as alterações que você ainda não tinha publicado."
+    }
   }
 }

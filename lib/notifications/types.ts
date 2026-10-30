@@ -88,7 +88,24 @@ export interface EmailQuotaEvent {
   noCredits: boolean;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent;
+/** LEN WATCH (spec local 2026-10-30-len-watch): a published site stopped loading, and where its fix
+ *  stands. Push and email. The texts come already written, in the owner's language
+ *  (lib/len-watch/texts.ts): the channels only carry them. */
+export type LenWatchPhase = "down" | "fixing" | "fix_ready" | "fixed" | "fix_failed" | "needs_owner" | "recovered";
+
+export interface LenWatchEvent {
+  type: "len_watch";
+  projectId: string;
+  recipientUserId: string;
+  incidentId: string;
+  phase: LenWatchPhase;
+  title: string;
+  body: string;
+  emailSubject: string;
+  emailText: string;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;
