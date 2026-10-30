@@ -83,6 +83,17 @@
     "autoFixHint": "Len commence à le réparer dès qu'il tombe. Cela utilise vos crédits.",
     "autoPublish": "Publier tout seul",
     "autoPublishHint": "Publie la correction sans vous attendre, sauf si la vérification de sécurité ou un changement de données l'arrête.",
-    "ownerOnly": "Seul le propriétaire du projet peut modifier ceci."
+    "ownerOnly": "Seul le propriétaire du projet peut modifier ceci.",
+    "fixPending": {
+      "title": "La correction de Len n'est pas encore dans votre brouillon",
+      "body": "Len a réparé votre site publié dans une copie à part. Si vous publiez maintenant sans apporter la correction, la panne revient.",
+      "bring": "Apporter la correction",
+      "publishAnyway": "Publier quand même",
+      "cancel": "Annuler",
+      "bringing": "Ajout de la correction…",
+      "handedToLen": "Elle entre en conflit avec ce que vous modifiiez : Len l'apporte à la main. Publiez quand il aura fini.",
+      "queued": "Len travaille sur le projet : nous l'apporterons dès qu'il aura fini.",
+      "failed": "Impossible d'apporter la correction. Réessayez."
+    }
   }
 }

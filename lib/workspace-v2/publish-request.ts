@@ -24,6 +24,8 @@ export type PublishOutcome =
   // Stripe (spec local 2026-10-21-stripe-integration): the two keys are of different accounts, or copying to live failed.
   | { readonly kind: "stripe_account_mismatch" }
   | { readonly kind: "stripe_sync_failed"; readonly message: string }
+  // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix it published isn't in the draft yet.
+  | { readonly kind: "len_watch_fix_pending"; readonly incidentId: string; readonly branch: string }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
 export async function postPublish(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
@@ -50,6 +52,7 @@ export async function postPublish(projectId: string, body: Record<string, unknow
     };
   }
   if (res.status === 428 && data.error === "security_review_pending") return { kind: "security_review_pending", fingerprint: String(data.fingerprint ?? "") };
+  if (res.status === 428 && data.error === "len_watch_fix_pending") return { kind: "len_watch_fix_pending", incidentId: String(data.incidentId ?? ""), branch: String(data.branch ?? "") };
   if (res.status === 428 && data.error === "secrets_required") return { kind: "secrets_required", missing: (data.missing as string[]) ?? [] };
   if (data.error === "functions_do_not_compile") return { kind: "functions_do_not_compile", errors: (data.errors as string[]) ?? [] };
   if (data.error === "functions_deploy_failed" || data.error === "functions_bundler_unavailable") return { kind: "functions_failed" };

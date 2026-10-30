@@ -35,7 +35,7 @@ export async function cargarGestion(c: ClienteDeOpenLen, id: string, signal?: Ab
 export function comprobarNombre(c: ClienteDeOpenLen, subdomain: string, signal?: AbortSignal) {
   return pedir<{ available: boolean; reason?: string }>(c, "/api/subdomains/check", { ...post({ subdomain }), signal });
 }
-export interface ConfirmacionPublicar { acceptSecurityFingerprint?: string; confirmFingerprint?: string; skipMissingSecrets?: boolean }
+export interface ConfirmacionPublicar { acceptSecurityFingerprint?: string; confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptLenWatchFix?: string }
 export function publicar(c: ClienteDeOpenLen, id: string, subdomain: string, locale: Idioma, confirmacion: ConfirmacionPublicar = {}) {
   return pedir<{ url: string; publishedAt: string }>(c, `/api/projects/${encodeURIComponent(id)}/publish`, post({ subdomain, locale, ...confirmacion }));
 }
@@ -52,6 +52,10 @@ export function lenWatchArreglar(c: ClienteDeOpenLen, id: string) {
 }
 export function lenWatchAprobar(c: ClienteDeOpenLen, id: string, confirmarCambios = false) {
   return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post(confirmarCambios ? { confirmChanged: true } : {}));
+}
+/** «Traer el arreglo» (spec §5.5): the fix Len published comes into the draft. */
+export function lenWatchTraer(c: ClienteDeOpenLen, id: string, incidentId: string) {
+  return pedir<{ status: "brought" | "nothing" | "handed_to_len" | "queued" }>(c, rutaLenWatch(id, "/bring"), post({ incidentId }));
 }
 export function leerVisitas(c: ClienteDeOpenLen, id: string, zona: string, signal?: AbortSignal) {
   return pedir<DatosDeVisitas>(c, `/api/voz/visitas?project=${encodeURIComponent(id)}&zona=${encodeURIComponent(zona)}`, { signal });

@@ -25,6 +25,11 @@ describe("lo que contesta publicar", () => {
     reply(409, { error: "taken" });
     expect(await postPublish("p", { subdomain: "t" })).toEqual({ kind: "error", status: 409, error: "taken" });
   });
+  // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix published from its branch isn't in the draft yet.
+  it("428 len_watch_fix_pending → «Traer el arreglo» o «Publicar igual»", async () => {
+    reply(428, { error: "len_watch_fix_pending", incidentId: "i1", branch: "len-watch/i1" });
+    expect(await postPublish("p", { subdomain: "t" })).toEqual({ kind: "len_watch_fix_pending", incidentId: "i1", branch: "len-watch/i1" });
+  });
 });
 
 describe("postPublish — Stripe (spec local 2026-10-21-stripe-integration)", () => {

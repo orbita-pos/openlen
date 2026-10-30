@@ -93,3 +93,21 @@ it("la confirmación destructiva muestra columna y cantidad afectada", async () 
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("phone");
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("29");
 });
+// Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix Len published isn't in the draft yet.
+it("el arreglo de Len Watch que falta en el borrador: «Traer el arreglo» lo trae y publica otra vez", async () => {
+  const rutas: { r: string; body: unknown }[] = [];
+  let primera = true;
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async (r, init) => {
+    if (init?.body) rutas.push({ r, body: JSON.parse(String(init.body)) });
+    if (r.endsWith("/publish") && primera) { primera = false; return Response.json({ error: "len_watch_fix_pending", incidentId: "i1", branch: "len-watch/i1" }, { status: 428 }); }
+    if (r.endsWith("/len-watch/bring")) return Response.json({ status: "brought" });
+    if (r.endsWith("/publish")) return Response.json({ url: "https://pan.openlen.app", publishedAt: "2026-10-30T12:00:00Z" });
+    return Response.json({ project });
+  } });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  expect(host.textContent).toContain("arregloPendiente");
+  await act(async () => boton("traerArreglo").click());
+  expect(rutas.map(x => x.r)).toEqual(["/api/projects/p/publish", "/api/projects/p/len-watch/bring", "/api/projects/p/publish"]);
+  expect(rutas[1]!.body).toEqual({ incidentId: "i1" });
+  expect(rutas[2]!.body).not.toHaveProperty("acceptLenWatchFix");
+});

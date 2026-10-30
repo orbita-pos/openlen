@@ -68,6 +68,16 @@ export async function incidentById(id: string): Promise<Incident | null> {
   return row ? toIncident(row) : null;
 }
 
+/** The project's incidents whose published fix the owner hasn't brought into the draft (spec §5.5), newest first. */
+export async function pendingBrings(projectId: string): Promise<Incident[]> {
+  const rows = await db
+    .select()
+    .from(schema.lenWatchIncidents)
+    .where(and(eq(schema.lenWatchIncidents.projectId, projectId), eq(schema.lenWatchIncidents.bringState, "pending")))
+    .orderBy(sql`${schema.lenWatchIncidents.createdAt} desc`);
+  return rows.map(toIncident);
+}
+
 /** Opens the project's incident, or returns null when one is already active (someone else won the race). */
 export async function openIncident(projectId: string, sample: WatchReport): Promise<Incident | null> {
   await db

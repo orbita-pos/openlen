@@ -83,6 +83,17 @@
     "autoFixHint": "Len inizia a sistemarlo appena va giù. Usa i tuoi crediti.",
     "autoPublish": "Pubblica da solo",
     "autoPublishHint": "Pubblica la correzione senza aspettarti, a meno che la revisione di sicurezza o una modifica ai dati la fermi.",
-    "ownerOnly": "Solo il proprietario del progetto può cambiarlo."
+    "ownerOnly": "Solo il proprietario del progetto può cambiarlo.",
+    "fixPending": {
+      "title": "La correzione di Len non è ancora nella tua bozza",
+      "body": "Len ha sistemato il tuo sito pubblicato in una copia a parte. Se pubblichi ora senza portare la correzione, l'errore torna.",
+      "bring": "Porta la correzione",
+      "publishAnyway": "Pubblica comunque",
+      "cancel": "Annulla",
+      "bringing": "Sto portando la correzione…",
+      "handedToLen": "Entra in conflitto con ciò che stavi modificando: Len la porta a mano. Pubblica quando ha finito.",
+      "queued": "Len sta lavorando al progetto: la portiamo appena finisce.",
+      "failed": "Non è stato possibile portare la correzione. Riprova."
+    }
   }
 }
