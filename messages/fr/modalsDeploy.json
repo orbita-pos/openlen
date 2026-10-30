@@ -74,5 +74,15 @@
       "denied": "La connexion à GitHub a été annulée.",
       "exchange": "Impossible de terminer la connexion à GitHub. Réessayez."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "Si votre site publié cesse de se charger, nous vous prévenons.",
+    "watch": "Surveiller et prévenir",
+    "autoFix": "Réparer tout seul",
+    "autoFixHint": "Len commence à le réparer dès qu'il tombe. Cela utilise vos crédits.",
+    "autoPublish": "Publier tout seul",
+    "autoPublishHint": "Publie la correction sans vous attendre, sauf si la vérification de sécurité ou un changement de données l'arrête.",
+    "ownerOnly": "Seul le propriétaire du projet peut modifier ceci."
   }
 }

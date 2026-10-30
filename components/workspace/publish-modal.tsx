@@ -23,6 +23,7 @@ import { SpeedCard } from "@/components/workspace/speed-card";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 import { PUBLISHED_BASE_HOST } from "@/lib/publish/base-host";
 import { MAX_SUBDOMAINS_PER_PLAN } from "@/lib/subdomain/limits";
+import { LenWatchSettings } from "@/components/workspace-v2/len-watch/len-watch-settings";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Publish-to-openlen.com modal.
@@ -626,6 +627,8 @@ export function PublishModal({
           )}
 
           {isPublished && <SpeedCard projectId={project.id} active={open} esApp={project.esApp === true} />}
+
+          {isPublished && open && <LenWatchSettings projectId={project.id} />}
 
           {langsFallidos.length > 0 && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 ring-1 ring-amber-200 dark:ring-amber-500/30 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-200">

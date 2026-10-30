@@ -269,6 +269,8 @@ interface LeftSidebarProps {
   pendingAttachments?: PendingAttachments | null;
   /** El proyecto es una app: el chat habla de la app, no de «tu página». */
   esApp?: boolean;
+  /** Opens the Publish modal (Len Watch's Approve, when a publish gate needs a review). */
+  onOpenPublish?: () => void;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
    *  The global-section rail icons set this; the parent renders the section. */
   activeSection?: SectionView;
@@ -333,6 +335,7 @@ export function LeftSidebar({
   onPendingDraftConsumed,
   pendingAttachments = null,
   esApp = false,
+  onOpenPublish,
   sitePages = [],
   activeSitePage = null,
   fillWidth = false,
@@ -572,6 +575,7 @@ export function LeftSidebar({
                 esApp={esApp}
                 onClose={onToggleCollapse}
                 centered={filling}
+                onOpenPublish={onOpenPublish}
               />
             )}
             {mode === "chat" && !newChat && (

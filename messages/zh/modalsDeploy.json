@@ -74,5 +74,15 @@
       "denied": "已取消连接 GitHub。",
       "exchange": "无法完成 GitHub 连接，请重试。"
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "如果你发布的网站无法加载，我们会通知你。",
+    "watch": "监控并通知",
+    "autoFix": "自动修复",
+    "autoFixHint": "网站一出问题，Len 就开始修复。会使用你的额度。",
+    "autoPublish": "自动发布",
+    "autoPublishHint": "不等你就发布修复，除非安全审查或数据更改阻止了它。",
+    "ownerOnly": "只有项目所有者可以更改此项。"
   }
 }

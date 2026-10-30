@@ -524,5 +524,15 @@
     "removeDone": "Klaar: je krijgt deze e-mail niet meer.",
     "removeInvalid": "Deze link is niet geldig.",
     "removeGone": "Deze taak bestaat niet meer."
+  },
+  "lenWatch": {
+    "working": "Je gepubliceerde site laadt niet. Len is ermee bezig.",
+    "down": "Je gepubliceerde site laadt niet.",
+    "ready": "Len heeft je site gerepareerd. De oplossing is nog niet gepubliceerd.",
+    "shipsUnpublished": "Je niet-gepubliceerde wijzigingen gaan ook live.",
+    "fix": "Repareren met Len",
+    "approve": "Oplossing publiceren",
+    "review": "Publiceren heeft je controle nodig.",
+    "failed": "Dat lukte niet. Probeer het opnieuw."
   }
 }
