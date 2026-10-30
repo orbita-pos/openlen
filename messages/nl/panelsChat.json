@@ -229,7 +229,10 @@
     },
     "steps": {
       "running": "Len is bezig",
-      "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}"
+      "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}",
+      "screenshots": "Wat Len zag",
+      "openScreenshot": "Screenshot {number} openen",
+      "screenshotCaption": "{total, plural, one {Wat Len zag} other {Wat Len zag · {number} van {total}}}"
     },
     "activity": {
       "reading": "Leest je pagina",

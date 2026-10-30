@@ -229,7 +229,10 @@
     },
     "steps": {
       "running": "Len 正在工作",
-      "done": "{count, plural, other {Len 完成了 # 个步骤}}"
+      "done": "{count, plural, other {Len 完成了 # 个步骤}}",
+      "screenshots": "Len 看到的画面",
+      "openScreenshot": "打开截图 {number}",
+      "screenshotCaption": "{total, plural, =1 {Len 看到的画面} other {Len 看到的画面 · {number}/{total}}}"
     },
     "activity": {
       "reading": "正在阅读你的页面",

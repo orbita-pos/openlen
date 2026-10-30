@@ -112,7 +112,20 @@ export function PhotoGallery({ photos }: { photos: readonly GalleryPhoto[] }) {
   );
 }
 
-function Lightbox({ photos, index, onIndex, onClose }: { photos: readonly GalleryPhoto[]; index: number; onIndex: (i: number) => void; onClose: () => void }) {
+/** The big view. `withCredit: false` for images that are not Commons photos (the screenshots of Len's steps). */
+export function Lightbox({
+  photos,
+  index,
+  onIndex,
+  onClose,
+  withCredit = true,
+}: {
+  photos: readonly GalleryPhoto[];
+  index: number;
+  onIndex: (i: number) => void;
+  onClose: () => void;
+  withCredit?: boolean;
+}) {
   const t = useTranslations("panelsChat");
   const photo = photos[index]!;
   const [credit, setCredit] = useState<CommonsCredit | null>(null);
@@ -120,11 +133,11 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: readonly Galler
   useEffect(() => {
     let live = true;
     setCredit(null);
-    void creditOf(photo.url).then((c) => live && setCredit(c));
+    if (withCredit) void creditOf(photo.url).then((c) => live && setCredit(c));
     return () => {
       live = false;
     };
-  }, [photo.url]);
+  }, [photo.url, withCredit]);
   useEffect(() => closeRef.current?.focus(), []);
   const prev = index > 0 ? () => onIndex(index - 1) : null;
   const next = index < photos.length - 1 ? () => onIndex(index + 1) : null;

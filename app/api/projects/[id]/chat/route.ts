@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { deliveredFrom } from "@/lib/agent/skills/present";
+import { screenshotsFrom } from "@/lib/agent/step-screenshots";
 import { widgetFrom } from "@/lib/agent/visuals/widget";
 import {
   appendChatMessage,
@@ -162,6 +163,11 @@ const ActionSchema = z.object({
   delivered: z
     .unknown()
     .transform((v) => deliveredFrom(v) ?? undefined)
+    .optional(),
+  /** Lo que vio Len: las capturas del paso. Se LIMPIAN (`screenshotsFrom`): sólo pasan las nuestras. */
+  screenshots: z
+    .unknown()
+    .transform((v) => screenshotsFrom(v) ?? undefined)
     .optional(),
   /**
    * QUÉ cambió, resuelto por el servidor mientras los `data-op-id` valían.

@@ -229,7 +229,10 @@
     },
     "steps": {
       "running": "Len arbeitet",
-      "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}"
+      "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}",
+      "screenshots": "Was Len gesehen hat",
+      "openScreenshot": "Screenshot {number} öffnen",
+      "screenshotCaption": "{total, plural, one {Was Len gesehen hat} other {Was Len gesehen hat · {number} von {total}}}"
     },
     "activity": {
       "reading": "Liest deine Seite",
