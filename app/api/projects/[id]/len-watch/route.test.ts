@@ -8,13 +8,13 @@ vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/len-watch/store", () => ({ getSettings: vi.fn(), saveSettings: vi.fn(), activeIncident: vi.fn() }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: vi.fn() }));
-vi.mock("@/lib/len-watch/orchestrate", () => ({ startFix: vi.fn(async () => undefined), approveFix: vi.fn() }));
+vi.mock("@/lib/len-watch/orchestrate", () => ({ startFix: vi.fn(async () => undefined), approveFix: vi.fn(), recoverIfStale: vi.fn(async (i: unknown) => i) }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { activeIncident, getSettings, saveSettings } from "@/lib/len-watch/store";
 import { projectForWatch } from "@/lib/len-watch/owner";
-import { approveFix, startFix } from "@/lib/len-watch/orchestrate";
+import { approveFix, recoverIfStale, startFix } from "@/lib/len-watch/orchestrate";
 import type { Incident } from "@/lib/len-watch/types";
 
 import { GET, PUT } from "./route";
@@ -93,6 +93,13 @@ describe("POST fix", () => {
     expect(await res.json()).toEqual({ status: "fixing" });
     expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ id: "i1" }), PROJECT);
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "owner", "editar");
+  });
+
+  it("a fix cut by a restart is recovered first, so the owner can start it again", async () => {
+    vi.mocked(activeIncident).mockResolvedValue(incident("fixing"));
+    vi.mocked(recoverIfStale).mockImplementationOnce(async (i) => ({ ...i, status: "needs_owner", reason: "interrupted" }));
+    expect((await FIX(req("POST"), ctx)).status).toBe(202);
+    expect(startFix).toHaveBeenCalledWith(expect.objectContaining({ status: "needs_owner" }), PROJECT);
   });
 
   it("nothing to fix, or already at it: 409", async () => {

@@ -3,8 +3,8 @@
 // «fix on its own» spends their credits.
 import { z } from "zod";
 
-import { incidentView, whoMay } from "@/lib/len-watch/api";
-import { activeIncident, getSettings, saveSettings } from "@/lib/len-watch/store";
+import { incidentView, standingIncident, whoMay } from "@/lib/len-watch/api";
+import { getSettings, saveSettings } from "@/lib/len-watch/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 
 export const runtime = "nodejs";
@@ -21,7 +21,7 @@ export const GET = paraLaApp(async (req: Request, { params }: { params: Promise<
   const { id } = await params;
   const who = await whoMay(req, id, "ver");
   if (who instanceof Response) return who;
-  const [settings, incident] = await Promise.all([getSettings(id), activeIncident(id)]);
+  const [settings, incident] = await Promise.all([getSettings(id), standingIncident(id)]);
   return Response.json({ enabled: true, isOwner: who.acceso.rol === "dueno", settings, incident: incident ? incidentView(incident) : null });
 });
 

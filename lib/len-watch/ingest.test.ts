@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { LoadCheck } from "./check";
-import { CHECK_INTERVAL_MS, createIngester, type IngestDeps } from "./ingest";
+import { CHECK_INTERVAL_MS, createIngester, MAX_PENDING_CHECKS, type IngestDeps } from "./ingest";
 import type { ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, WatchReport } from "./types";
 
@@ -82,6 +82,24 @@ describe("ingestWatchReport", () => {
     clock.t += 2 * 60_000;
     await ingest("p1", REPORT);
     expect(deps.check).toHaveBeenCalledTimes(2);
+  });
+
+  it(`🔴 a flood across many projects: at most ${MAX_PENDING_CHECKS} checks wait; the rest are dropped, not claimed`, async () => {
+    const releases: (() => void)[] = [];
+    const { deps } = fakeDeps();
+    deps.check.mockImplementation(() => new Promise<LoadCheck>((resolve) => releases.push(() => resolve({ loads: true, reason: "ok", errors: [] }))));
+    const ingest = createIngester(deps);
+    const all = Array.from({ length: 20 }, (_, i) => ingest(`p${i}`, REPORT));
+    for (let n = 0; n < 40 && releases.length < MAX_PENDING_CHECKS; n++) {
+      await new Promise((r) => setTimeout(r, 0));
+      releases.splice(0).forEach((release) => release());
+    }
+    await Promise.all(all);
+    expect(deps.check).toHaveBeenCalledTimes(MAX_PENDING_CHECKS);
+    // A dropped project wasn't claimed: its next report is checked.
+    deps.check.mockResolvedValue({ loads: true, reason: "ok", errors: [] });
+    await ingest("p19", REPORT);
+    expect(deps.check).toHaveBeenCalledTimes(MAX_PENDING_CHECKS + 1);
   });
 
   it("checks the page that was reported, not always the home", async () => {
