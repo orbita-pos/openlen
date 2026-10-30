@@ -22,7 +22,8 @@
     "imagesSent": "{count} images sent",
     "homePage": "Home",
     "desdeElHilo": "from the thread · {donde}",
-    "scheduled": "Scheduled task «{title}» · {when}"
+    "scheduled": "Scheduled task «{title}» · {when}",
+    "lenWatch": "Len Watch · your published site wasn't loading"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",

@@ -22,7 +22,8 @@
     "imagesSent": "{count} afbeeldingen verstuurd",
     "homePage": "Home",
     "desdeElHilo": "vanuit de draad · {donde}",
-    "scheduled": "Geplande taak «{title}» · {when}"
+    "scheduled": "Geplande taak «{title}» · {when}",
+    "lenWatch": "Len Watch · je gepubliceerde site laadde niet"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",

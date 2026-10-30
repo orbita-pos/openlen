@@ -22,7 +22,8 @@
     "imagesSent": "{count} immagini inviate",
     "homePage": "Home",
     "desdeElHilo": "dalla conversazione · {donde}",
-    "scheduled": "Attività programmata «{title}» · {when}"
+    "scheduled": "Attività programmata «{title}» · {when}",
+    "lenWatch": "Len Watch · il tuo sito pubblicato non si caricava"
   },
   "proceso": {
     "completadoEn": "Completato in <d>{duracion}</d>",

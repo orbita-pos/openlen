@@ -22,7 +22,8 @@
     "imagesSent": "{count} 枚の画像を送信しました",
     "homePage": "ホーム",
     "desdeElHilo": "スレッドから · {donde}",
-    "scheduled": "予定タスク「{title}」 · {when}"
+    "scheduled": "予定タスク「{title}」 · {when}",
+    "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",

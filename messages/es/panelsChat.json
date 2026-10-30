@@ -22,7 +22,8 @@
     "imagesSent": "{count} imágenes enviadas",
     "homePage": "Inicio",
     "desdeElHilo": "desde el hilo · {donde}",
-    "scheduled": "Tarea programada «{title}» · {when}"
+    "scheduled": "Tarea programada «{title}» · {when}",
+    "lenWatch": "Len Watch · tu sitio publicado no cargaba"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",

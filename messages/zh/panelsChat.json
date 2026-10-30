@@ -22,7 +22,8 @@
     "imagesSent": "已发送 {count} 张图片",
     "homePage": "首页",
     "desdeElHilo": "来自讨论 · {donde}",
-    "scheduled": "定时任务「{title}」 · {when}"
+    "scheduled": "定时任务「{title}」 · {when}",
+    "lenWatch": "Len Watch · 你发布的网站无法加载"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",
