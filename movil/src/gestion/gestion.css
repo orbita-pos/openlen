@@ -37,3 +37,10 @@
 .gestion-error ul { padding-left:18px; font-size:13px; line-height:1.5; }
 .app-gestion .gestion-consentir { display:flex; align-items:center; gap:10px; line-height:1.5; }
 .gestion-consentir input { width:22px; height:22px; flex-shrink:0; }
+/* Len Watch (spec local 2026-10-30-len-watch): where the fix stands and the three switches. */
+.gestion-len-watch { padding:18px; margin:22px 0; border-radius:22px; background:var(--m-glass); }
+.gestion-len-watch h3 { margin:0 0 8px; }
+.gestion-len-watch-aviso { margin:0 0 14px; padding:14px; border:1px solid var(--m-faint); border-radius:18px; }
+.app-gestion .gestion-len-watch-interruptor { display:flex; align-items:flex-start; gap:10px; margin:12px 0; line-height:1.4; }
+.gestion-len-watch-interruptor input { width:22px; height:22px; flex-shrink:0; }
+.gestion-len-watch-interruptor small { display:block; opacity:.7; font-size:13px; }

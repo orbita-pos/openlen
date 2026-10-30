@@ -160,6 +160,9 @@ const targets = [
   // Las tareas programadas de Len: scheduledTasks y scheduledTaskRuns (spec local
   // 2026-10-29-tareas-programadas). Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código.
   "scheduled-tasks-migrate",
+  // Len Watch: lenWatchSettings y lenWatchIncidents (spec local 2026-10-30-len-watch). Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, ningún reporte abre un incidente.
+  "len-watch-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴

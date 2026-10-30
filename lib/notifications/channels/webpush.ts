@@ -4,7 +4,7 @@ import { db, schema } from "@/lib/db";
 import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
 import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
-import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenTurnoEvent, NotificationChannel, NotificationEvent } from "../types";
+import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -119,6 +119,11 @@ async function appAiCapPush(event: AppAiCapEvent): Promise<PushPayload> {
   return capPush({ projectId: event.projectId, projectTitle: p?.title ?? null, percent: event.percent, spent: event.spent, cap: event.cap });
 }
 
+/** LEN WATCH (spec local 2026-10-30-len-watch): its texts come written; it opens the project's chat. */
+export function lenWatchPush(event: LenWatchEvent): PushPayload {
+  return { title: event.title, body: event.body, url: urlDelChat(event.projectId) };
+}
+
 /** Al fichero del hilo, en la lente «Código» (`?codigo=` lo abre `/new`). */
 export function urlDelHilo(projectId: string, ruta: string): string {
   return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
@@ -152,7 +157,9 @@ export const webPushChannel: NotificationChannel = {
               ? await appAiCapPush(event)
               : event.type === "email_domain" || event.type === "email_quota"
                 ? await projectEmailPush(event)
-                : {
+                : event.type === "len_watch"
+                  ? lenWatchPush(event)
+                  : {
                   title: event.senderName,
                   body: event.preview,
                   url: "/inbox?conv=" + event.conversationId,

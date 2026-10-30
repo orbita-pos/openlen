@@ -251,6 +251,34 @@ describe("runJob", () => {
     expect(deliveries.some((d) => d.status === "skipped" && d.channel === "presence")).toBe(true);
   });
 
+  it("🔴 quiet hours: a Len Watch «site down» goes through; «Len is on it» waits for the morning", async () => {
+    // The whole day is quiet, in UTC (the window ends at 23:59, so «now» falls inside it).
+    await db.insert(schema.notificationPreferences).values({ userId: UID, webPushEnabled: true, emailEnabled: true, quietFrom: "00:00", quietUntil: "23:59", timezone: "UTC" }).onConflictDoNothing();
+    if (!withinQuietHours(await loadPrefs(UID), new Date())) return; // 23:59 UTC exactly: nothing to prove this minute
+    mockWebPushSend.mockResolvedValue("sent");
+    const watch = (phase: string) => ({ type: "len_watch", projectId: "test-dispatch-proj", recipientUserId: UID, incidentId: "i1", phase, title: "t", body: "b", emailSubject: "s", emailText: "x" });
+    const insertWatch = async (phase: string) => {
+      const id = crypto.randomUUID();
+      await db.insert(schema.notificationJobs).values({ id, payload: watch(phase), status: "pending", attempts: 0, runAfter: new Date(), dedupeKey: null });
+      return id;
+    };
+    try {
+      const down = await insertWatch("down");
+      await runJob(down);
+      expect(mockWebPushSend).toHaveBeenCalledTimes(1);
+      expect((await getJob(down))?.status).toBe("done");
+
+      const fixing = await insertWatch("fixing");
+      await runJob(fixing);
+      expect(mockWebPushSend).toHaveBeenCalledTimes(1);
+      const deferred = await getJob(fixing);
+      expect(deferred?.status).toBe("pending");
+      expect(deferred!.runAfter.getTime()).toBeGreaterThan(Date.now());
+    } finally {
+      await db.delete(schema.notificationPreferences).where(eq(schema.notificationPreferences.userId, UID));
+    }
+  });
+
   it("no-op when job is already done (0-row claim)", async () => {
     mockWebPushSend.mockResolvedValue("sent");
 

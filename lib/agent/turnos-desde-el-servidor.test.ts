@@ -25,6 +25,7 @@ vi.mock("@/lib/projects/hilos", () => ({
 
 import {
   launchEmailTurn,
+  launchLenWatchTurn,
   launchScheduledTurn,
   lanzarTurnoDelHilo,
   registrarCorredorDeTurnos,
@@ -245,5 +246,49 @@ describe("a scheduled task's turn, on the server (spec local 2026-10-29-tareas-p
     await hasta(() => fails.length > 0);
     expect(fails).toEqual([{ f: { motivo: "sin créditos", code: "no_credits" }, cut: false }]);
     expect(replies).toEqual([]);
+  });
+});
+
+describe("a Len Watch turn, on the server (spec local 2026-10-30-len-watch, §5.4)", () => {
+  const origin = { kind: "len_watch" as const, incidentId: "inc-1" };
+  const launch = (o: { reply?: (t: string, c: unknown) => Promise<void>; fail?: (f: unknown, cut: boolean) => Promise<void> } = {}) =>
+    launchLenWatchTurn({
+      userId: "owner",
+      projectId: "p-watch",
+      texto: "Tu sitio publicado no carga. Arréglalo.",
+      framing: "[LEN WATCH] The published site at https://holi.openlen.app does not load",
+      origin,
+      timeZone: "America/Mexico_City",
+      locale: "es",
+      filaId: "row-1",
+      reply: o.reply ?? (async () => {}),
+      fail: o.fail ?? (async () => {}),
+      onStart: async () => {},
+    });
+
+  it("runs as the owner with the Len Watch framing and origin", async () => {
+    const corredor = vi.fn(async (_u: string, _b: Record<string, unknown>, _r: unknown, opts: { scheduled?: ScheduledRequest }) => {
+      await opts.scheduled!.onReply("Arreglado: main.jsx leía un campo vacío.", []);
+      return sse([["done", {}]]);
+    });
+    registrarCorredorDeTurnos(corredor);
+    const replies: string[] = [];
+    launch({ reply: async (t) => void replies.push(t) });
+    await hasta(() => replies.length > 0);
+    expect(corredor).toHaveBeenCalledWith(
+      "owner",
+      { projectId: "p-watch", prompt: "Tu sitio publicado no carga. Arréglalo.", turnId: "row-1", answersQuestions: false, zonaHoraria: "America/Mexico_City", idioma: "es" },
+      expect.anything(),
+      { scheduled: expect.objectContaining({ framing: "[LEN WATCH] The published site at https://holi.openlen.app does not load", origin }) },
+    );
+    expect(replies).toEqual(["Arreglado: main.jsx leía un campo vacío."]);
+  });
+
+  it("without a reply, fails with the reason", async () => {
+    registrarCorredorDeTurnos(async () => sse([["error", { message: "sin créditos", code: "no_credits" }]]));
+    const fails: unknown[] = [];
+    launch({ fail: async (f, cut) => void fails.push({ f, cut }) });
+    await hasta(() => fails.length > 0);
+    expect(fails).toEqual([{ f: { motivo: "sin créditos", code: "no_credits" }, cut: false }]);
   });
 });

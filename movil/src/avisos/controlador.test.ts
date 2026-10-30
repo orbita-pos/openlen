@@ -34,6 +34,11 @@ describe("avisos del teléfono", () => {
     await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "mencion" });
     expect(p.abiertos).toEqual(["p1"]); expect(p.destinos).toEqual(["equipo"]);
   });
+  it("un aviso de Len Watch abre Gestión, donde están el arreglo y sus interruptores", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_watch" });
+    expect(p.abiertos).toEqual(["p1"]); expect(p.destinos).toEqual(["gestion"]);
+  });
   it("una mención recibida en primer plano conserva su destino al tocar Abrir", async () => {
     const p = prueba(); await p.control.iniciar();
     p.eventos().recibir({ projectId: "p1", recipientUserId: "ana", type: "mencion" }, "Equipo", "Hola");

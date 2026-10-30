@@ -8,6 +8,7 @@ import { hub } from "@/lib/chat/hub";
 import { listAgentUserIds } from "@/lib/chat/agents";
 import { CHANNELS } from "@/lib/notifications/channels/index";
 import type { NotificationEvent, NotificationPrefs } from "./types";
+import { breaksQuietHours } from "./urgency";
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
@@ -246,7 +247,8 @@ export async function runJob(jobId: string): Promise<void> {
   const prefs = await loadPrefs(event.recipientUserId);
   const now = new Date();
 
-  if (withinQuietHours(prefs, now)) {
+  // A published site down and needing a person goes through (./urgency.ts).
+  if (withinQuietHours(prefs, now) && !breaksQuietHours(event)) {
     const delayMins = minutesUntilEndOfQuiet(prefs, now);
     // Deferring for quiet hours isn't a failed send — restore the attempt the
     // atomic claim consumed so a job created mid-quiet-window keeps all 5 tries.

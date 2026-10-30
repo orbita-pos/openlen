@@ -3684,6 +3684,7 @@ function NewV2Inner() {
           flatProjectPage={activeSitePage}
           flatProjectId={loadedProject?.id}
           soloLectura={soloLector}
+          onOpenPublish={soloLector ? undefined : onPublish}
           chatSinVer={chatSinVer}
           onFlatHtmlUpdate={(newHtml, pageOverride, untrusted) => {
             // Va en el MISMO handler que el html para que no puedan

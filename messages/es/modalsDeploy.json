@@ -74,5 +74,15 @@
       "denied": "Se canceló la conexión con GitHub.",
       "exchange": "No se pudo terminar de conectar GitHub. Inténtalo de nuevo."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "Si tu sitio publicado deja de cargar, te avisamos.",
+    "watch": "Vigilar y avisar",
+    "autoFix": "Arreglar solo",
+    "autoFixHint": "Len empieza a arreglarlo en cuanto se cae. Usa tus créditos.",
+    "autoPublish": "Publicar solo",
+    "autoPublishHint": "Publica el arreglo sin esperarte, salvo que lo pare la revisión de seguridad o un cambio de datos.",
+    "ownerOnly": "Solo el dueño del proyecto puede cambiar esto."
   }
 }

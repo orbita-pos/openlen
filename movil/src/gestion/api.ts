@@ -1,6 +1,7 @@
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
+import type { LenWatchSettings, LenWatchStatus } from "@/lib/len-watch/types";
 import type { Idioma } from "../config";
 
 export class ErrorGestion extends Error {
@@ -37,6 +38,20 @@ export function comprobarNombre(c: ClienteDeOpenLen, subdomain: string, signal?:
 export interface ConfirmacionPublicar { acceptSecurityFingerprint?: string; confirmFingerprint?: string; skipMissingSecrets?: boolean }
 export function publicar(c: ClienteDeOpenLen, id: string, subdomain: string, locale: Idioma, confirmacion: ConfirmacionPublicar = {}) {
   return pedir<{ url: string; publishedAt: string }>(c, `/api/projects/${encodeURIComponent(id)}/publish`, post({ subdomain, locale, ...confirmacion }));
+}
+// LEN WATCH (spec local 2026-10-30-len-watch): its state, the owner's switches, «Fix with Len» and Approve.
+const rutaLenWatch = (id: string, sub = "") => `/api/projects/${encodeURIComponent(id)}/len-watch${sub}`;
+export function lenWatchEstado(c: ClienteDeOpenLen, id: string, signal?: AbortSignal) {
+  return pedir<LenWatchStatus>(c, rutaLenWatch(id), { signal });
+}
+export function lenWatchAjustes(c: ClienteDeOpenLen, id: string, cambio: Partial<LenWatchSettings>) {
+  return pedir<{ settings: LenWatchSettings }>(c, rutaLenWatch(id), { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(cambio) });
+}
+export function lenWatchArreglar(c: ClienteDeOpenLen, id: string) {
+  return pedir<{ status: "fixing" }>(c, rutaLenWatch(id, "/fix"), post({}));
+}
+export function lenWatchAprobar(c: ClienteDeOpenLen, id: string, confirmarCambios = false) {
+  return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post(confirmarCambios ? { confirmChanged: true } : {}));
 }
 export function leerVisitas(c: ClienteDeOpenLen, id: string, zona: string, signal?: AbortSignal) {
   return pedir<DatosDeVisitas>(c, `/api/voz/visitas?project=${encodeURIComponent(id)}&zona=${encodeURIComponent(zona)}`, { signal });

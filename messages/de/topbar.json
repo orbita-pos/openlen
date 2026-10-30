@@ -344,5 +344,53 @@
       "continueBody": "Lade ältere Ergebnisse, um weiterzusuchen.",
       "date": "Datum"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} lädt nicht",
+        "body": "Wir haben es geöffnet und es blieb leer. Bitte Len im Chat, es zu reparieren.",
+        "subject": "{project} lädt nicht",
+        "text": "Wir haben {url} in unserem Browser geöffnet und es blieb leer, so wie es deine Besucher sehen.\n\nBitte Len im Chat des Projekts, es zu reparieren:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} lädt nicht",
+        "body": "Len ist schon dran.",
+        "subject": "{project} lädt nicht – Len ist schon dran",
+        "text": "Wir haben {url} in unserem Browser geöffnet und es blieb leer. Len sucht schon nach der Ursache; wir schreiben dir wieder, wenn es fertig ist.\n\nVerfolge es im Chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len hat {project} repariert",
+        "body": "Die Korrektur muss noch veröffentlicht werden.",
+        "subject": "Lens Korrektur für {project} ist bereit zur Veröffentlichung",
+        "text": "Len hat herausgefunden, warum {url} nicht lud, und es repariert. Es ist noch nicht veröffentlicht: Öffne das Projekt und veröffentliche die Korrektur.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} lädt wieder",
+        "body": "Len hat es repariert und die Korrektur veröffentlicht.",
+        "subject": "{project} lädt wieder",
+        "text": "Len hat {url} repariert und die Korrektur veröffentlicht. Wir haben es erneut geöffnet und es lädt.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} lädt immer noch nicht",
+        "body": "Lens Korrektur hat nicht gereicht.",
+        "subject": "{project} lädt immer noch nicht",
+        "text": "Len hat eine Korrektur veröffentlicht, aber {url} bleibt beim Öffnen weiterhin leer. Len versucht es nicht von selbst noch einmal: Sieh dir im Chat an, was er gemacht hat, und sag ihm, wie es weitergeht.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len konnte {project} nicht reparieren",
+        "body": "Len braucht dich.",
+        "subject": "Len konnte {project} nicht reparieren",
+        "text": "{url} lädt nicht und Len konnte es nicht allein reparieren.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} lädt wieder",
+        "body": "Es lädt von selbst wieder.",
+        "subject": "{project} lädt wieder",
+        "text": "{url} lädt wieder: Es kam von selbst zurück, während Len es sich ansah. Es wurde nichts veröffentlicht.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Beim Veröffentlichen gehen auch deine noch nicht veröffentlichten Änderungen online."
+    },
+    "turnPrompt": "Deine veröffentlichte Seite lädt nicht. Finde heraus, warum, und repariere sie."
   }
 }

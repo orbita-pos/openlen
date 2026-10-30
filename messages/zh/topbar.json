@@ -344,5 +344,53 @@
       "continueBody": "加载更早内容以继续搜索。",
       "date": "日期"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} 无法加载",
+        "body": "我们打开后一片空白。请在聊天中让 Len 修复。",
+        "subject": "{project} 无法加载",
+        "text": "我们在自己的浏览器中打开了 {url}，和你的访客看到的一样，一片空白。\n\n请在项目聊天中让 Len 修复：\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} 无法加载",
+        "body": "Len 已经在处理了。",
+        "subject": "{project} 无法加载——Len 正在处理",
+        "text": "我们在自己的浏览器中打开了 {url}，一片空白。Len 已经在查找原因，完成后我们会再通知你。\n\n在聊天中查看进展：\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len 修复了 {project}",
+        "body": "修复还需要发布。",
+        "subject": "Len 对 {project} 的修复已可发布",
+        "text": "Len 找到了 {url} 无法加载的原因并修复了它。修复尚未发布：打开项目并发布修复。\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} 又能加载了",
+        "body": "Len 修复并发布了修复。",
+        "subject": "{project} 又能加载了",
+        "text": "Len 修复了 {url} 并发布了修复。我们再次打开，它可以正常加载。\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} 仍然无法加载",
+        "body": "Len 的修复还不够。",
+        "subject": "{project} 仍然无法加载",
+        "text": "Len 发布了一个修复，但我们打开 {url} 时仍然一片空白。Len 不会自己再试一次：请在聊天中查看它做了什么，并告诉它下一步怎么做。\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len 无法修复 {project}",
+        "body": "Len 需要你的帮助。",
+        "subject": "Len 无法修复 {project}",
+        "text": "{url} 无法加载，Len 无法自行修复。\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} 又能加载了",
+        "body": "它自己恢复了。",
+        "subject": "{project} 又能加载了",
+        "text": "{url} 又能加载了：在 Len 查看时它自己恢复了。没有发布任何内容。\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "发布时，你尚未发布的更改也会一起发布。"
+    },
+    "turnPrompt": "你发布的网站无法加载。找出原因并修复它。"
   }
 }

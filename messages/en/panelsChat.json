@@ -22,7 +22,8 @@
     "imagesSent": "{count} images sent",
     "homePage": "Home",
     "desdeElHilo": "from the thread · {donde}",
-    "scheduled": "Scheduled task «{title}» · {when}"
+    "scheduled": "Scheduled task «{title}» · {when}",
+    "lenWatch": "Len Watch · your published site wasn't loading"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
@@ -523,5 +524,17 @@
     "removeDone": "Done: you won't get this email anymore.",
     "removeInvalid": "This link isn't valid.",
     "removeGone": "This task no longer exists."
+  },
+  "lenWatch": {
+    "working": "Your published site isn't loading. Len is on it.",
+    "down": "Your published site isn't loading.",
+    "ready": "Len fixed your site. The fix isn't published yet.",
+    "shipsUnpublished": "Your unpublished changes will go out too.",
+    "fix": "Fix with Len",
+    "approve": "Publish the fix",
+    "review": "Publishing needs your review.",
+    "failed": "That didn't work. Try again.",
+    "changed": "The draft changed after Len's fix: those edits would go out too.",
+    "publishAnyway": "Publish anyway"
   }
 }

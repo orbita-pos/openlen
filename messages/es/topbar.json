@@ -344,5 +344,53 @@
       "continueBody": "Carga los anteriores para seguir buscando.",
       "date": "Fecha"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} no carga",
+        "body": "Lo abrimos y se quedó en blanco. Pídele a Len que lo arregle desde el chat.",
+        "subject": "{project} no carga",
+        "text": "Abrimos {url} en nuestro navegador y se quedó en blanco, como lo están viendo tus visitantes.\n\nPídele a Len que lo arregle desde el chat del proyecto:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} no carga",
+        "body": "Len ya está en ello.",
+        "subject": "{project} no carga: Len ya está en ello",
+        "text": "Abrimos {url} en nuestro navegador y se quedó en blanco. Len ya está buscando la causa; te escribimos otra vez cuando termine.\n\nSíguelo en el chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len arregló {project}",
+        "body": "Falta publicar el arreglo.",
+        "subject": "El arreglo de Len para {project} está listo para publicar",
+        "text": "Len encontró por qué {url} no cargaba y lo arregló. Todavía no está publicado: abre el proyecto y publica el arreglo.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} vuelve a cargar",
+        "body": "Len lo arregló y publicó el arreglo.",
+        "subject": "{project} vuelve a cargar",
+        "text": "Len arregló {url} y publicó el arreglo. Lo abrimos otra vez y carga.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} sigue sin cargar",
+        "body": "El arreglo de Len no bastó.",
+        "subject": "{project} sigue sin cargar",
+        "text": "Len publicó un arreglo, pero {url} se sigue quedando en blanco al abrirlo. Len no lo volverá a intentar solo: mira en el chat lo que hizo y dile qué hacer.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len no pudo arreglar {project}",
+        "body": "Len te necesita.",
+        "subject": "Len no pudo arreglar {project}",
+        "text": "{url} no carga y Len no pudo arreglarlo solo.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} vuelve a cargar",
+        "body": "Volvió a cargar solo.",
+        "subject": "{project} vuelve a cargar",
+        "text": "{url} vuelve a cargar: volvió solo mientras Len lo miraba. No se publicó nada.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Al publicarlo saldrán también los cambios que aún no habías publicado."
+    },
+    "turnPrompt": "Tu sitio publicado no carga. Averigua por qué y arréglalo."
   }
 }

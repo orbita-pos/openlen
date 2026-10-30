@@ -344,5 +344,53 @@
       "continueBody": "以前の成果物を読み込んで検索を続けてください。",
       "date": "日付"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} が表示されません",
+        "body": "開いてみたところ、真っ白のままでした。チャットから Len に修正を頼んでください。",
+        "subject": "{project} が表示されません",
+        "text": "{url} を私たちのブラウザで開いたところ、訪問者に見えているとおり真っ白のままでした。\n\nプロジェクトのチャットから Len に修正を頼んでください:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} が表示されません",
+        "body": "Len がすでに対応しています。",
+        "subject": "{project} が表示されません — Len が対応中です",
+        "text": "{url} を私たちのブラウザで開いたところ、真っ白のままでした。Len がすでに原因を調べています。終わったらまたお知らせします。\n\nチャットで進み具合を確認できます:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len が {project} を修正しました",
+        "body": "あとは修正を公開するだけです。",
+        "subject": "{project} の Len の修正を公開できます",
+        "text": "Len が {url} が表示されなかった原因を見つけて修正しました。まだ公開されていません。プロジェクトを開いて修正を公開してください。\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} がまた表示されます",
+        "body": "Len が修正して公開しました。",
+        "subject": "{project} がまた表示されるようになりました",
+        "text": "Len が {url} を修正して公開しました。もう一度開いて、表示されることを確認しました。\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} はまだ表示されません",
+        "body": "Len の修正では足りませんでした。",
+        "subject": "{project} はまだ表示されません",
+        "text": "Len が修正を公開しましたが、{url} は開いてもまだ真っ白です。Len が自動でもう一度試すことはありません。チャットで Len がしたことを確認し、次にどうするか伝えてください。\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len は {project} を修正できませんでした",
+        "body": "Len があなたの助けを必要としています。",
+        "subject": "Len は {project} を修正できませんでした",
+        "text": "{url} が表示されず、Len は自力で修正できませんでした。\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} がまた表示されます",
+        "body": "自然に表示されるようになりました。",
+        "subject": "{project} がまた表示されるようになりました",
+        "text": "{url} がまた表示されるようになりました。Len が調べている間に自然に戻りました。何も公開していません。\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "公開すると、まだ公開していなかった変更も一緒に公開されます。"
+    },
+    "turnPrompt": "公開中のサイトが表示されません。原因を調べて直してください。"
   }
 }

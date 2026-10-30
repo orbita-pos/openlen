@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { db, schema } from "@/lib/db";
 import { isBot, normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
 import { parseCid, parseSource } from "@/lib/analytics/cid";
+import { lenWatchEnabled } from "@/lib/len-watch/enabled";
+import { parseWatchReport } from "@/lib/len-watch/report";
 import {
   getClientIp,
   shouldDropForRateLimit,
@@ -117,6 +119,20 @@ export async function POST(
     cid?: unknown;
     s?: unknown;
   };
+  // LEN WATCH (spec local 2026-10-30-len-watch): the page stayed blank for this visitor. Not an
+  // analytics row: the scrubbed report goes to the ingester, which confirms it in our own browser.
+  if (data.t === "f") {
+    if (lenWatchEnabled() && !isBot(req.headers.get("user-agent") ?? "")) {
+      const report = parseWatchReport(body);
+      if (report) {
+        void import("@/lib/len-watch/ingest")
+          .then((m) => m.ingestWatchReport(projectId, report))
+          .catch((err: unknown) => console.warn("[len-watch] the report couldn't be ingested", err));
+      }
+    }
+    return new Response(null, { status: 204 });
+  }
+
   const type =
     data.t === "v" ? "view" : data.t === "c" ? "click" : data.t === "o" ? "order" : null;
   if (!type) return new Response(null, { status: 204 });

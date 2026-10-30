@@ -34,6 +34,8 @@ import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
+import { lenWatchEnabled } from "@/lib/len-watch/enabled";
+import { injectWatchSnippet } from "@/lib/len-watch/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
 import { injectLogoIntoHtml } from "@/lib/branding/inject-logo";
 import { absolutizeSocialMeta } from "@/lib/branding/social-image";
@@ -659,6 +661,13 @@ async function bakeDocument(
   // Analytics tracker snippet — AFTER all other rewrites.
   if (ctx.projectId && ctx.analyticsEnabled) {
     migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId, page);
+  }
+
+  // Len Watch (spec local 2026-10-30-len-watch): the page tells OpenLen when it stays blank.
+  // Not tied to the analytics opt-out — it sends no visitor id, only that the page didn't load.
+  // Before the seal, so its inline-script hash enters the CSP like the others.
+  if (ctx.projectId && lenWatchEnabled()) {
+    migratedHtml = injectWatchSnippet(migratedHtml, ctx.projectId, page);
   }
 
   // URL self-cleaner — strips tracking params (fbclid/utm_*) from the address

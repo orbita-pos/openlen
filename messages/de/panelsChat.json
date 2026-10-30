@@ -22,7 +22,8 @@
     "imagesSent": "{count} Bilder gesendet",
     "homePage": "Startseite",
     "desdeElHilo": "aus der Unterhaltung · {donde}",
-    "scheduled": "Geplante Aufgabe «{title}» · {when}"
+    "scheduled": "Geplante Aufgabe «{title}» · {when}",
+    "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
@@ -523,5 +524,17 @@
     "removeDone": "Erledigt: Du bekommst diese E-Mail nicht mehr.",
     "removeInvalid": "Dieser Link ist ungültig.",
     "removeGone": "Diese Aufgabe gibt es nicht mehr."
+  },
+  "lenWatch": {
+    "working": "Deine veröffentlichte Seite lädt nicht. Len ist dran.",
+    "down": "Deine veröffentlichte Seite lädt nicht.",
+    "ready": "Len hat deine Seite repariert. Die Korrektur ist noch nicht veröffentlicht.",
+    "shipsUnpublished": "Deine unveröffentlichten Änderungen gehen auch online.",
+    "fix": "Mit Len reparieren",
+    "approve": "Korrektur veröffentlichen",
+    "review": "Die Veröffentlichung braucht deine Prüfung.",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "changed": "Der Entwurf hat sich nach Lens Korrektur geändert: Diese Änderungen gingen auch online.",
+    "publishAnyway": "Trotzdem veröffentlichen"
   }
 }
