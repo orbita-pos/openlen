@@ -112,6 +112,9 @@ export default defineConfig({
       "lib/len-email/**/*.test.ts",
       // Las tareas programadas de Len (spec local 2026-10-29-tareas-programadas). LISTA BLANCA.
       "lib/scheduled-tasks/**/*.test.ts",
+      // Len Watch (spec local 2026-10-30-len-watch). LISTA BLANCA.
+      "lib/len-watch/**/*.test.ts",
+      "lib/len-watch/**/*.test.tsx",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
