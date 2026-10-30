@@ -106,6 +106,8 @@ export interface AgentAction {
   widget?: VisualWidget;
   /** The files `present` delivered (spec local 2026-10-26-len-skills). */
   delivered?: readonly DeliveredFile[];
+  /** Lo que vio Len: las URLs de las capturas del paso (`screenshotsFrom`), que la tarjeta de pasos enseña siempre. */
+  screenshots?: readonly string[];
   /** En qué punto del texto de Len va ese visual (`StoredChatTurn`). */
   textOffset?: number;
   /** Cuántas ediciones aplicó esta llamada. */

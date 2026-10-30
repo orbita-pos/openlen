@@ -68,6 +68,30 @@ describe("la tarjeta de los pasos", () => {
     }
   });
 
+  // Lo que vio Len, en el chat (como Claude Code: la captura es el resultado del
+  // paso). Jesús, 29/10: «que se vea siempre», también con los pasos plegados.
+  it("🔴 las capturas de un paso se ven con los pasos plegados, y una miniatura la abre en grande", () => {
+    const url = "https://uploads.openlen.com/uploads/p/screenshot-0123456789abcdef0123456789abcdef.jpg";
+    const host = pintar([
+      { tool: "Edit", status: "done", summary: "/index.html" },
+      { tool: "view_page", status: "done", summary: "", screenshots: [url] },
+    ] as AgentAction[]);
+    expect(host.querySelector("button[aria-expanded]")?.getAttribute("aria-expanded")).toBe("false");
+    const miniatura = host.querySelector<HTMLImageElement>(`img[src="${url}"]`);
+    expect(miniatura).not.toBeNull();
+    act(() => miniatura!.closest("button")!.click());
+    const visor = document.querySelector('[role="dialog"]');
+    expect(visor?.querySelector(`img[src="${url}"]`)).not.toBeNull();
+    // Su pie dice qué es, no la etiqueta del botón que la abrió (visto en el navegador, 29/10).
+    expect(visor?.textContent).toContain("newChat.steps.screenshotCaption");
+    expect(visor?.textContent).not.toContain("newChat.steps.openScreenshot");
+  });
+
+  it("BRAZO DE CONTROL: sin capturas no hay tira de miniaturas", () => {
+    const host = pintar([{ tool: "view_page", status: "done", summary: "" } as AgentAction]);
+    expect(host.querySelector("[data-step-screenshots]")).toBeNull();
+  });
+
   it("🔴 un comando de la terminal que falla enseña el comando y «falló»", () => {
     const host = pintar([{ tool: "bash", status: "error", summary: "ls /supabase" } as AgentAction]);
     expect(host.textContent).toContain("ls /supabase");
