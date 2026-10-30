@@ -12,7 +12,7 @@ const PROJECT: ProjectForWatch = { projectId: "p1", ownerId: "u1", title: "Holi"
 
 function incident(over: Partial<Incident> = {}): Incident {
   const now = new Date();
-  return { id: "i1", projectId: "p1", status: "open", sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null, ...over };
+  return { id: "i1", projectId: "p1", status: "open", sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null, copyProjectId: null, branch: null, base: null, bringState: null, ...over };
 }
 
 function fakeDeps(o: { active?: Incident | null; settings?: Partial<LenWatchSettings>; project?: ProjectForWatch | null; check?: LoadCheck; clock?: { t: number } } = {}) {

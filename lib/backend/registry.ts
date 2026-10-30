@@ -11,6 +11,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { rootProject } from "@/lib/projects/root-project";
 import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
 import { getSubdomainOwner } from "@/lib/projects";
 import { publishBaseHost } from "@/lib/publish/deploy-url";
@@ -53,6 +54,7 @@ export interface BackendRecord {
 }
 
 export async function getBackendByProject(projectId: string): Promise<BackendRecord | null> {
+  projectId = await rootProject(projectId);
   const [row] = await db.select().from(schema.projectBackends).where(eq(schema.projectBackends.projectId, projectId)).limit(1);
   return row ?? null;
 }
@@ -73,6 +75,7 @@ export async function isBackendRef(sub: string): Promise<boolean> {
 /** El backend del proyecto, creándolo si no tiene (sin la base todavía: ésa
  *  se crea con la primera petición o la primera migración). */
 export async function ensureBackend(projectId: string): Promise<BackendRecord> {
+  projectId = await rootProject(projectId);
   const existing = await getBackendByProject(projectId);
   if (existing) return existing;
   for (let attempt = 0; attempt < 5; attempt++) {

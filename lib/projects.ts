@@ -432,7 +432,8 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
       updatedAt: schema.projects.updatedAt,
     })
     .from(schema.projects)
-    .where(donde)
+    // Never the hidden working copy of a Len Watch fix (spec local 2026-10-30-len-watch, §5.5).
+    .where(and(donde, isNull(schema.projects.parentProjectId)))
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 

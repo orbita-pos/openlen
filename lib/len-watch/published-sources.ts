@@ -15,7 +15,7 @@ import { ensureRepository } from "@/lib/git/run";
 import type { GitStore } from "@/lib/git/store";
 import { isVersionable, workingTree } from "@/lib/git/worktree";
 import { ficherosDelSitio, leerFichero, sinOpIds, type SitioDeDatos } from "@/lib/agent/ficheros/sitio";
-import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
+import type { ProjectData } from "@/lib/projects/types";
 
 export interface Snapshot {
   /** Absolute path → content, what git sees: the site's pages and the folder's versionable files. */
@@ -54,8 +54,9 @@ export async function commitPublished(store: GitStore, files: Readonly<Record<st
 
 export interface PublishedSources {
   readonly commitOid: string;
-  readonly settings: ProjectData["settings"] | null;
-  readonly app: AppDeProyecto | null;
+  /** The project's data as published, whole: a page is more than its HTML (its title, its metadata), and the
+   *  settings (forms, chat, analytics) count as unpublished changes too. A worktree is born from it. */
+  readonly data: ProjectData;
   readonly extraFiles: Record<string, string>;
 }
 
@@ -65,7 +66,7 @@ export async function recordPublishedSources(p: { projectId: string; ownerId: st
     const [{ db, schema }, { postgresStore }, { identityOf }] = await Promise.all([import("@/lib/db"), import("@/lib/git/postgres-store"), import("@/lib/git/service")]);
     const snap = snapshotFiles(p.data, p.folder);
     const commitOid = await commitPublished(postgresStore(p.projectId), snap.versioned, await identityOf(p.ownerId), new Date());
-    const row = { commitOid, settings: p.data.settings ?? null, app: p.data.app ?? null, extraFiles: snap.extra, publishedAt: new Date() };
+    const row = { commitOid, data: p.data, extraFiles: snap.extra, publishedAt: new Date() };
     await db
       .insert(schema.projectPublishedSources)
       .values({ projectId: p.projectId, ...row })
@@ -79,5 +80,5 @@ export async function readPublishedSources(projectId: string): Promise<Published
   const [{ eq }, { db, schema }] = await Promise.all([import("drizzle-orm"), import("@/lib/db")]);
   const [row] = await db.select().from(schema.projectPublishedSources).where(eq(schema.projectPublishedSources.projectId, projectId)).limit(1);
   if (!row) return null;
-  return { commitOid: row.commitOid, settings: row.settings ?? null, app: row.app ?? null, extraFiles: row.extraFiles ?? {} };
+  return { commitOid: row.commitOid, data: row.data, extraFiles: row.extraFiles ?? {} };
 }

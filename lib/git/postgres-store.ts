@@ -8,6 +8,7 @@ import { ObjectCache } from "./object-cache";
 import type { GitObject, ObjectType } from "./objects";
 import { applyChanges, type GitStore, type Index, type MergeState, type Remote, type RepoState, type Upstream } from "./store";
 import { worktreeStore } from "./worktree-store";
+import { rootProject } from "@/lib/projects/root-project";
 
 /** 64 MB for the whole process: a page can weigh half a megabyte, and the box has 3.8 GB. */
 const cache = new ObjectCache(64 * 1024 * 1024);
@@ -20,8 +21,8 @@ function remember(projectId: string, o: GitObject): void {
 /** A project's repository: its own, or — for the hidden working copy of a Len Watch fix (`parentProjectId`) — a
  *  worktree of its parent's (lib/git/worktree-store.ts). */
 export async function gitStoreFor(projectId: string): Promise<GitStore> {
-  const [row] = await db.select({ parentId: schema.projects.parentProjectId }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
-  return row?.parentId ? worktreeStore(postgresStore(row.parentId), postgresStore(projectId)) : postgresStore(projectId);
+  const root = await rootProject(projectId);
+  return root !== projectId ? worktreeStore(postgresStore(root), postgresStore(projectId)) : postgresStore(projectId);
 }
 
 export function postgresStore(projectId: string): GitStore {

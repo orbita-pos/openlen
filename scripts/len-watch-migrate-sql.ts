@@ -32,6 +32,11 @@ export const CREATE_LEN_WATCH: readonly string[] = [
   );`,
   // A table created before the column existed gets it too (idempotent).
   `ALTER TABLE "lenWatchIncidents" ADD COLUMN IF NOT EXISTS "fixStamp" text;`,
+  // The fix's worktree (§5.5): its working copy, its branch, the commit it was cut from, and whether it was brought.
+  `ALTER TABLE "lenWatchIncidents" ADD COLUMN IF NOT EXISTS "copyProjectId" text;`,
+  `ALTER TABLE "lenWatchIncidents" ADD COLUMN IF NOT EXISTS "branch" text;`,
+  `ALTER TABLE "lenWatchIncidents" ADD COLUMN IF NOT EXISTS "base" text;`,
+  `ALTER TABLE "lenWatchIncidents" ADD COLUMN IF NOT EXISTS "bringState" text;`,
   // The lock of «one active incident per project»: a second open loses the race and inserts nothing.
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenWatchIncidents_active_idx" ON "lenWatchIncidents" ("projectId") WHERE "status" <> 'resolved';`,
   `CREATE INDEX IF NOT EXISTS "lenWatchIncidents_resolvedAt_idx" ON "lenWatchIncidents" ("resolvedAt") WHERE "resolvedAt" IS NOT NULL;`,
@@ -42,8 +47,7 @@ export const CREATE_LEN_WATCH: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS "projectPublishedSources" (
     "projectId" text PRIMARY KEY,
     "commitOid" text NOT NULL,
-    "settings" jsonb,
-    "app" jsonb,
+    "data" jsonb NOT NULL,
     "extraFiles" jsonb NOT NULL DEFAULT '{}'::jsonb,
     "publishedAt" timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT "projectPublishedSources_projectId_projects_id_fk"

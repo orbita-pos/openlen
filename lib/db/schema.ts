@@ -20,8 +20,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import type { AppDeProyecto, ProjectData, TurnOrigin } from "@/lib/projects/types";
-import type { IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
+import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
+import type { BringState, IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
 import type { ScheduleRecord } from "@/lib/scheduled-tasks/deepseek/types";
@@ -2400,6 +2400,10 @@ export const lenWatchIncidents = pgTable(
     resolvedAt: timestamp("resolvedAt", { mode: "date", withTimezone: true }),
     resolution: text("resolution").$type<Resolution>(),
     fixStamp: text("fixStamp"),
+    copyProjectId: text("copyProjectId"),
+    branch: text("branch"),
+    base: text("base"),
+    bringState: text("bringState").$type<BringState>(),
   },
   // Its indexes live in the migration's SQL (scripts/len-watch-migrate-sql.ts), the partial unique
   // one on "projectId" WHERE status <> 'resolved' among them: it is the lock of «one active incident
@@ -2407,12 +2411,11 @@ export const lenWatchIncidents = pgTable(
 );
 
 /** What the last publish published (spec local 2026-10-30-len-watch, §5.5): a commit off the project's branches, the
- *  settings and the app it published, and the folder's files git never sees (lib/len-watch/published-sources.ts). */
+ *  project's data as published, and the folder's files git never sees (lib/len-watch/published-sources.ts). */
 export const projectPublishedSources = pgTable("projectPublishedSources", {
   projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
   commitOid: text("commitOid").notNull(),
-  settings: jsonb("settings").$type<ProjectData["settings"]>(),
-  app: jsonb("app").$type<AppDeProyecto>(),
+  data: jsonb("data").$type<ProjectData>().notNull(),
   extraFiles: jsonb("extraFiles").$type<Record<string, string>>().notNull().default({}),
   publishedAt: timestamp("publishedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });

@@ -25,7 +25,7 @@ const ctx = { params: Promise.resolve({ id: "p1" }) };
 const SETTINGS = { autoFix: false, autoPublish: false, muted: false, locale: null };
 const PROJECT = { projectId: "p1", ownerId: "owner", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "UTC" };
 const now = new Date("2026-10-30T12:00:00Z");
-const incident = (status: Incident["status"]): Incident => ({ id: "i1", projectId: "p1", status, sample: { message: "boom", file: null, line: null, col: null, page: null }, reports: 3, summary: "Arreglado.", reason: null, shipsUnpublished: false, turnRowId: "row-1", createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null });
+const incident = (status: Incident["status"]): Incident => ({ id: "i1", projectId: "p1", status, sample: { message: "boom", file: null, line: null, col: null, page: null }, reports: 3, summary: "Arreglado.", reason: null, shipsUnpublished: false, turnRowId: "row-1", createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null, copyProjectId: null, branch: null, base: null, bringState: null });
 
 const req = (method: string, body?: unknown) => new Request("https://openlen.com/api/projects/p1/len-watch", { method, ...(body ? { body: JSON.stringify(body) } : {}) });
 

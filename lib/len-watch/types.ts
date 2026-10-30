@@ -69,4 +69,15 @@ export interface Incident {
   /** What the project's content looked like when Len's fix was ready: Approve compares against it to
    *  ask before publishing edits that came after (like a review dismissed by new commits). */
   fixStamp: string | null;
+  /** The fix's worktree (spec §5.5): its hidden working copy, while it lives… */
+  copyProjectId: string | null;
+  /** …its branch, `len-watch/<incident>`… */
+  branch: string | null;
+  /** …the published commit it was cut from… */
+  base: string | null;
+  /** …and whether the owner brought the fix into their draft. */
+  bringState: BringState | null;
 }
+
+/** pending = published, not in the draft yet · brought = in the draft · declined = «Publish anyway», not asked again. */
+export type BringState = "pending" | "brought" | "declined";
