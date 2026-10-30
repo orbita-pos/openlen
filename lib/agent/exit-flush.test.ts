@@ -67,6 +67,42 @@ describe("the exit after a SIGTERM waits for the live turns", () => {
     expect(lines).toEqual(["[exit] 1 live turn(s) were still writing after 2000 ms: exiting anyway; the next boot closes what they left"]);
   });
 
+  it("🔴 Next never exits while a connection stays open: the deadline exits anyway, and the live turns write first", async () => {
+    vi.useFakeTimers();
+    const { proc, exits, signal } = fakeProcess();
+    const flush = vi.fn(async () => {});
+    register(flush);
+    const lines: string[] = [];
+    installExitFlush({ proc, graceMs: 10_000, log: (l) => lines.push(l) });
+    signal("SIGTERM");
+    // A workspace's open stream, or the live turn's own response: Next's server.close() never ends, so it never exits.
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(exits).toEqual([]);
+    expect(flush).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(flush).toHaveBeenCalledTimes(1);
+    expect(exits).toEqual([0]);
+    expect(lines[0]).toBe("[exit] connections still open 10000 ms after the signal: exiting without waiting for them");
+    expect(lines[1]).toMatch(/^\[exit\] 1 live turn\(s\) wrote what they had before the exit \(\d+ ms\)$/);
+  });
+
+  it("the deadline stays quiet once Next exited on its own", async () => {
+    vi.useFakeTimers();
+    const { proc, exits, signal } = fakeProcess();
+    const lines: string[] = [];
+    installExitFlush({ proc, graceMs: 10_000, log: (l) => lines.push(l) });
+    signal("SIGTERM");
+    proc.exit(0);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(exits).toEqual([0]);
+    expect(lines).toEqual([]);
+  });
+
+  it("the deadline and the flush limit end well inside systemd's 90 s before its SIGKILL", async () => {
+    const { EXIT_GRACE_MS, EXIT_FLUSH_TIMEOUT_MS } = await import("./exit-flush");
+    expect(EXIT_GRACE_MS + EXIT_FLUSH_TIMEOUT_MS).toBeLessThan(90_000 / 2);
+  });
+
   it("with no live turn the exit is the one it always was, at once", () => {
     const { proc, exits, signal } = fakeProcess();
     installExitFlush({ proc, log: () => {} });
