@@ -217,7 +217,7 @@ async function defaultDeps(): Promise<OrchestratorDeps> {
   defaults = {
     store,
     project: owner.projectForWatch,
-    check: (url) => checkPublishedLoads(url),
+    check: (url) => checkPublishedLoads(url, { allowOrigins: owner.allowedCheckOrigins() }),
     notify: (event, key) => scheduleNotification(event, key),
     launch: turns.launchLenWatchTurn,
     publish: gates.publishThroughGates,
