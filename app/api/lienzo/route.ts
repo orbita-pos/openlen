@@ -1,12 +1,7 @@
-import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db, schema } from "@/lib/db";
-import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
-import { guardarDocumento } from "@/lib/lienzo/almacen";
-import { documentoDeVista } from "@/lib/lienzo/documento";
-import { lienzoApagado, urlDelDocumento } from "@/lib/lienzo/host";
+import { lienzoApagado } from "@/lib/lienzo/host";
+import { openCanvasDocument } from "@/lib/lienzo/open-document";
 import { MAX_HTML_BYTES } from "@/lib/projects/limites-html";
-import { validatePageSlug } from "@/lib/projects/site-pages";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,7 +14,9 @@ import { accesoAlProyecto } from "@/lib/projects/acceso";
 //
 // El `html` llega YA instrumentado por `derive()` (los scripts del editor). Aquí
 // se le pasa `documentoDeVista` —logo, módulos, sello—, que no puede correr en
-// el cliente porque es Rust. Los ajustes salen de la base, no del cliente.
+// el cliente porque es Rust. Los ajustes salen de la base, no del cliente. Lo
+// hace `openCanvasDocument`, el mismo que abre la vista previa de la app del
+// teléfono (`/api/movil/canvas`).
 //
 // Autorización: sesión + propiedad, el mismo par 401/404 que las demás rutas
 // de proyecto.
@@ -53,60 +50,13 @@ export async function POST(req: Request): Promise<Response> {
   // El lienzo lo ven el dueño y sus miembros (lib/projects/acceso.ts).
   const acceso = await accesoAlProyecto(body.projectId, session.user.id);
   if (!acceso) return json({ error: "no_encontrado" }, 404);
-  const [fila] = await db
-    .select({
-      data: schema.projects.data,
-      title: schema.projects.title,
-      subdomain: schema.projects.subdomain,
-      logoUrl: schema.projects.logoUrl,
-    })
-    .from(schema.projects)
-    .where(and(eq(schema.projects.id, body.projectId), eq(schema.projects.userId, acceso.duenoId)))
-    .limit(1);
-  if (!fila) return json({ error: "no_encontrado" }, 404);
-
-  let pagina: string | null = null;
-  if (typeof body.pagina === "string" && body.pagina.length > 0) {
-    const check = validatePageSlug(body.pagina);
-    if (!check.ok || !fila.data?.pages?.[check.slug]) return json({ error: "no_encontrado" }, 404);
-    pagina = check.slug;
-  }
-
-  // Sin dominio donde servirlo no se hornea ni se guarda nada: se dice. La URL
-  // se construye con el id REAL, así que la comprobación va con la función
-  // pura antes de gastar trabajo, y el resultado final se vuelve a comprobar.
-  const hostDeLaPeticion = req.headers.get("host");
-  const construir = (docId: string) =>
-    urlDelDocumento({ projectId: body.projectId as string, docId, pagina, hostDeLaPeticion });
-  if (construir("comprobacion") === null) return json({ error: "sin_host" }, 503);
-
-  // UNA APP WEB (spec local 2026-10-07-apps): su documento lleva el import map
-  // y el almacén recuerda la app y su `import.meta.env`, que es lo que
-  // `/api/lienzo/site` necesita para compilar sus módulos.
-  const app = fila.data?.app ?? null;
-  const entorno = app ? await entornoPublicoDeLaApp(body.projectId, "draft") : undefined;
-  const html = documentoDeVista(body.html, {
+  const abierto = await openCanvasDocument({
     projectId: body.projectId,
-    title: fila.title ?? null,
-    sub: fila.subdomain ?? null,
-    pagina,
-    settings: fila.data?.settings,
-    logoUrl: fila.logoUrl ?? null,
-    app,
+    ownerId: acceso.duenoId,
+    personId: session.user.id,
+    page: typeof body.pagina === "string" && body.pagina.length > 0 ? body.pagina : null,
+    html: body.html,
+    requestHost: req.headers.get("host"),
   });
-  const docId = guardarDocumento({
-    html,
-    projectId: body.projectId,
-    userId: session.user.id,
-    pagina,
-    app,
-    ...(entorno ? { entorno } : {}),
-  });
-  const url = construir(docId);
-  // ⚠️ ESTE `null` NO PUEDE OCURRIR, y se deja a propósito. `urlDelDocumento`
-  // sólo depende del projectId y del entorno, no del docId, así que si la
-  // comprobación de arriba pasó ésta pasa también: es defensa en profundidad
-  // contra un cambio futuro que haga la URL dependiente del id, no una rama
-  // viva. Dicho aquí para que nadie gaste tiempo buscando cómo llegar.
-  return url === null ? json({ error: "sin_host" }, 503) : json({ url }, 200);
+  return abierto.ok ? json({ url: abierto.url }, 200) : json({ error: abierto.error }, abierto.status);
 }

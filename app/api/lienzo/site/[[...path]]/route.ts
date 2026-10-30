@@ -139,7 +139,8 @@ export async function GET(
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
-      "content-security-policy": `frame-ancestors ${frameAncestors()}`,
+      // El taller, y la app del teléfono sólo en lo que se abrió para ella.
+      "content-security-policy": `frame-ancestors ${[frameAncestors(), ...(doc.framedBy ?? [])].join(" ")}`,
       // La misma que la publicada (infra/caddy/Caddyfile, bloque *.openlen.app).
       "permissions-policy": PAGE_PERMISSIONS_POLICY,
       "referrer-policy": "no-referrer",

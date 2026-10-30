@@ -17,6 +17,10 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/lienzo/documento", () => ({ documentoDeVista: mocks.documento }));
 vi.mock("@/lib/lienzo/almacen", () => ({ guardarDocumento: mocks.guardar }));
+// El `import.meta.env` de una app sale de la base: aquí no hay app, y sin esto
+// el módulo real pedía al doble de drizzle un `sql` que no tiene y el fichero no
+// llegaba a cargar.
+vi.mock("@/lib/apps/entorno", () => ({ entornoPublicoDeLaApp: vi.fn(async () => ({})) }));
 
 import { POST } from "./route";
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";

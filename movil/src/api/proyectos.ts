@@ -31,7 +31,17 @@ export async function leerProyecto(c: ClienteDeOpenLen, id: string): Promise<Pro
   return { id: p.id, title: p.title, subdomain: p.subdomain, publicado: p.publishedAt !== null, historial: p.chatHistory };
 }
 
+/** La vista previa es el LIENZO, el mismo que enseña la web: una app sólo corre
+ *  ahí (el enlace para compartir sirve su cascarón vacío). Sin lienzo —un
+ *  servidor de antes o con el lienzo apagado—, el enlace para compartir. */
 export async function enlaceDeVistaPrevia(c: ClienteDeOpenLen, base: string, id: string): Promise<string> {
+  const canvas = await c
+    .pedir("/api/movil/canvas", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId: id }) })
+    .catch(() => null);
+  if (canvas?.ok) {
+    const { url } = (await canvas.json()) as { url?: unknown };
+    if (typeof url === "string") return url;
+  }
   const j = await json<{ enabled: boolean; token: string; __muestraHtml?: string }>(
     c.pedir(`/api/projects/${encodeURIComponent(id)}/preview`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }),
   );

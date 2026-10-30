@@ -57,6 +57,9 @@ export interface DocumentoGuardado {
   readonly app?: AppDeProyecto | null;
   /** Su `import.meta.env` público (`lib/apps/entorno.ts`). */
   readonly entorno?: Readonly<Record<string, string>>;
+  /** Quién más puede enmarcarlo, además del taller: la app del teléfono
+   *  (`/api/movil/canvas`). Ausente = sólo el taller. */
+  readonly framedBy?: readonly string[];
   readonly creado: number;
   ultimoUso: number;
 }
@@ -120,6 +123,7 @@ export function guardarDocumento(
     pagina: string | null;
     app?: AppDeProyecto | null;
     entorno?: Readonly<Record<string, string>>;
+    framedBy?: readonly string[];
   },
   ahora = Date.now(),
 ): string {

@@ -12,6 +12,7 @@ import { Cara } from "../cara";
 import { Icono, type NombreDeIcono } from "../iconos";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { enlaceDeVistaPrevia, leerProyecto, listarProyectos, type ProyectoAbierto, type ProyectoEnLista } from "../api/proyectos";
+import { ALLOW_REMOTO, SANDBOX_REMOTO } from "@/components/workspace-v2/sandbox-del-lienzo";
 import { loQueDijoLen, ultimoTurnoDeLen } from "../hoja";
 import { plataforma } from "../sesion/plataforma";
 import { Cargando } from "./cargando";
@@ -205,6 +206,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               key={recarga}
               className="app-vista"
               src={vista}
+              // Las banderas del lienzo de la web: lo que la publicada puede, sin sacarte de la app.
+              sandbox={SANDBOX_REMOTO}
+              allow={ALLOW_REMOTO}
               title={p?.title ?? "Vista previa"}
               style={tamano === "cel" ? undefined : { width: ANCHO[tamano], transform: `scale(${390 / ANCHO[tamano]})`, transformOrigin: "0 0", height: `calc((100% - var(--app-barra)) * ${ANCHO[tamano] / 390})` }}
               onError={() => setVistaFallo(true)}
