@@ -87,7 +87,9 @@ export function registrarCorredorDeTurnos(f: Corredor): void {
 const colas = new Map<string, Promise<unknown>>();
 const ESPERA_MAX_MS = 30 * 60_000;
 
-async function esperarALen(projectId: string): Promise<boolean> {
+/** Waits for Len's live turn in the project to end (up to half an hour); false if it never did. «Traer el arreglo»
+ *  waits on it too (lib/len-watch/bring.ts). */
+export async function esperarALen(projectId: string): Promise<boolean> {
   const hasta = Date.now() + ESPERA_MAX_MS;
   while (hayTurnoVivoEnElProyecto(projectId)) {
     if (Date.now() > hasta) return false;

@@ -9,17 +9,20 @@ vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/len-watch/store", () => ({ getSettings: vi.fn(), saveSettings: vi.fn(), activeIncident: vi.fn() }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: vi.fn() }));
 vi.mock("@/lib/len-watch/orchestrate", () => ({ startFix: vi.fn(async () => undefined), approveFix: vi.fn(), recoverIfStale: vi.fn(async (i: unknown) => i) }));
+vi.mock("@/lib/len-watch/bring", () => ({ bringFix: vi.fn() }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { activeIncident, getSettings, saveSettings } from "@/lib/len-watch/store";
 import { projectForWatch } from "@/lib/len-watch/owner";
 import { approveFix, recoverIfStale, startFix } from "@/lib/len-watch/orchestrate";
+import { bringFix } from "@/lib/len-watch/bring";
 import type { Incident } from "@/lib/len-watch/types";
 
 import { GET, PUT } from "./route";
 import { POST as FIX } from "./fix/route";
 import { POST as APPROVE } from "./approve/route";
+import { POST as BRING } from "./bring/route";
 
 const ctx = { params: Promise.resolve({ id: "p1" }) };
 const SETTINGS = { autoFix: false, autoPublish: false, muted: false, locale: null };
@@ -141,5 +144,27 @@ describe("POST approve", () => {
   it("no incident: 409", async () => {
     expect((await APPROVE(req("POST"), ctx)).status).toBe(409);
     expect(approveFix).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST bring («Traer el arreglo», spec §5.5)", () => {
+  it("whoever can edit brings it, as themselves; the answer says what happened", async () => {
+    vi.mocked(bringFix).mockResolvedValue({ status: "brought" });
+    const res = await BRING(req("POST", { incidentId: "i1" }), ctx);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "brought" });
+    expect(exigirAcceso).toHaveBeenCalledWith("p1", "owner", "editar");
+    expect(bringFix).toHaveBeenCalledWith({ projectId: "p1", incidentId: "i1", actorId: "owner" });
+  });
+
+  it("someone who can't edit: their 403/404, nothing brought", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue(new Response(null, { status: 404 }));
+    expect((await BRING(req("POST", { incidentId: "i1" }), ctx)).status).toBe(404);
+    expect(bringFix).not.toHaveBeenCalled();
+  });
+
+  it("without an incident: 400", async () => {
+    expect((await BRING(req("POST", {}), ctx)).status).toBe(400);
+    expect(bringFix).not.toHaveBeenCalled();
   });
 });

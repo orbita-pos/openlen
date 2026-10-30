@@ -391,6 +391,7 @@
       },
       "shipsUnpublished": "Publishing it will also publish the changes you hadn't published yet."
     },
-    "turnPrompt": "Your published site isn't loading. Find out why and fix it."
+    "turnPrompt": "Your published site isn't loading. Find out why and fix it.",
+    "bringPrompt": "Bring the fix you published into my draft, keeping what I was editing."
   }
 }

@@ -391,6 +391,7 @@
       },
       "shipsUnpublished": "Beim Veröffentlichen gehen auch deine noch nicht veröffentlichten Änderungen online."
     },
-    "turnPrompt": "Deine veröffentlichte Seite lädt nicht. Finde heraus, warum, und repariere sie."
+    "turnPrompt": "Deine veröffentlichte Seite lädt nicht. Finde heraus, warum, und repariere sie.",
+    "bringPrompt": "Übernimm die veröffentlichte Korrektur in meinen Entwurf, ohne zu verlieren, was ich gerade bearbeitet habe."
   }
 }
