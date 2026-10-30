@@ -7,13 +7,13 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { bannerState, patchFor, settingsRows, type SettingKey } from "@/components/workspace-v2/len-watch/view-model";
 import type { LenWatchStatus } from "@/lib/len-watch/types";
 import type { Idioma } from "../config";
-import { ErrorGestion, lenWatchAjustes, lenWatchAprobar, lenWatchArreglar, lenWatchEstado } from "./api";
+import { ErrorGestion, lenWatchAjustes, lenWatchAprobar, lenWatchArreglar, lenWatchEstado, lenWatchTraer } from "./api";
 
 export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpenLen; projectId: string; idioma: Idioma }) {
   const t = useTranslations("movil.lenWatch");
   const [estado, setEstado] = useState<LenWatchStatus | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const [nota, setNota] = useState<"review" | "failed" | "changed" | null>(null);
+  const [nota, setNota] = useState<"review" | "failed" | "changed" | "handedToLen" | "queued" | "bringFailed" | null>(null);
   const cargar = async (signal?: AbortSignal) => {
     const e = await lenWatchEstado(cliente, projectId, signal).catch(() => null);
     if (!signal?.aborted && e?.enabled) setEstado(e);
@@ -26,7 +26,16 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
   }, [cliente, projectId]);
   if (!estado) return null;
 
-  const vista = bannerState(estado.incident);
+  const vista = bannerState(estado.incident, estado.pendingFix ?? null);
+  // «Traer el arreglo» (spec §5.5): the fix Len published from its branch comes into the draft.
+  const traer = async (incidentId: string) => {
+    setOcupado(true);
+    setNota(null);
+    const r = await lenWatchTraer(cliente, projectId, incidentId).catch(() => null);
+    setNota(!r ? "bringFailed" : r.status === "handed_to_len" ? "handedToLen" : r.status === "queued" ? "queued" : null);
+    setOcupado(false);
+    await cargar();
+  };
   const actuar = async (accion: "fix" | "approve", confirmarCambios = false) => {
     setOcupado(true);
     setNota(null);
@@ -50,7 +59,12 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
 
   return <section className="gestion-len-watch" aria-label={t("title")}>
     <h3>{t("title")}</h3>
-    {vista.kind !== "hidden" && <div className="gestion-len-watch-aviso" role="status">
+    {vista.kind === "bring" && <div className="gestion-len-watch-aviso" role="status">
+      <p><strong>{t("bringTitle")}</strong> {t("bringBody")}</p>
+      <button className="gestion-principal" disabled={ocupado} onClick={() => void traer(vista.incidentId)}>{ocupado ? t("bringing") : t("bring")}</button>
+      {(nota === "handedToLen" || nota === "queued" || nota === "bringFailed") && <p>{t(nota)}</p>}
+    </div>}
+    {vista.kind !== "hidden" && vista.kind !== "bring" && <div className="gestion-len-watch-aviso" role="status">
       <p>{vista.kind === "working" ? t("working") : vista.kind === "down" ? t("down") : t("ready")}{vista.kind === "ready" && vista.shipsUnpublished && <> {t("shipsUnpublished")}</>}</p>
       {vista.kind !== "working" && <button className="gestion-principal" disabled={ocupado} onClick={() => void actuar(vista.kind === "ready" ? "approve" : "fix")}>{vista.kind === "ready" ? t("approve") : t("fix")}</button>}
       {nota === "review" && <p>{t("review")}</p>}

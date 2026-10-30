@@ -24,6 +24,15 @@ describe("bannerState", () => {
   it("a fix waiting: Approve, saying when unpublished changes would go too", () => {
     expect(bannerState({ status: "fix_ready", shipsUnpublished: true })).toEqual({ kind: "ready", action: "approve", shipsUnpublished: true });
   });
+
+  // Spec §5.5: a fix published from its branch that the draft doesn't have yet.
+  it("a fix to bring into the draft: «Traer el arreglo», unless something about the site is still going on", () => {
+    const pending = { incidentId: "i1", branch: "len-watch/i1" };
+    expect(bannerState(null, pending)).toEqual({ kind: "bring", incidentId: "i1" });
+    expect(bannerState({ status: "resolved", shipsUnpublished: false }, pending)).toEqual({ kind: "bring", incidentId: "i1" });
+    expect(bannerState({ status: "fixing", shipsUnpublished: false }, pending)).toEqual({ kind: "working" });
+    expect(bannerState(null, null)).toEqual({ kind: "hidden" });
+  });
 });
 
 describe("settingsRows", () => {
