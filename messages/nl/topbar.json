@@ -390,6 +390,7 @@
         "text": "{url} laadt weer: het kwam vanzelf terug terwijl Len ernaar keek. Er is niets gepubliceerd.\n\n{detail}\n\n{chatUrl}"
       },
       "shipsUnpublished": "Bij het publiceren gaan ook je nog niet gepubliceerde wijzigingen live."
-    }
+    },
+    "turnPrompt": "Je gepubliceerde site laadt niet. Zoek uit waarom en repareer het."
   }
 }
