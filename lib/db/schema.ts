@@ -194,6 +194,13 @@ export const projects = pgTable(
     ),
     // How many times THIS project was remixed by others.
     remixCount: integer("remixCount").notNull().default(0),
+    // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): set, this project is the hidden working copy of a fix —
+    // a worktree of the parent, on its branch `len-watch/<incident>`. Never listed, never published under its own
+    // name; it goes with its parent. `npm run len-watch:migrate`.
+    parentProjectId: text("parentProjectId").references(
+      (): AnyPgColumn => projects.id,
+      { onDelete: "cascade" },
+    ),
     // When it entered the feed (feed "recent" ordering). Null = never public.
     listedAt: timestamp("listedAt", { mode: "date" }),
     // Short labels surfaced on the list cards. Auto-populated from the

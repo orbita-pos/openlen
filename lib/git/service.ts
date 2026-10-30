@@ -7,7 +7,7 @@ import { db, schema } from "@/lib/db";
 import { githubCredentials } from "@/lib/integrations/github-app-store";
 import type { GitIdentity, GitRunResult } from "./command";
 import { gitIdentity } from "./identity";
-import { postgresStore } from "./postgres-store";
+import { gitStoreFor } from "./postgres-store";
 import { runGit } from "./run";
 import { formatGitStatusBlock } from "./status-block";
 
@@ -41,7 +41,7 @@ export async function gitCli(p: GitCliInput): Promise<GitRunResult> {
     const { identity, owner } = await identities(p.ownerId, p.personId);
     return await runGit(
       {
-        store: postgresStore(p.projectId),
+        store: await gitStoreFor(p.projectId),
         files: p.files,
         cwd: p.cwd,
         identity,
@@ -68,7 +68,7 @@ export async function gitStatusForTurn(p: {
   readonly loadFiles: () => Promise<Record<string, string>>;
 }): Promise<string | null> {
   const [files, who] = await Promise.all([p.loadFiles(), identities(p.ownerId, p.personId)]);
-  const input = { store: postgresStore(p.projectId), files, cwd: "/", identity: who.identity, owner: who.owner, now: () => new Date() };
+  const input = { store: await gitStoreFor(p.projectId), files, cwd: "/", identity: who.identity, owner: who.owner, now: () => new Date() };
   const status = await runGit(input, ["--no-optional-locks", "status", "--short"]);
   const log = await runGit(input, ["--no-optional-locks", "log", "--oneline", "-n", "5"]);
   const branch = await runGit(input, ["--no-optional-locks", "branch", "--show-current"]);

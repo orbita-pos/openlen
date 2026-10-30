@@ -35,6 +35,9 @@ export const CREATE_LEN_WATCH: readonly string[] = [
   // The lock of «one active incident per project»: a second open loses the race and inserts nothing.
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenWatchIncidents_active_idx" ON "lenWatchIncidents" ("projectId") WHERE "status" <> 'resolved';`,
   `CREATE INDEX IF NOT EXISTS "lenWatchIncidents_resolvedAt_idx" ON "lenWatchIncidents" ("resolvedAt") WHERE "resolvedAt" IS NOT NULL;`,
+  // A fix's hidden working copy points at its parent (§5.5): a worktree, gone with the project.
+  `ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "parentProjectId" text REFERENCES "projects"("id") ON DELETE CASCADE;`,
+  `CREATE INDEX IF NOT EXISTS "projects_parentProjectId_idx" ON "projects" ("parentProjectId") WHERE "parentProjectId" IS NOT NULL;`,
   // What the last publish published (§5.5): the worktree of a fix is cut from it.
   `CREATE TABLE IF NOT EXISTS "projectPublishedSources" (
     "projectId" text PRIMARY KEY,
