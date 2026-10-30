@@ -51,7 +51,7 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       </div>
       {!soloLectura && view.kind !== "working" && (
         <div className="flex items-center gap-2 pl-[22px]">
-          <button type="button" disabled={busy} onClick={() => void act(view.kind === "ready" ? "approve" : "fix")} className="rounded-lg bg-[var(--nc-accent)] px-2.5 py-1 font-medium text-white disabled:opacity-60">
+          <button type="button" disabled={busy} onClick={() => void act(view.kind === "ready" ? "approve" : "fix")} className="inline-flex h-7 items-center rounded-md bg-[var(--accent-strong)] px-3 text-[11.5px] font-medium text-white shadow-coral transition hover:brightness-105 disabled:opacity-50">
             {view.kind === "ready" ? t("lenWatch.approve") : t("lenWatch.fix")}
           </button>
           {note === "review" && <span className="fg-muted">{t("lenWatch.review")}</span>}
@@ -61,7 +61,7 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       {!soloLectura && note === "changed" && (
         <div className="flex flex-col items-start gap-1.5 pl-[22px]">
           <span className="fg-muted">{t("lenWatch.changed")}</span>
-          <button type="button" disabled={busy} onClick={() => void act("approve", true)} className="rounded-lg border bd px-2.5 py-1 font-medium fg disabled:opacity-60">
+          <button type="button" disabled={busy} onClick={() => void act("approve", true)} className="inline-flex h-7 items-center rounded-md border bd px-3 text-[11.5px] font-medium fg hover:bg-hover disabled:opacity-50">
             {t("lenWatch.publishAnyway")}
           </button>
         </div>
