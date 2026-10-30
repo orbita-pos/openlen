@@ -53,6 +53,18 @@ export function useSkillSlash(text: string, setText: (t: string) => void, ref: R
   const open = typing !== null && typing.from !== closedAt;
   const options = open ? skillOptions(typing.query, skills) : [];
   useEffect(() => setChosen(0), [typing?.query]);
+  // Like Claude Code's `/` menu, the visible window follows the chosen skill: the list scrolls just enough
+  // to keep it in view (only the list, never the chat around it).
+  const listRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const item = list?.children[chosen] as HTMLElement | undefined;
+    if (!list || !item) return;
+    const top = item.offsetTop;
+    const bottom = top + item.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [chosen, open, options.length]);
   useEffect(() => {
     if (typing === null) setClosedAt(null);
   }, [typing]);
@@ -88,7 +100,7 @@ export function useSkillSlash(text: string, setText: (t: string) => void, ref: R
   const menu: ReactNode = !open ? null : options.length === 0 ? (
     <span className="mt-1 block rounded-md border bd bg-app px-2 py-1 text-[11.5px] fg-muted shadow-sm">{t("composer.noSkills")}</span>
   ) : (
-    <span role="listbox" aria-label={t("composer.skills")} className="mt-1 block max-h-56 overflow-y-auto rounded-md border bd bg-app shadow-sm nice-scroll">
+    <span ref={listRef} role="listbox" aria-label={t("composer.skills")} className="relative mt-1 block max-h-56 overflow-y-auto rounded-md border bd bg-app shadow-sm nice-scroll">
       {options.map((o, i) => (
         <button
           key={o.name}
