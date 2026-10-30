@@ -20,7 +20,7 @@ export function abandonarAvisos(cliente: ClienteDeOpenLen): void {
     void Promise.allSettled([nativoAvisos.desregistrar(), nativoAvisos.limpiar()]);
   }
 }
-export function useAvisos({ cliente, onAbrirProyecto }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo"): void }) {
+export function useAvisos({ cliente, onAbrirProyecto }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void }) {
   const abrir = useRef(onAbrirProyecto);
   abrir.current = onAbrirProyecto;
   const ref = useRef<ReturnType<typeof crearControlDeAvisos> | null>(null);

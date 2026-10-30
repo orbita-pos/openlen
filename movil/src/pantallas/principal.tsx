@@ -71,17 +71,18 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | null>(null);
   const idActual = useRef(id);
   const paginaCargada = useRef<string | null>(null);
-  const equipoDelAviso = useRef<string | null>(null);
+  // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
+  const panelDelAviso = useRef<{ id: string; panel: "equipo" | "gestion" } | null>(null);
   useLayoutEffect(() => { idActual.current = id; paginaCargada.current = p?.id ?? null; }, [id, p]);
-  useEffect(() => { setPanel(equipoDelAviso.current !== null && equipoDelAviso.current === id ? "equipo" : null); equipoDelAviso.current = null; setChatAbierto(false); setLlamada(false); setConPip(false); }, [id]);
-  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo") => {
+  useEffect(() => { setPanel(panelDelAviso.current?.id === id ? panelDelAviso.current.panel : null); panelDelAviso.current = null; setChatAbierto(false); setLlamada(false); setConPip(false); }, [id]);
+  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo" | "gestion") => {
     // El controlador ya verificó identidad y acceso. Releer la lista conserva
     // también sus títulos y evita abrir proyectos que ya no estén disponibles.
     void listarProyectos(cliente).then((ps) => {
       if (!ps.some((x) => x.id === destino)) return;
-      if (panelDestino === "equipo") {
-        if (idActual.current !== destino) equipoDelAviso.current = destino;
-        else setPanel("equipo");
+      if (panelDestino) {
+        if (idActual.current !== destino) panelDelAviso.current = { id: destino, panel: panelDestino };
+        else setPanel(panelDestino);
       }
       setLista(ps); setId(destino); setSelector(false); setMenu(false);
     }).catch(() => setSinRed(true));
