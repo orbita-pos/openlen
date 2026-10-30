@@ -13,6 +13,9 @@ import { Icono, type NombreDeIcono } from "../iconos";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { enlaceDeVistaPrevia, leerProyecto, listarProyectos, type ProyectoAbierto, type ProyectoEnLista } from "../api/proyectos";
 import { loQueDijoLen, ultimoTurnoDeLen } from "../hoja";
+import { plataforma } from "../sesion/plataforma";
+import { Cargando } from "./cargando";
+import { devolverFoco } from "../foco";
 import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
 import { Llamada } from "../llamada/llamada";
@@ -26,6 +29,7 @@ import { ControlAvisos } from "../avisos/control-avisos";
 import { useAvisos } from "../avisos/use-avisos";
 import { Comparacion, EntregaVisual, Progreso } from "../entrega/entrega";
 import { Equipo } from "../equipo/equipo";
+import { PanelAnimado } from "../panel-animado";
 import { useEquipo } from "../equipo/use-equipo";
 
 const ULTIMO = "len-proyecto";
@@ -43,14 +47,20 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const tc = useTranslations("movil.chat");
   const te = useTranslations("movil.entrega");
   const tq = useTranslations("movil.equipo");
+  const ta = useTranslations("movil.adjuntos");
+  const ti = useTranslations("movil.interfaz");
   const [lista, setLista] = useState<ProyectoEnLista[] | null>(null);
   const [sinRed, setSinRed] = useState(false);
   const [id, setId] = useState<string | null>(() => localStorage.getItem(ULTIMO));
-  const [p, setP] = useState<ProyectoAbierto | null>(null);
+  const [proyectoGuardado, setP] = useState<ProyectoAbierto | null>(null);
+  const p = proyectoGuardado?.id === id ? proyectoGuardado : null;
   const [vista, setVista] = useState<string | null>(null);
   const [vistaFallo, setVistaFallo] = useState(false);
+  const [intentoVista, setIntentoVista] = useState(0);
   const [tamano, setTamano] = useState<Tamano>("cel");
   const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuBoton = useRef<HTMLButtonElement>(null);
   const [selector, setSelector] = useState(false);
   const [hojaMin, setHojaMin] = useState(false);
   const [llamada, setLlamada] = useState(false);
@@ -59,9 +69,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [recarga, setRecarga] = useState(0);
   const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | null>(null);
   const idActual = useRef(id);
+  const paginaCargada = useRef<string | null>(null);
   const equipoDelAviso = useRef<string | null>(null);
-  useLayoutEffect(() => { idActual.current = id; }, [id]);
-  useEffect(() => { setPanel(equipoDelAviso.current !== null && equipoDelAviso.current === id ? "equipo" : null); equipoDelAviso.current = null; setChatAbierto(false); }, [id]);
+  useLayoutEffect(() => { idActual.current = id; paginaCargada.current = p?.id ?? null; }, [id, p]);
+  useEffect(() => { setPanel(equipoDelAviso.current !== null && equipoDelAviso.current === id ? "equipo" : null); equipoDelAviso.current = null; setChatAbierto(false); setLlamada(false); setConPip(false); }, [id]);
   const abrirAviso = useCallback((destino: string, panelDestino?: "equipo") => {
     // El controlador ya verificó identidad y acceso. Releer la lista conserva
     // también sus títulos y evita abrir proyectos que ya no estén disponibles.
@@ -77,21 +88,31 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso });
   useAtras(selector, () => setSelector(false));
   useAtras(menu, () => setMenu(false));
+  useEffect(() => {
+    if (!menu) return;
+    const antes = document.activeElement as HTMLElement | null;
+    menuRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    const fuera = (e: PointerEvent) => {
+      if (e.target instanceof Node && !menuRef.current?.contains(e.target) && !menuBoton.current?.contains(e.target)) setMenu(false);
+    };
+    document.addEventListener("pointerdown", fuera);
+    return () => { document.removeEventListener("pointerdown", fuera); devolverFoco(antes); };
+  }, [menu]);
   const deslizarHoja = useHojaDeslizable({ encogida: hojaMin, alCambiar: setHojaMin });
 
-  const cargar = useCallback(async () => {
-    setSinRed(false);
+  const cargar = useCallback(async (conservarPantalla = false) => {
+    if (!conservarPantalla) setSinRed(false);
     try {
       const ps = await listarProyectos(cliente);
       setLista(ps);
-      const elegido = ps.find((x) => x.id === id)?.id ?? ps[0]?.id ?? null;
-      setId(elegido);
+      const elegido = ps.find((x) => x.id === idActual.current)?.id ?? ps[0]?.id ?? null;
+      setId(elegido); setSinRed(false);
     } catch {
       // También un HTTP 500 o una respuesta inválida necesitan reintento.
       // El cliente ya devuelve a Entrar cuando recibe un 401.
-      setSinRed(true);
+      if (!conservarPantalla) setSinRed(true);
     }
-  }, [cliente, id]);
+  }, [cliente]);
 
   useEffect(() => {
     void cargar();
@@ -106,27 +127,25 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     if (!id || !lista?.some((x) => x.id === id)) return;
     let vigente = true;
     localStorage.setItem(ULTIMO, id);
-    setP(null);
-    setVista(null);
-    setVistaFallo(false);
+    // La derivación por id oculta otros proyectos; releer éste conserva sus capas.
     void leerProyecto(cliente, id)
       .then((x) => {
         if (vigente) setP(x);
       })
       .catch(() => {
-        if (vigente) setSinRed(true);
+        // Una actualización fallida no desmonta conversación ni llamada ya abiertas.
+        if (vigente && paginaCargada.current !== id) setSinRed(true);
       });
-    void enlaceDeVistaPrevia(cliente, BASE, id)
-      .then((x) => {
-        if (vigente) setVista(x);
-      })
-      .catch(() => {
-        if (vigente) setVistaFallo(true);
-      });
-    return () => {
-      vigente = false;
-    };
+    return () => { vigente = false; };
   }, [cliente, id, lista]);
+  useEffect(() => {
+    if (!id || !lista?.some(x => x.id === id)) return;
+    let vigente = true;
+    setVista(null); setVistaFallo(false);
+    void enlaceDeVistaPrevia(cliente, BASE, id).then(x => { if (vigente) setVista(x); })
+      .catch(() => { if (vigente) setVistaFallo(true); });
+    return () => { vigente = false; };
+  }, [cliente, id, lista, intentoVista]);
 
   const dicho = p ? loQueDijoLen(p.historial) : null;
 
@@ -139,13 +158,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   }, [cliente, id]);
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) recargar(); });
+      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) void cargar(true); });
       return () => { void listener.then((l) => l.remove()); };
     }
-    const volver = () => { if (document.visibilityState === "visible") recargar(); };
+    const volver = () => { if (document.visibilityState === "visible") void cargar(true); };
     document.addEventListener("visibilitychange", volver);
     return () => document.removeEventListener("visibilitychange", volver);
-  }, [recargar]);
+  }, [cargar]);
 
   // El chat (pieza 2). Si cuelgas o cierras con Len trabajando, el chat se
   // vuelve a enganchar al turno (lo que antes hacía aquí la hoja).
@@ -157,6 +176,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     historial: p?.historial ?? SIN_HISTORIAL,
     alCambiarLaPagina: recargar,
     textoDeFotoSola: tc("fotoSola"),
+    textoDeArchivoSolo: ta("archivoSolo"),
   });
   const equipo = useEquipo({
     cliente, projectId: id, idioma, activo: panel === "equipo",
@@ -169,8 +189,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   });
 
   if (sinRed) return <SinRed onReintentar={() => void cargar()} />;
-  if (lista && lista.length === 0) return <section className="ent-empty"><p>{tv("sinPaginas")}</p><ControlAvisos avisos={avisos} /><button className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button></section>;
-  if (!lista || !id) return null;
+  if (lista && lista.length === 0) return <section className="ent-empty lm-layer lm-chat is-on"><Cara estado="reposo" className="app-cargando-cara" /><p>{tv("sinPaginas")}</p><div className="app-vacio-acciones"><button className="app-vacio-abrir" type="button" onClick={() => void plataforma.abrirNavegador(BASE).catch(() => setSinRed(true))}>{ti("abrirOpenLen")}</button><button type="button" onClick={() => void cargar()}>{ti("actualizarPaginas")}</button></div><ControlAvisos avisos={avisos} /><button className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button></section>;
+  if (!lista || !id) return <Cargando mensaje={ti("cargandoPaginas")} />;
+
+  if (!p) return <Cargando mensaje={ti("cargandoPagina")} />;
 
   const direccion = p?.subdomain ? publishedHost(p.subdomain) : t("sinPublicar");
 
@@ -188,22 +210,31 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               onError={() => setVistaFallo(true)}
             />
           ) : vistaFallo ? (
-            <p className="app-aviso">{t("vistaNoCarga")}</p>
-          ) : null}
+            <div className="app-vista-estado" role="alert"><p>{t("vistaNoCarga")}</p><button type="button" onClick={() => setIntentoVista(n => n + 1)}>{te("reintentar")}</button></div>
+          ) : <div className="app-vista-estado" role="status"><p>{ti("cargandoPagina")}</p></div>}
         </div>
 
         <header className="lm-bar">
           <button className="ent-face-button" type="button" aria-label={te("tuLen")} onClick={() => setPanel("look")}><Cara estado="reposo" className="lm-bar-face" /></button>
           <button type="button" className="lm-bar-t" style={{ background: "none", border: 0, textAlign: "left", color: "inherit", padding: 0 }} onClick={() => setSelector(true)}>
-            <b>{p?.title ?? ""}</b>
+            <b>{p?.title ?? lista.find(x => x.id === id)?.title ?? ""}</b>
             <span>{direccion}</span>
           </button>
           <span className={`lm-chip-st${p?.publicado ? " is-live" : ""}`}>{p?.publicado ? t("publicada") : t("vistaPrevia")}</span>
-          <button type="button" className={`lm-dvbtn${tamano !== "cel" ? " is-dv" : ""}`} aria-label={t("otrosTamanos")} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
+          <button ref={menuBoton} type="button" className={`lm-dvbtn${tamano !== "cel" ? " is-dv" : ""}`} aria-label={t("otrosTamanos")} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)}>
             <Icono nombre={ICONO_DEL_TAMANO[tamano]} />
           </button>
         </header>
-        <div className={`lm-dvmenu${menu ? " is-on" : ""}`} role="menu" aria-label={t("verEn")}>
+        <div ref={menuRef} className={`lm-dvmenu${menu ? " is-on" : ""}`} role="menu" aria-label={t("verEn")} inert={!menu} onKeyDown={e => {
+          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setMenu(false); return; }
+          const bs = [...(menuRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+          const i = bs.indexOf(document.activeElement as HTMLButtonElement);
+          if (["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Home", "End", "Tab"].includes(e.key)) {
+            e.preventDefault();
+            const indice = e.key === "Home" ? 0 : e.key === "End" ? bs.length - 1 : (i + ((e.key === "Tab" ? e.shiftKey : e.key === "ArrowUp" || e.key === "ArrowLeft") ? -1 : 1) + bs.length) % bs.length;
+            bs[indice]?.focus({ preventScroll: true });
+          }
+        }}>
           <p className="lm-dvmenu-cap">{t("verEn")}</p>
           <div>
             {(["cel", "tab", "pc"] as const).map((x) => (
@@ -271,14 +302,20 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         onEquipo={() => setPanel("equipo")}
       />
 
-      {panel === "gestion" && <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />}
-      {panel === "look" && <TuLen onCerrar={() => setPanel(null)} />}
-      {panel === "comparar" && <Comparacion cliente={cliente} projectId={id} page={p?.historial.at(-1)?.page} onCerrar={() => setPanel(null)} />}
-      {panel === "equipo" && <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />}
+      <PanelAnimado contexto={id}
+        paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel ?? ""}
+        onVolver={() => { if (panel === "equipo" && equipo.hilo) equipo.cerrarHilo(); else setPanel(null); }}
+        nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
+        {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />
+          : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
+          : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
+          : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} /> : null}
+      </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
 
       {llamada && (
         <Llamada
+          key={`llamada:${id}`}
           cliente={cliente}
           projectId={id}
           idioma={idioma}

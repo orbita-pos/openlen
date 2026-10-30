@@ -1,0 +1,70 @@
+[
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "status": "pass",
+    "grab": {
+      "x": 163,
+      "y": 335.125,
+      "width": 64,
+      "height": 44
+    },
+    "colors": {
+      "button": "rgb(43, 20, 5)",
+      "parent": "rgb(43, 20, 5)"
+    },
+    "errors": []
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "status": "pass",
+    "grab": {
+      "x": 163,
+      "y": 335.125,
+      "width": 64,
+      "height": 44
+    },
+    "colors": {
+      "button": "rgb(255, 241, 230)",
+      "parent": "rgb(255, 241, 230)"
+    },
+    "errors": []
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "status": "pass",
+    "grab": {
+      "x": 133.74359130859375,
+      "y": 150.25640869140625,
+      "width": 52.5128173828125,
+      "height": 36.102569580078125
+    },
+    "colors": {
+      "button": "rgb(43, 20, 5)",
+      "parent": "rgb(43, 20, 5)"
+    },
+    "errors": []
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "status": "pass",
+    "grab": {
+      "x": 133.74359130859375,
+      "y": 150.25640869140625,
+      "width": 52.5128173828125,
+      "height": 36.102569580078125
+    },
+    "colors": {
+      "button": "rgb(255, 241, 230)",
+      "parent": "rgb(255, 241, 230)"
+    },
+    "errors": []
+  }
+]

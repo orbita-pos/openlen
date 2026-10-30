@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useTranslations } from "use-intl";
 import { useAtras } from "../atras";
+import { devolverFoco } from "../foco";
 import { CajaMenciones, TextoMenciones } from "./menciones";
 import type { ControlEquipo } from "./use-equipo";
 import "./equipo.css";
@@ -29,7 +30,7 @@ export function Equipo({ equipo: e, titulo, idioma, onCerrar }: { equipo: Contro
   useEffect(() => {
     const antes = document.activeElement as HTMLElement | null;
     cerrar.current?.focus();
-    return () => antes?.focus();
+    return () => devolverFoco(antes);
   }, []);
   useEffect(() => {
     const el = feed.current;

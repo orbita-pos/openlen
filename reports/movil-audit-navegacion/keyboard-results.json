@@ -1,0 +1,46 @@
+[
+  {
+    "state": "selector opened",
+    "focus": {
+      "tag": "BUTTON",
+      "class": "lm-bar-t",
+      "label": null
+    }
+  },
+  {
+    "state": "tab in selector",
+    "focus": {
+      "tag": "BUTTON",
+      "class": "lm-dvbtn",
+      "label": "Ver en otro tamaño"
+    }
+  },
+  {
+    "state": "escape selector",
+    "stillOpen": 1
+  },
+  {
+    "state": "theme switched",
+    "theme": "dark"
+  },
+  {
+    "state": "theme persisted",
+    "theme": "dark"
+  },
+  {
+    "state": "arrow down in size menu",
+    "focus": {
+      "tag": "BUTTON",
+      "class": "lm-dvbtn",
+      "label": "Ver en otro tamaño"
+    }
+  },
+  {
+    "state": "escape size menu",
+    "stillOpen": 1
+  },
+  {
+    "state": "back selector",
+    "stillOpen": 0
+  }
+]

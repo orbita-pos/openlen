@@ -3,7 +3,7 @@
 // cronómetro, la cara con el halo que late con la voz real, subtítulo con los
 // números en pastilla, tarjetas y Audio · Colgar · Silenciar. Pequeña: la
 // píldora flotante del prototipo (.lm-pip) mientras ves tu página.
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, Fragment, type ReactNode } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { useLlamada } from "@/components/llamada/use-llamada";
@@ -115,9 +115,9 @@ export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena, enc
         <b className="pip-name">Len</b>
         <span className="pip-t">{crono}</span>
         <div className="pip-acts">
-          <button type="button" className={`pip-b${ll.audio ? " is-on" : ""}`} aria-label={tl("audio")} onClick={ll.alternarAudio}><Icono nombre={icAudio} /></button>
+          <button type="button" className={`pip-b${ll.audio ? " is-on" : ""}`} aria-label={tl("audio")} aria-pressed={ll.audio} onClick={ll.alternarAudio}><Icono nombre={icAudio} /></button>
           <button type="button" className="pip-b is-hang" aria-label={tl("colgar")} onClick={ll.colgar}><Icono nombre="phoneDown" /></button>
-          <button type="button" className={`pip-b${ll.micro ? "" : " is-on"}`} aria-label={tl("silenciar")} onClick={ll.alternarMicro}><Icono nombre={icMicro} /></button>
+          <button type="button" className={`pip-b${ll.micro ? "" : " is-on"}`} aria-label={tl("silenciar")} aria-pressed={!ll.micro} onClick={ll.alternarMicro}><Icono nombre={icMicro} /></button>
         </div>
       </div>
     );
@@ -150,15 +150,15 @@ export function Llamada({ cliente, projectId, idioma, onTerminar, onPequena, enc
           {/* Un solo bloque dentro: el párrafo lo alinea abajo y, si no cabe, se ve lo último (app.css). */}
           <span className="app-subs">
             {palabras.map((w, i) => (
-              <span key={i} className={`lm-w is-said${w.clave ? " is-key" : ""}`}>{w.texto} </span>
+              <Fragment key={i}><span className={`lm-w is-said${w.clave ? " is-key" : ""}`}>{w.texto}</span>{" "}</Fragment>
             ))}
             {ll.lineaTu && <span className="lm-you"><b>{t("tu")}</b>{ll.lineaTu}</span>}
           </span>
         </p>
         <div className="lm-call-actions">
-          <button type="button" className={`lm-round lm-rb${ll.audio ? " is-on" : ""}`} onClick={ll.alternarAudio}><span><Icono nombre={icAudio} /></span>{tl("audio")}</button>
+          <button type="button" className={`lm-round lm-rb${ll.audio ? " is-on" : ""}`} aria-pressed={ll.audio} onClick={ll.alternarAudio}><span><Icono nombre={icAudio} /></span>{tl("audio")}</button>
           <button type="button" className="lm-round lm-hang" onClick={ll.colgar}><span><Icono nombre="phoneDown" /></span>{tl("colgar")}</button>
-          <button type="button" className={`lm-round lm-rb${ll.micro ? "" : " is-on"}`} onClick={ll.alternarMicro}><span><Icono nombre={icMicro} /></span>{tl("silenciar")}</button>
+          <button type="button" className={`lm-round lm-rb${ll.micro ? "" : " is-on"}`} aria-pressed={!ll.micro} onClick={ll.alternarMicro}><span><Icono nombre={icMicro} /></span>{tl("silenciar")}</button>
         </div>
       </section>
     );

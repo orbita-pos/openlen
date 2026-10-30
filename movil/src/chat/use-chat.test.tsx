@@ -3,7 +3,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useChat, type Chat } from "./use-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
-const m = vi.hoisted(() => ({ mandar: vi.fn() }));
+const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn() }));
+vi.mock("./archivos", async importar => ({...await importar<typeof import("./archivos")>(), subirArchivo:m.archivo}));
 vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: vi.fn(), subirFoto: vi.fn(), transcribir: vi.fn() }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root;
@@ -13,7 +14,7 @@ const cliente = { pedir: vi.fn(), avisarAlCerrar: vi.fn() };
 const historia: [] = [];
 const recargar = vi.fn();
 function Pantalla({ id, historial = historia }: { id: string; historial?: StoredChatTurn[] }) {
-  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeFotoSola: "Foto" });
+  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeFotoSola: "Foto", textoDeArchivoSolo: "Revisa el archivo" });
   return null;
 }
 beforeEach(() => {
@@ -59,4 +60,37 @@ it("un turno nuevo empieza sin reutilizar los pasos del anterior", async () => {
   await act(async () => chat.mandar("Prueba de nuevo"));
   expect(chat.progreso).toEqual([]);
   await act(async () => terminar("terminado"));
+});
+
+it("reintenta sólo las subidas pendientes y conserva todos los archivos del mensaje", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  const a={url:"https://x/a.pdf",name:"a.pdf",size:1},b={url:"https://x/b.pdf",name:"b.pdf",size:1};
+  m.archivo.mockResolvedValueOnce(a).mockRejectedValueOnce(new Error("red")).mockResolvedValueOnce(b);
+  await act(async()=>root.render(<Pantalla id="a"/>));
+  await act(async()=>chat.mandar("",undefined,[new File(["x"],"a.pdf"),new File(["x"],"b.pdf")]));
+  const e=chat.elementos.find(e=>e.tipo==="tu")!;
+  expect(e.tipo==="tu"&&e.estado).toBe("noSeSubio");
+  await act(async()=>chat.reintentar(e.clave));
+  expect(m.archivo).toHaveBeenCalledTimes(3);expect(m.mandar.mock.calls[0][1]).toMatchObject({prompt:"Revisa el archivo",archivos:[a,b]});
+});
+it("una subida del proyecto anterior no envía archivos al proyecto nuevo", async()=>{
+  let terminar!:(v:unknown)=>void;m.archivo.mockImplementation(()=>new Promise(r=>terminar=r));
+  await act(async()=>root.render(<Pantalla id="a"/>));
+  await act(async()=>chat.mandar("Documento A",undefined,[new File(["x"],"a.pdf")]));
+  await act(async()=>root.render(<Pantalla id="b"/>));
+  await act(async()=>terminar({url:"https://x/a.pdf",name:"a.pdf",size:1}));
+  expect(m.mandar).not.toHaveBeenCalled();expect(chat.elementos.some(e=>e.tipo==="tu")).toBe(false);
+});
+
+it("mantiene enviando hasta que el servidor confirma el turno", async () => {
+  let terminar!: (v: string) => void;
+  m.mandar.mockImplementation(() => new Promise(r => { terminar = r; }));
+  await act(async () => root.render(<Pantalla id="a" />));
+  await act(async () => chat.mandar("Cambio pendiente"));
+  try {
+    expect(chat.elementos.find(e => e.tipo === "tu")).toMatchObject({ estado: "enviando" });
+    const evento = m.mandar.mock.calls[0][2];
+    await act(async () => evento({ nombre: "turno", datos: { turnoId: "servidor" } }));
+    expect(chat.elementos.find(e => e.tipo === "tu")).toMatchObject({ estado: "ok" });
+  } finally { await act(async () => terminar("terminado")); }
 });

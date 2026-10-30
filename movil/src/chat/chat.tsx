@@ -3,18 +3,22 @@
 // chat de la web. Entra desde la derecha; se va con la flecha, deslizando a la
 // derecha o con atrás. El estado vive en `useChat` (en la principal): Len
 // sigue trabajando aunque lo cierres.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { Cara } from "../cara";
 import { Icono } from "../iconos";
 import { useDeslizar } from "../deslizar";
+import { devolverFoco } from "../foco";
 import { useAtras } from "../atras";
 import { TarjetaDeLaApp } from "../llamada/tarjetas";
 import { claveDeAvance, cualDia, diaLocal, type ElementoDelHilo } from "./hilo";
 import { conGesto, type Gesto, type Micro } from "./grabadora";
 import { useNota } from "./use-nota";
 import type { Chat } from "./use-chat";
+import { ElegirAdjunto } from "./elegir-adjunto";
+import { tamanoArchivo } from "./archivos";
+import { useSeguirChat } from "./use-seguir-chat";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -39,6 +43,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
   const tq = useTranslations("movil.equipo");
+  const ta = useTranslations("movil.adjuntos");
   const [texto, setTexto] = useState("");
   // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
   // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
@@ -47,17 +52,27 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const [micro, setMicro] = useState<Micro>({ fase: "quieto" });
   const microRef = useRef<Micro>({ fase: "quieto" });
   const [arrastre, setArrastre] = useState(0);
-  const log = useRef<HTMLDivElement>(null);
-  const archivo = useRef<HTMLInputElement>(null);
+  const { log, contenido, puedeBajar, alFinal } = useSeguirChat(abierto, projectId, chat.elementos);
+  const campo = useRef<HTMLTextAreaElement>(null);
+  const volver = useRef<HTMLButtonElement>(null);
+  const [archivos,setArchivos] = useState<File[]>([]);
+  const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
+  useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
   const vistos = useRef(chat.elementos.length);
-  const deslizar = useDeslizar({ hacia: "derecha", alSoltar: onCerrar });
+  const deslizar = useDeslizar({ hacia: "derecha", rapido: true, activo: abierto, clave: projectId, alSoltar: onCerrar });
   useAtras(abierto, onCerrar);
+  useEffect(() => {
+    if (!abierto) return;
+    const antes = document.activeElement as HTMLElement | null;
+    volver.current?.focus({ preventScroll: true });
+    return () => devolverFoco(antes);
+  }, [abierto, projectId]);
 
   const limite = useRef<() => void>(() => {});
   const nota = useNota(() => limite.current());
   const enviarNota = async () => {
     const n = await nota.terminar();
-    if (n) chat.mandarNota(n);
+    if (n) { alFinal(); chat.mandarNota(n); }
   };
   useEffect(() => {
     // A los 2 minutos la nota se envía sola.
@@ -68,33 +83,22 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     };
   });
 
-  // Siempre abajo del todo, como un chat: al abrir, al llegar algo, mientras escribe.
-  useEffect(() => {
-    const l = log.current;
-    if (l) l.scrollTop = l.scrollHeight;
-  }, [chat.elementos.length, chat.trabajando, abierto]);
-  useEffect(() => {
-    vistos.current = chat.elementos.length;
-  });
-  // Al abrirse el teclado el hilo encoge por abajo: si estabas al final, se
-  // queda al final (lo último no se esconde detrás del campo).
-  useEffect(() => {
-    const l = log.current;
-    if (!l) return;
-    let alFinal = true;
-    const alMover = () => {
-      alFinal = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
-    };
-    const ro = new ResizeObserver(() => {
-      if (alFinal) l.scrollTop = l.scrollHeight;
+  useEffect(() => { vistos.current = chat.elementos.length; });
+  useLayoutEffect(() => {
+    const el = campo.current;
+    if (!el) return;
+    const ajustar = () => { el.style.height = "44px"; el.style.height = `${Math.min(132, Math.max(44, el.scrollHeight))}px`; };
+    ajustar();
+    let ancho = el.clientWidth;
+    const observador = new ResizeObserver(() => {
+      // El ancho cambia al girar o redimensionar; el alto lo ajusta el texto.
+      if (el.clientWidth !== ancho) { ancho = el.clientWidth; ajustar(); }
     });
-    l.addEventListener("scroll", alMover, { passive: true });
-    ro.observe(l);
-    return () => {
-      ro.disconnect();
-      l.removeEventListener("scroll", alMover);
-    };
-  }, []);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [texto, abierto]);
+  // La vista previa de una foto se libera al sustituirla, cambiar de proyecto o salir.
+  useEffect(() => () => { if (adjunta) URL.revokeObjectURL(adjunta.url); }, [adjunta]);
 
   const gesto = (g: Gesto) => {
     const r = conGesto(microRef.current, g);
@@ -113,24 +117,19 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   };
 
   const quitarAdjunta = () => {
-    if (adjunta) URL.revokeObjectURL(adjunta.url);
     setAdjunta(null);
   };
   const mandarTexto = () => {
     const x = texto.trim();
-    if (!x && !adjunta) return;
+    if (!x && !adjunta && !archivos.length) return;
+    alFinal();
     setTexto("");
-    chat.mandar(x, adjunta?.foto);
+    chat.mandar(x, adjunta?.foto, archivos);
+    setArchivos([]);setErrorAdjunto(null);
     quitarAdjunta();
   };
-  // Con la foto puesta, el pie crece: lo último del hilo no debe quedar debajo.
-  useEffect(() => {
-    const l = log.current;
-    if (l) l.scrollTop = l.scrollHeight;
-  }, [adjunta]);
-
   // Con texto o con una foto puesta, el botón envía (no graba).
-  const hayTexto = texto.trim().length > 0 || adjunta !== null;
+  const hayTexto = texto.trim().length > 0 || adjunta !== null || archivos.length > 0;
   const grabando = micro.fase === "grabando";
   const fija = micro.fase === "grabando" && micro.fijo;
   const avance = claveDeAvance(chat.avance);
@@ -176,7 +175,8 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       .filter(Boolean)
       .join(" ");
     previo = quien;
-    const leido = i === ultimoMio && (i < chat.elementos.length - 1 || chat.trabajando);
+    const recibido = (e.tipo === "tu" || e.tipo === "voz") && e.estado === "ok";
+    const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "verEnTuPagina"));
     return (
       <div key={e.clave} className={cls}>
         <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} />
@@ -186,9 +186,17 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   });
 
   return (
-    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta ? " con-adjunta" : ""}`} aria-hidden={!abierto}>
+    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto} inert={!abierto} role="dialog" aria-label="Len" aria-modal={abierto || undefined} onKeyDown={e => {
+      if (e.nativeEvent.isComposing) return;
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onCerrar(); }
+      if (e.key === "Tab") {
+        const bs = [...e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),textarea:not(:disabled),a[href]')];
+        if (e.shiftKey && document.activeElement === bs[0]) { e.preventDefault(); bs.at(-1)?.focus(); }
+        if (!e.shiftKey && document.activeElement === bs.at(-1)) { e.preventDefault(); bs[0]?.focus(); }
+      }
+    }}>
       <header className="ch-top">
-        <button type="button" className="ch-btn" aria-label={t("volver")} onClick={onCerrar}>
+        <button ref={volver} type="button" className="ch-btn" aria-label={t("volver")} onClick={onCerrar}>
           <Icono nombre="back" />
         </button>
         <div className="ch-who">
@@ -202,7 +210,9 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
         {onEquipo && <button type="button" className="ch-equipo" onClick={onEquipo}>@ {tq("titulo")}</button>}
       </header>
 
-      <div className="ch-log" ref={log} aria-live="polite">
+      <div className="ch-historial">
+      <div className="ch-log" ref={log} role="log" aria-live="polite" aria-relevant="additions text">
+        <div className="ch-contenido" ref={contenido}>
         {filas}
         {chat.trabajando && (
           <div className={`ch-row is-len${previo === "len" ? " is-cont" : ""}`}>
@@ -213,40 +223,29 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
             </div>
           </div>
         )}
+        </div>
+      </div>
+      {puedeBajar && <button className="ch-volver-final" type="button" aria-label={t("irAlUltimo")} onClick={alFinal}><Icono nombre="arrowR" /></button>}
       </div>
 
       <div className="ch-foot" data-no-deslizar>
-        {adjunta && (
-          <div className="app-adjunta">
-            {/* eslint-disable-next-line @next/next/no-img-element -- la app es Vite, no hay next/image */}
-            <img src={adjunta.url} alt="" />
-            <button type="button" aria-label={t("quitarFoto")} onClick={quitarAdjunta}>
-              <Icono nombre="x" />
-            </button>
-          </div>
-        )}
+        {errorAdjunto && <p className="app-adjuntos-error" role="alert">{ta(errorAdjunto)}</p>}
+        {(adjunta || archivos.length>0) && <div className="app-pendientes" data-no-deslizar>
+          {adjunta && <div className="app-adjunta">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={adjunta.url} alt=""/>
+            <button type="button" onClick={quitarAdjunta} aria-label={t("quitarFoto")}><Icono nombre="x"/></button>
+          </div>}
+          {archivos.map((f,i)=><div className="app-archivo-pendiente" key={`${i}:${f.name}`}><b>{f.name}</b><small>{tamanoArchivo(f.size)}</small><button type="button" aria-label={ta("quitar",{nombre:f.name})} onClick={()=>setArchivos(fs=>fs.filter((_,j)=>j!==i))}>×</button></div>)}
+        </div>}
         <div className="lm-comp">
-          <input
-            ref={archivo}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (!f) return;
-              if (adjunta) URL.revokeObjectURL(adjunta.url);
-              setAdjunta({ foto: f, url: URL.createObjectURL(f) });
-            }}
-          />
-          <button type="button" className="ch-plus" aria-label={t("mandarFoto")} disabled={chat.trabajando || grabando} onClick={() => archivo.current?.click()}>
-            <Icono nombre="plus" />
-          </button>
+          <ElegirAdjunto key={projectId} cantidad={archivos.length} disabled={chat.trabajando || grabando} onError={setErrorAdjunto} onArchivos={fs=>setArchivos(xs=>[...xs,...fs])} onFoto={f=>{setAdjunta({foto:f,url:URL.createObjectURL(f)});}}/>
           <div className={`lm-field${grabando ? " is-rec" : ""}`}>
             {/* textarea y no input: en un <input> Chrome pone encima del
                 teclado su barra negra de autocompletar (contraseñas,
                 direcciones), que se comía el poco sitio que deja el teclado. */}
             <textarea
+              ref={campo}
               rows={1}
               placeholder={t("mensaje")}
               autoComplete="off"
@@ -254,7 +253,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   mandarTexto();
                 }
@@ -319,6 +318,8 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
   onVerPagina: () => void;
 }) {
   const t = useTranslations("movil.chat");
+  const ta = useTranslations("movil.adjuntos");
+  const estado = useTranslations("movil.tarjetas");
   const otraVez = (
     <>
       {" "}
@@ -342,10 +343,12 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
               <img src={e.foto} alt="" />
             </div>
           )}
+          {e.archivos?.map((f,i)=><div className="ch-b ch-file" key={`${i}:${f.name}`}><b>{f.name}</b><small>{(f.kind??"pdf").toUpperCase()} · {tamanoArchivo(f.size)}</small></div>)}
           {e.texto && <div className="ch-b">{e.texto}</div>}
+          {e.estado === "enviando" && <span className="ch-rcpt" role="status">{estado("enviando")}</span>}
           {(e.estado === "noSeEnvio" || e.estado === "noSeSubio") && (
             <span className="ch-rcpt">
-              {t(e.estado)}
+              {e.estado === "noSeSubio" ? ta("subida") : t(e.estado)}
               {otraVez}
             </span>
           )}
@@ -367,6 +370,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
           </div>
           <div className="ch-tr">
             {e.transcripcion ? `«${e.transcripcion}»` : e.estado === "transcribiendo" ? <span className="ch-live">{t("transcribiendo")}</span> : t("noSeEntendio")}
+            {e.estado === "enviando" && <span role="status"> {estado("enviando")}</span>}
             {e.estado === "noSeEnvio" && ` ${t("noSeEnvio")}`}
             {(e.estado === "noSeEntendio" || e.estado === "noSeEnvio") && otraVez}
           </div>

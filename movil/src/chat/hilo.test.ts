@@ -219,3 +219,11 @@ describe("claveDeAvance", () => {
     expect(claveDeAvance(null)).toBeNull();
   });
 });
+
+it("recupera los archivos adjuntos del historial sin perder sus nombres", () => {
+  const archivo={url:"https://x/lista.pdf",name:"Lista.pdf",size:20};
+  const fila=turno({id:"documento",userText:"Revísalo",attachedFiles:[archivo]} as Parameters<typeof turno>[0]);
+  Object.assign(fila,{attachedFiles:[archivo]});
+  const e=hiloDesdeElHistorial([fila],Date.now()).find(e=>e.tipo==="tu");
+  expect(e && e.tipo==="tu" && e.archivos).toEqual([archivo]);
+});

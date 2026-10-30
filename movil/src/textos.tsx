@@ -8,6 +8,9 @@ import { textosAvisos } from "./textos-avisos";
 import { textosPersonalizacion } from "./textos-personalizacion";
 import { textosEntrega } from "./textos-entrega";
 import { textosEquipo } from "./textos-equipo";
+import { Cargando } from "./pantallas/cargando";
+import { textosInterfaz } from "./textos-interfaz";
+import { textosAdjuntos } from "./textos-adjuntos";
 
 const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada}.json");
 
@@ -16,7 +19,7 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/movil.json`]!(),
     cargas[`../../messages/${idioma}/llamada.json`]!(),
   ]);
-  return { movil: { ...movil.default, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma] }, llamada: llamada.default };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma] }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {
@@ -26,7 +29,7 @@ export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNo
     void mensajesDe(idioma).then((m) => { if (vigente) setM(m); });
     return () => { vigente = false; };
   }, [idioma]);
-  if (!m) return null;
+  if (!m) return <Cargando />;
   return (
     <IntlProvider locale={idioma} messages={m} timeZone={Intl.DateTimeFormat().resolvedOptions().timeZone}>
       {children}

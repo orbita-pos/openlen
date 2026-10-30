@@ -32,6 +32,7 @@ it("el bloqueo de seguridad se ve y jamás se fuerza sin confirmación", async (
   } });
   await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
   expect(host.textContent).toContain("Acceso a datos privados");
+  expect(host.textContent).not.toContain("security_findings");
   expect(posts).toHaveLength(1);
   expect(posts[0]).not.toHaveProperty("acceptSecurityFingerprint");
   expect(boton("publicarIgual").disabled).toBe(true);
@@ -67,7 +68,8 @@ it("comparte sólo la dirección publicada que devolvió el servidor", async () 
 it("no presenta una falla de visitas como cero visitas", async () => {
   await montar({ avisarAlCerrar: vi.fn(), pedir: async r => r.includes("visitas") ? new Response("proxy failed", { status: 503 }) : Response.json({ project }) });
   await act(async () => boton("numeros").click());
-  expect(host.querySelector('[role="alert"]')?.textContent).toContain("HTTP 503");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("error");
+  expect(host.querySelector('[role="alert"]')?.textContent).not.toContain("HTTP 503");
   expect(host.querySelector(".gestion-numeros")).toBeNull();
 });
 it("no permite quitar un encargo mientras sigue trabajando y pausa el turno exacto", async () => {
