@@ -83,6 +83,17 @@
     "autoFixHint": "Len empieza a arreglarlo en cuanto se cae. Usa tus créditos.",
     "autoPublish": "Publicar solo",
     "autoPublishHint": "Publica el arreglo sin esperarte, salvo que lo pare la revisión de seguridad o un cambio de datos.",
-    "ownerOnly": "Solo el dueño del proyecto puede cambiar esto."
+    "ownerOnly": "Solo el dueño del proyecto puede cambiar esto.",
+    "fixPending": {
+      "title": "El arreglo de Len aún no está en tu borrador",
+      "body": "Len arregló tu sitio publicado en una copia aparte. Si publicas ahora sin traer el arreglo, el fallo vuelve.",
+      "bring": "Traer el arreglo",
+      "publishAnyway": "Publicar igual",
+      "cancel": "Cancelar",
+      "bringing": "Trayendo el arreglo…",
+      "handedToLen": "Choca con lo que estabas editando: Len lo está trayendo a mano. Publica cuando termine.",
+      "queued": "Len está trabajando en el proyecto: lo traemos en cuanto termine.",
+      "failed": "No se pudo traer el arreglo. Inténtalo otra vez."
+    }
   }
 }

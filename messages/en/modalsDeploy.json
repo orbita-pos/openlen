@@ -83,6 +83,17 @@
     "autoFixHint": "Len starts fixing it as soon as it goes down. It uses your credits.",
     "autoPublish": "Publish on its own",
     "autoPublishHint": "Publishes the fix without waiting for you, unless the security review or a data change stops it.",
-    "ownerOnly": "Only the project's owner can change this."
+    "ownerOnly": "Only the project's owner can change this.",
+    "fixPending": {
+      "title": "Len's fix isn't in your draft yet",
+      "body": "Len fixed your published site in a separate copy. If you publish now without bringing the fix in, the crash comes back.",
+      "bring": "Bring the fix in",
+      "publishAnyway": "Publish anyway",
+      "cancel": "Cancel",
+      "bringing": "Bringing the fix in…",
+      "handedToLen": "It collides with what you were editing: Len is bringing it in by hand. Publish when he's done.",
+      "queued": "Len is working on the project: we'll bring it in as soon as he's done.",
+      "failed": "The fix couldn't be brought in. Try again."
+    }
   }
 }

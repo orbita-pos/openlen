@@ -10,6 +10,7 @@ import type { Finding, ReviewView } from "@/lib/security-review/types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 import { MissingSecrets } from "./missing-secrets";
+import { LenWatchFixPending } from "./len-watch/fix-pending";
 import { SecurityPanel } from "./security-findings";
 import { stripeKindsToCopy, type StripeForCard } from "@/lib/stripe/card";
 
@@ -51,6 +52,8 @@ type CardState =
   | { kind: "secrets_required"; missing: string[] }
   // La revisión de seguridad: lo grave, y el dueño decide.
   | { kind: "security_findings"; view: ReviewView }
+  // Len Watch (spec local 2026-10-30-len-watch, §5.5): el arreglo que publicó aún no está en el borrador.
+  | { kind: "len_watch_fix_pending"; incidentId: string }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -88,6 +91,7 @@ export function AgentConfirmCard({
   // de confirmar lo destructivo).
   const saltarSecretos = useRef(false);
   const aceptarSeguridad = useRef<string | null>(null);
+  const aceptarArreglo = useRef<string | null>(null);
   const locale = useLocale();
   const tSecurity = useTranslations("modalsDomain.security");
   // Primera publicación con base de datos: la casilla de copiar los de prueba.
@@ -97,7 +101,7 @@ export function AgentConfirmCard({
 
   const inert = state.kind === "published" || state.kind === "cancelled";
 
-  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string } = {}) => {
+  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string } = {}) => {
     if (busy || inert) return;
     const { subdominio, idiomas, republicar } = confirm;
 
@@ -138,6 +142,7 @@ export function AgentConfirmCard({
 
     if (o.skipMissingSecrets) saltarSecretos.current = true;
     if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
+    if (o.acceptLenWatchFix) aceptarArreglo.current = o.acceptLenWatchFix;
     setState({ kind: "publishing" });
     try {
       // `languages` is only sent when the agent actually chose some: the
@@ -156,9 +161,14 @@ export function AgentConfirmCard({
           ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
           locale,
           ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
+          ...(aceptarArreglo.current ? { acceptLenWatchFix: aceptarArreglo.current } : {}),
         },
         () => setState({ kind: "publishing" }),
       );
+      if (outcome.kind === "len_watch_fix_pending") {
+        setState({ kind: "len_watch_fix_pending", incidentId: outcome.incidentId });
+        return;
+      }
       if (outcome.kind === "security_findings") {
         setState({ kind: "security_findings", view: outcome.view });
         return;
@@ -325,6 +335,19 @@ export function AgentConfirmCard({
             busy={busy}
             onSavedPublish={() => void handlePublish()}
             onPublishAnyway={() => void handlePublish({ skipMissingSecrets: true })}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+
+      {state.kind === "len_watch_fix_pending" && (
+        <div className="mt-2">
+          <LenWatchFixPending
+            projectId={projectId}
+            incidentId={state.incidentId}
+            busy={busy}
+            onPublishAgain={() => void handlePublish()}
+            onPublishAnyway={() => void handlePublish({ acceptLenWatchFix: state.incidentId })}
             onCancel={handleCancel}
           />
         </div>

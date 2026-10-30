@@ -83,6 +83,17 @@
     "autoFixHint": "Len beginnt mit der Reparatur, sobald sie ausfällt. Das verbraucht deine Credits.",
     "autoPublish": "Selbst veröffentlichen",
     "autoPublishHint": "Veröffentlicht die Korrektur, ohne auf dich zu warten, außer die Sicherheitsprüfung oder eine Datenänderung hält sie auf.",
-    "ownerOnly": "Nur der Eigentümer des Projekts kann das ändern."
+    "ownerOnly": "Nur der Eigentümer des Projekts kann das ändern.",
+    "fixPending": {
+      "title": "Lens Korrektur ist noch nicht in deinem Entwurf",
+      "body": "Len hat deine veröffentlichte Seite in einer separaten Kopie repariert. Wenn du jetzt veröffentlichst, ohne die Korrektur zu übernehmen, kommt der Fehler zurück.",
+      "bring": "Korrektur übernehmen",
+      "publishAnyway": "Trotzdem veröffentlichen",
+      "cancel": "Abbrechen",
+      "bringing": "Korrektur wird übernommen…",
+      "handedToLen": "Sie kollidiert mit dem, was du bearbeitet hast: Len übernimmt sie von Hand. Veröffentliche, wenn er fertig ist.",
+      "queued": "Len arbeitet gerade am Projekt: Wir übernehmen sie, sobald er fertig ist.",
+      "failed": "Die Korrektur konnte nicht übernommen werden. Versuch es noch einmal."
+    }
   }
 }

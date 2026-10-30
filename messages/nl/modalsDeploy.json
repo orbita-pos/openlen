@@ -83,6 +83,17 @@
     "autoFixHint": "Len begint met repareren zodra hij plat gaat. Dit gebruikt je credits.",
     "autoPublish": "Zelf publiceren",
     "autoPublishHint": "Publiceert de oplossing zonder op je te wachten, tenzij de beveiligingscontrole of een datawijziging het tegenhoudt.",
-    "ownerOnly": "Alleen de eigenaar van het project kan dit wijzigen."
+    "ownerOnly": "Alleen de eigenaar van het project kan dit wijzigen.",
+    "fixPending": {
+      "title": "Lens fix staat nog niet in je concept",
+      "body": "Len heeft je gepubliceerde site in een aparte kopie gerepareerd. Als je nu publiceert zonder de fix over te nemen, komt de fout terug.",
+      "bring": "Fix overnemen",
+      "publishAnyway": "Toch publiceren",
+      "cancel": "Annuleren",
+      "bringing": "Fix wordt overgenomen…",
+      "handedToLen": "Hij botst met wat je aan het bewerken was: Len neemt hem met de hand over. Publiceer als hij klaar is.",
+      "queued": "Len werkt aan het project: we nemen hem over zodra hij klaar is.",
+      "failed": "De fix kon niet worden overgenomen. Probeer het opnieuw."
+    }
   }
 }

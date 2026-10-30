@@ -66,6 +66,8 @@ const PublishBodySchema = z.object({
   acceptSecurityFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   /** El idioma de quien publica: el de los textos de la revisión si arranca aquí. */
   locale: z.string().min(2).max(10).optional(),
+  /** «Publicar igual» sin el arreglo de Len Watch que el borrador aún no tiene (428 len_watch_fix_pending). */
+  acceptLenWatchFix: z.string().min(1).max(64).optional(),
 });
 
 export const POST = paraLaApp(async (
@@ -112,6 +114,7 @@ export const POST = paraLaApp(async (
     skipMissingSecrets: parsed.data.skipMissingSecrets,
     acceptSecurityFingerprint: parsed.data.acceptSecurityFingerprint,
     locale: parsed.data.locale,
+    ...(parsed.data.acceptLenWatchFix ? { acceptLenWatchFix: parsed.data.acceptLenWatchFix } : {}),
     source: "person",
   });
   return json(r.body, r.status);

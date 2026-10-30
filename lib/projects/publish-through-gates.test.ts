@@ -3,9 +3,17 @@
 // publishes a fix — the same codes, the same 428s, nothing skipped.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ publishProject: vi.fn(), gate: vi.fn(), markPublished: vi.fn(async () => undefined), afterOwnerPublish: vi.fn(async () => undefined) }));
+const mocks = vi.hoisted(() => ({
+  publishProject: vi.fn(),
+  gate: vi.fn(),
+  markPublished: vi.fn(async () => undefined),
+  afterOwnerPublish: vi.fn(async () => undefined),
+  pendingFix: vi.fn(async (): Promise<{ incidentId: string; branch: string } | null> => null),
+  declineFix: vi.fn(async () => undefined),
+}));
 vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate, markPublished: mocks.markPublished }) }));
 vi.mock("@/lib/len-watch/orchestrate", () => ({ afterOwnerPublish: mocks.afterOwnerPublish }));
+vi.mock("@/lib/len-watch/bring", () => ({ pendingFix: mocks.pendingFix, declineFix: mocks.declineFix }));
 vi.mock("@/lib/projects", async () => {
   class E extends Error {}
   return {
@@ -29,6 +37,37 @@ beforeEach(() => {
   mocks.markPublished.mockClear();
   mocks.afterOwnerPublish.mockClear();
   mocks.gate.mockResolvedValue({ kind: "open", view: VIEW });
+  mocks.pendingFix.mockReset();
+  mocks.pendingFix.mockResolvedValue(null);
+  mocks.declineFix.mockClear();
+});
+
+// Len Watch (spec local 2026-10-30-len-watch, §5.5 step 5): a fix published from its branch that isn't in the draft
+// yet — the owner's next publish would bring the crash back.
+describe("the Len Watch fix not in the draft yet", () => {
+  const PENDING = { incidentId: "i1", branch: "len-watch/i1" };
+
+  it("a person's publish stops, before anything else", async () => {
+    mocks.pendingFix.mockResolvedValue(PENDING);
+    const r = await publishThroughGates(INPUT);
+    expect(r).toEqual({ status: 428, body: { error: "len_watch_fix_pending", incidentId: "i1", branch: "len-watch/i1" } });
+    expect(mocks.gate).not.toHaveBeenCalled();
+    expect(mocks.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("«Publicar igual» publishes and isn't asked again", async () => {
+    mocks.pendingFix.mockResolvedValue(PENDING);
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "holi" });
+    expect((await publishThroughGates({ ...INPUT, acceptLenWatchFix: "i1" })).status).toBe(200);
+    expect(mocks.declineFix).toHaveBeenCalledWith("i1");
+  });
+
+  it("Len Watch's own publish of its branch is never stopped by it", async () => {
+    mocks.pendingFix.mockResolvedValue(PENDING);
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "holi" });
+    expect((await publishThroughGates({ ...INPUT, source: "len_watch", sourcesFrom: "copy-1" })).status).toBe(200);
+    expect(mocks.pendingFix).not.toHaveBeenCalled();
+  });
 });
 
 describe("publishThroughGates", () => {

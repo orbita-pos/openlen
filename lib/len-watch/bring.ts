@@ -30,6 +30,26 @@ export async function planBring(
 
 export type BringStatus = "brought" | "nothing" | "handed_to_len" | "queued" | "no_fix";
 
+/** A fix published from its branch that the draft doesn't have yet: the owner's next publish would bring the crash
+ *  back, so it waits for «Traer el arreglo» or «Publicar igual». A branch deleted by hand is a discarded fix. */
+export async function pendingFix(projectId: string): Promise<{ incidentId: string; branch: string } | null> {
+  const [{ lenWatchEnabled }, store, wt] = await Promise.all([import("./enabled"), import("./store"), import("./worktree")]);
+  if (!lenWatchEnabled()) return null;
+  for (const i of await store.pendingBrings(projectId)) {
+    if (!i.branch || !i.base) continue;
+    const tip = await wt.branchTip(projectId, i.branch);
+    if (!tip) continue;
+    if ((await planOf(projectId, i.base, tip)).kind !== "nothing") return { incidentId: i.id, branch: i.branch };
+  }
+  return null;
+}
+
+/** «Publicar igual»: published without the fix, and not asked again for it (like an accepted security finding). The
+ *  branch stays: it can still be brought. */
+export async function declineFix(incidentId: string): Promise<void> {
+  await (await import("./store")).updateIncident(incidentId, { bringState: "declined" });
+}
+
 /** «Traer el arreglo», pressed by `actorId`. With Len working in the project, it waits for the turn to end (in the
  *  background: the answer is `queued`); otherwise it brings it now. */
 export async function bringFix(p: { projectId: string; incidentId: string; actorId: string }): Promise<{ status: BringStatus }> {

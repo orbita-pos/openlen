@@ -5,6 +5,7 @@ import type { DestructiveChange } from "@/lib/backend/data-changes-types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
+import { LenWatchFixPending } from "@/components/workspace-v2/len-watch/fix-pending";
 import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
 import { useSecurityReview } from "@/components/workspace-v2/use-security-review";
 import {
@@ -159,6 +160,10 @@ export function PublishModal({
   // petición que confirma lo destructivo).
   const [missingSecrets, setMissingSecrets] = useState<string[] | null>(null);
   const saltarSecretos = useRef(false);
+  // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix it published that the draft doesn't have yet (428),
+  // and «Publicar igual» once chosen.
+  const [lenWatchFix, setLenWatchFix] = useState<{ incidentId: string } | null>(null);
+  const aceptarArreglo = useRef<string | null>(null);
   const dataPreview = useDataChangesPreview(project.id, open);
   // La revisión de seguridad (spec local 2026-10-15): arranca al abrir y se
   // sigue mientras corre; un 428 de la ruta la sustituye. «Publicar igual»
@@ -186,6 +191,8 @@ export function PublishModal({
     setMissingSecrets(null);
     saltarSecretos.current = false;
     aceptarSeguridad.current = null;
+    setLenWatchFix(null);
+    aceptarArreglo.current = null;
     // Focus input after the modal mount animation settles.
     const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => clearTimeout(t);
@@ -268,13 +275,14 @@ export function PublishModal({
     };
   }, [normalized, isCurrent]);
 
-  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string } = {}) => {
+  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string } = {}) => {
     if (submitting) return;
     // Allow the existing subdomain through even when the availability check
     // hasn't settled yet — same precedence as `canPublish` below.
     if (check.kind !== "available" && !isCurrent) return;
     if (o.skipMissingSecrets) saltarSecretos.current = true;
     if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
+    if (o.acceptLenWatchFix) aceptarArreglo.current = o.acceptLenWatchFix;
     setSubmitting("publishing");
     setError(null);
     try {
@@ -292,9 +300,16 @@ export function PublishModal({
           ...(saltarSecretos.current ? { skipMissingSecrets: true } : {}),
           locale,
           ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
+          ...(aceptarArreglo.current ? { acceptLenWatchFix: aceptarArreglo.current } : {}),
         },
         setSecurity,
       );
+      // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix it published isn't in the draft yet.
+      if (outcome.kind === "len_watch_fix_pending") {
+        setLenWatchFix({ incidentId: outcome.incidentId });
+        setSubmitting(null);
+        return;
+      }
       if (outcome.kind === "security_findings") {
         setSecurity(outcome.view);
         setSubmitting(null);
@@ -702,6 +717,24 @@ export function PublishModal({
               onSavedPublish={() => void doPublish()}
               onPublishAnyway={() => void doPublish({ skipMissingSecrets: true })}
               onCancel={() => setMissingSecrets(null)}
+            />
+          )}
+
+          {lenWatchFix && (
+            <LenWatchFixPending
+              projectId={project.id}
+              incidentId={lenWatchFix.incidentId}
+              busy={submitting !== null}
+              onPublishAgain={() => {
+                setLenWatchFix(null);
+                void doPublish();
+              }}
+              onPublishAnyway={() => {
+                const id = lenWatchFix.incidentId;
+                setLenWatchFix(null);
+                void doPublish({ acceptLenWatchFix: id });
+              }}
+              onCancel={() => setLenWatchFix(null)}
             />
           )}
 

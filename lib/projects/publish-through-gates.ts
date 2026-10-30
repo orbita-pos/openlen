@@ -28,6 +28,8 @@ export interface GatedPublishInput {
   /** Publishing a Len Watch branch (spec local 2026-10-30-len-watch, §5.5): its sources are this copy's, everything
    *  else the project's; no data changes; reviewed against the project's published base. */
   sourcesFrom?: string;
+  /** «Publicar igual» over a Len Watch fix that isn't in the draft yet: that incident, not asked again. */
+  acceptLenWatchFix?: string;
 }
 
 export interface GatedPublishResult {
@@ -36,6 +38,20 @@ export interface GatedPublishResult {
 }
 
 export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPublishResult> {
+  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
+  // branch isn't in the draft would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
+  if (i.source === "person") {
+    const bring = await import("@/lib/len-watch/bring");
+    const pending = await bring.pendingFix(i.projectId).catch((err: unknown) => {
+      console.warn("[publish] couldn't tell whether a Len Watch fix is pending; publishing", err);
+      return null;
+    });
+    if (pending && i.acceptLenWatchFix !== pending.incidentId) {
+      return { status: 428, body: { error: "len_watch_fix_pending", incidentId: pending.incidentId, branch: pending.branch } };
+    }
+    if (pending) await bring.declineFix(pending.incidentId);
+  }
+
   // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que
   // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
   // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).

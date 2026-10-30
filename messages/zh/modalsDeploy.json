@@ -83,6 +83,17 @@
     "autoFixHint": "网站一出问题，Len 就开始修复。会使用你的额度。",
     "autoPublish": "自动发布",
     "autoPublishHint": "不等你就发布修复，除非安全审查或数据更改阻止了它。",
-    "ownerOnly": "只有项目所有者可以更改此项。"
+    "ownerOnly": "只有项目所有者可以更改此项。",
+    "fixPending": {
+      "title": "Len 的修复还不在你的草稿里",
+      "body": "Len 在一个单独的副本里修好了你发布的网站。如果现在不把修复带过来就发布，故障会回来。",
+      "bring": "带入修复",
+      "publishAnyway": "仍然发布",
+      "cancel": "取消",
+      "bringing": "正在带入修复…",
+      "handedToLen": "它和你正在编辑的内容冲突：Len 正在手动带入。等他完成后再发布。",
+      "queued": "Len 正在这个项目里工作：他一完成我们就带入。",
+      "failed": "无法带入修复。请再试一次。"
+    }
   }
 }

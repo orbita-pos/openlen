@@ -83,6 +83,17 @@
     "autoFixHint": "O Len começa a corrigir assim que ele cai. Usa seus créditos.",
     "autoPublish": "Publicar sozinho",
     "autoPublishHint": "Publica a correção sem esperar por você, a menos que a revisão de segurança ou uma mudança de dados impeça.",
-    "ownerOnly": "Só o dono do projeto pode mudar isso."
+    "ownerOnly": "Só o dono do projeto pode mudar isso.",
+    "fixPending": {
+      "title": "A correção do Len ainda não está no seu rascunho",
+      "body": "O Len corrigiu o seu site publicado numa cópia à parte. Se publicar agora sem trazer a correção, a falha volta.",
+      "bring": "Trazer a correção",
+      "publishAnyway": "Publicar mesmo assim",
+      "cancel": "Cancelar",
+      "bringing": "Trazendo a correção…",
+      "handedToLen": "Ela choca com o que você estava editando: o Len está trazendo à mão. Publique quando ele terminar.",
+      "queued": "O Len está trabalhando no projeto: trazemos assim que ele terminar.",
+      "failed": "Não foi possível trazer a correção. Tente de novo."
+    }
   }
 }
