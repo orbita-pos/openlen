@@ -11,8 +11,9 @@
 // hasta hoy ningún caso podía leerlo. Una segunda composición en el arnés
 // mediría una fila que la ruta no escribe.
 //
-// Puro: sólo tipos del bucle y del proyecto.
+// Puro: tipos del bucle y del proyecto, y la regla pura `laPaginaNoCambio`.
 
+import { laPaginaNoCambio } from "@/components/workspace-v2/panels/turno-cerrado";
 import type { AgentErrorCode, AgentStreamEvent, TopeCode } from "@/lib/agent/loop";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
@@ -53,6 +54,10 @@ export interface RegistroDelTurno {
   observar(ev: AgentStreamEvent): void;
   /** Todo el texto que Len emitió en el turno. */
   readonly texto: string;
+  /** Len's last message: what it said after its last step (a turn that ended on a step keeps the
+   *  last thing it said). Claude Code hands a run's final message back as its result, not the notes
+   *  between steps. */
+  readonly finalText: string;
   readonly tarjetas: Tarjetas;
   readonly cambioDocumento: boolean;
   /** ¿Merece fila? Un turno que no produjo nada —sin créditos, un rechazo
@@ -66,6 +71,8 @@ export interface RegistroDelTurno {
     /** Lo que devuelve `corteDelTurno`: con código, la fila se guarda como
      *  cortada. */
     readonly corte?: AgentErrorCode | null;
+    /** Some tool wrote something durable: an app's files change without an `html` event. */
+    readonly mutoDurable: boolean;
   }): Omit<StoredChatTurn, "status"> & {
     status: StoredChatTurn["status"] | typeof ESTADO_CORTADO;
     toolResults: { tool: string; ok?: boolean; respuesta: Record<string, unknown> }[] | null;
@@ -74,15 +81,33 @@ export interface RegistroDelTurno {
 
 export function crearRegistroDelTurno(): RegistroDelTurno {
   let texto = "";
+  // What Len has said since its last step, the last stretch before that, and whether a step came
+  // after the last text: that's all `finalText` needs.
+  let sinceStep = "";
+  let beforeStep = "";
+  let stepSinceText = false;
+  const discard = (n: number) => {
+    texto = texto.slice(0, Math.max(0, texto.length - n));
+    sinceStep = sinceStep.slice(0, Math.max(0, sinceStep.length - n));
+  };
   const tarjetas: Tarjetas = [];
   let cambioDocumento = false;
   return {
     observar(ev) {
-      if (ev.type === "text") texto += ev.text;
+      if (ev.type === "action") stepSinceText = true;
+      if (ev.type === "text") {
+        if (stepSinceText) {
+          if (sinceStep.trim()) beforeStep = sinceStep;
+          sinceStep = "";
+          stepSinceText = false;
+        }
+        texto += ev.text;
+        sinceStep += ev.text;
+      }
       // El intento fallido no existió (`lib/agent/loop.ts`, reintentos).
-      else if (ev.type === "retry") texto = texto.slice(0, Math.max(0, texto.length - ev.discardChars));
+      else if (ev.type === "retry") discard(ev.discardChars);
       // Ni lo de un intento que desbordó y se repitió tras compactar.
-      else if (ev.type === "compaction" && ev.discardChars > 0) texto = texto.slice(0, Math.max(0, texto.length - ev.discardChars));
+      else if (ev.type === "compaction" && ev.discardChars > 0) discard(ev.discardChars);
       else if (ev.type === "action" && ev.status !== "running") {
         tarjetas.push({
           tool: ev.tool,
@@ -139,6 +164,9 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
     get texto() {
       return texto;
     },
+    get finalText() {
+      return sinceStep.trim() ? sinceStep : beforeStep;
+    },
     tarjetas,
     get cambioDocumento() {
       return cambioDocumento;
@@ -158,7 +186,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
         status: o.corte ? ESTADO_CORTADO : "applied",
         page: o.page,
         actions: tarjetas,
-        noDocChange: !cambioDocumento,
+        // The browser's one definition (`laPaginaNoCambio`); the server doesn't track `cambio`.
+        noDocChange: laPaginaNoCambio({ huboCambioReal: null, hayDocumentoNuevo: cambioDocumento, mutoDurable: o.mutoDurable }),
         toolResults: o.toolResults,
       };
     },

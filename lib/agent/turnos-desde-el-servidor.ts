@@ -62,8 +62,9 @@ export interface ScheduledRequest {
   readonly framing: string;
   /** A scheduled task's run, or a Len Watch turn (spec local 2026-10-30-len-watch): both arrive framed. */
   readonly origin: ScheduledOrigin | LenWatchOrigin;
-  /** What Len said at the end and the turn's cards (their `present` files go in the email). */
-  readonly onReply: (text: string, cards: Tarjetas) => Promise<void>;
+  /** What Len said at the end and the turn's cards (their `present` files go in the email);
+   *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
+  readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
 }
 
 type Corredor = (
@@ -285,7 +286,7 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin> {
   readonly locale: string;
   /** The chat row's id: the run's id. */
   readonly filaId: string;
-  readonly reply: (text: string, cards: Tarjetas) => Promise<void>;
+  readonly reply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
   readonly fail: (fallo: FalloDelTurno | null, cut: boolean) => Promise<void>;
   readonly onStart: () => Promise<void>;
 }
@@ -305,9 +306,9 @@ function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label
       const scheduled: ScheduledRequest = {
         framing: p.framing,
         origin: p.origin,
-        onReply: async (text, cards) => {
+        onReply: async (text, cards, finalText) => {
           replied = true;
-          await p.reply(text, cards);
+          await p.reply(text, cards, finalText);
         },
       };
       const errores = await runTurn(

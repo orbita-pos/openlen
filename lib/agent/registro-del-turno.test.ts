@@ -40,13 +40,40 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[0]).toMatchObject({ textOffset: 5 });
   });
 
+  it("finalText is Len's last message: what it said after its last step, not the notes between steps", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "text", text: "I'll look at the code." });
+    r.observar({ type: "action", tool: "Read", status: "running", summary: "" });
+    r.observar({ type: "action", tool: "Read", status: "done", summary: "" });
+    r.observar({ type: "text", text: "Found it. " });
+    r.observar({ type: "text", text: "Fixing it." });
+    r.observar({ type: "action", tool: "Edit", status: "done", summary: "" });
+    r.observar({ type: "text", text: "Fixed: " });
+    r.observar({ type: "text", text: "the list skipped a missing date." });
+    expect(r.finalText).toBe("Fixed: the list skipped a missing date.");
+    expect(r.texto).toContain("I'll look at the code.");
+  });
+
+  it("finalText: a turn that ends on a step keeps its last words, and a retry's discarded text never counts", () => {
+    const r = crearRegistroDelTurno();
+    expect(r.finalText).toBe("");
+    r.observar({ type: "text", text: "Done, it loads." });
+    r.observar({ type: "action", tool: "todo_write", status: "done", summary: "", todos: [] });
+    expect(r.finalText).toBe("Done, it loads.");
+    r.observar({ type: "text", text: "Half an attem" });
+    r.observar({ type: "retry", attempt: 1, maxAttempts: 3, delayMs: 0, discardChars: 13 });
+    expect(r.finalText).toBe("Done, it loads.");
+    r.observar({ type: "text", text: "All good." });
+    expect(r.finalText).toBe("All good.");
+  });
+
   const base ={ terminalError: true, topeAlcanzado: null, errorCode: "cancelled" as const, mutoDurable: true };
 
   it("🔴 H05 · cortado a medias habiendo escrito: se guarda como cortado", () => {
     expect(corteDelTurno(base)).toBe("cancelled");
     const r = crearRegistroDelTurno();
     r.observar({ type: "action", tool: "editar_html", status: "done", summary: "decks" });
-    const fila = r.fila({ id: "t", userText: "x", page: null, toolResults: null, corte: corteDelTurno(base) });
+    const fila = r.fila({ id: "t", userText: "x", page: null, toolResults: null, corte: corteDelTurno(base), mutoDurable: true });
     expect(fila.status).toBe("cortado");
     expect(fila.actions).toEqual([{ tool: "editar_html", status: "done", summary: "decks" }]);
   });
@@ -61,8 +88,18 @@ describe("la fila del turno que escribe el servidor", () => {
 
   it("…ni uno que terminó bien", () => {
     expect(corteDelTurno({ ...base, terminalError: false, errorCode: null })).toBeNull();
-    const fila = crearRegistroDelTurno().fila({ id: "t", userText: "x", page: null, toolResults: null });
+    const fila = crearRegistroDelTurno().fila({ id: "t", userText: "x", page: null, toolResults: null, mutoDurable: false });
     expect(fila.status).toBe("applied");
+  });
+
+  // A Len Watch turn fixed /src/screens/Inicio.tsx in an app and its row said «No cambió nada de la app»:
+  // an app's files change without an `html` event. The browser already decides this with
+  // `laPaginaNoCambio`; the row the server writes (server-driven turns, a closed tab) now does too.
+  it("noDocChange: a turn that wrote files without an html event did change something", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "Edit", status: "done", summary: "/src/screens/Inicio.tsx" });
+    expect(r.fila({ id: "t", userText: "x", page: null, toolResults: null, mutoDurable: true }).noDocChange).toBe(false);
+    expect(crearRegistroDelTurno().fila({ id: "t", userText: "x", page: null, toolResults: null, mutoDurable: false }).noDocChange).toBe(true);
   });
 
   it("un reintento retira de la fila lo que el intento fallido llegó a escribir", () => {

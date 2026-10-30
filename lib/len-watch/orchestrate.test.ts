@@ -89,6 +89,26 @@ describe("when Len replies", () => {
     expect(w.notices).toEqual(["fixing", "fixed"]);
   });
 
+  it("the summary is Len's final message, not the notes between its steps", async () => {
+    const w = world({ settings: { autoFix: true, autoPublish: true }, checks: [DOWN, UP] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Voy a mirar el código.\n\nArreglado: main.jsx.", [], "Arreglado: main.jsx.");
+    expect(w.current()).toMatchObject({ resolution: "fixed", summary: "Arreglado: main.jsx." });
+  });
+
+  it("the framing says who publishes, and names the owner's language", async () => {
+    const alone = world({ settings: { autoFix: true, autoPublish: true } });
+    await onIncidentOpened(alone.open(), P, DOWN, alone.deps);
+    expect(alone.launched[0]!.framing).toContain("OpenLen publishes your fix on its own");
+    expect(alone.launched[0]!.framing).toContain("in Spanish.");
+    const halfDone = world({ settings: { autoFix: true, autoPublish: true }, unpublished: true });
+    await onIncidentOpened(halfDone.open(), P, DOWN, halfDone.deps);
+    expect(halfDone.launched[0]!.framing).toContain("the owner decides whether to publish your fix");
+    const asked = world({ settings: { autoFix: true } });
+    await onIncidentOpened(asked.open(), P, DOWN, asked.deps);
+    expect(asked.launched[0]!.framing).toContain("the owner decides whether to publish your fix");
+  });
+
   it("🔴 the owner had changes half done: never published alone; the notice says they'd go too", async () => {
     const w = world({ settings: { autoFix: true, autoPublish: true }, unpublished: true, checks: [DOWN] });
     await onIncidentOpened(w.open(), P, DOWN, w.deps);
