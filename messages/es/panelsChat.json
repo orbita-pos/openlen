@@ -22,7 +22,8 @@
     "imagesSent": "{count} imágenes enviadas",
     "homePage": "Inicio",
     "desdeElHilo": "desde el hilo · {donde}",
-    "scheduled": "Tarea programada «{title}» · {when}"
+    "scheduled": "Tarea programada «{title}» · {when}",
+    "lenWatch": "Len Watch · tu sitio publicado no cargaba"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",
@@ -523,5 +524,17 @@
     "removeDone": "Listo: ya no recibirás este correo.",
     "removeInvalid": "Este enlace no es válido.",
     "removeGone": "Esta tarea ya no existe."
+  },
+  "lenWatch": {
+    "working": "Tu sitio publicado no carga. Len está en ello.",
+    "down": "Tu sitio publicado no carga.",
+    "ready": "Len arregló tu sitio. Falta publicar el arreglo.",
+    "shipsUnpublished": "Saldrán también tus cambios sin publicar.",
+    "fix": "Arreglar con Len",
+    "approve": "Publicar el arreglo",
+    "review": "La publicación necesita tu revisión.",
+    "failed": "No se pudo. Prueba otra vez.",
+    "changed": "El borrador cambió después del arreglo de Len: esos cambios saldrían también.",
+    "publishAnyway": "Publicar igual"
   }
 }

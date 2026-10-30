@@ -344,5 +344,53 @@
       "continueBody": "이전 결과물을 불러와 계속 검색하세요.",
       "date": "날짜"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project}이(가) 열리지 않아요",
+        "body": "열어 보니 빈 화면이었어요. 채팅에서 Len에게 고쳐 달라고 하세요.",
+        "subject": "{project}이(가) 열리지 않아요",
+        "text": "저희 브라우저에서 {url}을(를) 열어 보니 방문자에게 보이는 것처럼 빈 화면이었어요.\n\n프로젝트 채팅에서 Len에게 고쳐 달라고 하세요:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project}이(가) 열리지 않아요",
+        "body": "Len이 이미 고치고 있어요.",
+        "subject": "{project}이(가) 열리지 않아요 — Len이 고치는 중이에요",
+        "text": "저희 브라우저에서 {url}을(를) 열어 보니 빈 화면이었어요. Len이 이미 원인을 찾고 있어요. 끝나면 다시 알려 드릴게요.\n\n채팅에서 확인하세요:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len이 {project}을(를) 고쳤어요",
+        "body": "수정 사항을 게시하기만 하면 돼요.",
+        "subject": "{project}에 대한 Len의 수정 사항을 게시할 수 있어요",
+        "text": "Len이 {url}이(가) 열리지 않던 이유를 찾아 고쳤어요. 아직 게시되지 않았어요. 프로젝트를 열고 수정 사항을 게시하세요.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project}이(가) 다시 열려요",
+        "body": "Len이 고치고 수정 사항을 게시했어요.",
+        "subject": "{project}이(가) 다시 열려요",
+        "text": "Len이 {url}을(를) 고치고 수정 사항을 게시했어요. 다시 열어 보니 잘 열려요.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project}이(가) 여전히 열리지 않아요",
+        "body": "Len의 수정으로는 부족했어요.",
+        "subject": "{project}이(가) 여전히 열리지 않아요",
+        "text": "Len이 수정 사항을 게시했지만 {url}은(는) 열어도 여전히 빈 화면이에요. Len은 혼자서 다시 시도하지 않아요. 채팅에서 Len이 한 일을 확인하고 다음에 할 일을 알려 주세요.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len이 {project}을(를) 고치지 못했어요",
+        "body": "Len에게 도움이 필요해요.",
+        "subject": "Len이 {project}을(를) 고치지 못했어요",
+        "text": "{url}이(가) 열리지 않고 Len이 혼자서 고치지 못했어요.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project}이(가) 다시 열려요",
+        "body": "저절로 다시 열려요.",
+        "subject": "{project}이(가) 다시 열려요",
+        "text": "{url}이(가) 다시 열려요. Len이 살펴보는 동안 저절로 돌아왔어요. 게시된 것은 없어요.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "게시하면 아직 게시하지 않은 변경 사항도 함께 게시돼요."
+    },
+    "turnPrompt": "게시된 사이트가 열리지 않아요. 원인을 찾아서 고쳐 주세요."
   }
 }

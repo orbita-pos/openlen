@@ -60,6 +60,7 @@ import { LineaDeDestino } from "./linea-de-destino";
 import { destinoDe, permitido } from "@/lib/workspace-v2/destino-del-mensaje";
 import { colorDePersona } from "@/lib/workspace-v2/menciones";
 import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
+import { LenWatchBanner } from "../len-watch/len-watch-banner";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -94,6 +95,8 @@ export interface NewChatPanelProps {
    *  deliverable), as Claude keeps the chat in the middle until an artifact exists. Docked, centered at a reading
    *  width, and with no way to float it off an empty screen. */
   centered?: boolean;
+  /** Opens the Publish modal: Len Watch's Approve sends there when a publish gate needs a review. */
+  onOpenPublish?: () => void;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -162,6 +165,7 @@ function AgentChatView({
   esApp = false,
   onClose,
   soloLectura = false,
+  onOpenPublish,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -478,6 +482,8 @@ function AgentChatView({
           />
         </div>
       )}
+      {/* Len Watch (spec local 2026-10-30-len-watch): the published site isn't loading. */}
+      {!plegado && <LenWatchBanner projectId={projectId} soloLectura={soloLectura} onOpenPublish={onOpenPublish} />}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
       <div

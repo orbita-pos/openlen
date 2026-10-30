@@ -74,5 +74,15 @@
       "denied": "Il collegamento a GitHub è stato annullato.",
       "exchange": "Impossibile completare il collegamento a GitHub. Riprova."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "Se il tuo sito pubblicato smette di caricarsi, ti avvisiamo.",
+    "watch": "Controlla e avvisa",
+    "autoFix": "Sistema da solo",
+    "autoFixHint": "Len inizia a sistemarlo appena va giù. Usa i tuoi crediti.",
+    "autoPublish": "Pubblica da solo",
+    "autoPublishHint": "Pubblica la correzione senza aspettarti, a meno che la revisione di sicurezza o una modifica ai dati la fermi.",
+    "ownerOnly": "Solo il proprietario del progetto può cambiarlo."
   }
 }

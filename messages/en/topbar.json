@@ -344,5 +344,53 @@
       "continueBody": "Load older items to keep searching.",
       "date": "Date"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} isn't loading",
+        "body": "We opened it and it stayed blank. Ask Len to fix it from the chat.",
+        "subject": "{project} isn't loading",
+        "text": "We opened {url} in our browser and it stayed blank, the way your visitors see it.\n\nAsk Len to fix it from the project's chat:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} isn't loading",
+        "body": "Len is already on it.",
+        "subject": "{project} isn't loading — Len is on it",
+        "text": "We opened {url} in our browser and it stayed blank. Len is already looking for the cause; we'll write again when it's done.\n\nFollow it in the chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len fixed {project}",
+        "body": "The fix is ready to publish.",
+        "subject": "Len's fix for {project} is ready to publish",
+        "text": "Len found why {url} wasn't loading and fixed it. It isn't published yet: open the project and publish the fix.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} is back",
+        "body": "Len fixed it and published the fix.",
+        "subject": "{project} is loading again",
+        "text": "Len fixed {url} and published the fix. We opened it again and it loads.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} still isn't loading",
+        "body": "Len's fix wasn't enough.",
+        "subject": "{project} still isn't loading",
+        "text": "Len published a fix, but {url} still stays blank when we open it. Len won't try again on its own: see what it did in the chat and tell it what to do next.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len couldn't fix {project}",
+        "body": "Len needs you.",
+        "subject": "Len couldn't fix {project}",
+        "text": "{url} isn't loading and Len couldn't fix it on its own.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} is back",
+        "body": "It loads again on its own.",
+        "subject": "{project} is loading again",
+        "text": "{url} loads again: it came back on its own while Len was looking at it. Nothing was published.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Publishing it will also publish the changes you hadn't published yet."
+    },
+    "turnPrompt": "Your published site isn't loading. Find out why and fix it."
   }
 }

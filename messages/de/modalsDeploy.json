@@ -74,5 +74,15 @@
       "denied": "Die Verbindung mit GitHub wurde abgebrochen.",
       "exchange": "Die Verbindung mit GitHub konnte nicht abgeschlossen werden. Versuch es noch einmal."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "Wenn deine veröffentlichte Seite nicht mehr lädt, sagen wir dir Bescheid.",
+    "watch": "Überwachen und benachrichtigen",
+    "autoFix": "Selbst reparieren",
+    "autoFixHint": "Len beginnt mit der Reparatur, sobald sie ausfällt. Das verbraucht deine Credits.",
+    "autoPublish": "Selbst veröffentlichen",
+    "autoPublishHint": "Veröffentlicht die Korrektur, ohne auf dich zu warten, außer die Sicherheitsprüfung oder eine Datenänderung hält sie auf.",
+    "ownerOnly": "Nur der Eigentümer des Projekts kann das ändern."
   }
 }

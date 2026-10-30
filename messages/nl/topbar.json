@@ -344,5 +344,53 @@
       "continueBody": "Laad oudere resultaten om verder te zoeken.",
       "date": "Datum"
     }
+  },
+  "lenWatch": {
+    "notice": {
+      "down": {
+        "title": "{project} laadt niet",
+        "body": "We hebben het geopend en het bleef leeg. Vraag Len in de chat om het te repareren.",
+        "subject": "{project} laadt niet",
+        "text": "We hebben {url} in onze browser geopend en het bleef leeg, zoals je bezoekers het zien.\n\nVraag Len in de chat van het project om het te repareren:\n{chatUrl}"
+      },
+      "fixing": {
+        "title": "{project} laadt niet",
+        "body": "Len is er al mee bezig.",
+        "subject": "{project} laadt niet – Len is er al mee bezig",
+        "text": "We hebben {url} in onze browser geopend en het bleef leeg. Len zoekt al naar de oorzaak; we schrijven je weer als het klaar is.\n\nVolg het in de chat:\n{chatUrl}"
+      },
+      "fix_ready": {
+        "title": "Len heeft {project} gerepareerd",
+        "body": "De oplossing moet nog gepubliceerd worden.",
+        "subject": "De oplossing van Len voor {project} is klaar om te publiceren",
+        "text": "Len heeft gevonden waarom {url} niet laadde en het gerepareerd. Het is nog niet gepubliceerd: open het project en publiceer de oplossing.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fixed": {
+        "title": "{project} laadt weer",
+        "body": "Len heeft het gerepareerd en de oplossing gepubliceerd.",
+        "subject": "{project} laadt weer",
+        "text": "Len heeft {url} gerepareerd en de oplossing gepubliceerd. We hebben het opnieuw geopend en het laadt.\n\n{detail}\n\n{chatUrl}"
+      },
+      "fix_failed": {
+        "title": "{project} laadt nog steeds niet",
+        "body": "De oplossing van Len was niet genoeg.",
+        "subject": "{project} laadt nog steeds niet",
+        "text": "Len heeft een oplossing gepubliceerd, maar {url} blijft leeg als we het openen. Len probeert het niet zelf opnieuw: bekijk in de chat wat hij deed en zeg wat hij moet doen.\n\n{detail}\n\n{chatUrl}"
+      },
+      "needs_owner": {
+        "title": "Len kon {project} niet repareren",
+        "body": "Len heeft je nodig.",
+        "subject": "Len kon {project} niet repareren",
+        "text": "{url} laadt niet en Len kon het niet zelf repareren.\n\n{detail}\n\n{chatUrl}"
+      },
+      "recovered": {
+        "title": "{project} laadt weer",
+        "body": "Het laadt vanzelf weer.",
+        "subject": "{project} laadt weer",
+        "text": "{url} laadt weer: het kwam vanzelf terug terwijl Len ernaar keek. Er is niets gepubliceerd.\n\n{detail}\n\n{chatUrl}"
+      },
+      "shipsUnpublished": "Bij het publiceren gaan ook je nog niet gepubliceerde wijzigingen live."
+    },
+    "turnPrompt": "Je gepubliceerde site laadt niet. Zoek uit waarom en repareer het."
   }
 }

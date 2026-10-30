@@ -2,7 +2,7 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 
 export type EstadoAvisos = {
   estado: "cargando" | "noDisponible" | "desactivados" | "activando" | "activos" | "denegados" | "error";
-  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: "mencion" } | null;
+  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: "mencion" | "len_watch" } | null;
 };
 type Permiso = "granted" | "denied" | "prompt";
 export interface EventosAvisos {
@@ -26,7 +26,7 @@ export function crearControlDeAvisos(d: {
   nativo: NativoAvisos;
   configurado: boolean;
   onEstado(e: EstadoAvisos): void;
-  onAbrirProyecto(id: string, destino?: "equipo"): void;
+  onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void;
 }) {
   let vivo = true;
   let permitido = false;
@@ -40,11 +40,11 @@ export function crearControlDeAvisos(d: {
   const emitir = (nuevo: Partial<EstadoAvisos>) => { estado = { ...estado, ...nuevo }; if (vivo) d.onEstado(estado); };
   const cancelarEspera = () => { if (temporizador) clearTimeout(temporizador); temporizador = undefined; };
   const pedir = (ruta: string, init?: RequestInit) => d.cliente.pedir(ruta, { ...init, signal: AbortSignal.timeout(12_000) });
-  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: "mencion" } | null => {
+  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: "mencion" | "len_watch" } | null => {
     if (!datos || typeof datos !== "object") return null;
     const b = datos as Record<string, unknown>;
     if (typeof b.projectId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(b.projectId) || typeof b.recipientUserId !== "string" || b.recipientUserId !== usuario) return null;
-    return { projectId: b.projectId, recipientUserId: b.recipientUserId, ...(b.type === "mencion" ? { type: "mencion" as const } : {}) };
+    return { projectId: b.projectId, recipientUserId: b.recipientUserId, ...(b.type === "mencion" || b.type === "len_watch" ? { type: b.type } : {}) };
   };
   async function abrir(datos: unknown) {
     if (!vivo) return;
@@ -56,6 +56,8 @@ export function crearControlDeAvisos(d: {
       if (res.ok && vivo && b.recipientUserId === usuario) {
         emitir({ recibido: null });
         if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
+        // LEN WATCH: Gestión has where the fix stands, its button and the switches.
+        else if (b.type === "len_watch") d.onAbrirProyecto(b.projectId, "gestion");
         else d.onAbrirProyecto(b.projectId);
       }
     } catch { if (vivo) emitir({ estado: "error" }); }

@@ -74,5 +74,15 @@
       "denied": "GitHub 연결이 취소되었습니다.",
       "exchange": "GitHub 연결을 마치지 못했습니다. 다시 시도하세요."
     }
+  },
+  "lenWatch": {
+    "title": "Len Watch",
+    "intro": "게시된 사이트가 열리지 않으면 알려 드려요.",
+    "watch": "감시하고 알리기",
+    "autoFix": "알아서 고치기",
+    "autoFixHint": "사이트가 멈추면 Len이 바로 고치기 시작해요. 크레딧을 사용해요.",
+    "autoPublish": "알아서 게시하기",
+    "autoPublishHint": "보안 검토나 데이터 변경으로 멈추지 않는 한, 기다리지 않고 수정 사항을 게시해요.",
+    "ownerOnly": "프로젝트 소유자만 바꿀 수 있어요."
   }
 }

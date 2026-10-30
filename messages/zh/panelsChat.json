@@ -22,7 +22,8 @@
     "imagesSent": "已发送 {count} 张图片",
     "homePage": "首页",
     "desdeElHilo": "来自讨论 · {donde}",
-    "scheduled": "定时任务「{title}」 · {when}"
+    "scheduled": "定时任务「{title}」 · {when}",
+    "lenWatch": "Len Watch · 你发布的网站无法加载"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",
@@ -523,5 +524,17 @@
     "removeDone": "完成：你将不再收到这封邮件。",
     "removeInvalid": "此链接无效。",
     "removeGone": "此任务已不存在。"
+  },
+  "lenWatch": {
+    "working": "你发布的网站无法加载。Len 正在处理。",
+    "down": "你发布的网站无法加载。",
+    "ready": "Len 修复了你的网站。修复尚未发布。",
+    "shipsUnpublished": "你尚未发布的更改也会一起发布。",
+    "fix": "让 Len 修复",
+    "approve": "发布修复",
+    "review": "发布前需要你检查。",
+    "failed": "没有成功，请重试。",
+    "changed": "Len 修复后草稿又有改动：这些改动也会一起发布。",
+    "publishAnyway": "仍然发布"
   }
 }

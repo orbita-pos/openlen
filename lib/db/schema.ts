@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
+import type { IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
 import type { ScheduleRecord } from "@/lib/scheduled-tasks/deepseek/types";
@@ -2362,6 +2363,41 @@ export const scheduledTaskRuns = pgTable(
 );
 
 export type ScheduledRunOutcome = "done" | "no_credits" | "member_cap" | "cut" | "failed" | "missed" | "plan_required" | "no_access";
+
+// LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a
+// published site that stopped loading. `npm run len-watch:migrate`.
+export const lenWatchSettings = pgTable("lenWatchSettings", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  autoFix: boolean("autoFix").notNull().default(false),
+  /** Only ever true with `autoFix` (lib/len-watch/store.ts keeps it so). */
+  autoPublish: boolean("autoPublish").notNull().default(false),
+  muted: boolean("muted").notNull().default(false),
+  locale: text("locale"),
+  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
+
+export const lenWatchIncidents = pgTable(
+  "lenWatchIncidents",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    status: text("status").$type<IncidentStatus>().notNull().default("open"),
+    sample: jsonb("sample").$type<WatchReport>().notNull(),
+    reports: integer("reports").notNull().default(1),
+    summary: text("summary"),
+    reason: text("reason"),
+    shipsUnpublished: boolean("shipsUnpublished").notNull().default(false),
+    turnRowId: text("turnRowId"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp("resolvedAt", { mode: "date", withTimezone: true }),
+    resolution: text("resolution").$type<Resolution>(),
+    fixStamp: text("fixStamp"),
+  },
+  // Its indexes live in the migration's SQL (scripts/len-watch-migrate-sql.ts), the partial unique
+  // one on "projectId" WHERE status <> 'resolved' among them: it is the lock of «one active incident
+  // per project», which Drizzle's declarations can't express.
+);
 
 // LAS EDGE FUNCTIONS (spec local docs/superpowers/specs/2026-10-11-edge-functions-design.md):
 // lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el

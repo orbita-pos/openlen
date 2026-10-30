@@ -918,6 +918,23 @@ export async function sendProjectEmailNotice(input: { to: string; subject: strin
   await enviar(live, "project email notice", { from, to: input.to, subject: input.subject, text: input.text });
 }
 
+/** LEN WATCH (spec local 2026-10-30-len-watch): the owner's published site stopped loading, or its
+ *  fix moved on. The subject and text come written in the owner's language (lib/len-watch/texts.ts). */
+export async function sendLenWatchEmail(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("len watch email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`
+  📧 [DEV] Len Watch email to ${input.to}
+     ${input.subject}
+`);
+    }
+    return;
+  }
+  await enviar(live, "len watch email", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
 /** EDGE FUNCTIONS: una bolsa pasó del 80 % de su tope. Al operador (la bandeja
  *  de los reportes de abuso, si no hay una propia), una vez al mes por bolsa. */
 export async function sendFunctionsPoolAlertEmail(input: { subject: string; text: string }): Promise<void> {

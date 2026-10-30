@@ -43,6 +43,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
 import { AccountMenu } from "./account-menu";
+import { LenWatchSettings } from "./len-watch/len-watch-settings";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import { visibleProjects } from "@/lib/projects/blank";
 import { ArtifactTray } from "./artifacts/artifact-tray";
@@ -884,6 +885,12 @@ export function TopBar({
                       </>
                     )}
                   </div>
+                  {/* Len Watch (spec local 2026-10-30-len-watch): where a published project's owner looks. */}
+                  {projectId && (
+                    <div className="mt-2">
+                      <LenWatchSettings projectId={projectId} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button

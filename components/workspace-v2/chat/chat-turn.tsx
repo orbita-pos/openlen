@@ -11,8 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Crosshair, CornerDownRight, FileText, Film, Flag } from "lucide-react";
-import { isScheduledOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
+import { isLenWatchOrigin, isScheduledOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -175,6 +175,12 @@ export function UserMessage({
                   when: new Intl.DateTimeFormat(document.documentElement.lang || undefined, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(turn.origen.occurrenceAt)),
                 })}
               </span>
+            </div>
+          ) : turn.origen && isLenWatchOrigin(turn.origen) ? (
+            // A LEN WATCH TURN (spec local 2026-10-30-len-watch, §5.4): the published site stopped loading.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-len-watch-turn="">
+              <ShieldAlert size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.lenWatch")}</span>
             </div>
           ) : turn.origen && (
             <button

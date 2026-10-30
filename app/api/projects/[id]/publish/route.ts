@@ -1,24 +1,12 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
-import { dataChangesErrorBody } from "@/lib/backend/data-changes";
-import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
-import { stripePublishErrorBody } from "@/lib/stripe/publish-errors";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
-import { conAutor } from "@/lib/projects/autor-del-cambio";
+import { publishThroughGates } from "@/lib/projects/publish-through-gates";
 import { auth } from "@/auth";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { securityReviewer } from "@/lib/security-review/real";
-import {
-  ProjectNotFoundError,
-  publishProject,
-  SubdomainInvalidError,
-  SubdomainLimitError,
-  SubdomainTakenError,
-  unpublishProject,
-} from "@/lib/projects";
+import { ProjectNotFoundError, unpublishProject } from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -111,69 +99,22 @@ export const POST = paraLaApp(async (
     if (!p?.subdomain || p.subdomain !== parsed.data.subdomain) return json({ error: "solo_dueno_direccion" }, 403);
   }
 
-  // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que
-  // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
-  // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).
-  const seguridad = await securityReviewer()
-    .gate({ projectId: id, accept: parsed.data.acceptSecurityFingerprint, actorId: userId, locale: parsed.data.locale ?? "en" })
-    .catch((err: unknown) => {
-      console.warn("[publish] security review failed; publishing without it", err);
-      return { kind: "open" as const, view: null };
-    });
-  if (seguridad.kind === "pending") return json({ error: "security_review_pending", fingerprint: seguridad.view.fingerprint }, 428);
-  if (seguridad.kind === "blocked") return json({ error: "security_findings", ...seguridad.view }, 428);
-
-  try {
-    // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
-    const result = await conAutor(userId, () => publishProject({
-      projectId: id,
-      userId: acceso.duenoId,
-      subdomain: parsed.data.subdomain,
-      languages: parsed.data.languages,
-      dataChanges: { mode: "owner", confirmFingerprint: parsed.data.confirmFingerprint, copyDraftData: parsed.data.copyDraftData },
-      functions: { skipMissingSecrets: parsed.data.skipMissingSecrets === true },
-    }));
-    // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
-    // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
-    if (seguridad.view) {
-      await securityReviewer()
-        .markPublished(id, seguridad.view.fingerprint)
-        .catch((err: unknown) => console.warn("[publish] could not keep the published version as the security review's base", err));
-    }
-    return json(result, 200);
-  } catch (err) {
-    if (err instanceof SubdomainInvalidError) {
-      return json({ error: err.reason }, 400);
-    }
-    if (err instanceof SubdomainTakenError) {
-      return json({ error: "taken" }, 409);
-    }
-    if (err instanceof SubdomainLimitError) {
-      return json({ error: "limit_reached", limit: err.limit }, 402);
-    }
-    if (err instanceof ProjectNotFoundError) {
-      return json({ error: "not_found" }, 404);
-    }
-    // Una app web que no compila no se publica (spec local 2026-10-07-apps):
-    // se dice qué fichero y qué línea, para el dueño y para Len.
-    if (err instanceof AppNoCompilaError) {
-      return json({ error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) }, 422);
-    }
-    // Los datos (spec local 2026-10-09): una migración que falla en producción,
-    // o lo destructivo sin confirmar.
-    const dataError = dataChangesErrorBody(err);
-    if (dataError) return json(dataError.body, dataError.status);
-    // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
-    // o su despliegue falló (la página no cambió).
-    // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
-    const stripeError = stripePublishErrorBody(err);
-    if (stripeError) return json(stripeError.body, stripeError.status);
-    const fnError = functionsPublishErrorBody(err);
-    if (fnError) return json(fnError.body, fnError.status);
-    // eslint-disable-next-line no-console
-    console.error("[publish] unexpected error:", err);
-    return json({ error: "publish_failed" }, 500);
-  }
+  // The gates (security review, data, functions, Stripe) and their codes live in one function, shared
+  // with Len Watch (lib/projects/publish-through-gates.ts).
+  const r = await publishThroughGates({
+    projectId: id,
+    actorId: userId,
+    ownerId: acceso.duenoId,
+    subdomain: parsed.data.subdomain,
+    languages: parsed.data.languages,
+    confirmFingerprint: parsed.data.confirmFingerprint,
+    copyDraftData: parsed.data.copyDraftData,
+    skipMissingSecrets: parsed.data.skipMissingSecrets,
+    acceptSecurityFingerprint: parsed.data.acceptSecurityFingerprint,
+    locale: parsed.data.locale,
+    source: "person",
+  });
+  return json(r.body, r.status);
 });
 
 export async function DELETE(
