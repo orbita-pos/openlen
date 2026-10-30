@@ -55,6 +55,13 @@ describe("mandarALen", () => {
     expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body)).attachedImage).toEqual({ url: "https://x/f.jpg" });
   });
 
+  it("manda documentos por el contrato attachedFiles existente en master", async () => {
+    const { c, pedir } = cliente(async () => trozos(""));
+    const archivos = [{url:"https://x/presupuesto.xlsx",name:"Presupuesto.xlsx",size:20,kind:"xlsx" as const}];
+    await mandarALen(c, {projectId:"p1",prompt:"Revísalo",archivos}, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body)).attachedFiles).toEqual(archivos);
+  });
+
   it("sin red: «sinRed»; un rechazo: su status", async () => {
     expect(await mandarALen(cliente(sinRed).c, { projectId: "p", prompt: "x" }, () => {})).toBe("sinRed");
     expect(await mandarALen(cliente(async () => new Response(null, { status: 503 })).c, { projectId: "p", prompt: "x" }, () => {})).toEqual({ status: 503 });

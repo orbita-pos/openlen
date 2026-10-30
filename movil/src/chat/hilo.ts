@@ -2,6 +2,7 @@
 // que el Chat de la web), lo que pasa en esta sesión (lo que mandas, tus
 // notas, la llamada) y el turno que corre ahora. Puro: la pantalla sólo pinta.
 // Sin pasos ni herramientas: el chat del móvil no es el de la web.
+import { archivosDelHistorial, type ArchivoAdjunto } from "./archivos";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import { currentToolName } from "@/lib/agent/tool-renames";
@@ -19,7 +20,7 @@ interface Enviado {
 }
 
 export type ElementoDelHilo =
-  | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; estado: EstadoLocal; goal?: "create" | "resume" } & Enviado)
+  | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; archivos?: readonly Pick<ArchivoAdjunto,"name"|"size"|"kind">[]; estado: EstadoLocal; goal?: "create" | "resume" } & Enviado)
   | ({ clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal } & Enviado)
   | { clave: string; t: number; tipo: "len"; texto: string }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
@@ -67,8 +68,9 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
   for (const turno of turnos) {
     if (turno.tipo === "persona") continue;
     const t = turno.appliedAt ?? ahora;
-    if (turno.userText.trim() || turno.attachedImage) {
-      salida.push({ clave: `${turno.id}:tu`, t, tipo: "tu", texto: turno.userText.trim(), foto: turno.attachedImage?.url, estado: "ok" });
+    const archivos = archivosDelHistorial((turno as StoredChatTurn & {attachedFiles?:unknown}).attachedFiles);
+    if (turno.userText.trim() || turno.attachedImage || archivos.length) {
+      salida.push({ clave: `${turno.id}:tu`, t, tipo: "tu", texto: turno.userText.trim(), foto: turno.attachedImage?.url, ...(archivos.length ? {archivos} : {}), estado: "ok" });
     }
     // En curso: lo que lleva dicho lo pinta el turno en vivo (o el reenganche).
     if (turno.enCurso) continue;

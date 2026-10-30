@@ -3,7 +3,7 @@ import { arrobaEnCurso, opcionesDeMencion, ponerMencion, trozosConMenciones, col
 
 export function TextoMenciones({ texto, personas }: { texto: string; personas: readonly PersonaMencionable[] }) {
   return <>{trozosConMenciones(texto, personas).map((p, i) => p.userId || p.len
-    ? <span key={i} className="eq-mencion" data-mencion={p.len ? "len" : "persona"} style={{ color: p.len ? "var(--len,#ed6200)" : colorDePersona(p.userId!, personas.map(p => p.userId)) }}>{p.texto}</span>
+    ? <span key={i} className="eq-mencion" data-mencion={p.len ? "len" : "persona"} style={{ color: p.len ? "var(--c-qr-ink,#B93F08)" : colorDePersona(p.userId!, personas.map(p => p.userId)) }}>{p.texto}</span>
     : <span key={i}>{p.texto}</span>)}</>;
 }
 export function CajaMenciones({ value, onChange, personas, conLen, disabled = false, label, placeholder, onEnviar }: {

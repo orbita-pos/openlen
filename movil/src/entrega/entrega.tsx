@@ -4,6 +4,7 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { terminaEnPregunta } from "../chat/hilo";
 import { useAtras } from "../atras";
+import { devolverFoco } from "../foco";
 import { Cara } from "../cara";
 import type { Paso } from "./progreso";
 import "./entrega.css";
@@ -39,7 +40,7 @@ export function Comparacion({ cliente, projectId, page, onCerrar }: { cliente: C
   useEffect(() => {
     const previo = document.activeElement as HTMLElement | null;
     cerrar.current?.focus();
-    return () => { previo?.focus(); };
+    return () => devolverFoco(previo);
   }, []);
   useEffect(() => {
     let vigente = true;

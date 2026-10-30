@@ -1,0 +1,1322 @@
+[
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nPanadería Luna\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "theme": "light",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 32,
+          "h": 32
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 172.3125,
+          "h": 33.75
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 40,
+          "h": 5
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54.000030517578125
+        }
+      },
+      {
+        "text": "Modo oscuro",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      }
+    ]
+  },
+  {
+    "w": 390,
+    "theme": "light",
+    "escapeSelector": 1
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "light",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nPanadería Luna\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "theme": "dark",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 32,
+          "h": 32
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 172.3125,
+          "h": 33.75
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 34,
+          "h": 34
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 40,
+          "h": 5
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      },
+      {
+        "text": "Modo claro",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 350,
+          "h": 54
+        }
+      }
+    ]
+  },
+  {
+    "w": 390,
+    "theme": "dark",
+    "escapeSelector": 1
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 390,
+    "h": 844,
+    "theme": "dark",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n\nTus páginas\n\nPanadería Luna\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "theme": "light",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 29.538463592529297,
+          "h": 29.538463592529297
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 159.0576934814453,
+          "h": 31.153846740722656
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 31.384613037109375,
+          "h": 31.38461685180664
+        }
+      },
+      {
+        "text": "Celular390 px",
+        "label": null,
+        "box": {
+          "w": 158.7692413330078,
+          "h": 31.75384521484375
+        }
+      },
+      {
+        "text": "Tableta820 px",
+        "label": null,
+        "box": {
+          "w": 158.7692413330078,
+          "h": 31.75383758544922
+        }
+      },
+      {
+        "text": "Compu1280 px",
+        "label": null,
+        "box": {
+          "w": 158.7692413330078,
+          "h": 31.753860473632812
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 36.923065185546875,
+          "h": 4.615386962890625
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Modo oscuro",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.84613037109375
+        }
+      }
+    ]
+  },
+  {
+    "w": 360,
+    "theme": "light",
+    "escapeSelector": 1
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "light",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nPanadería Luna\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "theme": "dark",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 29.538463592529297,
+          "h": 29.538463592529297
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 159.0576934814453,
+          "h": 31.153846740722656
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 31.384613037109375,
+          "h": 31.38461685180664
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 36.923065185546875,
+          "h": 4.615386962890625
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Modo claro",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.846160888671875
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 323.076904296875,
+          "h": 49.84613037109375
+        }
+      }
+    ]
+  },
+  {
+    "w": 360,
+    "theme": "dark",
+    "escapeSelector": 1
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 360,
+    "h": 640,
+    "theme": "dark",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nPanadería Luna\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "theme": "light",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 26.256412506103516,
+          "h": 26.256410598754883
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 141.38461303710938,
+          "h": 27.69230842590332
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 27.897430419921875,
+          "h": 27.89743423461914
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 32.82051086425781,
+          "h": 4.102569580078125
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.307708740234375
+        }
+      },
+      {
+        "text": "Modo oscuro",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.30767822265625
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.307708740234375
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.30767822265625
+        }
+      }
+    ]
+  },
+  {
+    "w": 320,
+    "theme": "light",
+    "escapeSelector": 1
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo oscuro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "light",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "login",
+    "text": "Len\nTu página, en tu bolsillo.\n?\n¡Hola!\nz\nz\nZ\n1\nEntrar",
+    "errors": []
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "sizes",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nVER TU PÁGINA EN\n\nCelular\n390 px\nTableta\n820 px\nCompu\n1280 px\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "desktop",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nPanadería Luna\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "theme": "dark",
+    "targets": [
+      {
+        "text": "\n\n  \n    \n    \n    \n      \n    \n    \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n\n  \n    \n      \n    \n    \n    \n    \n    \n      \n      \n      \n    \n    \n    \n      \n    \n  \n\n  \n    \n    \n    \n      \n      \n      \n      \n      \n      \n      \n    \n  \n\n  \n    \n    \n  \n\n  ?\n\n  \n    \n    \n    ¡Hola!\n  \n\n  \n    z\n    z\n    Z\n  \n\n  \n    \n      \n      \n      \n      \n      \n      \n      \n    \n    \n      \n      \n      \n        \n        \n      \n    \n  \n\n  \n    \n    \n    \n    \n    \n    \n      1\n    \n  \n\n  \n    \n      \n      \n      \n      \n      \n    \n    \n  \n\n  \n    \n    \n    \n    \n    \n  \n",
+        "label": "Tu Len",
+        "box": {
+          "w": 26.256412506103516,
+          "h": 26.256410598754883
+        }
+      },
+      {
+        "text": "Panadería Lunapanaderia-luna.openlen.app",
+        "label": null,
+        "box": {
+          "w": 141.38461303710938,
+          "h": 27.69230842590332
+        }
+      },
+      {
+        "text": "",
+        "label": "Ver en otro tamaño",
+        "box": {
+          "w": 27.897430419921875,
+          "h": 27.89743423461914
+        }
+      },
+      {
+        "text": "",
+        "label": "Encoger o abrir",
+        "box": {
+          "w": 32.82051086425781,
+          "h": 4.1025543212890625
+        }
+      },
+      {
+        "text": "Panadería Luna",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.30769348144531
+        }
+      },
+      {
+        "text": "Modo claro",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.307708740234375
+        }
+      },
+      {
+        "text": "Tu Len",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.307708740234375
+        }
+      },
+      {
+        "text": "Salir",
+        "label": null,
+        "box": {
+          "w": 287.17950439453125,
+          "h": 44.30767822265625
+        }
+      }
+    ]
+  },
+  {
+    "w": 320,
+    "theme": "dark",
+    "escapeSelector": 1
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "empty",
+    "text": "Aún no tienes páginas: créala en OpenLen.\n\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "list-error",
+    "text": "Len\nNo llego a OpenLen.\nReintentar",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "preview-error",
+    "text": "No pude cargar tu página. La llamada sigue funcionando.\n\n?\n¡Hola!\nz\nz\nZ\n1\nPanadería Luna\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "long-main",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "long-selector",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "long-selector-bottom",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\npanaderia-luna.openlen.app\nPublicada\n\nTus páginas\n\nTienda internacional de los mejores productos de Chihuahua y toda la república mexicana, panadería y repostería artesanal\nProyecto número 2 — sucursal Centro Chihuahua\nProyecto número 3 — sucursal Centro Chihuahua\nProyecto número 4 — sucursal Centro Chihuahua\nProyecto número 5 — sucursal Centro Chihuahua\nProyecto número 6 — sucursal Centro Chihuahua\nProyecto número 7 — sucursal Centro Chihuahua\nProyecto número 8 — sucursal Centro Chihuahua\nProyecto número 9 — sucursal Centro Chihuahua\nProyecto número 10 — sucursal Centro Chihuahua\nProyecto número 11 — sucursal Centro Chihuahua\nProyecto número 12 — sucursal Centro Chihuahua\nProyecto número 13 — sucursal Centro Chihuahua\nProyecto número 14 — sucursal Centro Chihuahua\nProyecto número 15 — sucursal Centro Chihuahua\nProyecto número 16 — sucursal Centro Chihuahua\nProyecto número 17 — sucursal Centro Chihuahua\nProyecto número 18 — sucursal Centro Chihuahua\nModo claro\nTu Len\nAvisos de Len\n\nLos avisos de Android todavía no están configurados en esta versión.\n\nSalir",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "changed",
+    "text": "?\n¡Hola!\nz\nz\nZ\n1\nProyecto número 18 — sucursal Centro Chihuahua\npanaderia-luna.openlen.app\nPublicada\n?\n¡Hola!\nz\nz\nZ\n1\nLen\nTu página, en vista previa\n\n6 de cada 10 llegan de Instagram.\n\nLlamar a Len\nPedir un cambio\nPublicar y gestionar\nAntes / Ahora\nEquipo e hilos",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  },
+  {
+    "w": 320,
+    "h": 568,
+    "theme": "dark",
+    "name": "loading",
+    "text": "",
+    "errors": [
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs.",
+      "Failed to read the 'localStorage' property from 'Window': Storage is disabled inside 'data:' URLs."
+    ]
+  }
+]

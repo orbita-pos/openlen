@@ -3,6 +3,7 @@
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { crearLectorSse, type EventoSse } from "@/lib/len-bench/sse";
 import { SinRed } from "./proyectos";
+import type { ArchivoAdjunto } from "../chat/archivos";
 
 /** «cortado»: se fue la conexión a media respuesta — el turno sigue en el servidor y la app se vuelve a enganchar. */
 export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number };
@@ -10,7 +11,7 @@ export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number 
 export async function mandarALen(
   c: ClienteDeOpenLen,
   /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
-  cuerpo: { projectId: string; prompt: string; foto?: string; turnId?: string; goal?: "create" | "resume" },
+  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume" },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -25,6 +26,7 @@ export async function mandarALen(
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),
+        ...(cuerpo.archivos?.length ? { attachedFiles: cuerpo.archivos } : {}),
       }),
     });
   } catch {
@@ -63,9 +65,10 @@ export async function dirigirA(c: ClienteDeOpenLen, turnoId: string, texto: stri
 
 /** Sube la foto (ya achicada) y devuelve su dirección completa: la ruta puede
  *  contestar con una relativa, y Len la necesita entera. */
-export async function subirFoto(c: ClienteDeOpenLen, base: string, foto: Blob): Promise<string> {
+export async function subirFoto(c: ClienteDeOpenLen, base: string, foto: Blob, projectId?: string): Promise<string> {
   const form = new FormData();
   form.append("file", foto, "foto.jpg");
+  if (projectId) form.append("generationId", projectId);
   let r: Response;
   try {
     r = await c.pedir("/api/upload", { method: "POST", body: form });

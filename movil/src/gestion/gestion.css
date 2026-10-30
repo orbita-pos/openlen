@@ -12,7 +12,7 @@
 .gestion-cuerpo { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:18px 1px 12px; touch-action:pan-y; }
 .app-gestion h2 { font:400 31px/1.12 "Instrument Serif",Georgia,serif; margin:12px 0; }
 .app-gestion p { font-size:14px; line-height:1.5; color:var(--m-dim); }
-.app-gestion .gestion-proyecto { margin:0; font-size:12px; }
+.app-gestion .gestion-proyecto { overflow-wrap:anywhere; margin:0; font-size:12px; }
 .app-gestion label { display:block; font-size:13px; font-weight:600; margin:22px 0 8px; }
 .gestion-direccion { display:flex; align-items:center; border-radius:14px; overflow:hidden; background:var(--m-card); color:var(--m-card-ink); }
 .gestion-direccion input { min-width:0; flex:1; border:0; padding:15px 10px; font-size:16px; background:transparent; color:inherit; }
@@ -22,10 +22,11 @@
 .gestion-url { display:block; word-break:break-all; color:var(--m-ink); font-size:14px; padding:16px 0; }
 .gestion-acciones { display:flex; gap:8px; margin:16px 0; }
 .gestion-acciones button { flex:1; }
-.gestion-numeros { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:26px 0; }
-.gestion-numeros div { padding:18px 8px; background:var(--m-glass); border-radius:18px; text-align:center; }
-.gestion-numeros strong { display:block; font:400 36px/1.2 "Instrument Serif",Georgia,serif; }
-.gestion-numeros span { font-size:11px; }
+.gestion-numeros { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:26px 0; }
+.gestion-numeros div { min-width:0; padding:18px 8px; background:var(--m-glass); border-radius:18px; text-align:center; }
+.gestion-numeros strong { display:block; white-space:nowrap; font:400 28px/1.2 "Instrument Serif",Georgia,serif; }
+.gestion-numeros div > span { font-size:11px; }
+.gestion-numeros .gestion-unidad { font:500 13px/1.2 Inter,sans-serif; }
 .app-gestion table { width:100%; border-collapse:collapse; font-size:13px; margin:20px 0; }
 .app-gestion td,.app-gestion th { padding:10px; text-align:left; border-bottom:1px solid var(--m-faint); }
 .gestion-encargo { padding:18px; margin:22px 0; border-radius:22px; background:var(--m-glass); }
