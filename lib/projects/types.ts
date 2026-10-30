@@ -333,6 +333,9 @@ export interface ScheduledOrigin {
 export interface LenWatchOrigin {
   kind: "len_watch";
   incidentId: string;
+  /** Len fixed it in a worktree, not in the draft (spec local 2026-10-30-len-watch, §5.5): this row has nothing of
+   *  the draft to undo. */
+  worktree?: true;
 }
 
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */

@@ -76,4 +76,11 @@ describe("deshacer un turno tras recargar", () => {
   it("🔴 quien sólo mira (un lector) no recibe `onUndo`: no hay botón aunque se pueda deshacer", () => {
     expect(botonDeshacer(pintar(guardado(true)))).toBeUndefined();
   });
+
+  // Len Watch fixed in a worktree (spec local 2026-10-30-len-watch, §5.5): Len didn't touch the draft, so this row
+  // has nothing of it to undo. Bringing the fix in is a separate step, with its own undo.
+  it("a Len Watch turn in a worktree offers no Undo, even with a record on the server", () => {
+    const turn: DesignTurn = { ...guardado(true), origen: { kind: "len_watch", incidentId: "i1", worktree: true } };
+    expect(botonDeshacer(pintar(turn, () => {}))).toBeUndefined();
+  });
 });

@@ -3322,9 +3322,35 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     // The mocked loop emits no text events, so the record's text is empty here; what matters is that
     // the reply goes once, with the turn's cards.
     expect(onReply).toHaveBeenCalledTimes(1);
-    expect(onReply).toHaveBeenCalledWith(expect.any(String), expect.any(Array));
+    // The third is Len's last message (`RegistroDelTurno.finalText`), what Len Watch tells the owner.
+    expect(onReply).toHaveBeenCalledWith(expect.any(String), expect.any(Array), expect.any(String));
     const cerrada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } }])[1];
     expect(cerrada.transcript.sentText).toBe(framing);
+  });
+
+  it("🔴 a Len Watch turn in a worktree: the tools act on the copy and the row lives in the parent's chat, with no undo", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Arreglado.", turns: 1, toolCalls: 1,
+      usage: { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: true,
+      transcripcion: [{ role: "assistant", content: "Arreglado." }],
+    });
+    mocks.creditsForUsage.mockReturnValue(5);
+    // The same two snapshots with which an ordinary turn saves its undo (the F2 test above).
+    mocks.cargarFicherosDeLaTerminal
+      .mockResolvedValueOnce({ "/index.html": "<h1>Hola</h1>" })
+      .mockResolvedValueOnce({ "/index.html": "<h1>Oleaje</h1>" });
+    mocks.guardarCambiosDelTurno.mockClear();
+    const fila = "33333333-3333-4333-8333-333333333333";
+    const origin = { kind: "len_watch" as const, incidentId: "i1", worktree: true as const };
+    const onReply = vi.fn(async () => {});
+    const corredor = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+    const res = await corredor("ana", { projectId: "p1", prompt: "Tu sitio publicado no carga.", turnId: fila, zonaHoraria: "UTC" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "[LEN WATCH] …", origin, onReply, chatProjectId: "parent-1" } });
+    await readEvents(res);
+    expect((mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string])[0]).toBe("parent-1");
+    expect((mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string])[0]).toBe("parent-1");
+    expect(mocks.guardarCambiosDelTurno).not.toHaveBeenCalled();
+    expect(onReply).toHaveBeenCalledTimes(1);
   });
 
   it("🔴 con miembros, Len recibe lo que el equipo se dijo desde el último turno, quién pide y la regla; sin miembros, el prompt de siempre", async () => {

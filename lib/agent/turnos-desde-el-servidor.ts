@@ -65,6 +65,9 @@ export interface ScheduledRequest {
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
+  /** Whose chat the row goes to, when the tools act on another project: a Len Watch worktree's turn lives in its
+   *  parent's chat (spec local 2026-10-30-len-watch, §5.5). */
+  readonly chatProjectId?: string;
 }
 
 type Corredor = (
@@ -289,6 +292,8 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin> {
   readonly reply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
   readonly fail: (fallo: FalloDelTurno | null, cut: boolean) => Promise<void>;
   readonly onStart: () => Promise<void>;
+  /** The chat the row goes to when `projectId` is a worktree (`ScheduledRequest.chatProjectId`). */
+  readonly chatProjectId?: string;
 }
 
 function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label: string): void {
@@ -310,6 +315,7 @@ function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label
           replied = true;
           await p.reply(text, cards, finalText);
         },
+        ...(p.chatProjectId ? { chatProjectId: p.chatProjectId } : {}),
       };
       const errores = await runTurn(
         correr,
