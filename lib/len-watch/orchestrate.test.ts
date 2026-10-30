@@ -48,7 +48,7 @@ function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; 
   };
   const open = (status: Incident["status"] = "open"): Incident => {
     const now = new Date();
-    const i: Incident = { id: "i1", projectId: "p1", status, sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null };
+    const i: Incident = { id: "i1", projectId: "p1", status, sample: REPORT, reports: 1, summary: null, reason: null, shipsUnpublished: false, turnRowId: null, createdAt: now, updatedAt: now, resolvedAt: null, resolution: null, fixStamp: null, copyProjectId: null, branch: null, base: null, bringState: null };
     incidents.set(i.id, i);
     return i;
   };

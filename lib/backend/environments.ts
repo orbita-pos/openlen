@@ -19,6 +19,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { rootProject } from "@/lib/projects/root-project";
 import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
 import { newJwtSecret, newProjectRef } from "./keys";
 
@@ -89,17 +90,20 @@ function toRecord(row: Row): EnvironmentRecord {
 const T = schema.projectBackendEnvironments;
 
 export async function getEnvironment(projectId: string, env: Environment): Promise<EnvironmentRecord | null> {
+  projectId = await rootProject(projectId);
   const [row] = await db.select().from(T).where(and(eq(T.projectId, projectId), eq(T.environment, env))).limit(1);
   return row ? toRecord(row) : null;
 }
 
 export async function listEnvironments(projectId: string): Promise<EnvironmentRecord[]> {
+  projectId = await rootProject(projectId);
   return (await db.select().from(T).where(eq(T.projectId, projectId))).map(toRecord);
 }
 
 /** El registro del entorno (sin su base: ésa la crea quien lo necesita). Si ya
  *  existe, el que hay. */
 export async function createEnvironment(projectId: string, ref: string, env: Environment): Promise<EnvironmentRecord> {
+  projectId = await rootProject(projectId);
   const rows = await db
     .insert(T)
     .values({
@@ -118,6 +122,7 @@ export async function createEnvironment(projectId: string, ref: string, env: Env
 }
 
 export async function markEnvironmentProvisioned(projectId: string, env: Environment): Promise<void> {
+  projectId = await rootProject(projectId);
   await db.update(T).set({ provisionedAt: new Date() }).where(and(eq(T.projectId, projectId), eq(T.environment, env)));
 }
 
@@ -128,6 +133,7 @@ export async function deleteEnvironment(projectId: string, env: Environment): Pr
 /** Guarda la contraseña del rol de lectura SÓLO si aún no hay una, y devuelve
  *  la que quedó: dos lecturas a la vez acaban usando la misma. */
 export async function claimReadOnlyPassword(projectId: string, encrypted: string, env: Environment = "live"): Promise<string> {
+  projectId = await rootProject(projectId);
   await db
     .update(T)
     .set({ readOnlyPasswordEncrypted: encrypted })

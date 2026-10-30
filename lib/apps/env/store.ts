@@ -8,6 +8,7 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { rootProject } from "@/lib/projects/root-project";
 import { envHashOf, envVersionOf, varsOfTarget } from "./hash";
 import { ENV_TARGETS, validateEnvVars, type EnvTarget, type EnvVarInput, type EnvVarProblem, type StoredEnvVar } from "./rules";
 
@@ -28,11 +29,13 @@ const columns = (t: typeof schema.projectEnvVars) => ({ name: t.name, target: t.
 const rowKey = (v: StoredEnvVar) => `${v.target}\u0000${v.name}\u0000${v.value}`;
 
 export async function listEnvVars(projectId: string): Promise<EnvVarRow[]> {
+  projectId = await rootProject(projectId);
   const t = schema.projectEnvVars;
   return db.select(columns(t)).from(t).where(eq(t.projectId, projectId)).orderBy(asc(t.name), asc(t.target));
 }
 
 export async function envVarsFor(projectId: string, target: EnvTarget): Promise<Record<string, string>> {
+  projectId = await rootProject(projectId);
   const t = schema.projectEnvVars;
   const rows = await db
     .select({ name: t.name, value: t.value })

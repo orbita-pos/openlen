@@ -61,6 +61,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { rootProject } from "@/lib/projects/root-project";
 
 export type RolEnProyecto = "dueno" | "editor" | "lector";
 export type RolDeMiembro = Exclude<RolEnProyecto, "dueno">;
@@ -87,6 +88,9 @@ export function puede(rol: RolEnProyecto, permiso: Permiso): boolean {
 /** El rol de `userId` en el proyecto, o `null` si no entra (o no existe). */
 export async function accesoAlProyecto(projectId: string, userId: string): Promise<AccesoAlProyecto | null> {
   if (!projectId || !userId) return null;
+  // La copia oculta de un arreglo de Len Watch: su dueño y sus miembros son los de su padre
+  // (spec local 2026-10-30-len-watch, §5.5).
+  projectId = await rootProject(projectId);
   const filas = await db
     .select({ duenoId: schema.projects.userId, rol: schema.projectMembers.rol })
     .from(schema.projects)

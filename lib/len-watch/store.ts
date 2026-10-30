@@ -5,7 +5,7 @@ import { and, eq, isNotNull, lt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
-import type { Incident, IncidentStatus, LenWatchSettings, Resolution, WatchReport } from "./types";
+import type { BringState, Incident, IncidentStatus, LenWatchSettings, Resolution, WatchReport } from "./types";
 
 const DEFAULTS: LenWatchSettings = { autoFix: false, autoPublish: false, muted: false, locale: null };
 
@@ -47,6 +47,10 @@ function toIncident(row: IncidentRow): Incident {
     resolvedAt: row.resolvedAt ?? null,
     resolution: row.resolution ?? null,
     fixStamp: row.fixStamp ?? null,
+    copyProjectId: row.copyProjectId ?? null,
+    branch: row.branch ?? null,
+    base: row.base ?? null,
+    bringState: row.bringState ?? null,
   };
 }
 
@@ -92,7 +96,7 @@ export async function countReport(incidentId: string, n = 1): Promise<void> {
 
 export async function updateIncident(
   id: string,
-  patch: Partial<{ status: Exclude<IncidentStatus, "resolved">; summary: string | null; reason: string | null; shipsUnpublished: boolean; turnRowId: string | null; fixStamp: string | null }>,
+  patch: Partial<{ status: Exclude<IncidentStatus, "resolved">; summary: string | null; reason: string | null; shipsUnpublished: boolean; turnRowId: string | null; fixStamp: string | null; copyProjectId: string | null; branch: string | null; base: string | null; bringState: BringState | null }>,
 ): Promise<void> {
   await db
     .update(schema.lenWatchIncidents)
