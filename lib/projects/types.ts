@@ -329,11 +329,21 @@ export interface ScheduledOrigin {
   occurrenceAt: string;
 }
 
+/** A Len Watch turn (spec local 2026-10-30-len-watch, §5.4): the published site stopped loading. */
+export interface LenWatchOrigin {
+  kind: "len_watch";
+  incidentId: string;
+}
+
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin;
 
 export function isScheduledOrigin(o: TurnOrigin): o is ScheduledOrigin {
   return "kind" in o && o.kind === "scheduled";
+}
+
+export function isLenWatchOrigin(o: TurnOrigin): o is LenWatchOrigin {
+  return "kind" in o && o.kind === "len_watch";
 }
 
 export interface StoredChatTurn {

@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { ScheduledOrigin, StoredChatTurn } from "@/lib/projects/types";
+import type { LenWatchOrigin, ScheduledOrigin, StoredChatTurn } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -60,7 +60,8 @@ export interface EmailRequest {
  *  `[SCHEDULE REMINDER]` framing instead of the prompt; the row keeps the prompt with its origin. */
 export interface ScheduledRequest {
   readonly framing: string;
-  readonly origin: ScheduledOrigin;
+  /** A scheduled task's run, or a Len Watch turn (spec local 2026-10-30-len-watch): both arrive framed. */
+  readonly origin: ScheduledOrigin | LenWatchOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email). */
   readonly onReply: (text: string, cards: Tarjetas) => Promise<void>;
 }
@@ -259,12 +260,27 @@ export async function launchEmailTurn(p: {
  * queue. `reply` gets what Len said and the turn's cards; with no reply (no credits, the members'
  * cap, a failure, Len busy for too long) `fail` gets the reason — never silence. Returns at once.
  */
-export function launchScheduledTurn(p: {
+export function launchScheduledTurn(p: FramedTurn<ScheduledOrigin>): void {
+  launchFramedTurn(p, "scheduled-task");
+}
+
+/**
+ * A LEN WATCH TURN (spec local 2026-10-30-len-watch, §5.4): the published site stopped loading and the
+ * owner let Len fix it on its own (or pressed «Fix with Len»). The same road as a scheduled task:
+ * it runs as the owner, waits its turn in the project's queue, and says why when it can't reply.
+ */
+export function launchLenWatchTurn(p: FramedTurn<LenWatchOrigin>): void {
+  launchFramedTurn(p, "len-watch");
+}
+
+interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin> {
   readonly userId: string;
   readonly projectId: string;
+  /** What the chat row shows as the person's message. */
   readonly texto: string;
+  /** What the model reads instead. */
   readonly framing: string;
-  readonly origin: ScheduledOrigin;
+  readonly origin: O;
   readonly timeZone: string;
   readonly locale: string;
   /** The chat row's id: the run's id. */
@@ -272,7 +288,9 @@ export function launchScheduledTurn(p: {
   readonly reply: (text: string, cards: Tarjetas) => Promise<void>;
   readonly fail: (fallo: FalloDelTurno | null, cut: boolean) => Promise<void>;
   readonly onStart: () => Promise<void>;
-}): void {
+}
+
+function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label: string): void {
   enqueue(
     p.projectId,
     async () => {
@@ -299,7 +317,7 @@ export function launchScheduledTurn(p: {
       );
       if (!replied) await p.fail(errores.at(-1) ?? null, false);
     },
-    "scheduled-task",
+    label,
   );
 }
 

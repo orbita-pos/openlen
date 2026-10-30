@@ -22,7 +22,8 @@
     "imagesSent": "이미지 {count}개 전송됨",
     "homePage": "홈",
     "desdeElHilo": "스레드에서 · {donde}",
-    "scheduled": "예약 작업 «{title}» · {when}"
+    "scheduled": "예약 작업 «{title}» · {when}",
+    "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",

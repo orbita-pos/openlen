@@ -22,7 +22,8 @@
     "imagesSent": "{count} images envoyées",
     "homePage": "Accueil",
     "desdeElHilo": "depuis le fil · {donde}",
-    "scheduled": "Tâche planifiée «{title}» · {when}"
+    "scheduled": "Tâche planifiée «{title}» · {when}",
+    "lenWatch": "Len Watch · votre site publié ne se chargeait pas"
   },
   "proceso": {
     "completadoEn": "Terminé en <d>{duracion}</d>",

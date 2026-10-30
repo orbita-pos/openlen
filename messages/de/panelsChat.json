@@ -22,7 +22,8 @@
     "imagesSent": "{count} Bilder gesendet",
     "homePage": "Startseite",
     "desdeElHilo": "aus der Unterhaltung · {donde}",
-    "scheduled": "Geplante Aufgabe «{title}» · {when}"
+    "scheduled": "Geplante Aufgabe «{title}» · {when}",
+    "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
