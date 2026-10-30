@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LenWatchPhase } from "@/lib/notifications/types";
 
-import { lenWatchTexts } from "./texts";
+import { lenWatchTexts, lenWatchTurnPrompt } from "./texts";
 
 const LOCALES = ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"] as const;
 const PHASES: readonly LenWatchPhase[] = ["down", "fixing", "fix_ready", "fixed", "fix_failed", "needs_owner", "recovered"];
@@ -35,6 +35,15 @@ describe("lenWatchTexts", () => {
     const es = JSON.parse(fs.readFileSync(path.join(process.cwd(), "messages/es/topbar.json"), "utf8")) as { lenWatch: { notice: { shipsUnpublished: string } } };
     expect(lenWatchTexts("fix_ready", "es", { ...V, shipsUnpublished: true }).emailText).toContain(es.lenWatch.notice.shipsUnpublished);
     expect(lenWatchTexts("fix_ready", "es", V).emailText).not.toContain(es.lenWatch.notice.shipsUnpublished);
+  });
+
+  it("the chat row's message exists in every language", () => {
+    for (const l of LOCALES) {
+      const prompt = lenWatchTurnPrompt(l);
+      expect(prompt, l).toBeTruthy();
+      expect(prompt, l).not.toContain("lenWatch.");
+    }
+    expect(lenWatchTurnPrompt("xx")).toBe(lenWatchTurnPrompt("en"));
   });
 
   it("an unknown language reads as English", () => {

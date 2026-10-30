@@ -390,6 +390,7 @@
         "text": "{url} 又能加载了：在 Len 查看时它自己恢复了。没有发布任何内容。\n\n{detail}\n\n{chatUrl}"
       },
       "shipsUnpublished": "发布时，你尚未发布的更改也会一起发布。"
-    }
+    },
+    "turnPrompt": "你发布的网站无法加载。找出原因并修复它。"
   }
 }

@@ -390,6 +390,7 @@
         "text": "{url} loads again: it came back on its own while Len was looking at it. Nothing was published.\n\n{detail}\n\n{chatUrl}"
       },
       "shipsUnpublished": "Publishing it will also publish the changes you hadn't published yet."
-    }
+    },
+    "turnPrompt": "Your published site isn't loading. Find out why and fix it."
   }
 }

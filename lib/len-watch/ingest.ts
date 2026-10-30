@@ -62,21 +62,17 @@ export function createIngester(deps: IngestDeps): Ingest {
 let ingester: Ingest | null = null;
 
 async function defaultDeps(): Promise<IngestDeps> {
-  const [store, owner, { checkPublishedLoads }, { scheduleNotification }] = await Promise.all([
+  const [store, owner, { checkPublishedLoads }, { onIncidentOpened }] = await Promise.all([
     import("./store"),
     import("./owner"),
     import("./check"),
-    import("@/lib/notifications/dispatch"),
+    import("./orchestrate"),
   ]);
   return {
     store,
     project: owner.projectForWatch,
     check: (url) => checkPublishedLoads(url),
-    // Until Len fixes things (the orchestrator), an opened incident tells the owner it's down.
-    onOpened: async (incident, project) => {
-      const event = owner.noticeFor(project, incident, "down");
-      await scheduleNotification(event, owner.noticeKey(event));
-    },
+    onOpened: (incident, project, check) => onIncidentOpened(incident, project, check),
     now: Date.now,
   };
 }

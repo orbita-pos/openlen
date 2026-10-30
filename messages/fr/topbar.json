@@ -390,6 +390,7 @@
         "text": "{url} se charge à nouveau : il est revenu tout seul pendant que Len le regardait. Rien n'a été publié.\n\n{detail}\n\n{chatUrl}"
       },
       "shipsUnpublished": "En le publiant, vos modifications pas encore publiées seront publiées aussi."
-    }
+    },
+    "turnPrompt": "Votre site publié ne se charge pas. Trouvez pourquoi et réparez-le."
   }
 }

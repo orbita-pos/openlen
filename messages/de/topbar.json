@@ -390,6 +390,7 @@
         "text": "{url} lädt wieder: Es kam von selbst zurück, während Len es sich ansah. Es wurde nichts veröffentlicht.\n\n{detail}\n\n{chatUrl}"
       },
       "shipsUnpublished": "Beim Veröffentlichen gehen auch deine noch nicht veröffentlichten Änderungen online."
-    }
+    },
+    "turnPrompt": "Deine veröffentlichte Seite lädt nicht. Finde heraus, warum, und repariere sie."
   }
 }

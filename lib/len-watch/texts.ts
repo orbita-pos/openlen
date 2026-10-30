@@ -27,6 +27,12 @@ export interface LenWatchTexts {
   emailText: string;
 }
 
+/** What the chat row of a Len Watch turn shows as its message (the model reads the framing instead). */
+export function lenWatchTurnPrompt(locale: string): string {
+  const l = idiomaDelCorreo(locale);
+  return (createTranslator({ locale: l, messages: MESSAGES[l] }) as unknown as Translate)("lenWatch.turnPrompt");
+}
+
 export function lenWatchTexts(
   phase: LenWatchPhase,
   locale: string,
