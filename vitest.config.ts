@@ -117,6 +117,7 @@ export default defineConfig({
       "lib/len-watch/**/*.test.tsx",
       "app/c/**/*.test.ts",
       "lib/projects/publish-through-gates.test.ts",
+      "app/api/projects/[id]/len-watch/route.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
