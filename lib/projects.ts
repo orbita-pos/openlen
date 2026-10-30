@@ -1210,6 +1210,13 @@ export async function publishProject(
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
 
+  // 5b'. LEN WATCH (spec local 2026-10-30-len-watch, §5.5): what just went live, kept as a commit off the
+  // branches so a fix can be cut from it. Fail-soft inside; not awaited by the response's critical path.
+  if (project.data && (await import("@/lib/len-watch/enabled")).lenWatchEnabled()) {
+    const { recordPublishedSources } = await import("@/lib/len-watch/published-sources");
+    void recordPublishedSources({ projectId: params.projectId, ownerId: params.userId, data: project.data, folder: projectFiles });
+  }
+
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
   // sync is the durability backstop; this gives us a lower-RPO copy that
   // lands in cloud storage seconds after the publish. Soft-fails if R2

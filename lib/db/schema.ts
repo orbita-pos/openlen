@@ -20,7 +20,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
+import type { AppDeProyecto, ProjectData, TurnOrigin } from "@/lib/projects/types";
 import type { IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
@@ -2398,6 +2398,17 @@ export const lenWatchIncidents = pgTable(
   // one on "projectId" WHERE status <> 'resolved' among them: it is the lock of «one active incident
   // per project», which Drizzle's declarations can't express.
 );
+
+/** What the last publish published (spec local 2026-10-30-len-watch, §5.5): a commit off the project's branches, the
+ *  settings and the app it published, and the folder's files git never sees (lib/len-watch/published-sources.ts). */
+export const projectPublishedSources = pgTable("projectPublishedSources", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  commitOid: text("commitOid").notNull(),
+  settings: jsonb("settings").$type<ProjectData["settings"]>(),
+  app: jsonb("app").$type<AppDeProyecto>(),
+  extraFiles: jsonb("extraFiles").$type<Record<string, string>>().notNull().default({}),
+  publishedAt: timestamp("publishedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
 
 // LAS EDGE FUNCTIONS (spec local docs/superpowers/specs/2026-10-11-edge-functions-design.md):
 // lo desplegado en cada entorno, el uso del mes por proyecto y por bolsa (el
