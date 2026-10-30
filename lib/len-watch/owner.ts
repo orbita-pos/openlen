@@ -97,6 +97,7 @@ export function noticeFor(p: ProjectForWatch, incident: Incident, phase: LenWatc
     chatUrl: `${siteUrl()}${urlDelChat(p.projectId)}`,
     detail,
     shipsUnpublished: incident.shipsUnpublished,
+    bringPending: incident.bringState === "pending",
   });
   return { type: "len_watch", projectId: p.projectId, recipientUserId: p.ownerId, incidentId: incident.id, phase, ...texts };
 }

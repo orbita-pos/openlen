@@ -18,13 +18,35 @@ const UP: LoadCheck = { loads: true, reason: "ok", errors: [] };
 
 type Launched = Parameters<OrchestratorDeps["launch"]>[0];
 
-function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; stamps?: string[]; unpublished?: boolean; publish?: { status: number; body: Record<string, unknown> }; live?: boolean; now?: number } = {}) {
+function world(o: {
+  settings?: Partial<LenWatchSettings>;
+  checks?: LoadCheck[];
+  stamps?: string[];
+  unpublished?: boolean;
+  publish?: { status: number; body: Record<string, unknown> };
+  live?: boolean;
+  now?: number;
+  /** What was published is kept (spec §5.5): the fix goes through a worktree. */
+  worktree?: boolean;
+  tip?: string;
+  touchesTables?: boolean;
+  publishedCommit?: string;
+} = {}) {
   const incidents = new Map<string, Incident>();
   const notices: string[] = [];
   const launched: Launched[] = [];
+  const wt: string[] = [];
   const checks = [...(o.checks ?? [])];
   const stamps = [...(o.stamps ?? ["a", "b"])];
   const deps: OrchestratorDeps = {
+    worktree: {
+      add: async (p) => (o.worktree ? { copyId: "copy-1", branch: `len-watch/${p.incidentId}`, base: "base-1" } : null),
+      commitLeftovers: async (copyId) => (wt.push(`commit ${copyId}`), o.tip ?? "tip-1"),
+      touches: async (_p, _b, _t, prefix) => o.touchesTables === true && prefix === "/supabase/migrations/",
+      remove: async (copyId) => void wt.push(`remove ${copyId}`),
+      deleteBranch: async (_p, branch) => void wt.push(`delete ${branch}`),
+      publishedCommit: async () => o.publishedCommit ?? "base-1",
+    },
     store: {
       getSettings: async () => ({ autoFix: false, autoPublish: false, muted: false, locale: null, ...o.settings }),
       activeIncident: async (pid) => [...incidents.values()].find((i) => i.projectId === pid && i.status !== "resolved") ?? null,
@@ -53,8 +75,84 @@ function world(o: { settings?: Partial<LenWatchSettings>; checks?: LoadCheck[]; 
     return i;
   };
   const current = () => incidents.get("i1")!;
-  return { deps, notices, launched, open, current };
+  return { deps, notices, launched, open, current, wt };
 }
+
+// THE WORKTREE (spec local 2026-10-30-len-watch, §5.5): Len fixes a copy of what is published, on its own branch;
+// the branch tip is what goes out; bringing it into the draft is the owner's.
+describe("the fix in a worktree", () => {
+  it("Len works in the worktree: the turn is on the copy, its row in the project's chat, the framing names the branch", async () => {
+    const w = world({ settings: { autoFix: true }, worktree: true });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    expect(w.launched[0]).toMatchObject({ projectId: "copy-1", chatProjectId: "p1", origin: { kind: "len_watch", incidentId: "i1", worktree: true } });
+    expect(w.launched[0]!.framing).toContain("on branch len-watch/i1");
+    expect(w.current()).toMatchObject({ status: "fixing", copyProjectId: "copy-1", branch: "len-watch/i1", base: "base-1" });
+  });
+
+  it("publish on its own: the branch tip goes out, the copy goes, and the fix waits to be brought", async () => {
+    const w = world({ settings: { autoFix: true, autoPublish: true }, worktree: true, checks: [DOWN, UP] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Voy a mirar.\n\nArreglado.", [], "Arreglado.");
+    expect(w.wt).toContain("commit copy-1");
+    expect(w.deps.publish).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", sourcesFrom: "copy-1", source: "len_watch" }));
+    expect(w.wt).toContain("remove copy-1");
+    expect(w.current()).toMatchObject({ status: "resolved", resolution: "fixed", bringState: "pending", copyProjectId: null, summary: "Arreglado." });
+    expect(w.notices).toEqual(["fixing", "fixed"]);
+  });
+
+  it("the owner's half-done changes don't stop it from publishing on its own anymore", async () => {
+    const w = world({ settings: { autoFix: true, autoPublish: true }, worktree: true, unpublished: true, checks: [DOWN, UP] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    expect(w.launched[0]!.framing).toContain("OpenLen publishes your fix on its own");
+    expect(w.launched[0]!.framing).not.toContain("keep them and fix on top");
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect(w.deps.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("a fix that changes tables isn't published: the owner brings it and publishes", async () => {
+    const w = world({ settings: { autoFix: true, autoPublish: true }, worktree: true, touchesTables: true, checks: [DOWN] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado, con una columna nueva.", []);
+    expect(w.deps.publish).not.toHaveBeenCalled();
+    expect(w.current()).toMatchObject({ status: "needs_owner", reason: "needs_tables", bringState: "pending" });
+    expect(w.wt).toContain("remove copy-1");
+    expect(w.wt).not.toContain("delete len-watch/i1");
+  });
+
+  it("without publish on its own, Approve publishes the branch", async () => {
+    const w = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN, UP] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect(w.current()).toMatchObject({ status: "fix_ready", copyProjectId: "copy-1" });
+    expect((await approveFix(w.current(), P, w.deps)).status).toBe(200);
+    expect(w.deps.publish).toHaveBeenCalledWith(expect.objectContaining({ sourcesFrom: "copy-1" }));
+    expect(w.current()).toMatchObject({ resolution: "fixed", bringState: "pending" });
+  });
+
+  it("🔴 Approve after the owner published something else: 409 published_changed, nothing published", async () => {
+    const w = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN], publishedCommit: "someone-elses" });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect(await approveFix(w.current(), P, w.deps)).toEqual({ status: 409, body: { error: "published_changed" } });
+    expect(w.deps.publish).not.toHaveBeenCalled();
+  });
+
+  it("the branch didn't move: needs_owner no_change, and the copy and the branch go", async () => {
+    const w = world({ settings: { autoFix: true, autoPublish: true }, worktree: true, tip: "base-1", checks: [DOWN] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("No encontré la causa.", []);
+    expect(w.current()).toMatchObject({ status: "needs_owner", reason: "no_change" });
+    expect(w.wt).toEqual(expect.arrayContaining(["remove copy-1", "delete len-watch/i1"]));
+    expect(w.deps.publish).not.toHaveBeenCalled();
+  });
+
+  it("without published sources: today's road, on the draft", async () => {
+    const w = world({ settings: { autoFix: true } });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    expect(w.launched[0]).toMatchObject({ projectId: "p1" });
+    expect(w.launched[0]).not.toHaveProperty("chatProjectId");
+  });
+});
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 

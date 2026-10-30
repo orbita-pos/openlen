@@ -42,7 +42,7 @@ export function lenWatchBringPrompt(locale: string): string {
 export function lenWatchTexts(
   phase: LenWatchPhase,
   locale: string,
-  v: { projectTitle: string; url: string; chatUrl: string; detail: string | null; shipsUnpublished: boolean },
+  v: { projectTitle: string; url: string; chatUrl: string; detail: string | null; shipsUnpublished: boolean; bringPending?: boolean },
 ): LenWatchTexts {
   const l = idiomaDelCorreo(locale);
   // The key is built from the phase, which next-intl's typed keys can't follow.
@@ -52,6 +52,8 @@ export function lenWatchTexts(
   const paragraphs = t(`${k}.text`, vars).split("\n\n");
   // The warning goes right after the first paragraph, where the text says the fix isn't published.
   if (v.shipsUnpublished) paragraphs.splice(1, 0, t("lenWatch.notice.shipsUnpublished"));
+  // A fix published from its branch (spec §5.5): the draft doesn't have it until the owner brings it in.
+  if (v.bringPending) paragraphs.splice(1, 0, t("lenWatch.notice.bringPending"));
   return {
     title: t(`${k}.title`, vars),
     body: t(`${k}.body`, vars),
