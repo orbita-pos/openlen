@@ -49,15 +49,40 @@ export async function projectForWatch(projectId: string): Promise<ProjectForWatc
     ownerId: row.userId,
     title: row.title,
     subdomain,
-    url: subdomain ? publishedUrl(subdomain) : null,
+    url: subdomain ? publishedOrigin(subdomain) : null,
     locale: settings.locale ?? htmlLang(row.data?.html) ?? "en",
     timeZone: prefs.timezone,
   };
 }
 
+/** OPENLEN_WATCH_PUBLISHED_ORIGIN: where Len Watch opens a published site INSTEAD of
+ *  https://<sub>.<publish host> — a local or staging run, whose published pages aren't on the production
+ *  domain (in a local dev without it, the check would open production's address). `{sub}` becomes the
+ *  subdomain. Unset in production. */
+function overrideOrigin(): string | null {
+  return process.env.OPENLEN_WATCH_PUBLISHED_ORIGIN?.trim().replace(/\/+$/, "") || null;
+}
+
+function publishedOrigin(sub: string): string {
+  const o = overrideOrigin();
+  return o ? o.replace("{sub}", sub) : publishedUrl(sub);
+}
+
 /** The address of the page that was reported: a site page is `/<slug>/`, the home is the root. */
 export function pageUrl(p: ProjectForWatch, page: string | null): string {
-  return publishedUrl(p.subdomain ?? "", page ? `/${page}/` : "");
+  return publishedOrigin(p.subdomain ?? "") + (page ? `/${page}/` : "");
+}
+
+/** With the override, our browser may open that (local) origin: the SSRF guard lets nothing private
+ *  through otherwise. Without it, nothing is allowed beyond the public internet. */
+export function allowedCheckOrigins(): string[] {
+  const o = overrideOrigin();
+  if (!o) return [];
+  try {
+    return [new URL(o.replace("{sub}", "x")).host];
+  } catch {
+    return [];
+  }
 }
 
 function siteUrl(): string {
