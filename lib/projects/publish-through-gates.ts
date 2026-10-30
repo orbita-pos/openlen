@@ -25,6 +25,9 @@ export interface GatedPublishInput {
   acceptSecurityFingerprint?: string;
   locale?: string;
   source: "person" | "len_watch";
+  /** Publishing a Len Watch branch (spec local 2026-10-30-len-watch, §5.5): its sources are this copy's, everything
+   *  else the project's; no data changes; reviewed against the project's published base. */
+  sourcesFrom?: string;
 }
 
 export interface GatedPublishResult {
@@ -37,7 +40,7 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
   // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).
   const seguridad = await securityReviewer()
-    .gate({ projectId: i.projectId, accept: i.acceptSecurityFingerprint, actorId: i.actorId, locale: i.locale ?? "en" })
+    .gate({ projectId: i.projectId, accept: i.acceptSecurityFingerprint, actorId: i.actorId, locale: i.locale ?? "en", ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}) })
     .catch((err: unknown) => {
       console.warn("[publish] security review failed; publishing without it", err);
       return { kind: "open" as const, view: null };
@@ -53,15 +56,17 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
         userId: i.ownerId,
         subdomain: i.subdomain,
         languages: i.languages,
-        dataChanges: { mode: "owner", confirmFingerprint: i.confirmFingerprint, copyDraftData: i.copyDraftData },
+        // A branch never carries data changes: the draft's migrations are the owner's, half done (§5.5).
+        dataChanges: i.sourcesFrom ? { mode: "skip" } : { mode: "owner", confirmFingerprint: i.confirmFingerprint, copyDraftData: i.copyDraftData },
         functions: { skipMissingSecrets: i.skipMissingSecrets === true },
+        ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}),
       }),
     );
     // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
     // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
     if (seguridad.view) {
-      await securityReviewer()
-        .markPublished(i.projectId, seguridad.view.fingerprint)
+      const reviewer = securityReviewer();
+      await (i.sourcesFrom ? reviewer.markPublished(i.projectId, seguridad.view.fingerprint, i.sourcesFrom) : reviewer.markPublished(i.projectId, seguridad.view.fingerprint))
         .catch((err: unknown) => console.warn("[publish] could not keep the published version as the security review's base", err));
     }
     // A person published: if Len Watch had an incident open, it checks whether the site loads now.

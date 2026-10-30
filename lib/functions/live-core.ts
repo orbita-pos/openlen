@@ -29,9 +29,12 @@ export async function prepareLiveRelease(
     readonly skipMissingSecrets: boolean;
     /** Stripe's live ids already copied (spec local 2026-10-21-stripe-integration, §6.4), to compare with what is deployed. */
     readonly swap?: (text: string) => string;
+    /** Where the functions' sources are, when not in `projectId`: a Len Watch branch's copy (spec local
+     *  2026-10-30-len-watch, §5.5). Where they deploy stays `projectId`'s. */
+    readonly sourcesFrom?: string;
   },
 ): Promise<LiveRelease> {
-  const files = await deps.loadFiles(projectId);
+  const files = await deps.loadFiles(o.sourcesFrom ?? projectId);
   const b = await deps.bundle(files, FUNCTIONS_CATALOG_CURRENT, "production");
   if (!b) throw new FunctionsBundlerUnavailableError();
   if (!b.ok) throw new FunctionsDoNotCompileError(b.errors);
