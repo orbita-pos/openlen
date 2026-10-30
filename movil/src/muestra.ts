@@ -77,7 +77,7 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "
         // Como el servidor: lo que se le mandó a Len es tu mensaje (con la foto sola, lo que la app le pidió de tu parte).
         userText: [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n"),
         ...(foto ? { attachedImage: { url: foto }, noDocChange: true, actions: [{ tool: "preguntar", status: "done" as const, summary: "" }] } : {}),
-        ...(archivos.length ? {attachedFiles: archivos} : {}),
+        ...(archivos.length ? {attachedFiles: [...archivos]} : {}),
         assistantReasoning: dicho,
         status: "applied",
         appliedAt: Date.now(),
