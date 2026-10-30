@@ -237,6 +237,11 @@ export const KNOWN_TOOLS = new Set([
   "draft_reply",
   // Shopify without a key (spec local 2026-10-22-shopify-storefront): the store by its domain.
   "connect_shopify_store",
+  // Scheduled tasks (spec local 2026-10-29-tareas-programadas): Len's four schedule tools.
+  "schedule_create",
+  "schedule_list",
+  "schedule_delete",
+  "schedule_update",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module
