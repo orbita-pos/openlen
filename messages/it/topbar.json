@@ -389,7 +389,8 @@
         "subject": "{project} si carica di nuovo",
         "text": "{url} si carica di nuovo: è tornato da solo mentre Len lo guardava. Non è stato pubblicato niente.\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "Pubblicandolo usciranno anche le modifiche che non avevi ancora pubblicato."
+      "shipsUnpublished": "Pubblicandolo usciranno anche le modifiche che non avevi ancora pubblicato.",
+      "bringPending": "La tua bozza non ha ancora questa correzione: portala dal progetto con «Porta la correzione» prima della prossima pubblicazione."
     },
     "turnPrompt": "Il tuo sito pubblicato non si carica. Scopri perché e sistemalo.",
     "bringPrompt": "Porta nella mia bozza la correzione che hai pubblicato, senza perdere ciò che stavo modificando."

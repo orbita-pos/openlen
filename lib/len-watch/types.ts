@@ -47,6 +47,8 @@ export interface LenWatchStatus {
   isOwner: boolean;
   settings: LenWatchSettings;
   incident: IncidentView | null;
+  /** A fix published from its branch that the draft doesn't have yet (spec §5.5): «Traer el arreglo». */
+  pendingFix?: { incidentId: string; branch: string } | null;
 }
 
 export interface Incident {

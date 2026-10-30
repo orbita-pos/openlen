@@ -9,14 +9,14 @@ vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/len-watch/store", () => ({ getSettings: vi.fn(), saveSettings: vi.fn(), activeIncident: vi.fn() }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: vi.fn() }));
 vi.mock("@/lib/len-watch/orchestrate", () => ({ startFix: vi.fn(async () => undefined), approveFix: vi.fn(), recoverIfStale: vi.fn(async (i: unknown) => i) }));
-vi.mock("@/lib/len-watch/bring", () => ({ bringFix: vi.fn() }));
+vi.mock("@/lib/len-watch/bring", () => ({ bringFix: vi.fn(), pendingFix: vi.fn(async () => null) }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { activeIncident, getSettings, saveSettings } from "@/lib/len-watch/store";
 import { projectForWatch } from "@/lib/len-watch/owner";
 import { approveFix, recoverIfStale, startFix } from "@/lib/len-watch/orchestrate";
-import { bringFix } from "@/lib/len-watch/bring";
+import { bringFix, pendingFix } from "@/lib/len-watch/bring";
 import type { Incident } from "@/lib/len-watch/types";
 
 import { GET, PUT } from "./route";
@@ -56,8 +56,15 @@ describe("GET", () => {
       isOwner: true,
       settings: SETTINGS,
       incident: { id: "i1", status: "fix_ready", reason: null, summary: "Arreglado.", shipsUnpublished: false, createdAt: now.toISOString() },
+      pendingFix: null,
     });
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "owner", "ver");
+  });
+
+  it("a fix published from its branch that the draft doesn't have yet shows in the state (spec §5.5)", async () => {
+    vi.mocked(pendingFix).mockResolvedValueOnce({ incidentId: "i1", branch: "len-watch/i1" });
+    const body = (await (await GET(req("GET"), ctx)).json()) as { pendingFix: unknown };
+    expect(body.pendingFix).toEqual({ incidentId: "i1", branch: "len-watch/i1" });
   });
 
   it("401 without a session, 404 with Len Watch off", async () => {

@@ -54,6 +54,16 @@ describe("watchFraming", () => {
   });
 });
 
+describe("watchFraming in a worktree (spec §5.5)", () => {
+  it("tells Len where he is, to commit on the branch, and that tables can't go out alone — only in a worktree", () => {
+    const f = watchFraming({ ...BASE, worktree: { branch: "len-watch/i1", base: "abc1234" } });
+    expect(f).toContain("You are in a worktree of what is published, on branch len-watch/i1 (from abc1234); the owner's draft is elsewhere and stays as it is.");
+    expect(f).toContain("Commit your fix on this branch.");
+    expect(f).toContain("A fix that needs a database change can't be published on its own: say so.");
+    expect(watchFraming(BASE)).not.toContain("worktree");
+  });
+});
+
 describe("bringFraming", () => {
   const B = { branch: "len-watch/i1", base: "abc1234", paths: ["/src/App.tsx"], notes: [], language: "Spanish" };
 

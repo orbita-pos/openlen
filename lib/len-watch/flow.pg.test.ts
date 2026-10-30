@@ -70,8 +70,20 @@ describe.skipIf(!URL)("Len Watch against real Postgres", () => {
 
     const launched: { reply: (t: string, c: []) => Promise<void>; userId: string }[] = [];
     const checks = [{ loads: false, reason: "blank" as const, errors: ["kaput"] }];
+    const wt = await import("./worktree");
+    const { readPublishedSources } = await import("./published-sources");
     const deps: import("./orchestrate").OrchestratorDeps = {
       store,
+      // The real worktree: this project was never published through publishProject, so nothing published was kept
+      // and the fix goes the way it went before (the worktree's own flow is in worktree-flow.pg.test.ts).
+      worktree: {
+        add: wt.addWorktree,
+        commitLeftovers: wt.commitLeftovers,
+        touches: wt.branchTouches,
+        remove: wt.removeWorktree,
+        deleteBranch: wt.deleteBranch,
+        publishedCommit: async (id) => (await readPublishedSources(id))?.commitOid ?? null,
+      },
       project: owner.projectForWatch,
       check: async () => checks.shift() ?? { loads: true, reason: "ok", errors: [] },
       notify: (e, key) => scheduleNotification(e, key),

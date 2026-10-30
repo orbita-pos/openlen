@@ -30,7 +30,16 @@ export function bringFraming(i: { branch: string; base: string; paths: readonly 
 /** `publishesAlone`: OpenLen publishes the fix the moment Len finishes (so Len's last words match what
  *  happens next). `language`: the owner's, in English — this message being English must not read as
  *  the owner switching language, which the turn's LANGUAGE line tells Len to follow. */
-export function watchFraming(i: { url: string; reports: readonly WatchReport[]; check: LoadCheck; hadUnpublishedChanges: boolean; publishesAlone: boolean; language: string }): string {
+export function watchFraming(i: {
+  url: string;
+  reports: readonly WatchReport[];
+  check: LoadCheck;
+  hadUnpublishedChanges: boolean;
+  publishesAlone: boolean;
+  language: string;
+  /** Len works in a worktree of what is published (spec §5.5), on this branch cut from this commit. */
+  worktree?: { branch: string; base: string };
+}): string {
   const block = [...i.reports.map(reportLine), `our browser: ${i.check.errors.length > 0 ? i.check.errors.join(" | ") : "no error"}`];
   const whoPublishes = i.publishesAlone ? "OpenLen publishes your fix on its own and checks that the site loads." : "the owner decides whether to publish your fix.";
   return [
@@ -40,6 +49,13 @@ export function watchFraming(i: { url: string; reports: readonly WatchReport[]; 
     ...block,
     "</visitor-reports>",
     "Find the cause and fix it in the project's files. Check with view_page that it loads again, and run the app's tests if it has them. You may read production data with `db query --linked`; never write it.",
+    ...(i.worktree
+      ? [
+          `You are in a worktree of what is published, on branch ${i.worktree.branch} (from ${i.worktree.base}); the owner's draft is elsewhere and stays as it is.`,
+          "Commit your fix on this branch.",
+          "A fix that needs a database change can't be published on its own: say so.",
+        ]
+      : []),
     `Do not call publish: when you finish, ${whoPublishes}`,
     ...(i.hadUnpublishedChanges ? ["The project has changes the owner has not published yet; keep them and fix on top."] : []),
     "If you cannot fix it in this turn, say what you found and what is missing.",

@@ -389,7 +389,8 @@
         "subject": "{project} 又能加载了",
         "text": "{url} 又能加载了：在 Len 查看时它自己恢复了。没有发布任何内容。\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "发布时，你尚未发布的更改也会一起发布。"
+      "shipsUnpublished": "发布时，你尚未发布的更改也会一起发布。",
+      "bringPending": "你的草稿里还没有这个修复：下次发布前，请在项目里用「带入修复」把它带过来。"
     },
     "turnPrompt": "你发布的网站无法加载。找出原因并修复它。",
     "bringPrompt": "把你发布的修复带到我的草稿里，保留我正在编辑的内容。"

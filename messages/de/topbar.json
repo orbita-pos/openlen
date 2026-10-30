@@ -389,7 +389,8 @@
         "subject": "{project} lädt wieder",
         "text": "{url} lädt wieder: Es kam von selbst zurück, während Len es sich ansah. Es wurde nichts veröffentlicht.\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "Beim Veröffentlichen gehen auch deine noch nicht veröffentlichten Änderungen online."
+      "shipsUnpublished": "Beim Veröffentlichen gehen auch deine noch nicht veröffentlichten Änderungen online.",
+      "bringPending": "Dein Entwurf hat diese Korrektur noch nicht: Übernimm sie im Projekt mit „Korrektur übernehmen“, bevor du das nächste Mal veröffentlichst."
     },
     "turnPrompt": "Deine veröffentlichte Seite lädt nicht. Finde heraus, warum, und repariere sie.",
     "bringPrompt": "Übernimm die veröffentlichte Korrektur in meinen Entwurf, ohne zu verlieren, was ich gerade bearbeitet habe."

@@ -37,6 +37,13 @@ describe("lenWatchTexts", () => {
     expect(lenWatchTexts("fix_ready", "es", V).emailText).not.toContain(es.lenWatch.notice.shipsUnpublished);
   });
 
+  it("a fix published from its branch says the draft doesn't have it yet, right after the first paragraph (spec §5.5)", () => {
+    const es = JSON.parse(fs.readFileSync(path.join(process.cwd(), "messages/es/topbar.json"), "utf8")) as { lenWatch: { notice: { bringPending: string } } };
+    const paragraphs = lenWatchTexts("fixed", "es", { ...V, bringPending: true }).emailText.split("\n\n");
+    expect(paragraphs[1]).toBe(es.lenWatch.notice.bringPending);
+    expect(lenWatchTexts("fixed", "es", V).emailText).not.toContain(es.lenWatch.notice.bringPending);
+  });
+
   it("the chat row's message exists in every language", () => {
     for (const l of LOCALES) {
       const prompt = lenWatchTurnPrompt(l);

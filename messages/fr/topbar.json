@@ -389,7 +389,8 @@
         "subject": "{project} se charge à nouveau",
         "text": "{url} se charge à nouveau : il est revenu tout seul pendant que Len le regardait. Rien n'a été publié.\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "En le publiant, vos modifications pas encore publiées seront publiées aussi."
+      "shipsUnpublished": "En le publiant, vos modifications pas encore publiées seront publiées aussi.",
+      "bringPending": "Votre brouillon n'a pas encore cette correction : apportez-la depuis le projet avec « Apporter la correction » avant votre prochaine publication."
     },
     "turnPrompt": "Votre site publié ne se charge pas. Trouvez pourquoi et réparez-le.",
     "bringPrompt": "Apportez dans mon brouillon la correction que vous avez publiée, sans perdre ce que j'étais en train de modifier."

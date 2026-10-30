@@ -389,7 +389,8 @@
         "subject": "{project} is loading again",
         "text": "{url} loads again: it came back on its own while Len was looking at it. Nothing was published.\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "Publishing it will also publish the changes you hadn't published yet."
+      "shipsUnpublished": "Publishing it will also publish the changes you hadn't published yet.",
+      "bringPending": "Your draft doesn't have this fix yet: bring it in from the project with «Bring the fix in» before your next publish."
     },
     "turnPrompt": "Your published site isn't loading. Find out why and fix it.",
     "bringPrompt": "Bring the fix you published into my draft, keeping what I was editing."

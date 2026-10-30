@@ -389,7 +389,8 @@
         "subject": "{project} voltou a carregar",
         "text": "{url} voltou a carregar: voltou sozinho enquanto o Len olhava. Nada foi publicado.\n\n{detail}\n\n{chatUrl}"
       },
-      "shipsUnpublished": "Ao publicar, também sairão as alterações que você ainda não tinha publicado."
+      "shipsUnpublished": "Ao publicar, também sairão as alterações que você ainda não tinha publicado.",
+      "bringPending": "Seu rascunho ainda não tem esta correção: traga-a pelo projeto com «Trazer a correção» antes da próxima publicação."
     },
     "turnPrompt": "Seu site publicado não carrega. Descubra por quê e corrija.",
     "bringPrompt": "Traga para o meu rascunho a correção que você publicou, sem perder o que eu estava editando."
