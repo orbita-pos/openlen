@@ -55,10 +55,9 @@ describe("watchFraming", () => {
 });
 
 describe("watchFraming in a worktree (spec §5.5)", () => {
-  it("tells Len where he is, to commit on the branch, and that tables can't go out alone — only in a worktree", () => {
+  it("tells Len where he is and that tables can't go out alone — only in a worktree", () => {
     const f = watchFraming({ ...BASE, worktree: { branch: "len-watch/i1", base: "abc1234" } });
     expect(f).toContain("You are in a worktree of what is published, on branch len-watch/i1 (from abc1234); the owner's draft is elsewhere and stays as it is.");
-    expect(f).toContain("Commit your fix on this branch.");
     expect(f).toContain("A fix that needs a database change can't be published on its own: say so.");
     expect(watchFraming(BASE)).not.toContain("worktree");
   });
@@ -68,6 +67,12 @@ describe("watchFraming in a worktree (spec §5.5)", () => {
     const line = "The owner never sees the branch or the commit: in your final message, say what was wrong, what you changed and what you checked.";
     expect(watchFraming({ ...BASE, worktree: { branch: "len-watch/i1", base: "abc1234" } })).toContain(line);
     expect(watchFraming(BASE)).not.toContain(line);
+  });
+
+  // The real incident of 31/10 opened the owner's notice with «Fixed and committed on the fix branch.»: told to
+  // commit, Len reports the commit. OpenLen commits what he leaves (commitLeftovers), so he is never told to.
+  it("🔴 never tells Len to commit", () => {
+    expect(watchFraming({ ...BASE, worktree: { branch: "len-watch/i1", base: "abc1234" } })).not.toMatch(/\bcommit (your|the) fix\b/i);
   });
 });
 
