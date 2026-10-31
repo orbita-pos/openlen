@@ -128,6 +128,14 @@ describe("POST fix", () => {
     expect(await res.json()).toEqual({ error: "busy" });
     expect(startFix).not.toHaveBeenCalled();
   });
+
+  it("🔴 its fix changes tables and waits in its branch to be brought: 409, the branch isn't cut again over it", async () => {
+    vi.mocked(activeIncident).mockResolvedValue({ ...incident("needs_owner"), reason: "needs_tables", branch: "len-watch/i1", bringState: "pending" });
+    const res = await FIX(req("POST"), ctx);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "fix_pending" });
+    expect(startFix).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST approve", () => {

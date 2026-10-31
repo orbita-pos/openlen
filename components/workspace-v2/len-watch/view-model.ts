@@ -11,12 +11,14 @@ export type BannerState =
   | { kind: "bring"; incidentId: string };
 
 export function bannerState(
-  incident: { status: IncidentStatus; shipsUnpublished: boolean } | null,
+  incident: { id?: string; status: IncidentStatus; shipsUnpublished: boolean } | null,
   pendingFix: { incidentId: string } | null = null,
 ): BannerState {
-  // What is going on with the site comes first; a fix to bring shows once nothing else does.
+  // What is going on with the site comes first; a fix to bring shows once nothing else does — or when it is this
+  // crash's own fix, waiting in its branch because it changes tables (spec §5.5): fixing it again would cut it over.
   const site = siteState(incident);
-  return site.kind === "hidden" && pendingFix ? { kind: "bring", incidentId: pendingFix.incidentId } : site;
+  if (!pendingFix) return site;
+  return site.kind === "hidden" || (incident?.id === pendingFix.incidentId && site.kind === "down") ? { kind: "bring", incidentId: pendingFix.incidentId } : site;
 }
 
 function siteState(incident: { status: IncidentStatus; shipsUnpublished: boolean } | null): BannerState {

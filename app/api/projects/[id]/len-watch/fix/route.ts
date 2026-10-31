@@ -19,6 +19,9 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   const incident = await standingIncident(id);
   if (!incident) return Response.json({ error: "no_incident" }, { status: 409 });
   if (!FIXABLE.includes(incident.status)) return Response.json({ error: "busy" }, { status: 409 });
+  // Its fix changes tables and waits in its branch for «Traer el arreglo» (spec §5.5): fixing again would cut the
+  // branch over it.
+  if (incident.bringState === "pending") return Response.json({ error: "fix_pending" }, { status: 409 });
   const project = await projectForWatch(id);
   if (!project?.url) return Response.json({ error: "no_incident" }, { status: 409 });
   // The turn is whoever pressed: an editor's counts against the members' monthly cap.
