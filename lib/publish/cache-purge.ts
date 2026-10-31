@@ -1,7 +1,7 @@
 // Cloudflare cache-purge for published landing pages.
 //
-// When `<sub>.openlen.com` is proxied by Cloudflare (orange cloud), the
-// edge caches the rendered HTML up to `s-maxage`. After a publish we
+// When `<sub>.<PUBLISH_BASE_HOST>` (openlen.app in production) is proxied
+// by Cloudflare (orange cloud), the edge caches the rendered HTML up to `s-maxage`. After a publish we
 // must purge it so the next visitor sees fresh content instead of the
 // previous deploy.
 //
@@ -10,8 +10,11 @@
 // warn. Publish has already succeeded on disk; a stale edge cache will
 // flush on its own within the `s-maxage` window.
 //
-// Token scope required: `Zone:Zone:Read` + `Zone:Cache Purge:Edit`
-// restricted to the openlen.com zone.
+// Token scope required: `Zone:Zone:Read` + `Zone:Cache Purge:Edit` on the
+// zone of PUBLISH_BASE_HOST, and CLOUDFLARE_ZONE_ID must be THAT zone. With
+// the openlen.com zone, Cloudflare answers success and purges nothing:
+// measured 2026-10-31, every publish since pages moved to openlen.app
+// (2026-09-10) left the previous page cached for up to `s-maxage`.
 
 const PURGE_TIMEOUT_MS = 5000;
 let warnedMissingEnv = false;

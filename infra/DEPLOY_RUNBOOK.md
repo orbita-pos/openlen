@@ -40,7 +40,8 @@ Edit, then `systemctl restart openlen-app`. Full reference: `infra/app/env.examp
   `production` only to take real money. Webhook URL in Polar:
   `${NEXTAUTH_URL}/api/billing/webhook` (format: Raw).
 - `GITHUB_DEPLOY_*`, `VERCEL_*` — Deploy-dropdown export targets
-- `R2_*` (assets), `CLOUDFLARE_ZONE_ID/API_TOKEN` (publish cache purge)
+- `R2_*` (assets), `CLOUDFLARE_ZONE_ID/API_TOKEN` (publish cache purge — the
+  zone of `PUBLISH_BASE_HOST`, openlen.app, not openlen.com)
 - **`BROADCAST_POSTAL_ADDRESS`** — CAN-SPAM postal address stamped into every
   Broadcast email. The Send route returns 503 until this is set (required only
   to use the Broadcast module).
