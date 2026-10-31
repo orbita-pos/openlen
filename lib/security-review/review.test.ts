@@ -190,6 +190,28 @@ describe("start", () => {
     expect(calls).toHaveLength(0);
   });
 
+  // Seen with Len Watch (31/10): every Len turn gives the project a backend record, which puts it in scope before its
+  // draft database exists — so the schema is still null and the fingerprint is the one reviewed out of scope.
+  it("🔴 the same files, reviewed when the project had no backend, get the model once it has one", async () => {
+    let inputs = page();
+    const { reviewer, calls } = setup({ inputs: () => inputs });
+    const before = await reviewer.start("p", "es");
+    expect(before?.status).toBe("skipped_scope");
+    inputs = page({ hasBackend: true });
+    const after = await reviewer.start("p", "es");
+    expect(after?.fingerprint).toBe(before?.fingerprint);
+    expect(after?.status).toBe("running");
+    await settle();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("still out of scope: asked again, it stays rules only", async () => {
+    const { reviewer, calls } = setup({ inputs: () => page() });
+    await reviewer.start("p", "es");
+    expect((await reviewer.start("p", "es"))?.status).toBe("skipped_scope");
+    expect(calls).toHaveLength(0);
+  });
+
   it("a review skipped for budget on an earlier day runs the model when asked again today", async () => {
     let now = new Date("2026-10-16T23:00:00Z");
     let env: Record<string, string> = { OPENLEN_SECURITY_REVIEW_DAILY_USD: "0" };

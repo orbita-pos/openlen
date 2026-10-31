@@ -58,7 +58,7 @@ export const pgSecurityReviewStore: SecurityReviewStore = {
     const out = await db
       .update(T)
       .set({ status: "running", findings: [], failReason: null, finishedAt: null, startedAt: at })
-      .where(and(one(projectId, fingerprint), inArray(T.status, ["failed", "skipped_budget"])))
+      .where(and(one(projectId, fingerprint), inArray(T.status, ["failed", "skipped_budget", "skipped_scope"])))
       .returning({ fingerprint: T.fingerprint });
     return out.length > 0;
   },

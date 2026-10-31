@@ -27,7 +27,8 @@ export interface SecurityReviewStore {
   /** Only a `running` review is finished; any other is left as it is. The run's cost is ADDED to what the review
    *  already cost (a retried review keeps what its earlier runs spent). */
   finish(projectId: string, fingerprint: string, f: FinishedReview): Promise<void>;
-  /** A `failed` or `skipped_budget` review runs again: `running` from `at`, keeping its cost. false for any other. */
+  /** A `failed`, `skipped_budget` or `skipped_scope` review runs again: `running` from `at`, keeping its cost. false for
+   *  any other. */
   restart(projectId: string, fingerprint: string, at: Date): Promise<boolean>;
   /** Started in [from, to): this project's reviews that used the model, and what ALL reviews cost. */
   usageBetween(projectId: string, from: Date, to: Date): Promise<{ readonly projectModelRuns: number; readonly spentCentiCredits: number }>;
@@ -68,7 +69,7 @@ export function memorySecurityReviewStore(): SecurityReviewStore & { readonly re
     },
     async restart(projectId, fingerprint, when) {
       const i = at(projectId, fingerprint);
-      if (i < 0 || (reviews[i]!.status !== "failed" && reviews[i]!.status !== "skipped_budget")) return false;
+      if (i < 0 || !["failed", "skipped_budget", "skipped_scope"].includes(reviews[i]!.status)) return false;
       reviews[i] = { ...reviews[i]!, status: "running", findings: [], failReason: null, finishedAt: null, startedAt: when };
       return true;
     },
