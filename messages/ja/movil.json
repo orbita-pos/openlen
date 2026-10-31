@@ -107,6 +107,21 @@
       "modulo": "モジュールを有効にしています…",
       "deshaciendo": "変更を元に戻しています…",
       "trabajando": "作業中…"
+    },
+    "hecho": {
+      "leyendo": "ページを読みました",
+      "cambiando": "ページを変更しました",
+      "comprobando": "仕上がりを確認しました",
+      "fotos": "写真を探しました",
+      "internet": "ネットで調べました",
+      "visitas": "訪問数を見ました",
+      "formularios": "フォームを見ました",
+      "mensajes": "メッセージを読みました",
+      "borrador": "下書きを書きました",
+      "publicar": "公開の準備をしました",
+      "modulo": "モジュールを有効にしました",
+      "deshaciendo": "変更を元に戻しました",
+      "trabajando": "作業しました"
     }
   }
 }

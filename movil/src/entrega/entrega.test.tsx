@@ -1,13 +1,24 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-import { Comparacion, EntregaVisual, esEntrega } from "./entrega";
-vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
+import { Comparacion, EntregaVisual, esEntrega, Progreso } from "./entrega";
+// The key with its namespace, so a test can tell «movil.chat.avance» from «movil.chat.hecho».
+vi.mock("use-intl", () => ({ useTranslations: (ns?: string) => (s: string) => (ns ? `${ns}.${s}` : s) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../cara", () => ({ Cara: () => null }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | undefined;
 afterEach(() => { if (root) act(() => root!.unmount()); root = undefined; vi.useRealTimers(); });
+// Incidente real del 31/10, en el teléfono: un turno terminado decía «working… / changing your page… / checking how it
+// turned out…» —los textos de un paso en curso, con sólo un ✓ pequeño— y parecía que Len seguía trabajando.
+it("un paso terminado se dice en pasado; uno en curso, con su «…»", () => {
+  const host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  act(() => root!.render(<Progreso pasos={[{ clave: "cambiando", estado: "done" }, { clave: "comprobando", estado: "running" }]} trabajando={false} />));
+  const filas = [...host.querySelectorAll("li")].map((li) => li.textContent);
+  expect(filas[0]).toContain("movil.chat.hecho.cambiando");
+  expect(filas[1]).toContain("movil.chat.avance.comprobando");
+});
+
 it("sólo entrega cambios terminados sin fallos ni preguntas pendientes", () => {
   const t = { id: "t", status: "applied" as const, userText: "cambia", assistantReasoning: "listo" };
   expect(esEntrega(t)).toBe(true);

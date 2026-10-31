@@ -107,6 +107,21 @@
       "modulo": "activation d'un module…",
       "deshaciendo": "annulation du changement…",
       "trabajando": "au travail…"
+    },
+    "hecho": {
+      "leyendo": "page lue",
+      "cambiando": "page modifiée",
+      "comprobando": "résultat vérifié",
+      "fotos": "photos recherchées",
+      "internet": "lu sur internet",
+      "visitas": "visites consultées",
+      "formularios": "formulaires consultés",
+      "mensajes": "messages lus",
+      "borrador": "brouillon rédigé",
+      "publicar": "publication préparée",
+      "modulo": "module activé",
+      "deshaciendo": "changement annulé",
+      "trabajando": "travail fait"
     }
   }
 }

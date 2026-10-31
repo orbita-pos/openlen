@@ -107,6 +107,21 @@
       "modulo": "activando un módulo…",
       "deshaciendo": "deshaciendo el cambio…",
       "trabajando": "trabajando…"
+    },
+    "hecho": {
+      "leyendo": "leyó tu página",
+      "cambiando": "cambió tu página",
+      "comprobando": "revisó cómo quedó",
+      "fotos": "buscó fotos",
+      "internet": "leyó en internet",
+      "visitas": "miró tus visitas",
+      "formularios": "miró tus formularios",
+      "mensajes": "leyó tus mensajes",
+      "borrador": "escribió el borrador",
+      "publicar": "preparó la publicación",
+      "modulo": "activó un módulo",
+      "deshaciendo": "deshizo el cambio",
+      "trabajando": "trabajó en ello"
     }
   }
 }

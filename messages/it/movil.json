@@ -107,6 +107,21 @@
       "modulo": "attiva un modulo…",
       "deshaciendo": "annulla la modifica…",
       "trabajando": "al lavoro…"
+    },
+    "hecho": {
+      "leyendo": "ha letto la tua pagina",
+      "cambiando": "ha modificato la tua pagina",
+      "comprobando": "ha controllato com'è venuta",
+      "fotos": "ha cercato foto",
+      "internet": "ha letto su internet",
+      "visitas": "ha guardato le tue visite",
+      "formularios": "ha guardato i tuoi moduli",
+      "mensajes": "ha letto i tuoi messaggi",
+      "borrador": "ha scritto la bozza",
+      "publicar": "ha preparato la pubblicazione",
+      "modulo": "ha attivato un modulo",
+      "deshaciendo": "ha annullato la modifica",
+      "trabajando": "ci ha lavorato"
     }
   }
 }

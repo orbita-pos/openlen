@@ -107,6 +107,21 @@
       "modulo": "schaltet ein Modul ein…",
       "deshaciendo": "macht die Änderung rückgängig…",
       "trabajando": "arbeitet…"
+    },
+    "hecho": {
+      "leyendo": "hat deine Seite gelesen",
+      "cambiando": "hat deine Seite geändert",
+      "comprobando": "hat das Ergebnis geprüft",
+      "fotos": "hat Fotos gesucht",
+      "internet": "hat im Internet gelesen",
+      "visitas": "hat deine Besuche angeschaut",
+      "formularios": "hat deine Formulare angeschaut",
+      "mensajes": "hat deine Nachrichten gelesen",
+      "borrador": "hat den Entwurf geschrieben",
+      "publicar": "hat die Veröffentlichung vorbereitet",
+      "modulo": "hat ein Modul eingeschaltet",
+      "deshaciendo": "hat die Änderung rückgängig gemacht",
+      "trabajando": "hat daran gearbeitet"
     }
   }
 }

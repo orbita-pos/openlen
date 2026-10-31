@@ -107,6 +107,21 @@
       "modulo": "turning on a module…",
       "deshaciendo": "undoing the change…",
       "trabajando": "working…"
+    },
+    "hecho": {
+      "leyendo": "read your page",
+      "cambiando": "changed your page",
+      "comprobando": "checked how it turned out",
+      "fotos": "looked for photos",
+      "internet": "read online",
+      "visitas": "looked at your visits",
+      "formularios": "looked at your forms",
+      "mensajes": "read your messages",
+      "borrador": "wrote the draft",
+      "publicar": "got it ready to publish",
+      "modulo": "turned on a module",
+      "deshaciendo": "undid the change",
+      "trabajando": "worked on it"
     }
   }
 }
