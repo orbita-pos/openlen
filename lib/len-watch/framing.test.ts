@@ -62,6 +62,13 @@ describe("watchFraming in a worktree (spec §5.5)", () => {
     expect(f).toContain("A fix that needs a database change can't be published on its own: say so.");
     expect(watchFraming(BASE)).not.toContain("worktree");
   });
+
+  // Seen in 2 of 3 real turns: «Dejé el arreglo en una confirmación en la rama de este aviso» in the owner's email.
+  it("🔴 says the owner never sees the branch or the commit — only in a worktree", () => {
+    const line = "The owner never sees the branch or the commit: in your final message, say what was wrong, what you changed and what you checked.";
+    expect(watchFraming({ ...BASE, worktree: { branch: "len-watch/i1", base: "abc1234" } })).toContain(line);
+    expect(watchFraming(BASE)).not.toContain(line);
+  });
 });
 
 describe("bringFraming", () => {
