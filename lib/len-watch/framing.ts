@@ -52,7 +52,8 @@ export function watchFraming(i: {
     ...(i.worktree
       ? [
           `You are in a worktree of what is published, on branch ${i.worktree.branch} (from ${i.worktree.base}); the owner's draft is elsewhere and stays as it is.`,
-          "Commit your fix on this branch.",
+          // No «commit your fix»: OpenLen commits what Len leaves (`commitLeftovers`), and a Len told to commit
+          // reports it — «Fixed and committed on the fix branch» opened the owner's notice in a real incident (31/10).
           "The owner never sees the branch or the commit: in your final message, say what was wrong, what you changed and what you checked.",
           "A fix that needs a database change can't be published on its own: say so.",
         ]
