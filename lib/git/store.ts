@@ -17,6 +17,8 @@ export interface RepoState {
   readonly refs: Readonly<Record<string, string>>;
   /** A merge in progress (git's MERGE_HEAD and MERGE_MSG), or null. */
   readonly merge: MergeState | null;
+  /** Branches checked out in ANOTHER worktree → where (lib/git/worktree-store.ts): git won't switch to them. */
+  readonly elsewhere?: Readonly<Record<string, string>>;
   /** The remotes by name (`origin`), each with its remote-tracking branches (`refs/remotes/origin/*`). */
   readonly remotes: Readonly<Record<string, Remote>>;
   /** Each local branch's upstream (git's branch.<name>.remote and .merge). */

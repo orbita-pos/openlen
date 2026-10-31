@@ -22,7 +22,7 @@ function remember(projectId: string, o: GitObject): void {
  *  worktree of its parent's (lib/git/worktree-store.ts). */
 export async function gitStoreFor(projectId: string): Promise<GitStore> {
   const root = await rootProject(projectId);
-  return root !== projectId ? worktreeStore(postgresStore(root), postgresStore(projectId)) : postgresStore(projectId);
+  return root !== projectId ? worktreeStore(postgresStore(root), postgresStore(projectId), root) : postgresStore(projectId);
 }
 
 export function postgresStore(projectId: string): GitStore {
