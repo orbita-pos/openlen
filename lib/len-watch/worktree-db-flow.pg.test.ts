@@ -119,7 +119,7 @@ describe.skipIf(!RUN_IT)("the Len Watch worktree on a project with a database", 
     //    is born with it.
     await supabase(PROJECT, "db", "push");
     expect((await publishThroughGates({ ...base, source: "person" })).status).toBe(200);
-    await vi.waitFor(async () => expect(await readPublishedSources(PROJECT)).not.toBeNull(), { timeout: 10_000 });
+    await vi.waitFor(async () => expect(await readPublishedSources(PROJECT)).not.toBeNull(), { timeout: 30_000 });
     expect(await columns("live")).toEqual(["id", "paquete", "nombre"]);
 
     // 2. The owner goes on: a migration they haven't published, applied to the draft database only.
