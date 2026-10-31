@@ -53,6 +53,7 @@ export function watchFraming(i: {
       ? [
           `You are in a worktree of what is published, on branch ${i.worktree.branch} (from ${i.worktree.base}); the owner's draft is elsewhere and stays as it is.`,
           "Commit your fix on this branch.",
+          "The owner never sees the branch or the commit: in your final message, say what was wrong, what you changed and what you checked.",
           "A fix that needs a database change can't be published on its own: say so.",
         ]
       : []),
