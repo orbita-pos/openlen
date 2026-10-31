@@ -29,6 +29,11 @@ describe("los textos de la app", () => {
     expect(es).toContain("chat.pedirCambio");
     expect(es).toContain("chat.avance.trabajando");
   });
+  it("cada paso en curso tiene su texto en pasado, para cuando ha terminado", () => {
+    const avance = es.filter((k) => k.startsWith("chat.avance.")).map((k) => k.slice("chat.avance.".length));
+    const hecho = es.filter((k) => k.startsWith("chat.hecho.")).map((k) => k.slice("chat.hecho.".length));
+    expect(hecho).toEqual(avance);
+  });
 });
 
 for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo, adjuntos: textosAdjuntos, interfaz: textosInterfaz, lenWatch: textosLenWatch })) {

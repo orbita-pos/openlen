@@ -41,4 +41,11 @@ describe("CORS sólo para la app", () => {
     expect(r.status).toBe(204);
     expect(r.headers.get("access-control-allow-methods")).toContain("POST");
   });
+
+  // 31/10: the Len Watch switches on the phone go by PUT, and the preflight didn't name it — the WebView stopped the
+  // request before it left, and «Fix on its own» never stayed checked.
+  it("🔴 la petición previa deja PUT: los interruptores de Len Watch del teléfono", () => {
+    const r = respuestaPrevia(desde("https://localhost"));
+    expect(r.headers.get("access-control-allow-methods")?.split(/,\s*/)).toContain("PUT");
+  });
 });

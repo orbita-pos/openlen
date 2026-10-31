@@ -107,6 +107,21 @@
       "modulo": "zet een module aan…",
       "deshaciendo": "draait de wijziging terug…",
       "trabajando": "aan het werk…"
+    },
+    "hecho": {
+      "leyendo": "heeft je pagina gelezen",
+      "cambiando": "heeft je pagina aangepast",
+      "comprobando": "heeft het resultaat gecontroleerd",
+      "fotos": "heeft foto's gezocht",
+      "internet": "heeft op internet gelezen",
+      "visitas": "heeft je bezoeken bekeken",
+      "formularios": "heeft je formulieren bekeken",
+      "mensajes": "heeft je berichten gelezen",
+      "borrador": "heeft het concept geschreven",
+      "publicar": "heeft de publicatie voorbereid",
+      "modulo": "heeft een module aangezet",
+      "deshaciendo": "heeft de wijziging teruggedraaid",
+      "trabajando": "heeft eraan gewerkt"
     }
   }
 }

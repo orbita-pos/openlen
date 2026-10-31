@@ -13,7 +13,8 @@ export function cabecerasCors(req: Request): Record<string, string> {
   return {
     "access-control-allow-origin": origen,
     "access-control-allow-headers": "authorization, content-type",
-    "access-control-allow-methods": "GET, POST, PATCH, DELETE, OPTIONS",
+    // PUT: the Len Watch switches (31/10, without it «Fix on its own» never stayed checked on the phone).
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "access-control-max-age": "600",
     vary: "Origin",
   };

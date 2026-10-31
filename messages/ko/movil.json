@@ -107,6 +107,21 @@
       "modulo": "모듈을 켜는 중…",
       "deshaciendo": "변경을 되돌리는 중…",
       "trabajando": "작업 중…"
+    },
+    "hecho": {
+      "leyendo": "페이지를 읽었어요",
+      "cambiando": "페이지를 바꿨어요",
+      "comprobando": "결과를 확인했어요",
+      "fotos": "사진을 찾았어요",
+      "internet": "인터넷에서 읽었어요",
+      "visitas": "방문 수를 봤어요",
+      "formularios": "양식을 봤어요",
+      "mensajes": "메시지를 읽었어요",
+      "borrador": "초안을 썼어요",
+      "publicar": "게시를 준비했어요",
+      "modulo": "모듈을 켰어요",
+      "deshaciendo": "변경을 되돌렸어요",
+      "trabajando": "작업했어요"
     }
   }
 }

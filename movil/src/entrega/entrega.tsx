@@ -16,12 +16,14 @@ export function esEntrega(turno?: StoredChatTurn): boolean {
 export function Progreso({ pasos = [], trabajando }: { pasos?: Paso[]; trabajando: boolean }) {
   const t = useTranslations("movil.entrega");
   const avance = useTranslations("movil.chat.avance");
+  // A finished step says what was done, like Claude Code's: «working…» on a ✓ read as if Len were still at it (31/10).
+  const hecho = useTranslations("movil.chat.hecho");
   if (!pasos.length) return null;
   return <details className="ent-progreso" open={trabajando || pasos.some((p) => p.estado === "error" || p.estado === "warning")}>
     <summary>{t("progreso")}</summary>
     <ol>{pasos.map((p, i) => <li key={i} data-estado={p.estado}>
       <span aria-hidden="true">{p.estado === "done" ? "✓" : p.estado === "error" || p.estado === "warning" ? "!" : p.estado === "running" ? "◉" : "○"}</span>
-      <span>{p.texto ?? avance(p.clave ?? "trabajando")}{(p.estado === "error" || p.estado === "warning") && <small>{t("fallo")}</small>}</span>
+      <span>{p.texto ?? (p.estado === "done" ? hecho : avance)(p.clave ?? "trabajando")}{(p.estado === "error" || p.estado === "warning") && <small>{t("fallo")}</small>}</span>
     </li>)}</ol>
   </details>;
 }

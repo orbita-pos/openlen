@@ -107,6 +107,21 @@
       "modulo": "正在开启模块…",
       "deshaciendo": "正在撤销修改…",
       "trabajando": "工作中…"
+    },
+    "hecho": {
+      "leyendo": "读了你的页面",
+      "cambiando": "修改了你的页面",
+      "comprobando": "检查了效果",
+      "fotos": "找了照片",
+      "internet": "上网查了",
+      "visitas": "看了你的访问量",
+      "formularios": "看了你的表单",
+      "mensajes": "读了你的消息",
+      "borrador": "写了草稿",
+      "publicar": "准备好了发布",
+      "modulo": "开启了模块",
+      "deshaciendo": "撤销了修改",
+      "trabajando": "做完了"
     }
   }
 }
