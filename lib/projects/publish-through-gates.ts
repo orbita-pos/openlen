@@ -10,6 +10,7 @@ import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
 import { ProjectNotFoundError, publishProject, SubdomainInvalidError, SubdomainLimitError, SubdomainTakenError } from "@/lib/projects";
 import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { securityReviewer } from "@/lib/security-review/real";
+import { AGENT_WAIT_MS } from "@/lib/security-review/review";
 import { stripePublishErrorBody } from "@/lib/stripe/publish-errors";
 
 export interface GatedPublishInput {
@@ -55,12 +56,20 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que
   // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
   // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).
-  const seguridad = await securityReviewer()
-    .gate({ projectId: i.projectId, accept: i.acceptSecurityFingerprint, actorId: i.actorId, locale: i.locale ?? "en", ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}) })
-    .catch((err: unknown) => {
-      console.warn("[publish] security review failed; publishing without it", err);
-      return { kind: "open" as const, view: null };
-    });
+  const gate = () =>
+    securityReviewer()
+      .gate({ projectId: i.projectId, accept: i.acceptSecurityFingerprint, actorId: i.actorId, locale: i.locale ?? "en", ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}) })
+      .catch((err: unknown) => {
+        console.warn("[publish] security review failed; publishing without it", err);
+        return { kind: "open" as const, view: null };
+      });
+  let seguridad = await gate();
+  // Still running: a person has the Publish modal, which waits; Len Watch has nobody in front of it («Publicar solo»
+  // at 3 a.m.), so it waits itself, as Len's own `publish` does (`forAgent`), and asks again.
+  if (seguridad.kind === "pending" && i.source === "len_watch") {
+    await securityReviewer().wait(i.projectId, seguridad.view.fingerprint, AGENT_WAIT_MS).catch(() => null);
+    seguridad = await gate();
+  }
   if (seguridad.kind === "pending") return { status: 428, body: { error: "security_review_pending", fingerprint: seguridad.view.fingerprint } };
   if (seguridad.kind === "blocked") return { status: 428, body: { error: "security_findings", ...seguridad.view } };
 

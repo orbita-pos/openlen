@@ -6,12 +6,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   publishProject: vi.fn(),
   gate: vi.fn(),
+  wait: vi.fn(async () => null),
   markPublished: vi.fn(async () => undefined),
   afterOwnerPublish: vi.fn(async () => undefined),
   pendingFix: vi.fn(async (): Promise<{ incidentId: string; branch: string } | null> => null),
   declineFix: vi.fn(async () => undefined),
 }));
-vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate, markPublished: mocks.markPublished }) }));
+vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: mocks.gate, wait: mocks.wait, markPublished: mocks.markPublished }) }));
 vi.mock("@/lib/len-watch/orchestrate", () => ({ afterOwnerPublish: mocks.afterOwnerPublish }));
 vi.mock("@/lib/len-watch/bring", () => ({ pendingFix: mocks.pendingFix, declineFix: mocks.declineFix }));
 vi.mock("@/lib/projects", async () => {
@@ -34,6 +35,7 @@ const VIEW = { fingerprint: "f".repeat(64) };
 beforeEach(() => {
   mocks.publishProject.mockReset();
   mocks.gate.mockReset();
+  mocks.wait.mockClear();
   mocks.markPublished.mockClear();
   mocks.afterOwnerPublish.mockClear();
   mocks.gate.mockResolvedValue({ kind: "open", view: VIEW });
@@ -67,6 +69,33 @@ describe("the Len Watch fix not in the draft yet", () => {
     mocks.publishProject.mockResolvedValueOnce({ subdomain: "holi" });
     expect((await publishThroughGates({ ...INPUT, source: "len_watch", sourcesFrom: "copy-1" })).status).toBe(200);
     expect(mocks.pendingFix).not.toHaveBeenCalled();
+  });
+});
+
+// A review still running answers «pending» the first time it's asked. A person has the Publish modal, which waits; Len
+// Watch has nobody in front of it (3 a.m., «Publicar solo»), so it waits itself, like Len's own `publish` (forAgent).
+describe("a security review still running", () => {
+  const LW = { ...INPUT, source: "len_watch" as const, sourcesFrom: "copy-1" };
+
+  it("🔴 Len Watch's publish waits for it and then publishes", async () => {
+    mocks.gate.mockResolvedValueOnce({ kind: "pending", view: VIEW }).mockResolvedValueOnce({ kind: "open", view: VIEW });
+    mocks.publishProject.mockResolvedValueOnce({ subdomain: "holi" });
+    expect((await publishThroughGates(LW)).status).toBe(200);
+    expect(mocks.wait).toHaveBeenCalledWith("p1", VIEW.fingerprint, 155_000);
+    expect(mocks.gate).toHaveBeenCalledTimes(2);
+  });
+
+  it("🔴 what it waited for found something: 428 security_findings, nothing published", async () => {
+    mocks.gate.mockResolvedValueOnce({ kind: "pending", view: VIEW }).mockResolvedValueOnce({ kind: "blocked", view: { ...VIEW, blocking: [1] } });
+    const r = await publishThroughGates(LW);
+    expect(r).toMatchObject({ status: 428, body: { error: "security_findings" } });
+    expect(mocks.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("a person's publish answers «pending» at once: the modal does the waiting", async () => {
+    mocks.gate.mockResolvedValueOnce({ kind: "pending", view: VIEW });
+    expect(await publishThroughGates(INPUT)).toEqual({ status: 428, body: { error: "security_review_pending", fingerprint: VIEW.fingerprint } });
+    expect(mocks.wait).not.toHaveBeenCalled();
   });
 });
 
