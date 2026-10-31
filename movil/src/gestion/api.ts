@@ -50,8 +50,10 @@ export function lenWatchAjustes(c: ClienteDeOpenLen, id: string, cambio: Partial
 export function lenWatchArreglar(c: ClienteDeOpenLen, id: string) {
   return pedir<{ status: "fixing" }>(c, rutaLenWatch(id, "/fix"), post({}));
 }
-export function lenWatchAprobar(c: ClienteDeOpenLen, id: string, confirmarCambios = false) {
-  return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post(confirmarCambios ? { confirmChanged: true } : {}));
+/** `confirmChanged`: the draft moved after Len's fix and it goes anyway. `acceptSecurityFingerprint`: «Publicar igual»
+ *  over what the security review found in the fix. */
+export function lenWatchAprobar(c: ClienteDeOpenLen, id: string, permiso: { confirmChanged?: true; acceptSecurityFingerprint?: string } = {}) {
+  return pedir<Record<string, unknown>>(c, rutaLenWatch(id, "/approve"), post(permiso));
 }
 /** «Traer el arreglo» (spec §5.5): the fix Len published comes into the draft. */
 export function lenWatchTraer(c: ClienteDeOpenLen, id: string, incidentId: string) {

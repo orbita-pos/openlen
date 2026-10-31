@@ -17,8 +17,10 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   const project = incident ? await projectForWatch(id) : null;
   if (!incident || !project?.url) return Response.json({ error: "no_incident" }, { status: 409 });
   // `confirmChanged`: the person saw that the draft moved after Len's fix and publishes anyway.
-  const body = (await req.json().catch(() => null)) as { confirmChanged?: unknown } | null;
-  const r = await approveFix(incident, project, undefined, { actorId: who.userId, confirmChanged: body?.confirmChanged === true });
+  // `acceptSecurityFingerprint`: «Publicar igual» over what the security review found in the fix.
+  const body = (await req.json().catch(() => null)) as { confirmChanged?: unknown; acceptSecurityFingerprint?: unknown } | null;
+  const accept = typeof body?.acceptSecurityFingerprint === "string" && /^[0-9a-f]{64}$/.test(body.acceptSecurityFingerprint) ? body.acceptSecurityFingerprint : null;
+  const r = await approveFix(incident, project, undefined, { actorId: who.userId, confirmChanged: body?.confirmChanged === true, ...(accept ? { acceptSecurityFingerprint: accept } : {}) });
   return Response.json(r.body, { status: r.status });
 });
 

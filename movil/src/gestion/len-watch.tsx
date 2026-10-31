@@ -8,12 +8,14 @@ import { bannerState, patchFor, settingsRows, type SettingKey } from "@/componen
 import type { LenWatchStatus } from "@/lib/len-watch/types";
 import type { Idioma } from "../config";
 import { ErrorGestion, lenWatchAjustes, lenWatchAprobar, lenWatchArreglar, lenWatchEstado, lenWatchTraer } from "./api";
+import { textoDelDetalle } from "./detalle";
 
 export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpenLen; projectId: string; idioma: Idioma }) {
   const t = useTranslations("movil.lenWatch");
   const [estado, setEstado] = useState<LenWatchStatus | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [nota, setNota] = useState<"review" | "failed" | "changed" | "handedToLen" | "queued" | "bringFailed" | null>(null);
+  const [hallazgos, setHallazgos] = useState<{ huella: string; lista: unknown[] } | null>(null);
   const cargar = async (signal?: AbortSignal) => {
     const e = await lenWatchEstado(cliente, projectId, signal).catch(() => null);
     if (!signal?.aborted && e?.enabled) setEstado(e);
@@ -36,14 +38,23 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
     setOcupado(false);
     await cargar();
   };
-  const actuar = async (accion: "fix" | "approve", confirmarCambios = false) => {
+  const actuar = async (accion: "fix" | "approve", permiso: { confirmChanged?: true; acceptSecurityFingerprint?: string } = {}) => {
     setOcupado(true);
     setNota(null);
+    setHallazgos(null);
     try {
-      await (accion === "fix" ? lenWatchArreglar(cliente, projectId) : lenWatchAprobar(cliente, projectId, confirmarCambios));
+      await (accion === "fix" ? lenWatchArreglar(cliente, projectId) : lenWatchAprobar(cliente, projectId, permiso));
     } catch (e) {
-      // 409 changed_since_fix: el borrador cambió tras el arreglo de Len; se pregunta antes de publicarlo.
-      setNota(e instanceof ErrorGestion && e.status === 428 ? "review" : e instanceof ErrorGestion && e.codigo === "changed_since_fix" ? "changed" : "failed");
+      const g = e instanceof ErrorGestion ? e : null;
+      // El arreglo en su rama (spec §5.5): «Publicar» publica el borrador, nunca esto; lo que encontró la revisión se
+      // contesta aquí.
+      if (g?.status === 428 && g.datos.branch === true) {
+        if (g.codigo === "security_findings" && typeof g.datos.fingerprint === "string") setHallazgos({ huella: g.datos.fingerprint, lista: Array.isArray(g.datos.blocking) ? g.datos.blocking : [] });
+        else setNota("failed");
+      } else {
+        // 409 changed_since_fix: el borrador cambió tras el arreglo de Len; se pregunta antes de publicarlo.
+        setNota(g?.status === 428 ? "review" : g?.codigo === "changed_since_fix" ? "changed" : "failed");
+      }
     }
     setOcupado(false);
     await cargar();
@@ -69,7 +80,8 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
       {vista.kind !== "working" && <button className="gestion-principal" disabled={ocupado} onClick={() => void actuar(vista.kind === "ready" ? "approve" : "fix")}>{vista.kind === "ready" ? t("approve") : t("fix")}</button>}
       {nota === "review" && <p>{t("review")}</p>}
       {nota === "failed" && <p>{t("failed")}</p>}
-      {nota === "changed" && <><p>{t("changed")}</p><button className="gestion-texto" disabled={ocupado} onClick={() => void actuar("approve", true)}>{t("publishAnyway")}</button></>}
+      {nota === "changed" && <><p>{t("changed")}</p><button className="gestion-texto" disabled={ocupado} onClick={() => void actuar("approve", { confirmChanged: true })}>{t("publishAnyway")}</button></>}
+      {hallazgos && <><p>{t("findings")}</p>{hallazgos.lista.length > 0 && <ul>{hallazgos.lista.map((d, i) => <li key={i}>{textoDelDetalle(d)}</li>)}</ul>}<button className="gestion-texto" disabled={ocupado} onClick={() => void actuar("approve", { acceptSecurityFingerprint: hallazgos.huella })}>{t("publishAnyway")}</button></>}
     </div>}
     <p>{t("intro")}</p>
     {settingsRows(estado.settings, estado.isOwner).map((fila) => <label key={fila.key} className="gestion-len-watch-interruptor">

@@ -272,8 +272,19 @@ async function onFixFailed(i: Incident, p: ProjectForWatch, fallo: FalloDelTurno
 
 /** Publishes the fix through the gates and, if it went out, opens the site again to see it load. With `sourcesFrom`
  *  it is a worktree's branch (spec §5.5): once out, the copy goes and the fix waits for the owner to bring it in. */
-async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorDeps, actorId: string, sourcesFrom?: string): Promise<GatedPublishResult> {
-  const r = await d.publish({ projectId: p.projectId, actorId, ownerId: p.ownerId, subdomain: p.subdomain ?? "", locale: p.locale, source: "len_watch", ...(sourcesFrom ? { sourcesFrom } : {}) });
+async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorDeps, actorId: string, sourcesFrom?: string, acceptSecurityFingerprint?: string): Promise<GatedPublishResult> {
+  const r = await d.publish({
+    projectId: p.projectId,
+    actorId,
+    ownerId: p.ownerId,
+    subdomain: p.subdomain ?? "",
+    locale: p.locale,
+    source: "len_watch",
+    ...(sourcesFrom ? { sourcesFrom } : {}),
+    ...(acceptSecurityFingerprint ? { acceptSecurityFingerprint } : {}),
+  });
+  // A gate on a branch is the branch's: no client may send it to the Publish modal, which publishes the draft.
+  if (r.status === 428 && sourcesFrom) return { status: 428, body: { ...r.body, branch: true } };
   if (r.status !== 200) return r;
   let out = i;
   if (sourcesFrom) {
@@ -293,21 +304,26 @@ async function publishAndCheck(i: Incident, p: ProjectForWatch, d: OrchestratorD
   return r;
 }
 
-/** Someone pressed Approve. A gate (428) answers as it is and the incident waits for them. If the draft
- *  moved after Len's fix, publishing would carry those edits too: it asks first (409
- *  `changed_since_fix`), the way a review is dismissed when new commits land, and goes on with
- *  `confirmChanged`. */
-export async function approveFix(i: Incident, p: ProjectForWatch, deps?: OrchestratorDeps, o: { actorId?: string; confirmChanged?: boolean } = {}): Promise<GatedPublishResult> {
+/** Someone pressed Approve. A gate (428) answers as it is and the incident waits for them; on a branch it says so
+ *  (`branch: true`), and «Publicar igual» over a security finding comes back as `acceptSecurityFingerprint`. If the
+ *  draft moved after Len's fix, publishing would carry those edits too: it asks first (409 `changed_since_fix`), the
+ *  way a review is dismissed when new commits land, and goes on with `confirmChanged`. */
+export async function approveFix(
+  i: Incident,
+  p: ProjectForWatch,
+  deps?: OrchestratorDeps,
+  o: { actorId?: string; confirmChanged?: boolean; acceptSecurityFingerprint?: string } = {},
+): Promise<GatedPublishResult> {
   const d = deps ?? (await defaultDeps());
   if (i.status !== "fix_ready") return { status: 409, body: { error: "not_ready" } };
   // A worktree's branch (spec §5.5): if something else was published since it was cut, it's an old copy — never
   // published over what is live now.
   if (i.copyProjectId) {
     if ((await d.worktree.publishedCommit(p.projectId)) !== i.base) return { status: 409, body: { error: "published_changed" } };
-    return publishAndCheck(i, p, d, o.actorId ?? p.ownerId, i.copyProjectId);
+    return publishAndCheck(i, p, d, o.actorId ?? p.ownerId, i.copyProjectId, o.acceptSecurityFingerprint);
   }
   if (i.fixStamp && !o.confirmChanged && (await d.contentStamp(p.projectId)) !== i.fixStamp) return { status: 409, body: { error: "changed_since_fix" } };
-  return publishAndCheck(i, p, d, o.actorId ?? p.ownerId);
+  return publishAndCheck(i, p, d, o.actorId ?? p.ownerId, undefined, o.acceptSecurityFingerprint);
 }
 
 /** A person published the project: if an incident stands (and Len isn't mid-turn), check whether the
