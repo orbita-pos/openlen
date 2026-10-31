@@ -19,7 +19,9 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
   const tFix = useTranslations("modalsDeploy.lenWatch.fixPending");
   const { status, reload } = useLenWatch(projectId);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<"review" | "failed" | "changed" | null>(null);
+  const [note, setNote] = useState<"review" | "failed" | "changed" | "reviewRunning" | "secretsMissing" | null>(null);
+  // The function secrets production is missing, when that is what stopped the fix's branch.
+  const [missing, setMissing] = useState<string[]>([]);
   const [bringNote, setBringNote] = useState<"handedToLen" | "queued" | "failed" | null>(null);
   // What the security review found in Len's fix on its branch (spec §5.5): answered here, with «Publicar igual».
   const [findings, setFindings] = useState<ReviewView | null>(null);
@@ -95,11 +97,16 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
     }).catch(() => null);
     setBusy(false);
     if (r?.status === 428) {
-      const gate = (await r.json().catch(() => null)) as ({ error?: string; branch?: boolean } & Partial<ReviewView>) | null;
+      const gate = (await r.json().catch(() => null)) as ({ error?: string; branch?: boolean; missing?: unknown } & Partial<ReviewView>) | null;
       if (gate?.branch) {
-        // Len's fix is on its branch: the Publish modal publishes the draft, never this. A finding is answered here.
+        // Len's fix is on its branch: the Publish modal publishes the draft, never this. A finding is answered here;
+        // what else stopped it is said.
         if (gate.error === "security_findings" && gate.fingerprint) setFindings(gate as ReviewView);
-        else setNote("failed");
+        else if (gate.error === "security_review_pending") setNote("reviewRunning");
+        else if (gate.error === "secrets_required" && Array.isArray(gate.missing)) {
+          setMissing(gate.missing.map(String));
+          setNote("secretsMissing");
+        } else setNote("failed");
       } else {
         setNote("review");
         onOpenPublish?.();
@@ -130,6 +137,8 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
           </button>
           {note === "review" && <span className="fg-muted">{t("lenWatch.review")}</span>}
           {note === "failed" && <span className="fg-muted">{t("lenWatch.failed")}</span>}
+          {note === "reviewRunning" && <span className="fg-muted">{t("lenWatch.reviewRunning")}</span>}
+          {note === "secretsMissing" && <span className="fg-muted">{t("lenWatch.secretsMissing", { names: missing.join(", ") })}</span>}
         </div>
       )}
       {!soloLectura && note === "changed" && (

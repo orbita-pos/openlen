@@ -60,8 +60,23 @@ it("🔴 el arreglo en su rama y la revisión encontró algo: lo dice aquí y «
   expect(llamadas.filter((l) => l.ruta.endsWith("/approve")).map((l) => l.cuerpo)).toEqual([{}, { acceptSecurityFingerprint: fp }]);
 });
 
-it("🔴 otra puerta en la rama tampoco manda a «Publicar»: dice que no se pudo", async () => {
-  const { c } = cliente({ incident: READY, approve: { status: 428, body: { error: "secrets_required", branch: true } } });
+it("🔴 faltan secretos en producción: lo dice, y no manda a «Publicar»", async () => {
+  const { c } = cliente({ incident: READY, approve: { status: 428, body: { error: "secrets_required", missing: ["STRIPE_SECRET_KEY"], branch: true } } });
+  await montar(c);
+  await act(async () => boton("approve")!.click());
+  expect(host.textContent).not.toContain("review");
+  expect(host.textContent).toContain("secretsMissing");
+});
+
+it("la revisión sigue en marcha tras esperar: que pruebes en un momento", async () => {
+  const { c } = cliente({ incident: READY, approve: { status: 428, body: { error: "security_review_pending", branch: true } } });
+  await montar(c);
+  await act(async () => boton("approve")!.click());
+  expect(host.textContent).toContain("reviewRunning");
+});
+
+it("otra puerta en la rama tampoco manda a «Publicar»: dice que no se pudo", async () => {
+  const { c } = cliente({ incident: READY, approve: { status: 428, body: { error: "something_new", branch: true } } });
   await montar(c);
   await act(async () => boton("approve")!.click());
   expect(host.textContent).not.toContain("review");
