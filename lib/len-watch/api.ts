@@ -17,7 +17,7 @@ export async function standingIncident(projectId: string): Promise<Incident | nu
 }
 
 export function incidentView(i: Incident): IncidentView {
-  return { id: i.id, status: i.status, reason: i.reason, summary: i.summary, shipsUnpublished: i.shipsUnpublished, createdAt: i.createdAt.toISOString() };
+  return { id: i.id, status: i.status, reason: i.reason, summary: i.summary, shipsUnpublished: i.shipsUnpublished, fixBrought: i.bringState === "brought", createdAt: i.createdAt.toISOString() };
 }
 
 /** The caller and their access, or the response that ends the request (404 off, 401, the access gate's). */

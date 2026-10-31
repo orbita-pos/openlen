@@ -55,7 +55,7 @@ describe("GET", () => {
       enabled: true,
       isOwner: true,
       settings: SETTINGS,
-      incident: { id: "i1", status: "fix_ready", reason: null, summary: "Arreglado.", shipsUnpublished: false, createdAt: now.toISOString() },
+      incident: { id: "i1", status: "fix_ready", reason: null, summary: "Arreglado.", shipsUnpublished: false, fixBrought: false, createdAt: now.toISOString() },
       pendingFix: null,
     });
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "owner", "ver");
@@ -65,6 +65,12 @@ describe("GET", () => {
     vi.mocked(pendingFix).mockResolvedValueOnce({ incidentId: "i1", branch: "len-watch/i1" });
     const body = (await (await GET(req("GET"), ctx)).json()) as { pendingFix: unknown };
     expect(body.pendingFix).toEqual({ incidentId: "i1", branch: "len-watch/i1" });
+  });
+
+  it("the crash's own fix already brought into the draft (it changes tables): the state says so", async () => {
+    vi.mocked(activeIncident).mockResolvedValue({ ...incident("needs_owner"), reason: "needs_tables", bringState: "brought" });
+    const body = (await (await GET(req("GET"), ctx)).json()) as { incident: { fixBrought: boolean } };
+    expect(body.incident.fixBrought).toBe(true);
   });
 
   it("401 without a session, 404 with Len Watch off", async () => {

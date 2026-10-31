@@ -535,6 +535,10 @@
     "review": "La pubblicazione richiede la tua revisione.",
     "failed": "Non è andata. Riprova.",
     "changed": "La bozza è cambiata dopo la correzione di Len: usciranno anche quelle modifiche.",
-    "publishAnyway": "Pubblica comunque"
+    "publishAnyway": "Pubblica comunque",
+    "publishBrought": "La correzione di Len è ora nella tua bozza. Pubblicala perché il tuo sito torni a caricarsi.",
+    "publishNow": "Pubblica",
+    "reviewRunning": "Il controllo di sicurezza della correzione è ancora in corso. Riprova tra poco.",
+    "secretsMissing": "Per pubblicare la correzione mancano i segreti di produzione delle tue funzioni: {names}. Aggiungili e pubblica di nuovo la correzione."
   }
 }

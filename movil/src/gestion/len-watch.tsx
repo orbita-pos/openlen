@@ -75,7 +75,9 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
       <button className="gestion-principal" disabled={ocupado} onClick={() => void traer(vista.incidentId)}>{ocupado ? t("bringing") : t("bring")}</button>
       {(nota === "handedToLen" || nota === "queued" || nota === "bringFailed") && <p>{t(nota)}</p>}
     </div>}
-    {vista.kind !== "hidden" && vista.kind !== "bring" && <div className="gestion-len-watch-aviso" role="status">
+    {/* The fix (it changes tables) is in the draft: «Publicar» sits right above, in this same panel. */}
+    {vista.kind === "publish" && <div className="gestion-len-watch-aviso" role="status"><p>{t("publishBrought")}</p></div>}
+    {vista.kind !== "hidden" && vista.kind !== "bring" && vista.kind !== "publish" && <div className="gestion-len-watch-aviso" role="status">
       <p>{vista.kind === "working" ? t("working") : vista.kind === "down" ? t("down") : t("ready")}{vista.kind === "ready" && vista.shipsUnpublished && <> {t("shipsUnpublished")}</>}</p>
       {vista.kind !== "working" && <button className="gestion-principal" disabled={ocupado} onClick={() => void actuar(vista.kind === "ready" ? "approve" : "fix")}>{vista.kind === "ready" ? t("approve") : t("fix")}</button>}
       {nota === "review" && <p>{t("review")}</p>}

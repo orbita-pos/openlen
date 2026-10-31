@@ -38,6 +38,11 @@ describe("bannerState", () => {
     expect(bannerState({ id: "i1", status: "needs_owner", shipsUnpublished: false }, { incidentId: "i1" })).toEqual({ kind: "bring", incidentId: "i1" });
   });
 
+  it("🔴 the crash's fix (it changes tables) is already in the draft: the notice says to publish, not «Fix with Len»", () => {
+    expect(bannerState({ id: "i1", status: "needs_owner", shipsUnpublished: false, fixBrought: true }, null)).toEqual({ kind: "publish" });
+    expect(bannerState({ id: "i1", status: "fixing", shipsUnpublished: false, fixBrought: true }, null)).toEqual({ kind: "working" });
+  });
+
   it("a NEW crash while an older fix waits to be brought: the crash comes first", () => {
     expect(bannerState({ id: "i2", status: "needs_owner", shipsUnpublished: false }, { incidentId: "i1" })).toEqual({ kind: "down", action: "fix" });
   });

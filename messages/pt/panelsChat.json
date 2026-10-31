@@ -535,6 +535,10 @@
     "review": "A publicação precisa da sua revisão.",
     "failed": "Não deu certo. Tente de novo.",
     "changed": "O rascunho mudou depois da correção do Len: essas alterações também sairiam.",
-    "publishAnyway": "Publicar mesmo assim"
+    "publishAnyway": "Publicar mesmo assim",
+    "publishBrought": "A correção do Len já está no seu rascunho. Publique para que seu site volte a carregar.",
+    "publishNow": "Publicar",
+    "reviewRunning": "A revisão de segurança da correção ainda está em andamento. Tente de novo daqui a pouco.",
+    "secretsMissing": "Para publicar a correção faltam segredos de produção das suas funções: {names}. Adicione-os e publique a correção de novo."
   }
 }
