@@ -128,8 +128,24 @@ describe("the Len Watch notice", () => {
       expect(posts).toEqual([{}, { acceptSecurityFingerprint: FP }]);
     });
 
-    it("🔴 any other gate on the branch doesn't open the Publish modal either: it says it couldn't", async () => {
-      approveFetch({ status: 428, body: { error: "secrets_required", branch: true } });
+    it("🔴 secrets missing in production: says which, and the Publish modal never opens", async () => {
+      approveFetch({ status: 428, body: { error: "secrets_required", missing: ["STRIPE_SECRET_KEY", "RESEND_API_KEY"], branch: true } });
+      const onOpenPublish = vi.fn();
+      const host = await mount(<LenWatchBanner projectId="p1" onOpenPublish={onOpenPublish} />);
+      await press(host, panelsChat.lenWatch.approve);
+      expect(onOpenPublish).not.toHaveBeenCalled();
+      expect(host.textContent).toContain(panelsChat.lenWatch.secretsMissing.replace("{names}", "STRIPE_SECRET_KEY, RESEND_API_KEY"));
+    });
+
+    it("the review still running after the wait: says to try again in a moment", async () => {
+      approveFetch({ status: 428, body: { error: "security_review_pending", fingerprint: FP, branch: true } });
+      const host = await mount(<LenWatchBanner projectId="p1" />);
+      await press(host, panelsChat.lenWatch.approve);
+      expect(host.textContent).toContain(panelsChat.lenWatch.reviewRunning);
+    });
+
+    it("any other gate on the branch: it says it couldn't, and the Publish modal never opens", async () => {
+      approveFetch({ status: 428, body: { error: "something_new", branch: true } });
       const onOpenPublish = vi.fn();
       const host = await mount(<LenWatchBanner projectId="p1" onOpenPublish={onOpenPublish} />);
       await press(host, panelsChat.lenWatch.approve);
