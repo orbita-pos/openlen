@@ -9,6 +9,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 
 import modalsDeploy from "@/messages/es/modalsDeploy.json";
+import modalsDomain from "@/messages/es/modalsDomain.json";
 import panelsChat from "@/messages/es/panelsChat.json";
 import type { LenWatchStatus } from "@/lib/len-watch/types";
 import { notifyFolderChanged, onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
@@ -50,7 +51,7 @@ async function mount(node: React.ReactNode) {
   roots.push(root);
   await act(async () => {
     root.render(
-      <NextIntlClientProvider locale="es" messages={{ panelsChat, modalsDeploy }}>
+      <NextIntlClientProvider locale="es" messages={{ panelsChat, modalsDeploy, modalsDomain }}>
         {node}
       </NextIntlClientProvider>,
     );
@@ -91,6 +92,50 @@ describe("the Len Watch notice", () => {
     await act(async () => new Promise((r) => setTimeout(r, 0)));
     const posts = calls.filter((c) => c.method === "POST");
     expect(posts.map((c) => c.body && JSON.parse(c.body))).toEqual([{}, { confirmChanged: true }]);
+  });
+
+  // Spec §5.5: Len's fix on its branch. The Publish modal publishes the DRAFT (with the crash and the owner's
+  // half-done changes), so a gate on the branch is answered here, never there.
+  describe("a gate on Len's fix on its branch", () => {
+    const FP = "a".repeat(64);
+    const FINDING = { key: "k1", source: "model", severity: "HIGH", category: "missing_authorization", file: "/src/lib/api.ts", line: 3, description: "Cualquiera puede leer las reservas", exploitScenario: "", recommendation: "" };
+    /** The first approve answers `first`; the next ones, 200. */
+    function approveFetch(first: { status: number; body: unknown }) {
+      const posts: unknown[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (_url: string, init?: RequestInit) => {
+          if ((init?.method ?? "GET") === "GET") return new Response(JSON.stringify(status(READY)), { status: 200 });
+          posts.push(JSON.parse(String(init?.body)));
+          return posts.length === 1 ? new Response(JSON.stringify(first.body), { status: first.status }) : new Response("{}", { status: 200 });
+        }),
+      );
+      return posts;
+    }
+    const press = async (host: HTMLElement, text: string) => {
+      await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === text)!.click());
+      await act(async () => new Promise((r) => setTimeout(r, 0)));
+    };
+
+    it("🔴 a security finding shows here, the Publish modal never opens, and «Publicar igual» approves with its fingerprint", async () => {
+      const posts = approveFetch({ status: 428, body: { error: "security_findings", fingerprint: FP, status: "done", blocking: [FINDING], medium: [], accepted: [], branch: true } });
+      const onOpenPublish = vi.fn();
+      const host = await mount(<LenWatchBanner projectId="p1" onOpenPublish={onOpenPublish} />);
+      await press(host, panelsChat.lenWatch.approve);
+      expect(onOpenPublish).not.toHaveBeenCalled();
+      expect(host.textContent).toContain(FINDING.description);
+      await press(host, modalsDomain.security.publishAnyway);
+      expect(posts).toEqual([{}, { acceptSecurityFingerprint: FP }]);
+    });
+
+    it("🔴 any other gate on the branch doesn't open the Publish modal either: it says it couldn't", async () => {
+      approveFetch({ status: 428, body: { error: "secrets_required", branch: true } });
+      const onOpenPublish = vi.fn();
+      const host = await mount(<LenWatchBanner projectId="p1" onOpenPublish={onOpenPublish} />);
+      await press(host, panelsChat.lenWatch.approve);
+      expect(onOpenPublish).not.toHaveBeenCalled();
+      expect(host.textContent).toContain(panelsChat.lenWatch.failed);
+    });
   });
 
   it("a reader sees the notice but no button", async () => {

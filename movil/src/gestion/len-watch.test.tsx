@@ -47,6 +47,27 @@ it("un arreglo listo: dice qué saldría, y un 428 manda a revisar", async () =>
   expect(host.textContent).toContain("review");
 });
 
+// Spec §5.5: Len's fix on its branch. «Publicar» publishes the DRAFT, so a gate on the branch is answered here.
+it("🔴 el arreglo en su rama y la revisión encontró algo: lo dice aquí y «Publicar igual» aprueba con la huella", async () => {
+  const fp = "a".repeat(64);
+  const { c, llamadas } = cliente({ incident: READY, approve: { status: 428, body: { error: "security_findings", fingerprint: fp, blocking: [{ description: "Cualquiera puede leer las reservas" }], branch: true } } });
+  await montar(c);
+  await act(async () => boton("approve")!.click());
+  expect(host.textContent).not.toContain("review");
+  expect(host.textContent).toContain("findings");
+  expect(host.textContent).toContain("Cualquiera puede leer las reservas");
+  await act(async () => boton("publishAnyway")!.click());
+  expect(llamadas.filter((l) => l.ruta.endsWith("/approve")).map((l) => l.cuerpo)).toEqual([{}, { acceptSecurityFingerprint: fp }]);
+});
+
+it("🔴 otra puerta en la rama tampoco manda a «Publicar»: dice que no se pudo", async () => {
+  const { c } = cliente({ incident: READY, approve: { status: 428, body: { error: "secrets_required", branch: true } } });
+  await montar(c);
+  await act(async () => boton("approve")!.click());
+  expect(host.textContent).not.toContain("review");
+  expect(host.textContent).toContain("failed");
+});
+
 it("el borrador cambió tras el arreglo: lo dice y «Publicar igual» lo confirma", async () => {
   const { c, llamadas } = cliente({ incident: READY, approve: { status: 409, body: { error: "changed_since_fix" } } });
   await montar(c);

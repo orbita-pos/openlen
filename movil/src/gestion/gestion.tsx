@@ -8,18 +8,11 @@ import type { Idioma } from "../config";
 import { useAtras } from "../atras";
 import { devolverFoco } from "../foco";
 import { cargarGestion, comprobarNombre, publicar, leerVisitas, quitarEncargo, pausarEncargo, ErrorGestion, urlPublicada, lenWatchTraer, type ProyectoGestion, type ConfirmacionPublicar } from "./api";
+import { textoDelDetalle } from "./detalle";
 import { LenWatch } from "./len-watch";
 import "./gestion.css";
 
 type Seccion = "publicar" | "numeros" | "encargos";
-function textoDelDetalle(valor: unknown): string {
-  if (typeof valor === "string") return valor;
-  if (!valor || typeof valor !== "object") return "";
-  const d = valor as Record<string, unknown>;
-  const campos = [d.description || d.kind || d.category, d.table, d.column, d.count, d.from, d.to, d.migration, d.statement, d.file, d.line, d.exploitScenario, d.recommendation];
-  if (d.params && typeof d.params === "object") campos.push(...Object.entries(d.params).map(([k,v]) => `${k}: ${String(v)}`));
-  return campos.filter(v => v !== undefined && v !== null && v !== "").map(String).join(" · ");
-}
 interface Props {
   cliente: ClienteDeOpenLen; projectId: string; idioma: Idioma; trabajando: boolean; turnoId: string | null;
   onCerrar: () => void; onCambio: () => void; onEncargo: (texto: string, modo: "create" | "resume") => void;

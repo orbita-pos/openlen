@@ -129,6 +129,22 @@ describe("the fix in a worktree", () => {
     expect(w.current()).toMatchObject({ resolution: "fixed", bringState: "pending" });
   });
 
+  it("🔴 a gate stops the branch's publish: the 428 says it's the branch's, so no client sends it to the draft's publish", async () => {
+    const w = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN], publish: { status: 428, body: { error: "security_findings", fingerprint: "f1" } } });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect(await approveFix(w.current(), P, w.deps)).toEqual({ status: 428, body: { error: "security_findings", fingerprint: "f1", branch: true } });
+    expect(w.current()).toMatchObject({ status: "fix_ready", copyProjectId: "copy-1" });
+  });
+
+  it("«Publicar igual» over a finding in the fix: the acceptance goes through the same gates", async () => {
+    const w = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN, UP] });
+    await onIncidentOpened(w.open(), P, DOWN, w.deps);
+    await w.launched[0]!.reply("Arreglado.", []);
+    expect((await approveFix(w.current(), P, w.deps, { acceptSecurityFingerprint: "f1" })).status).toBe(200);
+    expect(w.deps.publish).toHaveBeenCalledWith(expect.objectContaining({ sourcesFrom: "copy-1", acceptSecurityFingerprint: "f1" }));
+  });
+
   it("🔴 Approve after the owner published something else: 409 published_changed, nothing published", async () => {
     const w = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN], publishedCommit: "someone-elses" });
     await onIncidentOpened(w.open(), P, DOWN, w.deps);

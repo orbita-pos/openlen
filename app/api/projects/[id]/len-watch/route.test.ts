@@ -156,6 +156,16 @@ describe("POST approve", () => {
     expect(approveFix).toHaveBeenLastCalledWith(expect.anything(), PROJECT, undefined, { actorId: "owner", confirmChanged: false });
   });
 
+  it("«Publicar igual» over a security finding in the fix: the fingerprint goes on; anything else isn't one", async () => {
+    vi.mocked(activeIncident).mockResolvedValue(incident("fix_ready"));
+    vi.mocked(approveFix).mockResolvedValue({ status: 200, body: {} });
+    const fp = "a".repeat(64);
+    await APPROVE(req("POST", { acceptSecurityFingerprint: fp }), ctx);
+    expect(approveFix).toHaveBeenLastCalledWith(expect.anything(), PROJECT, undefined, { actorId: "owner", confirmChanged: false, acceptSecurityFingerprint: fp });
+    await APPROVE(req("POST", { acceptSecurityFingerprint: "not-a-fingerprint" }), ctx);
+    expect(approveFix).toHaveBeenLastCalledWith(expect.anything(), PROJECT, undefined, { actorId: "owner", confirmChanged: false });
+  });
+
   it("no incident: 409", async () => {
     expect((await APPROVE(req("POST"), ctx)).status).toBe(409);
     expect(approveFix).not.toHaveBeenCalled();

@@ -8,7 +8,9 @@ import { useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
 
 import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+import type { ReviewView } from "@/lib/security-review/types";
 
+import { SecurityPanel } from "../security-findings";
 import { useLenWatch } from "./use-len-watch";
 import { bannerState } from "./view-model";
 
@@ -19,6 +21,8 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<"review" | "failed" | "changed" | null>(null);
   const [bringNote, setBringNote] = useState<"handedToLen" | "queued" | "failed" | null>(null);
+  // What the security review found in Len's fix on its branch (spec §5.5): answered here, with «Publicar igual».
+  const [findings, setFindings] = useState<ReviewView | null>(null);
   const view = bannerState(status?.incident ?? null, status?.pendingFix ?? null);
   if (view.kind === "hidden") return null;
 
@@ -61,18 +65,26 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
     );
   }
 
-  const act = async (path: "fix" | "approve", confirmChanged = false) => {
+  const act = async (path: "fix" | "approve", o: { confirmChanged?: true; acceptSecurityFingerprint?: string } = {}) => {
     setBusy(true);
     setNote(null);
+    setFindings(null);
     const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/len-watch/${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(confirmChanged ? { confirmChanged: true } : {}),
+      body: JSON.stringify(o),
     }).catch(() => null);
     setBusy(false);
     if (r?.status === 428) {
-      setNote("review");
-      onOpenPublish?.();
+      const gate = (await r.json().catch(() => null)) as ({ error?: string; branch?: boolean } & Partial<ReviewView>) | null;
+      if (gate?.branch) {
+        // Len's fix is on its branch: the Publish modal publishes the draft, never this. A finding is answered here.
+        if (gate.error === "security_findings" && gate.fingerprint) setFindings(gate as ReviewView);
+        else setNote("failed");
+      } else {
+        setNote("review");
+        onOpenPublish?.();
+      }
     } else if (r?.status === 409 && ((await r.json().catch(() => null)) as { error?: string } | null)?.error === "changed_since_fix") {
       // The draft moved after Len's fix: publishing would carry those edits too. Ask, don't guess.
       setNote("changed");
@@ -104,9 +116,19 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       {!soloLectura && note === "changed" && (
         <div className="flex flex-col items-start gap-1.5 pl-[22px]">
           <span className="fg-muted">{t("lenWatch.changed")}</span>
-          <button type="button" disabled={busy} onClick={() => void act("approve", true)} className="inline-flex h-7 items-center rounded-md border bd px-3 text-[11.5px] font-medium fg hover:bg-hover disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => void act("approve", { confirmChanged: true })} className="inline-flex h-7 items-center rounded-md border bd px-3 text-[11.5px] font-medium fg hover:bg-hover disabled:opacity-50">
             {t("lenWatch.publishAnyway")}
           </button>
+        </div>
+      )}
+      {!soloLectura && findings && (
+        <div className="pl-[22px]">
+          <SecurityPanel
+            view={findings}
+            busy={busy}
+            onPublishAnyway={() => void act("approve", { acceptSecurityFingerprint: findings.fingerprint })}
+            onCancel={() => setFindings(null)}
+          />
         </div>
       )}
     </div>
