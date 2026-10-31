@@ -371,6 +371,21 @@ describe("recoverIfStale", () => {
     expect(w.notices).toEqual(["needs_owner"]);
   });
 
+  it("🔴 cut while Len fixed in the worktree: nothing went out, so the copy and its branch go, like a failed turn", async () => {
+    const w = world({ now: NOW });
+    const stale = { ...minutesAgo(w, "fixing", STALE_FIX_MS / 60_000 + 1), copyProjectId: "copy-1", branch: "len-watch/i1", base: "base-1" };
+    expect(await recoverIfStale(stale, w.deps)).toMatchObject({ status: "needs_owner", reason: "interrupted", copyProjectId: null });
+    expect(w.wt).toEqual(["remove copy-1", "delete len-watch/i1"]);
+    expect(w.current()).toMatchObject({ copyProjectId: null });
+  });
+
+  it("cut while publishing from the worktree: the branch may be out already, so nothing is removed", async () => {
+    const w = world({ now: NOW });
+    const stale = { ...minutesAgo(w, "publishing", STALE_FIX_MS / 60_000 + 1), branch: "len-watch/i1", base: "base-1", bringState: "pending" as const };
+    expect((await recoverIfStale(stale, w.deps)).status).toBe("needs_owner");
+    expect(w.wt).toEqual([]);
+  });
+
   it("a publish cut the same way too", async () => {
     const w = world({ now: NOW });
     expect((await recoverIfStale(minutesAgo(w, "publishing", STALE_FIX_MS / 60_000 + 1), w.deps)).status).toBe("needs_owner");

@@ -79,8 +79,15 @@ export async function recoverIfStale(i: Incident, deps?: OrchestratorDeps): Prom
   const d = deps ?? (await defaultDeps());
   // In a worktree the turn runs on the copy.
   if (d.now() - i.updatedAt.getTime() < STALE_FIX_MS || d.liveTurn(i.copyProjectId ?? i.projectId)) return i;
-  const next: Incident = { ...i, status: "needs_owner", reason: "interrupted" };
-  await d.store.updateIncident(i.id, { status: "needs_owner", reason: "interrupted" });
+  // Cut while Len fixed in the worktree: nothing went out, so the copy and its branch go, as when a turn fails. Cut
+  // while publishing, the branch may be out already (the copy went with the publish): it stays.
+  const dropCopy = i.status === "fixing" && i.copyProjectId !== null;
+  if (dropCopy) {
+    await d.worktree.remove(i.copyProjectId!).catch(() => undefined);
+    if (i.branch) await d.worktree.deleteBranch(i.projectId, i.branch).catch(() => undefined);
+  }
+  const next: Incident = { ...i, status: "needs_owner", reason: "interrupted", ...(dropCopy ? { copyProjectId: null } : {}) };
+  await d.store.updateIncident(i.id, { status: "needs_owner", reason: "interrupted", ...(dropCopy ? { copyProjectId: null } : {}) });
   const p = await d.project(i.projectId);
   if (p) await tell(d, p, next, "needs_owner", d.interruptedPhrase(p.locale));
   return next;
