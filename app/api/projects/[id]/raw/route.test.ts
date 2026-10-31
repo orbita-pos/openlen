@@ -20,7 +20,13 @@ const mocks = vi.hoisted(() => ({
 // Compartir el proyecto: aquí quien pide es el dueño (ver acceso-de-prueba.ts).
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-vi.mock("drizzle-orm", () => ({ and: (...a: unknown[]) => a, eq: (l: unknown, r: unknown) => [l, r] }));
+// Only the two the route's query uses; the rest is the real module (what the route imports through other modules
+// builds `sql` fragments when it loads).
+vi.mock("drizzle-orm", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("drizzle-orm")>()),
+  and: (...a: unknown[]) => a,
+  eq: (l: unknown, r: unknown) => [l, r],
+}));
 vi.mock("@/lib/db", () => ({
   db: { select: () => ({ from: () => ({ where: () => ({ limit: mocks.limit }) }) }) },
   schema: { projects: { id: "id", userId: "userId", data: "data", title: "title", subdomain: "subdomain", logoUrl: "logoUrl" } },
