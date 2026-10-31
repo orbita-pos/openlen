@@ -28,6 +28,14 @@ export async function planBring(
   return { kind: "clean", writes: m.write };
 }
 
+/** After a collision handed to Len: is the fix in? Like `git add` after resolving a conflict, the files Len was handed
+ *  (`handed`: path → oid at hand-off) and rewrote count as merged — merging the branch again would still collide on
+ *  them, so that can't be the test. Anything else of the branch still missing from the draft means it isn't. */
+export function handOffDone(plan: BringPlan, handed: ReadonlyMap<string, string | undefined>, now: ReadonlyMap<string, string>): boolean {
+  const left = plan.kind === "nothing" ? [] : plan.kind === "conflict" ? plan.paths : [...plan.writes.keys()];
+  return left.every((path) => handed.has(path) && now.get(path) !== handed.get(path));
+}
+
 export type BringStatus = "brought" | "nothing" | "handed_to_len" | "queued" | "no_fix";
 
 /** A fix published from its branch that the draft doesn't have yet: the owner's next publish would bring the crash
@@ -123,25 +131,27 @@ async function bringNow(p: { projectId: string; incidentId: string; actorId: str
   return handToLen(p, project, branch, base, plan.paths, [], finish);
 }
 
-async function planOf(projectId: string, base: string, tip: string): Promise<BringPlan> {
-  const [{ postgresStore }, { Repository }, { toAbsolute }, { oidOfContent }] = await Promise.all([
-    import("@/lib/git/postgres-store"),
-    import("@/lib/git/repository"),
-    import("@/lib/git/paths"),
-    import("@/lib/git/content"),
-  ]);
+/** The draft as a git tree: absolute path → blob oid, and each oid's text. */
+async function draftTree(projectId: string): Promise<{ oids: Map<string, string>; texts: Map<string, string> }> {
+  const { oidOfContent } = await import("@/lib/git/content");
+  const oids = new Map<string, string>();
+  const texts = new Map<string, string>();
+  for (const [path, content] of Object.entries(await draftFiles(projectId))) {
+    const oid = oidOfContent(content);
+    oids.set(path, oid);
+    texts.set(oid, content);
+  }
+  return { oids, texts };
+}
+
+async function planOf(projectId: string, base: string, tip: string, draft?: Awaited<ReturnType<typeof draftTree>>): Promise<BringPlan> {
+  const [{ postgresStore }, { Repository }, { toAbsolute }] = await Promise.all([import("@/lib/git/postgres-store"), import("@/lib/git/repository"), import("@/lib/git/paths")]);
   const repo = new Repository(postgresStore(projectId));
   const [b, t] = await Promise.all([repo.commit(base), repo.commit(tip)]);
   const [baseFiles, theirFiles] = await Promise.all([repo.files(b.tree), repo.files(t.tree)]);
   const absolute = (m: ReadonlyMap<string, string>) => new Map([...m].map(([path, oid]) => [toAbsolute(path), oid]));
-  const ours = new Map<string, string>();
-  const oursTexts = new Map<string, string>();
-  for (const [path, content] of Object.entries(await draftFiles(projectId))) {
-    const oid = oidOfContent(content);
-    ours.set(path, oid);
-    oursTexts.set(oid, content);
-  }
-  return planBring(absolute(baseFiles), ours, absolute(theirFiles), async (oid) => oursTexts.get(oid) ?? repo.text(oid));
+  const ours = draft ?? (await draftTree(projectId));
+  return planBring(absolute(baseFiles), ours.oids, absolute(theirFiles), async (oid) => ours.texts.get(oid) ?? repo.text(oid));
 }
 
 async function handToLen(
@@ -160,6 +170,8 @@ async function handToLen(
     import("@/lib/publish/publish-locales"),
   ]);
   const tip = async () => (await import("./worktree")).branchTip(p.projectId, branch);
+  const atHandOff = (await draftTree(p.projectId)).oids;
+  const handed = new Map(paths.map((path) => [path, atHandOff.get(path)]));
   launchLenWatchTurn({
     userId: p.actorId,
     projectId: p.projectId,
@@ -170,10 +182,12 @@ async function handToLen(
     locale: project.locale,
     filaId: crypto.randomUUID(),
     onStart: async () => undefined,
-    // Brought when the draft already has everything the branch changed.
+    // Brought when Len rewrote what it was handed and nothing else of the branch is missing (`handOffDone`).
     reply: async () => {
       const t = await tip();
-      if (t && (await planOf(p.projectId, base, t)).kind === "nothing") await finish();
+      if (!t) return;
+      const now = await draftTree(p.projectId);
+      if (handOffDone(await planOf(p.projectId, base, t, now), handed, now.oids)) await finish();
     },
     fail: async () => undefined,
   });

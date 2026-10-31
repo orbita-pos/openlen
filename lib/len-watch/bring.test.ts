@@ -9,7 +9,7 @@ vi.mock("server-only", () => ({}));
 import { makePointer } from "@/lib/files/blob-pointer";
 import { oidOfContent } from "@/lib/git/content";
 
-import { planBring } from "./bring";
+import { handOffDone, planBring } from "./bring";
 
 const POINTER = makePointer({ sha256: "e".repeat(64), size: 3, gitOid: "f".repeat(40) });
 
@@ -60,11 +60,39 @@ describe("planBring", () => {
     expect(Object.fromEntries(p.writes)).toEqual({ "/new.js": "new", "/old.js": null });
   });
 
+  it("🔴 after Len merged a collision by hand, a fresh merge still collides: it can't be what says «brought»", async () => {
+    const merged = FIVE.replace("L3", "L3 owner + fix");
+    const s = sides({ "/index.html": FIVE }, { "/index.html": merged }, { "/index.html": FIVE.replace("L3", "L3 fix") });
+    expect((await planBring(s.base, s.ours, s.theirs, s.text)).kind).toBe("conflict");
+  });
+
   it("an untouched binary pointer is not written", async () => {
     const s = sides({ "/img/a.webp": POINTER, "/index.html": FIVE }, { "/img/a.webp": POINTER, "/index.html": FIVE }, { "/img/a.webp": POINTER, "/index.html": FIVE.replace("L5", "L5 fix") });
     const p = await planBring(s.base, s.ours, s.theirs, s.text);
     expect(p.kind).toBe("clean");
     if (p.kind !== "clean") return;
     expect([...p.writes.keys()]).toEqual(["/index.html"]);
+  });
+});
+
+// Handed to Len (it collided): like `git add` after resolving, the files Len was handed and rewrote count as merged.
+describe("handOffDone", () => {
+  const handed = new Map([["/index.html", "oid-at-hand-off"]]);
+
+  it("Len rewrote the colliding file → brought, though merging again would still collide", () => {
+    expect(handOffDone({ kind: "conflict", paths: ["/index.html"] }, handed, new Map([["/index.html", "oid-merged"]]))).toBe(true);
+  });
+
+  it("Len left the colliding file as it was → not brought", () => {
+    expect(handOffDone({ kind: "conflict", paths: ["/index.html"] }, handed, new Map([["/index.html", "oid-at-hand-off"]]))).toBe(false);
+  });
+
+  it("something else of the branch is still missing from the draft → not brought", () => {
+    const plan = { kind: "clean" as const, writes: new Map([["/js/b.js", "b fix"]]) };
+    expect(handOffDone(plan, handed, new Map([["/index.html", "oid-merged"]]))).toBe(false);
+  });
+
+  it("nothing left of the branch → brought", () => {
+    expect(handOffDone({ kind: "nothing" }, handed, new Map())).toBe(true);
   });
 });
