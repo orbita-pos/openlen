@@ -131,6 +131,9 @@ export function unmergedIndex(ctx: CommandContext): GitRunResult | null {
  * which; this does git's work: the overwrite check, the files, the index and the branch.
  */
 export async function switchTo(ctx: CommandContext, target: string, o: { readonly create: boolean; readonly startPoint?: string }): Promise<GitRunResult> {
+  // Checked out in another worktree: git refuses first (switch and checkout alike, 128).
+  const usedAt = o.create ? undefined : ctx.state.elsewhere?.[target];
+  if (usedAt !== undefined) throw new GitFatal(`fatal: '${target}' is already used by worktree at '${usedAt}'\n`);
   const refused = unmergedIndex(ctx);
   if (refused) return refused;
   if (!o.create && target === ctx.state.branch) {

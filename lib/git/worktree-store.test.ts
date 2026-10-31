@@ -20,7 +20,7 @@ async function setup(files: Record<string, string>) {
   const own = memoryStore();
   const born = await own.createRepo(repo.head, repo.index);
   await own.updateRepo(born.version, born.head, born.index, { branch: BRANCH });
-  return { parent, own, wt: worktreeStore(parent, own), base: repo.head };
+  return { parent, own, wt: worktreeStore(parent, own, "p-parent"), base: repo.head };
 }
 
 const git = (store: GitStore, files: Record<string, string>, args: string[]) =>
@@ -47,6 +47,15 @@ describe("worktreeStore", () => {
     await git(wt, fixed, ["commit", "-m", "Fix"]);
     const tip = (await wt.readRepo())!.head;
     expect((await parent.readObjects([tip])).has(tip)).toBe(true);
+  });
+
+  // Real git 2.45.2, a linked worktree switching to the main worktree's branch (both commands, exit 128).
+  it("🔴 the branch the owner's working copy has checked out is refused, as git does", async () => {
+    const { wt } = await setup({ "/index.html": "v1" });
+    for (const args of [["switch", "main"], ["checkout", "main"]]) {
+      expect(await git(wt, { "/index.html": "v1" }, args)).toMatchObject({ stdout: "", stderr: "fatal: 'main' is already used by worktree at 'p-parent'\n", exitCode: 128 });
+    }
+    expect((await wt.readRepo())!.branch).toBe(BRANCH);
   });
 
   it("git branch in the worktree lists the parent's branches and marks its own", async () => {

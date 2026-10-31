@@ -6,7 +6,9 @@ import type { GitStore, RepoChanges, RepoState } from "./store";
 /** How many times a branch move is retried when the parent was written meanwhile. */
 const PARENT_RETRIES = 5;
 
-export function worktreeStore(parent: GitStore, own: GitStore): GitStore {
+/** `mainWorktree`: what git calls the parent's working copy when it refuses its branch («is already used by worktree
+ *  at '…'»). Ours have no path on a disk: it is the parent project. */
+export function worktreeStore(parent: GitStore, own: GitStore, mainWorktree: string): GitStore {
   // The branches the last read showed: a write's `refs` is the whole set, so what changed is told against it.
   let seenRefs: Readonly<Record<string, string>> = {};
 
@@ -46,6 +48,8 @@ export function worktreeStore(parent: GitStore, own: GitStore): GitStore {
         refs: { ...(p?.refs ?? {}), [mine.branch]: mine.head },
         remotes: p?.remotes ?? {},
         upstreams: p?.upstreams ?? {},
+        // The owner's working copy has its branch checked out: as in git, this worktree can't switch to it.
+        ...(p && p.branch !== mine.branch ? { elsewhere: { [p.branch]: mainWorktree } } : {}),
       };
       seenRefs = view.refs;
       return view;
