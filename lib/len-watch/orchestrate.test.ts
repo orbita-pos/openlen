@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 
 import type { LoadCheck } from "./check";
 import { createIngester } from "./ingest";
-import { afterOwnerPublish, approveFix, onIncidentOpened, recoverIfStale, STALE_FIX_MS, startFix, type OrchestratorDeps } from "./orchestrate";
+import { afterOwnerPublish, approveFix, onIncidentOpened, recoverIfStale, STALE_FIX_MS, startFix, summaryOf, type OrchestratorDeps } from "./orchestrate";
 import type { ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, Resolution, WatchReport } from "./types";
 
@@ -171,6 +171,48 @@ describe("the fix in a worktree", () => {
 });
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
+
+// What Len says at the end goes into the owner's email (the chat, linked there, has it whole). Seen in a real turn:
+// cut at 1,000 characters mid-word — «…bloquea la petición al backend por COR».
+describe("summaryOf", () => {
+  const repeat = (n: number, s: string) => Array.from({ length: n }, () => s).join(" ");
+
+  it("a summary that fits goes whole", () => {
+    expect(summaryOf("  Arreglado.\n\nQué cambié: nada más.  ")).toBe("Arreglado.\n\nQué cambié: nada más.");
+    expect(summaryOf("   ")).toBeNull();
+  });
+
+  it("🔴 too long: it ends after the last whole paragraph that fits, never mid-word", () => {
+    const a = repeat(80, "Primera parte.");
+    const b = repeat(80, "Segunda parte.");
+    const note = "Un aviso aparte: el navegador bloquea la petición al backend por CORS.";
+    expect(summaryOf(`${a}\n\n${b}\n\n${note}`)).toBe(`${a}\n\n…`);
+  });
+
+  it("one long paragraph: it ends after the last whole sentence that fits", () => {
+    const s = summaryOf(repeat(200, "Una frase corta."))!;
+    expect(s.endsWith("Una frase corta. …")).toBe(true);
+    expect(s.length).toBeLessThanOrEqual(2_002);
+  });
+
+  it("no sentence to end at: at the last space", () => {
+    const s = summaryOf(repeat(400, "palabra"))!;
+    expect(s.endsWith("palabra …")).toBe(true);
+    expect(s.length).toBeLessThanOrEqual(2_002);
+  });
+
+  it("🔴 both roads keep it that way (the worktree's and the draft's)", async () => {
+    const long = repeat(200, "Una frase corta.");
+    const onBranch = world({ settings: { autoFix: true }, worktree: true, checks: [DOWN] });
+    await onIncidentOpened(onBranch.open(), P, DOWN, onBranch.deps);
+    await onBranch.launched[0]!.reply(long, []);
+    expect(onBranch.current().summary).toBe(summaryOf(long));
+    const onDraft = world({ settings: { autoFix: true }, checks: [DOWN] });
+    await onIncidentOpened(onDraft.open(), P, DOWN, onDraft.deps);
+    await onDraft.launched[0]!.reply(long, []);
+    expect(onDraft.current().summary).toBe(summaryOf(long));
+  });
+});
 
 describe("onIncidentOpened", () => {
   it("without «fix on its own», it only says the site is down", async () => {
