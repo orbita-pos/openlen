@@ -27,7 +27,24 @@ import { noticeFor, noticeKey, pageUrl, type ProjectForWatch } from "./owner";
 import type { Incident, LenWatchSettings, Resolution } from "./types";
 import type { addWorktree, branchTouches, commitLeftovers, deleteBranch, removeWorktree, Worktree } from "./worktree";
 
-const MAX_SUMMARY = 1_000;
+const MAX_SUMMARY = 2_000;
+
+/** What Len said at the end, for the owner's email (the chat, linked there, has it whole): up to MAX_SUMMARY, ending
+ *  after the last whole paragraph that fits, else sentence, else word — never mid-word — with «…» when cut. A cut point
+ *  only counts if it keeps at least half: a one-line first paragraph mustn't throw the rest away. */
+export function summaryOf(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  if (t.length <= MAX_SUMMARY) return t;
+  const head = t.slice(0, MAX_SUMMARY);
+  const half = MAX_SUMMARY / 2;
+  const paragraph = head.lastIndexOf("\n\n");
+  if (paragraph >= half) return `${head.slice(0, paragraph).trimEnd()}\n\n…`;
+  const sentence = Math.max(head.lastIndexOf(". "), head.lastIndexOf("! "), head.lastIndexOf("? "), head.lastIndexOf("。"));
+  if (sentence >= half) return `${head.slice(0, sentence + 1).trimEnd()} …`;
+  const space = head.lastIndexOf(" ");
+  return `${(space >= half ? head.slice(0, space) : head).trimEnd()} …`;
+}
 
 export interface OrchestratorDeps {
   store: {
@@ -190,7 +207,7 @@ async function startInWorktree(i: Incident, p: ProjectForWatch, d: OrchestratorD
 const commitMessage = (summary: string | null) => `Len Watch: ${(summary ?? "").split("\n")[0]!.slice(0, 72) || "fix the published site"}`;
 
 async function onWorktreeReply(i: Incident, p: ProjectForWatch, wt: Worktree, text: string, d: OrchestratorDeps): Promise<void> {
-  const summary = text.trim().slice(0, MAX_SUMMARY) || null;
+  const summary = summaryOf(text);
   const withSummary: Incident = { ...i, summary };
   const drop = async () => {
     await d.worktree.remove(wt.copyId).catch(() => undefined);
@@ -242,7 +259,7 @@ async function onWorktreeFailed(i: Incident, p: ProjectForWatch, wt: Worktree, f
 }
 
 async function onFixReply(i: Incident, p: ProjectForWatch, before: { stamp: string; hadUnpublished: boolean }, text: string, d: OrchestratorDeps): Promise<void> {
-  const summary = text.trim().slice(0, MAX_SUMMARY) || null;
+  const summary = summaryOf(text);
   const withSummary: Incident = { ...i, summary };
   // Len's edits aren't published yet: a site that loads now came back by itself.
   if ((await d.check(pageUrl(p, i.sample.page))).loads) {
