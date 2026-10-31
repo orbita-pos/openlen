@@ -10,18 +10,22 @@
 
 export const FOLDER_CHANGED_EVENT = "openlen:folder-changed";
 
-/** Avisa de que la carpeta de ESTE proyecto cambió. */
-export function notifyFolderChanged(projectId: string): void {
+/** Avisa de que la carpeta de ESTE proyecto cambió. `outside`: desde fuera de
+ *  los caminos que la pestaña ya sigue (el turno de Len, el editor), como el
+ *  arreglo de Len Watch traído en el servidor: la lente Código vuelve a pedir
+ *  la lista sólo entonces (pedirla en cada escritura de Len la traería entera). */
+export function notifyFolderChanged(projectId: string, o: { outside?: boolean } = {}): void {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(FOLDER_CHANGED_EVENT, { detail: { projectId } }));
+  window.dispatchEvent(new CustomEvent(FOLDER_CHANGED_EVENT, { detail: { projectId, outside: o.outside === true } }));
 }
 
 /** Escucha los cambios de la carpeta de ese proyecto. Devuelve cómo dejar de
  *  escuchar. */
-export function onFolderChanged(projectId: string, cb: () => void): () => void {
+export function onFolderChanged(projectId: string, cb: (cambio: { outside: boolean }) => void): () => void {
   if (typeof window === "undefined") return () => {};
   const oyente = (ev: Event) => {
-    if ((ev as CustomEvent<{ projectId?: unknown }>).detail?.projectId === projectId) cb();
+    const detail = (ev as CustomEvent<{ projectId?: unknown; outside?: unknown }>).detail;
+    if (detail?.projectId === projectId) cb({ outside: detail.outside === true });
   };
   window.addEventListener(FOLDER_CHANGED_EVENT, oyente);
   return () => window.removeEventListener(FOLDER_CHANGED_EVENT, oyente);

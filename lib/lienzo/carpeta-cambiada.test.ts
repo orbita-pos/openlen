@@ -20,6 +20,15 @@ describe("el aviso de que la carpeta cambió", () => {
     quitarOtro();
   });
 
+  it("dice si el cambio vino de FUERA de los caminos que esta pestaña ya sigue (el arreglo de Len Watch traído)", () => {
+    const cb = vi.fn();
+    const quitar = onFolderChanged("p1", cb);
+    notifyFolderChanged("p1");
+    notifyFolderChanged("p1", { outside: true });
+    expect(cb.mock.calls).toEqual([[{ outside: false }], [{ outside: true }]]);
+    quitar();
+  });
+
   it("al dejar de escuchar, ya no llega", () => {
     const cb = vi.fn();
     const quitar = onFolderChanged("p1", cb);

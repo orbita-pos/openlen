@@ -63,7 +63,7 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       else if (answer === "queued") setBringNote("queued");
       else if (answer !== "brought" && answer !== "nothing") setBringNote("failed");
       // The draft has the fix now: the canvas reloads it (and this notice looks again, through the same event).
-      if (answer === "brought") notifyFolderChanged(projectId);
+      if (answer === "brought") notifyFolderChanged(projectId, { outside: true });
       else await reload();
     };
     return (
