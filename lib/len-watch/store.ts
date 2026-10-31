@@ -1,7 +1,7 @@
 // LEN WATCH's rows (spec local 2026-10-30-len-watch): the owner's switches and the incidents.
 // One active incident per project, kept by a partial unique index (scripts/len-watch-migrate-sql.ts):
 // `openIncident` inserts with ON CONFLICT DO NOTHING, so 500 visitors racing open exactly one.
-import { and, eq, isNotNull, lt, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -112,6 +112,26 @@ export async function updateIncident(
     .update(schema.lenWatchIncidents)
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(schema.lenWatchIncidents.id, id));
+}
+
+/** «Fix with Len» takes the incident in ONE statement: the route only read the status, and OpenLen spends seconds
+ *  looking at the page before `startFix` writes «fixing», so two clicks could start two fixes (a real incident,
+ *  31/10). `false`: someone else has it, or it isn't in a status Len may be asked from. */
+export async function claimFix(id: string, from: readonly IncidentStatus[]): Promise<boolean> {
+  const rows = await db
+    .update(schema.lenWatchIncidents)
+    .set({ status: "fixing", reason: null, updatedAt: new Date() })
+    .where(and(eq(schema.lenWatchIncidents.id, id), inArray(schema.lenWatchIncidents.status, [...from])))
+    .returning({ id: schema.lenWatchIncidents.id });
+  return rows.length > 0;
+}
+
+/** The claim back, when the fix couldn't start: only while no turn has its row (one that started keeps it). */
+export async function releaseFix(id: string, to: IncidentStatus): Promise<void> {
+  await db
+    .update(schema.lenWatchIncidents)
+    .set({ status: to, updatedAt: new Date() })
+    .where(and(eq(schema.lenWatchIncidents.id, id), eq(schema.lenWatchIncidents.status, "fixing"), isNull(schema.lenWatchIncidents.turnRowId)));
 }
 
 export async function resolveIncident(id: string, resolution: Resolution): Promise<void> {

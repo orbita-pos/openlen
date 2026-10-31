@@ -95,7 +95,6 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
       headers: { "content-type": "application/json" },
       body: JSON.stringify(o),
     }).catch(() => null);
-    setBusy(false);
     if (r?.status === 428) {
       const gate = (await r.json().catch(() => null)) as ({ error?: string; branch?: boolean; missing?: unknown } & Partial<ReviewView>) | null;
       if (gate?.branch) {
@@ -117,7 +116,9 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
     } else if (!r?.ok) {
       setNote("failed");
     }
-    await reload();
+    // Off until the notice has looked again: the POST answers at once, and in between the button was clickable on
+    // the old state (a real incident, 31/10).
+    await reload().finally(() => setBusy(false));
   };
 
   const text = view.kind === "working" ? t("lenWatch.working") : view.kind === "down" ? t("lenWatch.down") : t("lenWatch.ready");

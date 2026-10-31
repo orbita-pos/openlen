@@ -61,6 +61,34 @@ async function mount(node: React.ReactNode) {
 }
 
 describe("the Len Watch notice", () => {
+  // A real incident (31/10): the POST answers at once, and «Arreglar con Len» was clickable again while the notice
+  // was still looking at where the fix stood.
+  it("🔴 after «Arreglar con Len», the button stays off until the notice has looked again", async () => {
+    const DOWN = { id: "i1", status: "open" as const, reason: null, summary: null, shipsUnpublished: false, createdAt: "2026-10-30T12:00:00.000Z" };
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let gets = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET") !== "GET") return new Response(JSON.stringify({ status: "fixing" }), { status: 202 });
+        gets++;
+        if (gets > 1) await held;
+        return new Response(JSON.stringify(status(gets > 1 ? { ...DOWN, status: "fixing" } : DOWN)), { status: 200 });
+      }),
+    );
+    const host = await mount(<LenWatchBanner projectId="p1" />);
+    const fix = () => [...host.querySelectorAll("button")].find((b) => b.textContent === panelsChat.lenWatch.fix);
+    await act(async () => fix()!.click());
+    await act(async () => new Promise((r) => setTimeout(r, 0)));
+    expect(fix()?.disabled).toBe(true);
+    await act(async () => {
+      release();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(fix()).toBeUndefined();
+  });
+
   it("shows nothing without an incident", async () => {
     fakeFetch(status(null));
     const host = await mount(<LenWatchBanner projectId="p1" />);

@@ -37,6 +37,33 @@ async function montar(c: ClienteDeOpenLen) {
 }
 const boton = (nombre: string) => [...host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === nombre);
 
+// Incidente real del 31/10: el POST contesta al momento y «Arreglar con Len» se podía volver a pulsar mientras la
+// tarjeta aún miraba en qué estaba el arreglo.
+it("🔴 tras «Arreglar con Len», el botón sigue apagado hasta que la tarjeta ha vuelto a mirar", async () => {
+  const CAIDA = { ...READY, status: "open", summary: null, shipsUnpublished: false };
+  let soltar!: () => void;
+  const retenida = new Promise<void>((r) => (soltar = r));
+  let lecturas = 0;
+  const c: ClienteDeOpenLen = {
+    avisarAlCerrar: vi.fn(),
+    pedir: async (_ruta, init) => {
+      if ((init?.method ?? "GET") !== "GET") return Response.json({ status: "fixing" }, { status: 202 });
+      lecturas++;
+      if (lecturas > 1) await retenida;
+      return Response.json({ enabled: true, isOwner: true, settings: SETTINGS, incident: lecturas > 1 ? { ...CAIDA, status: "fixing" } : CAIDA });
+    },
+  };
+  await montar(c);
+  await act(async () => boton("fix")!.click());
+  await act(async () => new Promise((r) => setTimeout(r, 0)));
+  expect(boton("fix")?.disabled).toBe(true);
+  await act(async () => {
+    soltar();
+    await new Promise((r) => setTimeout(r, 0));
+  });
+  expect(boton("fix")).toBeUndefined();
+});
+
 it("un arreglo listo: dice qué saldría, y un 428 manda a revisar", async () => {
   const { c, llamadas } = cliente({ incident: READY, approve: { status: 428, body: { error: "security_findings" } } });
   await montar(c);

@@ -100,3 +100,35 @@ describe("incidents", () => {
     expect(await store.incidentById(old!.id)).toBeNull();
   });
 });
+
+// A real incident (31/10): «Arreglar con Len» stayed clickable for the seconds OpenLen spends looking at the page
+// before marking the incident «fixing», and the route only READ the status — two clicks could start two fixes.
+describe("claiming the fix", () => {
+  const FIXABLE = ["open", "needs_owner", "fix_failed"] as const;
+
+  it("only the first of two clicks gets it", async () => {
+    const i = (await store.openIncident("p1", SAMPLE))!;
+    expect(await store.claimFix(i.id, FIXABLE)).toBe(true);
+    expect(await store.claimFix(i.id, FIXABLE)).toBe(false);
+    expect((await store.incidentById(i.id))!.status).toBe("fixing");
+  });
+
+  it("can't claim an incident in a status it wasn't asked from", async () => {
+    const i = (await store.openIncident("p1", SAMPLE))!;
+    await store.updateIncident(i.id, { status: "fix_ready" });
+    expect(await store.claimFix(i.id, FIXABLE)).toBe(false);
+    expect((await store.incidentById(i.id))!.status).toBe("fix_ready");
+  });
+
+  it("gives it back only while no turn has started", async () => {
+    const i = (await store.openIncident("p1", SAMPLE))!;
+    await store.claimFix(i.id, ["open"]);
+    await store.releaseFix(i.id, "open");
+    expect((await store.incidentById(i.id))!.status).toBe("open");
+
+    await store.claimFix(i.id, ["open"]);
+    await store.updateIncident(i.id, { turnRowId: "row-1" });
+    await store.releaseFix(i.id, "open");
+    expect((await store.incidentById(i.id))!.status).toBe("fixing");
+  });
+});
