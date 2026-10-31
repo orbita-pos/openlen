@@ -7,7 +7,7 @@ vi.mock("@/lib/db", async () => {
   return { schema: s, db: {} };
 });
 
-const { allowedCheckOrigins, htmlLang, noticeFor, noticeKey, pageUrl } = await import("./owner");
+const { allowedCheckOrigins, htmlLang, noticeFor, noticeKey, pageUrl, watchLocale } = await import("./owner");
 
 const P = { projectId: "p1", ownerId: "u1", title: "Holi", subdomain: "holi", url: "https://holi.openlen.app", locale: "es", timeZone: "UTC" };
 const now = new Date();
@@ -19,6 +19,27 @@ describe("owner", () => {
     expect(htmlLang("<html lang=fr>")).toBe("fr");
     expect(htmlLang('<html lang="sw">')).toBeNull();
     expect(htmlLang(null)).toBeNull();
+  });
+
+  // A real incident (31/10): an owner who writes to Len in Spanish got the notice and Len's fix in English, because
+  // the page said <html lang="en">. Like Claude Code: the person's language, not their project's.
+  describe("the owner's language, like Claude Code's", () => {
+    it("🔴 the language they write to Len in wins over the page's", () => {
+      expect(watchLocale({ writing: "es", interface: null, html: '<html lang="en">' })).toBe("es");
+    });
+
+    it("and over their interface's, as in Len's own turns", () => {
+      expect(watchLocale({ writing: "es", interface: "en", html: null })).toBe("es");
+    });
+
+    it("never having written, their interface's", () => {
+      expect(watchLocale({ writing: null, interface: "es", html: '<html lang="en">' })).toBe("es");
+    });
+
+    it("the page's only when nothing is known about them, and English with nothing at all", () => {
+      expect(watchLocale({ writing: null, interface: null, html: '<html lang="fr">' })).toBe("fr");
+      expect(watchLocale({ writing: null, interface: null, html: null })).toBe("en");
+    });
   });
 
   it("the reported page's address", () => {

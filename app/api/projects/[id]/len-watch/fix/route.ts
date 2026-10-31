@@ -3,6 +3,7 @@
 import { standingIncident, whoMay } from "@/lib/len-watch/api";
 import { startFix } from "@/lib/len-watch/orchestrate";
 import { projectForWatch } from "@/lib/len-watch/owner";
+import { claimFix, releaseFix } from "@/lib/len-watch/store";
 import type { IncidentStatus } from "@/lib/len-watch/types";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 
@@ -24,8 +25,14 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   if (incident.bringState === "pending") return Response.json({ error: "fix_pending" }, { status: 409 });
   const project = await projectForWatch(id);
   if (!project?.url) return Response.json({ error: "no_incident" }, { status: 409 });
+  // Taken in one statement before answering: `startFix` looks at the page for seconds before it writes «fixing»,
+  // and a second click in between started a second fix (a real incident, 31/10).
+  if (!(await claimFix(incident.id, FIXABLE))) return Response.json({ error: "busy" }, { status: 409 });
   // The turn is whoever pressed: an editor's counts against the members' monthly cap.
-  void startFix(incident, project, undefined, { actorId: who.userId }).catch((err: unknown) => console.warn("[len-watch] the fix couldn't start", err));
+  void startFix(incident, project, undefined, { actorId: who.userId }).catch(async (err: unknown) => {
+    console.warn("[len-watch] the fix couldn't start", err);
+    await releaseFix(incident.id, incident.status).catch(() => undefined);
+  });
   return Response.json({ status: "fixing" }, { status: 202 });
 });
 

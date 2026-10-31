@@ -61,8 +61,10 @@ export function LenWatch({ cliente, projectId, idioma }: { cliente: ClienteDeOpe
         setNota(g?.status === 428 ? "review" : g?.codigo === "changed_since_fix" ? "changed" : "failed");
       }
     }
-    setOcupado(false);
+    // Apagado hasta que la tarjeta ha vuelto a mirar: el POST contesta al momento, y entre medias el botón se podía
+    // pulsar sobre el estado viejo (incidente real, 31/10).
     await cargar();
+    setOcupado(false);
   };
   const cambiar = async (clave: SettingKey, activo: boolean) => {
     setOcupado(true);

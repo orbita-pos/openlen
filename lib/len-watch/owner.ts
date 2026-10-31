@@ -3,8 +3,9 @@
 // around when a site goes down at 3 a.m.
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 
+import { userWritingLanguage } from "@/lib/agent/user-language";
 import { db, schema } from "@/lib/db";
 import { loadPrefs } from "@/lib/notifications/dispatch";
 import { urlDelChat } from "@/lib/notifications/channels/webpush";
@@ -35,6 +36,32 @@ export function htmlLang(html: string | null | undefined): string | null {
   return l && LOCALES.has(l) ? l : null;
 }
 
+/** The owner's language, like Claude Code's: the person's, never their project's. The language they write to Len in
+ *  first (as in Len's own turns, where it beats the interface's), then their interface's (the one their last Len
+ *  Watch setting came from), and the page's only when nothing is known about them. A real incident (31/10): an owner
+ *  who writes to Len in Spanish got the notice and Len's fix in English, because the page said <html lang="en">. */
+export function watchLocale(o: { writing: string | null; interface: string | null; html: string | null | undefined }): string {
+  return o.writing ?? o.interface ?? htmlLang(o.html) ?? "en";
+}
+
+/** Owner's own messages that say which language they write in. */
+const OWNER_MESSAGES = 6;
+
+/** The language the owner writes to Len in, from their latest own messages in any of their projects: their words in
+ *  the chat (`origen` null), never a notice or a turn OpenLen started (a Len Watch turn's text is ours). Null if
+ *  they never wrote. */
+async function ownerWritingLanguage(ownerId: string): Promise<string | null> {
+  const m = schema.projectChatMessages;
+  const rows = await db
+    .select({ text: m.userText })
+    .from(m)
+    .innerJoin(schema.projects, eq(schema.projects.id, m.projectId))
+    .where(and(eq(schema.projects.userId, ownerId), isNull(m.origen), isNull(m.tipo), or(isNull(m.autorId), eq(m.autorId, ownerId)), ne(m.userText, "")))
+    .orderBy(desc(m.createdAt))
+    .limit(OWNER_MESSAGES);
+  return userWritingLanguage("", rows.map((r) => r.text).reverse());
+}
+
 export async function projectForWatch(projectId: string): Promise<ProjectForWatch | null> {
   const [row] = await db
     .select({ userId: schema.projects.userId, title: schema.projects.title, subdomain: schema.projects.subdomain, publishedAt: schema.projects.publishedAt, data: schema.projects.data })
@@ -42,7 +69,7 @@ export async function projectForWatch(projectId: string): Promise<ProjectForWatc
     .where(eq(schema.projects.id, projectId))
     .limit(1);
   if (!row) return null;
-  const [settings, prefs] = await Promise.all([getSettings(projectId), loadPrefs(row.userId)]);
+  const [settings, prefs, writing] = await Promise.all([getSettings(projectId), loadPrefs(row.userId), ownerWritingLanguage(row.userId).catch(() => null)]);
   const subdomain = row.subdomain && row.publishedAt ? row.subdomain : null;
   return {
     projectId,
@@ -50,7 +77,7 @@ export async function projectForWatch(projectId: string): Promise<ProjectForWatc
     title: row.title,
     subdomain,
     url: subdomain ? publishedOrigin(subdomain) : null,
-    locale: settings.locale ?? htmlLang(row.data?.html) ?? "en",
+    locale: watchLocale({ writing, interface: settings.locale, html: row.data?.html }),
     timeZone: prefs.timezone,
   };
 }

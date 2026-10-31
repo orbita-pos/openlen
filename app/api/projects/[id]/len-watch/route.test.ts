@@ -6,14 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
-vi.mock("@/lib/len-watch/store", () => ({ getSettings: vi.fn(), saveSettings: vi.fn(), activeIncident: vi.fn() }));
+vi.mock("@/lib/len-watch/store", () => ({ getSettings: vi.fn(), saveSettings: vi.fn(), activeIncident: vi.fn(), claimFix: vi.fn(async () => true), releaseFix: vi.fn(async () => undefined) }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: vi.fn() }));
 vi.mock("@/lib/len-watch/orchestrate", () => ({ startFix: vi.fn(async () => undefined), approveFix: vi.fn(), recoverIfStale: vi.fn(async (i: unknown) => i) }));
 vi.mock("@/lib/len-watch/bring", () => ({ bringFix: vi.fn(), pendingFix: vi.fn(async () => null) }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
-import { activeIncident, getSettings, saveSettings } from "@/lib/len-watch/store";
+import { activeIncident, claimFix, getSettings, releaseFix, saveSettings } from "@/lib/len-watch/store";
 import { projectForWatch } from "@/lib/len-watch/owner";
 import { approveFix, recoverIfStale, startFix } from "@/lib/len-watch/orchestrate";
 import { bringFix, pendingFix } from "@/lib/len-watch/bring";
@@ -133,6 +133,27 @@ describe("POST fix", () => {
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "busy" });
     expect(startFix).not.toHaveBeenCalled();
+  });
+
+  // A real incident (31/10): OpenLen looks at the page for seconds before `startFix` writes «fixing», and a second
+  // click in between passed the status check.
+  it("🔴 two clicks: the second finds the fix taken, 409 busy, and Len starts once", async () => {
+    vi.mocked(activeIncident).mockResolvedValue(incident("open"));
+    vi.mocked(claimFix).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    expect((await FIX(req("POST"), ctx)).status).toBe(202);
+    const second = await FIX(req("POST"), ctx);
+    expect(second.status).toBe(409);
+    expect(await second.json()).toEqual({ error: "busy" });
+    expect(startFix).toHaveBeenCalledTimes(1);
+    expect(claimFix).toHaveBeenCalledWith("i1", ["open", "needs_owner", "fix_failed"]);
+  });
+
+  it("a fix that couldn't start gives the incident back to the status it had", async () => {
+    vi.mocked(activeIncident).mockResolvedValue(incident("needs_owner"));
+    vi.mocked(startFix).mockRejectedValueOnce(new Error("no browser"));
+    expect((await FIX(req("POST"), ctx)).status).toBe(202);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(releaseFix).toHaveBeenCalledWith("i1", "needs_owner");
   });
 
   it("🔴 its fix changes tables and waits in its branch to be brought: 409, the branch isn't cut again over it", async () => {
