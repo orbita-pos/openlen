@@ -9,6 +9,10 @@ vi.mock("@/lib/security-review/real", () => ({ securityReviewer: () => ({ gate: 
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => "u1") }));
+// Len Watch asks the database around every person's publish (a fix waiting to be brought; an incident to recheck).
+// This test is about the route: without these it queried whatever DATABASE_URL said — production, from .env.local.
+vi.mock("@/lib/len-watch/bring", () => ({ pendingFix: vi.fn(async () => null), declineFix: vi.fn(async () => undefined) }));
+vi.mock("@/lib/len-watch/orchestrate", () => ({ afterOwnerPublish: vi.fn(async () => undefined) }));
 vi.mock("@/lib/projects", async () => {
   class E extends Error {}
   return {
