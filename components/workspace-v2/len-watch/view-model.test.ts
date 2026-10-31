@@ -33,6 +33,14 @@ describe("bannerState", () => {
     expect(bannerState({ status: "fixing", shipsUnpublished: false }, pending)).toEqual({ kind: "working" });
     expect(bannerState(null, null)).toEqual({ kind: "hidden" });
   });
+
+  it("🔴 the fix changes tables, so it waits in its branch: the notice brings it, never «Fix with Len» again", () => {
+    expect(bannerState({ id: "i1", status: "needs_owner", shipsUnpublished: false }, { incidentId: "i1" })).toEqual({ kind: "bring", incidentId: "i1" });
+  });
+
+  it("a NEW crash while an older fix waits to be brought: the crash comes first", () => {
+    expect(bannerState({ id: "i2", status: "needs_owner", shipsUnpublished: false }, { incidentId: "i1" })).toEqual({ kind: "down", action: "fix" });
+  });
 });
 
 describe("settingsRows", () => {
