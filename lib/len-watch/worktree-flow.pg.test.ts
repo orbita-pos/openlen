@@ -13,6 +13,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+// The turn «Traer el arreglo» hands to Len when it collides: kept here, so the test plays Len.
+const handed = vi.hoisted(() => [] as { projectId: string; reply: (t: string, c: []) => Promise<void> }[]);
+vi.mock("@/lib/agent/turnos-desde-el-servidor", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/agent/turnos-desde-el-servidor")>()),
+  launchLenWatchTurn: (x: (typeof handed)[number]) => void handed.push(x),
+}));
 
 const ROOT = mkdtempSync(path.join(tmpdir(), "ol-len-watch-flow-"));
 process.env.PUBLISH_ROOT = ROOT;
@@ -51,6 +57,43 @@ describe.skipIf(!RUN_IT)("the Len Watch worktree, from the crash to the owner's 
     await db.insert(schema.projectFiles).values({ projectId: PROJECT, path: "/js/app.js", content: "crash();" });
   });
 
+  /** The orchestrator's real pieces, with Len's turn kept for the test to play and the browser check scripted. */
+  async function watchDeps() {
+    const store = await import("./store");
+    const owner = await import("./owner");
+    const orchestrate = await import("./orchestrate");
+    const wt = await import("./worktree");
+    const { publishThroughGates } = await import("@/lib/projects/publish-through-gates");
+    const { readPublishedSources } = await import("./published-sources");
+    const launched: { projectId: string; chatProjectId?: string; reply: (t: string, c: [], f?: string) => Promise<void> }[] = [];
+    const checks = [DOWN, UP, UP];
+    const deps: import("./orchestrate").OrchestratorDeps = {
+      store,
+      worktree: {
+        add: wt.addWorktree,
+        commitLeftovers: wt.commitLeftovers,
+        touches: wt.branchTouches,
+        remove: wt.removeWorktree,
+        deleteBranch: wt.deleteBranch,
+        publishedCommit: async (id) => (await readPublishedSources(id))?.commitOid ?? null,
+      },
+      project: owner.projectForWatch,
+      check: async () => checks.shift() ?? UP,
+      notify: async () => undefined,
+      launch: (x) => void launched.push(x as never),
+      publish: publishThroughGates,
+      hasUnpublished: async () => true,
+      contentStamp: orchestrate.contentStamp,
+      failPhrase: () => "x",
+      turnPrompt: () => "Tu sitio publicado no carga.",
+      interruptedPhrase: () => "x",
+      liveTurn: () => false,
+      now: Date.now,
+      newId: () => `row-${RUN}-${Math.random().toString(36).slice(2, 6)}`,
+    };
+    return { launched, deps };
+  }
+
   afterAll(async () => {
     if (!RUN_IT) return;
     const { db, schema } = await import("@/lib/db");
@@ -87,33 +130,7 @@ describe.skipIf(!RUN_IT)("the Len Watch worktree, from the crash to the owner's 
     await store.saveSettings(PROJECT, { autoFix: true, autoPublish: true });
     const incident = (await store.openIncident(PROJECT, { message: "boom", file: "/js/app.js", line: 1, col: 1, page: null }))!;
     const p = (await owner.projectForWatch(PROJECT))!;
-    const launched: { projectId: string; chatProjectId?: string; reply: (t: string, c: [], f?: string) => Promise<void> }[] = [];
-    const checks = [DOWN, UP, UP];
-    const { readPublishedSources: rps } = await import("./published-sources");
-    const deps: import("./orchestrate").OrchestratorDeps = {
-      store,
-      worktree: {
-        add: wt.addWorktree,
-        commitLeftovers: wt.commitLeftovers,
-        touches: wt.branchTouches,
-        remove: wt.removeWorktree,
-        deleteBranch: wt.deleteBranch,
-        publishedCommit: async (id) => (await rps(id))?.commitOid ?? null,
-      },
-      project: owner.projectForWatch,
-      check: async () => checks.shift() ?? UP,
-      notify: async () => undefined,
-      launch: (x) => void launched.push(x as never),
-      publish: publishThroughGates,
-      hasUnpublished: async () => true,
-      contentStamp: orchestrate.contentStamp,
-      failPhrase: () => "x",
-      turnPrompt: () => "Tu sitio publicado no carga.",
-      interruptedPhrase: () => "x",
-      liveTurn: () => false,
-      now: Date.now,
-      newId: () => `row-${RUN}`,
-    };
+    const { launched, deps } = await watchDeps();
     await orchestrate.startFix(incident, p, deps, { check: DOWN });
 
     // 4. Len works in the worktree: what was published, not the draft, on its branch.
@@ -148,5 +165,82 @@ describe.skipIf(!RUN_IT)("the Len Watch worktree, from the crash to the owner's 
     expect((await publishThroughGates({ ...base, source: "person" })).status).toBe(200);
     expect(served("index.html")).toContain("owner-edit");
     expect(served("js/app.js")).toContain("ok();");
+  });
+
+  it("🔴 it collides: Len merges it by hand, and that brings it — merging again would still collide", async () => {
+    const { db, schema } = await import("@/lib/db");
+    const { eq, and } = await import("drizzle-orm");
+    const { publishThroughGates } = await import("@/lib/projects/publish-through-gates");
+    const { readPublishedSources } = await import("./published-sources");
+    const store = await import("./store");
+    const owner = await import("./owner");
+    const orchestrate = await import("./orchestrate");
+    const wt = await import("./worktree");
+    const { bringFix } = await import("./bring");
+    const base = { projectId: PROJECT, actorId: OWNER, ownerId: OWNER, subdomain: SUB };
+    const setFile = (projectId: string, content: string) =>
+      db.update(schema.projectFiles).set({ content }).where(and(eq(schema.projectFiles.projectId, projectId), eq(schema.projectFiles.path, "/js/app.js")));
+    const draftApp = async () =>
+      (await db.select({ c: schema.projectFiles.content }).from(schema.projectFiles).where(and(eq(schema.projectFiles.projectId, PROJECT), eq(schema.projectFiles.path, "/js/app.js"))))[0]?.c;
+
+    // Published broken; then the owner edits THE line Len will fix.
+    const before = (await readPublishedSources(PROJECT))?.commitOid;
+    await setFile(PROJECT, "boom();\n");
+    expect((await publishThroughGates({ ...base, source: "person" })).status).toBe(200);
+    await vi.waitFor(async () => expect((await readPublishedSources(PROJECT))?.commitOid).not.toBe(before), { timeout: 10_000 });
+    await setFile(PROJECT, "boom(); // owner\n");
+
+    // Len fixes it in its worktree and it goes out.
+    const incident = (await store.openIncident(PROJECT, { message: "boom", file: "/js/app.js", line: 1, col: 1, page: null }))!;
+    const { launched, deps } = await watchDeps();
+    await orchestrate.startFix(incident, (await owner.projectForWatch(PROJECT))!, deps, { check: DOWN });
+    await setFile(launched[0]!.projectId, "ok();\n");
+    await launched[0]!.reply("Arreglado.", [], "Arreglado.");
+    const fixed = (await store.incidentById(incident.id))!;
+    expect(fixed).toMatchObject({ resolution: "fixed", bringState: "pending" });
+
+    // «Traer el arreglo» collides: no markers in the draft, it's Len's.
+    expect(await bringFix({ projectId: PROJECT, incidentId: incident.id, actorId: OWNER })).toEqual({ status: "handed_to_len" });
+    expect(await draftApp()).toBe("boom(); // owner\n");
+    const turn = handed.at(-1)!;
+    expect(turn.projectId).toBe(PROJECT);
+
+    // Len merges both by hand and ends its turn: the fix is in.
+    await setFile(PROJECT, "ok(); // owner\n");
+    await turn.reply("Traído: tu comentario sigue y el arreglo está.", []);
+    expect((await store.incidentById(incident.id))!.bringState).toBe("brought");
+    expect(await wt.branchTip(PROJECT, fixed.branch!)).toBeNull();
+    expect((await publishThroughGates({ ...base, source: "person" })).status).toBe(200);
+    expect(served("js/app.js")).toContain("ok(); // owner");
+  });
+
+  it("handed to Len, who ends the turn without touching the file: still waiting to be brought", async () => {
+    const { db, schema } = await import("@/lib/db");
+    const { eq, and } = await import("drizzle-orm");
+    const { publishThroughGates } = await import("@/lib/projects/publish-through-gates");
+    const { readPublishedSources } = await import("./published-sources");
+    const store = await import("./store");
+    const owner = await import("./owner");
+    const orchestrate = await import("./orchestrate");
+    const { bringFix, pendingFix } = await import("./bring");
+    const base = { projectId: PROJECT, actorId: OWNER, ownerId: OWNER, subdomain: SUB };
+    const setFile = (projectId: string, content: string) =>
+      db.update(schema.projectFiles).set({ content }).where(and(eq(schema.projectFiles.projectId, projectId), eq(schema.projectFiles.path, "/js/app.js")));
+
+    const before = (await readPublishedSources(PROJECT))?.commitOid;
+    await setFile(PROJECT, "kaput();\n");
+    expect((await publishThroughGates({ ...base, source: "person" })).status).toBe(200);
+    await vi.waitFor(async () => expect((await readPublishedSources(PROJECT))?.commitOid).not.toBe(before), { timeout: 10_000 });
+    await setFile(PROJECT, "kaput(); // owner\n");
+    const incident = (await store.openIncident(PROJECT, { message: "kaput", file: "/js/app.js", line: 1, col: 1, page: null }))!;
+    const { launched, deps } = await watchDeps();
+    await orchestrate.startFix(incident, (await owner.projectForWatch(PROJECT))!, deps, { check: DOWN });
+    await setFile(launched[0]!.projectId, "fine();\n");
+    await launched[0]!.reply("Arreglado.", [], "Arreglado.");
+
+    expect(await bringFix({ projectId: PROJECT, incidentId: incident.id, actorId: OWNER })).toEqual({ status: "handed_to_len" });
+    await handed.at(-1)!.reply("No pude traerlo.", []);
+    expect((await store.incidentById(incident.id))!.bringState).toBe("pending");
+    expect(await pendingFix(PROJECT)).toMatchObject({ incidentId: incident.id });
   });
 });
