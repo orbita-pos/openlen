@@ -145,7 +145,10 @@ export function createSecurityReviewer(deps: ReviewDeps): SecurityReviewer {
     if (existing) {
       const settled = await settleOrphan(existing);
       const now = deps.now();
-      if (!inScope || !retryable(settled, now) || !(await checkBudget(deps.store, projectId, now, deps.env)).ok) return settled;
+      // Reviewed out of scope, in scope now (a backend record comes before its draft database, so the schema — and the
+      // fingerprint — can be the same): the same files get the model. Scope decides no rule, so the rules stand.
+      const cameIntoScope = settled.status === "skipped_scope";
+      if (!inScope || !(cameIntoScope || retryable(settled, now)) || !(await checkBudget(deps.store, projectId, now, deps.env)).ok) return settled;
       if (await deps.store.restart(projectId, fingerprint, now)) launch(inputs, fingerprint, settled.phase0, locale);
       return deps.store.get(projectId, fingerprint);
     }
