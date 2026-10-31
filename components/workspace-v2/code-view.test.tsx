@@ -14,6 +14,7 @@ import { CodeView } from "./code-view";
 import { esperaALen } from "./hilos-del-codigo";
 import { comentariosDelChat } from "@/lib/workspace-v2/comentarios-de-lineas";
 import { cambiosEnVivo } from "@/lib/workspace-v2/cambios-en-vivo";
+import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 
 // `next/dynamic` carga el editor aparte: aquí, con React.lazy, para esperarlo.
@@ -251,6 +252,30 @@ describe("CodeView — abrir archivos en pestañas", () => {
     const { el } = await pintar({ peticion: { ruta: "/borrada/index.html", n: 1 } });
     await esperar(() => el.textContent?.includes("ya no está."));
     expect(el.textContent).toContain("borrada/index.html · ya no está.");
+  });
+});
+
+// Len Watch (spec local 2026-10-30-len-watch, §5.5): «Traer el arreglo» writes the folder on the server, outside the
+// chat's turn and this editor — the two things the list already follows.
+describe("CodeView — un cambio de la carpeta desde fuera (el arreglo de Len Watch traído)", () => {
+  const pedidasDeLaLista = () => llamadas.filter((l) => l.metodo === "GET" && /\/ficheros$/.test(l.url)).length;
+
+  it("🔴 llega a la pestaña sin cambios, sin recargar la página", async () => {
+    const { el } = await pintar();
+    act(() => botonDelArbol(el, "reservas.json").click());
+    await esperar(() => texto(el).includes("Ana"));
+    LISTA = { ...LISTA, ficheros: LISTA.ficheros.map((f) => (f.ruta === "/datos/reservas.json" ? { ruta: f.ruta, contenido: '[{"nombre":"Ana"},{"nombre":"Leo"}]' } : f)) };
+    act(() => notifyFolderChanged(proyecto, { outside: true }));
+    await esperar(() => texto(el).includes("Leo"));
+    expect(texto(el)).toBe('[{"nombre":"Ana"},{"nombre":"Leo"}]');
+  });
+
+  it("lo que ya sigue (el turno de Len, este editor) no vuelve a pedir la lista", async () => {
+    await pintar();
+    const antes = pedidasDeLaLista();
+    act(() => notifyFolderChanged(proyecto));
+    await act(async () => new Promise((r) => setTimeout(r, 50)));
+    expect(pedidasDeLaLista()).toBe(antes);
   });
 });
 

@@ -88,7 +88,7 @@ import { colorearLineas, lenguajeDe, type Lenguaje } from "@/lib/workspace-v2/co
 import { MAX_SUBIDA, planDeSubida, type MotivoDeSalto } from "@/lib/workspace-v2/subir-ficheros";
 import { isBinaryBytes } from "@/lib/files/blob-pointer";
 import { formatFileSize } from "@/lib/agent/terminal/formato";
-import { notifyFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
+import { notifyFolderChanged, onFolderChanged } from "@/lib/lienzo/carpeta-cambiada";
 
 import { copiar } from "./copiar";
 import { DebajoDeLaLinea, claveDeLinea, useComentarLineas, type EtiquetasDeComentar } from "./comentar-linea";
@@ -466,6 +466,8 @@ function Explorador({
       vivo = false;
     };
   }, [projectId, recarga, turnosConCambios]);
+  // Lo que cambió en la carpeta desde FUERA del turno de Len y de este editor (el arreglo de Len Watch traído).
+  useEffect(() => onFolderChanged(projectId, ({ outside }) => outside && setRecarga((n) => n + 1)), [projectId]);
 
   const guardados = useMemo(
     () => new Map(typeof lista === "string" ? [] : lista.ficheros.flatMap((f) => ("contenido" in f ? [[f.ruta, f.contenido] as const] : []))),
@@ -477,8 +479,14 @@ function Explorador({
   );
   // LO QUE CAMBIÓ POR FUERA llega a las pestañas SIN cambios: las que tienen
   // algo escrito se quedan como están, y guardarlas avisará (`cambio`).
+  // Una pestaña abierta en la que nadie escribió no tiene búfer (su texto ES el
+  // de la lista, con la revisión 0): sin la lista de antes no sabría que cambió.
+  const guardadosAntes = useRef<ReadonlyMap<string, string>>(new Map());
   useEffect(() => {
     if (typeof lista === "string") return;
+    const antes = guardadosAntes.current;
+    guardadosAntes.current = guardados;
+    const abiertas = new Set(editores.grupos.flatMap((g) => g.pestanas));
     setBuffers((prev) => {
       let cambio = false;
       const nuevos: Record<string, Buffer> = { ...prev };
@@ -489,9 +497,16 @@ function Explorador({
         nuevos[ruta] = { base: ahora, texto: ahora, revision: b.revision + 1, estado: { tipo: "listo" } };
         cambio = true;
       }
+      for (const ruta of abiertas) {
+        const ahora = guardados.get(ruta);
+        const era = antes.get(ruta);
+        if (prev[ruta] || ahora === undefined || era === undefined || ahora === era) continue;
+        nuevos[ruta] = { base: ahora, texto: ahora, revision: 1, estado: { tipo: "listo" } };
+        cambio = true;
+      }
       return cambio ? nuevos : prev;
     });
-  }, [lista, guardados]);
+  }, [lista, guardados, editores]);
 
   const arbolBase = useMemo(
     () =>

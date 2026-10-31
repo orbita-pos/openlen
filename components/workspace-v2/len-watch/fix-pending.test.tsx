@@ -79,7 +79,7 @@ describe("the publish that waits for the Len Watch fix", () => {
     try {
       const { host } = await mount();
       await click(button(host, T.bring));
-      expect(changed).toHaveBeenCalledTimes(1);
+      expect(changed.mock.calls).toEqual([[{ outside: true }]]);
     } finally {
       stop();
     }

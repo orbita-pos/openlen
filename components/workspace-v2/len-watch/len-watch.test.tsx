@@ -242,7 +242,7 @@ describe("«Traer el arreglo» over the chat", () => {
       });
       expect(calls.find((c) => c.method === "POST")).toEqual({ url: "/api/projects/p1/len-watch/bring", method: "POST", body: JSON.stringify({ incidentId: "i1" }) });
       expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
-      expect(changed).toHaveBeenCalledTimes(1);
+      expect(changed.mock.calls).toEqual([[{ outside: true }]]);
     } finally {
       stop();
     }

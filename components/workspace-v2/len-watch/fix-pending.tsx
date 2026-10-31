@@ -44,7 +44,7 @@ export function LenWatchFixPending({
       if (!res.ok && res.status !== 202) return setNote("failed");
       if (data.status === "brought" || data.status === "nothing") {
         setNote(null);
-        if (data.status === "brought") notifyFolderChanged(projectId);
+        if (data.status === "brought") notifyFolderChanged(projectId, { outside: true });
         onPublishAgain();
         return;
       }
