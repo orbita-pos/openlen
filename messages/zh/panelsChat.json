@@ -535,6 +535,10 @@
     "review": "发布前需要你检查。",
     "failed": "没有成功，请重试。",
     "changed": "Len 修复后草稿又有改动：这些改动也会一起发布。",
-    "publishAnyway": "仍然发布"
+    "publishAnyway": "仍然发布",
+    "publishBrought": "Len 的修复已经在你的草稿里了。发布后，你的网站就能重新加载。",
+    "publishNow": "发布",
+    "reviewRunning": "修复的安全检查仍在进行中。请稍后再试。",
+    "secretsMissing": "发布修复还缺少函数的生产环境密钥：{names}。添加后请再次发布修复。"
   }
 }

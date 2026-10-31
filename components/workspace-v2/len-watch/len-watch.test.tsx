@@ -174,6 +174,16 @@ describe("the Len Watch notice", () => {
     }
   });
 
+  it("🔴 the fix (it changes tables) is in the draft and the site still down: «Publicar» opens Publish, not «Fix with Len»", async () => {
+    fakeFetch(status({ ...READY, status: "needs_owner", reason: "needs_tables", fixBrought: true }));
+    const onOpenPublish = vi.fn();
+    const host = await mount(<LenWatchBanner projectId="p1" onOpenPublish={onOpenPublish} />);
+    expect(host.querySelector('[data-len-watch-banner="publish"]')?.textContent).toContain(panelsChat.lenWatch.publishBrought);
+    expect([...host.querySelectorAll("button")].some((b) => b.textContent === panelsChat.lenWatch.fix)).toBe(false);
+    await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === panelsChat.lenWatch.publishNow)!.click());
+    expect(onOpenPublish).toHaveBeenCalledTimes(1);
+  });
+
   it("a reader sees the notice but no button", async () => {
     fakeFetch(status({ ...READY, status: "needs_owner" }));
     const host = await mount(<LenWatchBanner projectId="p1" soloLectura />);

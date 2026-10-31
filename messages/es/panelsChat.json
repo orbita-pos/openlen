@@ -535,6 +535,10 @@
     "review": "La publicación necesita tu revisión.",
     "failed": "No se pudo. Prueba otra vez.",
     "changed": "El borrador cambió después del arreglo de Len: esos cambios saldrían también.",
-    "publishAnyway": "Publicar igual"
+    "publishAnyway": "Publicar igual",
+    "publishBrought": "El arreglo de Len ya está en tu borrador. Publícalo para que tu sitio vuelva a cargar.",
+    "publishNow": "Publicar",
+    "reviewRunning": "La revisión de seguridad del arreglo sigue en marcha. Prueba otra vez en un momento.",
+    "secretsMissing": "Para publicar el arreglo faltan secretos de producción de tus funciones: {names}. Añádelos y vuelve a publicar el arreglo."
   }
 }

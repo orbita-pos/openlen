@@ -535,6 +535,10 @@
     "review": "La publication demande votre vérification.",
     "failed": "Ça n'a pas marché. Réessayez.",
     "changed": "Le brouillon a changé après la correction de Len : ces modifications seraient publiées aussi.",
-    "publishAnyway": "Publier quand même"
+    "publishAnyway": "Publier quand même",
+    "publishBrought": "La correction de Len est maintenant dans votre brouillon. Publiez-la pour que votre site se charge à nouveau.",
+    "publishNow": "Publier",
+    "reviewRunning": "La vérification de sécurité de la correction est encore en cours. Réessayez dans un instant.",
+    "secretsMissing": "Pour publier la correction, il manque des secrets de production pour vos fonctions : {names}. Ajoutez-les et publiez à nouveau la correction."
   }
 }

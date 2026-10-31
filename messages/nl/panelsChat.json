@@ -535,6 +535,10 @@
     "review": "Publiceren heeft je controle nodig.",
     "failed": "Dat lukte niet. Probeer het opnieuw.",
     "changed": "Het concept is gewijzigd na de oplossing van Len: die wijzigingen gaan ook live.",
-    "publishAnyway": "Toch publiceren"
+    "publishAnyway": "Toch publiceren",
+    "publishBrought": "De correctie van Len staat nu in je concept. Publiceer het zodat je site weer laadt.",
+    "publishNow": "Publiceren",
+    "reviewRunning": "De beveiligingscontrole van de correctie loopt nog. Probeer het zo opnieuw.",
+    "secretsMissing": "Om de correctie te publiceren ontbreken productiegeheimen van je functies: {names}. Voeg ze toe en publiceer de correctie opnieuw."
   }
 }

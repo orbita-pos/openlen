@@ -26,6 +26,25 @@ export function LenWatchBanner({ projectId, soloLectura, onOpenPublish }: { proj
   const view = bannerState(status?.incident ?? null, status?.pendingFix ?? null);
   if (view.kind === "hidden") return null;
 
+  // The crash's own fix (it changes tables) is in the draft: the owner's publish carries it, with its migration.
+  if (view.kind === "publish") {
+    return (
+      <div className="mx-4 mt-3 flex shrink-0 flex-col gap-2 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px]" role="status" data-len-watch-banner="publish">
+        <div className="flex items-start gap-2">
+          <ShieldAlert size={14} className="mt-0.5 shrink-0 text-[var(--nc-accent-text)]" />
+          <span className="fg">{t("lenWatch.publishBrought")}</span>
+        </div>
+        {!soloLectura && onOpenPublish && (
+          <div className="pl-[22px]">
+            <button type="button" onClick={onOpenPublish} className="inline-flex h-7 items-center rounded-md bg-[var(--accent-strong)] px-3 text-[11.5px] font-medium text-white shadow-coral transition hover:brightness-105">
+              {t("lenWatch.publishNow")}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // «Traer el arreglo» (spec §5.5): the fix Len published from its branch comes into the draft.
   if (view.kind === "bring") {
     const bring = async () => {

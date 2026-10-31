@@ -77,6 +77,13 @@ it("el borrador cambió tras el arreglo: lo dice y «Publicar igual» lo confirm
   expect(llamadas.filter((l) => l.ruta.endsWith("/approve")).map((l) => l.cuerpo)).toEqual([{}, { confirmChanged: true }]);
 });
 
+it("🔴 el arreglo (cambia tablas) ya está en el borrador y el sitio sigue caído: dice que publiques, no «Arreglar con Len»", async () => {
+  const { c } = cliente({ incident: { ...READY, status: "needs_owner", reason: "needs_tables", shipsUnpublished: false, fixBrought: true } });
+  await montar(c);
+  expect(host.textContent).toContain("publishBrought");
+  expect(boton("fix")).toBeUndefined();
+});
+
 it("caído y sin nadie: «Arreglar con Len» pide el arreglo", async () => {
   const { c, llamadas } = cliente({ incident: { ...READY, status: "open", shipsUnpublished: false } });
   await montar(c);

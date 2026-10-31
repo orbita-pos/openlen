@@ -38,6 +38,8 @@ export interface IncidentView {
   reason: string | null;
   summary: string | null;
   shipsUnpublished: boolean;
+  /** Its fix is in the draft already (brought; a fix that changes tables waits there for the owner's publish). */
+  fixBrought?: boolean;
   createdAt: string;
 }
 
