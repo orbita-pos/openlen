@@ -138,6 +138,42 @@ describe("the Len Watch notice", () => {
     });
   });
 
+  it("🔴 its first look failed (the server was busy): it looks again 30 s later instead of staying blank", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      let calls = 0;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => (++calls === 1 ? new Response("", { status: 502 }) : new Response(JSON.stringify(status({ ...READY, status: "needs_owner" })), { status: 200 }))),
+      );
+      const host = await mount(<LenWatchBanner projectId="p1" />);
+      expect(host.querySelector("[data-len-watch-banner]")).toBeNull();
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(host.querySelector('[data-len-watch-banner="down"]')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Len Watch off (404): it doesn't keep asking", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const fetchMock = vi.fn(async () => new Response("", { status: 404 }));
+      vi.stubGlobal("fetch", fetchMock);
+      await mount(<LenWatchBanner projectId="p1" />);
+      await act(async () => {
+        vi.advanceTimersByTime(90_000);
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("a reader sees the notice but no button", async () => {
     fakeFetch(status({ ...READY, status: "needs_owner" }));
     const host = await mount(<LenWatchBanner projectId="p1" soloLectura />);
