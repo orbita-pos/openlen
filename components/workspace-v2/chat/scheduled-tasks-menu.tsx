@@ -9,6 +9,8 @@ import { AlarmClock, Pause, Pencil, Play, Trash2 } from "lucide-react";
 
 import { useMandoDesplegable } from "../use-mando-desplegable";
 
+import { editFromTask, hhmm, timingBody, zoneOf, type Freq } from "./scheduled-format";
+
 /** One task as GET /api/projects/[id]/scheduled-tasks gives it. */
 export interface ClockTask {
   readonly id: string;
@@ -37,23 +39,11 @@ export interface ScheduledTasks {
   setPaused(id: string, paused: boolean): Promise<boolean>;
 }
 
-type Freq = "once" | "daily" | "weekly" | "hours" | "cron";
-
-const zoneOf = (task: ClockTask) => task.timeZone ?? /\[([^\]]+)\]$/.exec(task.scheduledAtLocal)?.[1] ?? "UTC";
 const city = (zone: string) => (zone.split("/").pop() ?? zone).replace(/_/g, " ");
-const hhmm = (time: string | undefined) => (time ?? "09:00").slice(0, 5);
 const lang = () => (typeof document !== "undefined" && document.documentElement.lang) || undefined;
 /** ISO weekday 1–7 → its short name in the interface's language (2026-11-02 is a Monday). */
 const weekdayName = (d: number) => new Intl.DateTimeFormat(lang(), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 10, 1 + d)));
 const when = (iso: string) => new Intl.DateTimeFormat(lang(), { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
-
-function freqOf(task: ClockTask): Freq {
-  if (task.kind === "daily") return "daily";
-  if (task.kind === "weekly") return "weekly";
-  if (task.kind === "every") return "hours";
-  if (task.kind === "cron") return "cron";
-  return "once";
-}
 
 function Rule({ task }: { task: ClockTask }) {
   const t = useTranslations("panelsChat");
@@ -73,27 +63,19 @@ function Rule({ task }: { task: ClockTask }) {
 
 function Editor({ task, onDone, update }: { task: ClockTask; onDone: () => void; update: ScheduledTasks["update"] }) {
   const t = useTranslations("panelsChat");
-  const [title, setTitle] = useState(task.title);
-  const [prompt, setPrompt] = useState(task.prompt);
-  const [freq, setFreq] = useState<Freq>(freqOf(task));
-  const [time, setTime] = useState(hhmm(task.time ?? /T(\d\d:\d\d)/.exec(task.scheduledAtLocal)?.[1]));
-  const [days, setDays] = useState<number[]>([...(task.weekdays ?? [1])]);
-  const [hours, setHours] = useState(String(Math.max(1, Math.round((task.everySeconds ?? 3600) / 3600))));
-  const [expression, setExpression] = useState(task.expression ?? "");
-  const [date, setDate] = useState(/^(\d{4}-\d\d-\d\d)/.exec(task.scheduledAtLocal)?.[1] ?? "");
-  const [zone, setZone] = useState(zoneOf(task));
+  const [initial] = useState(() => editFromTask(task));
+  const [title, setTitle] = useState(initial.title);
+  const [prompt, setPrompt] = useState(initial.prompt);
+  const [freq, setFreq] = useState<Freq>(initial.freq);
+  const [time, setTime] = useState(initial.time);
+  const [days, setDays] = useState<number[]>([...initial.days]);
+  const [hours, setHours] = useState(initial.hours);
+  const [expression, setExpression] = useState(initial.expression);
+  const [date, setDate] = useState(initial.date);
+  const [zone, setZone] = useState(initial.zone);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const timing: Record<string, unknown> =
-    freq === "daily"
-      ? { daily: { time: `${time}:00`, time_zone: zone } }
-      : freq === "weekly"
-        ? { weekly: { time: `${time}:00`, time_zone: zone, weekdays: [...days].sort() } }
-        : freq === "hours"
-          ? { every_seconds: Number(hours) * 3600 }
-          : freq === "cron"
-            ? { cron: { expression, time_zone: zone } }
-            : { at: { date, time: `${time}:00`, time_zone: zone } };
+  const timing = timingBody({ title, prompt, freq, time, days, hours, expression, date, zone });
   const field = "w-full rounded-[9px] border bd bg-elev px-2 py-1.5 text-[12.5px] fg";
   return (
     <div className="space-y-2 p-2 text-[12px]">

@@ -19,6 +19,8 @@ import { Cargando } from "./cargando";
 import { devolverFoco } from "../foco";
 import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
+import { DeliveredTab } from "../overview/delivered-tab";
+import { TasksTab } from "../overview/tasks-tab";
 import { Llamada } from "../llamada/llamada";
 import { useHojaDeslizable } from "../hoja-deslizable";
 import { useAtras } from "../atras";
@@ -48,6 +50,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const tc = useTranslations("movil.chat");
   const te = useTranslations("movil.entrega");
   const tq = useTranslations("movil.equipo");
+  const tr = useTranslations("movil.resumen");
   const ta = useTranslations("movil.adjuntos");
   const ti = useTranslations("movil.interfaz");
   const [lista, setLista] = useState<ProyectoEnLista[] | null>(null);
@@ -68,20 +71,25 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [chatAbierto, setChatAbierto] = useState(false);
   const [conPip, setConPip] = useState(false);
   const [recarga, setRecarga] = useState(0);
-  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | null>(null);
+  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | null>(null);
   const idActual = useRef(id);
   const paginaCargada = useRef<string | null>(null);
   // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
-  const panelDelAviso = useRef<{ id: string; panel: "equipo" | "gestion" } | null>(null);
+  // «chat» (spec local 2026-10-31-len-movil): a row of «Tareas» answered in the project's chat.
+  const panelDelAviso = useRef<{ id: string; panel: "equipo" | "gestion" | "chat" } | null>(null);
   useLayoutEffect(() => { idActual.current = id; paginaCargada.current = p?.id ?? null; }, [id, p]);
-  useEffect(() => { setPanel(panelDelAviso.current?.id === id ? panelDelAviso.current.panel : null); panelDelAviso.current = null; setChatAbierto(false); setLlamada(false); setConPip(false); }, [id]);
-  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo" | "gestion") => {
+  useEffect(() => {
+    const destino = panelDelAviso.current?.id === id ? panelDelAviso.current.panel : null;
+    setPanel(destino && destino !== "chat" ? destino : null); panelDelAviso.current = null; setChatAbierto(destino === "chat"); setLlamada(false); setConPip(false);
+  }, [id]);
+  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo" | "gestion" | "chat") => {
     // El controlador ya verificó identidad y acceso. Releer la lista conserva
     // también sus títulos y evita abrir proyectos que ya no estén disponibles.
     void listarProyectos(cliente).then((ps) => {
       if (!ps.some((x) => x.id === destino)) return;
       if (panelDestino) {
         if (idActual.current !== destino) panelDelAviso.current = { id: destino, panel: panelDestino };
+        else if (panelDestino === "chat") { setPanel(null); setChatAbierto(true); }
         else setPanel(panelDestino);
       }
       setLista(ps); setId(destino); setSelector(false); setMenu(false);
@@ -256,7 +264,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             su z-index la deja debajo de la app). Como en el prototipo, una
             sola hoja que cambia de contenido. */}
         {selector ? (
-          <Selector proyectos={lista} actual={id} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir}>
+          <Selector proyectos={lista} actual={id} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} top={<>
+            <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
+            <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
+          </>}>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("look"); }}>{te("tuLen")}</button>
             <ControlAvisos avisos={avisos} />
           </Selector>
@@ -314,7 +325,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />
           : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
           : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
-          : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} /> : null}
+          : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
+          : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} />
+          : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir) => { setPanel(null); abrirAviso(destino, abrir); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
 

@@ -7,8 +7,10 @@ import { aplicarTema, temaGuardado, type Tema } from "../tema";
 import { devolverFoco } from "../foco";
 import { useDeslizar } from "../deslizar";
 
-export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, children }: {
+export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, children }: {
   proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void; children?: ReactNode;
+  /** Above the projects: «Entregado» and «Tareas», across all of them (spec local 2026-10-31-len-movil). */
+  top?: ReactNode;
 }) {
   const t = useTranslations("movil.principal");
   const [tema, setTema] = useState<Tema>(temaGuardado);
@@ -37,6 +39,7 @@ export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, child
       <div className="lm-body">
         <p className="lm-msg">{t("tusPaginas")}</p>
         <div className="lm-actions" style={{ display: "grid", gap: 8 }}>
+          {top}
           {proyectos.map((p) => (
             <button key={p.id} type="button" className={`lm-btn ${p.id === actual ? "lm-pri" : "lm-sec"}`} aria-current={p.id === actual ? "page" : undefined} onClick={() => onElegir(p.id)}>
               <span>{p.title}</span>
