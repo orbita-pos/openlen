@@ -16,5 +16,5 @@ export const CREATE_DELIVERED_FILES: readonly string[] = [
       FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE
   );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "deliveredFiles_url_idx" ON "deliveredFiles" ("url");`,
-  `CREATE INDEX IF NOT EXISTS "deliveredFiles_projectId_createdAt_idx" ON "deliveredFiles" ("projectId", "createdAt" DESC);`,
+  `CREATE INDEX IF NOT EXISTS "deliveredFiles_projectId_createdAt_idx" ON "deliveredFiles" ("projectId", "createdAt");`,
 ];
