@@ -47,6 +47,8 @@ export default defineConfig({
       "components/claves-de-traduccion.test.ts",
       "components/workspace-v2/**/*.test.ts",
       "components/workspace-v2/**/*.test.tsx",
+      "components/viewer/**/*.test.ts",
+      "components/viewer/**/*.test.tsx",
       // El modal de publicar con los datos (spec local 2026-10-09). LISTA BLANCA.
       "components/workspace/publish-modal-datos.test.tsx",
       // La píldora Página/App del input de la portada. LISTA BLANCA.
