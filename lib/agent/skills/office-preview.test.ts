@@ -25,37 +25,58 @@ describe("officePreview", () => {
     expect(out && new TextDecoder().decode(out.slice(0, 5))).toBe("%PDF-");
     expect(t.ejecutar).toHaveBeenCalledTimes(1);
     const [command, options] = t.ejecutar.mock.calls[0]!;
-    expect(command).toContain("soffice --headless --convert-to pdf --outdir '/tmp/office-preview/");
-    expect(command).toContain("'/out/deck.pptx'");
+    const outdir = /--outdir '(\/tmp\/office-preview\/[0-9a-f]{8})'/.exec(command)?.[1];
+    expect(outdir).toBeDefined();
+    // A copy in /tmp is converted: LibreOffice's lock files never land in the project.
+    expect(command).toContain(`cp -- '/out/deck.pptx' '${outdir}/deck.pptx'`);
+    expect(command).toContain(`--outdir '${outdir}' '${outdir}/deck.pptx'`);
+    // Its own profile: never the one Len's office skills use in the same box.
+    expect(command).toContain(`-env:UserInstallation=file://${outdir}/profile`);
     expect(options).toEqual({ timeoutMs: 60_000 });
     expect(t.readFileBytes.mock.calls[0]![0]).toMatch(/^\/tmp\/office-preview\/[0-9a-f]{8}\/deck\.pdf$/);
   });
 
+  // Found by the final review: past the terminal's timeout the box keeps the command running in the
+  // background (and tells Len about it later). The conversion must end, killed if need be, before that.
+  it("a hung conversion is killed inside the budget, so the box never keeps it running", async () => {
+    const t = box();
+    await officePreview(t, "/out/deck.pptx", 60_000);
+    const seconds = Number(/timeout -k 5 (\d+) soffice /.exec(t.ejecutar.mock.calls[0]![0])?.[1]);
+    expect(seconds).toBeGreaterThan(0);
+    expect((seconds + 5) * 1000).toBeLessThan(60_000);
+  });
+
+  it("with too little time left it is not started", async () => {
+    const t = box();
+    expect(await officePreview(t, "/out/deck.pptx", 9_000)).toBeNull();
+    expect(t.ejecutar).not.toHaveBeenCalled();
+  });
+
   it("quotes a path with a single quote in it", async () => {
     const t = box();
-    await officePreview(t, "/out/it's.pptx", 1000);
+    await officePreview(t, "/out/it's.pptx", 60_000);
     expect(t.ejecutar.mock.calls[0]![0]).toContain(`'/out/it'\\''s.pptx'`);
   });
 
   it("no preview when the command fails", async () => {
-    expect(await officePreview(box({ exitCode: 1 }), "/out/deck.pptx", 1000)).toBeNull();
+    expect(await officePreview(box({ exitCode: 1 }), "/out/deck.pptx", 60_000)).toBeNull();
   });
 
   it("no preview when the PDF is missing", async () => {
-    expect(await officePreview(box({ output: null }), "/out/deck.pptx", 1000)).toBeNull();
+    expect(await officePreview(box({ output: null }), "/out/deck.pptx", 60_000)).toBeNull();
   });
 
   it("no preview when the output is not a PDF", async () => {
-    expect(await officePreview(box({ output: new TextEncoder().encode("<html>") }), "/out/deck.pptx", 1000)).toBeNull();
+    expect(await officePreview(box({ output: new TextEncoder().encode("<html>") }), "/out/deck.pptx", 60_000)).toBeNull();
   });
 
   it("no preview when the box throws", async () => {
-    expect(await officePreview(box({ throws: true }), "/out/deck.pptx", 1000)).toBeNull();
+    expect(await officePreview(box({ throws: true }), "/out/deck.pptx", 60_000)).toBeNull();
   });
 
   it("no preview without a way to read the box, or without time left", async () => {
     const t = box();
-    expect(await officePreview({ ejecutar: t.ejecutar }, "/out/deck.pptx", 1000)).toBeNull();
+    expect(await officePreview({ ejecutar: t.ejecutar }, "/out/deck.pptx", 60_000)).toBeNull();
     expect(await officePreview(t, "/out/deck.pptx", 0)).toBeNull();
     expect(t.ejecutar).not.toHaveBeenCalled();
   });
