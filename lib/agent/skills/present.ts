@@ -7,6 +7,8 @@
  */
 import { ATTACHMENT_KINDS, kindFromName } from "@/lib/projects/chat-files";
 
+import { officePreview, wantsOfficePreview } from "./office-preview";
+
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 export const PRESENT_TOOL = "present";
@@ -18,7 +20,12 @@ export interface DeliveredFile {
   readonly url: string;
   readonly size: number;
   readonly description?: string;
+  /** An Office file's PDF preview, made by LibreOffice in the box (spec local 2026-10-31-len-movil, §5.2). */
+  readonly preview?: string;
 }
+
+/** What all the Office previews of one `present` call may take together. */
+export const OFFICE_PREVIEW_BUDGET_MS = 60_000;
 
 export const DECLARACION_PRESENT = {
   name: PRESENT_TOOL,
@@ -82,7 +89,14 @@ export function deliveredFrom(v: unknown): DeliveredFile[] | null {
     // Only where `present` puts a file (`deliverableLocation`): the project's route, which checks
     // access. Never another site or another page of this one: the chat is shared among the members.
     if (!DELIVERY_URL.test(r.url) || r.url.length > 500) continue;
-    out.push({ name: r.name.slice(0, 120), url: r.url, size: r.size, ...(typeof r.description === "string" && r.description ? { description: r.description.slice(0, 300) } : {}) });
+    const preview = typeof r.preview === "string" && DELIVERY_URL.test(r.preview) && r.preview.length <= 500 ? r.preview : null;
+    out.push({
+      name: r.name.slice(0, 120),
+      url: r.url,
+      size: r.size,
+      ...(typeof r.description === "string" && r.description ? { description: r.description.slice(0, 300) } : {}),
+      ...(preview ? { preview } : {}),
+    });
   }
   return out.length > 0 ? out : null;
 }
@@ -101,7 +115,7 @@ export async function toolPresent(session: AgentSession, deps: AgentDeps, args: 
   if (!fromBox && !kept?.size) return fail("There is no file to deliver: no terminal box ran in this turn. Make the file in the terminal first.");
   const read = async (path: string) => kept?.get(path) ?? (fromBox ? fromBox(path) : null);
   // Every file is checked before any is uploaded: a refusal uploads nothing.
-  const ready: { name: string; bytes: Uint8Array; description?: string }[] = [];
+  const ready: { name: string; path: string; bytes: Uint8Array; description?: string }[] = [];
   for (const f of files) {
     const raw = typeof (f as { path?: unknown })?.path === "string" ? ((f as { path: string }).path.trim()) : "";
     if (!raw) return fail("Each file needs its path.");
@@ -110,13 +124,25 @@ export async function toolPresent(session: AgentSession, deps: AgentDeps, args: 
     if (!bytes) return fail(`${path} does not exist or is not a file.`);
     if (bytes.byteLength > MAX_DELIVERABLE_BYTES) return fail(`${path} is larger than 20 MB.`);
     const description = typeof (f as { description?: unknown }).description === "string" ? (f as { description: string }).description.trim() : "";
-    ready.push({ name: path.split("/").pop()!, bytes, ...(description ? { description } : {}) });
+    ready.push({ name: path.split("/").pop()!, path, bytes, ...(description ? { description } : {}) });
   }
   if (!deps.storeDeliverable) return fail("Delivering files isn't available in this environment.");
+  // Office files get a PDF preview from the box, all of them within one budget; one that fails or
+  // doesn't fit is delivered without it (spec local 2026-10-31-len-movil, §5.2).
+  const started = Date.now();
+  const previews = new Map<number, Uint8Array>();
+  for (const [i, r] of ready.entries()) {
+    if (!terminal || !wantsOfficePreview(r.name)) continue;
+    const pdf = await officePreview(terminal, r.path, OFFICE_PREVIEW_BUDGET_MS - (Date.now() - started));
+    if (pdf) previews.set(i, pdf);
+  }
+  const turnId = session.turnId ?? "turn";
   const delivered: DeliveredFile[] = [];
-  for (const r of ready) {
-    const { url } = await deps.storeDeliverable(session.projectId, session.turnId ?? "turn", r.name, r.bytes, contentTypeOf(r.name));
-    delivered.push({ name: r.name, url, size: r.bytes.byteLength, ...(r.description ? { description: r.description } : {}) });
+  for (const [i, r] of ready.entries()) {
+    const { url } = await deps.storeDeliverable(session.projectId, turnId, r.name, r.bytes, contentTypeOf(r.name));
+    const pdf = previews.get(i);
+    const preview = pdf ? (await deps.storeDeliverable(session.projectId, turnId, `${r.name}.preview.pdf`, pdf, "application/pdf")).url : null;
+    delivered.push({ name: r.name, url, size: r.bytes.byteLength, ...(r.description ? { description: r.description } : {}), ...(preview ? { preview } : {}) });
   }
   return { response: { ok: true, files: delivered }, action: { tool: PRESENT_TOOL, ok: true, summary: delivered.map((d) => d.name).join(", ") }, delivered };
 }
