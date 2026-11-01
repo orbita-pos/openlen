@@ -52,6 +52,7 @@ function deps(o: Partial<TasksOverviewDeps> = {}): TasksOverviewDeps {
     lastTurnOf: async () => null,
     incidentOf: async () => null,
     resolvedIncidents: async () => [],
+    deliveriesBetween: async () => [],
     ...o,
   };
 }
@@ -112,7 +113,24 @@ describe("buildTasksOverview", () => {
 
   it("a scheduled task carries how its last run went", async () => {
     const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { lastRunId: "r1" })], runOf: async () => run({ id: "r1", outcome: "no_credits", reason: "Sin créditos." }) }));
-    expect(out.scheduled[0]!.lastRun).toEqual({ at: NOW.toISOString(), outcome: "no_credits", reason: "Sin créditos." });
+    expect(out.scheduled[0]!.lastRun).toEqual({ at: NOW.toISOString(), outcome: "no_credits", reason: "Sin créditos.", files: [] });
+  });
+
+  it("the last run carries the files Len delivered while it ran", async () => {
+    const startedAt = new Date(NOW.getTime() - 60_000);
+    const deliveriesBetween = vi.fn(async () => [
+      { id: "d1", projectId: "own", turnId: "turn-1", name: "informe.pdf", url: "/api/projects/own/deliveries/turn-1/ab12cd34-informe.pdf", previewUrl: null, size: 10, contentType: "application/pdf", description: "Semana 45", createdAt: NOW },
+    ]);
+    const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { lastRunId: "r1" })], runOf: async () => run({ id: "r1", startedAt, finishedAt: NOW }), deliveriesBetween }));
+    expect(deliveriesBetween).toHaveBeenCalledWith("own", startedAt, NOW);
+    expect(out.scheduled[0]!.lastRun!.files).toEqual([{ name: "informe.pdf", url: "/api/projects/own/deliveries/turn-1/ab12cd34-informe.pdf", size: 10, previewUrl: null, description: "Semana 45" }]);
+  });
+
+  it("a run still going has no files yet", async () => {
+    const deliveriesBetween = vi.fn(async () => []);
+    const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { lastRunId: "r1" })], runOf: async () => run({ id: "r1", finishedAt: null, outcome: null }), deliveriesBetween }));
+    expect(deliveriesBetween).not.toHaveBeenCalled();
+    expect(out.scheduled[0]!.lastRun!.files).toEqual([]);
   });
 
   it("resolved holds their own runs of the last 7 days and resolved incidents", async () => {

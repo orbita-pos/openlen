@@ -10,6 +10,8 @@
 .resumen-tarea { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
 .resumen-tarea .gestion-acciones { margin-top: 6px; flex-wrap: wrap; }
 .resumen-tarea small.resumen-fallo { opacity: 1; font-weight: 600; }
+.resumen-archivos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.app-resumen .resumen-archivos button { padding: 8px 12px; min-height: 36px; border-radius: 10px; font: 500 12px/1.2 Inter, sans-serif; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .resumen-nada { font-size: 12px; opacity: .6; padding: 4px 2px; }
 .resumen-editor { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
 .resumen-editor label { display: grid; gap: 4px; font-size: 12px; }

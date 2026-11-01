@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_DELIVERED_FILES } = await import("@/scripts/delivered-files-migrate-sql");
-const { indexDeliveries, listDeliveries } = await import("./delivery-index");
+const { deliveriesBetween, indexDeliveries, listDeliveries } = await import("./delivery-index");
 
 const file = (n: string, over: Record<string, unknown> = {}) => ({
   name: `${n}.pdf`,
@@ -59,6 +59,17 @@ describe("delivery index", () => {
     await indexDeliveries("p1", "t1", [file("a"), file("b"), file("c")]);
     expect(await listDeliveries(["p1"], 2)).toHaveLength(2);
     expect(await listDeliveries([], 50)).toEqual([]);
+  });
+
+  it("between two instants: only that project's files of that window, oldest first", async () => {
+    const before = new Date(Date.now() - 1000);
+    await indexDeliveries("p1", "t1", [file("a")]);
+    await new Promise((r) => setTimeout(r, 5));
+    await indexDeliveries("p1", "t1", [file("b")]);
+    await indexDeliveries("p2", "t9", [file("x", { url: "/api/projects/p2/deliveries/t9/ab12cd34-x.pdf" })]);
+    const after = new Date(Date.now() + 1000);
+    expect((await deliveriesBetween("p1", before, after)).map((r) => r.name)).toEqual(["a.pdf", "b.pdf"]);
+    expect(await deliveriesBetween("p1", after, new Date(after.getTime() + 1000))).toEqual([]);
   });
 
   it("deleting the project deletes its rows", async () => {

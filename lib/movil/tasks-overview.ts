@@ -12,6 +12,7 @@
  * Every read is injected (`TasksOverviewDeps`): the route passes the stores, the test passes doubles.
  */
 import type { GoalSnapshot } from "@/lib/agent/goal";
+import type { DeliveryIndexRow } from "@/lib/agent/skills/delivery-index";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import type { Incident } from "@/lib/len-watch/types";
 import type { VisibleProject } from "@/lib/projects/visible-projects";
@@ -40,11 +41,20 @@ export interface OverviewItem {
   readonly outcome?: string | null;
 }
 
+/** A file Len delivered in a scheduled task's last run, opened from «Programadas». */
+export interface RunFile {
+  readonly name: string;
+  readonly url: string;
+  readonly size: number;
+  readonly previewUrl: string | null;
+  readonly description: string | null;
+}
+
 export type ScheduledItem = OpenLenScheduleView & {
   readonly projectId: string;
   readonly projectTitle: string;
   readonly recurring: boolean;
-  readonly lastRun: { readonly at: string; readonly outcome: string | null; readonly reason: string | null } | null;
+  readonly lastRun: { readonly at: string; readonly outcome: string | null; readonly reason: string | null; readonly files: RunFile[] } | null;
 };
 
 export interface TasksOverview {
@@ -65,6 +75,9 @@ export interface TasksOverviewDeps {
   lastTurnOf(projectId: string, userId: string, isOwner: boolean): Promise<{ id: string; actions: StoredChatTurn["actions"] | null; createdAt: Date } | null>;
   incidentOf(projectId: string): Promise<Incident | null>;
   resolvedIncidents(projectIds: readonly string[], since: Date): Promise<Incident[]>;
+  /** What Len delivered in a project between two instants: a run's files (its row does not keep its turn,
+   *  and a project runs one turn at a time). */
+  deliveriesBetween(projectId: string, from: Date, to: Date): Promise<DeliveryIndexRow[]>;
 }
 
 const canEdit = (p: VisibleProject) => p.role === "dueno" || p.role === "editor";
@@ -119,13 +132,21 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
       .filter((t) => byId.has(t.projectId) && canEdit(byId.get(t.projectId)!))
       .map(async (t): Promise<ScheduledItem> => {
         const last = t.lastRunId ? await deps.runOf(t.lastRunId) : null;
+        const files = last?.finishedAt ? await deps.deliveriesBetween(t.projectId, last.startedAt ?? last.claimedAt, last.finishedAt) : [];
         const p = byId.get(t.projectId)!;
         return {
           ...viewForModel(t.record, now.getTime(), t.timeZone, { pausedAt: t.pausedAt }),
           projectId: p.id,
           projectTitle: p.title,
           recurring: isRecurringScheduleRecord(t.record),
-          lastRun: last ? { at: last.occurrenceAt.toISOString(), outcome: last.outcome, reason: last.reason } : null,
+          lastRun: last
+            ? {
+                at: last.occurrenceAt.toISOString(),
+                outcome: last.outcome,
+                reason: last.reason,
+                files: files.map((f) => ({ name: f.name, url: f.url, size: f.size, previewUrl: f.previewUrl, description: f.description })),
+              }
+            : null,
         };
       }),
   );
