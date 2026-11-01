@@ -18,8 +18,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u1");
   vi.mocked(visibleProjects).mockResolvedValue([
-    { id: "own", title: "Mi tienda", role: "dueno" },
-    { id: "seen", title: "Sólo mirar", role: "lector" },
+    { id: "own", title: "Mi tienda", role: "dueno", publishedAt: null },
+    { id: "seen", title: "Sólo mirar", role: "lector", publishedAt: null },
   ]);
   vi.mocked(listDeliveries).mockResolvedValue([ROW]);
 });

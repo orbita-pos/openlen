@@ -14,6 +14,8 @@ export interface VisibleProject {
   readonly id: string;
   readonly title: string;
   readonly role: RolEnProyecto;
+  /** When it was last published (null: never). «Tareas» uses it to drop a publish already done. */
+  readonly publishedAt: Date | null;
 }
 
 export async function visibleProjects(userId: string): Promise<VisibleProject[]> {
@@ -21,7 +23,7 @@ export async function visibleProjects(userId: string): Promise<VisibleProject[]>
   const roleOf = new Map(shared.map((s) => [s.projectId, s.rol]));
   const sharedRows = await listProjectsByIds(shared.map((s) => s.projectId));
   return [
-    ...own.filter((p) => !p.isBlank).map((p) => ({ id: p.id, title: p.title, role: "dueno" as const })),
-    ...sharedRows.filter((p) => !p.isBlank && roleOf.has(p.id)).map((p) => ({ id: p.id, title: p.title, role: roleOf.get(p.id)! })),
+    ...own.filter((p) => !p.isBlank).map((p) => ({ id: p.id, title: p.title, role: "dueno" as const, publishedAt: p.publishedAt })),
+    ...sharedRows.filter((p) => !p.isBlank && roleOf.has(p.id)).map((p) => ({ id: p.id, title: p.title, role: roleOf.get(p.id)!, publishedAt: p.publishedAt })),
   ];
 }
