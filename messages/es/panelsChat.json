@@ -523,7 +523,10 @@
     "removeConfirm": "Quitar la tarea",
     "removeDone": "Listo: ya no recibirás este correo.",
     "removeInvalid": "Este enlace no es válido.",
-    "removeGone": "Esta tarea ya no existe."
+    "removeGone": "Esta tarea ya no existe.",
+    "paused": "En pausa",
+    "pause": "Pausar",
+    "resume": "Reanudar"
   },
   "lenWatch": {
     "working": "Tu sitio publicado no carga. Len está en ello.",

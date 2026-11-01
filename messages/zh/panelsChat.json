@@ -523,7 +523,10 @@
     "removeConfirm": "删除任务",
     "removeDone": "完成：你将不再收到这封邮件。",
     "removeInvalid": "此链接无效。",
-    "removeGone": "此任务已不存在。"
+    "removeGone": "此任务已不存在。",
+    "paused": "已暂停",
+    "pause": "暂停",
+    "resume": "恢复"
   },
   "lenWatch": {
     "working": "你发布的网站无法加载。Len 正在处理。",

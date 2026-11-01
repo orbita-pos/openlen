@@ -34,6 +34,12 @@ export function useScheduledTasks(projectId: string | null, busy: boolean): Sche
       if (res?.ok) await load();
       return { ok: Boolean(res?.ok), ...(value.code ? { code: value.code } : {}), ...(value.message ? { message: value.message } : {}) };
     },
+    setPaused: async (id, paused) => {
+      if (!base) return false;
+      const res = await fetch(`${base}/${encodeURIComponent(id)}/pause`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paused }) }).catch(() => null);
+      await load();
+      return Boolean(res?.ok);
+    },
     remove: async (id) => {
       if (!base) return false;
       const res = await fetch(`${base}/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);

@@ -523,7 +523,10 @@
     "removeConfirm": "Rimuovi l'attività",
     "removeDone": "Fatto: non riceverai più questa email.",
     "removeInvalid": "Questo link non è valido.",
-    "removeGone": "Questa attività non esiste più."
+    "removeGone": "Questa attività non esiste più.",
+    "paused": "In pausa",
+    "pause": "Metti in pausa",
+    "resume": "Riprendi"
   },
   "lenWatch": {
     "working": "Il tuo sito pubblicato non si carica. Len ci sta lavorando.",

@@ -523,7 +523,10 @@
     "removeConfirm": "Remove the task",
     "removeDone": "Done: you won't get this email anymore.",
     "removeInvalid": "This link isn't valid.",
-    "removeGone": "This task no longer exists."
+    "removeGone": "This task no longer exists.",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume"
   },
   "lenWatch": {
     "working": "Your published site isn't loading. Len is on it.",

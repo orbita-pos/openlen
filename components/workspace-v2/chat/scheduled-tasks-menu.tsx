@@ -5,7 +5,7 @@
 // update, the same one Len's `schedule_update` makes; delete asks first. Creating stays with Len.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, Pencil, Trash2 } from "lucide-react";
+import { AlarmClock, Pause, Pencil, Play, Trash2 } from "lucide-react";
 
 import { useMandoDesplegable } from "../use-mando-desplegable";
 
@@ -25,12 +25,16 @@ export interface ClockTask {
   readonly expression?: string;
   readonly createdBy: string;
   readonly lastRun: { readonly at: string; readonly outcome: string | null; readonly reason: string | null } | null;
+  /** Paused by a person (spec local 2026-10-31-len-movil, §5.5). */
+  readonly paused?: true;
 }
 
 export interface ScheduledTasks {
   readonly tasks: readonly ClockTask[];
   update(id: string, body: Record<string, unknown>): Promise<{ ok: boolean; code?: string; message?: string }>;
   remove(id: string): Promise<boolean>;
+  /** «Pausar» / «Reanudar»: only recurring tasks. */
+  setPaused(id: string, paused: boolean): Promise<boolean>;
 }
 
 type Freq = "once" | "daily" | "weekly" | "hours" | "cron";
@@ -203,7 +207,7 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
                     <b className="block truncate text-[13px] font-semibold">{task.title}</b>
                     <Rule task={task} />
                     <small className="block text-[11.5px] leading-snug fg-muted">
-                      {t("scheduled.next", { when: when(task.scheduledAt) })}
+                      {task.paused ? <span data-scheduled-paused="" className="font-medium fg">{t("scheduled.paused")}</span> : t("scheduled.next", { when: when(task.scheduledAt) })}
                       {task.lastRun &&
                         ` · ${
                           task.lastRun.outcome === "done"
@@ -232,6 +236,16 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
                     )}
                   </div>
                   <div className="flex shrink-0 items-start gap-0.5">
+                    {task.kind !== "at" && task.kind !== "after" &&
+                      (task.paused ? (
+                        <button type="button" data-scheduled-resume="" aria-label={t("scheduled.resume")} title={t("scheduled.resume")} onClick={() => void scheduled.setPaused(task.id, false)} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
+                          <Play size={12} />
+                        </button>
+                      ) : (
+                        <button type="button" data-scheduled-pause="" aria-label={t("scheduled.pause")} title={t("scheduled.pause")} onClick={() => void scheduled.setPaused(task.id, true)} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
+                          <Pause size={12} />
+                        </button>
+                      ))}
                     <button type="button" data-scheduled-edit="" aria-label={t("scheduled.edit")} title={t("scheduled.edit")} onClick={() => setEditing(task.id)} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
                       <Pencil size={12} />
                     </button>

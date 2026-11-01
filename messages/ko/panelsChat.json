@@ -523,7 +523,10 @@
     "removeConfirm": "작업 삭제",
     "removeDone": "완료: 이 메일은 더 이상 받지 않아요.",
     "removeInvalid": "유효하지 않은 링크예요.",
-    "removeGone": "이 작업은 더 이상 없어요."
+    "removeGone": "이 작업은 더 이상 없어요.",
+    "paused": "일시 중지됨",
+    "pause": "일시 중지",
+    "resume": "다시 시작"
   },
   "lenWatch": {
     "working": "게시된 사이트가 열리지 않아요. Len이 고치고 있어요.",

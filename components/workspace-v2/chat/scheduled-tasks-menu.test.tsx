@@ -32,13 +32,13 @@ const TASK: ClockTask = {
   lastRun: { at: "2026-11-02T15:03:00.000Z", outcome: "no_credits", reason: "Sin créditos." },
 };
 
-function paint(tasks: ClockTask[], update = vi.fn(async () => ({ ok: true })), remove = vi.fn(async () => true)) {
+function paint(tasks: ClockTask[], update = vi.fn(async () => ({ ok: true })), remove = vi.fn(async () => true), setPaused = vi.fn(async () => true)) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  act(() => root.render(<ScheduledTasksMenu scheduled={{ tasks, update, remove }} />));
-  return { host, update, remove };
+  act(() => root.render(<ScheduledTasksMenu scheduled={{ tasks, update, remove, setPaused }} />));
+  return { host, update, remove, setPaused };
 }
 
 function type(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -52,6 +52,30 @@ function type(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
 describe("ScheduledTasksMenu", () => {
   it("without tasks there is no clock", () => {
     expect(paint([]).host.querySelector("[data-scheduled-clock]")).toBeNull();
+  });
+
+  it("pauses a recurring task", async () => {
+    const { host, setPaused } = paint([TASK]);
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+    expect(host.querySelector("[data-scheduled-resume]")).toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-pause]")!.click());
+    expect(setPaused).toHaveBeenCalledWith("schedule-1", true);
+  });
+
+  it("a paused task says so and resumes", async () => {
+    const { host, setPaused } = paint([{ ...TASK, paused: true }]);
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+    expect(host.textContent).toContain("scheduled.paused");
+    expect(host.querySelector("[data-scheduled-pause]")).toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-resume]")!.click());
+    expect(setPaused).toHaveBeenCalledWith("schedule-1", false);
+  });
+
+  it("a one-shot task has neither pause nor resume", () => {
+    const { host } = paint([{ ...TASK, kind: "at" }]);
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+    expect(host.querySelector("[data-scheduled-pause]")).toBeNull();
+    expect(host.querySelector("[data-scheduled-resume]")).toBeNull();
   });
 
   it("lists each task with how its last run went", () => {
