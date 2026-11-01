@@ -96,6 +96,69 @@ describe("present", () => {
 // What `present` delivers is private (spec local 2026-10-26-len-skills, §4.9; like DeepSeek's host,
 // which exposes the presented file to the session, and Claude's files): kept in the private store and
 // served only through the project's route, which checks access.
+describe("present: the PDF preview of Office files", () => {
+  const PDF = new TextEncoder().encode("%PDF-1.7");
+
+  function withBox(files: Record<string, Uint8Array>, convert: (command: string, timeoutMs: number) => Promise<number>) {
+    const { session, deps, stored } = setup(null);
+    const made = new Map<string, Uint8Array>();
+    const ejecutar = vi.fn(async (command: string, o?: { timeoutMs?: number }) => {
+      const exitCode = await convert(command, o?.timeoutMs ?? 0);
+      const outdir = /--outdir '([^']+)'/.exec(command)?.[1];
+      const source = /'([^']+)'$/.exec(command)?.[1] ?? "";
+      if (exitCode === 0 && outdir) made.set(`${outdir}/${source.split("/").pop()!.replace(/\.[^.]+$/, "")}.pdf`, PDF);
+      return { stdout: "", stderr: "", exitCode, ficheros: null };
+    });
+    session.terminal = {
+      arrancada: true,
+      ejecutar,
+      readFileBytes: async (path: string) => files[path] ?? made.get(path) ?? null,
+    } as unknown as AgentSession["terminal"];
+    return { session, deps, stored, ejecutar };
+  }
+
+  it("a deck gets a preview stored next to it", async () => {
+    const { session, deps, stored } = withBox({ "/out/deck.pptx": XLSX }, async () => 0);
+    const out = await toolPresent(session, deps, { files: [{ path: "/out/deck.pptx" }] });
+    expect(out.response.ok).toBe(true);
+    expect(stored.map((s) => s.name)).toEqual(["deck.pptx", "deck.pptx.preview.pdf"]);
+    expect(stored[1]!.contentType).toBe("application/pdf");
+    expect(out.delivered).toEqual([{ name: "deck.pptx", url: "https://cdn.example/deliveries/p1/t1/deck.pptx", size: 5, preview: "https://cdn.example/deliveries/p1/t1/deck.pptx.preview.pdf" }]);
+  });
+
+  it("a conversion that fails or runs out of time delivers the file without a preview", async () => {
+    const { session, deps, stored } = withBox({ "/out/big.xlsx": XLSX }, async () => 124);
+    const out = await toolPresent(session, deps, { files: [{ path: "/out/big.xlsx" }] });
+    expect(out.response.ok).toBe(true);
+    expect(stored.map((s) => s.name)).toEqual(["big.xlsx"]);
+    expect(out.delivered![0]).not.toHaveProperty("preview");
+  });
+
+  it("two Office files share one budget of 60 seconds", async () => {
+    let clock = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => clock);
+    try {
+      const budgets: number[] = [];
+      const { session, deps } = withBox({ "/out/a.docx": XLSX, "/out/b.docx": XLSX, "/out/c.docx": XLSX }, async (_c, timeoutMs) => {
+        budgets.push(timeoutMs);
+        clock += 45_000;
+        return 0;
+      });
+      const out = await toolPresent(session, deps, { files: [{ path: "/out/a.docx" }, { path: "/out/b.docx" }, { path: "/out/c.docx" }] });
+      expect(budgets).toEqual([60_000, 15_000]);
+      expect(out.delivered!.map((d) => Boolean(d.preview))).toEqual([true, true, false]);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("a PDF or an image is never converted", async () => {
+    const { session, deps, ejecutar } = withBox({ "/out/a.pdf": PDF, "/out/b.png": XLSX }, async () => 0);
+    await toolPresent(session, deps, { files: [{ path: "/out/a.pdf" }, { path: "/out/b.png" }] });
+    expect(ejecutar).not.toHaveBeenCalled();
+  });
+});
+
 describe("deliverableLocation", () => {
   it("keys it under the project and the turn, and serves it through the project's route", () => {
     expect(deliverableLocation("p1", "t-1", "Inventario tienda.xlsx", "ab12cd34")).toEqual({
@@ -142,5 +205,12 @@ describe("deliveredFrom", () => {
       expect(deliveredFrom([{ name: "a.xlsx", url, size: 3 }])).toBeNull();
     }
     expect(deliveredFrom([{ name: "menú.docx", url: "/api/projects/p1/deliveries/t1/ab12cd34-men%C3%BA.docx", size: 3 }])).toHaveLength(1);
+  });
+
+  it("keeps a preview only when it is a delivery's route too", () => {
+    const url = "/api/projects/p1/deliveries/t1/ab12cd34-deck.pptx";
+    const preview = "/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf";
+    expect(deliveredFrom([{ name: "deck.pptx", url, size: 3, preview }])).toEqual([{ name: "deck.pptx", url, size: 3, preview }]);
+    expect(deliveredFrom([{ name: "deck.pptx", url, size: 3, preview: "https://evil.example/x.pdf" }])).toEqual([{ name: "deck.pptx", url, size: 3 }]);
   });
 });
