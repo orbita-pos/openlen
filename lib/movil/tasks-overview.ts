@@ -90,7 +90,9 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
       // A turn of theirs still running there has not finished asking anything.
       if (p.role !== "lector" && !live.some((t) => t.projectId === p.id && t.userId === userId)) {
         const turn = await deps.lastTurnOf(p.id, userId, p.role === "dueno");
-        const waiting = turn ? waitingFrom(turn.actions ?? []) : [];
+        // The stored publish card never says it was published: the project does.
+        const published = (c: { tool: string }) => c.tool === "publish" && turn !== null && p.publishedAt !== null && p.publishedAt >= turn.createdAt;
+        const waiting = turn ? waitingFrom((turn.actions ?? []).filter((c) => !published(c))) : [];
         if (turn && waiting.length > 0) {
           const asks = (turn.actions ?? []).some((c) => asksTheOwner(c.tool) && !c.respuesta);
           needsYou.push(item(p, { kind: asks ? "question" : "waiting", text: waiting[0]!, at: turn.createdAt.toISOString(), open: "chat" }));

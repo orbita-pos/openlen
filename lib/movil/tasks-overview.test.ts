@@ -39,9 +39,9 @@ const run = (o: Partial<RunWithTask>): RunWithTask =>
 function deps(o: Partial<TasksOverviewDeps> = {}): TasksOverviewDeps {
   return {
     visibleProjects: async () => [
-      { id: "own", title: "Mi tienda", role: "dueno" },
-      { id: "shared", title: "Del equipo", role: "editor" },
-      { id: "seen", title: "Sólo mirar", role: "lector" },
+      { id: "own", title: "Mi tienda", role: "dueno", publishedAt: null },
+      { id: "shared", title: "Del equipo", role: "editor", publishedAt: null },
+      { id: "seen", title: "Sólo mirar", role: "lector", publishedAt: null },
     ],
     now: () => NOW,
     liveTurns: () => [],
@@ -80,6 +80,15 @@ describe("buildTasksOverview", () => {
   it("a pending publish waits too, like the scheduled-task email", async () => {
     const out = await buildTasksOverview("owner", deps({ lastTurnOf: async (p) => (p === "own" ? { id: "row", createdAt: NOW, actions: [{ tool: "publish", status: "done" as const, summary: "Publicar en tienda.openlen.app" }] } : null) }));
     expect(out.needsYou).toEqual([expect.objectContaining({ kind: "waiting", projectId: "own", text: "Publicar en tienda.openlen.app" })]);
+  });
+
+  // Found by the final review: the stored card never says it was published, so the project does.
+  it("a publish done since that turn no longer needs you; one done before it still does", async () => {
+    const turn = { id: "row", createdAt: NOW, actions: [{ tool: "publish", status: "done" as const, summary: "Publicar en tienda.openlen.app" }] };
+    const lastTurnOf = async (p: string) => (p === "own" ? turn : null);
+    const published = (at: Date) => async () => [{ id: "own", title: "Mi tienda", role: "dueno" as const, publishedAt: at }];
+    expect((await buildTasksOverview("owner", deps({ lastTurnOf, visibleProjects: published(new Date(NOW.getTime() + 60_000)) }))).needsYou).toEqual([]);
+    expect((await buildTasksOverview("owner", deps({ lastTurnOf, visibleProjects: published(new Date(NOW.getTime() - 60_000)) }))).needsYou).toEqual([expect.objectContaining({ kind: "waiting", projectId: "own" })]);
   });
 
   it("a blocked goal needs you; an active one is working; a complete one in 7 days is resolved", async () => {
