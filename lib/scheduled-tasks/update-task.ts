@@ -80,10 +80,10 @@ export async function updateScheduledTask(projectId: string, args: Record<string
     ...(args.prompt === undefined ? {} : { prompt: args.prompt as string }),
   });
   if (!("record" in result)) return result as unknown as Record<string, unknown>;
-  if (!result.updated) return viewForModel(expected.record, now, expected.timeZone);
+  if (!result.updated) return viewForModel(expected.record, now, expected.timeZone, { pausedAt: expected.pausedAt });
   checkOpenLenLimits(result.record);
   const saved = await deps.update(projectId, id, result.record, expected.updatedAt);
   if (saved === "not_found") return { id, updated: false, code: "schedule_not_found" };
   if (saved === "conflict") return { id, updated: false, code: "schedule_conflict" };
-  return viewForModel(saved.record, now, saved.timeZone);
+  return viewForModel(saved.record, now, saved.timeZone, { pausedAt: saved.pausedAt });
 }

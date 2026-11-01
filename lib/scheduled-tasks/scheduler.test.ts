@@ -19,7 +19,7 @@ function memory(records: ScheduleRecord[]) {
   for (const record of records) {
     tasks.set(record.id, {
       id: record.id, projectId: "p1", createdBy: "member", locale: "es", timeZone: "America/Mexico_City", record,
-      scheduledAt: new Date(record.scheduledAt), status: "active", lastRunId: null, createdAt: new Date(CREATED), updatedAt: new Date(CREATED),
+      scheduledAt: new Date(record.scheduledAt), status: "active", pausedAt: null, lastRunId: null, createdAt: new Date(CREATED), updatedAt: new Date(CREATED),
     });
   }
   const runs = new Map<string, RunRow>();

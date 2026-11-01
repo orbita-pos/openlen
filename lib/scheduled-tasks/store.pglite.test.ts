@@ -154,6 +154,49 @@ describe("dueTasks / claimDue", () => {
   });
 });
 
+describe("pauseTask / resumeTask", () => {
+  it("a paused task is not due and cannot be claimed", async () => {
+    const task = await store.createTask(input("t1"));
+    const paused = await store.pauseTask("p1", "t1", new Date(NOW));
+    expect(paused !== "not_found" && paused !== "one_shot" && paused.pausedAt?.getTime()).toBe(NOW);
+    expect(await store.dueTasks(new Date("2026-11-03T00:00:00Z"), 10)).toEqual([]);
+    const claimed = await store.claimDue(task, { occurrenceAt: task.scheduledAt.toISOString(), nextScheduledAt: "2026-11-09T15:03:00.000Z", runId: "r", processStartedAt: new Date(NOW) });
+    expect(claimed).toBeNull();
+  });
+
+  it("refuses to pause a one-shot task", async () => {
+    const at = createAtScheduleRecord(ScheduleId("o1"), "p", "2026-11-02T09:03:00-06:00", NOW, "Una vez");
+    await store.createTask({ ...input("o1"), record: at });
+    expect(await store.pauseTask("p1", "o1", new Date(NOW))).toBe("one_shot");
+    expect(await store.pauseTask("p1", "missing", new Date(NOW))).toBe("not_found");
+  });
+
+  it("stays listed and counted while paused", async () => {
+    await store.createTask(input("t1"));
+    await store.pauseTask("p1", "t1", new Date(NOW));
+    expect((await store.listTasks("p1")).map((t) => t.id)).toEqual(["t1"]);
+  });
+
+  it("editing a paused task keeps it paused", async () => {
+    const row = await store.createTask(input("t1"));
+    await store.pauseTask("p1", "t1", new Date(NOW));
+    const updated = await store.updateTask("p1", "t1", { ...row.record, title: "Otro" } as typeof row.record);
+    expect(updated !== "conflict" && updated !== "not_found" && updated.pausedAt?.getTime()).toBe(NOW);
+  });
+
+  it("resuming three weeks later skips what was missed and goes to the next future run", async () => {
+    await store.createTask(input("t1"));
+    await store.pauseTask("p1", "t1", new Date(NOW));
+    const resumeAt = new Date("2026-11-23T18:00:00Z");
+    const resumed = await store.resumeTask("p1", "t1", resumeAt);
+    expect(resumed !== "not_found" && resumed.pausedAt).toBeNull();
+    expect(resumed !== "not_found" && resumed.scheduledAt.toISOString()).toBe("2026-11-30T15:03:00.000Z");
+    expect(resumed !== "not_found" && resumed.record.scheduledAt).toBe("2026-11-30T15:03:00.000Z");
+    expect(await store.dueTasks(resumeAt, 10)).toEqual([]);
+    expect(await store.resumeTask("p1", "missing", resumeAt)).toBe("not_found");
+  });
+});
+
 describe("cascades and purge", () => {
   it("deleting the project deletes its tasks and runs", async () => {
     const task = await store.createTask(input("t1"));

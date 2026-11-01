@@ -33,6 +33,7 @@ function rowOf(record: ScheduleRecord): TaskRow {
     record,
     scheduledAt: new Date(record.scheduledAt),
     status: "active",
+    pausedAt: null,
     lastRunId: null,
     createdAt: new Date(NOW),
     updatedAt: new Date(NOW),

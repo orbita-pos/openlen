@@ -255,7 +255,7 @@ export async function toolScheduleList(session: AgentSession, deps: AgentDeps, _
     const sd = depsOf(deps);
     if (!sd) return internalError();
     const now = sd.now();
-    return (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone));
+    return (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
   });
 }
 
