@@ -9,7 +9,8 @@ const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void), 
 vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void; onAbrirEntregado?: (id: string, url: string) => void }) => { aviso.abrir = o.onAbrirProyecto; aviso.entregado = o.onAbrirEntregado ?? null; return { estado:"noDisponible" }; } }));
 vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
-vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: () => null }));
+const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: number) => void) }));
+vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: (o: { alMedir?: (v: number) => void }) => { hoja.alMedir = o.alMedir ?? null; return null; } }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../llamada/llamada", () => ({ Llamada: ({ projectId }: { projectId: string }) => <div data-llamada={projectId} /> }));
 vi.mock("../chat/chat", () => ({ PantallaChat: () => null }));
@@ -58,6 +59,27 @@ it("la espera de la lista siempre muestra un estado visible", async () => {
  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
  await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
  expect(host.querySelector('[role="status"]')).not.toBeNull();
+});
+it("con la hoja encogida la página acaba encima de ella (se ve hasta su pie); abierta, vuelve a todo el alto", async () => {
+ vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+ try {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-01", chatHistory: [] };
+  const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({ projects: [proyecto] }) : ruta.endsWith("/preview") ? Response.json({ enabled: true, token: "vista" }) : Response.json({ project: proyecto }));
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+  const sitio = () => host.querySelector<HTMLElement>(".lm-pagehost")!.style.getPropertyValue("--app-hoja");
+  act(() => hoja.alMedir!(96));
+  expect(sitio()).toBe("0px");
+  act(() => host.querySelector<HTMLButtonElement>(".lm-grab")!.click());
+  // Mientras baja la hoja, la página no se mueve: se acorta al terminar.
+  expect(sitio()).toBe("0px");
+  await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+  expect(sitio()).toBe("96px");
+  act(() => host.querySelector<HTMLButtonElement>(".lm-grab")!.click());
+  expect(sitio()).toBe("0px");
+ } finally {
+  vi.useRealTimers();
+ }
 });
 it("una vista previa fallida permite reintentar sin recargar la lista", async () => {
  let falla = true;
