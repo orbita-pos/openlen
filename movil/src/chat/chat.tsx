@@ -19,6 +19,7 @@ import type { Chat } from "./use-chat";
 import { ElegirAdjunto } from "./elegir-adjunto";
 import { tamanoArchivo } from "./archivos";
 import { useSeguirChat } from "./use-seguir-chat";
+import { DeliveredCards } from "./delivered-cards";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -395,6 +396,8 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
           <TarjetaDeLaApp x={e.tarjeta} cliente={cliente} projectId={projectId} idioma={idioma} />
         </div>
       );
+    case "entregado":
+      return <DeliveredCards cliente={cliente} archivos={e.archivos} />;
     default:
       return null;
   }

@@ -29,6 +29,23 @@ describe("parrafos", () => {
   });
 });
 
+// What Len delivered with `present`, seen in the phone's chat (spec local 2026-10-31-len-movil, §5.1).
+describe("delivered files in the thread", () => {
+  const deck = { name: "deck.pptx", url: "/api/projects/p1/deliveries/t1/ab12cd34-deck.pptx", size: 900, preview: "/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf" };
+
+  it("a stored turn shows its delivered files after Len's text", () => {
+    const h = hiloDesdeElHistorial([turno({ id: "a", userText: "Hazme la presentación", assistantReasoning: "Aquí la tienes.", noDocChange: true, appliedAt: 1, actions: [{ tool: "present", status: "done", summary: "deck.pptx", delivered: [deck] }] })], 9);
+    expect(tipos(h)).toEqual(["tu", "len", "entregado"]);
+    expect(h[2]).toMatchObject({ tipo: "entregado", archivos: [deck] });
+  });
+
+  it("a live turn shows them as soon as present finishes", () => {
+    const v = conEvento(turnoNuevo("f"), ev("action", { tool: "present", status: "done", summary: "deck.pptx", delivered: [deck, { name: "x", url: "https://evil.example/x", size: 1 }] }));
+    const s = elementosDelTurno(v, 5);
+    expect(s).toEqual([{ clave: "vivo:entregado", t: 5, tipo: "entregado", archivos: [deck] }]);
+  });
+});
+
 describe("hiloDesdeElHistorial", () => {
   it("los mensajes entre personas van al panel de equipo, sin fingir una respuesta o entrega de Len", () => {
     expect(hiloDesdeElHistorial([turno({ id: "equipo", tipo: "persona", userText: "@Ana revisa", autorId: "otro" })], 1)).toEqual([]);

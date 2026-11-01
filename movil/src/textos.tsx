@@ -12,6 +12,7 @@ import { Cargando } from "./pantallas/cargando";
 import { textosInterfaz } from "./textos-interfaz";
 import { textosAdjuntos } from "./textos-adjuntos";
 import { textosLenWatch } from "./textos-len-watch";
+import { deliveredTexts } from "./delivered-texts";
 
 const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada}.json");
 
@@ -20,7 +21,7 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/movil.json`]!(),
     cargas[`../../messages/${idioma}/llamada.json`]!(),
   ]);
-  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma] }, llamada: llamada.default };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma] }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {
