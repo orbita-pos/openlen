@@ -49,4 +49,12 @@ describe("el aviso de que Len terminó sin nadie mirando", () => {
     const e = avisoDelTurno({ projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Edit" }] });
     expect(e.pregunta).toBe(false);
   });
+
+  // spec local 2026-10-31-len-movil, §5.4: tapping the push opens what Len delivered.
+  it("a turn that delivered files opens the first one", () => {
+    const url = "/api/projects/p1/deliveries/t1/ab12cd34-informe.pdf";
+    const e = avisoDelTurno({ projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Edit" }, { tool: "present", delivered: [{ name: "informe.pdf", url, size: 3 }] }] });
+    expect(e.abrir).toBe(url);
+    expect("abrir" in avisoDelTurno({ projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Edit" }] })).toBe(false);
+  });
 });

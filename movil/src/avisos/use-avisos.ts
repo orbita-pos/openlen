@@ -20,13 +20,15 @@ export function abandonarAvisos(cliente: ClienteDeOpenLen): void {
     void Promise.allSettled([nativoAvisos.desregistrar(), nativoAvisos.limpiar()]);
   }
 }
-export function useAvisos({ cliente, onAbrirProyecto }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void }) {
+export function useAvisos({ cliente, onAbrirProyecto, onAbrirEntregado }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void; onAbrirEntregado?(id: string, url: string): void }) {
   const abrir = useRef(onAbrirProyecto);
   abrir.current = onAbrirProyecto;
+  const entregado = useRef(onAbrirEntregado);
+  entregado.current = onAbrirEntregado;
   const ref = useRef<ReturnType<typeof crearControlDeAvisos> | null>(null);
   const [estado, setEstado] = useState<EstadoAvisos>({ estado: "cargando", recibido: null });
   useEffect(() => {
-    const control = crearControlDeAvisos({ cliente, nativo: nativoAvisos, configurado: Capacitor.getPlatform() === "android" && import.meta.env.VITE_ANDROID_PUSH_CONFIGURED === "true", onEstado: setEstado, onAbrirProyecto: (id, destino) => abrir.current(id, destino) });
+    const control = crearControlDeAvisos({ cliente, nativo: nativoAvisos, configurado: Capacitor.getPlatform() === "android" && import.meta.env.VITE_ANDROID_PUSH_CONFIGURED === "true", onEstado: setEstado, onAbrirProyecto: (id, destino) => abrir.current(id, destino), onAbrirEntregado: (id, url) => entregado.current ? entregado.current(id, url) : abrir.current(id) });
     ref.current = control;
     controles.set(cliente, control);
     void control.iniciar();

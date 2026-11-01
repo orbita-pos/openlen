@@ -11,6 +11,7 @@
 
 import type { LenTurnoEvent } from "@/lib/notifications/types";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
+import type { DeliveredFile } from "@/lib/agent/skills/present";
 
 /** Lo que cabe en una notificación sin que el sistema lo corte a su manera. */
 export const MAX_AVISO = 140;
@@ -30,9 +31,12 @@ export function avisoDelTurno(o: {
   readonly projectId: string;
   readonly userId: string;
   readonly texto: string;
-  readonly tarjetas: readonly { readonly tool: string; readonly respuesta?: string }[];
+  readonly tarjetas: readonly { readonly tool: string; readonly respuesta?: string; readonly delivered?: readonly DeliveredFile[] }[];
 }): LenTurnoEvent {
+  // What it delivered: tapping the push opens the first file (spec local 2026-10-31-len-movil, §5.4).
+  const abrir = o.tarjetas.find((t) => t.tool === "present" && t.delivered?.length)?.delivered?.[0]?.url;
   return {
+    ...(abrir ? { abrir } : {}),
     type: "len_turno",
     projectId: o.projectId,
     recipientUserId: o.userId,
