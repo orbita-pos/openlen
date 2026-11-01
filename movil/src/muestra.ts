@@ -16,9 +16,51 @@ const FOTO =
   "data:image/svg+xml;charset=utf-8," +
   encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="264"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#FFB86B"/><stop offset="1" stop-color="#E8560A"/></linearGradient></defs><rect width="360" height="264" fill="url(#g)"/><circle cx="180" cy="132" r="60" fill="#FFE4CC"/></svg>');
 
+// «Entregado» y «Tareas» de la muestra: un PDF hecho aquí (texto pequeño y rayas finas, para ver si el zoom
+// lo dibuja nítido) que Len entregó en el primer turno y otra vez en la última ejecución de una tarea.
+// `?tareasFallan` hace que pausar y borrar fallen, para ver el aviso.
+function pdfDeMuestra(): Uint8Array {
+  const rayas = Array.from({ length: 60 }, (_, i) => `${40 + i * 8.5} 300 m ${40 + i * 8.5} 700 l`).join(" ");
+  const letra = Array.from({ length: 30 }, (_, i) => `BT /F1 6 Tf 40 ${280 - i * 8} Td (Linea ${i + 1}: la letra pequena se lee nitida con zoom.) Tj ET`).join("\n");
+  const contenido = `BT /F1 28 Tf 40 740 Td (Menu de otono) Tj ET\n0.3 w ${rayas} S\n${letra}`;
+  const objetos = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${contenido.length} >>\nstream\n${contenido}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let pdf = "%PDF-1.4\n";
+  const posiciones = objetos.map((o, i) => {
+    const en = pdf.length;
+    pdf += `${i + 1} 0 obj\n${o}\nendobj\n`;
+    return en;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n${posiciones.map((p) => `${String(p).padStart(10, "0")} 00000 n \n`).join("")}`;
+  pdf += `trailer\n<< /Size ${objetos.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return new TextEncoder().encode(pdf);
+}
+const PDF = pdfDeMuestra();
+const ENTREGA = { name: "menu-otono.pdf", url: "/api/projects/m1/deliveries/t1/ab12cd34-menu-otono.pdf", size: PDF.byteLength, description: "El menú para imprimir" };
+const tareasFallan = () => new URLSearchParams(location.search).has("tareasFallan");
+let tareaEnPausa = false;
+const tareasDeMuestra = () => ({
+  needsYou: [],
+  working: [],
+  scheduled: [{
+    id: "s1", kind: "weekly", title: "Menú de la semana", prompt: "Haz el PDF del menú", scheduledAt: new Date(Date.now() + 3 * 24 * HORA).toISOString(),
+    scheduledAtLocal: "", state: "scheduled", time: "09:00:00.000", timeZone: "America/Mexico_City", weekdays: [1], deliveryMode: "session",
+    projectId: "m1", projectTitle: "Panadería Luna", recurring: true, ...(tareaEnPausa ? { paused: true } : {}),
+    lastRun: { at: new Date(Date.now() - 2 * 24 * HORA).toISOString(), outcome: "done", reason: null, files: [{ ...ENTREGA, previewUrl: null }] },
+  }],
+  resolved: [{ kind: "run", projectId: "m1", projectTitle: "Panadería Luna", text: "Menú de la semana", at: new Date(Date.now() - 2 * 24 * HORA).toISOString(), open: "chat", outcome: "done" }],
+});
+
 const PROYECTOS = [{ id: "m1", title: "Panadería Luna", subdomain: "panaderia-luna", publishedAt: "2026-09-29T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" }];
 const HISTORIAL: StoredChatTurn[] = [
-  { id: "t1", userText: "Hazme una página para mi panadería", assistantReasoning: "¡Ya quedó tu página!\n\nLe puse tus panes, un formulario para encargar pasteles y cómo llegar.", status: "applied", appliedAt: Date.now() - 26 * HORA },
+  { id: "t1", userText: "Hazme una página para mi panadería", assistantReasoning: "¡Ya quedó tu página!\n\nLe puse tus panes, un formulario para encargar pasteles y cómo llegar.", status: "applied", appliedAt: Date.now() - 26 * HORA,
+    actions: [{ tool: "present", status: "done", summary: "menu-otono.pdf", delivered: [ENTREGA] }] },
   { id: "t2", userText: "Pon esta foto en la portada", attachedImage: { url: FOTO }, assistantReasoning: "Puse tu foto en la portada, grande y con el nombre encima.", status: "applied", appliedAt: Date.now() - 2 * HORA },
   { id: "t3", userText: "¿Cómo va?", assistantReasoning: "Esta semana entraron 312 personas.\n\n6 de cada 10 llegan de Instagram.", status: "applied", noDocChange: true, appliedAt: Date.now() - HORA },
 ];
@@ -125,6 +167,14 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
       return Response.json({ project: { ...PROYECTOS[0], rol: "dueno", deployUrl: "https://panaderia-luna.example/", hasUnpublishedChanges: actualizado, chatHistory: historia } });
     }
     if (ruta.startsWith("/api/movil/entrega")) return Response.json({ comparacion: { antes: { html: pagina(true), fecha: "2026-10-01T12:00:00Z" }, ahora: { html: pagina(false), fecha: new Date().toISOString() } } });
+    if (ruta.startsWith("/api/movil/delivered")) return Response.json({ items: [{ id: "d1", projectId: "m1", turnId: "t1", ...ENTREGA, previewUrl: null, contentType: "application/pdf", createdAt: new Date(Date.now() - 26 * HORA).toISOString(), projectTitle: "Panadería Luna" }] });
+    if (ruta === "/api/movil/tasks") return Response.json(tareasDeMuestra());
+    if (ruta === ENTREGA.url) return new Response(PDF.slice(), { headers: { "content-type": "application/pdf" } });
+    if (ruta.startsWith("/api/projects/m1/scheduled-tasks/s1")) {
+      if (tareasFallan()) return new Response(null, { status: 503 });
+      if (ruta.endsWith("/pause")) tareaEnPausa = (JSON.parse(String(init?.body ?? "{}")) as { paused?: boolean }).paused === true;
+      return Response.json({ ok: true });
+    }
     if (ruta === "/api/subdomains/check") return Response.json({ available: true });
     if (ruta === "/api/projects/m1/publish") { actualizado = false; return Response.json({ url: "https://panaderia-luna.example/", publishedAt: new Date().toISOString() }); }
     if (ruta === "/api/agent/encargo") { objetivo = undefined; return Response.json({ ok: true }); }
