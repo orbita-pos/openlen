@@ -499,6 +499,7 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "confirmDelete": "Diese Aufgabe löschen?",
+    "actionFailed": "Das hat nicht geklappt. Versuche es noch einmal.",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "fieldName": "Name",

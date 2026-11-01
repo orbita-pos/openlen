@@ -499,6 +499,7 @@
     "edit": "編集",
     "delete": "削除",
     "confirmDelete": "このタスクを削除しますか？",
+    "actionFailed": "うまくいきませんでした。もう一度お試しください。",
     "save": "保存",
     "cancel": "キャンセル",
     "fieldName": "名前",

@@ -499,6 +499,7 @@
     "edit": "编辑",
     "delete": "删除",
     "confirmDelete": "删除此任务？",
+    "actionFailed": "没有成功，请再试一次。",
     "save": "保存",
     "cancel": "取消",
     "fieldName": "名称",

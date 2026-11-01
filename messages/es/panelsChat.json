@@ -499,6 +499,7 @@
     "edit": "Editar",
     "delete": "Borrar",
     "confirmDelete": "¿Borrar esta tarea?",
+    "actionFailed": "No se pudo. Vuelve a intentarlo.",
     "save": "Guardar",
     "cancel": "Cancelar",
     "fieldName": "Nombre",

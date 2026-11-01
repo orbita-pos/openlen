@@ -9,6 +9,7 @@
 .app-resumen button.resumen-fila.is-necesita { outline: 2px solid var(--m-ink); outline-offset: -2px; }
 .resumen-tarea { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
 .resumen-tarea .gestion-acciones { margin-top: 6px; flex-wrap: wrap; }
+.resumen-tarea small.resumen-fallo { opacity: 1; font-weight: 600; }
 .resumen-nada { font-size: 12px; opacity: .6; padding: 4px 2px; }
 .resumen-editor { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
 .resumen-editor label { display: grid; gap: 4px; font-size: 12px; }

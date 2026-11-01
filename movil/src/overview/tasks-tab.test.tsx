@@ -91,6 +91,25 @@ describe("TasksTab", () => {
     expect(deleteScheduledTask).toHaveBeenCalledWith(expect.anything(), "p1", "t1");
   });
 
+  it("a pause the server refuses is said on its row", async () => {
+    vi.mocked(setTaskPaused).mockResolvedValueOnce(false);
+    const { host } = await paint();
+    const row = (id: string) => host.querySelector(`[data-task="${id}"]`)!;
+    await act(async () => row("t1").querySelector<HTMLButtonElement>("[data-pause]")!.click());
+    expect(row("t1").querySelector('[role="alert"]')?.textContent).toBe("accionFallo");
+    expect(row("t2").querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("a delete that fails keeps the confirmation and says so", async () => {
+    vi.mocked(deleteScheduledTask).mockRejectedValueOnce(new Error("offline"));
+    const { host } = await paint();
+    const row = () => host.querySelector('[data-task="t1"]')!;
+    act(() => row().querySelector<HTMLButtonElement>("[data-delete]")!.click());
+    await act(async () => row().querySelector<HTMLButtonElement>("[data-confirm-delete]")!.click());
+    expect(row().querySelector('[role="alert"]')?.textContent).toBe("accionFallo");
+    expect(row().querySelector("[data-confirm-delete]")).not.toBeNull();
+  });
+
   it("with nothing at all it says so", async () => {
     const { host } = await paint({ needsYou: [], working: [], scheduled: [], resolved: [] });
     expect(host.textContent).toContain("vacioTareas");
