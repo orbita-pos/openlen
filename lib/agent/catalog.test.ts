@@ -368,7 +368,7 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).toContain("instead of wrapping up early or leaving it half done");
   });
 
-  // CUÁNDO PREGUNTAR, como Claude Code (2.1.296, «Do ordinary work»), con
+  // CUÁNDO PREGUNTAR, como Claude Code, con
   // palabras nuestras. Holi, 11/10: ante «¿la img dónde se guarda?» Len escribió
   // una prueba en el proyecto para comprobar la dirección (turno 13); y ante «no
   // empieces a programar hasta que me entiendas» preguntó píxeles y pantallas,

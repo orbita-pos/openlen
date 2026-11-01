@@ -1160,7 +1160,7 @@ async function correrTurno(
     // último turno y quién pide éste (lib/agent/equipo.ts).
     // (`equipoAhora` ya acaba en salto de línea: `plegarEquipo`).
     // Con miembros, lo escrito va con las marcas a mano neutralizadas: el único
-    // <asked-by> que vale es el que pone el servidor (como en el binario).
+    // <asked-by> que vale es el que pone el servidor (como en Claude Code).
     prompt: `${equipoAhora}${pideAhora ? `${pideAhora}\n` : ""}${textoEnviado}`,
     equipo: compartido,
     history,
@@ -1263,7 +1263,7 @@ async function correrTurno(
   const ownerEmail = await correoDelUsuario(userId).catch(() => null);
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
-    // What the conversation already loaded, as state (Claude Code's invokedSkills), and what /name
+    // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
     // put in this message: `skill` answers «already loaded» for them.
     loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
     projectId,

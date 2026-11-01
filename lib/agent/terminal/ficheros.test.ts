@@ -41,7 +41,7 @@ describe("salidaDeLaTerminal — lo que la terminal real no pudo guardar", () =>
   });
 });
 
-describe("salidaDeLaTerminal — como el Bash de Claude Code (binario 2.1.293)", () => {
+describe("salidaDeLaTerminal — como el Bash de Claude Code", () => {
   it("🔴 bien: sólo la salida, sin líneas en blanco delante ni espacio detrás; sin código", () => {
     expect(salidaDeLaTerminal({ stdout: "\n\n1:<h1>Marejada</h1>\n\n", stderr: "", exitCode: 0 })).toEqual({ texto: "1:<h1>Marejada</h1>", exitCode: 0 });
   });
@@ -50,7 +50,7 @@ describe("salidaDeLaTerminal — como el Bash de Claude Code (binario 2.1.293)",
     expect(salidaDeLaTerminal({ stdout: "", stderr: "", exitCode: 0 }).texto).toBe("(bash completed with no output)");
   });
 
-  it("🔴 un fallo empieza por «Exit code N» y sigue la salida (MKr: el código, luego lo impreso)", () => {
+  it("🔴 un fallo empieza por «Exit code N» y sigue la salida (como Claude Code: el código, luego lo impreso)", () => {
     expect(salidaDeLaTerminal({ stdout: "", stderr: "bash: curl: command not found\n", exitCode: 127, fallo: true })).toEqual({
       texto: "Exit code 127\nbash: curl: command not found",
       exitCode: 127,

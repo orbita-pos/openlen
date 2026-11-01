@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createSilentTurnReminder, SILENT_TURN_TEXT } from "./silent-turn-reminder";
 
-describe("createSilentTurnReminder (Claude Code's silent_turn_reminder: 5 steps, 3 per stretch)", () => {
+describe("createSilentTurnReminder (as Claude Code: 5 steps, 3 per stretch)", () => {
   const fired = (steps: boolean[], r = createSilentTurnReminder()) => steps.map((spoke) => r.observe(spoke) !== "");
 
   it("every 5 silent steps, at most 3 times in one silent stretch", () => {

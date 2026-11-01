@@ -5,7 +5,7 @@
  * ⚰️ Hasta el 2026-10-08 eran `/memoria/dueno.md` y `/memoria/proyecto.md` y
  * SÓLO SE AÑADÍA: una edición que quitaba o cambiaba una línea se rechazaba,
  * porque borrar era del dueño. Se retiró a petición de Jesús («así sería más
- * como Claude Code en su binario»): Claude Code edita y borra su memoria y se
+ * como Claude Code»): Claude Code edita y borra su memoria y se
  * apoya en que el usuario VE cada cambio. Aquí se ve en la tarjeta del chat y
  * se corrige en la lente Código. Se quedan el chequeo de credenciales
  * (`lib/agent/memory/secrets.ts`) y la regla de inyección del prompt.

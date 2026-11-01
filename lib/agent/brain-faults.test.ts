@@ -149,7 +149,7 @@ describe("provider faults against real sockets", () => {
     expect(t.result.terminalError).toBe(true);
   });
 
-  // Layer 0, Claude Code's `slow_first_byte` and `streaming_stall`: onCall says when the first event came and
+  // Layer 0, as Claude Code watches for a slow first byte and a stalled stream: onCall says when the first event came and
   // the longest silence between two events, raw; whoever reads the rows applies the threshold.
   it("onCall reports the time to the first event and the longest gap between events", async () => {
     const t = await turn({ "/deepinfra": [{ kind: "ok", text: "Hecho del todo, gracias.", delayFirstMs: 150, pause: { after: 2, ms: 250 } }] });

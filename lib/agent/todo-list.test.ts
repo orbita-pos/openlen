@@ -149,7 +149,7 @@ describe("the notices", () => {
   });
 });
 
-describe("todoReminder (Claude Code's todo_reminder)", () => {
+describe("todoReminder (as Claude Code)", () => {
   const step = (name = "Write") => ({ role: "assistant", content: "", functionCalls: [{ name }] });
   const results = (content = "") => ({ role: "user", content });
   const calls = (n: number) => Array.from({ length: n }, () => [step(), results()]).flat();

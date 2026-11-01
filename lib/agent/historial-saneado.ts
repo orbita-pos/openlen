@@ -186,7 +186,7 @@ export const MARCA_DE_TURNO_DETENIDO =
  * un reinicio): la fila se quedó con la copia de mitad de turno (`partial`) o
  * sin ninguna, y el reenganche la pasó a cortada. Sin marca se leía como un
  * turno que terminó —el H05 de la auditoría del 2026-09-22—. Es el texto de
- * Claude Code (binario 2.1.309) para una sesión que se acabó sin que nadie lo
+ * Claude Code para una sesión que se acabó sin que nadie lo
  * pidiera, letra por letra; las llamadas sin respuesta llevan las de DeepSeek
  * (`TOOL_OUTCOME_UNKNOWN`, como A6).
  */

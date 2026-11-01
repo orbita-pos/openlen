@@ -1,6 +1,6 @@
 // The cache-break detector (layer 0 of Len 3.1, spec local
-// 2026-10-24-len-3-1-layers-0-1, §4.2), after Claude Code's `[PROMPT CACHE BREAK]`
-// (binary 2.1.304): when a call reads clearly less from the provider's cache than
+// 2026-10-24-len-3-1-layers-0-1, §4.2), after Claude Code's cache-break warning:
+// when a call reads clearly less from the provider's cache than
 // the previous call of the same kind, name why, with the same vocabulary.
 import type { RequestFingerprint } from "./request-fingerprint";
 

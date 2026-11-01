@@ -247,7 +247,7 @@ export interface AgentLoopArgs {
   activePage?: () => string | null;
   /** Lo que llegó DESPUÉS de las herramientas que lo causaron —los tipos y el
    *  lint de una app (`takeTypesAndLint`)—, recogido antes de cada llamada al
-   *  modelo, como los adjuntos `lsp_diagnostics` de Claude Code. */
+   *  modelo, como los diagnósticos del LSP que adjunta Claude Code. */
   lateDiagnostics?: () => readonly Diagnostico[];
   /** LA TERMINAL REAL (spec local 2026-10-21-real-terminal-e2b): los comandos de la caja
    *  que terminaron en segundo plano, recogidos igual, antes de cada llamada al modelo. */
@@ -362,7 +362,7 @@ export interface AgentLoopArgs {
    *
    * Y como él, se mira ENTRE llamadas: una sola respuesta larga puede pasarlo (27/10: un `Write` de
    * 520 s dejó un turno en 6,37 con techo de 5). Claude Code hace lo mismo —su motor lo comprueba con
-   * cada mensaje que llega (`budget_exhausted`)—, DeepSeek no tiene techo, y lo que acota una
+   * cada mensaje que llega—, DeepSeek no tiene techo, y lo que acota una
    * respuesta es su `max_tokens`. El saldo nunca baja de 0 (`GREATEST(0, …)`).
    *
    * La cuenta en créditos la hace quien llama (la tarifa es del cerebro, no del
@@ -527,7 +527,7 @@ const FAIL_REPEAT_LIMIT = 2;
 // `INSISTE_SIN_EFECTO`, el testigo «OK» y la vuelta retenida), retirada el
 // 2026-10-17. Se puso el 2026-08-31 porque el modelo de entonces contestaba
 // «Listo, agregué el enlace» sin llamar a nada. Claude Code no tiene nada así:
-// una respuesta sin herramientas cierra el turno (binario 2.1.296). MEDIDO con
+// una respuesta sin herramientas cierra el turno. MEDIDO con
 // DeepSeek V4.1 Flash en DeepInfra, con un historial de tres turnos cuyos dos
 // últimos se contestaron con palabras —el peor caso de agosto—: «cambia el
 // título de la portada» editó 10 de 10 SIN la insistencia, 0 «Listo» falsos; en
@@ -591,9 +591,9 @@ type CutCall = { readonly name: string; readonly argsHead: string };
  * un modelo que acababa de escribir 30.000 tokens de un Write: lo reintentaba
  * igual de grande. Lo vio Jesús pidiéndole a Len un juego de terror entero.
  *
- * LA VARA ES CLAUDE CODE (su binario): «Output token limit hit. Resume
- * directly — no apology, no recap of what you were doing… Break remaining work
- * into smaller pieces.» Lo nuestro añade lo que allí va en el propio mensaje
+ * LA VARA ES CLAUDE CODE: su aviso al cortarse la salida pide seguir sin
+ * disculpas ni resumen y partir lo que falta en trozos más pequeños. Lo
+ * nuestro añade lo que allí va en el propio mensaje
  * cortado y aquí no puede ir —una llamada con el JSON roto no cabe en el
  * protocolo—: cuál no corrió, con su principio, y qué sí corrió.
  */
@@ -624,9 +624,9 @@ function cutCallNotice(cut: CutCall | null, ranCount: number): string {
  * enseñó cuatro turnos muertos por un solo paso desbocado, y Jesús pidió el
  * tope de Claude Code.
  *
- * 🔴 «SEGUIDOS», desde el 2026-10-15: su binario pone la cuenta
- * (`maxOutputTokensRecoveryCount`) a cero en cada vuelta que ejecuta
- * herramientas. Aquí era del turno entero, y un turno largo que avanzaba entre
+ * 🔴 «SEGUIDOS», desde el 2026-10-15: Claude Code pone la cuenta de cortes a
+ * cero en cada vuelta que ejecuta herramientas. Aquí era del turno entero, y
+ * un turno largo que avanzaba entre
  * corte y corte —un juego, fichero a fichero— moría al cuarto. Sigue habiendo
  * techo: un modelo que se corta siempre no vacía el saldo, y uno que avanza
  * entre cortes topa con `maxTurns` y con el de gasto como cualquier otro.
@@ -965,7 +965,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const ownArchived: Message[] = [];
   /** A2 de Len 3.1: el aviso de llamadas repetidas de DeepSeek (`repeat-reminder.ts`). */
   const repeticiones = createRepeatReminder();
-  // El `silent_turn_reminder` de Claude Code: 5 pasos sin decirle nada a la persona.
+  // El aviso de turno callado de Claude Code: 5 pasos sin decirle nada a la persona.
   const silencio = createSilentTurnReminder();
   // A3 · el reloj del turno, el de Claude Code: empieza con el mensaje del dueño
   // y vuelve a empezar con una corrección (también es un mensaje suyo).
@@ -1067,7 +1067,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       separated: false,
     });
     // A11 · la petición del resumen tampoco cupo: `compactIfNeeded` la
-    // reintenta UNA vez recortada (el `compact_ptl_retry` de Claude Code).
+    // reintenta UNA vez recortada (como Claude Code).
     if (stop?.kind === "error" && stop.code === "context_window_exceeded") return "too_long";
     const valid = !calledTool && (stop === null || stop.kind === "end_turn");
     return valid && text.trim() !== "" ? text : null;
@@ -1178,7 +1178,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // alimentaban una segunda pasada que era inalcanzable. Ver el bloque de los
   // ojos, más abajo, para el porqué entero.
   /** Lo que ya se le entregó al modelo este turno: una tanda no le repite a la
-   *  siguiente lo que ya oyó (el `delivered` del registro de Claude Code). */
+   *  siguiente lo que ya oyó (como el registro de lo entregado de Claude Code). */
   const entregados = new NuevosDiagnosticos();
   /** Lo que las escrituras de esta tanda dejaron mal (`outcome.diagnosticos`). */
   let diagnosticosDeLaTanda: Diagnostico[] = [];
@@ -2280,8 +2280,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // cierre de un encargo), como el `deferContext` de DeepSeek.
     const medido = await medirYRedactar();
     // Y LAS CAPTURAS, en este mismo mensaje y con su rótulo: el modelo las mira
-    // él, sin nadie que se las describa (la skill `verify` de Claude Code: «That
-    // capture is your evidence»). Las viejas pierden los píxeles.
+    // él, sin nadie que se las describa (como la skill `verify` de Claude Code:
+    // la captura es la prueba). Las viejas pierden los píxeles.
     const imagenes = capturas.flatMap((c) => c.images);
     messages.push({
       role: "user",
@@ -2294,9 +2294,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         offersTodoWrite ? (todoReminder(messages, currentTodos) ?? "") : "",
         // Y el de las llamadas repetidas, el de DeepSeek: detrás de los resultados, sin bloquear nada.
         ...repeticiones.observe(functionResponses.map((r, i) => ({ name: calls[i]?.name ?? r.name, args: calls[i]?.args, response: r.response }))),
-        // Y el tiempo que lleva el turno, el `elapsed_time_reminder` de Claude Code (A3).
+        // Y el tiempo que lleva el turno, como Claude Code (A3).
         elapsedTimeReminder(ahora() - relojDesde),
-        // Y si lleva 5 pasos sin decirle nada a la persona, el `silent_turn_reminder`.
+        // Y si lleva 5 pasos sin decirle nada a la persona, el aviso de turno callado.
         silencio.observe(turnText.trim() !== "" || calls.some((c) => asksTheOwner(c.name))),
         cutNotice,
       ].filter((x) => x.length > 0).join("\n\n"),

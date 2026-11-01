@@ -58,7 +58,7 @@ function recortarLinea(l: LineaDelDiff): LineaDelDiff {
   return l.texto.length > CARACTERES_POR_LINEA ? { ...l, texto: `${l.texto.slice(0, CARACTERES_POR_LINEA)}…` } : l;
 }
 
-/** Los trozos hasta `tope` líneas en total, como la `J` de Claude Code. */
+/** Los trozos hasta `tope` líneas en total, como Claude Code. */
 function recortar(trozos: readonly TrozoDelDiff[], tope: number): { trozos: TrozoDelDiff[]; ocultas: number } {
   const salida: TrozoDelDiff[] = [];
   let usadas = 0;

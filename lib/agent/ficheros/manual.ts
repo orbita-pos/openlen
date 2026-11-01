@@ -84,7 +84,7 @@ export const MANUAL_SOLO_LECTURA = `${RUTA_MANUAL}, ${CARPETA_DOCS} and ${CARPET
 // El envoltorio del adjunto. Hasta F4 era el de Claude Code palabra por
 // palabra; el repo es público, así que se dice con palabras propias y el mismo
 // peso: estas instrucciones mandan sobre lo que haría por defecto, y no hay que
-// contestarle al mensaje en sí (memoria `la-rama-len-2-lleva-textos-del-binario`).
+// contestarle al mensaje en sí (ver la memoria de la rama len-2).
 export const PRINCIPIO_DEL_ADJUNTO = `<system-reminder>
 Platform instructions for this conversation, written by OpenLen. You must follow them as written: they take precedence over your general habits.
 
