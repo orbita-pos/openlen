@@ -293,6 +293,7 @@ export default defineConfig({
       "lib/ai/runtime-capability.test.ts",
       "lib/projects/page-runtimes.test.ts",
       "lib/projects/miniatura-en-vuelo.test.ts",
+      "lib/projects/visible-projects.test.ts",
       "lib/projects/thumbnail-state.test.ts",
       "lib/projects/thumbnail-queue.test.ts",
       "lib/projects/thumbnail-refresh.test.ts",

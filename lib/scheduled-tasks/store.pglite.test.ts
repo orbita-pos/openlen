@@ -197,6 +197,27 @@ describe("pauseTask / resumeTask", () => {
   });
 });
 
+describe("across projects (the phone's «Tareas»)", () => {
+  it("listTasksOfProjects lists the active tasks of the asked projects", async () => {
+    await store.createTask(input("t1"));
+    await store.createTask(input("q1", { projectId: "p2" }));
+    await store.createTask(input("t2"));
+    await store.deactivateTask("t2");
+    expect((await store.listTasksOfProjects(["p1", "p2"])).map((t) => t.id).sort()).toEqual(["q1", "t1"]);
+    expect(await store.listTasksOfProjects([])).toEqual([]);
+  });
+
+  it("runsSince gives the finished runs since a date, with their task's title and creator", async () => {
+    const task = await store.createTask(input("t1"));
+    await store.claimDue(task, { occurrenceAt: task.scheduledAt.toISOString(), nextScheduledAt: "2026-11-09T15:03:00.000Z", runId: "r1", processStartedAt: new Date(NOW) });
+    await store.markRun("r1", { finishedAt: new Date("2026-11-02T15:04:00Z"), outcome: "done" });
+    const runs = await store.runsSince(["p1"], new Date("2026-11-01T00:00:00Z"));
+    expect(runs).toEqual([expect.objectContaining({ id: "r1", outcome: "done", title: "PDF de resultados", createdBy: "u1", projectId: "p1" })]);
+    expect(await store.runsSince(["p1"], new Date("2026-11-03T00:00:00Z"))).toEqual([]);
+    expect(await store.runsSince([], new Date(0))).toEqual([]);
+  });
+});
+
 describe("cascades and purge", () => {
   it("deleting the project deletes its tasks and runs", async () => {
     const task = await store.createTask(input("t1"));

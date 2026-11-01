@@ -5,7 +5,7 @@
 // can never run the same occurrence twice.
 import "server-only";
 
-import { and, asc, count, eq, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { isRecurringScheduleRecord, resolveRecurringOccurrence } from "./deepseek/domain";
@@ -53,6 +53,31 @@ export async function listTasks(projectId: string, o: { readonly includeInactive
     .from(schema.scheduledTasks)
     .where(o.includeInactive ? eq(schema.scheduledTasks.projectId, projectId) : and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.status, "active")))
     .orderBy(asc(schema.scheduledTasks.createdAt), asc(schema.scheduledTasks.id));
+}
+
+/** The active tasks of several projects (the phone's «Tareas», spec local 2026-10-31-len-movil, §5.4). */
+export async function listTasksOfProjects(projectIds: readonly string[]): Promise<TaskRow[]> {
+  if (projectIds.length === 0) return [];
+  return db
+    .select()
+    .from(schema.scheduledTasks)
+    .where(and(inArray(schema.scheduledTasks.projectId, [...projectIds]), eq(schema.scheduledTasks.status, "active")))
+    .orderBy(asc(schema.scheduledTasks.scheduledAt), asc(schema.scheduledTasks.id));
+}
+
+export type RunWithTask = RunRow & { readonly title: string; readonly createdBy: string };
+
+/** The runs of several projects that finished since `since`, newest first, with their task's title and
+ *  creator (the phone's «Tareas · Resueltas»). */
+export async function runsSince(projectIds: readonly string[], since: Date): Promise<RunWithTask[]> {
+  if (projectIds.length === 0) return [];
+  const rows = await db
+    .select({ run: schema.scheduledTaskRuns, record: schema.scheduledTasks.record, createdBy: schema.scheduledTasks.createdBy })
+    .from(schema.scheduledTaskRuns)
+    .innerJoin(schema.scheduledTasks, eq(schema.scheduledTasks.id, schema.scheduledTaskRuns.taskId))
+    .where(and(inArray(schema.scheduledTaskRuns.projectId, [...projectIds]), gte(schema.scheduledTaskRuns.finishedAt, since)))
+    .orderBy(desc(schema.scheduledTaskRuns.finishedAt));
+  return rows.map((r) => ({ ...r.run, title: r.record.title, createdBy: r.createdBy }));
 }
 
 export async function getTask(projectId: string, id: string): Promise<TaskRow | null> {

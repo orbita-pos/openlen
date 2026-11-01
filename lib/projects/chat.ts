@@ -180,6 +180,40 @@ async function conversationStateOf(projectId: string): Promise<{ planMode: boole
 }
 
 /**
+ * The goal of the project's conversation and when its row was saved (spec local 2026-10-31-len-movil,
+ * §5.4): the same fold as `conversationStateOf`, for the phone's «Tareas». Null without one.
+ */
+export async function goalOfProject(projectId: string): Promise<{ goal: GoalSnapshot; at: Date } | null> {
+  const t = schema.projectChatMessages;
+  const rows = await db
+    .select({ goal: sql<unknown>`${t.transcript}->'goal'`, at: t.createdAt })
+    .from(t)
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), sql`jsonb_typeof(${t.transcript}) = 'object'`))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  const goal = parseGoalSnapshot(rows[0]?.goal);
+  return goal && rows[0] ? { goal, at: rows[0].at } : null;
+}
+
+/**
+ * The last finished turn a person started in the project's conversation (spec local
+ * 2026-10-31-len-movil, §5.4), with its cards, to see whether Len waits for them. The owner's rows may
+ * carry no author (older rows, and the owner's own); a member only ever gets rows with their id.
+ * Only `actions` and `createdAt`: never the transcript.
+ */
+export async function lastFinishedTurnOf(projectId: string, userId: string, isOwner: boolean): Promise<{ id: string; actions: StoredChatTurn["actions"] | null; createdAt: Date } | null> {
+  const t = schema.projectChatMessages;
+  const mine = isOwner ? or(eq(t.autorId, userId), isNull(t.autorId)) : eq(t.autorId, userId);
+  const [row] = await db
+    .select({ id: t.id, actions: t.actions, createdAt: t.createdAt })
+    .from(t)
+    .where(and(enCurso(projectId), ne(t.status, ESTADO_EN_CURSO), mine))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  return row ? { id: row.id, actions: (row.actions as StoredChatTurn["actions"]) ?? null, createdAt: row.createdAt } : null;
+}
+
+/**
  * PIEZA 8 · QUITAR EL ENCARGO de la charla en curso (`POST /api/agent/encargo`).
  * Lo duradero es la foto de la última fila cerrada con transcripción (la que
  * pliega el servidor), así que se escribe `goal: null` en ESA fila: el pliegue

@@ -1,7 +1,7 @@
 // LEN WATCH's rows (spec local 2026-10-30-len-watch): the owner's switches and the incidents.
 // One active incident per project, kept by a partial unique index (scripts/len-watch-migrate-sql.ts):
 // `openIncident` inserts with ON CONFLICT DO NOTHING, so 500 visitors racing open exactly one.
-import { and, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -61,6 +61,18 @@ export async function activeIncident(projectId: string): Promise<Incident | null
     .where(and(eq(schema.lenWatchIncidents.projectId, projectId), ne(schema.lenWatchIncidents.status, "resolved")))
     .limit(1);
   return row ? toIncident(row) : null;
+}
+
+/** The incidents of several projects resolved since `since`, newest first (the phone's «Tareas ·
+ *  Resueltas», spec local 2026-10-31-len-movil, §5.4). */
+export async function resolvedSince(projectIds: readonly string[], since: Date): Promise<Incident[]> {
+  if (projectIds.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(schema.lenWatchIncidents)
+    .where(and(inArray(schema.lenWatchIncidents.projectId, [...projectIds]), eq(schema.lenWatchIncidents.status, "resolved"), gte(schema.lenWatchIncidents.resolvedAt, since)))
+    .orderBy(desc(schema.lenWatchIncidents.resolvedAt));
+  return rows.map(toIncident);
 }
 
 export async function incidentById(id: string): Promise<Incident | null> {

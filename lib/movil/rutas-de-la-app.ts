@@ -29,4 +29,6 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/scheduled-tasks/route.ts", metodos: ["GET"] },
   { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/route.ts", metodos: ["PATCH", "DELETE"] },
   { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/pause/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/movil/delivered/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/movil/tasks/route.ts", metodos: ["GET"] },
 ];
