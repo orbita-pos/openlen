@@ -2,13 +2,14 @@
 // uses too (`components/viewer`), fed by the phone. Bytes come through the phone's client, with its key
 // in a header (an <img src> can't carry it); an HTML opens on the canvas host through the view route;
 // and instead of a download, Share and Open with another app.
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { Viewer, type ViewerFile } from "@/components/viewer/viewer";
 
 import { useAtras } from "../atras";
+import { plataforma } from "../sesion/plataforma";
 import { openWith, shareFile } from "./file-actions";
 
 async function blobFrom(c: ClienteDeOpenLen, url: string): Promise<Blob> {
@@ -22,6 +23,11 @@ export function PhoneViewer({ cliente, file, onClose, onGoToChat }: { cliente: C
   const t = useTranslations("movil.entregado");
   const [busy, setBusy] = useState(false);
   useAtras(true, onClose);
+  // The app stays upright; the viewer alone turns, so a PDF or a video can fill the phone sideways.
+  useEffect(() => {
+    plataforma.girarLibre();
+    return () => plataforma.soloDePie();
+  }, []);
   const loadBytes = useCallback((url: string) => blobFrom(cliente, url), [cliente]);
   const openHtml = useCallback(async (url: string) => {
     const res = await cliente.pedir(`${url}/view`, { method: "POST" });

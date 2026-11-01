@@ -21,6 +21,7 @@ const muestra = import.meta.env.DEV && new URLSearchParams(location.search).has(
 aplicarTema(temaGuardado());
 seguirMovimientoDelTelefono();
 plataforma.atrasEnElTelefono();
+plataforma.soloDePie();
 
 // Acostado lo dice la pantalla, no la ventana: con el teclado abierto la
 // ventana queda más ancha que alta y la app se achicaba entera.

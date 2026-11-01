@@ -7,8 +7,10 @@ import { createRoot, type Root } from "react-dom/client";
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("@/components/viewer/pdf-pages", () => ({ PdfPages: () => <div data-pdf-pages="" /> }));
 vi.mock("./file-actions", () => ({ shareFile: vi.fn(async () => undefined), openWith: vi.fn(async () => undefined) }));
+vi.mock("../sesion/plataforma", () => ({ plataforma: { soloDePie: vi.fn(), girarLibre: vi.fn() } }));
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import { plataforma } from "../sesion/plataforma";
 import { openWith, shareFile } from "./file-actions";
 import { PhoneViewer } from "./phone-viewer";
 
@@ -86,6 +88,15 @@ describe("PhoneViewer", () => {
   it("without where to go, no chat button", async () => {
     const { host } = await paint({ name: "a.pdf", url: "/x/a.pdf", size: 9 });
     expect(host.querySelector("[data-go-to-chat]")).toBeNull();
+  });
+
+  it("the app stays upright; only the viewer turns, and closing it stands the phone up again", async () => {
+    const { host } = await paint({ name: "a.pdf", url: "/x/a.pdf", size: 9 });
+    expect(plataforma.girarLibre).toHaveBeenCalledTimes(1);
+    expect(plataforma.soloDePie).not.toHaveBeenCalled();
+    act(() => roots.pop()!.unmount());
+    expect(plataforma.soloDePie).toHaveBeenCalledTimes(1);
+    expect(host.childElementCount).toBe(0);
   });
 
   it("Android's back closes the viewer", async () => {
