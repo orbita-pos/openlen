@@ -14,6 +14,7 @@ import {
   turnoDeLaFila,
   filaEnMarcha,
   turnoVivoDelProyecto,
+  liveTurns,
   rondaSiguiente,
   siguienteDeLaFila,
   MAX_DIRECCION,
@@ -21,6 +22,18 @@ import {
 import { QUESTION_DISMISSED, type QuestionAnswer } from "./ask-user-question";
 
 beforeEach(() => _vaciarTodo());
+
+// The phone's «Tareas · Trabajando» (spec local 2026-10-31-len-movil, §5.4).
+describe("liveTurns", () => {
+  it("lists the turns running in a project, and forgets a closed one", () => {
+    const now = Date.now();
+    abrirTurno("t1", "u1", now, { projectId: "p1", filaId: "row-1" });
+    abrirTurno("t2", "u2", now);
+    expect(liveTurns(now)).toEqual([{ projectId: "p1", userId: "u1", rowId: "row-1", startedAt: now }]);
+    cerrarTurno("t1");
+    expect(liveTurns()).toEqual([]);
+  });
+});
 
 describe("corregirle el rumbo al Agente a media faena", () => {
   it("lo que se deja, se lee", () => {

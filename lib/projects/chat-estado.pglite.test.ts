@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { abrirFilaDelTurno, cutOffRowsOpenedBeforeBoot, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { goalOfProject, lastFinishedTurnOf, abrirFilaDelTurno, cutOffRowsOpenedBeforeBoot, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -448,5 +448,35 @@ describe("latestTodoListForChat (la lista de progreso, spec local 2026-10-15)", 
   it("sin ninguna lista, null", async () => {
     await filaConTarjetas({ id: "a", minuto: 1, actions: [{ tool: "Write", status: "done", summary: "" }] });
     expect(await latestTodoListForChat("p1")).toBeNull();
+  });
+});
+
+// The phone's «Tareas» (spec local 2026-10-31-len-movil, §5.4): the goal of each project, and the last
+// finished turn a person started, to see whether Len waits for them.
+describe("goalOfProject / lastFinishedTurnOf", () => {
+  it("goalOfProject gives the goal of the conversation and when it was saved", async () => {
+    await fila({ id: "a", minuto: 1, transcript: { goal: ENCARGO } });
+    const got = await goalOfProject("p1");
+    expect(got?.goal).toMatchObject({ id: "g1", phase: "active" });
+    expect(got?.at.toISOString()).toBe("2026-10-05T12:01:00.000Z");
+    expect(await goalOfProject("p2")).toBeNull();
+  });
+
+  it("lastFinishedTurnOf takes the person's own last finished turn of the conversation", async () => {
+    await pg.query(`insert into "projectChatMessages" ("id","projectId","userText","assistantReasoning","status","createdAt","actions","autorId") values ('m1','p1','x','','applied',$1,$2::jsonb,'member')`, [new Date(Date.UTC(2026, 9, 5, 12, 1)), JSON.stringify([{ tool: "ask_user_question", status: "done", summary: "¿Qué color?" }])]);
+    await pg.query(`insert into "projectChatMessages" ("id","projectId","userText","assistantReasoning","status","createdAt","autorId") values ('o1','p1','x','','applied',$1,null)`, [new Date(Date.UTC(2026, 9, 5, 12, 2))]);
+    await pg.query(`insert into "projectChatMessages" ("id","projectId","userText","assistantReasoning","status","createdAt","autorId") values ('m2','p1','x','','en_curso',$1,'member')`, [new Date(Date.UTC(2026, 9, 5, 12, 3))]);
+    const member = await lastFinishedTurnOf("p1", "member", false);
+    expect(member?.id).toBe("m1");
+    expect(member?.actions).toEqual([{ tool: "ask_user_question", status: "done", summary: "¿Qué color?" }]);
+    // The owner's rows carry no author (they were written before members existed, or by the owner).
+    expect((await lastFinishedTurnOf("p1", "u1", true))?.id).toBe("o1");
+    // A member never gets the owner's rows.
+    expect(await lastFinishedTurnOf("p1", "other", false)).toBeNull();
+  });
+
+  it("an archived conversation is not looked at", async () => {
+    await filaConTarjetas({ id: "old", minuto: 1, actions: [], conversation: "c-archived" });
+    expect(await lastFinishedTurnOf("p1", "u1", true)).toBeNull();
   });
 });

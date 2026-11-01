@@ -118,6 +118,17 @@ export function turnoVivoDelProyecto(projectId: string, userId: string): boolean
   return false;
 }
 
+/** The turns running now in a project, of anyone (spec local 2026-10-31-len-movil, §5.4: the phone's
+ *  «Tareas · Trabajando»). A turn opened without a project is left out. */
+export function liveTurns(ahora = Date.now()): { projectId: string; userId: string; rowId: string | null; startedAt: number }[] {
+  barrer(ahora);
+  const out: { projectId: string; userId: string; rowId: string | null; startedAt: number }[] = [];
+  for (const t of abiertos.values()) {
+    if (t.projectId) out.push({ projectId: t.projectId, userId: t.userId, rowId: t.filaId ?? null, startedAt: t.abiertoEn });
+  }
+  return out;
+}
+
 /** ¿Corre ahora un turno en este proyecto, de quien sea? (un `@Len` desde un
  *  hilo del código espera a que acabe: dos Len a la vez editarían lo mismo). */
 export function hayTurnoVivoEnElProyecto(projectId: string): boolean {

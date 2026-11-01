@@ -7,7 +7,7 @@
 import "server-only";
 
 import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
-import { asksTheOwner } from "@/lib/agent/ask-user-question";
+import { waitingFrom } from "./waiting";
 import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
 import type { Tarjetas } from "@/lib/agent/turnos-desde-el-servidor";
 import type { ScheduledRunOutcome } from "@/lib/db/schema";
@@ -39,22 +39,8 @@ export interface DeliverDeps {
   removeUrl(task: TaskRow): string | null;
 }
 
-/** Cards that leave the turn waiting for the person, beyond a question: their summary says what. */
-const WAITS_FOR_THE_PERSON = new Set(["publish", "exit_plan_mode", "request_secrets", "connect_email_domain"]);
-
-/** What waits for the person in OpenLen: unanswered questions, and the cards above. */
-export function waitingFrom(cards: Tarjetas): string[] {
-  const out: string[] = [];
-  for (const card of cards) {
-    if (asksTheOwner(card.tool) && !card.respuesta) {
-      const questions = (card.preguntas ?? []).map((p) => p.question).filter(Boolean);
-      out.push(...(questions.length > 0 ? questions : [card.pregunta ?? card.summary]));
-    } else if (WAITS_FOR_THE_PERSON.has(card.tool)) {
-      out.push(card.summary);
-    }
-  }
-  return [...new Set(out.map((s) => s?.trim()).filter((s): s is string => Boolean(s)))];
-}
+/** What waits for the person: one rule with the phone's «Tareas» (`./waiting.ts`). */
+export { waitingFrom };
 
 /** The private-store key behind a delivered file's URL (`deliverableLocation` in present.ts). */
 function deliveryKey(projectId: string, url: string): string | null {

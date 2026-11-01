@@ -58,6 +58,16 @@ describe("settings", () => {
 });
 
 describe("incidents", () => {
+  it("resolvedSince lists the incidents resolved since a date, in the asked projects", async () => {
+    const before = new Date(Date.now() - 1000);
+    const i = await store.openIncident("p1", SAMPLE);
+    await store.resolveIncident(i!.id, "fixed");
+    await store.openIncident("p2", SAMPLE);
+    expect((await store.resolvedSince(["p1", "p2"], before)).map((r) => r.id)).toEqual([i!.id]);
+    expect(await store.resolvedSince(["p1"], new Date(Date.now() + 60_000))).toEqual([]);
+    expect(await store.resolvedSince([], before)).toEqual([]);
+  });
+
   it("one active incident per project", async () => {
     const first = await store.openIncident("p1", SAMPLE);
     expect(first).not.toBeNull();
