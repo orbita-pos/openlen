@@ -737,6 +737,7 @@ export default defineConfig({
       "app/api/scheduled-tasks/remove/route.test.ts",
       "app/api/projects/[id]/mention-index/route.test.ts",
       "app/api/projects/[id]/deliveries/[turn]/[file]/route.test.ts",
+      "app/api/projects/[id]/deliveries/[turn]/[file]/view/route.test.ts",
       "lib/projects/chat-files.test.ts",
       "components/workspace-v2/chat/skill-menu.test.tsx",
       "components/workspace-v2/chat/skill-menu-locale.test.tsx",

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: vi.fn(async () => "ana") }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/scheduled-tasks/store", () => ({ listTasks: vi.fn(), getRun: vi.fn(), updateTask: vi.fn(), deleteTask: vi.fn() }));
 
@@ -38,6 +39,14 @@ describe("GET /api/projects/[id]/scheduled-tasks", () => {
     expect(tasks[0]).toMatchObject({ id: "schedule-1", title: "PDF de resultados", createdBy: "ana", lastRun: { at: "2026-10-26T15:03:00.000Z", outcome: "no_credits", reason: "Sin créditos." } });
     expect(String(tasks[0]!.scheduledAtLocal)).toMatch(/\[America\/Mexico_City\]$/);
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "ana", "editar");
+  });
+
+  it("the phone reads it with its key, with the app's CORS", async () => {
+    const res = await GET(new Request("http://x", { headers: { authorization: `Bearer ${"k".repeat(32)}`, origin: "https://localhost" } }), ctx);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://localhost");
+    expect(exigirAcceso).toHaveBeenCalledWith("p1", "ana", "editar");
+    expect(auth).not.toHaveBeenCalled();
   });
 
   it("a reader is refused like the rest of Len", async () => {

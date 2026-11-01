@@ -1,7 +1,9 @@
 // GET /api/projects/[id]/scheduled-tasks — THE CLOCK'S LIST (spec local 2026-10-29-tareas-programadas,
 // §7.8): the project's active tasks, as the model sees them (DeepSeek's view + the local next run), with
-// who created each and how its last run went. For whoever can talk to Len there (owner and editors).
-import { auth } from "@/auth";
+// who created each and how its last run went. For whoever can talk to Len there (owner and editors),
+// from the web or the phone (spec local 2026-10-31-len-movil).
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { getRun, listTasks } from "@/lib/scheduled-tasks/store";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
@@ -9,8 +11,10 @@ import { viewForModel } from "@/lib/scheduled-tasks/view";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
-  const userId = (await auth())?.user?.id;
+export const OPTIONS = respuestaPrevia;
+
+export const GET = paraLaApp(async (req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   const acceso = await exigirAcceso(id, userId, "editar");
@@ -27,4 +31,4 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }),
   );
   return Response.json({ tasks });
-}
+});
