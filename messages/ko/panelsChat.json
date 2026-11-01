@@ -543,5 +543,12 @@
     "publishNow": "게시하기",
     "reviewRunning": "수정 사항의 보안 검사가 아직 진행 중이에요. 잠시 후 다시 시도해 주세요.",
     "secretsMissing": "수정 사항을 게시하려면 함수의 프로덕션 시크릿이 필요해요: {names}. 추가한 뒤 다시 수정 사항을 게시하세요."
+  },
+  "viewer": {
+    "close": "닫기",
+    "download": "다운로드",
+    "noPreview": "미리보기를 사용할 수 없어요",
+    "loading": "여는 중…",
+    "failed": "이 파일을 열 수 없어요"
   }
 }

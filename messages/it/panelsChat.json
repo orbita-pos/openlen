@@ -543,5 +543,12 @@
     "publishNow": "Pubblica",
     "reviewRunning": "Il controllo di sicurezza della correzione è ancora in corso. Riprova tra poco.",
     "secretsMissing": "Per pubblicare la correzione mancano i segreti di produzione delle tue funzioni: {names}. Aggiungili e pubblica di nuovo la correzione."
+  },
+  "viewer": {
+    "close": "Chiudi",
+    "download": "Scarica",
+    "noPreview": "Anteprima non disponibile",
+    "loading": "Apertura…",
+    "failed": "Impossibile aprire questo file"
   }
 }

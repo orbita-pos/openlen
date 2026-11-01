@@ -543,5 +543,12 @@
     "publishNow": "Publish",
     "reviewRunning": "The security review of the fix is still running. Try again in a moment.",
     "secretsMissing": "Publishing the fix needs production secrets for your functions: {names}. Add them and publish the fix again."
+  },
+  "viewer": {
+    "close": "Close",
+    "download": "Download",
+    "noPreview": "No preview for this file",
+    "loading": "Opening…",
+    "failed": "Couldn't open this file"
   }
 }
