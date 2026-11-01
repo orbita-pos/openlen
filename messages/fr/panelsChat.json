@@ -523,7 +523,10 @@
     "removeConfirm": "Supprimer la tâche",
     "removeDone": "C'est fait : vous ne recevrez plus cet e-mail.",
     "removeInvalid": "Ce lien n'est pas valide.",
-    "removeGone": "Cette tâche n'existe plus."
+    "removeGone": "Cette tâche n'existe plus.",
+    "paused": "En pause",
+    "pause": "Mettre en pause",
+    "resume": "Reprendre"
   },
   "lenWatch": {
     "working": "Votre site publié ne se charge pas. Len s'en occupe.",

@@ -523,7 +523,10 @@
     "removeConfirm": "Aufgabe entfernen",
     "removeDone": "Erledigt: Du bekommst diese E-Mail nicht mehr.",
     "removeInvalid": "Dieser Link ist ungültig.",
-    "removeGone": "Diese Aufgabe gibt es nicht mehr."
+    "removeGone": "Diese Aufgabe gibt es nicht mehr.",
+    "paused": "Pausiert",
+    "pause": "Pausieren",
+    "resume": "Fortsetzen"
   },
   "lenWatch": {
     "working": "Deine veröffentlichte Seite lädt nicht. Len ist dran.",

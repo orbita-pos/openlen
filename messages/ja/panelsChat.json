@@ -523,7 +523,10 @@
     "removeConfirm": "タスクを削除",
     "removeDone": "完了: このメールはもう届きません。",
     "removeInvalid": "このリンクは無効です。",
-    "removeGone": "このタスクはもう存在しません。"
+    "removeGone": "このタスクはもう存在しません。",
+    "paused": "一時停止中",
+    "pause": "一時停止",
+    "resume": "再開"
   },
   "lenWatch": {
     "working": "公開中のサイトが表示されません。Len が対応しています。",
