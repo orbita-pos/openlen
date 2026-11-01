@@ -543,5 +543,12 @@
     "publishNow": "Publicar",
     "reviewRunning": "La revisión de seguridad del arreglo sigue en marcha. Prueba otra vez en un momento.",
     "secretsMissing": "Para publicar el arreglo faltan secretos de producción de tus funciones: {names}. Añádelos y vuelve a publicar el arreglo."
+  },
+  "viewer": {
+    "close": "Cerrar",
+    "download": "Descargar",
+    "noPreview": "Vista previa no disponible",
+    "loading": "Abriendo…",
+    "failed": "No se pudo abrir este archivo"
   }
 }

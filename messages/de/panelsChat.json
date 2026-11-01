@@ -543,5 +543,12 @@
     "publishNow": "Veröffentlichen",
     "reviewRunning": "Die Sicherheitsprüfung der Korrektur läuft noch. Versuch es gleich noch einmal.",
     "secretsMissing": "Zum Veröffentlichen der Korrektur fehlen Produktions-Secrets deiner Funktionen: {names}. Füge sie hinzu und veröffentliche die Korrektur noch einmal."
+  },
+  "viewer": {
+    "close": "Schließen",
+    "download": "Herunterladen",
+    "noPreview": "Keine Vorschau verfügbar",
+    "loading": "Wird geöffnet…",
+    "failed": "Datei konnte nicht geöffnet werden"
   }
 }

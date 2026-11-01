@@ -543,5 +543,12 @@
     "publishNow": "Publicar",
     "reviewRunning": "A revisão de segurança da correção ainda está em andamento. Tente de novo daqui a pouco.",
     "secretsMissing": "Para publicar a correção faltam segredos de produção das suas funções: {names}. Adicione-os e publique a correção de novo."
+  },
+  "viewer": {
+    "close": "Fechar",
+    "download": "Baixar",
+    "noPreview": "Pré-visualização indisponível",
+    "loading": "Abrindo…",
+    "failed": "Não foi possível abrir este arquivo"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import "./tokens.css";
+import "@/components/viewer/viewer.css";
 
 import {
   Suspense,

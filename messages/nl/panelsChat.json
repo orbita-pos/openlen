@@ -543,5 +543,12 @@
     "publishNow": "Publiceren",
     "reviewRunning": "De beveiligingscontrole van de correctie loopt nog. Probeer het zo opnieuw.",
     "secretsMissing": "Om de correctie te publiceren ontbreken productiegeheimen van je functies: {names}. Voeg ze toe en publiceer de correctie opnieuw."
+  },
+  "viewer": {
+    "close": "Sluiten",
+    "download": "Downloaden",
+    "noPreview": "Geen voorbeeld beschikbaar",
+    "loading": "Openen…",
+    "failed": "Dit bestand kon niet worden geopend"
   }
 }

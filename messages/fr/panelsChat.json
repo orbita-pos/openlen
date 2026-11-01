@@ -543,5 +543,12 @@
     "publishNow": "Publier",
     "reviewRunning": "La vérification de sécurité de la correction est encore en cours. Réessayez dans un instant.",
     "secretsMissing": "Pour publier la correction, il manque des secrets de production pour vos fonctions : {names}. Ajoutez-les et publiez à nouveau la correction."
+  },
+  "viewer": {
+    "close": "Fermer",
+    "download": "Télécharger",
+    "noPreview": "Aperçu indisponible",
+    "loading": "Ouverture…",
+    "failed": "Impossible d’ouvrir ce fichier"
   }
 }
