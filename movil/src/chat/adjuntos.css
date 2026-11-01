@@ -15,3 +15,9 @@
 .app-adjuntos-error{font-size:12px;line-height:1.4;margin:0 0 8px 48px;color:var(--c-ink);padding:8px 10px;border:1px solid var(--c-line);border-radius:12px;background:var(--c-field)}
 
 .ch-b.ch-file{display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}.ch-file b{font-size:14px}.ch-file small{font-size:11px;opacity:.75}
+
+/* What Len delivered (spec local 2026-10-31-len-movil, §5.1): one card per file, like the attached ones. */
+.ch-entregado{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px 48px;max-width:calc(100% - 64px)}
+.ch-entregado-card{display:flex;flex-direction:column;gap:3px;text-align:left;min-height:44px;padding:10px 14px;border:1px solid var(--c-line);border-radius:14px;background:var(--c-field);color:var(--c-ink);font:inherit;overflow-wrap:anywhere}
+.ch-entregado-card b{font-size:14px}.ch-entregado-card small{font-size:11px;opacity:.75}
+.ch-entregado-card:active,.ch-entregado-card:focus-visible{background:var(--c-qr-bg);outline:2px solid var(--c-line)}

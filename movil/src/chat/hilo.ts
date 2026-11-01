@@ -8,6 +8,7 @@ import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llama
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import type { EventoSse } from "@/lib/len-bench/sse";
+import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
 
@@ -28,7 +29,9 @@ export type ElementoDelHilo =
   | { clave: string; t: number; tipo: "tarjeta"; tarjeta: TarjetaDeLlamada }
   | { clave: string; t: number; tipo: "llamada"; segundos: number }
   | { clave: string; t: number; tipo: "aviso"; aviso: "sinMicro" | "tope" }
-  | { clave: string; t: number; tipo: "dia"; dia: string };
+  | { clave: string; t: number; tipo: "dia"; dia: string }
+  // Lo que Len entregó con `present` (spec local 2026-10-31-len-movil, §5.1): se abre en el visor.
+  | { clave: string; t: number; tipo: "entregado"; archivos: readonly DeliveredFile[] };
 
 export interface TurnoEnVivo {
   acciones?: NonNullable<StoredChatTurn["actions"]>;
@@ -63,6 +66,11 @@ export function parrafos(texto: string): string[] {
     .filter(Boolean);
 }
 
+/** What `present` delivered in a turn's cards, only where its route serves it (`deliveredFrom`). */
+function deliveredOf(actions: StoredChatTurn["actions"] | undefined): DeliveredFile[] {
+  return (actions ?? []).filter((a) => a.tool === "present").flatMap((a) => deliveredFrom(a.delivered) ?? []);
+}
+
 export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): ElementoDelHilo[] {
   const salida: ElementoDelHilo[] = [];
   for (const turno of turnos) {
@@ -75,6 +83,8 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
     // En curso: lo que lleva dicho lo pinta el turno en vivo (o el reenganche).
     if (turno.enCurso) continue;
     parrafos(turno.assistantReasoning).forEach((texto, i) => salida.push({ clave: `${turno.id}:len:${i}`, t, tipo: "len", texto }));
+    const entregado = deliveredOf(turno.actions);
+    if (entregado.length) salida.push({ clave: `${turno.id}:entregado`, t, tipo: "entregado", archivos: entregado });
     if (turno.status === "error") salida.push({ clave: `${turno.id}:fallo`, t, tipo: "fallo" });
     else if (turno.status === "applied" && !turno.noDocChange) salida.push({ clave: `${turno.id}:ver`, t, tipo: "verEnTuPagina" });
   }
@@ -102,8 +112,10 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
     case "action": {
       if (typeof d.tool !== "string") return v;
       const status = d.status === "running" || d.status === "error" || d.status === "warning" ? d.status : "done";
+      const entregado = d.tool === "present" ? deliveredFrom(d.delivered) : null;
       const accion: NonNullable<StoredChatTurn["actions"]>[number] = {
         tool: d.tool, status, summary: typeof d.summary === "string" ? d.summary : "",
+        ...(entregado ? { delivered: entregado } : {}),
         ...(Array.isArray(d.todos) ? { todos: d.todos.filter((x): x is { content: string; status: "pending" | "in_progress" | "completed" } => !!x && typeof x === "object" && typeof x.content === "string" && ["pending", "in_progress", "completed"].includes(x.status)) } : {}),
       };
       const acciones = [...(v.acciones ?? [])];
@@ -134,6 +146,8 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
 /** Lo que el turno en vivo pone en el hilo. `t`: ahora — el turno que corre es siempre lo último. */
 export function elementosDelTurno(v: TurnoEnVivo, t: number): ElementoDelHilo[] {
   const s: ElementoDelHilo[] = parrafos(v.texto).map((texto, i): ElementoDelHilo => ({ clave: `vivo:len:${i}`, t, tipo: "len", texto }));
+  const entregado = deliveredOf(v.acciones);
+  if (entregado.length) s.push({ clave: "vivo:entregado", t, tipo: "entregado", archivos: entregado });
   v.tarjetas.forEach((tarjeta, i) => s.push({ clave: `vivo:tarjeta:${i}`, t, tipo: "tarjeta", tarjeta }));
   if (v.error) s.push({ clave: "vivo:fallo", t, tipo: "fallo" });
   else if (v.terminado && v.cambioLaPagina) s.push({ clave: "vivo:ver", t, tipo: "verEnTuPagina" });

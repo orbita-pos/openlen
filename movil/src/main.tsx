@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
 import "./estilos/prototipo.css";
 import "./estilos/app.css";
+import "@/components/viewer/viewer.css";
 import { App } from "./app";
 import { seguirMovimientoDelTelefono } from "./movimiento";
 import { Textos } from "./textos";
