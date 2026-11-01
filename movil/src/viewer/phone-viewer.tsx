@@ -8,6 +8,7 @@ import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { Viewer, type ViewerFile } from "@/components/viewer/viewer";
 
+import { useAtras } from "../atras";
 import { openWith, shareFile } from "./file-actions";
 
 async function blobFrom(c: ClienteDeOpenLen, url: string): Promise<Blob> {
@@ -19,6 +20,7 @@ async function blobFrom(c: ClienteDeOpenLen, url: string): Promise<Blob> {
 export function PhoneViewer({ cliente, file, onClose }: { cliente: ClienteDeOpenLen; file: ViewerFile; onClose: () => void }) {
   const t = useTranslations("movil.entregado");
   const [busy, setBusy] = useState(false);
+  useAtras(true, onClose);
   const loadBytes = useCallback((url: string) => blobFrom(cliente, url), [cliente]);
   const openHtml = useCallback(async (url: string) => {
     const res = await cliente.pedir(`${url}/view`, { method: "POST" });
