@@ -71,6 +71,22 @@ describe("ScheduledTasksMenu", () => {
     expect(setPaused).toHaveBeenCalledWith("schedule-1", false);
   });
 
+  it("a pause that fails is said on its row", async () => {
+    const { host } = paint([TASK], undefined, undefined, vi.fn(async () => false));
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-pause]")!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe("scheduled.actionFailed");
+  });
+
+  it("a delete that fails keeps the confirmation and says so", async () => {
+    const { host } = paint([TASK], undefined, vi.fn(async () => false));
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+    act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-delete]")!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-confirm-delete]")!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe("scheduled.actionFailed");
+    expect(host.querySelector("[data-scheduled-confirm-delete]")).not.toBeNull();
+  });
+
   it("a one-shot task has neither pause nor resume", () => {
     const { host } = paint([{ ...TASK, kind: "at" }]);
     act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());

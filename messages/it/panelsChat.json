@@ -499,6 +499,7 @@
     "edit": "Modifica",
     "delete": "Elimina",
     "confirmDelete": "Eliminare questa attività?",
+    "actionFailed": "Non è riuscito. Riprova.",
     "save": "Salva",
     "cancel": "Annulla",
     "fieldName": "Nome",

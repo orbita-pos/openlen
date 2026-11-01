@@ -499,6 +499,7 @@
     "edit": "Bewerken",
     "delete": "Verwijderen",
     "confirmDelete": "Deze taak verwijderen?",
+    "actionFailed": "Dat lukte niet. Probeer het opnieuw.",
     "save": "Opslaan",
     "cancel": "Annuleren",
     "fieldName": "Naam",

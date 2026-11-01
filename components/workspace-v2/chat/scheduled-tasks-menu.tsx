@@ -155,7 +155,15 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const menu = useMandoDesplegable({ abierto: open, cerrar: () => setOpen(false) });
+  // A refused or failed pause/delete is said on its own row, not swallowed.
+  const act = async (id: string, run: () => Promise<boolean>) => {
+    setFailed(null);
+    const ok = await run();
+    if (!ok) setFailed(id);
+    return ok;
+  };
   if (scheduled.tasks.length === 0) return null;
   return (
     <div className="relative" ref={menu.refContenedor} onKeyDown={menu.alPulsarTecla}>
@@ -197,6 +205,11 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
                             : t("scheduled.lastFailed", { why: t(`scheduled.outcome_${task.lastRun.outcome ?? "failed"}`) })
                         }`}
                     </small>
+                    {failed === task.id && (
+                      <p role="alert" className="text-[11.5px] nc-bad">
+                        {t("scheduled.actionFailed")}
+                      </p>
+                    )}
                     {deleting === task.id && (
                       <div className="mt-1.5 flex items-center gap-1.5 text-[11.5px]">
                         <span className="fg">{t("scheduled.confirmDelete")}</span>
@@ -204,8 +217,7 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
                           type="button"
                           data-scheduled-confirm-delete=""
                           onClick={async () => {
-                            await scheduled.remove(task.id);
-                            setDeleting(null);
+                            if (await act(task.id, () => scheduled.remove(task.id))) setDeleting(null);
                           }}
                           className="rounded-md px-1.5 py-0.5 font-medium nc-bad hover:bg-side"
                         >
@@ -220,11 +232,11 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
                   <div className="flex shrink-0 items-start gap-0.5">
                     {task.kind !== "at" && task.kind !== "after" &&
                       (task.paused ? (
-                        <button type="button" data-scheduled-resume="" aria-label={t("scheduled.resume")} title={t("scheduled.resume")} onClick={() => void scheduled.setPaused(task.id, false)} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
+                        <button type="button" data-scheduled-resume="" aria-label={t("scheduled.resume")} title={t("scheduled.resume")} onClick={() => void act(task.id, () => scheduled.setPaused(task.id, false))} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
                           <Play size={12} />
                         </button>
                       ) : (
-                        <button type="button" data-scheduled-pause="" aria-label={t("scheduled.pause")} title={t("scheduled.pause")} onClick={() => void scheduled.setPaused(task.id, true)} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
+                        <button type="button" data-scheduled-pause="" aria-label={t("scheduled.pause")} title={t("scheduled.pause")} onClick={() => void act(task.id, () => scheduled.setPaused(task.id, true))} className="grid h-6 w-6 place-items-center rounded-md fg-muted hover:bg-elev hover:fg">
                           <Pause size={12} />
                         </button>
                       ))}

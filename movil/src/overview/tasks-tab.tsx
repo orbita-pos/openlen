@@ -24,6 +24,7 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [actionFailed, setActionFailed] = useState<string | null>(null);
   useAtras(true, onCerrar);
   useEffect(() => {
     let alive = true;
@@ -34,15 +35,15 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
     };
   }, [cliente, attempt]);
   const reload = () => setAttempt((n) => n + 1);
-  const run = async (f: () => Promise<unknown>) => {
+  // A refused or failed pause/delete is said on its own row, not swallowed.
+  const run = async (taskId: string, f: () => Promise<boolean>) => {
     if (busy) return;
     setBusy(true);
-    try {
-      await f();
-    } finally {
-      setBusy(false);
-      reload();
-    }
+    setActionFailed(null);
+    const ok = await f().catch(() => false);
+    setBusy(false);
+    if (!ok) setActionFailed(taskId);
+    reload();
   };
 
   const label = (i: OverviewItem) =>
@@ -68,10 +69,22 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
           {s.paused ? t("enPausa") : t("proxima", { when: when(s.scheduledAt) })}
           {s.lastRun ? ` · ${t(s.lastRun.outcome === "done" ? "ultimaBien" : "ultimaMal")}` : ""}
         </small>
+        {actionFailed === s.id && <small role="alert" className="resumen-fallo">{t("accionFallo")}</small>}
         {deleting === s.id ? (
           <div className="gestion-acciones">
             <span>{t("confirmarBorrar")}</span>
-            <button type="button" data-confirm-delete="" disabled={busy} onClick={() => void run(async () => { await deleteScheduledTask(cliente, s.projectId, s.id); setDeleting(null); })}>
+            <button
+              type="button"
+              data-confirm-delete=""
+              disabled={busy}
+              onClick={() =>
+                void run(s.id, async () => {
+                  const ok = await deleteScheduledTask(cliente, s.projectId, s.id);
+                  if (ok) setDeleting(null);
+                  return ok;
+                })
+              }
+            >
               {t("borrar")}
             </button>
             <button type="button" onClick={() => setDeleting(null)}>
@@ -82,11 +95,11 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
           <div className="gestion-acciones">
             {s.recurring &&
               (s.paused ? (
-                <button type="button" data-resume="" disabled={busy} onClick={() => void run(() => setTaskPaused(cliente, s.projectId, s.id, false))}>
+                <button type="button" data-resume="" disabled={busy} onClick={() => void run(s.id, () => setTaskPaused(cliente, s.projectId, s.id, false))}>
                   {t("reanudar")}
                 </button>
               ) : (
-                <button type="button" data-pause="" disabled={busy} onClick={() => void run(() => setTaskPaused(cliente, s.projectId, s.id, true))}>
+                <button type="button" data-pause="" disabled={busy} onClick={() => void run(s.id, () => setTaskPaused(cliente, s.projectId, s.id, true))}>
                   {t("pausar")}
                 </button>
               ))}
