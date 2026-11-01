@@ -7,16 +7,18 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-type PdfDocument = { numPages: number; getPage(n: number): Promise<PdfPage>; destroy(): Promise<void> };
+type PdfDocument = { numPages: number; getPage(n: number): Promise<PdfPage> };
 type PdfPage = {
   getViewport(o: { scale: number }): { width: number; height: number };
   render(o: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number }; canvas: HTMLCanvasElement }): { promise: Promise<void> };
 };
+/** What `getDocument()` returns. In pdf.js 6 only this task has `destroy()`, not the document it opens. */
+type PdfLoading = { promise: Promise<PdfDocument>; destroy(): Promise<void> };
 
-async function openPdf(blob: Blob): Promise<PdfDocument> {
+async function openPdf(blob: Blob): Promise<PdfLoading> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-  return (await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise) as unknown as PdfDocument;
+  return pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }) as unknown as PdfLoading;
 }
 
 export function PdfPages({ blob, pageLabel }: { blob: Blob; pageLabel: (n: number, total: number) => string }) {
@@ -24,18 +26,17 @@ export function PdfPages({ blob, pageLabel }: { blob: Blob; pageLabel: (n: numbe
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let alive = true;
-    let opened: PdfDocument | null = null;
-    openPdf(blob).then(
-      (d) => {
-        opened = d;
-        if (alive) setDoc(d);
-        else void d.destroy();
-      },
-      () => alive && setFailed(true),
-    );
+    let loading: PdfLoading | null = null;
+    openPdf(blob)
+      .then((task) => {
+        loading = task;
+        if (!alive) return void task.destroy();
+        return task.promise.then((d) => alive && setDoc(d));
+      })
+      .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
-      void opened?.destroy();
+      void loading?.destroy();
     };
   }, [blob]);
   if (failed) return <p className="viewer-note">PDF</p>;
