@@ -120,3 +120,44 @@ describe("Viewer", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:http://x/1");
   });
 });
+
+// Found by the final review: the phone's WebView has its own zoom off (Capacitor), so pinching did
+// nothing. The viewer zooms images and PDFs itself.
+describe("Viewer zoom", () => {
+  const zoomOf = (host: HTMLElement) => (host.querySelector(".viewer-zoom") as HTMLElement | null)?.style.width;
+  const touch = (target: Element, type: string, points: [number, number][]) => {
+    const e = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(e, "touches", { value: points.map(([clientX, clientY]) => ({ clientX, clientY })) });
+    act(() => void target.dispatchEvent(e));
+  };
+
+  it("a double tap or double click zooms an image in, and another one out", async () => {
+    const { host } = await paint(file("a.png"));
+    const body = host.querySelector(".viewer-body")!;
+    expect(zoomOf(host)).toBe("100%");
+    act(() => void body.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+    expect(zoomOf(host)).toBe("250%");
+    act(() => void body.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+    expect(zoomOf(host)).toBe("100%");
+  });
+
+  it("two fingers pinch a PDF's zoom, between 1x and 4x", async () => {
+    const { host } = await paint(file("a.pdf"));
+    const body = host.querySelector(".viewer-body")!;
+    touch(body, "touchstart", [[100, 100], [200, 100]]);
+    touch(body, "touchmove", [[50, 100], [250, 100]]);
+    expect(zoomOf(host)).toBe("200%");
+    touch(body, "touchmove", [[0, 100], [5000, 100]]);
+    expect(zoomOf(host)).toBe("400%");
+    touch(body, "touchmove", [[149, 100], [151, 100]]);
+    expect(zoomOf(host)).toBe("100%");
+    touch(body, "touchend", []);
+  });
+
+  it("a page, a video or a text is not zoomed by the viewer", async () => {
+    for (const name of ["a.html", "a.mp4", "a.txt"]) {
+      const { host } = await paint(file(name));
+      expect(host.querySelector(".viewer-zoom")).toBeNull();
+    }
+  });
+});
