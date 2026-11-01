@@ -1,7 +1,7 @@
 // La pantalla principal (escena 5 del prototipo): la barra, tu página de
 // verdad en vista previa y la hoja de Len. La llamada (Task 10) se abre desde
 // la hoja y, pequeña, flota encima.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { App as AppNativa } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -125,7 +125,17 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     document.addEventListener("pointerdown", fuera);
     return () => { document.removeEventListener("pointerdown", fuera); devolverFoco(antes); };
   }, [menu]);
-  const deslizarHoja = useHojaDeslizable({ encogida: hojaMin, alCambiar: setHojaMin });
+  // Encogida, la hoja no tapa el final de la página (Jesús, 01/11): la página acaba encima de ella. Se acorta
+  // cuando la hoja termina de bajar (.32 s, app.css) y, al abrirla, vuelve a todo el alto en el acto: abierta
+  // la tapa igual, y así no se ve un hueco mientras la hoja se mueve.
+  const [visibleEncogida, setVisibleEncogida] = useState(0);
+  const [paginaCorta, setPaginaCorta] = useState(false);
+  useEffect(() => {
+    if (!hojaMin || selector) { setPaginaCorta(false); return; }
+    const espera = setTimeout(() => setPaginaCorta(true), 320);
+    return () => clearTimeout(espera);
+  }, [hojaMin, selector]);
+  const deslizarHoja = useHojaDeslizable({ encogida: hojaMin, alCambiar: setHojaMin, alMedir: setVisibleEncogida });
 
   const cargar = useCallback(async (conservarPantalla = false) => {
     if (!conservarPantalla) setSinRed(false);
@@ -226,7 +236,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   return (
     <>
       <section className="lm-layer lm-app is-on" data-mode="page">
-        <div className={`lm-pagehost app-con-iframe${tamano !== "cel" ? " is-dv" : ""}`}>
+        <div className={`lm-pagehost app-con-iframe${tamano !== "cel" ? " is-dv" : ""}`} style={{ "--app-hoja": paginaCorta ? `${visibleEncogida}px` : "0px" } as CSSProperties}>
           {vista && !vistaFallo ? (
             <iframe
               key={recarga}
@@ -236,7 +246,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               sandbox={SANDBOX_REMOTO}
               allow={ALLOW_REMOTO}
               title={p?.title ?? "Vista previa"}
-              style={tamano === "cel" ? undefined : { width: ANCHO[tamano], transform: `scale(${390 / ANCHO[tamano]})`, transformOrigin: "0 0", height: `calc((100% - var(--app-barra)) * ${ANCHO[tamano] / 390})` }}
+              style={tamano === "cel" ? undefined : { width: ANCHO[tamano], transform: `scale(${390 / ANCHO[tamano]})`, transformOrigin: "0 0", height: `calc((100% - var(--app-barra) - var(--app-hoja, 0px)) * ${ANCHO[tamano] / 390})` }}
               onError={() => setVistaFallo(true)}
             />
           ) : vistaFallo ? (

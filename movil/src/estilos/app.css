@@ -17,7 +17,7 @@ body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; -webkit-tap-hig
 .app-lienzo .lm-dvmenu { top: calc(var(--app-barra) - 4px); }
 .app-lienzo .lm-sheet { padding-bottom: calc(18px + var(--app-abajo)); }
 /* la vista previa real: un iframe que llena el hueco entre la barra y el borde */
-.app-vista { position: absolute; top: var(--app-barra); left: 0; right: 0; bottom: 0; border: 0; width: 100%; height: calc(100% - var(--app-barra)); background: #fff; }
+.app-vista { position: absolute; top: var(--app-barra); left: 0; right: 0; bottom: 0; border: 0; width: 100%; height: calc(100% - var(--app-barra) - var(--app-hoja, 0px)); background: #fff; }
 .lm-pagehost.app-con-iframe { padding: 0; overflow: hidden; }
 .app-aviso { position: absolute; left: 24px; right: 24px; top: 46%; text-align: center; font: 500 15px/1.4 Inter, sans-serif; color: var(--lm-muted); }
 /* en las capas naranjas («Entrar», «Llamando…») el aviso va encima de los

@@ -1,6 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 
-type Opciones = { encogida: boolean; alCambiar: (encogida: boolean) => void };
+/** `alMedir`: cuánto queda a la vista con la hoja encogida (su alto menos el cuerpo), para que la página
+ *  acabe encima de ella y no debajo. */
+type Opciones = { encogida: boolean; alCambiar: (encogida: boolean) => void; alMedir?: (visibleEncogida: number) => void };
 
 // La hoja conserva su tamaño: sólo cambia su posición. El cuerpo nunca sale
 // del layout y su opacidad sigue al dedo, también al invertir el gesto.
@@ -37,6 +39,7 @@ export function useHojaDeslizable(op: Opciones) {
       const fraccion = recorrido ? posicion / recorrido : Number(ultimo.current.encogida);
       recorrido = cuerpo.offsetHeight;
       poner(arrastrando ? fraccion * recorrido : ultimo.current.encogida ? recorrido : 0);
+      ultimo.current.alMedir?.(el.offsetHeight - recorrido);
     };
     const scrollDe = (target: Element) => {
       for (let p: HTMLElement | null = target as HTMLElement; p && p !== el; p = p.parentElement) {
