@@ -160,9 +160,9 @@ export function nearCapNotice(o: { hasList: boolean; goalContinues: boolean }): 
 }
 
 /**
- * Claude Code's TodoWrite reminder (binary 2.1.304: `todo_reminder`, its
- * `TURNS_SINCE_WRITE: 10, TURNS_BETWEEN_REMINDERS: 10` and its text, with the
- * tool's name). Measured in production on 24/10/2026: Len wrote a 5-step list
+ * Claude Code's TodoWrite reminder (its 10 steps since the last write, its 10
+ * between reminders and its text, with the tool's name). Measured in
+ * production on 24/10/2026: Len wrote a 5-step list
  * at the start of a 40-call turn and never touched it again, so the user saw
  * "0 of 5" while the app got built. Claude Code counts the assistant messages
  * back through the whole conversation — earlier turns too — to the last

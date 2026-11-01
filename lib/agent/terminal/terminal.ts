@@ -17,8 +17,7 @@ import type { CurlRequest, FunctionsCurl } from "@/lib/functions/curl-types";
 import type { TerminalBackend } from "./backend";
 import { formatDuration } from "./formato";
 
-/** El tiempo de un comando, el del `Bash` de Claude Code (leído en su binario
- *  2.1.293: `BASH_DEFAULT_TIMEOUT_MS`, `BASH_MAX_TIMEOUT_MS`; plan 04 de las
+/** El tiempo de un comando, el del `Bash` de Claude Code (plan 04 de las
  *  apps, tarea 7): 120 s si no se pide otro, y hasta 600 s con `timeout`. */
 export const DEFAULT_TIMEOUT_MS = 120_000;
 export const MAX_TIMEOUT_MS = 600_000;
@@ -415,7 +414,7 @@ export class TerminalDeLen implements TerminalBackend {
       if (!(e instanceof CorteDuro)) throw e;
       await this.cerrar();
       return {
-        // Como Claude Code (uRe, binario 2.1.293): el aviso y el 143 de SIGTERM.
+        // Como Claude Code: el aviso y el 143 de SIGTERM.
         stdout: `Command timed out after ${formatDuration(tope)}`,
         stderr: "",
         exitCode: 143,

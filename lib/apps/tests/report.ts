@@ -4,7 +4,7 @@
 // la duración; `Start at` es la hora local. Sale con 1 si algo falló, si un
 // fichero no cargó o si no había pruebas. Sin tiempo para todo, lo que vitest
 // imprime hasta que lo matan (la cabecera y los ficheros acabados): el comando
-// se corta como en Claude Code (`timedOut`, 143).
+// se corta como en Claude Code (con el código 143).
 import { TEST_INCLUDE } from "./test-files";
 import type { TestFailure, TestFileResult, TestRun } from "./run-tests";
 

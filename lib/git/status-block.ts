@@ -1,10 +1,10 @@
-// The git status block Len gets at the start of each turn: Claude Code's, read in its binary
-// (2.1.296), with "conversation" said as "turn" — a conversation with Len lasts days (spec §5).
+// The git status block Len gets at the start of each turn: Claude Code's, with "conversation"
+// said as "turn" — a conversation with Len lasts days (spec §5).
 const MAX_STATUS = 2000;
 
 export function formatGitStatusBlock(p: {
   readonly branch: string;
-  /** With a remote, Claude Code's «Main branch (you will usually use this for PRs)»; null or absent without one. */
+  /** With a remote, Claude Code's main-branch line; null or absent without one. */
   readonly mainBranch?: string | null;
   readonly user: string;
   readonly status: string;

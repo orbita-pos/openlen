@@ -2238,7 +2238,7 @@ describe("runAgentLoop — lo que dejan las escrituras vuelve al modelo", () => 
 
   // Plan 03 de las apps: los tipos y el lint llegan DESPUÉS de la herramienta
   // que los causó, y se recogen antes de cada llamada al modelo, como los
-  // adjuntos `lsp_diagnostics` de Claude Code.
+  // diagnósticos del LSP que adjunta Claude Code.
   it("🔴 lo que llega tarde (lateDiagnostics) va en el `<new-diagnostics>` de la tanda siguiente", async () => {
     const vistos: Message[][] = [];
     const tardios = [
@@ -4532,7 +4532,7 @@ describe("the live transcript", () => {
   });
 });
 
-// A3 of Len 3.1, Claude Code's `elapsed_time_reminder` (binary 2.1.304): after every round of tools the
+// A3 of Len 3.1, as Claude Code does: after every round of tools the
 // model reads how long the turn has been running, in a <system-reminder> at the end of the step — never
 // in the system prompt, so the cached prefix stays. The clock starts with the user's message and starts
 // over with a correction. Anthropic measured it: runs finish sooner and cost less.
@@ -4573,7 +4573,7 @@ describe("the elapsed-time reminder", () => {
   });
 });
 
-// Claude Code's `silent_turn_reminder` (binary 2.1.304): after 5 model steps in a row with nothing the person
+// As Claude Code does: after 5 model steps in a row with nothing the person
 // can see — no text, no question to them — the step ends with its text in a <system-reminder>; at most 3
 // times per silent stretch. Len speaking, or a message from the person, starts the count over.
 describe("the silent-turn reminder", () => {

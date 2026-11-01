@@ -1,12 +1,12 @@
 // @vitest-environment node
-// Los formatos del Bash de Claude Code (leídos en su binario 2.1.293).
+// Los formatos del Bash de Claude Code.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatDuration, formatFileSize, persistedOutput } from "./formato";
 
 describe("como Claude Code", () => {
-  it("formatDuration: su Zt", () => {
+  it("formatDuration: como el de Claude Code", () => {
     expect([0, 1000, 30_000, 59_999, 90_500, 120_000, 600_000].map(formatDuration)).toEqual(["0s", "1s", "30s", "59s", "1m 31s", "2m 0s", "10m 0s"]);
   });
 

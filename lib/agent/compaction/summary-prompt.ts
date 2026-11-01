@@ -64,8 +64,8 @@ export function buildSummaryRequest(messages: readonly Message[], span: Span, in
   return [...messages.slice(0, span.end), { role: "user", content: summaryInstruction(instructions) }];
 }
 
-/** El marcador de Claude Code en el reintento de un resumen que no cupo
- *  (`compact_ptl_retry`), literal del binario. */
+/** El marcador de Claude Code en el reintento de un resumen que no cupo,
+ *  tal cual. */
 export const COMPACTION_RETRY_MARKER = "[earlier conversation truncated for compaction retry]";
 
 /** A11 · la petición del resumen sin la mitad más vieja del tramo, con el
