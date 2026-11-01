@@ -195,6 +195,17 @@ describe("pauseTask / resumeTask", () => {
     expect(await store.dueTasks(resumeAt, 10)).toEqual([]);
     expect(await store.resumeTask("p1", "missing", resumeAt)).toBe("not_found");
   });
+
+  // Found in the browser: pause, then resume before Monday → 500 (DeepSeek's resolver refuses a time
+  // before the saved run).
+  it("resuming before the next run keeps that run", async () => {
+    const created = await store.createTask(input("t1"));
+    await store.pauseTask("p1", "t1", new Date(NOW));
+    const resumed = await store.resumeTask("p1", "t1", new Date(NOW + 60 * 60_000));
+    expect(resumed !== "not_found" && resumed.pausedAt).toBeNull();
+    expect(resumed !== "not_found" && resumed.scheduledAt.toISOString()).toBe(created.scheduledAt.toISOString());
+    expect(resumed !== "not_found" && resumed.record.scheduledAt).toBe(created.record.scheduledAt);
+  });
 });
 
 describe("across projects (the phone's «Tareas»)", () => {

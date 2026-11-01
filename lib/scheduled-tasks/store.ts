@@ -145,7 +145,11 @@ export async function resumeTask(projectId: string, id: string, now: Date): Prom
   const task = await getTask(projectId, id);
   if (!task || task.status !== "active") return "not_found";
   if (!task.pausedAt || !isRecurringScheduleRecord(task.record)) return task;
-  const next = resolveRecurringOccurrence(task.record, now.getTime()).nextScheduledAt ?? task.record.scheduledAt;
+  // A run still ahead stands (DeepSeek's resolver only answers from the saved run on).
+  const next =
+    Date.parse(task.record.scheduledAt) > now.getTime()
+      ? task.record.scheduledAt
+      : (resolveRecurringOccurrence(task.record, now.getTime()).nextScheduledAt ?? task.record.scheduledAt);
   const [row] = await db
     .update(schema.scheduledTasks)
     .set({ pausedAt: null, record: { ...task.record, scheduledAt: next } as ScheduleRecord, scheduledAt: new Date(next), updatedAt: now })
