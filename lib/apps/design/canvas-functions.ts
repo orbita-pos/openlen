@@ -5,7 +5,7 @@
 // que `decl` deja definido en la página.
 //
 // La técnica de subir por las fibras desde un nodo del DOM es la del script
-// de Claude Code para sus sistemas de diseño (2.1.296): `__reactFiber$` →
+// de Claude Code para sus sistemas de diseño: `__reactFiber$` →
 // `fiber.return`. El origen de cada fibra lo apunta nuestro jsx-dev-runtime
 // (`lib/apps/design/jsx-dev-runtime.ts`) con la clave `element.props`.
 

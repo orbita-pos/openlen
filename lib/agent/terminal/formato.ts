@@ -1,9 +1,9 @@
-// lib/agent/terminal/formato.ts — LOS FORMATOS DEL `Bash` DE CLAUDE CODE (leídos
-// en su binario 2.1.293, 2026-10-09; plan 04 de las apps, tarea 7): cómo dice
+// lib/agent/terminal/formato.ts — LOS FORMATOS DEL `Bash` DE CLAUDE CODE
+// (2026-10-09; plan 04 de las apps, tarea 7): cómo dice
 // un tiempo («Command timed out after 2m 0s»), un tamaño y la salida que no
 // cabe (`<persisted-output>`). Puro.
 
-/** Su `Zt`: bajo un minuto, segundos enteros; si no, `Xm Ys` (y horas y días). */
+/** Como Claude Code: bajo un minuto, segundos enteros; si no, `Xm Ys` (y horas y días). */
 export function formatDuration(ms: number): string {
   if (ms < 60_000) {
     if (ms === 0) return "0s";

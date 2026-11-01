@@ -97,7 +97,7 @@ export function redactarDiagnosticos(ds: readonly Diagnostico[]): string | null 
 /**
  * LO NUEVO, y una sola vez: resta la línea base del fichero (lo que ya tenía
  * antes de que Len lo tocara, como la línea base de Claude Code) y lo que ya se le
- * entregó en este turno (el `delivered` del registro).
+ * entregó en este turno (como el registro de Claude Code).
  */
 export class NuevosDiagnosticos {
   #entregados = new Set<string>();

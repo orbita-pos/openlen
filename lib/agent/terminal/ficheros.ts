@@ -63,14 +63,14 @@ export function cambiosDeLaTerminal(
   return cambios;
 }
 
-/** Hasta dónde llega la salida que lee el modelo: el de Claude Code (binario
- *  2.1.293): lo que pasa de aquí va a un fichero (`persistedOutput`). */
+/** Hasta dónde llega la salida que lee el modelo: el de Claude Code. Lo que
+ *  pasa de aquí va a un fichero (`persistedOutput`). */
 export const MAX_SALIDA = 30_000;
 
 /** Lo que lee el modelo de un comando sin salida: el texto de Claude Code
- *  para un resultado vacío, `(${tool} completed with no output)`. */
+ *  para un resultado vacío, con el nombre de la herramienta. */
 const SIN_SALIDA = "(bash completed with no output)";
-/** El recorte de la salida de un fallo, su `cu`: 10.000 caracteres (5.000 del
+/** El recorte de la salida de un fallo, como Claude Code: 10.000 caracteres (5.000 del
  *  principio y 5.000 del final), y sólo si pasa de 10.000 + 1.024. */
 const MAX_FALLO = 10_000;
 const HOLGURA_DEL_FALLO = 1_024;
@@ -82,9 +82,8 @@ function recortarFallo(texto: string): string {
 }
 
 /**
- * LA SALIDA DE UN COMANDO COMO LA DEVUELVE EL `Bash` DE CLAUDE CODE (leído en
- * su binario 2.1.293: `mapToolResultToToolResultBlockParam` y, si falla, el
- * error `YW` que formatea `MKr`): si no falla, lo que escribió —sin líneas en
+ * LA SALIDA DE UN COMANDO COMO LA DEVUELVE EL `Bash` DE CLAUDE CODE: si no
+ * falla, lo que escribió —sin líneas en
  * blanco delante ni espacio detrás— y, si pasa de 30.000 caracteres, el bloque
  * `<persisted-output>`; si falla, «Exit code N» en la primera línea y lo que
  * escribió, recortado por el medio a 10.000. Detrás, lo que pasó al guardar.

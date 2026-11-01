@@ -169,7 +169,7 @@ describe("historialDesdeLaBase", () => {
   // H05 de la auditoría del 22/09), aunque sus escrituras ya estuvieran en el
   // proyecto. La marca es la de Claude Code para una sesión que se acabó sin que
   // nadie lo pidiera, letra por letra: no se reescribe.
-  it("la marca es la de Claude Code (2.1.309), tal cual", () => {
+  it("la marca es la de Claude Code, tal cual", () => {
     expect(CUT_OFF_TURN_MARK).toBe("[Request interrupted: the session ended before this agent finished. Nobody asked it to stop.]");
   });
 

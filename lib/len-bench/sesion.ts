@@ -163,7 +163,7 @@ export function tarjetaDePublicar(eventos: readonly EventoSse[]): TarjetaDePubli
  * El TAP del dueño en la tarjeta: lo mismo que `agent-confirm-card.tsx`. Un
  * nombre nuevo se comprueba primero (`/api/subdomains/check`); re-publicar el
  * suyo no. `languages` sólo va si Len eligió idiomas: la ruta trata una clave
- * PRESENTE como «guarda esto». Como el `artifactPublishGranted` del corredor de
+ * PRESENTE como «guarda esto». Como el permiso de publicar del corredor de
  * Claude Code: sólo se toca en los encargos que lo conceden (`publicaLen`).
  */
 export async function tocarPublicar(o: {

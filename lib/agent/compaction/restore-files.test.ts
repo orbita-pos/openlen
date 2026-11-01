@@ -9,7 +9,7 @@ import {
 } from "./restore-files";
 
 // A11: after a summary, Claude Code attaches again the files read most recently
-// (binary 2.1.304, `Clr`: 5 files, 5,000 tokens each, 50,000 in all).
+// (5 files, 5,000 tokens each, 50,000 in all).
 describe("restoredFilesMessage", () => {
   const file = (path: string, tokens = 10, output: string | null = `1\t<h1>${path}</h1>`) => ({ path, output, tokens });
 

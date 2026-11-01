@@ -4,7 +4,7 @@ import { foldLoadedSkills } from "./tool";
 
 const MARK = { messages: [{ role: "user", content: "summary" }], fromTranscript: 0, trigger: "pressure", preTokens: 10, postTokens: 2 };
 
-// Which skills the conversation already has, as STATE (Claude Code's `invokedSkills`, DeepSeek's
+// Which skills the conversation already has, as STATE (as Claude Code keeps them, and DeepSeek's
 // messages sourced `skill-invocation`): each row records what its turn loaded, and a summary forgets
 // what came before it. Never read from text anyone could type.
 describe("foldLoadedSkills", () => {

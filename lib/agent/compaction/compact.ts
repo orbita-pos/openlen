@@ -91,7 +91,7 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
   if (!span) return prunedOnly;
   const instructions = o.instructions ?? null;
   let summary = await o.summarize(buildSummaryRequest(pruned.messages, span, instructions));
-  // A11 · el `compact_ptl_retry` de Claude Code: si el resumen no cabe, UN
+  // A11 · como Claude Code: si el resumen no cabe, UN
   // reintento sin la mitad más vieja del tramo y su marcador en su lugar.
   if (summary === "too_long") summary = await o.summarize(buildTruncatedSummaryRequest(pruned.messages, span, instructions));
   if (!summary || summary === "too_long" || summary.trim() === "") return prunedOnly;
