@@ -5,6 +5,7 @@
 import { Capacitor } from "@capacitor/core";
 import { App as AppNativa } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
+import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 
 const CLAVE = "len-llave";
@@ -49,6 +50,14 @@ export const plataforma = {
       if (canGoBack) window.history.back();
       else void AppNativa.minimizeApp();
     });
+  },
+  /** De pie siempre (Jesús, 01/11): la app está dibujada para un teléfono de pie y acostada quedaba una
+   *  columna estrecha en medio. Sólo el visor gira (`girarLibre`), para ver un PDF o un vídeo a lo ancho. */
+  soloDePie(): void {
+    if (!enWeb) void ScreenOrientation.lock({ orientation: "portrait" }).catch(() => {});
+  },
+  girarLibre(): void {
+    if (!enWeb) void ScreenOrientation.unlock().catch(() => {});
   },
   nombreDelTelefono(): string {
     return enWeb ? "Navegador de la PC" : `Android (${navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? "?"})`;
