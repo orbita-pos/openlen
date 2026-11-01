@@ -184,6 +184,16 @@ describe("pauseTask / resumeTask", () => {
     expect(updated !== "conflict" && updated !== "not_found" && updated.pausedAt?.getTime()).toBe(NOW);
   });
 
+  // A one-shot can't be paused (nor resumed: both screens hide the button), so it can't stay paused.
+  it("editing a paused task into a one-shot unpauses it, and it runs at its time", async () => {
+    await store.createTask(input("t1"));
+    await store.pauseTask("p1", "t1", new Date(NOW));
+    const at = createAtScheduleRecord(ScheduleId("t1"), "p", "2026-11-02T09:03:00-06:00", NOW, "Una vez");
+    const updated = await store.updateTask("p1", "t1", at);
+    expect(updated !== "conflict" && updated !== "not_found" && updated.pausedAt).toBeNull();
+    expect((await store.dueTasks(new Date("2026-11-02T15:04:00Z"), 10)).map((t) => t.id)).toEqual(["t1"]);
+  });
+
   it("resuming three weeks later skips what was missed and goes to the next future run", async () => {
     await store.createTask(input("t1"));
     await store.pauseTask("p1", "t1", new Date(NOW));
