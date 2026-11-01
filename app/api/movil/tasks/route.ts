@@ -2,6 +2,7 @@
 // Duet's Tasks: what needs the person, what Len is doing, their scheduled tasks and what was resolved,
 // across every project they can see (`buildTasksOverview`, with the real stores here).
 import { liveTurns } from "@/lib/agent/direcciones";
+import { deliveriesBetween } from "@/lib/agent/skills/delivery-index";
 import { activeIncident, resolvedSince } from "@/lib/len-watch/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
@@ -27,6 +28,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     lastTurnOf: lastFinishedTurnOf,
     incidentOf: activeIncident,
     resolvedIncidents: resolvedSince,
+    deliveriesBetween,
   });
   return Response.json(overview, { headers: { "cache-control": "no-store" } });
 });

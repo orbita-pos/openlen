@@ -3,13 +3,16 @@
 // every project they can see. A row goes to its project, where it is answered; a scheduled task is
 // paused, resumed, edited or deleted here, like the web clock. The panel wears Gestión's look.
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import type { ViewerFile } from "@/components/viewer/viewer";
 import type { OverviewItem, ScheduledItem, TasksOverview } from "@/lib/movil/tasks-overview";
 
 import { useAtras } from "../atras";
 import { deleteScheduledTask, fetchTasks, setTaskPaused } from "../api/overview";
+import { PhoneViewer } from "../viewer/phone-viewer";
 import { ScheduledTaskEditor } from "./scheduled-task-editor";
 import "../gestion/gestion.css";
 import "./overview.css";
@@ -25,6 +28,7 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
   const [deleting, setDeleting] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ViewerFile | null>(null);
   useAtras(true, onCerrar);
   useEffect(() => {
     let alive = true;
@@ -69,6 +73,20 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
           {s.paused ? t("enPausa") : t("proxima", { when: when(s.scheduledAt) })}
           {s.lastRun ? ` · ${t(s.lastRun.outcome === "done" ? "ultimaBien" : "ultimaMal")}` : ""}
         </small>
+        {s.lastRun?.files.length ? (
+          <div className="resumen-archivos">
+            {s.lastRun.files.map((f) => (
+              <button
+                key={f.url}
+                type="button"
+                data-run-file=""
+                onClick={() => setViewing({ name: f.name, url: f.url, size: f.size, ...(f.description ? { description: f.description } : {}), ...(f.previewUrl ? { preview: f.previewUrl } : {}), projectTitle: s.projectTitle })}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
         {actionFailed === s.id && <small role="alert" className="resumen-fallo">{t("accionFallo")}</small>}
         {deleting === s.id ? (
           <div className="gestion-acciones">
@@ -149,6 +167,7 @@ export function TasksTab({ cliente, onAbrirProyecto, onCerrar }: { cliente: Clie
           </>
         )}
       </div>
+      {viewing && createPortal(<PhoneViewer cliente={cliente} file={viewing} onClose={() => setViewing(null)} />, document.body)}
     </section>
   );
 }

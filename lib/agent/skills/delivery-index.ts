@@ -7,7 +7,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { desc, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -33,6 +33,16 @@ export async function indexDeliveries(projectId: string, turnId: string, files: 
       })),
     )
     .onConflictDoNothing({ target: schema.deliveredFiles.url });
+}
+
+/** A project's files delivered between two instants (a scheduled run's), oldest first, as presented. */
+export async function deliveriesBetween(projectId: string, from: Date, to: Date): Promise<DeliveryIndexRow[]> {
+  return db
+    .select()
+    .from(schema.deliveredFiles)
+    .where(and(eq(schema.deliveredFiles.projectId, projectId), gte(schema.deliveredFiles.createdAt, from), lte(schema.deliveredFiles.createdAt, to)))
+    .orderBy(asc(schema.deliveredFiles.createdAt))
+    .limit(20);
 }
 
 export async function listDeliveries(projectIds: readonly string[], limit: number): Promise<DeliveryIndexRow[]> {

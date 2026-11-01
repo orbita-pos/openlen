@@ -5,6 +5,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, unknown>) => (v ? `${k} ${JSON.stringify(v)}` : k) }));
+vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string } }) => <div role="dialog" aria-label={file.name} /> }));
 vi.mock("../api/overview", () => ({ fetchTasks: vi.fn(), setTaskPaused: vi.fn(async () => true), editScheduledTask: vi.fn(async () => ({ ok: true })), deleteScheduledTask: vi.fn(async () => true) }));
 
 import type { TasksOverview } from "@/lib/movil/tasks-overview";
@@ -108,6 +109,17 @@ describe("TasksTab", () => {
     await act(async () => row().querySelector<HTMLButtonElement>("[data-confirm-delete]")!.click());
     expect(row().querySelector('[role="alert"]')?.textContent).toBe("accionFallo");
     expect(row().querySelector("[data-confirm-delete]")).not.toBeNull();
+  });
+
+  it("the last run's files open in the viewer", async () => {
+    const file = { name: "informe.pdf", url: "/api/projects/p1/deliveries/turn-1/ab12cd34-informe.pdf", size: 10, previewUrl: null, description: null };
+    const withFiles = { ...OVERVIEW, scheduled: [{ ...weekly, lastRun: { at: "2026-11-09T15:00:00.000Z", outcome: "done", reason: null, files: [file] } }] } as unknown as TasksOverview;
+    const { host } = await paint(withFiles);
+    const row = host.querySelector('[data-task="t1"]')!;
+    const button = row.querySelector<HTMLButtonElement>("[data-run-file]")!;
+    expect(button.textContent).toContain("informe.pdf");
+    act(() => button.click());
+    expect(document.body.querySelector('[role="dialog"][aria-label="informe.pdf"]')).not.toBeNull();
   });
 
   it("with nothing at all it says so", async () => {
