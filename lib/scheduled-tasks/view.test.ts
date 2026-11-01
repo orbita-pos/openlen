@@ -21,6 +21,20 @@ describe("viewForModel", () => {
     expect(v.id).toBe("d");
   });
 
+  it("says paused only when the task is paused", () => {
+    const now = Date.parse("2026-11-01T20:00:00Z");
+    const r = createDailyScheduleRecord(ScheduleId("d"), "p", { time: "09:03:00", time_zone: "America/Mexico_City" }, now, "T");
+    expect(viewForModel(r, now, "UTC", { pausedAt: new Date(now) }).paused).toBe(true);
+    expect("paused" in viewForModel(r, now, "UTC", { pausedAt: null })).toBe(false);
+  });
+
+  it("a task that is not paused reads byte for byte as before", () => {
+    const now = Date.parse("2026-11-01T20:00:00Z");
+    const r = createDailyScheduleRecord(ScheduleId("d"), "p", { time: "09:03:00", time_zone: "America/Mexico_City" }, now, "T");
+    expect(JSON.stringify(viewForModel(r, now, "UTC", { pausedAt: null }))).toBe(JSON.stringify(viewForModel(r, now, "UTC")));
+    expect(Object.keys(viewForModel(r, now, "UTC")).at(-1)).toBe("scheduledAtLocal");
+  });
+
   it("uses the task's zone for rules that carry none", () => {
     const now = Date.parse("2026-11-01T20:00:00Z");
     const r = createEveryScheduleRecord(ScheduleId("e"), "p", 3600, now, "T");

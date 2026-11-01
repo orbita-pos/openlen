@@ -20,7 +20,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     (await listTasks(id)).map(async (task) => {
       const run = task.lastRunId ? await getRun(task.lastRunId) : null;
       return {
-        ...viewForModel(task.record, now, task.timeZone),
+        ...viewForModel(task.record, now, task.timeZone, { pausedAt: task.pausedAt }),
         createdBy: task.createdBy,
         lastRun: run ? { at: run.occurrenceAt.toISOString(), outcome: run.outcome, reason: run.reason } : null,
       };

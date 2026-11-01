@@ -39,4 +39,6 @@ export const CREATE_SCHEDULED_TASKS: readonly string[] = [
   );`,
   `CREATE INDEX IF NOT EXISTS "scheduledTaskRuns_unfinished_idx" ON "scheduledTaskRuns" ("finishedAt") WHERE "finishedAt" IS NULL;`,
   `CREATE INDEX IF NOT EXISTS "scheduledTaskRuns_claimedAt_idx" ON "scheduledTaskRuns" ("claimedAt");`,
+  // Pausing a recurring task (spec local 2026-10-31-len-movil, §5.5).
+  `ALTER TABLE "scheduledTasks" ADD COLUMN IF NOT EXISTS "pausedAt" timestamptz;`,
 ];

@@ -8,6 +8,7 @@ import "server-only";
 import { and, asc, count, eq, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { isRecurringScheduleRecord, resolveRecurringOccurrence } from "./deepseek/domain";
 import type { ScheduleRecord } from "./deepseek/types";
 import { MAX_ACTIVE_TASKS_PER_PROJECT, OpenLenScheduleError } from "./limits";
 
@@ -98,11 +99,41 @@ export async function deleteTasksByCreator(projectId: string, userId: string): P
   return rows.length;
 }
 
+/**
+ * Pauses a recurring task (spec local 2026-10-31-len-movil, §5.5): it stays `active` (listed, counted in
+ * the limit of ten) but is never due. A one-shot is not paused: resumed late it would be lost quietly.
+ */
+export async function pauseTask(projectId: string, id: string, now: Date): Promise<TaskRow | "not_found" | "one_shot"> {
+  const task = await getTask(projectId, id);
+  if (!task || task.status !== "active") return "not_found";
+  if (!isRecurringScheduleRecord(task.record)) return "one_shot";
+  const [row] = await db
+    .update(schema.scheduledTasks)
+    .set({ pausedAt: now, updatedAt: now })
+    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id)))
+    .returning();
+  return row ?? "not_found";
+}
+
+/** Resumes a paused task at its next run after `now`: what it missed while paused is not run. */
+export async function resumeTask(projectId: string, id: string, now: Date): Promise<TaskRow | "not_found"> {
+  const task = await getTask(projectId, id);
+  if (!task || task.status !== "active") return "not_found";
+  if (!task.pausedAt || !isRecurringScheduleRecord(task.record)) return task;
+  const next = resolveRecurringOccurrence(task.record, now.getTime()).nextScheduledAt ?? task.record.scheduledAt;
+  const [row] = await db
+    .update(schema.scheduledTasks)
+    .set({ pausedAt: null, record: { ...task.record, scheduledAt: next } as ScheduleRecord, scheduledAt: new Date(next), updatedAt: now })
+    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id)))
+    .returning();
+  return row ?? "not_found";
+}
+
 export async function dueTasks(now: Date, limit: number): Promise<TaskRow[]> {
   return db
     .select()
     .from(schema.scheduledTasks)
-    .where(and(eq(schema.scheduledTasks.status, "active"), lte(schema.scheduledTasks.scheduledAt, now)))
+    .where(and(eq(schema.scheduledTasks.status, "active"), isNull(schema.scheduledTasks.pausedAt), lte(schema.scheduledTasks.scheduledAt, now)))
     .orderBy(asc(schema.scheduledTasks.scheduledAt))
     .limit(limit);
 }
@@ -130,6 +161,7 @@ export async function claimDue(
           eq(schema.scheduledTasks.id, task.id),
           sql`date_trunc('milliseconds', ${schema.scheduledTasks.scheduledAt}) = ${task.scheduledAt}`,
           eq(schema.scheduledTasks.status, "active"),
+          isNull(schema.scheduledTasks.pausedAt),
         ),
       )
       .returning({ id: schema.scheduledTasks.id });

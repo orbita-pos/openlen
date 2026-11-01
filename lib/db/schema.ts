@@ -2337,6 +2337,9 @@ export const scheduledTasks = pgTable(
     record: jsonb("record").$type<ScheduleRecord>().notNull(),
     scheduledAt: timestamp("scheduledAt", { mode: "date", withTimezone: true }).notNull(),
     status: text("status").$type<"active" | "inactive">().notNull().default("active"),
+    /** Paused by a person (spec local 2026-10-31-len-movil, §5.5): not due while set; still `active`,
+     *  so it counts in the limit of ten. Only recurring tasks are paused. */
+    pausedAt: timestamp("pausedAt", { mode: "date", withTimezone: true }),
     lastRunId: text("lastRunId"),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
