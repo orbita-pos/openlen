@@ -76,6 +76,20 @@
   cursor: pointer;
 }
 
+/* On a phone the buttons take their own row under the name: beside it they left the name one letter. */
+@media (max-width: 560px) {
+  .viewer-bar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .viewer-actions {
+    order: 3;
+    flex: 1 1 100%;
+    overflow-x: auto;
+  }
+}
+
 .viewer-body {
   position: relative;
   flex: 1;
