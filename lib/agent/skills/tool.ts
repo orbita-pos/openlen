@@ -51,7 +51,7 @@ export function renderSkillContent(s: ResolvedSkill): string {
 export const alreadyLoaded = (name: string) => `Skill /${name} is already loaded above; instructions unchanged.`;
 
 /**
- * Which skills the conversation already shows, as STATE (Claude Code's `invokedSkills`, DeepSeek's
+ * Which skills the conversation already shows, as STATE (as Claude Code keeps them, and DeepSeek's
  * messages sourced `skill-invocation`): each row records what its turn loaded (`skillsLoaded`), and a
  * summary forgets what came before it, as Claude Code forgets its invoked skills on compaction. Never
  * read from text, which anyone could type.

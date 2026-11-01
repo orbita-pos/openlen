@@ -78,7 +78,7 @@ describe("🔴 allow-same-origin: la frontera de verdad", () => {
   });
 
   it("el modo REMOTO la lleva porque su src es OTRO sitio (lienzo-<id>)", () => {
-    // Es lo que hacen la acción `preview` de Claude Code (su Nb) y v0: con la
+    // Es lo que hacen la acción `preview` de Claude Code y v0: con la
     // página en otro sitio, allow-same-origin da a la página SU origen, no el
     // de la app. Que ese src sea siempre un host lienzo-* lo fija
     // lib/lienzo/host.test.ts y la Task 10 de este plan.

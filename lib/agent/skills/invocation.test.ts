@@ -44,6 +44,6 @@ describe("withInvokedSkills", () => {
   });
 
   // ⚰️ «an invoked skill counts as loaded» read the injected <skill_content> back from the text. Loaded
-  // skills are state now (foldLoadedSkills, like Claude Code's invokedSkills): the route adds the
+  // skills are state now (foldLoadedSkills, like Claude Code): the route adds the
   // invoked names itself, tested in route.test.ts («the row keeps it as sentText»).
 });

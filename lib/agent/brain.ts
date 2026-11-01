@@ -85,9 +85,9 @@ export interface BrainCall {
   readonly effort: string | null;
   readonly startedAt: number;
   readonly durationMs: number;
-  /** Capa 0 (`slow_first_byte` de Claude Code): del inicio al primer evento; null si no llegó ninguno. */
+  /** Capa 0 (como el aviso de primer byte lento de Claude Code): del inicio al primer evento; null si no llegó ninguno. */
   readonly firstEventMs?: number | null;
-  /** Capa 0 (`streaming_stall`): el silencio más largo entre dos eventos seguidos. */
+  /** Capa 0 (como su aviso de flujo parado): el silencio más largo entre dos eventos seguidos. */
   readonly longestGapMs?: number | null;
   readonly usage: UsageTotals | null;
   readonly stop: FireworksStopReason["kind"];

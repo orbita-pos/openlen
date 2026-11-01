@@ -88,10 +88,10 @@ describe("TerminalDeLen", () => {
     expect((await t.ejecutar("echo sigue")).stdout).toBe("sigue\n");
   }, 20_000);
 
-  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y al pasarse lo de su binario (143, el aviso DELANTE de lo que alcanzó a escribir)", async () => {
+  it("🔴 el tiempo de Claude Code: 120 s por defecto, timeout hasta 600 s, y al pasarse lo suyo (143, el aviso DELANTE de lo que alcanzó a escribir)", async () => {
     expect([DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS]).toEqual([120_000, 600_000]);
     const { t } = terminal({});
-    // uRe de Claude Code 2.1.293: `s.stdout = r ? `${w} ${r}` : w` con w = «Command timed out after ${Zt(ms)}», y el código 143 (wot).
+    // Como Claude Code: el aviso de tiempo agotado delante de lo que alcanzó a escribir, y el código 143.
     // Lo que el guion escribió antes no llega: `just-bash` 3.6.0 lo tira al abortar (medido: «bash: execution aborted», stdout vacío).
     const r = await t.ejecutar("echo antes; sleep 3; echo tarde", { timeoutMs: 1000 });
     expect([r.stdout, r.stderr, r.exitCode]).toEqual(["Command timed out after 1s", "", 143]);

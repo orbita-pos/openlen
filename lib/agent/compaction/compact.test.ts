@@ -117,7 +117,7 @@ describe("compactIfNeeded", () => {
     expect(out.summarized).toBe(false);
   });
 
-  // A11: como el `compact_ptl_retry` de Claude Code. Sólo si la petición del
+  // A11: como el reintento del resumen de Claude Code. Sólo si la petición del
   // resumen tampoco cabe: un reintento sin la mitad más vieja del tramo y, en su
   // lugar, su marcador literal.
   it("🔴 A11: si el resumen no cabe, UN reintento con el marcador de Claude Code y sin la mitad más vieja", async () => {
@@ -140,7 +140,7 @@ describe("compactIfNeeded", () => {
     expect(summarize).toHaveBeenCalledTimes(1);
   });
 
-  // A11: qué ficheros vuelven tras resumir (como `Clr` de Claude Code): los
+  // A11: qué ficheros vuelven tras resumir (como en Claude Code): los
   // leídos en lo resumido, del más reciente al más viejo, sin los que siguen leídos en lo conservado.
   it("🔴 A11: readPaths son los Read del tramo resumido, del más reciente, sin repetir ni los del tramo conservado", async () => {
     const leer = (ruta: string): Message[] => [

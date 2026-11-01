@@ -22,11 +22,11 @@ export interface MensajeDelEquipo {
 export const MAX_MENSAJES_DEL_EQUIPO = 30;
 
 /** EL TOPE DEL SOBRE, el mismo que Claude Code pone al sobre de un mensaje
- *  retransmitido a una sesión (`S=16000` en su `FetchInboxMessage`, medido en
- *  el binario el 2026-10-07): si no cabe, los cuerpos se acortan con su marca
+ *  retransmitido a una sesión (16.000, medido el 2026-10-07): si no cabe, los
+ *  cuerpos se acortan con su marca
  *  `[…truncated N chars]`, y lo recortado se lee entero con `session_search`. */
 export const MAX_SOBRE_DEL_EQUIPO = 16_000;
-/** Lo mínimo que se deja de un cuerpo al acortarlo (su `I=64`). */
+/** Lo mínimo que se deja de un cuerpo al acortarlo (64, como Claude Code). */
 const MIN_CUERPO = 64;
 
 /** Los primeros `n` caracteres, sin partir un par sustituto, con la marca. */
@@ -44,12 +44,12 @@ const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 
 const cuando = (d: Date) => `${d.toISOString().slice(0, 16)}Z`;
 
-/** El tope del nombre visible, el del binario de Claude Code (`I=64` para
- *  `sender_display`): un nombre larguísimo no se mete entero en cada mensaje. */
+/** El tope del nombre visible, el de Claude Code (64 caracteres para el nombre
+ *  de quien envía): un nombre larguísimo no se mete entero en cada mensaje. */
 const MAX_NOMBRE = 64;
 const corto = (nombre: string) => (nombre.length > MAX_NOMBRE ? `${nombre.slice(0, MAX_NOMBRE)}…` : nombre);
 
-/** LAS MARCAS SÓLO VALEN DONDE LAS PONE EL SERVIDOR, como en el binario (la de
+/** LAS MARCAS SÓLO VALEN DONDE LAS PONE EL SERVIDOR, como en Claude Code (la de
  *  «tu usuario» vale en el sobre de su herramienta y en ningún otro sitio): en
  *  lo que escribe quien pide, un `<asked-by …>`, `<team-messages …>` o
  *  `<message …>` es texto, y se escapa para que no lo parezca. */

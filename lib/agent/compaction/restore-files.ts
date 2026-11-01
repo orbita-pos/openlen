@@ -1,9 +1,8 @@
 // A11 (spec local 2026-10-25-a11-continuity, point 8): after a summary, the files
-// read most recently come back, as Claude Code does (binary 2.1.304, `Clr`: the
-// most recent reads, `oXe` = 5 of them, each read with `rXe` = 5,000 tokens at
-// most, `klr` = 50,000 in all; a file that is too large comes back as its
-// `compact_file_reference` note). DeepSeek's harness has no such piece, so the
-// texts are Claude Code's, verbatim. Pure.
+// read most recently come back, as Claude Code does (the most recent reads, 5 of
+// them, each read with 5,000 tokens at most, 50,000 in all; a file that is too
+// large comes back as a short note that names it). DeepSeek's harness has no such
+// piece, so the texts are the same as Claude Code's. Pure.
 
 // Cache effect: only right after a summary, which already rebuilds the prefix; the message goes into the compaction mark and comes back from it byte for byte on later turns.
 import type { Message } from "@/lib/ai-gateway";

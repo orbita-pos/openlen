@@ -352,7 +352,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
         // El TAP. `publicar` nunca publica: deja una tarjeta y espera al dueño.
         // Un dueño que pidió publicar la toca antes de contestar, como en el
         // taller. Sólo si el encargo lo concede (`publicaLen`), como el
-        // `artifactPublishGranted` del corredor de Claude Code.
+        // permiso de publicar del corredor de Claude Code.
         const tarjeta = e.publicaLen ? tarjetaDePublicar(eventos) : null;
         if (tarjeta) {
           const tap = await tocarPublicar({ base: o.base, cookie: o.cookie, projectId, tarjeta });

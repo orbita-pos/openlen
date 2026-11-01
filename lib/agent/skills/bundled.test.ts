@@ -181,14 +181,14 @@ describe("bundled skills", () => {
       for (const must of ["works", "fails", "couldn't verify"]) expect(text(), must).toContain(must);
     });
 
-    // Claude Code's verify: «Evidence has to reach the reader» — it sends its screenshots. The user
+    // As Claude Code's verify skill, the evidence has to reach whoever reads it: it sends its screenshots. The user
     // doesn't see Len's; each is kept at the path in the tool's `screenshots`, and present delivers it.
     it("verify sends the screenshot that shows it with present", () => {
       for (const must of ["`screenshots`", "present"]) expect(text(), must).toContain(must);
     });
 
     // Real turn (27/10): Len took its one screenshot BEFORE sending the form, so it had no frame of the
-    // result to present. Claude Code's verify: «the one frame a reviewer looks at to see the feature».
+    // result to present. As in Claude Code's verify skill, it is the frame a reviewer looks at.
     it("verify takes its screenshot after acting, the frame it presents", () => {
       expect(text()).toContain("after acting");
     });

@@ -659,7 +659,7 @@ export function contentMap(html: string): string {
     if (linea !== undefined) muestra.push(linea);
   }
   // Y SE DICE QUE ES UNA MUESTRA. Es la disciplina del informe de `preview` de
-  // Claude Code, que nunca recorta en silencio («… N more not listed»): sin
+  // Claude Code, que nunca recorta en silencio (dice cuántas faltan): sin
   // esta línea el modelo puede leer la ausencia como una pista, y la ausencia
   // aquí no dice nada.
   return [
@@ -1428,8 +1428,8 @@ defect. Never set broken=true for it and never list it in issues.
   //
   // Las capturas viajan en el MISMO orden que esta lista, y se le pide al
   // modelo que empiece cada frase por la dirección de su página. Rotular es lo
-  // que hace el informe de `preview` de Claude Code («Capture 1
-  // (390 light):») dentro de una única respuesta; y el prefijo es una
+  // que hace el informe de `preview` de Claude Code (cada captura con su
+  // número y su vista) dentro de una única respuesta; y el prefijo es una
   // DIRECCIÓN, no un nombre, así que no es prosa: la frase que el modelo
   // escribe sigue viniendo entera en el idioma del usuario.
   //

@@ -1,6 +1,6 @@
 // @vitest-environment node
-// Tipos y lint tras cada edición de una app, como el LSP de Claude Code (plan 03,
-// leído en el binario 2.1.293): la herramienta NO espera; lo que llega se
+// Tipos y lint tras cada edición de una app, como el LSP de Claude Code (plan
+// 03): la herramienta NO espera; lo que llega se
 // entrega antes de la siguiente llamada al modelo. Sin hilo: `checkApp` es un
 // doble que contesta cuando cada prueba quiere.
 import { describe, expect, it } from "vitest";
@@ -43,7 +43,7 @@ describe("tipos y lint como el LSP de Claude Code (plan 03)", () => {
     expect(takeTypesAndLint(session).map((d) => d.ruta)).toEqual(["/src/a.tsx"]);
   });
 
-  it("🔴 tras editar un fichero, lo ya entregado de ESE fichero se olvida (clearDeliveredForFile): vuelve a salir si sigue", async () => {
+  it("🔴 tras editar un fichero, lo ya entregado de ESE fichero se olvida: vuelve a salir si sigue", async () => {
     const { session, llamadas, escribir, tick } = montar();
     const r = { typescript: [diag("/src/a.tsx", "TS2322")], eslint: [] };
     escribir(["/src/a.tsx"]);

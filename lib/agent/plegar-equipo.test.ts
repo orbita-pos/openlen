@@ -44,9 +44,8 @@ describe("plegar el chat del equipo en el historial de Len", () => {
     expect(plegarEquipo([turno("x", 1)], GENTE, "u-dana").filas[0]!.prefijoDelEquipo).toContain('name="Dana Dueña"');
   });
 
-  // Como el binario de Claude Code (session-inbox): sólo baja los adjuntos del
-  // mensaje del dueño (`sender_kind === "rc_owner"`); de los demás, el texto
-  // llega y los adjuntos no, sin decirlo.
+  // Como Claude Code: sólo baja los adjuntos del mensaje del dueño; de los
+  // demás, el texto llega y los adjuntos no, sin decirlo.
   it("🔴 las fotos de un mensaje del equipo sólo llegan si lo escribió el dueño", () => {
     const conFoto = (autor: string, min: number): FilaCruda => ({
       ...persona(`foto de ${autor}`, min, autor, []),

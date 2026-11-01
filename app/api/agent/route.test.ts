@@ -2048,7 +2048,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(prompt).toMatch(/\/office-docx hazme una carta\n\n<skill_content name="office-docx">/);
       const guardada = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string; skillsLoaded?: string[] } | null }])[1];
       expect(guardada.transcript?.sentText).toMatch(/<skill_content name="office-docx">/);
-      // As state, like Claude Code's invokedSkills: the row records that this turn loaded it.
+      // As state, like Claude Code: the row records that this turn loaded it.
       expect(guardada.transcript?.skillsLoaded).toEqual(["office-docx"]);
     });
 

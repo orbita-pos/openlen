@@ -1,12 +1,10 @@
 // lib/agent/types-and-lint.ts — TIPOS Y LINT TRAS CADA EDICIÓN DE UNA APP, como
-// los diagnósticos del LSP en Claude Code (plan 03; leído en su binario 2.1.293,
-// el registro `ydt` y su `takePending`):
+// los diagnósticos del LSP en Claude Code (plan 03):
 //
 //   · al escribir, la herramienta NO espera: olvida lo entregado y lo pendiente
-//     de los ficheros que escribió (`clearDeliveredForFile`,
-//     `clearPendingForFile`) y lanza el chequeo;
-//   · lo que vuelve de un chequeo que ya no es el último se tira («Dropping
-//     stale publishDiagnostics»); lo demás queda PENDIENTE, sólo de los ficheros
+//     de los ficheros que escribió y lanza el chequeo;
+//   · lo que vuelve de un chequeo que ya no es el último se tira; lo demás
+//     queda PENDIENTE, sólo de los ficheros
 //     «abiertos» —los que Len escribió—, como un servidor de lenguaje sólo
 //     publica los documentos abiertos;
 //   · antes de cada llamada al modelo, el bucle recoge lo pendiente
@@ -19,7 +17,7 @@ import { isCompileInputPath, isPublishableFolderPath } from "@/lib/agent/fichero
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 
-/** El registro de un turno: el `ydt` de Claude Code. */
+/** El registro de un turno, como el de Claude Code. */
 export interface TypesAndLintState {
   /** El último chequeo lanzado: un resultado de otro anterior es viejo. */
   version: number;
@@ -31,7 +29,7 @@ export interface TypesAndLintState {
   pendientes: Diagnostico[];
 }
 
-/** La identidad de Claude Code (`hdt`): mensaje, gravedad, rango, fuente y código. */
+/** La identidad, como en Claude Code: mensaje, gravedad, rango, fuente y código. */
 function clave(d: Diagnostico): string {
   return JSON.stringify([d.mensaje, d.gravedad, d.linea, d.columna, d.fuente ?? null, d.codigo ?? null]);
 }

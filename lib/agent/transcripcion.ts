@@ -52,7 +52,7 @@ export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
  *  historial sólo crece por el final, que es lo único que la caché del proveedor
  *  sirve (Holi, 10/10: el primer paso de cada turno pagaba ~230.000 tokens sin
  *  caché). Como el microcompact de Claude Code, que es un evento con su marca
- *  (`microcompact_boundary`) y deja los recientes. Con caché, llevar más cuesta
+ *  y deja los recientes. Con caché, llevar más cuesta
  *  poco: en DeepSeek V4.1 Flash un token en caché vale 50 veces menos. */
 export interface PresupuestoDeResultados {
   readonly hasta: number;

@@ -1,4 +1,4 @@
-// Claude Code's `silent_turn_reminder` (binary 2.1.304, `AIr`/`OIr`): after `SILENT_STEPS` model steps
+// The silent-turn reminder, as Claude Code has it: after `SILENT_STEPS` model steps
 // in a row with nothing the person can see, the step ends with its text in a <system-reminder>; at most
 // `MAX_REMINDERS_IN_STRETCH` times per silent stretch. What counts as speaking is theirs: visible text, or
 // a tool that addresses the person (AskUserQuestion, ExitPlanMode… — in Len, `asksTheOwner`). Len
