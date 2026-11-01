@@ -14,6 +14,11 @@ export const OFFICE_PREVIEW_KINDS: readonly string[] = ["pptx", "docx", "xlsx", 
 
 const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
+/** Seconds kept back from the budget: `timeout`'s 5 s grace before SIGKILL, plus the copy. */
+const KILL_MARGIN_S = 8;
+/** Below this, LibreOffice can't even start: not attempted. */
+const MIN_SECONDS = 3;
+
 /** Whether a delivered file's name asks for a preview. */
 export function wantsOfficePreview(name: string): boolean {
   return OFFICE_PREVIEW_KINDS.includes(/\.([A-Za-z0-9]+)$/.exec(name)?.[1]?.toLowerCase() ?? "");
@@ -25,11 +30,21 @@ export async function officePreview(
   budgetMs: number,
 ): Promise<Uint8Array | null> {
   const { ejecutar, readFileBytes } = terminal;
-  if (!ejecutar || !readFileBytes || budgetMs <= 0) return null;
+  // Killed (`timeout -k 5`) before the terminal's own timeout, which would leave it running in the box's
+  // background; with too little time left for that, not started.
+  const seconds = Math.floor(budgetMs / 1000) - KILL_MARGIN_S;
+  if (!ejecutar || !readFileBytes || seconds < MIN_SECONDS) return null;
   const outdir = `/tmp/office-preview/${randomHex()}`;
-  const stem = (path.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+  const name = path.split("/").pop() ?? "";
+  const stem = name.replace(/\.[^.]+$/, "");
+  const copy = `${outdir}/${name}`;
+  // A copy is converted, so LibreOffice's lock files stay in /tmp; with its own profile, so it never
+  // waits on the one Len's office skills use in the same box.
+  const command =
+    `mkdir -p ${quote(outdir)} && cp -- ${quote(path)} ${quote(copy)} && ` +
+    `timeout -k 5 ${seconds} soffice -env:UserInstallation=file://${outdir}/profile --headless --convert-to pdf --outdir ${quote(outdir)} ${quote(copy)}`;
   try {
-    const run = await ejecutar.call(terminal, `mkdir -p ${quote(outdir)} && soffice --headless --convert-to pdf --outdir ${quote(outdir)} ${quote(path)}`, { timeoutMs: budgetMs });
+    const run = await ejecutar.call(terminal, command, { timeoutMs: budgetMs });
     if (run.exitCode !== 0) return null;
     const pdf = await readFileBytes.call(terminal, `${outdir}/${stem}.pdf`);
     if (!pdf || pdf.byteLength < 5 || new TextDecoder().decode(pdf.slice(0, 5)) !== "%PDF-") return null;
