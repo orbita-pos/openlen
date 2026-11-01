@@ -27,6 +27,8 @@ export function crearControlDeAvisos(d: {
   configurado: boolean;
   onEstado(e: EstadoAvisos): void;
   onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void;
+  /** A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4). */
+  onAbrirEntregado?(id: string, url: string): void;
 }) {
   let vivo = true;
   let permitido = false;
@@ -40,11 +42,14 @@ export function crearControlDeAvisos(d: {
   const emitir = (nuevo: Partial<EstadoAvisos>) => { estado = { ...estado, ...nuevo }; if (vivo) d.onEstado(estado); };
   const cancelarEspera = () => { if (temporizador) clearTimeout(temporizador); temporizador = undefined; };
   const pedir = (ruta: string, init?: RequestInit) => d.cliente.pedir(ruta, { ...init, signal: AbortSignal.timeout(12_000) });
-  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: "mencion" | "len_watch" } | null => {
+  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: "mencion" | "len_watch"; abrir?: string } | null => {
     if (!datos || typeof datos !== "object") return null;
     const b = datos as Record<string, unknown>;
     if (typeof b.projectId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(b.projectId) || typeof b.recipientUserId !== "string" || b.recipientUserId !== usuario) return null;
-    return { projectId: b.projectId, recipientUserId: b.recipientUserId, ...(b.type === "mencion" || b.type === "len_watch" ? { type: b.type } : {}) };
+    // Only a delivery of THIS project, through its route (the one that checks access): nothing else opens.
+    const entrega = new RegExp(`^/api/projects/${b.projectId}/deliveries/[A-Za-z0-9_-]{1,100}/[0-9a-f]{8}-[^/?#]{1,300}$`);
+    const abrir = typeof b.abrir === "string" && entrega.test(b.abrir) ? b.abrir : null;
+    return { projectId: b.projectId, recipientUserId: b.recipientUserId, ...(b.type === "mencion" || b.type === "len_watch" ? { type: b.type } : {}), ...(abrir ? { abrir } : {}) };
   };
   async function abrir(datos: unknown) {
     if (!vivo) return;
@@ -55,7 +60,8 @@ export function crearControlDeAvisos(d: {
       const res = await pedir(`/api/projects/${encodeURIComponent(b.projectId)}`);
       if (res.ok && vivo && b.recipientUserId === usuario) {
         emitir({ recibido: null });
-        if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
+        if (b.abrir && d.onAbrirEntregado) d.onAbrirEntregado(b.projectId, b.abrir);
+        else if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
         // LEN WATCH: Gestión has where the fix stands, its button and the switches.
         else if (b.type === "len_watch") d.onAbrirProyecto(b.projectId, "gestion");
         else d.onAbrirProyecto(b.projectId);

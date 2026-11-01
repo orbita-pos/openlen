@@ -2,6 +2,7 @@
 // verdad en vista previa y la hoja de Len. La llamada (Task 10) se abre desde
 // la hoja y, pequeña, flota encima.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { App as AppNativa } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { useTranslations } from "use-intl";
@@ -21,6 +22,9 @@ import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
 import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
+import { fetchDelivered } from "../api/overview";
+import { PhoneViewer } from "../viewer/phone-viewer";
+import type { ViewerFile } from "@/components/viewer/viewer";
 import { Llamada } from "../llamada/llamada";
 import { useHojaDeslizable } from "../hoja-deslizable";
 import { useAtras } from "../atras";
@@ -95,7 +99,17 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       setLista(ps); setId(destino); setSelector(false); setMenu(false);
     }).catch(() => setSinRed(true));
   }, [cliente]);
-  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso });
+  // A finished task's push (spec local 2026-10-31-len-movil, §5.4): the project, and over it what Len delivered,
+  // found in «Entregado» for its name and preview (only its URL travels in the push).
+  const [archivoDelAviso, setArchivoDelAviso] = useState<ViewerFile | null>(null);
+  const abrirEntregado = useCallback((destino: string, url: string) => {
+    abrirAviso(destino);
+    void fetchDelivered(cliente, 100).then((items) => {
+      const d = items.find((x) => x.url === url);
+      setArchivoDelAviso(d ? { name: d.name, url: d.url, size: d.size, ...(d.previewUrl ? { preview: d.previewUrl } : {}), projectTitle: d.projectTitle } : { name: decodeURIComponent(url.split("/").pop() ?? "").slice(9), url, size: 0 });
+    }).catch(() => setSinRed(true));
+  }, [abrirAviso, cliente]);
+  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso, onAbrirEntregado: abrirEntregado });
   useAtras(selector, () => setSelector(false));
   useAtras(menu, () => setMenu(false));
   useEffect(() => {
@@ -330,6 +344,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir) => { setPanel(null); abrirAviso(destino, abrir); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
+      {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}
 
       {llamada && (
         <Llamada

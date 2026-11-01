@@ -16,6 +16,12 @@ describe("FCM sin servicios externos", () => {
   it("incluye proyecto y destinatario para abrir sólo la cuenta correcta", () => {
     expect(mensajeFcm(evento, "token")).toMatchObject({ message: { token: "token", notification: { title: "Len", body: "❓ Listo" }, data: { projectId: "proyecto-1", recipientUserId: "ana", type: "len_turno" } } });
   });
+  // A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
+  it("a turn that delivered a file carries it, and one that didn't carries the same data as before", () => {
+    const abrir = "/api/projects/proyecto-1/deliveries/t1/ab12cd34-informe.pdf";
+    expect(mensajeFcm({ ...evento, abrir }, "t").message.data).toEqual({ type: "len_turno", projectId: "proyecto-1", recipientUserId: "ana", abrir });
+    expect(Object.keys(mensajeFcm(evento, "t").message.data)).toEqual(["type", "projectId", "recipientUserId"]);
+  });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
     expect(mensajeFcm({ ...base, type: "email_domain", domain: "pan.mx", status: "ready" }, "t").message.notification.body).toContain("pan.mx");

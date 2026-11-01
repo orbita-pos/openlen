@@ -24,9 +24,29 @@ function prueba(o: { configurado?: boolean; activa?: boolean; permiso?: "granted
     if (init?.method === "DELETE") { tokens.length = 0; return new Response(null, { status: 204 }); }
     return Response.json({ disponible: o.disponible ?? true, activa: o.activa ?? false, recipientUserId: "ana" });
   }) };
-  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); } });
-  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, eventos: () => eventos! };
+  const entregados: [string, string][] = [];
+  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); }, onAbrirEntregado: (p, url) => { entregados.push([p, url]); } });
+  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, entregados, eventos: () => eventos! };
 }
+// A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
+describe("the push of a finished task", () => {
+  const url = "/api/projects/p1/deliveries/t1/ab12cd34-informe.pdf";
+  it("opens the delivered file, after checking recipient and access", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_turno", abrir: url });
+    expect(p.entregados).toEqual([["p1", url]]);
+    expect(p.abiertos).toEqual([]);
+  });
+  it("ignores an `abrir` that isn't one of the project's deliveries", async () => {
+    const p = prueba(); await p.control.iniciar();
+    for (const abrir of ["https://evil.example/x.pdf", "/api/projects/p2/deliveries/t1/ab12cd34-x.pdf", "/api/projects/p1/publish"]) {
+      await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_turno", abrir });
+    }
+    expect(p.entregados).toEqual([]);
+    expect(p.abiertos).toEqual(["p1", "p1", "p1"]);
+  });
+});
+
 describe("avisos del teléfono", () => {
   it("una mención abre equipo sólo tras comprobar destinatario y acceso", async () => {
     const p = prueba(); await p.control.iniciar();

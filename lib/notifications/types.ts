@@ -23,6 +23,9 @@ export interface LenTurnoEvent {
   preview: string;
   /** Terminó preguntando (`preguntar`): sin respuesta, Len no sigue. */
   pregunta: boolean;
+  /** A file Len delivered in the turn (its delivery URL): tapping the push opens it (spec local
+   *  2026-10-31-len-movil, §5.4). Absent when nothing was delivered. */
+  abrir?: string;
 }
 
 /** HILOS EN EL CÓDIGO: alguien te mencionó en una línea de un fichero de un

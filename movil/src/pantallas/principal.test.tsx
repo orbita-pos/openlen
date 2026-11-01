@@ -5,8 +5,9 @@ import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
-const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void) }));
-vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void }) => { aviso.abrir = o.onAbrirProyecto; return { estado:"noDisponible" }; } }));
+const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void), entregado: null as null | ((id: string, url: string) => void) }));
+vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void; onAbrirEntregado?: (id: string, url: string) => void }) => { aviso.abrir = o.onAbrirProyecto; aviso.entregado = o.onAbrirEntregado ?? null; return { estado:"noDisponible" }; } }));
+vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
 vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: () => null }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
@@ -127,4 +128,17 @@ it("the selector opens Delivered and Tasks", async () => {
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find(b => b.textContent === "tareas")!.click());
  expect(host.querySelector("#tareas-titulo")).not.toBeNull();
  expect(pedir).toHaveBeenCalledWith("/api/movil/tasks");
+});
+
+// A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
+it("the push of a finished task opens the delivered file in the viewer, with its preview", async () => {
+ const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
+ const url = "/api/projects/p1/deliveries/t1/ab12cd34-deck.pptx";
+ const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta.startsWith("/api/movil/delivered") ? Response.json({items:[{ id:"d1", projectId:"p1", turnId:"t1", name:"deck.pptx", url, previewUrl:"/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf", size:9, contentType:"x", description:null, createdAt:"2026-11-10T18:00:00Z", projectTitle:"Página" }]}) : Response.json({project:proyecto}));
+ host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+ await act(async () => root.render(<PantallaPrincipal cliente={{pedir,avisarAlCerrar:vi.fn()}} idioma="es" onSalir={vi.fn()}/>));
+ await act(async () => aviso.entregado!("p1", url));
+ const visor = document.body.querySelector("[data-viewer]");
+ expect(visor?.getAttribute("data-viewer")).toBe("deck.pptx");
+ expect(visor?.getAttribute("data-preview")).toBe("/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf");
 });
