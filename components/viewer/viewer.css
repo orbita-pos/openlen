@@ -90,7 +90,23 @@
   max-height: 100%;
   margin: auto;
   object-fit: contain;
-  touch-action: pinch-zoom;
+}
+
+/* The viewer's own zoom (viewer.tsx): wider than the screen, the body scrolls both ways. Two-finger
+   gestures are the viewer's, one finger still scrolls. */
+.viewer-zoom {
+  margin: 0 auto;
+  touch-action: pan-x pan-y;
+}
+
+.viewer-zoom-image:not([data-zoomed]) {
+  height: 100%;
+}
+
+.viewer-zoom[data-zoomed] .viewer-image {
+  width: 100%;
+  max-width: none;
+  max-height: none;
 }
 
 .viewer-video {
@@ -121,7 +137,6 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .viewer-page {
