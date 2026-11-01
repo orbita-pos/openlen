@@ -3975,6 +3975,44 @@ describe("compactación dentro del turno (como el arnés de DeepSeek)", () => {
     expect(r.compactionMark?.messages[1]).toEqual(VUELTA);
   });
 
+  // Como Claude Code, las skills cargadas vuelven también tras resumir, detrás
+  // de los ficheros, y la marca dice cuáles ve el modelo desde ahí.
+  it("🔴 tras resumir, las skills cargadas vuelven detrás de los ficheros y la marca dice cuáles", async () => {
+    const vistos: Message[][] = [];
+    const conservados: Message[][] = [];
+    const conLectura: Message[] = [
+      { role: "system", content: "s" }, { role: "user", content: "manual" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/menu/index.html" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x".repeat(140) } }] },
+      ...historial(10).slice(2),
+    ];
+    const VUELTA: Message = { role: "user", content: "Called the Read tool with the following input: {\"file_path\":\"/menu/index.html\"}\nResult of calling the Read tool:\n1\t<h1>Menú</h1>" };
+    const SKILLS: Message = { role: "user", content: "<system-reminder>\n<skill_content name=\"office-xlsx\">…</skill_content>\n</system-reminder>" };
+    const guion = scripted(
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- haz esto" }, uso(1), done],
+      [{ type: "text_delta", text: "Hecho." }, uso(1), done],
+    );
+    const r = await runAgentLoop({
+      messages: conLectura, tools: leer,
+      compaction: {
+        ...compaction,
+        restoreFiles: async () => VUELTA,
+        restoreSkills: (kept) => (conservados.push(structuredClone([...kept])), { message: SKILLS, loaded: ["office-xlsx"] }),
+      },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+      runTool: async () => { throw new Error("must not run"); },
+      emit: () => {},
+    });
+    expect(vistos[1]![3]).toEqual(VUELTA);
+    expect(vistos[1]![4]).toEqual(SKILLS);
+    expect(r.compactionMark?.messages[2]).toEqual(SKILLS);
+    expect(r.compactionMark?.skills).toEqual(["office-xlsx"]);
+    // Lo que sigue al resumen, sin el resumen ni lo que vuelve: ahí mira si una skill aún se ve.
+    expect(conservados).toHaveLength(1);
+    expect(conservados[0]!.length).toBeGreaterThan(0);
+    expect(conservados[0]!.some((m) => m.content.includes("<compacted-summary>") || m.content === VUELTA.content)).toBe(false);
+  });
+
   // A11: como Claude Code, que anota el `compact_boundary` en cuanto resume, la
   // marca sale del bucle EN ESE MOMENTO (antes de la llamada siguiente), no sólo
   // en el resultado: un turno que revienta después no la pierde.

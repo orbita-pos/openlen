@@ -287,6 +287,11 @@ export interface AgentLoopArgs {
      *  el mensaje que va justo detrás del resumen (`restoredFilesMessage`), o
      *  `null`. Como Claude Code, que vuelve a adjuntar los leídos. */
     restoreFiles?(paths: readonly string[]): Promise<Message | null>;
+    /** Tras resumir, las skills cargadas (`restoredSkills`): recibe lo que
+     *  sigue al resumen y devuelve el mensaje que va detrás de los ficheros (o
+     *  `null`) y las skills que el modelo ve desde ahí, que entran en la marca.
+     *  Como Claude Code, que vuelve a adjuntar las invocadas. */
+    restoreSkills?(kept: readonly Message[]): { message: Message | null; loaded: string[] };
     /** A11 · la marca, EN CUANTO resume (antes de la llamada siguiente), como
      *  Claude Code anota el `compact_boundary` en ese momento: un turno que
      *  revienta después no la pierde. Un fallo al guardarla no para el turno. */
@@ -1092,10 +1097,25 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (!outcome.changed) return false;
     ownArchived.push(...messages.slice(ownStart));
     messages.splice(0, messages.length, ...outcome.messages);
-    // A11 · lo que estaba leyendo vuelve detrás del resumen (y entra en la marca).
-    if (outcome.summarized && outcome.summaryIndex !== undefined && outcome.readPaths?.length && args.compaction.restoreFiles) {
-      const vuelta = await args.compaction.restoreFiles(outcome.readPaths).catch(() => null);
-      if (vuelta) messages.splice(outcome.summaryIndex + 1, 0, vuelta);
+    // A11 · lo que estaba leyendo vuelve detrás del resumen, y detrás las skills
+    // cargadas (todo entra en la marca).
+    let skillsVisibles: string[] | undefined;
+    if (outcome.summarized && outcome.summaryIndex !== undefined) {
+      const conservados = messages.slice(outcome.summaryIndex + 1);
+      let detras = outcome.summaryIndex + 1;
+      if (outcome.readPaths?.length && args.compaction.restoreFiles) {
+        const vuelta = await args.compaction.restoreFiles(outcome.readPaths).catch(() => null);
+        if (vuelta) messages.splice(detras++, 0, vuelta);
+      }
+      if (args.compaction.restoreSkills) {
+        try {
+          const skills = args.compaction.restoreSkills(conservados);
+          if (skills.message) messages.splice(detras, 0, skills.message);
+          skillsVisibles = skills.loaded;
+        } catch {
+          // Sin las skills de vuelta, la marca no dice cuáles: el turno siguiente las olvida todas.
+        }
+      }
     }
     ownStart = messages.length;
     if (outcome.summarized) {
@@ -1105,6 +1125,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         trigger,
         preTokens: Math.round(pressureTokens),
         postTokens: Math.round(estimateTokens(messages)),
+        ...(skillsVisibles ? { skills: skillsVisibles } : {}),
       };
       await args.compaction.saveMark?.(compactionMark).catch(() => undefined);
     }

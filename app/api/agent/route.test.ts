@@ -2062,6 +2062,30 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(guardada.transcript?.skillsLoaded).toBeUndefined();
     });
 
+    // Like Claude Code, which attaches its invoked skills again after compacting.
+    it("🔴 after a summary the loaded skills come back, and one the kept messages still show is not repeated", async () => {
+      type Vuelta = { message: { content: string } | null; loaded: string[] } | undefined;
+      let vuelta: Vuelta;
+      let otraVez: Vuelta;
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        vuelta = args.compaction?.restoreSkills?.([]);
+        otraVez = args.compaction?.restoreSkills?.([{ role: "user", content: vuelta?.message?.content ?? "" }]);
+        return {
+          finalText: "listo", turns: 1, toolCalls: 1,
+          usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+          terminalError: false, mutoDurable: true,
+          transcripcion: [{ role: "assistant", content: "listo" }],
+        };
+      });
+      mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+      await readEvents(
+        await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "/office-docx hazme una carta" }) })),
+      );
+      expect(vuelta?.message?.content).toMatch(/<skill_content name="office-docx">/);
+      expect(vuelta?.loaded).toEqual(["office-docx"]);
+      expect(otraVez).toEqual({ message: null, loaded: ["office-docx"] });
+    });
+
     it("/name inside a url invokes nothing", async () => {
       turno();
       mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
