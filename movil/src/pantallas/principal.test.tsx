@@ -113,3 +113,18 @@ it("sin páginas ofrece actualizar y descubre las creadas al volver a la app", a
  finally { visibilidad.mockRestore(); }
  expect(host.textContent).toContain('Mi primera página');
 });
+
+// «Entregado» and «Tareas» (spec local 2026-10-31-len-movil, §5.3–5.4): two entries in the selector, above the projects.
+it("the selector opens Delivered and Tasks", async () => {
+ const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
+ const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta === "/api/movil/tasks" ? Response.json({needsYou:[],working:[],scheduled:[],resolved:[]}) : ruta.startsWith("/api/movil/delivered") ? Response.json({items:[]}) : Response.json({project:proyecto}));
+ host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+ await act(async () => root.render(<PantallaPrincipal cliente={{pedir,avisarAlCerrar:vi.fn()}} idioma="es" onSalir={vi.fn()}/>));
+ await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+ const botones = [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].map(b => b.textContent);
+ expect(botones.indexOf("entregado")).toBeGreaterThanOrEqual(0);
+ expect(botones.indexOf("tareas")).toBeLessThan(botones.indexOf("Página"));
+ await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find(b => b.textContent === "tareas")!.click());
+ expect(host.querySelector("#tareas-titulo")).not.toBeNull();
+ expect(pedir).toHaveBeenCalledWith("/api/movil/tasks");
+});

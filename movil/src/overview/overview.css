@@ -1,0 +1,18 @@
+/* «Entregado» and «Tareas» on the phone (spec local 2026-10-31-len-movil, §5.3–5.4). The panel is
+   Gestión's (.app-gestion); this only adds the rows. */
+.app-resumen .gestion-cuerpo { overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
+.app-resumen h2 { font: 600 11px/1 Inter, sans-serif; text-transform: uppercase; letter-spacing: .14em; margin: 22px 0 8px; opacity: .7; }
+.resumen-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.app-resumen button.resumen-fila { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; text-align: left; border-radius: 14px; }
+.resumen-fila b, .resumen-tarea b { font: 600 14px/1.3 Inter, sans-serif; overflow-wrap: anywhere; }
+.resumen-fila small, .resumen-tarea small { font: 400 12px/1.35 Inter, sans-serif; opacity: .72; }
+.app-resumen button.resumen-fila.is-necesita { outline: 2px solid var(--m-ink); outline-offset: -2px; }
+.resumen-tarea { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
+.resumen-tarea .gestion-acciones { margin-top: 6px; flex-wrap: wrap; }
+.resumen-nada { font-size: 12px; opacity: .6; padding: 4px 2px; }
+.resumen-editor { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; background: var(--m-glass); }
+.resumen-editor label { display: grid; gap: 4px; font-size: 12px; }
+.resumen-editor input, .resumen-editor textarea, .resumen-editor select { font: 400 14px Inter, sans-serif; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--m-faint); background: transparent; color: var(--m-ink); }
+.resumen-dias { display: flex; flex-wrap: wrap; gap: 4px; }
+.app-resumen .resumen-dias button { padding: 8px 10px; min-height: 36px; border-radius: 10px; font-size: 12px; }
+.app-resumen .resumen-dias button[aria-pressed="true"] { outline: 2px solid var(--m-ink); outline-offset: -2px; }
