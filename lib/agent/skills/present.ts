@@ -144,5 +144,7 @@ export async function toolPresent(session: AgentSession, deps: AgentDeps, args: 
     const preview = pdf ? (await deps.storeDeliverable(session.projectId, turnId, `${r.name}.preview.pdf`, pdf, "application/pdf")).url : null;
     delivered.push({ name: r.name, url, size: r.bytes.byteLength, ...(r.description ? { description: r.description } : {}), ...(preview ? { preview } : {}) });
   }
+  // The phone's «Entregado» lists from this index; a failure there never undoes the delivery.
+  await deps.indexDeliveries?.(session.projectId, turnId, delivered).catch((err: unknown) => console.warn("[present] could not index the delivered files", err));
   return { response: { ok: true, files: delivered }, action: { tool: PRESENT_TOOL, ok: true, summary: delivered.map((d) => d.name).join(", ") }, delivered };
 }

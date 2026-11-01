@@ -163,6 +163,9 @@ const targets = [
   // Len Watch: lenWatchSettings y lenWatchIncidents (spec local 2026-10-30-len-watch). Aditiva e
   // idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, ningún reporte abre un incidente.
   "len-watch-migrate",
+  // The index of what Len delivered: deliveredFiles (spec local 2026-10-31-len-movil, §5.3). Aditiva e
+  // idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, la pestaña Entregado del teléfono da 500.
+  "delivered-files-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴

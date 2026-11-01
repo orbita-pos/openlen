@@ -391,6 +391,8 @@ export interface AgentDeps {
   readAttachment?: (file: AttachedFile) => Promise<Uint8Array | null>;
   /** `present` (spec local 2026-10-26-len-skills): stores a delivered file, answers its URL. */
   storeDeliverable?(projectId: string, turnId: string, name: string, bytes: Uint8Array, contentType: string): Promise<{ url: string }>;
+  /** `present`: writes what it delivered to the index the phone's «Entregado» reads (spec local 2026-10-31-len-movil, §5.3). */
+  indexDeliveries?(projectId: string, turnId: string, files: readonly DeliveredFile[]): Promise<void>;
   /** A PDF's pages as images (`renderPdfPages`); a double in the tests. */
   pdfPages?: (pdf: Uint8Array, range: { first: number; last: number } | null) => Promise<PdfPages>;
   /** An image made in the box, as `Read` shows it (`lib/agent/image-for-model.ts`); a double in the tests. */
@@ -868,6 +870,10 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       const where = deliverableLocation(projectId, turnId, name, randomBytes(4).toString("hex"));
       await store.put(where.key, bytes, contentType);
       return { url: where.url };
+    },
+    async indexDeliveries(projectId, turnId, files) {
+      const { indexDeliveries } = await import("@/lib/agent/skills/delivery-index");
+      await indexDeliveries(projectId, turnId, files);
     },
     // `Read` of an image made in the box (spec local 2026-10-27-len-pdf-skill, §4.7). Lazy import: the
     // native image binding.
