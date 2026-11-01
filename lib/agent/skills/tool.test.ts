@@ -17,7 +17,16 @@ describe("foldLoadedSkills", () => {
     expect([...foldLoadedSkills(rows)].sort()).toEqual(["office-docx", "office-xlsx"]);
   });
 
-  it("forgets what came before the last summary, as Claude Code does on compaction", () => {
+  it("🔴 after the last summary: what came back with it, what its turn loaded afterwards, and what came later", () => {
+    const rows = [
+      { transcript: { skillsLoaded: ["office-xlsx", "pdf"] } },
+      { compaction: { ...MARK, skills: ["office-xlsx"] }, transcript: { skillsLoaded: ["office-docx"] } },
+      { transcript: { skillsLoaded: ["cotizar"] } },
+    ];
+    expect([...foldLoadedSkills(rows as never)]).toEqual(["office-xlsx", "office-docx", "cotizar"]);
+  });
+
+  it("a mark from before skills came back with the summary forgets everything up to its row", () => {
     const rows = [
       { transcript: { skillsLoaded: ["office-xlsx"] } },
       { compaction: MARK, transcript: { skillsLoaded: ["office-docx"] } },

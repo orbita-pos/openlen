@@ -86,6 +86,7 @@ import { resolveCompaction } from "@/lib/agent/compaction/policy";
 import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import { POST_COMPACT_MAX_FILES, restoredFilesMessage } from "@/lib/agent/compaction/restore-files";
+import { restoredSkills } from "@/lib/agent/compaction/restore-skills";
 import { CHARS_PER_TOKEN } from "@/lib/agent/compaction/estimate";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
@@ -1900,6 +1901,14 @@ async function correrTurno(
                 files.push({ path, output, tokens: output === null ? 0 : Math.ceil(output.length / CHARS_PER_TOKEN) });
               }
               return restoredFilesMessage(files);
+            },
+            // Y detrás, las skills que tenía cargadas, como en Claude Code. Las que
+            // no caben dejan de estar cargadas: `skill` las vuelve a dar enteras.
+            restoreSkills: (kept) => {
+              const cargadas = [...(agentSession.loadedSkills ?? [])].flatMap((name) => agentSession.skills?.get(name) ?? []);
+              const vuelta = restoredSkills(cargadas, kept);
+              agentSession.loadedSkills = new Set(vuelta.loaded);
+              return vuelta;
             },
           },
           // LA RETENCIÓN DE RESULTADOS GRANDES, como la `spill-policy` de DeepSeek

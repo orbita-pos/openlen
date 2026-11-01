@@ -9,7 +9,7 @@
  */
 import type { ResolvedSkill } from "./registry";
 import { SKILL_NAME } from "./skill-file";
-import { isCompactionMark } from "@/lib/agent/compaction/mark";
+import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
@@ -51,17 +51,27 @@ export function renderSkillContent(s: ResolvedSkill): string {
 export const alreadyLoaded = (name: string) => `Skill /${name} is already loaded above; instructions unchanged.`;
 
 /**
- * Which skills the conversation already shows, as STATE (Claude Code's `invokedSkills`, DeepSeek's
- * messages sourced `skill-invocation`): each row records what its turn loaded (`skillsLoaded`), and a
- * summary forgets what came before it, as Claude Code forgets its invoked skills on compaction. Never
- * read from text, which anyone could type.
+ * Which skills the conversation already shows, as STATE (as Claude Code keeps them, and DeepSeek's
+ * messages sourced `skill-invocation`): each row records what its turn loaded (`skillsLoaded`). A
+ * summary starts over from the skills its mark says the model still sees (the ones that came back
+ * with it, as Claude Code attaches its invoked skills again on compaction), plus what that turn loaded
+ * afterwards; a mark from before they came back forgets everything up to its row. Never read from
+ * text, which anyone could type.
  */
 export function foldLoadedSkills(
   rows: readonly { readonly compaction?: unknown; readonly transcript: { readonly skillsLoaded?: readonly string[] } | null }[],
 ): Set<string> {
   const loaded = new Set<string>();
   const lastMark = rows.findLastIndex((r) => isCompactionMark(r.compaction));
-  for (const [i, r] of rows.entries()) if (i > lastMark) for (const name of r.transcript?.skillsLoaded ?? []) loaded.add(name);
+  for (const [i, r] of rows.entries()) {
+    if (i < lastMark) continue;
+    if (i === lastMark) {
+      const kept = (r.compaction as CompactionMark).skills;
+      if (!kept) continue;
+      for (const name of kept) loaded.add(name);
+    }
+    for (const name of r.transcript?.skillsLoaded ?? []) loaded.add(name);
+  }
   return loaded;
 }
 

@@ -17,6 +17,10 @@ export interface CompactionMark {
   /** Tokens before and after, for the chat's «summarized» line and layer 0. */
   readonly preTokens: number;
   readonly postTokens: number;
+  /** The skills the model sees right after the summary (the ones that came back with it and the
+   *  ones the kept messages show), as state: `foldLoadedSkills`. Absent on a mark from before they
+   *  came back, which forgets them all. */
+  readonly skills?: string[];
 }
 
 const TRIGGERS: ReadonlySet<string> = new Set<CompactionTrigger>(["pressure", "overflow", "manual"]);
@@ -35,6 +39,7 @@ export function isCompactionMark(v: unknown): v is CompactionMark {
     typeof m.trigger === "string" &&
     TRIGGERS.has(m.trigger) &&
     isCount(m.preTokens) &&
-    isCount(m.postTokens)
+    isCount(m.postTokens) &&
+    (m.skills === undefined || (Array.isArray(m.skills) && m.skills.every((s) => typeof s === "string")))
   );
 }
