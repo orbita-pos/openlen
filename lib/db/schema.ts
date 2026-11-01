@@ -2386,6 +2386,26 @@ export const lenWatchSettings = pgTable("lenWatchSettings", {
   updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 
+// THE INDEX OF WHAT LEN DELIVERED with `present` (spec local 2026-10-31-len-movil, §5.3): the bytes stay
+// in the private store and the card in the turn; this row is how the phone's «Entregado» lists them
+// across projects without reading every turn. SQL in scripts/delivered-files-migrate-sql.ts.
+export const deliveredFiles = pgTable(
+  "deliveredFiles",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    turnId: text("turnId").notNull(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    previewUrl: text("previewUrl"),
+    size: integer("size").notNull(),
+    contentType: text("contentType").notNull(),
+    description: text("description"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("deliveredFiles_url_idx").on(t.url), index("deliveredFiles_projectId_createdAt_idx").on(t.projectId, t.createdAt)],
+);
+
 export const lenWatchIncidents = pgTable(
   "lenWatchIncidents",
   {

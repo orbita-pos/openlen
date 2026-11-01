@@ -96,6 +96,29 @@ describe("present", () => {
 // What `present` delivers is private (spec local 2026-10-26-len-skills, §4.9; like DeepSeek's host,
 // which exposes the presented file to the session, and Claude's files): kept in the private store and
 // served only through the project's route, which checks access.
+describe("present: the index of delivered files", () => {
+  it("indexes what it delivered, once", async () => {
+    const { session, deps } = setup({ "/tmp/office/inventario.xlsx": XLSX });
+    const indexDeliveries = vi.fn(async () => undefined);
+    (deps as { indexDeliveries?: unknown }).indexDeliveries = indexDeliveries;
+    const out = await toolPresent(session, deps, { files: [{ path: "/tmp/office/inventario.xlsx" }] });
+    expect(indexDeliveries).toHaveBeenCalledTimes(1);
+    expect(indexDeliveries).toHaveBeenCalledWith("p1", "t1", out.delivered);
+  });
+
+  it("a failing index still delivers", async () => {
+    const { session, deps } = setup({ "/tmp/office/inventario.xlsx": XLSX });
+    (deps as { indexDeliveries?: unknown }).indexDeliveries = vi.fn(async () => {
+      throw new Error("no table");
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const out = await toolPresent(session, deps, { files: [{ path: "/tmp/office/inventario.xlsx" }] });
+    expect(out.response.ok).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
 describe("present: the PDF preview of Office files", () => {
   const PDF = new TextEncoder().encode("%PDF-1.7");
 
