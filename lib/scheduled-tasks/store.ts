@@ -95,12 +95,13 @@ export async function getTaskById(id: string): Promise<TaskRow | null> {
   return row ?? null;
 }
 
-/** Replaces the record (and its next run). With `expectedUpdatedAt`, only if nobody changed it since. */
+/** Replaces the record (and its next run). With `expectedUpdatedAt`, only if nobody changed it since. A
+ *  paused task stays paused, unless it becomes a one-shot: those are never paused (`pauseTask`). */
 export async function updateTask(projectId: string, id: string, next: ScheduleRecord, expectedUpdatedAt?: Date): Promise<TaskRow | "not_found" | "conflict"> {
   const where = and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id));
   const [row] = await db
     .update(schema.scheduledTasks)
-    .set({ record: next, scheduledAt: new Date(next.scheduledAt), status: "active", updatedAt: new Date() })
+    .set({ record: next, scheduledAt: new Date(next.scheduledAt), status: "active", updatedAt: new Date(), ...(isRecurringScheduleRecord(next) ? {} : { pausedAt: null }) })
     .where(expectedUpdatedAt ? and(where, eq(schema.scheduledTasks.updatedAt, expectedUpdatedAt)) : where)
     .returning();
   if (row) return row;
