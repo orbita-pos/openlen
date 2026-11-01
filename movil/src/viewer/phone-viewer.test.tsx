@@ -32,15 +32,21 @@ function client(): ClienteDeOpenLen & { pedir: ReturnType<typeof vi.fn> } {
   } as never;
 }
 
-async function paint(file: { name: string; url: string; size: number; preview?: string }) {
+async function paint(file: { name: string; url: string; size: number; preview?: string }, onClose: () => void = () => undefined) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
   const c = client();
-  await act(async () => root.render(<PhoneViewer cliente={c} file={file} onClose={() => undefined} />));
+  await act(async () => root.render(<PhoneViewer cliente={c} file={file} onClose={onClose} />));
   return { host, c };
 }
+
+const back = () =>
+  act(async () => {
+    history.back();
+    await new Promise((r) => setTimeout(r, 20));
+  });
 
 describe("PhoneViewer", () => {
   it("an Office file is fetched from its preview, with the phone's client", async () => {
@@ -64,5 +70,12 @@ describe("PhoneViewer", () => {
     expect(c.pedir).toHaveBeenCalledWith(file.url);
     expect(shareFile).toHaveBeenCalledWith(file, expect.any(Blob));
     expect(openWith).toHaveBeenCalledWith(file, expect.any(Blob));
+  });
+
+  it("Android's back closes the viewer", async () => {
+    const onClose = vi.fn();
+    await paint({ name: "a.pdf", url: "/api/projects/p1/deliveries/t1/ab12cd34-a.pdf", size: 9 }, onClose);
+    await back();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

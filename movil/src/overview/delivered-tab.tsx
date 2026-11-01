@@ -29,7 +29,7 @@ export function DeliveredTab({ cliente, onCerrar }: { cliente: ClienteDeOpenLen;
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [open, setOpen] = useState<ViewerFile | null>(null);
-  useAtras(!open, onCerrar);
+  useAtras(true, onCerrar);
   useEffect(() => {
     let alive = true;
     setFailed(false);

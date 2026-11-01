@@ -6,7 +6,16 @@ import { createRoot, type Root } from "react-dom/client";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("../api/overview", () => ({ fetchDelivered: vi.fn() }));
-vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div role="dialog" aria-label={file.name} data-preview={file.preview ?? ""} /> }));
+vi.mock("../viewer/phone-viewer", async () => {
+  // The real viewer takes its own entry in the back history; this stand-in does the same.
+  const { useAtras } = await import("../atras");
+  return {
+    PhoneViewer: ({ file, onClose }: { file: { name: string; preview?: string }; onClose: () => void }) => {
+      useAtras(true, onClose);
+      return <div role="dialog" aria-label={file.name} data-preview={file.preview ?? ""} />;
+    },
+  };
+});
 
 import { fetchDelivered } from "../api/overview";
 import { DeliveredTab } from "./delivered-tab";
@@ -21,13 +30,19 @@ afterEach(() => {
 
 const item = (name: string, createdAt: string, o: Record<string, unknown> = {}) => ({ id: name, projectId: "p1", turnId: "t1", name, url: `/api/projects/p1/deliveries/t1/ab12cd34-${name}`, previewUrl: null, size: 10, contentType: "application/pdf", description: null, createdAt, projectTitle: "Mi tienda", ...o });
 
-async function paint(items: unknown[]) {
+const back = () =>
+  act(async () => {
+    history.back();
+    await new Promise((r) => setTimeout(r, 20));
+  });
+
+async function paint(items: unknown[], onCerrar: () => void = () => undefined) {
   vi.mocked(fetchDelivered).mockResolvedValue(items as never);
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  await act(async () => root.render(<DeliveredTab cliente={{} as never} onCerrar={() => undefined} />));
+  await act(async () => root.render(<DeliveredTab cliente={{} as never} onCerrar={onCerrar} />));
   return host;
 }
 
@@ -45,6 +60,17 @@ describe("DeliveredTab", () => {
     const dialog = document.body.querySelector('[role="dialog"][aria-label]');
     expect(dialog?.getAttribute("aria-label")).toBe("deck.pptx");
     expect(dialog?.getAttribute("data-preview")).toBe("/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf");
+  });
+
+  it("back with the viewer open closes the viewer, and the next back the tab", async () => {
+    const onCerrar = vi.fn();
+    const host = await paint([item("a.pdf", "2026-11-10T18:00:00Z")], onCerrar);
+    act(() => host.querySelector<HTMLButtonElement>("[data-delivered-item]")!.click());
+    await back();
+    expect(document.body.querySelector('[role="dialog"][aria-label]')).toBeNull();
+    expect(onCerrar).not.toHaveBeenCalled();
+    await back();
+    expect(onCerrar).toHaveBeenCalledTimes(1);
   });
 
   it("with nothing delivered it says so", async () => {
