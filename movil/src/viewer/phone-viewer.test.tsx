@@ -72,6 +72,22 @@ describe("PhoneViewer", () => {
     expect(openWith).toHaveBeenCalledWith(file, expect.any(Blob));
   });
 
+  it("from «Entregado» it offers going to the turn's chat", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const onGoToChat = vi.fn();
+    await act(async () => root.render(<PhoneViewer cliente={client()} file={{ name: "a.pdf", url: "/x/a.pdf", size: 9 }} onClose={() => undefined} onGoToChat={onGoToChat} />));
+    act(() => host.querySelector<HTMLButtonElement>("[data-go-to-chat]")!.click());
+    expect(onGoToChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("without where to go, no chat button", async () => {
+    const { host } = await paint({ name: "a.pdf", url: "/x/a.pdf", size: 9 });
+    expect(host.querySelector("[data-go-to-chat]")).toBeNull();
+  });
+
   it("Android's back closes the viewer", async () => {
     const onClose = vi.fn();
     await paint({ name: "a.pdf", url: "/api/projects/p1/deliveries/t1/ab12cd34-a.pdf", size: 9 }, onClose);

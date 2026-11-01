@@ -10,9 +10,13 @@ vi.mock("../viewer/phone-viewer", async () => {
   // The real viewer takes its own entry in the back history; this stand-in does the same.
   const { useAtras } = await import("../atras");
   return {
-    PhoneViewer: ({ file, onClose }: { file: { name: string; preview?: string }; onClose: () => void }) => {
+    PhoneViewer: ({ file, onClose, onGoToChat }: { file: { name: string; preview?: string }; onClose: () => void; onGoToChat?: () => void }) => {
       useAtras(true, onClose);
-      return <div role="dialog" aria-label={file.name} data-preview={file.preview ?? ""} />;
+      return (
+        <div role="dialog" aria-label={file.name} data-preview={file.preview ?? ""}>
+          {onGoToChat && <button data-go-to-chat="" onClick={onGoToChat} />}
+        </div>
+      );
     },
   };
 });
@@ -36,13 +40,13 @@ const back = () =>
     await new Promise((r) => setTimeout(r, 20));
   });
 
-async function paint(items: unknown[], onCerrar: () => void = () => undefined) {
+async function paint(items: unknown[], onCerrar: () => void = () => undefined, onIrAlChat: (projectId: string, turnId: string) => void = () => undefined) {
   vi.mocked(fetchDelivered).mockResolvedValue(items as never);
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  await act(async () => root.render(<DeliveredTab cliente={{} as never} onCerrar={onCerrar} />));
+  await act(async () => root.render(<DeliveredTab cliente={{} as never} onCerrar={onCerrar} onIrAlChat={onIrAlChat} />));
   return host;
 }
 
@@ -71,6 +75,15 @@ describe("DeliveredTab", () => {
     expect(onCerrar).not.toHaveBeenCalled();
     await back();
     expect(onCerrar).toHaveBeenCalledTimes(1);
+  });
+
+  it("«Ver en el chat» goes to the project and the turn that delivered it", async () => {
+    const onIrAlChat = vi.fn();
+    const host = await paint([item("a.pdf", "2026-11-10T18:00:00Z", { projectId: "p7", turnId: "turn-9" })], undefined, onIrAlChat);
+    act(() => host.querySelector<HTMLButtonElement>("[data-delivered-item]")!.click());
+    act(() => document.body.querySelector<HTMLButtonElement>("[data-go-to-chat]")!.click());
+    expect(onIrAlChat).toHaveBeenCalledWith("p7", "turn-9");
+    expect(document.body.querySelector('[role="dialog"][aria-label]')).toBeNull();
   });
 
   it("with nothing delivered it says so", async () => {

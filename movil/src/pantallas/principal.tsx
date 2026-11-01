@@ -73,6 +73,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [hojaMin, setHojaMin] = useState(false);
   const [llamada, setLlamada] = useState(false);
   const [chatAbierto, setChatAbierto] = useState(false);
+  // «Ver en el chat» desde Entregado: el elemento del hilo que el chat trae a la vista al abrirse.
+  const [enfocarEnChat, setEnfocarEnChat] = useState<string | null>(null);
+  const alEnfocarEnChat = useCallback(() => setEnfocarEnChat(null), []);
   const [conPip, setConPip] = useState(false);
   const [recarga, setRecarga] = useState(0);
   const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | null>(null);
@@ -326,10 +329,12 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         projectId={id}
         idioma={idioma}
         conPip={llamada && conPip}
-        onCerrar={() => setChatAbierto(false)}
+        onCerrar={() => { setChatAbierto(false); setEnfocarEnChat(null); }}
         onLlamar={() => setLlamada(true)}
         onVerPagina={() => setChatAbierto(false)}
         onEquipo={() => setPanel("equipo")}
+        enfocar={enfocarEnChat}
+        onEnfocado={alEnfocarEnChat}
       />
 
       <PanelAnimado contexto={id}
@@ -340,7 +345,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
           : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
-          : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} />
+          : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir) => { setPanel(null); abrirAviso(destino, abrir); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
