@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/agent/skills/deliveries", () => ({ deliveryStore: vi.fn() }));
+vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: vi.fn(async (k: string) => (k === "k".repeat(32) ? "ana" : null)) }));
 
 import { GET } from "./route";
 import { auth } from "@/auth";
@@ -73,5 +74,25 @@ describe("GET /api/projects/[id]/deliveries/[turn]/[file]", () => {
   it("503 when this server has no private store for them", async () => {
     vi.mocked(deliveryStore).mockReturnValue(null);
     expect((await pedir("t-1", "ab12cd34-Inventario-tienda.xlsx")).status).toBe(503);
+  });
+
+  // The phone (spec local 2026-10-31-len-movil, §5.1): its key in Authorization, never cookies.
+  it("the phone fetches it with its key, with the app's CORS", async () => {
+    vi.mocked(auth).mockClear();
+    const res = await GET(
+      new Request("http://localhost/api/projects/p1/deliveries/t-1/ab12cd34-Inventario-tienda.xlsx", { headers: { authorization: `Bearer ${"k".repeat(32)}`, origin: "https://localhost" } }),
+      { params: Promise.resolve({ id: "p1", turn: "t-1", file: "ab12cd34-Inventario-tienda.xlsx" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://localhost");
+    expect(exigirAcceso).toHaveBeenCalledWith("p1", "ana", "ver");
+    expect(auth).not.toHaveBeenCalled();
+  });
+
+  it("a key that isn't valid is 401, without falling back to the cookie", async () => {
+    const res = await GET(new Request("http://localhost/x", { headers: { authorization: `Bearer ${"z".repeat(32)}` } }), {
+      params: Promise.resolve({ id: "p1", turn: "t-1", file: "ab12cd34-Inventario-tienda.xlsx" }),
+    });
+    expect(res.status).toBe(401);
   });
 });

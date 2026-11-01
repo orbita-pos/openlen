@@ -23,4 +23,10 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   // Pieza 2: la foto que le mandas a Len en el chat.
   { fichero: "app/api/upload/route.ts", metodos: ["POST"] },
   { fichero: "app/api/voz/nota/route.ts", metodos: ["POST"] },
+  // Entregado y Tareas (spec local 2026-10-31-len-movil): lo que entregó Len y las tareas programadas.
+  { fichero: "app/api/projects/[id]/deliveries/[turn]/[file]/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/projects/[id]/deliveries/[turn]/[file]/view/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/projects/[id]/scheduled-tasks/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/route.ts", metodos: ["PATCH", "DELETE"] },
+  { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/pause/route.ts", metodos: ["POST"] },
 ];
