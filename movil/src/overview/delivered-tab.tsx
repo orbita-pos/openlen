@@ -23,12 +23,12 @@ const fileOf = (d: DeliveredItem): ViewerFile => ({
   projectTitle: d.projectTitle,
 });
 
-export function DeliveredTab({ cliente, onCerrar }: { cliente: ClienteDeOpenLen; onCerrar: () => void }) {
+export function DeliveredTab({ cliente, onCerrar, onIrAlChat }: { cliente: ClienteDeOpenLen; onCerrar: () => void; onIrAlChat: (projectId: string, turnId: string) => void }) {
   const t = useTranslations("movil.resumen");
   const [items, setItems] = useState<DeliveredItem[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [open, setOpen] = useState<ViewerFile | null>(null);
+  const [open, setOpen] = useState<DeliveredItem | null>(null);
   useAtras(true, onCerrar);
   useEffect(() => {
     let alive = true;
@@ -64,7 +64,7 @@ export function DeliveredTab({ cliente, onCerrar }: { cliente: ClienteDeOpenLen;
           <ul className="resumen-lista">
             {items.map((d) => (
               <li key={d.id}>
-                <button type="button" className="resumen-fila" data-delivered-item="" onClick={() => setOpen(fileOf(d))}>
+                <button type="button" className="resumen-fila" data-delivered-item="" onClick={() => setOpen(d)}>
                   <b>{d.name}</b>
                   <small>{[d.projectTitle, d.description, when(d.createdAt)].filter(Boolean).join(" · ")}</small>
                 </button>
@@ -73,7 +73,19 @@ export function DeliveredTab({ cliente, onCerrar }: { cliente: ClienteDeOpenLen;
           </ul>
         )}
       </div>
-      {open && createPortal(<PhoneViewer cliente={cliente} file={open} onClose={() => setOpen(null)} />, document.body)}
+      {open &&
+        createPortal(
+          <PhoneViewer
+            cliente={cliente}
+            file={fileOf(open)}
+            onClose={() => setOpen(null)}
+            onGoToChat={() => {
+              setOpen(null);
+              onIrAlChat(open.projectId, open.turnId);
+            }}
+          />,
+          document.body,
+        )}
     </section>
   );
 }

@@ -22,9 +22,9 @@ beforeEach(() => {
  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
-function pintar(elementos: ElementoDelHilo[], trabajando = false, turnoId: string | null = null, abierto = true) {
+function pintar(elementos: ElementoDelHilo[], trabajando = false, turnoId: string | null = null, abierto = true, enfocar?: { clave: string | null; alEnfocar: () => void }) {
  const chat = { elementos, trabajando, turnoId, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
- act(() => root.render(<PantallaChat abierto={abierto} chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} />));
+ act(() => root.render(<PantallaChat abierto={abierto} chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} enfocar={enfocar?.clave} onEnfocado={enfocar?.alEnfocar} />));
  return host.querySelector<HTMLDivElement>(".ch-log")!;
 }
 it("no muestra leído para un mensaje pendiente ni una subida fallida", () => {
@@ -51,6 +51,23 @@ it("respetar lectura antigua y volver al final con un control visible", () => {
  expect(el.scrollTop).toBe(0);
  const boton = host.querySelector<HTMLButtonElement>('.ch-volver-final'); expect(boton).not.toBeNull();
  act(() => boton!.click()); expect(el.scrollTop).toBeGreaterThanOrEqual(800);
+});
+
+it("desde Entregado lleva a la vista el turno que entregó el archivo, cuando llega, y deja de seguir el final", () => {
+ const vistos: Element[] = [];
+ Element.prototype.scrollIntoView = function (this: Element) { vistos.push(this); };
+ const alEnfocar = vi.fn();
+ const objetivo = { ...respuesta("El PDF"), clave: "t9:entregado" };
+ const el = pintar([mensaje()], false, null, true, { clave: "t9:entregado", alEnfocar });
+ expect(alEnfocar).not.toHaveBeenCalled();
+ pintar([mensaje(), objetivo, { ...respuesta("Luego"), clave: "t10:len:0" }], false, null, true, { clave: "t9:entregado", alEnfocar });
+ expect(vistos.map(v => v.getAttribute("data-clave"))).toEqual(["t9:entregado"]);
+ expect(alEnfocar).toHaveBeenCalledOnce();
+ Object.defineProperties(el, { clientHeight: { value: 200 }, scrollHeight: { value: 1000 } });
+ el.scrollTop = 100;
+ pintar([mensaje(), objetivo, { ...respuesta("Luego"), clave: "t10:len:0" }, { ...respuesta("Más"), clave: "t11:len:0" }], false, null, true, { clave: null, alEnfocar });
+ expect(el.scrollTop).toBe(100);
+ delete (Element.prototype as Partial<Element>).scrollIntoView;
 });
 
 it("el chat contiene el foco y Escape vuelve a la página", () => {

@@ -37,9 +37,12 @@ interface Props {
   onLlamar: () => void;
   onVerPagina: () => void;
   onEquipo?: () => void;
+  /** Desde «Entregado»: la clave del elemento del hilo que hay que traer a la vista (el turno que entregó). */
+  enfocar?: string | null;
+  onEnfocado?: () => void;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -53,7 +56,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const [micro, setMicro] = useState<Micro>({ fase: "quieto" });
   const microRef = useRef<Micro>({ fase: "quieto" });
   const [arrastre, setArrastre] = useState(0);
-  const { log, contenido, puedeBajar, alFinal } = useSeguirChat(abierto, projectId, chat.elementos);
+  const { log, contenido, puedeBajar, alFinal } = useSeguirChat(abierto, projectId, chat.elementos, enfocar, onEnfocado);
   const campo = useRef<HTMLTextAreaElement>(null);
   const volver = useRef<HTMLButtonElement>(null);
   const [archivos,setArchivos] = useState<File[]>([]);
@@ -179,7 +182,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     const recibido = (e.tipo === "tu" || e.tipo === "voz") && e.estado === "ok";
     const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "verEnTuPagina"));
     return (
-      <div key={e.clave} className={cls}>
+      <div key={e.clave} className={cls} data-clave={e.clave}>
         <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} />
         {leido && <span className="ch-rcpt">{t("leido")}</span>}
       </div>

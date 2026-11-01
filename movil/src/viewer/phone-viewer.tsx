@@ -17,7 +17,8 @@ async function blobFrom(c: ClienteDeOpenLen, url: string): Promise<Blob> {
   return res.blob();
 }
 
-export function PhoneViewer({ cliente, file, onClose }: { cliente: ClienteDeOpenLen; file: ViewerFile; onClose: () => void }) {
+/** `onGoToChat`: opened from «Entregado», the viewer also leads to the chat turn that delivered the file. */
+export function PhoneViewer({ cliente, file, onClose, onGoToChat }: { cliente: ClienteDeOpenLen; file: ViewerFile; onClose: () => void; onGoToChat?: () => void }) {
   const t = useTranslations("movil.entregado");
   const [busy, setBusy] = useState(false);
   useAtras(true, onClose);
@@ -53,6 +54,11 @@ export function PhoneViewer({ cliente, file, onClose }: { cliente: ClienteDeOpen
           <button type="button" data-open-with="" disabled={busy} onClick={act(openWith)}>
             {t("abrirCon")}
           </button>
+          {onGoToChat && (
+            <button type="button" data-go-to-chat="" onClick={onGoToChat}>
+              {t("verEnChat")}
+            </button>
+          )}
         </>
       }
       labels={{ close: t("cerrar"), download: t("abrirCon"), noPreview: t("sinVista"), loading: t("abriendo"), failed: t("fallo"), page: (n, total) => `${n} / ${total}` }}
