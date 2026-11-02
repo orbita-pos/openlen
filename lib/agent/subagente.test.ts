@@ -209,6 +209,28 @@ describe("runSubagent, Len's loop for a delegated child", () => {
     expect(ran).not.toContain("Write");
   });
 
+  it("🔴 a tool declared but not allowed (a fork keeps Len's declarations) is refused with the gate's text and never runs", async () => {
+    const g = guion(llama("publish", { subdomain: "x" }), dice("Done."));
+    const ran: string[] = [];
+    const seen: Message[][] = [];
+    await runSubagent({
+      messages: [{ role: "system", content: "S" }, { role: "user", content: "Go." }],
+      tools: ["Read", "publish"].map((name) => ({ name })),
+      allowed: new Set(["Read"]),
+      openStream: (m) => {
+        seen.push([...m]);
+        return g.abrir(m);
+      },
+      runTool: async (name) => {
+        ran.push(name);
+        return { response: { ok: true } };
+      },
+      emit: () => {},
+    });
+    expect(ran).toEqual([]);
+    expect(seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false, error: "This agent does not have that tool." });
+  });
+
   it("the spending limit closes it with what it has", async () => {
     const g = guion(llama("Read", { file_path: "/a" }), llama("Read", { file_path: "/b" }), dice("never"));
     let calls = 0;
