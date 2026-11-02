@@ -3744,7 +3744,10 @@ describe("POST /api/agent — Len's subagents", () => {
     mutoDurable: false, transcripcion: [{ role: "assistant", content: "ok" }],
   });
   const peticion = (prompt = "busca el menú") =>
-    new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt, idioma: "es", zonaHoraria: "Europe/Madrid" }) });
+    new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt, idioma: "es", zonaHoraria: "Europe/Madrid", esfuerzo: "low", mode: "dynamis" }),
+    });
   const pedir = async () => readEvents(await POST(peticion()));
   const corredor = () => mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
   const loopArgs = () => (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [AgentLoopArgs])[0];
@@ -3830,6 +3833,8 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(mocks.launchSubagentNoticeTurn).toHaveBeenCalledTimes(1);
     const p = mocks.launchSubagentNoticeTurn.mock.calls[0]![0] as { userId: string; projectId: string; timeZone: string; locale: string; takeNotices(): { id: string }[] };
     expect(p).toMatchObject({ userId: "u1", projectId: "p1", timeZone: "Europe/Madrid", locale: "es" });
+    // The launching turn's effort and mode, not the saved ones (a real turn showed `effort_changed` and a cold cache).
+    expect(p).toMatchObject({ effort: "low", mode: "dynamis" });
     expect(noticeTurnPending("p1")).toBe(true);
     // Taking them (when that turn starts) clears the flag and marks them delivered.
     expect(p.takeNotices().map((n) => n.id)).toEqual(["r1"]);

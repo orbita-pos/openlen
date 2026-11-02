@@ -275,6 +275,18 @@ describe("the turn that wakes Len with its subagents' notices (spec local 2026-1
     );
   });
 
+  it("keeps the effort and the mode of the turn that launched the children", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    launchSubagentNoticeTurn({
+      userId: "ana", projectId: "p-sub", filaId: "row-e", timeZone: "Europe/Madrid", locale: "es",
+      effort: "low", mode: "dynamis",
+      takeNotices: () => [{ id: "r1", text: "Background subagent r1 finished." }], onStart: async () => {}, fail: async () => {},
+    });
+    await hasta(() => corredor.mock.calls.length > 0);
+    expect(corredor).toHaveBeenCalledWith("ana", expect.objectContaining({ esfuerzo: "low", mode: "dynamis" }), expect.anything(), expect.anything());
+  });
+
   it("does not run when another turn already took the notices", async () => {
     const corredor = vi.fn(async () => sse([["done", {}]]));
     registrarCorredorDeTurnos(corredor);
