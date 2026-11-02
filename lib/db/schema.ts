@@ -2661,6 +2661,8 @@ export const subagentRuns = pgTable(
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settledAt", { mode: "date", withTimezone: true }),
     noticeDeliveredAt: timestamp("noticeDeliveredAt", { mode: "date", withTimezone: true }),
+    /** Phase 2: forked from Len's conversation (`subagent_fork`), so it resumes with Len's own system prompt. */
+    forked: boolean("forked").notNull().default(false),
   },
   (t) => [index("subagentRuns_projectId_status_idx").on(t.projectId, t.status), index("subagentRuns_chatRowId_idx").on(t.chatRowId)],
 );

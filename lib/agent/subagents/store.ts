@@ -1,8 +1,9 @@
 // LEN'S SUBAGENTS IN POSTGRES (spec local 2026-11-01-subagentes-de-len, §4.7, table `subagentRuns`):
 // a row per child, written when it starts, as it goes and when it ends. Its notice is marked delivered
-// once, with compare-and-set, so a restart never hands it to Len twice.
+// once, with compare-and-set, so a restart never hands it to Len twice. Since phase 2 a settled child can be
+// reopened (`send_message` wakes it from its transcript): the same row runs again.
 import "server-only";
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 import type { SubagentStatus, SubagentStopReason } from "./notice";
@@ -32,9 +33,11 @@ export interface SubagentRunRow {
   readonly createdAt: Date;
   readonly settledAt: Date | null;
   readonly noticeDeliveredAt: Date | null;
+  /** Forked from Len's conversation (`subagent_fork`). */
+  readonly forked: boolean;
 }
 
-export type NewSubagentRun = Pick<SubagentRunRow, "id" | "projectId" | "chatRowId" | "turnId" | "personId" | "preset" | "description" | "prompt">;
+export type NewSubagentRun = Pick<SubagentRunRow, "id" | "projectId" | "chatRowId" | "turnId" | "personId" | "preset" | "description" | "prompt" | "forked">;
 
 export interface SettledRun {
   readonly status: SubagentStopReason;
@@ -80,6 +83,27 @@ export async function runsOfRow(projectId: string, chatRowId: string): Promise<S
 export async function runById(id: string): Promise<SubagentRunRow | null> {
   const [r] = await db.select().from(t).where(eq(t.id, id)).limit(1);
   return (r as SubagentRunRow | undefined) ?? null;
+}
+
+/** A settled run runs again (`send_message` woke it): true only for the call that reopened it. */
+export async function reopenRun(id: string): Promise<boolean> {
+  const reopened = await db
+    .update(t)
+    .set({ status: "running", settledAt: null, noticeDeliveredAt: null })
+    .where(and(eq(t.id, id), ne(t.status, "running")))
+    .returning({ id: t.id });
+  return reopened.length > 0;
+}
+
+/** Len's children: the runs launched from rows of the project's current conversation, oldest first. */
+export async function runsOfCurrentConversation(projectId: string): Promise<SubagentRunRow[]> {
+  const m = schema.projectChatMessages;
+  return (await db
+    .select(getTableColumns(t))
+    .from(t)
+    .innerJoin(m, eq(m.id, t.chatRowId))
+    .where(and(eq(t.projectId, projectId), isNull(m.conversation)))
+    .orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
 }
 
 /** What a previous process left running (boot). */

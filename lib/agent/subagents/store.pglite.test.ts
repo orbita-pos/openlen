@@ -19,17 +19,20 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { ALTER_AGENT_REQUEST_STEPS, CREATE_SUBAGENTS } = await import("@/scripts/subagents-migrate-sql");
+const { ALTER_AGENT_REQUEST_STEPS, ALTER_SUBAGENT_RUNS, CREATE_SUBAGENTS } = await import("@/scripts/subagents-migrate-sql");
 const store = await import("./store");
 
-const RUN = { projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find the menu", prompt: "Where is it?" };
+const RUN = { projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find the menu", prompt: "Where is it?", forked: false };
 const SETTLED = { finalText: "In /menu/index.html:12.", diagnostic: null, transcript: [{ role: "user", content: "Where is it?" }], actions: [], usage: { inputTokens: 10, outputTokens: 2, cachedTokens: 0, thinkingTokens: 0 }, toolUses: 3, durationMs: 4200, chargedCenticredits: 7 };
 
 beforeEach(async () => {
   const pg = new PGlite();
   await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
   await pg.query(`INSERT INTO "projects" VALUES ('p1')`);
-  for (const statement of CREATE_SUBAGENTS) await pg.query(statement);
+  for (const statement of [...CREATE_SUBAGENTS, ...ALTER_SUBAGENT_RUNS]) await pg.query(statement);
+  // The chat rows a run hangs from, with only what the conversation filter reads.
+  await pg.query(`CREATE TABLE "projectChatMessages" ("id" text PRIMARY KEY, "projectId" text NOT NULL, "conversation" text)`);
+  await pg.query(`INSERT INTO "projectChatMessages" VALUES ('row1', 'p1', NULL), ('row-old', 'p1', 'archived-1')`);
   base.db = drizzle(pg, { schema });
 });
 
@@ -86,8 +89,35 @@ describe("subagentRuns", () => {
     const pg = new PGlite();
     await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
     await pg.query(`CREATE TABLE "agentRequestSteps" ("id" text PRIMARY KEY)`);
-    for (let i = 0; i < 2; i++) for (const statement of [...CREATE_SUBAGENTS, ...ALTER_AGENT_REQUEST_STEPS]) await pg.query(statement);
+    for (let i = 0; i < 2; i++) for (const statement of [...CREATE_SUBAGENTS, ...ALTER_SUBAGENT_RUNS, ...ALTER_AGENT_REQUEST_STEPS]) await pg.query(statement);
+    const runCols = await pg.query<{ column_name: string }>(`select column_name from information_schema.columns where table_name = 'subagentRuns' and column_name = 'forked'`);
+    expect(runCols.rows).toHaveLength(1);
     const cols = await pg.query<{ column_name: string }>(`select column_name from information_schema.columns where table_name = 'agentRequestSteps'`);
     expect(cols.rows.map((r) => r.column_name).sort()).toEqual(["id", "subagentId"]);
+  });
+
+  it("lists only the current conversation's runs, oldest first", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.createRun({ id: "r2", ...RUN, chatRowId: "row-old" });
+    await store.createRun({ id: "r3", ...RUN });
+    expect((await store.runsOfCurrentConversation("p1")).map((r) => r.id)).toEqual(["r1", "r3"]);
+  });
+
+  it("reopens a settled run once; a running or unknown one stays as it is", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    expect(await store.reopenRun("r1")).toBe(false);
+    await store.settleRun("r1", { status: "completed", ...SETTLED });
+    await store.markNoticeDelivered("r1");
+    expect(await store.reopenRun("r1")).toBe(true);
+    expect(await store.runById("r1")).toMatchObject({ status: "running", settledAt: null, noticeDeliveredAt: null, toolUses: 3, chargedCenticredits: 7 });
+    expect(await store.reopenRun("r1")).toBe(false);
+    expect(await store.reopenRun("nope")).toBe(false);
+  });
+
+  it("a fork is recorded as forked", async () => {
+    await store.createRun({ id: "r1", ...RUN, preset: "general-purpose", forked: true });
+    await store.createRun({ id: "r2", ...RUN });
+    expect((await store.runById("r1"))!.forked).toBe(true);
+    expect((await store.runById("r2"))!.forked).toBe(false);
   });
 });

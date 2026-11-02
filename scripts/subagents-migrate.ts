@@ -9,10 +9,10 @@
 import { sql } from "drizzle-orm";
 
 import { db } from "../lib/db";
-import { ALTER_AGENT_REQUEST_STEPS, CREATE_SUBAGENTS } from "./subagents-migrate-sql";
+import { ALTER_AGENT_REQUEST_STEPS, ALTER_SUBAGENT_RUNS, CREATE_SUBAGENTS } from "./subagents-migrate-sql";
 
 async function main() {
-  for (const statement of [...CREATE_SUBAGENTS, ...ALTER_AGENT_REQUEST_STEPS]) await db.execute(sql.raw(statement));
+  for (const statement of [...CREATE_SUBAGENTS, ...ALTER_SUBAGENT_RUNS, ...ALTER_AGENT_REQUEST_STEPS]) await db.execute(sql.raw(statement));
   console.log("[subagents:migrate] listo");
   process.exit(0);
 }
