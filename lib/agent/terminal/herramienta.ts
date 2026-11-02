@@ -32,7 +32,8 @@ import { ghForTerminal, gitForTerminal } from "./git-option";
 import { stripeEnabled } from "@/lib/stripe/enabled";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
-import { closeTurnTerminal, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { TurnSandbox, closeTurnTerminal, holderOf, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { lockBox } from "@/lib/agent/sandbox/project-lease";
 import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
 import { mergeCurls } from "./curl-targets";
@@ -59,6 +60,23 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
   }
 
   const terminal = await terminalOfTheTurn(session, deps);
+  // ONE BOX PER PROJECT (spec local 2026-11-01-subagentes-de-len, §4.8): the turn and its subagents share it,
+  // so a whole call — bring it up to date, run, save what changed — goes one at a time.
+  const release = terminal instanceof TurnSandbox ? await lockBox(terminal) : null;
+  try {
+    return await bashOnTheTerminal(session, deps, args, command, terminal);
+  } finally {
+    release?.();
+  }
+}
+
+async function bashOnTheTerminal(
+  session: AgentSession,
+  deps: AgentDeps,
+  args: Record<string, unknown>,
+  command: string,
+  terminal: TerminalBackend,
+): Promise<ToolOutcome> {
   // Lo que otra herramienta guardó desde el último comando (Edit, Write, revertir…) entra antes de
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
@@ -69,6 +87,8 @@ export async function toolBash(session: AgentSession, deps: AgentDeps, args: Rec
       timeoutMs: typeof args.timeout === "number" ? args.timeout : undefined,
       // LA TERMINAL REAL: arrancar y volver al momento (la de siempre no tiene procesos y lo corre igual).
       ...(args.run_in_background === true ? { background: true } : {}),
+      // Whose job it is in a shared box: its notice goes to them, and closing them stops only theirs.
+      owner: holderOf(session),
     }),
     deps.stillWorking,
   );

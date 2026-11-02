@@ -42,6 +42,8 @@ interface Job {
   readonly outputPath: string;
   readonly exitPath: string;
   done: boolean;
+  /** Who started it, when the box is shared (spec local 2026-11-01-subagentes-de-len, §4.8): the turn or a subagent. */
+  readonly owner?: string;
 }
 
 /** In place of the visitor data, which never enters the box (Jesús, 21/10). */
@@ -502,11 +504,11 @@ export class SandboxTerminal implements TerminalBackend {
     }
   }
 
-  async ejecutar(command: string, o: { readonly timeoutMs?: number; readonly background?: boolean } = {}): Promise<SalidaDeUnComando> {
+  async ejecutar(command: string, o: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string } = {}): Promise<SalidaDeUnComando> {
     await this.open();
     const timeoutMs = Math.min(Math.max(o.timeoutMs ?? DEFAULT_TIMEOUT_MS, 1), MAX_TIMEOUT_MS);
     const id = `b${++this.nextJob}`;
-    const job = { command, outputPath: `${JOBS_DIR}/${id}.output`, exitPath: `${JOBS_DIR}/${id}.exit` };
+    const job = { command, outputPath: `${JOBS_DIR}/${id}.output`, exitPath: `${JOBS_DIR}/${id}.exit`, ...(o.owner ? { owner: o.owner } : {}) };
     const script = this.wrap(command, job);
     const notes = () => this.notes.splice(0).map((n) => `${n}\n`).join("");
 
@@ -556,9 +558,10 @@ export class SandboxTerminal implements TerminalBackend {
     return { ...seen.tree };
   }
 
-  /** What finished in the background since the last look, said once each; answers its bridge requests too. */
-  async finishedBackground(): Promise<string[]> {
-    const running = [...this.jobs.entries()].filter(([, j]) => !j.done);
+  /** What finished in the background since the last look, said once each; answers its bridge requests too.
+   *  With `owner`, only that holder's jobs (a shared box: the turn's and its subagents'). */
+  async finishedBackground(owner?: string): Promise<string[]> {
+    const running = [...this.jobs.entries()].filter(([, j]) => !j.done && (owner === undefined || j.owner === owner));
     if (running.length === 0) return [];
     await this.serveOnce().catch(() => undefined);
     const notices: string[] = [];
@@ -574,10 +577,11 @@ export class SandboxTerminal implements TerminalBackend {
     return notices;
   }
 
-  /** Stops what still runs in the background (the turn is closing); killed jobs are not announced. */
-  async killBackground(): Promise<void> {
+  /** Stops what still runs in the background (the turn is closing); killed jobs are not announced.
+   *  With `owner`, only that holder's jobs: the others' keep running. */
+  async killBackground(owner?: string): Promise<void> {
     for (const job of this.jobs.values()) {
-      if (job.done) continue;
+      if (job.done || (owner !== undefined && job.owner !== owner)) continue;
       job.done = true;
       if (job.pid !== undefined) {
         await this.o.handle

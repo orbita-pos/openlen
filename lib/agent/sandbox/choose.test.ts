@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "@/lib/agent/tools";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
@@ -7,10 +7,14 @@ import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
 import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, settleTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
 import { fakeDriver } from "./fake-driver";
+import { forgetAllBoxes } from "./project-lease";
 import { BASE_ENV_FILE, SandboxTerminal } from "./sandbox-terminal";
 import type { ProjectSandboxRow } from "./store";
 
 const ENV = { E2B_API_KEY: "k" };
+
+// The project leases live in the process: every test starts with none.
+afterEach(() => forgetAllBoxes());
 
 function memoryStore(rows: Record<string, ProjectSandboxRow> = {}): SandboxStore & { rows: Record<string, ProjectSandboxRow> } {
   return {
@@ -312,5 +316,57 @@ describe("closeTurnTerminal", () => {
     const { s, o } = setup();
     const t = await terminalForTurn(s, o);
     expect((t as { inner?: unknown }).inner).toBeInstanceOf(SandboxTerminal);
+  });
+});
+
+// Len's subagents (spec local 2026-11-01-subagentes-de-len, §4.8): the project's box is shared by the turn
+// and its subagents, and by a later turn while they still run; it pauses when its last holder leaves.
+describe("the project's box, shared", () => {
+
+  it("a subagent of the turn joins the open box instead of falling back", async () => {
+    const { s, o } = setup();
+    s.terminal = await terminalForTurn(s, o);
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    expect(child.terminal).toBe(s.terminal);
+    expect(child.sandboxNotice).toBeUndefined();
+  });
+
+  it("the box pauses, is let go and charged only when its last holder closes", async () => {
+    const { s, o, store, charge } = setup();
+    s.terminal = await terminalForTurn(s, o);
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    await closeTurnTerminal(s, { save: async () => {}, store, charge });
+    expect(s.terminal).toBeUndefined();
+    expect(store.rows.p?.heldBy).toBe("turn-1");
+    expect(charge).not.toHaveBeenCalled();
+    await closeTurnTerminal(child, { save: async () => {}, store, charge });
+    expect(store.rows.p?.heldBy).toBeNull();
+    expect(store.rows.p?.state).toBe("paused");
+    expect(charge).toHaveBeenCalledTimes(1);
+  });
+
+  it("a later turn joins the box a subagent still keeps", async () => {
+    const { o } = setup();
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    const next = { projectId: "p", userId: "owner", turnId: "turn-2" } as AgentSession;
+    next.terminal = await terminalForTurn(next, o);
+    expect(next.terminal).toBe(child.terminal);
+    expect(next.sandboxNotice).toBeUndefined();
+  });
+
+  it("closing one holder keeps the other's background job running", async () => {
+    let pid = 30;
+    const driver = fakeDriver({ onRun: (_cmd, _files, run) => (run.background ? { pid: pid++ } : undefined) });
+    const { s, o, store, charge } = setup({ driver });
+    s.terminal = await terminalForTurn(s, o);
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    await child.terminal.ejecutar("sleep 9; echo child", { background: true, owner: "sub-1" });
+    await closeTurnTerminal(s, { save: async () => {}, store, charge });
+    const handleId = store.rows.p!.sandboxId!;
+    expect(driver.commands(handleId).some((c) => c.includes("kill") && c.includes("30"))).toBe(false);
   });
 });

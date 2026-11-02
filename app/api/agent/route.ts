@@ -136,7 +136,7 @@ import { streamWithRetry } from "@/lib/agent/retry";
 import { conSenales, relojDeSilencio } from "@/lib/agent/reloj-de-silencio";
 import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type AgentSession } from "@/lib/agent/tools";
 import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
-import { TurnSandbox } from "@/lib/agent/sandbox/choose";
+import { TurnSandbox, holderOf } from "@/lib/agent/sandbox/choose";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
@@ -1861,7 +1861,8 @@ async function correrTurno(
           // antes de cada llamada al modelo, como el LSP de Claude Code.
           lateDiagnostics: () => takeTypesAndLint(agentSession),
           // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
-          lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground() : []),
+          // Only this turn's jobs: the box may be shared with subagents (spec local 2026-11-01-subagentes-de-len).
+          lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
           // Lo que vio Len, en el chat: las capturas de un paso, guardadas para su tarjeta.
           storeScreenshots: (images) => storeStepScreenshots(projectId, images),
           // El ■ también corta la espera entre reintentos del proveedor

@@ -1264,6 +1264,9 @@ export interface AgentSession {
   /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Write, Edit and what a
    *  command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
+  /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
+   *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
+  terminalHolderId?: string;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;

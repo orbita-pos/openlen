@@ -76,4 +76,29 @@ describe("background commands in the box", () => {
     // Killed jobs are not announced.
     expect(await terminal.finishedBackground()).toEqual([]);
   });
+
+  // Len's subagents share the project's box (spec local 2026-11-01-subagentes-de-len, §4.8): each job has
+  // an owner, who hears when it ends, and stopping one holder's jobs leaves the others'.
+  it("a job is announced to its owner only", async () => {
+    let pid = 10;
+    const { terminal, box } = await open((_cmd, _files, o) => (o.background ? { pid: pid++ } : undefined));
+    await terminal.ejecutar("sleep 1; echo len", { background: true, owner: "turn-1" });
+    await terminal.ejecutar("sleep 1; echo child", { background: true, owner: "sub-1" });
+    box().set("/tmp/bash-tasks/b1.exit", "0\n");
+    box().set("/tmp/bash-tasks/b2.exit", "0\n");
+    expect((await terminal.finishedBackground("sub-1")).map((n) => n.includes("job b2"))).toEqual([true]);
+    expect((await terminal.finishedBackground("turn-1")).map((n) => n.includes("job b1"))).toEqual([true]);
+  });
+
+  it("stopping one holder's jobs leaves the other's running", async () => {
+    let pid = 20;
+    const { terminal, box, d, handle } = await open((_cmd, _files, o) => (o.background ? { pid: pid++ } : undefined));
+    await terminal.ejecutar("python3 -m http.server", { background: true, owner: "turn-1" });
+    await terminal.ejecutar("sleep 5; echo child", { background: true, owner: "sub-1" });
+    await terminal.killBackground("turn-1");
+    expect(d.commands(handle.id).some((c) => c.includes("kill") && c.includes("20"))).toBe(true);
+    expect(d.commands(handle.id).some((c) => c.includes("kill") && c.includes("21"))).toBe(false);
+    box().set("/tmp/bash-tasks/b2.exit", "0\n");
+    expect(await terminal.finishedBackground("sub-1")).toHaveLength(1);
+  });
 });
