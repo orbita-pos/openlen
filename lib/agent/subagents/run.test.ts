@@ -8,6 +8,7 @@ import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { settlementNotice } from "./notice";
 import { forgetAllSubagents, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
+import type { SubagentRunRow } from "./store";
 import { createTurnSpend } from "./spend";
 
 afterEach(() => forgetAllSubagents());
@@ -62,6 +63,9 @@ function setup(
     lenSpent?: number;
     snapshots?: Record<string, string>[];
     touched?: Record<string, string[]>;
+    /** Runs left out of the current conversation (an archived one). */
+    archived?: string[];
+    onCloseTerminal?: () => void;
   } = {},
 ) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
@@ -94,9 +98,18 @@ function setup(
       };
     },
     store: {
-      createRun: async (r) => void rows.set(r.id, { ...r, status: "running" }),
+      createRun: async (r) => void rows.set(r.id, { ...r, status: "running", toolUses: 0, durationMs: null, chargedCenticredits: 0, actions: [], transcript: null }),
       saveProgress: async () => {},
       settleRun: async (id, s) => void rows.set(id, { ...rows.get(id), ...s }),
+      runById: async (id) => (rows.get(id) as unknown as SubagentRunRow | undefined) ?? null,
+      reopenRun: async (id) => {
+        const r = rows.get(id);
+        if (!r || r.status === "running") return false;
+        rows.set(id, { ...r, status: "running" });
+        return true;
+      },
+      runsOfCurrentConversation: async (projectId) =>
+        [...rows.values()].filter((r) => r.projectId === projectId && !o.archived?.includes(String(r.id))) as unknown as SubagentRunRow[],
     },
     charge: async (c) => {
       charges.push(c);
@@ -106,7 +119,10 @@ function setup(
       if (!sessions.includes(session)) sessions.push(session);
       terminals.push(`open ${holderId}`);
     },
-    closeTerminal: async (_s, holderId) => void terminals.push(`close ${holderId}`),
+    closeTerminal: async (_s, holderId) => {
+      terminals.push(`close ${holderId}`);
+      o.onCloseTerminal?.();
+    },
     turnAlive: () => o.turnAlive ?? false,
     launchNoticeTurn: (projectId, personId) => void noticeTurns.push({ projectId, personId }),
     turnStillOpen: () => o.turnOpen ?? true,
@@ -128,6 +144,7 @@ function setup(
     app: null,
     planMode: false,
     turnArgs: TURN_ARGS,
+    lenSystemPrompt: "LEN SYSTEM PROMPT",
     declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
     deps: {} as AgentDeps,
     sessionBase: { skills: new Map() as never, ownerEmail: null },
@@ -369,6 +386,79 @@ describe("continuable children (phase 2)", () => {
     expect(t.some((m) => m.role === "system")).toBe(false);
     expect(t.some((m) => m.role === "user" && String(m.content).includes("Find the menu."))).toBe(true);
     expect(t.at(-1)).toMatchObject({ role: "assistant", content: "Done: /menu/index.html" });
+  });
+});
+
+describe("waking an idle child (phase 2)", () => {
+  const until = async (cond: () => boolean) => {
+    for (let i = 0; i < 400 && !cond(); i++) await new Promise((r) => setTimeout(r, 2));
+  };
+
+  it("an idle child resumes from its transcript with Len's message and settles again", async () => {
+    const s = setup({ scripts: [dice("First pass done"), dice("Footer done too")] });
+    await s.launcher.launch({ description: "Fix", prompt: "Fix the header.", preset: "general-purpose" });
+    await s.settled("r1");
+    takeNotices("p");
+    expect(await s.launcher.send({ id: "r1", message: "Now the footer." })).toEqual({ ok: true, resumed: true, preset: "general-purpose" });
+    const row = await s.settled("r1");
+    const second = s.g.seen[1]!;
+    expect(second[0]!.role).toBe("system");
+    expect(String(second[0]!.content)).toContain("LEN SYSTEM PROMPT");
+    expect(second.some((m) => m.role === "user" && String(m.content).includes("Fix the header."))).toBe(true);
+    expect(second.some((m) => m.role === "assistant" && m.content === "First pass done")).toBe(true);
+    expect(second.at(-1)).toEqual({ role: "user", content: "Agent len sent a message: Now the footer." });
+    expect(row.status).toBe("completed");
+    expect(takeNotices("p").map((n) => n.text)).toEqual([
+      "Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nFooter done too",
+    ]);
+  });
+
+  it("a running child gets Len's message in its inbox instead", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    expect(await s.launcher.send({ id: "r1", message: "Hurry." })).toEqual({ ok: true, resumed: false, preset: "general-purpose" });
+    s.g.release();
+    await s.settled("r1");
+    expect(s.g.seen[1]!.some((m) => m.content === "Agent len sent a message: Hurry.")).toBe(true);
+  });
+
+  it("the woken run adds to the row's counts, and counts against the current turn's slots and cap", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("One"), llama("Read", { file_path: "/b" }), dice("Two")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    const first = { ...(await s.settled("r1")) };
+    await s.launcher.send({ id: "r1", message: "Again." });
+    const second = await s.settled("r1");
+    expect(second.toolUses).toBe((first.toolUses as number) + 1);
+    expect(second.chargedCenticredits as number).toBeGreaterThan(first.chargedCenticredits as number);
+    expect(second.actions as unknown[]).toHaveLength(2);
+    for (let i = 0; i < 8; i++) reserve("p", `x${i}`, new AbortController());
+    expect(await s.launcher.send({ id: "r1", message: "x" })).toMatchObject({ ok: false, code: "too_many_subagents" });
+    forgetAllSubagents();
+    s.setLen(10_000);
+    expect(await s.launcher.send({ id: "r1", message: "x" })).toMatchObject({ ok: false, code: "turn_budget_reached" });
+  });
+
+  it("🔴 a message at the very moment it settles wakes it again: nothing is lost", async () => {
+    let once = true;
+    const s = setup({
+      scripts: [dice("Done"), dice("Got it")],
+      onCloseTerminal: () => {
+        if (once) sendToRun("r1", "One more thing.");
+        once = false;
+      },
+    });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await until(() => s.g.seen.length === 2 && s.rows.get("r1")?.status === "completed");
+    expect(s.g.seen[1]!.at(-1)).toEqual({ role: "user", content: "Agent len sent a message: One more thing." });
+  });
+
+  it("an unknown child, or one of an archived conversation, is unavailable", async () => {
+    const s = setup({ archived: ["r1"] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(await s.launcher.send({ id: "r1", message: "x" })).toEqual({ ok: false, code: "unavailable", message: 'subagent "r1" is unavailable' });
+    expect(await s.launcher.send({ id: "nope", message: "x" })).toMatchObject({ ok: false, code: "unavailable" });
   });
 });
 

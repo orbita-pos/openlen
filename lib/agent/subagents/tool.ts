@@ -150,8 +150,15 @@ export function notYourParentError(childId: string, target: string): string {
 
 export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled";
 
+/** What `send` answers: delivered into a running child's inbox (`resumed: false`), or it woke from its transcript. */
+export type SendResult =
+  | { ok: true; resumed: boolean; preset: string }
+  | { ok: false; code: "unavailable" | "too_many_subagents" | "turn_budget_reached"; message: string };
+
 export interface SubagentsDeps {
   launch(o: { description: string; prompt: string; preset: SubagentPreset }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  /** Len's `send_message` to one of his children (phase 2). */
+  send(o: { id: string; message: string }): Promise<SendResult>;
 }
 
 const invalid = (message: string): ToolOutcome => ({ response: { ok: false, error: "invalid_arguments", message } });
