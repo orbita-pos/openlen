@@ -484,6 +484,8 @@ export interface StoredChatTurn {
     textOffset?: number;
     /** Lo que entregó `present` (spec local 2026-10-26-len-skills): la tarjeta es su único enlace. */
     delivered?: readonly { readonly name: string; readonly url: string; readonly size: number; readonly description?: string; readonly preview?: string }[];
+    /** El subagente que lanzó una llamada a `subagent` (spec local 2026-11-01-subagentes-de-len). */
+    subagent?: { readonly id: string; readonly preset: string };
     /** Lo que vio Len: las URLs de las capturas del paso (`storeStepScreenshots`), las mismas que recibió el modelo. */
     screenshots?: readonly string[];
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.

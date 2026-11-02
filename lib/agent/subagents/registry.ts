@@ -78,6 +78,11 @@ export function queueNotice(projectId: string, n: QueuedNotice): void {
   wake(projectId);
 }
 
+/** Whether a notice waits, without taking it (the closing turn decides whether to wake Len). */
+export function hasNotices(projectId: string): boolean {
+  return (state.notices.get(projectId)?.length ?? 0) > 0;
+}
+
 export function takeNotices(projectId: string): QueuedNotice[] {
   const queue = state.notices.get(projectId) ?? [];
   state.notices.delete(projectId);

@@ -126,6 +126,12 @@ const mocks = vi.hoisted(() => {
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>),
   // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
   nacerComoApp: vi.fn(async (_p: unknown) => true),
+  // Len's subagents (spec local 2026-11-01-subagentes-de-len): the launcher is checked by what the route hands it.
+  createSubagentLauncher: vi.fn((_ctx: unknown, _io: unknown) => ({ launch: vi.fn(async () => ({ ok: true as const, id: "r1" })) })),
+  launchSubagentNoticeTurn: vi.fn((_p: unknown) => {}),
+  markNoticeDelivered: vi.fn(async (_id: string) => true),
+  hayTurnoVivoEnElProyecto: vi.fn((_projectId: string) => false),
+  addChangesToTurn: vi.fn(async () => false),
   };
 });
 
@@ -135,6 +141,14 @@ vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
   registrarCorredorDeTurnos: (f: NonNullable<typeof mocks.corredor>) => {
     mocks.corredor = f;
   },
+  launchSubagentNoticeTurn: mocks.launchSubagentNoticeTurn,
+}));
+vi.mock("@/lib/agent/subagents/run", () => ({ createSubagentLauncher: mocks.createSubagentLauncher }));
+vi.mock("@/lib/agent/subagents/store", () => ({
+  createRun: vi.fn(),
+  saveProgress: vi.fn(),
+  settleRun: vi.fn(),
+  markNoticeDelivered: mocks.markNoticeDelivered,
 }));
 vi.mock("@/lib/projects/hilos", async (original) => ({
   // Pura: la de verdad (quién del texto es del proyecto, sin uno mismo).
@@ -206,7 +220,7 @@ vi.mock("@/lib/resultados/zona-guardada", () => ({
 }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }));
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
-vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno }));
+vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno, addChangesToTurn: mocks.addChangesToTurn }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
@@ -272,6 +286,7 @@ vi.mock("@/lib/agent/direcciones", () => ({
   esperarRespuesta: mocks.esperarRespuesta,
   // Pieza 8: la ronda siguiente de una fila (el sondeo del chat la lee).
   rondaSiguiente: mocks.rondaSiguiente,
+  hayTurnoVivoEnElProyecto: mocks.hayTurnoVivoEnElProyecto,
   MAX_DIRECCION: 2000,
 }));
 // El renderizador de Chromium. Se dobla para poder CONTAR arranques: el punto
@@ -3719,5 +3734,178 @@ describe("POST /api/agent — el segundo proveedor", () => {
     expect(isCooling("deepinfra", Date.now())).toBe(false);
     await pedir();
     expect(isCooling("deepinfra", Date.now())).toBe(true);
+  });
+});
+
+describe("POST /api/agent — Len's subagents", () => {
+  const usage = { inputTokens: 10, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 };
+  const cierre = () => ({
+    finalText: "ok", turns: 1, toolCalls: 1, usage, terminalError: false, topeAlcanzado: null, errorCode: null,
+    mutoDurable: false, transcripcion: [{ role: "assistant", content: "ok" }],
+  });
+  const peticion = (prompt = "busca el menú") =>
+    new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt, idioma: "es", zonaHoraria: "Europe/Madrid" }) });
+  const pedir = async () => readEvents(await POST(peticion()));
+  const corredor = () => mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+  const loopArgs = () => (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [AgentLoopArgs])[0];
+  type Ctx = { emit?: (ev: unknown) => void; spend: { addChildren(n: number): void }; planMode: boolean; chatRowId: string; personId: string };
+  type Io = { launchNoticeTurn(projectId: string, personId: string): void; turnAlive(projectId: string): boolean };
+  const launcherArgs = () => mocks.createSubagentLauncher.mock.calls.at(-1) as unknown as [Ctx, Io];
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    (await import("@/lib/agent/subagents/registry")).forgetAllSubagents();
+    vi.stubEnv("OPENLEN_AGENT", "1");
+    vi.stubEnv("OPENLEN_SUBAGENTS", "");
+    vi.stubEnv("FIREWORKS_API_KEY", "k");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+    mocks.loadProject.mockResolvedValue({
+      title: "Página", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "<html><body><h1>hola</h1></body></html>" },
+    });
+    mocks.loadBusinessProfile.mockResolvedValue(null);
+    mocks.getUserMemoryBounded.mockResolvedValue(null);
+    mocks.getEsfuerzoGuardado.mockResolvedValue(null);
+    mocks.listVersions.mockResolvedValue([]);
+    mocks.getCreditState.mockResolvedValue({ plan: "pro", balance: 5_000, allotment: 15_000, refillsAt: null });
+    mocks.creditsForUsage.mockImplementation((i: number, o: number) => i + o);
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub());
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    mocks.runAgentTool.mockResolvedValue({ response: { ok: true, tool_result: "started subagent r1" } });
+    mocks.runAgentLoop.mockImplementation(async () => cierre());
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    mocks.techoDelTurno.mockReturnValue(1_000_000);
+    mocks.hayTurnoVivoEnElProyecto.mockReturnValue(false);
+  });
+
+  it("the turn's tools get the launcher, and a child's event reaches the chat as `subagent`", async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("subagent", { description: "Find the menu", prompt: "Where is it?", subagent_type: "Explore" });
+      launcherArgs()[0].emit?.({ type: "subagent", id: "r1", preset: "Explore", description: "Find the menu", status: "running" });
+      return cierre();
+    });
+    const eventos = await pedir();
+    const launcher = mocks.createSubagentLauncher.mock.results.at(-1)!.value as unknown;
+    const deps = (mocks.runAgentTool.mock.calls.at(-1) as unknown as [unknown, { subagents?: unknown }])[1];
+    expect(deps.subagents).toBe(launcher);
+    expect(eventos.find((e) => e.event === "subagent")?.data).toMatchObject({ id: "r1", status: "running", description: "Find the menu" });
+    expect(launcherArgs()[0]).toMatchObject({ personId: "u1", planMode: false });
+  });
+
+  it("with OPENLEN_SUBAGENTS=0 there is no launcher and the loop gets no notice hooks", async () => {
+    vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return cierre();
+    });
+    await pedir();
+    expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
+    const deps = (mocks.runAgentTool.mock.calls.at(-1) as unknown as [unknown, { subagents?: unknown }])[1];
+    expect(deps.subagents).toBeUndefined();
+    expect(loopArgs().takeAgentNotices).toBeUndefined();
+  });
+
+  it("notices are taken for the loop and marked delivered", async () => {
+    const { queueNotice } = await import("@/lib/agent/subagents/registry");
+    let taken: readonly string[] = [];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      queueNotice("p1", { id: "r1", text: "Background subagent r1 finished." });
+      taken = args.takeAgentNotices!();
+      return cierre();
+    });
+    await pedir();
+    expect(taken).toEqual(["Background subagent r1 finished."]);
+    expect(mocks.markNoticeDelivered).toHaveBeenCalledWith("r1");
+  });
+
+  it("a notice left in the queue when the turn closes goes on in a server turn, as the person who asked", async () => {
+    const { queueNotice, noticeTurnPending } = await import("@/lib/agent/subagents/registry");
+    mocks.runAgentLoop.mockImplementation(async () => {
+      queueNotice("p1", { id: "r1", text: "Background subagent r1 finished." });
+      return cierre();
+    });
+    await pedir();
+    expect(mocks.launchSubagentNoticeTurn).toHaveBeenCalledTimes(1);
+    const p = mocks.launchSubagentNoticeTurn.mock.calls[0]![0] as { userId: string; projectId: string; timeZone: string; locale: string; takeNotices(): { id: string }[] };
+    expect(p).toMatchObject({ userId: "u1", projectId: "p1", timeZone: "Europe/Madrid", locale: "es" });
+    expect(noticeTurnPending("p1")).toBe(true);
+    // Taking them (when that turn starts) clears the flag and marks them delivered.
+    expect(p.takeNotices().map((n) => n.id)).toEqual(["r1"]);
+    expect(noticeTurnPending("p1")).toBe(false);
+    expect(mocks.markNoticeDelivered).toHaveBeenCalledWith("r1");
+  });
+
+  it("a server turn that never starts lets the next one launch", async () => {
+    const { queueNotice, noticeTurnPending } = await import("@/lib/agent/subagents/registry");
+    mocks.runAgentLoop.mockImplementation(async () => {
+      queueNotice("p1", { id: "r1", text: "Background subagent r1 finished." });
+      return cierre();
+    });
+    await pedir();
+    const p = mocks.launchSubagentNoticeTurn.mock.calls[0]![0] as { fail(f: null): Promise<void> };
+    await p.fail(null);
+    expect(noticeTurnPending("p1")).toBe(false);
+  });
+
+  it("no server turn when another Len turn of the project is alive: it takes the notice itself", async () => {
+    const { queueNotice } = await import("@/lib/agent/subagents/registry");
+    mocks.hayTurnoVivoEnElProyecto.mockReturnValue(true);
+    mocks.runAgentLoop.mockImplementation(async () => {
+      queueNotice("p1", { id: "r1", text: "Background subagent r1 finished." });
+      return cierre();
+    });
+    await pedir();
+    expect(mocks.launchSubagentNoticeTurn).not.toHaveBeenCalled();
+  });
+
+  it("the turn's ■ does not stop its children", async () => {
+    const { reserve } = await import("@/lib/agent/subagents/registry");
+    const child = new AbortController();
+    reserve("p1", "r1", child);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      const { abortar } = (mocks.abrirTurno.mock.calls.at(-1) as unknown as [string, string, number, { abortar(): void }])[3];
+      abortar();
+      expect(args.signal?.aborted).toBe(true);
+      return { ...cierre(), terminalError: true, errorCode: "cancelled" };
+    });
+    await pedir();
+    expect(child.signal.aborted).toBe(false);
+  });
+
+  it("only a turn nobody watches waits for its children", async () => {
+    await pedir();
+    expect(loopArgs().awaitAgentNotices).toBeUndefined();
+    const origin = { kind: "scheduled" as const, taskId: "t1", title: "PDF", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "Make the PDF", turnId: "44444444-4444-4444-8444-444444444444" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "[SCHEDULE]", origin, onReply: vi.fn(async () => {}) } }));
+    expect(typeof loopArgs().awaitAgentNotices).toBe("function");
+    // No child running: it closes at once.
+    expect(await loopArgs().awaitAgentNotices!()).toBe(false);
+  });
+
+  it("the notices' server turn has no message of the person and is not refused for it", async () => {
+    const origin = { kind: "subagents" as const, ids: ["r1"] };
+    const res = await corredor()("u1", { projectId: "p1", prompt: "", turnId: "55555555-5555-4555-8555-555555555555" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "Background subagent r1 finished.", origin, onReply: vi.fn(async () => {}) } });
+    expect(res.status).toBe(200);
+    await readEvents(res);
+    const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
+    expect(paraElModelo.prompt).toBe("Background subagent r1 finished.");
+  });
+
+  it("what the children spent counts against the turn's cap", async () => {
+    mocks.techoDelTurno.mockReturnValue(100);
+    let before = true;
+    let after = false;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      const g = { inputTokens: 30, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
+      before = args.excedePresupuesto!(g, undefined as never);
+      launcherArgs()[0].spend.addChildren(80);
+      after = args.excedePresupuesto!(g, undefined as never);
+      return cierre();
+    });
+    await pedir();
+    expect(before).toBe(false);
+    expect(after).toBe(true);
   });
 });

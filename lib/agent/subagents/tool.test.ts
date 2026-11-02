@@ -26,6 +26,8 @@ describe("the subagent tool (DeepSeek's)", () => {
     const out = await toolSubagent(session, deps, { description: "Find the menu", prompt: "Where is the menu defined? Report paths." });
     expect(out.response).toEqual({ ok: true, tool_result: "started subagent r1" });
     expect(out.action).toMatchObject({ tool: "subagent", ok: true, summary: "Find the menu" });
+    // Its card names the run, so the chat finds it again after a reload.
+    expect(out.subagent).toEqual({ id: "r1", preset: "general-purpose" });
     expect(launched).toEqual([{ description: "Find the menu", prompt: "Where is the menu defined? Report paths.", preset: "general-purpose" }]);
   });
 

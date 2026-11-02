@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  hasNotices,
   MAX_ACTIVE_SUBAGENTS,
   forgetAllSubagents,
   liveCount,
@@ -54,7 +55,9 @@ describe("the live subagents of each project", () => {
   it("notices wait in order and are taken once", () => {
     queueNotice("p", { id: "r1", text: "one" });
     queueNotice("p", { id: "r2", text: "two" });
+    expect(hasNotices("p")).toBe(true);
     expect(takeNotices("p")).toEqual([{ id: "r1", text: "one" }, { id: "r2", text: "two" }]);
+    expect(hasNotices("p")).toBe(false);
     expect(takeNotices("p")).toEqual([]);
   });
 

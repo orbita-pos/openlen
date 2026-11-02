@@ -84,7 +84,8 @@ export interface SubagentRunStore {
 }
 
 export interface RunnerIO {
-  brain(tools: Record<string, unknown>[], runId: string): SubagentBrain;
+  /** `signal`: the child's own stop (its card's ■, the project deleted), never the launching turn's. */
+  brain(tools: Record<string, unknown>[], runId: string, signal: AbortSignal): SubagentBrain;
   runTool(session: AgentSession, deps: AgentDeps, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   readonly store: SubagentRunStore;
   /** Charges the owner (ledger surface `subagent`); the centicredits that moved. */
@@ -178,7 +179,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     try {
       await io.openTerminal(session, id);
       before = await io.snapshot(session).catch(() => null);
-      const b = (brain = io.brain(tools, id));
+      const b = (brain = io.brain(tools, id, abort.signal));
       result = await runSubagent({
         messages: childMessages(ctx.turnArgs, o.preset, o.prompt),
         tools,

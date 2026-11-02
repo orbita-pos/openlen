@@ -63,9 +63,13 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
   const noticeTurns: unknown[] = [];
   const changes: unknown[] = [];
   const events: SubagentEvent[] = [];
+  const brainSignals: (AbortSignal | undefined)[] = [];
   let n = 0;
   const io: RunnerIO = {
-    brain: () => ({ openStream: g.abrir, closeOut: () => g.abrir([]), modelId: "m", lastProvider: () => "deepinfra" }),
+    brain: (_tools, _runId, signal) => {
+      brainSignals.push(signal);
+      return { openStream: g.abrir, closeOut: () => g.abrir([]), modelId: "m", lastProvider: () => "deepinfra" };
+    },
     runTool: async (session, _deps, name, args): Promise<ToolOutcome> => {
       if (!sessions.includes(session)) sessions.push(session);
       ran.push(name);
@@ -118,7 +122,7 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -180,6 +184,8 @@ describe("the launcher of Len's subagents", () => {
     const row = await s.settled("r1");
     expect(row.status).toBe("aborted");
     expect(takeNotices("p")[0]!.text).toContain("was stopped before it finished.");
+    // Its brain listened to its own stop: the model call is cut too, not only the loop.
+    expect(s.brainSignals[0]?.aborted).toBe(true);
   });
 
   it("past the turn's limit nothing starts; reaching it while running closes it as budget", async () => {

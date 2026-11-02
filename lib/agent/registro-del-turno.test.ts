@@ -17,6 +17,12 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[0]).toMatchObject({ tool: "present", delivered });
   });
 
+  it("a subagent's launch: its card keeps the run, for the chat to find it after a reload", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "subagent", status: "done", summary: "Find the menu", subagent: { id: "r1", preset: "Explore" } });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "subagent", subagent: { id: "r1", preset: "Explore" } });
+  });
+
   it("lo que vio Len: guarda las capturas del paso en su tarjeta", () => {
     const r = crearRegistroDelTurno();
     const screenshots = ["https://u/uploads/p1/screenshot-1.jpg"];
