@@ -1,7 +1,7 @@
 // The real database behind the step store (layer 0 of Len 3.1). Kept apart from
 // `step-store.ts` so the store's tests never import `lib/db` (on the development
 // machine `.env.local` points at production).
-import { and, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { agentRequestSteps } from "@/lib/db/schema";
@@ -68,7 +68,8 @@ export const drizzleStepStoreDb: StepStoreDb = {
     const rows = await db
       .select()
       .from(agentRequestSteps)
-      .where(and(eq(agentRequestSteps.projectId, projectId), eq(agentRequestSteps.kind, kind), isNotNull(agentRequestSteps.messageHashes)))
+      // Len's own calls: a subagent's conversation is another prefix (spec local 2026-11-01-subagentes-de-len).
+      .where(and(eq(agentRequestSteps.projectId, projectId), eq(agentRequestSteps.kind, kind), isNotNull(agentRequestSteps.messageHashes), isNull(agentRequestSteps.subagentId)))
       .orderBy(desc(agentRequestSteps.createdAt), desc(agentRequestSteps.step))
       .limit(1);
     return rows[0] ? fromDb(rows[0]) : null;

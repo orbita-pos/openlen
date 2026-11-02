@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BrainCall } from "@/lib/agent/brain";
 import * as schema from "@/lib/db/schema";
+import { ALTER_AGENT_REQUEST_STEPS } from "../../../scripts/subagents-migrate-sql";
 
 const base = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("@/lib/db", async () => {
@@ -40,6 +41,8 @@ beforeEach(async () => {
       "turnFirstMessageCount" integer, "messageHashes" jsonb, "tools" jsonb, "repeats" jsonb, "cacheBreak" jsonb,
       "endReason" text, "createdAt" timestamp not null default now());
   `);
+  // And what scripts/subagents-migrate.ts adds.
+  for (const statement of ALTER_AGENT_REQUEST_STEPS) await pg.exec(statement);
   base.db = drizzle(pg, { schema });
 });
 
@@ -92,5 +95,19 @@ describe("layer 0 rows as the turn goes, in Postgres", () => {
       [1, false, null],
       [0, true, "completed"],
     ]);
+  });
+
+  it("a subagent's rows carry its run's id, and the next turn's baseline is Len's last call, never a child's", async () => {
+    const store = createStepStore(drizzleStepStoreDb, { log: () => {} });
+    const len = createStepRecorder({ projectId: "P", turnId: "T", hasHistory: false, store, log: () => {} });
+    len.onCall(call(["a"], 1000));
+    len.finish({ endReason: "completed" });
+    await len.flush();
+    const child = createStepRecorder({ projectId: "P", turnId: "T", hasHistory: false, store, log: () => {}, subagentId: "r1" });
+    child.onCall(call(["child"], 0));
+    await child.flush();
+    const ids = (await pg.query<{ subagentId: string | null }>(`select "subagentId" from "agentRequestSteps" order by "createdAt", "step"`)).rows;
+    expect(ids.map((r) => r.subagentId)).toEqual([null, "r1"]);
+    expect(await store.loadBaseline("P", "loop")).toMatchObject({ turnId: "T", cachedTokens: 1000 });
   });
 });
