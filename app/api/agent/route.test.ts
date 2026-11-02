@@ -3882,6 +3882,59 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(child.signal.aborted).toBe(false);
   });
 
+  it("the fork seed is the request without its last message", async () => {
+    const seed = [
+      { role: "system", content: "You are Len." },
+      { role: "user", content: "hola" },
+      { role: "assistant", content: "¡Hola!" },
+    ];
+    mocks.buildAgentMessages.mockReturnValueOnce({ ok: true as const, systemPrompt: "You are Len.", messages: [...seed, { role: "user", content: "busca el menú" }] } as never);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      // What the loop appends belongs to the turn in flight: a fork never sees it.
+      (args.messages as unknown as { role: string; content: string }[]).push({ role: "assistant", content: "Buscando…" });
+      return cierre();
+    });
+    await pedir();
+    const ctx = launcherArgs()[0] as unknown as { forkSeed: unknown[]; lenSystemPrompt: string };
+    expect(ctx.forkSeed).toEqual(seed);
+    expect(ctx.lenSystemPrompt).toBe("You are Len.");
+  });
+
+  it("list and send go through the current conversation: the launcher gets the store's conversation queries", async () => {
+    await pedir();
+    const store = await import("@/lib/agent/subagents/store");
+    const io = launcherArgs()[1] as unknown as { store: Record<string, unknown> };
+    expect(io.store.runsOfCurrentConversation).toBe(store.runsOfCurrentConversation);
+    expect(io.store.runById).toBe(store.runById);
+    expect(io.store.reopenRun).toBe(store.reopenRun);
+  });
+
+  it("a child's message reaches Len but is not marked delivered: only how a run ended is", async () => {
+    const { queueNotice } = await import("@/lib/agent/subagents/registry");
+    let taken: readonly string[] = [];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      queueNotice("p1", { id: "r1", text: "Agent r1 sent a message: halfway", message: true });
+      queueNotice("p1", { id: "r2", text: "Background subagent r2 finished." });
+      taken = args.takeAgentNotices!();
+      return cierre();
+    });
+    await pedir();
+    expect(taken).toEqual(["Agent r1 sent a message: halfway", "Background subagent r2 finished."]);
+    expect(mocks.markNoticeDelivered.mock.calls).toEqual([["r2"]]);
+  });
+
+  it("the notices' server turn doesn't mark a child's message delivered either", async () => {
+    const { queueNotice } = await import("@/lib/agent/subagents/registry");
+    mocks.runAgentLoop.mockImplementation(async () => {
+      queueNotice("p1", { id: "r1", text: "Agent r1 sent a message: halfway", message: true });
+      return cierre();
+    });
+    await pedir();
+    const p = mocks.launchSubagentNoticeTurn.mock.calls[0]![0] as { takeNotices(): { id: string }[] };
+    expect(p.takeNotices().map((n) => n.id)).toEqual(["r1"]);
+    expect(mocks.markNoticeDelivered).not.toHaveBeenCalled();
+  });
+
   it("only a turn nobody watches waits for its children", async () => {
     await pedir();
     expect(loopArgs().awaitAgentNotices).toBeUndefined();

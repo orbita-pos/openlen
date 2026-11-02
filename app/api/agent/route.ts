@@ -1340,7 +1340,8 @@ async function correrTurno(
       takeNotices: () => {
         setNoticeTurnPending(pid, false);
         const notices = takeNotices(pid);
-        for (const n of notices) void markNoticeDelivered(n.id).catch(() => false);
+        // A child's message is not how its run ended: only a settlement is marked delivered.
+        for (const n of notices) if (!n.message) void markNoticeDelivered(n.id).catch(() => false);
         return notices;
       },
       onStart: async () => {},
@@ -1936,8 +1937,9 @@ async function correrTurno(
                 },
                 turnArgs: argsDelTurno,
                 lenSystemPrompt: built.systemPrompt,
-                // Task 10 of phase 2 fills it with the completed turns.
-                forkSeed: [],
+                // What a fork inherits: the request up to the person's message (Len's system prompt and the
+                // completed turns), copied before the loop appends the turn in flight.
+                forkSeed: messages.slice(0, -1),
                 declarations: tools,
                 // A child's page checks open their own browser: the turn's pool closes with the turn, and one
                 // reopened after that would never be closed.
@@ -1991,10 +1993,11 @@ async function correrTurno(
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
           ...(subagentsOn
             ? {
-                // LEN'S SUBAGENTS: their notices, before each call and before closing, each marked delivered once.
+                // LEN'S SUBAGENTS: their notices, before each call and before closing; a settlement is marked
+                // delivered once, a child's message never (a restart must still tell how its run ended).
                 takeAgentNotices: () =>
                   takeNotices(projectId).map((n) => {
-                    void markNoticeDelivered(n.id).catch(() => false);
+                    if (!n.message) void markNoticeDelivered(n.id).catch(() => false);
                     return n.text;
                   }),
                 // A turn nobody watches waits for its children before closing (DeepSeek's headless hosts). Waiting
