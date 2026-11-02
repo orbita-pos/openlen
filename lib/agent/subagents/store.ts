@@ -77,6 +77,11 @@ export async function runsOfRow(projectId: string, chatRowId: string): Promise<S
   return (await db.select().from(t).where(and(eq(t.projectId, projectId), eq(t.chatRowId, chatRowId))).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
 }
 
+export async function runById(id: string): Promise<SubagentRunRow | null> {
+  const [r] = await db.select().from(t).where(eq(t.id, id)).limit(1);
+  return (r as SubagentRunRow | undefined) ?? null;
+}
+
 /** What a previous process left running (boot). */
 export async function runningRuns(): Promise<SubagentRunRow[]> {
   return (await db.select().from(t).where(eq(t.status, "running")).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
