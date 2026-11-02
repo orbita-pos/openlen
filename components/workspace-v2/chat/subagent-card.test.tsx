@@ -148,6 +148,21 @@ describe("the subagents of a turn", () => {
     expect(visibleSteps([woke("r1", "general-purpose", "Fix"), { tool: "send_message", status: "done", summary: "" }]).map((a) => a.tool)).toEqual(["send_message"]);
   });
 
+  it("a run launched and woken in the same turn has one card; a fork's keeps its chip", () => {
+    noRuns();
+    const host = paint(
+      <SubagentCards
+        actions={[launch("r1", "general-purpose", "Fix the footer"), woke("r1", "general-purpose", "Fix the footer"), fork("r2", "Check"), woke("r2", "general-purpose", "Check"), woke("r2", "general-purpose", "Check")]}
+        projectId="p1"
+        rowId="row1"
+      />,
+    );
+    const cards = host.querySelectorAll("[data-subagent-card]");
+    expect(cards).toHaveLength(2);
+    expect(cards[0]!.querySelector("[data-subagent-forked]")).toBeNull();
+    expect(cards[1]!.querySelector("[data-subagent-forked]")).not.toBeNull();
+  });
+
   it("two cards of one run show the same status", () => {
     noRuns();
     const first = paint(<SubagentCards actions={[launch("r1", "general-purpose", "Fix the footer")]} projectId="p1" rowId="row1" />);

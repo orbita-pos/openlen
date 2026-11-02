@@ -6,9 +6,11 @@ import type { BuildAgentMessagesArgs } from "@/lib/agent/context";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { settlementNotice } from "./notice";
-import { forgetAllSubagents, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
+import { withPlanSection } from "@/lib/agent/plan-mode";
+
+import { forgetAllSubagents, isLive, liveCount, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
-import type { SubagentRunRow } from "./store";
+import type { ConversationRun, SubagentRunRow } from "./store";
 import { createTurnSpend } from "./spend";
 
 afterEach(() => forgetAllSubagents());
@@ -67,6 +69,9 @@ function setup(
     archived?: string[];
     onCloseTerminal?: () => void;
     forkSeed?: Message[];
+    /** The database fails when a settled run is reopened. */
+    reopenFails?: boolean;
+    planMode?: boolean;
   } = {},
 ) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
@@ -81,6 +86,7 @@ function setup(
   const brainSignals: (AbortSignal | undefined)[] = [];
   const brainTools: Record<string, unknown>[][] = [];
   const browsersClosed: AgentSession[] = [];
+  const reopens: [string, string][] = [];
   const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
@@ -104,15 +110,20 @@ function setup(
       createRun: async (r) => void rows.set(r.id, { ...r, status: "running", toolUses: 0, durationMs: null, chargedCenticredits: 0, actions: [], transcript: null }),
       saveProgress: async () => {},
       settleRun: async (id, s) => void rows.set(id, { ...rows.get(id), ...s }),
-      runById: async (id) => (rows.get(id) as unknown as SubagentRunRow | undefined) ?? null,
-      reopenRun: async (id) => {
+      reopenRun: async (id, personId) => {
+        if (o.reopenFails) throw new Error("the database is down");
         const r = rows.get(id);
         if (!r || r.status === "running") return false;
-        rows.set(id, { ...r, status: "running" });
+        reopens.push([id, personId]);
+        rows.set(id, { ...r, status: "running", personId });
         return true;
       },
       runsOfCurrentConversation: async (projectId) =>
-        [...rows.values()].filter((r) => r.projectId === projectId && !o.archived?.includes(String(r.id))) as unknown as SubagentRunRow[],
+        [...rows.values()].filter((r) => r.projectId === projectId && !o.archived?.includes(String(r.id))) as unknown as ConversationRun[],
+      runOfCurrentConversation: async (projectId, id) => {
+        const r = rows.get(id);
+        return r && r.projectId === projectId && !o.archived?.includes(id) ? (r as unknown as SubagentRunRow) : null;
+      },
     },
     charge: async (c) => {
       charges.push(c);
@@ -145,7 +156,7 @@ function setup(
     chatRowId: "row-1",
     mode: "len",
     app: null,
-    planMode: false,
+    planMode: o.planMode ?? false,
     turnArgs: TURN_ARGS,
     lenSystemPrompt: "LEN SYSTEM PROMPT",
     forkSeed: o.forkSeed ?? [],
@@ -161,7 +172,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, io, rows, reopens, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -455,6 +466,72 @@ describe("waking an idle child (phase 2)", () => {
     await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
     await until(() => s.g.seen.length === 2 && s.rows.get("r1")?.status === "completed");
     expect(s.g.seen[1]!.at(-1)).toEqual({ role: "user", content: "Agent len sent a message: One more thing." });
+    // One activation (DeepSeek: pending input holds the settlement): Len hears once, when it is really done.
+    expect(takeNotices("p").map((n) => n.text)).toEqual([settlementNotice({ id: "r1", stopReason: "completed", closingText: "Got it" })]);
+    expect(s.events.filter((e) => e.status === "completed")).toHaveLength(1);
+  });
+
+  it("🔴 a stop sticks: what Len sent meanwhile waits in its transcript for the next wake", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done"), dice("Footer done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    // While its first call is out: the message waits in its inbox for the next step.
+    await until(() => s.g.seen.length === 1);
+    expect(await s.launcher.send({ id: "r1", message: "Also the footer." })).toMatchObject({ ok: true, resumed: false });
+    expect(await s.launcher.interrupt("r1")).toBe(true);
+    s.g.release();
+    await until(() => s.rows.get("r1")?.status === "aborted" && !isLive("p", "r1"));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(s.rows.get("r1")!.status).toBe("aborted");
+    expect(s.g.seen).toHaveLength(1);
+    expect(takeNotices("p").map((n) => n.text)).toEqual([expect.stringContaining("was stopped")]);
+    expect((s.rows.get("r1")!.transcript as Message[]).at(-1)).toEqual({ role: "user", content: "Agent len sent a message: Also the footer." });
+    // The next wake carries it, before the new message.
+    expect(await s.launcher.send({ id: "r1", message: "Go on." })).toMatchObject({ ok: true, resumed: true });
+    await s.settled("r1");
+    expect(s.g.seen[1]!.slice(-2)).toEqual([
+      { role: "user", content: "Agent len sent a message: Also the footer." },
+      { role: "user", content: "Agent len sent a message: Go on." },
+    ]);
+  });
+
+  it("a woken run whose row can't be reopened gives its slot back", async () => {
+    const s = setup({ scripts: [dice("Done")], reopenFails: true });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    await expect(s.launcher.send({ id: "r1", message: "Again." })).rejects.toThrow("the database is down");
+    expect(isLive("p", "r1")).toBe(false);
+    expect(liveCount("p")).toBe(0);
+  });
+
+  it("a message as it settles, with its row unreachable: it settles, frees its slot and keeps the message for the next wake", async () => {
+    let once = true;
+    const s = setup({
+      scripts: [dice("Done"), dice("Got it")],
+      reopenFails: true,
+      onCloseTerminal: () => {
+        if (once) sendToRun("r1", "One more thing.");
+        once = false;
+      },
+    });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await until(() => s.rows.get("r1")?.status === "completed" && !isLive("p", "r1"));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(isLive("p", "r1")).toBe(false);
+    expect(s.g.seen).toHaveLength(1);
+    expect(takeNotices("p").map((n) => n.text)).toEqual([settlementNotice({ id: "r1", stopReason: "completed", closingText: "Done" })]);
+    expect((s.rows.get("r1")!.transcript as Message[]).at(-1)).toEqual({ role: "user", content: "Agent len sent a message: One more thing." });
+  });
+
+  it("a woken run runs as, and is recorded for, the person who woke it: their ■ stops it", async () => {
+    const s = setup({ scripts: [dice("One"), dice("Two")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    const member = createSubagentLauncher({ ...s.ctx, personId: "m2" }, s.io);
+    expect(await member.send({ id: "r1", message: "Again." })).toMatchObject({ ok: true, resumed: true });
+    await s.settled("r1");
+    expect(s.reopens).toEqual([["r1", "m2"]]);
+    expect(s.rows.get("r1")!.personId).toBe("m2");
   });
 
   it("an unknown child, or one of an archived conversation, is unavailable", async () => {
@@ -486,6 +563,16 @@ describe("forks (phase 2)", () => {
     expect(task).toContain('Your parent agent id is "len".');
     expect(s.brainTools[0]).toEqual(s.ctx.declarations);
     expect(s.rows.get("r1")).toMatchObject({ forked: true, preset: "general-purpose" });
+  });
+
+  it("🔴 in plan mode a fork's request starts with Len's system prompt as he sends it: with the plan section", async () => {
+    const s = setup({ forkSeed: SEED, planMode: true });
+    await s.launcher.fork({ description: "Review", prompt: "Review it." });
+    await s.settled("r1");
+    const first = s.g.seen[0]!;
+    expect(first[0]).toEqual(withPlanSection(SEED, true)[0]);
+    expect(first[0]).not.toEqual(SEED[0]);
+    expect(first.slice(1, SEED.length)).toEqual(SEED.slice(1));
   });
 
   it("🔴 a fork is refused publish and subagent though they are declared to it", async () => {
