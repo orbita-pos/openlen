@@ -55,7 +55,7 @@ describe("at boot, what the previous process left", () => {
   it("a settled run whose notice never reached Len goes too, with its closing message", async () => {
     const s = setup([row({ id: "r1", status: "completed", finalText: "In /menu/index.html:12.", settledAt: new Date(NOW - 5_000) })]);
     expect(await closeSubagentsOfThePreviousProcess(s.io)).toBe(1);
-    expect(s.turns[0]!.notices[0]!.text).toBe("Background subagent r1 finished. It cannot receive follow-up messages.\n\nIts closing message:\nIn /menu/index.html:12.");
+    expect(s.turns[0]!.notices[0]!.text).toBe("Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nIn /menu/index.html:12.");
   });
 
   it("one from more than a day ago is closed without waking Len", async () => {
