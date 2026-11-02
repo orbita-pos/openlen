@@ -23,6 +23,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
+- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one). The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -93,6 +94,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
+- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i). The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -163,6 +165,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
+- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE APP IS FILES:
 /index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="/src/main.jsx"> that it must keep: that src IS the app's entry, as in Vite, so renaming the entry means changing it there too. The app itself lives in /src: /src/main.jsx mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i). PROJECT STATE lists the app's files; the files themselves don't come in your context. You read a file when what the user asks needs it —a question about the code, a change to it—; a greeting, or a message that isn't about the app, needs nothing read. And whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -976,6 +979,249 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "goal_id",
         "revision",
         "action"
+      ]
+    }
+  },
+  {
+    "name": "schedule_create",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "prompt": {
+          "type": "STRING",
+          "description": "Reminder content to present when the target becomes due."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "Concise task name in the user's language, at most 120 characters. Name only the core action and subject; keep essential target identifiers such as PR numbers and branch names. Do not include execution frequency (e.g. daily, hourly), scheduled dates/times, time zones, task status, or configuration and execution details (e.g. read-only mode, profile-tag filters), even when embedded in the requested or existing title. Do not append parenthetical notes. Put scheduling information in the timing parameters and execution instructions in prompt."
+        },
+        "after_seconds": {
+          "type": "NUMBER",
+          "description": "Delay in whole seconds."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "prompt",
+        "title"
+      ]
+    }
+  },
+  {
+    "name": "schedule_list",
+    "description": "List the active reminders in this project's chat.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "schedule_delete",
+    "description": "Delete a reminder in this project's chat, active or inactive. Deletion does not retract a reminder message that is already queued.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Exact schedule id."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "schedule_update",
+    "description": "Change a reminder in place, keeping its id. Supply a new title, prompt, or at most one timing parameter; omitted fields keep their stored values. To change a relative delay, create a new reminder.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Schedule id returned by schedule_list."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "New task name; follow the schedule_create title rules."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "New reminder content."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "subagent",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs."
+        },
+        "agent_preset": {
+          "type": "STRING",
+          "enum": [
+            "general-purpose",
+            "Explore",
+            "Plan"
+          ],
+          "description": "The type of subagent; general-purpose when omitted."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
       ]
     }
   },
@@ -1922,6 +2168,249 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "schedule_create",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "prompt": {
+          "type": "STRING",
+          "description": "Reminder content to present when the target becomes due."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "Concise task name in the user's language, at most 120 characters. Name only the core action and subject; keep essential target identifiers such as PR numbers and branch names. Do not include execution frequency (e.g. daily, hourly), scheduled dates/times, time zones, task status, or configuration and execution details (e.g. read-only mode, profile-tag filters), even when embedded in the requested or existing title. Do not append parenthetical notes. Put scheduling information in the timing parameters and execution instructions in prompt."
+        },
+        "after_seconds": {
+          "type": "NUMBER",
+          "description": "Delay in whole seconds."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "prompt",
+        "title"
+      ]
+    }
+  },
+  {
+    "name": "schedule_list",
+    "description": "List the active reminders in this project's chat.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "schedule_delete",
+    "description": "Delete a reminder in this project's chat, active or inactive. Deletion does not retract a reminder message that is already queued.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Exact schedule id."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "schedule_update",
+    "description": "Change a reminder in place, keeping its id. Supply a new title, prompt, or at most one timing parameter; omitted fields keep their stored values. To change a relative delay, create a new reminder.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Schedule id returned by schedule_list."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "New task name; follow the schedule_create title rules."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "New reminder content."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "subagent",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs."
+        },
+        "agent_preset": {
+          "type": "STRING",
+          "enum": [
+            "general-purpose",
+            "Explore",
+            "Plan"
+          ],
+          "description": "The type of subagent; general-purpose when omitted."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
+      ]
+    }
+  },
+  {
     "name": "undo_last_change",
     "description": "Undoes your PREVIOUS turn whole: every file it changed goes back to how it was before it. If the user changed one of those files afterwards, it undoes nothing and tells you which, so their work is never lost; the database is not undone (a migration that was pushed stays: undoing it is a new migration). \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the files before editing them again.",
     "parameters": {
@@ -2854,6 +3343,249 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "goal_id",
         "revision",
         "action"
+      ]
+    }
+  },
+  {
+    "name": "schedule_create",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "prompt": {
+          "type": "STRING",
+          "description": "Reminder content to present when the target becomes due."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "Concise task name in the user's language, at most 120 characters. Name only the core action and subject; keep essential target identifiers such as PR numbers and branch names. Do not include execution frequency (e.g. daily, hourly), scheduled dates/times, time zones, task status, or configuration and execution details (e.g. read-only mode, profile-tag filters), even when embedded in the requested or existing title. Do not append parenthetical notes. Put scheduling information in the timing parameters and execution instructions in prompt."
+        },
+        "after_seconds": {
+          "type": "NUMBER",
+          "description": "Delay in whole seconds."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "prompt",
+        "title"
+      ]
+    }
+  },
+  {
+    "name": "schedule_list",
+    "description": "List the active reminders in this project's chat.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
+    "name": "schedule_delete",
+    "description": "Delete a reminder in this project's chat, active or inactive. Deletion does not retract a reminder message that is already queued.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Exact schedule id."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "schedule_update",
+    "description": "Change a reminder in place, keeping its id. Supply a new title, prompt, or at most one timing parameter; omitted fields keep their stored values. To change a relative delay, create a new reminder.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "id": {
+          "type": "STRING",
+          "description": "Schedule id returned by schedule_list."
+        },
+        "title": {
+          "type": "STRING",
+          "description": "New task name; follow the schedule_create title rules."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "New reminder content."
+        },
+        "every_seconds": {
+          "type": "NUMBER",
+          "description": "Fixed-rate interval in whole seconds, at least 3600, aligned to the creation time; changing it with schedule_update re-aligns it to the save time."
+        },
+        "daily": {
+          "type": "OBJECT",
+          "description": "Every day at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 23:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "time",
+            "time_zone"
+          ]
+        },
+        "weekly": {
+          "type": "OBJECT",
+          "description": "On the given weekdays at a local time.",
+          "properties": {
+            "time": {
+              "type": "STRING",
+              "description": "HH:mm:ss with optional 1-3 fractional digits, for example 09:00:00."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            },
+            "weekdays": {
+              "type": "ARRAY",
+              "description": "ISO weekdays, Monday 1 through Sunday 7, without repetitions.",
+              "items": {
+                "type": "INTEGER"
+              }
+            }
+          },
+          "required": [
+            "time",
+            "time_zone",
+            "weekdays"
+          ]
+        },
+        "cron": {
+          "type": "OBJECT",
+          "description": "Five-field Vixie cron expression in a time zone.",
+          "properties": {
+            "expression": {
+              "type": "STRING",
+              "description": "minute hour day-of-month month day-of-week, for example \\"*/15 9-17 * * 1-5\\". When both day fields are restricted, a date matches if either one matches."
+            },
+            "time_zone": {
+              "type": "STRING",
+              "description": "UTC or IANA Area/Location, for example Asia/Shanghai."
+            }
+          },
+          "required": [
+            "expression",
+            "time_zone"
+          ]
+        },
+        "at": {
+          "type": "STRING",
+          "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "subagent",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs."
+        },
+        "agent_preset": {
+          "type": "STRING",
+          "enum": [
+            "general-purpose",
+            "Explore",
+            "Plan"
+          ],
+          "description": "The type of subagent; general-purpose when omitted."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
       ]
     }
   },
@@ -6230,6 +6962,98 @@ def main():
 
 if __name__ == "__main__":
     main()
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/schedule/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: schedule
+description: Create, change or remove a scheduled task in this project's chat — Len does it at a time, once or repeatedly, and emails the result to whoever asked. Use when the user wants something done later or on a schedule ("every Monday at 9", "tomorrow at 8", "in an hour").
+---
+
+# Scheduled tasks
+
+A scheduled task is a message to yourself, delivered to this project's chat at a time: when it is due,
+you get it as a \`[SCHEDULE REMINDER]\` from the user and do the work then, with nobody watching. When the
+turn ends, whoever created the task gets an email with what you said, the files you \`present\`ed attached,
+and anything still waiting for them; replying to that email reaches you.
+
+Use \`schedule_create\`, \`schedule_list\`, \`schedule_update\` and \`schedule_delete\`.
+
+## Creating one
+
+1. **The prompt must be self-contained.** When it runs, you may have forgotten this conversation. Write
+   what to do as if to someone who was not here: what to read, what to make, in which format, for whom.
+   "Make a PDF with last week's visits, form submissions and messages, compared with the week before,
+   and present it" — not "do the usual".
+2. **The title** is short, in the user's language, without the frequency or the time.
+3. **The time is the user's.** Read their zone from the time context and pass it explicitly. When the
+   request is approximate, avoid :00 and :30 (09:03, 08:57).
+4. **Confirm with the real time.** Tell the user the returned \`scheduledAtLocal\`, written plainly
+   ("Monday, November 2 at 9:03, Mexico City time"), never the time you asked for.
+5. **Minimum interval is 1 hour.** Nothing runs more often; say so if they ask for less.
+6. **Only on paid plans.** If the tool answers \`plan_required\`, tell the user scheduled tasks need a paid
+   plan (Pro, Max or Ultra) for the project's owner. Nothing was scheduled.
+
+## When it runs
+
+- You have your usual tools. What needs the user's touch still waits for it: \`publish\` prepares the card
+  and never publishes on its own; replies to customers stay drafts; a question you ask ends the turn and
+  goes in the email. Say clearly in your last message what is waiting for them.
+- Files the user should get: make them and \`present\` them, so they go in the email.
+- Finish with a short summary of what you did; it is the body of the email.
+
+## Changing or removing one
+
+\`schedule_list\` shows the active tasks with their ids. \`schedule_update\` changes the title, the prompt
+or the timing in place; \`schedule_delete\` removes one. The user can do the same from the clock in the
+chat's header, or with «Quitar esta tarea» at the foot of the email.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/schedule/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: schedule
+description: Create, change or remove a scheduled task in this project's chat — Len does it at a time, once or repeatedly, and emails the result to whoever asked. Use when the user wants something done later or on a schedule ("every Monday at 9", "tomorrow at 8", "in an hour").
+---
+
+# Scheduled tasks
+
+A scheduled task is a message to yourself, delivered to this project's chat at a time: when it is due,
+you get it as a \`[SCHEDULE REMINDER]\` from the user and do the work then, with nobody watching. When the
+turn ends, whoever created the task gets an email with what you said, the files you \`present\`ed attached,
+and anything still waiting for them; replying to that email reaches you.
+
+Use \`schedule_create\`, \`schedule_list\`, \`schedule_update\` and \`schedule_delete\`.
+
+## Creating one
+
+1. **The prompt must be self-contained.** When it runs, you may have forgotten this conversation. Write
+   what to do as if to someone who was not here: what to read, what to make, in which format, for whom.
+   "Make a PDF with last week's visits, form submissions and messages, compared with the week before,
+   and present it" — not "do the usual".
+2. **The title** is short, in the user's language, without the frequency or the time.
+3. **The time is the user's.** Read their zone from the time context and pass it explicitly. When the
+   request is approximate, avoid :00 and :30 (09:03, 08:57).
+4. **Confirm with the real time.** Tell the user the returned \`scheduledAtLocal\`, written plainly
+   ("Monday, November 2 at 9:03, Mexico City time"), never the time you asked for.
+5. **Minimum interval is 1 hour.** Nothing runs more often; say so if they ask for less.
+6. **Only on paid plans.** If the tool answers \`plan_required\`, tell the user scheduled tasks need a paid
+   plan (Pro, Max or Ultra) for the project's owner. Nothing was scheduled.
+
+## When it runs
+
+- You have your usual tools. What needs the user's touch still waits for it: \`publish\` prepares the card
+  and never publishes on its own; replies to customers stay drafts; a question you ask ends the turn and
+  goes in the email. Say clearly in your last message what is waiting for them.
+- Files the user should get: make them and \`present\` them, so they go in the email.
+- Finish with a short summary of what you did; it is the body of the email.
+
+## Changing or removing one
+
+\`schedule_list\` shows the active tasks with their ids. \`schedule_update\` changes the title, the prompt
+or the timing in place; \`schedule_delete\` removes one. The user can do the same from the clock in the
+chat's header, or with «Quitar esta tarea» at the foot of the email.
 "
 `;
 

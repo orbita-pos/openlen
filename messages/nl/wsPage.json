@@ -68,7 +68,8 @@
       "schedule_create": "Taak plannen",
       "schedule_list": "Geplande taken bekijken",
       "schedule_delete": "Geplande taak verwijderen",
-      "schedule_update": "Geplande taak bijwerken"
+      "schedule_update": "Geplande taak bijwerken",
+      "subagent": "Subagent starten"
     },
     "toolApp": {
       "Read": "De code lezen",

@@ -68,7 +68,8 @@
       "schedule_create": "Programmo un'attività",
       "schedule_list": "Controllo le attività programmate",
       "schedule_delete": "Elimino un'attività programmata",
-      "schedule_update": "Aggiorno un'attività programmata"
+      "schedule_update": "Aggiorno un'attività programmata",
+      "subagent": "Avvio di un subagente"
     },
     "toolApp": {
       "Read": "Lettura del codice",

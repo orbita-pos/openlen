@@ -68,7 +68,8 @@
       "schedule_create": "예약 작업 만들기",
       "schedule_list": "예약 작업 확인",
       "schedule_delete": "예약 작업 삭제",
-      "schedule_update": "예약 작업 업데이트"
+      "schedule_update": "예약 작업 업데이트",
+      "subagent": "서브에이전트 시작 중"
     },
     "toolApp": {
       "Read": "코드를 읽는 중",

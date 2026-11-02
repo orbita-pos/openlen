@@ -304,7 +304,9 @@ describe("los nombres que usa el modo app", () => {
     // nombre viejo cae aquí y la prueba lo dice.
     // `in_progress`: un estado de `todo_write` (la lista de progreso).
     // `store_domain`, `storefront_api`: fields of PROJECT STATE's `shopify`.
-    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress", "store_domain", "storefront_api"]);
+    // `agent_preset`: the `subagent` tool's parameter (spec local 2026-11-01-subagentes-de-len).
+    // `after_seconds`, `every_seconds`: parameters of `schedule_create` (spec local 2026-10-29-tareas-programadas).
+    const NO_SON_HERRAMIENTAS = new Set(["blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress", "store_domain", "storefront_api", "agent_preset", "after_seconds", "every_seconds"]);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
       (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
     );

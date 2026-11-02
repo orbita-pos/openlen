@@ -68,7 +68,8 @@
       "schedule_create": "Agendando uma tarefa",
       "schedule_list": "Vendo as tarefas agendadas",
       "schedule_delete": "Apagando uma tarefa agendada",
-      "schedule_update": "Atualizando uma tarefa agendada"
+      "schedule_update": "Atualizando uma tarefa agendada",
+      "subagent": "Iniciando um subagente"
     },
     "toolApp": {
       "Read": "Lendo o código",

@@ -68,7 +68,8 @@
       "schedule_create": "Aufgabe planen",
       "schedule_list": "Geplante Aufgaben ansehen",
       "schedule_delete": "Geplante Aufgabe löschen",
-      "schedule_update": "Geplante Aufgabe aktualisieren"
+      "schedule_update": "Geplante Aufgabe aktualisieren",
+      "subagent": "Startet einen Subagenten"
     },
     "toolApp": {
       "Read": "Code wird gelesen",

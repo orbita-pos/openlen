@@ -215,6 +215,8 @@ export const KNOWN_TOOLS = new Set([
   "skill",
   "present",
   "show_widget",
+  // Len's subagents (spec local 2026-11-01-subagentes-de-len): a launch is its card; a refused one stays a step.
+  "subagent",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",
