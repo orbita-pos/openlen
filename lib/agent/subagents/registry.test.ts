@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   hasNotices,
+  hasRunInbox,
+  isLive,
+  sendToRun,
+  takeRunInbox,
   MAX_ACTIVE_SUBAGENTS,
   forgetAllSubagents,
   liveCount,
@@ -101,5 +105,28 @@ describe("the turn's spending limit, shared with its subagents", () => {
     expect(spend.over(5)).toBe(true);
     len = 16;
     expect(spend.over()).toBe(true);
+  });
+
+});
+
+describe("a running child's inbox (phase 2)", () => {
+  it("an inbox per run: messages wait in order, are taken once, and another run's stay", () => {
+    expect(hasRunInbox("r1")).toBe(false);
+    sendToRun("r1", "one");
+    sendToRun("r1", "two");
+    sendToRun("r2", "other");
+    expect(hasRunInbox("r1")).toBe(true);
+    expect(takeRunInbox("r1")).toEqual(["one", "two"]);
+    expect(takeRunInbox("r1")).toEqual([]);
+    expect(hasRunInbox("r1")).toBe(false);
+    expect(takeRunInbox("r2")).toEqual(["other"]);
+  });
+
+  it("whether a run is live in its project", () => {
+    reserve("p", "r1", new AbortController());
+    expect(isLive("p", "r1")).toBe(true);
+    expect(isLive("other", "r1")).toBe(false);
+    release("p", "r1");
+    expect(isLive("p", "r1")).toBe(false);
   });
 });

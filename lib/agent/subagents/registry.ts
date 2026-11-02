@@ -19,11 +19,15 @@ interface State {
   readonly notices: Map<string, QueuedNotice[]>;
   readonly waiters: Map<string, Set<() => void>>;
   readonly noticeTurns: Set<string>;
+  /** Phase 2: what Len sent a running child (`send_message`), by run id; its loop takes it before its next call. */
+  readonly inboxes: Map<string, string[]>;
 }
 
 const KEY = Symbol.for("openlen.agent.subagents");
 type Global = typeof globalThis & { [KEY]?: State };
-const state: State = ((globalThis as Global)[KEY] ??= { live: new Map(), notices: new Map(), waiters: new Map(), noticeTurns: new Set() });
+const state: State = ((globalThis as Global)[KEY] ??= { live: new Map(), notices: new Map(), waiters: new Map(), noticeTurns: new Set(), inboxes: new Map() });
+// A process that loaded the phase 1 state (a dev reload) gets the inbox map it lacks.
+(state as { inboxes?: Map<string, string[]> }).inboxes ??= new Map();
 
 function wake(projectId: string): void {
   const waiting = state.waiters.get(projectId);
@@ -126,7 +130,29 @@ export function setNoticeTurnPending(projectId: string, pending: boolean): void 
 }
 
 /** For tests: forget everything. */
+/** Whether the run is working in that project now. */
+export function isLive(projectId: string, id: string): boolean {
+  return state.live.get(projectId)?.has(id) ?? false;
+}
+
+/** A message from Len for a running child: it reads it at its next step. */
+export function sendToRun(id: string, text: string): void {
+  state.inboxes.set(id, [...(state.inboxes.get(id) ?? []), text]);
+}
+
+/** What waits for the child, in order; taken once. */
+export function takeRunInbox(id: string): string[] {
+  const inbox = state.inboxes.get(id) ?? [];
+  state.inboxes.delete(id);
+  return inbox;
+}
+
+export function hasRunInbox(id: string): boolean {
+  return (state.inboxes.get(id)?.length ?? 0) > 0;
+}
+
 export function forgetAllSubagents(): void {
+  state.inboxes.clear();
   state.live.clear();
   state.notices.clear();
   state.waiters.clear();
