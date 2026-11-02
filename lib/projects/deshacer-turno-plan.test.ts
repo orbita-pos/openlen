@@ -6,6 +6,7 @@ import {
   cambiosDelTurnoParaDeshacer,
   conForma,
   esDeshacible,
+  mergeTurnChanges,
   planearDeshacer,
   RUTA_FORMA,
   type CambioDelTurno,
@@ -219,5 +220,27 @@ describe("a page Len deleted with rm comes back with the turn's Deshacer", () =>
     const plan = planearDeshacer(cambios, { data: despues, ficheros: {} });
     if (!plan.ok) throw new Error(plan.motivo);
     expect(plan.data).toEqual(antes);
+  });
+});
+
+// Len's subagents (spec local 2026-11-01-subagentes-de-len, §4.8): what a child wrote after its turn closed
+// joins that turn's undo, which then brings everything back to how the turn found it.
+describe("mergeTurnChanges", () => {
+  const c = (ruta: string, antes: string | null, despues: string | null, deshacible = true): CambioDelTurno => ({ ruta, antes, despues, deshacible });
+
+  it("a path in both keeps the turn's before and takes the child's after", () => {
+    expect(mergeTurnChanges([c("/index.html", "A", "B")], [c("/index.html", "B", "C")])).toEqual([c("/index.html", "A", "C")]);
+  });
+
+  it("a path only the child touched comes in as it is", () => {
+    expect(mergeTurnChanges([c("/index.html", "A", "B")], [c("/menu/index.html", null, "M")])).toEqual([c("/index.html", "A", "B"), c("/menu/index.html", null, "M")]);
+  });
+
+  it("a path the child left as the turn found it drops out", () => {
+    expect(mergeTurnChanges([c("/index.html", "A", "B")], [c("/index.html", "B", "A")])).toEqual([]);
+  });
+
+  it("what does not come back with undo stays so", () => {
+    expect(mergeTurnChanges([c("/LEN.md", null, null, false)], [c("/LEN.md", "x", "y")])).toEqual([c("/LEN.md", null, null, false)]);
   });
 });

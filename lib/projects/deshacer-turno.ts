@@ -26,7 +26,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import type { ProjectData } from "@/lib/projects/types";
-import { planearDeshacer, type CambioDelTurno } from "./deshacer-turno-plan";
+import { mergeTurnChanges, planearDeshacer, type CambioDelTurno } from "./deshacer-turno-plan";
 
 /** Los turnos que se pueden deshacer, por proyecto: los últimos 30… */
 export const TURNOS_GUARDADOS = 30;
@@ -55,6 +55,26 @@ export async function guardarCambiosDelTurno(projectId: string, turnId: string, 
   `);
   await podarTurnos(projectId);
   return cambios.some((c) => c.deshacible);
+}
+
+/**
+ * LOS SUBAGENTES DE LEN (spec local 2026-11-01-subagentes-de-len, §4.8): lo que un hijo cambió después de que
+ * el turno que lo lanzó cerrara se suma al «Deshacer» de ese turno (`mergeTurnChanges`). Devuelve si queda algo
+ * que deshacer; si el hijo lo dejó todo como lo encontró el turno, el turno se queda sin nada.
+ */
+export async function addChangesToTurn(projectId: string, turnId: string, later: readonly CambioDelTurno[]): Promise<boolean> {
+  if (later.length === 0) return false;
+  const t = schema.projectTurnChanges;
+  const previos = await db
+    .select({ ruta: t.path, antes: t.contentBefore, despues: t.contentAfter, deshacible: t.undoable })
+    .from(t)
+    .where(and(eq(t.projectId, projectId), eq(t.turnId, turnId)));
+  const juntos = mergeTurnChanges(previos, later);
+  if (juntos.length === 0) {
+    await db.delete(t).where(and(eq(t.projectId, projectId), eq(t.turnId, turnId)));
+    return false;
+  }
+  return guardarCambiosDelTurno(projectId, turnId, juntos);
 }
 
 /** Deja los últimos `TURNOS_GUARDADOS` turnos sin pasar de `BYTES_GUARDADOS`. */

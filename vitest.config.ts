@@ -306,6 +306,8 @@ export default defineConfig({
       // la sentencia, contra Postgres).
       "lib/projects/deshacer-turno-plan.test.ts",
       "lib/projects/deshacer-turno.pg.test.ts",
+      // Len's subagents: a child's changes join the launching turn's undo (PGlite). LISTA BLANCA.
+      "lib/projects/add-turn-changes.pglite.test.ts",
       // Compartir el proyecto: quién entra a qué, y las invitaciones.
       "lib/projects/miembros.pg.test.ts",
       "lib/projects/hilos.pg.test.ts",

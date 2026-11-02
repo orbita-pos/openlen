@@ -127,6 +127,23 @@ export function cambiosDelTurnoParaDeshacer(
   return out;
 }
 
+/**
+ * LOS SUBAGENTES DE LEN (spec local 2026-11-01-subagentes-de-len, §4.8): lo que un hijo cambió después de
+ * cerrar el turno que lo lanzó entra en el «Deshacer» de ese turno. Por ruta: el `antes` es el del turno y el
+ * `despues`, el del hijo; si el hijo la dejó como la encontró el turno, sale; lo que no vuelve, sigue sin volver.
+ */
+export function mergeTurnChanges(existing: readonly CambioDelTurno[], later: readonly CambioDelTurno[]): CambioDelTurno[] {
+  const porRuta = new Map(existing.map((c) => [c.ruta, c] as const));
+  for (const l of later) {
+    const e = porRuta.get(l.ruta);
+    if (!e) porRuta.set(l.ruta, l);
+    else if (!e.deshacible || !l.deshacible) porRuta.set(l.ruta, { ruta: l.ruta, antes: null, despues: null, deshacible: false });
+    else if (e.antes === l.despues) porRuta.delete(l.ruta);
+    else porRuta.set(l.ruta, { ruta: l.ruta, antes: e.antes, despues: l.despues, deshacible: true });
+  }
+  return [...porRuta.values()].sort((a, b) => (a.ruta < b.ruta ? -1 : a.ruta > b.ruta ? 1 : 0));
+}
+
 /** Lo que hay AHORA en una ruta, leído como lo leen las fotos. */
 function contenidoActual(ruta: string, data: ProjectData, ficheros: Readonly<Record<string, string>>): string | null {
   if (ruta === RUTA_FORMA) return formaDelProyecto(data);
