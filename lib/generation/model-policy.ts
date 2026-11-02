@@ -234,7 +234,11 @@ export type ModelOperation =
   /** LA REVISIÓN DE SEGURIDAD AL PUBLICAR (`lib/security-review/`, spec local
    *  2026-10-15): subagentes de solo lectura sobre el cerebro de Len. La paga
    *  OpenLen, no el dueño. */
-  | "security_review";
+  | "security_review"
+  /** LOS SUBAGENTES DE LEN (`lib/agent/subagents/`, spec local
+   *  2026-11-01-subagentes-de-len): los hijos que lanza `subagent`, en el
+   *  cerebro de Len. Los paga el dueño, a la tarifa de Len. */
+  | "subagent";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -304,6 +308,10 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // que es el que llama a herramientas: su esfuerzo lo fija la revisión en la
   // capa de POSTURA (`high`, `lib/security-review/real.ts`), como `agent_turn`.
   security_review: { role: "agent", effort: null },
+  // Los subagentes de Len corren en su cerebro (`createAgentBrain`) con el
+  // esfuerzo efectivo del turno que los lanzó, en la capa de POSTURA, como
+  // `agent_turn`.
+  subagent: { role: "agent", effort: null },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {
