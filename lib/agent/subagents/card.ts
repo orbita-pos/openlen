@@ -2,12 +2,12 @@
 // follows it, also after a reload. It travels in the turn's cards, which the client saves back, so it is
 // cleaned like any other field there. Pure and client-safe.
 
+import { SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
+
 export interface SubagentRef {
   readonly id: string;
   readonly preset: string;
 }
-
-import { SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 
 /** The actions that carry a run's card when they name one: a launch, a fork, and a message that woke a child. */
 export const SUBAGENT_CARD_TOOLS: ReadonlySet<string> = new Set([SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL]);

@@ -6,6 +6,7 @@ import {
   reopenConversation,
   startNewConversation,
 } from "@/lib/projects/chat";
+import { dropNotices, stopProject } from "@/lib/agent/subagents/registry";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAS CHARLAS DEL PROYECTO (plans/new-chat/, decisión de Jesús del 03/10).
@@ -61,6 +62,10 @@ export async function POST(
         ? await startNewConversation(id)
         : await reopenConversation(id, parsed.data.conversation);
     if (!r.ok) return json({ error: r.reason }, r.reason === "busy" ? 409 : 404);
+    // Len's subagents working for the conversation that goes stop, and what they queued for him is dropped: the
+    // new one is not theirs (spec local 2026-11-01-subagentes-de-len). Their settlements check it too.
+    stopProject(id);
+    dropNotices(id);
     return json({ ok: true, archived: r.archived }, 200);
   } catch (err) {
     console.error("[projects/chat/conversations] change failed", err);

@@ -60,7 +60,8 @@ export function SubagentCard({ run, forked = false, onStop }: { run: SubagentRun
       {open && (
         <div className="flex flex-col gap-1.5 border-t bd px-2.5 py-2">
           {run.actions.map((a, i) => (
-            <AgentActionCard key={i} action={a} />
+            // A child's send_message goes to Len, not to a subagent like Len's own.
+            <AgentActionCard key={i} action={a} {...(a.tool === SEND_MESSAGE_TOOL ? { toolLabel: t("subagent.messageToLen") } : {})} />
           ))}
           {run.finalText && (
             <details>

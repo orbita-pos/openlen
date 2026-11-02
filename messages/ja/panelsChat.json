@@ -566,6 +566,7 @@
     "closing": "Len への報告",
     "stop": "このサブエージェントを停止",
     "liveBar": "{n, plural, other {# 件のサブエージェントが作業中}}",
-    "forked": "フォーク"
+    "forked": "フォーク",
+    "messageToLen": "Lenにメッセージを送信中"
   }
 }

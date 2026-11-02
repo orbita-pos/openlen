@@ -69,6 +69,15 @@ describe("a subagent's card", () => {
   });
 });
 
+describe("a child's steps", () => {
+  it("its own send_message reads as a message to Len", () => {
+    const host = paint(<SubagentCard run={{ ...RUN, status: "completed", actions: [{ tool: "send_message", status: "done", summary: "" }] }} onStop={() => {}} />);
+    act(() => host.querySelector<HTMLButtonElement>("button[aria-expanded]")!.click());
+    expect(host.textContent).toContain("subagent.messageToLen");
+    expect(host.textContent).not.toContain("agent.tool.send_message");
+  });
+});
+
 describe("the subagents of a turn", () => {
   const launch = (id: string, preset: string, summary: string) => ({ tool: "subagent", status: "done" as const, summary, subagent: { id, preset } });
   const fork = (id: string, summary: string) => ({ tool: "subagent_fork", status: "done" as const, summary, subagent: { id, preset: "general-purpose" } });

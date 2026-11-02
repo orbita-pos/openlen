@@ -9,7 +9,8 @@ import {
   LIST_AGENTS_DECLARATION,
   listAgentsText,
   messageDeliveredLine,
-  notYourParentError,
+  belongsToAnotherParentError,
+  parentGoneError,
   SEND_MESSAGE_DECLARATION,
   SUBAGENT_DECLARATION,
   SUBAGENT_FORK_DECLARATION,
@@ -159,7 +160,8 @@ describe("the control tools' declarations and answers (DeepSeek's words)", () =>
 
   it("the errors", () => {
     expect(unavailableError("abc")).toBe('subagent "abc" is unavailable');
-    expect(notYourParentError("abc", "xyz")).toBe('agent "abc" is not a resident continuable child and cannot send to parent "xyz"');
+    expect(belongsToAnotherParentError("xyz")).toBe('subagent "xyz" belongs to another parent session');
+    expect(parentGoneError()).toBe("direct parent is not live; the message was not delivered");
   });
 });
 

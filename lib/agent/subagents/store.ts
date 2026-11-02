@@ -35,9 +35,11 @@ export interface SubagentRunRow {
   readonly noticeDeliveredAt: Date | null;
   /** Forked from Len's conversation (`subagent_fork`). */
   readonly forked: boolean;
+  /** Started while Len was in plan mode: read-only for good. */
+  readonly planMode: boolean;
 }
 
-export type NewSubagentRun = Pick<SubagentRunRow, "id" | "projectId" | "chatRowId" | "turnId" | "personId" | "preset" | "description" | "prompt" | "forked">;
+export type NewSubagentRun = Pick<SubagentRunRow, "id" | "projectId" | "chatRowId" | "turnId" | "personId" | "preset" | "description" | "prompt" | "forked" | "planMode">;
 
 /** What Len's list of his children needs of each (`list_agents`, `interrupt_agent`). */
 export type ConversationRun = Pick<SubagentRunRow, "id" | "description" | "preset">;
@@ -63,8 +65,11 @@ export async function createRun(r: NewSubagentRun): Promise<void> {
   await db.insert(t).values({ ...r, status: "running" });
 }
 
-export async function saveProgress(id: string, p: { transcript: unknown; actions: unknown[]; toolUses: number }): Promise<void> {
-  await db.update(t).set({ transcript: p.transcript, actions: p.actions, toolUses: p.toolUses }).where(and(eq(t.id, id), eq(t.status, "running")));
+export async function saveProgress(id: string, p: { transcript: unknown; actions: unknown[]; toolUses: number; durationMs: number }): Promise<void> {
+  await db
+    .update(t)
+    .set({ transcript: p.transcript, actions: p.actions, toolUses: p.toolUses, durationMs: p.durationMs })
+    .where(and(eq(t.id, id), eq(t.status, "running")));
 }
 
 export async function settleRun(id: string, s: SettledRun): Promise<void> {
@@ -74,12 +79,13 @@ export async function settleRun(id: string, s: SettledRun): Promise<void> {
     .where(eq(t.id, id));
 }
 
-/** True only for the call that marked it: the notice goes once. */
+/** True only for the call that marked it: the notice goes once. A run that runs again (woken) is not marked by an
+ *  earlier settlement's notice: its next settlement is the one still owed. */
 export async function markNoticeDelivered(id: string): Promise<boolean> {
   const marked = await db
     .update(t)
     .set({ noticeDeliveredAt: new Date() })
-    .where(and(eq(t.id, id), isNull(t.noticeDeliveredAt)))
+    .where(and(eq(t.id, id), isNull(t.noticeDeliveredAt), ne(t.status, "running")))
     .returning({ id: t.id });
   return marked.length > 0;
 }
@@ -138,11 +144,14 @@ export async function runningRuns(): Promise<SubagentRunRow[]> {
   return (await db.select().from(t).where(eq(t.status, "running")).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
 }
 
-/** Settled runs whose notice never reached Len: a project's, or every project's (the boot cleanup). */
+/** Settled runs whose notice never reached Len: a project's, or every project's (the boot cleanup). Only the current
+ *  conversation's: an archived one's children are not his any more. */
 export async function undeliveredSettledRuns(projectId?: string): Promise<SubagentRunRow[]> {
+  const m = schema.projectChatMessages;
   return (await db
-    .select()
+    .select(getTableColumns(t))
     .from(t)
-    .where(and(...(projectId === undefined ? [] : [eq(t.projectId, projectId)]), ne(t.status, "running"), isNull(t.noticeDeliveredAt)))
+    .innerJoin(m, eq(m.id, t.chatRowId))
+    .where(and(...(projectId === undefined ? [] : [eq(t.projectId, projectId)]), ne(t.status, "running"), isNull(t.noticeDeliveredAt), isNull(m.conversation)))
     .orderBy(asc(t.settledAt), asc(t.id))) as SubagentRunRow[];
 }

@@ -35,7 +35,9 @@ export const ALTER_AGENT_REQUEST_STEPS: readonly string[] = [
   `ALTER TABLE "agentRequestSteps" ADD COLUMN IF NOT EXISTS "subagentId" text;`,
 ];
 
-/** Phase 2: a child forked from Len's conversation (`subagent_fork`) resumes with Len's own system prompt. */
+/** Phase 2: a child forked from Len's conversation (`subagent_fork`) resumes with Len's own system prompt, and one
+ *  started in plan mode wakes read-only. */
 export const ALTER_SUBAGENT_RUNS: readonly string[] = [
   `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "forked" boolean NOT NULL DEFAULT false;`,
+  `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "planMode" boolean NOT NULL DEFAULT false;`,
 ];

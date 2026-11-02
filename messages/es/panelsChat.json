@@ -566,6 +566,7 @@
     "closing": "Lo que le dijo a Len",
     "stop": "Parar este subagente",
     "liveBar": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}",
-    "forked": "Bifurcado"
+    "forked": "Bifurcado",
+    "messageToLen": "Enviando un mensaje a Len"
   }
 }

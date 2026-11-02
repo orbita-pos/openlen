@@ -403,20 +403,21 @@ export function AgentActionCard({
   action,
   terminal,
   onAbrirFichero,
+  toolLabel,
 }: {
   action: AgentAction;
   /** Sólo para las de `bash`: dónde está su salida, para desplegarla aquí. */
   terminal?: DondeEstaLaSalida;
   /** Con él, la tarjeta de un fichero (Read, Edit, Write) lo abre en el taller. */
   onAbrirFichero?: (ruta: string) => void;
+  /** En lugar de la del nombre de la herramienta: el `send_message` de un subagente va a Len. */
+  toolLabel?: string;
 }) {
   const t = useTranslations("wsPage");
   const [abierta, setAbierta] = useState(false);
   // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
   const tool = currentToolName(action.tool);
-  const label = KNOWN_TOOLS.has(tool)
-    ? t(`agent.tool.${tool}`)
-    : action.tool;
+  const label = toolLabel ?? (KNOWN_TOOLS.has(tool) ? t(`agent.tool.${tool}`) : action.tool);
   const summary = summaryLabel(action, t);
   const cobertura = coberturaTitle(action, t);
   // LA DE LA TERMINAL SE DESPLIEGA (la #5 de plans/len-agente-2026/notas/

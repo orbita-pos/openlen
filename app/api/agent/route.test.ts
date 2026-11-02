@@ -3900,6 +3900,25 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(ctx.lenSystemPrompt).toBe("You are Len.");
   });
 
+  it("the fork seed leaves out the turn's plan-mode notice: it belongs to this turn, not to a completed one", async () => {
+    const seed = [
+      { role: "system", content: "You are Len." },
+      { role: "user", content: "hola" },
+      { role: "assistant", content: "¡Hola!" },
+    ];
+    mocks.buildAgentMessages.mockReturnValueOnce({ ok: true as const, systemPrompt: "You are Len.", messages: [...seed, { role: "user", content: "planifica" }] } as never);
+    await readEvents(
+      await POST(
+        new Request("http://localhost/api/agent", {
+          method: "POST",
+          body: JSON.stringify({ projectId: "p1", prompt: "planifica", idioma: "es", zonaHoraria: "Europe/Madrid", esfuerzo: "low", mode: "dynamis", plan: true }),
+        }),
+      ),
+    );
+    const ctx = launcherArgs()[0] as unknown as { forkSeed: unknown[] };
+    expect(ctx.forkSeed).toEqual(seed);
+  });
+
   it("list and send go through the current conversation: the launcher gets the store's conversation queries", async () => {
     await pedir();
     const store = await import("@/lib/agent/subagents/store");
