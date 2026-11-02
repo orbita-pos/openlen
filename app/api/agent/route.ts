@@ -5,13 +5,18 @@ import { conAutor } from "@/lib/projects/autor-del-cambio";
 import { hiloDelProyecto, mencionesValidas, personasDelProyecto, respuestaDeLen } from "@/lib/projects/hilos";
 import { apuntarMencionesDelTurno, nombresDeUsuarios, proyectoCompartido } from "@/lib/projects/chat-equipo";
 import { mencionesDe } from "@/lib/workspace-v2/menciones";
-import { registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo, type ScheduledRequest } from "@/lib/agent/turnos-desde-el-servidor";
+import { launchSubagentNoticeTurn, registrarCorredorDeTurnos, type EmailRequest, type PedidoDelHilo, type ScheduledRequest } from "@/lib/agent/turnos-desde-el-servidor";
 import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miembros";
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
+import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { createSubagentLauncher, type RunnerIO } from "@/lib/agent/subagents/run";
+import { createTurnSpend } from "@/lib/agent/subagents/spend";
+import { hasNotices, liveCount, noticeTurnPending, setNoticeTurnPending, takeNotices, waitForNoticeOrIdle } from "@/lib/agent/subagents/registry";
+import { createRun, markNoticeDelivered, saveProgress, settleRun } from "@/lib/agent/subagents/store";
 import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-store";
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
@@ -107,7 +112,7 @@ import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
 import { createArtifactAgent } from "@/lib/artifacts/tools";
 
-import { abrirTurno, cerrarTurno, esperarRespuesta, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
 import {
@@ -141,7 +146,7 @@ import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
-import { guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
+import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
@@ -435,7 +440,8 @@ async function correrTurno(
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
   // Reanudar un encargo y una ronda no traen mensaje: lo pone el de ronda.
-  const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined;
+  // Nor the server turn that carries the subagents' notices: Len reads them, nobody wrote anything.
+  const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined || opts.scheduled?.origin.kind === "subagents";
   if ((prompt.length === 0 && !sinMensajeDelDueno) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   // COMPARTIR EL PROYECTO (lib/projects/acceso.ts): un EDITOR también habla con
   // Len. Desde aquí `userId` es el DUEÑO —con él se lee y se escribe el proyecto
@@ -1316,6 +1322,27 @@ async function correrTurno(
     mensajeDelUsuario: prompt,
     zonaHoraria: zonaDelTurno,
   };
+  // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
+  // worktree (its row lives in another project's chat, where no notice turn could follow it).
+  const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId;
+  /** A server turn that carries the queued notices to an idle Len, as `personId` (DeepSeek: a notice to an idle
+   *  parent starts a new request). It takes them when it starts; one that never starts lets the next one launch. */
+  const launchNoticeTurn = (pid: string, personId: string): void =>
+    launchSubagentNoticeTurn({
+      userId: personId,
+      projectId: pid,
+      filaId: randomUUID(),
+      timeZone: zonaConocida ?? "",
+      locale: typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en",
+      takeNotices: () => {
+        setNoticeTurnPending(pid, false);
+        const notices = takeNotices(pid);
+        for (const n of notices) void markNoticeDelivered(n.id).catch(() => false);
+        return notices;
+      },
+      onStart: async () => {},
+      fail: async () => setNoticeTurnPending(pid, false),
+    });
   // Se guarda para las rutinas, que corren sin navegador. Nunca tumba el turno.
   if (zonaDelCuerpo) {
     void guardarZona(userId, zonaDelCuerpo).catch((e) => console.error("[agent] zona", e));
@@ -1666,6 +1693,8 @@ async function correrTurno(
       const grabadora = dirGrabacion ? creaGrabadora(messages) : null;
       // El aviso de lo que cambió en el turno; se arma con la foto del principio, abajo.
       let emitirCambios = async (): Promise<void> => {};
+      /** The turn's undo is written: a subagent that ends after this adds its own changes to it (`addChangesToTurn`). */
+      let cambiosCerrados = false;
 
       try {
         const creditState = await getCreditState(userId);
@@ -1688,6 +1717,9 @@ async function correrTurno(
           const margen = await margenDeMiembros(projectId);
           if (margen != null) techo = Math.min(techo, margen);
         }
+        // LEN'S SUBAGENTS: what they spend counts against this same cap, also after this turn closes.
+        let lenSpent = 0;
+        const spend = createTurnSpend(techo, () => lenSpent);
         // LOS CAMBIOS DEL TURNO, la foto del principio (`cambios-del-turno.ts`,
         // la forma de DeepSeek): los ficheros del proyecto ANTES de que Len
         // escriba nada. Se saca a la vez que la fila y la primera llamada al
@@ -1732,6 +1764,8 @@ async function correrTurno(
             }
           } catch (err) {
             console.warn("[agent] no se pudieron calcular los cambios del turno", err);
+          } finally {
+            cambiosCerrados = true;
           }
         };
         // La fila, abierta: desde aquí el turno se puede volver a mirar.
@@ -1832,6 +1866,88 @@ async function correrTurno(
         const scheduledTasks: ScheduledTasksDeps | undefined = scheduleEnabled()
           ? { ownerPlan: () => getUserPlan(ownerId), create: createTask, list: listTasks, update: updateTask, remove: deleteTask, now: () => Date.now() }
           : undefined;
+        // LEN'S SUBAGENTS: the launcher of this turn's children, with what the turn has and the real world (`RunnerIO`).
+        const subagentIo: RunnerIO = {
+          brain: (childTools, runId, signal) => {
+            const recorder =
+              process.env.OPENLEN_STEP_TELEMETRY === "0"
+                ? null
+                : createStepRecorder({ projectId, turnId: turnIdDelCliente ?? turnoId, hasHistory: false, store: stepStore(), log: console.warn, subagentId: runId });
+            const b = createAgentBrain({
+              ...(recorder ? { onCall: recorder.onCall } : {}),
+              tools: childTools,
+              requestId: projectId,
+              signal,
+              esfuerzoDelTurno,
+              esfuerzoDelUsuario,
+              mode,
+            });
+            return { openStream: b.openStream, closeOut: b.closeOut, modelId: b.modelId, lastProvider: () => b.lastProvider() };
+          },
+          runTool: (session, d, name, args) => runAgentTool(session, d, name, args),
+          store: { createRun, saveProgress, settleRun },
+          charge: async (c) => {
+            await chargeCredits(c.ownerId, c.centicredits, {
+              surface: "subagent",
+              outcome: "ok",
+              projectId: c.projectId,
+              actorId: c.actorId,
+              refId: c.refId,
+              listCenticredits: c.listCenticredits,
+              uses: c.uses,
+            });
+            if (c.actorId) await sumarGasto(c.projectId, c.actorId, c.centicredits);
+            return c.centicredits;
+          },
+          // The box opens with the child's first command, under its own holder (`terminalHolderId`).
+          openTerminal: async () => {},
+          closeTerminal: (session) => cerrarTerminalDeLaSesion(session, deps),
+          turnAlive: hayTurnoVivoEnElProyecto,
+          launchNoticeTurn,
+          turnStillOpen: () => !cambiosCerrados,
+          snapshot: (session) => cargarFicherosDeLaTerminal(session, deps),
+          addTurnChanges: async (pid, rowId, before, after) => {
+            await addChangesToTurn(pid, rowId, cambiosDelTurnoParaDeshacer(before, after));
+          },
+          loopExtras: (session) => ({ compaction: { policy: COMPACTION_POLICY, firstIndex: 2 }, lateDiagnostics: () => takeTypesAndLint(session) }),
+          flushOnExit,
+          now: Date.now,
+          newId: randomUUID,
+          log: console.warn,
+        };
+        const subagents = subagentsOn
+          ? createSubagentLauncher(
+              {
+                projectId,
+                ownerId: userId,
+                userId,
+                personId: quien,
+                turnId: turnoId,
+                chatRowId: filaId,
+                mode,
+                app: appDelTurno,
+                // What it is when the child starts: Len may leave plan mode mid-turn.
+                get planMode() {
+                  return planActivo;
+                },
+                turnArgs: argsDelTurno,
+                declarations: tools,
+                deps,
+                sessionBase: {
+                  skills: agentSession.skills,
+                  attachments: agentSession.attachments,
+                  ...(agentSession.uiLocale ? { uiLocale: agentSession.uiLocale } : {}),
+                  zonaHoraria: agentSession.zonaHoraria,
+                  ownerEmail,
+                },
+                spend,
+                // Straight to the channel: a child's step is not this turn's sign of life.
+                emit: (ev) => channel.emit("subagent", ev),
+                isMember: miembro,
+              },
+              subagentIo,
+            )
+          : undefined;
         const depsDelTurno = answersQuestions
           ? {
               ...deps,
@@ -1840,12 +1956,13 @@ async function correrTurno(
               scheduledTasks,
               stillWorking,
               turnSignal,
+              ...(subagents ? { subagents } : {}),
               askUser: async (questions: UserQuestion[]) => {
                 emit("question", { questions });
                 return esperarRespuesta(turnoId, { timeoutMs: ASK_USER_TIMEOUT_MS, signal: upstreamAbort.signal, preguntas: questions });
               },
             }
-          : { ...deps, planMode, goal, scheduledTasks, stillWorking, turnSignal };
+          : { ...deps, planMode, goal, scheduledTasks, stillWorking, turnSignal, ...(subagents ? { subagents } : {}) };
         const result = await runAgentLoop({
           messages,
           tools,
@@ -1863,6 +1980,31 @@ async function correrTurno(
           // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
           // Only this turn's jobs: the box may be shared with subagents (spec local 2026-11-01-subagentes-de-len).
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
+          ...(subagentsOn
+            ? {
+                // LEN'S SUBAGENTS: their notices, before each call and before closing, each marked delivered once.
+                takeAgentNotices: () =>
+                  takeNotices(projectId).map((n) => {
+                    void markNoticeDelivered(n.id).catch(() => false);
+                    return n.text;
+                  }),
+                // A turn nobody watches waits for its children before closing (DeepSeek's headless hosts). Waiting
+                // is work: the silence watchdog is kept from firing meanwhile.
+                ...(hiloDelTurno || correoDelTurno || programadaDelTurno
+                  ? {
+                      awaitAgentNotices: async () => {
+                        if (liveCount(projectId) === 0) return false;
+                        const keepAlive = setInterval(reloj.vivo, 30_000);
+                        try {
+                          return (await waitForNoticeOrIdle(projectId, upstreamAbort.signal)) === "notice";
+                        } finally {
+                          clearInterval(keepAlive);
+                        }
+                      },
+                    }
+                  : {}),
+              }
+            : {}),
           // Lo que vio Len, en el chat: las capturas de un paso, guardadas para su tarjeta.
           storeScreenshots: (images) => storeStepScreenshots(projectId, images),
           // El ■ también corta la espera entre reintentos del proveedor
@@ -1934,11 +2076,16 @@ async function correrTurno(
           // cerraría el turno antes de empezar.
           // Y con lo COBRABLE: lo que un respaldo no le cobra al usuario tampoco
           // le acerca el techo (spec local 2026-10-16-second-provider §3.4b).
-          excedePresupuesto: (g, perdonado) => g.inputTokens + g.outputTokens > 0 && creditosCobrables(g, perdonado) >= techo,
+          // And with what the children already spent (`spend`): the cap is the turn's, children included.
+          excedePresupuesto: (g, perdonado) => {
+            if (g.inputTokens + g.outputTokens === 0) return false;
+            lenSpent = creditosCobrables(g, perdonado);
+            return spend.over();
+          },
           // La lista de progreso (spec local 2026-10-15): el aviso al 70 %, con
           // la MISMA cuenta; si sigue solo un encargo, y la lista heredada.
           nearBudget: (g, perdonado) =>
-            g.inputTokens + g.outputTokens > 0 && creditosCobrables(g, perdonado) >= techo * NEAR_TURN_CAP_RATIO,
+            g.inputTokens + g.outputTokens > 0 && creditosCobrables(g, perdonado) + spend.children() >= techo * NEAR_TURN_CAP_RATIO,
           goalContinues: () => goalArmado && goalActual?.phase === "active",
           initialTodos: listaDelTurno.initialTodos,
           // SIN `maxTurns` NI `maxToolCalls` (H1, 2026-09-25): como el bucle
@@ -2078,6 +2225,8 @@ async function correrTurno(
         // COBRA lo cobrable —un respaldo no lo paga el usuario— y el libro guarda
         // lo que el turno VALÍA (`listCenticredits`). Sin respaldo, lo mismo.
         const credits = Math.max(1, creditosCobrables(result.usage, result.forgivenUsage));
+        // The children still running count Len's whole turn against the cap.
+        lenSpent = credits;
         const valia = Math.max(1, creditsForUsage(inputTokens, outputTokens, brain.creditRate(), cachedTokens));
         // EL LIBRO DE GASTO (spec local 2026-10-16-credit-ledger): la fila del
         // turno, con sus tokens, un `use` por proveedor que corrió (§3.5). Con
@@ -2403,6 +2552,12 @@ async function correrTurno(
         // EL TURNO SE CIERRA PASE LO QUE PASE. Si no, su fila se queda con la
         // correccion que nadie leera y ocupando sitio en el mapa.
         cerrarTurno(turnoId);
+        // LEN'S SUBAGENTS: a notice that arrived after this turn's last look goes on in a server turn — right after
+        // `cerrarTurno`, so a child settling from now on sees no live turn and launches it itself.
+        if (subagentsOn && hasNotices(projectId) && !hayTurnoVivoEnElProyecto(projectId) && !noticeTurnPending(projectId)) {
+          setNoticeTurnPending(projectId, true);
+          launchNoticeTurn(projectId, quien);
+        }
         // One image after the complete turn, including cancelled turns that
         // saved work. The queue waits if another turn already owns the project.
         if (mutoDurable) {

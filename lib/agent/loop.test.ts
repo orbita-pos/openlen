@@ -4611,6 +4611,22 @@ describe("the silent-turn reminder", () => {
 describe("the subagents' notices in the loop", () => {
   const NOTICE = "Background subagent r1 finished. It cannot receive follow-up messages.\n\nIts closing message:\nFound it.";
 
+  it("the launch's card carries the run it started", async () => {
+    const actions: Record<string, unknown>[] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(
+        [{ type: "function_call", name: "subagent", args: { description: "Find", prompt: "Where?" } }, done],
+        [{ type: "text_delta", text: "Lanzado." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true, tool_result: "started subagent r1" }, subagent: { id: "r1", preset: "general-purpose" } }),
+      emit: (ev) => {
+        if (ev.type === "action" && ev.status !== "running") actions.push(ev);
+      },
+    });
+    expect(actions[0]).toMatchObject({ tool: "subagent", subagent: { id: "r1", preset: "general-purpose" } });
+  });
+
   it("a notice enters before the next call, as its own user message after the tool results", async () => {
     const seen: Message[][] = [];
     const pending = [[], [NOTICE]];

@@ -63,8 +63,13 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
   if (!SUBAGENT_PRESETS.includes(preset as SubagentPreset)) {
     return invalid(`agent_preset must be one of ${SUBAGENT_PRESETS.join(", ")}.`);
   }
+  const type = preset as SubagentPreset;
   if (!deps.subagents) return { response: { ok: false, error: "subagents_disabled", message: "Subagents are not available in this session." } };
-  const r = await deps.subagents.launch({ description, prompt, preset: preset as SubagentPreset });
+  const r = await deps.subagents.launch({ description, prompt, preset: type });
   if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
-  return { response: { ok: true, tool_result: startedLine(r.id) }, action: { tool: SUBAGENT_TOOL, ok: true, summary: description } };
+  return {
+    response: { ok: true, tool_result: startedLine(r.id) },
+    action: { tool: SUBAGENT_TOOL, ok: true, summary: description },
+    subagent: { id: r.id, preset: type },
+  };
 }

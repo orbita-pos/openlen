@@ -171,6 +171,8 @@ export type AgentStreamEvent =
       widget?: VisualWidget;
       /** The files `present` delivered (spec local 2026-10-26-len-skills): the card is their only link. */
       delivered?: readonly DeliveredFile[];
+      /** The run a `subagent` call started: the chat's card follows it, also after a reload. */
+      subagent?: { readonly id: string; readonly preset: string };
       /** What Len saw: the URLs of this step's screenshots, the same images the model got (`storeScreenshots`). */
       screenshots?: readonly string[];
     }
@@ -2055,6 +2057,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.widget ? { widget: outcome.widget } : {}),
           // Y lo que entregó `present`: sin esto el enlace de descarga no llega a la tarjeta.
           ...(outcome.delivered?.length ? { delivered: outcome.delivered } : {}),
+          // And the run a `subagent` call started: the card's only way back to it.
+          ...(outcome.subagent ? { subagent: outcome.subagent } : {}),
           // Y lo que vio: sin esto la captura sólo la ve el modelo.
           ...(screenshots.length ? { screenshots } : {}),
         });

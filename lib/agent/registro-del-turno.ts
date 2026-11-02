@@ -141,6 +141,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           ...(ev.todos ? { todos: ev.todos.map((t) => ({ content: t.content, status: t.status })) } : {}),
           // Y LO QUE ENTREGÓ `present` (spec local 2026-10-26-len-skills): la tarjeta es su único enlace.
           ...(ev.delivered?.length ? { delivered: ev.delivered.map((f) => ({ ...f })) } : {}),
+          // Y EL SUBAGENTE que lanzó (spec local 2026-11-01-subagentes-de-len): su tarjeta lo vuelve a encontrar al recargar.
+          ...(ev.subagent ? { subagent: { id: ev.subagent.id, preset: ev.subagent.preset } } : {}),
           // Y LO QUE VIO LEN: las capturas del paso, que sólo el modelo veía.
           ...(ev.screenshots?.length ? { screenshots: [...ev.screenshots] } : {}),
           // Y EL VISUAL de `show_widget` (spec local 2026-10-16-len-inline-visuals),

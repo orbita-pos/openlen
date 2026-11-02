@@ -1300,6 +1300,8 @@ export interface ToolOutcome {
   widget?: VisualWidget;
   /** The files `present` delivered (spec local 2026-10-26-len-skills), for the chat's card. */
   delivered?: readonly DeliveredFile[];
+  /** The run a `subagent` call started (spec local 2026-11-01-subagentes-de-len): its card finds it again after a reload. */
+  subagent?: { readonly id: string; readonly preset: string };
   /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
    *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
    *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,
