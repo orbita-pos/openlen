@@ -1505,6 +1505,26 @@ export const lenSkills = pgTable(
   (t) => [uniqueIndex("lenSkills_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
 );
 
+/** Los tipos de subagente de un proyecto (`/.len/agents`) y de una persona (`~/.len/agents`), como
+ *  `lenSkills`: spec local 2026-11-01-subagentes-de-len, §6. La crea `npm run subagents:migrate`. */
+export const lenAgents = pgTable(
+  "lenAgents",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    scope: text("scope").$type<"project" | "personal">().notNull(),
+    ownerId: text("ownerId").notNull(),
+    name: text("name").notNull(),
+    /** El <name>.md entero, como lo escribió Len o la persona. */
+    text: text("text").notNull(),
+    authorId: text("authorId"),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+    /** Borrado (`rm`): uno con el mismo nombre lo revive. */
+    deletedAt: timestamp("deletedAt", { mode: "date" }),
+  },
+  (t) => [uniqueIndex("lenAgents_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
+);
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",
