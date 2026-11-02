@@ -14,6 +14,7 @@ import {
 } from "./manual-de-la-plataforma";
 import { clauseMarker } from "@/lib/ai/js-clause";
 import { GOAL_GUIDANCE } from "@/lib/agent/goal";
+import { SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { PUBLISH_LOCALES } from "@/lib/publish/publish-locales";
 
 // Las nueve conductas `data-ol-*`, retiradas el 2026-10-04. Ningún prompt puede
@@ -58,6 +59,13 @@ const RETIRADAS = [
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
+  it("SUBAGENTS: subagent by default; not with OPENLEN_SUBAGENTS=0, and the prompt's line goes with it", () => {
+    expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("subagent");
+    expect(buildFunctionDeclarations({ OPENLEN_SUBAGENTS: "0" }).map((d) => d.name)).not.toContain("subagent");
+    expect(buildAgentSystemPrompt({})).toContain(SUBAGENT_GUIDANCE);
+    expect(buildAgentSystemPrompt({ OPENLEN_SUBAGENTS: "0" })).not.toContain(SUBAGENT_GUIDANCE);
+  });
+
   it("PROJECT EMAIL: connect_email_domain and set_form_auto_reply only with the email on, after request_secrets", () => {
     const off = buildFunctionDeclarations({}).map((d) => d.name);
     expect(off).not.toContain("connect_email_domain");
@@ -134,6 +142,8 @@ describe("buildFunctionDeclarations", () => {
       "schedule_list",
       "schedule_delete",
       "schedule_update",
+      // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent`.
+      "subagent",
       "undo_last_change",
       // F4 de las apps: convertir una página en app (sólo en una página).
       "convert_to_app",
