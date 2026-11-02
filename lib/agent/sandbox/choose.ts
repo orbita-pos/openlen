@@ -23,6 +23,7 @@ import type { SandboxDriver, SandboxHandle } from "./driver";
 import { e2bDriver } from "./e2b-driver";
 import type { Manifest } from "./manifest";
 import { conflictingTopLevel } from "./paths";
+import { boxHolders, holdsBox, joinBox, leaveBox } from "./project-lease";
 import { SandboxTerminal } from "./sandbox-terminal";
 import * as rows from "./store";
 
@@ -99,7 +100,7 @@ export class TurnSandbox implements TerminalBackend {
     return this.current.arrancada;
   }
 
-  async ejecutar(command: string, o?: { readonly timeoutMs?: number; readonly background?: boolean }): Promise<SalidaDeUnComando> {
+  async ejecutar(command: string, o?: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string }): Promise<SalidaDeUnComando> {
     if (this.diedAt !== null) return this.current.ejecutar(command, o);
     try {
       return await this.inner.ejecutar(command, o);
@@ -146,9 +147,24 @@ export class TurnSandbox implements TerminalBackend {
     return this.current.cerrar();
   }
 
-  /** What finished in the box's background since the last look (loop.ts `lateNotices`). */
-  async finishedBackground(): Promise<string[]> {
-    return this.diedAt === null ? this.inner.finishedBackground() : [];
+  /** What finished in the box's background since the last look (loop.ts `lateNotices`); with `owner`,
+   *  only that holder's (a box shared with subagents). */
+  async finishedBackground(owner?: string): Promise<string[]> {
+    return this.diedAt === null ? this.inner.finishedBackground(owner) : [];
+  }
+
+  /** One holder of a shared box is done while others still use it (spec local 2026-11-01-subagentes-de-len,
+   *  §4.8): its own background jobs stop and what the box changed meanwhile is saved through its guards. The
+   *  box keeps running; `settle` and `close` are for the last holder. */
+  async settleFor(owner: string, save?: Save): Promise<void> {
+    if (this.settled || this.diedAt !== null) return;
+    await this.inner.killBackground(owner).catch(() => undefined);
+    try {
+      const pending = await this.inner.pendingChanges();
+      if (Object.keys(pending).length > 0 && save) await save(pending);
+    } catch (e) {
+      this.ctx.log(`[sandbox] could not save a holder's last changes project=${this.ctx.session.projectId}: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   /** Box seconds this turn: until the pause, or until it died. */
@@ -220,6 +236,38 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
   if (conflictingTopLevel(Object.keys(projectFiles)).length > 0) return fallback("conflict");
 
   const turnId = (session.turnId ??= randomUUID());
+  // ONE BOX PER PROJECT (spec local 2026-11-01-subagentes-de-len, §4.8): a subagent of the turn, or a later
+  // turn while subagents still run, joins the box that is open instead of falling back as «held».
+  let fellBack: TerminalBackend | null = null;
+  const box = await joinBox(session.projectId, holderOf(session), async () => {
+    const opened = await openTheBox(session, o, { config, log, now, turnId, projectFiles, fallback });
+    if (opened instanceof TurnSandbox) return opened;
+    fellBack = opened;
+    return null;
+  }, { subagent: session.terminalHolderId !== undefined });
+  if (!box) return fellBack ?? fallback("held");
+  session.fotoDeLaTerminal ??= { ...projectFiles };
+  return box;
+}
+
+/** Who holds the box in a session: a subagent's own id, or the turn. */
+export function holderOf(session: Pick<AgentSession, "terminalHolderId" | "turnId">): string {
+  return session.terminalHolderId ?? session.turnId ?? "";
+}
+
+async function openTheBox(
+  session: AgentSession,
+  o: TurnTerminalOptions,
+  c: {
+    readonly config: NonNullable<ReturnType<typeof sandboxConfig>>;
+    readonly log: (line: string) => void;
+    readonly now: () => number;
+    readonly turnId: string;
+    readonly projectFiles: Record<string, string>;
+    readonly fallback: (reason: string, notice?: boolean) => TerminalBackend;
+  },
+): Promise<TerminalBackend> {
+  const { config, log, now, turnId, projectFiles, fallback } = c;
   const store = o.store ?? postgresStore;
   const openingAt = now();
   if (!(await store.hold(session.projectId, turnId))) return fallback("held");
@@ -273,12 +321,23 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
   }
 }
 
-/** Before the turn's last photo: the box stops its background work and saves what is pending. */
-export async function settleTurnTerminal(session: AgentSession, o: { readonly save?: Save }): Promise<void> {
-  if (session.terminal instanceof TurnSandbox) await session.terminal.settle(o.save);
+/** Whether others still use the session's box once it leaves (a turn and its subagents). */
+function othersHoldTheBox(session: AgentSession): boolean {
+  const holder = holderOf(session);
+  return holdsBox(session.projectId, holder) && boxHolders(session.projectId).length > 1;
 }
 
-/** Closes the turn's terminal: the box saves what is pending (if not settled yet), pauses, is let go and charged. */
+/** Before the turn's last photo: the box stops its background work and saves what is pending — only this
+ *  holder's work while others still use the box. */
+export async function settleTurnTerminal(session: AgentSession, o: { readonly save?: Save }): Promise<void> {
+  const t = session.terminal;
+  if (!(t instanceof TurnSandbox)) return;
+  if (othersHoldTheBox(session)) await t.settleFor(holderOf(session), o.save);
+  else await t.settle(o.save);
+}
+
+/** Closes the turn's terminal: the box saves what is pending (if not settled yet), pauses, is let go and
+ *  charged — by its last holder; the others only leave it. */
 export async function closeTurnTerminal(
   session: AgentSession,
   o: { readonly save?: Save; readonly store?: SandboxStore; readonly charge?: Charge; readonly now?: () => number },
@@ -287,6 +346,9 @@ export async function closeTurnTerminal(
   session.terminal = undefined;
   session.fotoDeLaTerminal = undefined;
   if (!t) return;
-  if (t instanceof TurnSandbox) await t.close(o);
-  else await t.cerrar();
+  if (!(t instanceof TurnSandbox)) return await t.cerrar();
+  const holder = holderOf(session);
+  if (!holdsBox(session.projectId, holder)) return await t.close(o);
+  if (boxHolders(session.projectId).length > 1) await t.settleFor(holder, o.save);
+  await leaveBox(session.projectId, holder, (box) => box.close(o));
 }
