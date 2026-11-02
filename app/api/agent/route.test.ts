@@ -149,6 +149,9 @@ vi.mock("@/lib/agent/subagents/store", () => ({
   saveProgress: vi.fn(),
   settleRun: vi.fn(),
   markNoticeDelivered: mocks.markNoticeDelivered,
+  runById: vi.fn(async () => null),
+  reopenRun: vi.fn(async () => false),
+  runsOfCurrentConversation: vi.fn(async () => []),
 }));
 vi.mock("@/lib/projects/hilos", async (original) => ({
   // Pura: la de verdad (quién del texto es del proyecto, sin uno mismo).

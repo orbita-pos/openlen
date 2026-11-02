@@ -16,7 +16,7 @@ import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
 import { createSubagentLauncher, type RunnerIO } from "@/lib/agent/subagents/run";
 import { createTurnSpend } from "@/lib/agent/subagents/spend";
 import { hasNotices, liveCount, noticeTurnPending, setNoticeTurnPending, takeNotices, waitForNoticeOrIdle } from "@/lib/agent/subagents/registry";
-import { createRun, markNoticeDelivered, saveProgress, settleRun } from "@/lib/agent/subagents/store";
+import { createRun, markNoticeDelivered, reopenRun, runById, runsOfCurrentConversation, saveProgress, settleRun } from "@/lib/agent/subagents/store";
 import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-store";
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
@@ -1888,7 +1888,7 @@ async function correrTurno(
             return { openStream: b.openStream, closeOut: b.closeOut, modelId: b.modelId, lastProvider: () => b.lastProvider() };
           },
           runTool: (session, d, name, args) => runAgentTool(session, d, name, args),
-          store: { createRun, saveProgress, settleRun },
+          store: { createRun, saveProgress, settleRun, runById, reopenRun, runsOfCurrentConversation },
           charge: async (c) => {
             await chargeCredits(c.ownerId, c.centicredits, {
               surface: "subagent",
@@ -1935,6 +1935,7 @@ async function correrTurno(
                   return planActivo;
                 },
                 turnArgs: argsDelTurno,
+                lenSystemPrompt: built.systemPrompt,
                 declarations: tools,
                 // A child's page checks open their own browser: the turn's pool closes with the turn, and one
                 // reopened after that would never be closed.
