@@ -601,6 +601,8 @@ export default defineConfig({
       "lib/agent/npm-after-save.test.ts",
       "lib/ai/sitio-del-error.test.ts",
       "lib/agent/subagente.test.ts",
+      // Len's subagents (spec local 2026-11-01-subagentes-de-len). LISTA BLANCA.
+      "lib/agent/subagents/**/*.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
       // Lo puro de la prueba declarada: leer lo que devuelve el navegador, la
