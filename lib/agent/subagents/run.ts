@@ -23,11 +23,12 @@ import { creditsForUsage } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { AppDeProyecto } from "@/lib/projects/types";
 
-import { settlementNotice, type SubagentStatus, type SubagentStopReason } from "./notice";
+import { SEND_MESSAGE_TOOL } from "./enabled";
+import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
 import { childSystemPrompt, childToolDeclarations, isReadOnly, omitsLenMd, type SubagentPreset } from "./presets";
-import { noticeTurnPending, queueNotice, release, reserve, setNoticeTurnPending } from "./registry";
+import { noticeTurnPending, queueNotice, release, reserve, setNoticeTurnPending, takeRunInbox } from "./registry";
 import type { TurnSpend } from "./spend";
-import { SUBAGENT_GUIDANCE, type SubagentsDeps } from "./tool";
+import { messageDeliveredLine, notYourParentError, SUBAGENT_GUIDANCE, type SubagentsDeps } from "./tool";
 
 /** What the chat hears about a child: it started, a step, how it ended. */
 export interface SubagentEvent {
@@ -75,7 +76,7 @@ export interface SubagentBrain {
 }
 
 export interface SubagentRunStore {
-  createRun(r: { id: string; projectId: string; chatRowId: string; turnId: string; personId: string; preset: string; description: string; prompt: string }): Promise<void>;
+  createRun(r: { id: string; projectId: string; chatRowId: string; turnId: string; personId: string; preset: string; description: string; prompt: string; forked: boolean }): Promise<void>;
   saveProgress(id: string, p: { transcript: unknown; actions: unknown[]; toolUses: number }): Promise<void>;
   settleRun(
     id: string,
@@ -116,13 +117,14 @@ export const TOO_MANY_SUBAGENTS = "8 subagents are already running in this proje
 const TURN_BUDGET_REACHED = "This turn's spending limit is reached: no more subagents can start in it.";
 const PROGRESS_EVERY_MS = 5_000;
 
-/** The child's messages: the launching turn's pieces with no history and its task as the request; Explore
- *  and Plan without LEN.md and the person's notes (Claude Code's `omitClaudeMd`). */
+/** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
+ *  DeepSeek's return guidance (it reports to `len`); Explore and Plan without LEN.md and the person's notes
+ *  (Claude Code's `omitClaudeMd`). */
 export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: SubagentPreset, prompt: string): Message[] {
   const built = buildAgentMessages({
     ...turnArgs,
     history: [],
-    prompt,
+    prompt: withContinuableReturnGuidance(prompt),
     attachedImages: [],
     attachedFiles: undefined,
     seleccion: null,
@@ -172,11 +174,16 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     /** The files its tools wrote: its undo is only these (others may change the project meanwhile). */
     const touched = new Set<string>();
     const live: { read: (() => Message[]) | null } = { read: null };
+    /** Its last act was a `send_message` to Len: the settlement then omits the closing message (DeepSeek). */
+    let omitClosingText = false;
+    const initial = childMessages(ctx.turnArgs, o.preset, o.prompt);
+    /** What the run keeps: its whole conversation but the system prompt, so it can be woken later. */
+    const conversation = (own: readonly Message[]) => [...initial.slice(1), ...own];
     let result: AgentLoopResult | null = null;
     let diagnostic: string | null = null;
     let before: Readonly<Record<string, string>> | null = null;
     let brain: SubagentBrain | null = null;
-    const progress = () => io.store.saveProgress(id, { transcript: live.read?.() ?? null, actions, toolUses }).catch(() => undefined);
+    const progress = () => io.store.saveProgress(id, { transcript: conversation(live.read?.() ?? []), actions, toolUses }).catch(() => undefined);
     const timer = setInterval(() => void progress(), PROGRESS_EVERY_MS);
     timer.unref?.();
     const stopFlush = io.flushOnExit?.(progress);
@@ -185,12 +192,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       before = await io.snapshot(session).catch(() => null);
       const b = (brain = io.brain(tools, id, abort.signal));
       result = await runSubagent({
-        messages: childMessages(ctx.turnArgs, o.preset, o.prompt),
+        messages: initial,
         tools,
         openStream: (m) => b.openStream(m),
         closeOut: (m) => b.closeOut(m),
         signal: abort.signal,
         runTool: async (name, args) => {
+          if (name === SEND_MESSAGE_TOOL) return sendToLen(args);
+          // A tool call after its message: the closing message may report what the message didn't.
+          omitClosingText = false;
           const out = await io.runTool(session, deps, name, args);
           for (const f of out.ficherosTocados ?? []) touched.add(f.ruta);
           return out;
@@ -206,6 +216,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         },
         liveTranscript: (read) => {
           live.read = read;
+        },
+        // What Len sent it while it works, at its next step (DeepSeek: a working agent receives it then).
+        takeAgentNotices: () => {
+          const inbox = takeRunInbox(id);
+          if (inbox.length > 0) omitClosingText = false;
+          return inbox.map((text) => agentMessage(LEN_AGENT_ID, text));
         },
         lateNotices: async () => {
           const t = session.terminal as { finishedBackground?: (owner?: string) => Promise<string[]> } | undefined;
@@ -274,7 +290,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         status,
         finalText,
         diagnostic,
-        transcript: result?.transcripcion ?? live.read?.() ?? null,
+        transcript: conversation(result?.transcripcion ?? live.read?.() ?? []),
         actions,
         usage,
         toolUses,
@@ -283,9 +299,29 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       })
       .catch((e: unknown) => log(`[subagents] run=${id} settle failed: ${String(e)}`));
     // The notice first, then the slot: a turn waiting for «a notice or no child left» must see the notice.
-    queueNotice(ctx.projectId, { id, text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}) }) });
+    queueNotice(ctx.projectId, {
+      id,
+      text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText }),
+    });
     release(ctx.projectId, id);
     ctx.emit?.({ type: "subagent", id, preset: o.preset, description: o.description, status });
+    wakeLen();
+
+    /** The child's `send_message`: only to its parent, `len`; it reaches him like a notice (DeepSeek's). */
+    function sendToLen(args: Record<string, unknown>): ToolOutcome {
+      const target = typeof args.agent_id === "string" ? args.agent_id.trim() : "";
+      const text = typeof args.message === "string" ? args.message.trim() : "";
+      if (target !== LEN_AGENT_ID) return { response: { ok: false, error: notYourParentError(id, target) } };
+      if (!text) return { response: { ok: false, error: "invalid_arguments", message: "message is required." } };
+      queueNotice(ctx.projectId, { id, text: agentMessage(id, text), message: true });
+      wakeLen();
+      omitClosingText = true;
+      return { response: { ok: true, tool_result: messageDeliveredLine(LEN_AGENT_ID) } };
+    }
+  }
+
+  /** With Len idle, a server turn carries what waits for him (one at a time per project). */
+  function wakeLen(): void {
     if (!io.turnAlive(ctx.projectId) && !noticeTurnPending(ctx.projectId)) {
       setNoticeTurnPending(ctx.projectId, true);
       io.launchNoticeTurn(ctx.projectId, ctx.personId);
@@ -299,7 +335,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
       try {
-        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt });
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false });
       } catch (e) {
         release(ctx.projectId, id);
         throw e;
