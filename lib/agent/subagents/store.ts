@@ -87,11 +87,11 @@ export async function runningRuns(): Promise<SubagentRunRow[]> {
   return (await db.select().from(t).where(eq(t.status, "running")).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
 }
 
-/** Settled runs of a project whose notice never reached Len. */
-export async function undeliveredSettledRuns(projectId: string): Promise<SubagentRunRow[]> {
+/** Settled runs whose notice never reached Len: a project's, or every project's (the boot cleanup). */
+export async function undeliveredSettledRuns(projectId?: string): Promise<SubagentRunRow[]> {
   return (await db
     .select()
     .from(t)
-    .where(and(eq(t.projectId, projectId), ne(t.status, "running"), isNull(t.noticeDeliveredAt)))
+    .where(and(...(projectId === undefined ? [] : [eq(t.projectId, projectId)]), ne(t.status, "running"), isNull(t.noticeDeliveredAt)))
     .orderBy(asc(t.settledAt), asc(t.id))) as SubagentRunRow[];
 }

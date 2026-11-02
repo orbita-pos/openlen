@@ -11,6 +11,7 @@ export async function register() {
   // available on edge). Errors are swallowed — startup should never fail
   // because of a sweeping issue.
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    const startedAt = Date.now();
     try {
       const { cleanupStaleTmpDirs } = await import("@/lib/publish/filesystem");
       await cleanupStaleTmpDirs();
@@ -51,6 +52,33 @@ export async function register() {
       void import("@/lib/scheduled-tasks/scheduler")
         .then((m) => m.startScheduler())
         .catch((err) => console.error("[schedule] no se pudo arrancar el planificador", err));
+      // Len's subagents (spec local 2026-11-01-subagentes-de-len): the ones a restart cut close as stopped, and
+      // every notice that never reached Len goes to him, one server turn per project. OPENLEN_SUBAGENTS=0 leaves it.
+      if (process.env.OPENLEN_SUBAGENTS !== "0") {
+        void Promise.all([import("@/lib/agent/subagents/boot"), import("@/lib/agent/subagents/store"), import("@/lib/agent/turnos-desde-el-servidor")])
+          .then(([boot, store, turns]) =>
+            boot.closeSubagentsOfThePreviousProcess({
+              store,
+              launchNoticeTurn: ({ projectId, personId, notices }) =>
+                turns.launchSubagentNoticeTurn({
+                  userId: personId,
+                  projectId,
+                  filaId: crypto.randomUUID(),
+                  timeZone: "",
+                  locale: "en",
+                  takeNotices: () => notices,
+                  onStart: async () => {},
+                  fail: async () => {},
+                }),
+              now: Date.now,
+              startedAt,
+            }),
+          )
+          .then((n) => {
+            if (n > 0) console.info(`[subagents] ${n} notice(s) of the previous process handed to Len`);
+          })
+          .catch((err) => console.error("[subagents] could not close what the previous process left", err));
+      }
     }, 10_000).unref?.();
   }
 }

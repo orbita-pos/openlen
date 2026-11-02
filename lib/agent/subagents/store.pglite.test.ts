@@ -71,6 +71,9 @@ describe("subagentRuns", () => {
     await store.markNoticeDelivered("r3");
     expect((await store.runningRuns()).map((r) => r.id)).toEqual(["r1"]);
     expect((await store.undeliveredSettledRuns("p1")).map((r) => r.id)).toEqual(["r2"]);
+    // Without a project, every project's (the boot cleanup).
+    expect((await store.undeliveredSettledRuns()).map((r) => r.id)).toEqual(["r2"]);
+    expect(await store.undeliveredSettledRuns("other")).toEqual([]);
   });
 
   it("one run is found by its id, and an unknown id is null", async () => {
