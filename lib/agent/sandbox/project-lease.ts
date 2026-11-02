@@ -14,6 +14,9 @@ interface Lease {
   readonly holders: string[];
   /** The holders that are subagents. */
   readonly subagents: Set<string>;
+  /** Whose box it is: its bridge (git, gh, stripe…) answers as the session that opened it, so another person's
+   *  turn never joins it (a member would get the owner's live Stripe). */
+  readonly person: string | undefined;
 }
 
 interface State {
@@ -31,17 +34,18 @@ const state: State = ((globalThis as Global)[KEY] ??= { leases: new Map(), openi
  * The project's box: the one already open (joined), or `open()`'s. `null` when it could not open, or when it
  * is open and can't be shared; nothing is kept then. It is shared with subagents only: a subagent joins, and
  * anyone joins while a subagent is in it (a later turn while they still run); two plain turns of one project
- * still don't share it, as before.
+ * still don't share it, as before. And only by one person: another person's turn or subagent doesn't join.
  */
 export async function joinBox(
   projectId: string,
   holderId: string,
   open: () => Promise<TurnSandbox | null>,
-  o: { readonly subagent?: boolean } = {},
+  o: { readonly subagent?: boolean; readonly person?: string } = {},
 ): Promise<TurnSandbox | null> {
   const join = (lease: Lease): TurnSandbox | null => {
     if (!lease.holders.includes(holderId)) {
       if (!o.subagent && lease.subagents.size === 0) return null;
+      if (lease.person !== undefined && o.person !== undefined && lease.person !== o.person) return null;
       lease.holders.push(holderId);
       if (o.subagent) lease.subagents.add(holderId);
     }
@@ -60,7 +64,7 @@ export async function joinBox(
   try {
     const box = await opening;
     if (!box) return null;
-    const lease: Lease = { box, holders: [holderId], subagents: new Set(o.subagent ? [holderId] : []) };
+    const lease: Lease = { box, holders: [holderId], subagents: new Set(o.subagent ? [holderId] : []), person: o.person };
     state.leases.set(projectId, lease);
     return box;
   } finally {

@@ -3884,6 +3884,19 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(await loopArgs().awaitAgentNotices!()).toBe(false);
   });
 
+  it("the notices' server turn does not wait for the other children: «in the chat nobody waits»", async () => {
+    const origin = { kind: "subagents" as const, ids: ["r1"] };
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "", turnId: "66666666-6666-4666-8666-666666666666" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "Background subagent r1 finished.", origin, onReply: vi.fn(async () => {}) } }));
+    expect(loopArgs().awaitAgentNotices).toBeUndefined();
+  });
+
+  it("a child's page checks don't use the turn's browser (it closes with the turn)", async () => {
+    await pedir();
+    const deps = (launcherArgs()[0] as unknown as { deps: { observarPagina(input: unknown): Promise<unknown> } }).deps;
+    await deps.observarPagina({ page: null });
+    expect(mocks.observarPagina).toHaveBeenLastCalledWith({ page: null });
+  });
+
   it("the notices' server turn has no message of the person and is not refused for it", async () => {
     const origin = { kind: "subagents" as const, ids: ["r1"] };
     const res = await corredor()("u1", { projectId: "p1", prompt: "", turnId: "55555555-5555-4555-8555-555555555555" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "Background subagent r1 finished.", origin, onReply: vi.fn(async () => {}) } });

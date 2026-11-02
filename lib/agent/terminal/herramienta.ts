@@ -32,7 +32,7 @@ import { ghForTerminal, gitForTerminal } from "./git-option";
 import { stripeEnabled } from "@/lib/stripe/enabled";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
-import { TurnSandbox, closeTurnTerminal, holderOf, settleTurnTerminal, terminalForTurn } from "@/lib/agent/sandbox/choose";
+import { TurnSandbox, closeTurnTerminal, holderOf, settleTurnTerminal, terminalForTurn, startFromTheBox } from "@/lib/agent/sandbox/choose";
 import { lockBox } from "@/lib/agent/sandbox/project-lease";
 import { functionsCurlThrough } from "@/lib/agent/sandbox/functions-curl";
 import type { FunctionsCurl } from "@/lib/functions/curl-types";
@@ -81,6 +81,8 @@ async function bashOnTheTerminal(
   // correr éste. Sin esto la terminal enseñaba la página de antes, y como lo suyo se guarda ENTERO,
   // un `sed -i` deshacía los Edit (medido en el humo de la tanda dev 31, 02/10).
   // Si cambió algo, `/.openlen` también: la versión que se acaba de guardar.
+  // A shared box: start from what it has (another holder may have run since this session's last look).
+  startFromTheBox(session);
   if (await ponerAlDia(session, deps)) await terminal.refrescarPerezosos();
   const r = await whileWorking(
     terminal.ejecutar(command, {
@@ -89,6 +91,8 @@ async function bashOnTheTerminal(
       ...(args.run_in_background === true ? { background: true } : {}),
       // Whose job it is in a shared box: its notice goes to them, and closing them stops only theirs.
       owner: holderOf(session),
+      // Its own stop: in a shared box, another holder's ■ never stops this command.
+      ...(deps.turnSignal ? { signal: deps.turnSignal } : {}),
     }),
     deps.stillWorking,
   );
@@ -270,7 +274,6 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
     bridge: () => bridgeHandlersFor(session, deps),
     network: () => boxNetworkOf(session),
     baseEnv: () => boxBaseEnvOf(session),
-    signal: deps.turnSignal,
   }));
 }
 
@@ -306,19 +309,28 @@ export async function settleSessionTerminal(session: AgentSession, deps: AgentDe
   await settleTurnTerminal(session, { save: savePendingThroughGuards(session, deps) });
 }
 
-/** What the box changed and nobody saved yet, saved through Write's guards against the terminal's
- *  photo — taken NOW: `closeTurnTerminal` forgets it before saving. */
+/** What the box changed and nobody saved yet, saved through Write's guards against what the box had before
+ *  (the box's own tree: in a shared box this session's photo may be older). What the guards refused goes back
+ *  to the box, so no other holder saves it later. */
 function savePendingThroughGuards(session: AgentSession, deps: AgentDeps) {
-  const antes = { ...(session.fotoDeLaTerminal ?? {}) };
-  return async (pendiente: Readonly<Record<string, string | null>>): Promise<void> => {
+  return async (
+    pendiente: Readonly<Record<string, string | null>>,
+    antes: Readonly<Record<string, string>>,
+  ): Promise<Readonly<Record<string, string | null>> | void> => {
     const despues = { ...antes };
     for (const [ruta, contenido] of Object.entries(pendiente)) {
       if (contenido === null) delete despues[ruta];
       else despues[ruta] = contenido;
     }
     const cambios = cambiosDeLaTerminal(antes, despues);
-    if (cambios.length > 0) await guardarLoDeLaTerminal(session, deps, cambios, antes);
+    if (cambios.length === 0) return;
+    const guardado = await guardarLoDeLaTerminal(session, deps, cambios, antes);
+    for (const [ruta, contenido] of Object.entries(guardado.enLaTerminal)) {
+      if (contenido === null) delete despues[ruta];
+      else despues[ruta] = contenido;
+    }
     if (session.fotoDeLaTerminal) session.fotoDeLaTerminal = despues;
+    return guardado.enLaTerminal;
   };
 }
 

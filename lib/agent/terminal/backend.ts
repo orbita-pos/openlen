@@ -8,8 +8,11 @@ export interface TerminalBackend {
   /** Already started this turn (the route only writes /tmp files into a live terminal). */
   readonly arrancada: boolean;
   /** `owner`: who runs it, when the box is shared by the turn and its subagents (spec local
-   *  2026-11-01-subagentes-de-len, §4.8); today's terminal is never shared and ignores it. */
-  ejecutar(command: string, o?: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string }): Promise<SalidaDeUnComando>;
+   *  2026-11-01-subagentes-de-len, §4.8), and `signal` its own stop; today's terminal is never shared and ignores both. */
+  ejecutar(
+    command: string,
+    o?: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string; readonly signal?: AbortSignal },
+  ): Promise<SalidaDeUnComando>;
   refrescarPerezosos(): Promise<void>;
   poner(ficheros: Readonly<Record<string, string | null>>): Promise<void>;
   cerrar(): Promise<void>;

@@ -167,7 +167,6 @@ export interface SandboxTerminalOptions {
   /** When the box was created or resumed for this turn (ms). */
   readonly startedAt: number;
   /** The turn's: the owner's ■. */
-  readonly signal?: AbortSignal;
   readonly now?: () => number;
   /** How long the first sync took, phase by phase (the spec's latency goal, §5). */
   readonly logFirstSync?: (timings: string) => void;
@@ -449,10 +448,10 @@ export class SandboxTerminal implements TerminalBackend {
     return f && "text" in f ? f.text : null;
   }
 
-  /** Answers the box's requests until `stop` fires. */
-  private async serveBridge(stop: AbortSignal): Promise<void> {
+  /** Answers the box's requests until `stop` fires; `signal` is the running command's own stop. */
+  private async serveBridge(stop: AbortSignal, signal?: AbortSignal): Promise<void> {
     while (!stop.aborted) {
-      await this.serveOnce();
+      await this.serveOnce(signal);
       await new Promise<void>((resolve) => {
         const t = setTimeout(resolve, POLL_MS);
         stop.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
@@ -462,7 +461,7 @@ export class SandboxTerminal implements TerminalBackend {
 
   /** One pass over the mailbox: answers what is waiting. A request that can't be read or answered
    *  gets its error as its own command's output, like a tool that fails; the next ones are still served. */
-  private async serveOnce(): Promise<void> {
+  private async serveOnce(signal?: AbortSignal): Promise<void> {
     const box = this.o.handle;
     for (const name of await box.list(REQUESTS)) {
       if (!name.endsWith(".json") || this.answered.has(name)) continue;
@@ -482,7 +481,7 @@ export class SandboxTerminal implements TerminalBackend {
         id = req.id;
         program = req.program;
         const { tree } = await this.look();
-        const answer = await answerBridgeRequest(req, this.o.bridge, tree, { signal: this.o.signal });
+        const answer = await answerBridgeRequest(req, this.o.bridge, tree, { signal });
         response = { passthrough: true };
         if ("readLine" in answer) response = { readLine: true };
         else if (!("passthrough" in answer)) {
@@ -504,7 +503,11 @@ export class SandboxTerminal implements TerminalBackend {
     }
   }
 
-  async ejecutar(command: string, o: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string } = {}): Promise<SalidaDeUnComando> {
+  /** `signal`: the caller's own stop (a shared box has several holders: one's ■ never stops another's command). */
+  async ejecutar(
+    command: string,
+    o: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string; readonly signal?: AbortSignal } = {},
+  ): Promise<SalidaDeUnComando> {
     await this.open();
     const timeoutMs = Math.min(Math.max(o.timeoutMs ?? DEFAULT_TIMEOUT_MS, 1), MAX_TIMEOUT_MS);
     const id = `b${++this.nextJob}`;
@@ -513,16 +516,16 @@ export class SandboxTerminal implements TerminalBackend {
     const notes = () => this.notes.splice(0).map((n) => `${n}\n`).join("");
 
     if (o.background) {
-      const r = await this.o.handle.run(script, { timeoutMs, signal: this.o.signal, background: true });
+      const r = await this.o.handle.run(script, { timeoutMs, signal: o.signal, background: true });
       this.jobs.set(id, { ...job, pid: r.pid, done: false });
       return { stdout: backgroundStarted(id, job.outputPath), stderr: notes(), exitCode: 0, ficheros: await this.syncBack() };
     }
 
     const stop = new AbortController();
-    const serving = this.serveBridge(stop.signal).catch(() => undefined);
+    const serving = this.serveBridge(stop.signal, o.signal).catch(() => undefined);
     let r: RunResult;
     try {
-      r = await this.o.handle.run(script, { timeoutMs, signal: this.o.signal });
+      r = await this.o.handle.run(script, { timeoutMs, signal: o.signal });
     } finally {
       stop.abort();
       await serving;
@@ -638,6 +641,25 @@ export class SandboxTerminal implements TerminalBackend {
   async pendingChanges(): Promise<Readonly<Record<string, string | null>>> {
     await this.open();
     return (await this.look()).changed;
+  }
+
+  /** The project's files as the box has them, as of its last look (a shared box: where a holder's command starts). */
+  knownFiles(): Record<string, string> {
+    return { ...this.tree };
+  }
+
+  /** Saves what the box changed and nobody saved (`save` gets it with what the box had before), then takes it
+   *  as known and puts back what `save` refused: what one holder's checks refused never reaches another's. */
+  async settlePending(
+    save: (pending: Readonly<Record<string, string | null>>, before: Readonly<Record<string, string>>) => Promise<Readonly<Record<string, string | null>> | void>,
+  ): Promise<void> {
+    await this.open();
+    const seen = await this.look();
+    if (Object.keys(seen.changed).length === 0) return;
+    const back = await save(seen.changed, { ...this.tree });
+    this.tree = seen.tree;
+    this.synced = seen.box;
+    if (back && Object.keys(back).length > 0) await this.poner(back);
   }
 
   syncedManifest(): Manifest {

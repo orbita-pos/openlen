@@ -43,6 +43,14 @@ describe("one box per project, shared by the turn and its subagents", () => {
     expect(later).toBe(first);
   });
 
+  it("only one person's holders share it: another person's turn or subagent doesn't join", async () => {
+    const first = await joinBox("p", "sub-1", async () => box("b1"), { subagent: true, person: "owner" });
+    expect(await joinBox("p", "turn-2", async () => box("never"), { person: "member" })).toBeNull();
+    expect(await joinBox("p", "sub-2", async () => box("never"), { subagent: true, person: "member" })).toBeNull();
+    expect(await joinBox("p", "turn-3", async () => box("never"), { person: "owner" })).toBe(first);
+    expect(boxHolders("p")).toEqual(["sub-1", "turn-3"]);
+  });
+
   it("two plain turns of one project still don't share it", async () => {
     await joinBox("p", "turn-1", async () => box("b1"));
     expect(await joinBox("p", "turn-2", async () => box("never"))).toBeNull();

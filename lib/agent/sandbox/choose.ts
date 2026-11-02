@@ -23,7 +23,7 @@ import type { SandboxDriver, SandboxHandle } from "./driver";
 import { e2bDriver } from "./e2b-driver";
 import type { Manifest } from "./manifest";
 import { conflictingTopLevel } from "./paths";
-import { boxHolders, holdsBox, joinBox, leaveBox } from "./project-lease";
+import { boxHolders, holdsBox, joinBox, leaveBox, lockBox } from "./project-lease";
 import { SandboxTerminal } from "./sandbox-terminal";
 import * as rows from "./store";
 
@@ -61,7 +61,6 @@ export interface TurnTerminalOptions {
   readonly network?: () => Promise<BoxNetwork | null>;
   /** This turn's variables for every command of the box (BASE_URL: the draft, for the tests). */
   readonly baseEnv?: () => Promise<Readonly<Record<string, string>>>;
-  readonly signal?: AbortSignal;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly driver?: SandboxDriver;
   readonly store?: SandboxStore;
@@ -71,7 +70,11 @@ export interface TurnTerminalOptions {
 }
 
 type Charge = typeof chargeSandbox;
-type Save = (pending: Readonly<Record<string, string | null>>) => Promise<void>;
+/** Saves what the box changed (with what the box had before); returns what it refused, to put back in the box. */
+type Save = (
+  pending: Readonly<Record<string, string | null>>,
+  before: Readonly<Record<string, string>>,
+) => Promise<Readonly<Record<string, string | null>> | void>;
 
 /** The turn's real terminal: the box, and today's terminal behind it if the box dies. */
 export class TurnSandbox implements TerminalBackend {
@@ -100,7 +103,10 @@ export class TurnSandbox implements TerminalBackend {
     return this.current.arrancada;
   }
 
-  async ejecutar(command: string, o?: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string }): Promise<SalidaDeUnComando> {
+  async ejecutar(
+    command: string,
+    o?: { readonly timeoutMs?: number; readonly background?: boolean; readonly owner?: string; readonly signal?: AbortSignal },
+  ): Promise<SalidaDeUnComando> {
     if (this.diedAt !== null) return this.current.ejecutar(command, o);
     try {
       return await this.inner.ejecutar(command, o);
@@ -115,6 +121,11 @@ export class TurnSandbox implements TerminalBackend {
       this.ctx.log(`[sandbox] fallback project=${this.ctx.session.projectId} reason=died`);
       return { stdout: "", stderr: `The box stopped: ${message}\n`, exitCode: 1, ficheros: null };
     }
+  }
+
+  /** The project's files as the box has them (a shared box: where each holder's command starts); none once it died. */
+  knownFiles(): Record<string, string> | null {
+    return this.diedAt === null ? this.inner.knownFiles() : null;
   }
 
   /** A file's bytes from the box (what `present` delivers, a PDF to read); none once it died. */
@@ -160,8 +171,7 @@ export class TurnSandbox implements TerminalBackend {
     if (this.settled || this.diedAt !== null) return;
     await this.inner.killBackground(owner).catch(() => undefined);
     try {
-      const pending = await this.inner.pendingChanges();
-      if (Object.keys(pending).length > 0 && save) await save(pending);
+      if (save) await this.inner.settlePending(save);
     } catch (e) {
       this.ctx.log(`[sandbox] could not save a holder's last changes project=${this.ctx.session.projectId}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -180,8 +190,7 @@ export class TurnSandbox implements TerminalBackend {
     this.settled = true;
     await this.inner.killBackground().catch(() => undefined);
     try {
-      const pending = await this.inner.pendingChanges();
-      if (Object.keys(pending).length > 0 && save) await save(pending);
+      if (save) await this.inner.settlePending(save);
     } catch (e) {
       this.ctx.log(`[sandbox] could not save the box's last changes project=${this.ctx.session.projectId}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -244,10 +253,20 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
     if (opened instanceof TurnSandbox) return opened;
     fellBack = opened;
     return null;
-  }, { subagent: session.terminalHolderId !== undefined });
+  }, { subagent: session.terminalHolderId !== undefined, person: session.personId ?? session.userId });
   if (!box) return fellBack ?? fallback("held");
-  session.fotoDeLaTerminal ??= { ...projectFiles };
+  // A holder that joins starts from what the box has (`startFromTheBox`): its first command then brings in what
+  // was saved since, instead of saving the box's older copy over it.
+  session.fotoDeLaTerminal ??= box.knownFiles() ?? { ...projectFiles };
   return box;
+}
+
+/** Before each command on a shared box (under its lock): the session's photo is what the box has, not what this
+ *  session saw last — another holder may have run since. Then bringing the box up to date pushes only what was
+ *  saved meanwhile, and what the command changes is its own. Nothing for today's terminal. */
+export function startFromTheBox(session: AgentSession): void {
+  const known = session.terminal instanceof TurnSandbox ? session.terminal.knownFiles() : null;
+  if (known) session.fotoDeLaTerminal = known;
 }
 
 /** Who holds the box in a session: a subagent's own id, or the turn. */
@@ -307,7 +326,6 @@ async function openTheBox(
       readOnly: o.readOnly,
       ...(o.readOnlyBytes ? { readOnlyBytes: o.readOnlyBytes } : {}),
       startedAt,
-      signal: o.signal,
       now,
       logFirstSync: (timings) => log(`[sandbox] first sync project=${session.projectId} ${timings}`),
       fresh: !resumed,
@@ -332,8 +350,14 @@ function othersHoldTheBox(session: AgentSession): boolean {
 export async function settleTurnTerminal(session: AgentSession, o: { readonly save?: Save }): Promise<void> {
   const t = session.terminal;
   if (!(t instanceof TurnSandbox)) return;
-  if (othersHoldTheBox(session)) await t.settleFor(holderOf(session), o.save);
-  else await t.settle(o.save);
+  // Under the box's lock: another holder's command may be halfway through writing.
+  const release = o.save ? await lockBox(t) : null;
+  try {
+    if (othersHoldTheBox(session)) await t.settleFor(holderOf(session), o.save);
+    else await t.settle(o.save);
+  } finally {
+    release?.();
+  }
 }
 
 /** Closes the turn's terminal: the box saves what is pending (if not settled yet), pauses, is let go and
@@ -347,8 +371,15 @@ export async function closeTurnTerminal(
   session.fotoDeLaTerminal = undefined;
   if (!t) return;
   if (!(t instanceof TurnSandbox)) return await t.cerrar();
-  const holder = holderOf(session);
-  if (!holdsBox(session.projectId, holder)) return await t.close(o);
-  if (boxHolders(session.projectId).length > 1) await t.settleFor(holder, o.save);
-  await leaveBox(session.projectId, holder, (box) => box.close(o));
+  // Saving reads the box: under its lock, like a command. (Without `save` — the process going away — it only
+  // pauses and lets go, and must not wait for a long command.)
+  const release = o.save ? await lockBox(t) : null;
+  try {
+    const holder = holderOf(session);
+    if (!holdsBox(session.projectId, holder)) return await t.close(o);
+    if (boxHolders(session.projectId).length > 1) await t.settleFor(holder, o.save);
+    await leaveBox(session.projectId, holder, (box) => box.close(o));
+  } finally {
+    release?.();
+  }
 }

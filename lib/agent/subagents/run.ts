@@ -101,6 +101,8 @@ export interface RunnerIO {
   turnStillOpen(chatRowId: string): boolean;
   snapshot(session: AgentSession): Promise<Readonly<Record<string, string>>>;
   addTurnChanges(projectId: string, chatRowId: string, before: Readonly<Record<string, string>>, after: Readonly<Record<string, string>>): Promise<void>;
+  /** Closes the child's browser tab (`use_page`), if it opened one. */
+  closeBrowser?(session: AgentSession): Promise<void>;
   /** What the route builds for any loop of the session: compaction, spill, late diagnostics. */
   loopExtras?(session: AgentSession): Partial<Pick<AgentLoopArgs, "compaction" | "spill" | "lateDiagnostics">>;
   /** Writes what the run has before the process exits (exit-flush.ts); returns its unregister. */
@@ -167,6 +169,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const deps: AgentDeps = { ...ctx.deps, subagents: undefined, turnSignal: abort.signal };
     const actions: Omit<Extract<AgentStreamEvent, { type: "action" }>, "type">[] = [];
     let toolUses = 0;
+    /** The files its tools wrote: its undo is only these (others may change the project meanwhile). */
+    const touched = new Set<string>();
     const live: { read: (() => Message[]) | null } = { read: null };
     let result: AgentLoopResult | null = null;
     let diagnostic: string | null = null;
@@ -186,7 +190,11 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         openStream: (m) => b.openStream(m),
         closeOut: (m) => b.closeOut(m),
         signal: abort.signal,
-        runTool: (name, args) => io.runTool(session, deps, name, args),
+        runTool: async (name, args) => {
+          const out = await io.runTool(session, deps, name, args);
+          for (const f of out.ficherosTocados ?? []) touched.add(f.ruta);
+          return out;
+        },
         emit: (ev) => {
           if (ev.type !== "action") return;
           const { type: _type, ...step } = ev;
@@ -203,7 +211,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
           const t = session.terminal as { finishedBackground?: (owner?: string) => Promise<string[]> } | undefined;
           return (await t?.finishedBackground?.(id).catch(() => [])) ?? [];
         },
-        excedePresupuesto: (g) => g.inputTokens + g.outputTokens > 0 && ctx.spend.over(centicreditsOf(g)),
+        // Its spend so far counts for Len and the other children too (`track`), not only for itself.
+        excedePresupuesto: (g) => {
+          if (g.inputTokens + g.outputTokens === 0) return false;
+          ctx.spend.track(id, centicreditsOf(g));
+          return ctx.spend.over();
+        },
         ...io.loopExtras?.(session),
       });
     } catch (e) {
@@ -223,7 +236,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     if (status === "error") diagnostic ??= result?.errorCode ?? "error";
     const usage = result?.usage ?? NO_USAGE;
     const charged = centicreditsOf(usage);
-    ctx.spend.addChildren(charged);
+    ctx.spend.settle(id, charged);
     if (charged > 0) {
       await io
         .charge({
@@ -246,11 +259,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         })
         .catch((e: unknown) => log(`[subagents] run=${id} charge failed: ${String(e)}`));
     }
-    if (before && !io.turnStillOpen(ctx.chatRowId)) {
+    if (before && touched.size > 0 && !io.turnStillOpen(ctx.chatRowId)) {
       const after = await io.snapshot(session).catch(() => null);
-      if (after) await io.addTurnChanges(ctx.projectId, ctx.chatRowId, before, after).catch((e: unknown) => log(`[subagents] run=${id} undo failed: ${String(e)}`));
+      if (after) {
+        const own = (files: Readonly<Record<string, string>>) => Object.fromEntries(Object.entries(files).filter(([path]) => touched.has(path)));
+        await io.addTurnChanges(ctx.projectId, ctx.chatRowId, own(before), own(after)).catch((e: unknown) => log(`[subagents] run=${id} undo failed: ${String(e)}`));
+      }
     }
     await io.closeTerminal(session, id).catch((e: unknown) => log(`[subagents] run=${id} closing its terminal failed: ${String(e)}`));
+    await io.closeBrowser?.(session).catch((e: unknown) => log(`[subagents] run=${id} closing its browser failed: ${String(e)}`));
     const finalText = status === "error" && !result ? "" : (result?.finalText ?? "");
     await io.store
       .settleRun(id, {
