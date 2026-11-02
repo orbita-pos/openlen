@@ -50,6 +50,8 @@ export function createStepRecorder(o: {
   readonly store: StepStore;
   readonly log: (line: string) => void;
   readonly ttlMs?: number;
+  /** A subagent's recorder (spec local 2026-11-01-subagentes-de-len): every row carries its run's id. */
+  readonly subagentId?: string;
 }): StepRecorder {
   const ttlMs = o.ttlMs ?? DEFAULT_PROVIDER_CACHE_TTL_MS;
   const prev = new Map<CallKind, CallSnapshot | null>();
@@ -109,6 +111,7 @@ export function createStepRecorder(o: {
       repeats: p.repeats,
       cacheBreak: p.cacheBreak,
       endReason: i === pending.length - 1 ? endReason : null,
+      subagentId: o.subagentId ?? null,
     }));
   };
 

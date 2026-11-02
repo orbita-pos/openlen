@@ -2624,12 +2624,45 @@ export const agentRequestSteps = pgTable(
     repeats: jsonb("repeats"),
     cacheBreak: jsonb("cacheBreak"),
     endReason: text("endReason"),
+    /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; null for Len's. */
+    subagentId: text("subagentId"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (t) => [
     index("agentRequestSteps_projectId_kind_createdAt_idx").on(t.projectId, t.kind, t.createdAt),
     index("agentRequestSteps_createdAt_idx").on(t.createdAt),
   ],
+);
+
+// LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): one row per child Len started — its task,
+// how it ended, what it saw and did, and what it cost. `npm run subagents:migrate`.
+export const subagentRuns = pgTable(
+  "subagentRuns",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The chat row of the turn that started it: its card lives there, and its changes undo with it. */
+    chatRowId: text("chatRowId").notNull(),
+    turnId: text("turnId").notNull(),
+    /** Who was talking: the woken turn runs as them. The owner pays. */
+    personId: text("personId").notNull(),
+    preset: text("preset").notNull(),
+    description: text("description").notNull(),
+    prompt: text("prompt").notNull(),
+    status: text("status").$type<"running" | "completed" | "aborted" | "error" | "budget">().notNull().default("running"),
+    transcript: jsonb("transcript"),
+    actions: jsonb("actions").$type<unknown[]>().notNull().default([]),
+    finalText: text("finalText"),
+    diagnostic: text("diagnostic"),
+    usage: jsonb("usage"),
+    toolUses: integer("toolUses").notNull().default(0),
+    durationMs: integer("durationMs"),
+    chargedCenticredits: integer("chargedCenticredits").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    settledAt: timestamp("settledAt", { mode: "date", withTimezone: true }),
+    noticeDeliveredAt: timestamp("noticeDeliveredAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [index("subagentRuns_projectId_status_idx").on(t.projectId, t.status), index("subagentRuns_chatRowId_idx").on(t.chatRowId)],
 );
 
 // La revisión de seguridad al publicar (lib/security-review, spec local

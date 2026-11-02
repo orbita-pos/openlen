@@ -65,6 +65,20 @@ describe("createStepRecorder", () => {
     expect(logs[0]).toBe("[cache-break] proj=P turn=U step=0 kind=loop causes=messages_rewritten@first=3 cached 221952→192256 provider=deepinfra");
   });
 
+  it("a subagent's rows carry its id; Len's carry none", async () => {
+    const child = fakeStore(null);
+    const c = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store: child.store, log: () => {}, subagentId: "r1" });
+    c.onCall(call(["a"], 0));
+    c.finish({ endReason: "completed" });
+    const len = fakeStore(null);
+    const l = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store: len.store, log: () => {} });
+    l.onCall(call(["a"], 0));
+    l.finish({ endReason: "completed" });
+    await flush();
+    expect(child.rows[0]!.subagentId).toBe("r1");
+    expect(len.rows[0]!.subagentId).toBeNull();
+  });
+
   it("hasHistory false: no baseline is loaded and the first call never breaks", async () => {
     const f = fakeStore(null);
     const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store: f.store, log: () => {} });

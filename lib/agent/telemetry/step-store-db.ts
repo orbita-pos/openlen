@@ -38,6 +38,7 @@ function fromDb(r: DbRow): StepRow {
     repeats: (r.repeats as StepRow["repeats"] | null) ?? { identicalRun: 0, alternatingPair: 0 },
     cacheBreak: (r.cacheBreak as StepRow["cacheBreak"]) ?? null,
     endReason: r.endReason,
+    subagentId: r.subagentId,
   };
 }
 

@@ -102,6 +102,7 @@
     "scheduled-tasks:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/scheduled-tasks-migrate.ts",
     "len-watch:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-watch-migrate.ts",
     "delivered-files:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/delivered-files-migrate.ts",
+    "subagents:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/subagents-migrate.ts",
     "len-memory:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-memory-migrate.ts",
     "len-skills:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-skills-migrate.ts",
     "chat-equipo:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/chat-equipo-migrate.ts",
