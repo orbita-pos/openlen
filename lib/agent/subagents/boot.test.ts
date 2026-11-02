@@ -9,7 +9,7 @@ function row(o: Partial<SubagentRunRow> & Pick<SubagentRunRow, "id">): SubagentR
   return {
     projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find", prompt: "Where?",
     status: "running", transcript: null, actions: [], finalText: null, diagnostic: null, usage: null, toolUses: 0, durationMs: null,
-    chargedCenticredits: 0, createdAt: new Date(NOW - 60_000), settledAt: null, noticeDeliveredAt: null,
+    chargedCenticredits: 0, createdAt: new Date(NOW - 60_000), settledAt: null, noticeDeliveredAt: null, forked: false,
     ...o,
   };
 }
