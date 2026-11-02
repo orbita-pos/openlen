@@ -69,6 +69,14 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
     );
   });
 
+  it("each type tells the child that Len gets what it sends with send_message and its final message", () => {
+    for (const p of SUBAGENT_PRESETS) {
+      const prompt = childSystemPrompt("LEN", p, "x");
+      expect(prompt).toContain("send_message");
+      expect(prompt).not.toMatch(/only your final message reaches Len/i);
+    }
+  });
+
   it("each type has its own section", () => {
     const g = childSystemPrompt("P", "general-purpose", "x");
     const e = childSystemPrompt("P", "Explore", "x");

@@ -77,15 +77,17 @@ export function SubagentCard({ run, forked = false, onStop }: { run: SubagentRun
 /** The turn's launches, forks and the children it woke, each with its card. `rowId` is the turn's row, where the
  *  server keeps what it launched; a woken child hangs from an earlier row, so it is read by id. */
 export function SubagentCards({ actions, projectId, rowId }: { actions: readonly AgentAction[] | undefined; projectId: string; rowId: string }) {
-  const launched = useMemo(
-    () =>
-      (actions ?? []).flatMap((a) =>
-        SUBAGENT_CARD_TOOLS.has(a.tool) && a.subagent
-          ? [{ ...a.subagent, description: a.summary, forked: a.tool === SUBAGENT_FORK_TOOL, woken: a.tool === SEND_MESSAGE_TOOL }]
-          : [],
-      ),
-    [actions],
-  );
+  const launched = useMemo(() => {
+    // One card per run: a turn that launched a child and then woke it, or woke it twice, shows it once.
+    const byId = new Map<string, { id: string; preset: string; description: string; forked: boolean; woken: boolean }>();
+    for (const a of actions ?? []) {
+      if (!SUBAGENT_CARD_TOOLS.has(a.tool) || !a.subagent) continue;
+      const l = { ...a.subagent, description: a.summary, forked: a.tool === SUBAGENT_FORK_TOOL, woken: a.tool === SEND_MESSAGE_TOOL };
+      const prev = byId.get(l.id);
+      byId.set(l.id, prev ? { ...prev, forked: prev.forked || l.forked, woken: prev.woken && l.woken } : l);
+    }
+    return [...byId.values()];
+  }, [actions]);
   const runs = useSyncExternalStore(subagentsLive.subscribe, subagentsLive.snapshot, subagentsLive.snapshot);
   const ids = launched.map((l) => l.id).join(",");
   const woken = [...new Set(launched.filter((l) => l.woken).map((l) => l.id))].join(",");

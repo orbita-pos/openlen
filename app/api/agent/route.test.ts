@@ -149,9 +149,9 @@ vi.mock("@/lib/agent/subagents/store", () => ({
   saveProgress: vi.fn(),
   settleRun: vi.fn(),
   markNoticeDelivered: mocks.markNoticeDelivered,
-  runById: vi.fn(async () => null),
   reopenRun: vi.fn(async () => false),
   runsOfCurrentConversation: vi.fn(async () => []),
+  runOfCurrentConversation: vi.fn(async () => null),
 }));
 vi.mock("@/lib/projects/hilos", async (original) => ({
   // Pura: la de verdad (quién del texto es del proyecto, sin uno mismo).
@@ -3905,8 +3905,16 @@ describe("POST /api/agent — Len's subagents", () => {
     const store = await import("@/lib/agent/subagents/store");
     const io = launcherArgs()[1] as unknown as { store: Record<string, unknown> };
     expect(io.store.runsOfCurrentConversation).toBe(store.runsOfCurrentConversation);
-    expect(io.store.runById).toBe(store.runById);
+    expect(io.store.runOfCurrentConversation).toBe(store.runOfCurrentConversation);
     expect(io.store.reopenRun).toBe(store.reopenRun);
+  });
+
+  it("a child talks to the provider Len is on now: its cache holds his prefix (a fork's whole request)", async () => {
+    mocks.createAgentBrain.mockReturnValue(mocks.brainStub({ lastProvider: () => "deepinfra" }));
+    await pedir();
+    const io = launcherArgs()[1] as unknown as { brain(tools: unknown[], runId: string, signal: AbortSignal): unknown };
+    io.brain([], "r1", new AbortController().signal);
+    expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ preferredProvider: "deepinfra" }));
   });
 
   it("a child's message reaches Len but is not marked delivered: only how a run ended is", async () => {

@@ -105,13 +105,36 @@ describe("subagentRuns", () => {
 
   it("reopens a settled run once; a running or unknown one stays as it is", async () => {
     await store.createRun({ id: "r1", ...RUN });
-    expect(await store.reopenRun("r1")).toBe(false);
+    expect(await store.reopenRun("r1", "u1")).toBe(false);
     await store.settleRun("r1", { status: "completed", ...SETTLED });
     await store.markNoticeDelivered("r1");
-    expect(await store.reopenRun("r1")).toBe(true);
+    expect(await store.reopenRun("r1", "u1")).toBe(true);
     expect(await store.runById("r1")).toMatchObject({ status: "running", settledAt: null, noticeDeliveredAt: null, toolUses: 3, chargedCenticredits: 7 });
-    expect(await store.reopenRun("r1")).toBe(false);
-    expect(await store.reopenRun("nope")).toBe(false);
+    expect(await store.reopenRun("r1", "u1")).toBe(false);
+    expect(await store.reopenRun("nope", "u1")).toBe(false);
+  });
+
+  it("a reopened run is recorded for whoever woke it", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.settleRun("r1", { status: "completed", ...SETTLED });
+    expect(await store.reopenRun("r1", "m2")).toBe(true);
+    expect((await store.runById("r1"))!.personId).toBe("m2");
+  });
+
+  it("the conversation's list and the cards' reads leave the transcript out; one child of the conversation is read whole", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.settleRun("r1", { status: "completed", ...SETTLED });
+    await store.createRun({ id: "r2", ...RUN, chatRowId: "row-old" });
+    const light = [...(await store.runsOfCurrentConversation("p1")), ...(await store.runsOfRow("p1", "row1")), ...(await store.runsByIds("p1", ["r1", "r2"]))];
+    expect(light).toHaveLength(4);
+    for (const r of light) {
+      expect(r).not.toHaveProperty("transcript");
+      expect(r).not.toHaveProperty("prompt");
+    }
+    expect(await store.runsOfCurrentConversation("p1")).toEqual([{ id: "r1", description: "Find the menu", preset: "Explore" }]);
+    expect(await store.runOfCurrentConversation("p1", "r1")).toMatchObject({ id: "r1", transcript: SETTLED.transcript, prompt: "Where is it?", forked: false });
+    expect(await store.runOfCurrentConversation("p1", "r2")).toBeNull();
+    expect(await store.runOfCurrentConversation("p2", "r1")).toBeNull();
   });
 
   it("runs are found by their ids, only in their project", async () => {
