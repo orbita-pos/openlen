@@ -11,6 +11,9 @@ export const MAX_ACTIVE_SUBAGENTS = 8;
 export interface QueuedNotice {
   readonly id: string;
   readonly text: string;
+  /** A message the child sent Len while working (`send_message`), not its settlement: Len marks only a
+   *  settlement delivered, so a restart still tells him how the run ended. */
+  readonly message?: true;
 }
 
 interface State {

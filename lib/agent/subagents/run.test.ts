@@ -6,7 +6,7 @@ import type { BuildAgentMessagesArgs } from "@/lib/agent/context";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { settlementNotice } from "./notice";
-import { forgetAllSubagents, noticeTurnPending, reserve, stop, takeNotices } from "./registry";
+import { forgetAllSubagents, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
 import { createTurnSpend } from "./spend";
 
@@ -128,7 +128,7 @@ function setup(
     app: null,
     planMode: false,
     turnArgs: TURN_ARGS,
-    declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent"].map((name) => ({ name })),
+    declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
     deps: {} as AgentDeps,
     sessionBase: { skills: new Map() as never, ownerEmail: null },
     spend: createTurnSpend(o.spendCap ?? 10_000, () => lenSpent),
@@ -313,6 +313,65 @@ describe("the launcher of Len's subagents", () => {
   });
 });
 
+describe("continuable children (phase 2)", () => {
+  const user = (m: Message[]) => m.filter((x) => x.role === "user").map((x) => (typeof x.content === "string" ? x.content : ""));
+
+  it("a message from Len reaches the running child at its next step, as Agent len sent a message", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    sendToRun("r1", "Also check the footer.");
+    s.g.release();
+    await s.settled("r1");
+    expect(user(s.g.seen[1]!)).toContain("Agent len sent a message: Also check the footer.");
+  });
+
+  it("the child's send_message reaches Len as a notice, wakes him, and the settlement omits the closing message", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Found: /menu/index.html:12" }), dice("Found: /menu/index.html:12")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    const notices = takeNotices("p");
+    expect(notices.map((n) => n.text)).toEqual([
+      "Agent r1 sent a message: Found: /menu/index.html:12",
+      "Background subagent r1 finished and will do no further work unless you send it more.\n\nIt sent you a message just before finishing, so its closing message is omitted.",
+    ]);
+    // A message does not settle the run: Len marks only the settlement delivered.
+    expect(notices[0]).toMatchObject({ id: "r1", message: true });
+    expect(notices[1]!.message).toBeUndefined();
+    expect(s.ran).not.toContain("send_message");
+    expect(s.noticeTurns).toHaveLength(1);
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: true, tool_result: "message delivered to agent len" });
+  });
+
+  it("a tool call after its message brings the closing message back", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Half done" }), llama("Read", { file_path: "/b" }), dice("All done")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAll done");
+  });
+
+  it("a child addressing anyone but len is refused with DeepSeek's text, and nothing reaches Len", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "r9", message: "psst" }), dice("ok")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({
+      ok: false,
+      error: 'agent "r1" is not a resident continuable child and cannot send to parent "r9"',
+    });
+    expect(takeNotices("p").map((n) => n.text.startsWith("Agent r1 sent"))).toEqual([false]);
+  });
+
+  it("the saved transcript is the whole conversation but the system prompt", async () => {
+    const s = setup();
+    await s.launcher.launch({ description: "a", prompt: "Find the menu.", preset: "Explore" });
+    const row = await s.settled("r1");
+    const t = row.transcript as Message[];
+    expect(t.some((m) => m.role === "system")).toBe(false);
+    expect(t.some((m) => m.role === "user" && String(m.content).includes("Find the menu."))).toBe(true);
+    expect(t.at(-1)).toMatchObject({ role: "assistant", content: "Done: /menu/index.html" });
+  });
+});
+
 describe("childMessages: what the child reads", () => {
   const text = (m: Message[]) => m.map((x) => (typeof x.content === "string" ? x.content : JSON.stringify(x.content)));
 
@@ -323,6 +382,8 @@ describe("childMessages: what the child reads", () => {
     expect(t.some((c) => c.includes("an old message of the chat"))).toBe(false);
     expect(t.some((c) => c.includes("THE SKILL CATALOG"))).toBe(true);
     expect(t.at(-1)).toContain("Where is the phone number?");
+    // DeepSeek's return guidance closes the task: the child reports to "len" with send_message.
+    expect(t.at(-1)).toContain('Your parent agent id is "len". Before you finish, send your result to that agent with send_message');
     expect(t.some((c) => c.includes("Len's own message"))).toBe(false);
     expect(t.some((c) => c.includes("DESIGN PANEL VALUES"))).toBe(false);
     expect(t.some((c) => c.includes("TODO LIST TO RESTORE"))).toBe(false);

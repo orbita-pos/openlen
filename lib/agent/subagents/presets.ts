@@ -22,7 +22,7 @@ import { PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
 
-import { SUBAGENT_TOOL } from "./enabled";
+import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 
 export type SubagentPreset = "general-purpose" | "Explore" | "Plan";
 
@@ -30,7 +30,8 @@ export const SUBAGENT_PRESETS: readonly SubagentPreset[] = ["general-purpose", "
 
 /**
  * Out for every child: they talk to the user (a question, a card, a delivered file, a widget), change the
- * session (plan mode, the goal, scheduled tasks, undoing Len's turn) or are this tool (depth 1).
+ * session (plan mode, the goal, scheduled tasks, undoing Len's turn) or start, stop or list children (depth 1).
+ * `send_message` stays: a child reports to Len with it (phase 2).
  *
  * What stays, and why: the files (Read, Grep, Glob, Edit, Write) and `bash`, the work itself; `skill` and
  * `read_me`, which load instructions into the child's own conversation; `view_page` and `use_page`, to look
@@ -56,6 +57,9 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   SHOW_WIDGET,
   "undo_last_change",
   SUBAGENT_TOOL,
+  SUBAGENT_FORK_TOOL,
+  INTERRUPT_AGENT_TOOL,
+  LIST_AGENTS_TOOL,
 ]);
 
 /** The artifact tools that only read. */
