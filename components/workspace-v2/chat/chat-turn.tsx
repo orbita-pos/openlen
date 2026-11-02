@@ -12,7 +12,7 @@ import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { AlarmClock, AtSign, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
-import { isLenWatchOrigin, isScheduledOrigin } from "@/lib/projects/types";
+import { isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -182,7 +182,7 @@ export function UserMessage({
               <ShieldAlert size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.lenWatch")}</span>
             </div>
-          ) : turn.origen && (
+          ) : turn.origen && isSubagentOrigin(turn.origen) ? null : turn.origen && (
             <button
               type="button"
               onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}

@@ -338,8 +338,19 @@ export interface LenWatchOrigin {
   worktree?: true;
 }
 
+/** The turn that wakes Len with its subagents' notices (spec local 2026-11-01-subagentes-de-len, §4.6). */
+export interface SubagentOrigin {
+  kind: "subagents";
+  /** The runs whose notices it carries. */
+  ids: string[];
+}
+
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin;
+
+export function isSubagentOrigin(o: TurnOrigin): o is SubagentOrigin {
+  return (o as { kind?: string }).kind === "subagents";
+}
 
 export function isScheduledOrigin(o: TurnOrigin): o is ScheduledOrigin {
   return "kind" in o && o.kind === "scheduled";
