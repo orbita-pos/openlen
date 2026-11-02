@@ -106,7 +106,11 @@ export async function correrSubagente(o: {
 export type SubagentLoopArgs = Omit<
   AgentLoopArgs,
   "maxTurns" | "maxToolCalls" | "leerDireccion" | "goalContinues" | "initialTodos" | "manualCompaction" | "compactFirst"
->;
+> & {
+  /** What it may run, when narrower than what it is declared: a fork keeps Len's declarations (his cached
+   *  prefix) and runs only a general-purpose child's tools. Absent = the declared ones. */
+  readonly allowed?: ReadonlySet<string>;
+};
 
 const TOOL_NOT_GIVEN = "This agent does not have that tool.";
 
@@ -116,8 +120,8 @@ const TOOL_NOT_GIVEN = "This agent does not have that tool.";
  * Len's own turn since H1. What stops it is the turn's spending limit (`excedePresupuesto`, which closes
  * with `closeOut`) or its ■ (`signal`). `correrSubagente` above stays as it is for the security review.
  */
-export async function runSubagent(o: SubagentLoopArgs): Promise<AgentLoopResult> {
-  const given = new Set(o.tools.map((d) => String(d.name)));
+export async function runSubagent({ allowed, ...o }: SubagentLoopArgs): Promise<AgentLoopResult> {
+  const given = allowed ?? new Set(o.tools.map((d) => String(d.name)));
   return runAgentLoop({
     ...o,
     // The loop already refuses what it was not declared; this is the second gate of a guarantee that
