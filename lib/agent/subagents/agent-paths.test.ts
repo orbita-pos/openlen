@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 
-import { PERSONAL_AGENTS_DIR, PROJECT_AGENTS_DIR, agentPath, agentPathOf, isUnderAgentsDir } from "./agent-paths";
+import { BUILT_IN_AGENT_TYPES, PERSONAL_AGENTS_DIR, PROJECT_AGENTS_DIR, agentPath, agentPathOf, isUnderAgentsDir } from "./agent-paths";
+import { SUBAGENT_PRESETS } from "./presets";
 
 describe("custom agent type paths", () => {
   it("knows a project's and a person's type", () => {
@@ -16,6 +17,10 @@ describe("custom agent type paths", () => {
       expect(isUnderAgentsDir(p), p).toBe(true);
     }
     expect(isUnderAgentsDir("/.len/skills/x/SKILL.md")).toBe(false);
+  });
+
+  it("the reserved names are the built-in types", () => {
+    expect([...BUILT_IN_AGENT_TYPES]).toEqual([...SUBAGENT_PRESETS]);
   });
 
   it("builds the path back", () => {

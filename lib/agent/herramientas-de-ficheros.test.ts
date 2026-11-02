@@ -925,6 +925,119 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
   });
 });
 
+describe("subagent types as files (spec local 2026-11-01-subagentes-de-len, §6)", () => {
+  const TYPE = "---\nname: reviewer\ndescription: Reviews copy\ntools: Read, Grep\n---\n\nReview the copy.\n";
+
+  function depsConTipos(o: { project?: Record<string, string>; personal?: Record<string, Record<string, string>> } = {}) {
+    const base = makeDepsCompletos({ html: HOME });
+    const estado = {
+      project: new Map(Object.entries(o.project ?? {})),
+      personal: new Map(Object.entries(o.personal ?? {}).map(([k, v]) => [k, new Map(Object.entries(v))] as const)),
+      upserts: [] as unknown[][],
+      removed: [] as string[],
+    };
+    const of = (scope: string, owner: string) => {
+      if (scope === "project") return estado.project;
+      if (!estado.personal.has(owner)) estado.personal.set(owner, new Map());
+      return estado.personal.get(owner)!;
+    };
+    const deps = {
+      ...base.deps,
+      agentStore: {
+        async list(scope: "project" | "personal", owner: string) {
+          return [...of(scope, owner)].map(([name, text]) => ({ name, text, updatedAt: new Date(0) }));
+        },
+        async upsert(scope: "project" | "personal", owner: string, name: string, text: string, author: string | null) {
+          estado.upserts.push([scope, owner, name, text, author]);
+          const before = of(scope, owner).get(name) ?? null;
+          of(scope, owner).set(name, text);
+          return { before };
+        },
+        async remove(scope: "project" | "personal", owner: string, name: string) {
+          estado.removed.push(`${scope}:${owner}:${name}`);
+          const before = of(scope, owner).get(name) ?? null;
+          of(scope, owner).delete(name);
+          return { before };
+        },
+      },
+    } as unknown as AgentDeps;
+    return { deps, estado };
+  }
+
+  it("Write of /.len/agents/reviewer.md saves it to the store, and Read sees it", async () => {
+    const { deps, estado } = depsConTipos();
+    const s = makeSession();
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/agents/reviewer.md", content: TYPE });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.deepEqual(estado.upserts, [["project", s.projectId, "reviewer", TYPE, s.userId]]);
+    assert.equal(out.mutoDurable, true);
+    const read = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.len/agents/reviewer.md" });
+    assert.match(texto(read), /Review the copy\./);
+  });
+
+  it("~/.len/agents/reviewer.md is the speaker's: a member's, never the owner's", async () => {
+    const { deps, estado } = depsConTipos();
+    const s = { ...makeSession(), userId: "dueno", personId: "editor" } as AgentSession;
+    const out = await runAgentTool(s, deps, "Write", { file_path: "~/.len/agents/reviewer.md", content: TYPE });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.deepEqual(estado.upserts, [["personal", "editor", "reviewer", TYPE, "editor"]]);
+  });
+
+  it("🔴 an agent file with a broken frontmatter saved by hand in the Code lens is refused and nothing is stored", async () => {
+    const { deps, estado } = depsConTipos({ project: { reviewer: TYPE } });
+    const r = await guardarAMano("p-editor", "u1", "/.len/agents/reviewer.md", "---\nname: reviewer\n---\n\nno description\n", TYPE, deps);
+    assert.equal(!r.ok && r.motivo, "rechazado", JSON.stringify(r));
+    assert.equal(estado.upserts.length, 0);
+    assert.equal(estado.project.get("reviewer"), TYPE);
+  });
+
+  it("a built-in type's name is refused", async () => {
+    const { deps, estado } = depsConTipos();
+    for (const name of ["Explore", "general-purpose"]) {
+      const out = await runAgentTool(makeSession(), deps, "Write", { file_path: `/.len/agents/${name}.md`, content: TYPE.replace("reviewer", name) });
+      assert.equal(out.response.ok, false, name);
+      assert.match(texto(out), /built-in/);
+    }
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("anything else under the agents folder is refused", async () => {
+    const { deps, estado } = depsConTipos();
+    for (const p of ["/.len/agents/notes.txt", "/.len/agents/a/b.md"]) {
+      const out = await runAgentTool(makeSession(), deps, "Write", { file_path: p, content: TYPE });
+      assert.equal(out.response.ok, false, p);
+      assert.match(texto(out), /A subagent type is one file/);
+    }
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("saving one that a type of the same name covers says so, both ways", async () => {
+    const mine = depsConTipos({ personal: { u1: { reviewer: TYPE } } });
+    const project = await runAgentTool(makeSession(), mine.deps, "Write", { file_path: "/.len/agents/reviewer.md", content: TYPE });
+    assert.match(texto(project), /Your own ~\/\.len\/agents\/reviewer\.md has the same name: it is the one you get\./);
+    const theirs = depsConTipos({ project: { reviewer: TYPE } });
+    const personal = await runAgentTool(makeSession(), theirs.deps, "Write", { file_path: "~/.len/agents/reviewer.md", content: TYPE });
+    assert.match(texto(personal), /It replaces the project's \/\.len\/agents\/reviewer\.md for you\./);
+  });
+
+  it("rm deletes it, and the terminal and the Code lens list both scopes' types", async () => {
+    const { deps, estado } = depsConTipos({ project: { reviewer: TYPE }, personal: { u1: { mine: TYPE.replace(/reviewer/g, "mine") } } });
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    assert.equal(antes["/.len/agents/reviewer.md"], TYPE);
+    assert.ok(Object.hasOwn(antes, "/home/user/.len/agents/mine.md"));
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/.len/agents/reviewer.md" }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual(estado.removed, [`project:${s.projectId}:reviewer`]);
+  });
+
+  it("Grep does not see them, like the skills", async () => {
+    const { deps } = depsConTipos({ project: { reviewer: TYPE.replace("Review the copy.", "zanahoria") } });
+    const out = await runAgentTool(makeSession(), deps, "Grep", { pattern: "zanahoria", output_mode: "files_with_matches" });
+    assert.doesNotMatch(texto(out), /\.len\/agents/);
+  });
+});
+
 // LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el
 // de su modo. Con `cat /AGENTS.md` en un turno Dynamis, mandarle a usar Edit
 // sería mandarle a una herramienta que no tiene.

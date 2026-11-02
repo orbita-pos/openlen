@@ -384,6 +384,12 @@ export interface AgentDeps {
     upsert(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null): Promise<{ before: string | null }>;
     remove(scope: SkillScope, ownerId: string, name: string): Promise<{ before: string | null }>;
   };
+  /** The subagent types of /.len/agents and ~/.len/agents (spec local 2026-11-01-subagentes-de-len, §6), like the skills. */
+  agentStore?: {
+    list(scope: SkillScope, ownerId: string): Promise<readonly { name: string; text: string; updatedAt: Date }[]>;
+    upsert(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null): Promise<{ before: string | null }>;
+    remove(scope: SkillScope, ownerId: string, name: string): Promise<{ before: string | null }>;
+  };
   /** Len sabe de tus resultados (plans/len-resultados/): visitas, formularios y
    *  mensajes, contados por el servidor. Opcional: sin él las herramientas lo dicen. */
   resultados?: ResultadosDeps;
@@ -899,6 +905,21 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       async remove(scope, ownerId, name) {
         const { deleteSkill } = await import("@/lib/agent/skills/store");
         return deleteSkill(scope, ownerId, name);
+      },
+    },
+    // The subagent types of /.len/agents and ~/.len/agents, the same way.
+    agentStore: {
+      async list(scope, ownerId) {
+        const { listAgents } = await import("@/lib/agent/subagents/agent-store");
+        return listAgents(scope, ownerId);
+      },
+      async upsert(scope, ownerId, name, text, authorId) {
+        const { upsertAgent } = await import("@/lib/agent/subagents/agent-store");
+        return upsertAgent(scope, ownerId, name, text, authorId);
+      },
+      async remove(scope, ownerId, name) {
+        const { deleteAgent } = await import("@/lib/agent/subagents/agent-store");
+        return deleteAgent(scope, ownerId, name);
       },
     },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
