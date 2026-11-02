@@ -157,6 +157,8 @@ export type SendResult =
 
 export interface SubagentsDeps {
   launch(o: { description: string; prompt: string; preset: SubagentPreset }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
+  fork(o: { description: string; prompt: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** Len's `send_message` to one of his children (phase 2). */
   send(o: { id: string; message: string }): Promise<SendResult>;
 }

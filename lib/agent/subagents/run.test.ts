@@ -66,6 +66,7 @@ function setup(
     /** Runs left out of the current conversation (an archived one). */
     archived?: string[];
     onCloseTerminal?: () => void;
+    forkSeed?: Message[];
   } = {},
 ) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
@@ -78,12 +79,14 @@ function setup(
   const changes: unknown[] = [];
   const events: SubagentEvent[] = [];
   const brainSignals: (AbortSignal | undefined)[] = [];
+  const brainTools: Record<string, unknown>[][] = [];
   const browsersClosed: AgentSession[] = [];
   const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
-    brain: (_tools, _runId, signal) => {
+    brain: (tools, _runId, signal) => {
       brainSignals.push(signal);
+      brainTools.push(tools);
       return { openStream: g.abrir, closeOut: () => g.abrir([]), modelId: "m", lastProvider: () => "deepinfra" };
     },
     runTool: async (session, _deps, name, args): Promise<ToolOutcome> => {
@@ -145,6 +148,7 @@ function setup(
     planMode: false,
     turnArgs: TURN_ARGS,
     lenSystemPrompt: "LEN SYSTEM PROMPT",
+    forkSeed: o.forkSeed ?? [],
     declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
     deps: {} as AgentDeps,
     sessionBase: { skills: new Map() as never, ownerEmail: null },
@@ -157,7 +161,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -459,6 +463,50 @@ describe("waking an idle child (phase 2)", () => {
     await s.settled("r1");
     expect(await s.launcher.send({ id: "r1", message: "x" })).toEqual({ ok: false, code: "unavailable", message: 'subagent "r1" is unavailable' });
     expect(await s.launcher.send({ id: "nope", message: "x" })).toMatchObject({ ok: false, code: "unavailable" });
+  });
+});
+
+describe("forks (phase 2)", () => {
+  const SEED: Message[] = [
+    { role: "system", content: "LEN SYSTEM PROMPT" },
+    { role: "user", content: "Make me a bakery page." },
+    { role: "assistant", content: "Done: hero, menu and contact." },
+  ];
+
+  it("🔴 a fork's request starts with Len's system prompt, tools and completed turns, byte for byte", async () => {
+    const s = setup({ forkSeed: SEED });
+    expect(await s.launcher.fork({ description: "Review", prompt: "Review what we built and propose the next step." })).toEqual({ ok: true, id: "r1" });
+    await s.settled("r1");
+    const first = s.g.seen[0]!;
+    expect(first.slice(0, SEED.length)).toEqual(SEED);
+    const task = String(first.at(-1)!.content);
+    expect(first.at(-1)!.role).toBe("user");
+    expect(task.startsWith("Review what we built and propose the next step.")).toBe(true);
+    expect(task).toContain("You are a delegated subagent: your permission scope was fixed when you were started");
+    expect(task).toContain('Your parent agent id is "len".');
+    expect(s.brainTools[0]).toEqual(s.ctx.declarations);
+    expect(s.rows.get("r1")).toMatchObject({ forked: true, preset: "general-purpose" });
+  });
+
+  it("🔴 a fork is refused publish and subagent though they are declared to it", async () => {
+    const s = setup({ forkSeed: SEED, scripts: [llama("publish", { subdomain: "x" }), llama("subagent", { description: "a", prompt: "b" }), dice("ok")] });
+    await s.launcher.fork({ description: "a", prompt: "b" });
+    await s.settled("r1");
+    expect(s.ran).toEqual([]);
+    for (const i of [1, 2]) {
+      expect(s.g.seen[i]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false, error: "This agent does not have that tool." });
+    }
+  });
+
+  it("a fork woken by Len resumes with Len's system prompt and his declarations", async () => {
+    const s = setup({ forkSeed: SEED, scripts: [dice("First"), dice("Second")] });
+    await s.launcher.fork({ description: "a", prompt: "b" });
+    await s.settled("r1");
+    await s.launcher.send({ id: "r1", message: "And the footer?" });
+    await s.settled("r1");
+    expect(s.g.seen[1]![0]).toEqual({ role: "system", content: "LEN SYSTEM PROMPT" });
+    expect(s.g.seen[1]!.slice(1, SEED.length)).toEqual(SEED.slice(1));
+    expect(s.brainTools[1]).toEqual(s.ctx.declarations);
   });
 });
 
