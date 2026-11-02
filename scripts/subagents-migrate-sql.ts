@@ -30,6 +30,23 @@ export const CREATE_SUBAGENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS "subagentRuns_chatRowId_idx" ON "subagentRuns" ("chatRowId");`,
 ];
 
+/** Phase 3: the subagent types of a project and of a person (`/.len/agents`, `~/.len/agents`), shaped like
+ *  `lenSkills` (scripts/len-skills-migrate-sql.ts). Keep in step with lib/db/schema.ts (`lenAgents`). */
+export const CREATE_LEN_AGENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS "lenAgents" (
+    "id" text PRIMARY KEY,
+    "scope" text NOT NULL,
+    "ownerId" text NOT NULL,
+    "name" text NOT NULL,
+    "text" text NOT NULL,
+    "authorId" text,
+    "createdAt" timestamp NOT NULL DEFAULT now(),
+    "updatedAt" timestamp NOT NULL DEFAULT now(),
+    "deletedAt" timestamp
+  );`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenAgents_scope_owner_name_idx" ON "lenAgents" ("scope", "ownerId", "name");`,
+];
+
 /** Layer 0's rows of a subagent's calls carry its id (null for Len's). Apart: the PGlite test has no steps table. */
 export const ALTER_AGENT_REQUEST_STEPS: readonly string[] = [
   `ALTER TABLE "agentRequestSteps" ADD COLUMN IF NOT EXISTS "subagentId" text;`,
