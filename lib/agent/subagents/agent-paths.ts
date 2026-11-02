@@ -9,6 +9,10 @@ import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 import type { SkillScope } from "@/lib/agent/skills/paths";
 import { SKILL_NAME, SKILL_NAME_MAX } from "@/lib/agent/skills/skill-file";
 
+/** The three types Claude Code ships (`presets.ts`, kept equal by agent-paths.test): a custom type can't take their names.
+ *  Here, not in presets.ts, so the file tools can check it without importing every tool the presets name. */
+export const BUILT_IN_AGENT_TYPES: ReadonlySet<string> = new Set(["general-purpose", "Explore", "Plan"]);
+
 export const PROJECT_AGENTS_DIR = "/.len/agents/";
 export const PERSONAL_AGENTS_DIR = `${HOME_DIR}/.len/agents/`;
 

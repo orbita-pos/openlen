@@ -53,6 +53,8 @@ import { ONLY_SKILL_MD, isUnderSkillsDir, skillPath, skillPathOf } from "@/lib/a
 import { parseSkillFile } from "@/lib/agent/skills/skill-file";
 import { bundledSkillNames, bundledSkills } from "@/lib/agent/skills/bundled";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
+import { parseAgentFile } from "@/lib/agent/subagents/agent-file";
+import { BUILT_IN_AGENT_TYPES, ONLY_AGENT_MD, agentPath, agentPathOf, isUnderAgentsDir } from "@/lib/agent/subagents/agent-paths";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
@@ -122,6 +124,9 @@ interface Virtuales {
   /** Skills (spec local 2026-10-26-len-skills): the project's `/.len/skills/<name>/SKILL.md` and the
    *  speaker's `~/.len/skills/<name>/SKILL.md`. Read by their path, like the memory notes. */
   readonly skills: ReadonlyMap<string, string>;
+  /** Subagent types (spec local 2026-11-01-subagentes-de-len, §6): the project's `/.len/agents/<name>.md` and the
+   *  speaker's `~/.len/agents/<name>.md`, like the skills. */
+  readonly agents: ReadonlyMap<string, string>;
   /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
   readonly folder: ReadonlyMap<string, string>;
   /** NPM ABIERTO (spec 2026-10-13): el lock de esm.sh, que vive en /.openlen
@@ -172,6 +177,16 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
       console.warn(`[agente] no se pudieron leer las skills (${scope})`, err);
     }
   }
+  const agents = new Map<string, string>();
+  for (const scope of ["project", "personal"] as const) {
+    try {
+      const owner = scope === "project" ? session.projectId : personOf(session);
+      for (const a of (await deps.agentStore?.list(scope, owner)) ?? []) agents.set(agentPath(scope, a.name), a.text);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[agente] no se pudieron leer los tipos de subagente (${scope})`, err);
+    }
+  }
   return {
     artifacts: new Map(Object.entries(await deps.artifacts?.files() ?? {})),
     memoria: new Map([
@@ -181,12 +196,13 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
       ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
     ]),
     skills,
+    agents,
     folder: new Map(Object.entries(folder).filter(([ruta]) => isFolderPath(ruta))),
     esmLock: folder[ESM_LOCK_PATH] ?? null,
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), skills: new Map(), folder: new Map(), esmLock: null };
+const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), skills: new Map(), agents: new Map(), folder: new Map(), esmLock: null };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -207,6 +223,8 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       if (memoria !== undefined) return memoria;
       const skill = v.skills.get(ruta);
       if (skill !== undefined) return skill;
+      const agent = v.agents.get(ruta);
+      if (agent !== undefined) return agent;
       const fichero = v.folder.get(ruta);
       if (fichero !== undefined) return fichero;
       const html = leerFichero(data, ruta);
@@ -520,6 +538,7 @@ async function aplicarPlan(
   }
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   if (isUnderSkillsDir(plan.ruta)) return await guardarSkill(session, deps, v.skills, plan, herramienta, detalle);
+  if (isUnderAgentsDir(plan.ruta)) return await guardarAgent(session, deps, v.agents, plan, herramienta, detalle);
   if (memoryLayerOf(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
@@ -832,6 +851,56 @@ async function guardarSkill(
   };
 }
 
+/** Subagent types per scope, as many as skills. */
+export const MAX_AGENTS_PER_SCOPE = 100;
+
+/**
+ * A SUBAGENT TYPE IS SAVED (spec local 2026-11-01-subagentes-de-len, §6), like a user skill: only a `<name>.md` that
+ * parses, never with a built-in type's name, in the project's store or the speaker's. When a type of the same name
+ * covers it (or it covers one), the answer says which wins: nothing is dropped by the order in silence.
+ */
+async function guardarAgent(
+  session: AgentSession,
+  deps: AgentDeps,
+  agents: ReadonlyMap<string, string>,
+  plan: Extract<PlanDeEdit, { ok: true }>,
+  herramienta: "Edit" | "Write" | "bash",
+  detalle: string,
+): Promise<ToolOutcome> {
+  // A built-in's name first: `Explore` is not a kebab-case name, and saying so would hide the real reason.
+  const bare = /\/([^/]+)\.md$/.exec(plan.ruta)?.[1];
+  if (bare !== undefined && BUILT_IN_AGENT_TYPES.has(bare)) {
+    return { response: respuesta(fallo(`"${bare}" is one of the built-in subagent types. Give yours another name.`)) };
+  }
+  const at = agentPathOf(plan.ruta);
+  if (!at) return { response: respuesta(fallo(ONLY_AGENT_MD)) };
+  const parsed = parseAgentFile(plan.contenido, at.name);
+  if (!parsed.ok) return { response: respuesta(fallo(parsed.error)) };
+  const before = agents.get(plan.ruta) ?? null;
+  const inScope = [...agents.keys()].filter((r) => agentPathOf(r)?.scope === at.scope).length;
+  if (before === null && inScope >= MAX_AGENTS_PER_SCOPE) {
+    return { response: respuesta(fallo(`There are already ${MAX_AGENTS_PER_SCOPE} subagent types here. Update or remove one before adding another.`)) };
+  }
+  if (!deps.agentStore) return { response: respuesta(fallo("Subagent types can't be saved right now.")) };
+  const owner = at.scope === "project" ? session.projectId : personOf(session);
+  await deps.agentStore.upsert(at.scope, owner, at.name, plan.contenido, personOf(session));
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
+  session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
+  const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
+  // Ours: which of two same-named types the speaker gets.
+  const covered =
+    at.scope === "project" && agents.has(agentPath("personal", at.name))
+      ? ` Your own ~/.len/agents/${at.name}.md has the same name: it is the one you get.`
+      : at.scope === "personal" && agents.has(agentPath("project", at.name))
+        ? ` It replaces the project's /.len/agents/${at.name}.md for you.`
+        : "";
+  return {
+    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) + covered }, { cambio }),
+    action: { tool: herramienta, ok: true, summary: detalle, cambio },
+    ...(cambio === "cambio" ? { mutoDurable: true } : {}),
+  };
+}
+
 /**
  * LOS FICHEROS QUE VE LA TERMINAL (F1): los mismos que Read —las páginas sin
  * op-ids, la memoria, la carpeta del proyecto (pieza 9) y el manual—, con su
@@ -845,6 +914,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   for (const ruta of ficherosDelSitio(row.data)) ficheros[ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.skills) ficheros[ruta] = texto;
+  for (const [ruta, texto] of v.agents) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
@@ -927,6 +997,19 @@ export async function guardarLoDeLaTerminal(
       const skillAt = skillPathOf(c.ruta);
       if (skillAt && deps.skillStore) {
         await deps.skillStore.remove(skillAt.scope, skillAt.scope === "project" ? session.projectId : personOf(session), skillAt.name);
+        enLaTerminal[c.ruta] = null;
+        notas.push(`${rutaRelativa(c.ruta)}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${rutaRelativa(c.ruta)}`, cambio: "cambio" },
+          mutoDurable: true,
+        });
+        continue;
+      }
+      // A SUBAGENT TYPE (spec local 2026-11-01-subagentes-de-len, §6): `rm` deletes it, like a skill.
+      const agentAt = agentPathOf(c.ruta);
+      if (agentAt && deps.agentStore) {
+        await deps.agentStore.remove(agentAt.scope, agentAt.scope === "project" ? session.projectId : personOf(session), agentAt.name);
         enLaTerminal[c.ruta] = null;
         notas.push(`${rutaRelativa(c.ruta)}: removed.`);
         escrituras.push({
