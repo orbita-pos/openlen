@@ -1,32 +1,39 @@
-// THE `subagent` TOOL (spec local 2026-11-01-subagentes-de-len, §4.1): DeepSeek Harness's
-// (`packages/subagent/tool-subagent/src/index.ts` @ ce7073d, MIT, LICENSES/deepseek-harness.MIT.txt) for
-// a fresh child that cannot be continued: its name, its description and its `description` and `prompt`
-// parameters word for word, and its answer, `started subagent <id>`. Always in the background, as
-// DeepSeek's (Jesús, 01/11). `agent_preset` is DeepSeek's parameter; what it picks are Claude Code's
-// three types. The line per type and the two closing sentences are ours.
+// THE SUBAGENT TOOLS (spec local 2026-11-01-subagentes-de-len, §4.1 and §5): DeepSeek Harness's
+// (`packages/subagent/tool-subagent/src/index.ts` and `packages/subagent/tool-subagent-control/src/` @ ce7073d,
+// MIT, LICENSES/deepseek-harness.MIT.txt) for continuable children: `subagent`, `subagent_fork`,
+// `send_message`, `interrupt_agent` and `list_agents` — names, descriptions, parameters and answers word for
+// word. Always in the background, as DeepSeek's (Jesús, 01/11). `agent_preset` is DeepSeek's parameter; what
+// it picks are Claude Code's three types. The line per type and the two closing sentences are ours.
 //
-// The tool only validates and hands over: the launcher (`deps.subagents`, lib/agent/subagents/run.ts)
-// builds and runs the child, and its notice reaches Len later.
+// The tools only validate and hand over: the launcher (`deps.subagents`, lib/agent/subagents/run.ts)
+// builds, runs, wakes and stops the children, and their notices reach Len later.
 //
-// Cache effect: the declaration is fixed per server (OPENLEN_SUBAGENTS); its answer is appended.
+// Cache effect: the declarations are fixed per server (OPENLEN_SUBAGENTS); their answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
-import { SUBAGENT_TOOL } from "./enabled";
-import { startedLine } from "./notice";
+import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
+import { LEN_AGENT_ID, startedLine } from "./notice";
 import { SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
 
-/** DeepSeek's `tool:subagent` system-prompt section, with only `subagent` visible. */
+/** DeepSeek's `tool:subagent` system-prompt section, with `subagent` and `subagent_fork` visible. */
 export const SUBAGENT_GUIDANCE =
-  "Start independent delegations with `subagent` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.";
+  "Start independent delegations with `subagent` or `subagent_fork` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.";
+
+/** DeepSeek's sentences for a backend whose children accept `send_message`. */
+const CONTINUABLE =
+  "This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with `send_message`; use `send_message` to steer it while running or continue its conversation after it finishes.";
+/** Ours: what Claude Code says that DeepSeek doesn't. */
+const NOT_SHOWN = "Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.";
+const SHORT_DESCRIPTION = "A short (3-5 word) description of the delegated task, for display.";
 
 const DESCRIPTION = [
-  // DeepSeek's `providerWording(false)` + its backend sentences for a child without `send_message`.
+  // DeepSeek's `providerWording(false)`.
   "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps.",
-  "This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages.",
-  // Ours: the three types (Claude Code's), and what Claude Code says that DeepSeek doesn't.
+  CONTINUABLE,
+  // Ours: the three types (Claude Code's).
   "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
-  "Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+  NOT_SHOWN,
 ].join(" ");
 
 export const SUBAGENT_DECLARATION: Record<string, unknown> = {
@@ -35,7 +42,7 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
   parameters: {
     type: "OBJECT",
     properties: {
-      description: { type: "STRING", description: "A short (3-5 word) description of the delegated task, for display." },
+      description: { type: "STRING", description: SHORT_DESCRIPTION },
       prompt: {
         type: "STRING",
         description: "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs.",
@@ -45,6 +52,101 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
     required: ["description", "prompt"],
   },
 };
+
+/** DeepSeek's `providerWording(true)`: a child seeded with the conversation's completed turns. */
+export const SUBAGENT_FORK_DECLARATION: Record<string, unknown> = {
+  name: SUBAGENT_FORK_TOOL,
+  description: [
+    "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps.",
+    CONTINUABLE,
+    NOT_SHOWN,
+  ].join(" "),
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      description: { type: "STRING", description: SHORT_DESCRIPTION },
+      prompt: {
+        type: "STRING",
+        description: "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new.",
+      },
+    },
+    required: ["description", "prompt"],
+  },
+};
+
+export const SEND_MESSAGE_DECLARATION: Record<string, unknown> = {
+  name: SEND_MESSAGE_TOOL,
+  description:
+    "Send a message to an agent. A working agent receives it at its next step; an idle agent starts a new turn with it. Returns delivery confirmation, not the agent's answer.",
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      agent_id: {
+        type: "STRING",
+        description: "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child.",
+      },
+      message: { type: "STRING", description: "The message to deliver to the agent." },
+    },
+    required: ["agent_id", "message"],
+  },
+};
+
+export const INTERRUPT_AGENT_DECLARATION: Record<string, unknown> = {
+  name: INTERRUPT_AGENT_TOOL,
+  description:
+    "Ask a subagent to stop its current work. This call returns without waiting for it to stop. You can continue a local direct child's conversation later with send_message. External executions stop permanently and cannot receive follow-ups. Subagents it started will keep running.",
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      agent_id: { type: "STRING", description: "The id of an agent created under you: your direct child or a deeper descendant." },
+    },
+    required: ["agent_id"],
+  },
+};
+
+export const LIST_AGENTS_DECLARATION: Record<string, unknown> = {
+  name: LIST_AGENTS_TOOL,
+  description:
+    "List subagents you started, with their ids, labels, and status. running means it is working; inactive means it is not currently working. You will be notified when a subagent finishes; there is no need to keep checking its status. Use send_message to continue the conversation.",
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      scope: {
+        type: "STRING",
+        enum: ["children", "descendants"],
+        description:
+          "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent.",
+      },
+    },
+  },
+};
+
+/** DeepSeek's answers. */
+export function messageDeliveredLine(id: string): string {
+  return `message delivered to agent ${id}`;
+}
+
+export function interruptRequestedLine(id: string): string {
+  return `interrupt requested for agent ${id}`;
+}
+
+export type ListAgentsScope = "children" | "descendants";
+
+/** DeepSeek's `list_agents` rendering. Depth is 1, so every child of Len is at depth 1 under `len`. */
+export function listAgentsText(entries: readonly { id: string; label: string; status: "running" | "inactive" }[], scope: ListAgentsScope): string {
+  if (entries.length === 0) return "(no subagents)";
+  const at = scope === "descendants" ? ` parent=${LEN_AGENT_ID} depth=1` : "";
+  return entries.map((e) => `${e.id} [${e.status}]${at} — ${e.label}`).join("\n");
+}
+
+/** DeepSeek's errors: a target that isn't Len's child (or doesn't exist), and a child addressing anyone but Len. */
+export function unavailableError(id: string): string {
+  return `subagent "${id}" is unavailable`;
+}
+
+export function notYourParentError(childId: string, target: string): string {
+  return `agent "${childId}" is not a resident continuable child and cannot send to parent "${target}"`;
+}
 
 export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled";
 

@@ -4609,7 +4609,7 @@ describe("the silent-turn reminder", () => {
 // DeepSeek's settlement notice. It enters before the next model call; one that arrives while Len writes his
 // closing message keeps the turn going; a turn with nobody watching waits for its children.
 describe("the subagents' notices in the loop", () => {
-  const NOTICE = "Background subagent r1 finished. It cannot receive follow-up messages.\n\nIts closing message:\nFound it.";
+  const NOTICE = "Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nFound it.";
 
   it("the launch's card carries the run it started", async () => {
     const actions: Record<string, unknown>[] = [];
