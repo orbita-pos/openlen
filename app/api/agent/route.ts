@@ -1936,6 +1936,8 @@ async function correrTurno(
                 },
                 turnArgs: argsDelTurno,
                 lenSystemPrompt: built.systemPrompt,
+                // Task 10 of phase 2 fills it with the completed turns.
+                forkSeed: [],
                 declarations: tools,
                 // A child's page checks open their own browser: the turn's pool closes with the turn, and one
                 // reopened after that would never be closed.

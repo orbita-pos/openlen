@@ -25,7 +25,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
-import { childSystemPrompt, childToolDeclarations, isReadOnly, omitsLenMd, SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
+import { childSystemPrompt, childToolDeclarations, DELEGATION_SCOPE_STATEMENT, isReadOnly, omitsLenMd, SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
 import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, takeRunInbox } from "./registry";
 import type { SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
@@ -59,6 +59,9 @@ export interface LaunchContext {
   readonly turnArgs: BuildAgentMessagesArgs;
   /** Len's system prompt this turn: a woken child's is rebuilt from it (a fork's is it, byte for byte). */
   readonly lenSystemPrompt: string;
+  /** Len's request up to, not including, this turn's message: the completed turns a fork inherits (DeepSeek's
+   *  `completedTurnPrefix`), captured when it is created. Its first message is Len's system prompt. */
+  readonly forkSeed: readonly Message[];
   /** Len's tool declarations: the child gets its preset's share (`childToolDeclarations`). */
   readonly declarations: readonly Record<string, unknown>[];
   /** Len's deps, without what only the turn has (questions, plan mode, goal, scheduled tasks). */
@@ -381,7 +384,6 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       release(ctx.projectId, id);
       return isLive(ctx.projectId, id) ? toInbox() : { ok: false, code: "unavailable", message: unavailableError(id) };
     }
-    const general = childToolDeclarations(ctx.declarations, "general-purpose", ctx.planMode);
     const spec: ChildSpec = {
       id,
       description: row.description,
@@ -392,7 +394,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         ...texts.map((t): Message => ({ role: "user", content: agentMessage(LEN_AGENT_ID, t) })),
       ],
       ...(row.forked
-        ? { tools: [...ctx.declarations], allowed: new Set(general.map((d) => String(d.name))) }
+        ? { tools: [...ctx.declarations], allowed: generalPurposeNames() }
         : { tools: childToolDeclarations(ctx.declarations, preset, ctx.planMode) }),
       prior: { toolUses: row.toolUses, durationMs: row.durationMs ?? 0, charged: row.chargedCenticredits, actions: row.actions as ChildStep[] },
     };
@@ -400,6 +402,9 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
     return { ok: true, resumed: true, preset };
   }
+
+  /** Len's tools a general-purpose child may run: a fork is declared all of Len's (his cached prefix) and gated to these. */
+  const generalPurposeNames = () => new Set(childToolDeclarations(ctx.declarations, "general-purpose", ctx.planMode).map((d) => String(d.name)));
 
   return {
     async launch(o) {
@@ -420,6 +425,33 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         preset: o.preset,
         messages: childMessages(ctx.turnArgs, o.preset, o.prompt),
         tools: childToolDeclarations(ctx.declarations, o.preset, ctx.planMode),
+        prior: NOTHING_YET,
+      };
+      void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
+      return { ok: true, id };
+    },
+    // DeepSeek's fork: Len's system prompt, tools and completed turns as they are, so his cached prefix carries over;
+    // the delegation statement and the return guidance go in its task (a context contribution in DeepSeek, not a
+    // system-prompt section). Always general-purpose.
+    async fork(o) {
+      if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
+      const id = io.newId();
+      const abort = new AbortController();
+      if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
+      try {
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true });
+      } catch (e) {
+        release(ctx.projectId, id);
+        throw e;
+      }
+      ctx.emit?.({ type: "subagent", id, preset: "general-purpose", description: o.description, status: "running" });
+      const spec: ChildSpec = {
+        id,
+        description: o.description,
+        preset: "general-purpose",
+        messages: [...ctx.forkSeed, { role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }],
+        tools: [...ctx.declarations],
+        allowed: generalPurposeNames(),
         prior: NOTHING_YET,
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
