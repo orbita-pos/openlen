@@ -14,7 +14,11 @@ import {
   SUBAGENT_DECLARATION,
   SUBAGENT_FORK_DECLARATION,
   SUBAGENT_GUIDANCE,
+  toolInterruptAgent,
+  toolListAgents,
+  toolSendMessage,
   toolSubagent,
+  toolSubagentFork,
   unavailableError,
 } from "./tool";
 
@@ -156,5 +160,95 @@ describe("the control tools' declarations and answers (DeepSeek's words)", () =>
   it("the errors", () => {
     expect(unavailableError("abc")).toBe('subagent "abc" is unavailable');
     expect(notYourParentError("abc", "xyz")).toBe('agent "abc" is not a resident continuable child and cannot send to parent "xyz"');
+  });
+});
+
+describe("the control tools (phase 2)", () => {
+  function control(over: Record<string, unknown> = {}) {
+    const calls: { name: string; arg: unknown }[] = [];
+    const subagents = {
+      launch: async () => ({ ok: true as const, id: "r1" }),
+      fork: async (o: unknown) => {
+        calls.push({ name: "fork", arg: o });
+        return { ok: true as const, id: "f1" };
+      },
+      send: async (o: unknown) => {
+        calls.push({ name: "send", arg: o });
+        return { ok: true as const, resumed: true, preset: "Explore", description: "Find the menu" };
+      },
+      interrupt: async (id: string) => {
+        calls.push({ name: "interrupt", arg: id });
+        return true;
+      },
+      list: async () => [
+        { id: "r1", label: "Find the menu", status: "running" as const },
+        { id: "r2", label: "Fix the footer", status: "inactive" as const },
+      ],
+      ...over,
+    };
+    return { deps: { subagents } as unknown as AgentDeps, calls };
+  }
+
+  it("subagent_fork starts a fork and answers with its id; its card names the run", async () => {
+    const { deps, calls } = control();
+    const out = await toolSubagentFork(session, deps, { description: "Review", prompt: "Review it." });
+    expect(out.response).toEqual({ ok: true, tool_result: "started subagent f1" });
+    expect(out.action).toMatchObject({ tool: "subagent_fork", ok: true, summary: "Review" });
+    expect(out.subagent).toEqual({ id: "f1", preset: "general-purpose" });
+    expect(calls).toEqual([{ name: "fork", arg: { description: "Review", prompt: "Review it." } }]);
+    expect((await toolSubagentFork(session, deps, { description: "", prompt: "x" })).response).toMatchObject({ ok: false, error: "invalid_arguments" });
+  });
+
+  it("send_message delivers, and a child it woke gets its card", async () => {
+    const { deps, calls } = control();
+    const out = await toolSendMessage(session, deps, { agent_id: "r1", message: "Also the footer." });
+    expect(out.response).toEqual({ ok: true, tool_result: "message delivered to agent r1" });
+    expect(out.action).toMatchObject({ tool: "send_message", ok: true, summary: "Find the menu" });
+    expect(out.subagent).toEqual({ id: "r1", preset: "Explore" });
+    expect(calls).toEqual([{ name: "send", arg: { id: "r1", message: "Also the footer." } }]);
+  });
+
+  it("send_message to a running child: delivered, no new card", async () => {
+    const { deps } = control({ send: async () => ({ ok: true as const, resumed: false, preset: "Explore", description: "Find the menu" }) });
+    const out = await toolSendMessage(session, deps, { agent_id: "r1", message: "Hurry." });
+    expect(out.response).toEqual({ ok: true, tool_result: "message delivered to agent r1" });
+    expect(out.subagent).toBeUndefined();
+  });
+
+  it("send_message passes on DeepSeek's unavailable, and refuses an empty call", async () => {
+    const { deps } = control({ send: async () => ({ ok: false as const, code: "unavailable" as const, message: 'subagent "zz" is unavailable' }) });
+    expect((await toolSendMessage(session, deps, { agent_id: "zz", message: "x" })).response).toEqual({ ok: false, error: "unavailable", message: 'subagent "zz" is unavailable' });
+    expect((await toolSendMessage(session, deps, { agent_id: "r1", message: " " })).response).toMatchObject({ ok: false, error: "invalid_arguments" });
+    expect((await toolSendMessage(session, deps, { message: "x" })).response).toMatchObject({ ok: false, error: "invalid_arguments" });
+  });
+
+  it("interrupt_agent asks and answers at once, as DeepSeek's", async () => {
+    const { deps, calls } = control({ interrupt: async () => false });
+    expect((await toolInterruptAgent(session, deps, { agent_id: "r1" })).response).toEqual({ ok: true, tool_result: "interrupt requested for agent r1" });
+    expect(calls).toEqual([]);
+    const live = control();
+    await toolInterruptAgent(session, live.deps, { agent_id: "r1" });
+    expect(live.calls).toEqual([{ name: "interrupt", arg: "r1" }]);
+  });
+
+  it("list_agents renders DeepSeek's rows, children by default", async () => {
+    const { deps } = control();
+    expect((await toolListAgents(session, deps, {})).response).toEqual({ ok: true, tool_result: "r1 [running] — Find the menu\nr2 [inactive] — Fix the footer" });
+    expect((await toolListAgents(session, deps, { scope: "descendants" })).response).toMatchObject({ tool_result: "r1 [running] parent=len depth=1 — Find the menu\nr2 [inactive] parent=len depth=1 — Fix the footer" });
+    expect((await toolListAgents(session, deps, { scope: "siblings" })).response).toMatchObject({ ok: false, error: "invalid_arguments" });
+    const none = control({ list: async () => [] });
+    expect((await toolListAgents(session, none.deps, {})).response).toEqual({ ok: true, tool_result: "(no subagents)" });
+  });
+
+  it("with subagents off, each one says so", async () => {
+    const off = {} as AgentDeps;
+    for (const out of [
+      await toolSubagentFork(session, off, { description: "a", prompt: "b" }),
+      await toolSendMessage(session, off, { agent_id: "r1", message: "x" }),
+      await toolInterruptAgent(session, off, { agent_id: "r1" }),
+      await toolListAgents(session, off, {}),
+    ]) {
+      expect(out.response).toMatchObject({ ok: false, error: "subagents_disabled" });
+    }
   });
 });

@@ -26,7 +26,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
 import { childSystemPrompt, childToolDeclarations, DELEGATION_SCOPE_STATEMENT, isReadOnly, omitsLenMd, SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
-import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, takeRunInbox } from "./registry";
+import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
 import { messageDeliveredLine, notYourParentError, SUBAGENT_GUIDANCE, unavailableError, type SendResult, type SubagentsDeps } from "./tool";
@@ -373,7 +373,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const preset = presetOf(row.preset);
     const toInbox = (): SendResult => {
       for (const t of texts) sendToRun(id, t);
-      return { ok: true, resumed: false, preset };
+      return { ok: true, resumed: false, preset, description: row.description };
     };
     if (isLive(ctx.projectId, id)) return toInbox();
     if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
@@ -400,8 +400,11 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     };
     ctx.emit?.({ type: "subagent", id, preset, description: row.description, status: "running" });
     void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
-    return { ok: true, resumed: true, preset };
+    return { ok: true, resumed: true, preset, description: row.description };
   }
+
+  /** Whether `id` is one of Len's children: a run of the project's current conversation. */
+  const ofThisConversation = async (id: string) => (await io.store.runsOfCurrentConversation(ctx.projectId)).some((r) => r.id === id);
 
   /** Len's tools a general-purpose child may run: a fork is declared all of Len's (his cached prefix) and gated to these. */
   const generalPurposeNames = () => new Set(childToolDeclarations(ctx.declarations, "general-purpose", ctx.planMode).map((d) => String(d.name)));
@@ -458,5 +461,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       return { ok: true, id };
     },
     send: ({ id, message }) => resume(id, [message]),
+    async interrupt(id) {
+      return isLive(ctx.projectId, id) && (await ofThisConversation(id)) && stop(id);
+    },
+    async list() {
+      return (await io.store.runsOfCurrentConversation(ctx.projectId)).map((r) => ({
+        id: r.id,
+        label: r.description,
+        status: isLive(ctx.projectId, r.id) ? ("running" as const) : ("inactive" as const),
+      }));
+    },
   };
 }

@@ -152,7 +152,7 @@ export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "suba
 
 /** What `send` answers: delivered into a running child's inbox (`resumed: false`), or it woke from its transcript. */
 export type SendResult =
-  | { ok: true; resumed: boolean; preset: string }
+  | { ok: true; resumed: boolean; preset: string; description: string }
   | { ok: false; code: "unavailable" | "too_many_subagents" | "turn_budget_reached"; message: string };
 
 export interface SubagentsDeps {
@@ -161,6 +161,10 @@ export interface SubagentsDeps {
   fork(o: { description: string; prompt: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** Len's `send_message` to one of his children (phase 2). */
   send(o: { id: string; message: string }): Promise<SendResult>;
+  /** `interrupt_agent`: stops a working child of the current conversation; false when there was none. */
+  interrupt(id: string): Promise<boolean>;
+  /** `list_agents`: the current conversation's children. */
+  list(): Promise<{ id: string; label: string; status: "running" | "inactive" }[]>;
 }
 
 const invalid = (message: string): ToolOutcome => ({ response: { ok: false, error: "invalid_arguments", message } });
@@ -183,4 +187,55 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
     action: { tool: SUBAGENT_TOOL, ok: true, summary: description },
     subagent: { id: r.id, preset: type },
   };
+}
+
+const disabled = (): ToolOutcome => ({ response: { ok: false, error: "subagents_disabled", message: "Subagents are not available in this session." } });
+const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** `subagent_fork`: always general-purpose; its task builds on what Len and the person already said. */
+export async function toolSubagentFork(_session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const description = text(args.description);
+  const prompt = text(args.prompt);
+  if (!description) return invalid("description is required: a short (3-5 word) description of the task.");
+  if (!prompt) return invalid("prompt is required: the task for the subagent.");
+  if (!deps.subagents) return disabled();
+  const r = await deps.subagents.fork({ description, prompt });
+  if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
+  return {
+    response: { ok: true, tool_result: startedLine(r.id) },
+    action: { tool: SUBAGENT_FORK_TOOL, ok: true, summary: description },
+    subagent: { id: r.id, preset: "general-purpose" },
+  };
+}
+
+/** Len's `send_message`: a working child reads it at its next step; an idle one wakes with it (its card shows
+ *  in this turn). A child's own `send_message` never comes here: its launcher answers it. */
+export async function toolSendMessage(_session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const id = text(args.agent_id);
+  const message = text(args.message);
+  if (!id) return invalid("agent_id is required.");
+  if (!message) return invalid("message is required.");
+  if (!deps.subagents) return disabled();
+  const r = await deps.subagents.send({ id, message });
+  if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
+  return {
+    response: { ok: true, tool_result: messageDeliveredLine(id) },
+    ...(r.resumed ? { action: { tool: SEND_MESSAGE_TOOL, ok: true, summary: r.description }, subagent: { id, preset: r.preset } } : {}),
+  };
+}
+
+/** `interrupt_agent`: like the ■ of its card; it answers at once, as DeepSeek's, whether or not it was working. */
+export async function toolInterruptAgent(_session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const id = text(args.agent_id);
+  if (!id) return invalid("agent_id is required.");
+  if (!deps.subagents) return disabled();
+  await deps.subagents.interrupt(id);
+  return { response: { ok: true, tool_result: interruptRequestedLine(id) } };
+}
+
+export async function toolListAgents(_session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const scope = args.scope ?? "children";
+  if (scope !== "children" && scope !== "descendants") return invalid("scope must be children or descendants.");
+  if (!deps.subagents) return disabled();
+  return { response: { ok: true, tool_result: listAgentsText(await deps.subagents.list(), scope) } };
 }
