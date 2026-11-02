@@ -141,8 +141,8 @@ import {
   toolScheduleUpdate,
   type ScheduledTasksDeps,
 } from "@/lib/agent/schedule-tools";
-import { SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
-import { toolSubagent, type SubagentsDeps } from "@/lib/agent/subagents/tool";
+import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
+import { toolInterruptAgent, toolListAgents, toolSendMessage, toolSubagent, toolSubagentFork, type SubagentsDeps } from "@/lib/agent/subagents/tool";
 import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { toolTodoWrite } from "@/lib/agent/todo-write";
 import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
@@ -3016,6 +3016,14 @@ async function ejecutarHerramienta(
       // Len's subagents, as DeepSeek's `subagent`.
       case SUBAGENT_TOOL:
         return await toolSubagent(session, deps, args);
+      case SUBAGENT_FORK_TOOL:
+        return await toolSubagentFork(session, deps, args);
+      case SEND_MESSAGE_TOOL:
+        return await toolSendMessage(session, deps, args);
+      case INTERRUPT_AGENT_TOOL:
+        return await toolInterruptAgent(session, deps, args);
+      case LIST_AGENTS_TOOL:
+        return await toolListAgents(session, deps, args);
       // Scheduled tasks, as DeepSeek.
       case SCHEDULE_CREATE:
         return await toolScheduleCreate(session, deps, args);

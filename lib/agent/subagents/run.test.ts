@@ -403,7 +403,7 @@ describe("waking an idle child (phase 2)", () => {
     await s.launcher.launch({ description: "Fix", prompt: "Fix the header.", preset: "general-purpose" });
     await s.settled("r1");
     takeNotices("p");
-    expect(await s.launcher.send({ id: "r1", message: "Now the footer." })).toEqual({ ok: true, resumed: true, preset: "general-purpose" });
+    expect(await s.launcher.send({ id: "r1", message: "Now the footer." })).toEqual({ ok: true, resumed: true, preset: "general-purpose", description: "Fix" });
     const row = await s.settled("r1");
     const second = s.g.seen[1]!;
     expect(second[0]!.role).toBe("system");
@@ -421,7 +421,7 @@ describe("waking an idle child (phase 2)", () => {
     const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
     s.g.hold();
     await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
-    expect(await s.launcher.send({ id: "r1", message: "Hurry." })).toEqual({ ok: true, resumed: false, preset: "general-purpose" });
+    expect(await s.launcher.send({ id: "r1", message: "Hurry." })).toEqual({ ok: true, resumed: false, preset: "general-purpose", description: "a" });
     s.g.release();
     await s.settled("r1");
     expect(s.g.seen[1]!.some((m) => m.content === "Agent len sent a message: Hurry.")).toBe(true);
@@ -507,6 +507,44 @@ describe("forks (phase 2)", () => {
     expect(s.g.seen[1]![0]).toEqual({ role: "system", content: "LEN SYSTEM PROMPT" });
     expect(s.g.seen[1]!.slice(1, SEED.length)).toEqual(SEED.slice(1));
     expect(s.brainTools[1]).toEqual(s.ctx.declarations);
+  });
+});
+
+describe("Len stops and lists his children (phase 2)", () => {
+  it("interrupt stops a running child of the current conversation; an idle or foreign one isn't touched", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("never")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    expect(await s.launcher.interrupt("r1")).toBe(true);
+    s.g.release();
+    expect((await s.settled("r1")).status).toBe("aborted");
+    expect(await s.launcher.interrupt("r1")).toBe(false);
+    expect(await s.launcher.interrupt("nope")).toBe(false);
+  });
+
+  it("interrupt leaves alone a live child of an archived conversation", async () => {
+    const s = setup({ archived: ["r1"], scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    expect(await s.launcher.interrupt("r1")).toBe(false);
+    s.g.release();
+    expect((await s.settled("r1")).status).toBe("completed");
+  });
+
+  it("list: the current conversation's children, running or inactive", async () => {
+    const s = setup({ archived: ["r3"], scripts: [dice("Done"), llama("Read", { file_path: "/a" }), dice("Done")] });
+    await s.launcher.launch({ description: "First", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    s.g.hold();
+    await s.launcher.launch({ description: "Second", prompt: "b", preset: "Explore" });
+    await s.launcher.launch({ description: "Archived", prompt: "b", preset: "Explore" });
+    expect(await s.launcher.list()).toEqual([
+      { id: "r1", label: "First", status: "inactive" },
+      { id: "r2", label: "Second", status: "running" },
+    ]);
+    s.g.release();
+    await s.settled("r2");
+    await s.settled("r3");
   });
 });
 
