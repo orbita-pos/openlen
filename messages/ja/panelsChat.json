@@ -23,7 +23,8 @@
     "homePage": "ホーム",
     "desdeElHilo": "スレッドから · {donde}",
     "scheduled": "予定タスク「{title}」 · {when}",
-    "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした"
+    "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした",
+    "fromSubagents": "サブエージェントの結果"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",
@@ -551,5 +552,19 @@
     "noPreview": "プレビューはありません",
     "loading": "開いています…",
     "failed": "このファイルを開けませんでした"
+  },
+  "subagent": {
+    "title": "サブエージェント · {description}",
+    "status": {
+      "running": "作業中",
+      "completed": "完了",
+      "aborted": "停止",
+      "error": "失敗",
+      "budget": "上限に到達"
+    },
+    "steps": "{n, plural, other {# ステップ}}",
+    "closing": "Len への報告",
+    "stop": "このサブエージェントを停止",
+    "liveBar": "{n, plural, other {# 件のサブエージェントが作業中}}"
   }
 }

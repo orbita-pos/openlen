@@ -59,6 +59,8 @@ import { withServerStatus } from "./server-status";
 import { publishNoteId } from "./publish-note";
 import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-controller";
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
+import { subagentRefFrom } from "@/lib/agent/subagents/card";
+import { subagentsLive } from "./subagents-live";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import {
   MAX_PROMPT,
@@ -1766,6 +1768,8 @@ export function useAgentChat({
                 const delivered = deliveredFrom((payload as { delivered?: unknown } | null)?.delivered);
                 // Lo que vio Len: las capturas del paso, limpias.
                 const screenshots = screenshotsFrom((payload as { screenshots?: unknown } | null)?.screenshots);
+                // The run a `subagent` call started: its card follows it (spec local 2026-11-01-subagentes-de-len).
+                const subagent = subagentRefFrom((payload as { subagent?: unknown } | null)?.subagent);
                 // LOS VISUALES: el visual de `show_widget`, limpio, en el punto
                 // donde empezó a escribirse (o en el que va el texto ahora).
                 const widget = tool === SHOW_WIDGET && status !== "running" ? widgetFrom((payload as { widget?: unknown } | null)?.widget) : null;
@@ -1805,6 +1809,7 @@ export function useAgentChat({
                     ...(descartada ? { dismissed: true as const } : {}),
                     ...(todos ? { todos } : {}),
                     ...(delivered ? { delivered } : {}),
+                    ...(subagent ? { subagent } : {}),
                     ...(screenshots ? { screenshots } : {}),
                     ...(widget && textOffset !== null ? { widget, textOffset } : {}),
                     ...(typeof valores === "string" && valores.trim()
@@ -1815,6 +1820,9 @@ export function useAgentChat({
                   finalActions = upsertActionInto(finalActions, action);
                 }
 
+              } else if (evName === "subagent") {
+                // LEN'S SUBAGENTS: a child started, took a step or ended; its card reads it.
+                subagentsLive.event(projectId, payload);
               } else if (evName === "terminal") {
                 // F6a · un comando de la terminal de Len, para la lente
                 // «Terminal» del lienzo. No toca el turno ni su tarjeta: la

@@ -48,6 +48,7 @@ import { useConversations } from "./use-conversations";
 import { useScheduledTasks } from "./use-scheduled-tasks";
 import { setChatLayout, useChatLayout, useFloatBox, type FloatBox } from "./use-chat-version";
 import type { LiveStatus } from "./live-status";
+import { subagentsLive } from "./subagents-live";
 import { useIsMobile } from "../use-is-mobile";
 import { turnosDelHilo } from "@/lib/workspace-v2/turnos-del-hilo";
 import { abrirEnElCodigo } from "@/lib/workspace-v2/abrir-fichero";
@@ -327,6 +328,8 @@ function AgentChatView({
     settledConfirms,
     cancelledText: t("errors.cancelled"),
   });
+  // LEN'S SUBAGENTS still working in this project: the bar says so, also after his turn ended.
+  const subagentsRunning = useSyncExternalStore(subagentsLive.subscribe, () => subagentsLive.runningCount(projectId), () => 0);
   // ANCLADO, FLOTANTE O MINIMIZADO. En el móvil, siempre anclado: el panel ya
   // ocupa la pantalla entera.
   const isMobile = useIsMobile();
@@ -544,7 +547,7 @@ function AgentChatView({
       </div>
       <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : centered ? `${CENTERED_PADDING} pb-4 pt-1` : "px-3 pb-3 pt-1"}`}>
         {(!plegado || avisoPendiente) && (
-          <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} />
+          <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} subagentsRunning={subagentsRunning} />
         )}
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
         {chat.goalOffered && (

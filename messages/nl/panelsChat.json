@@ -23,7 +23,8 @@
     "homePage": "Home",
     "desdeElHilo": "vanuit de draad · {donde}",
     "scheduled": "Geplande taak «{title}» · {when}",
-    "lenWatch": "Len Watch · je gepubliceerde site laadde niet"
+    "lenWatch": "Len Watch · je gepubliceerde site laadde niet",
+    "fromSubagents": "Resultaten van de subagents"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",
@@ -551,5 +552,19 @@
     "noPreview": "Geen voorbeeld beschikbaar",
     "loading": "Openen…",
     "failed": "Dit bestand kon niet worden geopend"
+  },
+  "subagent": {
+    "title": "Subagent · {description}",
+    "status": {
+      "running": "bezig",
+      "completed": "klaar",
+      "aborted": "gestopt",
+      "error": "mislukt",
+      "budget": "limiet bereikt"
+    },
+    "steps": "{n, plural, one {# stap} other {# stappen}}",
+    "closing": "Wat hij Len vertelde",
+    "stop": "Deze subagent stoppen",
+    "liveBar": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}"
   }
 }

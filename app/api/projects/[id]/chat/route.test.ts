@@ -153,6 +153,17 @@ describe("POST /api/projects/[id]/chat — lo que la tarjeta conserva al guardar
     expect(guardada().screenshots).toEqual(screenshots);
   });
 
+  it("a subagent's launch: its run reaches the row, and a malformed one drops without a 400", async () => {
+    const res = await guardar(turno([
+      { tool: "subagent", status: "done", summary: "Find", subagent: { id: "r1", preset: "Explore" } },
+      { tool: "subagent", status: "done", summary: "Bad", subagent: { id: "../x", preset: "Explore" } },
+    ]));
+    expect(res.status).toBe(200);
+    const guardadas = vi.mocked(appendChatMessage).mock.calls[0]![1].actions!;
+    expect(guardadas[0]!.subagent).toEqual({ id: "r1", preset: "Explore" });
+    expect(guardadas[1]!.subagent).toBeUndefined();
+  });
+
   it("LOS VISUALES: el visual de show_widget y su punto del texto LLEGAN a guardarse", async () => {
     const widget = { title: "visits_week", loadingMessages: ["Contando"], code: "<p>a</p>" };
     const res = await guardar(turno([{ tool: "show_widget", status: "done", summary: "", widget, textOffset: 5 }]));

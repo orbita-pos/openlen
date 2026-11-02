@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Square } from "lucide-react";
+import { Bot, Square } from "lucide-react";
 
 import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { isRunning, retryPhase, type Activity, type LiveStatus } from "./live-status";
@@ -18,11 +18,14 @@ export function LiveBar({
   status,
   onStop,
   esApp = false,
+  subagentsRunning = 0,
 }: {
   status: LiveStatus;
   onStop: () => void;
   /** El proyecto es una app: lo que nombra la página («Leyendo tu página») nombra la app. */
   esApp?: boolean;
+  /** Len's subagents still working (spec local 2026-11-01-subagentes-de-len): they go on after his turn. */
+  subagentsRunning?: number;
 }) {
   const t = useTranslations("panelsChat");
   const activityLabel = (a: Activity) =>
@@ -58,9 +61,21 @@ export function LiveBar({
   // cada herramienta («Buscando fotos», «Escribiendo», «Cambiando la página»,
   // «Escribiendo»…). Se queda dicho lo último que hizo de verdad.
   const [spoken, setSpoken] = useState("");
+  const subagentsLine =
+    subagentsRunning > 0 ? (
+      <span className="flex items-center gap-1 text-[11.5px] fg-muted" data-subagents-working="">
+        <Bot size={11} className="shrink-0 text-[var(--nc-accent-text)]" />
+        {t("subagent.liveBar", { n: subagentsRunning })}
+      </span>
+    ) : null;
   if (status.kind === "idle") {
     if (spoken !== "") setSpoken("");
-    return <span className="sr-only" role="status" aria-live="polite" />;
+    return (
+      <>
+        <span className="sr-only" role="status" aria-live="polite" />
+        {subagentsLine && <div className="nc-up flex items-center py-2 pl-1.5 pr-2">{subagentsLine}</div>}
+      </>
+    );
   }
   const seconds = startedAt !== null ? Math.max(0, Math.floor((now - startedAt) / 1000)) : null;
 
@@ -163,6 +178,7 @@ export function LiveBar({
             </span>
           )}
           {why && <span aria-hidden className="mt-0.5 line-clamp-2 text-[11.5px] italic fg-faint">{why}</span>}
+          {subagentsLine}
         </div>
         {running && (
           <button

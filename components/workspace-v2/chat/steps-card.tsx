@@ -46,6 +46,7 @@ import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { TODO_WRITE } from "@/lib/agent/todo-list";
 import { READ_ME, SHOW_WIDGET } from "@/lib/agent/visuals/widget";
+import { SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
 import type { DesignTurn } from "./use-agent-chat";
 
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
@@ -77,9 +78,15 @@ export function visibleSteps(actions: readonly AgentAction[] | undefined): Agent
   const abierta = openQuestionIndex(list);
   // Los visuales tampoco (spec local 2026-10-16-len-inline-visuals): el manual
   // no se narra, como en Claude, y el visual va en la respuesta (`LenReply`).
+  // Ni un subagente lanzado: tiene su tarjeta (`SubagentCards`); uno rechazado sí es un paso.
   return list.filter(
     (a, i) =>
-      !(asksTheOwner(a.tool) && a.dismissed) && i !== abierta && a.tool !== TODO_WRITE && a.tool !== READ_ME && a.tool !== SHOW_WIDGET,
+      !(asksTheOwner(a.tool) && a.dismissed) &&
+      i !== abierta &&
+      a.tool !== TODO_WRITE &&
+      a.tool !== READ_ME &&
+      a.tool !== SHOW_WIDGET &&
+      !(a.tool === SUBAGENT_TOOL && a.subagent),
   );
 }
 

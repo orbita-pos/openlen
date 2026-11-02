@@ -23,7 +23,8 @@
     "homePage": "홈",
     "desdeElHilo": "스레드에서 · {donde}",
     "scheduled": "예약 작업 «{title}» · {when}",
-    "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요"
+    "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요",
+    "fromSubagents": "서브에이전트 결과"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",
@@ -551,5 +552,19 @@
     "noPreview": "미리보기를 사용할 수 없어요",
     "loading": "여는 중…",
     "failed": "이 파일을 열 수 없어요"
+  },
+  "subagent": {
+    "title": "서브에이전트 · {description}",
+    "status": {
+      "running": "작업 중",
+      "completed": "완료",
+      "aborted": "중지됨",
+      "error": "실패",
+      "budget": "한도 도달"
+    },
+    "steps": "{n, plural, other {#단계}}",
+    "closing": "Len에게 전한 내용",
+    "stop": "이 서브에이전트 중지",
+    "liveBar": "{n, plural, other {서브에이전트 #개 작업 중}}"
   }
 }
