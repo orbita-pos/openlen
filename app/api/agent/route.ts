@@ -1902,6 +1902,7 @@ async function correrTurno(
           // The box opens with the child's first command, under its own holder (`terminalHolderId`).
           openTerminal: async () => {},
           closeTerminal: (session) => cerrarTerminalDeLaSesion(session, deps),
+          closeBrowser: (session) => closeBrowserTab(session.browserTab),
           turnAlive: hayTurnoVivoEnElProyecto,
           launchNoticeTurn,
           turnStillOpen: () => !cambiosCerrados,
@@ -1932,7 +1933,9 @@ async function correrTurno(
                 },
                 turnArgs: argsDelTurno,
                 declarations: tools,
-                deps,
+                // A child's page checks open their own browser: the turn's pool closes with the turn, and one
+                // reopened after that would never be closed.
+                deps: { ...deps, observarPagina: (input: Parameters<typeof observarPagina>[0]) => observarPagina(input) },
                 sessionBase: {
                   skills: agentSession.skills,
                   attachments: agentSession.attachments,
@@ -1989,8 +1992,9 @@ async function correrTurno(
                     return n.text;
                   }),
                 // A turn nobody watches waits for its children before closing (DeepSeek's headless hosts). Waiting
-                // is work: the silence watchdog is kept from firing meanwhile.
-                ...(hiloDelTurno || correoDelTurno || programadaDelTurno
+                // is work: the silence watchdog is kept from firing meanwhile. Not the notices' own turn: it has
+                // nobody to answer, and in the chat nobody waits (the next notice brings its own turn).
+                ...(hiloDelTurno || correoDelTurno || (programadaDelTurno && programadaDelTurno.origin.kind !== "subagents")
                   ? {
                       awaitAgentNotices: async () => {
                         if (liveCount(projectId) === 0) return false;

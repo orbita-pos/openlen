@@ -33,7 +33,6 @@ async function open(o: {
   onRun?: FakeRun;
   bridge?: BridgeHandlers;
   readOnly?: Record<string, string> | (() => Record<string, string>);
-  signal?: AbortSignal;
 }) {
   const readOnly = o.readOnly;
   const d = fakeDriver({ onRun: o.onRun });
@@ -46,7 +45,6 @@ async function open(o: {
     bridge: o.bridge ?? {},
     readOnly: async () => (typeof readOnly === "function" ? readOnly() : (readOnly ?? {})),
     startedAt: Date.now(),
-    signal: o.signal,
   });
   return { d, handle, terminal, box: () => d.files(handle.id) };
 }
@@ -485,7 +483,6 @@ describe("SandboxTerminal", () => {
     const { terminal } = await open({
       projectFiles: { "/index.html": "a" },
       bridge: { git: () => new Promise<never>(() => {}) },
-      signal: ctrl.signal,
       onRun: async (cmd, files) => {
         if (!cmd.includes("git status")) return;
         files.set("/run/openlen/requests/r1.json", JSON.stringify({ id: "r1", program: "git", args: ["status"], cwd: "/" }));
@@ -493,7 +490,7 @@ describe("SandboxTerminal", () => {
       },
     });
     const started = Date.now();
-    const ran = terminal.ejecutar("git status");
+    const ran = terminal.ejecutar("git status", { signal: ctrl.signal });
     setTimeout(() => ctrl.abort(), 50);
     const r = await ran;
     expect(Date.now() - started).toBeLessThan(1_000);

@@ -53,7 +53,17 @@ const TURN_ARGS = {
   todoRestore: "TODO LIST TO RESTORE",
 } as unknown as BuildAgentMessagesArgs;
 
-function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: boolean; spendCap?: number; lenSpent?: number } = {}) {
+function setup(
+  o: {
+    scripts?: StreamEvent[][];
+    turnAlive?: boolean;
+    turnOpen?: boolean;
+    spendCap?: number;
+    lenSpent?: number;
+    snapshots?: Record<string, string>[];
+    touched?: Record<string, string[]>;
+  } = {},
+) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
   const rows = new Map<string, Record<string, unknown>>();
   const sessions: AgentSession[] = [];
@@ -64,6 +74,8 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
   const changes: unknown[] = [];
   const events: SubagentEvent[] = [];
   const brainSignals: (AbortSignal | undefined)[] = [];
+  const browsersClosed: AgentSession[] = [];
+  const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
     brain: (_tools, _runId, signal) => {
@@ -74,7 +86,12 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
       if (!sessions.includes(session)) sessions.push(session);
       ran.push(name);
       if (name === "skill") session.loadedSkills?.add(String(args.name));
-      return { response: { ok: true, tool_result: "1\tx" }, action: { tool: name, ok: true, summary: String(args.file_path ?? args.name ?? "") } };
+      const touched = o.touched?.[name];
+      return {
+        response: { ok: true, tool_result: "1\tx" },
+        action: { tool: name, ok: true, summary: String(args.file_path ?? args.name ?? "") },
+        ...(touched ? { ficherosTocados: touched.map((ruta) => ({ ruta, versionPrevia: null })) } : {}),
+      };
     },
     store: {
       createRun: async (r) => void rows.set(r.id, { ...r, status: "running" }),
@@ -93,7 +110,8 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
     turnAlive: () => o.turnAlive ?? false,
     launchNoticeTurn: (projectId, personId) => void noticeTurns.push({ projectId, personId }),
     turnStillOpen: () => o.turnOpen ?? true,
-    snapshot: async () => ({ "/index.html": "a" }),
+    snapshot: async () => snapshots.shift() ?? { "/index.html": "a" },
+    closeBrowser: async (session) => void browsersClosed.push(session),
     addTurnChanges: async (...a) => void changes.push(a),
     now: () => 1_000,
     newId: () => `r${++n}`,
@@ -122,7 +140,7 @@ function setup(o: { scripts?: StreamEvent[][]; turnAlive?: boolean; turnOpen?: b
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, rows, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -248,10 +266,50 @@ describe("the launcher of Len's subagents", () => {
     await open.settled("r1");
     expect(open.changes).toEqual([]);
     forgetAllSubagents();
-    const closed = setup({ turnOpen: false });
+    // Only the files the child wrote: what others changed meanwhile is not its undo.
+    const closed = setup({
+      turnOpen: false,
+      scripts: [llama("Write", { file_path: "/a.html" }), dice("Done")],
+      snapshots: [
+        { "/a.html": "1", "/b.html": "1" },
+        { "/a.html": "2", "/b.html": "changed by another turn" },
+      ],
+      touched: { Write: ["/a.html"] },
+    });
     await closed.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
     await closed.settled("r1");
-    expect(closed.changes).toEqual([["p", "row-1", { "/index.html": "a" }, { "/index.html": "a" }]]);
+    expect(closed.changes).toEqual([["p", "row-1", { "/a.html": "1" }, { "/a.html": "2" }]]);
+    // A child that wrote nothing adds nothing.
+    forgetAllSubagents();
+    const reader = setup({ turnOpen: false });
+    await reader.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await reader.settled("r1");
+    expect(reader.changes).toEqual([]);
+  });
+
+  it("while it runs, its spend counts for the other children and for Len; when it ends, what it was charged", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
+    const tracked: [string, number][] = [];
+    const track = s.ctx.spend.track.bind(s.ctx.spend);
+    (s.ctx.spend as { track: typeof track }).track = (id, c) => {
+      tracked.push([id, c]);
+      track(id, c);
+    };
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    expect(tracked.length).toBeGreaterThan(0);
+    expect(tracked.every(([id, c]) => id === "r1" && c > 0)).toBe(true);
+    const charged = (s.charges[0] as { centicredits: number }).centicredits;
+    expect(s.ctx.spend.children()).toBe(charged);
+    expect(s.ctx.spend.over(10_000 - charged - 1)).toBe(false);
+  });
+
+  it("its browser tab closes when it ends", async () => {
+    const s = setup();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    expect(s.browsersClosed).toHaveLength(1);
+    expect(s.browsersClosed[0]).toBe(s.sessions[0]);
   });
 });
 

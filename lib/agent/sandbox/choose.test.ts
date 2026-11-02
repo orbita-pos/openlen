@@ -5,9 +5,9 @@ import type { AgentSession } from "@/lib/agent/tools";
 import type { TerminalBackend } from "@/lib/agent/terminal/backend";
 import type { SalidaDeUnComando } from "@/lib/agent/terminal/terminal";
 
-import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, settleTurnTerminal, terminalForTurn, type SandboxStore } from "./choose";
+import { BOX_STOPPED_NOTICE, LIMITED_TERMINAL_NOTICE, TurnSandbox, closeTurnTerminal, settleTurnTerminal, startFromTheBox, terminalForTurn, type SandboxStore } from "./choose";
 import { fakeDriver } from "./fake-driver";
-import { forgetAllBoxes } from "./project-lease";
+import { forgetAllBoxes, lockBox } from "./project-lease";
 import { BASE_ENV_FILE, SandboxTerminal } from "./sandbox-terminal";
 import type { ProjectSandboxRow } from "./store";
 
@@ -248,7 +248,7 @@ describe("closeTurnTerminal", () => {
     now += 45_000;
     const save = vi.fn(async () => {});
     await closeTurnTerminal(s, { save, store, charge, now: () => now });
-    expect(save).toHaveBeenCalledWith({ "/late.txt": "written in the background" });
+    expect(save).toHaveBeenCalledWith({ "/late.txt": "written in the background" }, expect.any(Object));
     expect(driver.paused(id)).toBe(true);
     expect(store.rows.p).toMatchObject({ state: "paused", heldBy: null });
     expect(Object.keys(store.rows.p!.syncedManifest)).toContain("/index.html");
@@ -289,7 +289,7 @@ describe("closeTurnTerminal", () => {
     driver.files(id).set("/data/out.json", "{}");
     const save = vi.fn(async () => {});
     await settleTurnTerminal(s, { save });
-    expect(save).toHaveBeenCalledWith({ "/data/out.json": "{}" });
+    expect(save).toHaveBeenCalledWith({ "/data/out.json": "{}" }, expect.any(Object));
     expect(driver.commands(id).some((c) => c.includes("kill -TERM") && c.includes("77"))).toBe(true);
     expect(driver.paused(id)).toBe(false);
     await closeTurnTerminal(s, { save, store, charge });
@@ -368,5 +368,70 @@ describe("the project's box, shared", () => {
     await closeTurnTerminal(s, { save: async () => {}, store, charge });
     const handleId = store.rows.p!.sandboxId!;
     expect(driver.commands(handleId).some((c) => c.includes("kill") && c.includes("30"))).toBe(false);
+  });
+
+  it("one holder's stop never stops another holder's commands: each command carries its own", async () => {
+    const opener = new AbortController();
+    const { s, o } = setup();
+    s.terminal = await terminalForTurn(s, o);
+    await s.terminal.ejecutar("true", { owner: "turn-1", signal: opener.signal });
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    opener.abort();
+    const theirs = await child.terminal.ejecutar("echo hi", { owner: "sub-1", signal: new AbortController().signal });
+    expect(theirs.exitCode).toBe(0);
+    const mine = await s.terminal.ejecutar("echo me", { owner: "turn-1", signal: opener.signal });
+    expect(mine.exitCode).toBe(130);
+  });
+
+  it("a holder starts from what the box has, not from its own last look (another holder ran meanwhile)", async () => {
+    let files: Record<string, string> = { "/index.html": "a" };
+    const { s, o } = setup({ projectFiles: async () => ({ ...files }) });
+    s.terminal = await terminalForTurn(s, o);
+    await s.terminal.ejecutar("true", { owner: "turn-1" });
+    // Len's Edit and Write: saved, not in the box yet.
+    files = { "/index.html": "b", "/about/index.html": "x" };
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    // So its first command pushes them in instead of saving the box's older copy over them.
+    expect(child.fotoDeLaTerminal).toEqual({ "/index.html": "a" });
+    s.fotoDeLaTerminal = { "/index.html": "stale" };
+    startFromTheBox(s);
+    expect(s.fotoDeLaTerminal).toEqual({ "/index.html": "a" });
+  });
+
+  it("settling one holder waits for the command another holder is running", async () => {
+    const { s, o } = setup();
+    s.terminal = await terminalForTurn(s, o);
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    const release = await lockBox(child.terminal as TurnSandbox);
+    let settled = false;
+    const settling = settleTurnTerminal(s, { save: async () => {} }).then(() => (settled = true));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(settled).toBe(false);
+    release();
+    await settling;
+    expect(settled).toBe(true);
+  });
+
+  it("what a holder's checks refuse when it settles goes back into the box, and nobody saves it later", async () => {
+    const { s, o, store, driver } = setup();
+    s.terminal = await terminalForTurn(s, o);
+    await s.terminal.ejecutar("true", { owner: "turn-1" });
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    child.terminal = await terminalForTurn(child, o);
+    // A read-only child's background job wrote a project file.
+    driver.files(store.rows.p!.sandboxId!).set("/index.html", "written by the child");
+    const befores: unknown[] = [];
+    await settleTurnTerminal(child, {
+      save: async (_pending, before) => {
+        befores.push(before);
+        return { "/index.html": "a" };
+      },
+    });
+    expect(befores).toEqual([{ "/index.html": "a" }]);
+    expect(driver.files(store.rows.p!.sandboxId!).get("/index.html")).toBe("a");
+    expect(await (s.terminal as TurnSandbox).inner.pendingChanges()).toEqual({});
   });
 });
