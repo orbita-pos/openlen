@@ -23,7 +23,8 @@
     "homePage": "Home",
     "desdeElHilo": "from the thread · {donde}",
     "scheduled": "Scheduled task «{title}» · {when}",
-    "lenWatch": "Len Watch · your published site wasn't loading"
+    "lenWatch": "Len Watch · your published site wasn't loading",
+    "fromSubagents": "Results from the subagents"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
@@ -551,5 +552,19 @@
     "noPreview": "No preview for this file",
     "loading": "Opening…",
     "failed": "Couldn't open this file"
+  },
+  "subagent": {
+    "title": "Subagent · {description}",
+    "status": {
+      "running": "working",
+      "completed": "done",
+      "aborted": "stopped",
+      "error": "failed",
+      "budget": "hit the limit"
+    },
+    "steps": "{n, plural, one {# step} other {# steps}}",
+    "closing": "What it told Len",
+    "stop": "Stop this subagent",
+    "liveBar": "{n, plural, one {# subagent working} other {# subagents working}}"
   }
 }

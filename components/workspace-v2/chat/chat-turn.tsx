@@ -11,7 +11,7 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
+import { AlarmClock, AtSign, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
 import { isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
@@ -41,6 +41,7 @@ import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { latestTodosOfActions } from "@/lib/agent/todo-list";
 import { TodoListView, continueStep } from "./todo-list";
 import { ArtifactTurnCards } from "../artifacts/artifact-turn-cards";
+import { SubagentCards } from "./subagent-card";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -182,7 +183,14 @@ export function UserMessage({
               <ShieldAlert size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.lenWatch")}</span>
             </div>
-          ) : turn.origen && isSubagentOrigin(turn.origen) ? null : turn.origen && (
+          ) : turn.origen && isSubagentOrigin(turn.origen) ? (
+            // THE SUBAGENTS' RESULTS (spec local 2026-11-01-subagentes-de-len, §4.6): Len was idle when they
+            // ended, so their notices started this turn; nobody wrote anything.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-subagents-turn="">
+              <Bot size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.fromSubagents")}</span>
+            </div>
+          ) : turn.origen && (
             <button
               type="button"
               onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}
@@ -351,6 +359,8 @@ export function LenTurn({
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
       <ArtifactTurnCards actions={turn.actions} />
       <DeliveredFiles actions={turn.actions} />
+      {/* LEN'S SUBAGENTS: a live card per child this turn launched. */}
+      <SubagentCards actions={turn.actions} projectId={projectId} rowId={turn.id} />
       {todos && todos.length > 0 && (
         <TodoListView todos={todos} streaming={streaming} continueWith={offer} {...(onContinue ? { onContinue } : {})} />
       )}

@@ -23,7 +23,8 @@
     "homePage": "Startseite",
     "desdeElHilo": "aus der Unterhaltung · {donde}",
     "scheduled": "Geplante Aufgabe «{title}» · {when}",
-    "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht"
+    "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht",
+    "fromSubagents": "Ergebnisse der Subagenten"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
@@ -551,5 +552,19 @@
     "noPreview": "Keine Vorschau verfügbar",
     "loading": "Wird geöffnet…",
     "failed": "Datei konnte nicht geöffnet werden"
+  },
+  "subagent": {
+    "title": "Subagent · {description}",
+    "status": {
+      "running": "arbeitet",
+      "completed": "fertig",
+      "aborted": "gestoppt",
+      "error": "fehlgeschlagen",
+      "budget": "Limit erreicht"
+    },
+    "steps": "{n, plural, one {# Schritt} other {# Schritte}}",
+    "closing": "Was er Len gesagt hat",
+    "stop": "Diesen Subagenten stoppen",
+    "liveBar": "{n, plural, one {# Subagent arbeitet} other {# Subagenten arbeiten}}"
   }
 }

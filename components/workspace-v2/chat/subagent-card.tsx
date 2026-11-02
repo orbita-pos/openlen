@@ -1,0 +1,122 @@
+"use client";
+
+/**
+ * LEN'S SUBAGENTS IN THE CHAT (spec local 2026-11-01-subagentes-de-len, §4.8): a card per child the turn
+ * launched, in place of its launch step, as Claude Code shows an agent's block in the conversation. Closed, its
+ * description, its type, how it goes and its steps so far; open, those steps and what it told Len. Its ■ stops
+ * that one child (the turn's ■ doesn't). Live from the stream while the turn is open, and re-read every 3 s
+ * while one still runs — after a reload too.
+ */
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
+import { Bot, ChevronRight, Square } from "lucide-react";
+
+import { subagentRefFrom } from "@/lib/agent/subagents/card";
+
+import { AgentActionCard, type AgentAction } from "../agent-action-card";
+import { subagentsLive, type SubagentRunView } from "./subagents-live";
+
+const REREAD_MS = 3_000;
+
+export function SubagentCard({ run, onStop }: { run: SubagentRunView; onStop(id: string): void }) {
+  const t = useTranslations("panelsChat");
+  const [open, setOpen] = useState(false);
+  const running = run.status === "running";
+  return (
+    <div className="nc-up rounded-lg border bd bg-elev text-[12.5px]" data-subagent-card={run.id}>
+      <div className="flex items-center gap-2 py-2 pl-2.5 pr-1.5">
+        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <ChevronRight size={13} className={`shrink-0 fg-faint transition-transform ${open ? "rotate-90" : ""}`} />
+          <Bot size={15} className="shrink-0 text-[var(--nc-accent-text)]" />
+          <span className="min-w-0 truncate font-medium fg">{t("subagent.title", { description: run.description })}</span>
+          {run.preset !== "general-purpose" && (
+            <span className="shrink-0 rounded-full border bd px-1.5 py-px text-[10.5px] fg-muted" data-subagent-preset="">
+              {run.preset}
+            </span>
+          )}
+        </button>
+        {run.toolUses > 0 && <span className="shrink-0 text-[11px] tabular-nums fg-faint">{t("subagent.steps", { n: run.toolUses })}</span>}
+        <span className={`shrink-0 text-[11px] ${running ? "nc-shimmer fg-muted" : "fg-faint"}`} data-subagent-status={run.status}>
+          {t(`subagent.status.${run.status}`)}
+        </span>
+        {running && (
+          <button
+            type="button"
+            onClick={() => onStop(run.id)}
+            aria-label={t("subagent.stop")}
+            title={t("subagent.stop")}
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border bd-strong fg-muted hover:border-[color:var(--accent-ring)] hover:text-[var(--nc-accent-text)]"
+          >
+            <Square size={8} className="fill-current" />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="flex flex-col gap-1.5 border-t bd px-2.5 py-2">
+          {run.actions.map((a, i) => (
+            <AgentActionCard key={i} action={a} />
+          ))}
+          {run.finalText && (
+            <details>
+              <summary className="cursor-pointer text-[11.5px] font-medium fg-muted">{t("subagent.closing")}</summary>
+              <div className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed fg">{run.finalText}</div>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The turn's launches, each with its card; `rowId` is the turn's row, where the server keeps them. */
+export function SubagentCards({ actions, projectId, rowId }: { actions: readonly AgentAction[] | undefined; projectId: string; rowId: string }) {
+  const launched = useMemo(
+    () => (actions ?? []).flatMap((a) => (a.tool === "subagent" && a.subagent ? [{ ...a.subagent, description: a.summary }] : [])),
+    [actions],
+  );
+  const runs = useSyncExternalStore(subagentsLive.subscribe, subagentsLive.snapshot, subagentsLive.snapshot);
+  const ids = launched.map((l) => l.id).join(",");
+  useEffect(() => {
+    if (!ids) return;
+    let gone = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const read = async () => {
+      try {
+        const res = await fetch(`/api/agent/subagents?project=${encodeURIComponent(projectId)}&row=${encodeURIComponent(rowId)}`, { cache: "no-store" });
+        if (res.ok) subagentsLive.fromServer(projectId, ((await res.json()) as { runs?: unknown }).runs);
+      } catch {
+        // The next read tries again.
+      }
+      if (gone) return;
+      const all = subagentsLive.snapshot();
+      if (ids.split(",").some((id) => (all.get(id)?.status ?? "running") === "running")) timer = setTimeout(() => void read(), REREAD_MS);
+    };
+    void read();
+    return () => {
+      gone = true;
+      clearTimeout(timer);
+    };
+  }, [ids, projectId, rowId]);
+  if (launched.length === 0) return null;
+  const stop = (id: string) => void fetch(`/api/agent/subagents/${encodeURIComponent(id)}/stop`, { method: "POST" }).catch(() => undefined);
+  return (
+    <div className="flex flex-col gap-1.5">
+      {launched.map((l) => {
+        const ref = subagentRefFrom(l);
+        if (!ref) return null;
+        const run = runs.get(ref.id) ?? {
+          id: ref.id,
+          projectId,
+          preset: ref.preset,
+          description: l.description,
+          status: "running" as const,
+          actions: [],
+          finalText: null,
+          toolUses: 0,
+          durationMs: null,
+        };
+        return <SubagentCard key={ref.id} run={run} onStop={stop} />;
+      })}
+    </div>
+  );
+}

@@ -23,7 +23,8 @@
     "homePage": "首页",
     "desdeElHilo": "来自讨论 · {donde}",
     "scheduled": "定时任务「{title}」 · {when}",
-    "lenWatch": "Len Watch · 你发布的网站无法加载"
+    "lenWatch": "Len Watch · 你发布的网站无法加载",
+    "fromSubagents": "子代理的结果"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",
@@ -551,5 +552,19 @@
     "noPreview": "无法预览",
     "loading": "正在打开…",
     "failed": "无法打开此文件"
+  },
+  "subagent": {
+    "title": "子代理 · {description}",
+    "status": {
+      "running": "进行中",
+      "completed": "已完成",
+      "aborted": "已停止",
+      "error": "失败",
+      "budget": "已达上限"
+    },
+    "steps": "{n, plural, other {# 步}}",
+    "closing": "它告诉 Len 的内容",
+    "stop": "停止此子代理",
+    "liveBar": "{n, plural, other {# 个子代理正在工作}}"
   }
 }

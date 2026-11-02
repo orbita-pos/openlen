@@ -1,5 +1,6 @@
 "use client";
 
+import type { SubagentRef } from "@/lib/agent/subagents/card";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, Loader } from "./icons";
@@ -106,6 +107,8 @@ export interface AgentAction {
   widget?: VisualWidget;
   /** The files `present` delivered (spec local 2026-10-26-len-skills). */
   delivered?: readonly DeliveredFile[];
+  /** The run a `subagent` call started (spec local 2026-11-01-subagentes-de-len): its card, not a step. */
+  subagent?: SubagentRef;
   /** Lo que vio Len: las URLs de las capturas del paso (`screenshotsFrom`), que la tarjeta de pasos enseña siempre. */
   screenshots?: readonly string[];
   /** En qué punto del texto de Len va ese visual (`StoredChatTurn`). */

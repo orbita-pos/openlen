@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { deliveredFrom } from "@/lib/agent/skills/present";
+import { subagentRefFrom } from "@/lib/agent/subagents/card";
 import { screenshotsFrom } from "@/lib/agent/step-screenshots";
 import { widgetFrom } from "@/lib/agent/visuals/widget";
 import {
@@ -163,6 +164,11 @@ const ActionSchema = z.object({
   delivered: z
     .unknown()
     .transform((v) => deliveredFrom(v) ?? undefined)
+    .optional(),
+  /** The run a `subagent` call started (spec local 2026-11-01-subagentes-de-len): cleaned, like the others. */
+  subagent: z
+    .unknown()
+    .transform((v) => subagentRefFrom(v) ?? undefined)
     .optional(),
   /** Lo que vio Len: las capturas del paso. Se LIMPIAN (`screenshotsFrom`): sólo pasan las nuestras. */
   screenshots: z

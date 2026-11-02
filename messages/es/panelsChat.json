@@ -23,7 +23,8 @@
     "homePage": "Inicio",
     "desdeElHilo": "desde el hilo · {donde}",
     "scheduled": "Tarea programada «{title}» · {when}",
-    "lenWatch": "Len Watch · tu sitio publicado no cargaba"
+    "lenWatch": "Len Watch · tu sitio publicado no cargaba",
+    "fromSubagents": "Resultados de los subagentes"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",
@@ -551,5 +552,19 @@
     "noPreview": "Vista previa no disponible",
     "loading": "Abriendo…",
     "failed": "No se pudo abrir este archivo"
+  },
+  "subagent": {
+    "title": "Subagente · {description}",
+    "status": {
+      "running": "trabajando",
+      "completed": "terminado",
+      "aborted": "parado",
+      "error": "falló",
+      "budget": "llegó al tope"
+    },
+    "steps": "{n, plural, one {# paso} other {# pasos}}",
+    "closing": "Lo que le dijo a Len",
+    "stop": "Parar este subagente",
+    "liveBar": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}"
   }
 }
