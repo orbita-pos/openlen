@@ -141,6 +141,8 @@ import {
   toolScheduleUpdate,
   type ScheduledTasksDeps,
 } from "@/lib/agent/schedule-tools";
+import { SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
+import { toolSubagent, type SubagentsDeps } from "@/lib/agent/subagents/tool";
 import { TODO_WRITE, type TodoItem } from "@/lib/agent/todo-list";
 import { toolTodoWrite } from "@/lib/agent/todo-write";
 import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
@@ -212,6 +214,9 @@ export interface AgentDeps {
   /** Scheduled tasks (spec local 2026-10-29-tareas-programadas): the project's store and the owner's
    *  plan. Without it, the four tools answer `internal_error`. */
   scheduledTasks?: ScheduledTasksDeps;
+  /** Len's subagents (spec local 2026-11-01-subagentes-de-len): the turn's launcher. Without it,
+   *  `subagent` answers `subagents_disabled`; a child never has one (depth 1). */
+  subagents?: SubagentsDeps;
   /** Pieza 8: el encargo del turno (`lib/agent/goal.ts`). Lo guarda la ruta: la
    *  foto que se escribe al cerrar y la activación del proceso. Sin él, las
    *  tres herramientas dicen que no hay turno abierto. */
@@ -3000,6 +3005,9 @@ async function ejecutarHerramienta(
         return await toolCreateGoal(session, deps, args);
       case UPDATE_GOAL:
         return await toolUpdateGoal(session, deps, args);
+      // Len's subagents, as DeepSeek's `subagent`.
+      case SUBAGENT_TOOL:
+        return await toolSubagent(session, deps, args);
       // Scheduled tasks, as DeepSeek.
       case SCHEDULE_CREATE:
         return await toolScheduleCreate(session, deps, args);

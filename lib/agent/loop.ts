@@ -828,6 +828,8 @@ const READ_ONLY_TOOLS = new Set([
   "Read",
   // Loading a skill reads its instructions (spec local 2026-10-26-len-skills).
   "skill",
+  // Starting a subagent changes nothing yet (spec local 2026-11-01-subagentes-de-len): what it writes later is its own.
+  "subagent",
   "Grep",
   "Glob",
   // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba

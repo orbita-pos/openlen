@@ -60,6 +60,8 @@ import { DECLARACION_CONVERTIR_EN_APP, laPaginaQueCrece } from "@/lib/agent/conv
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { SCHEDULE_DECLARATIONS, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
+import { SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { SUBAGENT_DECLARATION, SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
@@ -202,6 +204,8 @@ function declaracionesDelModo(
   if (_env.OPENLEN_IMAGE_SEARCH === "0") fuera.add(IMAGE_SEARCH);
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): on unless OPENLEN_SCHEDULE=0, per server.
   if (!scheduleEnabled(_env)) for (const n of SCHEDULE_TOOL_NAMES) fuera.add(n);
+  // SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, per server.
+  if (!subagentsEnabled(_env)) fuera.add(SUBAGENT_TOOL);
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
@@ -507,6 +511,8 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     ...GOAL_DECLARATIONS,
     // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four.
     ...SCHEDULE_DECLARATIONS,
+    // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent`.
+    SUBAGENT_DECLARATION,
     {
       name: "undo_last_change",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El
@@ -641,6 +647,9 @@ export function buildAgentSystemPrompt(
   const lineaDeBash = terminalEncendida(env)
     ? "\n- In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on."
     : "";
+  // SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.12): DeepSeek's `tool:subagent` section,
+  // only while the tool is declared. A child's prompt takes it out (`childSystemPrompt`).
+  const lineaDeSubagentes = subagentsEnabled(env) ? `\n- ${SUBAGENT_GUIDANCE}` : "";
   // «THE SITE IS FILES» — leer una página es para cuando el mensaje la necesita
   // (2026-10-17; igual en `modo-app.ts`). Decía «otherwise, read it first or
   // don't describe it», y en una conversación nueva Len leía la página para
@@ -669,7 +678,7 @@ HOW TO WORK:
 - The <new-diagnostics> and a tool's "aviso" field are checked facts about what YOUR last edit left on the page: fix them in this turn or tell the user; never finish while keeping quiet about them.
 - Long work doesn't have to be rushed: when the conversation grows long, its older part is summarized automatically and you keep working from that summary, so finish what was asked instead of wrapping up early or leaving it half done.
 - ${SESSION_QUERY_PROMPT}${lineaDeBash}
-- ${GOAL_PROMPT}
+- ${GOAL_PROMPT}${lineaDeSubagentes}
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, Grep to search the whole site and Glob to list files. The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
