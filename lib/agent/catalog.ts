@@ -60,8 +60,15 @@ import { DECLARACION_CONVERTIR_EN_APP, laPaginaQueCrece } from "@/lib/agent/conv
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { SCHEDULE_DECLARATIONS, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
-import { SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
-import { SUBAGENT_DECLARATION, SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
+import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import {
+  INTERRUPT_AGENT_DECLARATION,
+  LIST_AGENTS_DECLARATION,
+  SEND_MESSAGE_DECLARATION,
+  SUBAGENT_DECLARATION,
+  SUBAGENT_FORK_DECLARATION,
+  SUBAGENT_GUIDANCE,
+} from "@/lib/agent/subagents/tool";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
@@ -205,7 +212,9 @@ function declaracionesDelModo(
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): on unless OPENLEN_SCHEDULE=0, per server.
   if (!scheduleEnabled(_env)) for (const n of SCHEDULE_TOOL_NAMES) fuera.add(n);
   // SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, per server.
-  if (!subagentsEnabled(_env)) fuera.add(SUBAGENT_TOOL);
+  if (!subagentsEnabled(_env)) {
+    for (const n of [SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL, INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL]) fuera.add(n);
+  }
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
@@ -511,8 +520,13 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     ...GOAL_DECLARATIONS,
     // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four.
     ...SCHEDULE_DECLARATIONS,
-    // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent`.
+    // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent` and, phase 2 (§5),
+    // its fork and its control tools, in DeepSeek's order.
     SUBAGENT_DECLARATION,
+    SUBAGENT_FORK_DECLARATION,
+    SEND_MESSAGE_DECLARATION,
+    INTERRUPT_AGENT_DECLARATION,
+    LIST_AGENTS_DECLARATION,
     {
       name: "undo_last_change",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El

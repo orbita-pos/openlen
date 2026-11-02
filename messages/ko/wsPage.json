@@ -69,7 +69,11 @@
       "schedule_list": "예약 작업 확인",
       "schedule_delete": "예약 작업 삭제",
       "schedule_update": "예약 작업 업데이트",
-      "subagent": "서브에이전트 시작 중"
+      "subagent": "서브에이전트 시작 중",
+      "subagent_fork": "이 대화로 서브에이전트 시작 중",
+      "send_message": "서브에이전트에 메시지 보내는 중",
+      "interrupt_agent": "서브에이전트 중지 중",
+      "list_agents": "서브에이전트 목록 보는 중"
     },
     "toolApp": {
       "Read": "코드를 읽는 중",

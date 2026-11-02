@@ -69,7 +69,11 @@
       "schedule_list": "Checking the scheduled tasks",
       "schedule_delete": "Deleting a scheduled task",
       "schedule_update": "Updating a scheduled task",
-      "subagent": "Starting a subagent"
+      "subagent": "Starting a subagent",
+      "subagent_fork": "Starting a subagent with this conversation",
+      "send_message": "Sending a message to a subagent",
+      "interrupt_agent": "Stopping a subagent",
+      "list_agents": "Listing the subagents"
     },
     "toolApp": {
       "Read": "Reading the code",

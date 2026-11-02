@@ -59,10 +59,16 @@ const RETIRADAS = [
 ] as const;
 
 describe("buildFunctionDeclarations", () => {
-  it("SUBAGENTS: subagent by default; not with OPENLEN_SUBAGENTS=0, and the prompt's line goes with it", () => {
-    expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("subagent");
-    expect(buildFunctionDeclarations({ OPENLEN_SUBAGENTS: "0" }).map((d) => d.name)).not.toContain("subagent");
+  it("SUBAGENTS: subagent and its control tools by default; none with OPENLEN_SUBAGENTS=0, and the prompt's line goes with them", () => {
+    const tools = ["subagent", "subagent_fork", "send_message", "interrupt_agent", "list_agents"];
+    const on = buildFunctionDeclarations({}).map((d) => d.name);
+    const off = buildFunctionDeclarations({ OPENLEN_SUBAGENTS: "0" }).map((d) => d.name);
+    for (const t of tools) {
+      expect(on).toContain(t);
+      expect(off).not.toContain(t);
+    }
     expect(buildAgentSystemPrompt({})).toContain(SUBAGENT_GUIDANCE);
+    expect(SUBAGENT_GUIDANCE).toContain("`subagent` or `subagent_fork`");
     expect(buildAgentSystemPrompt({ OPENLEN_SUBAGENTS: "0" })).not.toContain(SUBAGENT_GUIDANCE);
   });
 
@@ -142,8 +148,12 @@ describe("buildFunctionDeclarations", () => {
       "schedule_list",
       "schedule_delete",
       "schedule_update",
-      // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent`.
+      // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent` and, phase 2, its control tools.
       "subagent",
+      "subagent_fork",
+      "send_message",
+      "interrupt_agent",
+      "list_agents",
       "undo_last_change",
       // F4 de las apps: convertir una página en app (sólo en una página).
       "convert_to_app",

@@ -23,7 +23,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
-- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
+- Start independent delegations with \`subagent\` or \`subagent_fork\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. bash, a terminal over those files, to read them (cat, sed -n), search the whole site (grep -rn), list them (find) and change them (sed -i, or a heredoc to write a whole one). The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -94,7 +94,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
-- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
+- Start independent delegations with \`subagent\` or \`subagent_fork\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE SITE IS FILES:
 Each page is a file: /index.html is the home page and /<slug>/index.html each of the others. Read to read, Edit to change an exact piece, Write to create a new page or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i). The project's state comes in your context; the pages don't. You read a page when what the user asks needs it —a question about the page, a change to it—; a greeting, or a message that isn't about the page, needs nothing read. And whatever you say about a page —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -165,7 +165,7 @@ HOW TO WORK:
 - Use session_search to find relevant work from prior sessions, or session_event_search to search earlier events in one session. Search results are cursor-free and workspace-scoped. Follow a useful hit with session_event_read when you need exact data.
 - In bash, commands are cheap and what they print tells you more than reasoning about them: run the direct command and adjust with its output instead of perfecting it in your head. A failed bash result starts with its exit code; investigate failures before moving on.
 - create_goal may infer goal intent from a direct human request in any language. After a service restart, an active goal is disarmed: when a human asks to continue or resume in any wording or language, use update_goal action resume to rearm it. Mark complete only when the objective is actually achieved. Mark blocked only after the same blocking condition persists for at least 3 consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, or useful remaining work is not blocked.
-- Start independent delegations with \`subagent\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
+- Start independent delegations with \`subagent\` or \`subagent_fork\` together in one assistant message and continue useful work while they run. When only waiting for their results remains, end your turn instead of sleeping or polling; the next result starts a new turn.
 
 THE APP IS FILES:
 /index.html is only the shell that starts the app: its <head> (<title>, the <meta> tags, the fonts) and the <div id="root"> plus <script type="module" src="/src/main.jsx"> that it must keep: that src IS the app's entry, as in Vite, so renaming the entry means changing it there too. The app itself lives in /src: /src/main.jsx mounts it, /src/App.jsx holds its routes, each screen goes in its own file under /src/screens and each component under /src/components, and /src/lib/supabase.js exports the backend client. Read to read, Edit to change an exact piece, Write to create a new file or rewrite a whole one, and bash, a terminal over the same files, to search the whole site (grep -rn), list them (find) or change many at once (sed -i). PROJECT STATE lists the app's files; the files themselves don't come in your context. You read a file when what the user asks needs it —a question about the code, a change to it—; a greeting, or a message that isn't about the app, needs nothing read. And whatever you say about the code —what it has, what it lacks, what its parts are called— comes from having read it in this conversation: if you haven't read it, don't describe it.
@@ -1197,7 +1197,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1223,6 +1223,81 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "description",
         "prompt"
       ]
+    }
+  },
+  {
+    "name": "subagent_fork",
+    "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
+      ]
+    }
+  },
+  {
+    "name": "send_message",
+    "description": "Send a message to an agent. A working agent receives it at its next step; an idle agent starts a new turn with it. Returns delivery confirmation, not the agent's answer.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child."
+        },
+        "message": {
+          "type": "STRING",
+          "description": "The message to deliver to the agent."
+        }
+      },
+      "required": [
+        "agent_id",
+        "message"
+      ]
+    }
+  },
+  {
+    "name": "interrupt_agent",
+    "description": "Ask a subagent to stop its current work. This call returns without waiting for it to stop. You can continue a local direct child's conversation later with send_message. External executions stop permanently and cannot receive follow-ups. Subagents it started will keep running.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The id of an agent created under you: your direct child or a deeper descendant."
+        }
+      },
+      "required": [
+        "agent_id"
+      ]
+    }
+  },
+  {
+    "name": "list_agents",
+    "description": "List subagents you started, with their ids, labels, and status. running means it is working; inactive means it is not currently working. You will be notified when a subagent finishes; there is no need to keep checking its status. Use send_message to continue the conversation.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "scope": {
+          "type": "STRING",
+          "enum": [
+            "children",
+            "descendants"
+          ],
+          "description": "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent."
+        }
+      }
     }
   },
   {
@@ -2382,7 +2457,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -2408,6 +2483,81 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "description",
         "prompt"
       ]
+    }
+  },
+  {
+    "name": "subagent_fork",
+    "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
+      ]
+    }
+  },
+  {
+    "name": "send_message",
+    "description": "Send a message to an agent. A working agent receives it at its next step; an idle agent starts a new turn with it. Returns delivery confirmation, not the agent's answer.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child."
+        },
+        "message": {
+          "type": "STRING",
+          "description": "The message to deliver to the agent."
+        }
+      },
+      "required": [
+        "agent_id",
+        "message"
+      ]
+    }
+  },
+  {
+    "name": "interrupt_agent",
+    "description": "Ask a subagent to stop its current work. This call returns without waiting for it to stop. You can continue a local direct child's conversation later with send_message. External executions stop permanently and cannot receive follow-ups. Subagents it started will keep running.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The id of an agent created under you: your direct child or a deeper descendant."
+        }
+      },
+      "required": [
+        "agent_id"
+      ]
+    }
+  },
+  {
+    "name": "list_agents",
+    "description": "List subagents you started, with their ids, labels, and status. running means it is working; inactive means it is not currently working. You will be notified when a subagent finishes; there is no need to keep checking its status. Use send_message to continue the conversation.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "scope": {
+          "type": "STRING",
+          "enum": [
+            "children",
+            "descendants"
+          ],
+          "description": "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent."
+        }
+      }
     }
   },
   {
@@ -3561,7 +3711,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The completion notice includes its final answer. This backend does not accept follow-up messages. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -3587,6 +3737,81 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "description",
         "prompt"
       ]
+    }
+  },
+  {
+    "name": "subagent_fork",
+    "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "description": {
+          "type": "STRING",
+          "description": "A short (3-5 word) description of the delegated task, for display."
+        },
+        "prompt": {
+          "type": "STRING",
+          "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        }
+      },
+      "required": [
+        "description",
+        "prompt"
+      ]
+    }
+  },
+  {
+    "name": "send_message",
+    "description": "Send a message to an agent. A working agent receives it at its next step; an idle agent starts a new turn with it. Returns delivery confirmation, not the agent's answer.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child."
+        },
+        "message": {
+          "type": "STRING",
+          "description": "The message to deliver to the agent."
+        }
+      },
+      "required": [
+        "agent_id",
+        "message"
+      ]
+    }
+  },
+  {
+    "name": "interrupt_agent",
+    "description": "Ask a subagent to stop its current work. This call returns without waiting for it to stop. You can continue a local direct child's conversation later with send_message. External executions stop permanently and cannot receive follow-ups. Subagents it started will keep running.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "agent_id": {
+          "type": "STRING",
+          "description": "The id of an agent created under you: your direct child or a deeper descendant."
+        }
+      },
+      "required": [
+        "agent_id"
+      ]
+    }
+  },
+  {
+    "name": "list_agents",
+    "description": "List subagents you started, with their ids, labels, and status. running means it is working; inactive means it is not currently working. You will be notified when a subagent finishes; there is no need to keep checking its status. Use send_message to continue the conversation.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "scope": {
+          "type": "STRING",
+          "enum": [
+            "children",
+            "descendants"
+          ],
+          "description": "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent."
+        }
+      }
     }
   },
   {

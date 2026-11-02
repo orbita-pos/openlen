@@ -59,6 +59,8 @@ const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   schedule_list: always,
   // DeepSeek's `subagent` (`isConcurrencySafe: () => true`): it only starts a child and returns its id.
   subagent: always,
+  // DeepSeek's `subagent_fork`, `send_message`, `interrupt_agent` and `list_agents` declare no `isConcurrencySafe`:
+  // they run one at a time, so they stay out of this table.
 };
 
 export function isConcurrencySafe(name: string, args: Record<string, unknown>): boolean {
