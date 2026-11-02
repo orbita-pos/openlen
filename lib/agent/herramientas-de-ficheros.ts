@@ -433,7 +433,11 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
   return { response: respuesta(r) };
 }
 
+/** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Explore, Plan, or any child in plan mode. */
+export const READ_ONLY_REFUSAL = "This agent is read-only: it cannot change the project's files.";
+
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  if (session.readOnly) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const entrada = coercerEntradaEdit(args);
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
@@ -452,6 +456,7 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 }
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  if (session.readOnly) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const { entrada, nota } = coercerEntradaWrite(args);
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
@@ -900,6 +905,11 @@ export async function guardarLoDeLaTerminal(
     enLaTerminal[ruta] = previo;
     notas.push(`${rutaRelativa(ruta)}: not saved — ${motivo} ${previo === null ? "It was removed." : "It is back as it was."}`);
   };
+  // A read-only subagent: nothing a command changed in the project is saved; all of it goes back.
+  if (session.readOnly) {
+    for (const c of cambios) deshacer(c.ruta, READ_ONLY_REFUSAL);
+    return { notas, rechazado, enLaTerminal, escrituras };
+  }
   for (const c of cambios) {
     if (c.ruta.startsWith(ARTIFACT_WORKSPACE)) {
       if (!deps.artifacts) { deshacer(c.ruta, "Artifact sources are unavailable in this session."); continue; }

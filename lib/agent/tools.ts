@@ -1261,6 +1261,9 @@ export interface AgentSession {
   /** The skills already in this conversation (loaded with `skill` or invoked with /name): `skill`
    *  answers Claude Code's «already loaded» line instead of sending them again. */
   loadedSkills?: Set<string>;
+  /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Write, Edit and what a
+   *  command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
+  readOnly?: true;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;
