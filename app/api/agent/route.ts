@@ -1940,8 +1940,9 @@ async function correrTurno(
                 turnArgs: argsDelTurno,
                 lenSystemPrompt: built.systemPrompt,
                 // What a fork inherits: the request up to the person's message (Len's system prompt and the
-                // completed turns), copied before the loop appends the turn in flight.
-                forkSeed: messages.slice(0, -1),
+                // completed turns), copied before the loop appends the turn in flight — and without this turn's
+                // plan-mode notice, spliced in just before that message.
+                forkSeed: messages.slice(0, planDelTurno.notice ? -2 : -1),
                 declarations: tools,
                 // A child's page checks open their own browser: the turn's pool closes with the turn, and one
                 // reopened after that would never be closed.

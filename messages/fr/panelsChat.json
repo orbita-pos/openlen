@@ -566,6 +566,7 @@
     "closing": "Ce qu'il a dit à Len",
     "stop": "Arrêter ce sous-agent",
     "liveBar": "{n, plural, one {# sous-agent au travail} other {# sous-agents au travail}}",
-    "forked": "Bifurqué"
+    "forked": "Bifurqué",
+    "messageToLen": "Envoi d'un message à Len"
   }
 }

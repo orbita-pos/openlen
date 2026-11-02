@@ -55,8 +55,13 @@ export async function register() {
       // Len's subagents (spec local 2026-11-01-subagentes-de-len): the ones a restart cut close as stopped, and
       // every notice that never reached Len goes to him, one server turn per project. OPENLEN_SUBAGENTS=0 leaves it.
       if (process.env.OPENLEN_SUBAGENTS !== "0") {
-        void Promise.all([import("@/lib/agent/subagents/boot"), import("@/lib/agent/subagents/store"), import("@/lib/agent/turnos-desde-el-servidor")])
-          .then(([boot, store, turns]) =>
+        void Promise.all([
+          import("@/lib/agent/subagents/boot"),
+          import("@/lib/agent/subagents/store"),
+          import("@/lib/agent/subagents/registry"),
+          import("@/lib/agent/turnos-desde-el-servidor"),
+        ])
+          .then(([boot, store, registry, turns]) =>
             boot.closeSubagentsOfThePreviousProcess({
               store,
               launchNoticeTurn: ({ projectId, personId, notices }) =>
@@ -70,6 +75,7 @@ export async function register() {
                   onStart: async () => {},
                   fail: async () => {},
                 }),
+              isLive: registry.isLive,
               now: Date.now,
               startedAt,
             }),

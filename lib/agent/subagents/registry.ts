@@ -132,7 +132,6 @@ export function setNoticeTurnPending(projectId: string, pending: boolean): void 
   else state.noticeTurns.delete(projectId);
 }
 
-/** For tests: forget everything. */
 /** Whether the run is working in that project now. */
 export function isLive(projectId: string, id: string): boolean {
   return state.live.get(projectId)?.has(id) ?? false;
@@ -150,10 +149,13 @@ export function takeRunInbox(id: string): string[] {
   return inbox;
 }
 
-export function hasRunInbox(id: string): boolean {
-  return (state.inboxes.get(id)?.length ?? 0) > 0;
+/** The conversation changed («Empezar de cero», or one reopened): what its children had queued for Len is not for the
+ *  new one. */
+export function dropNotices(projectId: string): void {
+  state.notices.delete(projectId);
 }
 
+/** For tests: forget everything. */
 export function forgetAllSubagents(): void {
   state.inboxes.clear();
   state.live.clear();

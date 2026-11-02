@@ -72,6 +72,9 @@ function setup(
     /** The database fails when a settled run is reopened. */
     reopenFails?: boolean;
     planMode?: boolean;
+    loopExtras?: RunnerIO["loopExtras"];
+    /** What Read answers, by path ("1\tx" otherwise). */
+    readResults?: Record<string, string>;
   } = {},
 ) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
@@ -87,6 +90,8 @@ function setup(
   const brainTools: Record<string, unknown>[][] = [];
   const browsersClosed: AgentSession[] = [];
   const reopens: [string, string][] = [];
+  const saves: Record<string, unknown>[] = [];
+  const flushes: (() => Promise<void>)[] = [];
   const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
@@ -101,14 +106,14 @@ function setup(
       if (name === "skill") session.loadedSkills?.add(String(args.name));
       const touched = o.touched?.[name];
       return {
-        response: { ok: true, tool_result: "1\tx" },
+        response: { ok: true, tool_result: (name === "Read" && o.readResults?.[String(args.file_path)]) || "1\tx" },
         action: { tool: name, ok: true, summary: String(args.file_path ?? args.name ?? "") },
         ...(touched ? { ficherosTocados: touched.map((ruta) => ({ ruta, versionPrevia: null })) } : {}),
       };
     },
     store: {
       createRun: async (r) => void rows.set(r.id, { ...r, status: "running", toolUses: 0, durationMs: null, chargedCenticredits: 0, actions: [], transcript: null }),
-      saveProgress: async () => {},
+      saveProgress: async (id, p) => void saves.push({ id, ...p }),
       settleRun: async (id, s) => void rows.set(id, { ...rows.get(id), ...s }),
       reopenRun: async (id, personId) => {
         if (o.reopenFails) throw new Error("the database is down");
@@ -143,6 +148,11 @@ function setup(
     snapshot: async () => snapshots.shift() ?? { "/index.html": "a" },
     closeBrowser: async (session) => void browsersClosed.push(session),
     addTurnChanges: async (...a) => void changes.push(a),
+    flushOnExit: (flush) => {
+      flushes.push(flush);
+      return () => {};
+    },
+    ...(o.loopExtras ? { loopExtras: o.loopExtras } : {}),
     now: () => 1_000,
     newId: () => `r${++n}`,
   };
@@ -172,7 +182,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, io, rows, reopens, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -382,14 +392,20 @@ describe("continuable children (phase 2)", () => {
     expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAll done");
   });
 
-  it("a child addressing anyone but len is refused with DeepSeek's text, and nothing reaches Len", async () => {
-    const s = setup({ scripts: [llama("send_message", { agent_id: "r9", message: "psst" }), dice("ok")] });
+  it("a refused call after its message brings the closing message back too (DeepSeek: any logged call voids it)", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Half done" }), llama("publish", { subdomain: "x" }), dice("All done")] });
     await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
     await s.settled("r1");
-    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({
-      ok: false,
-      error: 'agent "r1" is not a resident continuable child and cannot send to parent "r9"',
-    });
+    expect(s.ran).not.toContain("publish");
+    expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAll done");
+  });
+
+  it("a child addressing anyone but len gets DeepSeek's answers: one of Len's children belongs to another parent, anyone else is unavailable", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "r9", message: "psst" }), llama("send_message", { agent_id: "r1", message: "me" }), dice("ok")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
+    await s.settled("r1");
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false, error: 'subagent "r9" is unavailable' });
+    expect(s.g.seen[2]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false, error: 'subagent "r1" belongs to another parent session' });
     expect(takeNotices("p").map((n) => n.text.startsWith("Agent r1 sent"))).toEqual([false]);
   });
 
@@ -447,6 +463,8 @@ describe("waking an idle child (phase 2)", () => {
     expect(second.toolUses).toBe((first.toolUses as number) + 1);
     expect(second.chargedCenticredits as number).toBeGreaterThan(first.chargedCenticredits as number);
     expect(second.actions as unknown[]).toHaveLength(2);
+    // Its usage is both passes', like its charge.
+    expect((second.usage as { inputTokens: number }).inputTokens).toBe(2 * (first.usage as { inputTokens: number }).inputTokens);
     for (let i = 0; i < 8; i++) reserve("p", `x${i}`, new AbortController());
     expect(await s.launcher.send({ id: "r1", message: "x" })).toMatchObject({ ok: false, code: "too_many_subagents" });
     forgetAllSubagents();
@@ -534,6 +552,87 @@ describe("waking an idle child (phase 2)", () => {
     expect(s.rows.get("r1")!.personId).toBe("m2");
   });
 
+  it("progress is saved with its duration, and only when something changed (a fork's conversation is large)", async () => {
+    const s = setup({ scripts: [dice("Done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await until(() => s.g.seen.length === 1);
+    await s.flushes[0]!();
+    await s.flushes[0]!();
+    expect(s.saves).toHaveLength(1);
+    expect(s.saves[0]).toMatchObject({ id: "r1", durationMs: 0, toolUses: 0 });
+    s.g.release();
+    await s.settled("r1");
+  });
+
+  it("a child that summarized is saved, and woken, from what it saw after the summary — not its whole record", async () => {
+    // Its own head (Len's prompt and the platform notes) is ~9k tokens: the summary comes after two reads, the first one big.
+    const s = setup({
+      readResults: { "/a": "W".repeat(40_000) },
+      scripts: [
+        llama("Read", { file_path: "/a" }),
+        [{ type: "function_call", name: "Read", args: { file_path: "/b" } }, { type: "usage", inputTokens: 60_000, outputTokens: 5, cachedTokens: 0, thinkingTokens: 0 }, done],
+        dice("SUMMARY OF THE WORK"),
+        dice("Done"),
+        dice("Footer done"),
+      ],
+      loopExtras: () => ({ compaction: { policy: { thresholdTokens: 25_000, retainTokens: 5 }, firstIndex: 2 } }),
+    });
+    await s.launcher.launch({ description: "a", prompt: "Fix it.", preset: "general-purpose" });
+    const row = await s.settled("r1");
+    const saved = row.transcript as Message[];
+    expect(saved.some((m) => JSON.stringify(m).includes("WWWW"))).toBe(false);
+    expect(saved.some((m) => JSON.stringify(m).includes("SUMMARY OF THE WORK"))).toBe(true);
+    expect(saved.at(-1)).toMatchObject({ role: "assistant", content: "Done" });
+    takeNotices("p");
+    await s.launcher.send({ id: "r1", message: "Now the footer." });
+    await s.settled("r1");
+    expect(s.g.seen.at(-1)!.slice(1, -1)).toEqual(saved);
+  });
+
+  it("a child of an archived conversation tells Len nothing: neither its messages nor how it ended", async () => {
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "halfway" }), dice("Done")], archived: ["r1"] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    await until(() => !isLive("p", "r1"));
+    expect(takeNotices("p")).toEqual([]);
+    expect(s.noticeTurns).toEqual([]);
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false, error: "direct parent is not live; the message was not delivered" });
+  });
+
+  it("a child keeps the scope it started with: launched in plan mode it wakes read-only; and Len in plan mode wakes no writer", async () => {
+    const s = setup({ scripts: [dice("One"), dice("Two"), dice("Three"), dice("Four")], planMode: true });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(s.rows.get("r1")).toMatchObject({ planMode: true });
+    const outOfPlan = createSubagentLauncher({ ...s.ctx, planMode: false }, s.io);
+    await outOfPlan.send({ id: "r1", message: "Now write it." });
+    await s.settled("r1");
+    const names = (i: number) => s.brainTools[i]!.map((d) => d.name);
+    expect(names(1)).not.toContain("Edit");
+    await outOfPlan.launch({ description: "w", prompt: "c", preset: "general-purpose" });
+    await s.settled("r2");
+    expect(names(2)).toContain("Edit");
+    const inPlan = createSubagentLauncher({ ...s.ctx, planMode: true }, s.io);
+    await inPlan.send({ id: "r2", message: "More." });
+    await s.settled("r2");
+    expect(names(3)).not.toContain("Edit");
+  });
+
+  it("a run saved before its task was kept in the transcript (phase 1) wakes with its task first", async () => {
+    const s = setup({ scripts: [dice("Done"), dice("Footer done")] });
+    await s.launcher.launch({ description: "a", prompt: "Fix the header.", preset: "general-purpose" });
+    await s.settled("r1");
+    s.rows.set("r1", { ...s.rows.get("r1")!, transcript: [{ role: "assistant", content: "Header fixed." }] });
+    await s.launcher.send({ id: "r1", message: "Now the footer." });
+    await s.settled("r1");
+    const woken = s.g.seen[1]!;
+    const i = woken.findIndex((m) => m.content === "Header fixed.");
+    expect(i).toBeGreaterThan(1);
+    expect(woken.slice(1, i).some((m) => m.role === "user" && m.content.includes("Fix the header."))).toBe(true);
+    expect(woken.at(-1)).toEqual({ role: "user", content: "Agent len sent a message: Now the footer." });
+  });
+
   it("an unknown child, or one of an archived conversation, is unavailable", async () => {
     const s = setup({ archived: ["r1"] });
     await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
@@ -573,6 +672,41 @@ describe("forks (phase 2)", () => {
     expect(first[0]).toEqual(withPlanSection(SEED, true)[0]);
     expect(first[0]).not.toEqual(SEED[0]);
     expect(first.slice(1, SEED.length)).toEqual(SEED.slice(1));
+  });
+
+  it("a fork whose inherited conversation is over the summary threshold summarizes it before its first call (Len summarizes first only above it)", async () => {
+    const LONG: Message[] = [
+      { role: "system", content: "LEN SYSTEM PROMPT" },
+      { role: "user", content: "Make me a bakery page." },
+      { role: "assistant", content: "A".repeat(8000) },
+      { role: "user", content: "Add a menu." },
+      { role: "assistant", content: "B".repeat(8000) },
+    ];
+    const s = setup({
+      forkSeed: LONG,
+      scripts: [dice("SUMMARY OF THE CHAT"), dice("Done")],
+      loopExtras: () => ({ compaction: { policy: { thresholdTokens: 4000, retainTokens: 5 }, firstIndex: 2 } }),
+    });
+    await s.launcher.fork({ description: "Review", prompt: "Review it." });
+    await s.settled("r1");
+    expect(s.g.seen).toHaveLength(2);
+    expect(s.g.seen[1]!.some((m) => m.content.includes("AAAA"))).toBe(false);
+    expect(s.g.seen[1]!.some((m) => m.content.includes("SUMMARY OF THE CHAT"))).toBe(true);
+    expect(s.rows.get("r1")!.finalText).toBe("Done");
+  });
+
+  it("a fork's saved conversation keeps no photos: they travel with its requests, never to the database", async () => {
+    const seed: Message[] = [
+      { role: "system", content: "LEN SYSTEM PROMPT" },
+      { role: "user", content: "Use this photo.", images: [{ mimeType: "image/png", dataBase64: "iVBORw0KGgo=" }] },
+      { role: "assistant", content: "Done." },
+    ];
+    const s = setup({ forkSeed: seed });
+    await s.launcher.fork({ description: "a", prompt: "b" });
+    const row = await s.settled("r1");
+    expect(s.g.seen[0]![1]!.images).toHaveLength(1);
+    expect((row.transcript as Message[]).some((m) => m.images)).toBe(false);
+    expect((row.transcript as Message[])[0]).toEqual({ role: "user", content: "Use this photo." });
   });
 
   it("🔴 a fork is refused publish and subagent though they are declared to it", async () => {

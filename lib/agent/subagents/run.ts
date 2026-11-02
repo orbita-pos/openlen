@@ -18,6 +18,7 @@ import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AgentLoopArgs, AgentLoopResult, AgentStreamEvent } from "@/lib/agent/loop";
 import { withPlanSection } from "@/lib/agent/plan-mode";
 import { runSubagent } from "@/lib/agent/subagente";
+import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { LedgerUse } from "@/lib/credit-ledger";
 import { creditsForUsage } from "@/lib/credits";
@@ -30,7 +31,15 @@ import { childSystemPrompt, childToolDeclarations, DELEGATION_SCOPE_STATEMENT, i
 import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
-import { messageDeliveredLine, notYourParentError, SUBAGENT_GUIDANCE, unavailableError, type SendResult, type SubagentsDeps } from "./tool";
+import {
+  belongsToAnotherParentError,
+  messageDeliveredLine,
+  parentGoneError,
+  SUBAGENT_GUIDANCE,
+  unavailableError,
+  type SendResult,
+  type SubagentsDeps,
+} from "./tool";
 
 /** What the chat hears about a child: it started, a step, how it ended. */
 export interface SubagentEvent {
@@ -83,8 +92,8 @@ export interface SubagentBrain {
 }
 
 export interface SubagentRunStore {
-  createRun(r: { id: string; projectId: string; chatRowId: string; turnId: string; personId: string; preset: string; description: string; prompt: string; forked: boolean }): Promise<void>;
-  saveProgress(id: string, p: { transcript: unknown; actions: unknown[]; toolUses: number }): Promise<void>;
+  createRun(r: { id: string; projectId: string; chatRowId: string; turnId: string; personId: string; preset: string; description: string; prompt: string; forked: boolean; planMode: boolean }): Promise<void>;
+  saveProgress(id: string, p: { transcript: unknown; actions: unknown[]; toolUses: number; durationMs: number }): Promise<void>;
   settleRun(
     id: string,
     s: { status: SubagentStopReason; finalText: string; diagnostic: string | null; transcript: unknown; actions: unknown[]; usage: unknown; toolUses: number; durationMs: number; chargedCenticredits: number },
@@ -154,6 +163,39 @@ export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: Subagent
 
 type Usage = AgentLoopResult["usage"];
 const NO_USAGE: Usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
+const addUsage = (a: Usage, b: Usage): Usage => ({
+  inputTokens: a.inputTokens + b.inputTokens,
+  outputTokens: a.outputTokens + b.outputTokens,
+  cachedTokens: a.cachedTokens + b.cachedTokens,
+  thinkingTokens: a.thinkingTokens + b.thinkingTokens,
+});
+/** A saved row's usage, whatever jsonb gives back. */
+const usageOf = (v: unknown): Usage => {
+  const u = (v ?? {}) as Partial<Record<keyof Usage, unknown>>;
+  const n = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  return { inputTokens: n(u.inputTokens), outputTokens: n(u.outputTokens), cachedTokens: n(u.cachedTokens), thinkingTokens: n(u.thinkingTokens) };
+};
+
+/** What the database keeps of a message: its text, never its photos (`Message.images`: «nunca se guardan»). */
+const withoutImages = (m: Message): Message => {
+  if (!m.images) return m;
+  const { images: _images, ...rest } = m;
+  return rest;
+};
+
+/** After its last message to Len, did it call anything or read anything new? Then its closing message may say what the
+ *  message didn't (DeepSeek voids the omission on any logged call, refused ones too, and on claimed input). */
+function actedAfterMessagingLen(own: readonly Message[]): boolean {
+  for (let i = own.length - 1; i >= 0; i--) {
+    const calls = own[i]!.functionCalls ?? [];
+    const last = calls.map((c) => c.name).lastIndexOf(SEND_MESSAGE_TOOL);
+    if (last < 0) continue;
+    if (last < calls.length - 1) return true;
+    // Its tool results come right after; anything else said or called later counts.
+    return own.slice(i + 2).some((m) => (m.role === "assistant" && (m.functionCalls?.length ?? 0) > 0) || (m.role === "user" && !m.functionResponses?.length));
+  }
+  return false;
+}
 type ChildStep = Omit<Extract<AgentStreamEvent, { type: "action" }>, "type">;
 
 /** One run of a child: a fresh one, a fork, or one woken by Len's message. */
@@ -168,11 +210,13 @@ interface ChildSpec {
   /** What it is offered; `allowed`, what it may run when narrower (a fork). */
   readonly tools: Record<string, unknown>[];
   readonly allowed?: ReadonlySet<string>;
+  /** Read-only by plan mode: when it started, or now (a scope never widens from inside; DeepSeek fixes it at start). */
+  readonly planMode: boolean;
   /** What the row already counts: a woken child adds to it. */
-  readonly prior: { readonly toolUses: number; readonly durationMs: number; readonly charged: number; readonly actions: readonly ChildStep[] };
+  readonly prior: { readonly toolUses: number; readonly durationMs: number; readonly charged: number; readonly usage: Usage; readonly actions: readonly ChildStep[] };
 }
 
-const NOTHING_YET: ChildSpec["prior"] = { toolUses: 0, durationMs: 0, charged: 0, actions: [] };
+const NOTHING_YET: ChildSpec["prior"] = { toolUses: 0, durationMs: 0, charged: 0, usage: NO_USAGE, actions: [] };
 
 export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): SubagentsDeps {
   const rate = creditRateForRole(roleForOperation("subagent"));
@@ -197,7 +241,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       busquedasVaciasSeguidas: 0,
       leidos: new Map(),
       loadedSkills: new Set(),
-      ...(isReadOnly(preset, ctx.planMode) ? { readOnly: true as const } : {}),
+      ...(isReadOnly(preset, spec.planMode) ? { readOnly: true as const } : {}),
     } as AgentSession;
     const tools = spec.tools;
     // Depth 1: the child has no launcher of its own; its stop is its own.
@@ -210,15 +254,43 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     /** Its last act was a `send_message` to Len: the settlement then omits the closing message (DeepSeek). */
     let omitClosingText = false;
     const initial = spec.messages;
-    /** What the run keeps: its whole conversation but the system prompt, so it can be woken later. */
-    const conversation = (own: readonly Message[]) => [...initial.slice(1), ...own];
+    // Its compaction is the route's, and the latest summary it made is kept here (Len keeps his in the turn's row).
+    const extras = io.loopExtras?.(session);
+    const firstIndex = extras?.compaction?.firstIndex ?? 1;
+    let mark: CompactionMark | null = null;
+    const loopExtras = extras?.compaction
+      ? {
+          ...extras,
+          compaction: {
+            ...extras.compaction,
+            saveMark: async (m: CompactionMark) => {
+              mark = m;
+              await extras.compaction?.saveMark?.(m);
+            },
+          },
+        }
+      : extras;
+    /** What the run keeps, so it can be woken later: its conversation but the system prompt — after a summary, what
+     *  it saw from then on (Claude Code's compact boundary, as Len's own history does), not its whole record. */
+    const conversation = (own: readonly Message[]): Message[] =>
+      mark ? [...initial.slice(1, firstIndex), ...mark.messages, ...own.slice(mark.fromTranscript)] : [...initial.slice(1), ...own];
     const allActions = () => [...spec.prior.actions, ...actions];
     let result: AgentLoopResult | null = null;
     let diagnostic: string | null = null;
     let before: Readonly<Record<string, string>> | null = null;
     let brain: SubagentBrain | null = null;
-    const progress = () =>
-      io.store.saveProgress(id, { transcript: conversation(live.read?.() ?? []), actions: allActions(), toolUses: spec.prior.toolUses + toolUses }).catch(() => undefined);
+    const elapsed = () => spec.prior.durationMs + Math.max(0, io.now() - startedAt);
+    /** Saved only when it changed: a fork's conversation carries Len's whole one. */
+    let lastSaved = "";
+    const progress = () => {
+      const transcript = conversation(live.read?.() ?? []);
+      const all = allActions();
+      const total = spec.prior.toolUses + toolUses;
+      const shape = `${transcript.length}:${all.length}:${total}`;
+      if (shape === lastSaved) return Promise.resolve();
+      lastSaved = shape;
+      return io.store.saveProgress(id, { transcript: transcript.map(withoutImages), actions: all, toolUses: total, durationMs: elapsed() }).catch(() => undefined);
+    };
     const timer = setInterval(() => void progress(), PROGRESS_EVERY_MS);
     timer.unref?.();
     const stopFlush = io.flushOnExit?.(progress);
@@ -270,7 +342,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
           ctx.spend.track(id, centicreditsOf(g));
           return ctx.spend.over();
         },
-        ...io.loopExtras?.(session),
+        ...loopExtras,
       });
     } catch (e) {
       diagnostic = "internal_error";
@@ -323,20 +395,23 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     await io.closeBrowser?.(session).catch((e: unknown) => log(`[subagents] run=${id} closing its browser failed: ${String(e)}`));
     const finalText = status === "error" && !result ? "" : (result?.finalText ?? "");
     const own = result?.transcripcion ?? live.read?.() ?? [];
+    if (omitClosingText && actedAfterMessagingLen(own)) omitClosingText = false;
     const settled = {
       status,
       finalText,
       diagnostic,
       actions: allActions(),
-      usage,
+      usage: addUsage(spec.prior.usage, usage),
       toolUses: spec.prior.toolUses + toolUses,
-      durationMs: spec.prior.durationMs + Math.max(0, io.now() - startedAt),
+      durationMs: elapsed(),
       chargedCenticredits: spec.prior.charged + charged,
     };
     /** What Len sent that this run won't act on: it waits in the transcript for the next wake. */
     const kept: Message[] = [];
     const save = () =>
-      io.store.settleRun(id, { ...settled, transcript: [...conversation(own), ...kept] }).catch((e: unknown) => log(`[subagents] run=${id} settle failed: ${String(e)}`));
+      io.store
+        .settleRun(id, { ...settled, transcript: [...conversation(own), ...kept].map(withoutImages) })
+        .catch((e: unknown) => log(`[subagents] run=${id} settle failed: ${String(e)}`));
     /** Keeps what Len sends until none is left; the slot goes right after, with nothing in between. */
     const keepTheRest = async () => {
       for (let more = takeRunInbox(id); more.length > 0; more = takeRunInbox(id)) {
@@ -345,6 +420,9 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       }
     };
     await save();
+    // A child of a conversation that was archived tells the new one nothing. Asked here, before the inbox: from the
+    // last look at it to the slot there is no wait.
+    const toLen = await ofThisConversation(id).catch(() => true);
     if (status !== "completed") {
       // A stop sticks, and a failed or capped run doesn't go on (DeepSeek's cancel keeps the inbox).
       await keepTheRest();
@@ -360,13 +438,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       }
     }
     // The notice first, then the slot: a turn waiting for «a notice or no child left» must see the notice.
-    queueNotice(ctx.projectId, {
-      id,
-      text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText }),
-    });
+    if (toLen) {
+      queueNotice(ctx.projectId, {
+        id,
+        text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText }),
+      });
+    }
     release(ctx.projectId, id);
     ctx.emit?.({ type: "subagent", id, preset, description, status });
-    wakeLen();
+    if (toLen) wakeLen();
 
     /** Goes on with Len's messages, holding its slot: the row runs again and the next pass adds to this one's counts. */
     async function goOn(texts: readonly string[]): Promise<boolean> {
@@ -379,18 +459,24 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const next: ChildSpec = {
         ...spec,
         messages: [initial[0]!, ...conversation(own), ...texts.map(fromLen)],
-        prior: { toolUses: settled.toolUses, durationMs: settled.durationMs, charged: settled.chargedCenticredits, actions: settled.actions },
+        prior: { toolUses: settled.toolUses, durationMs: settled.durationMs, charged: settled.chargedCenticredits, usage: settled.usage, actions: settled.actions },
       };
       void run(next, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
       return true;
     }
 
-    /** The child's `send_message`: only to its parent, `len`; it reaches him like a notice (DeepSeek's). */
-    function sendToLen(args: Record<string, unknown>): ToolOutcome {
+    /** The child's `send_message`: only to its parent, `len`; it reaches him like a notice. Anyone else gets DeepSeek's
+     *  answer: one of Len's children belongs to another parent, the rest is unavailable. */
+    async function sendToLen(args: Record<string, unknown>): Promise<ToolOutcome> {
       const target = typeof args.agent_id === "string" ? args.agent_id.trim() : "";
       const text = typeof args.message === "string" ? args.message.trim() : "";
-      if (target !== LEN_AGENT_ID) return { response: { ok: false, error: notYourParentError(id, target) } };
+      if (target !== LEN_AGENT_ID) {
+        const sibling = await ofThisConversation(target).catch(() => false);
+        return { response: { ok: false, error: sibling ? belongsToAnotherParentError(target) : unavailableError(target) } };
+      }
       if (!text) return { response: { ok: false, error: "invalid_arguments", message: "message is required." } };
+      // Its conversation was archived: the Len it worked for is gone.
+      if (!(await ofThisConversation(id).catch(() => true))) return { response: { ok: false, error: parentGoneError() } };
       queueNotice(ctx.projectId, { id, text: agentMessage(id, text), message: true });
       wakeLen();
       omitClosingText = true;
@@ -424,6 +510,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
     const abort = new AbortController();
     if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
+    // Read-only if it started so, or if Len plans now: a scope never widens.
+    const scope = first.planMode || ctx.planMode;
     let reopened: boolean;
     try {
       reopened = await io.store.reopenRun(id, ctx.personId);
@@ -438,20 +526,32 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     }
     // Read again now that it is ours: what a stop kept in its transcript while this message was on its way.
     const row = (await io.store.runOfCurrentConversation(ctx.projectId, id).catch(() => null)) ?? first;
+    const transcript = (row.transcript as Message[] | null) ?? [];
+    // A run saved before its task was kept in its transcript (phase 1 kept only its own messages, which open with its
+    // first answer), or cut before its first save: its task goes first, as it started.
+    const head = !row.forked && transcript[0]?.role !== "user" ? childMessages(ctx.turnArgs, preset, row.prompt).slice(1) : [];
     const spec: ChildSpec = {
       id,
       description: row.description,
       preset,
       forked: row.forked,
+      planMode: scope,
       messages: [
         { role: "system", content: row.forked ? ctx.lenSystemPrompt : childSystemPrompt(ctx.lenSystemPrompt, preset, SUBAGENT_GUIDANCE) },
-        ...((row.transcript as Message[] | null) ?? []),
+        ...head,
+        ...transcript,
         ...texts.map(fromLen),
       ],
       ...(row.forked
-        ? { tools: [...ctx.declarations], allowed: generalPurposeNames() }
-        : { tools: childToolDeclarations(ctx.declarations, preset, ctx.planMode) }),
-      prior: { toolUses: row.toolUses, durationMs: row.durationMs ?? 0, charged: row.chargedCenticredits, actions: row.actions as ChildStep[] },
+        ? { tools: [...ctx.declarations], allowed: generalPurposeNames(scope) }
+        : { tools: childToolDeclarations(ctx.declarations, preset, scope) }),
+      prior: {
+        toolUses: row.toolUses,
+        durationMs: row.durationMs ?? 0,
+        charged: row.chargedCenticredits,
+        usage: usageOf(row.usage),
+        actions: row.actions as ChildStep[],
+      },
     };
     ctx.emit?.({ type: "subagent", id, preset, description: row.description, status: "running" });
     void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
@@ -462,7 +562,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   const ofThisConversation = async (id: string) => (await io.store.runsOfCurrentConversation(ctx.projectId)).some((r) => r.id === id);
 
   /** Len's tools a general-purpose child may run: a fork is declared all of Len's (his cached prefix) and gated to these. */
-  const generalPurposeNames = () => new Set(childToolDeclarations(ctx.declarations, "general-purpose", ctx.planMode).map((d) => String(d.name)));
+  const generalPurposeNames = (planMode: boolean) => new Set(childToolDeclarations(ctx.declarations, "general-purpose", planMode).map((d) => String(d.name)));
 
   return {
     async launch(o) {
@@ -471,7 +571,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
       try {
-        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false });
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode });
       } catch (e) {
         release(ctx.projectId, id);
         throw e;
@@ -482,6 +582,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         description: o.description,
         preset: o.preset,
         forked: false,
+        planMode: ctx.planMode,
         messages: childMessages(ctx.turnArgs, o.preset, o.prompt),
         tools: childToolDeclarations(ctx.declarations, o.preset, ctx.planMode),
         prior: NOTHING_YET,
@@ -498,7 +599,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
       try {
-        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true });
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode });
       } catch (e) {
         release(ctx.projectId, id);
         throw e;
@@ -509,9 +610,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         description: o.description,
         preset: "general-purpose",
         forked: true,
+        planMode: ctx.planMode,
         messages: [...ctx.forkSeed, { role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }],
         tools: [...ctx.declarations],
-        allowed: generalPurposeNames(),
+        allowed: generalPurposeNames(ctx.planMode),
         prior: NOTHING_YET,
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));

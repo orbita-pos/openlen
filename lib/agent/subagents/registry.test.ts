@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   hasNotices,
-  hasRunInbox,
   isLive,
   sendToRun,
   takeRunInbox,
@@ -106,19 +105,16 @@ describe("the turn's spending limit, shared with its subagents", () => {
     len = 16;
     expect(spend.over()).toBe(true);
   });
-
 });
 
 describe("a running child's inbox (phase 2)", () => {
   it("an inbox per run: messages wait in order, are taken once, and another run's stay", () => {
-    expect(hasRunInbox("r1")).toBe(false);
+    expect(takeRunInbox("r1")).toEqual([]);
     sendToRun("r1", "one");
     sendToRun("r1", "two");
     sendToRun("r2", "other");
-    expect(hasRunInbox("r1")).toBe(true);
     expect(takeRunInbox("r1")).toEqual(["one", "two"]);
     expect(takeRunInbox("r1")).toEqual([]);
-    expect(hasRunInbox("r1")).toBe(false);
     expect(takeRunInbox("r2")).toEqual(["other"]);
   });
 

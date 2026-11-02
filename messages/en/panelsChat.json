@@ -566,6 +566,7 @@
     "closing": "What it told Len",
     "stop": "Stop this subagent",
     "liveBar": "{n, plural, one {# subagent working} other {# subagents working}}",
-    "forked": "Forked"
+    "forked": "Forked",
+    "messageToLen": "Sending a message to Len"
   }
 }

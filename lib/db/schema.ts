@@ -2663,6 +2663,8 @@ export const subagentRuns = pgTable(
     noticeDeliveredAt: timestamp("noticeDeliveredAt", { mode: "date", withTimezone: true }),
     /** Phase 2: forked from Len's conversation (`subagent_fork`), so it resumes with Len's own system prompt. */
     forked: boolean("forked").notNull().default(false),
+    /** Started while Len was in plan mode: it stays read-only when woken later (its scope was fixed at start). */
+    planMode: boolean("planMode").notNull().default(false),
   },
   (t) => [index("subagentRuns_projectId_status_idx").on(t.projectId, t.status), index("subagentRuns_chatRowId_idx").on(t.chatRowId)],
 );

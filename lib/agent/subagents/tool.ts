@@ -139,13 +139,18 @@ export function listAgentsText(entries: readonly { id: string; label: string; st
   return entries.map((e) => `${e.id} [${e.status}]${at} — ${e.label}`).join("\n");
 }
 
-/** DeepSeek's errors: a target that isn't Len's child (or doesn't exist), and a child addressing anyone but Len. */
+/** DeepSeek's errors: a target that isn't Len's child (or doesn't exist); one of Len's children addressed by a child
+ *  (its parent is Len, not the sender); and a parent that is gone (the conversation was archived). */
 export function unavailableError(id: string): string {
   return `subagent "${id}" is unavailable`;
 }
 
-export function notYourParentError(childId: string, target: string): string {
-  return `agent "${childId}" is not a resident continuable child and cannot send to parent "${target}"`;
+export function belongsToAnotherParentError(id: string): string {
+  return `subagent "${id}" belongs to another parent session`;
+}
+
+export function parentGoneError(): string {
+  return "direct parent is not live; the message was not delivered";
 }
 
 export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled";

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { closeSubagentsOfThePreviousProcess, type BootIO } from "./boot";
+import { settlementNotice } from "./notice";
 import type { SubagentRunRow } from "./store";
 
 const NOW = Date.parse("2026-11-02T10:00:00Z");
@@ -9,7 +10,7 @@ function row(o: Partial<SubagentRunRow> & Pick<SubagentRunRow, "id">): SubagentR
   return {
     projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find", prompt: "Where?",
     status: "running", transcript: null, actions: [], finalText: null, diagnostic: null, usage: null, toolUses: 0, durationMs: null,
-    chargedCenticredits: 0, createdAt: new Date(NOW - 60_000), settledAt: null, noticeDeliveredAt: null, forked: false,
+    chargedCenticredits: 0, createdAt: new Date(NOW - 60_000), settledAt: null, noticeDeliveredAt: null, forked: false, planMode: false,
     ...o,
   };
 }
@@ -30,6 +31,7 @@ function setup(rows: SubagentRunRow[]) {
       undeliveredSettledRuns: async () => [...db.values()].filter((r) => r.status !== "running" && !r.noticeDeliveredAt),
     },
     launchNoticeTurn: (o) => void turns.push(o),
+    isLive: () => false,
     now: () => NOW,
     startedAt: NOW - 10_000,
   };
@@ -53,7 +55,7 @@ describe("at boot, what the previous process left", () => {
   });
 
   it("a settled run whose notice never reached Len goes too, with its closing message", async () => {
-    const s = setup([row({ id: "r1", status: "completed", finalText: "In /menu/index.html:12.", settledAt: new Date(NOW - 5_000) })]);
+    const s = setup([row({ id: "r1", status: "completed", finalText: "In /menu/index.html:12.", settledAt: new Date(NOW - 15_000) })]);
     expect(await closeSubagentsOfThePreviousProcess(s.io)).toBe(1);
     expect(s.turns[0]!.notices[0]!.text).toBe("Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nIn /menu/index.html:12.");
   });
@@ -74,6 +76,22 @@ describe("at boot, what the previous process left", () => {
     expect(s.db.get("r1")!.status).toBe("running");
     expect(s.db.get("r2")!.noticeDeliveredAt).toBeNull();
     expect(s.turns).toHaveLength(0);
+  });
+
+  it("a previous run this process woke is left alone: live, or settled here with its notice still queued", async () => {
+    const s = setup([row({ id: "r1" }), row({ id: "r2", status: "completed", finalText: "Done", settledAt: new Date(NOW - 5_000) })]);
+    const io: BootIO = { ...s.io, isLive: (_projectId, id) => id === "r1" };
+    expect(await closeSubagentsOfThePreviousProcess(io)).toBe(0);
+    expect(s.db.get("r1")!.status).toBe("running");
+    expect(s.db.get("r2")!.noticeDeliveredAt).toBeNull();
+    expect(s.turns).toEqual([]);
+  });
+
+  it("a run cut by the restart keeps the time it had worked and what it told Len before; its notice has no closing message", async () => {
+    const s = setup([row({ id: "r1", durationMs: 4_000, finalText: "Header fixed." })]);
+    await closeSubagentsOfThePreviousProcess(s.io);
+    expect(s.db.get("r1")).toMatchObject({ status: "aborted", durationMs: 4_000, finalText: "Header fixed." });
+    expect(s.turns[0]!.notices[0]!.text).toBe(settlementNotice({ id: "r1", stopReason: "aborted", closingText: "", diagnostic: "stopped by a restart" }));
   });
 
   it("each project gets its own turn", async () => {

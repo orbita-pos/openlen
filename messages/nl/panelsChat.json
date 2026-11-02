@@ -566,6 +566,7 @@
     "closing": "Wat hij Len vertelde",
     "stop": "Deze subagent stoppen",
     "liveBar": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}",
-    "forked": "Afgesplitst"
+    "forked": "Afgesplitst",
+    "messageToLen": "Bericht naar Len sturen"
   }
 }

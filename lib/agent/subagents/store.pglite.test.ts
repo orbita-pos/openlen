@@ -22,7 +22,7 @@ vi.mock("@/lib/db", async () => {
 const { ALTER_AGENT_REQUEST_STEPS, ALTER_SUBAGENT_RUNS, CREATE_SUBAGENTS } = await import("@/scripts/subagents-migrate-sql");
 const store = await import("./store");
 
-const RUN = { projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find the menu", prompt: "Where is it?", forked: false };
+const RUN = { projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find the menu", prompt: "Where is it?", forked: false, planMode: false };
 const SETTLED = { finalText: "In /menu/index.html:12.", diagnostic: null, transcript: [{ role: "user", content: "Where is it?" }], actions: [], usage: { inputTokens: 10, outputTokens: 2, cachedTokens: 0, thinkingTokens: 0 }, toolUses: 3, durationMs: 4200, chargedCenticredits: 7 };
 
 beforeEach(async () => {
@@ -46,7 +46,7 @@ describe("subagentRuns", () => {
 
   it("progress is kept while it runs", async () => {
     await store.createRun({ id: "r1", ...RUN });
-    await store.saveProgress("r1", { transcript: [{ role: "user", content: "x" }], actions: [{ tool: "Read" }], toolUses: 1 });
+    await store.saveProgress("r1", { transcript: [{ role: "user", content: "x" }], actions: [{ tool: "Read" }], toolUses: 1, durationMs: 10 });
     expect((await store.runsOfRow("p1", "row1"))[0]).toMatchObject({ status: "running", actions: [{ tool: "Read" }], toolUses: 1 });
   });
 
@@ -143,6 +143,28 @@ describe("subagentRuns", () => {
     expect((await store.runsByIds("p1", ["r2", "r1", "nope"])).map((r) => r.id)).toEqual(["r1", "r2"]);
     expect(await store.runsByIds("p2", ["r1"])).toEqual([]);
     expect(await store.runsByIds("p1", [])).toEqual([]);
+  });
+
+  it("a reopened run is not marked delivered by an earlier settlement's notice", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.settleRun("r1", { status: "completed", ...SETTLED });
+    expect(await store.reopenRun("r1", "u1")).toBe(true);
+    expect(await store.markNoticeDelivered("r1")).toBe(false);
+    expect((await store.runById("r1"))!.noticeDeliveredAt).toBeNull();
+  });
+
+  it("the settled runs of an archived conversation are never told to Len again", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.createRun({ id: "r2", ...RUN, chatRowId: "row-old" });
+    for (const id of ["r1", "r2"]) await store.settleRun(id, { status: "completed", ...SETTLED });
+    expect((await store.undeliveredSettledRuns()).map((r) => r.id)).toEqual(["r1"]);
+    expect((await store.undeliveredSettledRuns("p1")).map((r) => r.id)).toEqual(["r1"]);
+  });
+
+  it("the scope it started with (plan mode) is recorded, and progress keeps its duration", async () => {
+    await store.createRun({ id: "r1", ...RUN, planMode: true });
+    await store.saveProgress("r1", { transcript: [], actions: [], toolUses: 1, durationMs: 1234 });
+    expect(await store.runOfCurrentConversation("p1", "r1")).toMatchObject({ planMode: true, durationMs: 1234, toolUses: 1 });
   });
 
   it("a fork is recorded as forked", async () => {

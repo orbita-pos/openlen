@@ -566,6 +566,7 @@
     "closing": "Len에게 전한 내용",
     "stop": "이 서브에이전트 중지",
     "liveBar": "{n, plural, other {서브에이전트 #개 작업 중}}",
-    "forked": "포크됨"
+    "forked": "포크됨",
+    "messageToLen": "Len에게 메시지 보내는 중"
   }
 }

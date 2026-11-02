@@ -16,6 +16,8 @@ const RESTART = "stopped by a restart";
 export interface BootIO {
   readonly store: Pick<typeof store, "runningRuns" | "settleRun" | "markNoticeDelivered" | "undeliveredSettledRuns">;
   launchNoticeTurn(o: { projectId: string; personId: string; notices: { id: string; text: string }[] }): void;
+  /** A previous process's child this one woke is working here: it is not the restart's. */
+  isLive(projectId: string, id: string): boolean;
   now(): number;
   /** When this process started: what it launched since is its own (running, or its notice still queued). */
   readonly startedAt: number;
@@ -24,21 +26,27 @@ export interface BootIO {
 /** How many notices it handed to Len. */
 export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<number> {
   const previous = (r: SubagentRunRow) => r.createdAt.getTime() < io.startedAt;
-  for (const r of (await io.store.runningRuns()).filter(previous)) {
+  const closedHere = new Set<string>();
+  for (const r of (await io.store.runningRuns()).filter((r) => previous(r) && !io.isLive(r.projectId, r.id))) {
     await io.store.settleRun(r.id, {
       status: "aborted",
-      finalText: "",
+      // What it told Len before (a woken run) stays on its card; the notice below says it left nothing new.
+      finalText: r.finalText ?? "",
       diagnostic: RESTART,
       transcript: r.transcript,
       actions: r.actions,
       usage: r.usage,
       toolUses: r.toolUses,
-      durationMs: Math.max(0, io.now() - r.createdAt.getTime()),
+      // Its progress keeps the time it worked; without any, since it started.
+      durationMs: r.durationMs ?? Math.max(0, io.now() - r.createdAt.getTime()),
       chargedCenticredits: r.chargedCenticredits,
     });
+    closedHere.add(r.id);
   }
+  // A previous run settled after this process started was settled here (woken), and its notice is queued here.
+  const owed = (r: SubagentRunRow) => previous(r) && (closedHere.has(r.id) || (r.settledAt?.getTime() ?? 0) < io.startedAt);
   const byProject = new Map<string, SubagentRunRow[]>();
-  for (const r of (await io.store.undeliveredSettledRuns()).filter(previous)) {
+  for (const r of (await io.store.undeliveredSettledRuns()).filter(owed)) {
     byProject.set(r.projectId, [...(byProject.get(r.projectId) ?? []), r]);
   }
   let told = 0;
@@ -52,7 +60,12 @@ export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<nu
       if (io.now() - (r.settledAt?.getTime() ?? io.now()) > TELL_UP_TO_MS) continue;
       notices.push({
         id: r.id,
-        text: settlementNotice({ id: r.id, stopReason: r.status as SubagentStopReason, closingText: r.finalText ?? "", ...(r.diagnostic ? { diagnostic: r.diagnostic } : {}) }),
+        text: settlementNotice({
+          id: r.id,
+          stopReason: r.status as SubagentStopReason,
+          closingText: r.diagnostic === RESTART ? "" : (r.finalText ?? ""),
+          ...(r.diagnostic ? { diagnostic: r.diagnostic } : {}),
+        }),
       });
       personId = r.personId;
     }
