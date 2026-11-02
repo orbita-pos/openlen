@@ -69,7 +69,11 @@
       "schedule_list": "Controllo le attività programmate",
       "schedule_delete": "Elimino un'attività programmata",
       "schedule_update": "Aggiorno un'attività programmata",
-      "subagent": "Avvio di un subagente"
+      "subagent": "Avvio di un subagente",
+      "subagent_fork": "Avvio di un subagente con questa conversazione",
+      "send_message": "Invio un messaggio a un subagente",
+      "interrupt_agent": "Fermo un subagente",
+      "list_agents": "Elenco dei subagenti"
     },
     "toolApp": {
       "Read": "Lettura del codice",

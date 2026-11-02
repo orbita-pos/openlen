@@ -69,7 +69,11 @@
       "schedule_list": "Consultation des tâches planifiées",
       "schedule_delete": "Suppression d'une tâche planifiée",
       "schedule_update": "Mise à jour d'une tâche planifiée",
-      "subagent": "Lancement d'un sous-agent"
+      "subagent": "Lancement d'un sous-agent",
+      "subagent_fork": "Lancement d'un sous-agent avec cette conversation",
+      "send_message": "Envoi d'un message à un sous-agent",
+      "interrupt_agent": "Arrêt d'un sous-agent",
+      "list_agents": "Liste des sous-agents"
     },
     "toolApp": {
       "Read": "Lecture du code",

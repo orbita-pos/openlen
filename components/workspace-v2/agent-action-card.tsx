@@ -217,6 +217,11 @@ export const KNOWN_TOOLS = new Set([
   "show_widget",
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): a launch is its card; a refused one stays a step.
   "subagent",
+  // Phase 2: the fork launches like `subagent`; a message that wakes a child shows its card.
+  "subagent_fork",
+  "send_message",
+  "interrupt_agent",
+  "list_agents",
   // Pieza 5 de Len 2.5: buscar y leer en las charlas pasadas.
   "session_search",
   "session_event_search",

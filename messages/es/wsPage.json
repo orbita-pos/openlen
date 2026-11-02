@@ -69,7 +69,11 @@
       "schedule_list": "Mirando las tareas programadas",
       "schedule_delete": "Borrando una tarea programada",
       "schedule_update": "Actualizando una tarea programada",
-      "subagent": "Lanzando un subagente"
+      "subagent": "Lanzando un subagente",
+      "subagent_fork": "Lanzando un subagente con esta conversación",
+      "send_message": "Enviando un mensaje a un subagente",
+      "interrupt_agent": "Deteniendo un subagente",
+      "list_agents": "Listando los subagentes"
     },
     "toolApp": {
       "Read": "Leyendo el código",

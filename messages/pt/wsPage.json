@@ -69,7 +69,11 @@
       "schedule_list": "Vendo as tarefas agendadas",
       "schedule_delete": "Apagando uma tarefa agendada",
       "schedule_update": "Atualizando uma tarefa agendada",
-      "subagent": "Iniciando um subagente"
+      "subagent": "Iniciando um subagente",
+      "subagent_fork": "Iniciando um subagente com esta conversa",
+      "send_message": "Enviando uma mensagem a um subagente",
+      "interrupt_agent": "Parando um subagente",
+      "list_agents": "Listando os subagentes"
     },
     "toolApp": {
       "Read": "Lendo o código",

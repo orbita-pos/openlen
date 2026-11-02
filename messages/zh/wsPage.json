@@ -69,7 +69,11 @@
       "schedule_list": "查看定时任务",
       "schedule_delete": "删除定时任务",
       "schedule_update": "更新定时任务",
-      "subagent": "正在启动子代理"
+      "subagent": "正在启动子代理",
+      "subagent_fork": "正在用此对话启动子代理",
+      "send_message": "正在向子代理发送消息",
+      "interrupt_agent": "正在停止子代理",
+      "list_agents": "正在列出子代理"
     },
     "toolApp": {
       "Read": "正在读取代码",

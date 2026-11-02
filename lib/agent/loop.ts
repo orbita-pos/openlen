@@ -839,6 +839,9 @@ const READ_ONLY_TOOLS = new Set([
   "skill",
   // Starting a subagent changes nothing yet (spec local 2026-11-01-subagentes-de-len): what it writes later is its own.
   "subagent",
+  // Phase 2: a fork is a launch too, and listing the children reads.
+  "subagent_fork",
+  "list_agents",
   "Grep",
   "Glob",
   // ⚰️ `trabajar_en_pagina` estaba aquí porque mudarse de página no cambiaba

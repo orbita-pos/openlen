@@ -69,7 +69,11 @@
       "schedule_list": "Geplante Aufgaben ansehen",
       "schedule_delete": "Geplante Aufgabe löschen",
       "schedule_update": "Geplante Aufgabe aktualisieren",
-      "subagent": "Startet einen Subagenten"
+      "subagent": "Startet einen Subagenten",
+      "subagent_fork": "Startet einen Subagenten mit diesem Gespräch",
+      "send_message": "Sendet eine Nachricht an einen Subagenten",
+      "interrupt_agent": "Stoppt einen Subagenten",
+      "list_agents": "Listet die Subagenten auf"
     },
     "toolApp": {
       "Read": "Code wird gelesen",
