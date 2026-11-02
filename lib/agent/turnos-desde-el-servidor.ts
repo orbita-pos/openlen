@@ -293,6 +293,9 @@ export function launchSubagentNoticeTurn(p: {
   readonly filaId: string;
   readonly timeZone: string;
   readonly locale: string;
+  /** The launching turn's effort and mode (its pins): the turn that carries their results runs as it did. */
+  readonly effort?: string | null;
+  readonly mode?: string;
   readonly takeNotices: () => readonly { readonly id: string; readonly text: string }[];
   readonly onStart: () => Promise<void>;
   readonly fail: (fallo: FalloDelTurno | null) => Promise<void>;
@@ -312,6 +315,7 @@ export function launchSubagentNoticeTurn(p: {
       timeZone: p.timeZone,
       locale: p.locale,
       filaId: p.filaId,
+      extraBody: { ...(p.effort ? { esfuerzo: p.effort } : {}), ...(p.mode !== undefined ? { mode: p.mode } : {}) },
       reply: async () => {},
       fail: (fallo) => p.fail(fallo),
       onStart: p.onStart,
@@ -341,6 +345,8 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   /** Read right after `onStart` instead of `framing` and `origin` (the subagents' notices, taken when the
    *  turn starts); `null`: the turn does not run. */
   readonly resolveAtStart?: () => { framing: string; origin: O } | null;
+  /** More of the request's body (the subagents' turn: the launching turn's effort and mode). */
+  readonly extraBody?: Readonly<Record<string, unknown>>;
 }
 
 function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin>(
@@ -372,7 +378,7 @@ function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentO
       };
       const errores = await runTurn(
         correr,
-        { userId: p.userId, projectId: p.projectId, texto: p.texto, filaId: p.filaId, origen: `${siteUrl()}/api/agent`, body: { zonaHoraria: p.timeZone, idioma: p.locale } },
+        { userId: p.userId, projectId: p.projectId, texto: p.texto, filaId: p.filaId, origen: `${siteUrl()}/api/agent`, body: { zonaHoraria: p.timeZone, idioma: p.locale, ...p.extraBody } },
         { scheduled },
       );
       // A turn with nothing to deliver (the subagents') only reports a real failure.

@@ -1334,6 +1334,9 @@ async function correrTurno(
       filaId: randomUUID(),
       timeZone: zonaConocida ?? "",
       locale: typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en",
+      // This turn's pins: the turn that carries the results keeps its effort and mode (and its cache).
+      effort: esfuerzoDelTurno,
+      ...(typeof body?.mode === "string" ? { mode: body.mode } : {}),
       takeNotices: () => {
         setNoticeTurnPending(pid, false);
         const notices = takeNotices(pid);
