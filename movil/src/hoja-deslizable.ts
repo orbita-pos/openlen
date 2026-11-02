@@ -37,8 +37,14 @@ export function useHojaDeslizable(op: Opciones) {
     };
     const medir = () => {
       const fraccion = recorrido ? posicion / recorrido : Number(ultimo.current.encogida);
+      const antes = recorrido;
       recorrido = cuerpo.offsetHeight;
+      // Encogida, el cuerpo crece mientras Len escribe y la hoja, anclada abajo, sube al instante: con la
+      // transición tardaba .32 s en bajar y se asomaba naranja con cada trozo de respuesta. Va a su sitio de golpe.
+      const saltar = !arrastrando && ultimo.current.encogida && recorrido !== antes;
+      if (saltar) el.style.transition = "none";
       poner(arrastrando ? fraccion * recorrido : ultimo.current.encogida ? recorrido : 0);
+      if (saltar) { void el.offsetHeight; el.style.transition = ""; }
       ultimo.current.alMedir?.(el.offsetHeight - recorrido);
     };
     const scrollDe = (target: Element) => {
