@@ -565,6 +565,7 @@
     "steps": "{n, plural, one {# step} other {# steps}}",
     "closing": "What it told Len",
     "stop": "Stop this subagent",
-    "liveBar": "{n, plural, one {# subagent working} other {# subagents working}}"
+    "liveBar": "{n, plural, one {# subagent working} other {# subagents working}}",
+    "forked": "Forked"
   }
 }

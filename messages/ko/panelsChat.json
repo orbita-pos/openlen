@@ -565,6 +565,7 @@
     "steps": "{n, plural, other {#단계}}",
     "closing": "Len에게 전한 내용",
     "stop": "이 서브에이전트 중지",
-    "liveBar": "{n, plural, other {서브에이전트 #개 작업 중}}"
+    "liveBar": "{n, plural, other {서브에이전트 #개 작업 중}}",
+    "forked": "포크됨"
   }
 }

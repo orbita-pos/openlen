@@ -3,7 +3,7 @@
 // once, with compare-and-set, so a restart never hands it to Len twice. Since phase 2 a settled child can be
 // reopened (`send_message` wakes it from its transcript): the same row runs again.
 import "server-only";
-import { and, asc, eq, getTableColumns, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 import type { SubagentStatus, SubagentStopReason } from "./notice";
@@ -78,6 +78,12 @@ export async function markNoticeDelivered(id: string): Promise<boolean> {
 
 export async function runsOfRow(projectId: string, chatRowId: string): Promise<SubagentRunRow[]> {
   return (await db.select().from(t).where(and(eq(t.projectId, projectId), eq(t.chatRowId, chatRowId))).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
+}
+
+/** The runs a later turn woke (`send_message`): they hang from the row that launched them. Oldest first. */
+export async function runsByIds(projectId: string, ids: readonly string[]): Promise<SubagentRunRow[]> {
+  if (ids.length === 0) return [];
+  return (await db.select().from(t).where(and(eq(t.projectId, projectId), inArray(t.id, [...ids]))).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
 }
 
 export async function runById(id: string): Promise<SubagentRunRow | null> {

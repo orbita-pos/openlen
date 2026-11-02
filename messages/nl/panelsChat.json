@@ -565,6 +565,7 @@
     "steps": "{n, plural, one {# stap} other {# stappen}}",
     "closing": "Wat hij Len vertelde",
     "stop": "Deze subagent stoppen",
-    "liveBar": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}"
+    "liveBar": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}",
+    "forked": "Afgesplitst"
   }
 }

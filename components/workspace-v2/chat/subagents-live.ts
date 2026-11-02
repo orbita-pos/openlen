@@ -16,6 +16,8 @@ export interface SubagentRunView {
   readonly finalText: string | null;
   readonly toolUses: number;
   readonly durationMs: number | null;
+  /** Phase 2: a `subagent_fork` child, seeded with Len's conversation. */
+  readonly forked?: boolean;
 }
 
 const STATUSES: readonly SubagentStatus[] = ["running", "completed", "aborted", "error", "budget"];
@@ -49,6 +51,7 @@ function runFrom(projectId: string, v: unknown): SubagentRunView | null {
     finalText: str(o.finalText, 20_000),
     toolUses: typeof o.toolUses === "number" && Number.isFinite(o.toolUses) ? o.toolUses : 0,
     durationMs: typeof o.durationMs === "number" && Number.isFinite(o.durationMs) ? o.durationMs : null,
+    ...(o.forked === true ? { forked: true } : {}),
   };
 }
 
@@ -98,6 +101,7 @@ export const subagentsLive = {
         finalText: prev?.finalText ?? null,
         toolUses,
         durationMs: prev?.durationMs ?? null,
+        ...(prev?.forked ? { forked: true } : {}),
       },
     ]);
   },
