@@ -36,6 +36,8 @@ export interface StepRow {
   readonly repeats: RepeatSignals;
   readonly cacheBreak: CacheBreak | null;
   readonly endReason: string | null;
+  /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; null for Len's. */
+  readonly subagentId: string | null;
 }
 
 export interface StepStoreDb {

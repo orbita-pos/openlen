@@ -10,7 +10,7 @@ function row(o: Partial<StepRow> = {}): StepRow {
     model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", effort: "high", startedAt: new Date(T0), durationMs: 1200, firstByteMs: 300, longestGapMs: 900,
     inputTokens: 1000, cachedTokens: 900, outputTokens: 10, reasoningTokens: 5,
     systemHash: "s", toolsHash: "t", prefixHash: "p", messageCount: 3, turnFirstMessageCount: 3,
-    messageHashes: ["a", "b", "c"], tools: [], repeats: { identicalRun: 0, alternatingPair: 0 }, cacheBreak: null, endReason: null,
+    messageHashes: ["a", "b", "c"], tools: [], repeats: { identicalRun: 0, alternatingPair: 0 }, cacheBreak: null, endReason: null, subagentId: null,
     ...o,
   };
 }
