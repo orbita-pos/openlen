@@ -32,6 +32,8 @@ export type LedgerSurface =
   | "voice"
   | "app_ai"
   | "security_review"
+  /** Len's subagents (spec local 2026-11-01-subagentes-de-len): one row per child, paid by the owner. */
+  | "subagent"
   | "sandbox"
   | "page_assistant"
   | "publish_translation"
