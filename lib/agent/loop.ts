@@ -337,6 +337,13 @@ export interface AgentLoopArgs {
    *  corrección en cada vuelta como si fuera nueva. Ausente ⇒ el bucle se
    *  comporta exactamente como antes de que esto existiera. */
   leerDireccion?(): string | null;
+  /** LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.6): the settlement notices of the
+   *  children this turn launched, taken (and so consumed) before each model call and once more before
+   *  the turn closes. Each one enters as its own user message, as DeepSeek's harness sends it. */
+  takeAgentNotices?(): readonly string[];
+  /** For a turn nobody watches (thread, email, scheduled): when it would close with children still
+   *  running, it waits here. `true` = a notice arrived (take it and go on); `false` = none is left. */
+  awaitAgentNotices?(): Promise<boolean>;
   /** Se llama UNA vez, en cuanto una herramienta escribe en la base. El route
    *  lo usa para saber que el turno ya mutó incluso si el bucle revienta
    *  después y nunca llega a devolver un resultado. */
@@ -1466,6 +1473,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       args.emit({ type: "direccion", texto: direccion });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
+    for (const notice of args.takeAgentNotices?.() ?? []) messages.push({ role: "user", content: notice });
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
     }
@@ -1802,6 +1810,18 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         relojDesde = ahora();
         args.emit({ type: "direccion", texto: tardia });
         maxTurns += VUELTAS_POR_DIRECCION;
+        continue;
+      }
+      // A child that settled while Len wrote this closing message: like the late direction, the turn
+      // doesn't close; Len reads the notice after what he just said. A turn nobody watches waits for
+      // its children first (DeepSeek's headless hosts do the same) and closes when none is left.
+      let notices = args.takeAgentNotices?.() ?? [];
+      if (notices.length === 0 && args.awaitAgentNotices && (await args.awaitAgentNotices())) {
+        notices = args.takeAgentNotices?.() ?? [];
+      }
+      if (notices.length > 0) {
+        if (turnText.trim()) messages.push(delAsistente(turnText));
+        for (const notice of notices) messages.push({ role: "user", content: notice });
         continue;
       }
 

@@ -4604,3 +4604,78 @@ describe("the silent-turn reminder", () => {
     expect(contents(r).some((x) => x.includes(SILENT))).toBe(false);
   });
 });
+
+// Len's subagents (spec local 2026-11-01-subagentes-de-len, §4.6): a child's notice is a user message, as
+// DeepSeek's settlement notice. It enters before the next model call; one that arrives while Len writes his
+// closing message keeps the turn going; a turn with nobody watching waits for its children.
+describe("the subagents' notices in the loop", () => {
+  const NOTICE = "Background subagent r1 finished. It cannot receive follow-up messages.\n\nIts closing message:\nFound it.";
+
+  it("a notice enters before the next call, as its own user message after the tool results", async () => {
+    const seen: Message[][] = [];
+    const pending = [[], [NOTICE]];
+    const guion = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/a" } }, done],
+      [{ type: "text_delta", text: "Listo." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { seen.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true, tool_result: "1\ta" } }),
+      emit: () => {},
+      takeAgentNotices: () => pending.shift() ?? [],
+    });
+    expect(seen[1]!.at(-1)).toEqual({ role: "user", content: NOTICE });
+    expect(seen[1]!.at(-2)!.functionResponses?.[0]?.name).toBe("Read");
+  });
+
+  it("a notice that arrives while Len writes his closing message keeps the turn going", async () => {
+    const seen: Message[][] = [];
+    let closing = false;
+    let taken = false;
+    const guion = scripted(
+      [{ type: "text_delta", text: "Lancé al subagente." }, done],
+      [{ type: "text_delta", text: "Ya volvió: está en /a." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { seen.push(structuredClone(m)); closing = true; return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      takeAgentNotices: () => {
+        if (!closing || taken) return [];
+        taken = true;
+        return [NOTICE];
+      },
+    });
+    expect(seen).toHaveLength(2);
+    expect(seen[1]!.at(-2)).toMatchObject({ role: "assistant", content: "Lancé al subagente." });
+    expect(seen[1]!.at(-1)).toEqual({ role: "user", content: NOTICE });
+    expect(r.finalText).toBe("Ya volvió: está en /a.");
+  });
+
+  it("a turn with nobody watching waits for its children, then closes when none is left", async () => {
+    const seen: Message[][] = [];
+    const notices: string[][] = [];
+    const waits = [true, false];
+    const guion = scripted(
+      [{ type: "text_delta", text: "Esperando." }, done],
+      [{ type: "text_delta", text: "Hecho con lo del subagente." }, done],
+    );
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: (m) => { seen.push(structuredClone(m)); return guion(m); },
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      takeAgentNotices: () => notices.shift() ?? [],
+      awaitAgentNotices: async () => {
+        const w = waits.shift() ?? false;
+        if (w) notices.push([NOTICE]);
+        return w;
+      },
+    });
+    expect(seen).toHaveLength(2);
+    expect(seen[1]!.at(-1)).toEqual({ role: "user", content: NOTICE });
+    expect(r.finalText).toBe("Hecho con lo del subagente.");
+  });
+});
