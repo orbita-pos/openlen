@@ -16,7 +16,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
-import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
+import { READ_ONLY_REFUSAL, cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
 import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
@@ -2801,5 +2801,42 @@ describe("git in Len's terminal, end to end (spec local 2026-10-15-git-for-len)"
     } finally {
       await cerrarTerminalDeLaSesion(session);
     }
+  });
+});
+
+// LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.2): a read-only child (Explore, Plan, or any
+// child in plan mode) cannot change the project's files — not with Write or Edit, not from the terminal.
+describe("a read-only session (a subagent that only reads)", () => {
+  const sitio = (): ProjectData => ({ html: HOME, pages: { menu: { html: MENU } } });
+  const readOnly = (): AgentSession => ({ ...makeSession(), readOnly: true });
+  const refusal = (o: { response: Record<string, unknown> }) => String(o.response.error ?? "") + String(o.response.tool_result ?? "");
+
+  it("Write is refused and the page stays as it was", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const o = await runAgentTool(readOnly(), deps, "Write", { file_path: "/nueva/index.html", content: HOME });
+    assert.equal(o.response.ok, false);
+    assert.ok(refusal(o).includes(READ_ONLY_REFUSAL), refusal(o));
+    assert.equal(store.data.pages?.nueva, undefined);
+  });
+
+  it("Edit is refused even after a Read, and the page stays as it was", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const s = readOnly();
+    await runAgentTool(s, deps, "Read", { file_path: "/index.html" });
+    const o = await runAgentTool(s, deps, "Edit", { file_path: "/index.html", old_string: "Gorra", new_string: "Boina" });
+    assert.equal(o.response.ok, false);
+    assert.ok(refusal(o).includes(READ_ONLY_REFUSAL), refusal(o));
+    assert.match(store.data.html ?? "", /Gorra/);
+  });
+
+  it("what the terminal changed in the project goes back as it was, with the refusal in the notes", async () => {
+    const { deps, store } = makeDeps(sitio());
+    const antes = { "/index.html": HOME, "/menu/index.html": MENU };
+    const r = await guardarLoDeLaTerminal(readOnly(), deps, [{ tipo: "escrito", ruta: "/index.html", contenido: HOME.replace("Gorra", "Boina"), crea: false }], antes);
+    assert.equal(r.rechazado, true);
+    assert.equal(r.enLaTerminal["/index.html"], HOME);
+    assert.equal(r.escrituras.length, 0);
+    assert.ok(r.notas.some((n) => n.includes(READ_ONLY_REFUSAL)), r.notas.join("\n"));
+    assert.match(store.data.html ?? "", /Gorra/);
   });
 });
