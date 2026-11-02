@@ -19,7 +19,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CREATE_SUBAGENTS } = await import("@/scripts/subagents-migrate-sql");
+const { ALTER_AGENT_REQUEST_STEPS, CREATE_SUBAGENTS } = await import("@/scripts/subagents-migrate-sql");
 const store = await import("./store");
 
 const RUN = { projectId: "p1", chatRowId: "row1", turnId: "t1", personId: "u1", preset: "Explore", description: "Find the menu", prompt: "Where is it?" };
@@ -80,5 +80,14 @@ describe("subagentRuns", () => {
     await store.createRun({ id: "r1", ...RUN });
     expect(await store.runById("r1")).toMatchObject({ id: "r1", projectId: "p1", personId: RUN.personId });
     expect(await store.runById("nope")).toBeNull();
+  });
+
+  it("`npm run subagents:migrate` runs twice on the same database without failing", async () => {
+    const pg = new PGlite();
+    await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
+    await pg.query(`CREATE TABLE "agentRequestSteps" ("id" text PRIMARY KEY)`);
+    for (let i = 0; i < 2; i++) for (const statement of [...CREATE_SUBAGENTS, ...ALTER_AGENT_REQUEST_STEPS]) await pg.query(statement);
+    const cols = await pg.query<{ column_name: string }>(`select column_name from information_schema.columns where table_name = 'agentRequestSteps'`);
+    expect(cols.rows.map((r) => r.column_name).sort()).toEqual(["id", "subagentId"]);
   });
 });
