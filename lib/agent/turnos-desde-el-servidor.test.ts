@@ -27,6 +27,7 @@ import {
   launchEmailTurn,
   launchLenWatchTurn,
   launchScheduledTurn,
+  launchSubagentNoticeTurn,
   lanzarTurnoDelHilo,
   registrarCorredorDeTurnos,
   retomarPedidosDelHilo,
@@ -246,6 +247,42 @@ describe("a scheduled task's turn, on the server (spec local 2026-10-29-tareas-p
     await hasta(() => fails.length > 0);
     expect(fails).toEqual([{ f: { motivo: "sin créditos", code: "no_credits" }, cut: false }]);
     expect(replies).toEqual([]);
+  });
+});
+
+describe("the turn that wakes Len with its subagents' notices (spec local 2026-11-01-subagentes-de-len, §4.6)", () => {
+  const launch = (takeNotices: () => { id: string; text: string }[], fail: (f: unknown) => Promise<void> = async () => {}) =>
+    launchSubagentNoticeTurn({ userId: "ana", projectId: "p-sub", filaId: "row-n", timeZone: "Europe/Madrid", locale: "es", takeNotices, onStart: async () => {}, fail });
+
+  it("carries every notice waiting when it starts, as the framing, with the subagents' origin", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    launch(() => [
+      { id: "r1", text: "Background subagent r1 finished." },
+      { id: "r2", text: "Background subagent r2 failed before it finished." },
+    ]);
+    await hasta(() => corredor.mock.calls.length > 0);
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      expect.objectContaining({ projectId: "p-sub", prompt: "", turnId: "row-n", zonaHoraria: "Europe/Madrid", idioma: "es" }),
+      expect.anything(),
+      {
+        scheduled: expect.objectContaining({
+          framing: "Background subagent r1 finished.\n\nBackground subagent r2 failed before it finished.",
+          origin: { kind: "subagents", ids: ["r1", "r2"] },
+        }),
+      },
+    );
+  });
+
+  it("does not run when another turn already took the notices", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    const fails: unknown[] = [];
+    launch(() => [], async (f) => void fails.push(f));
+    await new Promise((r) => setTimeout(r, 60));
+    expect(corredor).not.toHaveBeenCalled();
+    expect(fails).toEqual([]);
   });
 });
 

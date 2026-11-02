@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { LenWatchOrigin, ScheduledOrigin, StoredChatTurn } from "@/lib/projects/types";
+import type { LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -60,8 +60,9 @@ export interface EmailRequest {
  *  `[SCHEDULE REMINDER]` framing instead of the prompt; the row keeps the prompt with its origin. */
 export interface ScheduledRequest {
   readonly framing: string;
-  /** A scheduled task's run, or a Len Watch turn (spec local 2026-10-30-len-watch): both arrive framed. */
-  readonly origin: ScheduledOrigin | LenWatchOrigin;
+  /** A scheduled task's run, a Len Watch turn (spec local 2026-10-30-len-watch) or the subagents' notices
+   *  (spec local 2026-11-01-subagentes-de-len): all arrive framed. */
+  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
@@ -279,7 +280,48 @@ export function launchLenWatchTurn(p: FramedTurn<LenWatchOrigin>): void {
   launchFramedTurn(p, "len-watch");
 }
 
-interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin> {
+/**
+ * THE TURN THAT WAKES LEN WITH ITS SUBAGENTS' NOTICES (spec local 2026-11-01-subagentes-de-len, §4.6): a child
+ * finished while no Len turn was alive in the project. As DeepSeek's notice reaching an idle parent starts one
+ * model request, this starts one turn: it waits its turn in the project's queue and, when it starts, takes
+ * every notice still waiting — the ones that arrived meanwhile too. If another turn already took them, it does
+ * not run. It runs as whoever launched the child; the chat shows it, so there is nothing to send back.
+ */
+export function launchSubagentNoticeTurn(p: {
+  readonly userId: string;
+  readonly projectId: string;
+  readonly filaId: string;
+  readonly timeZone: string;
+  readonly locale: string;
+  readonly takeNotices: () => readonly { readonly id: string; readonly text: string }[];
+  readonly onStart: () => Promise<void>;
+  readonly fail: (fallo: FalloDelTurno | null) => Promise<void>;
+}): void {
+  launchFramedTurn<SubagentOrigin>(
+    {
+      userId: p.userId,
+      projectId: p.projectId,
+      texto: "",
+      framing: "",
+      origin: { kind: "subagents", ids: [] },
+      resolveAtStart: () => {
+        const notices = p.takeNotices();
+        if (notices.length === 0) return null;
+        return { framing: notices.map((n) => n.text).join("\n\n"), origin: { kind: "subagents", ids: notices.map((n) => n.id) } };
+      },
+      timeZone: p.timeZone,
+      locale: p.locale,
+      filaId: p.filaId,
+      reply: async () => {},
+      fail: (fallo) => p.fail(fallo),
+      onStart: p.onStart,
+    },
+    "subagents",
+    { quietWhenNoReply: true },
+  );
+}
+
+interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin> {
   readonly userId: string;
   readonly projectId: string;
   /** What the chat row shows as the person's message. */
@@ -296,9 +338,16 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin> {
   readonly onStart: () => Promise<void>;
   /** The chat the row goes to when `projectId` is a worktree (`ScheduledRequest.chatProjectId`). */
   readonly chatProjectId?: string;
+  /** Read right after `onStart` instead of `framing` and `origin` (the subagents' notices, taken when the
+   *  turn starts); `null`: the turn does not run. */
+  readonly resolveAtStart?: () => { framing: string; origin: O } | null;
 }
 
-function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label: string): void {
+function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin>(
+  p: FramedTurn<O>,
+  label: string,
+  o: { readonly quietWhenNoReply?: boolean } = {},
+): void {
   enqueue(
     p.projectId,
     async () => {
@@ -309,10 +358,12 @@ function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label
         return;
       }
       await p.onStart();
+      const resolved = p.resolveAtStart ? p.resolveAtStart() : { framing: p.framing, origin: p.origin };
+      if (!resolved) return;
       let replied = false;
       const scheduled: ScheduledRequest = {
-        framing: p.framing,
-        origin: p.origin,
+        framing: resolved.framing,
+        origin: resolved.origin,
         onReply: async (text, cards, finalText) => {
           replied = true;
           await p.reply(text, cards, finalText);
@@ -324,7 +375,8 @@ function launchFramedTurn(p: FramedTurn<ScheduledOrigin | LenWatchOrigin>, label
         { userId: p.userId, projectId: p.projectId, texto: p.texto, filaId: p.filaId, origen: `${siteUrl()}/api/agent`, body: { zonaHoraria: p.timeZone, idioma: p.locale } },
         { scheduled },
       );
-      if (!replied) await p.fail(errores.at(-1) ?? null, false);
+      // A turn with nothing to deliver (the subagents') only reports a real failure.
+      if (!replied && !(o.quietWhenNoReply && errores.length === 0)) await p.fail(errores.at(-1) ?? null, false);
     },
     label,
   );
