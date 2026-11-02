@@ -11,14 +11,15 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Bot, ChevronRight, Square } from "lucide-react";
 
-import { subagentRefFrom } from "@/lib/agent/subagents/card";
+import { SUBAGENT_CARD_TOOLS, subagentRefFrom } from "@/lib/agent/subagents/card";
+import { SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL } from "@/lib/agent/subagents/enabled";
 
 import { AgentActionCard, type AgentAction } from "../agent-action-card";
 import { subagentsLive, type SubagentRunView } from "./subagents-live";
 
 const REREAD_MS = 3_000;
 
-export function SubagentCard({ run, onStop }: { run: SubagentRunView; onStop(id: string): void }) {
+export function SubagentCard({ run, forked = false, onStop }: { run: SubagentRunView; forked?: boolean; onStop(id: string): void }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
   const running = run.status === "running";
@@ -29,6 +30,11 @@ export function SubagentCard({ run, onStop }: { run: SubagentRunView; onStop(id:
           <ChevronRight size={13} className={`shrink-0 fg-faint transition-transform ${open ? "rotate-90" : ""}`} />
           <Bot size={15} className="shrink-0 text-[var(--nc-accent-text)]" />
           <span className="min-w-0 truncate font-medium fg">{t("subagent.title", { description: run.description })}</span>
+          {(forked || run.forked) && (
+            <span className="shrink-0 rounded-full border bd px-1.5 py-px text-[10.5px] fg-muted" data-subagent-forked="">
+              {t("subagent.forked")}
+            </span>
+          )}
           {run.preset !== "general-purpose" && (
             <span className="shrink-0 rounded-full border bd px-1.5 py-px text-[10.5px] fg-muted" data-subagent-preset="">
               {run.preset}
@@ -68,21 +74,29 @@ export function SubagentCard({ run, onStop }: { run: SubagentRunView; onStop(id:
   );
 }
 
-/** The turn's launches, each with its card; `rowId` is the turn's row, where the server keeps them. */
+/** The turn's launches, forks and the children it woke, each with its card. `rowId` is the turn's row, where the
+ *  server keeps what it launched; a woken child hangs from an earlier row, so it is read by id. */
 export function SubagentCards({ actions, projectId, rowId }: { actions: readonly AgentAction[] | undefined; projectId: string; rowId: string }) {
   const launched = useMemo(
-    () => (actions ?? []).flatMap((a) => (a.tool === "subagent" && a.subagent ? [{ ...a.subagent, description: a.summary }] : [])),
+    () =>
+      (actions ?? []).flatMap((a) =>
+        SUBAGENT_CARD_TOOLS.has(a.tool) && a.subagent
+          ? [{ ...a.subagent, description: a.summary, forked: a.tool === SUBAGENT_FORK_TOOL, woken: a.tool === SEND_MESSAGE_TOOL }]
+          : [],
+      ),
     [actions],
   );
   const runs = useSyncExternalStore(subagentsLive.subscribe, subagentsLive.snapshot, subagentsLive.snapshot);
   const ids = launched.map((l) => l.id).join(",");
+  const woken = [...new Set(launched.filter((l) => l.woken).map((l) => l.id))].join(",");
   useEffect(() => {
     if (!ids) return;
     let gone = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const read = async () => {
       try {
-        const res = await fetch(`/api/agent/subagents?project=${encodeURIComponent(projectId)}&row=${encodeURIComponent(rowId)}`, { cache: "no-store" });
+        const query = `project=${encodeURIComponent(projectId)}&row=${encodeURIComponent(rowId)}${woken ? `&ids=${encodeURIComponent(woken)}` : ""}`;
+        const res = await fetch(`/api/agent/subagents?${query}`, { cache: "no-store" });
         if (res.ok) subagentsLive.fromServer(projectId, ((await res.json()) as { runs?: unknown }).runs);
       } catch {
         // The next read tries again.
@@ -96,7 +110,7 @@ export function SubagentCards({ actions, projectId, rowId }: { actions: readonly
       gone = true;
       clearTimeout(timer);
     };
-  }, [ids, projectId, rowId]);
+  }, [ids, woken, projectId, rowId]);
   if (launched.length === 0) return null;
   const stop = (id: string) => void fetch(`/api/agent/subagents/${encodeURIComponent(id)}/stop`, { method: "POST" }).catch(() => undefined);
   return (
@@ -115,7 +129,7 @@ export function SubagentCards({ actions, projectId, rowId }: { actions: readonly
           toolUses: 0,
           durationMs: null,
         };
-        return <SubagentCard key={ref.id} run={run} onStop={stop} />;
+        return <SubagentCard key={ref.id} run={run} forked={l.forked} onStop={stop} />;
       })}
     </div>
   );

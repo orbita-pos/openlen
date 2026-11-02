@@ -565,6 +565,7 @@
     "steps": "{n, plural, other {# 步}}",
     "closing": "它告诉 Len 的内容",
     "stop": "停止此子代理",
-    "liveBar": "{n, plural, other {# 个子代理正在工作}}"
+    "liveBar": "{n, plural, other {# 个子代理正在工作}}",
+    "forked": "已分叉"
   }
 }

@@ -8,10 +8,14 @@
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { exigirAcceso } from "@/lib/projects/acceso";
-import { runsOfRow } from "@/lib/agent/subagents/store";
+import { runsByIds, runsOfRow } from "@/lib/agent/subagents/store";
+import { subagentRefFrom } from "@/lib/agent/subagents/card";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** A turn wakes a handful at most; more is not a card's question. */
+const MAX_IDS = 20;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -32,7 +36,14 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
   const acceso = await exigirAcceso(projectId, userId, "ver");
   if (acceso instanceof Response) return json({ error: "no_encontrado" }, 404);
 
-  const runs = (await runsOfRow(projectId, row)).map((r) => ({
+  // The runs this turn woke with `send_message` live in the row that launched them: the card names them.
+  const ids = [...new Set((url.searchParams.get("ids") ?? "").split(","))]
+    .filter((id) => subagentRefFrom({ id, preset: "x" }) !== null)
+    .slice(0, MAX_IDS);
+  const rows = await runsOfRow(projectId, row);
+  const woken = ids.length > 0 ? await runsByIds(projectId, ids) : [];
+  const seen = new Set(rows.map((r) => r.id));
+  const runs = [...rows, ...woken.filter((r) => !seen.has(r.id))].map((r) => ({
     id: r.id,
     preset: r.preset,
     description: r.description,
@@ -43,6 +54,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     durationMs: r.durationMs,
     createdAt: r.createdAt,
     settledAt: r.settledAt,
+    forked: r.forked,
   }));
   return json({ runs });
 });

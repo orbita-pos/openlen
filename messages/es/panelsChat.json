@@ -565,6 +565,7 @@
     "steps": "{n, plural, one {# paso} other {# pasos}}",
     "closing": "Lo que le dijo a Len",
     "stop": "Parar este subagente",
-    "liveBar": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}"
+    "liveBar": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}",
+    "forked": "Bifurcado"
   }
 }

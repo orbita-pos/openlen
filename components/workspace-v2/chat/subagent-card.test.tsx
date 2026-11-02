@@ -71,6 +71,9 @@ describe("a subagent's card", () => {
 
 describe("the subagents of a turn", () => {
   const launch = (id: string, preset: string, summary: string) => ({ tool: "subagent", status: "done" as const, summary, subagent: { id, preset } });
+  const fork = (id: string, summary: string) => ({ tool: "subagent_fork", status: "done" as const, summary, subagent: { id, preset: "general-purpose" } });
+  const woke = (id: string, preset: string, summary: string) => ({ tool: "send_message", status: "done" as const, summary, subagent: { id, preset } });
+  const noRuns = () => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ runs: [] }), { status: 200 })));
 
   it("the launch's step is its card, not a step", () => {
     expect(visibleSteps([launch("r1", "Explore", "Find"), { tool: "Read", status: "done", summary: "a" }]).map((a) => a.tool)).toEqual(["Read"]);
@@ -109,6 +112,49 @@ describe("the subagents of a turn", () => {
 
     const bar = paint(<LiveBar status={{ kind: "idle", face: "reposo" }} onStop={() => {}} subagentsRunning={1} />);
     expect(bar.textContent).toContain('subagent.liveBar {"n":1}');
+  });
+
+  it("a fork's card says it inherits the conversation", () => {
+    noRuns();
+    const host = paint(<SubagentCards actions={[fork("r1", "Check the copy"), launch("r2", "general-purpose", "Fix")]} projectId="p1" rowId="row1" />);
+    const cards = host.querySelectorAll("[data-subagent-card]");
+    expect(cards).toHaveLength(2);
+    expect(cards[0]!.textContent).toContain('subagent.title {"description":"Check the copy"}');
+    expect(cards[0]!.querySelector("[data-subagent-forked]")!.textContent).toBe("subagent.forked");
+    expect(cards[1]!.querySelector("[data-subagent-forked]")).toBeNull();
+    // Its launch is its card, not a step.
+    expect(visibleSteps([fork("r1", "Check the copy")])).toEqual([]);
+  });
+
+  it("the turn that woke a child shows its card, read by id: the run hangs from an earlier turn's row", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ runs: [{ id: "r1", preset: "general-purpose", description: "Fix the footer", status: "completed", actions: [], finalText: "Done.", toolUses: 3, durationMs: 900, forked: true }] }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const host = paint(<SubagentCards actions={[woke("r1", "general-purpose", "Fix the footer")]} projectId="p1" rowId="row2" />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/agent/subagents?project=p1&row=row2&ids=r1", expect.anything());
+    const card = host.querySelector("[data-subagent-card]")!;
+    expect(card.querySelector("[data-subagent-status]")!.textContent).toBe("subagent.status.completed");
+    // A forked run says so on every card, also on the one of the turn that woke it.
+    expect(card.querySelector("[data-subagent-forked]")).not.toBeNull();
+    // A message that woke a child is its card; one delivered to a working child (no run) stays a step.
+    expect(visibleSteps([woke("r1", "general-purpose", "Fix"), { tool: "send_message", status: "done", summary: "" }]).map((a) => a.tool)).toEqual(["send_message"]);
+  });
+
+  it("two cards of one run show the same status", () => {
+    noRuns();
+    const first = paint(<SubagentCards actions={[launch("r1", "general-purpose", "Fix the footer")]} projectId="p1" rowId="row1" />);
+    const second = paint(<SubagentCards actions={[woke("r1", "general-purpose", "Fix the footer")]} projectId="p1" rowId="row2" />);
+    act(() => subagentsLive.event("p1", { id: "r1", status: "running", description: "Fix the footer" }));
+    act(() => subagentsLive.event("p1", { id: "r1", status: "completed" }));
+    for (const host of [first, second]) expect(host.querySelector("[data-subagent-status]")!.textContent).toBe("subagent.status.completed");
   });
 
   it("its ■ asks the server to stop that one", async () => {

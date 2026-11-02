@@ -7,6 +7,11 @@ export interface SubagentRef {
   readonly preset: string;
 }
 
+import { SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
+
+/** The actions that carry a run's card when they name one: a launch, a fork, and a message that woke a child. */
+export const SUBAGENT_CARD_TOOLS: ReadonlySet<string> = new Set([SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL]);
+
 const ID = /^[\w-]{1,64}$/;
 const PRESET = /^[\w-]{1,32}$/;
 

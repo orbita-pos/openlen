@@ -114,6 +114,14 @@ describe("subagentRuns", () => {
     expect(await store.reopenRun("nope")).toBe(false);
   });
 
+  it("runs are found by their ids, only in their project", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    await store.createRun({ id: "r2", ...RUN, chatRowId: "row-old" });
+    expect((await store.runsByIds("p1", ["r2", "r1", "nope"])).map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(await store.runsByIds("p2", ["r1"])).toEqual([]);
+    expect(await store.runsByIds("p1", [])).toEqual([]);
+  });
+
   it("a fork is recorded as forked", async () => {
     await store.createRun({ id: "r1", ...RUN, preset: "general-purpose", forked: true });
     await store.createRun({ id: "r2", ...RUN });
