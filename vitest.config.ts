@@ -808,6 +808,9 @@ export default defineConfig({
       "app/api/agent/turno/[fila]/route.test.ts",
       // Pieza 8: quitar el encargo.
       "app/api/agent/encargo/route.test.ts",
+      // Len's subagents: a turn's children, and stopping one.
+      "app/api/agent/subagents/route.test.ts",
+      "app/api/agent/subagents/[id]/stop/route.test.ts",
       "app/api/usage/route.test.ts",
       // Task 5 — the fill surface that had no gate at all. Mocks fillTemplate
       // so the test drives the route's gate, not the filler's own sanitizer.

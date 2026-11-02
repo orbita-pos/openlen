@@ -4,6 +4,7 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { artifactsEnabled } from "@/lib/artifacts/enabled";
+import { stopProject } from "@/lib/agent/subagents/registry";
 import {
   deleteProject,
   getProject,
@@ -146,6 +147,8 @@ export async function DELETE(
   const { id } = await params;
   const ok = await deleteProject(id, session.user.id);
   if (!ok) return json({ error: "not_found" }, 404);
+  // Its subagents stop with it (after the owner check: a stranger stops nothing).
+  stopProject(id);
   return json({ ok: true }, 200);
 }
 

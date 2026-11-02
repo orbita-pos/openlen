@@ -72,4 +72,10 @@ describe("subagentRuns", () => {
     expect((await store.runningRuns()).map((r) => r.id)).toEqual(["r1"]);
     expect((await store.undeliveredSettledRuns("p1")).map((r) => r.id)).toEqual(["r2"]);
   });
+
+  it("one run is found by its id, and an unknown id is null", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    expect(await store.runById("r1")).toMatchObject({ id: "r1", projectId: "p1", personId: RUN.personId });
+    expect(await store.runById("nope")).toBeNull();
+  });
 });
