@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { CONTESTA_YA, MAX_VUELTAS_DEL_SUBAGENTE, correrSubagente } from "./subagente";
+import { CONTESTA_YA, MAX_VUELTAS_DEL_SUBAGENTE, correrSubagente, runSubagent } from "./subagente";
 
 const done: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
 const usage = (o: number): StreamEvent => ({ type: "usage", inputTokens: 100, outputTokens: o, cachedTokens: 40, thinkingTokens: 0 });
@@ -167,5 +167,63 @@ describe("el subagente de solo lectura", () => {
     });
     expect(r).toMatchObject({ ok: false, motivo: "upstream" });
     expect(r.uso.outputTokens).toBe(4);
+  });
+});
+
+// Len's subagents (spec local 2026-11-01-subagentes-de-len, §4.5): the same loop, with no turn cap —
+// like a Claude Code agent without `maxTurns`, DeepSeek's children and Len's own turn since H1.
+describe("runSubagent, Len's loop for a delegated child", () => {
+  const tools = ["Read", "Grep"].map((name) => ({ name }));
+
+  it("has no turn cap: twelve reads, then its text", async () => {
+    const g = guion(...Array.from({ length: 12 }, (_, i) => llama("Read", { file_path: `/p${i}/index.html` })), dice("Found it."));
+    const ran: string[] = [];
+    const r = await runSubagent({
+      messages: [{ role: "system", content: "S" }, { role: "user", content: "Find it." }],
+      tools,
+      openStream: g.abrir,
+      runTool: async (name, args) => {
+        ran.push(`${name} ${String(args.file_path)}`);
+        return { response: { ok: true, tool_result: "1\tx" } };
+      },
+      emit: () => {},
+    });
+    expect(ran).toHaveLength(12);
+    expect(r.finalText).toBe("Found it.");
+    expect(r.terminalError).toBeFalsy();
+  });
+
+  it("🔴 a tool it was not given never reaches the caller's runTool", async () => {
+    const g = guion(llama("Write", { file_path: "/index.html", content: "x" }), dice("Done."));
+    const ran: string[] = [];
+    await runSubagent({
+      messages: [{ role: "system", content: "S" }, { role: "user", content: "Go." }],
+      tools,
+      openStream: g.abrir,
+      runTool: async (name) => {
+        ran.push(name);
+        return { response: { ok: true } };
+      },
+      emit: () => {},
+    });
+    expect(ran).not.toContain("Write");
+  });
+
+  it("the spending limit closes it with what it has", async () => {
+    const g = guion(llama("Read", { file_path: "/a" }), llama("Read", { file_path: "/b" }), dice("never"));
+    let calls = 0;
+    const r = await runSubagent({
+      messages: [{ role: "system", content: "S" }, { role: "user", content: "Go." }],
+      tools,
+      openStream: g.abrir,
+      closeOut: () => (async function* () {
+        for (const ev of dice("Partial: read /a.")) yield ev;
+      })(),
+      runTool: async () => ({ response: { ok: true, tool_result: "1\tx" } }),
+      emit: () => {},
+      excedePresupuesto: () => ++calls >= 2,
+    });
+    expect(r.topeAlcanzado).toBe("budget_limit");
+    expect(r.finalText).toBe("Partial: read /a.");
   });
 });

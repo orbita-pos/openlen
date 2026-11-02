@@ -23,7 +23,7 @@
 
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { ToolOutcome } from "@/lib/agent/tools";
-import { runAgentLoop } from "@/lib/agent/loop";
+import { runAgentLoop, type AgentLoopArgs, type AgentLoopResult } from "@/lib/agent/loop";
 
 /** Lo que gastó: la misma forma que `AgentLoopResult.usage`. */
 export interface Uso {
@@ -99,4 +99,29 @@ export async function correrSubagente(o: {
   const uso = r.usage;
   if (r.terminalError) return { ok: false, motivo: r.errorCode ?? r.topeAlcanzado ?? "error", uso, vueltas };
   return { ok: true, texto: r.finalText, uso, vueltas };
+}
+
+/** What Len's tool hands a child's loop: everything a turn's loop takes, but no caps, no user steering
+ *  (phase 2: `send_message`), no goal, list or compaction command — a child has none of those. */
+export type SubagentLoopArgs = Omit<
+  AgentLoopArgs,
+  "maxTurns" | "maxToolCalls" | "leerDireccion" | "goalContinues" | "initialTodos" | "manualCompaction" | "compactFirst"
+>;
+
+const TOOL_NOT_GIVEN = "This agent does not have that tool.";
+
+/**
+ * LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.5): the child of the `subagent` tool runs
+ * Len's very loop, with no turn cap — like a Claude Code agent without `maxTurns`, DeepSeek's children and
+ * Len's own turn since H1. What stops it is the turn's spending limit (`excedePresupuesto`, which closes
+ * with `closeOut`) or its ■ (`signal`). `correrSubagente` above stays as it is for the security review.
+ */
+export async function runSubagent(o: SubagentLoopArgs): Promise<AgentLoopResult> {
+  const given = new Set(o.tools.map((d) => String(d.name)));
+  return runAgentLoop({
+    ...o,
+    // The loop already refuses what it was not declared; this is the second gate of a guarantee that
+    // cannot fail: a child never reaches a tool it was not given (depth 1, no card for the user).
+    runTool: async (name, args) => (given.has(name) ? await o.runTool(name, args) : { response: { ok: false, error: TOOL_NOT_GIVEN } }),
+  });
 }
