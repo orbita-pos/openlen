@@ -68,7 +68,8 @@
       "schedule_create": "Planification d'une tâche",
       "schedule_list": "Consultation des tâches planifiées",
       "schedule_delete": "Suppression d'une tâche planifiée",
-      "schedule_update": "Mise à jour d'une tâche planifiée"
+      "schedule_update": "Mise à jour d'une tâche planifiée",
+      "subagent": "Lancement d'un sous-agent"
     },
     "toolApp": {
       "Read": "Lecture du code",

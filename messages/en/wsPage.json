@@ -68,7 +68,8 @@
       "schedule_create": "Scheduling a task",
       "schedule_list": "Checking the scheduled tasks",
       "schedule_delete": "Deleting a scheduled task",
-      "schedule_update": "Updating a scheduled task"
+      "schedule_update": "Updating a scheduled task",
+      "subagent": "Starting a subagent"
     },
     "toolApp": {
       "Read": "Reading the code",
