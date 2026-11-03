@@ -44,7 +44,15 @@ export function agentBranchName(id: string, taken: ReadonlySet<string>): string 
 }
 
 export async function addAgentWorktree(p: { parentId: string; ownerId: string; runId: string; register?: (w: AgentWorktree) => Promise<void> }): Promise<AgentWorktree> {
-  return inTransaction(() => createAgentWorktree(p));
+  // Parallel launches write the same repository objects/refs. PostgreSQL can abort a serializable
+  // transaction even on INSERT ... ON CONFLICT: retry the entire rolled-back creation, including registration.
+  for (let attempt = 0; ; attempt++) {
+    try { return await inTransaction(() => createAgentWorktree(p)); }
+    catch (error) {
+      const code = (error as { code?: string; cause?: { code?: string } })?.code ?? (error as { cause?: { code?: string } })?.cause?.code;
+      if (attempt >= TRIES - 1 || (code !== "40001" && code !== "40P01")) throw error;
+    }
+  }
 }
 
 async function createAgentWorktree(p: { parentId: string; ownerId: string; runId: string; register?: (w: AgentWorktree) => Promise<void> }): Promise<AgentWorktree> {
