@@ -1774,6 +1774,81 @@ describe("editar a mano en la lente «Código» (la #18 de plans/len-agente-2026
   });
 });
 
+describe("an isolated child's virtual files (spec local 2026-11-02-subagentes-de-len-fase-4, §4)", () => {
+  /** Two projects, the real one and its copy, and where each write landed. */
+  function dosProyectos() {
+    const base = conCarpeta({ html: HOME });
+    const briefs: Record<string, string | null> = { parent: "The project's own brief.", copy: "An old brief of the copy." };
+    const writes: string[] = [];
+    const deps = {
+      ...base.deps,
+      async loadProject(projectId: string) {
+        return { data: base.store.data, title: "Brote", subdomain: null, publishedAt: null, userBrief: briefs[projectId] ?? null };
+      },
+      async setUserBrief(projectId: string, _u: string, v: string) {
+        briefs[projectId] = v;
+        writes.push(`brief:${projectId}`);
+        return true;
+      },
+      memoryNotes: {
+        async list(projectId: string) {
+          writes.push(`notes-read:${projectId}`);
+          return [];
+        },
+        async upsert(projectId: string, n: MemoryNote) {
+          writes.push(`note:${projectId}:${n.name}`);
+          return { before: null };
+        },
+        async remove() {
+          return { before: null };
+        },
+      },
+      skillStore: {
+        async list() {
+          return [];
+        },
+        async upsert(scope: string, owner: string, name: string) {
+          writes.push(`skill:${scope}:${owner}:${name}`);
+          return { before: null };
+        },
+        async remove() {
+          return { before: null };
+        },
+      },
+      async saveProjectFile(...args: Parameters<NonNullable<AgentDeps["saveProjectFile"]>>) {
+        const [projectId, ruta] = args;
+        writes.push(`file:${projectId}:${ruta}`);
+        return base.deps.saveProjectFile!(...args);
+      },
+    } as unknown as AgentDeps;
+    const session = { ...makeSession(), projectId: "copy", parentProjectId: "parent" } as AgentSession;
+    return { deps, session, writes };
+  }
+
+  it("Read /LEN.md gives the parent's brief", async () => {
+    const { deps, session } = dosProyectos();
+    assert.match(texto(await runAgentTool(session, deps, "Read", { file_path: "/LEN.md" })), /The project's own brief\./);
+  });
+
+  it("a memory note and a skill land in the parent", async () => {
+    const { deps, session, writes } = dosProyectos();
+    const note = await runAgentTool(session, deps, "Write", { file_path: "/.len/memory/nota.md", content: "---\nname: nota\ndescription: d\ntype: project\n---\n\nUse the blue.\n" });
+    assert.equal(note.response.ok, true, texto(note));
+    const skill = await runAgentTool(session, deps, "Write", { file_path: "/.len/skills/x/SKILL.md", content: "---\nname: x\ndescription: Does x\n---\n\nDo x.\n" });
+    assert.equal(skill.response.ok, true, texto(skill));
+    assert.ok(writes.includes("note:parent:nota"), writes.join(","));
+    assert.ok(writes.includes("skill:project:parent:x"), writes.join(","));
+    assert.ok(!writes.some((w) => w.includes(":copy")), writes.join(","));
+  });
+
+  it("a folder file lands in the copy", async () => {
+    const { deps, session, writes } = dosProyectos();
+    const out = await runAgentTool(session, deps, "Write", { file_path: "/src/a.ts", content: "export const a = 1;\n" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.ok(writes.includes("file:copy:/src/a.ts"), writes.join(","));
+  });
+});
+
 /** El doble de la carpeta del proyecto (pieza 9): los ficheros en memoria y
  *  cada «antes» archivado, con la misma forma que `realDeps`. */
 function conCarpeta(data: ProjectData) {

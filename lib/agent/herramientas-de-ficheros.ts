@@ -142,9 +142,26 @@ function withEsmLock(folder: ReadonlyMap<string, string>, esmLock: string | null
 
 /** What loading the terminal's files needs from a session: the agent route has it before the
  *  turn's session exists (the git status block, spec local 2026-10-15-git-for-len). */
-export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app">;
+export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app" | "parentProjectId">;
 
-async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBrief: string | null): Promise<Virtuales> {
+/** Whose `/LEN.md`, memory notes, skills and subagent types these are: the project's, or for an isolated subagent
+ *  (whose `projectId` is its copy) its parent's — they are not the folder, and a copy has none of its own (spec
+ *  local 2026-11-02-subagentes-de-len-fase-4, §4). */
+export function virtualProjectOf(session: Pick<AgentSession, "projectId" | "parentProjectId">): string {
+  return session.parentProjectId ?? session.projectId;
+}
+
+async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrief: string | null): Promise<Virtuales> {
+  const proyecto = virtualProjectOf(session);
+  let userBrief = ownBrief;
+  if (session.parentProjectId) {
+    try {
+      userBrief = (await deps.loadProject(session.parentProjectId, session.userId))?.userBrief ?? null;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[agente] no se pudo leer el /LEN.md del proyecto", err);
+    }
+  }
   let dueno = "";
   try {
     dueno = (await deps.leerMemoriaDelDueno?.(personOf(session))) ?? "";
@@ -161,7 +178,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
   }
   let notas: Awaited<ReturnType<NonNullable<AgentDeps["memoryNotes"]>["list"]>> = [];
   try {
-    notas = (await deps.memoryNotes?.list(session.projectId)) ?? [];
+    notas = (await deps.memoryNotes?.list(proyecto)) ?? [];
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[agente] no se pudieron leer las notas de memoria", err);
@@ -170,7 +187,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
   const skills = new Map<string, string>();
   for (const scope of ["project", "personal"] as const) {
     try {
-      const owner = scope === "project" ? session.projectId : personOf(session);
+      const owner = scope === "project" ? proyecto : personOf(session);
       for (const s of (await deps.skillStore?.list(scope, owner)) ?? []) skills.set(skillPath(scope, s.name), s.text);
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -180,7 +197,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, userBri
   const agents = new Map<string, string>();
   for (const scope of ["project", "personal"] as const) {
     try {
-      const owner = scope === "project" ? session.projectId : personOf(session);
+      const owner = scope === "project" ? proyecto : personOf(session);
       for (const a of (await deps.agentStore?.list(scope, owner)) ?? []) agents.set(agentPath(scope, a.name), a.text);
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -784,7 +801,7 @@ async function guardarMemoria(
       };
     }
     if (!deps.memoryNotes) return { response: respuesta(fallo("Memory notes are not available right now.")) };
-    await deps.memoryNotes.upsert(session.projectId, parsed.note, personOf(session));
+    await deps.memoryNotes.upsert(virtualProjectOf(session), parsed.note, personOf(session));
   } else {
     const max = layer === "personal" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
     if (plan.contenido.length > max) {
@@ -797,7 +814,7 @@ async function guardarMemoria(
     const ok =
       layer === "personal"
         ? await deps.setPersonalLenMd?.(personOf(session), plan.contenido)
-        : await deps.setUserBrief(session.projectId, session.userId, plan.contenido);
+        : await deps.setUserBrief(virtualProjectOf(session), session.userId, plan.contenido);
     if (!ok) return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} could not be saved.`)) };
   }
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
@@ -839,7 +856,7 @@ async function guardarSkill(
     return { response: respuesta(fallo(`There are already ${MAX_SKILLS_PER_SCOPE} skills here. Update or remove one before adding another.`)) };
   }
   if (!deps.skillStore) return { response: respuesta(fallo("Skills can't be saved right now.")) };
-  const owner = at.scope === "project" ? session.projectId : personOf(session);
+  const owner = at.scope === "project" ? virtualProjectOf(session) : personOf(session);
   await deps.skillStore.upsert(at.scope, owner, at.name, plan.contenido, personOf(session));
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
@@ -885,7 +902,7 @@ async function guardarAgent(
     return { response: respuesta(fallo(`There are already ${MAX_AGENTS_PER_SCOPE} subagent types here. Update or remove one before adding another.`)) };
   }
   if (!deps.agentStore) return { response: respuesta(fallo("Subagent types can't be saved right now.")) };
-  const owner = at.scope === "project" ? session.projectId : personOf(session);
+  const owner = at.scope === "project" ? virtualProjectOf(session) : personOf(session);
   await deps.agentStore.upsert(at.scope, owner, at.name, plan.contenido, personOf(session));
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
@@ -999,7 +1016,7 @@ export async function guardarLoDeLaTerminal(
       // A SKILL (spec local 2026-10-26-len-skills): `rm` deletes it, like a memory note.
       const skillAt = skillPathOf(c.ruta);
       if (skillAt && deps.skillStore) {
-        await deps.skillStore.remove(skillAt.scope, skillAt.scope === "project" ? session.projectId : personOf(session), skillAt.name);
+        await deps.skillStore.remove(skillAt.scope, skillAt.scope === "project" ? virtualProjectOf(session) : personOf(session), skillAt.name);
         enLaTerminal[c.ruta] = null;
         notas.push(`${rutaRelativa(c.ruta)}: removed.`);
         escrituras.push({
@@ -1012,7 +1029,7 @@ export async function guardarLoDeLaTerminal(
       // A SUBAGENT TYPE (spec local 2026-11-01-subagentes-de-len, §6): `rm` deletes it, like a skill.
       const agentAt = agentPathOf(c.ruta);
       if (agentAt && deps.agentStore) {
-        await deps.agentStore.remove(agentAt.scope, agentAt.scope === "project" ? session.projectId : personOf(session), agentAt.name);
+        await deps.agentStore.remove(agentAt.scope, agentAt.scope === "project" ? virtualProjectOf(session) : personOf(session), agentAt.name);
         enLaTerminal[c.ruta] = null;
         notas.push(`${rutaRelativa(c.ruta)}: removed.`);
         escrituras.push({
@@ -1026,7 +1043,7 @@ export async function guardarLoDeLaTerminal(
       // Code; ~/.len/LEN.md, /LEN.md y el índice no se borran (se vacían).
       const capa = memoryLayerOf(c.ruta);
       if (capa === "note" && deps.memoryNotes) {
-        await deps.memoryNotes.remove(session.projectId, noteNameOf(c.ruta)!);
+        await deps.memoryNotes.remove(virtualProjectOf(session), noteNameOf(c.ruta)!);
         enLaTerminal[c.ruta] = null;
         notas.push(`${rutaRelativa(c.ruta)}: removed.`);
         escrituras.push({
