@@ -2,7 +2,7 @@ import { checkSubdomainOrigin, publishedBaseHosts, resolveCustomDomainSub } from
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
-import { recordSubmission } from "@/lib/projects/forms";
+import { formKeyOf, recordSubmission } from "@/lib/projects/forms";
 import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { sendLeadNotificationEmail } from "@/lib/email";
 import { normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
@@ -155,6 +155,8 @@ export async function POST(
         page,
         cid,
       },
+      // Which form: an event task watches one (spec local 2026-11-03-len-que-avisa, §7.2).
+      formId: formKeyOf({ formId, formIndex, page }),
     });
   } catch (err) {
     // eslint-disable-next-line no-console
