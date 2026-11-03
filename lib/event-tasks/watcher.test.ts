@@ -15,7 +15,7 @@ function taskRow(over: Partial<EventTaskRow> = {}): EventTaskRow {
     id: "t1", projectId: "p1", createdBy: "u1", locale: "es", timeZone: "America/Mexico_City", title: "Reservas que chocan",
     prompt: "Avísame si choca.", source: "app_rows", params: { table: "reservas", created_column: "created_at", conditions: [{ field: "estado", op: "eq", value: "confirmada" }] },
     state: { cursor: { at: "a", key: "k" }, key_column: "id" }, status: "active", pausedAt: null, nextCheckAt: NOW, lastCheckedAt: null,
-    judgeDay: null, judgesThatDay: 0, transcript: null, createdAt: NOW, updatedAt: NOW, ...over,
+    judgeDay: null, judgesThatDay: 0, transcript: null, lastJudgedAt: null, createdAt: NOW, updatedAt: NOW, ...over,
   };
 }
 

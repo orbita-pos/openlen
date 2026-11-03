@@ -238,7 +238,10 @@ export type ModelOperation =
   /** LOS SUBAGENTES DE LEN (`lib/agent/subagents/`, spec local
    *  2026-11-01-subagentes-de-len): los hijos que lanza `subagent`, en el
    *  cerebro de Len. Los paga el dueño, a la tarifa de Len. */
-  | "subagent";
+  | "subagent"
+  /** «LEN QUE AVISA» (`lib/event-tasks/judge.ts`, spec local 2026-11-03-len-que-avisa): el turno de sólo
+   *  lectura que juzga un cambio de una tarea por evento, en el cerebro de Len. Lo paga el dueño. */
+  | "event_task_judge";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -312,6 +315,9 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // esfuerzo efectivo del turno que los lanzó, en la capa de POSTURA, como
   // `agent_turn`.
   subagent: { role: "agent", effort: null },
+  // El juez de una tarea por evento corre en el cerebro de Len con su esfuerzo en la capa de POSTURA
+  // (`high`, `lib/event-tasks/judge.ts`), como la revisión de seguridad.
+  event_task_judge: { role: "agent", effort: null },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {

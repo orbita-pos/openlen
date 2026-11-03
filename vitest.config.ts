@@ -559,6 +559,8 @@ export default defineConfig({
       "lib/agent/goal-activation.test.ts",
       "lib/agent/goal-tools.test.ts",
       "lib/agent/schedule-tools.test.ts",
+      // «Len que avisa»: the judge's two tools (spec local 2026-11-03-len-que-avisa). LISTA BLANCA.
+      "lib/agent/event-task-tools.test.ts",
       "lib/agent/time-context.test.ts",
       // La lista de progreso del usuario (spec local 2026-10-15).
       "lib/agent/todo-list.test.ts",

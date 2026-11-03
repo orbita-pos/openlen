@@ -52,6 +52,13 @@ export async function register() {
       void import("@/lib/scheduled-tasks/scheduler")
         .then((m) => m.startScheduler())
         .catch((err) => console.error("[schedule] no se pudo arrancar el planificador", err));
+      // «Len que avisa» (spec local 2026-11-03-len-que-avisa): the event tasks' watcher, a pass every minute, and the
+      // judges a restart left half done. OPENLEN_SCHEDULE=0 or OPENLEN_EVENT_TASKS=0 leaves it off.
+      void Promise.all([import("@/lib/event-tasks/enabled"), import("@/lib/event-tasks/watcher"), import("@/lib/event-tasks/judge")])
+        .then(([{ eventTasksEnabled }, { startWatcher }, { judgeCandidate }]) => {
+          if (eventTasksEnabled()) startWatcher((record, task) => judgeCandidate(record, task));
+        })
+        .catch((err) => console.error("[event-tasks] no se pudo arrancar el vigilante", err));
       // Len's subagents (spec local 2026-11-01-subagentes-de-len): the ones a restart cut close as stopped, and
       // every notice that never reached Len goes to him, one server turn per project. OPENLEN_SUBAGENTS=0 leaves it.
       if (process.env.OPENLEN_SUBAGENTS !== "0") {

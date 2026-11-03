@@ -34,6 +34,8 @@ export type LedgerSurface =
   | "security_review"
   /** Len's subagents (spec local 2026-11-01-subagentes-de-len): one row per child, paid by the owner. */
   | "subagent"
+  /** An event task's judging turn (spec local 2026-11-03-len-que-avisa, §7.5): the owner pays, at Len's rate. */
+  | "event_task"
   | "sandbox"
   | "page_assistant"
   | "publish_translation"
