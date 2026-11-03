@@ -16,7 +16,8 @@ import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
 import { createSubagentLauncher, type RunnerIO } from "@/lib/agent/subagents/run";
 import { createTurnSpend } from "@/lib/agent/subagents/spend";
 import { hasNotices, liveCount, noticeTurnPending, setNoticeTurnPending, takeNotices, waitForNoticeOrIdle } from "@/lib/agent/subagents/registry";
-import { createRun, markNoticeDelivered, reopenRun, runOfCurrentConversation, runsOfCurrentConversation, saveProgress, settleRun } from "@/lib/agent/subagents/store";
+import { createRun, markNoticeDelivered, reopenRun, runOfCurrentConversation, runsOfCurrentConversation, saveProgress, settleRun, setWorktree, setWorktreeOutcome } from "@/lib/agent/subagents/store";
+import { addAgentWorktree, finishAgentWorktree } from "@/lib/agent/subagents/worktree";
 import { createStepStore, type StepStore } from "@/lib/agent/telemetry/step-store";
 import { drizzleStepStoreDb } from "@/lib/agent/telemetry/step-store-db";
 import { billedUsage, preferredProviderFrom, withForgiven } from "@/lib/agent/provider-billing";
@@ -144,7 +145,7 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
 import { TurnSandbox, holderOf } from "@/lib/agent/sandbox/choose";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
-import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
@@ -1917,7 +1918,12 @@ async function correrTurno(
             return { openStream: b.openStream, closeOut: b.closeOut, modelId: b.modelId, lastProvider: () => b.lastProvider() };
           },
           runTool: runToolWithAgentTypes,
-          store: { createRun, saveProgress, settleRun, reopenRun, runsOfCurrentConversation, runOfCurrentConversation },
+          store: { createRun, saveProgress, settleRun, reopenRun, runsOfCurrentConversation, runOfCurrentConversation, setWorktree, setWorktreeOutcome },
+          addWorktree: addAgentWorktree,
+          finishWorktree: ({ w, description, session }) => finishAgentWorktree({
+            parentId: session.projectId, ownerId: session.userId, w, description,
+            save: (changes, draft) => guardarLoDeLaTerminal(session, deps, changes, draft),
+          }),
           charge: async (c) => {
             await chargeCredits(c.ownerId, c.centicredits, {
               surface: "subagent",
