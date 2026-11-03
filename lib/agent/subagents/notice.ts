@@ -2,7 +2,8 @@
 // line, the settlement notice, the messages between agents and the return guidance of DeepSeek Harness
 // (`packages/subagent/tool-subagent/src/index.ts` and `packages/subagent/subagent/src/continuation-messages.ts`
 // @ ce7073d, MIT, LICENSES/deepseek-harness.MIT.txt), in its continuable form: since phase 2 every child
-// accepts `send_message`. The `budget` line is ours: DeepSeek has no spending limit.
+// accepts `send_message`. The `budget` line is ours: DeepSeek has no spending limit; so are an isolated child's
+// lines (phase 4): DeepSeek has no worktrees.
 //
 // Pure: the launcher, the boot cleanup and the chat import it.
 //
@@ -50,15 +51,18 @@ function summary(id: string, stopReason: SubagentStopReason): string {
 }
 
 /** DeepSeek's `createSettlementMessage`, its blocks joined as one text. `omitClosingText`: the child's last
- *  act was a `send_message` to Len, which already carries it. */
+ *  act was a `send_message` to Len, which already carries it. `worktree`: how an isolated child's copy came back
+ *  (phase 4), our line after DeepSeek's blocks. */
 export function settlementNotice(o: {
   id: string;
   stopReason: SubagentStopReason;
   closingText: string;
   diagnostic?: string;
   omitClosingText?: boolean;
+  worktree?: WorktreeOutcome;
 }): string {
   const closing = o.closingText.trim();
+  const worktree = o.worktree ? worktreeNoticeLine(o.worktree) : null;
   return [
     summary(o.id, o.stopReason),
     o.omitClosingText
@@ -67,7 +71,29 @@ export function settlementNotice(o: {
         ? "It left no closing message."
         : `Its closing message:\n${closing}`,
     ...(o.diagnostic ? [o.diagnostic] : []),
+    ...(worktree ? [worktree] : []),
   ].join("\n\n");
+}
+
+/** Ours (phase 4): what an isolated child reads in its task. DeepSeek's return guidance says the parent shares its
+ *  workspace, which an isolated child doesn't. */
+export function isolationLine(branch: string): string {
+  return `You work in your own copy of the project, on git branch ${branch}. What you change in the project's folder is brought into Len's files when you finish; what you leave outside it, like /tmp, is lost. Re-read a file before you edit it.`;
+}
+
+/** Ours (phase 4): how an isolated child's copy came back, after its notice. Like Claude Code's branch line, it
+ *  leaves the branch to Len when it couldn't enter. */
+export function worktreeNoticeLine(o: WorktreeOutcome): string | null {
+  switch (o.state) {
+    case "nothing":
+      return null;
+    case "brought":
+      return `Its changes are now in your files: ${o.files.join(", ")}.`;
+    case "conflict":
+      return `Its changes were not brought into your files: they clash with changes made meanwhile in ${o.files.join(", ")}. All of them are on git branch ${o.branch}: read a file with git show ${o.branch}:<path>, compare with git diff, take one with git restore --source=${o.branch} <path>, and delete the branch with git branch -D ${o.branch} when you are done.`;
+    case "kept":
+      return `Its changes could not be brought into your files; they are on git branch ${o.branch}.`;
+  }
 }
 
 /** DeepSeek's `createAgentMessage`: what one agent says to another, as the recipient reads it. */

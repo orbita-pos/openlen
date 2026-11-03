@@ -1290,6 +1290,9 @@ export interface AgentSession {
   /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
    *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
   terminalHolderId?: string;
+  /** An isolated subagent (spec local 2026-11-02-subagentes-de-len-fase-4, §4): `projectId` is its copy, and this is
+   *  the real project, whose LEN.md, memory, skills and agents it reads and writes. Absent otherwise. */
+  parentProjectId?: string;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;
