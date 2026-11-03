@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, one {# subagent working} other {# subagents working}}",
       "origen": "Results from the subagents",
       "worktree": {
-      "retained": "could not save: its copy is kept for recovery",
+        "retained": "could not save: its copy is kept for recovery",
         "working": "in its own copy",
         "brought": "brought {n, plural, one {# file} other {# files}}",
         "conflict": "clashed with your changes: its work is still on its branch",
@@ -144,5 +144,31 @@
       "deshaciendo": "undid the change",
       "trabajando": "worked on it"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "Notice from «{task}»",
+    "proposed": "Len suggests",
+    "accept": "Do it",
+    "dismiss": "Not now",
+    "earlier": "Earlier notices",
+    "done": "Done",
+    "dismissed": "Dismissed",
+    "replaced": "Replaced",
+    "failed": "That didn't work. Try again.",
+    "records": "Records",
+    "noRecords": "Nothing yet",
+    "sourceRows": "New rows of {table}",
+    "sourceForm": "Submissions of form {form}",
+    "sourceAllForms": "Form submissions",
+    "conditions": "Conditions",
+    "recDelivered": "Len looked",
+    "recNotified": "Len notified",
+    "recFiltered": "Filtered: {reason}",
+    "recFailed": "Failed: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "All",
+    "filterTime": "Timed",
+    "filterEvents": "On events",
+    "lastCheck": "Last check: {when}"
   }
 }

@@ -576,5 +576,36 @@
     "liveBar": "{n, plural, one {# Subagent arbeitet} other {# Subagenten arbeiten}}",
     "forked": "Abgezweigt",
     "messageToLen": "Sendet eine Nachricht an Len"
+  },
+  "eventTasks": {
+    "notice": {
+      "emailSubject": "🔔 {task}: {title}",
+      "emailText": "{summary}\n\nLen schlägt vor: {action}\n\nIn deinem Projekt öffnen: {url}"
+    },
+    "turnPrompt": "🔔 {task}: Mach es",
+    "cardFrom": "Hinweis von „{task}“",
+    "proposed": "Len schlägt vor",
+    "accept": "Mach es",
+    "dismiss": "Jetzt nicht",
+    "earlier": "Frühere Hinweise",
+    "done": "Erledigt",
+    "dismissed": "Verworfen",
+    "replaced": "Ersetzt",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "records": "Protokoll",
+    "noRecords": "Noch nichts",
+    "sourceRows": "Neue Zeilen in {table}",
+    "sourceForm": "Einsendungen des Formulars {form}",
+    "sourceAllForms": "Formular-Einsendungen",
+    "conditions": "Bedingungen",
+    "recDelivered": "Len hat nachgesehen",
+    "recNotified": "Len hat Bescheid gegeben",
+    "recFiltered": "Gefiltert: {reason}",
+    "recFailed": "Fehlgeschlagen: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Alle",
+    "filterTime": "Zeitgesteuert",
+    "filterEvents": "Bei Ereignis",
+    "lastCheck": "Letzte Prüfung: {when}"
   }
 }

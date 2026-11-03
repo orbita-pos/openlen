@@ -576,5 +576,36 @@
     "liveBar": "{n, plural, one {# subagent working} other {# subagents working}}",
     "forked": "Forked",
     "messageToLen": "Sending a message to Len"
+  },
+  "eventTasks": {
+    "notice": {
+      "emailSubject": "🔔 {task}: {title}",
+      "emailText": "{summary}\n\nLen suggests: {action}\n\nOpen it in your project: {url}"
+    },
+    "turnPrompt": "🔔 {task}: Do it",
+    "cardFrom": "Notice from «{task}»",
+    "proposed": "Len suggests",
+    "accept": "Do it",
+    "dismiss": "Not now",
+    "earlier": "Earlier notices",
+    "done": "Done",
+    "dismissed": "Dismissed",
+    "replaced": "Replaced",
+    "failed": "That didn't work. Try again.",
+    "records": "Records",
+    "noRecords": "Nothing yet",
+    "sourceRows": "New rows of {table}",
+    "sourceForm": "Submissions of form {form}",
+    "sourceAllForms": "Form submissions",
+    "conditions": "Conditions",
+    "recDelivered": "Len looked",
+    "recNotified": "Len notified",
+    "recFiltered": "Filtered: {reason}",
+    "recFailed": "Failed: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "All",
+    "filterTime": "Timed",
+    "filterEvents": "On events",
+    "lastCheck": "Last check: {when}"
   }
 }

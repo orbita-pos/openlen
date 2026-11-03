@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}",
       "origen": "Resultaten van de subagents",
       "worktree": {
-      "retained": "opslaan mislukt: de kopie blijft bewaard voor herstel",
+        "retained": "opslaan mislukt: de kopie blijft bewaard voor herstel",
         "working": "in een eigen kopie",
         "brought": "{n, plural, one {# bestand} other {# bestanden}} overgenomen",
         "conflict": "conflict met je wijzigingen: het werk staat nog op de eigen branch",
@@ -144,5 +144,31 @@
       "deshaciendo": "heeft de wijziging teruggedraaid",
       "trabajando": "heeft eraan gewerkt"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "Melding van ‘{task}’",
+    "proposed": "Len stelt voor",
+    "accept": "Doe het",
+    "dismiss": "Nu niet",
+    "earlier": "Eerdere meldingen",
+    "done": "Gedaan",
+    "dismissed": "Overgeslagen",
+    "replaced": "Vervangen",
+    "failed": "Dat lukte niet. Probeer het opnieuw.",
+    "records": "Logboek",
+    "noRecords": "Nog niets",
+    "sourceRows": "Nieuwe rijen van {table}",
+    "sourceForm": "Inzendingen van formulier {form}",
+    "sourceAllForms": "Formulierinzendingen",
+    "conditions": "Voorwaarden",
+    "recDelivered": "Len keek",
+    "recNotified": "Len meldde",
+    "recFiltered": "Gefilterd: {reason}",
+    "recFailed": "Mislukt: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Alle",
+    "filterTime": "Op tijd",
+    "filterEvents": "Bij gebeurtenis",
+    "lastCheck": "Laatste controle: {when}"
   }
 }

@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, other {서브에이전트 #개 작업 중}}",
       "origen": "서브에이전트 결과",
       "worktree": {
-      "retained": "저장하지 못했습니다: 복구를 위해 복사본을 보관합니다",
+        "retained": "저장하지 못했습니다: 복구를 위해 복사본을 보관합니다",
         "working": "자체 복사본에서 작업 중",
         "brought": "파일 {n}개 반영됨",
         "conflict": "변경 사항이 충돌했습니다: 작업 내용은 해당 브랜치에 남아 있습니다",
@@ -144,5 +144,31 @@
       "deshaciendo": "변경을 되돌렸어요",
       "trabajando": "작업했어요"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "「{task}」 알림",
+    "proposed": "Len의 제안",
+    "accept": "실행",
+    "dismiss": "나중에",
+    "earlier": "이전 알림",
+    "done": "완료",
+    "dismissed": "넘김",
+    "replaced": "대체됨",
+    "failed": "실패했어요. 다시 시도해 주세요.",
+    "records": "기록",
+    "noRecords": "아직 없음",
+    "sourceRows": "{table}의 새 행",
+    "sourceForm": "{form} 양식 제출",
+    "sourceAllForms": "양식 제출",
+    "conditions": "조건",
+    "recDelivered": "Len이 확인함",
+    "recNotified": "Len이 알림",
+    "recFiltered": "제외됨: {reason}",
+    "recFailed": "실패: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "전체",
+    "filterTime": "시간",
+    "filterEvents": "이벤트",
+    "lastCheck": "마지막 확인: {when}"
   }
 }

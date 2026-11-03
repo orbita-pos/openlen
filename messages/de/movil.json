@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, one {# Subagent arbeitet} other {# Subagenten arbeiten}}",
       "origen": "Ergebnisse der Subagenten",
       "worktree": {
-      "retained": "Speichern fehlgeschlagen: die Kopie bleibt zur Wiederherstellung erhalten",
+        "retained": "Speichern fehlgeschlagen: die Kopie bleibt zur Wiederherstellung erhalten",
         "working": "in seiner eigenen Kopie",
         "brought": "{n, plural, one {# Datei} other {# Dateien}} übernommen",
         "conflict": "Konflikt mit deinen Änderungen: seine Arbeit bleibt auf seinem Branch",
@@ -144,5 +144,31 @@
       "deshaciendo": "hat die Änderung rückgängig gemacht",
       "trabajando": "hat daran gearbeitet"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "Hinweis von „{task}“",
+    "proposed": "Len schlägt vor",
+    "accept": "Mach es",
+    "dismiss": "Jetzt nicht",
+    "earlier": "Frühere Hinweise",
+    "done": "Erledigt",
+    "dismissed": "Verworfen",
+    "replaced": "Ersetzt",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "records": "Protokoll",
+    "noRecords": "Noch nichts",
+    "sourceRows": "Neue Zeilen in {table}",
+    "sourceForm": "Einsendungen des Formulars {form}",
+    "sourceAllForms": "Formular-Einsendungen",
+    "conditions": "Bedingungen",
+    "recDelivered": "Len hat nachgesehen",
+    "recNotified": "Len hat Bescheid gegeben",
+    "recFiltered": "Gefiltert: {reason}",
+    "recFailed": "Fehlgeschlagen: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Alle",
+    "filterTime": "Zeitgesteuert",
+    "filterEvents": "Bei Ereignis",
+    "lastCheck": "Letzte Prüfung: {when}"
   }
 }

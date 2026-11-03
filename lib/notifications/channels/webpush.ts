@@ -4,7 +4,7 @@ import { db, schema } from "@/lib/db";
 import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
 import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
-import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
+import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -120,6 +120,11 @@ async function appAiCapPush(event: AppAiCapEvent): Promise<PushPayload> {
 }
 
 /** LEN WATCH (spec local 2026-10-30-len-watch): its texts come written; it opens the project's chat. */
+/** An event task's card, opened in the chat (spec local 2026-11-03-len-que-avisa, §7.6). */
+export function lenAvisoPush(event: LenAvisoEvent): PushPayload {
+  return { title: event.title, body: event.push, url: `${urlDelChat(event.projectId)}&card=${encodeURIComponent(event.cardId)}` };
+}
+
 export function lenWatchPush(event: LenWatchEvent): PushPayload {
   return { title: event.title, body: event.body, url: urlDelChat(event.projectId) };
 }
@@ -159,6 +164,8 @@ export const webPushChannel: NotificationChannel = {
                 ? await projectEmailPush(event)
                 : event.type === "len_watch"
                   ? lenWatchPush(event)
+                  : event.type === "len_aviso"
+                    ? lenAvisoPush(event)
                   : {
                   title: event.senderName,
                   body: event.preview,

@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}",
       "origen": "Resultados de los subagentes",
       "worktree": {
-      "retained": "no se pudo guardar: su copia se conserva para recuperarla",
+        "retained": "no se pudo guardar: su copia se conserva para recuperarla",
         "working": "en su copia",
         "brought": "trajo {n, plural, one {# fichero} other {# ficheros}}",
         "conflict": "chocó con tus cambios: lo suyo sigue en su rama",
@@ -144,5 +144,31 @@
       "deshaciendo": "deshizo el cambio",
       "trabajando": "trabajó en ello"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "Aviso de «{task}»",
+    "proposed": "Len propone",
+    "accept": "Hazlo",
+    "dismiss": "Ahora no",
+    "earlier": "Avisos anteriores",
+    "done": "Hecho",
+    "dismissed": "Descartada",
+    "replaced": "Sustituida",
+    "failed": "No se pudo. Vuelve a intentarlo.",
+    "records": "Registros",
+    "noRecords": "Aún nada",
+    "sourceRows": "Filas nuevas de {table}",
+    "sourceForm": "Envíos del formulario {form}",
+    "sourceAllForms": "Envíos de los formularios",
+    "conditions": "Condiciones",
+    "recDelivered": "Len lo miró",
+    "recNotified": "Len avisó",
+    "recFiltered": "Filtrado: {reason}",
+    "recFailed": "Falló: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Todas",
+    "filterTime": "Por hora",
+    "filterEvents": "Por evento",
+    "lastCheck": "Última comprobación: {when}"
   }
 }

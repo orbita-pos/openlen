@@ -108,7 +108,23 @@ export interface LenWatchEvent {
   emailText: string;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent;
+/** «LEN QUE AVISA» (spec local 2026-11-03-len-que-avisa, §7.6): an event task's judge called `automation_notify`.
+ *  Push and email, held by quiet hours (it is not urgent). Its texts come written, in the creator's language, by
+ *  lib/event-tasks/cards.ts: the channels only carry them. */
+export interface LenAvisoEvent {
+  type: "len_aviso";
+  projectId: string;
+  recipientUserId: string;
+  cardId: string;
+  /** The task's name: the push's title. */
+  title: string;
+  /** One line under 200 characters, without markdown (Claude Code's PushNotification rules). */
+  push: string;
+  emailSubject: string;
+  emailText: string;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;
