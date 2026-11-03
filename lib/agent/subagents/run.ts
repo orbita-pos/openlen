@@ -28,7 +28,7 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import type { AgentTypeSet } from "./agent-registry";
 import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
-import { childSystemPrompt, childToolDeclarations, DELEGATION_SCOPE_STATEMENT, isReadOnly, omitsLenMd, SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
+import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
 import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
@@ -46,7 +46,7 @@ import {
 export interface SubagentEvent {
   readonly type: "subagent";
   readonly id: string;
-  readonly preset: SubagentPreset;
+  readonly preset: string;
   readonly description: string;
   readonly status: SubagentStatus;
   readonly step?: Omit<Extract<AgentStreamEvent, { type: "action" }>, "type">;
@@ -144,7 +144,8 @@ const PROGRESS_EVERY_MS = 5_000;
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
  *  DeepSeek's return guidance (it reports to `len`); Explore and Plan without LEN.md and the person's notes
  *  (Claude Code's `omitClaudeMd`). */
-export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: SubagentPreset, prompt: string): Message[] {
+export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: SubagentPreset | ChildType, prompt: string): Message[] {
+  const type: ChildType = typeof preset === "string" ? { kind: "builtin", preset } : preset;
   const built = buildAgentMessages({
     ...turnArgs,
     history: [],
@@ -156,11 +157,11 @@ export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: Subagent
     mentionedFiles: undefined,
     design: null,
     todoRestore: null,
-    ...(omitsLenMd(preset) ? { memoryMessage: null, userMemory: null } : {}),
+    ...(omitsLenMdFor(type) ? { memoryMessage: null, userMemory: null } : {}),
   });
   if (!built.ok) throw new Error("the subagent's task does not fit");
   const [system, ...rest] = built.messages;
-  return [{ ...system!, content: childSystemPrompt(built.systemPrompt, preset, SUBAGENT_GUIDANCE) }, ...rest];
+  return [{ ...system!, content: childSystemPromptFor(built.systemPrompt, type, SUBAGENT_GUIDANCE) }, ...rest];
 }
 
 type Usage = AgentLoopResult["usage"];
@@ -204,7 +205,8 @@ type ChildStep = Omit<Extract<AgentStreamEvent, { type: "action" }>, "type">;
 interface ChildSpec {
   readonly id: string;
   readonly description: string;
-  readonly preset: SubagentPreset;
+  readonly preset: string;
+  readonly type: ChildType;
   /** A `subagent_fork` child: its requests are Len's, plan section included. */
   readonly forked: boolean;
   /** The conversation it starts from, its system prompt first. */
@@ -243,7 +245,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       busquedasVaciasSeguidas: 0,
       leidos: new Map(),
       loadedSkills: new Set(),
-      ...(isReadOnly(preset, spec.planMode) ? { readOnly: true as const } : {}),
+      ...(isReadOnlyFor(spec.type, spec.planMode) ? { readOnly: true as const } : {}),
     } as AgentSession;
     const tools = spec.tools;
     // Depth 1: the child has no launcher of its own; its stop is its own.
@@ -497,18 +499,20 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   /** Len's message as the child reads it in its conversation. */
   const fromLen = (text: string): Message => ({ role: "user", content: agentMessage(LEN_AGENT_ID, text) });
 
-  const presetOf = (p: string): SubagentPreset => ((SUBAGENT_PRESETS as readonly string[]).includes(p) ? (p as SubagentPreset) : "general-purpose");
-
   /** Len's message for one of his children: into its inbox if it works, or it wakes from its transcript. */
   async function resume(id: string, texts: readonly string[]): Promise<SendResult> {
     const first = await io.store.runOfCurrentConversation(ctx.projectId, id);
     if (!first) return { ok: false, code: "unavailable", message: unavailableError(id) };
-    const preset = presetOf(first.preset);
+    const preset = first.preset;
     const toInbox = (): SendResult => {
       for (const t of texts) sendToRun(id, t);
       return { ok: true, resumed: false, preset, description: first.description };
     };
     if (isLive(ctx.projectId, id)) return toInbox();
+    const type = childTypeOf(preset, ctx.agentTypes);
+    if (!type) return { ok: false, code: "unavailable", message: `subagent "${id}" has no agent preset projection for restoration` };
+    const childTools = childToolsFor(ctx.declarations, type, first.planMode || ctx.planMode);
+    if (!childTools.length) return { ok: false, code: "unavailable", message: `agent type "${preset}" leaves the subagent no tools to work with` };
     if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
     const abort = new AbortController();
     if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
@@ -531,22 +535,23 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const transcript = (row.transcript as Message[] | null) ?? [];
     // A run saved before its task was kept in its transcript (phase 1 kept only its own messages, which open with its
     // first answer), or cut before its first save: its task goes first, as it started.
-    const head = !row.forked && transcript[0]?.role !== "user" ? childMessages(ctx.turnArgs, preset, row.prompt).slice(1) : [];
+    const head = !row.forked && transcript[0]?.role !== "user" ? childMessages(ctx.turnArgs, type, row.prompt).slice(1) : [];
     const spec: ChildSpec = {
       id,
       description: row.description,
       preset,
+      type,
       forked: row.forked,
       planMode: scope,
       messages: [
-        { role: "system", content: row.forked ? ctx.lenSystemPrompt : childSystemPrompt(ctx.lenSystemPrompt, preset, SUBAGENT_GUIDANCE) },
+        { role: "system", content: row.forked ? ctx.lenSystemPrompt : childSystemPromptFor(ctx.lenSystemPrompt, type, SUBAGENT_GUIDANCE) },
         ...head,
         ...transcript,
         ...texts.map(fromLen),
       ],
       ...(row.forked
         ? { tools: [...ctx.declarations], allowed: generalPurposeNames(scope) }
-        : { tools: childToolDeclarations(ctx.declarations, preset, scope) }),
+        : { tools: childTools }),
       prior: {
         toolUses: row.toolUses,
         durationMs: row.durationMs ?? 0,
@@ -569,6 +574,9 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   return {
     typeNames: () => ctx.agentTypes.names(),
     async launch(o) {
+      const type = childTypeOf(o.preset, ctx.agentTypes);
+      const tools = type ? childToolsFor(ctx.declarations, type, ctx.planMode) : [];
+      if (!type || !tools.length) return { ok: false, code: "no_tools", message: `agent type "${o.preset}" leaves the subagent no tools to work with` };
       if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
       const id = io.newId();
       const abort = new AbortController();
@@ -584,10 +592,11 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         id,
         description: o.description,
         preset: o.preset,
+        type,
         forked: false,
         planMode: ctx.planMode,
-        messages: childMessages(ctx.turnArgs, o.preset, o.prompt),
-        tools: childToolDeclarations(ctx.declarations, o.preset, ctx.planMode),
+        messages: childMessages(ctx.turnArgs, type, o.prompt),
+        tools,
         prior: NOTHING_YET,
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
@@ -612,6 +621,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         id,
         description: o.description,
         preset: "general-purpose",
+        type: { kind: "builtin", preset: "general-purpose" },
         forked: true,
         planMode: ctx.planMode,
         messages: [...ctx.forkSeed, { role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }],

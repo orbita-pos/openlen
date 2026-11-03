@@ -12,7 +12,7 @@ import { forgetAllSubagents, isLive, liveCount, noticeTurnPending, reserve, send
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import { createTurnSpend } from "./spend";
-import { NO_AGENT_TYPES } from "./agent-registry";
+import { NO_AGENT_TYPES, resolveAgentTypes, type AgentTypeSet } from "./agent-registry";
 
 afterEach(() => forgetAllSubagents());
 
@@ -60,6 +60,7 @@ const TURN_ARGS = {
 function setup(
   o: {
     scripts?: StreamEvent[][];
+    agentTypes?: AgentTypeSet;
     turnAlive?: boolean;
     turnOpen?: boolean;
     spendCap?: number;
@@ -159,7 +160,7 @@ function setup(
   };
   let lenSpent = o.lenSpent ?? 0;
   const ctx: LaunchContext = {
-    agentTypes: NO_AGENT_TYPES,
+    agentTypes: o.agentTypes ?? NO_AGENT_TYPES,
     projectId: "p",
     ownerId: "owner",
     userId: "owner",
@@ -795,5 +796,53 @@ describe("childMessages: what the child reads", () => {
     const general = text(childMessages(TURN_ARGS, "general-purpose", "x"));
     expect(general.some((c) => c.includes("PROJECT MEMORY"))).toBe(true);
     expect(general.some((c) => c.includes("PERSONAL NOTES"))).toBe(true);
+  });
+});
+
+const customTypes = (front = "tools: Read, Write, Edit", body = "Only review this task.") => resolveAgentTypes({ project: [{ name: "reviewer", text: `---\nname: reviewer\ndescription: Reviews\n${front}\n---\n${body}`, updatedAt: new Date(0) }], personal: [] });
+
+describe("launching custom types", () => {
+  it("runs with its section and tools, keeping its name on the row, and wakes with them again", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [llama("Read"), dice("Reviewed.")] });
+    expect(await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never })).toMatchObject({ ok: true });
+    await s.settled("r1");
+    expect(s.rows.get("r1")?.preset).toBe("reviewer");
+    expect(s.brainTools[0].map((d) => d.name)).toEqual(["Read"]);
+    expect(s.g.seen[0][0].content).toContain("SUBAGENT — REVIEWER:\nOnly review this task.");
+    await s.launcher.send({ id: "r1", message: "Check again." });
+    await s.settled("r1");
+    expect(s.brainTools[1].map((d) => d.name)).toEqual(["Read"]);
+    expect(s.g.seen.at(-1)![0].content).toContain("SUBAGENT — REVIEWER:");
+  });
+  it("a type with no usable tools is refused without a row or work", async () => {
+    const s = setup({ agentTypes: customTypes("tools: publish, missing") });
+    expect(await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never })).toEqual({ ok: false, code: "no_tools", message: 'agent type "reviewer" leaves the subagent no tools to work with' });
+    expect(s.rows.size).toBe(0);
+    expect(liveCount("p")).toBe(0);
+    expect(s.g.seen).toEqual([]);
+  });
+  it("plan mode makes even a custom writer read-only", async () => {
+    const s = setup({ planMode: true, agentTypes: customTypes(), scripts: [llama("Write"), llama("Read"), dice("ok")] });
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });
+    await s.settled("r1");
+    expect(s.ran).not.toContain("Write");
+    expect(s.sessions[0].readOnly).toBe(true);
+  });
+  it("a deleted type cannot be restored as general-purpose", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [dice("ok")] });
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });
+    await s.settled("r1");
+    const next = createSubagentLauncher({ ...s.ctx, agentTypes: NO_AGENT_TYPES }, s.io);
+    const count = s.g.seen.length;
+    expect(await next.send({ id: "r1", message: "Again." })).toMatchObject({ ok: false, message: 'subagent "r1" has no agent preset projection for restoration' });
+    expect(s.g.seen).toHaveLength(count);
+    expect(liveCount("p")).toBe(0);
+  });
+  it("omitLenMd leaves the project and person's notes out of its initial messages", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read\nomitLenMd: true"), scripts: [dice("ok")] });
+    const launcher = createSubagentLauncher({ ...s.ctx, turnArgs: { ...s.ctx.turnArgs, memoryMessage: "PROJECT NOTES", userMemory: "PERSON NOTES" } }, s.io);
+    await launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });
+    await s.settled("r1");
+    expect(JSON.stringify(s.g.seen[0])).not.toMatch(/PROJECT NOTES|PERSON NOTES/);
   });
 });

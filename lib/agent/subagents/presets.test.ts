@@ -84,3 +84,29 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
     expect(new Set([g, e, pl]).size).toBe(3);
   });
 });
+
+// Custom definitions obey the same child boundary as the built-in types.
+describe("custom child types", () => {
+  it("keeps built-in tools and prompts byte for byte", async () => {
+    const p = await import("./presets");
+    const { NO_AGENT_TYPES } = await import("./agent-registry");
+    for (const preset of SUBAGENT_PRESETS) {
+      const type = p.childTypeOf(preset, NO_AGENT_TYPES)!;
+      expect(p.childToolsFor(all, type, false)).toEqual(childToolDeclarations(all, preset, false));
+      expect(p.childSystemPromptFor("LEN", type, "guide")).toBe(childSystemPrompt("LEN", preset, "guide"));
+    }
+  });
+  it("uses its allow-list minus disallowed tools and the universal child restrictions", async () => {
+    const p = await import("./presets");
+    const { resolveAgentTypes } = await import("./agent-registry");
+    const types = resolveAgentTypes({ project: [{ name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\ntools: Read, Edit, Write, publish, skill\ndisallowedTools: Edit\nomitLenMd: true\n---\nCustom instructions.", updatedAt: new Date(0) }], personal: [] });
+    const type = p.childTypeOf("reviewer", types)!;
+    expect(p.childToolsFor(all, type, false).map((d) => d.name)).toEqual(["Read", "Write", "skill"]);
+    expect(p.childToolsFor(all, type, true).map((d) => d.name)).toEqual(["Read", "skill"]);
+    expect(p.omitsLenMdFor(type)).toBe(true);
+    expect(p.isReadOnlyFor(type, false)).toBe(false);
+    const prompt = p.childSystemPromptFor("LEN\n- guide", type, "guide");
+    expect(prompt).toContain("LEN\n\nSUBAGENT — REVIEWER:\nCustom instructions.");
+    expect(prompt.endsWith(DELEGATION_SCOPE_STATEMENT)).toBe(true);
+  });
+});

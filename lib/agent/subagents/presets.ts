@@ -23,6 +23,7 @@ import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
+import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";
 
 export type SubagentPreset = "general-purpose" | "Explore" | "Plan";
 
@@ -118,4 +119,36 @@ Len gets only what you send him with send_message and your final message: give h
 /** Len's prompt without the delegation line (the child has no `subagent`), then its type and DeepSeek's statement. */
 export function childSystemPrompt(lenSystemPrompt: string, preset: SubagentPreset, guidanceLine: string): string {
   return `${lenSystemPrompt.replace(`\n- ${guidanceLine}`, "")}\n\n${SECTIONS[preset]}\n\n${DELEGATION_SCOPE_STATEMENT}`;
+}
+
+export type ChildType = { readonly kind: "builtin"; readonly preset: SubagentPreset } | { readonly kind: "custom"; readonly type: ResolvedAgentType };
+
+export function childTypeOf(name: string, types: AgentTypeSet): ChildType | null {
+  if ((SUBAGENT_PRESETS as readonly string[]).includes(name)) return { kind: "builtin", preset: name as SubagentPreset };
+  const type = types.get(name);
+  return type ? { kind: "custom", type } : null;
+}
+
+export function isReadOnlyFor(type: ChildType, planMode: boolean): boolean {
+  return type.kind === "builtin" ? isReadOnly(type.preset, planMode) : planMode;
+}
+
+export function omitsLenMdFor(type: ChildType): boolean {
+  return type.kind === "builtin" ? omitsLenMd(type.preset) : type.type.agent.omitLenMd;
+}
+
+export function childToolsFor(all: readonly Record<string, unknown>[], type: ChildType, planMode: boolean): Record<string, unknown>[] {
+  if (type.kind === "builtin") return childToolDeclarations(all, type.preset, planMode);
+  const a = type.type.agent;
+  return all.filter((d) => {
+    const name = String(d.name);
+    return !OUT_FOR_EVERY_CHILD.has(name) && !(planMode && OUT_FOR_READ_ONLY.has(name)) &&
+      (a.tools === null || a.tools.includes(name)) && !a.disallowedTools.includes(name);
+  });
+}
+
+export function childSystemPromptFor(lenSystemPrompt: string, type: ChildType, guidanceLine: string): string {
+  if (type.kind === "builtin") return childSystemPrompt(lenSystemPrompt, type.preset, guidanceLine);
+  const a = type.type.agent;
+  return `${lenSystemPrompt.replace(`\n- ${guidanceLine}`, "")}\n\nSUBAGENT — ${a.name.toUpperCase()}:\n${a.body}\n\n${DELEGATION_SCOPE_STATEMENT}`;
 }
