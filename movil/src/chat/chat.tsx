@@ -20,6 +20,8 @@ import { ElegirAdjunto } from "./elegir-adjunto";
 import { tamanoArchivo } from "./archivos";
 import { useSeguirChat } from "./use-seguir-chat";
 import { DeliveredCards } from "./delivered-cards";
+import { useSubagentes } from "./use-subagentes";
+import { SubagentesLineas } from "./subagentes-lineas";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -49,6 +51,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const tq = useTranslations("movil.equipo");
   const ta = useTranslations("movil.adjuntos");
   const [texto, setTexto] = useState("");
+  const subagentes = useSubagentes(cliente, projectId, chat.elementos);
   // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
   // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
   // a la gente»).
@@ -137,7 +140,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const grabando = micro.fase === "grabando";
   const fija = micro.fase === "grabando" && micro.fijo;
   const avance = claveDeAvance(chat.avance);
-  const linea = chat.trabajando ? t(`avance.${avance ?? "trabajando"}`) : chat.pregunta ? t("tienePregunta") : "";
+  const linea = chat.trabajando ? t(`avance.${avance ?? "trabajando"}`) : subagentes.trabajando > 0 ? t("subagentes.trabajando", { n: subagentes.trabajando }) : chat.pregunta ? t("tienePregunta") : "";
   const cara = grabando ? "escuchando" : chat.trabajando ? "pensando" : chat.pregunta ? "avisando" : "reposo";
 
   const ultimoMio = chat.elementos.map(ladoDe).lastIndexOf("me");
@@ -145,6 +148,10 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   // `as`: si no, TypeScript lo deja en `null` tras el map (no sigue asignaciones dentro de callbacks).
   let previo = null as "me" | "len" | null;
   const filas = chat.elementos.map((e, i) => {
+    if (e.tipo === "subagentes") return <div className="ch-row is-len is-cont" key={e.clave} data-clave={e.clave}>
+      <SubagentesLineas runs={subagentes.porFila.get(e.fila) ?? []} parar={subagentes.parar} />
+    </div>;
+    if (e.tipo === "origen") return <div className="ch-day" key={e.clave}>{t("subagentes.origen")}</div>;
     if (e.tipo === "dia") {
       previo = null;
       const c = cualDia(e.dia, hoy);

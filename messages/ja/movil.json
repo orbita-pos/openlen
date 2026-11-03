@@ -67,6 +67,26 @@
     "asunto": "メッセージへの返信"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "作業中",
+        "completed": "完了",
+        "aborted": "停止",
+        "error": "失敗",
+        "budget": "上限に到達",
+        "turn_limit": "ターン上限に達しました"
+      },
+      "steps": "{n, plural, other {# ステップ}}",
+      "stop": "このサブエージェントを停止",
+      "trabajando": "{n, plural, other {# 件のサブエージェントが作業中}}",
+      "origen": "サブエージェントの結果",
+      "worktree": {
+        "working": "専用のコピーで作業中",
+        "brought": "{n}個のファイルを反映しました",
+        "conflict": "変更が競合しました：作業内容はブランチに残っています",
+        "kept": "変更を反映できませんでした：作業内容はブランチに残っています"
+      }
+    },
     "pedirCambio": "変更を頼む",
     "volver": "ページに戻る",
     "mensaje": "メッセージ",

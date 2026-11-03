@@ -67,6 +67,26 @@
     "asunto": "Reply to your message"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "working",
+        "completed": "done",
+        "aborted": "stopped",
+        "error": "failed",
+        "budget": "hit the limit",
+        "turn_limit": "hit its turn limit"
+      },
+      "steps": "{n, plural, one {# step} other {# steps}}",
+      "stop": "Stop this subagent",
+      "trabajando": "{n, plural, one {# subagent working} other {# subagents working}}",
+      "origen": "Results from the subagents",
+      "worktree": {
+        "working": "in its own copy",
+        "brought": "brought {n, plural, one {# file} other {# files}}",
+        "conflict": "clashed with your changes: its work is still on its branch",
+        "kept": "could not bring changes: its work is still on its branch"
+      }
+    },
     "pedirCambio": "Ask for a change",
     "volver": "Back to your page",
     "mensaje": "Message",
