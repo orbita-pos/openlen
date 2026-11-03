@@ -14,6 +14,15 @@ export type SubagentStopReason = "completed" | "aborted" | "error" | "budget" | 
 /** A run as `subagentRuns` keeps it. Here, not in the store, so the chat can import it. */
 export type SubagentStatus = "running" | SubagentStopReason;
 
+/** How an isolated child's copy came back into the draft (phase 4, spec local 2026-11-02-subagentes-de-len-fase-4,
+ *  §4.3): nothing changed; it all entered; it clashed and nothing entered (its work stays on its branch); or it could
+ *  not be brought for another reason (same). */
+export type WorktreeOutcome =
+  | { readonly state: "nothing" }
+  | { readonly state: "brought"; readonly files: readonly string[] }
+  | { readonly state: "conflict"; readonly files: readonly string[]; readonly branch: string }
+  | { readonly state: "kept"; readonly branch: string };
+
 /** Len's agent id, as his children address him (`send_message({ agent_id: "len" })`). DeepSeek's is the
  *  parent's session id; Len has one conversation in progress per project. */
 export const LEN_AGENT_ID = "len";

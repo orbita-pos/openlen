@@ -32,9 +32,15 @@ export function snapshotFiles(data: SitioDeDatos, folder: Readonly<Record<string
   return { versioned, extra };
 }
 
-/** The commit of `files` (absolute paths), its parent the repository's HEAD; no branch moves. With no repository yet,
- *  it is first created with an "Initial commit", as git does on first use. Returns the commit's oid. */
+/** The commit of what was published, hanging off HEAD (`commitDetached`). */
 export async function commitPublished(store: GitStore, files: Readonly<Record<string, string>>, owner: GitIdentity, now: Date): Promise<string> {
+  return commitDetached(store, files, owner, now, "Published\n");
+}
+
+/** The commit of `files` (absolute paths), its parent the repository's HEAD; no branch moves. With no repository yet,
+ *  it is first created with an "Initial commit", as git does on first use. Returns the commit's oid. An isolated
+ *  subagent's copy is cut from one too (lib/agent/subagents/worktree.ts). */
+export async function commitDetached(store: GitStore, files: Readonly<Record<string, string>>, owner: GitIdentity, now: Date, message: string): Promise<string> {
   const tree = workingTree(files);
   const repo = await ensureRepository(store, tree, owner, now);
   const index: Record<string, string> = {};
@@ -47,7 +53,7 @@ export async function commitPublished(store: GitStore, files: Readonly<Record<st
   }
   const { root, objects } = buildTree(index);
   const sig = signatureOf(owner, now);
-  const commit = makeObject("commit", encodeCommit({ tree: root, parents: [repo.head], author: sig, committer: sig, message: "Published\n" }));
+  const commit = makeObject("commit", encodeCommit({ tree: root, parents: [repo.head], author: sig, committer: sig, message }));
   await store.writeObjects([...blobs, ...objects, commit]);
   return commit.oid;
 }
