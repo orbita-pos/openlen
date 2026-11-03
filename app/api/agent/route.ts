@@ -104,6 +104,8 @@ import { guardarZona, leerZona } from "@/lib/resultados/zona-guardada";
 import { getUserPlan } from "@/lib/limits";
 import type { ScheduledTasksDeps } from "@/lib/agent/schedule-tools";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
+import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
+import { eventTasksToolDeps } from "@/lib/event-tasks/tool-deps";
 import { createTask, deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
 import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
@@ -1893,10 +1895,19 @@ async function correrTurno(
         const stillWorking = reloj.vivo;
         // A tool that waits (inspect_artifact's wait_ms) stops waiting when the turn is stopped.
         const turnSignal = upstreamAbort.signal;
-        // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): the project's, paid by its owner.
+        // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): the project's, paid by its owner; with event
+        // tasks on (spec local 2026-11-03-len-que-avisa), the same four tools reach them too.
         const ownerId = userId;
         const scheduledTasks: ScheduledTasksDeps | undefined = scheduleEnabled()
-          ? { ownerPlan: () => getUserPlan(ownerId), create: createTask, list: listTasks, update: updateTask, remove: deleteTask, now: () => Date.now() }
+          ? {
+              ownerPlan: () => getUserPlan(ownerId),
+              create: createTask,
+              list: listTasks,
+              update: updateTask,
+              remove: deleteTask,
+              now: () => Date.now(),
+              ...(eventTasksEnabled() ? { events: eventTasksToolDeps } : {}),
+            }
           : undefined;
         // LEN'S SUBAGENTS: the launcher of this turn's children, with what the turn has and the real world (`RunnerIO`).
         const subagentIo: RunnerIO = {

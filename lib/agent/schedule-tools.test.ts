@@ -168,3 +168,114 @@ describe("the catalog", () => {
     expect(String(create.description)).toMatch(/scheduledAtLocal/);
   });
 });
+
+// «LEN QUE AVISA» (spec local 2026-11-03-len-que-avisa, §7.1, §7.8, §7.10): `on` instead of a timing parameter.
+describe("event tasks through the schedule tools", () => {
+  const ROWS_ON = { prompt: "Avísame si una reserva choca con otra: misma fecha, hora y mesa.", title: "Reservas que chocan", on: { source: "app_rows", table: "reservas", created_column: "created_at" } };
+
+  function withEvents(o: { plan?: "free" | "pro"; reason?: string; active?: number } = {}) {
+    const base = fake({ plan: o.plan });
+    const tasks: Record<string, unknown>[] = [];
+    const events: NonNullable<ScheduledTasksDeps["events"]> = {
+      validate: vi.fn(async (_source: string, _projectId: string, _params: unknown) => (o.reason ? { ok: false as const, reason: o.reason } : { ok: true as const, initialState: { cursor: { at: "-infinity", key: "" }, key_column: "id" } })),
+      create: vi.fn(async (input) => {
+        if ((o.active ?? 0) >= 10) throw new OpenLenScheduleError("too_many_schedules", "This project already has 10 active scheduled tasks. Delete one before creating another.");
+        const row = { ...input, id: "e1", status: "active", pausedAt: null, lastCheckedAt: null };
+        tasks.push(row);
+        return row as never;
+      }),
+      list: vi.fn(async () => tasks as never),
+      get: vi.fn(async (_p, id) => (tasks.find((t) => t.id === id) ?? null) as never),
+      remove: vi.fn(async (_p, id) => tasks.some((t) => t.id === id)),
+      update: vi.fn(async (_p, id, patch) => ({ ...(tasks.find((t) => t.id === id) ?? {}), ...patch }) as never),
+      latestCards: vi.fn(async () => [{ title: "Choca la mesa 4", status: "dismissed", createdAt: new Date(NOW) }] as never),
+    };
+    base.scheduledTasks.events = events;
+    return { ...base, events, tasks };
+  }
+
+  it("create with on and a timing parameter is refused: exactly one of them", async () => {
+    const { deps, events } = withEvents();
+    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, daily: { time: "09:03:00", time_zone: "UTC" } }));
+    expect(out.code).toBe("invalid_selector");
+    expect(out.message).toContain("or on");
+    expect(events.create).not.toHaveBeenCalled();
+  });
+
+  it("create on a table without a creation column returns the source's reason", async () => {
+    const { deps, events } = withEvents({ reason: 'Table "reservas" has no timestamp or date column "created_at"' });
+    const out = result(await toolScheduleCreate(session, deps, ROWS_ON));
+    expect(out).toEqual({ code: "invalid_source", message: expect.stringContaining('no timestamp or date column "created_at"') });
+    expect(events.create).not.toHaveBeenCalled();
+  });
+
+  it("saves the task with its source, params and first state, as the person who asked", async () => {
+    const { deps, events } = withEvents();
+    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { ...ROWS_ON.on, conditions: [{ field: "estado", op: "eq", value: "confirmada" }] } }));
+    expect(events.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "p1",
+        createdBy: "member",
+        locale: "es",
+        source: "app_rows",
+        params: { table: "reservas", created_column: "created_at", conditions: [{ field: "estado", op: "eq", value: "confirmada" }] },
+        state: { cursor: { at: "-infinity", key: "" }, key_column: "id" },
+      }),
+    );
+    expect(out).toMatchObject({ id: "e1", kind: "event", source: "app_rows", title: "Reservas que chocan" });
+  });
+
+  it("create on a form says the per-lead email keeps coming", async () => {
+    const { deps } = withEvents();
+    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "form_submissions", form: "fab12" } }));
+    expect(out.note).toBe("The owner still gets an email for each submission of this form.");
+  });
+
+  it("an unknown source or bad params are refused", async () => {
+    const { deps } = withEvents();
+    expect(result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");
+    expect(result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "app_rows" } })).code).toBe("invalid_source");
+  });
+
+  it("the eleventh active task of either kind is refused with too_many_schedules", async () => {
+    const { deps } = withEvents({ active: 10 });
+    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("too_many_schedules");
+  });
+
+  it("on Free, create with on is plan_required", async () => {
+    const { deps, events } = withEvents({ plan: "free" });
+    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("plan_required");
+    expect(events.validate).not.toHaveBeenCalled();
+  });
+
+  it("list shows an event task with its source, params and latest cards", async () => {
+    const { deps } = withEvents();
+    await toolScheduleCreate(session, deps, ROWS_ON);
+    const out = result(await toolScheduleList(session, deps, {}));
+    expect(out).toContainEqual(
+      expect.objectContaining({ id: "e1", kind: "event", source: "app_rows", params: { table: "reservas", created_column: "created_at" }, latestNotices: [{ title: "Choca la mesa 4", status: "dismissed", at: new Date(NOW).toISOString() }] }),
+    );
+  });
+
+  it("update of an event task changes its title and prompt, and refuses a timing parameter", async () => {
+    const { deps, events } = withEvents();
+    await toolScheduleCreate(session, deps, ROWS_ON);
+    expect(result(await toolScheduleUpdate(session, deps, { id: "e1", every_seconds: 7200 })).code).toBe("invalid_selector");
+    expect(result(await toolScheduleUpdate(session, deps, { id: "e1", title: "Choques de reservas" }))).toMatchObject({ id: "e1", title: "Choques de reservas" });
+    expect(events.update).toHaveBeenCalledWith("p1", "e1", { title: "Choques de reservas" }, expect.any(Date));
+  });
+
+  it("delete finds an event task too", async () => {
+    const { deps } = withEvents();
+    await toolScheduleCreate(session, deps, ROWS_ON);
+    expect(result(await toolScheduleDelete(session, deps, { id: "e1" }))).toEqual({ id: "e1", deleted: true });
+  });
+
+  it("with OPENLEN_EVENT_TASKS=0, schedule_create declares no on and refuses one", async () => {
+    const create = (env: Record<string, string>) => buildFunctionDeclarations(env, {}).find((d) => d.name === "schedule_create") as { parameters: { properties: Record<string, unknown> } };
+    expect(create({}).parameters.properties.on).toBeDefined();
+    expect(create({ OPENLEN_EVENT_TASKS: "0" }).parameters.properties.on).toBeUndefined();
+    const { deps } = fake();
+    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("invalid_selector");
+  });
+});

@@ -33,7 +33,12 @@ export async function createTask(input: {
       .select({ n: count() })
       .from(schema.scheduledTasks)
       .where(and(eq(schema.scheduledTasks.projectId, input.projectId), eq(schema.scheduledTasks.status, "active")));
-    if ((active?.n ?? 0) >= MAX_ACTIVE_TASKS_PER_PROJECT) {
+    // The ten are shared with the project's event tasks (spec local 2026-11-03-len-que-avisa, §7.10).
+    const [watching] = await tx
+      .select({ n: count() })
+      .from(schema.eventTasks)
+      .where(and(eq(schema.eventTasks.projectId, input.projectId), eq(schema.eventTasks.status, "active")));
+    if (Number(active?.n ?? 0) + Number(watching?.n ?? 0) >= MAX_ACTIVE_TASKS_PER_PROJECT) {
       throw new OpenLenScheduleError(
         "too_many_schedules",
         `This project already has ${MAX_ACTIVE_TASKS_PER_PROJECT} active scheduled tasks. Delete one before creating another.`,

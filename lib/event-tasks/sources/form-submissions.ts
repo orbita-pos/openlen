@@ -5,10 +5,11 @@
 import "server-only";
 
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { db, schema } from "@/lib/db";
 
+import { formSubmissionsParamsSchema } from "./declarations";
 import type { EventSource, SourceChange } from "./types";
 
 export interface FormSubmissionsParams {
@@ -25,12 +26,7 @@ const BEFORE = 20;
 const f = schema.formSubmissions;
 const atText = sql<string>`${f.createdAt}::text`;
 
-const paramsSchema = z.object({
-  form: z.string().min(1).optional(),
-  conditions: z
-    .array(z.object({ field: z.string().min(1), op: z.enum(["eq", "neq", "contains", "gt", "lt", "exists"]), value: z.union([z.string(), z.number()]).optional() }))
-    .optional(),
-}) as z.ZodType<FormSubmissionsParams>;
+const paramsSchema = formSubmissionsParamsSchema as unknown as z.ZodType<FormSubmissionsParams>;
 
 const ofForm = (projectId: string, form: string | undefined) => (form ? and(eq(f.projectId, projectId), eq(f.formId, form)) : eq(f.projectId, projectId));
 
@@ -44,9 +40,6 @@ function summaryOf(data: Record<string, string>): string {
 export const formSubmissionsSource: EventSource<FormSubmissionsParams, FormSubmissionsState> = {
   kind: "form_submissions",
   paramsSchema,
-  declaration: {
-    form: { type: "STRING", description: "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project." },
-  },
 
   async validate(projectId, params) {
     const [last] = await db.select({ at: atText, id: f.id }).from(f).where(ofForm(projectId, params.form)).orderBy(desc(f.createdAt), desc(f.id)).limit(1);

@@ -11,8 +11,6 @@ const SOURCES: Record<EventSourceKind, EventSource<never, never>> = {
   form_submissions: formSubmissionsSource as unknown as EventSource<never, never>,
 };
 
-export const SOURCE_KINDS = Object.keys(SOURCES) as EventSourceKind[];
-
 export function sourceOf(kind: EventSourceKind): EventSource<unknown, unknown> {
   return SOURCES[kind] as unknown as EventSource<unknown, unknown>;
 }

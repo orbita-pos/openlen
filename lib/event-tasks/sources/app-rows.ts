@@ -8,11 +8,12 @@
 // (the cursor), quoted as literals. Condition values never reach SQL: the trigger matches them in TypeScript.
 import "server-only";
 
-import { z } from "zod";
+import type { z } from "zod";
 
 import type { QueryOutcome } from "@/lib/backend/cli-core";
 import { queryLive } from "@/lib/backend/live-read";
 
+import { appRowsParamsSchema } from "./declarations";
 import { SourceError, type EventSource, type SourceChange } from "./types";
 
 export interface AppRowsParams {
@@ -37,17 +38,7 @@ const CREATION_TYPES = new Set(["timestamp with time zone", "timestamp without t
 export const quoteIdent = (name: string): string => `"${name.replace(/\0/g, "").replace(/"/g, '""')}"`;
 export const quoteLiteral = (value: string): string => `'${value.replace(/\0/g, "").replace(/'/g, "''")}'`;
 
-const conditionSchema = z.object({
-  field: z.string().min(1),
-  op: z.enum(["eq", "neq", "contains", "gt", "lt", "exists"]),
-  value: z.union([z.string(), z.number()]).optional(),
-});
-
-const paramsSchema = z.object({
-  table: z.string().min(1),
-  created_column: z.string().min(1),
-  conditions: z.array(conditionSchema).optional(),
-}) as z.ZodType<AppRowsParams>;
+const paramsSchema = appRowsParamsSchema as unknown as z.ZodType<AppRowsParams>;
 
 /** The rows of a result as objects, without the cursor's own columns. */
 function objects(o: Extract<QueryOutcome, { kind: "rows" }>): Record<string, unknown>[] {
@@ -81,10 +72,6 @@ function summaryOf(row: Record<string, unknown>, keyColumn: string): string {
 export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
   kind: "app_rows",
   paramsSchema,
-  declaration: {
-    table: { type: "STRING", description: "app_rows: the table of the app's production base to watch for new rows." },
-    created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },
-  },
 
   async validate(projectId, params) {
     const columns = await queryLive(

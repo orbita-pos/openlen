@@ -41,9 +41,8 @@ export class SourceError extends Error {
 
 export interface EventSource<P, S> {
   readonly kind: EventSourceKind;
+  /** Its parameters' schema (./declarations.ts, shared with `schedule_create`'s `on`). */
   readonly paramsSchema: z.ZodType<P>;
-  /** The properties of `on` this source adds to `schedule_create` (Gemini-style JSON schema). */
-  readonly declaration: Record<string, unknown>;
   /** Whether a task can watch this, and its first state: what exists now never fires. */
   validate(projectId: string, params: P): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
   observe(projectId: string, params: P, state: S): Promise<Observation<S>>;
