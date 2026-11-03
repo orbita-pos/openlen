@@ -52,6 +52,8 @@ import { ENTRADA } from "@/lib/apps/esqueleto";
 import { ARTIFACT_MANUAL_INDEX, ARTIFACT_MANUAL_INDEX_SKILLS, artifactManuals } from "./artifact-manuals";
 import { bundledSkillFiles } from "./skills/bundled";
 import { skillsEnabled } from "./skills/enabled";
+import { bundledAgentFiles } from "./subagents/bundled-types";
+import { subagentsEnabled } from "./subagents/enabled";
 import { MAX_TEST_FILE_BYTES, RESERVED_ROOTS } from "@/lib/agent/ficheros/folder";
 import { MAX_FILE_BYTES, MAX_PROJECT_BYTES } from "@/lib/files/limits";
 
@@ -394,7 +396,8 @@ export function documentosDeLaPlataforma(
   const skillsOn = skillsEnabled(env);
   const artifacts = env.OPENLEN_ARTIFACTS === "1" && !skillsOn ? artifactManuals : {};
   // Las skills de Len (spec local 2026-10-26-len-skills): /.openlen/skills, como un documento más.
-  const skills = skillsOn ? bundledSkillFiles({ app, env }) : {};
+  // Los tipos de subagente de OpenLen (spec local 2026-11-02-subagentes-de-len-fase-4, §3), con sus skills.
+  const skills = { ...(skillsOn ? bundledSkillFiles({ app, env }) : {}), ...(subagentsEnabled(env) ? bundledAgentFiles() : {}) };
   // Con las skills encendidas, las guías también son skills (`frontend-design`, `convert-to-app`):
   // /.openlen/docs se queda sin nada que servir.
   if (skillsOn) return skills;

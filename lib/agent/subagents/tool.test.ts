@@ -267,9 +267,16 @@ describe("custom types in the subagent tool", () => {
     const { resolveAgentTypes } = await import("./agent-registry");
     const a = { name: "reviewer", text: `---\nname: reviewer\ndescription: ${"d".repeat(600)}\n---\nReview.`, updatedAt: new Date(0) };
     const d = subagentDeclaration(resolveAgentTypes({ project: [a], personal: [a] }));
-    expect((d.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "reviewer"]);
+    expect((d.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "reviewer"]);
     expect(d.description).toContain("reviewer (yours, over the project's reviewer)");
+    expect(d.description).toMatch(/ Custom types: reviewer/);
     expect(d.description).not.toContain("d".repeat(501));
+  });
+  it("OpenLen's types are in the enum and the description", () => {
+    expect((SUBAGENT_DECLARATION.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office"]);
+    expect(SUBAGENT_DECLARATION.description).toContain("OpenLen's types: len-design: Designs or redesigns");
+    expect(SUBAGENT_DECLARATION.description).toContain("len-office: Makes or edits");
+    expect(SUBAGENT_DECLARATION.description).not.toContain("Custom types:");
   });
   it("accepts the turn's custom type and refuses an unknown name with the available choices", async () => {
     const { deps, launched } = launching();

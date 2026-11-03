@@ -3,16 +3,19 @@
 // MIT, LICENSES/deepseek-harness.MIT.txt) for continuable children: `subagent`, `subagent_fork`,
 // `send_message`, `interrupt_agent` and `list_agents` — names, descriptions, parameters and answers word for
 // word. Always in the background, as DeepSeek's (Jesús, 01/11). `agent_preset` is DeepSeek's parameter; what
-// it picks are Claude Code's three types. The line per type and the two closing sentences are ours.
+// it picks are Claude Code's three types and OpenLen's two (phase 4). The line per type and the two closing
+// sentences are ours.
 //
 // The tools only validate and hand over: the launcher (`deps.subagents`, lib/agent/subagents/run.ts)
 // builds, runs, wakes and stops the children, and their notices reach Len later.
 //
 // Cache effect: the declaration changes when the project's or speaker's custom types change; without
-// custom types it is byte for byte the fixed built-in declaration. Answers are appended.
+// custom types it is byte for byte the fixed declaration, which lists Claude Code's three types and
+// OpenLen's two. Answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
+import { BUNDLED_AGENT_TYPES } from "./bundled-types";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import { LEN_AGENT_ID, startedLine } from "./notice";
 import { SUBAGENT_PRESETS } from "./presets";
@@ -35,6 +38,8 @@ const DESCRIPTION = [
   CONTINUABLE,
   // Ours: the three types (Claude Code's).
   "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
+  // Ours: OpenLen's own types (bundled-types.ts), always offered.
+  `OpenLen's types: ${BUNDLED_AGENT_TYPES.map((a) => `${a.name}: ${a.description}`).join("; ")}`,
   NOT_SHOWN,
 ].join(" ");
 
@@ -49,7 +54,7 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
         type: "STRING",
         description: "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs.",
       },
-      agent_preset: { type: "STRING", enum: [...SUBAGENT_PRESETS], description: "The type of subagent; general-purpose when omitted." },
+      agent_preset: { type: "STRING", enum: [...SUBAGENT_PRESETS, ...BUNDLED_AGENT_TYPES.map((a) => a.name)], description: "The type of subagent; general-purpose when omitted." },
     },
     required: ["description", "prompt"],
   },

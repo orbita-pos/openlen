@@ -10,9 +10,11 @@
  * Cache effect: the fixed `subagent` declaration lists these two in `agent_preset` and in its description; they
  * change only when this file does.
  */
+import { CARPETA_AGENTES } from "@/lib/agent/ficheros/manual";
+
 import { parseAgentFile, type AgentDefinition } from "./agent-file";
 
-export const BUNDLED_AGENTS_DIR = "/.openlen/agents";
+export const BUNDLED_AGENTS_DIR = CARPETA_AGENTES;
 
 const LEN_DESIGN = `---
 name: len-design
