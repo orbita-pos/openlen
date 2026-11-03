@@ -50,7 +50,7 @@ export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
  *  que se vuelve a pedir (Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit, Write); `skill` contesta «already
  *  loaded above» al volver a pedirla, así que vaciada, Len trabajaba sin sus instrucciones creyendo tenerlas.
  *  Efecto en la caché: una charla que ya la tenía vaciada la manda entera desde su turno siguiente (se paga una vez). */
-const seQuedaEntera = (r: { readonly name: string }) => r.name === SKILL_TOOL;
+const neverEmptied = (r: { readonly name: string }) => r.name === SKILL_TOOL;
 
 /** Caracteres de resultados de herramientas que viajan enteros en el historial:
  *  se acumulan hasta `hasta`, y al pasarse se vacían los más viejos hasta `deja`.
@@ -295,7 +295,7 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
     const m = salida[i]!;
     if (!m.functionResponses?.length) continue;
     const respuestas = [...m.functionResponses].reverse().map((r) => {
-      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || seQuedaEntera(r)) return r;
+      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || neverEmptied(r)) return r;
       const t = tamanoDeRespuesta(r.response);
       if (agotado || usado + t > presupuesto) {
         agotado = true;
@@ -490,7 +490,7 @@ function microcompactarASaltos<M extends Message | MensajeDelHistorial>(mensajes
     const respuestas = salida[i]!.functionResponses;
     if (!respuestas?.length) continue;
     respuestas.forEach((r, j) => {
-      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || seQuedaEntera(r)) return;
+      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || neverEmptied(r)) return;
       const tamano = tamanoDeRespuesta(r.response);
       enteras.push({ i, j, tamano });
       usado += tamano;

@@ -48,7 +48,15 @@ export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<nu
   const owed = (r: SubagentRunRow) => previous(r) && (closedHere.has(r.id) || (r.settledAt?.getTime() ?? 0) < io.startedAt);
   const recovered = new Map<string, WorktreeOutcome | null>();
   for (const r of (await io.store.unfinishedWorktreeRuns()).filter(r => owed(r) && !io.isLive(r.projectId, r.id))) {
-    recovered.set(r.id, await io.finishWorktree(r));
+    try {
+      recovered.set(r.id, await io.finishWorktree(r));
+    } catch (e) {
+      // One copy that can't come back stops neither the others nor any notice. As the launcher does: kept, and its
+      // row still lists the copy, so the next startup tries again.
+      // eslint-disable-next-line no-console
+      console.warn(`[subagents] run=${r.id} its copy could not come back at startup`, e);
+      recovered.set(r.id, r.worktreeBranch && r.worktreeCopyId ? { state: "kept", branch: r.worktreeBranch, copyId: r.worktreeCopyId } : null);
+    }
   }
   const byProject = new Map<string, SubagentRunRow[]>();
   for (const r of (await io.store.undeliveredSettledRuns()).filter(owed)) {

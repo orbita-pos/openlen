@@ -7,9 +7,13 @@ import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import * as schema from "@/lib/db/schema";
 import { transactionScope } from "@/lib/db/transaction-scope";
 
-const state = vi.hoisted(() => ({ scope: null as unknown }));
+const state = vi.hoisted(() => ({ scope: null as unknown, open: 0 }));
 vi.mock("@/lib/db", () => ({ schema, get db() { return (state.scope as ReturnType<typeof transactionScope>).db; },
-  inTransaction: (f: () => Promise<unknown>) => (state.scope as ReturnType<typeof transactionScope>).run(f) }));
+  inTransaction: async (f: () => Promise<unknown>) => {
+    state.open++;
+    try { return await (state.scope as ReturnType<typeof transactionScope>).run(f); }
+    finally { state.open--; }
+  } }));
 const { saveWorktreeIntoDraft } = await import("./worktree-save");
 const database = await import("@/lib/db");
 let pg: PGlite;
@@ -65,6 +69,30 @@ it("a failed second save rolls back the first", async () => {
   await expect(saveWorktreeIntoDraft(session(), deps, [a, { ...a, ruta: "/src/b.ts", crea: true }], draft)).rejects.toThrow("disk failed");
   expect(await content()).toBe("old");
 });
+// In an app, what the child imports is installed from esm.sh (network, seconds). Inside the serializable
+// transaction it held the connection and collided with everything Len wrote meanwhile; it goes after the commit.
+const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+const importsTiny = { ...a, contenido: `import tiny from "tiny";\nexport default tiny;\n` };
+const recordInstalls = () => {
+  const seen: string[] = [];
+  deps.installPackages = (async () => {
+    seen.push(state.open > 0 ? "inside the transaction" : "after the commit");
+    return { files: {}, notes: [], installed: [] };
+  }) as unknown as AgentDeps["installPackages"];
+  return seen;
+};
+it("in an app, what the child imports is installed after the merge commits, never inside its transaction", async () => {
+  const seen = recordInstalls();
+  expect(await saveWorktreeIntoDraft({ ...session(), app: APP }, deps, [importsTiny], draft)).toEqual({ rechazado: false });
+  expect(seen).toEqual(["after the commit"]);
+});
+it("in an app, a refused merge installs nothing", async () => {
+  const seen = recordInstalls();
+  const r = await saveWorktreeIntoDraft({ ...session(), app: APP }, deps, [importsTiny, { tipo: "borrado", ruta: "/index.html" }], draft);
+  expect(r.rechazado).toBe(true);
+  expect(seen).toEqual([]);
+});
+
 it("transaction scopes isolate parallel callers and defer side effects until commit", async () => {
   const scope = state.scope as ReturnType<typeof transactionScope>;
   const called: string[] = [];

@@ -65,6 +65,24 @@ describe("at boot, what the previous process left", () => {
     expect(s.turns[0]?.notices[0]?.text.endsWith(worktreeNoticeLine(outcome)!)).toBe(true);
   });
 
+  it("a copy that can't come back doesn't stop the others nor any notice; its own says the copy was kept", async () => {
+    const s = setup([
+      row({ id: "r1", projectId: "p1", worktreeCopyId: "c1", worktreeBranch: "worktree-agent-r1", worktreeBase: "b" }),
+      row({ id: "r2", projectId: "p2", worktreeCopyId: "c2", worktreeBranch: "worktree-agent-r2", worktreeBase: "b" }),
+    ]);
+    const finishWorktree = vi.fn(async (r: SubagentRunRow) => {
+      if (r.id === "r1") throw new Error("the database went away");
+      return { state: "nothing" } as const;
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await closeSubagentsOfThePreviousProcess({ ...s.io, finishWorktree });
+    expect(finishWorktree).toHaveBeenCalledTimes(2);
+    expect(s.turns.map((t) => t.projectId).sort()).toEqual(["p1", "p2"]);
+    // As the launcher does when it can't bring a copy back: kept, and retried at the next startup.
+    const kept = worktreeNoticeLine({ state: "kept", branch: "worktree-agent-r1", copyId: "c1" })!;
+    expect(s.turns.find((t) => t.projectId === "p1")!.notices[0]!.text.endsWith(kept)).toBe(true);
+  });
+
   it("a row without an unfinished copy is untouched", async () => {
     const s = setup([row({ id: "r1" }), row({ id: "r2", worktreeCopyId: "copy", worktreeOutcome: { state: "nothing" } })]);
     const finishWorktree = vi.fn(async (_r: SubagentRunRow) => null);
