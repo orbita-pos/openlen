@@ -201,6 +201,14 @@ describe("the control tools (phase 2)", () => {
     expect((await toolSubagentFork(session, deps, { description: "", prompt: "x" })).response).toMatchObject({ ok: false, error: "invalid_arguments" });
   });
 
+  it("a fork passes isolation on, and a bad one is refused", async () => {
+    const { deps, calls } = control();
+    expect((await toolSubagentFork(session, deps, { description: "Review", prompt: "Review it.", isolation: "worktree" })).response.ok).toBe(true);
+    expect(calls).toEqual([{ name: "fork", arg: { description: "Review", prompt: "Review it.", isolation: "worktree" } }]);
+    expect((await toolSubagentFork(session, deps, { description: "Review", prompt: "Review it.", isolation: "remote" })).response).toEqual({ ok: false, error: "invalid_arguments", message: "isolation must be worktree." });
+    expect(calls).toHaveLength(1);
+  });
+
   it("send_message delivers, and a child it woke gets its card", async () => {
     const { deps, calls } = control();
     const out = await toolSendMessage(session, deps, { agent_id: "r1", message: "Also the footer." });
@@ -252,6 +260,35 @@ describe("the control tools (phase 2)", () => {
     ]) {
       expect(out.response).toMatchObject({ ok: false, error: "subagents_disabled" });
     }
+  });
+});
+
+describe("isolation (phase 4)", () => {
+  it("isolation is offered only when asked", async () => {
+    const { subagentDeclaration, subagentForkDeclaration } = await import("./tool");
+    const { NO_AGENT_TYPES } = await import("./agent-registry");
+    const props = (d: Record<string, unknown>) => (d.parameters as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(props(subagentDeclaration(NO_AGENT_TYPES)).isolation).toBeUndefined();
+    expect(props(subagentForkDeclaration()).isolation).toBeUndefined();
+    expect(subagentForkDeclaration()).toEqual(SUBAGENT_FORK_DECLARATION);
+    for (const d of [subagentDeclaration(NO_AGENT_TYPES, { isolation: true }), subagentForkDeclaration({ isolation: true })]) {
+      const p = props(d).isolation!;
+      expect(p).toMatchObject({ type: "STRING", enum: ["worktree"] });
+      expect(String(p.description)).toContain("its own copy of the project, on its own git branch");
+      expect(String(p.description)).toContain("/tmp");
+    }
+  });
+
+  it("a launch passes isolation on", async () => {
+    const { deps, launched } = launching();
+    expect((await toolSubagent(session, deps, { description: "x", prompt: "y", isolation: "worktree" })).response.ok).toBe(true);
+    expect(launched).toEqual([{ description: "x", prompt: "y", preset: "general-purpose", isolation: "worktree" }]);
+  });
+
+  it("a bad isolation is refused", async () => {
+    const { deps, launched } = launching();
+    expect((await toolSubagent(session, deps, { description: "x", prompt: "y", isolation: "remote" })).response).toEqual({ ok: false, error: "invalid_arguments", message: "isolation must be worktree." });
+    expect(launched).toEqual([]);
   });
 });
 

@@ -72,6 +72,15 @@ describe("buildFunctionDeclarations", () => {
     expect(buildAgentSystemPrompt({ OPENLEN_SUBAGENTS: "0" })).not.toContain(SUBAGENT_GUIDANCE);
   });
 
+  it("SUBAGENTS: isolation follows git", () => {
+    const isolation = (env: Record<string, string>) =>
+      buildFunctionDeclarations(env)
+        .filter((d) => d.name === "subagent" || d.name === "subagent_fork")
+        .map((d) => "isolation" in (d.parameters as { properties: Record<string, unknown> }).properties);
+    expect(isolation({})).toEqual([true, true]);
+    expect(isolation({ OPENLEN_GIT: "0" })).toEqual([false, false]);
+  });
+
   it("PROJECT EMAIL: connect_email_domain and set_form_auto_reply only with the email on, after request_secrets", () => {
     const off = buildFunctionDeclarations({}).map((d) => d.name);
     expect(off).not.toContain("connect_email_domain");

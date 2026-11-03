@@ -1,8 +1,9 @@
 /**
  * THE FILE OF A CUSTOM SUBAGENT TYPE (spec local 2026-11-01-subagentes-de-len, §6): `<name>.md`, a frontmatter and
  * the type's section, like Claude Code's `.claude/agents/*.md`. The keys are a subset of Claude Code's: `name`,
- * `description`, `tools`, `disallowedTools`, `skills`, `effort`, `maxTurns` and `omitLenMd` (its `omitClaudeMd`);
- * the others (`model`, `color`…) are ignored, not refused, as the skills do. A key that grants or limits something
+ * `description`, `tools`, `disallowedTools`, `skills`, `effort`, `maxTurns`, `omitLenMd` (its `omitClaudeMd`) and,
+ * since phase 4, `isolation` (only `worktree`); the others (`model`, `color`…) are ignored, not refused, as the
+ * skills do. A key that grants or limits something
  * and is malformed drops the type: ignoring it would change what the type may do.
  *
  * Read like a SKILL.md (`lib/agent/skills/skill-file.ts`): line by line, `key: value`; lists on one line, comma
@@ -32,6 +33,8 @@ export interface AgentDefinition {
   readonly maxTurns: number | null;
   /** Without `/LEN.md` and the person's notes (Claude Code's `omitClaudeMd`). */
   readonly omitLenMd: boolean;
+  /** Works in its own copy of the project when launched (Claude Code's `isolation: worktree`). */
+  readonly isolation: "worktree" | null;
   /** The type's section. */
   readonly body: string;
 }
@@ -39,7 +42,7 @@ export interface AgentDefinition {
 const TRUE = new Set(["true", "yes", "on", "1"]);
 const FALSE = new Set(["false", "no", "off", "0"]);
 const ITEM = /^[A-Za-z_][\w-]*$/;
-const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd"]);
+const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd", "isolation"]);
 
 function template(name: string): string {
   return `---\nname: ${name}\ndescription: <what it does and when to use it, in one line>\ntools: Read, Grep, Glob\n---\n\n<the instructions for this type of subagent>\n`;
@@ -99,10 +102,13 @@ export function parseAgentFile(text: string, expectedName: string | null): { ok:
   const omitText = fields.get("omitLenMd")?.toLowerCase();
   const omitLenMd = omitText === undefined ? false : TRUE.has(omitText) ? true : FALSE.has(omitText) ? false : null;
   if (omitLenMd === null) return fail("omitLenMd must be true or false.");
+  const isolationText = fields.get("isolation");
+  if (isolationText !== undefined && isolationText !== "worktree") return fail("isolation must be worktree.");
+  const isolation = isolationText === "worktree" ? ("worktree" as const) : null;
   const body = t.slice(end + "\n---\n".length).trim();
   if (!body) return fail("The type has no instructions after the frontmatter.");
   if (body.length > AGENT_BODY_MAX) return fail(`The instructions are longer than ${AGENT_BODY_MAX} characters.`);
   const secret = findSecret(`${description}\n${body}`);
   if (secret) return { ok: false, error: `The type seems to contain a ${secret}. Never save credentials in a subagent type.` };
-  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, body } };
+  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, isolation, body } };
 }
