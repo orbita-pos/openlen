@@ -166,8 +166,10 @@ export const TOO_MANY_SUBAGENTS = "8 subagents are already running in this proje
 const TURN_BUDGET_REACHED = "This turn's spending limit is reached: no more subagents can start in it.";
 /** Ours: the custom type's model-call cap, followed by one tools-off closing call. */
 export const TURN_LIMIT_MESSAGE = "You have reached this agent's turn limit. Do not call any more tools: answer now with what you did, what you found and what is left undone.";
-/** Ours (phase 4): a launch that asked for isolation never runs in the shared folder instead. */
-const WORKTREE_FAILED = "The subagent's own copy of the project could not be made; start it without isolation.";
+/** Ours (phase 4): a launch that asked for isolation never runs in the shared folder instead. Like Claude Code's
+ *  «Failed to create worktree», it says what failed and suggests nothing: «start it without isolation» sent Len to
+ *  write in the shared folder, next to the children isolation was keeping apart. */
+const WORKTREE_FAILED = "The subagent's own copy of the project could not be made, so it did not start.";
 const PROGRESS_EVERY_MS = 5_000;
 
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by

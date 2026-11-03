@@ -1108,12 +1108,14 @@ describe("an isolated child (phase 4)", () => {
     expect(s.worktreesMade).toHaveLength(1);
   });
 
-  it("a copy that can't be made refuses the launch", async () => {
+  // Like Claude Code's «Failed to create worktree», it says what failed and suggests nothing: «start it without
+  // isolation» sent Len to write in the shared folder, next to the children isolation was keeping apart.
+  it("a copy that can't be made refuses the launch, without sending Len to the shared folder", async () => {
     const s = setup({ worktree: { fail: true }, scripts: [dice("Done")] });
     expect(await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" })).toEqual({
       ok: false,
       code: "worktree_failed",
-      message: "The subagent's own copy of the project could not be made; start it without isolation.",
+      message: "The subagent's own copy of the project could not be made, so it did not start.",
     });
     expect(liveCount("p")).toBe(0);
     expect((await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose" })).ok).toBe(true);

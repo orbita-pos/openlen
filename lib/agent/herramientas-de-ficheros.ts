@@ -980,6 +980,9 @@ export async function guardarLoDeLaTerminal(
   deps: AgentDeps,
   cambios: readonly CambioDeLaTerminal[],
   antes: Readonly<Record<string, string>>,
+  /** `deferInstall`: the caller installs what the save imports itself (`installAfterTerminalSave`), after its
+   *  transaction commits — an isolated child's merge (lib/agent/subagents/worktree-save.ts). */
+  opts: { readonly deferInstall?: boolean } = {},
 ): Promise<GuardadoDeLaTerminal> {
   const notas: string[] = [];
   const enLaTerminal: Record<string, string | null> = {};
@@ -1168,12 +1171,17 @@ export async function guardarLoDeLaTerminal(
   // entra a compilar la app. El /package.json nuevo vuelve a la terminal: el
   // comando siguiente no pisa lo que se acaba de instalar.
   const tocoLaApp = escrituras.some((o) => (o.ficherosTocados ?? []).some((f) => isCompileInputPath(f.ruta)));
-  if (session.app && tocoLaApp) {
-    const npm = await installPackagesAfterSave(session, deps, (d) => etiquetaDeVersion(session, "npm", d));
+  if (session.app && tocoLaApp && !opts.deferInstall) {
+    const npm = await installAfterTerminalSave(session, deps);
     if (npm.packageJson !== null) enLaTerminal[PACKAGE_JSON_PATH] = npm.packageJson;
     return { notas, rechazado, enLaTerminal, escrituras, npmNotes: npm.notes };
   }
   return { notas, rechazado, enLaTerminal, escrituras };
+}
+
+/** NPM ABIERTO tras guardar lo de la terminal: lo que importa y nadie sirve se instala, con su versión. */
+export function installAfterTerminalSave(session: AgentSession, deps: AgentDeps): ReturnType<typeof installPackagesAfterSave> {
+  return installPackagesAfterSave(session, deps, (d) => etiquetaDeVersion(session, "npm", d));
 }
 
 function conDiagnosticos(ds: ToolOutcome["diagnosticos"]): Pick<ToolOutcome, "diagnosticos"> {
