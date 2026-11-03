@@ -560,7 +560,8 @@
       "completed": "klaar",
       "aborted": "gestopt",
       "error": "mislukt",
-      "budget": "limiet bereikt"
+      "budget": "limiet bereikt",
+      "turn_limit": "heeft de beurtenlimiet bereikt"
     },
     "steps": "{n, plural, one {# stap} other {# stappen}}",
     "closing": "Wat hij Len vertelde",

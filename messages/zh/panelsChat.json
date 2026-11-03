@@ -560,7 +560,8 @@
       "completed": "已完成",
       "aborted": "已停止",
       "error": "失败",
-      "budget": "已达上限"
+      "budget": "已达上限",
+      "turn_limit": "已达到轮次上限"
     },
     "steps": "{n, plural, other {# 步}}",
     "closing": "它告诉 Len 的内容",
