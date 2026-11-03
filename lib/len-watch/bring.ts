@@ -71,8 +71,9 @@ export async function bringFix(p: { projectId: string; incidentId: string; actor
   return bringNow(p);
 }
 
-/** The draft as git would see it: absolute path → content (lib/len-watch/published-sources.ts). */
-async function draftFiles(projectId: string): Promise<Record<string, string>> {
+/** The draft as git would see it: absolute path → content (lib/len-watch/published-sources.ts). An isolated
+ *  subagent's copy is brought back against it too (lib/agent/subagents/worktree.ts). */
+export async function draftFiles(projectId: string): Promise<Record<string, string>> {
   const [{ eq }, { db, schema }, { listProjectFiles }, { snapshotFiles }] = await Promise.all([
     import("drizzle-orm"),
     import("@/lib/db"),
@@ -132,7 +133,7 @@ async function bringNow(p: { projectId: string; incidentId: string; actorId: str
 }
 
 /** The draft as a git tree: absolute path → blob oid, and each oid's text. */
-async function draftTree(projectId: string): Promise<{ oids: Map<string, string>; texts: Map<string, string> }> {
+export async function draftTree(projectId: string): Promise<{ oids: Map<string, string>; texts: Map<string, string> }> {
   const { oidOfContent } = await import("@/lib/git/content");
   const oids = new Map<string, string>();
   const texts = new Map<string, string>();

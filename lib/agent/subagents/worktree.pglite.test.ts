@@ -117,3 +117,129 @@ describe("an isolated child's copy", () => {
     expect(await projectRow(w.copyId)).toBeUndefined();
   });
 });
+
+/** A file of a project as its tools would write it: `/index.html` is the home page in `data`, the rest is the folder. */
+async function write(projectId: string, path: string, content: string | null) {
+  if (path === "/index.html") {
+    await pg.query(`update "projects" set "data" = jsonb_set("data", '{html}', to_jsonb($2::text)) where "id" = $1`, [projectId, content ?? ""]);
+    return;
+  }
+  if (content === null) await pg.query(`delete from "projectFiles" where "projectId" = $1 and "path" = $2`, [projectId, path]);
+  else await pg.query(`insert into "projectFiles" ("projectId", "path", "content") values ($1, $2, $3) on conflict ("projectId", "path") do update set "content" = excluded."content"`, [projectId, path, content]);
+}
+
+/** What `guardarLoDeLaTerminal` does for the launcher, here straight on the draft; `refuse` plays a guard. */
+function saver(refuse: (path: string, deleted: boolean) => boolean = () => false) {
+  const calls: unknown[][] = [];
+  const save = async (cambios: readonly import("@/lib/agent/terminal/ficheros").CambioDeLaTerminal[], draft: Readonly<Record<string, string>>) => {
+    calls.push([cambios, draft]);
+    if (cambios.some((c) => refuse(c.ruta, c.tipo === "borrado"))) return { rechazado: true };
+    for (const c of cambios) await write("p", c.ruta, c.tipo === "borrado" ? null : c.contenido);
+    return { rechazado: false };
+  };
+  return { save, calls };
+}
+
+const finish = (w: import("./worktree").AgentWorktree, save: ReturnType<typeof saver>["save"], onPlanned?: () => Promise<void>) =>
+  wt.finishAgentWorktree({ parentId: "p", ownerId: "owner", w, description: "Change the copy", save, ...(onPlanned ? { onPlanned } : {}) });
+const branchTip = async (branch: string) => (await postgresStore("p").readRepo())?.refs[branch];
+const THREE = "line one\nline two\nline three\n";
+
+describe("bringing the copy back", () => {
+  it("nothing changed", async () => {
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "n1" });
+    const r = await finish(w, saver().save);
+    expect(r).toEqual({ outcome: { state: "nothing" }, changes: null });
+    expect(await projectRow(w.copyId)).toBeUndefined();
+    expect(await branchTip(w.branch)).toBeUndefined();
+  });
+
+  it("what the child changed lands in the draft", async () => {
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "b1" });
+    await write(w.copyId, "/src/a.ts", "export const a = 9;\n");
+    await write(w.copyId, "/src/b.ts", "export const b = 1;\n");
+    const r = await finish(w, saver().save);
+    expect(r.outcome).toEqual({ state: "brought", files: ["/src/a.ts", "/src/b.ts"] });
+    expect(await filesOf("p")).toEqual({ "/src/a.ts": "export const a = 9;\n", "/src/b.ts": "export const b = 1;\n" });
+    expect(await projectRow(w.copyId)).toBeUndefined();
+    expect(await branchTip(w.branch)).toBeUndefined();
+    expect(r.changes?.before["/src/a.ts"]).toBe("export const a = 1;\n");
+    expect(r.changes?.after["/src/b.ts"]).toBe("export const b = 1;\n");
+  });
+
+  it("the draft's own pending edits are not a clash", async () => {
+    expect((await gitInParent(["add", "-A"])).exitCode).toBe(0);
+    await write("p", "/index.html", "<p>Home, edited and not committed</p>");
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "d1" });
+    await write(w.copyId, "/src/a.ts", "export const a = 9;\n");
+    const r = await finish(w, saver().save);
+    expect(r.outcome).toEqual({ state: "brought", files: ["/src/a.ts"] });
+    expect(((await projectRow("p"))!.data as { html: string }).html).toBe("<p>Home, edited and not committed</p>");
+  });
+
+  it("different lines of the same file mix", async () => {
+    await write("p", "/src/a.ts", THREE);
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "m1" });
+    await write(w.copyId, "/src/a.ts", THREE.replace("line one", "LINE ONE"));
+    await write("p", "/src/a.ts", THREE.replace("line three", "LINE THREE"));
+    const r = await finish(w, saver().save);
+    expect(r.outcome).toEqual({ state: "brought", files: ["/src/a.ts"] });
+    expect((await filesOf("p"))["/src/a.ts"]).toBe("LINE ONE\nline two\nLINE THREE\n");
+  });
+
+  it("the same lines clash and nothing enters", async () => {
+    await write("p", "/src/a.ts", THREE);
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "c1" });
+    await write(w.copyId, "/src/a.ts", THREE.replace("line one", "child's one"));
+    await write(w.copyId, "/src/c.ts", "export const c = 1;\n");
+    await write("p", "/src/a.ts", THREE.replace("line one", "Len's one"));
+    const before = await filesOf("p");
+    const r = await finish(w, saver().save);
+    expect(r).toEqual({ outcome: { state: "conflict", files: ["/src/a.ts"], branch: w.branch }, changes: null });
+    expect(await filesOf("p")).toEqual(before);
+    expect((await gitInParent(["show", `${w.branch}:src/a.ts`])).stdout).toBe(THREE.replace("line one", "child's one"));
+    expect(await projectRow(w.copyId)).toBeUndefined();
+  });
+
+  it("what the guards refuse counts as a clash", async () => {
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "g1" });
+    await write(w.copyId, "/src/a.ts", null);
+    const r = await finish(w, saver((path, deleted) => deleted && path === "/src/a.ts").save);
+    expect(r.outcome).toEqual({ state: "conflict", files: ["/src/a.ts"], branch: w.branch });
+    expect((await filesOf("p"))["/src/a.ts"]).toBe("export const a = 1;\n");
+    expect(await branchTip(w.branch)).toBeDefined();
+  });
+
+  it("a write by Len between planning and writing is kept", async () => {
+    await write("p", "/src/a.ts", THREE);
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "l1" });
+    await write(w.copyId, "/src/a.ts", THREE.replace("line one", "LINE ONE"));
+    let first = true;
+    const r = await finish(w, saver().save, async () => {
+      if (!first) return;
+      first = false;
+      await write("p", "/src/a.ts", THREE.replace("line three", "LINE THREE"));
+    });
+    expect(r.outcome).toEqual({ state: "brought", files: ["/src/a.ts"] });
+    expect((await filesOf("p"))["/src/a.ts"]).toBe("LINE ONE\nline two\nLINE THREE\n");
+  });
+
+  it("two copies of the same draft", async () => {
+    await write("p", "/src/a.ts", THREE);
+    const a = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "ta" });
+    const b = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "tb" });
+    await write(a.copyId, "/src/a.ts", THREE.replace("line one", "A's one"));
+    await write(b.copyId, "/src/c.ts", "export const c = 1;\n");
+    expect((await finish(a, saver().save)).outcome.state).toBe("brought");
+    expect((await finish(b, saver().save)).outcome.state).toBe("brought");
+    expect(await filesOf("p")).toEqual({ "/src/a.ts": THREE.replace("line one", "A's one"), "/src/c.ts": "export const c = 1;\n" });
+
+    const c = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "tc" });
+    const d = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "td" });
+    await write(c.copyId, "/src/a.ts", THREE.replace("line one", "C's one"));
+    await write(d.copyId, "/src/a.ts", THREE.replace("line one", "D's one"));
+    expect((await finish(c, saver().save)).outcome.state).toBe("brought");
+    expect((await finish(d, saver().save)).outcome).toEqual({ state: "conflict", files: ["/src/a.ts"], branch: d.branch });
+    expect((await filesOf("p"))["/src/a.ts"]).toBe(THREE.replace("line one", "C's one"));
+  });
+});
