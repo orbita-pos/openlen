@@ -1111,6 +1111,8 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
 }
 
 export interface AgentSession {
+  /** The forked skill this child is already executing; it cannot launch itself. */
+  runningSkill?: string;
   projectId: string;
   userId: string;
   /**
@@ -3004,7 +3006,7 @@ async function ejecutarHerramienta(
       case READ_ME:
         return toolReadMe(args);
       case SKILL_TOOL:
-        return toolSkill(session, args);
+        return toolSkill(session, args, deps);
       case PRESENT_TOOL:
         return await toolPresent(session, deps, args);
       case SHOW_WIDGET:

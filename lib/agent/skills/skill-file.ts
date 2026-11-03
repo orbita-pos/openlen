@@ -2,7 +2,8 @@
  * THE FILE OF A SKILL (spec local 2026-10-26-len-skills, §4.1): `<name>/SKILL.md`, a frontmatter and
  * the instructions, as DeepSeek Harness (`packages/skill/skill-filesystem`, MIT) and Claude Code read
  * it. The keys are the ones DeepSeek implements, a subset of Claude Code's; the others (allowed-tools,
- * argument-hint, context…) are ignored, not refused. An invocation key that is not a boolean drops the
+ * argument-hint…) are ignored, not refused. `context: fork` and `agent` select a subagent (phase 3).
+ * An invocation key that is not a boolean drops the
  * skill: ignoring it would grant permission by default (DeepSeek: «Invocation data fails closed»).
  *
  * The frontmatter is read line by line, `key: value`, like a memory note (`lib/agent/memory/note.ts`).
@@ -16,6 +17,7 @@ export const SKILL_NAME_MAX = 64;
 export const SKILL_BODY_MAX = 20_000;
 
 export interface SkillDefinition {
+  readonly fork: { readonly agent: string } | null;
   readonly name: string;
   /** With `when_to_use` after it, as the catalog shows it. */
   readonly description: string;
@@ -69,5 +71,6 @@ export function parseSkillFile(text: string, expectedName: string | null): { ok:
   if (body.length > SKILL_BODY_MAX) return fail(`The instructions are longer than ${SKILL_BODY_MAX} characters.`);
   const secret = findSecret(`${description}\n${body}`);
   if (secret) return { ok: false, error: `The skill seems to contain a ${secret}. Never save credentials in a skill.` };
-  return { ok: true, skill: { name, description, modelInvocable: !disableModel, userInvocable, body } };
+  const fork = fields.get("context") === "fork" ? { agent: fields.get("agent") || "general-purpose" } : null;
+  return { ok: true, skill: { name, description, modelInvocable: !disableModel, userInvocable, body, fork } };
 }

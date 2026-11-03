@@ -4,7 +4,7 @@ import { SKILL_DESCRIPTION_MAX, catalogBudgetChars, catalogDigest, foldSkillsDig
 import type { ResolvedSkill } from "./registry";
 
 const skill = (name: string, description = `${name} skill`): ResolvedSkill => ({
-  skill: { name, description, modelInvocable: true, userInvocable: true, body: "Do it." },
+  skill: { fork: null, name, description, modelInvocable: true, userInvocable: true, body: "Do it." },
   scope: "bundled",
   baseDir: `/.openlen/skills/${name}`,
 });

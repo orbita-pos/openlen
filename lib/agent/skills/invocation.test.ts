@@ -5,7 +5,7 @@ import type { ResolvedSkill } from "./registry";
 
 const USER = new Set(["office-docx", "office-xlsx", "cotizar"]);
 const skill = (name: string): ResolvedSkill => ({
-  skill: { name, description: `${name} skill`, modelInvocable: true, userInvocable: true, body: `# ${name}\nDo it.` },
+  skill: { fork: null, name, description: `${name} skill`, modelInvocable: true, userInvocable: true, body: `# ${name}\nDo it.` },
   scope: "bundled",
   baseDir: `/.openlen/skills/${name}`,
 });

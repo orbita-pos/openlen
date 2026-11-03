@@ -203,3 +203,12 @@ it("a run that hit its turn limit says so", () => {
   const host = paint(<SubagentCard run={{ ...RUN, status: "turn_limit" as never }} onStop={() => {}} />);
   expect(host.querySelector("[data-subagent-status]")!.textContent).toBe("subagent.status.turn_limit");
 });
+
+it("a skill launch shows a subagent card instead of a tool step, including long custom names", () => {
+  const name = "a".repeat(64);
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ runs: [] }))));
+  const action = { tool: "skill", status: "done" as const, summary: "summarize", subagent: { id: "r1", preset: name } };
+  expect(visibleSteps([action])).toEqual([]);
+  const host = paint(<SubagentCards actions={[action]} projectId="p1" rowId="row1" />);
+  expect(host.querySelector("[data-subagent-card]")).not.toBeNull();
+});

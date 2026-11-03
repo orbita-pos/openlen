@@ -8,7 +8,7 @@ const file = (front: string, body = "# Body") => `---\n${front}\n---\n\n${body}\
 describe("parseSkillFile", () => {
   it("parses name, description and body", () => {
     const r = parseSkillFile(file("name: office-xlsx\ndescription: Read Excel."), "office-xlsx");
-    expect(r).toEqual({ ok: true, skill: { name: "office-xlsx", description: "Read Excel.", modelInvocable: true, userInvocable: true, body: "# Body" } });
+    expect(r).toEqual({ ok: true, skill: { name: "office-xlsx", description: "Read Excel.", modelInvocable: true, userInvocable: true, body: "# Body", fork: null } });
   });
 
   it("parses CRLF, BOM and quoted values", () => {
@@ -69,4 +69,11 @@ describe("skillsEnabled", () => {
     expect(skillsEnabled({ OPENLEN_SKILLS: "1" })).toBe(true);
     expect(skillsEnabled({ OPENLEN_SKILLS: "0" })).toBe(false);
   });
+});
+
+it("parses fork skills with an explicit or default type, ignoring other context values", () => {
+  for (const [front, want] of [["context: fork\nagent: reviewer", { agent: "reviewer" }], ["context: fork", { agent: "general-purpose" }], ["context: inline\nagent: reviewer", null]] as const) {
+    const r = parseSkillFile(file(`name: summarize\ndescription: Summarizes\n${front}`), "summarize");
+    expect(r.ok && r.skill.fork).toEqual(want);
+  }
 });

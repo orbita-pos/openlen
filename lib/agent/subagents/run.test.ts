@@ -922,3 +922,14 @@ describe("skills preloaded in a custom child", () => {
     }
   });
 });
+
+it("a child launched by a fork skill knows the skill it is running, also after a wake", async () => {
+  const s = setup({ scripts: [llama("Read"), dice("ok")] });
+  await s.launcher.launch({ description: "summarize", prompt: "Skill instructions.", preset: "general-purpose", fromSkill: "summarize" } as never);
+  await s.settled("r1");
+  expect(s.sessions[0].runningSkill).toBe("summarize");
+  await s.launcher.send({ id: "r1", message: "Again." });
+  await s.settled("r1");
+  // Force a tool in the next activation so the session becomes observable.
+  expect((s.rows.get("r1")!.transcript as (Message & { runningSkill?: string })[]).some((m) => m.runningSkill === "summarize")).toBe(true);
+});

@@ -846,6 +846,10 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "name": {
           "type": "STRING",
           "description": "The exact skill name from the available skills list."
+        },
+        "args": {
+          "type": "STRING",
+          "description": "For a skill that runs in a subagent: the task to hand it, complete and self-contained. Leave it out for any other skill."
         }
       },
       "required": [
@@ -2106,6 +2110,10 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "name": {
           "type": "STRING",
           "description": "The exact skill name from the available skills list."
+        },
+        "args": {
+          "type": "STRING",
+          "description": "For a skill that runs in a subagent: the task to hand it, complete and self-contained. Leave it out for any other skill."
         }
       },
       "required": [
@@ -3360,6 +3368,10 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "name": {
           "type": "STRING",
           "description": "The exact skill name from the available skills list."
+        },
+        "args": {
+          "type": "STRING",
+          "description": "For a skill that runs in a subagent: the task to hand it, complete and self-contained. Leave it out for any other skill."
         }
       },
       "required": [

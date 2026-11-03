@@ -226,7 +226,7 @@ interface ChildSpec {
 }
 
 /** Server-owned state on a preload message, kept in its transcript but not sent as provider content. */
-type PreloadedMessage = Message & { readonly loadedSkill?: string };
+type PreloadedMessage = Message & { readonly loadedSkill?: string; readonly runningSkill?: string };
 
 const NOTHING_YET: ChildSpec["prior"] = { toolUses: 0, durationMs: 0, charged: 0, usage: NO_USAGE, actions: [] };
 
@@ -251,6 +251,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
 
   async function run(spec: ChildSpec, abort: AbortController): Promise<void> {
     const { id, preset, description } = spec;
+    const running = spec.messages.findLast((m: PreloadedMessage) => !!m.runningSkill) as PreloadedMessage | undefined;
     const startedAt = io.now();
     const session: AgentSession = {
       ...ctx.sessionBase,
@@ -267,6 +268,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       busquedasVaciasSeguidas: 0,
       leidos: new Map(),
       loadedSkills: new Set(spec.messages.flatMap((m: PreloadedMessage) => m.loadedSkill ? [m.loadedSkill] : [])),
+      ...(running?.runningSkill ? { runningSkill: running.runningSkill } : {}),
       ...(isReadOnlyFor(spec.type, spec.planMode) ? { readOnly: true as const } : {}),
     } as AgentSession;
     const tools = spec.tools;
@@ -283,7 +285,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     // Its compaction is the route's, and the latest summary it made is kept here (Len keeps his in the turn's row).
     const extras = io.loopExtras?.(session);
     // Preloaded instructions are part of the fixed head, so the summary keeps their bodies and state.
-    const firstIndex = Math.max(extras?.compaction?.firstIndex ?? 1, initial.findLastIndex((m: PreloadedMessage) => !!m.loadedSkill) + 1);
+    const firstIndex = Math.max(extras?.compaction?.firstIndex ?? 1, initial.findLastIndex((m: PreloadedMessage) => !!m.loadedSkill || !!m.runningSkill) + 1);
     let mark: CompactionMark | null = null;
     const loopExtras = extras?.compaction
       ? {
@@ -630,7 +632,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         type,
         forked: false,
         planMode: ctx.planMode,
-        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)),
+        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) => i === all.length - 1 && o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m),
         tools,
         prior: NOTHING_YET,
       };
