@@ -142,6 +142,8 @@ export async function writeRecord(o: {
   readonly kind: EventTaskRecordRow["kind"];
   readonly reason?: string | null;
   readonly candidate?: Record<string, unknown> | null;
+  /** How many changes it stands for: the filtered ones of one check share a record per reason. */
+  readonly count?: number;
   readonly at: Date;
 }): Promise<EventTaskRecordRow> {
   if (o.kind === "failed") {
@@ -159,6 +161,7 @@ export async function writeRecord(o: {
       projectId: o.projectId,
       kind: o.kind,
       reason: o.reason ?? null,
+      count: o.count ?? 1,
       candidate: o.candidate ?? null,
       judge: o.kind === "delivered" ? "pending" : null,
       firstAt: o.at,
