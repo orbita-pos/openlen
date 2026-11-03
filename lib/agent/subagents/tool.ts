@@ -15,7 +15,7 @@ import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import { LEN_AGENT_ID, startedLine } from "./notice";
-import { SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
+import { SUBAGENT_PRESETS } from "./presets";
 import type { AgentTypeSet } from "./agent-registry";
 
 /** DeepSeek's `tool:subagent` system-prompt section, with `subagent` and `subagent_fork` visible. */
@@ -165,7 +165,7 @@ export function parentGoneError(): string {
   return "direct parent is not live; the message was not delivered";
 }
 
-export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled";
+export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled" | "no_tools";
 
 /** What `send` answers: delivered into a running child's inbox (`resumed: false`), or it woke from its transcript. */
 export type SendResult =
@@ -174,7 +174,7 @@ export type SendResult =
 
 export interface SubagentsDeps {
   typeNames(): readonly string[];
-  launch(o: { description: string; prompt: string; preset: SubagentPreset }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  launch(o: { description: string; prompt: string; preset: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
   fork(o: { description: string; prompt: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** Len's `send_message` to one of his children (phase 2). */
@@ -197,7 +197,7 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
   if (typeof preset !== "string" || !names.includes(preset)) {
     return invalid(`agent_preset must be one of: ${names.join(", ")}`);
   }
-  const type = preset as SubagentPreset;
+  const type = preset;
   if (!deps.subagents) return { response: { ok: false, error: "subagents_disabled", message: "Subagents are not available in this session." } };
   const r = await deps.subagents.launch({ description, prompt, preset: type });
   if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
