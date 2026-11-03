@@ -35,12 +35,23 @@ export async function recordSubmission(params: {
     /** Session visitor id — funnel attribution (lib/analytics/cid.ts). */
     cid?: string;
   };
+  /** The form it came from (`formKeyOf`): an event task watches one form. */
+  formId?: string | null;
 }): Promise<void> {
   await db.insert(schema.formSubmissions).values({
     projectId: params.projectId,
     data: params.data,
     meta: params.meta,
+    formId: params.formId ?? null,
   });
+}
+
+/** Which form a submission came from, in `notifyOwner`'s order: its own id, else its page and index, else its
+ *  index (spec local 2026-11-03-len-que-avisa, §7.2). Null when the page didn't say. */
+export function formKeyOf(o: { readonly formId: string | null; readonly formIndex: number | null; readonly page: string | null }): string | null {
+  if (o.formId) return o.formId;
+  if (o.formIndex === null) return null;
+  return o.page ? `${o.page}:${o.formIndex}` : String(o.formIndex);
 }
 
 /** A project's submissions, newest-first. The caller verifies ownership. */
