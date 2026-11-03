@@ -251,6 +251,7 @@ export default defineConfig({
       "lib/agent/testing/**/*.test.ts",
       "lib/agent/replay-scenes/**/*.test.ts",
       "scripts/len-replay-gate.test.ts",
+      "scripts/modelos-comprobar.test.ts",
       "lib/ai/provider-error-code.test.ts",
       "lib/ai/esfuerzo-no-admitido.test.ts",
       "lib/ai/origen-de-medida.browser.test.ts",
