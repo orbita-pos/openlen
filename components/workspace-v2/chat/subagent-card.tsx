@@ -59,7 +59,7 @@ export function SubagentCard({ run, forked = false, onStop }: { run: SubagentRun
       </div>
       {run.worktree && run.worktree.state !== "nothing" && (
         <div className="px-2.5 pb-2 text-[11px] fg-muted" data-subagent-worktree="">
-          {t(`subagent.worktree.${run.worktree.state}`, { n: run.worktree.state === "brought" ? run.worktree.files.length : 0 })}
+          {t(`subagent.worktree.${run.worktree.state === "kept" && run.worktree.copyId ? "retained" : run.worktree.state}`, { n: run.worktree.state === "brought" ? run.worktree.files.length : 0 })}
         </div>
       )}
       {open && (

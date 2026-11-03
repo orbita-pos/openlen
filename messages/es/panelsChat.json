@@ -555,6 +555,7 @@
   },
   "subagent": {
     "worktree": {
+      "retained": "no se pudo guardar: su copia se conserva para recuperarla",
       "working": "en su copia",
       "brought": "trajo {n, plural, one {# fichero} other {# ficheros}}",
       "conflict": "chocó con tus cambios: lo suyo sigue en su rama",

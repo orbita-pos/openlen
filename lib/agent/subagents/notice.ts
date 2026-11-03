@@ -20,9 +20,9 @@ export type SubagentStatus = "running" | SubagentStopReason;
  *  not be brought for another reason (same). */
 export type WorktreeOutcome =
   | { readonly state: "nothing" }
-  | { readonly state: "brought"; readonly files: readonly string[] }
+  | { readonly state: "brought"; readonly files: readonly string[]; readonly copyId?: string }
   | { readonly state: "conflict"; readonly files: readonly string[]; readonly branch: string }
-  | { readonly state: "kept"; readonly branch: string };
+  | { readonly state: "kept"; readonly branch: string; readonly copyId?: string };
 
 /** Len's agent id, as his children address him (`send_message({ agent_id: "len" })`). DeepSeek's is the
  *  parent's session id; Len has one conversation in progress per project. */
@@ -92,6 +92,7 @@ export function worktreeNoticeLine(o: WorktreeOutcome): string | null {
     case "conflict":
       return `Its changes were not brought into your files: they clash with changes made meanwhile in ${o.files.join(", ")}. All of them are on git branch ${o.branch}: read a file with git show ${o.branch}:<path>, compare with git diff, take one with git restore --source=${o.branch} <path>, and delete the branch with git branch -D ${o.branch} when you are done.`;
     case "kept":
+      if (o.copyId) return `Its changes could not be brought into your files; copy ${o.copyId} was kept for recovery and will be retried at server startup. Do not delete that copy or its branch ${o.branch}.`;
       return `Its changes could not be brought into your files; they are on git branch ${o.branch}.`;
   }
 }

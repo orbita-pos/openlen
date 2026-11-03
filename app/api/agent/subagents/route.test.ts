@@ -28,9 +28,14 @@ beforeEach(() => {
   mocks.runsOfRow.mockResolvedValue([RUN]);
   mocks.runsByIds.mockResolvedValue([]);
 });
-afterEach(() => fijarAccesoDePrueba(null));
+afterEach(() => { fijarAccesoDePrueba(null); vi.unstubAllEnvs(); });
 
 describe("GET /api/agent/subagents", () => {
+  it("the off switch hides saved children from the phone too", async () => {
+    vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+    expect((await ask()).body.runs).toEqual([]);
+    expect(mocks.runsOfRow).not.toHaveBeenCalled();
+  });
   it.each([
     [{}, null],
     [{ status: "running", worktreeCopyId: "copy" }, { state: "working" }],

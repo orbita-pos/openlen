@@ -999,6 +999,45 @@ const until = async (done: () => boolean) => {
 };
 
 describe("an isolated child (phase 4)", () => {
+  it("a retained dirty copy cannot be orphaned by waking it in another copy", async () => {
+    const s = setup({ scripts: [dice("Done")], worktree: { outcome: { state: "kept", branch: "b", copyId: "copy-1" } } });
+    await s.launcher.launch({ description: "Edit", prompt: "Edit", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    expect(await s.launcher.send({ id: "r1", message: "more" })).toMatchObject({ ok: false, code: "unavailable" });
+    expect(s.worktreesMade).toHaveLength(1);
+  });
+  it("does not make a copy if creating its recovery row fails", async () => {
+    const s = setup();
+    s.io.store.createRun = async () => { throw new Error("row failed"); };
+    await expect(s.launcher.launch({ description: "Edit", prompt: "Edit", preset: "general-purpose", isolation: "worktree" })).rejects.toThrow("row failed");
+    expect(s.worktreesMade).toHaveLength(0);
+    expect(liveCount("p")).toBe(0);
+  });
+  it("does not start and discards the unused copy if its metadata fails", async () => {
+    const s = setup();
+    s.io.store.setWorktree = async () => { throw new Error("metadata failed"); };
+    await expect(s.launcher.launch({ description: "Edit", prompt: "Edit", preset: "general-purpose", isolation: "worktree" })).rejects.toThrow("metadata failed");
+    expect(s.g.seen).toHaveLength(0);
+    expect(s.finishes).toHaveLength(1);
+    expect(liveCount("p")).toBe(0);
+  });
+  it("stays running through finalization and durably keeps messages received there", async () => {
+    const s = setup({ scripts: [dice("Done")] });
+    let releaseFinish = () => {};
+    const gate = new Promise<void>(r => { releaseFinish = r; });
+    let finishing = false;
+    s.io.finishWorktree = async () => { finishing = true; await gate; return { outcome: { state: "nothing" }, changes: null }; };
+    await s.launcher.launch({ description: "Edit", prompt: "Edit", preset: "general-purpose", isolation: "worktree" });
+    await until(() => finishing);
+    expect(s.rows.get("r1")?.status).toBe("running");
+    const nextTurnLauncher = createSubagentLauncher(s.ctx, s.io);
+    await nextTurnLauncher.send({ id: "r1", message: "Next task received during merge" });
+    expect(JSON.stringify(s.rows.get("r1")?.transcript ?? s.saves.at(-1)?.transcript)).toContain("Next task received during merge");
+    releaseFinish();
+    await s.settled("r1");
+    expect(JSON.stringify(s.rows.get("r1")?.transcript)).toContain("Next task received during merge");
+    expect(takeNotices("p").at(-1)?.text).toContain("saved for its next activation");
+  });
   it("an isolated child works in its copy", async () => {
     const s = setup({ scripts: [llama("Read", { file_path: "/src/a.ts" }), dice("Done")] });
     await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });

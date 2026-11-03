@@ -66,9 +66,9 @@ export async function register() {
               store,
               finishWorktree: async (r) => {
                 if (!r.worktreeCopyId || !r.worktreeBranch || !r.worktreeBase) return null;
-                const [{ db, schema }, { eq }, { realDeps }, { guardarLoDeLaTerminal }, { finishAgentWorktree }] = await Promise.all([
+                const [{ db, schema }, { eq }, { realDeps }, { saveWorktreeIntoDraft }, { finishAgentWorktree }] = await Promise.all([
                   import("@/lib/db"), import("drizzle-orm"), import("@/lib/agent/tools"),
-                  import("@/lib/agent/herramientas-de-ficheros"), import("@/lib/agent/subagents/worktree"),
+                  import("@/lib/agent/subagents/worktree-save"), import("@/lib/agent/subagents/worktree"),
                 ]);
                 const [project] = await db.select().from(schema.projects).where(eq(schema.projects.id, r.projectId)).limit(1);
                 if (!project) return null;
@@ -81,7 +81,8 @@ export async function register() {
                 const result = await finishAgentWorktree({
                   parentId: r.projectId, ownerId: project.userId, description: r.description,
                   w: { copyId: r.worktreeCopyId, branch: r.worktreeBranch, base: r.worktreeBase },
-                  save: (changes, draft) => guardarLoDeLaTerminal(session, deps, changes, draft),
+                  previous: r.worktreeOutcome ?? undefined,
+                  save: (changes, draft) => saveWorktreeIntoDraft(session, deps, changes, draft),
                 });
                 if (result.changes) {
                   const [{ addChangesToTurn }, { cambiosDelTurnoParaDeshacer }] = await Promise.all([

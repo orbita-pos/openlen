@@ -10,6 +10,7 @@ import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { runsByIds, runsOfRow } from "@/lib/agent/subagents/store";
 import { subagentRefFrom } from "@/lib/agent/subagents/card";
+import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
 
   const acceso = await exigirAcceso(projectId, userId, "ver");
   if (acceso instanceof Response) return json({ error: "no_encontrado" }, 404);
+  if (!subagentsEnabled(process.env)) return json({ runs: [] });
 
   // The runs this turn woke with `send_message` live in the row that launched them: the card names them.
   const ids = [...new Set((url.searchParams.get("ids") ?? "").split(","))]

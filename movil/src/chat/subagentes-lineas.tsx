@@ -11,7 +11,7 @@ export function SubagentesLineas({ runs, parar }: { runs: readonly RunDelMovil[]
     <div className="ch-subagente-texto">
       <strong>{r.description}</strong>
       <small>{r.preset !== "general-purpose" && <span>{r.preset} · </span>}{t(`status.${r.status}`)} · {t("steps", { n: r.toolUses })}{r.durationMs !== null && ` · ${duracion(r.durationMs)}`}</small>
-      {r.worktree && r.worktree.state !== "nothing" && <small>{t(`worktree.${r.worktree.state}`, { n: r.worktree.state === "brought" ? r.worktree.files.length : 0 })}</small>}
+      {r.worktree && r.worktree.state !== "nothing" && <small>{t(`worktree.${r.worktree.state === "kept" && r.worktree.copyId ? "retained" : r.worktree.state}`, { n: r.worktree.state === "brought" ? r.worktree.files.length : 0 })}</small>}
     </div>
     {r.status === "running" && <button type="button" className="ch-subagente-parar" aria-label={t("stop")} onClick={() => void parar(r.id).catch(() => {})}>■</button>}
   </div>)}</div>;

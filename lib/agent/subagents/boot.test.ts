@@ -30,6 +30,7 @@ function setup(rows: SubagentRunRow[]) {
         return true;
       },
       undeliveredSettledRuns: async () => [...db.values()].filter((r) => r.status !== "running" && !r.noticeDeliveredAt),
+      unfinishedWorktreeRuns: async () => [...db.values()].filter(r => r.worktreeCopyId && (!r.worktreeOutcome || (r.worktreeOutcome.state === "kept" && r.worktreeOutcome.copyId))),
     },
     launchNoticeTurn: (o) => void turns.push(o),
     isLive: () => false,
@@ -41,6 +42,14 @@ function setup(rows: SubagentRunRow[]) {
 }
 
 describe("at boot, what the previous process left", () => {
+  it("finishes archived copies without sending their notices to the new conversation", async () => {
+    const s = setup([]);
+    const archived = row({ id: "old", status: "completed", settledAt: new Date(NOW - 15_000), worktreeCopyId: "copy" });
+    const finishWorktree = vi.fn(async (_r: SubagentRunRow) => ({ state: "nothing" } as const));
+    await closeSubagentsOfThePreviousProcess({ ...s.io, store: { ...s.io.store, unfinishedWorktreeRuns: async () => [archived] }, finishWorktree });
+    expect(finishWorktree).toHaveBeenCalledWith(archived);
+    expect(s.turns).toEqual([]);
+  });
   it.each(["running", "completed"] as const)("finishes an isolated child's unfinished copy (%s) before its notice", async (status) => {
     const s = setup([row({ id: "r1", status, settledAt: status === "completed" ? new Date(NOW - 15_000) : null,
       worktreeCopyId: "copy", worktreeBranch: "worktree-agent-r1", worktreeBase: "base" })]);

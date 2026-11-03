@@ -555,6 +555,7 @@
   },
   "subagent": {
     "worktree": {
+      "retained": "opslaan mislukt: de kopie blijft bewaard voor herstel",
       "working": "in een eigen kopie",
       "brought": "{n, plural, one {# bestand} other {# bestanden}} overgenomen",
       "conflict": "conflict met je wijzigingen: het werk staat nog op de eigen branch",

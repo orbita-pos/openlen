@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { agentMessage, isolationLine, LEN_AGENT_ID, settlementNotice, startedLine, withContinuableReturnGuidance, worktreeNoticeLine } from "./notice";
 
 describe("what Len reads about a subagent (DeepSeek's words, continuable form)", () => {
+  it("an uncommitted copy is identified without claiming its edits are on the branch", () => {
+    const line = worktreeNoticeLine({ state: "kept", branch: "b", copyId: "copy-1" });
+    expect(line).toContain("copy copy-1 was kept");
+    expect(line).not.toContain("they are on git branch");
+  });
   it("starting one answers with its id", () => {
     expect(startedLine("abc")).toBe("started subagent abc");
   });

@@ -81,6 +81,7 @@
       "trabajando": "{n, plural, one {# subagente al lavoro} other {# subagenti al lavoro}}",
       "origen": "Risultati dei subagenti",
       "worktree": {
+      "retained": "impossibile salvare: la copia è conservata per il recupero",
         "working": "nella propria copia",
         "brought": "ha riportato {n, plural, one {# file} other {# file}}",
         "conflict": "conflitto con le tue modifiche: il suo lavoro resta nel suo ramo",

@@ -555,6 +555,7 @@
   },
   "subagent": {
     "worktree": {
+      "retained": "Speichern fehlgeschlagen: die Kopie bleibt zur Wiederherstellung erhalten",
       "working": "in seiner eigenen Kopie",
       "brought": "{n, plural, one {# Datei} other {# Dateien}} übernommen",
       "conflict": "Konflikt mit deinen Änderungen: seine Arbeit bleibt auf seinem Branch",

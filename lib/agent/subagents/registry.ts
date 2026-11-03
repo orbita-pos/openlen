@@ -24,13 +24,19 @@ interface State {
   readonly noticeTurns: Set<string>;
   /** Phase 2: what Len sent a running child (`send_message`), by run id; its loop takes it before its next call. */
   readonly inboxes: Map<string, string[]>;
+  readonly finalizers: Map<string, (texts: readonly string[]) => Promise<void>>;
 }
 
 const KEY = Symbol.for("openlen.agent.subagents");
 type Global = typeof globalThis & { [KEY]?: State };
-const state: State = ((globalThis as Global)[KEY] ??= { live: new Map(), notices: new Map(), waiters: new Map(), noticeTurns: new Set(), inboxes: new Map() });
+const state: State = ((globalThis as Global)[KEY] ??= { live: new Map(), notices: new Map(), waiters: new Map(), noticeTurns: new Set(), inboxes: new Map(), finalizers: new Map() });
 // A process that loaded the phase 1 state (a dev reload) gets the inbox map it lacks.
 (state as { inboxes?: Map<string, string[]> }).inboxes ??= new Map();
+(state as { finalizers?: State["finalizers"] }).finalizers ??= new Map();
+
+/** A later turn can deliver durably while an earlier launcher's copy is being finalized (different bundles too). */
+export function finalizingInput(id: string) { return state.finalizers.get(id); }
+export function setFinalizingInput(id: string, receive: (texts: readonly string[]) => Promise<void>) { state.finalizers.set(id, receive); }
 
 function wake(projectId: string): void {
   const waiting = state.waiters.get(projectId);
@@ -49,6 +55,7 @@ export function reserve(projectId: string, id: string, abort: AbortController): 
 }
 
 export function release(projectId: string, id: string): void {
+  state.finalizers.delete(id);
   const runs = state.live.get(projectId);
   if (!runs?.delete(id)) return;
   if (runs.size === 0) state.live.delete(projectId);
@@ -157,6 +164,7 @@ export function dropNotices(projectId: string): void {
 
 /** For tests: forget everything. */
 export function forgetAllSubagents(): void {
+  state.finalizers.clear();
   state.inboxes.clear();
   state.live.clear();
   state.notices.clear();
