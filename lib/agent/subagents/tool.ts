@@ -8,13 +8,15 @@
 // The tools only validate and hand over: the launcher (`deps.subagents`, lib/agent/subagents/run.ts)
 // builds, runs, wakes and stops the children, and their notices reach Len later.
 //
-// Cache effect: the declarations are fixed per server (OPENLEN_SUBAGENTS); their answers are appended.
+// Cache effect: the declaration changes when the project's or speaker's custom types change; without
+// custom types it is byte for byte the fixed built-in declaration. Answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import { LEN_AGENT_ID, startedLine } from "./notice";
 import { SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
+import type { AgentTypeSet } from "./agent-registry";
 
 /** DeepSeek's `tool:subagent` system-prompt section, with `subagent` and `subagent_fork` visible. */
 export const SUBAGENT_GUIDANCE =
@@ -52,6 +54,16 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
     required: ["description", "prompt"],
   },
 };
+
+/** Ours: custom types extend DeepSeek's preset enum; keep the built-in declaration unchanged. */
+export function subagentDeclaration(types: AgentTypeSet): Record<string, unknown> {
+  if (!types.custom.length) return SUBAGENT_DECLARATION;
+  const parameters = SUBAGENT_DECLARATION.parameters as { properties: Record<string, Record<string, unknown>> };
+  const summaries = types.custom.map(({ agent, covers }) => `${agent.name}${covers ? ` (yours, over the project's ${agent.name})` : ""}: ${agent.description.slice(0, 500)}`);
+  return { ...SUBAGENT_DECLARATION, description: `${DESCRIPTION} Custom types: ${summaries.join("; ")}`, parameters: {
+    ...parameters, properties: { ...parameters.properties, agent_preset: { ...parameters.properties.agent_preset, enum: types.names() } },
+  } };
+}
 
 /** DeepSeek's `providerWording(true)`: a child seeded with the conversation's completed turns. */
 export const SUBAGENT_FORK_DECLARATION: Record<string, unknown> = {
@@ -161,6 +173,7 @@ export type SendResult =
   | { ok: false; code: "unavailable" | "too_many_subagents" | "turn_budget_reached"; message: string };
 
 export interface SubagentsDeps {
+  typeNames(): readonly string[];
   launch(o: { description: string; prompt: string; preset: SubagentPreset }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
   fork(o: { description: string; prompt: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
@@ -180,8 +193,9 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
   if (!description) return invalid("description is required: a short (3-5 word) description of the task.");
   if (!prompt) return invalid("prompt is required: the complete, self-contained task.");
   const preset = args.agent_preset ?? "general-purpose";
-  if (!SUBAGENT_PRESETS.includes(preset as SubagentPreset)) {
-    return invalid(`agent_preset must be one of ${SUBAGENT_PRESETS.join(", ")}.`);
+  const names = deps.subagents?.typeNames?.() ?? SUBAGENT_PRESETS;
+  if (typeof preset !== "string" || !names.includes(preset)) {
+    return invalid(`agent_preset must be one of: ${names.join(", ")}`);
   }
   const type = preset as SubagentPreset;
   if (!deps.subagents) return { response: { ok: false, error: "subagents_disabled", message: "Subagents are not available in this session." } };

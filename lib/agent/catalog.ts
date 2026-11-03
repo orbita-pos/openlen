@@ -65,7 +65,7 @@ import {
   INTERRUPT_AGENT_DECLARATION,
   LIST_AGENTS_DECLARATION,
   SEND_MESSAGE_DECLARATION,
-  SUBAGENT_DECLARATION,
+  subagentDeclaration,
   SUBAGENT_FORK_DECLARATION,
   SUBAGENT_GUIDANCE,
 } from "@/lib/agent/subagents/tool";
@@ -74,6 +74,7 @@ import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visual
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
 import { DECLARACION_PRESENT, PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
+import { NO_AGENT_TYPES, type AgentTypeSet } from "@/lib/agent/subagents/agent-registry";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { artifactToolDeclarations } from "@/lib/artifacts/tools";
@@ -154,6 +155,7 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
  *  defecto que apagara herramientas en el producto sería mucho peor que el que
  *  esto arregla. Quien NO puede, lo dice. */
 export interface CapacidadesDelEntorno {
+  readonly agentTypes?: AgentTypeSet;
   readonly artifactKinds?: readonly ArtifactKind[];
   /** `false` cuando el llamador no cablea `observarPagina`. */
   readonly mirarPagina?: boolean;
@@ -227,14 +229,14 @@ function declaracionesDelModo(
   if (terminalOnly(mode, _env)) for (const n of SUSTITUIDAS_EN_SOLO_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
     ? [
-        ...buildTodasLasDeclaraciones(),
+        ...buildTodasLasDeclaraciones(capacidades.agentTypes),
         // GIT (spec local 2026-10-15-git-for-len, §5): with git on, bash says so and carries the commit protocol.
         gitEnabled(_env) ? { ...DECLARACION_BASH, description: withGit(String(DECLARACION_BASH.description)) } : DECLARACION_BASH,
       ].map((d) =>
         // Lo que nombra las herramientas que salen se dice con la terminal.
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
       )
-    : buildTodasLasDeclaraciones();
+    : buildTodasLasDeclaraciones(capacidades.agentTypes);
   return fuera.size === 0 ? declaraciones : declaraciones.filter((d) => !fuera.has(String(d.name)));
 }
 
@@ -257,7 +259,7 @@ const FILE_PATH_OPCIONAL = {
 // se fue con ellas, porque una herramienta que carga lo que no existe es una
 // palanca a ninguna parte. Todo va cargado.
 
-function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
+function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES): Record<string, unknown>[] {
   return [
     // El sitio como ficheros: nombres y parámetros de Claude Code; las descripciones, nuestras.
     ...DECLARACIONES_DE_FICHEROS,
@@ -522,7 +524,7 @@ function buildTodasLasDeclaraciones(): Record<string, unknown>[] {
     ...SCHEDULE_DECLARATIONS,
     // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent` and, phase 2 (§5),
     // its fork and its control tools, in DeepSeek's order.
-    SUBAGENT_DECLARATION,
+    subagentDeclaration(agentTypes),
     SUBAGENT_FORK_DECLARATION,
     SEND_MESSAGE_DECLARATION,
     INTERRUPT_AGENT_DECLARATION,

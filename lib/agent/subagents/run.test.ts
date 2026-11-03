@@ -12,6 +12,7 @@ import { forgetAllSubagents, isLive, liveCount, noticeTurnPending, reserve, send
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import { createTurnSpend } from "./spend";
+import { NO_AGENT_TYPES } from "./agent-registry";
 
 afterEach(() => forgetAllSubagents());
 
@@ -158,6 +159,7 @@ function setup(
   };
   let lenSpent = o.lenSpent ?? 0;
   const ctx: LaunchContext = {
+    agentTypes: NO_AGENT_TYPES,
     projectId: "p",
     ownerId: "owner",
     userId: "owner",

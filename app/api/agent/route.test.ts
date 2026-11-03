@@ -254,6 +254,7 @@ vi.mock("@/lib/agent/retry", () => ({ streamWithRetry: vi.fn() }));
 // La capa 0 de Len 3.1: las filas de cada llamada, a una base de mentira.
 const stepDb = vi.hoisted(() => ({ upsert: vi.fn(async (_rows: unknown[]) => {}), lastWithHashes: vi.fn(async () => null), deleteOlderThan: vi.fn(async () => 0) }));
 vi.mock("@/lib/agent/telemetry/step-store-db", () => ({ drizzleStepStoreDb: stepDb }));
+const agentTypeStore = vi.hoisted(() => ({ list: vi.fn(async (_scope: string, _owner: string): Promise<unknown[]> => []), upsert: vi.fn(), remove: vi.fn() }));
 vi.mock("@/lib/agent/tools", () => ({
   realDeps: (cobro?: (userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>) => {
     mocks.cobroDeLasHerramientas = cobro;
@@ -264,6 +265,7 @@ vi.mock("@/lib/agent/tools", () => ({
       projectFiles: mocks.projectFiles,
       memoryNotes: mocks.memoryNotes,
       skillStore: mocks.skillStore,
+      agentStore: agentTypeStore,
       stripeCli: mocks.stripeCli,
     };
   },
@@ -3249,6 +3251,19 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     mocks.skillStore.list.mockImplementation(async () => []);
   });
 
+  it("a member sees their own agent types, never the owner's", async () => {
+    const type = (name: string) => ({ name, text: `---\nname: ${name}\ndescription: Reviews\n---\nReview.`, updatedAt: new Date(0) });
+    agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" ? [type(owner === "ana" ? "ana-review" : "owner-review")] : []);
+    try {
+      await readEvents(await pedir());
+      expect(agentTypeStore.list).toHaveBeenCalledWith("personal", "ana");
+      expect(agentTypeStore.list).not.toHaveBeenCalledWith("personal", "dueno-1");
+      const caps = (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as [unknown, { agentTypes: import("@/lib/agent/subagents/agent-registry").AgentTypeSet }])[1];
+      expect(caps.agentTypes.names()).toContain("ana-review");
+      expect(caps.agentTypes.names()).not.toContain("owner-review");
+    } finally { agentTypeStore.list.mockImplementation(async () => []); }
+  });
+
   it("el techo del turno de un miembro es lo que le queda al proyecto, si es menos", async () => {
     let excede: AgentLoopArgs["excedePresupuesto"];
     mocks.margenDeMiembros.mockResolvedValue(500);
@@ -3754,7 +3769,7 @@ describe("POST /api/agent — Len's subagents", () => {
   const pedir = async () => readEvents(await POST(peticion()));
   const corredor = () => mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
   const loopArgs = () => (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [AgentLoopArgs])[0];
-  type Ctx = { emit?: (ev: unknown) => void; spend: { addChildren(n: number): void }; planMode: boolean; chatRowId: string; personId: string };
+  type Ctx = { emit?: (ev: unknown) => void; spend: { addChildren(n: number): void }; planMode: boolean; chatRowId: string; personId: string; agentTypes: import("@/lib/agent/subagents/agent-registry").AgentTypeSet };
   type Io = { launchNoticeTurn(projectId: string, personId: string): void; turnAlive(projectId: string): boolean };
   const launcherArgs = () => mocks.createSubagentLauncher.mock.calls.at(-1) as unknown as [Ctx, Io];
 
@@ -3800,6 +3815,29 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(launcherArgs()[0]).toMatchObject({ personId: "u1", planMode: false });
   });
 
+  it("loads the project's and the speaker's custom types into the catalog and launcher", async () => {
+    const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
+    agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" && owner === "u1" ? [type] : []);
+    try {
+      await pedir();
+      expect(agentTypeStore.list).toHaveBeenCalledWith("project", "p1");
+      expect(agentTypeStore.list).toHaveBeenCalledWith("personal", "u1");
+      const capabilities = (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as [unknown, { agentTypes: Ctx["agentTypes"] }])[1];
+      expect(capabilities.agentTypes.names()).toContain("reviewer");
+      expect(launcherArgs()[0].agentTypes).toBe(capabilities.agentTypes);
+    } finally { agentTypeStore.list.mockImplementation(async () => []); }
+  });
+
+  it("a failing or slow custom-type store leaves the built-ins", async () => {
+    for (const load of [async () => { throw new Error("offline"); }, () => new Promise<never>(() => {})]) {
+      agentTypeStore.list.mockImplementation(load);
+      try {
+        await pedir();
+        expect(launcherArgs()[0].agentTypes.names()).toEqual(["general-purpose", "Explore", "Plan"]);
+      } finally { agentTypeStore.list.mockImplementation(async () => []); }
+    }
+  });
+
   it("with OPENLEN_SUBAGENTS=0 there is no launcher and the loop gets no notice hooks", async () => {
     vi.stubEnv("OPENLEN_SUBAGENTS", "0");
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
@@ -3811,6 +3849,7 @@ describe("POST /api/agent — Len's subagents", () => {
     const deps = (mocks.runAgentTool.mock.calls.at(-1) as unknown as [unknown, { subagents?: unknown }])[1];
     expect(deps.subagents).toBeUndefined();
     expect(loopArgs().takeAgentNotices).toBeUndefined();
+    expect(agentTypeStore.list).not.toHaveBeenCalled();
   });
 
   it("notices are taken for the loop and marked delivered", async () => {
