@@ -127,8 +127,8 @@ describe("bundled skills", () => {
     });
   });
 
-  // DEEP-RESEARCH (spec local 2026-10-27-len-five-skills, §4.1): Claude's method with one researcher —
-  // Len has no subagents — within Len's real search budget, read from the code, never written by hand.
+  // DEEP-RESEARCH: Len coordinates researchers (subagents phase 3); each turn's hard limits remain
+  // the ones read from the code, with a narrower assignment budget per researcher.
   describe("deep-research", () => {
     const text = () => bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/deep-research/SKILL.md`]!;
 
@@ -380,4 +380,16 @@ describe("OpenLen's skills in the / menu", () => {
       for (const n of names) expect(lines[n]!.trim().length, `${loc} ${n}`).toBeGreaterThan(0);
     }
   });
+});
+
+it("deep-research coordinates researchers in one message with each one's budget", () => {
+  const skill = bundledSkills().find((s) => s.skill.name === "deep-research")!.skill;
+  expect(skill.body).toContain("`subagent`");
+  expect(skill.body).toContain("together in one message");
+  expect(skill.body).toContain("3 queries");
+  expect(skill.body).toContain("2 pages");
+  expect(skill.body).toContain("general-purpose");
+  expect(skill.body).toContain("end your turn");
+  expect(skill.fork).toBeNull();
+  expect(readFileSync("lib/agent/skills/bundled/NOTICE.md", "utf8")).not.toContain("Len has none");
 });
