@@ -985,3 +985,10 @@ describe("el catálogo declara lo que de verdad puede correr", () => {
     expect(buildFunctionDeclarations({}).map((d) => d.name)).toContain("view_page");
   });
 });
+
+it("puts this turn's custom types in the subagent declaration", async () => {
+  const { resolveAgentTypes } = await import("./subagents/agent-registry");
+  const agentTypes = resolveAgentTypes({ project: [{ name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) }], personal: [] });
+  const d = buildFunctionDeclarations({}, { agentTypes }).find((d) => d.name === "subagent")!;
+  expect((d.parameters as any).properties.agent_preset.enum).toContain("reviewer");
+});

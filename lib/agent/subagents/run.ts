@@ -26,6 +26,7 @@ import { creditRateForRole, roleForOperation } from "@/lib/generation/model-poli
 import type { AppDeProyecto } from "@/lib/projects/types";
 
 import { SEND_MESSAGE_TOOL } from "./enabled";
+import type { AgentTypeSet } from "./agent-registry";
 import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
 import { childSystemPrompt, childToolDeclarations, DELEGATION_SCOPE_STATEMENT, isReadOnly, omitsLenMd, SUBAGENT_PRESETS, type SubagentPreset } from "./presets";
 import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
@@ -53,6 +54,7 @@ export interface SubagentEvent {
 
 /** What the launching turn hands its children. */
 export interface LaunchContext {
+  readonly agentTypes: AgentTypeSet;
   readonly projectId: string;
   /** Pays. */
   readonly ownerId: string;
@@ -565,6 +567,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   const generalPurposeNames = (planMode: boolean) => new Set(childToolDeclarations(ctx.declarations, "general-purpose", planMode).map((d) => String(d.name)));
 
   return {
+    typeNames: () => ctx.agentTypes.names(),
     async launch(o) {
       if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
       const id = io.newId();

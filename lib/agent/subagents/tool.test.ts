@@ -254,3 +254,28 @@ describe("the control tools (phase 2)", () => {
     }
   });
 });
+
+// A turn's custom types change the choice offered to the model, never the built-in-only declaration.
+describe("custom types in the subagent tool", () => {
+  it("without custom types the declaration is unchanged", async () => {
+    const { subagentDeclaration } = await import("./tool");
+    const { NO_AGENT_TYPES } = await import("./agent-registry");
+    expect(subagentDeclaration(NO_AGENT_TYPES)).toEqual(SUBAGENT_DECLARATION);
+  });
+  it("offers the custom types, caps their descriptions and names shadowing", async () => {
+    const { subagentDeclaration } = await import("./tool");
+    const { resolveAgentTypes } = await import("./agent-registry");
+    const a = { name: "reviewer", text: `---\nname: reviewer\ndescription: ${"d".repeat(600)}\n---\nReview.`, updatedAt: new Date(0) };
+    const d = subagentDeclaration(resolveAgentTypes({ project: [a], personal: [a] }));
+    expect((d.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "reviewer"]);
+    expect(d.description).toContain("reviewer (yours, over the project's reviewer)");
+    expect(d.description).not.toContain("d".repeat(501));
+  });
+  it("accepts the turn's custom type and refuses an unknown name with the available choices", async () => {
+    const { deps, launched } = launching();
+    Object.assign(deps.subagents!, { typeNames: () => ["general-purpose", "Explore", "Plan", "reviewer"] });
+    expect((await toolSubagent(session, deps, { description: "Review", prompt: "Check it.", agent_preset: "reviewer" })).response.ok).toBe(true);
+    expect(launched).toEqual([{ description: "Review", prompt: "Check it.", preset: "reviewer" }]);
+    expect((await toolSubagent(session, deps, { description: "Review", prompt: "Check it.", agent_preset: "missing" })).response).toMatchObject({ ok: false, message: "agent_preset must be one of: general-purpose, Explore, Plan, reviewer" });
+  });
+});

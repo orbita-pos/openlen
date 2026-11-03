@@ -38,6 +38,7 @@ import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { parseMentions, resolveMentions } from "@/lib/mentions/resolve";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { resolveAgentTypes } from "@/lib/agent/subagents/agent-registry";
 import { functionsEnabled } from "@/lib/functions/engines";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
 import { persistPage } from "@/lib/page-engine/persist";
@@ -668,7 +669,13 @@ async function correrTurno(
   // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
   // and pull request protocol; without one it stays byte for byte as before.
   const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
-  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote }, mode, appDelTurno);
+  const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId;
+  const [projectAgentTypes, personalAgentTypes] = subagentsOn ? await Promise.all([
+    conPlazo(async () => (await deps.agentStore?.list("project", projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+    conPlazo(async () => (await deps.agentStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+  ]) : [[], []];
+  const agentTypes = resolveAgentTypes({ project: projectAgentTypes, personal: personalAgentTypes });
+  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno);
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -1324,7 +1331,6 @@ async function correrTurno(
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).
-  const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId;
   /** A server turn that carries the queued notices to an idle Len, as `personId` (DeepSeek: a notice to an idle
    *  parent starts a new request). It takes them when it starts; one that never starts lets the next one launch. */
   const launchNoticeTurn = (pid: string, personId: string): void =>
@@ -1929,6 +1935,7 @@ async function correrTurno(
                 ownerId: userId,
                 userId,
                 personId: quien,
+                agentTypes,
                 turnId: turnoId,
                 chatRowId: filaId,
                 mode,
