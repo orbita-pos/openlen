@@ -11,8 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
-import { isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
+import { isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -189,6 +189,13 @@ export function UserMessage({
             <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-subagents-turn="">
               <Bot size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.fromSubagents")}</span>
+            </div>
+          ) : turn.origen && isEventTaskOrigin(turn.origen) ? (
+            // «HAZLO» ON AN EVENT TASK'S CARD (spec local 2026-11-03-len-que-avisa, §7.7): the owner approved its
+            // proposed action; nobody typed this turn's message.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-event-task-turn="">
+              <Bell size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("eventTasks.cardFrom", { task: turn.origen.title })}</span>
             </div>
           ) : turn.origen && (
             <button

@@ -345,8 +345,20 @@ export interface SubagentOrigin {
   ids: string[];
 }
 
+/** «Hazlo» on an event task's card (spec local 2026-11-03-len-que-avisa, §7.7): its proposed action, approved. */
+export interface EventTaskOrigin {
+  kind: "event_task";
+  taskId: string;
+  cardId: string;
+  title: string;
+}
+
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin;
+
+export function isEventTaskOrigin(o: TurnOrigin): o is EventTaskOrigin {
+  return "kind" in o && o.kind === "event_task";
+}
 
 export function isSubagentOrigin(o: TurnOrigin): o is SubagentOrigin {
   return (o as { kind?: string }).kind === "subagents";
