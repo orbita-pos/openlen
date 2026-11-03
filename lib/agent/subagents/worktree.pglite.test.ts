@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
 
-const base = vi.hoisted(() => ({ db: null as unknown, scope: null as unknown, failCommit: false, failRemove: false }));
+const base = vi.hoisted(() => ({ db: null as unknown, scope: null as unknown, failCommit: false, failRemove: false, abortCode: "", aborts: 0 }));
 vi.mock("@/lib/len-watch/worktree", async (original) => {
   const real = await original<typeof import("@/lib/len-watch/worktree")>();
   return { ...real, removeWorktree: (...args: Parameters<typeof real.removeWorktree>) => {
@@ -27,7 +27,11 @@ vi.mock("@/lib/db", async () => {
     get db() {
       return base.db;
     },
-    inTransaction: (f: () => Promise<unknown>) => (base.scope as { run(f: () => Promise<unknown>): Promise<unknown> }).run(f),
+    inTransaction: (f: () => Promise<unknown>) => (base.scope as { run(f: () => Promise<unknown>): Promise<unknown> }).run(async () => {
+      const value = await f();
+      if (base.aborts > 0) { base.aborts--; throw Object.assign(new Error("Drizzle transaction failed"), { cause: { code: base.abortCode } }); }
+      return value;
+    }),
   };
 });
 
@@ -43,6 +47,8 @@ let pg: PGlite;
 const DATA = { html: "<p>Home</p>" };
 
 beforeEach(async () => {
+  base.abortCode = "";
+  base.aborts = 0;
   base.failCommit = false;
   base.failRemove = false;
   pg = new PGlite();
@@ -92,6 +98,22 @@ async function gitInParent(args: string[]) {
 }
 
 describe("an isolated child's copy", () => {
+  it.each(["40001", "40P01"])("retries a rolled-back concurrent creation (%s) without orphan copies or branches", async (code) => {
+    base.abortCode = code; base.aborts = 1;
+    const registered: import("./worktree").AgentWorktree[] = [];
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "parallel", register: async w => { registered.push(w); } });
+    expect(registered).toHaveLength(2);
+    expect(registered[0].copyId).not.toBe(w.copyId);
+    expect((await pg.query(`select id from projects where "parentProjectId"='p'`)).rows).toEqual([{ id: w.copyId }]);
+    expect(Object.keys((await postgresStore("p").readRepo())!.refs).filter(b => b.startsWith("worktree-agent-"))).toEqual([w.branch]);
+  });
+  it("bounds creation retries and leaves no copy or repository after repeated aborts", async () => {
+    base.abortCode = "40001"; base.aborts = 5;
+    await expect(wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "busy" })).rejects.toThrow("Drizzle transaction failed");
+    expect(base.aborts).toBe(2);
+    expect((await pg.query(`select id from projects where "parentProjectId"='p'`)).rows).toEqual([]);
+    expect(await postgresStore("p").readRepo()).toBeNull();
+  });
   it("a registration failure rolls back the copy, branch and repository creation", async () => {
     await expect(wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "registration", register: async () => { throw new Error("register failed"); } })).rejects.toThrow("register failed");
     expect((await pg.query(`select id from projects where "parentProjectId"='p'`)).rows).toEqual([]);
