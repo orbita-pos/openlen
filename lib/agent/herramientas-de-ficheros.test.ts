@@ -983,6 +983,15 @@ describe("subagent types as files (spec local 2026-11-01-subagentes-de-len, §6)
     assert.deepEqual(estado.upserts, [["personal", "editor", "reviewer", TYPE, "editor"]]);
   });
 
+  it("multiline restrictions in the Code lens are refused and preserve the old type", async () => {
+    const { deps, estado } = depsConTipos({ project: { reviewer: TYPE } });
+    const invalid = TYPE.replace("tools: Read, Grep", "disallowedTools:\n  - Write\n  - Edit");
+    const result = await guardarAMano("p-editor", "u1", "/.len/agents/reviewer.md", invalid, TYPE, deps);
+    assert.equal(result.ok, false);
+    assert.equal(estado.upserts.length, 0);
+    assert.equal(estado.project.get("reviewer"), TYPE);
+  });
+
   it("🔴 an agent file with a broken frontmatter saved by hand in the Code lens is refused and nothing is stored", async () => {
     const { deps, estado } = depsConTipos({ project: { reviewer: TYPE } });
     const r = await guardarAMano("p-editor", "u1", "/.len/agents/reviewer.md", "---\nname: reviewer\n---\n\nno description\n", TYPE, deps);

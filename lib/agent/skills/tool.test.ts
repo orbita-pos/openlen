@@ -90,4 +90,12 @@ describe("forked skills", () => {
     try { expect((await f.invoke()).response.tool_result).toContain("FULL SKILL BODY."); expect(f.calls).toEqual([]); }
     finally { if (previous === undefined) delete process.env.OPENLEN_SUBAGENTS; else process.env.OPENLEN_SUBAGENTS = previous; }
   });
+
+  it("refreshes a fork skill's type before validation", async () => {
+    const f = await fixture();
+    const names = ["general-purpose"];
+    Object.assign(f.deps.subagents!, { typeNames: () => names, refreshTypes: async () => { names.push("reviewer"); } });
+    expect((await f.invoke()).response.ok).toBe(true);
+    expect(f.calls).toHaveLength(1);
+  });
 });

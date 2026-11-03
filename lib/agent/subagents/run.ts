@@ -58,6 +58,7 @@ export interface SubagentEvent {
 /** What the launching turn hands its children. */
 export interface LaunchContext {
   readonly agentTypes: AgentTypeSet;
+  readonly refreshAgentTypes?: () => Promise<void>;
   readonly projectId: string;
   /** Pays. */
   readonly ownerId: string;
@@ -340,6 +341,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
           const request = spec.forked ? withPlanSection(m, ctx.planMode) : m;
           if (definition?.maxTurns !== null && definition?.maxTurns !== undefined && calls >= definition.maxTurns) {
             turnLimitReached = true;
+            omitClosingText = false;
             return b.closeOut([...request, { role: "user", content: TURN_LIMIT_MESSAGE }]);
           }
           calls++;
@@ -546,6 +548,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       return { ok: true, resumed: false, preset, description: first.description };
     };
     if (isLive(ctx.projectId, id)) return toInbox();
+    await ctx.refreshAgentTypes?.();
     const type = childTypeOf(preset, ctx.agentTypes);
     if (!type) return { ok: false, code: "unavailable", message: `subagent "${id}" has no agent preset projection for restoration` };
     const childTools = childToolsFor(ctx.declarations, type, first.planMode || ctx.planMode);
@@ -609,8 +612,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   const generalPurposeNames = (planMode: boolean) => new Set(childToolDeclarations(ctx.declarations, "general-purpose", planMode).map((d) => String(d.name)));
 
   return {
+    refreshTypes: ctx.refreshAgentTypes,
     typeNames: () => ctx.agentTypes.names(),
     async launch(o) {
+      await ctx.refreshAgentTypes?.();
       const type = childTypeOf(o.preset, ctx.agentTypes);
       const tools = type ? childToolsFor(ctx.declarations, type, ctx.planMode) : [];
       if (!type || !tools.length) return { ok: false, code: "no_tools", message: `agent type "${o.preset}" leaves the subagent no tools to work with` };

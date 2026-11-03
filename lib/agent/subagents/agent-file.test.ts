@@ -71,3 +71,10 @@ describe("parseAgentFile", () => {
     expect(JSON.stringify(r)).not.toMatch(/opus|blue/);
   });
 });
+
+it("refuses malformed or multiline permission fields instead of widening the type", () => {
+  for (const front of ["disallowedTools:\n  - Write\n  - Edit", "disallowedTools Read, Write", "  tools: Read", "tools Read", "skills:\n  - dataviz", "maxTurns 2", "omitLenMd true"]) {
+    const parsed = parseAgentFile(file(`${base}\n${front}`), "reviewer");
+    expect(parsed.ok, front).toBe(false);
+  }
+});

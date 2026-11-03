@@ -39,6 +39,7 @@ export interface AgentDefinition {
 const TRUE = new Set(["true", "yes", "on", "1"]);
 const FALSE = new Set(["false", "no", "off", "0"]);
 const ITEM = /^[A-Za-z_][\w-]*$/;
+const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd"]);
 
 function template(name: string): string {
   return `---\nname: ${name}\ndescription: <what it does and when to use it, in one line>\ntools: Read, Grep, Glob\n---\n\n<the instructions for this type of subagent>\n`;
@@ -63,9 +64,19 @@ export function parseAgentFile(text: string, expectedName: string | null): { ok:
   const end = t.indexOf("\n---\n", 4);
   if (end < 0) return fail("The frontmatter is not closed with ---.");
   const fields = new Map<string, string>();
+  let previous: string | null = null;
   for (const line of t.slice(4, end).split("\n")) {
+    if (!line.trim() || line.trimStart().startsWith("#")) continue;
     const m = /^([A-Za-z][A-Za-z_-]*):\s*(.*)$/.exec(line);
-    if (m) fields.set(m[1]!, unquote(m[2]!.trim()));
+    if (!m) {
+      const attempted = /^\s*([A-Za-z][A-Za-z_-]*)\b/.exec(line)?.[1];
+      if ((previous && KEYS.has(previous)) || (attempted && KEYS.has(attempted))) {
+        return fail("Use one-line key: value fields. Lists must be comma-separated on the same line; multiline fields are not supported.");
+      }
+      continue;
+    }
+    previous = m[1]!;
+    fields.set(previous, unquote(m[2]!.trim()));
   }
   const name = fields.get("name") ?? "";
   if (expectedName !== null && name !== expectedName) return fail(`name must be "${expectedName}", the file's name.`);
