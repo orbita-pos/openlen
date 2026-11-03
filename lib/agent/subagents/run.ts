@@ -25,6 +25,8 @@ import { creditsForUsage } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import type { NivelEsfuerzo } from "@/lib/agent/esfuerzo";
+import { skillsEnabled } from "@/lib/agent/skills/enabled";
+import { renderSkillContent } from "@/lib/agent/skills/tool";
 
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import type { AgentTypeSet } from "./agent-registry";
@@ -223,12 +225,29 @@ interface ChildSpec {
   readonly prior: { readonly toolUses: number; readonly durationMs: number; readonly charged: number; readonly usage: Usage; readonly actions: readonly ChildStep[] };
 }
 
+/** Server-owned state on a preload message, kept in its transcript but not sent as provider content. */
+type PreloadedMessage = Message & { readonly loadedSkill?: string };
+
 const NOTHING_YET: ChildSpec["prior"] = { toolUses: 0, durationMs: 0, charged: 0, usage: NO_USAGE, actions: [] };
 
 export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): SubagentsDeps {
   const rate = creditRateForRole(roleForOperation("subagent"));
   const centicreditsOf = (g: Usage) => (g.inputTokens + g.outputTokens > 0 ? Math.max(1, creditsForUsage(g.inputTokens, g.outputTokens, rate, g.cachedTokens)) : 0);
   const log = io.log ?? ((line: string) => console.warn(line));
+
+  function preload(type: ChildType, messages: Message[]): Message[] {
+    if (type.kind !== "custom") return messages;
+    const preloaded: PreloadedMessage[] = [];
+    for (const name of type.type.agent.skills) {
+      const skill = ctx.sessionBase.skills?.get(name);
+      if (!skillsEnabled() || !skill || !skill.skill.modelInvocable) {
+        log(`[subagents] type=${type.type.agent.name} skipped preload ${name}: ${!skillsEnabled() ? "skills disabled" : !skill ? "unavailable" : "not model-invocable"}`);
+        continue;
+      }
+      preloaded.push({ role: "user", content: renderSkillContent(skill), loadedSkill: name });
+    }
+    return [...messages.slice(0, -1), ...preloaded, messages.at(-1)!];
+  }
 
   async function run(spec: ChildSpec, abort: AbortController): Promise<void> {
     const { id, preset, description } = spec;
@@ -247,7 +266,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       photoSearchesThisTurn: 0,
       busquedasVaciasSeguidas: 0,
       leidos: new Map(),
-      loadedSkills: new Set(),
+      loadedSkills: new Set(spec.messages.flatMap((m: PreloadedMessage) => m.loadedSkill ? [m.loadedSkill] : [])),
       ...(isReadOnlyFor(spec.type, spec.planMode) ? { readOnly: true as const } : {}),
     } as AgentSession;
     const tools = spec.tools;
@@ -263,13 +282,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const initial = spec.messages;
     // Its compaction is the route's, and the latest summary it made is kept here (Len keeps his in the turn's row).
     const extras = io.loopExtras?.(session);
-    const firstIndex = extras?.compaction?.firstIndex ?? 1;
+    // Preloaded instructions are part of the fixed head, so the summary keeps their bodies and state.
+    const firstIndex = Math.max(extras?.compaction?.firstIndex ?? 1, initial.findLastIndex((m: PreloadedMessage) => !!m.loadedSkill) + 1);
     let mark: CompactionMark | null = null;
     const loopExtras = extras?.compaction
       ? {
           ...extras,
           compaction: {
             ...extras.compaction,
+            firstIndex,
             saveMark: async (m: CompactionMark) => {
               mark = m;
               await extras.compaction?.saveMark?.(m);
@@ -549,7 +570,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const transcript = (row.transcript as Message[] | null) ?? [];
     // A run saved before its task was kept in its transcript (phase 1 kept only its own messages, which open with its
     // first answer), or cut before its first save: its task goes first, as it started.
-    const head = !row.forked && transcript[0]?.role !== "user" ? childMessages(ctx.turnArgs, type, row.prompt).slice(1) : [];
+    const head = !row.forked && transcript[0]?.role !== "user" ? preload(type, childMessages(ctx.turnArgs, type, row.prompt)).slice(1) : [];
     const spec: ChildSpec = {
       id,
       description: row.description,
@@ -609,7 +630,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         type,
         forked: false,
         planMode: ctx.planMode,
-        messages: childMessages(ctx.turnArgs, type, o.prompt),
+        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)),
         tools,
         prior: NOTHING_YET,
       };
