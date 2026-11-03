@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { agentMessage, LEN_AGENT_ID, settlementNotice, startedLine, withContinuableReturnGuidance } from "./notice";
+import { agentMessage, isolationLine, LEN_AGENT_ID, settlementNotice, startedLine, withContinuableReturnGuidance, worktreeNoticeLine } from "./notice";
 
 describe("what Len reads about a subagent (DeepSeek's words, continuable form)", () => {
   it("starting one answers with its id", () => {
@@ -63,4 +63,28 @@ describe("messages between Len and his subagents (DeepSeek's words)", () => {
 
 it("a turn-limited subagent reports its partial result", () => {
   expect(settlementNotice({ id: "abc", stopReason: "turn_limit" as never, closingText: "Read two pages." })).toBe("Background subagent abc stopped at its turn limit before it finished.\n\nIts closing message:\nRead two pages.");
+});
+
+describe("an isolated child's lines (ours, phase 4)", () => {
+  it("its task says where it works", () => {
+    expect(isolationLine("worktree-agent-ab12")).toBe(
+      "You work in your own copy of the project, on git branch worktree-agent-ab12. What you change in the project's folder is brought into Len's files when you finish; what you leave outside it, like /tmp, is lost. Re-read a file before you edit it.",
+    );
+  });
+
+  it("its notice says how its copy came back", () => {
+    expect(worktreeNoticeLine({ state: "brought", files: ["/src/a.ts"] })).toBe("Its changes are now in your files: /src/a.ts.");
+    expect(worktreeNoticeLine({ state: "nothing" })).toBeNull();
+    expect(worktreeNoticeLine({ state: "conflict", files: ["/src/a.ts"], branch: "worktree-agent-ab12" })).toBe(
+      "Its changes were not brought into your files: they clash with changes made meanwhile in /src/a.ts. All of them are on git branch worktree-agent-ab12: read a file with git show worktree-agent-ab12:<path>, compare with git diff, take one with git restore --source=worktree-agent-ab12 <path>, and delete the branch with git branch -D worktree-agent-ab12 when you are done.",
+    );
+    expect(worktreeNoticeLine({ state: "kept", branch: "worktree-agent-ab12" })).toBe("Its changes could not be brought into your files; they are on git branch worktree-agent-ab12.");
+  });
+
+  it("the settlement carries it after DeepSeek's blocks", () => {
+    expect(settlementNotice({ id: "abc", stopReason: "completed", closingText: "Done.", worktree: { state: "brought", files: ["/src/a.ts"] } })).toBe(
+      "Background subagent abc finished and will do no further work unless you send it more.\n\nIts closing message:\nDone.\n\nIts changes are now in your files: /src/a.ts.",
+    );
+    expect(settlementNotice({ id: "abc", stopReason: "completed", closingText: "Done.", worktree: { state: "nothing" } })).toBe(settlementNotice({ id: "abc", stopReason: "completed", closingText: "Done." }));
+  });
 });

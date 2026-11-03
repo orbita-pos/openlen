@@ -5,7 +5,7 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { BuildAgentMessagesArgs } from "@/lib/agent/context";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
-import { settlementNotice } from "./notice";
+import { isolationLine, settlementNotice, type WorktreeOutcome } from "./notice";
 import { withPlanSection } from "@/lib/agent/plan-mode";
 
 import { forgetAllSubagents, isLive, liveCount, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
@@ -78,6 +78,8 @@ function setup(
     loopExtras?: RunnerIO["loopExtras"];
     /** What Read answers, by path ("1\tx" otherwise). */
     readResults?: Record<string, string>;
+    /** Phase 4: how an isolated child's copy is made and comes back. */
+    worktree?: { fail?: boolean; outcome?: WorktreeOutcome; changes?: { before: Record<string, string>; after: Record<string, string> } | null };
   } = {},
 ) {
   const g = guion(...(o.scripts ?? [llama("Read", { file_path: "/menu/index.html" }), dice("Done: /menu/index.html")]));
@@ -99,8 +101,22 @@ function setup(
   const saves: Record<string, unknown>[] = [];
   const flushes: (() => Promise<void>)[] = [];
   const snapshots = [...(o.snapshots ?? [])];
+  const worktreesMade: { parentId: string; ownerId: string; runId: string }[] = [];
+  /** Each finish, with what was true when it ran: the notices already queued, its slot, the terminals closed. */
+  const finishes: { w: unknown; session: AgentSession; noticesBefore: number; liveBefore: boolean; terminalsBefore: string[] }[] = [];
   let n = 0;
+  let copies = 0;
   const io: RunnerIO = {
+    addWorktree: async (w) => {
+      if (o.worktree?.fail) throw new Error("no space");
+      worktreesMade.push(w);
+      return { copyId: `copy-${++copies}`, branch: `worktree-agent-${w.runId}${copies > 1 ? `-${copies}` : ""}`, base: "b".repeat(40) };
+    },
+    finishWorktree: async ({ w, session }) => {
+      const id = String(session.terminalHolderId);
+      finishes.push({ w, session, noticesBefore: takeNotices("p").length, liveBefore: isLive("p", id), terminalsBefore: [...terminals] });
+      return { outcome: o.worktree?.outcome ?? { state: "brought", files: ["/src/a.ts"] }, changes: o.worktree?.changes ?? null };
+    },
     log: (line) => void logs.push(line),
     brain: (tools, _runId, signal, effort) => {
       brainEfforts.push(effort);
@@ -123,6 +139,8 @@ function setup(
       createRun: async (r) => void rows.set(r.id, { ...r, status: "running", toolUses: 0, durationMs: null, chargedCenticredits: 0, actions: [], transcript: null }),
       saveProgress: async (id, p) => void saves.push({ id, ...p }),
       settleRun: async (id, s) => void rows.set(id, { ...rows.get(id), ...s }),
+      setWorktree: async (id, w) => void rows.set(id, { ...rows.get(id), worktreeCopyId: w.copyId, worktreeBranch: w.branch, worktreeBase: w.base, worktreeOutcome: null }),
+      setWorktreeOutcome: async (id, outcome) => void rows.set(id, { ...rows.get(id), worktreeOutcome: outcome }),
       reopenRun: async (id, personId) => {
         if (o.reopenFails) throw new Error("the database is down");
         const r = rows.get(id);
@@ -191,7 +209,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, brainEfforts, closeOuts, logs, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, brainEfforts, closeOuts, logs, browsersClosed, worktreesMade, finishes, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -974,4 +992,120 @@ it("tells a child which skills are already loaded before its task, without listi
   const notice = s.g.seen[0].find((m) => m.content.startsWith("Already loaded skills:"));
   expect(notice?.content).toBe("Already loaded skills: beta, alpha. Their full instructions follow below and are active for this task. Follow them directly; do not call skill to load them again.");
   expect(s.g.seen[0].indexOf(notice!)).toBeLessThan(s.g.seen[0].length - 1);
+});
+
+const until = async (done: () => boolean) => {
+  for (let i = 0; i < 200 && !done(); i++) await new Promise((r) => setTimeout(r, 2));
+};
+
+describe("an isolated child (phase 4)", () => {
+  it("an isolated child works in its copy", async () => {
+    const s = setup({ scripts: [llama("Read", { file_path: "/src/a.ts" }), dice("Done")] });
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    expect(s.worktreesMade).toEqual([{ parentId: "p", ownerId: "owner", runId: "r1" }]);
+    expect(s.sessions.length).toBeGreaterThan(0);
+    for (const session of s.sessions) expect(session).toMatchObject({ projectId: "copy-1", parentProjectId: "p" });
+    expect(String(s.g.seen[0].at(-1)!.content).endsWith(isolationLine("worktree-agent-r1"))).toBe(true);
+    expect(s.rows.get("r1")).toMatchObject({ worktreeCopyId: "copy-1", worktreeBranch: "worktree-agent-r1" });
+  });
+
+  it("its outcome reaches Len", async () => {
+    const s = setup({ scripts: [dice("Done")] });
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    await until(() => s.events.at(-1)?.status !== "running");
+    expect(s.finishes).toHaveLength(1);
+    const f = s.finishes[0]!;
+    // After its terminal closed, and before its notice and its slot.
+    expect(f.terminalsBefore).toContain("close r1");
+    expect(f.noticesBefore).toBe(0);
+    expect(f.liveBefore).toBe(true);
+    expect(f.session).toMatchObject({ projectId: "p" });
+    expect(f.session.parentProjectId).toBeUndefined();
+    expect(s.rows.get("r1")!.worktreeOutcome).toEqual({ state: "brought", files: ["/src/a.ts"] });
+    expect(takeNotices("p").at(-1)!.text.endsWith("\n\nIts changes are now in your files: /src/a.ts.")).toBe(true);
+    expect(s.events.at(-1)).toMatchObject({ status: "completed", worktree: { state: "brought" } });
+  });
+
+  it("a stopped isolated child still brings", async () => {
+    const s = setup({ scripts: [llama("Read"), dice("Done")] });
+    s.g.hold();
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await until(() => s.g.seen.length > 0);
+    stop("r1");
+    s.g.release();
+    expect((await s.settled("r1")).status).toBe("aborted");
+    await until(() => s.finishes.length > 0);
+    expect(s.finishes).toHaveLength(1);
+  });
+
+  it("a read-only child ignores isolation", async () => {
+    const s = setup({ scripts: [dice("Found")] });
+    await s.launcher.launch({ description: "Find", prompt: "Where?", preset: "Explore", isolation: "worktree" });
+    await s.settled("r1");
+    expect(s.worktreesMade).toEqual([]);
+    expect(s.logs.join("\n")).toContain("isolation ignored: read-only");
+    forgetAllSubagents();
+    const p = setup({ planMode: true, scripts: [dice("Planned")] });
+    await p.launcher.launch({ description: "Plan", prompt: "How?", preset: "general-purpose", isolation: "worktree" });
+    await p.settled("r1");
+    expect(p.worktreesMade).toEqual([]);
+  });
+
+  it("without git it runs in the folder", async () => {
+    vi.stubEnv("OPENLEN_GIT", "0");
+    const s = setup({ scripts: [dice("Done")] });
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    expect(s.worktreesMade).toEqual([]);
+    expect(s.logs.join("\n")).toContain("git disabled");
+  });
+
+  it("a type's file can ask for it", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read, Write\nisolation: worktree"), scripts: [dice("Done")] });
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+    await s.settled("r1");
+    expect(s.worktreesMade).toHaveLength(1);
+  });
+
+  it("a copy that can't be made refuses the launch", async () => {
+    const s = setup({ worktree: { fail: true }, scripts: [dice("Done")] });
+    expect(await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" })).toEqual({
+      ok: false,
+      code: "worktree_failed",
+      message: "The subagent's own copy of the project could not be made; start it without isolation.",
+    });
+    expect(liveCount("p")).toBe(0);
+    expect((await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose" })).ok).toBe(true);
+  });
+
+  it("a fork can be isolated", async () => {
+    const s = setup({ forkSeed: [{ role: "system", content: "LEN SYSTEM PROMPT" }], scripts: [dice("Done")] });
+    await s.launcher.fork({ description: "Fork", prompt: "Go on.", isolation: "worktree" });
+    await s.settled("r1");
+    expect(s.worktreesMade).toHaveLength(1);
+    expect(String(s.g.seen[0].at(-1)!.content)).toContain(isolationLine("worktree-agent-r1"));
+  });
+
+  it("waking an isolated child makes a new copy", async () => {
+    const s = setup({ scripts: [dice("Done")] });
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    await until(() => s.finishes.length > 0 && !isLive("p", "r1"));
+    expect((await s.launcher.send({ id: "r1", message: "Also b." })).ok).toBe(true);
+    await s.settled("r1");
+    expect(s.worktreesMade).toHaveLength(2);
+    const woken = s.g.seen.at(-1)!;
+    expect(woken.findIndex((m) => String(m.content).startsWith(isolationLine("worktree-agent-r1-2")))).toBeGreaterThan(0);
+  });
+
+  it("a brought change undoes with its turn", async () => {
+    const changes = { before: { "/src/a.ts": "old" }, after: { "/src/a.ts": "new" } };
+    const s = setup({ turnOpen: false, worktree: { changes }, scripts: [dice("Done")] });
+    await s.launcher.launch({ description: "Edit a", prompt: "Change a.", preset: "general-purpose", isolation: "worktree" });
+    await s.settled("r1");
+    await until(() => s.changes.length > 0);
+    expect(s.changes).toEqual([["p", "row-1", changes.before, changes.after]]);
+  });
 });

@@ -27,10 +27,21 @@ import type { AppDeProyecto } from "@/lib/projects/types";
 import type { NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { renderSkillContent } from "@/lib/agent/skills/tool";
+import { gitEnabled } from "@/lib/git/enabled";
 
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import type { AgentTypeSet } from "./agent-registry";
-import { agentMessage, LEN_AGENT_ID, settlementNotice, withContinuableReturnGuidance, type SubagentStatus, type SubagentStopReason } from "./notice";
+import {
+  agentMessage,
+  isolationLine,
+  LEN_AGENT_ID,
+  settlementNotice,
+  withContinuableReturnGuidance,
+  type SubagentStatus,
+  type SubagentStopReason,
+  type WorktreeOutcome,
+} from "./notice";
+import type { AgentWorktree, FinishedWorktree } from "./worktree";
 import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
 import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { ConversationRun, SubagentRunRow } from "./store";
@@ -53,6 +64,8 @@ export interface SubagentEvent {
   readonly description: string;
   readonly status: SubagentStatus;
   readonly step?: Omit<Extract<AgentStreamEvent, { type: "action" }>, "type">;
+  /** An isolated child (phase 4): working in its copy, then how the copy came back. */
+  readonly worktree?: { readonly state: "working" } | WorktreeOutcome;
 }
 
 /** What the launching turn hands its children. */
@@ -110,6 +123,9 @@ export interface SubagentRunStore {
   runsOfCurrentConversation(projectId: string): Promise<ConversationRun[]>;
   /** One of them, whole (its transcript); null when it is not his. */
   runOfCurrentConversation(projectId: string, id: string): Promise<SubagentRunRow | null>;
+  /** Phase 4: an isolated child's copy, and how it came back. */
+  setWorktree?(id: string, w: AgentWorktree): Promise<void>;
+  setWorktreeOutcome?(id: string, o: WorktreeOutcome): Promise<void>;
 }
 
 export interface RunnerIO {
@@ -132,6 +148,11 @@ export interface RunnerIO {
   addTurnChanges(projectId: string, chatRowId: string, before: Readonly<Record<string, string>>, after: Readonly<Record<string, string>>): Promise<void>;
   /** Closes the child's browser tab (`use_page`), if it opened one. */
   closeBrowser?(session: AgentSession): Promise<void>;
+  /** Phase 4 (`isolation: "worktree"`): the child's copy of the project (lib/agent/subagents/worktree.ts). Without
+   *  them, isolation is dropped and logged. */
+  addWorktree?(o: { parentId: string; ownerId: string; runId: string }): Promise<AgentWorktree>;
+  /** Brings the copy back into the draft with `session` (the launching turn's, on the parent) and removes it. */
+  finishWorktree?(o: { w: AgentWorktree; description: string; session: AgentSession }): Promise<FinishedWorktree>;
   /** What the route builds for any loop of the session: compaction, spill, late diagnostics. */
   loopExtras?(session: AgentSession): Partial<Pick<AgentLoopArgs, "compaction" | "spill" | "lateDiagnostics">>;
   /** Writes what the run has before the process exits (exit-flush.ts); returns its unregister. */
@@ -145,6 +166,8 @@ export const TOO_MANY_SUBAGENTS = "8 subagents are already running in this proje
 const TURN_BUDGET_REACHED = "This turn's spending limit is reached: no more subagents can start in it.";
 /** Ours: the custom type's model-call cap, followed by one tools-off closing call. */
 export const TURN_LIMIT_MESSAGE = "You have reached this agent's turn limit. Do not call any more tools: answer now with what you did, what you found and what is left undone.";
+/** Ours (phase 4): a launch that asked for isolation never runs in the shared folder instead. */
+const WORKTREE_FAILED = "The subagent's own copy of the project could not be made; start it without isolation.";
 const PROGRESS_EVERY_MS = 5_000;
 
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
@@ -224,6 +247,8 @@ interface ChildSpec {
   readonly planMode: boolean;
   /** What the row already counts: a woken child adds to it. */
   readonly prior: { readonly toolUses: number; readonly durationMs: number; readonly charged: number; readonly usage: Usage; readonly actions: readonly ChildStep[] };
+  /** Phase 4: it works in this copy, which comes back into the draft when it ends. */
+  readonly worktree?: AgentWorktree;
 }
 
 /** Server-owned state on a preload message, kept in its transcript but not sent as provider content. */
@@ -259,7 +284,9 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const startedAt = io.now();
     const session: AgentSession = {
       ...ctx.sessionBase,
-      projectId: ctx.projectId,
+      // An isolated child works in its copy; its LEN.md, memory, skills and agents stay its parent's (phase 4).
+      projectId: spec.worktree ? spec.worktree.copyId : ctx.projectId,
+      ...(spec.worktree ? { parentProjectId: ctx.projectId } : {}),
       userId: ctx.userId,
       ...(ctx.personId !== ctx.userId ? { personId: ctx.personId } : {}),
       turnId: ctx.turnId,
@@ -333,7 +360,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const stopFlush = io.flushOnExit?.(progress);
     try {
       await io.openTerminal(session, id);
-      before = await io.snapshot(session).catch(() => null);
+      // An isolated child's changes undo with what its copy brought back, not with a photo of the copy.
+      if (!spec.worktree) before = await io.snapshot(session).catch(() => null);
       const b = (brain = io.brain(tools, id, abort.signal, definition?.effort ?? undefined));
       result = await runSubagent({
         messages: initial,
@@ -483,16 +511,35 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         await keepTheRest();
       }
     }
+    // An isolated child's copy comes back now: after its terminal closed (which saved into the copy what the box
+    // changed), and before its notice and its slot, so Len hears how it came back (phase 4, spec §4.3).
+    const worktree = spec.worktree ? await finishCopy(spec.worktree) : undefined;
     // The notice first, then the slot: a turn waiting for «a notice or no child left» must see the notice.
     if (toLen) {
       queueNotice(ctx.projectId, {
         id,
-        text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText }),
+        text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText, ...(worktree ? { worktree } : {}) }),
       });
     }
     release(ctx.projectId, id);
-    ctx.emit?.({ type: "subagent", id, preset, description, status });
+    ctx.emit?.({ type: "subagent", id, preset, description, status, ...(worktree ? { worktree } : {}) });
     if (toLen) wakeLen();
+
+    async function finishCopy(w: AgentWorktree): Promise<WorktreeOutcome> {
+      const { parentProjectId: _parent, ...rest } = session;
+      let finished: FinishedWorktree;
+      try {
+        finished = await io.finishWorktree!({ w, description, session: { ...rest, projectId: ctx.projectId } as AgentSession });
+      } catch (e) {
+        log(`[subagents] run=${id} its copy could not come back: ${String(e)}`);
+        finished = { outcome: { state: "kept", branch: w.branch }, changes: null };
+      }
+      await io.store.setWorktreeOutcome?.(id, finished.outcome).catch((e: unknown) => log(`[subagents] run=${id} saving its copy's outcome failed: ${String(e)}`));
+      if (finished.changes && !io.turnStillOpen(ctx.chatRowId)) {
+        await io.addTurnChanges(ctx.projectId, ctx.chatRowId, finished.changes.before, finished.changes.after).catch((e: unknown) => log(`[subagents] run=${id} undo failed: ${String(e)}`));
+      }
+      return finished.outcome;
+    }
 
     /** Goes on with Len's messages, holding its slot: the row runs again and the next pass adds to this one's counts. */
     async function goOn(texts: readonly string[]): Promise<boolean> {
@@ -561,18 +608,33 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
     // Read-only if it started so, or if Len plans now: a scope never widens.
     const scope = first.planMode || ctx.planMode;
+    // An isolated child wakes in a new copy of the draft as it is now: what it did before already came back (phase 4).
+    const w = isolates(id, type, scope, first.worktreeBranch ? "worktree" : undefined) ? await makeCopy(id) : undefined;
+    if (w === null) {
+      release(ctx.projectId, id);
+      return { ok: false, code: "unavailable", message: WORKTREE_FAILED };
+    }
+    /** A copy nobody will use goes, as an unchanged one does when it is finished. */
+    const discard = async () => {
+      if (!w) return;
+      const session = { ...ctx.sessionBase, projectId: ctx.projectId, userId: ctx.userId, turnId: ctx.turnId, terminalHolderId: id, page: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
+      await io.finishWorktree!({ w, description: first.description, session }).catch((e: unknown) => log(`[subagents] run=${id} discarding its copy failed: ${String(e)}`));
+    };
     let reopened: boolean;
     try {
       reopened = await io.store.reopenRun(id, ctx.personId);
     } catch (e) {
       release(ctx.projectId, id);
+      await discard();
       throw e;
     }
     if (!reopened) {
       // Someone else woke it meanwhile: it works now, so the message waits in its inbox.
       release(ctx.projectId, id);
+      await discard();
       return isLive(ctx.projectId, id) ? toInbox() : { ok: false, code: "unavailable", message: unavailableError(id) };
     }
+    if (w) await io.store.setWorktree?.(id, w).catch((e: unknown) => log(`[subagents] run=${id} saving its copy failed: ${String(e)}`));
     // Read again now that it is ours: what a stop kept in its transcript while this message was on its way.
     const row = (await io.store.runOfCurrentConversation(ctx.projectId, id).catch(() => null)) ?? first;
     const transcript = (row.transcript as Message[] | null) ?? [];
@@ -590,8 +652,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         { role: "system", content: row.forked ? ctx.lenSystemPrompt : childSystemPromptFor(ctx.lenSystemPrompt, type, SUBAGENT_GUIDANCE) },
         ...head,
         ...transcript,
+        ...(w ? [{ role: "user" as const, content: isolationLine(w.branch) }] : []),
         ...texts.map(fromLen),
       ],
+      ...(w ? { worktree: w } : {}),
       ...(row.forked
         ? { tools: [...ctx.declarations], allowed: generalPurposeNames(scope) }
         : { tools: childTools }),
@@ -603,13 +667,34 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         actions: row.actions as ChildStep[],
       },
     };
-    ctx.emit?.({ type: "subagent", id, preset, description: row.description, status: "running" });
+    ctx.emit?.({ type: "subagent", id, preset, description: row.description, status: "running", ...(w ? { worktree: { state: "working" as const } } : {}) });
     void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
     return { ok: true, resumed: true, preset, description: row.description };
   }
 
   /** Whether `id` is one of Len's children: a run of the project's current conversation. */
   const ofThisConversation = async (id: string) => (await io.store.runsOfCurrentConversation(ctx.projectId)).some((r) => r.id === id);
+
+  /** Phase 4: whether this run works in its own copy — asked by the call or by its type's file, dropped (and logged)
+   *  for a child that can't write, without git, or without the copy's parts. */
+  function isolates(id: string, type: ChildType, planMode: boolean, asked: "worktree" | undefined): boolean {
+    if (!(asked ?? (type.kind === "custom" ? type.type.agent.isolation : null))) return false;
+    const why = isReadOnlyFor(type, planMode) ? "read-only" : !gitEnabled() ? "git disabled" : !io.addWorktree || !io.finishWorktree ? "no worktree support" : null;
+    if (why) log(`[subagents] run=${id} isolation ignored: ${why}`);
+    return why === null;
+  }
+
+  /** The copy, or null when it can't be made (the launch is then refused). */
+  async function makeCopy(id: string): Promise<AgentWorktree | null> {
+    try {
+      return await io.addWorktree!({ parentId: ctx.projectId, ownerId: ctx.ownerId, runId: id });
+    } catch (e) {
+      log(`[subagents] run=${id} its copy could not be made: ${String(e)}`);
+      return null;
+    }
+  }
+
+  const withLine = <M extends Message>(m: M, w: AgentWorktree | null): M => (w ? { ...m, content: `${m.content}\n\n${isolationLine(w.branch)}` } : m);
 
   /** Len's tools a general-purpose child may run: a fork is declared all of Len's (his cached prefix) and gated to these. */
   const generalPurposeNames = (planMode: boolean) => new Set(childToolDeclarations(ctx.declarations, "general-purpose", planMode).map((d) => String(d.name)));
@@ -626,13 +711,19 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const id = io.newId();
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
+      const w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+      if (w === null) {
+        release(ctx.projectId, id);
+        return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED };
+      }
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode });
+        if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
         release(ctx.projectId, id);
         throw e;
       }
-      ctx.emit?.({ type: "subagent", id, preset: o.preset, description: o.description, status: "running" });
+      ctx.emit?.({ type: "subagent", id, preset: o.preset, description: o.description, status: "running", ...(w ? { worktree: { state: "working" as const } } : {}) });
       const spec: ChildSpec = {
         id,
         description: o.description,
@@ -640,9 +731,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         type,
         forked: false,
         planMode: ctx.planMode,
-        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) => i === all.length - 1 && o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m),
+        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) =>
+          i === all.length - 1 ? withLine(o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m, w ?? null) : m,
+        ),
         tools,
         prior: NOTHING_YET,
+        ...(w ? { worktree: w } : {}),
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
       return { ok: true, id };
@@ -655,24 +749,32 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const id = io.newId();
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
+      const type: ChildType = { kind: "builtin", preset: "general-purpose" };
+      const w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+      if (w === null) {
+        release(ctx.projectId, id);
+        return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED };
+      }
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode });
+        if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
         release(ctx.projectId, id);
         throw e;
       }
-      ctx.emit?.({ type: "subagent", id, preset: "general-purpose", description: o.description, status: "running" });
+      ctx.emit?.({ type: "subagent", id, preset: "general-purpose", description: o.description, status: "running", ...(w ? { worktree: { state: "working" as const } } : {}) });
       const spec: ChildSpec = {
         id,
         description: o.description,
         preset: "general-purpose",
-        type: { kind: "builtin", preset: "general-purpose" },
+        type,
         forked: true,
         planMode: ctx.planMode,
-        messages: [...ctx.forkSeed, { role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }],
+        messages: [...ctx.forkSeed, withLine({ role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }, w ?? null)],
         tools: [...ctx.declarations],
         allowed: generalPurposeNames(ctx.planMode),
         prior: NOTHING_YET,
+        ...(w ? { worktree: w } : {}),
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
       return { ok: true, id };
