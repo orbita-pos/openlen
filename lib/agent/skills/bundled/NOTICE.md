@@ -34,8 +34,9 @@ one-hour minimum), which has no open license, and DeepSeek Harness's schedule to
 
 `deep-research` is ours, written from the method of Anthropic's `deep-research` skill (subtopics,
 short queries that never repeat, reading the promising pages, primary sources, a report that answers
-first), facts only: it has no open license. Claude coordinates research subagents; Len has none, so one
-researcher follows the same loop within Len's search limits (`lib/agent/web/herramientas.ts`). Added
+first), facts only: it has no open license. Len coordinates researcher subagents like Claude's, each
+with its own search budget, and combines their findings with sources. Without subagents it follows
+the same method inline within Len's search limits (`lib/agent/web/herramientas.ts`). Added
 on 2026-10-27 (spec local 2026-10-27-len-five-skills, §4.1).
 
 `dataviz` is ours, from the facts of Claude Code's `dataviz` skill (the procedure with color last, the
