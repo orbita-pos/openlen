@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin } from "@/lib/projects/types";
+import type { EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -62,7 +62,7 @@ export interface ScheduledRequest {
   readonly framing: string;
   /** A scheduled task's run, a Len Watch turn (spec local 2026-10-30-len-watch) or the subagents' notices
    *  (spec local 2026-11-01-subagentes-de-len): all arrive framed. */
-  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin;
+  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
@@ -281,6 +281,15 @@ export function launchLenWatchTurn(p: FramedTurn<LenWatchOrigin>): void {
 }
 
 /**
+ * «HAZLO» ON AN EVENT TASK'S CARD (spec local 2026-11-03-len-que-avisa, §7.7): the proposed action, approved by the
+ * press, runs in the project chat — where the task was created, with its code and its history (DeepSeek) — as
+ * whoever pressed, waiting its turn in the project's queue like a scheduled task.
+ */
+export function launchEventTaskTurn(p: FramedTurn<EventTaskOrigin>): void {
+  launchFramedTurn(p, "event-task");
+}
+
+/**
  * THE TURN THAT WAKES LEN WITH ITS SUBAGENTS' NOTICES (spec local 2026-11-01-subagentes-de-len, §4.6): a child
  * finished while no Len turn was alive in the project. As DeepSeek's notice reaching an idle parent starts one
  * model request, this starts one turn: it waits its turn in the project's queue and, when it starts, takes
@@ -325,7 +334,7 @@ export function launchSubagentNoticeTurn(p: {
   );
 }
 
-interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin> {
+interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin> {
   readonly userId: string;
   readonly projectId: string;
   /** What the chat row shows as the person's message. */
@@ -349,7 +358,7 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   readonly extraBody?: Readonly<Record<string, unknown>>;
 }
 
-function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin>(
+function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin>(
   p: FramedTurn<O>,
   label: string,
   o: { readonly quietWhenNoReply?: boolean } = {},

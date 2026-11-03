@@ -66,6 +66,12 @@ describe("createCard", () => {
     expect(n.sent[0]!.event.emailText).toContain(`card=${c.id}`);
   });
 
+  it("a card never enters what Len reads in the project chat: it writes no chat row", async () => {
+    await pg.exec(`CREATE TABLE "projectChatMessages" ("id" text PRIMARY KEY, "projectId" text, "userText" text);`);
+    await card(await newTask(), "Reserva de las 21:00 choca con la mesa 4", notifier());
+    expect((await pg.query(`SELECT 1 FROM "projectChatMessages"`)).rows).toEqual([]);
+  });
+
   it("a new card replaces the pending one of the same task, not of another task", async () => {
     const [a, b] = [await newTask(), await newTask()];
     const n = notifier();
