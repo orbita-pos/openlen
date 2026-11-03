@@ -9,7 +9,7 @@ import { CHARS_PER_TOKEN } from "./estimate";
 import { POST_COMPACT_MAX_TOKENS_PER_SKILL, POST_COMPACT_SKILLS_TOKEN_BUDGET, restoredSkills } from "./restore-skills";
 
 const skill = (name: string, body = `# ${name}\nDo it.`): ResolvedSkill => ({
-  skill: { name, description: `${name} skill`, modelInvocable: true, userInvocable: true, body },
+  skill: { name, description: `${name} skill`, modelInvocable: true, userInvocable: true, body, fork: null },
   scope: "bundled",
   baseDir: `/.openlen/skills/${name}`,
 });

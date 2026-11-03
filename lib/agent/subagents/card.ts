@@ -10,10 +10,10 @@ export interface SubagentRef {
 }
 
 /** The actions that carry a run's card when they name one: a launch, a fork, and a message that woke a child. */
-export const SUBAGENT_CARD_TOOLS: ReadonlySet<string> = new Set([SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL]);
+export const SUBAGENT_CARD_TOOLS: ReadonlySet<string> = new Set([SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL, "skill"]);
 
 const ID = /^[\w-]{1,64}$/;
-const PRESET = /^[\w-]{1,32}$/;
+const PRESET = /^[\w-]{1,64}$/;
 
 export function subagentRefFrom(v: unknown): SubagentRef | null {
   if (!v || typeof v !== "object") return null;

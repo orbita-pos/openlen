@@ -5,6 +5,7 @@ import type { BundledSkill } from "./bundled";
 import type { SkillDefinition } from "./skill-file";
 
 const def = (name: string, o: Partial<SkillDefinition> = {}): SkillDefinition => ({
+  fork: null,
   name,
   description: `${name} skill`,
   modelInvocable: true,

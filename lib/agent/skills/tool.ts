@@ -11,7 +11,9 @@ import type { ResolvedSkill } from "./registry";
 import { SKILL_NAME } from "./skill-file";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 
-import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
+import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
+import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { BUILT_IN_AGENT_TYPES } from "@/lib/agent/subagents/agent-paths";
 
 export const SKILL_TOOL = "skill";
 
@@ -22,6 +24,7 @@ export const DECLARACION_SKILL = {
     type: "OBJECT",
     properties: {
       name: { type: "STRING", description: "The exact skill name from the available skills list." },
+      args: { type: "STRING", description: "For a skill that runs in a subagent: the task to hand it, complete and self-contained. Leave it out for any other skill." },
     },
     required: ["name"],
   },
@@ -75,12 +78,27 @@ export function foldLoadedSkills(
   return loaded;
 }
 
-export function toolSkill(session: AgentSession, args: Record<string, unknown>): ToolOutcome {
+/** Ours: acknowledgements for a skill executed in its own child. */
+export const forkedSkillLine = (name: string, id: string) => `Skill "${name}" started in subagent ${id}; its result arrives as a notice.`;
+export const ALREADY_RUNNING_IT = "You are the subagent already running this skill: follow its instructions above instead of starting it again.";
+
+export async function toolSkill(session: AgentSession, args: Record<string, unknown>, deps?: Pick<AgentDeps, "subagents">): Promise<ToolOutcome> {
   const name = typeof args.name === "string" ? args.name.trim() : "";
   if (!SKILL_NAME.test(name)) return { response: { ok: false, error: `invalid skill name "${String(args.name ?? "")}"` } };
   const found = session.skills?.get(name);
   if (!found) return { response: { ok: false, error: `skill "${name}" is unknown or no longer available` } };
   if (!found.skill.modelInvocable) return { response: { ok: false, error: `skill "${name}" is not available for model invocation` } };
+  if (session.runningSkill === name) return { response: { ok: false, error: ALREADY_RUNNING_IT } };
+  if (found.skill.fork && deps?.subagents && subagentsEnabled(process.env)) {
+    const preset = found.skill.fork.agent;
+    const names = deps.subagents.typeNames?.() ?? [...BUILT_IN_AGENT_TYPES];
+    if (!names.includes(preset)) return { response: { ok: false, error: "invalid_arguments", message: `agent_preset must be one of: ${names.join(", ")}` } };
+    const task = typeof args.args === "string" ? args.args.trim() : "";
+    const prompt = [task, renderSkillContent(found)].filter(Boolean).join("\n\n");
+    const result = await deps.subagents.launch({ description: name, prompt, preset, fromSkill: name });
+    if (!result.ok) return { response: { ok: false, error: result.code, message: result.message } };
+    return { response: { ok: true, tool_result: forkedSkillLine(name, result.id) }, action: { tool: SKILL_TOOL, ok: true, summary: name }, subagent: { id: result.id, preset } };
+  }
   const loaded = (session.loadedSkills ??= new Set());
   if (loaded.has(name)) return { response: { ok: true, tool_result: alreadyLoaded(name) } };
   loaded.add(name);
