@@ -3,7 +3,9 @@
 // notas, la llamada) y el turno que corre ahora. Puro: la pantalla sólo pinta.
 // Sin pasos ni herramientas: el chat del móvil no es el de la web.
 import { archivosDelHistorial, type ArchivoAdjunto } from "./archivos";
-import type { StoredChatTurn } from "@/lib/projects/types";
+import { isSubagentOrigin, type StoredChatTurn } from "@/lib/projects/types";
+import { subagentRefFrom, type SubagentRef } from "@/lib/agent/subagents/card";
+import { subagentRefsOf } from "./subagentes";
 import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import { currentToolName } from "@/lib/agent/tool-renames";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
@@ -24,6 +26,8 @@ export type ElementoDelHilo =
   | ({ clave: string; t: number; tipo: "tu"; texto: string; foto?: string; archivos?: readonly Pick<ArchivoAdjunto,"name"|"size"|"kind">[]; estado: EstadoLocal; goal?: "create" | "resume" } & Enviado)
   | ({ clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal } & Enviado)
   | { clave: string; t: number; tipo: "len"; texto: string }
+  | { clave: string; t: number; tipo: "subagentes"; fila: string; refs: readonly SubagentRef[] }
+  | { clave: string; t: number; tipo: "origen"; origen: "subagentes" }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
   | { clave: string; t: number; tipo: "fallo" }
   | { clave: string; t: number; tipo: "tarjeta"; tarjeta: TarjetaDeLlamada }
@@ -82,7 +86,10 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
     }
     // En curso: lo que lleva dicho lo pinta el turno en vivo (o el reenganche).
     if (turno.enCurso) continue;
+    if (turno.origen && isSubagentOrigin(turno.origen)) salida.push({ clave: `${turno.id}:origen`, t, tipo: "origen", origen: "subagentes" });
     parrafos(turno.assistantReasoning).forEach((texto, i) => salida.push({ clave: `${turno.id}:len:${i}`, t, tipo: "len", texto }));
+    const refs = subagentRefsOf(turno.actions);
+    if (refs.length) salida.push({ clave: `${turno.id}:subagentes`, t, tipo: "subagentes", fila: turno.id, refs });
     const entregado = deliveredOf(turno.actions);
     if (entregado.length) salida.push({ clave: `${turno.id}:entregado`, t, tipo: "entregado", archivos: entregado });
     if (turno.status === "error") salida.push({ clave: `${turno.id}:fallo`, t, tipo: "fallo" });
@@ -113,9 +120,11 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
       if (typeof d.tool !== "string") return v;
       const status = d.status === "running" || d.status === "error" || d.status === "warning" ? d.status : "done";
       const entregado = d.tool === "present" ? deliveredFrom(d.delivered) : null;
+      const ref = subagentRefFrom(d.subagent);
       const accion: NonNullable<StoredChatTurn["actions"]>[number] = {
         tool: d.tool, status, summary: typeof d.summary === "string" ? d.summary : "",
         ...(entregado ? { delivered: entregado } : {}),
+        ...(ref ? { subagent: ref } : {}),
         ...(Array.isArray(d.todos) ? { todos: d.todos.filter((x): x is { content: string; status: "pending" | "in_progress" | "completed" } => !!x && typeof x === "object" && typeof x.content === "string" && ["pending", "in_progress", "completed"].includes(x.status)) } : {}),
       };
       const acciones = [...(v.acciones ?? [])];
@@ -146,6 +155,8 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
 /** Lo que el turno en vivo pone en el hilo. `t`: ahora — el turno que corre es siempre lo último. */
 export function elementosDelTurno(v: TurnoEnVivo, t: number): ElementoDelHilo[] {
   const s: ElementoDelHilo[] = parrafos(v.texto).map((texto, i): ElementoDelHilo => ({ clave: `vivo:len:${i}`, t, tipo: "len", texto }));
+  const refs = subagentRefsOf(v.acciones);
+  if (refs.length && v.fila) s.push({ clave: "vivo:subagentes", t, tipo: "subagentes", fila: v.fila, refs });
   const entregado = deliveredOf(v.acciones);
   if (entregado.length) s.push({ clave: "vivo:entregado", t, tipo: "entregado", archivos: entregado });
   v.tarjetas.forEach((tarjeta, i) => s.push({ clave: `vivo:tarjeta:${i}`, t, tipo: "tarjeta", tarjeta }));
