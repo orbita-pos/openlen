@@ -953,3 +953,12 @@ it("a turn-limited close-out keeps its closing report after an earlier message t
   expect((await s.settled("r1")).status).toBe("turn_limit");
   expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAnother file is still unchecked.");
 });
+
+it("tells a child which skills are already loaded before its task, without listing skipped skills", async () => {
+  const s = setup({ agentTypes: customTypes("tools: Read, skill\nskills: beta, missing, hidden, alpha"), skills: await preloadSkills(), scripts: [dice("ok")] });
+  await s.launcher.launch({ description: "Review", prompt: "THE TASK", preset: "reviewer" });
+  await s.settled("r1");
+  const notice = s.g.seen[0].find((m) => m.content.startsWith("Already loaded skills:"));
+  expect(notice?.content).toBe("Already loaded skills: beta, alpha. Their full instructions follow below and are active for this task. Follow them directly; do not call skill to load them again.");
+  expect(s.g.seen[0].indexOf(notice!)).toBeLessThan(s.g.seen[0].length - 1);
+});

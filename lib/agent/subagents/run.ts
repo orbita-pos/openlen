@@ -247,7 +247,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       }
       preloaded.push({ role: "user", content: renderSkillContent(skill), loadedSkill: name });
     }
-    return [...messages.slice(0, -1), ...preloaded, messages.at(-1)!];
+    if (!preloaded.length) return messages;
+    // Ours: the catalog's generic invocation rule must not ask the child to load these again.
+    const notice: Message = { role: "user", content: `Already loaded skills: ${preloaded.map((m) => m.loadedSkill).join(", ")}. Their full instructions follow below and are active for this task. Follow them directly; do not call skill to load them again.` };
+    return [...messages.slice(0, -1), notice, ...preloaded, messages.at(-1)!];
   }
 
   async function run(spec: ChildSpec, abort: AbortController): Promise<void> {
