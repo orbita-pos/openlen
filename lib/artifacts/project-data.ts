@@ -25,18 +25,8 @@ export function projectSourceLoader(database: ArtifactDatabase) {
 
 export async function queryProjectArtifactData(ctx: ArtifactContext, input: RealArtifactDataRequest): Promise<QueryOutcome | null> {
   if (input.source === "backend") {
-    const [{ getBackendByProject }, { getEnvironment, claimReadOnlyPassword }, { backendConfigured }] = await Promise.all([import("../backend/registry"), import("../backend/environments"), import("../backend/pg")]);
-    if (!backendConfigured()) return null;
-    const rec = await getBackendByProject(ctx.projectId);
-    const env = await getEnvironment(ctx.projectId, input.environment);
-    if (!rec || !env?.provisionedAt) return null;
-    const [{ encryptToken, decryptToken }, { newDatabasePassword }, { provisionReadOnlyRole }, { runLiveQuery }] = await Promise.all([import("../integrations/crypto"), import("../backend/keys"), import("../backend/read-only"), import("../backend/sql-query")]);
-    const encrypted = env.readOnlyPasswordEncrypted ?? await claimReadOnlyPassword(ctx.projectId, encryptToken(newDatabasePassword()), input.environment);
-    const roPassword = decryptToken(encrypted);
-    await provisionReadOnlyRole({ scope: env.scope, ref: rec.ref, password: roPassword });
-    // runLiveQuery is named for its original CLI consumer, but accepts any
-    // scope. Both environments use its SELECT-only role and READ ONLY tx.
-    return runLiveQuery({ scope: env.scope, roPassword }, input.query);
+    const { queryBackendReadOnly } = await import("../backend/live-read");
+    return queryBackendReadOnly(ctx.projectId, input.environment, input.query);
   }
   if (input.source === "visits") {
     const { resumirVisitas } = await import("../resultados/visitas");

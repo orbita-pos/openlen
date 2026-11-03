@@ -48,5 +48,5 @@ export interface EventSource<P, S> {
   validate(projectId: string, params: P): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
   observe(projectId: string, params: P, state: S): Promise<Observation<S>>;
   /** The judge's read: the candidate's items and the ones before them, to compare. */
-  read(projectId: string, params: P, args: { readonly keys: readonly string[] }): Promise<unknown>;
+  read(projectId: string, params: P, args: { readonly keys: readonly string[]; readonly state: S }): Promise<unknown>;
 }
