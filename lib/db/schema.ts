@@ -2669,7 +2669,7 @@ export const subagentRuns = pgTable(
     preset: text("preset").notNull(),
     description: text("description").notNull(),
     prompt: text("prompt").notNull(),
-    status: text("status").$type<"running" | "completed" | "aborted" | "error" | "budget">().notNull().default("running"),
+    status: text("status").$type<"running" | "completed" | "aborted" | "error" | "budget" | "turn_limit">().notNull().default("running"),
     transcript: jsonb("transcript"),
     actions: jsonb("actions").$type<unknown[]>().notNull().default([]),
     finalText: text("finalText"),
