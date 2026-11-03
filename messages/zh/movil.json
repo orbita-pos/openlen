@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, other {# 个子代理正在工作}}",
       "origen": "子代理的结果",
       "worktree": {
-      "retained": "无法保存：副本已保留以便恢复",
+        "retained": "无法保存：副本已保留以便恢复",
         "working": "在独立副本中工作",
         "brought": "已合入 {n} 个文件",
         "conflict": "与你的更改冲突：工作内容仍保留在其分支上",
@@ -144,5 +144,31 @@
       "deshaciendo": "撤销了修改",
       "trabajando": "做完了"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "来自「{task}」的提醒",
+    "proposed": "Len 的建议",
+    "accept": "执行",
+    "dismiss": "暂不",
+    "earlier": "之前的提醒",
+    "done": "已完成",
+    "dismissed": "已忽略",
+    "replaced": "已替换",
+    "failed": "没有成功，请再试一次。",
+    "records": "记录",
+    "noRecords": "暂无",
+    "sourceRows": "{table} 的新行",
+    "sourceForm": "表单 {form} 的提交",
+    "sourceAllForms": "表单提交",
+    "conditions": "条件",
+    "recDelivered": "Len 已查看",
+    "recNotified": "Len 已提醒",
+    "recFiltered": "已过滤：{reason}",
+    "recFailed": "失败：{reason}",
+    "recCount": "×{count}",
+    "filterAll": "全部",
+    "filterTime": "定时",
+    "filterEvents": "事件",
+    "lastCheck": "上次检查：{when}"
   }
 }

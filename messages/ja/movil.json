@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, other {# 件のサブエージェントが作業中}}",
       "origen": "サブエージェントの結果",
       "worktree": {
-      "retained": "保存できませんでした：復旧用にコピーを保持しています",
+        "retained": "保存できませんでした：復旧用にコピーを保持しています",
         "working": "専用のコピーで作業中",
         "brought": "{n}個のファイルを反映しました",
         "conflict": "変更が競合しました：作業内容はブランチに残っています",
@@ -144,5 +144,31 @@
       "deshaciendo": "変更を元に戻しました",
       "trabajando": "作業しました"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "「{task}」からのお知らせ",
+    "proposed": "Len の提案",
+    "accept": "実行する",
+    "dismiss": "今はしない",
+    "earlier": "以前のお知らせ",
+    "done": "完了",
+    "dismissed": "見送り",
+    "replaced": "置き換え済み",
+    "failed": "うまくいきませんでした。もう一度お試しください。",
+    "records": "記録",
+    "noRecords": "まだありません",
+    "sourceRows": "{table} の新しい行",
+    "sourceForm": "フォーム {form} の送信",
+    "sourceAllForms": "フォームの送信",
+    "conditions": "条件",
+    "recDelivered": "Len が確認",
+    "recNotified": "Len が通知",
+    "recFiltered": "除外: {reason}",
+    "recFailed": "失敗: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "すべて",
+    "filterTime": "時刻",
+    "filterEvents": "イベント",
+    "lastCheck": "最終確認: {when}"
   }
 }

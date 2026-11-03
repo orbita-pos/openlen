@@ -81,7 +81,7 @@
       "trabajando": "{n, plural, one {# subagente al lavoro} other {# subagenti al lavoro}}",
       "origen": "Risultati dei subagenti",
       "worktree": {
-      "retained": "impossibile salvare: la copia è conservata per il recupero",
+        "retained": "impossibile salvare: la copia è conservata per il recupero",
         "working": "nella propria copia",
         "brought": "ha riportato {n, plural, one {# file} other {# file}}",
         "conflict": "conflitto con le tue modifiche: il suo lavoro resta nel suo ramo",
@@ -144,5 +144,31 @@
       "deshaciendo": "ha annullato la modifica",
       "trabajando": "ci ha lavorato"
     }
+  },
+  "eventTasks": {
+    "cardFrom": "Avviso da «{task}»",
+    "proposed": "Len propone",
+    "accept": "Fallo",
+    "dismiss": "Non ora",
+    "earlier": "Avvisi precedenti",
+    "done": "Fatto",
+    "dismissed": "Scartato",
+    "replaced": "Sostituito",
+    "failed": "Non è andata. Riprova.",
+    "records": "Registro",
+    "noRecords": "Ancora niente",
+    "sourceRows": "Nuove righe di {table}",
+    "sourceForm": "Invii del modulo {form}",
+    "sourceAllForms": "Invii dei moduli",
+    "conditions": "Condizioni",
+    "recDelivered": "Len ha guardato",
+    "recNotified": "Len ha avvisato",
+    "recFiltered": "Filtrato: {reason}",
+    "recFailed": "Non riuscito: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Tutte",
+    "filterTime": "A orario",
+    "filterEvents": "Su evento",
+    "lastCheck": "Ultimo controllo: {when}"
   }
 }

@@ -28,8 +28,9 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "email_domain": title = "Email"; body = `${evento.domain} · ${evento.status === "ready" ? "✓" : "✕"}`; break;
     case "email_quota": title = "Email"; body = `${evento.percent}% · ${evento.sent} / ${evento.included}`; break;
     case "len_watch": title = evento.title; body = evento.body; break;
+    case "len_aviso": title = evento.title; body = evento.push; break;
   }
-  const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : {};
+  const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {};
   return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
 }
 

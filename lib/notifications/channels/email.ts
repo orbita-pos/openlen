@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { capEmail } from "@/lib/app-ai/cap-messages";
-import { sendAppAiCapEmail, sendChatNotificationEmail, sendFunctionsQuotaEmail, sendLenWatchEmail, sendMentionEmail, sendProjectEmailNotice } from "@/lib/email";
+import { sendAppAiCapEmail, sendChatNotificationEmail, sendFunctionsQuotaEmail, sendLenAvisoEmail, sendLenWatchEmail, sendMentionEmail, sendProjectEmailNotice } from "@/lib/email";
 import { domainNoticeEmail, quotaNoticeEmail } from "@/lib/project-email/notices";
 import { quotaEmail } from "@/lib/functions/quota-messages";
-import type { AppAiCapEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenWatchEvent, MencionEvent } from "../types";
+import type { AppAiCapEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenWatchEvent, MencionEvent } from "../types";
 import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
@@ -22,6 +22,7 @@ export const emailChannel: NotificationChannel = {
     if (event.type === "app_ai_cap") return sendAppAiCapAlert(event);
     if (event.type === "email_domain" || event.type === "email_quota") return sendProjectEmailAlert(event);
     if (event.type === "len_watch") return sendLenWatchAlert(event);
+    if (event.type === "len_aviso") return sendLenAvisoAlert(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -92,6 +93,14 @@ async function enviarCuota(event: FunctionsQuotaEvent): Promise<DeliveryResult> 
 }
 
 /** LEN WATCH (spec local 2026-10-30-len-watch): the owner's site stopped loading, or its fix moved on. */
+/** An event task's card (spec local 2026-11-03-len-que-avisa, §7.6): its texts come written. */
+async function sendLenAvisoAlert(event: LenAvisoEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  await sendLenAvisoEmail({ to: u.email, subject: event.emailSubject, text: event.emailText });
+  return "sent";
+}
+
 async function sendLenWatchAlert(event: LenWatchEvent): Promise<DeliveryResult> {
   const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
   if (!u?.email) return "skipped";

@@ -576,5 +576,36 @@
     "liveBar": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}",
     "forked": "Bifurcado",
     "messageToLen": "Enviando un mensaje a Len"
+  },
+  "eventTasks": {
+    "notice": {
+      "emailSubject": "🔔 {task}: {title}",
+      "emailText": "{summary}\n\nLen propone: {action}\n\nÁbrelo en tu proyecto: {url}"
+    },
+    "turnPrompt": "🔔 {task}: Hazlo",
+    "cardFrom": "Aviso de «{task}»",
+    "proposed": "Len propone",
+    "accept": "Hazlo",
+    "dismiss": "Ahora no",
+    "earlier": "Avisos anteriores",
+    "done": "Hecho",
+    "dismissed": "Descartada",
+    "replaced": "Sustituida",
+    "failed": "No se pudo. Vuelve a intentarlo.",
+    "records": "Registros",
+    "noRecords": "Aún nada",
+    "sourceRows": "Filas nuevas de {table}",
+    "sourceForm": "Envíos del formulario {form}",
+    "sourceAllForms": "Envíos de los formularios",
+    "conditions": "Condiciones",
+    "recDelivered": "Len lo miró",
+    "recNotified": "Len avisó",
+    "recFiltered": "Filtrado: {reason}",
+    "recFailed": "Falló: {reason}",
+    "recCount": "×{count}",
+    "filterAll": "Todas",
+    "filterTime": "Por hora",
+    "filterEvents": "Por evento",
+    "lastCheck": "Última comprobación: {when}"
   }
 }

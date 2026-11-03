@@ -935,6 +935,22 @@ export async function sendLenWatchEmail(input: { to: string; subject: string; te
   await enviar(live, "len watch email", { from, to: input.to, subject: input.subject, text: input.text });
 }
 
+/** «Len que avisa» (spec local 2026-11-03-len-que-avisa, §7.6): an event task's card, to its creator. */
+export async function sendLenAvisoEmail(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("len aviso email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`
+  📧 [DEV] Len aviso email to ${input.to}
+     ${input.subject}
+`);
+    }
+    return;
+  }
+  await enviar(live, "len aviso email", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
 /** EDGE FUNCTIONS: una bolsa pasó del 80 % de su tope. Al operador (la bandeja
  *  de los reportes de abuso, si no hay una propia), una vez al mes por bolsa. */
 export async function sendFunctionsPoolAlertEmail(input: { subject: string; text: string }): Promise<void> {
