@@ -13,14 +13,19 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 
+import type { CambioDeLaTerminal } from "@/lib/agent/terminal/ficheros";
 import { listProjectFiles } from "@/lib/backend/files";
 import { db, schema } from "@/lib/db";
+import { toAbsolute } from "@/lib/git/paths";
 import { postgresStore } from "@/lib/git/postgres-store";
 import { Repository } from "@/lib/git/repository";
 import { identityOf } from "@/lib/git/service";
+import { draftFiles, draftTree, planBring } from "@/lib/len-watch/bring";
 import { commitDetached, snapshotFiles } from "@/lib/len-watch/published-sources";
-import { removeWorktree, setBranch } from "@/lib/len-watch/worktree";
+import { commitLeftovers, deleteBranch, removeWorktree, setBranch } from "@/lib/len-watch/worktree";
 import { folderFingerprint } from "@/lib/projects/files-hash";
+
+import type { WorktreeOutcome } from "./notice";
 
 export interface AgentWorktree {
   readonly copyId: string;
@@ -78,4 +83,89 @@ export async function addAgentWorktree(p: { parentId: string; ownerId: string; r
     throw err;
   }
   return { copyId, branch, base };
+}
+
+/** Writes the merge into the draft through `Write`'s guards (`guardarLoDeLaTerminal`, with the launching turn's
+ *  session): `rechazado` when a guard refused part of it. */
+export type SaveIntoDraft = (cambios: readonly CambioDeLaTerminal[], draft: Readonly<Record<string, string>>) => Promise<{ rechazado: boolean }>;
+
+export interface FinishedWorktree {
+  readonly outcome: WorktreeOutcome;
+  /** What the draft had and has now in the files it wrote, for its undo. */
+  readonly changes: { before: Record<string, string>; after: Record<string, string> } | null;
+}
+
+const TRIES = 3;
+
+/**
+ * The copy comes back (spec §4.3): what it left without a commit goes in one on its branch (`commitLeftovers`), and
+ * Len Watch's three-way merge (base = the draft at launch, ours = the draft now, theirs = the branch tip) writes what
+ * it changed into the draft — all of it or nothing. It doesn't wait for Len's turn: if Len wrote a planned file
+ * meanwhile, the merge is planned again. The copy always goes; the branch goes when everything entered.
+ * `onPlanned` is a test seam, called after planning and before writing.
+ */
+export async function finishAgentWorktree(p: {
+  parentId: string;
+  ownerId: string;
+  w: AgentWorktree;
+  description: string;
+  save: SaveIntoDraft;
+  onPlanned?: () => Promise<void>;
+}): Promise<FinishedWorktree> {
+  const { parentId, w } = p;
+  const kept = async (): Promise<FinishedWorktree> => {
+    await removeWorktree(w.copyId).catch(() => undefined);
+    return { outcome: { state: "kept", branch: w.branch }, changes: null };
+  };
+  const gone = async (): Promise<FinishedWorktree> => {
+    await removeWorktree(w.copyId);
+    await deleteBranch(parentId, w.branch);
+    return { outcome: { state: "nothing" }, changes: null };
+  };
+  try {
+    const tip = await commitLeftovers(w.copyId, p.ownerId, `${p.description}\n`);
+    if (tip === w.base) return await gone();
+    const repo = new Repository(postgresStore(parentId));
+    const absolute = (m: ReadonlyMap<string, string>) => new Map([...m].map(([path, oid]) => [toAbsolute(path), oid]));
+    const [baseFiles, theirFiles] = await Promise.all([
+      repo.commit(w.base).then((c) => repo.files(c.tree)),
+      repo.commit(tip).then((c) => repo.files(c.tree)),
+    ]);
+    for (let i = 0; i < TRIES; i++) {
+      const ours = await draftTree(parentId);
+      const plan = await planBring(absolute(baseFiles), ours.oids, absolute(theirFiles), async (oid) => ours.texts.get(oid) ?? repo.text(oid));
+      if (plan.kind === "nothing") return await gone();
+      if (plan.kind === "conflict") {
+        await removeWorktree(w.copyId);
+        return { outcome: { state: "conflict", files: plan.paths, branch: w.branch }, changes: null };
+      }
+      await p.onPlanned?.();
+      const paths = [...plan.writes.keys()].sort();
+      const now = await draftTree(parentId);
+      if (paths.some((path) => now.oids.get(path) !== ours.oids.get(path))) continue;
+      const draft = await draftFiles(parentId);
+      const cambios: CambioDeLaTerminal[] = paths.map((ruta) => {
+        const contenido = plan.writes.get(ruta);
+        return contenido === null || contenido === undefined ? { tipo: "borrado", ruta } : { tipo: "escrito", ruta, contenido, crea: !Object.hasOwn(draft, ruta) };
+      });
+      const saved = await p.save(cambios, draft);
+      if (saved.rechazado) {
+        await removeWorktree(w.copyId);
+        return { outcome: { state: "conflict", files: paths, branch: w.branch }, changes: null };
+      }
+      await deleteBranch(parentId, w.branch);
+      await removeWorktree(w.copyId);
+      const before: Record<string, string> = {};
+      const after: Record<string, string> = {};
+      for (const c of cambios) {
+        if (Object.hasOwn(draft, c.ruta)) before[c.ruta] = draft[c.ruta]!;
+        if (c.tipo === "escrito") after[c.ruta] = c.contenido;
+      }
+      return { outcome: { state: "brought", files: paths }, changes: { before, after } };
+    }
+    return await kept();
+  } catch (err) {
+    console.warn(`[subagents] the copy ${w.copyId} could not be brought back`, err);
+    return kept();
+  }
 }
