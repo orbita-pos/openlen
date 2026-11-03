@@ -9,7 +9,7 @@
 // Cache effect: the notice is a new user message appended after the reusable prefix; nothing above it changes.
 
 /** How a child's run ended. */
-export type SubagentStopReason = "completed" | "aborted" | "error" | "budget";
+export type SubagentStopReason = "completed" | "aborted" | "error" | "budget" | "turn_limit";
 
 /** A run as `subagentRuns` keeps it. Here, not in the store, so the chat can import it. */
 export type SubagentStatus = "running" | SubagentStopReason;
@@ -35,6 +35,8 @@ function summary(id: string, stopReason: SubagentStopReason): string {
       return `${subject} failed before it finished.`;
     case "budget":
       return `${subject} stopped at the turn's spending limit before it finished.`;
+    case "turn_limit":
+      return `${subject} stopped at its turn limit before it finished.`;
   }
 }
 

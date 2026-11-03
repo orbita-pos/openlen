@@ -560,7 +560,8 @@
       "completed": "terminado",
       "aborted": "parado",
       "error": "falló",
-      "budget": "llegó al tope"
+      "budget": "llegó al tope",
+      "turn_limit": "llegó a su límite de vueltas"
     },
     "steps": "{n, plural, one {# paso} other {# pasos}}",
     "closing": "Lo que le dijo a Len",

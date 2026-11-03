@@ -560,7 +560,8 @@
       "completed": "완료",
       "aborted": "중지됨",
       "error": "실패",
-      "budget": "한도 도달"
+      "budget": "한도 도달",
+      "turn_limit": "턴 한도에 도달함"
     },
     "steps": "{n, plural, other {#단계}}",
     "closing": "Len에게 전한 내용",

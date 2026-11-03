@@ -3815,6 +3815,13 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(launcherArgs()[0]).toMatchObject({ personId: "u1", planMode: false });
   });
 
+  it("passes a custom type's effort as the child's turn pin", async () => {
+    await pedir();
+    const io = launcherArgs()[1] as unknown as import("@/lib/agent/subagents/run").RunnerIO;
+    io.brain([], "r1", new AbortController().signal, "high");
+    expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ esfuerzoDelTurno: "high" }));
+  });
+
   it("loads the project's and the speaker's custom types into the catalog and launcher", async () => {
     const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
     agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" && owner === "u1" ? [type] : []);

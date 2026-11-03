@@ -198,3 +198,8 @@ describe("the subagents of a turn", () => {
     expect(host.querySelector("[data-subagents-turn]")!.textContent).toContain("turn.fromSubagents");
   });
 });
+
+it("a run that hit its turn limit says so", () => {
+  const host = paint(<SubagentCard run={{ ...RUN, status: "turn_limit" as never }} onStop={() => {}} />);
+  expect(host.querySelector("[data-subagent-status]")!.textContent).toBe("subagent.status.turn_limit");
+});

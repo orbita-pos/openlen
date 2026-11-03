@@ -24,6 +24,7 @@ import type { LedgerUse } from "@/lib/credit-ledger";
 import { creditsForUsage } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { AppDeProyecto } from "@/lib/projects/types";
+import type { NivelEsfuerzo } from "@/lib/agent/esfuerzo";
 
 import { SEND_MESSAGE_TOOL } from "./enabled";
 import type { AgentTypeSet } from "./agent-registry";
@@ -110,7 +111,7 @@ export interface SubagentRunStore {
 
 export interface RunnerIO {
   /** `signal`: the child's own stop (its card's ■, the project deleted), never the launching turn's. */
-  brain(tools: Record<string, unknown>[], runId: string, signal: AbortSignal): SubagentBrain;
+  brain(tools: Record<string, unknown>[], runId: string, signal: AbortSignal, effort?: NivelEsfuerzo): SubagentBrain;
   runTool(session: AgentSession, deps: AgentDeps, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   readonly store: SubagentRunStore;
   /** Charges the owner (ledger surface `subagent`); the centicredits that moved. */
@@ -139,6 +140,8 @@ export interface RunnerIO {
 
 export const TOO_MANY_SUBAGENTS = "8 subagents are already running in this project; wait for one to finish.";
 const TURN_BUDGET_REACHED = "This turn's spending limit is reached: no more subagents can start in it.";
+/** Ours: the custom type's model-call cap, followed by one tools-off closing call. */
+export const TURN_LIMIT_MESSAGE = "You have reached this agent's turn limit. Do not call any more tools: answer now with what you did, what you found and what is left undone.";
 const PROGRESS_EVERY_MS = 5_000;
 
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
@@ -283,6 +286,9 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     let diagnostic: string | null = null;
     let before: Readonly<Record<string, string>> | null = null;
     let brain: SubagentBrain | null = null;
+    let calls = 0;
+    let turnLimitReached = false;
+    const definition = spec.type.kind === "custom" ? spec.type.type.agent : null;
     const elapsed = () => spec.prior.durationMs + Math.max(0, io.now() - startedAt);
     /** Saved only when it changed: a fork's conversation carries Len's whole one. */
     let lastSaved = "";
@@ -301,13 +307,21 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     try {
       await io.openTerminal(session, id);
       before = await io.snapshot(session).catch(() => null);
-      const b = (brain = io.brain(tools, id, abort.signal));
+      const b = (brain = io.brain(tools, id, abort.signal, definition?.effort ?? undefined));
       result = await runSubagent({
         messages: initial,
         tools,
         ...(spec.allowed ? { allowed: spec.allowed } : {}),
         // A fork's request is Len's as he sends it, with the plan section of now (`withPlanSection`): his cache.
-        openStream: (m) => b.openStream(spec.forked ? withPlanSection(m, ctx.planMode) : m),
+        openStream: (m) => {
+          const request = spec.forked ? withPlanSection(m, ctx.planMode) : m;
+          if (definition?.maxTurns !== null && definition?.maxTurns !== undefined && calls >= definition.maxTurns) {
+            turnLimitReached = true;
+            return b.closeOut([...request, { role: "user", content: TURN_LIMIT_MESSAGE }]);
+          }
+          calls++;
+          return b.openStream(request);
+        },
         closeOut: (m) => b.closeOut(spec.forked ? withPlanSection(m, ctx.planMode) : m),
         signal: abort.signal,
         runTool: async (name, args) => {
@@ -361,7 +375,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         ? "budget"
         : !result || result.terminalError
           ? "error"
-          : "completed";
+          : turnLimitReached ? "turn_limit" : "completed";
     if (status === "error") diagnostic ??= result?.errorCode ?? "error";
     const usage = result?.usage ?? NO_USAGE;
     const charged = centicreditsOf(usage);

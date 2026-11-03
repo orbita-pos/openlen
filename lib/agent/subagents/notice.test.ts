@@ -60,3 +60,7 @@ describe("messages between Len and his subagents (DeepSeek's words)", () => {
     );
   });
 });
+
+it("a turn-limited subagent reports its partial result", () => {
+  expect(settlementNotice({ id: "abc", stopReason: "turn_limit" as never, closingText: "Read two pages." })).toBe("Background subagent abc stopped at its turn limit before it finished.\n\nIts closing message:\nRead two pages.");
+});

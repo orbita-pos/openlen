@@ -560,7 +560,8 @@
       "completed": "finito",
       "aborted": "fermato",
       "error": "non riuscito",
-      "budget": "limite raggiunto"
+      "budget": "limite raggiunto",
+      "turn_limit": "ha raggiunto il limite di turni"
     },
     "steps": "{n, plural, one {# passo} other {# passi}}",
     "closing": "Cosa ha detto a Len",

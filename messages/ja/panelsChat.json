@@ -560,7 +560,8 @@
       "completed": "完了",
       "aborted": "停止",
       "error": "失敗",
-      "budget": "上限に到達"
+      "budget": "上限に到達",
+      "turn_limit": "ターン上限に達しました"
     },
     "steps": "{n, plural, other {# ステップ}}",
     "closing": "Len への報告",

@@ -560,7 +560,8 @@
       "completed": "done",
       "aborted": "stopped",
       "error": "failed",
-      "budget": "hit the limit"
+      "budget": "hit the limit",
+      "turn_limit": "hit its turn limit"
     },
     "steps": "{n, plural, one {# step} other {# steps}}",
     "closing": "What it told Len",

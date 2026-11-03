@@ -1878,7 +1878,7 @@ async function correrTurno(
           : undefined;
         // LEN'S SUBAGENTS: the launcher of this turn's children, with what the turn has and the real world (`RunnerIO`).
         const subagentIo: RunnerIO = {
-          brain: (childTools, runId, signal) => {
+          brain: (childTools, runId, signal, effort) => {
             const recorder =
               process.env.OPENLEN_STEP_TELEMETRY === "0"
                 ? null
@@ -1888,7 +1888,7 @@ async function correrTurno(
               tools: childTools,
               requestId: projectId,
               signal,
-              esfuerzoDelTurno,
+              esfuerzoDelTurno: effort ?? esfuerzoDelTurno,
               esfuerzoDelUsuario,
               mode,
               // The provider Len is on now: its cache holds his prefix (a fork's whole request).

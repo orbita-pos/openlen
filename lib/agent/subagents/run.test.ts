@@ -90,6 +90,8 @@ function setup(
   const events: SubagentEvent[] = [];
   const brainSignals: (AbortSignal | undefined)[] = [];
   const brainTools: Record<string, unknown>[][] = [];
+  const brainEfforts: unknown[] = [];
+  const closeOuts: Message[][] = [];
   const browsersClosed: AgentSession[] = [];
   const reopens: [string, string][] = [];
   const saves: Record<string, unknown>[] = [];
@@ -97,10 +99,11 @@ function setup(
   const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
-    brain: (tools, _runId, signal) => {
+    brain: (tools, _runId, signal, effort) => {
+      brainEfforts.push(effort);
       brainSignals.push(signal);
       brainTools.push(tools);
-      return { openStream: g.abrir, closeOut: () => g.abrir([]), modelId: "m", lastProvider: () => "deepinfra" };
+      return { openStream: g.abrir, closeOut: (m) => { closeOuts.push(m); return g.abrir(m); }, modelId: "m", lastProvider: () => "deepinfra" };
     },
     runTool: async (session, _deps, name, args): Promise<ToolOutcome> => {
       if (!sessions.includes(session)) sessions.push(session);
@@ -185,7 +188,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, brainEfforts, closeOuts, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -844,5 +847,31 @@ describe("launching custom types", () => {
     await launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });
     await s.settled("r1");
     expect(JSON.stringify(s.g.seen[0])).not.toMatch(/PROJECT NOTES|PERSON NOTES/);
+  });
+});
+
+describe("a custom type's effort and call limit", () => {
+  it("passes its effort to its brain", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read\neffort: high"), scripts: [dice("ok")] });
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+    await s.settled("r1");
+    expect(s.brainEfforts).toEqual(["high"]);
+  });
+  it("two model calls with tools are followed by a tools-off closing call and turn_limit", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read\nmaxTurns: 2"), scripts: [llama("Read"), llama("Read"), dice("Two pages checked; third left.")] });
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+    const row = await s.settled("r1");
+    expect(s.ran).toEqual(["Read", "Read"]);
+    expect(s.closeOuts).toHaveLength(1);
+    expect(s.closeOuts[0].at(-1)?.content).toBe("You have reached this agent's turn limit. Do not call any more tools: answer now with what you did, what you found and what is left undone.");
+    expect(row.status).toBe("turn_limit");
+    expect(takeNotices("p")[0].text).toContain("stopped at its turn limit before it finished.");
+    expect(row.finalText).toBe("Two pages checked; third left.");
+  });
+  it("a built-in keeps running without a custom turn limit", async () => {
+    const s = setup({ scripts: [llama("Read"), llama("Read"), llama("Read"), dice("Done")] });
+    await s.launcher.launch({ description: "Read", prompt: "Check.", preset: "general-purpose" });
+    expect((await s.settled("r1")).status).toBe("completed");
+    expect(s.closeOuts).toEqual([]);
   });
 });
