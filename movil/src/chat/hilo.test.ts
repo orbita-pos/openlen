@@ -20,6 +20,26 @@ const ev = (nombre: string, datos: unknown) => ({ nombre, datos });
 const diaUtc = (t: number) => new Date(t).toISOString().slice(0, 10);
 const tipos = (es: ElementoDelHilo[]) => es.map((e) => e.tipo);
 
+describe("a turn's children", () => {
+  const refs = [{ id: "r1", preset: "Explore" }, { id: "r2", preset: "len-design" }];
+  it("a saved turn with children puts their element after Len's words", () => {
+    const h = hiloDesdeElHistorial([turno({ id: "a", assistantReasoning: "Uno.\n\nDos.", noDocChange: true,
+      actions: refs.map(subagent => ({ tool: "subagent", status: "done", summary: "", subagent })) })], 9);
+    expect(tipos(h)).toEqual(["len", "len", "subagentes"]);
+    expect(h[2]).toMatchObject({ clave: "a:subagentes", fila: "a", refs });
+  });
+  it("a turn that woke Len with results is labelled", () => {
+    const h = hiloDesdeElHistorial([turno({ id: "a", assistantReasoning: "Hecho.", noDocChange: true, origen: { kind: "subagents", ids: ["r1"] } })], 9);
+    expect(tipos(h)).toEqual(["origen", "len"]);
+    expect(h[0]).toMatchObject({ origen: "subagentes" });
+  });
+  it("the live turn keeps the refs it heard", () => {
+    const v = conEvento(turnoNuevo("f1"), ev("action", { tool: "subagent", status: "done", subagent: refs[0] }));
+    expect(v.acciones?.[0]?.subagent).toEqual(refs[0]);
+    expect(elementosDelTurno(v, 5)).toEqual([{ clave: "vivo:subagentes", t: 5, tipo: "subagentes", fila: "f1", refs: [refs[0]] }]);
+  });
+});
+
 describe("parrafos", () => {
   it("una burbuja por párrafo, sin marcas de markdown y respetando los saltos de dentro", () => {
     expect(parrafos("**Listo.**\n\n- uno\n- dos\n\n## Siguiente\nMás")).toEqual(["Listo.", "- uno\n- dos", "Siguiente\nMás"]);
