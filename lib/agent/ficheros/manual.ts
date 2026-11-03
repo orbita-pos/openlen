@@ -56,6 +56,10 @@ export const RUTAS_DE_DOCS: readonly string[] = [RUTA_GUIA, RUTA_LIBRERIAS, RUTA
  *  Claude Code los de una skill; sin esto, sólo los veía la terminal (27/10). */
 export const CARPETA_SKILLS = "/.openlen/skills";
 
+/** Los tipos de subagente de OpenLen, `len-design` y `len-office` (spec local
+ *  2026-11-02-subagentes-de-len-fase-4, §3): de la plataforma como sus skills. */
+export const CARPETA_AGENTES = "/.openlen/agents";
+
 /** Los manuales que pasaron a ser skills (spec local 2026-10-27-len-five-skills, §4.2), con las
  *  skills encendidas: la ruta vieja → la skill. Una charla de antes los pide por la ruta vieja, y
  *  `Read` le dice adónde se mudaron, como las rutas viejas de la memoria. */
@@ -75,11 +79,11 @@ export function mudanza(ruta: string, skill: string): string {
 /** ¿Es del manual de la plataforma (de sólo lectura, no se publica)? Toda la
  *  carpeta, no sólo sus tres ficheros: un `nuevo.md` ahí tampoco se escribe. */
 export function esDeLaPlataforma(ruta: string): boolean {
-  return ruta === RUTA_MANUAL || ruta.startsWith(`${CARPETA_DOCS}/`) || ruta.startsWith(`${CARPETA_SKILLS}/`);
+  return ruta === RUTA_MANUAL || ruta.startsWith(`${CARPETA_DOCS}/`) || ruta.startsWith(`${CARPETA_SKILLS}/`) || ruta.startsWith(`${CARPETA_AGENTES}/`);
 }
 
 /** El rechazo de Edit, Write y la terminal, en el idioma de los errores de las herramientas. */
-export const MANUAL_SOLO_LECTURA = `${RUTA_MANUAL}, ${CARPETA_DOCS} and ${CARPETA_SKILLS} are OpenLen's platform manual and skills: read-only and never published. To keep something the user wants remembered, write it in ~/.len/LEN.md (the person) or /LEN.md (this project); a skill of the user's own goes in /.len/skills/<name>/SKILL.md.`;
+export const MANUAL_SOLO_LECTURA = `${RUTA_MANUAL}, ${CARPETA_DOCS}, ${CARPETA_SKILLS} and ${CARPETA_AGENTES} are OpenLen's platform manual, skills and subagent types: read-only and never published. To keep something the user wants remembered, write it in ~/.len/LEN.md (the person) or /LEN.md (this project); a skill of the user's own goes in /.len/skills/<name>/SKILL.md.`;
 
 // El envoltorio del adjunto. Hasta F4 era el de Claude Code palabra por
 // palabra; el repo es público, así que se dice con palabras propias y el mismo

@@ -507,6 +507,29 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.ok(!texto(await runAgentTool(s, deps, "Read", { file_path: "/AGENTS.md" })).includes("MORE, IN /.openlen/docs"));
   });
 
+  it("OpenLen's types can be read, never written", async (t) => {
+    const { bundledAgentFiles } = await import("@/lib/agent/subagents/bundled-types");
+    const { MANUAL_SOLO_LECTURA } = await import("@/lib/agent/ficheros/manual");
+    const { deps } = makeDeps({ html: HOME });
+    const s = makeSession();
+    const read = await runAgentTool(s, deps, "Read", { file_path: "/.openlen/agents/len-office.md" });
+    assert.equal(read.response.ok, true, texto(read));
+    assert.match(texto(read), /name: len-office/);
+    assert.ok(bundledAgentFiles()["/.openlen/agents/len-office.md"]!.includes("Make or edit the document Len asks for."));
+    const write = await runAgentTool(s, deps, "Write", { file_path: "/.openlen/agents/len-office.md", content: "nada" });
+    assert.equal(write.response.ok, false);
+    assert.match(JSON.stringify(write.response), /\/\.openlen\/agents/);
+    assert.match(MANUAL_SOLO_LECTURA, /\/\.openlen\/agents/);
+    const antes = process.env.OPENLEN_SUBAGENTS;
+    process.env.OPENLEN_SUBAGENTS = "0";
+    t.after(() => {
+      if (antes === undefined) delete process.env.OPENLEN_SUBAGENTS;
+      else process.env.OPENLEN_SUBAGENTS = antes;
+    });
+    const off = await runAgentTool(makeSession(), makeDeps({ html: HOME }).deps, "Read", { file_path: "/.openlen/agents/len-office.md" });
+    assert.equal(off.response.ok, false);
+  });
+
   it("🔴 F4 · Grep y Glob no ven /.openlen/docs, y Edit y Write lo rechazan como al manual", async () => {
     const { deps, store } = makeDeps({ html: HOME });
     const s = makeSession();
