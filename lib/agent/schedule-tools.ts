@@ -12,6 +12,12 @@
  *   · «Delivery can repeat after a crash» is gone: a run here is claimed once (store.ts).
  *   · A view carries `scheduledAtLocal` (view.ts), and two refusals of ours: `plan_required` (the
  *     owner is on Free) and `too_many_schedules` (ten per project).
+ *   · «Len que avisa» (spec local 2026-11-03-len-que-avisa): with event tasks on, `schedule_create` takes `on`
+ *     instead of a timing parameter (ours, after DeepSeek's event-triggered automation note: time is one source
+ *     among several); the four tools see both kinds, which share the ten.
+ *
+ * Cache effect: with event tasks on, `schedule_create`'s declaration carries `on` and one more sentence, fixed;
+ * with them off it is byte for byte DeepSeek's as before.
  */
 import { randomUUID } from "node:crypto";
 
@@ -36,6 +42,8 @@ import { checkOpenLenLimits, OPENLEN_MIN_INTERVAL_SECONDS, OpenLenScheduleError 
 import type { createTask, deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
 import { invalidInterval, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
+import { ON_DECLARATION, parseOn } from "@/lib/event-tasks/sources/declarations";
+import type { createEventTask, deleteEventTask, EventSourceKind, EventTaskRow, getEventTask, listEventTasks, updateEventTask } from "@/lib/event-tasks/store";
 
 export const SCHEDULE_CREATE = "schedule_create";
 export const SCHEDULE_LIST = "schedule_list";
@@ -53,6 +61,19 @@ export interface ScheduledTasksDeps {
   update: typeof updateTask;
   remove: typeof deleteTask;
   now(): number;
+  /** Event tasks (spec local 2026-11-03-len-que-avisa): present only when they are on. */
+  events?: EventTasksToolDeps;
+}
+
+export interface EventTasksToolDeps {
+  /** The source's own check (lib/event-tasks/sources): whether it can be watched, and its first state. */
+  validate(source: EventSourceKind, projectId: string, params: Record<string, unknown>): Promise<{ ok: true; initialState: unknown } | { ok: false; reason: string }>;
+  create: typeof createEventTask;
+  list: typeof listEventTasks;
+  get: typeof getEventTask;
+  remove: typeof deleteEventTask;
+  update: typeof updateEventTask;
+  latestCards(taskId: string, limit: number): Promise<readonly { readonly title: string; readonly status: string; readonly createdAt: Date }[]>;
 }
 
 const CREATE_DESCRIPTION =
@@ -128,6 +149,10 @@ const SELECTOR_PARAMETERS = {
   },
 } as const;
 
+/** Ours: what `on` adds to `schedule_create`'s description. */
+const ON_SENTENCE =
+  "Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash.";
+
 export const SCHEDULE_DECLARATIONS: Record<string, unknown>[] = [
   {
     name: SCHEDULE_CREATE,
@@ -165,6 +190,16 @@ export const SCHEDULE_DECLARATIONS: Record<string, unknown>[] = [
   },
 ];
 
+/** The four declarations; with event tasks on, `schedule_create` takes `on` too. */
+export function scheduleDeclarations(o: { readonly events: boolean }): Record<string, unknown>[] {
+  if (!o.events) return SCHEDULE_DECLARATIONS;
+  const [create, ...rest] = SCHEDULE_DECLARATIONS as [{ description: string; parameters: { properties: Record<string, unknown> } }, ...Record<string, unknown>[]];
+  return [
+    { ...create, description: `${create.description} ${ON_SENTENCE}`, parameters: { ...create.parameters, properties: { ...create.parameters.properties, on: ON_DECLARATION } } },
+    ...rest,
+  ];
+}
+
 type ToolError = { readonly code: string; readonly message: string };
 
 /** The value goes to the model as DeepSeek's `renderValue`: its JSON, as text. */
@@ -193,12 +228,14 @@ function depsOf(deps: AgentDeps): ScheduledTasksDeps | null {
 
 const SELECTORS = ["after_seconds", "at", "every_seconds", "daily", "weekly", "cron"] as const;
 
-/** DeepSeek's `validateCreateArgs`. */
-function validateCreateArgs(args: Record<string, unknown>): ToolError | undefined {
+/** DeepSeek's `validateCreateArgs`; with event tasks on, `on` counts as the one selector. */
+function validateCreateArgs(args: Record<string, unknown>, events = false): ToolError | undefined {
   const keys = Object.keys(args);
-  const selectors = SELECTORS.filter((k) => args[k] !== undefined).length;
-  if (keys.some((k) => k !== "prompt" && k !== "title" && !(SELECTORS as readonly string[]).includes(k)) || selectors !== 1) {
-    return { code: "invalid_selector", message: "schedule_create accepts exactly one of after_seconds, at, every_seconds, daily, weekly, or cron." };
+  const selectors = SELECTORS.filter((k) => args[k] !== undefined).length + (events && args.on !== undefined ? 1 : 0);
+  if (keys.some((k) => k !== "prompt" && k !== "title" && !(events && k === "on") && !(SELECTORS as readonly string[]).includes(k)) || selectors !== 1) {
+    return events
+      ? { code: "invalid_selector", message: "schedule_create accepts exactly one of after_seconds, at, every_seconds, daily, weekly, cron, or on." }
+      : { code: "invalid_selector", message: "schedule_create accepts exactly one of after_seconds, at, every_seconds, daily, weekly, or cron." };
   }
   if (typeof args.prompt !== "string" || args.prompt.trim().length === 0) return { code: "invalid_prompt", message: "prompt must be non-empty after trimming." };
   if (typeof args.title !== "string" || args.title.trim().length === 0) return { code: "invalid_prompt", message: REQUIRED_TITLE_MESSAGE };
@@ -228,7 +265,7 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
   return guarded(async () => {
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    const invalid = validateCreateArgs(args);
+    const invalid = validateCreateArgs(args, sd.events !== undefined);
     if (invalid) return invalid;
     if ((await sd.ownerPlan()) === "free") {
       throw new OpenLenScheduleError(
@@ -236,6 +273,7 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
         "Scheduled tasks are part of OpenLen's paid plans (Pro, Max, Ultra), and this project's owner is on Free. Tell the user it needs a paid plan; nothing was scheduled.",
       );
     }
+    if (args.on !== undefined && sd.events) return createEventTaskFrom(session, sd, sd.events, args);
     const now = sd.now();
     const record = recordFrom(args, now);
     checkOpenLenLimits(record);
@@ -255,9 +293,52 @@ export async function toolScheduleList(session: AgentSession, deps: AgentDeps, _
     const sd = depsOf(deps);
     if (!sd) return internalError();
     const now = sd.now();
-    return (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
+    const timed = (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
+    if (!sd.events) return timed;
+    const events = sd.events;
+    const watched = await Promise.all((await events.list(session.projectId)).map(async (row) => eventView(row, await events.latestCards(row.id, 3))));
+    return [...timed, ...watched];
   });
 }
+
+/** An event task as the model reads it (ours). */
+function eventView(row: EventTaskRow, cards: readonly { readonly title: string; readonly status: string; readonly createdAt: Date }[]) {
+  return {
+    id: row.id,
+    kind: "event",
+    title: row.title,
+    prompt: row.prompt,
+    source: row.source,
+    params: row.params,
+    state: row.pausedAt ? "paused" : "watching",
+    lastCheckedAt: row.lastCheckedAt ? row.lastCheckedAt.toISOString() : null,
+    latestNotices: cards.map((c) => ({ title: c.title, status: c.status, at: c.createdAt.toISOString() })),
+  };
+}
+
+async function createEventTaskFrom(session: AgentSession, sd: ScheduledTasksDeps, events: EventTasksToolDeps, args: Record<string, unknown>) {
+  const on = parseOn(args.on);
+  if (!on.ok) return { code: "invalid_source", message: on.message };
+  const checked = await events.validate(on.source, session.projectId, on.params);
+  if (!checked.ok) return { code: "invalid_source", message: checked.reason };
+  const row = await events.create({
+    projectId: session.projectId,
+    createdBy: session.personId ?? session.userId,
+    locale: session.uiLocale ?? "en",
+    timeZone: session.zonaHoraria ?? FALLBACK_ZONE,
+    title: scheduleTitle(args.title as string),
+    prompt: args.prompt as string,
+    source: on.source,
+    params: on.params,
+    state: checked.initialState as Record<string, unknown>,
+    now: new Date(sd.now()),
+  });
+  return { ...eventView(row, []), ...(on.source === "form_submissions" ? { note: FORM_EMAIL_NOTE } : {}) };
+}
+
+/** Ours: a form task doesn't replace the email of each submission (spec §7.6). */
+const FORM_EMAIL_NOTE = "The owner still gets an email for each submission of this form.";
+const EVENT_UPDATE_KEYS = new Set(["id", "title", "prompt"]);
 
 export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   return guarded(async () => {
@@ -266,7 +347,9 @@ export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps,
     }
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    return (await sd.remove(session.projectId, args.id)) ? { id: args.id, deleted: true } : { id: args.id, deleted: false, code: "schedule_not_found" };
+    if (await sd.remove(session.projectId, args.id)) return { id: args.id, deleted: true };
+    if (sd.events && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
+    return { id: args.id, deleted: false, code: "schedule_not_found" };
   });
 }
 
@@ -274,6 +357,15 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
   return guarded(async () => {
     const sd = depsOf(deps);
     if (!sd) return internalError();
+    const event = sd.events && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
+    if (event && sd.events) {
+      if (Object.keys(args).some((k) => !EVENT_UPDATE_KEYS.has(k))) {
+        return { code: "invalid_selector", message: "An event task changes only its title and prompt; to watch something else, create a new task." };
+      }
+      const patch = { ...(typeof args.title === "string" ? { title: scheduleTitle(args.title) } : {}), ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}) };
+      const row = await sd.events.update(session.projectId, event.id, patch, new Date(sd.now()));
+      return row ? eventView(row, await sd.events.latestCards(row.id, 3)) : { id: args.id, code: "schedule_not_found", message: "No such schedule." };
+    }
     return updateScheduledTask(session.projectId, args, sd);
   });
 }

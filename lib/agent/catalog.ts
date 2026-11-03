@@ -58,7 +58,8 @@ import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/se
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
 import { DECLARACION_CONVERTIR_EN_APP, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
-import { SCHEDULE_DECLARATIONS, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
+import { scheduleDeclarations, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
+import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
 import {
@@ -229,14 +230,14 @@ function declaracionesDelModo(
   if (terminalOnly(mode, _env)) for (const n of SUSTITUIDAS_EN_SOLO_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
     ? [
-        ...buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env)),
+        ...buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env)),
         // GIT (spec local 2026-10-15-git-for-len, §5): with git on, bash says so and carries the commit protocol.
         gitEnabled(_env) ? { ...DECLARACION_BASH, description: withGit(String(DECLARACION_BASH.description)) } : DECLARACION_BASH,
       ].map((d) =>
         // Lo que nombra las herramientas que salen se dice con la terminal.
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
       )
-    : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env));
+    : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env));
   return fuera.size === 0 ? declaraciones : declaraciones.filter((d) => !fuera.has(String(d.name)));
 }
 
@@ -259,7 +260,7 @@ const FILE_PATH_OPCIONAL = {
 // se fue con ellas, porque una herramienta que carga lo que no existe es una
 // palanca a ninguna parte. Todo va cargado.
 
-function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, isolation = false): Record<string, unknown>[] {
+function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, isolation = false, events = false): Record<string, unknown>[] {
   return [
     // El sitio como ficheros: nombres y parámetros de Claude Code; las descripciones, nuestras.
     ...DECLARACIONES_DE_FICHEROS,
@@ -520,8 +521,9 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     // `update_goal` de DeepSeek (`lib/agent/goal-tools.ts`). Siempre
     // declaradas: el catálogo no cambia entre turnos (la caché).
     ...GOAL_DECLARATIONS,
-    // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four.
-    ...SCHEDULE_DECLARATIONS,
+    // Scheduled tasks (spec local 2026-10-29-tareas-programadas): DeepSeek's four; with event tasks on
+    // (spec local 2026-11-03-len-que-avisa), `schedule_create` takes `on`.
+    ...scheduleDeclarations({ events }),
     // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent` and, phase 2 (§5),
     // its fork and its control tools, in DeepSeek's order.
     // Phase 4: with git on, both take `isolation` (Claude Code's worktree).

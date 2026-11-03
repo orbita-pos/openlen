@@ -988,7 +988,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1073,6 +1073,67 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "at": {
           "type": "STRING",
           "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        },
+        "on": {
+          "type": "OBJECT",
+          "description": "Instead of a timing parameter: the source whose changes wake this task. Use it for «tell me when…» requests about what visitors do.",
+          "properties": {
+            "source": {
+              "type": "STRING",
+              "enum": [
+                "app_rows",
+                "form_submissions"
+              ],
+              "description": "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page."
+            },
+            "table": {
+              "type": "STRING",
+              "description": "app_rows: the table to watch for new rows."
+            },
+            "created_column": {
+              "type": "STRING",
+              "description": "app_rows: the table's creation timestamp column, such as created_at."
+            },
+            "form": {
+              "type": "STRING",
+              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+            },
+            "conditions": {
+              "type": "ARRAY",
+              "description": "Optional: only changes whose fields match all of these wake the task; they are checked before any model looks.",
+              "items": {
+                "type": "OBJECT",
+                "properties": {
+                  "field": {
+                    "type": "STRING",
+                    "description": "A column or form field."
+                  },
+                  "op": {
+                    "type": "STRING",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "contains",
+                      "gt",
+                      "lt",
+                      "exists"
+                    ]
+                  },
+                  "value": {
+                    "type": "STRING",
+                    "description": "Compared as a number when both sides are numbers, else as text; omit it for exists."
+                  }
+                },
+                "required": [
+                  "field",
+                  "op"
+                ]
+              }
+            }
+          },
+          "required": [
+            "source"
+          ]
         }
       },
       "required": [
@@ -2268,7 +2329,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -2353,6 +2414,67 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "at": {
           "type": "STRING",
           "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        },
+        "on": {
+          "type": "OBJECT",
+          "description": "Instead of a timing parameter: the source whose changes wake this task. Use it for «tell me when…» requests about what visitors do.",
+          "properties": {
+            "source": {
+              "type": "STRING",
+              "enum": [
+                "app_rows",
+                "form_submissions"
+              ],
+              "description": "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page."
+            },
+            "table": {
+              "type": "STRING",
+              "description": "app_rows: the table to watch for new rows."
+            },
+            "created_column": {
+              "type": "STRING",
+              "description": "app_rows: the table's creation timestamp column, such as created_at."
+            },
+            "form": {
+              "type": "STRING",
+              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+            },
+            "conditions": {
+              "type": "ARRAY",
+              "description": "Optional: only changes whose fields match all of these wake the task; they are checked before any model looks.",
+              "items": {
+                "type": "OBJECT",
+                "properties": {
+                  "field": {
+                    "type": "STRING",
+                    "description": "A column or form field."
+                  },
+                  "op": {
+                    "type": "STRING",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "contains",
+                      "gt",
+                      "lt",
+                      "exists"
+                    ]
+                  },
+                  "value": {
+                    "type": "STRING",
+                    "description": "Compared as a number when both sides are numbers, else as text; omit it for exists."
+                  }
+                },
+                "required": [
+                  "field",
+                  "op"
+                ]
+              }
+            }
+          },
+          "required": [
+            "source"
+          ]
         }
       },
       "required": [
@@ -3542,7 +3664,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -3627,6 +3749,67 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "at": {
           "type": "STRING",
           "description": "Absolute target: an RFC 3339 date-time with offset, for example 2026-11-02T09:03:00-06:00."
+        },
+        "on": {
+          "type": "OBJECT",
+          "description": "Instead of a timing parameter: the source whose changes wake this task. Use it for «tell me when…» requests about what visitors do.",
+          "properties": {
+            "source": {
+              "type": "STRING",
+              "enum": [
+                "app_rows",
+                "form_submissions"
+              ],
+              "description": "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page."
+            },
+            "table": {
+              "type": "STRING",
+              "description": "app_rows: the table to watch for new rows."
+            },
+            "created_column": {
+              "type": "STRING",
+              "description": "app_rows: the table's creation timestamp column, such as created_at."
+            },
+            "form": {
+              "type": "STRING",
+              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+            },
+            "conditions": {
+              "type": "ARRAY",
+              "description": "Optional: only changes whose fields match all of these wake the task; they are checked before any model looks.",
+              "items": {
+                "type": "OBJECT",
+                "properties": {
+                  "field": {
+                    "type": "STRING",
+                    "description": "A column or form field."
+                  },
+                  "op": {
+                    "type": "STRING",
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "contains",
+                      "gt",
+                      "lt",
+                      "exists"
+                    ]
+                  },
+                  "value": {
+                    "type": "STRING",
+                    "description": "Compared as a number when both sides are numbers, else as text; omit it for exists."
+                  }
+                },
+                "required": [
+                  "field",
+                  "op"
+                ]
+              }
+            }
+          },
+          "required": [
+            "source"
+          ]
         }
       },
       "required": [

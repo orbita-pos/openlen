@@ -19,7 +19,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CREATE_SCHEDULED_TASKS } = await import("@/scripts/scheduled-tasks-migrate-sql");
+const { CREATE_EVENT_TASKS, CREATE_SCHEDULED_TASKS } = await import("@/scripts/scheduled-tasks-migrate-sql");
 const { ScheduleId, createAtScheduleRecord, createWeeklyScheduleRecord } = await import("./deepseek/domain");
 const store = await import("./store");
 
@@ -41,7 +41,7 @@ beforeEach(async () => {
   await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY);`);
   await pg.query(`INSERT INTO "users" VALUES ('u1'), ('u2');`);
   await pg.query(`INSERT INTO "projects" VALUES ('p1'), ('p2');`);
-  for (const statement of CREATE_SCHEDULED_TASKS) await pg.query(statement);
+  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS]) await pg.query(statement);
   base.pg = pg;
   base.db = drizzle(pg, { schema });
 });
@@ -60,6 +60,17 @@ describe("createTask / listTasks", () => {
     await expect(store.createTask(input("t10"))).rejects.toMatchObject({ code: "too_many_schedules" });
     // Another project is not counted.
     await expect(store.createTask(input("q1", { projectId: "p2" }))).resolves.toMatchObject({ id: "q1" });
+  });
+
+  it("shares the ten with the project's event tasks", async () => {
+    for (let i = 0; i < 4; i++) {
+      await (base.pg as PGlite).query(
+        `INSERT INTO "eventTasks" ("id","projectId","createdBy","locale","timeZone","title","prompt","source","params") VALUES ($1,'p1','u1','es','UTC','t','p','form_submissions','{}')`,
+        [`e${i}`],
+      );
+    }
+    for (let i = 0; i < 6; i++) await store.createTask(input(`t${i}`));
+    await expect(store.createTask(input("t6"))).rejects.toMatchObject({ code: "too_many_schedules" });
   });
 
   it("leaves inactive tasks out unless asked", async () => {
