@@ -12,6 +12,9 @@ import { SKILL_NAME, SKILL_NAME_MAX } from "@/lib/agent/skills/skill-file";
 /** The three types Claude Code ships (`presets.ts`, kept equal by agent-paths.test): a custom type can't take their names.
  *  Here, not in presets.ts, so the file tools can check it without importing every tool the presets name. */
 export const BUILT_IN_AGENT_TYPES: ReadonlySet<string> = new Set(["general-purpose", "Explore", "Plan"]);
+/** OpenLen's own types (`bundled-types.ts`, kept equal by bundled-types.test), reserved like its skills. */
+export const OPENLEN_AGENT_TYPES: ReadonlySet<string> = new Set(["len-design", "len-office"]);
+export const RESERVED_AGENT_TYPES: ReadonlySet<string> = new Set([...BUILT_IN_AGENT_TYPES, ...OPENLEN_AGENT_TYPES]);
 
 export const PROJECT_AGENTS_DIR = "/.len/agents/";
 export const PERSONAL_AGENTS_DIR = `${HOME_DIR}/.len/agents/`;

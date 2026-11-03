@@ -1010,6 +1010,14 @@ describe("subagent types as files (spec local 2026-11-01-subagentes-de-len, §6)
     assert.equal(estado.upserts.length, 0);
   });
 
+  it("OpenLen's names can't be written", async () => {
+    const { deps, estado } = depsConTipos();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/agents/len-design.md", content: TYPE.replace("reviewer", "len-design") });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /"len-design" is one of OpenLen's subagent types\. Give yours another name\./);
+    assert.equal(estado.upserts.length, 0);
+  });
+
   it("anything else under the agents folder is refused", async () => {
     const { deps, estado } = depsConTipos();
     for (const p of ["/.len/agents/notes.txt", "/.len/agents/a/b.md"]) {

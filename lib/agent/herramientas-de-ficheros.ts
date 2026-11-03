@@ -54,7 +54,7 @@ import { parseSkillFile } from "@/lib/agent/skills/skill-file";
 import { bundledSkillNames, bundledSkills } from "@/lib/agent/skills/bundled";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { parseAgentFile } from "@/lib/agent/subagents/agent-file";
-import { BUILT_IN_AGENT_TYPES, ONLY_AGENT_MD, agentPath, agentPathOf, isUnderAgentsDir } from "@/lib/agent/subagents/agent-paths";
+import { BUILT_IN_AGENT_TYPES, ONLY_AGENT_MD, OPENLEN_AGENT_TYPES, agentPath, agentPathOf, isUnderAgentsDir } from "@/lib/agent/subagents/agent-paths";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
@@ -871,6 +871,9 @@ async function guardarAgent(
   const bare = /\/([^/]+)\.md$/.exec(plan.ruta)?.[1];
   if (bare !== undefined && BUILT_IN_AGENT_TYPES.has(bare)) {
     return { response: respuesta(fallo(`"${bare}" is one of the built-in subagent types. Give yours another name.`)) };
+  }
+  if (bare !== undefined && OPENLEN_AGENT_TYPES.has(bare)) {
+    return { response: respuesta(fallo(`"${bare}" is one of OpenLen's subagent types. Give yours another name.`)) };
   }
   const at = agentPathOf(plan.ruta);
   if (!at) return { response: respuesta(fallo(ONLY_AGENT_MD)) };

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 
-import { BUILT_IN_AGENT_TYPES, PERSONAL_AGENTS_DIR, PROJECT_AGENTS_DIR, agentPath, agentPathOf, isUnderAgentsDir } from "./agent-paths";
+import { BUILT_IN_AGENT_TYPES, PERSONAL_AGENTS_DIR, PROJECT_AGENTS_DIR, RESERVED_AGENT_TYPES, agentPath, agentPathOf, isUnderAgentsDir } from "./agent-paths";
 import { SUBAGENT_PRESETS } from "./presets";
 
 describe("custom agent type paths", () => {
@@ -21,6 +21,10 @@ describe("custom agent type paths", () => {
 
   it("the reserved names are the built-in types", () => {
     expect([...BUILT_IN_AGENT_TYPES]).toEqual([...SUBAGENT_PRESETS]);
+  });
+
+  it("the reserved names are Claude Code's three and OpenLen's two", () => {
+    expect([...RESERVED_AGENT_TYPES].sort()).toEqual(["Explore", "Plan", "general-purpose", "len-design", "len-office"]);
   });
 
   it("builds the path back", () => {

@@ -954,6 +954,19 @@ it("a turn-limited close-out keeps its closing report after an earlier message t
   expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAnother file is still unchecked.");
 });
 
+it("launching len-office preloads office and the project's brand", async () => {
+  const { resolveSkills } = await import("@/lib/agent/skills/registry");
+  const skills = resolveSkills({ bundled: [], project: ["office", "brand"].map((name) => ({ name, text: `---\nname: ${name}\ndescription: ${name}\n---\nFULL ${name} INSTRUCTIONS.`, updatedAt: new Date(0) })), personal: [] });
+  const s = setup({ agentTypes: resolveAgentTypes({ project: [], personal: [] }), skills, scripts: [dice("ok")] });
+  await s.launcher.launch({ description: "Menu", prompt: "Make the Word.", preset: "len-office" });
+  await s.settled("r1");
+  const first = s.g.seen[0];
+  expect(first[0]!.content).toContain("SUBAGENT — LEN-OFFICE:");
+  expect(first.some((m) => m.content.includes('skill_content name="office"'))).toBe(true);
+  expect(first.some((m) => m.content.includes('skill_content name="brand"'))).toBe(true);
+  expect(first.some((m) => m.content.startsWith("Already loaded skills: office, brand."))).toBe(true);
+});
+
 it("tells a child which skills are already loaded before its task, without listing skipped skills", async () => {
   const s = setup({ agentTypes: customTypes("tools: Read, skill\nskills: beta, missing, hidden, alpha"), skills: await preloadSkills(), scripts: [dice("ok")] });
   await s.launcher.launch({ description: "Review", prompt: "THE TASK", preset: "reviewer" });
