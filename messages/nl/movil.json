@@ -67,6 +67,26 @@
     "asunto": "Antwoord op je bericht"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "bezig",
+        "completed": "klaar",
+        "aborted": "gestopt",
+        "error": "mislukt",
+        "budget": "limiet bereikt",
+        "turn_limit": "heeft de beurtenlimiet bereikt"
+      },
+      "steps": "{n, plural, one {# stap} other {# stappen}}",
+      "stop": "Deze subagent stoppen",
+      "trabajando": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}",
+      "origen": "Resultaten van de subagents",
+      "worktree": {
+        "working": "in een eigen kopie",
+        "brought": "{n, plural, one {# bestand} other {# bestanden}} overgenomen",
+        "conflict": "conflict met je wijzigingen: het werk staat nog op de eigen branch",
+        "kept": "wijzigingen konden niet worden overgenomen: het werk staat nog op de eigen branch"
+      }
+    },
     "pedirCambio": "Wijziging vragen",
     "volver": "Terug naar je pagina",
     "mensaje": "Bericht",

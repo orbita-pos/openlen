@@ -67,6 +67,26 @@
     "asunto": "Resposta à sua mensagem"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "trabalhando",
+        "completed": "concluído",
+        "aborted": "parado",
+        "error": "falhou",
+        "budget": "atingiu o limite",
+        "turn_limit": "atingiu o limite de turnos"
+      },
+      "steps": "{n, plural, one {# passo} other {# passos}}",
+      "stop": "Parar este subagente",
+      "trabajando": "{n, plural, one {# subagente trabalhando} other {# subagentes trabalhando}}",
+      "origen": "Resultados dos subagentes",
+      "worktree": {
+        "working": "na sua própria cópia",
+        "brought": "trouxe {n, plural, one {# ficheiro} other {# ficheiros}}",
+        "conflict": "conflito com as tuas alterações: o trabalho continua no seu ramo",
+        "kept": "não foi possível trazer as alterações: o trabalho continua no seu ramo"
+      }
+    },
     "pedirCambio": "Pedir uma mudança",
     "volver": "Voltar para sua página",
     "mensaje": "Mensagem",

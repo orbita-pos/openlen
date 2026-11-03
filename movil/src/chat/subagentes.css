@@ -1,0 +1,6 @@
+.ch-subagentes { display: grid; gap: 8px; width: 100%; }
+.ch-subagente { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid currentColor; border-radius: 12px; }
+.ch-subagente-texto { display: grid; gap: 4px; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.ch-subagente-texto strong { font-size: 13px; font-weight: 500; }
+.ch-subagente-texto small { font-size: 11px; opacity: .7; }
+.ch-subagente-parar { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 50%; color: inherit; background: transparent; }

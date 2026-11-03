@@ -67,6 +67,26 @@
     "asunto": "Respuesta a tu mensaje"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "trabajando",
+        "completed": "terminado",
+        "aborted": "parado",
+        "error": "falló",
+        "budget": "llegó al tope",
+        "turn_limit": "llegó a su límite de vueltas"
+      },
+      "steps": "{n, plural, one {# paso} other {# pasos}}",
+      "stop": "Parar este subagente",
+      "trabajando": "{n, plural, one {# subagente trabajando} other {# subagentes trabajando}}",
+      "origen": "Resultados de los subagentes",
+      "worktree": {
+        "working": "en su copia",
+        "brought": "trajo {n, plural, one {# fichero} other {# ficheros}}",
+        "conflict": "chocó con tus cambios: lo suyo sigue en su rama",
+        "kept": "no se pudo traer: lo suyo sigue en su rama"
+      }
+    },
     "pedirCambio": "Pedir un cambio",
     "volver": "Volver a tu página",
     "mensaje": "Mensaje",

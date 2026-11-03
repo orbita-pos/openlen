@@ -67,6 +67,26 @@
     "asunto": "메시지에 대한 답장"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "작업 중",
+        "completed": "완료",
+        "aborted": "중지됨",
+        "error": "실패",
+        "budget": "한도 도달",
+        "turn_limit": "턴 한도에 도달함"
+      },
+      "steps": "{n, plural, other {#단계}}",
+      "stop": "이 서브에이전트 중지",
+      "trabajando": "{n, plural, other {서브에이전트 #개 작업 중}}",
+      "origen": "서브에이전트 결과",
+      "worktree": {
+        "working": "자체 복사본에서 작업 중",
+        "brought": "파일 {n}개 반영됨",
+        "conflict": "변경 사항이 충돌했습니다: 작업 내용은 해당 브랜치에 남아 있습니다",
+        "kept": "변경 사항을 반영하지 못했습니다: 작업 내용은 해당 브랜치에 남아 있습니다"
+      }
+    },
     "pedirCambio": "변경 요청하기",
     "volver": "내 페이지로 돌아가기",
     "mensaje": "메시지",

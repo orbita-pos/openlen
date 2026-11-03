@@ -67,6 +67,26 @@
     "asunto": "回复你的消息"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "进行中",
+        "completed": "已完成",
+        "aborted": "已停止",
+        "error": "失败",
+        "budget": "已达上限",
+        "turn_limit": "已达到轮次上限"
+      },
+      "steps": "{n, plural, other {# 步}}",
+      "stop": "停止此子代理",
+      "trabajando": "{n, plural, other {# 个子代理正在工作}}",
+      "origen": "子代理的结果",
+      "worktree": {
+        "working": "在独立副本中工作",
+        "brought": "已合入 {n} 个文件",
+        "conflict": "与你的更改冲突：工作内容仍保留在其分支上",
+        "kept": "无法合入更改：工作内容仍保留在其分支上"
+      }
+    },
     "pedirCambio": "提出修改",
     "volver": "返回你的页面",
     "mensaje": "消息",

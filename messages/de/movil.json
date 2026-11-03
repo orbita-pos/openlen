@@ -67,6 +67,26 @@
     "asunto": "Antwort auf deine Nachricht"
   },
   "chat": {
+    "subagentes": {
+      "status": {
+        "running": "arbeitet",
+        "completed": "fertig",
+        "aborted": "gestoppt",
+        "error": "fehlgeschlagen",
+        "budget": "Limit erreicht",
+        "turn_limit": "hat das Rundenlimit erreicht"
+      },
+      "steps": "{n, plural, one {# Schritt} other {# Schritte}}",
+      "stop": "Diesen Subagenten stoppen",
+      "trabajando": "{n, plural, one {# Subagent arbeitet} other {# Subagenten arbeiten}}",
+      "origen": "Ergebnisse der Subagenten",
+      "worktree": {
+        "working": "in seiner eigenen Kopie",
+        "brought": "{n, plural, one {# Datei} other {# Dateien}} übernommen",
+        "conflict": "Konflikt mit deinen Änderungen: seine Arbeit bleibt auf seinem Branch",
+        "kept": "Änderungen konnten nicht übernommen werden: seine Arbeit bleibt auf seinem Branch"
+      }
+    },
     "pedirCambio": "Änderung wünschen",
     "volver": "Zurück zu deiner Seite",
     "mensaje": "Nachricht",
