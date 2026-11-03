@@ -5,7 +5,7 @@
 //
 // Pure: instrumentation.ts hands it the real store and `launchSubagentNoticeTurn`.
 
-import { settlementNotice, type SubagentStopReason } from "./notice";
+import { settlementNotice, type SubagentStopReason, type WorktreeOutcome } from "./notice";
 import type { SubagentRunRow } from "./store";
 import type * as store from "./store";
 
@@ -14,6 +14,7 @@ const TELL_UP_TO_MS = 24 * 3_600_000;
 const RESTART = "stopped by a restart";
 
 export interface BootIO {
+  finishWorktree(r: SubagentRunRow): Promise<WorktreeOutcome | null>;
   readonly store: Pick<typeof store, "runningRuns" | "settleRun" | "markNoticeDelivered" | "undeliveredSettledRuns">;
   launchNoticeTurn(o: { projectId: string; personId: string; notices: { id: string; text: string }[] }): void;
   /** A previous process's child this one woke is working here: it is not the restart's. */
@@ -55,6 +56,7 @@ export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<nu
     const notices: { id: string; text: string }[] = [];
     let personId = "";
     for (const r of runs) {
+      const worktree = r.worktreeOutcome ?? (r.worktreeCopyId ? await io.finishWorktree(r) : null);
       // Marked before the turn is launched: a failure after that loses the notice rather than repeating it.
       if (!(await io.store.markNoticeDelivered(r.id))) continue;
       if (io.now() - (r.settledAt?.getTime() ?? io.now()) > TELL_UP_TO_MS) continue;
@@ -65,6 +67,7 @@ export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<nu
           stopReason: r.status as SubagentStopReason,
           closingText: r.diagnostic === RESTART ? "" : (r.finalText ?? ""),
           ...(r.diagnostic ? { diagnostic: r.diagnostic } : {}),
+          ...(worktree ? { worktree } : {}),
         }),
       });
       personId = r.personId;

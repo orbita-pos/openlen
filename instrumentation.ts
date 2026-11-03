@@ -64,6 +64,34 @@ export async function register() {
           .then(([boot, store, registry, turns]) =>
             boot.closeSubagentsOfThePreviousProcess({
               store,
+              finishWorktree: async (r) => {
+                if (!r.worktreeCopyId || !r.worktreeBranch || !r.worktreeBase) return null;
+                const [{ db, schema }, { eq }, { realDeps }, { guardarLoDeLaTerminal }, { finishAgentWorktree }] = await Promise.all([
+                  import("@/lib/db"), import("drizzle-orm"), import("@/lib/agent/tools"),
+                  import("@/lib/agent/herramientas-de-ficheros"), import("@/lib/agent/subagents/worktree"),
+                ]);
+                const [project] = await db.select().from(schema.projects).where(eq(schema.projects.id, r.projectId)).limit(1);
+                if (!project) return null;
+                const session: import("@/lib/agent/tools").AgentSession = {
+                  projectId: r.projectId, userId: project.userId, personId: r.personId, turnId: r.turnId,
+                  app: project.data.app, page: null, ownerEmail: null,
+                  imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0,
+                };
+                const deps = realDeps();
+                const result = await finishAgentWorktree({
+                  parentId: r.projectId, ownerId: project.userId, description: r.description,
+                  w: { copyId: r.worktreeCopyId, branch: r.worktreeBranch, base: r.worktreeBase },
+                  save: (changes, draft) => guardarLoDeLaTerminal(session, deps, changes, draft),
+                });
+                if (result.changes) {
+                  const [{ addChangesToTurn }, { cambiosDelTurnoParaDeshacer }] = await Promise.all([
+                    import("@/lib/projects/deshacer-turno"), import("@/lib/projects/deshacer-turno-plan"),
+                  ]);
+                  await addChangesToTurn(r.projectId, r.chatRowId, cambiosDelTurnoParaDeshacer(result.changes.before, result.changes.after));
+                }
+                await store.setWorktreeOutcome(r.id, result.outcome);
+                return result.outcome;
+              },
               launchNoticeTurn: ({ projectId, personId, notices }) =>
                 turns.launchSubagentNoticeTurn({
                   userId: personId,

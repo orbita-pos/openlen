@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { closeSubagentsOfThePreviousProcess, type BootIO } from "./boot";
-import { settlementNotice } from "./notice";
+import { settlementNotice, worktreeNoticeLine } from "./notice";
 import type { SubagentRunRow } from "./store";
 
 const NOW = Date.parse("2026-11-02T10:00:00Z");
@@ -33,6 +33,7 @@ function setup(rows: SubagentRunRow[]) {
     },
     launchNoticeTurn: (o) => void turns.push(o),
     isLive: () => false,
+    finishWorktree: async () => null,
     now: () => NOW,
     startedAt: NOW - 10_000,
   };
@@ -40,6 +41,28 @@ function setup(rows: SubagentRunRow[]) {
 }
 
 describe("at boot, what the previous process left", () => {
+  it.each(["running", "completed"] as const)("finishes an isolated child's unfinished copy (%s) before its notice", async (status) => {
+    const s = setup([row({ id: "r1", status, settledAt: status === "completed" ? new Date(NOW - 15_000) : null,
+      worktreeCopyId: "copy", worktreeBranch: "worktree-agent-r1", worktreeBase: "base" })]);
+    const outcome = { state: "brought", files: ["/src/a.ts"] } as const;
+    const finishWorktree = vi.fn(async (_r: SubagentRunRow) => {
+      expect(s.turns).toHaveLength(0);
+      return outcome;
+    });
+    await closeSubagentsOfThePreviousProcess({ ...s.io, finishWorktree });
+    expect(finishWorktree).toHaveBeenCalledTimes(1);
+    expect(finishWorktree.mock.calls[0]?.[0]).toMatchObject({ id: "r1", projectId: "p1" });
+    expect(s.db.get("r1")?.status).toBe(status === "running" ? "aborted" : "completed");
+    expect(s.turns[0]?.notices[0]?.text.endsWith(worktreeNoticeLine(outcome)!)).toBe(true);
+  });
+
+  it("a row without an unfinished copy is untouched", async () => {
+    const s = setup([row({ id: "r1" }), row({ id: "r2", worktreeCopyId: "copy", worktreeOutcome: { state: "nothing" } })]);
+    const finishWorktree = vi.fn(async (_r: SubagentRunRow) => null);
+    await closeSubagentsOfThePreviousProcess({ ...s.io, finishWorktree });
+    expect(finishWorktree).not.toHaveBeenCalled();
+  });
+
   it("boot closes running runs once", async () => {
     const s = setup([row({ id: "r1" }), row({ id: "r2", personId: "u2", createdAt: new Date(NOW - 30_000) })]);
     expect(await closeSubagentsOfThePreviousProcess(s.io)).toBe(2);
