@@ -606,6 +606,8 @@ export default defineConfig({
       "lib/agent/subagente.test.ts",
       // Len's subagents (spec local 2026-11-01-subagentes-de-len). LISTA BLANCA.
       "lib/agent/subagents/**/*.test.ts",
+      // The atomic work of an isolated child's copy (`inTransaction`). LISTA BLANCA.
+      "lib/db/transaction-scope.test.ts",
       "lib/agent/facts-kept.test.ts",
       "lib/agent/contenido-perdido.test.ts",
       // Lo puro de la prueba declarada: leer lo que devuelve el navegador, la

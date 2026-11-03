@@ -43,16 +43,34 @@ export function agentBranchName(id: string, taken: ReadonlySet<string>): string 
   for (let n = 2; ; n++) if (!taken.has(`${first}-${n}`)) return `${first}-${n}`;
 }
 
-export async function addAgentWorktree(p: { parentId: string; ownerId: string; runId: string; register?: (w: AgentWorktree) => Promise<void> }): Promise<AgentWorktree> {
-  // Parallel launches write the same repository objects/refs. PostgreSQL can abort a serializable
-  // transaction even on INSERT ... ON CONFLICT: retry the entire rolled-back creation, including registration.
-  for (let attempt = 0; ; attempt++) {
-    try { return await inTransaction(() => createAgentWorktree(p)); }
-    catch (error) {
-      const code = (error as { code?: string; cause?: { code?: string } })?.code ?? (error as { cause?: { code?: string } })?.cause?.code;
-      if (attempt >= TRIES - 1 || (code !== "40001" && code !== "40P01")) throw error;
+const LOCKS = Symbol.for("openlen.agent.subagents.worktreeLocks");
+type Global = typeof globalThis & { [LOCKS]?: Map<string, Promise<unknown>> };
+
+/** Like git's lock on `git worktree add`: a project's copies are made and brought back one at a time. Each one writes
+ *  the parent's repository in a serializable transaction, and parallel launches (`subagent` runs concurrently) aborted
+ *  each other past their retries: against a real Postgres, 8 at once made 5 copies (03/11). On `globalThis`, like the
+ *  registry: the route, the boot and every bundle of this process share it. Other projects don't wait. */
+function oneAtATime<T>(projectId: string, work: () => Promise<T>): Promise<T> {
+  const locks = ((globalThis as Global)[LOCKS] ??= new Map());
+  const next = (locks.get(projectId) ?? Promise.resolve()).then(work);
+  const settled = next.then(() => undefined, () => undefined);
+  locks.set(projectId, settled);
+  void settled.then(() => { if (locks.get(projectId) === settled) locks.delete(projectId); });
+  return next;
+}
+
+export function addAgentWorktree(p: { parentId: string; ownerId: string; runId: string; register?: (w: AgentWorktree) => Promise<void> }): Promise<AgentWorktree> {
+  return oneAtATime(p.parentId, async () => {
+    // Len's own git commands still write the same repository objects/refs. PostgreSQL can abort a serializable
+    // transaction even on INSERT ... ON CONFLICT: retry the entire rolled-back creation, including registration.
+    for (let attempt = 0; ; attempt++) {
+      try { return await inTransaction(() => createAgentWorktree(p)); }
+      catch (error) {
+        const code = (error as { code?: string; cause?: { code?: string } })?.code ?? (error as { cause?: { code?: string } })?.cause?.code;
+        if (attempt >= TRIES - 1 || (code !== "40001" && code !== "40P01")) throw error;
+      }
     }
-  }
+  });
 }
 
 async function createAgentWorktree(p: { parentId: string; ownerId: string; runId: string; register?: (w: AgentWorktree) => Promise<void> }): Promise<AgentWorktree> {
@@ -115,10 +133,14 @@ const TRIES = 3;
  * The copy comes back (spec §4.3): what it left without a commit goes in one on its branch (`commitLeftovers`), and
  * Len Watch's three-way merge (base = the draft at launch, ours = the draft now, theirs = the branch tip) writes what
  * it changed into the draft — all of it or nothing. It doesn't wait for Len's turn: if Len wrote a planned file
- * meanwhile, the merge is planned again. The copy always goes; the branch goes when everything entered.
- * `onPlanned` is a test seam, called after planning and before writing.
+ * meanwhile, the merge is planned again. It waits for the project's other copies (`oneAtATime`). The copy always goes;
+ * the branch goes when everything entered. `onPlanned` is a test seam, called after planning and before writing.
  */
-export async function finishAgentWorktree(p: {
+export function finishAgentWorktree(p: FinishParams): Promise<FinishedWorktree> {
+  return oneAtATime(p.parentId, () => bringBack(p));
+}
+
+interface FinishParams {
   parentId: string;
   ownerId: string;
   w: AgentWorktree;
@@ -127,7 +149,9 @@ export async function finishAgentWorktree(p: {
   previous?: WorktreeOutcome;
   onPlanned?: () => Promise<void>;
   onRechecked?: () => Promise<void>;
-}): Promise<FinishedWorktree> {
+}
+
+async function bringBack(p: FinishParams): Promise<FinishedWorktree> {
   const { parentId, w } = p;
   const clean = () => inTransaction(async () => { await deleteBranch(parentId, w.branch); await removeWorktree(w.copyId); });
   if (p.previous?.state === "brought" && p.previous.copyId) {

@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
 
-const base = vi.hoisted(() => ({ db: null as unknown, scope: null as unknown, failCommit: false, failRemove: false, abortCode: "", aborts: 0 }));
+const base = vi.hoisted(() => ({ db: null as unknown, scope: null as unknown, failCommit: false, failRemove: false, abortCode: "", aborts: 0, inFlight: 0, mostInFlight: 0 }));
 vi.mock("@/lib/len-watch/worktree", async (original) => {
   const real = await original<typeof import("@/lib/len-watch/worktree")>();
   return { ...real, removeWorktree: (...args: Parameters<typeof real.removeWorktree>) => {
@@ -27,11 +27,17 @@ vi.mock("@/lib/db", async () => {
     get db() {
       return base.db;
     },
-    inTransaction: (f: () => Promise<unknown>) => (base.scope as { run(f: () => Promise<unknown>): Promise<unknown> }).run(async () => {
-      const value = await f();
-      if (base.aborts > 0) { base.aborts--; throw Object.assign(new Error("Drizzle transaction failed"), { cause: { code: base.abortCode } }); }
-      return value;
-    }),
+    // PGlite runs one transaction at a time by itself: how many were asked for at once is counted before it.
+    inTransaction: async (f: () => Promise<unknown>) => {
+      base.mostInFlight = Math.max(base.mostInFlight, ++base.inFlight);
+      try {
+        return await (base.scope as { run(f: () => Promise<unknown>): Promise<unknown> }).run(async () => {
+          const value = await f();
+          if (base.aborts > 0) { base.aborts--; throw Object.assign(new Error("Drizzle transaction failed"), { cause: { code: base.abortCode } }); }
+          return value;
+        });
+      } finally { base.inFlight--; }
+    },
   };
 });
 
@@ -51,6 +57,8 @@ beforeEach(async () => {
   base.aborts = 0;
   base.failCommit = false;
   base.failRemove = false;
+  base.inFlight = 0;
+  base.mostInFlight = 0;
   pg = new PGlite();
   await pg.exec(`
     create table "users" ("id" text primary key, "name" text, "handle" text);
@@ -152,6 +160,25 @@ describe("an isolated child's copy", () => {
     const after = (await postgresStore("p").readRepo())!;
     expect(after.head).toBe(head);
     expect((await gitInParent(["log", "--oneline"])).stdout.trim().split("\n")).toHaveLength(1);
+  });
+
+  // Parallel launches (`subagent` runs concurrently) all write the parent's repository: against a real Postgres, 8 at
+  // once made 5 copies and 5 of a 300-file project made 3 (03/11), the rest aborted by serialization. Like git's lock
+  // on `git worktree add`, a project's copies are made one at a time.
+  it("copies of one project are made one at a time", async () => {
+    const ws = await Promise.all(["s1", "s2", "s3", "s4"].map((runId) => wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId })));
+    expect(base.mostInFlight).toBe(1);
+    expect(new Set(ws.map((w) => w.branch)).size).toBe(4);
+    expect((await pg.query(`select id from projects where "parentProjectId"='p'`)).rows).toHaveLength(4);
+  });
+  it("a copy of another project doesn't wait for this one's", async () => {
+    await pg.query(`insert into "projects" ("id", "userId", "data") values ('q', 'owner', $1)`, [JSON.stringify(DATA)]);
+    const slow = async () => { await new Promise((r) => setTimeout(r, 30)); };
+    await Promise.all([
+      wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "o1", register: slow }),
+      wt.addAgentWorktree({ parentId: "q", ownerId: "owner", runId: "o2", register: slow }),
+    ]);
+    expect(base.mostInFlight).toBe(2);
   });
 
   it("the copy goes with its parent", async () => {
@@ -304,6 +331,25 @@ describe("bringing the copy back", () => {
     });
     expect(r.outcome).toEqual({ state: "brought", files: ["/src/a.ts"] });
     expect((await filesOf("p"))["/src/a.ts"]).toBe("LINE ONE\nline two\nLINE THREE\n");
+  });
+
+  it("children that finish together come back one at a time, and all of them enter", async () => {
+    const a = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "fa" });
+    const b = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "fb" });
+    await write(a.copyId, "/src/a.ts", "export const a = 2;\n");
+    await write(b.copyId, "/src/b.ts", "export const b = 2;\n");
+    let saving = 0;
+    let mostSaving = 0;
+    const { save } = saver();
+    const slowSave: typeof save = async (cambios, draft) => {
+      mostSaving = Math.max(mostSaving, ++saving);
+      try { await new Promise((r) => setTimeout(r, 30)); return await save(cambios, draft); }
+      finally { saving--; }
+    };
+    const [ra, rb] = await Promise.all([finish(a, slowSave), finish(b, slowSave)]);
+    expect(mostSaving).toBe(1);
+    expect([ra.outcome.state, rb.outcome.state]).toEqual(["brought", "brought"]);
+    expect(await filesOf("p")).toEqual({ "/src/a.ts": "export const a = 2;\n", "/src/b.ts": "export const b = 2;\n" });
   });
 
   it("two copies of the same draft", async () => {
