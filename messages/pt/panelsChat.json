@@ -554,6 +554,12 @@
     "failed": "Não foi possível abrir este arquivo"
   },
   "subagent": {
+    "worktree": {
+      "working": "na sua própria cópia",
+      "brought": "trouxe {n, plural, one {# ficheiro} other {# ficheiros}}",
+      "conflict": "conflito com as tuas alterações: o trabalho continua no seu ramo",
+      "kept": "não foi possível trazer as alterações: o trabalho continua no seu ramo"
+    },
     "title": "Subagente · {description}",
     "status": {
       "running": "trabalhando",

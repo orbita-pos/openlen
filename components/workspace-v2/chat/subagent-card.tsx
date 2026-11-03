@@ -57,6 +57,11 @@ export function SubagentCard({ run, forked = false, onStop }: { run: SubagentRun
           </button>
         )}
       </div>
+      {run.worktree && run.worktree.state !== "nothing" && (
+        <div className="px-2.5 pb-2 text-[11px] fg-muted" data-subagent-worktree="">
+          {t(`subagent.worktree.${run.worktree.state}`, { n: run.worktree.state === "brought" ? run.worktree.files.length : 0 })}
+        </div>
+      )}
       {open && (
         <div className="flex flex-col gap-1.5 border-t bd px-2.5 py-2">
           {run.actions.map((a, i) => (

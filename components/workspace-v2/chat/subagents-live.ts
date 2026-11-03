@@ -4,7 +4,7 @@
 // live bar read the same runs.
 
 import type { AgentAction } from "../agent-action-card";
-import type { SubagentStatus } from "@/lib/agent/subagents/notice";
+import type { SubagentStatus, WorktreeOutcome } from "@/lib/agent/subagents/notice";
 
 export interface SubagentRunView {
   readonly id: string;
@@ -18,6 +18,7 @@ export interface SubagentRunView {
   readonly durationMs: number | null;
   /** Phase 2: a `subagent_fork` child, seeded with Len's conversation. */
   readonly forked?: boolean;
+  readonly worktree?: { readonly state: "working" } | WorktreeOutcome | null;
 }
 
 const STATUSES: readonly SubagentStatus[] = ["running", "completed", "aborted", "error", "budget", "turn_limit"];
@@ -52,6 +53,7 @@ function runFrom(projectId: string, v: unknown): SubagentRunView | null {
     toolUses: typeof o.toolUses === "number" && Number.isFinite(o.toolUses) ? o.toolUses : 0,
     durationMs: typeof o.durationMs === "number" && Number.isFinite(o.durationMs) ? o.durationMs : null,
     ...(o.forked === true ? { forked: true } : {}),
+    worktree: (o.worktree ?? null) as SubagentRunView["worktree"],
   };
 }
 
@@ -101,6 +103,7 @@ export const subagentsLive = {
         finalText: prev?.finalText ?? null,
         toolUses,
         durationMs: prev?.durationMs ?? null,
+        worktree: o.worktree === undefined ? prev?.worktree : o.worktree as SubagentRunView["worktree"],
         ...(prev?.forked ? { forked: true } : {}),
       },
     ]);
