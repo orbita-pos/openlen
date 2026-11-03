@@ -60,14 +60,35 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
   },
 };
 
-/** Ours: custom types extend DeepSeek's preset enum; keep the built-in declaration unchanged. */
-export function subagentDeclaration(types: AgentTypeSet): Record<string, unknown> {
-  if (!types.custom.length) return SUBAGENT_DECLARATION;
-  const parameters = SUBAGENT_DECLARATION.parameters as { properties: Record<string, Record<string, unknown>> };
+/** Ours, after Claude Code's `isolation` parameter (phase 4): offered when git is on. */
+const ISOLATION_PARAMETER = {
+  type: "STRING",
+  enum: ["worktree"],
+  description:
+    '"worktree": the subagent works in its own copy of the project, on its own git branch. What it changes in the project\'s folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time.',
+};
+
+type Declaration = Record<string, unknown> & { parameters: { properties: Record<string, Record<string, unknown>> } };
+
+const withIsolation = (d: Record<string, unknown>, isolation: boolean): Record<string, unknown> => {
+  if (!isolation) return d;
+  const parameters = (d as Declaration).parameters;
+  return { ...d, parameters: { ...parameters, properties: { ...parameters.properties, isolation: ISOLATION_PARAMETER } } };
+};
+
+/** Ours: custom types extend DeepSeek's preset enum; keep the fixed declaration unchanged. */
+export function subagentDeclaration(types: AgentTypeSet, opts: { isolation: boolean } = { isolation: false }): Record<string, unknown> {
+  if (!types.custom.length) return withIsolation(SUBAGENT_DECLARATION, opts.isolation);
+  const parameters = (SUBAGENT_DECLARATION as Declaration).parameters;
   const summaries = types.custom.map(({ agent, covers }) => `${agent.name}${covers ? ` (yours, over the project's ${agent.name})` : ""}: ${agent.description.slice(0, 500)}`);
-  return { ...SUBAGENT_DECLARATION, description: `${DESCRIPTION} Custom types: ${summaries.join("; ")}`, parameters: {
+  return withIsolation({ ...SUBAGENT_DECLARATION, description: `${DESCRIPTION} Custom types: ${summaries.join("; ")}`, parameters: {
     ...parameters, properties: { ...parameters.properties, agent_preset: { ...parameters.properties.agent_preset, enum: types.names() } },
-  } };
+  } }, opts.isolation);
+}
+
+/** `subagent_fork`, with `isolation` when git is on (phase 4). */
+export function subagentForkDeclaration(opts: { isolation: boolean } = { isolation: false }): Record<string, unknown> {
+  return withIsolation(SUBAGENT_FORK_DECLARATION, opts.isolation);
 }
 
 /** DeepSeek's `providerWording(true)`: a child seeded with the conversation's completed turns. */
@@ -170,7 +191,7 @@ export function parentGoneError(): string {
   return "direct parent is not live; the message was not delivered";
 }
 
-export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled" | "no_tools";
+export type LaunchRefusal = "too_many_subagents" | "turn_budget_reached" | "subagents_disabled" | "no_tools" | "worktree_failed";
 
 /** What `send` answers: delivered into a running child's inbox (`resumed: false`), or it woke from its transcript. */
 export type SendResult =
@@ -181,9 +202,9 @@ export interface SubagentsDeps {
   /** Re-read project/speaker types after their files changed, before validating a launch. */
   refreshTypes?(): Promise<void>;
   typeNames(): readonly string[];
-  launch(o: { description: string; prompt: string; preset: string; fromSkill?: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  launch(o: { description: string; prompt: string; preset: string; fromSkill?: string; isolation?: "worktree" }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
-  fork(o: { description: string; prompt: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  fork(o: { description: string; prompt: string; isolation?: "worktree" }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** Len's `send_message` to one of his children (phase 2). */
   send(o: { id: string; message: string }): Promise<SendResult>;
   /** `interrupt_agent`: stops a working child of the current conversation; false when there was none. */
@@ -194,11 +215,20 @@ export interface SubagentsDeps {
 
 const invalid = (message: string): ToolOutcome => ({ response: { ok: false, error: "invalid_arguments", message } });
 
+/** `isolation`, when given, can only be "worktree"; `false` when it is anything else. */
+function isolationOf(args: Record<string, unknown>): { isolation?: "worktree" } | false {
+  if (args.isolation === undefined) return {};
+  return args.isolation === "worktree" ? { isolation: "worktree" } : false;
+}
+const BAD_ISOLATION = "isolation must be worktree.";
+
 export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const description = typeof args.description === "string" ? args.description.trim() : "";
   const prompt = typeof args.prompt === "string" ? args.prompt.trim() : "";
   if (!description) return invalid("description is required: a short (3-5 word) description of the task.");
   if (!prompt) return invalid("prompt is required: the complete, self-contained task.");
+  const isolation = isolationOf(args);
+  if (!isolation) return invalid(BAD_ISOLATION);
   const preset = args.agent_preset ?? "general-purpose";
   await deps.subagents?.refreshTypes?.();
   const names = deps.subagents?.typeNames?.() ?? SUBAGENT_PRESETS;
@@ -207,7 +237,7 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
   }
   const type = preset;
   if (!deps.subagents) return { response: { ok: false, error: "subagents_disabled", message: "Subagents are not available in this session." } };
-  const r = await deps.subagents.launch({ description, prompt, preset: type });
+  const r = await deps.subagents.launch({ description, prompt, preset: type, ...isolation });
   if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
   return {
     response: { ok: true, tool_result: startedLine(r.id) },
@@ -225,8 +255,10 @@ export async function toolSubagentFork(_session: AgentSession, deps: AgentDeps, 
   const prompt = text(args.prompt);
   if (!description) return invalid("description is required: a short (3-5 word) description of the task.");
   if (!prompt) return invalid("prompt is required: the task for the subagent.");
+  const isolation = isolationOf(args);
+  if (!isolation) return invalid(BAD_ISOLATION);
   if (!deps.subagents) return disabled();
-  const r = await deps.subagents.fork({ description, prompt });
+  const r = await deps.subagents.fork({ description, prompt, ...isolation });
   if (!r.ok) return { response: { ok: false, error: r.code, message: r.message } };
   return {
     response: { ok: true, tool_result: startedLine(r.id) },

@@ -8,7 +8,7 @@ const base = "name: reviewer\ndescription: Reviews copy";
 describe("parseAgentFile", () => {
   it("parses every key of the subset", () => {
     const r = parseAgentFile(
-      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true`),
+      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true\nisolation: worktree`),
       "reviewer",
     );
     expect(r).toEqual({
@@ -22,6 +22,7 @@ describe("parseAgentFile", () => {
         effort: "high",
         maxTurns: 12,
         omitLenMd: true,
+        isolation: "worktree",
         body: "Review the copy of the page.",
       },
     });
@@ -29,7 +30,12 @@ describe("parseAgentFile", () => {
 
   it("defaults", () => {
     const r = parseAgentFile(file(base), "reviewer");
-    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false });
+    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false, isolation: null });
+  });
+
+  it("isolation: any other value is refused with its template", () => {
+    const r = parseAgentFile(file(`${base}\nisolation: none`), "reviewer");
+    expect(!r.ok && r.error).toMatch(/^isolation must be worktree\. A subagent type looks like this:/);
   });
 
   it("parses CRLF and a BOM", () => {

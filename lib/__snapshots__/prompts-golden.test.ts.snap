@@ -1223,6 +1223,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "len-office"
           ],
           "description": "The type of subagent; general-purpose when omitted."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
@@ -1244,6 +1251,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "prompt": {
           "type": "STRING",
           "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
@@ -2489,6 +2503,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "len-office"
           ],
           "description": "The type of subagent; general-purpose when omitted."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
@@ -2510,6 +2531,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "prompt": {
           "type": "STRING",
           "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
@@ -3749,6 +3777,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "len-office"
           ],
           "description": "The type of subagent; general-purpose when omitted."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
@@ -3770,6 +3805,13 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "prompt": {
           "type": "STRING",
           "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+        },
+        "isolation": {
+          "type": "STRING",
+          "enum": [
+            "worktree"
+          ],
+          "description": "\\"worktree\\": the subagent works in its own copy of the project, on its own git branch. What it changes in the project's folder comes back into your files when it finishes; if it changes nothing, the copy is removed; what it leaves outside the folder (/tmp) is lost. Use it when several subagents write at the same time."
         }
       },
       "required": [
