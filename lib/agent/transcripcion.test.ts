@@ -29,6 +29,10 @@ const leer = (ruta: string, texto: string): Message[] => [
   { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: ruta } }] },
   { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: texto } }] },
 ];
+const cargarSkill = (name: string, texto: string): Message[] => [
+  { role: "assistant", content: "", functionCalls: [{ name: "skill", args: { name } }] },
+  { role: "user", content: "", functionResponses: [{ name: "skill", response: { ok: true, tool_result: texto } }] },
+];
 const fila = (userText: string, mensajes: Message[] | null, assistantReasoning = ""): FilaDelHistorial => ({
   userText,
   assistantReasoning,
@@ -258,6 +262,18 @@ describe("historialDesdeLaBase", () => {
     expect(h[1]!.functionCalls![0]!.args).toEqual({ file_path: "/a/index.html" });
   });
 
+  // 🔴 Como Claude Code, que sólo vacía lo que se puede volver a pedir (Read, Bash, Grep, Glob, WebSearch,
+  // WebFetch, Edit, Write): una skill cargada sigue cargada, y `skill` contesta «already loaded above» al
+  // volver a pedirla. Vaciada, Len trabajaba sin sus instrucciones creyendo que las tenía.
+  it("🔴 al pasarse de `hasta`, una skill cargada se queda entera y no cuenta en el presupuesto", () => {
+    const grande = "x".repeat(600);
+    const h = historialDesdeLaBase(
+      [fila("uno", [...cargarSkill("brand", grande), ...leer("/a/index.html", grande)]), fila("dos", leer("/b/index.html", grande))],
+      { hasta: 1000, deja: 700 },
+    );
+    expect(h.flatMap((m) => m.functionResponses ?? []).map((r) => r.response.tool_result)).toEqual([grande, RESULTADO_VACIADO, grande]);
+  });
+
   it("CONTRA-PRUEBA: con presupuesto de sobra no se vacía nada", () => {
     const h = historialDesdeLaBase([fila("uno", leer("/a/index.html", "abc")), fila("dos", leer("/b/index.html", "def"))], { hasta: 1000, deja: 500 });
     expect(h.flatMap((m) => m.functionResponses ?? []).map((r) => r.response.tool_result)).toEqual(["abc", "def"]);
@@ -364,6 +380,14 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     const t = transcripcionParaGuardar([...bash(1, 150_000), ...bash(2, 150_000), ...bash(3, 150_000)], new Map());
     expect(JSON.stringify(t)).not.toContain(CLAVE_CAMBIOS_DEL_COMANDO);
     expect(salidas(t.mensajes)).toEqual(["salida 1", "salida 2", "salida 3"]);
+  });
+
+  it("🔴 una transcripción que no cabe guarda entera la skill que cargó", () => {
+    const skill = "instrucciones de la skill\n".repeat(400);
+    const lectura = (n: number) => leer(`/p${n}/index.html`, "y".repeat(150_000));
+    const t = transcripcionParaGuardar([...cargarSkill("brand", skill), ...lectura(1), ...lectura(2), ...lectura(3)], new Map());
+    // Desde el final, como siempre: cabe la última lectura; las de antes se vacían, la skill no.
+    expect(salidas(t.mensajes)).toEqual([skill, RESULTADO_VACIADO, RESULTADO_VACIADO, "y".repeat(150_000)]);
   });
 
   // 🔴 H15 fase 2 (02/10, Jesús): lo pensado se guarda con la conversación y
