@@ -554,6 +554,12 @@
     "failed": "Dit bestand kon niet worden geopend"
   },
   "subagent": {
+    "worktree": {
+      "working": "in een eigen kopie",
+      "brought": "{n, plural, one {# bestand} other {# bestanden}} overgenomen",
+      "conflict": "conflict met je wijzigingen: het werk staat nog op de eigen branch",
+      "kept": "wijzigingen konden niet worden overgenomen: het werk staat nog op de eigen branch"
+    },
     "title": "Subagent · {description}",
     "status": {
       "running": "bezig",

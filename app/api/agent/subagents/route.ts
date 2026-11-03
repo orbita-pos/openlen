@@ -55,6 +55,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     createdAt: r.createdAt,
     settledAt: r.settledAt,
     forked: r.forked,
+    worktree: r.worktreeOutcome ?? (r.worktreeCopyId && r.status === "running" ? { state: "working" } : null),
   }));
   return json({ runs });
 });

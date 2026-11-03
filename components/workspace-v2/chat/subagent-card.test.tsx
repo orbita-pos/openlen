@@ -3,9 +3,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { createTranslator } from "use-intl";
+import { readFileSync } from "node:fs";
+import es from "@/messages/es/panelsChat.json";
+
+const spanish = createTranslator({ locale: "es", messages: es });
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (clave: string, v?: Record<string, unknown>) => (v ? `${clave} ${JSON.stringify(v)}` : clave),
+  useTranslations: () => (clave: string, v?: Record<string, unknown>) => clave.startsWith("subagent.worktree.")
+    ? spanish(clave as never, v as never) : (v ? `${clave} ${JSON.stringify(v)}` : clave),
   useLocale: () => "es",
 }));
 
@@ -42,6 +48,33 @@ const RUN: SubagentRunView = {
 };
 
 describe("a subagent's card", () => {
+  it.each([
+    [{ state: "working" }, "en su copia"],
+    [{ state: "brought", files: ["/a", "/b"] }, "trajo 2 ficheros"],
+    [{ state: "conflict", files: ["/a"], branch: "b" }, "chocó con tus cambios: lo suyo sigue en su rama"],
+    [{ state: "kept", branch: "b" }, "no se pudo traer: lo suyo sigue en su rama"],
+    [{ state: "nothing" }, null], [null, null],
+  ])("an isolated child says where it works and what it brought (%j)", (worktree, want) => {
+    subagentsLive.fromServer("p1", [{ ...RUN, worktree }]);
+    const run = subagentsLive.snapshot().get("r1")!;
+    const host = paint(<SubagentCard run={run} onStop={() => {}} />);
+    expect(host.querySelector("[data-subagent-worktree]")?.textContent ?? null).toBe(want);
+  });
+
+  it("the worktree keys exist in all 10 locales", () => {
+    for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+      const messages = JSON.parse(readFileSync(`messages/${l}/panelsChat.json`, "utf8"));
+      for (const key of ["working", "brought", "conflict", "kept"]) expect(messages.subagent.worktree?.[key]).toBeTruthy();
+    }
+  });
+
+  it("live steps keep the copy's state until the outcome arrives", () => {
+    subagentsLive.event("p1", { ...RUN, worktree: { state: "working" } });
+    subagentsLive.event("p1", { id: "r1", status: "running", step: { tool: "Read", status: "done" } });
+    expect(subagentsLive.snapshot().get("r1")?.worktree).toEqual({ state: "working" });
+    subagentsLive.event("p1", { id: "r1", status: "completed", worktree: { state: "nothing" } });
+    expect(subagentsLive.snapshot().get("r1")?.worktree).toEqual({ state: "nothing" });
+  });
   it("while it runs: its description, its type, «working» and the ■, which stops it", () => {
     const onStop = vi.fn();
     const host = paint(<SubagentCard run={RUN} onStop={onStop} />);

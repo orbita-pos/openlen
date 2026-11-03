@@ -554,6 +554,12 @@
     "failed": "이 파일을 열 수 없어요"
   },
   "subagent": {
+    "worktree": {
+      "working": "자체 복사본에서 작업 중",
+      "brought": "파일 {n}개 반영됨",
+      "conflict": "변경 사항이 충돌했습니다: 작업 내용은 해당 브랜치에 남아 있습니다",
+      "kept": "변경 사항을 반영하지 못했습니다: 작업 내용은 해당 브랜치에 남아 있습니다"
+    },
     "title": "서브에이전트 · {description}",
     "status": {
       "running": "작업 중",

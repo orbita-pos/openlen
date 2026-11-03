@@ -31,6 +31,15 @@ beforeEach(() => {
 afterEach(() => fijarAccesoDePrueba(null));
 
 describe("GET /api/agent/subagents", () => {
+  it.each([
+    [{}, null],
+    [{ status: "running", worktreeCopyId: "copy" }, { state: "working" }],
+    [{ worktreeCopyId: "copy" }, null],
+    [{ worktreeOutcome: { state: "brought", files: ["/a"] } }, { state: "brought", files: ["/a"] }],
+  ])("a run's worktree (%j)", async (fields, want) => {
+    mocks.runsOfRow.mockResolvedValue([{ ...RUN, ...fields }]);
+    expect(((await ask()).body.runs as { worktree: unknown }[])[0]?.worktree).toEqual(want);
+  });
   it("a turn's row lists its subagents, without their transcript or prompt", async () => {
     const { status, body } = await ask();
     expect(status).toBe(200);
@@ -39,7 +48,7 @@ describe("GET /api/agent/subagents", () => {
       {
         id: "r1", preset: "Explore", description: "Find the menu", status: "completed",
         actions: [{ tool: "Read", summary: "/menu/index.html" }], finalText: "In /menu/index.html:12.",
-        toolUses: 3, durationMs: 4200, createdAt: "2026-11-01T10:00:00.000Z", settledAt: "2026-11-01T10:00:04.000Z", forked: false,
+        toolUses: 3, durationMs: 4200, createdAt: "2026-11-01T10:00:00.000Z", settledAt: "2026-11-01T10:00:04.000Z", forked: false, worktree: null,
       },
     ]);
     expect(mocks.runsByIds).not.toHaveBeenCalled();
