@@ -64,6 +64,7 @@ export const CREATE_EVENT_TASKS: readonly string[] = [
     "judgeDay" text,
     "judgesThatDay" integer NOT NULL DEFAULT 0,
     "transcript" jsonb,
+    "lastJudgedAt" timestamptz,
     "createdAt" timestamptz NOT NULL DEFAULT now(),
     "updatedAt" timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT "eventTasks_projectId_projects_id_fk"

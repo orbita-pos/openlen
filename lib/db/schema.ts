@@ -2426,6 +2426,8 @@ export const eventTasks = pgTable(
     judgesThatDay: integer("judgesThatDay").notNull().default(0),
     /** The task's own conversation: where Len judges, apart from the project chat. */
     transcript: jsonb("transcript").$type<unknown[]>(),
+    /** When its judge last ran: the owner's decisions on its cards after this reach the next judge, once. */
+    lastJudgedAt: timestamp("lastJudgedAt", { mode: "date", withTimezone: true }),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },

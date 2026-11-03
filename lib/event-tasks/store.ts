@@ -131,8 +131,9 @@ export async function saveObservation(taskId: string, state: Record<string, unkn
   await db.update(t).set({ state, lastCheckedAt: at, updatedAt: at }).where(eq(t.id, taskId));
 }
 
-export async function saveTranscript(taskId: string, transcript: unknown[]): Promise<void> {
-  await db.update(t).set({ transcript }).where(eq(t.id, taskId));
+/** The judge's conversation after a turn, and when it ran. */
+export async function saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void> {
+  await db.update(t).set({ transcript, lastJudgedAt: at }).where(eq(t.id, taskId));
 }
 
 /** One record per change or failure; a failure with the same cause as the task's newest record adds to its count. */
