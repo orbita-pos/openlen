@@ -562,6 +562,9 @@ export const formSubmissions = pgTable(
     // está visto si tiene esto O si llegó antes de `users.lastSeenLeadsAt`: la
     // regla vive en `lib/resultados/visto.ts` (`condicionSinVer`), y sólo ahí.
     seenAt: timestamp("seenAt", { mode: "date" }),
+    /** The form it came from (the same id `notifyOwner` resolves): an event task watches one form (spec local
+     *  2026-11-03-len-que-avisa, §7.2). Null on rows before it. */
+    formId: text("formId"),
   },
   (table) => [
     index("formSubmissions_projectId_createdAt_idx").on(
@@ -2393,6 +2396,83 @@ export const scheduledTaskRuns = pgTable(
 );
 
 export type ScheduledRunOutcome = "done" | "no_credits" | "member_cap" | "cut" | "failed" | "missed" | "plan_required" | "no_access";
+
+// «LEN QUE AVISA» (spec local 2026-11-03-len-que-avisa): a task that wakes on a change of a source, not on
+// the time. DeepSeek's event-triggered automation tasks: an instruction, a source with its parameters and the
+// state the trigger last saw. They share the scheduled tasks' tools, their cap of ten and their screens, and
+// live apart so DeepSeek's schedule domain stays as it was. `npm run scheduled-tasks:migrate`.
+export const eventTasks = pgTable(
+  "eventTasks",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** Who asked Len for it: they get its notices. The owner pays. */
+    createdBy: text("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    timeZone: text("timeZone").notNull(),
+    title: text("title").notNull(),
+    /** The instruction, in the owner's words, with the facts the judgment needs. */
+    prompt: text("prompt").notNull(),
+    source: text("source").$type<"app_rows" | "form_submissions">().notNull(),
+    params: jsonb("params").$type<Record<string, unknown>>().notNull(),
+    /** What the trigger last saw (the source's cursor). */
+    state: jsonb("state").$type<Record<string, unknown>>(),
+    status: text("status").$type<"active" | "inactive">().notNull().default("active"),
+    pausedAt: timestamp("pausedAt", { mode: "date", withTimezone: true }),
+    nextCheckAt: timestamp("nextCheckAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    lastCheckedAt: timestamp("lastCheckedAt", { mode: "date", withTimezone: true }),
+    /** The day (YYYY-MM-DD in the task's zone) `judgesThatDay` counts. */
+    judgeDay: text("judgeDay"),
+    judgesThatDay: integer("judgesThatDay").notNull().default(0),
+    /** The task's own conversation: where Len judges, apart from the project chat. */
+    transcript: jsonb("transcript").$type<unknown[]>(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("eventTasks_status_nextCheckAt_idx").on(t.status, t.nextCheckAt), index("eventTasks_projectId_idx").on(t.projectId)],
+);
+
+/** What the trigger did with a change: delivered to the judge, filtered with its reason, or failed. */
+export const eventTaskRecords = pgTable(
+  "eventTaskRecords",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("taskId").notNull().references(() => eventTasks.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"delivered" | "filtered" | "failed">().notNull(),
+    reason: text("reason"),
+    /** Consecutive failures with the same cause are one record. */
+    count: integer("count").notNull().default(1),
+    candidate: jsonb("candidate").$type<Record<string, unknown>>(),
+    /** A delivered record: `pending` until its judge ran, then `done`. */
+    judge: text("judge").$type<"pending" | "done">(),
+    notified: boolean("notified"),
+    firstAt: timestamp("firstAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("eventTaskRecords_taskId_lastAt_idx").on(t.taskId, t.lastAt)],
+);
+
+/** What `automation_notify` left for the owner: a card they accept («Hazlo») or dismiss («Ahora no»). */
+export const eventTaskCards = pgTable(
+  "eventTaskCards",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("taskId").notNull().references(() => eventTasks.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    recordId: text("recordId").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    proposedAction: text("proposedAction").notNull(),
+    status: text("status").$type<"pending" | "accepted" | "dismissed" | "replaced">().notNull().default("pending"),
+    decidedBy: text("decidedBy"),
+    decidedAt: timestamp("decidedAt", { mode: "date", withTimezone: true }),
+    /** The chat row of the turn «Hazlo» launched. */
+    acceptedRowId: text("acceptedRowId"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("eventTaskCards_projectId_status_idx").on(t.projectId, t.status)],
+);
 
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a
 // published site that stopped loading. `npm run len-watch:migrate`.
