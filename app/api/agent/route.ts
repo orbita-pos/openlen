@@ -145,7 +145,8 @@ import { realDeps, runAgentTool, summarizeProjectState, type AgentDeps, type Age
 import { cerrarTerminalDeLaSesion, settleSessionTerminal } from "@/lib/agent/terminal/herramienta";
 import { TurnSandbox, holderOf } from "@/lib/agent/sandbox/choose";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
-import { cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { cargarFicherosDeLaTerminal } from "@/lib/agent/herramientas-de-ficheros";
+import { saveWorktreeIntoDraft } from "@/lib/agent/subagents/worktree-save";
 import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
@@ -1919,10 +1920,10 @@ async function correrTurno(
           },
           runTool: runToolWithAgentTypes,
           store: { createRun, saveProgress, settleRun, reopenRun, runsOfCurrentConversation, runOfCurrentConversation, setWorktree, setWorktreeOutcome },
-          addWorktree: addAgentWorktree,
+          addWorktree: (o) => addAgentWorktree({ ...o, register: w => setWorktree(o.runId, w) }),
           finishWorktree: ({ w, description, session }) => finishAgentWorktree({
             parentId: session.projectId, ownerId: session.userId, w, description,
-            save: (changes, draft) => guardarLoDeLaTerminal(session, deps, changes, draft),
+            save: (changes, draft) => saveWorktreeIntoDraft(session, deps, changes, draft),
           }),
           charge: async (c) => {
             await chargeCredits(c.ownerId, c.centicredits, {

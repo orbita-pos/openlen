@@ -43,7 +43,7 @@ import {
 } from "./notice";
 import type { AgentWorktree, FinishedWorktree } from "./worktree";
 import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
-import { isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
+import { finalizingInput, isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setFinalizingInput, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
 import type { ConversationRun, SubagentRunRow } from "./store";
 import type { TurnSpend } from "./spend";
 import {
@@ -482,10 +482,19 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     };
     /** What Len sent that this run won't act on: it waits in the transcript for the next wake. */
     const kept: Message[] = [];
-    const save = () =>
-      io.store
-        .settleRun(id, { ...settled, transcript: [...conversation(own), ...kept].map(withoutImages) })
-        .catch((e: unknown) => log(`[subagents] run=${id} settle failed: ${String(e)}`));
+    let copyPending = !!spec.worktree;
+    let saving = Promise.resolve();
+    const persist = () => {
+      const next = saving.catch(() => undefined).then(() => {
+        const transcript = [...conversation(own), ...kept].map(withoutImages);
+        return copyPending
+          ? io.store.saveProgress(id, { transcript, actions: settled.actions, toolUses: settled.toolUses, durationMs: settled.durationMs })
+          : io.store.settleRun(id, { ...settled, transcript });
+      });
+      saving = next;
+      return next;
+    };
+    const save = () => persist().catch((e: unknown) => log(`[subagents] run=${id} settle failed: ${String(e)}`));
     /** Keeps what Len sends until none is left; the slot goes right after, with nothing in between. */
     const keepTheRest = async () => {
       for (let more = takeRunInbox(id); more.length > 0; more = takeRunInbox(id)) {
@@ -513,12 +522,29 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     }
     // An isolated child's copy comes back now: after its terminal closed (which saved into the copy what the box
     // changed), and before its notice and its slot, so Len hears how it came back (phase 4, spec §4.3).
+    let receivedWhileFinishing = 0;
+    setFinalizingInput(id, async texts => {
+      kept.push(...texts.map(fromLen));
+      receivedWhileFinishing += texts.length;
+      // Delivery is acknowledged only after the accepted input is durable, including during a restart.
+      await persist();
+    });
     const worktree = spec.worktree ? await finishCopy(spec.worktree) : undefined;
+    copyPending = false;
+    // No await between the final stable save and releasing the inbox: a new delivery forces another save.
+    for (;;) {
+      const revision = receivedWhileFinishing;
+      await keepTheRest();
+      await save();
+      if (revision === receivedWhileFinishing) break;
+    }
     // The notice first, then the slot: a turn waiting for «a notice or no child left» must see the notice.
     if (toLen) {
       queueNotice(ctx.projectId, {
         id,
-        text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText, ...(worktree ? { worktree } : {}) }),
+        text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText, ...(worktree ? { worktree } : {}) })
+          // Ours: accepted input cannot run in the copy that has just been removed.
+          + (receivedWhileFinishing ? "\n\nMessages received while it was finishing are saved for its next activation; use send_message to wake it again." : ""),
       });
     }
     release(ctx.projectId, id);
@@ -532,7 +558,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         finished = await io.finishWorktree!({ w, description, session: { ...rest, projectId: ctx.projectId } as AgentSession });
       } catch (e) {
         log(`[subagents] run=${id} its copy could not come back: ${String(e)}`);
-        finished = { outcome: { state: "kept", branch: w.branch }, changes: null };
+        finished = { outcome: { state: "kept", branch: w.branch, copyId: w.copyId }, changes: null };
       }
       await io.store.setWorktreeOutcome?.(id, finished.outcome).catch((e: unknown) => log(`[subagents] run=${id} saving its copy's outcome failed: ${String(e)}`));
       if (finished.changes && !io.turnStillOpen(ctx.chatRowId)) {
@@ -597,7 +623,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       for (const t of texts) sendToRun(id, t);
       return { ok: true, resumed: false, preset, description: first.description };
     };
-    if (isLive(ctx.projectId, id)) return toInbox();
+    if (isLive(ctx.projectId, id)) {
+      const closing = finalizingInput(id);
+      if (closing) { await closing(texts); return { ok: true, resumed: false, preset, description: first.description }; }
+      return toInbox();
+    }
+    // Ours: replacing this reference would orphan the only durable working copy of its previous activation.
+    if (first.worktreeOutcome?.state === "kept" && first.worktreeOutcome.copyId) {
+      return { ok: false, code: "unavailable", message: `Subagent ${id} still has unsaved work in copy ${first.worktreeOutcome.copyId}; server startup must recover that copy before it can be woken.` };
+    }
     await ctx.refreshAgentTypes?.();
     const type = childTypeOf(preset, ctx.agentTypes);
     if (!type) return { ok: false, code: "unavailable", message: `subagent "${id}" has no agent preset projection for restoration` };
@@ -609,32 +643,26 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     // Read-only if it started so, or if Len plans now: a scope never widens.
     const scope = first.planMode || ctx.planMode;
     // An isolated child wakes in a new copy of the draft as it is now: what it did before already came back (phase 4).
-    const w = isolates(id, type, scope, first.worktreeBranch ? "worktree" : undefined) ? await makeCopy(id) : undefined;
-    if (w === null) {
-      release(ctx.projectId, id);
-      return { ok: false, code: "unavailable", message: WORKTREE_FAILED };
-    }
-    /** A copy nobody will use goes, as an unchanged one does when it is finished. */
-    const discard = async () => {
-      if (!w) return;
-      const session = { ...ctx.sessionBase, projectId: ctx.projectId, userId: ctx.userId, turnId: ctx.turnId, terminalHolderId: id, page: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
-      await io.finishWorktree!({ w, description: first.description, session }).catch((e: unknown) => log(`[subagents] run=${id} discarding its copy failed: ${String(e)}`));
-    };
     let reopened: boolean;
     try {
       reopened = await io.store.reopenRun(id, ctx.personId);
     } catch (e) {
       release(ctx.projectId, id);
-      await discard();
       throw e;
     }
     if (!reopened) {
       // Someone else woke it meanwhile: it works now, so the message waits in its inbox.
       release(ctx.projectId, id);
-      await discard();
       return isLive(ctx.projectId, id) ? toInbox() : { ok: false, code: "unavailable", message: unavailableError(id) };
     }
-    if (w) await io.store.setWorktree?.(id, w).catch((e: unknown) => log(`[subagents] run=${id} saving its copy failed: ${String(e)}`));
+    const w = isolates(id, type, scope, first.worktreeBranch ? "worktree" : undefined) ? await makeCopy(id) : undefined;
+    if (w === null) {
+      await failUnstarted(id, first);
+      release(ctx.projectId, id);
+      return { ok: false, code: "unavailable", message: WORKTREE_FAILED };
+    }
+    try { if (w) await io.store.setWorktree?.(id, w); }
+    catch (error) { if (w) await discardUnused(id, w, first.description); await failUnstarted(id, first); release(ctx.projectId, id); throw error; }
     // Read again now that it is ours: what a stop kept in its transcript while this message was on its way.
     const row = (await io.store.runOfCurrentConversation(ctx.projectId, id).catch(() => null)) ?? first;
     const transcript = (row.transcript as Message[] | null) ?? [];
@@ -696,6 +724,18 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
 
   const withLine = <M extends Message>(m: M, w: AgentWorktree | null): M => (w ? { ...m, content: `${m.content}\n\n${isolationLine(w.branch)}` } : m);
 
+  async function failUnstarted(id: string, prior?: SubagentRunRow) {
+    await io.store.settleRun(id, { status: "error", finalText: prior?.finalText ?? "", diagnostic: WORKTREE_FAILED, transcript: prior?.transcript ?? [], actions: prior?.actions ?? [], usage: prior?.usage ?? NO_USAGE, toolUses: prior?.toolUses ?? 0, durationMs: prior?.durationMs ?? 0, chargedCenticredits: prior?.chargedCenticredits ?? 0 }).catch(e => log(`[subagents] run=${id} saving failed launch: ${String(e)}`));
+  }
+
+  async function discardUnused(id: string, w: AgentWorktree, description: string) {
+    const session = { ...ctx.sessionBase, projectId: ctx.projectId, userId: ctx.userId, turnId: ctx.turnId, terminalHolderId: id, page: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
+    try {
+      const result = await io.finishWorktree!({ w, description, session });
+      await io.store.setWorktreeOutcome?.(id, result.outcome);
+    } catch (e) { log(`[subagents] run=${id} discarding unused copy failed: ${String(e)}`); }
+  }
+
   /** Len's tools a general-purpose child may run: a fork is declared all of Len's (his cached prefix) and gated to these. */
   const generalPurposeNames = (planMode: boolean) => new Set(childToolDeclarations(ctx.declarations, "general-purpose", planMode).map((d) => String(d.name)));
 
@@ -711,15 +751,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const id = io.newId();
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
-      const w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
-      if (w === null) {
-        release(ctx.projectId, id);
-        return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED };
-      }
+      let w: AgentWorktree | null | undefined;
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode });
+        w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+        if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
+        if (w) await discardUnused(id, w, o.description);
+        await failUnstarted(id);
         release(ctx.projectId, id);
         throw e;
       }
@@ -750,15 +790,15 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const abort = new AbortController();
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
       const type: ChildType = { kind: "builtin", preset: "general-purpose" };
-      const w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
-      if (w === null) {
-        release(ctx.projectId, id);
-        return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED };
-      }
+      let w: AgentWorktree | null | undefined;
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode });
+        w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+        if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
+        if (w) await discardUnused(id, w, o.description);
+        await failUnstarted(id);
         release(ctx.projectId, id);
         throw e;
       }

@@ -9,7 +9,7 @@
 import "server-only";
 import { and, asc, desc, eq, like, or } from "drizzle-orm";
 
-import { db, schema } from "@/lib/db";
+import { db, schema, afterCommit } from "@/lib/db";
 import { folderFingerprint } from "@/lib/projects/files-hash";
 import { isRemixedFolderPath } from "@/lib/agent/ficheros/folder";
 
@@ -33,7 +33,7 @@ async function refreshFilesHash(projectId: string): Promise<void> {
  *  importa el registro, que importa este fichero. */
 function despuesDeCambiar(projectId: string, paths: readonly string[]): void {
   if (!paths.some((p) => p.startsWith("/supabase/functions/") || p === "/supabase/config.toml")) return;
-  void import("@/lib/functions/deploy").then((m) => m.scheduleDraftDeployIfEnabled(projectId)).catch(() => undefined);
+  afterCommit(() => { void import("@/lib/functions/deploy").then((m) => m.scheduleDraftDeployIfEnabled(projectId)).catch(() => undefined); });
 }
 
 export async function saveProjectFile(projectId: string, path: string, content: string): Promise<void> {

@@ -37,6 +37,17 @@ beforeEach(async () => {
 });
 
 describe("subagentRuns", () => {
+  it("unfinished copies include archived rows independently of notices", async () => {
+    await store.createRun({ id: "archived", ...RUN, chatRowId: "row-old" });
+    await store.setWorktree("archived", { copyId: "copy", branch: "b", base: "base" });
+    await store.settleRun("archived", { ...SETTLED, status: "completed", diagnostic: null });
+    expect((await store.undeliveredSettledRuns()).map(r => r.id)).toEqual([]);
+    expect((await store.unfinishedWorktreeRuns()).map(r => r.id)).toEqual(["archived"]);
+    await store.setWorktreeOutcome("archived", { state: "kept", branch: "b", copyId: "copy" });
+    expect((await store.unfinishedWorktreeRuns()).map(r => r.id)).toEqual(["archived"]);
+    await store.setWorktreeOutcome("archived", { state: "nothing" });
+    expect(await store.unfinishedWorktreeRuns()).toEqual([]);
+  });
   it("a new run is running, and a turn's row lists it", async () => {
     await store.createRun({ id: "r1", ...RUN });
     const runs = await store.runsOfRow("p1", "row1");

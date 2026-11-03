@@ -555,6 +555,7 @@
   },
   "subagent": {
     "worktree": {
+      "retained": "could not save: its copy is kept for recovery",
       "working": "in its own copy",
       "brought": "brought {n, plural, one {# file} other {# files}}",
       "conflict": "clashed with your changes: its work is still on its branch",

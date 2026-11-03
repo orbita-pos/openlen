@@ -555,6 +555,7 @@
   },
   "subagent": {
     "worktree": {
+      "retained": "无法保存：副本已保留以便恢复",
       "working": "在独立副本中工作",
       "brought": "已合入 {n} 个文件",
       "conflict": "与你的更改冲突：工作内容仍保留在其分支上",

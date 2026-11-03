@@ -81,6 +81,7 @@
       "trabajando": "{n, plural, one {# sous-agent au travail} other {# sous-agents au travail}}",
       "origen": "Résultats des sous-agents",
       "worktree": {
+      "retained": "impossible d'enregistrer : sa copie est conservée pour récupération",
         "working": "dans sa propre copie",
         "brought": "a rapporté {n, plural, one {# fichier} other {# fichiers}}",
         "conflict": "conflit avec vos modifications : son travail reste sur sa branche",

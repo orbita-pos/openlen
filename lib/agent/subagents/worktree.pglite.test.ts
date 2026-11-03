@@ -9,7 +9,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
 
-const base = vi.hoisted(() => ({ db: null as unknown }));
+const base = vi.hoisted(() => ({ db: null as unknown, scope: null as unknown, failCommit: false, failRemove: false }));
+vi.mock("@/lib/len-watch/worktree", async (original) => {
+  const real = await original<typeof import("@/lib/len-watch/worktree")>();
+  return { ...real, removeWorktree: (...args: Parameters<typeof real.removeWorktree>) => {
+    if (base.failRemove) throw new Error("cleanup failed");
+    return real.removeWorktree(...args);
+  }, commitLeftovers: (...args: Parameters<typeof real.commitLeftovers>) => {
+    if (base.failCommit) throw new Error("object write failed");
+    return real.commitLeftovers(...args);
+  } };
+});
 vi.mock("@/lib/db", async () => {
   const s = await import("@/lib/db/schema");
   return {
@@ -17,11 +27,13 @@ vi.mock("@/lib/db", async () => {
     get db() {
       return base.db;
     },
+    inTransaction: (f: () => Promise<unknown>) => (base.scope as { run(f: () => Promise<unknown>): Promise<unknown> }).run(f),
   };
 });
 
 await import("@/lib/db");
 const wt = await import("./worktree");
+const { transactionScope } = await import("@/lib/db/transaction-scope");
 const { postgresStore } = await import("@/lib/git/postgres-store");
 const { runGit } = await import("@/lib/git/run");
 const { identityOf } = await import("@/lib/git/service");
@@ -31,6 +43,8 @@ let pg: PGlite;
 const DATA = { html: "<p>Home</p>" };
 
 beforeEach(async () => {
+  base.failCommit = false;
+  base.failRemove = false;
   pg = new PGlite();
   await pg.exec(`
     create table "users" ("id" text primary key, "name" text, "handle" text);
@@ -61,7 +75,9 @@ beforeEach(async () => {
   `);
   await pg.query(`insert into "projects" ("id", "userId", "data", "userBrief") values ('p', 'owner', $1, 'Use the blue.')`, [JSON.stringify(DATA)]);
   await pg.query(`insert into "projectFiles" ("projectId", "path", "content") values ('p', '/src/a.ts', 'export const a = 1;\n')`);
-  base.db = drizzle(pg, { schema });
+  const scope = transactionScope(drizzle(pg, { schema }) as never);
+  base.db = scope.db;
+  base.scope = scope;
 });
 
 const filesOf = async (projectId: string) =>
@@ -76,6 +92,11 @@ async function gitInParent(args: string[]) {
 }
 
 describe("an isolated child's copy", () => {
+  it("a registration failure rolls back the copy, branch and repository creation", async () => {
+    await expect(wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "registration", register: async () => { throw new Error("register failed"); } })).rejects.toThrow("register failed");
+    expect((await pg.query(`select id from projects where "parentProjectId"='p'`)).rows).toEqual([]);
+    expect(await postgresStore("p").readRepo()).toBeNull();
+  });
   it("agentBranchName takes the next free name", () => {
     expect(wt.agentBranchName("ab12", new Set())).toBe("worktree-agent-ab12");
     expect(wt.agentBranchName("ab12", new Set(["worktree-agent-ab12"]))).toBe("worktree-agent-ab12-2");
@@ -146,6 +167,45 @@ const branchTip = async (branch: string) => (await postgresStore("p").readRepo()
 const THREE = "line one\nline two\nline three\n";
 
 describe("bringing the copy back", () => {
+  it("cleanup failure after a committed merge preserves its undo and retryable copy reference", async () => {
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "cleanup" });
+    await write(w.copyId, "/src/a.ts", "child");
+    base.failRemove = true;
+    const result = await finish(w, saver().save);
+    expect(result.outcome).toEqual({ state: "brought", files: ["/src/a.ts"], copyId: w.copyId });
+    expect(result.changes?.before["/src/a.ts"]).toBe("export const a = 1;\n");
+    expect((await filesOf("p"))["/src/a.ts"]).toBe("child");
+    expect(await branchTip(w.branch)).toBeTruthy();
+    base.failRemove = false;
+    const retried = await wt.finishAgentWorktree({ parentId: "p", ownerId: "owner", w, description: "cleanup retry", save: saver().save, previous: result.outcome });
+    expect(retried).toEqual({ outcome: { state: "brought", files: ["/src/a.ts"] }, changes: null });
+    expect(await projectRow(w.copyId)).toBeUndefined();
+  });
+  it("a write after the final recheck still uses the planned draft as its expected version", async () => {
+    await write("p", "/src/a.ts", THREE);
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "late" });
+    await write(w.copyId, "/src/a.ts", "child\nline two\nline three\n");
+    let moved = false;
+    const result = await wt.finishAgentWorktree({ parentId: "p", ownerId: "owner", w, description: "late",
+      onRechecked: async () => { if (!moved) { moved = true; await write("p", "/src/a.ts", "line one\nline two\nparent\n"); } },
+      save: async (changes, expected) => {
+        const current = await filesOf("p");
+        if (changes.some(c => current[c.ruta] !== expected[c.ruta])) return { rechazado: false, retry: true };
+        for (const c of changes) await write("p", c.ruta, c.tipo === "borrado" ? null : c.contenido);
+        return { rechazado: false };
+      },
+    });
+    expect(result.outcome.state).toBe("brought");
+    expect((await filesOf("p"))["/src/a.ts"]).toBe("child\nline two\nparent\n");
+  });
+  it("a failed leftovers commit keeps the dirty copy and a retryable recovery location", async () => {
+    const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "failed" });
+    await write(w.copyId, "/src/a.ts", "unsaved child work");
+    base.failCommit = true;
+    const result = await finish(w, saver().save);
+    expect(result.outcome).toMatchObject({ state: "kept", copyId: w.copyId });
+    expect((await filesOf(w.copyId))["/src/a.ts"]).toBe("unsaved child work");
+  });
   it("nothing changed", async () => {
     const w = await wt.addAgentWorktree({ parentId: "p", ownerId: "owner", runId: "n1" });
     const r = await finish(w, saver().save);

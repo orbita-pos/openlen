@@ -3,7 +3,7 @@
 // once, with compare-and-set, so a restart never hands it to Len twice. Since phase 2 a settled child can be
 // reopened (`send_message` wakes it from its transcript): the same row runs again.
 import "server-only";
-import { and, asc, eq, getTableColumns, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, inArray, isNull, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 import type { SubagentStatus, SubagentStopReason, WorktreeOutcome } from "./notice";
@@ -156,6 +156,11 @@ export async function runOfCurrentConversation(projectId: string, id: string): P
 /** What a previous process left running (boot). */
 export async function runningRuns(): Promise<SubagentRunRow[]> {
   return (await db.select().from(t).where(eq(t.status, "running")).orderBy(asc(t.createdAt), asc(t.id))) as SubagentRunRow[];
+}
+
+/** Resource recovery is independent of whether an archived conversation still owes a notice. */
+export async function unfinishedWorktreeRuns(): Promise<SubagentRunRow[]> {
+  return await db.select().from(t).where(and(isNotNull(t.worktreeCopyId), or(isNull(t.worktreeOutcome), sql`${t.worktreeOutcome}->>'copyId' is not null`))) as SubagentRunRow[];
 }
 
 /** Settled runs whose notice never reached Len: a project's, or every project's (the boot cleanup). Only the current

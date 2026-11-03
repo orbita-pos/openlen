@@ -3,6 +3,7 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { Pool } from "pg";
 import { drizzle as drizzlePg, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
+import { transactionScope } from "./transaction-scope";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Drizzle client — auto-selects the driver from DATABASE_URL so the SAME code is
@@ -15,8 +16,8 @@ import * as schema from "./schema";
 //     real connection Pool, the right shape for a long-lived server next to PG.
 //
 // Cutover to the box is then just a DATABASE_URL change. The app uses only the
-// shared Drizzle query API (zero db.transaction() calls), so both drivers are
-// interchangeable behind one NodePgDatabase-typed handle.
+// shared Drizzle query API. Explicit atomic work uses a short-lived pg pool on
+// Neon too: neon-http cannot run interactive transactions.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const connectionString = process.env.DATABASE_URL;
@@ -41,7 +42,7 @@ const needsTls = /\bsslmode=(require|verify-ca|verify-full)\b/.test(url);
 // neon-http and node-postgres expose the same Drizzle query API the app uses, so
 // cast the Neon handle to the pg handle type to keep the ~100 call sites
 // driver-agnostic behind a single `db`.
-export const db: NodePgDatabase<typeof schema> = isNeon
+const rootDb: NodePgDatabase<typeof schema> = isNeon
   ? (drizzleNeon({ client: neon(url), schema }) as unknown as NodePgDatabase<typeof schema>)
   : drizzlePg(
       new Pool({
@@ -52,4 +53,13 @@ export const db: NodePgDatabase<typeof schema> = isNeon
       { schema },
     );
 
+let transactionDb: NodePgDatabase<typeof schema> | undefined;
+const scope = transactionScope(rootDb, () => {
+  if (!isNeon) return rootDb;
+  // Lazy and quickly idle: ordinary Neon requests keep the stateless HTTP driver.
+  return transactionDb ??= drizzlePg(new Pool({ connectionString: url, max: 2, idleTimeoutMillis: 1_000, ssl: needsTls ? { rejectUnauthorized: false } : undefined }), { schema });
+});
+export const db = scope.db;
+export const inTransaction = scope.run;
+export const afterCommit = scope.afterCommit;
 export { schema };

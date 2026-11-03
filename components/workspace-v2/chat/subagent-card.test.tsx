@@ -53,6 +53,7 @@ describe("a subagent's card", () => {
     [{ state: "brought", files: ["/a", "/b"] }, "trajo 2 ficheros"],
     [{ state: "conflict", files: ["/a"], branch: "b" }, "chocó con tus cambios: lo suyo sigue en su rama"],
     [{ state: "kept", branch: "b" }, "no se pudo traer: lo suyo sigue en su rama"],
+    [{ state: "kept", branch: "b", copyId: "copy" }, "no se pudo guardar: su copia se conserva para recuperarla"],
     [{ state: "nothing" }, null], [null, null],
   ])("an isolated child says where it works and what it brought (%j)", (worktree, want) => {
     subagentsLive.fromServer("p1", [{ ...RUN, worktree }]);

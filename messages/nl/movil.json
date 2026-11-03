@@ -81,6 +81,7 @@
       "trabajando": "{n, plural, one {# subagent aan het werk} other {# subagents aan het werk}}",
       "origen": "Resultaten van de subagents",
       "worktree": {
+      "retained": "opslaan mislukt: de kopie blijft bewaard voor herstel",
         "working": "in een eigen kopie",
         "brought": "{n, plural, one {# bestand} other {# bestanden}} overgenomen",
         "conflict": "conflict met je wijzigingen: het werk staat nog op de eigen branch",
