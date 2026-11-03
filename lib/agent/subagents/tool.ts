@@ -173,6 +173,8 @@ export type SendResult =
   | { ok: false; code: "unavailable" | "too_many_subagents" | "turn_budget_reached"; message: string };
 
 export interface SubagentsDeps {
+  /** Re-read project/speaker types after their files changed, before validating a launch. */
+  refreshTypes?(): Promise<void>;
   typeNames(): readonly string[];
   launch(o: { description: string; prompt: string; preset: string; fromSkill?: string }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
@@ -193,6 +195,7 @@ export async function toolSubagent(_session: AgentSession, deps: AgentDeps, args
   if (!description) return invalid("description is required: a short (3-5 word) description of the task.");
   if (!prompt) return invalid("prompt is required: the complete, self-contained task.");
   const preset = args.agent_preset ?? "general-purpose";
+  await deps.subagents?.refreshTypes?.();
   const names = deps.subagents?.typeNames?.() ?? SUBAGENT_PRESETS;
   if (typeof preset !== "string" || !names.includes(preset)) {
     return invalid(`agent_preset must be one of: ${names.join(", ")}`);

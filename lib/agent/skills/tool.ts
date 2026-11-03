@@ -90,6 +90,7 @@ export async function toolSkill(session: AgentSession, args: Record<string, unkn
   if (!found.skill.modelInvocable) return { response: { ok: false, error: `skill "${name}" is not available for model invocation` } };
   if (session.runningSkill === name) return { response: { ok: false, error: ALREADY_RUNNING_IT } };
   if (found.skill.fork && deps?.subagents && subagentsEnabled(process.env)) {
+    await deps.subagents.refreshTypes?.();
     const preset = found.skill.fork.agent;
     const names = deps.subagents.typeNames?.() ?? [...BUILT_IN_AGENT_TYPES];
     if (!names.includes(preset)) return { response: { ok: false, error: "invalid_arguments", message: `agent_preset must be one of: ${names.join(", ")}` } };

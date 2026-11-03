@@ -254,7 +254,6 @@ export function operacionDeLaVuelta(
 }
 
 export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
-  const wireTools = toolsForFireworks(options.tools);
   // Una vuelta con fotos y un agente que NO ve la corre el PAPEL CON VISION
   // (`operacionDeLaVuelta`), y cada papel trae su tarifa. Sin esta bandera se
   // cobraria al precio del que no corrio — la misma clase de error que
@@ -550,7 +549,9 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           // plantilla del modelo pone las herramientas en el prompt de sistema).
           // Sin ellas, la llamada del cierre se pagaba entera sin caché
           // (auditoría de los sospechosos, `cache-suspects.test.ts`).
-          tools: wireTools,
+          // A turn can refresh custom agent choices after editing their files. Read its declarations
+          // for each request; unchanged declarations still serialize byte for byte identically.
+          tools: toolsForFireworks(options.tools),
           ...(withTools ? {} : { toolChoice: "none" as const }),
           // LOS TROZOS DE LOS ARGUMENTOS, para pintar un Write mientras se
           // escribe. Sólo en el bucle: el cierre no llama a nada.

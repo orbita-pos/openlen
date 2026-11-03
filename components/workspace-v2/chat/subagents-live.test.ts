@@ -44,3 +44,23 @@ describe("the chat's view of the subagents", () => {
     expect(subagentsLive.snapshot()).toBe(before);
   });
 });
+
+it("a turn-limited run stops the live count and accepts its closing result, including on reload", () => {
+  const row = { id: "r1", preset: "reviewer", description: "Review", status: "turn_limit", actions: [], finalText: "Checked two pages.", toolUses: 2, durationMs: 100 };
+  subagentsLive.event("p1", started);
+  subagentsLive.event("p1", { ...started, status: "turn_limit" });
+  expect(subagentsLive.runningCount("p1")).toBe(0);
+  subagentsLive.fromServer("p1", [row]);
+  expect(subagentsLive.snapshot().get("r1")).toMatchObject({ status: "turn_limit", finalText: "Checked two pages." });
+  subagentsLive.forget();
+  subagentsLive.fromServer("p1", [row]);
+  expect(subagentsLive.snapshot().get("r1")).toMatchObject({ status: "turn_limit", finalText: "Checked two pages." });
+});
+
+it("keeps the full custom type name from stream events and server rows", () => {
+  const preset = "reviewer-" + "a".repeat(55);
+  subagentsLive.event("p1", { ...started, preset });
+  expect(subagentsLive.snapshot().get("r1")!.preset).toBe(preset);
+  subagentsLive.fromServer("p1", [{ ...started, preset, actions: [], finalText: null, toolUses: 0, durationMs: null }]);
+  expect(subagentsLive.snapshot().get("r1")!.preset).toBe(preset);
+});

@@ -164,3 +164,18 @@ describe("provider faults against real sockets", () => {
     expect(t.result.terminalError).toBe(true);
   });
 });
+
+it("refreshes changed tool declarations on the next provider request", async () => {
+  server = await startFaultServer({ "/deepinfra": [ok("First."), ok("Second.")] });
+  const local = server;
+  const tools = [{ name: "subagent", parameters: { type: "OBJECT", properties: { agent_preset: { type: "STRING", enum: ["general-purpose"] } } } }];
+  const calls: BrainCall[] = [];
+  const brain = createAgentBrain({ tools, requestId: "p1", env: { OPENLEN_AGENT_PROVIDERS: "deepinfra", DEEPINFRA_API_KEY: "test" }, streamClientFor: (p) => createFireworksStreamClient({ endpoint: local.url(`/${p.id}`), apiKey: "test", modelId: p.modelId }), onCall: (c) => calls.push(c) });
+  const messages = [{ role: "user" as const, content: "Review." }];
+  for await (const event of brain.openStream(messages)) void event;
+  tools[0] = { name: "subagent", parameters: { type: "OBJECT", properties: { agent_preset: { type: "STRING", enum: ["general-purpose", "reviewer"] } } } };
+  for await (const event of brain.openStream(messages)) void event;
+  expect(local.requests("/deepinfra")).toBe(2);
+  expect(JSON.stringify(calls[0].wire!.tools)).not.toContain('"reviewer"');
+  expect(JSON.stringify(calls[1].wire!.tools)).toContain('"reviewer"');
+});

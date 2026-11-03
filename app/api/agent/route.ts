@@ -670,12 +670,32 @@ async function correrTurno(
   // and pull request protocol; without one it stays byte for byte as before.
   const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
   const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId;
-  const [projectAgentTypes, personalAgentTypes] = subagentsOn ? await Promise.all([
-    conPlazo(async () => (await deps.agentStore?.list("project", projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
-    conPlazo(async () => (await deps.agentStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
-  ]) : [[], []];
-  const agentTypes = resolveAgentTypes({ project: projectAgentTypes, personal: personalAgentTypes });
+  const loadAgentTypes = async () => {
+    const [projectTypes, personalTypes] = subagentsOn ? await Promise.all([
+      conPlazo(async () => (await deps.agentStore?.list("project", projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+      conPlazo(async () => (await deps.agentStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
+    ]) : [[], []];
+    return resolveAgentTypes({ project: projectTypes, personal: personalTypes });
+  };
+  let agentTypes = await loadAgentTypes();
   const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno);
+  let typesRefresh = Promise.resolve();
+  const refreshAgentTypes = (): Promise<void> => {
+    if (!subagentsOn) return Promise.resolve();
+    // Serialized reads cannot overwrite a newer definition with an older in-flight read.
+    typesRefresh = typesRefresh.then(async () => {
+      const next = await loadAgentTypes();
+      const changed = JSON.stringify(next.custom) !== JSON.stringify(agentTypes.custom);
+      agentTypes = next;
+      if (changed) tools.splice(0, tools.length, ...buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
+    });
+    return typesRefresh;
+  };
+  const runToolWithAgentTypes: typeof runAgentTool = async (session, d, name, args) => {
+    const result = await runAgentTool(session, d, name, args);
+    if (name === "Write" || name === "Edit" || name === "bash") await refreshAgentTypes();
+    return result;
+  };
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador
   // sólo se acepta un NOMBRE de herramienta que exista, sin argumentos, y un
   // resumen acotado. Vive fuera para que el arnés de evals reproduzca una
@@ -1896,7 +1916,7 @@ async function correrTurno(
             });
             return { openStream: b.openStream, closeOut: b.closeOut, modelId: b.modelId, lastProvider: () => b.lastProvider() };
           },
-          runTool: (session, d, name, args) => runAgentTool(session, d, name, args),
+          runTool: runToolWithAgentTypes,
           store: { createRun, saveProgress, settleRun, reopenRun, runsOfCurrentConversation, runOfCurrentConversation },
           charge: async (c) => {
             await chargeCredits(c.ownerId, c.centicredits, {
@@ -1935,7 +1955,8 @@ async function correrTurno(
                 ownerId: userId,
                 userId,
                 personId: quien,
-                agentTypes,
+                get agentTypes() { return agentTypes; },
+                refreshAgentTypes,
                 turnId: turnoId,
                 chatRowId: filaId,
                 mode,
@@ -2184,7 +2205,7 @@ async function correrTurno(
           runTool: async (name, args) => {
             // Nada se escribe antes de la foto del principio.
             await fotoAntes;
-            const outcome = await runAgentTool(agentSession, depsDelTurno, name, args);
+            const outcome = await runToolWithAgentTypes(agentSession, depsDelTurno, name, args);
             diario.anotar(name, outcome.response, args);
             // LA CARPETA (pieza 9 de Len 2.5, carril B): los ficheros que cambió
             // esta herramienta, cada uno con la versión de su «antes», para

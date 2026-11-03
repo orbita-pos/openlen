@@ -933,3 +933,23 @@ it("a child launched by a fork skill knows the skill it is running, also after a
   // Force a tool in the next activation so the session becomes observable.
   expect((s.rows.get("r1")!.transcript as (Message & { runningSkill?: string })[]).some((m) => m.runningSkill === "summarize")).toBe(true);
 });
+
+it("refreshes a deleted custom type before waking its idle run", async () => {
+  const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [dice("ok")] });
+  let current = s.ctx.agentTypes;
+  let next = current;
+  const launcher = createSubagentLauncher({ ...s.ctx, get agentTypes() { return current; }, refreshAgentTypes: async () => { current = next; } } as LaunchContext, s.io);
+  await launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+  await s.settled("r1");
+  next = NO_AGENT_TYPES;
+  const calls = s.g.seen.length;
+  expect(await launcher.send({ id: "r1", message: "Again." })).toMatchObject({ ok: false, message: 'subagent "r1" has no agent preset projection for restoration' });
+  expect(s.g.seen).toHaveLength(calls);
+});
+
+it("a turn-limited close-out keeps its closing report after an earlier message to Len", async () => {
+  const s = setup({ agentTypes: customTypes("tools: send_message\nmaxTurns: 1"), scripts: [llama("send_message", { agent_id: "len", message: "Initial finding." }), dice("Another file is still unchecked.")] });
+  await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+  expect((await s.settled("r1")).status).toBe("turn_limit");
+  expect(takeNotices("p").at(-1)!.text).toContain("Its closing message:\nAnother file is still unchecked.");
+});

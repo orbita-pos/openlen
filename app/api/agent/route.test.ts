@@ -87,7 +87,7 @@ const mocks = vi.hoisted(() => {
   renderViewports: vi.fn(async () => ({ desktop: "d", mobile: "m" })),
   poolRender: vi.fn(async () => ({ desktop: "pool-d", mobile: "pool-m" })),
   poolClose: vi.fn(async () => {}),
-  buildFunctionDeclarations: vi.fn(() => []),
+  buildFunctionDeclarations: vi.fn((_env?: unknown, _caps?: unknown, _mode?: unknown, _app?: unknown): Record<string, unknown>[] => []),
   buildAgentMessages: vi.fn(() => ({
     ok: true as const,
     messages: [{ role: "user", content: "cambia el título" }],
@@ -3820,6 +3820,35 @@ describe("POST /api/agent — Len's subagents", () => {
     const io = launcherArgs()[1] as unknown as import("@/lib/agent/subagents/run").RunnerIO;
     io.brain([], "r1", new AbortController().signal, "high");
     expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ esfuerzoDelTurno: "high" }));
+  });
+
+  it("refreshes custom choices after creating and deleting a type in the same turn", async () => {
+    const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
+    let rows: typeof type[] = [];
+    const observed: unknown[] = [];
+    agentTypeStore.list.mockImplementation(async (scope) => scope === "project" ? rows : []);
+    mocks.buildFunctionDeclarations.mockImplementation((_env, caps) => [{ name: "subagent", names: (caps as { agentTypes: Ctx["agentTypes"] }).agentTypes.names() }]);
+    mocks.runAgentTool.mockImplementation(async (_session, _deps, name) => {
+      if (name === "Write") rows = [type];
+      if (name === "bash") rows = [];
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"));
+      await args.runTool("Write", { file_path: "/.len/agents/reviewer.md", content: type.text });
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), args.tools.find((d) => d.name === "subagent")!.names);
+      await args.runTool("bash", { command: "rm /.len/agents/reviewer.md" });
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), args.tools.find((d) => d.name === "subagent")!.names);
+      return cierre();
+    });
+    try {
+      await pedir();
+      expect(observed).toEqual([false, true, ["general-purpose", "Explore", "Plan", "reviewer"], false, ["general-purpose", "Explore", "Plan"]]);
+    }
+    finally {
+      agentTypeStore.list.mockImplementation(async () => []);
+      mocks.buildFunctionDeclarations.mockImplementation(() => []);
+    }
   });
 
   it("loads the project's and the speaker's custom types into the catalog and launcher", async () => {

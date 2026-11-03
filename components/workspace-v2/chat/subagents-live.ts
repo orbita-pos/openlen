@@ -20,7 +20,7 @@ export interface SubagentRunView {
   readonly forked?: boolean;
 }
 
-const STATUSES: readonly SubagentStatus[] = ["running", "completed", "aborted", "error", "budget"];
+const STATUSES: readonly SubagentStatus[] = ["running", "completed", "aborted", "error", "budget", "turn_limit"];
 const STEP_STATUSES: readonly AgentAction["status"][] = ["running", "done", "warning", "error"];
 
 const str = (v: unknown, max: number): string | null => (typeof v === "string" ? v.slice(0, max) : null);
@@ -44,7 +44,7 @@ function runFrom(projectId: string, v: unknown): SubagentRunView | null {
   return {
     id,
     projectId,
-    preset: str(o.preset, 32) ?? "general-purpose",
+    preset: str(o.preset, 64) ?? "general-purpose",
     description: str(o.description, 200) ?? "",
     status,
     actions: Array.isArray(o.actions) ? o.actions.flatMap((a) => stepFrom(a) ?? []) : [],
@@ -94,7 +94,7 @@ export const subagentsLive = {
       {
         id,
         projectId,
-        preset: str(o.preset, 32) ?? prev?.preset ?? "general-purpose",
+        preset: str(o.preset, 64) ?? prev?.preset ?? "general-purpose",
         description: str(o.description, 200) ?? prev?.description ?? "",
         status,
         actions,

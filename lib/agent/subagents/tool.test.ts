@@ -279,3 +279,12 @@ describe("custom types in the subagent tool", () => {
     expect((await toolSubagent(session, deps, { description: "Review", prompt: "Check it.", agent_preset: "missing" })).response).toMatchObject({ ok: false, message: "agent_preset must be one of: general-purpose, Explore, Plan, reviewer" });
   });
 });
+
+it("refreshes types before validating a newly created type", async () => {
+  const { deps, launched } = launching();
+  const names = ["general-purpose"];
+  Object.assign(deps.subagents!, { typeNames: () => names, refreshTypes: async () => { names.push("reviewer"); } });
+  const result = await toolSubagent(session, deps, { description: "Review", prompt: "Check.", agent_preset: "reviewer" });
+  expect(result.response.ok).toBe(true);
+  expect(launched).toMatchObject([{ preset: "reviewer" }]);
+});
