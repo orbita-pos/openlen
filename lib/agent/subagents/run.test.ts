@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { BuildAgentMessagesArgs } from "@/lib/agent/context";
@@ -14,7 +14,7 @@ import type { ConversationRun, SubagentRunRow } from "./store";
 import { createTurnSpend } from "./spend";
 import { NO_AGENT_TYPES, resolveAgentTypes, type AgentTypeSet } from "./agent-registry";
 
-afterEach(() => forgetAllSubagents());
+afterEach(() => { forgetAllSubagents(); vi.unstubAllEnvs(); });
 
 const done: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
 const usage = (o: number): StreamEvent => ({ type: "usage", inputTokens: 1000, outputTokens: o, cachedTokens: 0, thinkingTokens: 0 });
@@ -61,6 +61,7 @@ function setup(
   o: {
     scripts?: StreamEvent[][];
     agentTypes?: AgentTypeSet;
+    skills?: AgentSession["skills"];
     turnAlive?: boolean;
     turnOpen?: boolean;
     spendCap?: number;
@@ -92,6 +93,7 @@ function setup(
   const brainTools: Record<string, unknown>[][] = [];
   const brainEfforts: unknown[] = [];
   const closeOuts: Message[][] = [];
+  const logs: string[] = [];
   const browsersClosed: AgentSession[] = [];
   const reopens: [string, string][] = [];
   const saves: Record<string, unknown>[] = [];
@@ -99,6 +101,7 @@ function setup(
   const snapshots = [...(o.snapshots ?? [])];
   let n = 0;
   const io: RunnerIO = {
+    log: (line) => void logs.push(line),
     brain: (tools, _runId, signal, effort) => {
       brainEfforts.push(effort);
       brainSignals.push(signal);
@@ -178,7 +181,7 @@ function setup(
     forkSeed: o.forkSeed ?? [],
     declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
     deps: {} as AgentDeps,
-    sessionBase: { skills: new Map() as never, ownerEmail: null },
+    sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null },
     spend: createTurnSpend(o.spendCap ?? 10_000, () => lenSpent),
     emit: (ev) => void events.push(ev),
     isMember: false,
@@ -188,7 +191,7 @@ function setup(
     for (let i = 0; i < 200 && rows.get(id)?.status === "running"; i++) await new Promise((r) => setTimeout(r, 2));
     return rows.get(id)!;
   };
-  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, brainEfforts, closeOuts, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
+  return { g, io, rows, reopens, saves, flushes, sessions, ran, charges, terminals, noticeTurns, changes, events, brainSignals, brainTools, brainEfforts, closeOuts, logs, browsersClosed, ctx, launcher, settled, setLen: (v: number) => (lenSpent = v) };
 }
 
 describe("the launcher of Len's subagents", () => {
@@ -873,5 +876,49 @@ describe("a custom type's effort and call limit", () => {
     await s.launcher.launch({ description: "Read", prompt: "Check.", preset: "general-purpose" });
     expect((await s.settled("r1")).status).toBe("completed");
     expect(s.closeOuts).toEqual([]);
+  });
+});
+
+async function preloadSkills() {
+  const { resolveSkills } = await import("@/lib/agent/skills/registry");
+  return resolveSkills({ bundled: [], project: ["alpha", "beta", "hidden"].map((name) => ({ name, text: `---\nname: ${name}\ndescription: ${name}\n${name === "hidden" ? "disable-model-invocation: true\n" : ""}---\nFULL ${name} INSTRUCTIONS.`, updatedAt: new Date(0) })), personal: [] });
+}
+
+describe("skills preloaded in a custom child", () => {
+  it("loads their full bodies in the listed order immediately before the task, without adding them on a wake", async () => {
+    const s = setup({ agentTypes: customTypes("tools: Read, skill\nskills: beta, alpha"), skills: await preloadSkills(), scripts: [dice("ok")] });
+    await s.launcher.launch({ description: "Review", prompt: "THE TASK", preset: "reviewer" });
+    await s.settled("r1");
+    const first = s.g.seen[0];
+    expect(first.at(-3)?.content).toContain('skill_content name="beta"');
+    expect(first.at(-3)?.content).toContain("FULL beta INSTRUCTIONS.");
+    expect(first.at(-2)?.content).toContain('skill_content name="alpha"');
+    expect(first.at(-1)?.content).toContain("THE TASK");
+    await s.launcher.send({ id: "r1", message: "Again." });
+    await s.settled("r1");
+    expect(s.g.seen.at(-1)!.filter((m) => m.content.startsWith('<skill_content name="beta"'))).toHaveLength(1);
+  });
+  it("a preloaded skill already counts as loaded when the child invokes it", async () => {
+    const { toolSkill, alreadyLoaded } = await import("@/lib/agent/skills/tool");
+    const s = setup({ agentTypes: customTypes("tools: Read, skill\nskills: alpha"), skills: await preloadSkills(), scripts: [llama("skill", { name: "alpha" }), dice("ok")] });
+    const answers: unknown[] = [];
+    s.io.runTool = async (session, _deps, _name, args) => { const out = await toolSkill(session, args); answers.push(out.response); return out; };
+    await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+    await s.settled("r1");
+    expect(answers).toEqual([{ ok: true, tool_result: alreadyLoaded("alpha") }]);
+  });
+  it("skips and logs missing or hidden skills, and all skills when disabled, without telling the model", async () => {
+    for (const disabled of [false, true]) {
+      vi.stubEnv("OPENLEN_SKILLS", disabled ? "0" : "1");
+      forgetAllSubagents();
+      const s = setup({ agentTypes: customTypes("tools: Read\nskills: missing, hidden, alpha"), skills: await preloadSkills(), scripts: [dice("ok")] });
+      await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" });
+      await s.settled("r1");
+      const text = JSON.stringify(s.g.seen[0]);
+      expect(text).not.toMatch(/FULL hidden|skill_content.*missing/);
+      expect(s.logs.join("\n")).toContain("missing");
+      expect(s.logs.join("\n")).toContain("hidden");
+      if (disabled) { expect(text).not.toContain("FULL alpha"); expect(s.logs.join("\n")).toContain("alpha"); }
+    }
   });
 });
