@@ -57,4 +57,9 @@ export const ALTER_AGENT_REQUEST_STEPS: readonly string[] = [
 export const ALTER_SUBAGENT_RUNS: readonly string[] = [
   `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "forked" boolean NOT NULL DEFAULT false;`,
   `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "planMode" boolean NOT NULL DEFAULT false;`,
+  // Phase 4: an isolated child's copy, branch, base and how it came back.
+  `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "worktreeCopyId" text;`,
+  `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "worktreeBranch" text;`,
+  `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "worktreeBase" text;`,
+  `ALTER TABLE "subagentRuns" ADD COLUMN IF NOT EXISTS "worktreeOutcome" jsonb;`,
 ];

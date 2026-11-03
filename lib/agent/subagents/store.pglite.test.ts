@@ -96,6 +96,20 @@ describe("subagentRuns", () => {
     expect(cols.rows.map((r) => r.column_name).sort()).toEqual(["id", "subagentId"]);
   });
 
+  it("the worktree columns", async () => {
+    await store.createRun({ id: "r1", ...RUN });
+    expect(await store.runById("r1")).toMatchObject({ worktreeCopyId: null, worktreeBranch: null, worktreeBase: null, worktreeOutcome: null });
+    await store.setWorktree("r1", { copyId: "copy-1", branch: "worktree-agent-r1", base: "a".repeat(40) });
+    await store.setWorktreeOutcome("r1", { state: "conflict", files: ["/src/a.ts"], branch: "worktree-agent-r1" });
+    expect(await store.runById("r1")).toMatchObject({ worktreeCopyId: "copy-1", worktreeBranch: "worktree-agent-r1", worktreeBase: "a".repeat(40), worktreeOutcome: { state: "conflict", files: ["/src/a.ts"], branch: "worktree-agent-r1" } });
+    expect((await store.runsOfRow("p1", "row1"))[0]).toMatchObject({ worktreeBranch: "worktree-agent-r1", worktreeOutcome: { state: "conflict" } });
+    const pg = new PGlite();
+    await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
+    for (let i = 0; i < 2; i++) for (const statement of [...CREATE_SUBAGENTS, ...ALTER_SUBAGENT_RUNS]) await pg.query(statement);
+    const cols = await pg.query<{ column_name: string }>(`select column_name from information_schema.columns where table_name = 'subagentRuns' and column_name like 'worktree%'`);
+    expect(cols.rows.map((r) => r.column_name).sort()).toEqual(["worktreeBase", "worktreeBranch", "worktreeCopyId", "worktreeOutcome"]);
+  });
+
   it("lists only the current conversation's runs, oldest first", async () => {
     await store.createRun({ id: "r1", ...RUN });
     await store.createRun({ id: "r2", ...RUN, chatRowId: "row-old" });

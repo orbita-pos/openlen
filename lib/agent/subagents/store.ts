@@ -6,7 +6,7 @@ import "server-only";
 import { and, asc, eq, getTableColumns, inArray, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
-import type { SubagentStatus, SubagentStopReason } from "./notice";
+import type { SubagentStatus, SubagentStopReason, WorktreeOutcome } from "./notice";
 
 export type { SubagentStatus } from "./notice";
 
@@ -37,6 +37,11 @@ export interface SubagentRunRow {
   readonly forked: boolean;
   /** Started while Len was in plan mode: read-only for good. */
   readonly planMode: boolean;
+  /** Phase 4: an isolated child's copy, branch and base, and how the copy came back. */
+  readonly worktreeCopyId: string | null;
+  readonly worktreeBranch: string | null;
+  readonly worktreeBase: string | null;
+  readonly worktreeOutcome: WorktreeOutcome | null;
 }
 
 export type NewSubagentRun = Pick<SubagentRunRow, "id" | "projectId" | "chatRowId" | "turnId" | "personId" | "preset" | "description" | "prompt" | "forked" | "planMode">;
@@ -77,6 +82,15 @@ export async function settleRun(id: string, s: SettledRun): Promise<void> {
     .update(t)
     .set({ ...s, settledAt: new Date() })
     .where(eq(t.id, id));
+}
+
+/** An isolated child's copy (phase 4), recorded before it starts working in it. */
+export async function setWorktree(id: string, w: { copyId: string; branch: string; base: string }): Promise<void> {
+  await db.update(t).set({ worktreeCopyId: w.copyId, worktreeBranch: w.branch, worktreeBase: w.base, worktreeOutcome: null }).where(eq(t.id, id));
+}
+
+export async function setWorktreeOutcome(id: string, o: WorktreeOutcome): Promise<void> {
+  await db.update(t).set({ worktreeOutcome: o }).where(eq(t.id, id));
 }
 
 /** True only for the call that marked it: the notice goes once. A run that runs again (woken) is not marked by an

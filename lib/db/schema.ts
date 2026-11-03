@@ -2685,6 +2685,12 @@ export const subagentRuns = pgTable(
     forked: boolean("forked").notNull().default(false),
     /** Started while Len was in plan mode: it stays read-only when woken later (its scope was fixed at start). */
     planMode: boolean("planMode").notNull().default(false),
+    /** Phase 4 (`isolation: "worktree"`): its copy (a hidden child project), its branch and the draft it started from. */
+    worktreeCopyId: text("worktreeCopyId"),
+    worktreeBranch: text("worktreeBranch"),
+    worktreeBase: text("worktreeBase"),
+    /** How its copy came back into the draft (`WorktreeOutcome`, lib/agent/subagents/notice.ts). */
+    worktreeOutcome: jsonb("worktreeOutcome").$type<import("@/lib/agent/subagents/notice").WorktreeOutcome>(),
   },
   (t) => [index("subagentRuns_projectId_status_idx").on(t.projectId, t.status), index("subagentRuns_chatRowId_idx").on(t.chatRowId)],
 );

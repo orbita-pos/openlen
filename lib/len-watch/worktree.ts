@@ -32,8 +32,9 @@ const CHUNK = 500;
 
 export const branchName = (incidentId: string): string => `len-watch/${incidentId}`;
 
-/** Moves (or, with `oid` null, deletes) a branch of a repository, compare-and-swap with retries. */
-async function setBranch(store: GitStore, branch: string, oid: string | null): Promise<void> {
+/** Moves (or, with `oid` null, deletes) a branch of a repository, compare-and-swap with retries. An isolated
+ *  subagent's copy moves its branch with it too (lib/agent/subagents/worktree.ts). */
+export async function setBranch(store: GitStore, branch: string, oid: string | null): Promise<void> {
   for (let i = 0; i < RETRIES; i++) {
     const r = await store.readRepo();
     if (!r) throw new Error("the project has no repository");
