@@ -169,6 +169,27 @@
     "filterAll": "全部",
     "filterTime": "定时",
     "filterEvents": "事件",
-    "lastCheck": "上次检查：{when}"
+    "lastCheck": "上次检查：{when}",
+    "actionData": "{table} 中的更改",
+    "actionReply": "收件人：{to} · 方式：邮件",
+    "apply": "应用",
+    "applyAndSend": "应用并发送",
+    "rowChanged": "自提醒以来该行已更改：未应用任何内容。",
+    "rowNow": "现在：{now}",
+    "lookAgain": "重新查看",
+    "lookingAgain": "Len 正在重新查看，稍后会收到新提醒。",
+    "dailyLimit": "此任务今天没有剩余的审查次数，请明天再试。",
+    "sending": "正在发送…（第 {attempts} 次尝试）",
+    "sendFailed": "未发送：{error}",
+    "withdraw": "撤回",
+    "withdrawn": "已撤回",
+    "whatWouldYouChange": "你想改什么？（可选）",
+    "askAgain": "换一个建议",
+    "dismissConfirm": "忽略",
+    "repliesGoTo": "回复将发送到 {email}",
+    "doneApplied": "已应用：{result}",
+    "doneSent": "已发送给 {to}",
+    "actionFailed": "无法完成：{error}",
+    "yourNote": "你的备注：{note}"
   }
 }

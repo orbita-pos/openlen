@@ -169,6 +169,27 @@
     "filterAll": "All",
     "filterTime": "Timed",
     "filterEvents": "On events",
-    "lastCheck": "Last check: {when}"
+    "lastCheck": "Last check: {when}",
+    "actionData": "Change in {table}",
+    "actionReply": "To: {to} · By: email",
+    "apply": "Apply",
+    "applyAndSend": "Apply and send",
+    "rowChanged": "The row changed since the notice: nothing was applied.",
+    "rowNow": "Now: {now}",
+    "lookAgain": "Look again",
+    "lookingAgain": "Len is looking again; another notice will come.",
+    "dailyLimit": "No reviews left today for this task. Try tomorrow.",
+    "sending": "Sending… (attempt {attempts})",
+    "sendFailed": "Not sent: {error}",
+    "withdraw": "Withdraw",
+    "withdrawn": "Withdrawn",
+    "whatWouldYouChange": "What would you change? (optional)",
+    "askAgain": "Ask for another",
+    "dismissConfirm": "Dismiss",
+    "repliesGoTo": "Replies will come to {email}",
+    "doneApplied": "Applied: {result}",
+    "doneSent": "Sent to {to}",
+    "actionFailed": "Couldn't do it: {error}",
+    "yourNote": "Your note: {note}"
   }
 }

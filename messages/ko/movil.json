@@ -169,6 +169,27 @@
     "filterAll": "전체",
     "filterTime": "시간",
     "filterEvents": "이벤트",
-    "lastCheck": "마지막 확인: {when}"
+    "lastCheck": "마지막 확인: {when}",
+    "actionData": "{table} 변경",
+    "actionReply": "받는 사람: {to} · 방법: 이메일",
+    "apply": "적용",
+    "applyAndSend": "적용하고 보내기",
+    "rowChanged": "알림 이후 행이 바뀌었어요. 아무것도 적용하지 않았어요.",
+    "rowNow": "현재: {now}",
+    "lookAgain": "다시 보기",
+    "lookingAgain": "Len이 다시 보고 있어요. 새 알림이 올 거예요.",
+    "dailyLimit": "오늘은 이 작업의 검토가 더 남지 않았어요. 내일 다시 시도해 주세요.",
+    "sending": "보내는 중… ({attempts}번째 시도)",
+    "sendFailed": "보내지 못했어요: {error}",
+    "withdraw": "취소",
+    "withdrawn": "취소됨",
+    "whatWouldYouChange": "무엇을 바꾸고 싶으세요? (선택)",
+    "askAgain": "다른 제안 요청",
+    "dismissConfirm": "넘기기",
+    "repliesGoTo": "답장은 {email}(으)로 와요",
+    "doneApplied": "적용됨: {result}",
+    "doneSent": "{to}에게 보냈어요",
+    "actionFailed": "하지 못했어요: {error}",
+    "yourNote": "내 메모: {note}"
   }
 }

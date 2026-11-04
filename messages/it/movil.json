@@ -169,6 +169,27 @@
     "filterAll": "Tutte",
     "filterTime": "A orario",
     "filterEvents": "Su evento",
-    "lastCheck": "Ultimo controllo: {when}"
+    "lastCheck": "Ultimo controllo: {when}",
+    "actionData": "Modifica in {table}",
+    "actionReply": "A: {to} · Via: e-mail",
+    "apply": "Applica",
+    "applyAndSend": "Applica e invia",
+    "rowChanged": "La riga è cambiata dall’avviso: non è stato applicato nulla.",
+    "rowNow": "Ora: {now}",
+    "lookAgain": "Guarda di nuovo",
+    "lookingAgain": "Len sta guardando di nuovo; arriverà un altro avviso.",
+    "dailyLimit": "Oggi non restano revisioni per questa attività. Riprova domani.",
+    "sending": "Invio… (tentativo {attempts})",
+    "sendFailed": "Non inviato: {error}",
+    "withdraw": "Ritira",
+    "withdrawn": "Ritirato",
+    "whatWouldYouChange": "Cosa cambieresti? (facoltativo)",
+    "askAgain": "Chiedine un’altra",
+    "dismissConfirm": "Scarta",
+    "repliesGoTo": "Le risposte arriveranno a {email}",
+    "doneApplied": "Applicato: {result}",
+    "doneSent": "Inviato a {to}",
+    "actionFailed": "Impossibile: {error}",
+    "yourNote": "La tua nota: {note}"
   }
 }
