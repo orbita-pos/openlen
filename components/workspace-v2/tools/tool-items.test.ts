@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { InstalledToolView } from "@/lib/tools/types";
 
 import { railActiveKey } from "../rail-model";
-import { draftCanvasBridge, projectToolItems, railToolItems, toolIdOfLens, toolLens, toolPromptDraft } from "./tool-items";
+import { draftCanvasBridge, installedToolIdentity, projectToolItems, railToolItems, toolIdOfLens, toolLens, toolPromptDraft } from "./tool-items";
 
 const tool = (over: Partial<InstalledToolView> = {}): InstalledToolView => ({
   id: "a",
@@ -64,5 +64,11 @@ describe("draftCanvasBridge", () => {
     expect(draftCanvasBridge({ isTool: true, remoteUrl: null, projectId: "p1" })).toBeNull();
     expect(draftCanvasBridge({ isTool: true, remoteUrl: "not a url", projectId: "p1" })).toBeNull();
     expect(draftCanvasBridge({ isTool: true, remoteUrl: "https://lienzo-abc.openlen.app/", projectId: null })).toBeNull();
+  });
+});
+
+describe("installedToolIdentity", () => {
+  it("an installed tool is told its own PROJECT, the id it has in its canvas and in Len's eyes — not the installation's", () => {
+    expect(installedToolIdentity(tool({ id: "inst-1", projectId: "tool-project", releaseSha: "sha9" }))).toEqual({ id: "tool-project", version: "sha9" });
   });
 });

@@ -51,3 +51,10 @@ export function draftCanvasBridge(i: {
     return null;
   }
 }
+
+/** What an installed tool's `context().tool` says: its own PROJECT — the same id it has in its canvas and in Len's
+ *  eyes, so code that leaves the tool out of `projects()` works everywhere (found in the real turn) — and the release
+ *  it runs. The installation's id is OpenLen's, not the tool's. */
+export function installedToolIdentity(tool: Pick<InstalledToolView, "projectId" | "releaseSha">): { readonly id: string; readonly version: string } {
+  return { id: tool.projectId, version: tool.releaseSha };
+}

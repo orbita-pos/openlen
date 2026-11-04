@@ -21,7 +21,7 @@ import {
   ToolsIcon,
 } from "./icons";
 import type { InstalledToolView } from "@/lib/tools/types";
-import { draftCanvasBridge } from "./tools/tool-items";
+import { draftCanvasBridge, installedToolIdentity } from "./tools/tool-items";
 import { ToolFrame } from "./tools/tool-frame";
 import { useToolBridgeHost } from "./tools/use-tool-bridge-host";
 
@@ -1284,7 +1284,7 @@ export function PreviewArea({
                 context={{
                   person: toolPerson ?? { name: "", locale: "en" },
                   project: { id: projectId, title: toolProjectTitle ?? "" },
-                  tool: { id: tool.id, version: tool.releaseSha },
+                  tool: installedToolIdentity(tool),
                   environment: "installed",
                 }}
                 onPrompt={onToolPrompt ? (text) => onToolPrompt(text, tool.title) : null}

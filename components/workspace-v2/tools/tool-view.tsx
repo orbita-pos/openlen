@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import type { InstalledToolView } from "@/lib/tools/types";
 
 import { ToolFrame } from "./tool-frame";
+import { installedToolIdentity } from "./tool-items";
 
 export function ToolView({ tool, person, locale }: { tool: InstalledToolView | null; person: { name: string }; locale: string }) {
   const t = useTranslations("wsChrome");
@@ -26,7 +27,7 @@ export function ToolView({ tool, person, locale }: { tool: InstalledToolView | n
         src={tool.frameUrl}
         frameOrigin={tool.frameOrigin}
         caller={{ installationId: tool.id }}
-        context={{ person: { name: person.name, locale }, project: null, tool: { id: tool.id, version: tool.releaseSha }, environment: "installed" }}
+        context={{ person: { name: person.name, locale }, project: null, tool: installedToolIdentity(tool), environment: "installed" }}
         onPrompt={null}
         title={tool.title}
       />

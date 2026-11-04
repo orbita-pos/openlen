@@ -38,7 +38,7 @@ describe("installEyesBridge", () => {
 
   it("context: the person, a light theme, the tool and its mode", async () => {
     const i = await exposed(installed);
-    expect((await i.call("context")).result).toMatchObject({ person: { locale: "es" }, theme: { mode: "light" }, tool: { id: "i1", version: "sha1" }, environment: "installed" });
+    expect((await i.call("context")).result).toMatchObject({ person: { locale: "es" }, theme: { mode: "light" }, tool: { id: "tool", version: "sha1" }, environment: "installed" });
   });
 
   it("context in dark: the workspace's dark colours, when the eyes ask for dark", async () => {
