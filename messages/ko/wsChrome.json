@@ -320,7 +320,12 @@
       "appHint": "사용하는 것: POS, 예약, 로그인이 있는 대시보드",
       "appPlaceholder": "앱을 설명하세요: 무엇을 하고, 누가 쓰는지…",
       "headline": "다음 앱은 여기서 시작됩니다",
-      "subtitle": "무엇을 해야 하는지 Len에게 말하면 화면, 데이터, 로그인까지 만들어 줍니다."
+      "subtitle": "무엇을 해야 하는지 Len에게 말하면 화면, 데이터, 로그인까지 만들어 줍니다.",
+      "tool": "도구",
+      "toolHint": "Len이 만든, OpenLen 안의 나만의 화면.",
+      "toolHeadline": "어떤 도구가 필요하세요?",
+      "toolSubtitle": "Len이 만들어 내 OpenLen에 남아요. 사이드바나 프로젝트 안에요.",
+      "toolPlaceholder": "오늘 예약을 보고 확정할 수 있는 것…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "받은편지함",
     "business": "내 비즈니스",
     "versions": "버전",
-    "database": "데이터베이스"
+    "database": "데이터베이스",
+    "tools": "도구"
   },
   "startTabs": {
     "crear": "만들기",
     "mispaginas": "내 페이지",
-    "comunidad": "커뮤니티"
+    "comunidad": "커뮤니티",
+    "herramientas": "도구"
   },
   "resultadosTabs": {
     "page": "페이지",
@@ -735,6 +742,31 @@
       "step": "{total}단계 중 {current}단계",
       "noSteps": "—",
       "finished": "완료"
+    }
+  },
+  "tools": {
+    "planRequired": "이 도구를 열려면 유료 요금제가 필요해요.",
+    "change": {
+      "title": "{tool}이(가) {project}의 {table}을(를) 바꾸려고 해요",
+      "subtitle": "실제 데이터가 바뀌어요. 적용하기 전에는 아무것도 바뀌지 않아요.",
+      "apply": "적용",
+      "cancel": "취소"
+    },
+    "unavailable": "지금은 이 도구를 열 수 없어요.",
+    "page": {
+      "title": "도구",
+      "subtitle": "Len이 만들어 준 화면이에요. 사이트가 아니라 내 OpenLen 안에 있어요.",
+      "ask": "Len에게 도구 부탁하기",
+      "empty": "아직 도구가 없어요. Len에게 부탁해 보세요.",
+      "inRail": "사이드바",
+      "inProject": "프로젝트 안",
+      "version": "버전 {version} · {date}",
+      "switch": "{tool} 표시",
+      "openProject": "프로젝트 열기",
+      "remove": "제거",
+      "restore": "복원",
+      "releaseGone": "그 버전은 이제 없어요. Len에게 다시 설치해 달라고 하세요.",
+      "failed": "잘 안 됐어요. 다시 시도해 주세요."
     }
   }
 }

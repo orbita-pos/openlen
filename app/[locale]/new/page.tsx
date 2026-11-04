@@ -55,6 +55,10 @@ import { MiembrosDialog } from "@/components/workspace-v2/miembros-dialog";
 import { EnvVarsDialog } from "@/components/workspace-v2/env-vars-dialog";
 import { AnalyticsSection } from "../analytics/analytics-section";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
+import { projectToolItems, railToolItems, toolPromptDraft } from "@/components/workspace-v2/tools/tool-items";
+import { ToolView } from "@/components/workspace-v2/tools/tool-view";
+import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
+import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
   LeftSidebar,
@@ -219,6 +223,8 @@ interface LoadedProject {
    *  (una app que nace, una página que se convierte) y con su Deshacer: lo trae
    *  el refetch de `onChatChange`. */
   app: AppDeProyecto | null;
+  /** A TOOL being built (`data.tool`, spec local 2026-11-04-herramientas-hechas-por-len): installed, not published. */
+  tool: boolean;
   /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
    *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
    *  esto sólo esconde lo que no podría hacer. */
@@ -345,6 +351,8 @@ function NewV2Inner() {
   const tVersions = useTranslations("panelsB");
   const tProps = useTranslations("panelsProps");
   const locale = useLocale();
+  // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): the person's installed tools.
+  const installedTools = useInstalledTools(locale);
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
   // Editor sound (creamy click on rail switching) + the mute/volume control,
@@ -455,9 +463,13 @@ function NewV2Inner() {
     viewParam === "templates" ||
     viewParam === "messages" ||
     viewParam === "explore" ||
-    viewParam === "database"
+    viewParam === "database" ||
+    // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3, §4.11).
+    viewParam === "tools" || viewParam === "tool"
       ? viewParam
       : "page";
+  // The open rail tool, for `?view=tool`.
+  const toolParam = centerView === "tool" ? searchParams.get("tool") : null;
   // "analytics" is the pre-rail-unification URL alias for "resultados" —
   // ?view=analytics keeps working, but the render below only ever branches
   // on the normalized value.
@@ -465,12 +477,16 @@ function NewV2Inner() {
     centerView === "analytics" ? "resultados" : centerView;
   // The start page (no project loaded) tabs between three surfaces, driven by
   // the same ?view= param the in-editor sections used to read.
-  const startSurface: "crear" | "mispaginas" | "comunidad" =
+  const startSurface: "crear" | "mispaginas" | "comunidad" | "herramientas" | "herramienta" =
     !searchParams.get("project") && viewParam === "projects"
       ? "mispaginas"
       : !searchParams.get("project") && viewParam === "explore"
         ? "comunidad"
-        : "crear";
+        : !searchParams.get("project") && centerView === "tools"
+          ? "herramientas"
+          : !searchParams.get("project") && centerView === "tool"
+            ? "herramienta"
+            : "crear";
   // ¿Hay una página abierta? Es lo que separa las DOS pantallas del taller: con
   // página, rail a la izquierda y barra del proyecto arriba; sin ella, ni rail
   // ni proyecto — la barra pasa a ser la navegación global. Se mira el
@@ -482,7 +498,7 @@ function NewV2Inner() {
   useEffect(() => {
     const pid = searchParams.get("project");
     if (!pid) return;
-    if (centerView === "projects" || centerView === "explore" || centerView === "templates") {
+    if (centerView === "projects" || centerView === "explore" || centerView === "templates" || centerView === "tools") {
       router.replace(centerView === "templates" ? "/new" : `/new?view=${centerView}`);
     }
   }, [centerView, searchParams, router]);
@@ -491,11 +507,32 @@ function NewV2Inner() {
       const params = new URLSearchParams(searchParams.toString());
       if (v === "page") params.delete("view");
       else params.set("view", v);
+      // Leaving a tool forgets which one was open.
+      if (v !== "tool") params.delete("tool");
       const qs = params.toString();
       router.replace(qs ? `/new?${qs}` : "/new");
     },
     [searchParams, router],
   );
+  /** Opens an installed rail tool in the center, keeping the project open (spec local 2026-11-04-herramientas-hechas-por-len, §4.3). */
+  const openTool = useCallback(
+    (id: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("view", "tool");
+      params.set("tool", id);
+      router.replace(`/new?${params.toString()}`);
+    },
+    [searchParams, router],
+  );
+  const openToolData = installedTools.tools.find((t) => t.id === toolParam) ?? null;
+  /** A project tool's `sendPrompt` (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): the text, quoted and signed
+   *  with the tool's name, goes into Len's composer — the person sends it, so it never enters as their order unseen. */
+  const toolPrompt = useCallback((text: string, toolTitle: string) => {
+    setCenterView("page");
+    setPendingChatDraft(toolPromptDraft(text, toolTitle));
+    setMode("chat");
+    setLeftCollapsed(false);
+  }, [setCenterView]);
   /**
    * QUÉ LENTE SE MIRA — la página, su código, su terminal o sus cambios.
    *
@@ -1079,7 +1116,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
+        ...(naceComo === "app" || naceComo === "tool" ? { naceComo, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1360,6 +1397,7 @@ function NewV2Inner() {
                 degradations?: Degradation[];
                 degradationsDismissed?: boolean;
                 app?: AppDeProyecto;
+                tool?: { bornAt: string };
               };
               rol?: "dueno" | "editor" | "lector";
               artifacts?: boolean;
@@ -1403,6 +1441,7 @@ function NewV2Inner() {
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
         app: p.data?.app ?? null,
+        tool: !!p.data?.tool,
         rol: p.rol ?? "dueno",
         artifacts: p.artifacts === true,
       });
@@ -1532,7 +1571,7 @@ function NewV2Inner() {
   // AN APP BEING BORN: the first turn of a project that is (or was just asked to
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
-  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app");
+  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app" || naceComo === "tool");
   // LO QUE ENSEÑA EL CENTRO, como Claude con un artefacto (21/10): la conversación ocupa el medio mientras no hay
   // nada que ver; una pieza (presentación, dashboard, imagen, video, voz) se abre ahí si el proyecto no tiene
   // página; con página o app, el lienzo de siempre. La lista de piezas se lee UNA vez y la comparten la campana,
@@ -1549,7 +1588,7 @@ function NewV2Inner() {
   // `loading` vuelve a false y cuenta como ninguna).
   const centro = centerContent({
     hasPage: loadedProject ? activeDoc.trim() !== "" || Object.keys(loadedProject.pages ?? {}).length > 0 : null,
-    isApp: esApp || naceComo === "app",
+    isApp: esApp || naceComo === "app" || naceComo === "tool",
     deliverables:
       artifactsOn && artifacts.enabled === null && artifacts.loading ? null : artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
   });
@@ -3582,6 +3621,7 @@ function NewV2Inner() {
         onPublish={soloLector || pantallaDeInicio ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        isTool={loadedProject?.tool === true}
         artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
         artifactsData={artifactsOn ? artifacts : undefined}
@@ -3631,14 +3671,15 @@ function NewV2Inner() {
           !pantallaDeInicio
             ? undefined
             : {
-                activa: startSurface,
+                activa: startSurface === "herramienta" ? "herramientas" : startSurface,
+                conHerramientas: installedTools.available,
                 onIr: (s) => {
                   // En el blanco ya estás en «Crear»: ir a `/new` lo volvería a buscar.
                   if (s === "crear" && enElEditor) return;
                   router.replace(
                     s === "crear"
                       ? "/new"
-                      : `/new?view=${s === "mispaginas" ? "projects" : "explore"}`,
+                      : `/new?view=${s === "mispaginas" ? "projects" : s === "herramientas" ? "tools" : "explore"}`,
                   );
                 },
                 etiqueta: (s) => tws(`startTabs.${s}`),
@@ -3751,6 +3792,9 @@ function NewV2Inner() {
           activePageLabel={activeSitePage ? `/${activeSitePage}` : t("modulesHub.home")}
           homePageLabel={t("modulesHub.home")}
           siteName={loadedProject?.title ?? null}
+          railTools={installedTools.available ? railToolItems(installedTools.tools) : undefined}
+          activeToolId={toolParam}
+          onOpenTool={openTool}
         />
         )}
         {/* One <main> landmark for the workspace center. `contents` keeps the
@@ -3759,7 +3803,9 @@ function NewV2Inner() {
             sr-only h1 gives every entry state a top-level heading. */}
         <main className="contents">
         <h1 className="sr-only">{t("a11y.workspaceHeading")}</h1>
-        {normalizedCenterView === "messages" ? (
+        {normalizedCenterView === "tool" ? (
+          <ToolView tool={openToolData} person={installedTools.person} locale={locale} />
+        ) : normalizedCenterView === "messages" ? (
           <InboxHub
             franja={
               <FranjaDeEstado
@@ -3806,6 +3852,11 @@ function NewV2Inner() {
                 doc=""
                 lente={lente}
                 onLente={setLente}
+                projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
+                toolPerson={{ name: installedTools.person.name, locale }}
+                toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
+                onToolPrompt={toolPrompt}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
                 openInNewTabUrl={previewingTemplate.previewUrl}
@@ -3832,7 +3883,11 @@ function NewV2Inner() {
                 debajo de la barra. Subieron A la barra el 2026-08-31: son la
                 navegación global, y ahí competían por el centro con el propio
                 contenido de la pantalla (el brief, la rejilla de páginas). */}
-            {startSurface === "mispaginas" ? (
+            {startSurface === "herramientas" ? (
+              <ToolsView tools={installedTools.tools} paid={installedTools.paid} onChanged={installedTools.reload} />
+            ) : startSurface === "herramienta" ? (
+              <ToolView tool={openToolData} person={installedTools.person} locale={locale} />
+            ) : startSurface === "mispaginas" ? (
               <ProjectsSection
                 onOpenExplore={() => router.replace("/new?view=explore")}
               />
@@ -3877,6 +3932,11 @@ function NewV2Inner() {
                 doc=""
                 lente={lente}
                 onLente={setLente}
+                projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
+                toolPerson={{ name: installedTools.person.name, locale }}
+                toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
+                onToolPrompt={toolPrompt}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
                 openInNewTabUrl={previewingTemplate.previewUrl}
@@ -3907,6 +3967,8 @@ function NewV2Inner() {
                 }}
                 onPaste={() => router.push("/new?mode=paste")}
                 naceComo={naceComo}
+                conHerramienta={installedTools.available}
+                herramientaBloqueada={installedTools.paid ? undefined : tws("tools.planRequired")}
                 onNaceComoChange={setNaceComo}
               />
             </div>
@@ -3930,6 +3992,11 @@ function NewV2Inner() {
                 doc={activeDoc}
                 lente={lente}
                 onLente={setLente}
+                projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
+                toolPerson={{ name: installedTools.person.name, locale }}
+                toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
+                onToolPrompt={toolPrompt}
                 projectId={loadedProject.id}
                 pagina={activeSitePage ?? null}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}

@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { entornoPublicoDeLaApp } from "@/lib/apps/entorno";
 import { validatePageSlug } from "@/lib/projects/site-pages";
+import { injectToolBridge } from "@/lib/tools/bridge/inject";
 import { guardarDocumento } from "./almacen";
 import { documentoDeVista } from "./documento";
 import { urlDelDocumento } from "./host";
@@ -63,7 +64,10 @@ export async function openCanvasDocument(input: {
   const app = row.data?.app ?? null;
   const env = app ? await entornoPublicoDeLaApp(input.projectId, "draft") : undefined;
   const saved = page ? (row.data?.pages?.[page]?.html ?? "") : (row.data?.html ?? "");
-  const html = documentoDeVista(input.html ?? saved, {
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its canvas runs it with `window.openlen` in
+  // draft mode — the workspace answers, and production is never written from here.
+  const tool = !!row.data?.tool;
+  const vista = documentoDeVista(input.html ?? saved, {
     projectId: input.projectId,
     title: row.title ?? null,
     sub: row.subdomain ?? null,
@@ -72,6 +76,7 @@ export async function openCanvasDocument(input: {
     logoUrl: row.logoUrl ?? null,
     app,
   });
+  const html = tool ? injectToolBridge(vista) : vista;
   const docId = guardarDocumento({
     html,
     projectId: input.projectId,
@@ -80,6 +85,7 @@ export async function openCanvasDocument(input: {
     app,
     ...(env ? { entorno: env } : {}),
     ...(input.framedBy?.length ? { framedBy: input.framedBy } : {}),
+    ...(tool ? { tool: true } : {}),
   });
   const url = build(docId);
   // ⚠️ THIS `null` CANNOT HAPPEN, and is left on purpose. `urlDelDocumento` depends only on the projectId and the

@@ -119,7 +119,9 @@
       "limit": "Hai raggiunto il limite di progetti pubblicati del tuo piano.",
       "invalid": "Impossibile pubblicare. Controlla il sottodominio e riprova.",
       "checking": "Verifica…",
-      "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare."
+      "langsFailed": "{langs} non è stata tradotta — pubblica di nuovo per riprovare.",
+      "install": "Installa",
+      "installed": "Ho installato «{title}» nel tuo OpenLen."
     },
     "errors": {
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",

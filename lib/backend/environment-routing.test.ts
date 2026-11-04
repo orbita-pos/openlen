@@ -61,3 +61,20 @@ describe("una lectura pública de Storage", () => {
     expect(isPublicObjectRead(new Request("https://x.openlen.app/rest/v1/productos"))).toBe(false);
   });
 });
+
+// TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.5): an installed tool runs on its own
+// `lienzo-` label and its backend calls carry it; it is production for THIS project, never another's.
+describe("decideEnvironment — an installed tool", () => {
+  const tool = "https://lienzo-00112233445566778899aabbccddeeff.openlen.app";
+  it("an installed tool of this project reaches production", () => {
+    expect(decideEnvironment({ origin: tool, referer: null, lienzoLabel: "lienzo-ffffffffffffffffffffffffffffffff", hasLive: true, toolOfProject: true })).toEqual({
+      kind: "env",
+      environment: "live",
+      attributed: true,
+    });
+  });
+  it("a label that is neither this canvas nor a tool of this project is still forbidden", () => {
+    expect(decideEnvironment({ origin: tool, referer: null, lienzoLabel: "lienzo-ffffffffffffffffffffffffffffffff", hasLive: true, toolOfProject: false }).kind).toBe("forbidden");
+    expect(decideEnvironment({ origin: tool, referer: null, lienzoLabel: "lienzo-ffffffffffffffffffffffffffffffff", hasLive: true }).kind).toBe("forbidden");
+  });
+});

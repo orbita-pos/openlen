@@ -62,6 +62,10 @@ export interface StartLandingProps {
   /** Página o App: las dos tarjetas de encima del compositor. */
   naceComo: NaceComo;
   onNaceComoChange: (v: NaceComo) => void;
+  /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): the third card, when tools are on. */
+  conHerramienta?: boolean;
+  /** Why the tool card can't be chosen (the Free plan). */
+  herramientaBloqueada?: string;
 }
 
 export function StartLanding({
@@ -74,6 +78,8 @@ export function StartLanding({
   onPaste,
   naceComo,
   onNaceComoChange,
+  conHerramienta = false,
+  herramientaBloqueada,
 }: StartLandingProps) {
   const tw = useTranslations("wsChrome");
   const tp = useTranslations("panelsA");
@@ -144,17 +150,17 @@ export function StartLanding({
           {/* Hero copy */}
           <div className="text-center mb-6">
             <h2 className="text-[26px] sm:text-[31px] font-semibold fg tracking-tight leading-tight">
-              {naceComo === "app" ? tw("start.kind.headline") : tw("start.headline")}
+              {naceComo === "app" ? tw("start.kind.headline") : naceComo === "tool" ? tw("start.kind.toolHeadline") : tw("start.headline")}
             </h2>
             <p className="mt-2.5 text-[13px] fg-muted leading-relaxed max-w-md mx-auto">
-              {naceComo === "app" ? tw("start.kind.subtitle") : tw("start.subtitle")}
+              {naceComo === "app" ? tw("start.kind.subtitle") : naceComo === "tool" ? tw("start.kind.toolSubtitle") : tw("start.subtitle")}
             </p>
           </div>
 
           {/* PÁGINA O APP, y debajo el compositor de siempre. */}
           <div className="max-w-2xl mx-auto">
             <div className="mb-4">
-              <TarjetasNaceComo value={naceComo} onChange={onNaceComoChange} disabled={generating} />
+              <TarjetasNaceComo value={naceComo} onChange={onNaceComoChange} disabled={generating} conHerramienta={conHerramienta} {...(herramientaBloqueada ? { herramientaBloqueada } : {})} />
             </div>
             <HeroComposer
               state={aiState}
@@ -163,7 +169,7 @@ export function StartLanding({
               effort={effort}
               onEffortChange={onEffortChange}
               addFilesRef={addFilesRef}
-              {...(naceComo === "app" ? { placeholder: tw("start.kind.appPlaceholder") } : {})}
+              {...(naceComo === "app" ? { placeholder: tw("start.kind.appPlaceholder") } : naceComo === "tool" ? { placeholder: tw("start.kind.toolPlaceholder") } : {})}
             />
             {/* Pegar HTML y la galería son de PÁGINAS: con App elegida no hay
                 plantilla que clonar ni HTML que pegar, y enseñarlas sería

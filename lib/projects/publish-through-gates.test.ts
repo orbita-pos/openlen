@@ -154,3 +154,13 @@ describe("publishThroughGates", () => {
     expect(mocks.afterOwnerPublish).not.toHaveBeenCalled();
   });
 });
+
+// A TOOL IS INSTALLED, NOT PUBLISHED (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): publishProject refuses
+// it, and the answer says where to go.
+describe("a tool project", () => {
+  it("is not published: 409 tool_installs", async () => {
+    const { ProjectIsToolError } = await import("@/lib/tools/errors");
+    mocks.publishProject.mockRejectedValue(new ProjectIsToolError());
+    expect(await publishThroughGates(INPUT)).toEqual({ status: 409, body: { error: "tool_installs" } });
+  });
+});

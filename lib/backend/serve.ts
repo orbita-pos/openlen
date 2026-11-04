@@ -3,6 +3,7 @@
 // (borrador o producción, spec local 2026-10-09), la base creada si aún no lo
 // está, y el enrutador.
 
+import { isInstalledToolOrigin } from "@/lib/tools/environment";
 import "server-only";
 
 import { BOX_MARKER_HEADER, BOX_READS_PRODUCTION } from "@/lib/agent/sandbox/box-marker";
@@ -44,11 +45,13 @@ export async function serveBackend(req: Request): Promise<Response> {
   if (!hb) return json({ message: "no Route matched with those values" }, 404);
   // El ref propio del borrador: siempre el borrador, sin mirar de dónde viene.
   if (hb.environment) return serveIn(req, hb, hb.environment);
+  const lienzoLabel = etiquetaDeLienzo(hb.record.projectId);
   const decision = decideEnvironment({
     origin: req.headers.get("origin"),
     referer: req.headers.get("referer"),
-    lienzoLabel: etiquetaDeLienzo(hb.record.projectId),
+    lienzoLabel,
     hasLive: await hasLiveEnvironment(hb.record),
+    toolOfProject: await isInstalledToolOrigin({ origin: req.headers.get("origin"), referer: req.headers.get("referer"), lienzoLabel, projectId: hb.record.projectId }),
   });
   if (decision.kind === "forbidden") return json({ message: decision.message }, 403);
   // LEN'S BOX (lib/agent/sandbox/box-marker.ts): it reads production, it never writes there.

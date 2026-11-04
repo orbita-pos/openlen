@@ -142,7 +142,7 @@ function withEsmLock(folder: ReadonlyMap<string, string>, esmLock: string | null
 
 /** What loading the terminal's files needs from a session: the agent route has it before the
  *  turn's session exists (the git status block, spec local 2026-10-15-git-for-len). */
-export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app" | "parentProjectId">;
+export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app" | "parentProjectId" | "tool">;
 
 /** Whose `/LEN.md`, memory notes, skills and subagent types these are: the project's, or for an isolated subagent
  *  (whose `projectId` is its copy) its parent's — they are not the folder, and a copy has none of its own (spec
@@ -938,7 +938,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
-  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null, realTerminalFor(session.userId));
+  ficheros[RUTA_MANUAL] = buildManualDeLaPlataforma(process.env, session.mode, session.app ?? null, realTerminalFor(session.userId), session.tool === true);
   // F4 · /.openlen/docs NO va aquí: es de la carpeta oculta de sólo lectura, y
   // la sirve `soloLecturaDeLaTerminal` como lo demás de /.openlen.
   // F5 · los ajustes del proyecto, escribibles por sus caminos (`ajustes.ts`).

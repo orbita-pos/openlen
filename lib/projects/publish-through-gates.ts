@@ -2,6 +2,7 @@
 // with its data, functions and Stripe gates, and the publish route's map of errors to HTTP codes.
 // The publish route answers with it, and Len Watch publishes a fix with it — so a fix published at
 // 3 a.m. stops at exactly the 428s a person would see (spec local 2026-10-30-len-watch, §5.7).
+import { ProjectIsToolError } from "@/lib/tools/errors";
 import "server-only";
 
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
@@ -38,6 +39,39 @@ export interface GatedPublishResult {
   body: Record<string, unknown>;
 }
 
+/**
+ * LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que quien publica lo acepta, y queda
+ * apuntado quién. Si la revisión misma falla, no frena: se publica como antes (la fase 0 ya va dentro de la
+ * puerta). Shared by publishing and by installing a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2).
+ * `stop` is the 428 to answer; otherwise `fingerprint` is the reviewed version to mark (null when there was none).
+ */
+export async function runSecurityGate(i: {
+  readonly projectId: string;
+  readonly actorId: string;
+  readonly accept?: string;
+  readonly locale: string;
+  readonly sourcesFrom?: string;
+  /** Nobody is in front of it (Len Watch's «Publicar solo» at 3 a.m.): it waits itself, as Len's own `publish`
+   *  does (`forAgent`), and asks again. A person has the Publish modal, which waits. */
+  readonly waitWhenPending?: boolean;
+}): Promise<{ stop: GatedPublishResult } | { fingerprint: string | null }> {
+  const gate = () =>
+    securityReviewer()
+      .gate({ projectId: i.projectId, accept: i.accept, actorId: i.actorId, locale: i.locale, ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}) })
+      .catch((err: unknown) => {
+        console.warn("[publish] security review failed; publishing without it", err);
+        return { kind: "open" as const, view: null };
+      });
+  let seguridad = await gate();
+  if (seguridad.kind === "pending" && i.waitWhenPending) {
+    await securityReviewer().wait(i.projectId, seguridad.view.fingerprint, AGENT_WAIT_MS).catch(() => null);
+    seguridad = await gate();
+  }
+  if (seguridad.kind === "pending") return { stop: { status: 428, body: { error: "security_review_pending", fingerprint: seguridad.view.fingerprint } } };
+  if (seguridad.kind === "blocked") return { stop: { status: 428, body: { error: "security_findings", ...seguridad.view } } };
+  return { fingerprint: seguridad.view?.fingerprint ?? null };
+}
+
 export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPublishResult> {
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
   // branch isn't in the draft would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
@@ -53,25 +87,15 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     if (pending) await bring.declineFix(pending.incidentId);
   }
 
-  // LA REVISIÓN DE SEGURIDAD (spec local 2026-10-15): lo grave frena hasta que
-  // quien publica lo acepta, y queda apuntado quién. Si la revisión misma falla,
-  // no frena: se publica como antes (la fase 0 ya va dentro de la puerta).
-  const gate = () =>
-    securityReviewer()
-      .gate({ projectId: i.projectId, accept: i.acceptSecurityFingerprint, actorId: i.actorId, locale: i.locale ?? "en", ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}) })
-      .catch((err: unknown) => {
-        console.warn("[publish] security review failed; publishing without it", err);
-        return { kind: "open" as const, view: null };
-      });
-  let seguridad = await gate();
-  // Still running: a person has the Publish modal, which waits; Len Watch has nobody in front of it («Publicar solo»
-  // at 3 a.m.), so it waits itself, as Len's own `publish` does (`forAgent`), and asks again.
-  if (seguridad.kind === "pending" && i.source === "len_watch") {
-    await securityReviewer().wait(i.projectId, seguridad.view.fingerprint, AGENT_WAIT_MS).catch(() => null);
-    seguridad = await gate();
-  }
-  if (seguridad.kind === "pending") return { status: 428, body: { error: "security_review_pending", fingerprint: seguridad.view.fingerprint } };
-  if (seguridad.kind === "blocked") return { status: 428, body: { error: "security_findings", ...seguridad.view } };
+  const seguridad = await runSecurityGate({
+    projectId: i.projectId,
+    actorId: i.actorId,
+    ...(i.acceptSecurityFingerprint ? { accept: i.acceptSecurityFingerprint } : {}),
+    locale: i.locale ?? "en",
+    ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}),
+    waitWhenPending: i.source === "len_watch",
+  });
+  if ("stop" in seguridad) return seguridad.stop;
 
   try {
     // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
@@ -89,9 +113,9 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     );
     // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
     // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
-    if (seguridad.view) {
+    if (seguridad.fingerprint) {
       const reviewer = securityReviewer();
-      await (i.sourcesFrom ? reviewer.markPublished(i.projectId, seguridad.view.fingerprint, i.sourcesFrom) : reviewer.markPublished(i.projectId, seguridad.view.fingerprint))
+      await (i.sourcesFrom ? reviewer.markPublished(i.projectId, seguridad.fingerprint, i.sourcesFrom) : reviewer.markPublished(i.projectId, seguridad.fingerprint))
         .catch((err: unknown) => console.warn("[publish] could not keep the published version as the security review's base", err));
     }
     // A person published: if Len Watch had an incident open, it checks whether the site loads now.
@@ -106,6 +130,7 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
     if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
     if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
+    if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
     // Una app web que no compila no se publica (spec local 2026-10-07-apps):
     // se dice qué fichero y qué línea, para el dueño y para Len.
     if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };

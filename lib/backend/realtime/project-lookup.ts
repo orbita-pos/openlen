@@ -9,6 +9,7 @@
 // `supabase db push`). Sin base todavía, broadcast y presence funcionan igual
 // (no la tocan); postgres_changes y los canales privados contestan su error.
 
+import { isInstalledToolOrigin } from "@/lib/tools/environment";
 import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
@@ -55,7 +56,13 @@ export async function realtimeProjectForHost(host: string, origin: string | null
   const hasLive = envs.some((e) => e.environment === "live" && e.provisionedAt);
   const decision = fijado
     ? ({ kind: "env", environment: fijado, attributed: true } as const)
-    : decideEnvironment({ origin, referer: null, lienzoLabel: etiquetaDeLienzo(rec.projectId), hasLive });
+    : decideEnvironment({
+        origin,
+        referer: null,
+        lienzoLabel: etiquetaDeLienzo(rec.projectId),
+        hasLive,
+        toolOfProject: await isInstalledToolOrigin({ origin, referer: null, lienzoLabel: etiquetaDeLienzo(rec.projectId), projectId: rec.projectId }),
+      });
   // Un lienzo ajeno: como un tenant que no existe.
   if (decision.kind === "forbidden") return null;
   const env = envs.find((e) => e.environment === decision.environment) ?? null;

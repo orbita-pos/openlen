@@ -59,6 +59,8 @@ const TURN_ARGS = {
 
 function setup(
   o: {
+    /** A tool project (spec local 2026-11-04-herramientas-hechas-por-len, §4.8). */
+    tool?: boolean;
     scripts?: StreamEvent[][];
     agentTypes?: AgentTypeSet;
     skills?: AgentSession["skills"];
@@ -199,7 +201,7 @@ function setup(
     forkSeed: o.forkSeed ?? [],
     declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
     deps: {} as AgentDeps,
-    sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null },
+    sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null, ...(o.tool ? { tool: true } : {}) },
     spend: createTurnSpend(o.spendCap ?? 10_000, () => lenSpent),
     emit: (ev) => void events.push(ev),
     isMember: false,
@@ -299,6 +301,13 @@ describe("the launcher of Len's subagents", () => {
     });
     s.g.release();
     for (let i = 1; i <= 8; i++) await s.settled(`r${i}`);
+  });
+
+  it("in a tool project, a child knows it is one (its publish installs; its eyes open the installed tool)", async () => {
+    const s = setup({ tool: true, scripts: [dice("ok")] });
+    await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(s.sessions[0]!.tool).toBe(true);
   });
 
   it("each child gets a fresh leidos, the same skills, its own loaded skills, and read-only when it only reads", async () => {

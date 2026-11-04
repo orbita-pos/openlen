@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { ToolInstallButton } from "./tools/install-button";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PUBLISHED_BASE_HOST, publishedUrl } from "@/lib/publish/base-host";
 import {
@@ -118,6 +119,8 @@ interface TopBarProps {
    *  "Previous deploys" section. Optional: the section just hides if
    *  unset, so V1 callers and pre-Editing entry modes still render. */
   projectId?: string;
+  /** A TOOL project (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): «Instalar» takes «Publicar»'s place. */
+  isTool?: boolean;
   /** Len 3.0's deliverables are on on this server (`GET /api/projects/[id]`). */
   artifactsEnabled?: boolean;
   artifactsReadOnly?: boolean;
@@ -145,9 +148,11 @@ interface TopBarProps {
    *  normalmente: sin esto el usuario se queda sin idioma, sin tema y sin
    *  cerrar sesión en cuanto sale de un proyecto. */
   inicio?: {
-    activa: "crear" | "mispaginas" | "comunidad";
-    onIr: (s: "crear" | "mispaginas" | "comunidad") => void;
-    etiqueta: (s: "crear" | "mispaginas" | "comunidad") => string;
+    activa: StartTab;
+    onIr: (s: StartTab) => void;
+    etiqueta: (s: StartTab) => string;
+    /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.11): the Herramientas tab, when tools are on. */
+    conHerramientas?: boolean;
     dark: boolean;
     onToggleDark: () => void;
     soundVolume?: number;
@@ -155,6 +160,9 @@ interface TopBarProps {
     onToggleSoundMute?: () => void;
   };
 }
+
+/** The start page's global tabs. */
+export type StartTab = "crear" | "mispaginas" | "comunidad" | "herramientas";
 
 export function TopBar({
   esApp = false,
@@ -167,6 +175,7 @@ export function TopBar({
   onPublish,
   published,
   projectId,
+  isTool = false,
   artifactsEnabled = false,
   artifactsReadOnly = false,
   artifactsData,
@@ -547,7 +556,7 @@ export function TopBar({
           <>
             <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
             <nav className="flex items-center gap-0.5 min-w-0">
-              {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
+              {(inicio.conHerramientas ? (["crear", "mispaginas", "comunidad", "herramientas"] as const) : (["crear", "mispaginas", "comunidad"] as const)).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -777,7 +786,13 @@ export function TopBar({
             publish is handled by PublishModal which the parent renders;
             we only toggle it. Hidden entirely when no project is loaded
             (onPublish is undefined) — nothing to publish yet. */}
-        {onPublish && (
+        {onPublish && isTool && projectId ? (
+          <>
+            <ToolInstallButton projectId={projectId} title={projectName} />
+            <span className="hidden md:inline-block h-5 w-px bg-[color:var(--border)] mx-1.5" />
+          </>
+        ) : null}
+        {onPublish && !isTool && (
         <>
         <div className="relative ml-0.5" ref={deployRef}>
           <button

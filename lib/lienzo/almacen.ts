@@ -60,6 +60,8 @@ export interface DocumentoGuardado {
   /** Quién más puede enmarcarlo, además del taller: la app del teléfono
    *  (`/api/movil/canvas`). Ausente = sólo el taller. */
   readonly framedBy?: readonly string[];
+  /** A project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len): its canvas serves the bridge. */
+  readonly tool?: boolean;
   readonly creado: number;
   ultimoUso: number;
 }
@@ -124,6 +126,8 @@ export function guardarDocumento(
     app?: AppDeProyecto | null;
     entorno?: Readonly<Record<string, string>>;
     framedBy?: readonly string[];
+    /** A project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len): its canvas serves the bridge. */
+    tool?: boolean;
   },
   ahora = Date.now(),
 ): string {
@@ -176,6 +180,7 @@ export function proyectoDeEtiqueta(
   userId: string;
   app: AppDeProyecto | null;
   entorno: Readonly<Record<string, string>> | undefined;
+  tool: boolean;
 } | null {
   podar(ahora);
   // El MÁS RECIENTE de ese proyecto: si el dueño acaba de convertirlo en app
@@ -186,7 +191,7 @@ export function proyectoDeEtiqueta(
     if (!elegido || d.creado > elegido.creado) elegido = d;
   }
   return elegido
-    ? { projectId: elegido.projectId, userId: elegido.userId, app: elegido.app ?? null, entorno: elegido.entorno }
+    ? { projectId: elegido.projectId, userId: elegido.userId, app: elegido.app ?? null, entorno: elegido.entorno, tool: elegido.tool === true }
     : null;
 }
 

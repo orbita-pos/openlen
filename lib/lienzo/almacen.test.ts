@@ -106,7 +106,13 @@ describe("el proyecto de una etiqueta", () => {
       userId: "u1",
       app: null,
       entorno: undefined,
+      tool: false,
     });
+  });
+
+  it("a tool project's document says so (spec local 2026-11-04-herramientas-hechas-por-len)", () => {
+    guardarDocumento({ ...base, projectId: P1, tool: true }, 1_000);
+    expect(proyectoDeEtiqueta(etiquetaDeLienzo(P1, env)!, 1_000, env)?.tool).toBe(true);
   });
 
   it("una APP: la etiqueta trae su app y su entorno, los del documento MÁS RECIENTE", () => {
@@ -118,6 +124,7 @@ describe("el proyecto de una etiqueta", () => {
       userId: "u1",
       app,
       entorno: { VITE_SUPABASE_URL: "https://x.openlen.app" },
+      tool: false,
     });
   });
 

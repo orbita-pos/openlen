@@ -123,11 +123,14 @@ export default defineConfig({
       // «Len que avisa»: «Hazlo» / «Ahora no» on a card. LISTA BLANCA.
       "app/api/projects/[id]/event-cards/[cardId]/route.test.ts",
       "app/api/projects/[id]/event-cards/route.test.ts",
+      // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "app/api/projects/[id]/install/route.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
       // EL MODO DISEÑO de las apps (spec local 2026-10-11).
       "lib/agent/design-request.test.ts",
+      "lib/agent/usar-pagina-version.test.ts",
       "lib/agent/design-block.test.ts",
       "lib/agent/design-screenshots.browser.test.ts",
       "lib/agent/design-captures.test.ts",
@@ -320,6 +323,9 @@ export default defineConfig({
       "lib/projects/autor-del-cambio.test.ts",
       "lib/projects/correos-del-proyecto.test.ts",
       "lib/projects/nacer-como-app.pg.test.ts",
+      // A blank project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/projects/born-as-tool.pglite.test.ts",
+      "lib/projects/publish-refuses-a-tool.pglite.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
@@ -602,6 +608,9 @@ export default defineConfig({
       "lib/agent/manual-de-la-plataforma.test.ts",
       // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
       "lib/agent/modo-app.test.ts",
+      // Len's tool posture and install (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/agent/tool-mode.test.ts",
+      "lib/agent/tool-install.test.ts",
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
       "lib/agent/types-and-lint.test.ts",
@@ -613,6 +622,9 @@ export default defineConfig({
       "lib/agent/subagents/**/*.test.ts",
       // «Len que avisa»: event tasks (spec local 2026-11-03-len-que-avisa). LISTA BLANCA.
       "lib/event-tasks/**/*.test.ts",
+      // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/tools/**/*.test.ts",
+      "app/api/tools/**/*.test.ts",
       // The atomic work of an isolated child's copy (`inTransaction`). LISTA BLANCA.
       "lib/db/transaction-scope.test.ts",
       "lib/agent/facts-kept.test.ts",
