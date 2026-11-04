@@ -17,6 +17,7 @@ import {
   readRows,
   signOutUser,
   updateRow,
+  updateRowIf,
 } from "./dashboard";
 import { handleBackendRequest } from "./router";
 import { newTestProject, TEST_URL, type TestProject } from "./testing/project";
@@ -120,6 +121,21 @@ describe("panel del dueño — tablas", () => {
     const left = await readRows(t.project, "productos", { offset: 0, limit: 10 });
     if ("error" in left) throw new Error(left.error);
     expect(left.rows.map((r) => r.sku)).toEqual(["otro"]);
+  }, 30_000);
+
+  it("updateRowIf changes the row only while it still has the values the card saw; else answers changed (review focus 1)", async () => {
+    await insertRow(t.project, "productos", { sku: "c1", nombre: "Caja", precio: "12.50" });
+    expect(await updateRowIf(t.project, "productos", { sku: "c1" }, { nombre: "Caja", precio: "12.5" }, { nombre: "Caja grande" })).toMatchObject({ row: { nombre: "Caja grande" } });
+    // What the card saw is no longer there: nothing changes.
+    expect(await updateRowIf(t.project, "productos", { sku: "c1" }, { nombre: "Caja" }, { nombre: "Otra" })).toEqual({ changed: true });
+    const rows = await readRows(t.project, "productos", { offset: 0, limit: 10 });
+    if ("error" in rows) throw new Error(rows.error);
+    expect(rows.rows.map((r) => r.nombre)).toEqual(["Caja grande"]);
+    // A before of null compares as null.
+    // `precio` defaults to 0: the row starts without one only when it says so.
+    await insertRow(t.project, "productos", { sku: "c2", nombre: "Sin precio", precio: null });
+    expect(await updateRowIf(t.project, "productos", { sku: "c2" }, { precio: null }, { precio: "3.00" })).toMatchObject({ row: { precio: 3 } });
+    expect(await updateRowIf(t.project, "productos", { sku: "c2" }, { "precio; drop": "1" }, { precio: "4.00" })).toMatchObject({ error: expect.any(String) });
   }, 30_000);
 
   it("el error de Postgres llega con su mensaje", async () => {

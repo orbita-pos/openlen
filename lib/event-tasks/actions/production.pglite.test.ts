@@ -50,7 +50,10 @@ describe("production reads for a card's actions", () => {
   });
 
   it("reads one row by its key, or none", async () => {
-    expect(await readRow("p1", "reservas", "id", "00000000-0000-0000-0000-000000000002")).toMatchObject({ mesa: 4, nombre: "Luis" });
+    const row = await readRow("p1", "reservas", "id", "00000000-0000-0000-0000-000000000002");
+    expect(row).toMatchObject({ mesa: 4, nombre: "Luis", hora: "21:00:00" });
+    // As Postgres writes it, never a JS Date: a card's «before» must compare equal when the owner applies it.
+    expect(typeof row!.created_at).toBe("string");
     expect(await readRow("p1", "reservas", "id", "00000000-0000-0000-0000-000000000009")).toBeNull();
   });
 
