@@ -18,13 +18,13 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string; taskId: string }> };
 
-async function allowed(req: Request, ctx: Ctx): Promise<{ id: string; taskId: string } | Response> {
+async function allowed(req: Request, ctx: Ctx): Promise<{ id: string; taskId: string; owner: boolean } | Response> {
   if (!scheduleEnabled()) return Response.json({ error: "scheduled_tasks_off" }, { status: 503 });
   const userId = await usuarioDeLaPeticion(req);
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const { id, taskId } = await ctx.params;
   const acceso = await exigirAcceso(id, userId, "editar");
-  return acceso instanceof Response ? acceso : { id, taskId };
+  return acceso instanceof Response ? acceso : { id, taskId, owner: acceso.rol === "dueno" };
 }
 
 const STATUS: Readonly<Record<string, number>> = { schedule_not_found: 404, schedule_ended: 409, schedule_conflict: 409, internal_error: 500 };
@@ -34,7 +34,8 @@ export const PATCH = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response>
   if (ok instanceof Response) return ok;
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body || typeof body !== "object" || Array.isArray(body)) return Response.json({ code: "invalid_selector", message: "A JSON object is required." }, { status: 400 });
-  if (await getEventTask(ok.id, ok.taskId)) {
+  // An event task is the owner's (final review I8): for a member it isn't there.
+  if (ok.owner && (await getEventTask(ok.id, ok.taskId))) {
     const change = eventTaskPatch(body);
     if (!change.ok) return Response.json(change.error, { status: 400 });
     const row = await updateEventTask(ok.id, ok.taskId, change.patch, new Date());
@@ -48,7 +49,7 @@ export const PATCH = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response>
 export const DELETE = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response> => {
   const ok = await allowed(req, ctx);
   if (ok instanceof Response) return ok;
-  const deleted = (await deleteTask(ok.id, ok.taskId)) || (await deleteEventTask(ok.id, ok.taskId));
+  const deleted = (await deleteTask(ok.id, ok.taskId)) || (ok.owner && (await deleteEventTask(ok.id, ok.taskId)));
   return deleted ? Response.json({ id: ok.taskId, deleted: true }) : Response.json({ id: ok.taskId, deleted: false, code: "schedule_not_found" }, { status: 404 });
 });
 

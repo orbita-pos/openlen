@@ -8,6 +8,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 
 import { db, schema } from "@/lib/db";
+import { readFormIds } from "@/lib/publish/form-identity";
 
 import { formSubmissionsParamsSchema } from "./declarations";
 import type { EventSource, SourceChange } from "./types";
@@ -28,6 +29,17 @@ const atText = sql<string>`${f.createdAt}::text`;
 
 const paramsSchema = formSubmissionsParamsSchema as unknown as z.ZodType<FormSubmissionsParams>;
 
+/** The keys of the site's forms, as `formKeyOf` names their submissions: a form's own id, else its position —
+ *  bare on the home page, `<page>:<position>` on another page. */
+export function siteFormKeys(data: { readonly html?: string; readonly pages?: Record<string, { readonly html?: string } | undefined> } | null | undefined): string[] {
+  const keys: string[] = [];
+  const add = (html: string | undefined, page: string | null) =>
+    readFormIds(html ?? "").forEach((id, i) => keys.push(id || (page ? `${page}:${i}` : String(i))));
+  add(data?.html, null);
+  for (const [slug, page] of Object.entries(data?.pages ?? {})) add(page?.html, slug);
+  return keys;
+}
+
 const ofForm = (projectId: string, form: string | undefined) => (form ? and(eq(f.projectId, projectId), eq(f.formId, form)) : eq(f.projectId, projectId));
 
 function summaryOf(data: Record<string, string>): string {
@@ -42,6 +54,21 @@ export const formSubmissionsSource: EventSource<FormSubmissionsParams, FormSubmi
   paramsSchema,
 
   async validate(projectId, params) {
+    // A form the site has, or one whose submissions already came: a typo would watch nothing and say nothing
+    // (final review I12).
+    if (params.form) {
+      const [project] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+      const keys = siteFormKeys(project?.data as Parameters<typeof siteFormKeys>[0]);
+      if (!keys.includes(params.form)) {
+        const [seen] = await db.select({ id: f.id }).from(f).where(ofForm(projectId, params.form)).limit(1);
+        if (!seen) {
+          return {
+            ok: false,
+            reason: `There is no form "${params.form}" on this site. Its forms: ${keys.length ? keys.join(", ") : "none"}. A form with its own id is named by it; one without, by its position — bare on the home page (0, 1…), "<page>:<position>" on another page.`,
+          };
+        }
+      }
+    }
     const [last] = await db.select({ at: atText, id: f.id }).from(f).where(ofForm(projectId, params.form)).orderBy(desc(f.createdAt), desc(f.id)).limit(1);
     return { ok: true, initialState: { cursor: last ? { at: last.at, id: last.id } : { at: "-infinity", id: "" } } };
   },

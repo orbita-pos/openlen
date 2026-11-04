@@ -25,7 +25,7 @@ export function acceptedFraming(o: { readonly card: EventTaskCardRow; readonly t
 
 export interface AcceptDeps {
   now(): Date;
-  decide(cardId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<Decision>;
+  decide(projectId: string, cardId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<Decision>;
   getTask(taskId: string): Promise<EventTaskRow | null>;
   nameOf(userId: string): Promise<string>;
   launch: typeof launchEventTaskTurn;
@@ -41,7 +41,7 @@ export type AcceptResult =
 
 export async function decideAndLaunch(o: { readonly projectId: string; readonly cardId: string; readonly action: "accept" | "dismiss"; readonly actorId: string }, deps: AcceptDeps): Promise<AcceptResult> {
   const now = deps.now();
-  const decided = await deps.decide(o.cardId, o.action, o.actorId, now);
+  const decided = await deps.decide(o.projectId, o.cardId, o.action, o.actorId, now);
   if (!decided.ok) return decided;
   const card = decided.card;
   // A card of another project was never this route's: it decides nothing visible and launches nothing.

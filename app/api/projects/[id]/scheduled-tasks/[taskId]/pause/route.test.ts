@@ -49,9 +49,13 @@ describe("POST /api/projects/[id]/scheduled-tasks/[taskId]/pause", () => {
     expect(resumeTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
   });
 
-  it("pauses and resumes an event task (spec local 2026-11-03-len-que-avisa)", async () => {
+  it("the owner pauses and resumes an event task (spec local 2026-11-03-len-que-avisa); an editor finds none", async () => {
     vi.mocked(pauseTask).mockResolvedValue("not_found");
     vi.mocked(resumeTask).mockResolvedValue("not_found");
+    vi.mocked(pauseEventTask).mockResolvedValue({ id: "t1" } as EventTaskRow);
+    expect((await post({ paused: true })).status).toBe(404);
+    expect(pauseEventTask).not.toHaveBeenCalled();
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "ana" });
     vi.mocked(pauseEventTask).mockResolvedValue({ id: "t1" } as EventTaskRow);
     vi.mocked(resumeEventTask).mockResolvedValue({ id: "t1" } as EventTaskRow);
     expect(await (await post({ paused: true })).json()).toEqual({ id: "t1", paused: true });

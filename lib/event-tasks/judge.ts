@@ -77,11 +77,19 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     const prior = kept((task.transcript ?? []) as Message[]);
     const ask: Message = { role: "user", content: candidateMessage({ task, candidate: record.candidate as unknown as Candidate, decisions }) };
     const brain = d.brain(tools);
+    // Past the reading budget, ONE more call that can only notify: the verdict is a tool call, so a call without
+    // tools (closeOut) could never notify (final review I1). After it, closeOut ends the turn.
+    const notifyOnly = EVENT_TASK_TOOL_DECLARATIONS.filter((t) => t.name === AUTOMATION_NOTIFY);
     let steps = 0;
     const result = await (d.runLoop ?? runAgentLoop)({
       messages: [{ role: "system", content: JUDGE_SYSTEM }, ...prior, ask],
       tools,
-      openStream: (messages) => (++steps <= MAX_STEPS ? brain.openStream(messages) : brain.closeOut([...messages, { role: "user", content: ANSWER_NOW }])),
+      openStream: (messages) => {
+        steps++;
+        if (steps <= MAX_STEPS) return brain.openStream(messages);
+        if (steps === MAX_STEPS + 1) return d.brain(notifyOnly).openStream([...messages, { role: "user", content: ANSWER_NOW }]);
+        return brain.closeOut(messages);
+      },
       closeOut: brain.closeOut,
       runTool: async (name, args) => {
         // The loop refuses what it was not declared; this is the second gate of a guarantee that can't fail.

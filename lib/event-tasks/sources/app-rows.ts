@@ -33,7 +33,9 @@ const PAGE = 200;
 const BEFORE = 20;
 const AT = "__openlen_at";
 const KEY = "__openlen_key";
-const CREATION_TYPES = new Set(["timestamp with time zone", "timestamp without time zone", "date"]);
+// Not `date`: rows of one day tie on it and the key's order is not arrival order (uuids), so a cursor past one
+// row of the day would skip the later ones that sort before it (final review I5).
+const CREATION_TYPES = new Set(["timestamp with time zone", "timestamp without time zone"]);
 
 export const quoteIdent = (name: string): string => `"${name.replace(/\0/g, "").replace(/"/g, '""')}"`;
 export const quoteLiteral = (value: string): string => `'${value.replace(/\0/g, "").replace(/'/g, "''")}'`;
@@ -89,11 +91,14 @@ export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
         reason: `Table "${params.table}" has no timestamp or date column "${params.created_column}" saying when each row was created; a migration can add one (created_at timestamptz default now()).`,
       };
     }
+    // From the catalog, not information_schema: `table_constraints` hides the keys of a table the role can only
+    // SELECT, and production's read-only role can only SELECT (final review C1). The first column of the key.
     const pk = await queryLive(
       projectId,
-      `SELECT kcu.column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema WHERE tc.table_schema = 'public' AND tc.table_name = ${quoteLiteral(params.table)} AND tc.constraint_type = 'PRIMARY KEY' ORDER BY kcu.ordinal_position`,
+      `SELECT a.attname FROM pg_index i JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0] WHERE i.indrelid = to_regclass('public.' || quote_ident(${quoteLiteral(params.table)})) AND i.indisprimary`,
     );
-    const keyColumn = pk?.kind === "rows" ? String(pk.rows[0]?.[0] ?? "") : "";
+    if (pk?.kind !== "rows") return { ok: false, reason: pk?.kind === "error" ? pk.message : "The production base could not be read." };
+    const keyColumn = String(pk.rows[0]?.[0] ?? "");
     if (!keyColumn) return { ok: false, reason: `Table "${params.table}" has no primary key.` };
     const t = quoteIdent(params.table);
     const c = quoteIdent(params.created_column);

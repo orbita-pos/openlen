@@ -1096,7 +1096,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             },
             "form": {
               "type": "STRING",
-              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+              "description": "form_submissions: the form to watch — its own id (f…) when it has one, else its position: bare on the home page (0, 1…), <page>:<position> on another page. Omit it for every form of the project."
             },
             "conditions": {
               "type": "ARRAY",
@@ -2437,7 +2437,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             },
             "form": {
               "type": "STRING",
-              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+              "description": "form_submissions: the form to watch — its own id (f…) when it has one, else its position: bare on the home page (0, 1…), <page>:<position> on another page. Omit it for every form of the project."
             },
             "conditions": {
               "type": "ARRAY",
@@ -3772,7 +3772,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             },
             "form": {
               "type": "STRING",
-              "description": "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project."
+              "description": "form_submissions: the form to watch — its own id (f…) when it has one, else its position: bare on the home page (0, 1…), <page>:<position> on another page. Omit it for every form of the project."
             },
             "conditions": {
               "type": "ARRAY",

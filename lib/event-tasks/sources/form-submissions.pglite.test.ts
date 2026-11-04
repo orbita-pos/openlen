@@ -23,11 +23,14 @@ let pg: PGlite;
 beforeEach(async () => {
   pg = new PGlite();
   await pg.exec(`
-    CREATE TABLE "projects" ("id" text PRIMARY KEY);
-    INSERT INTO "projects" VALUES ('p1'), ('p2');
+    CREATE TABLE "projects" ("id" text PRIMARY KEY, "data" jsonb);
+    INSERT INTO "projects" VALUES ('p1', NULL), ('p2', NULL);
     CREATE TABLE "formSubmissions" (
       "id" text PRIMARY KEY, "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
       "data" jsonb NOT NULL, "meta" jsonb, "createdAt" timestamp NOT NULL DEFAULT now(), "seenAt" timestamp, "formId" text);`);
+  // The site: home with a form of its own id and one without, and a page «contacto» with one without and «fab12».
+  const site = { html: '<form data-ol-form-id="fhome1"></form><form></form>', pages: { contacto: { html: '<form></form><form data-ol-form-id="fab12"></form>' } } };
+  await pg.query(`UPDATE "projects" SET "data" = $1 WHERE "id" = 'p1'`, [JSON.stringify(site)]);
   base.db = drizzle(pg, { schema });
 });
 
@@ -48,6 +51,18 @@ describe("the form a submission came from", () => {
 });
 
 describe("formSubmissionsSource", () => {
+  it("validate refuses a form the site doesn't have, naming the ones it does (review I12)", async () => {
+    const v = await formSubmissionsSource.validate("p1", { form: "home:0" });
+    expect(v.ok).toBe(false);
+    if (!v.ok) for (const key of ["fhome1", "1", "contacto:0"]) expect(v.reason).toContain(key);
+    for (const form of ["fhome1", "1", "contacto:0"]) expect((await formSubmissionsSource.validate("p1", { form })).ok).toBe(true);
+    // A form whose submissions already came is accepted even if the page no longer has it.
+    await submit("p2", "fold9", { nombre: "Ana" });
+    expect((await formSubmissionsSource.validate("p2", { form: "fold9" })).ok).toBe(true);
+    // Every form of the project: nothing to check.
+    expect((await formSubmissionsSource.validate("p2", {})).ok).toBe(true);
+  });
+
   it("validate starts the cursor at the newest submission of that form", async () => {
     await submit("p1", "fab12", { nombre: "Ana" });
     await submit("p1", "fcd34", { nombre: "Otro formulario" });

@@ -1,5 +1,6 @@
 // POST /api/projects/[id]/event-cards/[cardId] — «Hazlo» or «Ahora no» on an event task's card (spec local
-// 2026-11-03-len-que-avisa, §7.7). The owner or an editor; the turn runs as whoever pressed. The phone too.
+// 2026-11-03-len-que-avisa, §7.7). The OWNER's: a card carries what the site's visitors sent, which only the owner
+// sees (lib/projects/acceso.ts; final review I8). The turn runs as them. The phone too.
 import { decideAndLaunch, defaultAcceptDeps } from "@/lib/event-tasks/accept";
 import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -23,6 +24,7 @@ export const POST = paraLaApp(
       if (action !== "accept" && action !== "dismiss") return Response.json({ error: "bad_action" }, { status: 400 });
       const acceso = await exigirAcceso(id, userId, "editar");
       if (acceso instanceof Response) return acceso;
+      if (acceso.rol !== "dueno") return Response.json({ error: "owner_only" }, { status: 403 });
       const r = await decideAndLaunch({ projectId: id, cardId, action, actorId: userId }, await defaultAcceptDeps());
       if (!r.ok) return Response.json({ error: r.reason }, { status: r.reason === "not_found" ? 404 : 409 });
       // Accepted: the row and its text let the chat paint the turn running and follow it.

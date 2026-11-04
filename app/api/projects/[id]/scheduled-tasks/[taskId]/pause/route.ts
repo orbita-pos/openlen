@@ -27,6 +27,8 @@ export const POST = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response> 
   const now = new Date();
   const result = body.paused ? await pauseTask(id, taskId, now) : await resumeTask(id, taskId, now);
   if (result === "not_found") {
+    // An event task is the owner's (final review I8).
+    if (access.rol !== "dueno") return Response.json({ code: "schedule_not_found" }, { status: 404 });
     const event = body.paused ? await pauseEventTask(id, taskId, now) : await resumeEventTask(id, taskId, now);
     return event ? Response.json({ id: taskId, paused: body.paused }) : Response.json({ code: "schedule_not_found" }, { status: 404 });
   }

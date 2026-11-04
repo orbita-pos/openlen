@@ -24,7 +24,7 @@ const PK = rows(["column_name"], [["id"]]);
 function reservas(after: unknown[][], newest: unknown[] | null = ["2026-11-03 19:00:00.123456+00", "r9"]) {
   live.answer = (sql) => {
     if (sql.includes("information_schema.columns")) return sql.includes("'reservas'") ? COLUMNS : rows(["column_name", "data_type"], []);
-    if (sql.includes("PRIMARY KEY")) return PK;
+    if (sql.includes("indisprimary")) return PK;
     if (sql.includes("DESC") && sql.includes("LIMIT 1")) return rows(["__openlen_at", "__openlen_key"], newest ? [newest] : []);
     if (sql.includes("LIMIT 200")) return rows(["id", "created_at", "nombre", "mesa", "fecha", "__openlen_at", "__openlen_key"], after);
     return { kind: "error", message: `unexpected ${sql}` };

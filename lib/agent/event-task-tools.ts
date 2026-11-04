@@ -6,6 +6,8 @@
 //
 // Cache effect: these two declarations exist only in a judging turn's request, fixed, after Read/Glob/Grep; the
 // project chat's requests never carry them.
+import { visitorEnvelope } from "@/lib/event-tasks/framing";
+
 import type { ToolOutcome } from "./tools";
 
 export const SOURCE_READ = "source_read";
@@ -61,7 +63,15 @@ export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunne
   const run = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
     if (name === SOURCE_READ) {
       const keys = Array.isArray(args.keys) ? args.keys.map(String) : [];
-      return { response: { ok: true, tool_result: JSON.stringify(await deps.readSource(keys)) } };
+      let read: unknown;
+      try {
+        read = await deps.readSource(keys);
+      } catch (err) {
+        // A read that fails is this tool's answer; the judge can still decide on what it has.
+        return refuse(`The source could not be read: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      // The same visitor text as the candidate: inside the same envelope (final review I2).
+      return { response: { ok: true, tool_result: visitorEnvelope([read]).join("\n") } };
     }
     if (name !== AUTOMATION_NOTIFY) return refuse(`unknown tool ${name}`);
     // DeepSeek's words for a second card in a turn.

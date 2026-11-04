@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, count, desc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { MAX_ACTIVE_TASKS_PER_PROJECT, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
@@ -27,6 +27,9 @@ const RECORDS_PER_TASK = 200;
 
 const t = schema.eventTasks;
 const r = schema.eventTaskRecords;
+/** A task without the judge's conversation: what the lists and the minute's claim read (final review I10). Only
+ *  the judge reads its conversation, by id (`getEventTaskById`). */
+const WITHOUT_TRANSCRIPT = { ...getTableColumns(t), transcript: sql<EventTaskRow["transcript"]>`NULL` };
 
 /** Active tasks of both kinds: the ten per project are shared (spec §7.10). */
 export async function countActiveTasks(projectId: string): Promise<number> {
@@ -67,7 +70,7 @@ export async function createEventTask(input: {
 
 export async function listEventTasks(projectId: string, o: { readonly includeInactive?: boolean } = {}): Promise<EventTaskRow[]> {
   return db
-    .select()
+    .select(WITHOUT_TRANSCRIPT)
     .from(t)
     .where(o.includeInactive ? eq(t.projectId, projectId) : and(eq(t.projectId, projectId), eq(t.status, "active")))
     .orderBy(asc(t.createdAt), asc(t.id));
@@ -77,7 +80,7 @@ export async function listEventTasks(projectId: string, o: { readonly includeIna
 export async function listEventTasksOfProjects(projectIds: readonly string[]): Promise<EventTaskRow[]> {
   if (projectIds.length === 0) return [];
   return db
-    .select()
+    .select(WITHOUT_TRANSCRIPT)
     .from(t)
     .where(and(inArray(t.projectId, [...projectIds]), eq(t.status, "active")))
     .orderBy(asc(t.createdAt));
@@ -119,7 +122,7 @@ export async function resumeEventTask(projectId: string, id: string, now: Date):
 /** The tasks due a check, each claimed once: its `nextCheckAt` moves a minute on only if it is still as read. */
 export async function claimDueChecks(now: Date, limit: number): Promise<EventTaskRow[]> {
   const due = await db
-    .select()
+    .select({ id: t.id, nextCheckAt: t.nextCheckAt })
     .from(t)
     .where(and(eq(t.status, "active"), isNull(t.pausedAt), lte(t.nextCheckAt, now)))
     .orderBy(asc(t.nextCheckAt))
@@ -131,7 +134,7 @@ export async function claimDueChecks(now: Date, limit: number): Promise<EventTas
       .set({ nextCheckAt: new Date(now.getTime() + CHECK_EVERY_MS), lastCheckedAt: now })
       // In milliseconds, JS's precision, as the scheduled tasks' claim.
       .where(and(eq(t.id, task.id), sql`date_trunc('milliseconds', ${t.nextCheckAt}) = ${task.nextCheckAt}`, eq(t.status, "active"), isNull(t.pausedAt)))
-      .returning();
+      .returning(WITHOUT_TRANSCRIPT);
     if (row) claimed.push(row);
   }
   return claimed;
