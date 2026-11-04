@@ -1130,7 +1130,7 @@ async function loadVersion(tab: OpenTab, html: string, opciones: OpenTab["opcion
  */
 export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string; images?: InlineImage[] }> {
   // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8 step 6): its own host, as the person
-  // sees it, with the bridge in installed mode — its writes are refused all the same.
+  // sees it, with the bridge in installed mode — its own data is real; `update` is refused.
   if (p.installedUrl && p.toolBridge) {
     const bridge = p.toolBridge;
     return visitAnotherSite(
@@ -1336,7 +1336,7 @@ export async function closeBrowserTab(holder: BrowserTabHolder | undefined): Pro
 }
 
 /** The tabs whose page already exposes a tool's bridge (Puppeteer refuses to expose a name twice). */
-const bridgedTabs = new WeakSet<object>();
+const bridgeCallers = new WeakMap<object, BridgeCaller>();
 
 async function visitTab(
   tab: OpenTab,
@@ -1354,9 +1354,17 @@ async function visitTab(
   const opciones = p.toolBridge
     ? { ...(carpeta ?? { files: {}, pagina: null }), platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([]) } }
     : carpeta;
-  if (p.toolBridge && !bridgedTabs.has(tab.page)) {
-    await installEyesBridge(tab.page as never, p.toolBridge);
-    bridgedTabs.add(tab.page);
+  if (p.toolBridge) {
+    // Exposed once per tab; the caller is this visit's (light or dark), read on every call.
+    const page = tab.page as object;
+    const first = !bridgeCallers.has(page);
+    bridgeCallers.set(page, p.toolBridge);
+    if (first) {
+      await installEyesBridge(tab.page as never, () => bridgeCallers.get(page)!).catch((err: unknown) => {
+        bridgeCallers.delete(page);
+        throw err;
+      });
+    }
   }
   const version = versionOf(html, opciones);
   const enUnaApp = Boolean(p.vista?.app);

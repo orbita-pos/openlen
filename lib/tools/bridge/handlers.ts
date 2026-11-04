@@ -15,6 +15,8 @@ export type BridgeCaller = {
   readonly personEmail: string;
   readonly locale: string;
   readonly timeZone: string;
+  /** Len's eyes only: the colours the tool is shown with (`dark: true`); the workspace sends its own. */
+  readonly theme?: "light" | "dark";
 } & ({ readonly mode: "draft"; readonly toolProjectId: string } | { readonly mode: "installed"; readonly installation: ToolInstallationRow });
 
 export type ServerMethod = "backend" | "projects" | "forms" | "visits" | "query";

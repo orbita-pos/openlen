@@ -2441,7 +2441,13 @@ async function toolEyesOf(
   if (!session.tool) return {};
   const store = await import("@/lib/tools/store");
   const personId = session.personId ?? session.userId;
-  const base = { personId, personEmail: await store.personEmail(personId).catch(() => ""), locale: session.uiLocale ?? "en", timeZone: session.zonaHoraria ?? "UTC" };
+  const base = {
+    personId,
+    personEmail: await store.personEmail(personId).catch(() => ""),
+    locale: session.uiLocale ?? "en",
+    timeZone: session.zonaHoraria ?? "UTC",
+    theme: args.dark === true ? ("dark" as const) : ("light" as const),
+  };
   if (args.installed !== true) return { toolBridge: { ...base, mode: "draft", toolProjectId: session.projectId } };
   const row = await store.installationOf(personId, session.projectId).catch(() => null);
   if (!row || row.removedAt || !row.enabled) return { error: "This tool isn't installed for this person yet: call publish to install it first." };

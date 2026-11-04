@@ -23,6 +23,17 @@ describe("declarationsOfTool", () => {
     for (const n of ["view_page", "use_page"]) expect(props(byName(n)).installed).toMatchObject({ type: "BOOLEAN" });
   });
 
+  it("view_page and use_page can look in dark, as the person sees it with OpenLen dark", () => {
+    for (const n of ["view_page", "use_page"]) expect(props(byName(n)).dark).toMatchObject({ type: "BOOLEAN" });
+  });
+
+  it("installed: says its own data is real and only update is refused — not that every write is", () => {
+    const d = String((props(byName("use_page")).installed as { description: string }).description);
+    expect(d).not.toMatch(/writes are always refused/);
+    expect(d).toMatch(/real data/);
+    expect(d).toMatch(/update/);
+  });
+
   it("only the three it names change", () => {
     const before = buildFunctionDeclarations(process.env, {}, "len", app);
     const changed = declarations.filter((d, i) => JSON.stringify(d) !== JSON.stringify(before[i])).map((d) => d.name);
