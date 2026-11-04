@@ -25,6 +25,18 @@ export async function readRelease(sha: string): Promise<Record<string, ToolRelea
   return row?.files ?? null;
 }
 
+/** A person's installation of a tool project, or null. */
+export async function installationOf(personId: string, projectId: string): Promise<ToolInstallationRow | null> {
+  const [row] = await db.select().from(i).where(and(eq(i.personId, personId), eq(i.projectId, projectId))).limit(1);
+  return row ?? null;
+}
+
+/** The person's email: their tool's backend signs them in by it (Len's eyes run the bridge in Node). */
+export async function personEmail(personId: string): Promise<string> {
+  const [row] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, personId)).limit(1);
+  return row?.email ?? "";
+}
+
 /** The person's name, for a tool's `context()` (the workspace has no session object of its own). */
 export async function personName(personId: string): Promise<string> {
   const [row] = await db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, personId)).limit(1);
