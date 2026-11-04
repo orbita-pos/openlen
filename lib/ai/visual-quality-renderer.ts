@@ -171,6 +171,10 @@ export interface VisualQualityRenderOptions {
   /** LA CARPETA (pieza 9 de Len 2.5): los ficheros del proyecto que la página
    *  pide, contestados desde memoria por el guardia (`localResponseFor`). */
   readonly carpeta?: OpcionesDelDocumento;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): runs on the raw measuring page before it loads
+   *  the document — the eyes' bridge is exposed there, so window.openlen answers from the first line. Only a fresh
+   *  page (`captureWithBrowser`): the pool reuses pages, and a function can be exposed once per page. */
+  readonly preparePage?: (page: unknown) => Promise<void>;
 }
 
 interface PageLike {
@@ -1595,7 +1599,7 @@ async function createBrowserWorker(internals: VisualQualityRendererInternals) {
     // El plazo por paso se pone AQUÍ, una vez, y ya no hay forma de medir por
     // un camino que no lo lleve.
     const acotada = paginaConPlazo(page, internals.plazos?.pasoMs ?? RENDER_PASO_MS);
-    return { browser, page: acotada.page, colgada: acotada.colgada };
+    return { browser, page: acotada.page, raw: page, colgada: acotada.colgada };
   } catch (error) {
     await browser.close();
     throw error;
@@ -1609,6 +1613,7 @@ async function captureWithBrowser(
 ): Promise<VisualQualityViewports | null> {
   const worker = await createBrowserWorker(internals);
   try {
+    if (opts.preparePage) await opts.preparePage(worker.raw);
     const salida = await conPlazo(
       captureWithPage(worker.page, html, internals, opts),
       internals.plazos?.topeMs ?? RENDER_TOPE_MS,
@@ -1752,6 +1757,9 @@ export async function createVisualQualityRendererPool(
   return {
     render(html, opts = {}) {
       if (closed) return Promise.resolve(null);
+      // A page that has to be prepared (a tool's bridge) gets a browser of its own: a pooled page lives on, and a
+      // function can be exposed on a page only once.
+      if (opts.preparePage) return renderVisualQualityViewports(html, internals, opts);
       const index = cursor % huecos.length;
       cursor += 1;
       const task = tails[index]

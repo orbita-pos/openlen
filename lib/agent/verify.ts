@@ -30,6 +30,8 @@ import { renderVisualQualityViewports } from "@/lib/ai/visual-quality-renderer";
 // aquí abajo llegó a afirmar un mínimo distinto del que se comprobaba.
 import { UMBRAL_CONTRASTE } from "@/lib/ai/contraste";
 import { injectModelRuntime } from "@/lib/ai-stream/model-runtime";
+import { injectToolBridge, TOOL_BRIDGE_PATH } from "@/lib/tools/bridge/inject";
+import { toolBridgeClientSource } from "@/lib/tools/bridge/client-source";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import type { OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 // Las frases de «lo que la medición no pudo comprobar», en un solo sitio. Import
@@ -1533,6 +1535,9 @@ export interface MiradaParams {
    * Ausente ⇒ se mide el documento tal cual, como antes de que esto existiera.
    */
   readonly vista?: ContextoDeVista | null;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): measured with window.openlen in draft, as the
+   *  screenshot sees it — without it every tool «throws» reading the bridge. */
+  readonly toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
 }
 
 /** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
@@ -1619,10 +1624,18 @@ export async function observarPagina(
   // el usuario miraban páginas distintas. Fallo blando, como allí: si el
   // binding nativo no carga se mide crudo, que ya es útil.
   const medir = internals.medir ?? renderVisualQualityViewports;
-  const doc = documentoMedible(params.html, params.vista ?? null);
+  const medible = documentoMedible(params.html, params.vista ?? null);
   // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-  const carpeta = await carpetaDeLaVista(params.vista);
-  const m = await (carpeta ? medir(doc, {}, { carpeta }) : medir(doc)).catch(() => null);
+  const suCarpeta = await carpetaDeLaVista(params.vista);
+  const bridge = params.toolBridge;
+  const doc = bridge ? injectToolBridge(medible) : medible;
+  const carpeta = bridge
+    ? { ...(suCarpeta ?? { files: {}, pagina: null }), platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([]) } }
+    : suCarpeta;
+  const preparePage = bridge
+    ? async (page: unknown) => (await import("@/lib/tools/bridge/eyes")).installEyesBridge(page as never, bridge)
+    : undefined;
+  const m = await (carpeta ? medir(doc, {}, { carpeta, ...(preparePage ? { preparePage } : {}) }) : medir(doc)).catch(() => null);
   if (!m) return null;
 
   return { respuesta: `Measured in the browser${zona}. ${describeMeasurements(m)}` };

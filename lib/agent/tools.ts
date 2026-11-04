@@ -470,6 +470,8 @@ export interface AgentDeps {
     /** El contexto con el que se hornea lo que se MIDE, para que sea el mismo
      *  documento que el lienzo le enseña al usuario. Ver `MiradaParams.vista`. */
     vista?: ContextoDeVista | null;
+    /** A tool: measured with its bridge in draft (`MiradaParams.toolBridge`). */
+    toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
   }): Promise<{ respuesta: string } | null>;
   /** USAR LA PÁGINA — `use_page` (H9). Una visita en Chromium con los pasos
    *  que da Len; devuelve HECHOS de cada paso, no un veredicto. Opcional por lo
@@ -2006,8 +2008,15 @@ async function toolMirarPagina(
     };
   }
 
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): measured in draft, with its bridge; the
+  // installed version is looked at with a screenshot, where it really runs.
+  if (session.tool && args.installed === true) {
+    return { response: { ok: false, error: `with "installed", mode has to be "screenshot": "measure" runs this project's draft.` } };
+  }
+  const ojosParaMedir = session.tool ? await toolEyesOf(session, { ...args, installed: false }) : {};
+  if ("error" in ojosParaMedir) return { response: { ok: false, error: ojosParaMedir.error } };
   const visto = await deps
-    .observarPagina!({ html, tipo, pregunta, ...(zona ? { zona } : {}), vista })
+    .observarPagina!({ html, tipo, pregunta, ...(zona ? { zona } : {}), vista, ...(ojosParaMedir.toolBridge ? { toolBridge: ojosParaMedir.toolBridge } : {}) })
     .catch(() => null);
   if (!visto) {
     // Fail-open y DICIÉNDOLO: «no se pudo mirar» no puede leerse como «está
