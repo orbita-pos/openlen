@@ -2023,6 +2023,8 @@ async function correrTurno(
                   ...(agentSession.uiLocale ? { uiLocale: agentSession.uiLocale } : {}),
                   zonaHoraria: agentSession.zonaHoraria,
                   ownerEmail,
+                  // A child in a tool project installs and opens the installed tool, as Len does.
+                  ...(toolDelTurno ? { tool: true } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.
