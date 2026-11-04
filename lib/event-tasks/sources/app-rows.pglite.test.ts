@@ -99,7 +99,7 @@ describe("app_rows with after_hours", () => {
   }
   const age = (id: string, hoursAgo: number, type: "timestamptz" | "timestamp" = "timestamptz") =>
     pg().exec(`RESET ROLE; UPDATE esperan SET created_at = ${type === "timestamptz" ? "now()" : "localtimestamp"} - interval '${hoursAgo} hours' WHERE id = '${id}'; SET ROLE ro;`);
-  const started = async (params = PARAMS) => {
+  const started = async (params: { table: string; created_column: string; after_hours?: number } = PARAMS) => {
     const v = await appRowsSource.validate("p1", params, CTX);
     if (!v.ok) throw new Error(v.reason);
     return v.initialState;
