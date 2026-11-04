@@ -112,7 +112,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       setArchivoDelAviso(d ? { name: d.name, url: d.url, size: d.size, ...(d.previewUrl ? { preview: d.previewUrl } : {}), projectTitle: d.projectTitle } : { name: decodeURIComponent(url.split("/").pop() ?? "").slice(9), url, size: 0 });
     }).catch(() => setSinRed(true));
   }, [abrirAviso, cliente]);
-  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso, onAbrirEntregado: abrirEntregado });
+  // An event task's card (spec local 2026-11-03-len-que-avisa, §8): the project's chat, with that card in view.
+  const [avisoDelChat, setAvisoDelChat] = useState<{ id: string; tarjeta: string | null } | null>(null);
+  const abrirAvisoDeLen = useCallback((destino: string, tarjeta: string | null) => {
+    setAvisoDelChat({ id: destino, tarjeta });
+    abrirAviso(destino, "chat");
+  }, [abrirAviso]);
+  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso, onAbrirEntregado: abrirEntregado, onAbrirAviso: abrirAvisoDeLen });
   useAtras(selector, () => setSelector(false));
   useAtras(menu, () => setMenu(false));
   useEffect(() => {
@@ -345,6 +351,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         onEquipo={() => setPanel("equipo")}
         enfocar={enfocarEnChat}
         onEnfocado={alEnfocarEnChat}
+        resaltarAviso={avisoDelChat?.id === id ? avisoDelChat.tarjeta : null}
       />
 
       <PanelAnimado contexto={id}
@@ -356,7 +363,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
-          : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir) => { setPanel(null); abrirAviso(destino, abrir); }} /> : null}
+          : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}

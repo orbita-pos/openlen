@@ -8,6 +8,7 @@ import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { Incident } from "@/lib/len-watch/types";
 import { ScheduleId, createAtScheduleRecord, createWeeklyScheduleRecord } from "@/lib/scheduled-tasks/deepseek/domain";
 import type { RunWithTask, TaskRow } from "@/lib/scheduled-tasks/store";
+import type { EventTaskCardRow, EventTaskRecordRow, EventTaskRow } from "@/lib/event-tasks/store";
 
 import { buildTasksOverview, type TasksOverviewDeps } from "./tasks-overview";
 
@@ -146,6 +147,47 @@ describe("buildTasksOverview", () => {
   });
 
   it("no projects, nothing at all", async () => {
-    expect(await buildTasksOverview("owner", deps({ visibleProjects: async () => [] }))).toEqual({ needsYou: [], working: [], scheduled: [], resolved: [] });
+    expect(await buildTasksOverview("owner", deps({ visibleProjects: async () => [] }))).toEqual({ needsYou: [], working: [], scheduled: [], resolved: [], events: [] });
+  });
+
+  // «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): event tasks beside the timed ones.
+  const eventTask = (id: string, projectId: string) =>
+    ({ id, projectId, title: "Reservas que chocan", prompt: "Avísame.", source: "app_rows", params: { table: "reservas", created_column: "created_at" }, pausedAt: null, lastCheckedAt: NOW, transcript: [{ secret: 1 }] }) as unknown as EventTaskRow;
+  const record = (taskId: string) =>
+    ({ id: `r-${taskId}`, taskId, kind: "failed", reason: "table_missing", count: 2, notified: null, candidate: { secret: 1 }, lastAt: NOW }) as unknown as EventTaskRecordRow;
+
+  it("an editor's event tasks are listed with their source and records; a viewer's are not", async () => {
+    const eventTasksOf = vi.fn(async (ids: readonly string[]) => [eventTask("e1", "own"), eventTask("e3", "seen")].filter((t) => ids.includes(t.projectId)));
+    const eventRecordsOf = vi.fn(async (taskId: string) => [record(taskId)]);
+    const out = await buildTasksOverview("owner", deps({ eventTasksOf, eventRecordsOf }));
+    expect(eventTasksOf).toHaveBeenCalledWith(["own", "shared"]);
+    expect(out.events).toEqual([
+      {
+        id: "e1",
+        projectId: "own",
+        projectTitle: "Mi tienda",
+        title: "Reservas que chocan",
+        prompt: "Avísame.",
+        source: "app_rows",
+        params: { table: "reservas", created_column: "created_at" },
+        paused: false,
+        lastCheckedAt: NOW.toISOString(),
+        records: [{ id: "r-e1", kind: "failed", reason: "table_missing", count: 2, notified: null, at: NOW.toISOString() }],
+      },
+    ]);
+    expect(eventRecordsOf).toHaveBeenCalledWith("e1", 20);
+    expect(JSON.stringify(out.events)).not.toContain("secret");
+  });
+
+  it("a pending card needs whoever can decide it, in the project's chat", async () => {
+    const card = { id: "c1", taskId: "e1", projectId: "shared", title: "Dos reservas a la misma hora", status: "pending", createdAt: NOW } as unknown as EventTaskCardRow;
+    const pendingCardsOf = vi.fn(async (ids: readonly string[]) => [card].filter((c) => ids.includes(c.projectId)));
+    const out = await buildTasksOverview("owner", deps({ pendingCardsOf }));
+    expect(pendingCardsOf).toHaveBeenCalledWith(["own", "shared"]);
+    expect(out.needsYou).toEqual([{ kind: "aviso", projectId: "shared", projectTitle: "Del equipo", text: "Dos reservas a la misma hora", at: NOW.toISOString(), open: "chat", card: "c1" }]);
+  });
+
+  it("without event tasks wired, there are none", async () => {
+    expect((await buildTasksOverview("owner", deps())).events).toEqual([]);
   });
 });

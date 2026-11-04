@@ -20,15 +20,17 @@ export function abandonarAvisos(cliente: ClienteDeOpenLen): void {
     void Promise.allSettled([nativoAvisos.desregistrar(), nativoAvisos.limpiar()]);
   }
 }
-export function useAvisos({ cliente, onAbrirProyecto, onAbrirEntregado }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void; onAbrirEntregado?(id: string, url: string): void }) {
+export function useAvisos({ cliente, onAbrirProyecto, onAbrirEntregado, onAbrirAviso }: { cliente: ClienteDeOpenLen; onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void; onAbrirEntregado?(id: string, url: string): void; onAbrirAviso?(id: string, tarjeta: string | null): void }) {
   const abrir = useRef(onAbrirProyecto);
   abrir.current = onAbrirProyecto;
   const entregado = useRef(onAbrirEntregado);
   entregado.current = onAbrirEntregado;
+  const aviso = useRef(onAbrirAviso);
+  aviso.current = onAbrirAviso;
   const ref = useRef<ReturnType<typeof crearControlDeAvisos> | null>(null);
   const [estado, setEstado] = useState<EstadoAvisos>({ estado: "cargando", recibido: null });
   useEffect(() => {
-    const control = crearControlDeAvisos({ cliente, nativo: nativoAvisos, configurado: Capacitor.getPlatform() === "android" && import.meta.env.VITE_ANDROID_PUSH_CONFIGURED === "true", onEstado: setEstado, onAbrirProyecto: (id, destino) => abrir.current(id, destino), onAbrirEntregado: (id, url) => entregado.current ? entregado.current(id, url) : abrir.current(id) });
+    const control = crearControlDeAvisos({ cliente, nativo: nativoAvisos, configurado: Capacitor.getPlatform() === "android" && import.meta.env.VITE_ANDROID_PUSH_CONFIGURED === "true", onEstado: setEstado, onAbrirProyecto: (id, destino) => abrir.current(id, destino), onAbrirEntregado: (id, url) => entregado.current ? entregado.current(id, url) : abrir.current(id), onAbrirAviso: (id, tarjeta) => aviso.current ? aviso.current(id, tarjeta) : abrir.current(id) });
     ref.current = control;
     controles.set(cliente, control);
     void control.iniciar();

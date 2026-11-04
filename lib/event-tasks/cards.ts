@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, gt, gte, ne } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, ne } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { LenAvisoEvent } from "@/lib/notifications/types";
@@ -87,6 +87,16 @@ export async function setAcceptedRow(cardId: string, rowId: string): Promise<voi
 /** The project's cards for the chat: pending ones and those decided since `since`, newest first. */
 export async function cardsOfProject(projectId: string, o: { readonly since: Date }): Promise<EventTaskCardRow[]> {
   return db.select().from(c).where(and(eq(c.projectId, projectId), gte(c.createdAt, o.since))).orderBy(desc(c.createdAt)).limit(50);
+}
+
+/** The cards waiting for «Hazlo» or «Ahora no» in several projects: the phone's «Te necesita». */
+export async function pendingCardsOfProjects(projectIds: readonly string[]): Promise<EventTaskCardRow[]> {
+  if (projectIds.length === 0) return [];
+  return db
+    .select()
+    .from(c)
+    .where(and(inArray(c.projectId, [...projectIds]), eq(c.status, "pending")))
+    .orderBy(desc(c.createdAt));
 }
 
 /** What the owner decided on a task's cards since `since`: the judge's status notice. */

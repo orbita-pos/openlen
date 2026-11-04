@@ -19,3 +19,6 @@
 .resumen-dias { display: flex; flex-wrap: wrap; gap: 4px; }
 .app-resumen .resumen-dias button { padding: 8px 10px; min-height: 36px; border-radius: 10px; font-size: 12px; }
 .app-resumen .resumen-dias button[aria-pressed="true"] { outline: 2px solid var(--m-ink); outline-offset: -2px; }
+/* An event task's «Registros» (spec local 2026-11-03-len-que-avisa, §8): 44 px to open, one line per look. */
+.resumen-registros { justify-self: start; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.resumen-registros-lista { display: grid; gap: 4px; margin: 0; padding: 0 0 0 10px; list-style: none; border-left: 2px solid currentColor; font-size: 12px; opacity: .8; }

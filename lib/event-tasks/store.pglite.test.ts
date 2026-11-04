@@ -112,6 +112,16 @@ describe("event tasks", () => {
     expect(await store.countActiveTasks("p2")).toBe(0);
   });
 
+  it("lists the active tasks of several projects, for the phone's «Tareas»", async () => {
+    const a = await store.createEventTask(eventInput());
+    const b = await store.createEventTask(eventInput({ projectId: "p2" }));
+    const gone = await store.createEventTask(eventInput());
+    await store.deactivateEventTask(gone.id, NOW);
+    expect((await store.listEventTasksOfProjects(["p1", "p2"])).map((t) => t.id).sort()).toEqual([a.id, b.id].sort());
+    expect((await store.listEventTasksOfProjects(["p2"])).map((t) => t.id)).toEqual([b.id]);
+    expect(await store.listEventTasksOfProjects([])).toEqual([]);
+  });
+
   it("deleting the project deletes its tasks, records and cards", async () => {
     const task = await store.createEventTask(eventInput());
     await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "filtered", reason: "estado ≠ confirmada", at: NOW });

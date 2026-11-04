@@ -84,6 +84,19 @@ describe("createCard", () => {
   });
 });
 
+describe("pendingCardsOfProjects", () => {
+  it("the pending cards of these projects, newest first; decided ones are not", async () => {
+    const n = notifier();
+    const task = await newTask();
+    const first = await card(task, "Primero", n);
+    const other = await store.createEventTask({ projectId: "p1", createdBy: "u1", locale: "es", timeZone: "UTC", title: "Otra", prompt: "p", source: "form_submissions", params: {}, state: {}, now: NOW });
+    const second = await card(other, "Segundo", n);
+    await cards.decideCard(first.id, "dismiss", "u1", NOW);
+    expect((await cards.pendingCardsOfProjects(["p1"])).map((c) => c.id)).toEqual([second.id]);
+    expect(await cards.pendingCardsOfProjects([])).toEqual([]);
+  });
+});
+
 describe("decideCard", () => {
   it("two concurrent decisions on one card: one wins, the other gets not_pending", async () => {
     const c = await card(await newTask(), "t", notifier());

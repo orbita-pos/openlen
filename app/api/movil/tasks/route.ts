@@ -2,6 +2,9 @@
 // Duet's Tasks: what needs the person, what Len is doing, their scheduled tasks and what was resolved,
 // across every project they can see (`buildTasksOverview`, with the real stores here).
 import { liveTurns } from "@/lib/agent/direcciones";
+import { pendingCardsOfProjects } from "@/lib/event-tasks/cards";
+import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
+import { listEventTasksOfProjects, recordsOf } from "@/lib/event-tasks/store";
 import { deliveriesBetween } from "@/lib/agent/skills/delivery-index";
 import { activeIncident, resolvedSince } from "@/lib/len-watch/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -29,6 +32,8 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     incidentOf: activeIncident,
     resolvedIncidents: resolvedSince,
     deliveriesBetween,
+    // Event tasks (spec local 2026-11-03-len-que-avisa, §8), when they are on.
+    ...(eventTasksEnabled() ? { eventTasksOf: listEventTasksOfProjects, eventRecordsOf: recordsOf, pendingCardsOf: pendingCardsOfProjects } : {}),
   });
   return Response.json(overview, { headers: { "cache-control": "no-store" } });
 });
