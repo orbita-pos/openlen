@@ -12,6 +12,8 @@ export function sourceLabel(task: { readonly source: string; readonly params?: R
   switch (task.source) {
     case "app_rows":
       return { key: "sourceRows", values: { table: text("table") } };
+    case "app_users":
+      return { key: "sourceAppUsers" };
     case "visitor_chat":
       return { key: p.watch === "signups" ? "sourceChatSignups" : "sourceChatMessages" };
     default:

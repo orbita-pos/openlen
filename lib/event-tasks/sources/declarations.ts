@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { EventSourceKind } from "../store";
 
-export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat"];
+export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat", "app_users"];
 
 const conditionSchema = z.object({
   field: z.string().min(1),
@@ -16,11 +16,13 @@ const conditionSchema = z.object({
 export const appRowsParamsSchema = z.object({ table: z.string().min(1), created_column: z.string().min(1), conditions: z.array(conditionSchema).optional() });
 export const formSubmissionsParamsSchema = z.object({ form: z.string().min(1).optional(), conditions: z.array(conditionSchema).optional() });
 export const visitorChatParamsSchema = z.object({ watch: z.enum(["messages", "signups"]).optional(), conditions: z.array(conditionSchema).optional() });
+export const appUsersParamsSchema = z.object({ conditions: z.array(conditionSchema).optional() });
 
 const PARAMS: Record<EventSourceKind, z.ZodTypeAny> = {
   app_rows: appRowsParamsSchema,
   form_submissions: formSubmissionsParamsSchema,
   visitor_chat: visitorChatParamsSchema,
+  app_users: appUsersParamsSchema,
 };
 
 /** `schedule_create`'s `on`, Gemini-style like the file's other schemas (no oneOf). Ours. */
@@ -32,7 +34,7 @@ export const ON_DECLARATION: Record<string, unknown> = {
       type: "STRING",
       enum: [...SOURCE_KINDS],
       description:
-        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it).",
+        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it). app_users: new sign-ups to the app (its production users).",
     },
     table: { type: "STRING", description: "app_rows: the table to watch for new rows." },
     created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },

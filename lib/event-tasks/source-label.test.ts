@@ -11,6 +11,10 @@ describe("sourceLabel", () => {
     expect(sourceLabel({ source: "form_submissions", params: {} })).toEqual({ key: "sourceAllForms" });
   });
 
+  it("app_users says sign-ups", () => {
+    expect(sourceLabel({ source: "app_users", params: {} })).toEqual({ key: "sourceAppUsers" });
+  });
+
   it("visitor_chat says messages or signups", () => {
     expect(sourceLabel({ source: "visitor_chat", params: {} })).toEqual({ key: "sourceChatMessages" });
     expect(sourceLabel({ source: "visitor_chat", params: { watch: "signups" } })).toEqual({ key: "sourceChatSignups" });
