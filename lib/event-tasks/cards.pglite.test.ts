@@ -155,6 +155,14 @@ describe("decideCard", () => {
     expect((await cards.getCard(c.id))!.status).toBe("pending");
   });
 
+  it("a replaced card is reported to the next judge", async () => {
+    const task = await newTask();
+    const n = notifier();
+    const first = await card(task, "uno", n, "r1");
+    await card(task, "uno otra vez", n, "r1");
+    expect((await cards.decisionsSince(task.id, new Date(Date.now() - 60_000))).map((d) => ({ id: d.id, status: d.status }))).toEqual([{ id: first.id, status: "replaced" }]);
+  });
+
   it("the decisions since a time are what the judge reads next", async () => {
     const task = await newTask();
     const c = await card(task, "t", notifier());

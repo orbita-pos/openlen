@@ -29,7 +29,7 @@ const record = (note = "ventana, por favor"): EventTaskRecordRow => ({
   candidate: { subject: "reservas", summary: "reservas: 1", changes: [{ subject: "reservas", summary: "Ana", detail: { id: "r10", nombre: "Ana", mesa: 4, nota: note }, at: "x" }] },
 });
 
-function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRow>[]; fail?: boolean } = {}) {
+function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRow>[]; pending?: Partial<EventTaskCardRow>[]; fail?: boolean } = {}) {
   const sent: Message[][] = [];
   const offered: string[][] = [];
   const reads: { session: AgentSession; name: string }[] = [];
@@ -70,6 +70,7 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
     castCheck: async () => null,
     createCard: async (c) => (cards.push(c), { id: "c1" } as EventTaskCardRow),
     decisionsSince: async () => (o.decisions ?? []) as EventTaskCardRow[],
+    pendingCards: async () => (o.pending ?? []) as EventTaskCardRow[],
     saveTranscript: async (_id, transcript) => void saved.push(transcript),
     markJudged: async (id, notified) => void judged.push({ id, notified }),
     charge: async (c) => void charges.push(c),
@@ -148,6 +149,28 @@ describe("judgeCandidate", () => {
     expect(s.charges).toEqual([
       expect.objectContaining({ uses: [{ provider: "fireworks", model: "the-model", inputTokens: 1000, cachedTokens: 0, outputTokens: 5, reasoningTokens: 0 }] }),
     ]);
+  });
+
+  it("the candidate message lists the task's pending cards, so the judge doesn't repeat one", async () => {
+    const s = setup([say("Nada.")], { pending: [{ title: "Choque en la mesa 2 (Marta y Pedro)", status: "pending", subjectKey: "r5", proposedAction: "reservas: mesa 2 → 3" }] });
+    await judgeCandidate(record(), task(), s.deps);
+    const ask = userText(s.sent[0]!);
+    expect(ask).toContain("Cards still waiting for the owner on this task");
+    expect(ask).toContain("Choque en la mesa 2 (Marta y Pedro)");
+  });
+
+  it("a dismissed card's note reaches the next judge as the owner's words, outside the visitors' envelope", async () => {
+    const s = setup([say("Nada.")]);
+    await judgeCandidate({ ...record(), note: "mejor ofrécele las 22:00" }, task(), s.deps);
+    const ask = userText(s.sent[0]!);
+    expect(ask).toContain("The owner asked to change the earlier proposal: mejor ofrécele las 22:00");
+    expect(ask.indexOf("mejor ofrécele")).toBeGreaterThan(ask.indexOf("</event-data>"));
+  });
+
+  it("the judge is told that changing real data and messaging people are the owner's to approve", async () => {
+    const s = setup([say("Nada.")]);
+    await judgeCandidate(record(), task(), s.deps);
+    expect(s.sent[0]![0]!.content).toContain("propose them as data_change or reply");
   });
 
   it("no automation_notify call means notified false and no card", async () => {

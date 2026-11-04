@@ -49,9 +49,10 @@ export async function createCard(
   const d = deps ?? (await defaultCardDeps());
   // A task can have several cards waiting, one per row or person — DeepSeek's several Tickets on a Thread. Only the
   // pending card about the same one is replaced.
+  // `decidedAt` too: the next judge hears that it was replaced, as it hears the owner's decisions.
   await db
     .update(c)
-    .set({ status: "replaced" })
+    .set({ status: "replaced", decidedAt: new Date() })
     .where(and(eq(c.taskId, o.task.id), eq(c.status, "pending"), eq(c.subjectKey, o.subjectKey)));
   const proposedAction = actionsLine(o.actions);
   const [card] = await db
