@@ -37,6 +37,7 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
   const saved: unknown[][] = [];
   const judged: { id: string; notified: boolean }[] = [];
   const charges: unknown[] = [];
+  const answers: { id: string; answer: string }[] = [];
   let step = 0;
   const deps: JudgeDeps = {
     now: () => NOW,
@@ -74,9 +75,10 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
     saveTranscript: async (_id, transcript) => void saved.push(transcript),
     markJudged: async (id, notified) => void judged.push({ id, notified }),
     charge: async (c) => void charges.push(c),
+    answerLookAgain: async (id, answer) => void answers.push({ id, answer }),
     runLoop: withReplayInvariant(runAgentLoop),
   };
-  return { deps, sent, offered, reads, cards, saved, judged, charges };
+  return { deps, sent, offered, reads, cards, saved, judged, charges, answers };
 }
 
 const userText = (messages: Message[]) => messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
@@ -167,6 +169,27 @@ describe("judgeCandidate", () => {
     expect(ask.indexOf("mejor ofrécele")).toBeGreaterThan(ask.indexOf("</event-data>"));
   });
 
+  it("an accepted card's status says what each action came to, so a blocked change isn't read as resolved (real turn, 04/11)", async () => {
+    const blocked = {
+      id: "c0",
+      title: "Choca la mesa 1",
+      status: "accepted" as const,
+      actions: [
+        { action: { kind: "data_change", table: "reservas", key: { id: "r9" }, set: { mesa: "2" }, before: { mesa: "1" } }, state: "blocked", attempts: 0, nextAttemptAt: null, error: "The row changed since the card was made.", result: "mesa 3" },
+        { action: { kind: "reply", channel: "email", to: "pedro@ejemplo.test", subject: "s", body: "b" }, state: "pending", attempts: 0, nextAttemptAt: null, error: null, result: null },
+      ],
+    };
+    const s = setup([say("Nada.")], { decisions: [blocked as unknown as Partial<EventTaskCardRow>] });
+    await judgeCandidate(record(), task(), s.deps);
+    const ask = userText(s.sent[0]!);
+    const status = ask.slice(ask.indexOf("Latest status of action cards"));
+    expect(status).toMatch(/data_change[^\n]*blocked/);
+    expect(status).toMatch(/reply[^\n]*pending/);
+    // Only the kinds and states: the row's values and the address stay out of the status facts.
+    expect(status).not.toContain("mesa 3");
+    expect(status).not.toContain("pedro@ejemplo.test");
+  });
+
   it("the judge is told that changing real data and messaging people are the owner's to approve", async () => {
     const s = setup([say("Nada.")]);
     await judgeCandidate(record(), task(), s.deps);
@@ -197,6 +220,23 @@ describe("judgeCandidate", () => {
       }),
     ]);
     expect(JSON.stringify(s.offered[0])).not.toContain("reply");
+  });
+
+  it("a record the owner put back whose judge makes no card answers on the earlier card, in the judge's words (real turn, 04/11)", async () => {
+    const s = setup([say("La reserva de Pedro ya no choca con ninguna: no hay nada que hacer.")]);
+    const putBack = { ...record(), lastAt: new Date(NOW.getTime() + 3_600_000) };
+    expect(await judgeCandidate(putBack, task(), s.deps)).toEqual({ notified: false });
+    expect(s.answers).toEqual([{ id: "r1", answer: "La reserva de Pedro ya no choca con ninguna: no hay nada que hacer." }]);
+  });
+
+  it("a first judge, or a judge put back that made a card, answers nothing on earlier cards", async () => {
+    const first = setup([say("No choca.")]);
+    await judgeCandidate(record(), task(), first.deps);
+    expect(first.answers).toEqual([]);
+    const args = { title: "Choca la mesa 1", summary: "Pedro y Luis.", actions: [{ kind: "project", text: "Escribirle a Pedro." }] };
+    const again = setup([call("automation_notify", args), say("Avisé.")]);
+    await judgeCandidate({ ...record(), lastAt: new Date(NOW.getTime() + 3_600_000) }, task(), again.deps);
+    expect(again.answers).toEqual([]);
   });
 
   it("an automation_notify call makes the card, for this record", async () => {

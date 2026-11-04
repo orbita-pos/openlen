@@ -31,6 +31,15 @@ const MAX_STEPS = 6;
 const ANSWER_NOW = "You have used the reading budget for this change. Do not call any more tools except automation_notify: decide now.";
 /** The task's own conversation keeps its last messages, cut at a candidate. */
 const KEEP_MESSAGES = 40;
+/** Len's answer on a card it looked at again: a line or two, plain. */
+const ANSWER_MAX = 400;
+
+/** The judge's last words as a card line: no markdown, one paragraph, cut at ANSWER_MAX. */
+function asAnswer(text: string): string | null {
+  const plain = text.replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim();
+  if (!plain) return null;
+  return plain.length <= ANSWER_MAX ? plain : `${plain.slice(0, ANSWER_MAX - 1).trimEnd()}…`;
+}
 
 export interface JudgeDeps {
   now(): Date;
@@ -57,6 +66,8 @@ export interface JudgeDeps {
   pendingCards(taskId: string): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
   markJudged(recordId: string, notified: boolean): Promise<void>;
+  /** The record's earlier card that asked to look again hears what the judge found (./cards.ts). */
+  answerLookAgain(recordId: string, answer: string): Promise<void>;
   charge(c: { ownerId: string; projectId: string; actorId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly JudgeUse[] }): Promise<void>;
   runLoop?: typeof runAgentLoop;
 }
@@ -157,6 +168,9 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
       unattended: true,
     });
     notified = runEventTool.notified();
+    // Put back by the owner (requeueRecord moves `lastAt`) and no new card: the card that asked hears the judge.
+    const answer = asAnswer(result.finalText ?? "");
+    if (!notified && answer && record.lastAt.getTime() > record.firstAt.getTime()) await d.answerLookAgain(record.id, answer);
     await d.saveTranscript(task.id, [...prior, ask, ...(result.transcripcion ?? [])], d.now());
     // Each provider's tokens: the ledger prices them, so a judging turn has its real cost like a chat turn.
     const uses = brains.flatMap((b) =>
@@ -215,6 +229,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
     pendingCards: cards.pendingCardsOfTask,
     saveTranscript: store.saveTranscript,
     markJudged: store.markJudged,
+    answerLookAgain: cards.answerLookAgain,
     charge: async (c) => {
       const rate = policy.creditRateForRole(policy.roleForOperation("event_task_judge"));
       const centicredits = creditsForUsage(c.usage.inputTokens, c.usage.outputTokens, rate, c.usage.cachedTokens);

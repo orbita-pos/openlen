@@ -140,9 +140,9 @@ describe("createCard", () => {
   it("the migration adds the new columns to existing tables, and running it twice is harmless", async () => {
     for (const statement of [...ALTER_EVENT_TASK_CARDS, ...ALTER_EVENT_TASK_CARDS]) await pg.query(statement);
     const cols = (await pg.query<{ table_name: string; column_name: string }>(
-      `SELECT table_name, column_name FROM information_schema.columns WHERE column_name IN ('actions', 'subjectKey', 'dismissNote', 'note') ORDER BY table_name, column_name`,
+      `SELECT table_name, column_name FROM information_schema.columns WHERE column_name IN ('actions', 'subjectKey', 'dismissNote', 'lookedAgain', 'note') ORDER BY table_name, column_name`,
     )).rows.map((r) => `${r.table_name}.${r.column_name}`);
-    expect(cols).toEqual(["eventTaskCards.actions", "eventTaskCards.dismissNote", "eventTaskCards.subjectKey", "eventTaskRecords.note"]);
+    expect(cols).toEqual(["eventTaskCards.actions", "eventTaskCards.dismissNote", "eventTaskCards.lookedAgain", "eventTaskCards.subjectKey", "eventTaskRecords.note"]);
   });
 });
 
@@ -180,6 +180,25 @@ describe("decideCard", () => {
     const c = await card(await newTask(), "t", notifier());
     expect((await cards.cardOfRecord("r1", new Date(c.createdAt.getTime() - 1000)))?.id).toBe(c.id);
     expect(await cards.cardOfRecord("r1", new Date(c.createdAt.getTime() + 1000))).toBeNull();
+  });
+
+  it("answerLookAgain writes Len's answer on the record's card that asked to look again — a blocked change, or a dismissal with a note — and nowhere else", async () => {
+    const task = await newTask();
+    const n = notifier();
+    const blocked = await card(task, "bloqueada", n, "a");
+    await cards.decideCard("p1", blocked.id, "accept", "u1", NOW);
+    await cards.updateCardAction(blocked.id, 0, { state: "blocked", result: "mesa 3" });
+    const noted = await card(task, "con nota", n, "b");
+    await cards.decideCard("p1", noted.id, "dismiss", "u1", NOW, "mejor a las 22:00");
+    const plain = await card(task, "descartada", n, "c");
+    await cards.decideCard("p1", plain.id, "dismiss", "u1", NOW);
+    const waiting = await card(task, "pendiente", n, "d");
+    await cards.answerLookAgain("r1", "Ya no choca con ninguna: no hay nada que hacer.");
+    const after = async (id: string) => (await cards.getCard(id))!.lookedAgain;
+    expect(await after(blocked.id)).toBe("Ya no choca con ninguna: no hay nada que hacer.");
+    expect(await after(noted.id)).toBe("Ya no choca con ninguna: no hay nada que hacer.");
+    expect(await after(plain.id)).toBeNull();
+    expect(await after(waiting.id)).toBeNull();
   });
 
   it("an unknown card is not_found", async () => {

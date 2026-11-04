@@ -122,5 +122,6 @@ export const ALTER_EVENT_TASK_CARDS: readonly string[] = [
   `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "actions" jsonb;`,
   `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "subjectKey" text;`,
   `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "dismissNote" text;`,
+  `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "lookedAgain" text;`,
   `ALTER TABLE "eventTaskRecords" ADD COLUMN IF NOT EXISTS "note" text;`,
 ];

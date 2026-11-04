@@ -17,7 +17,7 @@ const task: EventTaskRow = {
 };
 const card = (over: Partial<EventTaskCardRow> = {}): EventTaskCardRow => ({
   id: "c1", taskId: "t1", projectId: "p1", recordId: "r1", title: "Choca la mesa 4", summary: `Ana escribió ${PROBE}`, proposedAction: "Escribirle a Luis para ofrecerle la mesa 6.",
-  status: "accepted", decidedBy: "u2", decidedAt: NOW, acceptedRowId: null, actions: null, subjectKey: null, dismissNote: null, createdAt: NOW, ...over,
+  status: "accepted", decidedBy: "u2", decidedAt: NOW, acceptedRowId: null, actions: null, subjectKey: null, dismissNote: null, lookedAgain: null, createdAt: NOW, ...over,
 });
 
 const change: CardAction = { kind: "data_change", table: "reservas", key: { id: "r7" }, set: { mesa: "6" }, before: { mesa: "4" } };
