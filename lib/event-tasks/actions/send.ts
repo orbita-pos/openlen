@@ -9,7 +9,7 @@ import "server-only";
 import type { SendInput, SendOutcome } from "@/lib/project-email/send";
 
 import type { EventTaskCardRow } from "../store";
-import type { ActionState, CardActionRecord } from "./types";
+import { WITHDRAWN, type ActionState, type CardActionRecord } from "./types";
 
 export interface SendReplyDeps {
   send(i: SendInput): Promise<SendOutcome>;
@@ -20,7 +20,6 @@ export interface SendReplyDeps {
 
 const FIRST_WAIT_S = 5;
 const LONGEST_WAIT_S = 300;
-const WITHDRAWN = "retirado por el dueño";
 
 const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const html = (body: string) =>

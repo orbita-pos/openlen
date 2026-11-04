@@ -43,6 +43,7 @@ export const GET = paraLaApp(async (req: Request, { params }: { params: Promise<
       proposedAction: c.proposedAction,
       actions: c.actions ?? null,
       dismissNote: c.dismissNote,
+      subjectKey: c.subjectKey,
       status: c.status,
       acceptedRowId: c.acceptedRowId,
       createdAt: c.createdAt.toISOString(),

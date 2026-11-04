@@ -606,6 +606,27 @@
     "filterAll": "Alle",
     "filterTime": "Zeitgesteuert",
     "filterEvents": "Bei Ereignis",
-    "lastCheck": "Letzte Prüfung: {when}"
+    "lastCheck": "Letzte Prüfung: {when}",
+    "actionData": "Änderung in {table}",
+    "actionReply": "An: {to} · Per: E-Mail",
+    "apply": "Anwenden",
+    "applyAndSend": "Anwenden und senden",
+    "rowChanged": "Die Zeile hat sich seit dem Hinweis geändert: Nichts wurde angewendet.",
+    "rowNow": "Jetzt: {now}",
+    "lookAgain": "Erneut prüfen",
+    "lookingAgain": "Len prüft erneut; ein neuer Hinweis kommt.",
+    "dailyLimit": "Für diese Aufgabe sind heute keine Prüfungen mehr übrig. Versuch es morgen.",
+    "sending": "Wird gesendet… (Versuch {attempts})",
+    "sendFailed": "Nicht gesendet: {error}",
+    "withdraw": "Zurückziehen",
+    "withdrawn": "Zurückgezogen",
+    "whatWouldYouChange": "Was würdest du ändern? (optional)",
+    "askAgain": "Neuen Vorschlag anfordern",
+    "dismissConfirm": "Verwerfen",
+    "repliesGoTo": "Antworten gehen an {email}",
+    "doneApplied": "Angewendet: {result}",
+    "doneSent": "Gesendet an {to}",
+    "actionFailed": "Nicht möglich: {error}",
+    "yourNote": "Deine Notiz: {note}"
   }
 }

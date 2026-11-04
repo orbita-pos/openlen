@@ -42,6 +42,9 @@ export interface CardActionRecord {
   readonly result: string | null;
 }
 
+/** The error of a send the owner withdrew («Retirar»): the card says «Retirado». */
+export const WITHDRAWN = "retirado por el dueño";
+
 /** At most this many actions on one card: the real case needs two, move and tell. */
 export const MAX_ACTIONS = 2;
 
