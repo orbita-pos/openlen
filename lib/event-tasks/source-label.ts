@@ -11,7 +11,7 @@ export function sourceLabel(task: { readonly source: string; readonly params?: R
   const text = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : typeof p[k] === "number" ? String(p[k]) : "");
   switch (task.source) {
     case "app_rows":
-      return { key: "sourceRows", values: { table: text("table") } };
+      return text("after_hours") ? { key: "sourceRowsAfter", values: { table: text("table"), hours: text("after_hours") } } : { key: "sourceRows", values: { table: text("table") } };
     case "app_users":
       return { key: "sourceAppUsers" };
     case "visitor_chat":

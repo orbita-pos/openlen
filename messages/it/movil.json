@@ -159,6 +159,7 @@
     "records": "Registro",
     "noRecords": "Ancora niente",
     "sourceRows": "Nuove righe di {table}",
+    "sourceRowsAfter": "Righe di {table} ancora uguali dopo {hours} h",
     "sourceForm": "Invii del modulo {form}",
     "sourceAllForms": "Invii dei moduli",
     "sourceChatMessages": "Messaggi nella chat della tua pagina",

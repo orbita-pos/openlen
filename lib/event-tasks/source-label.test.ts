@@ -11,6 +11,10 @@ describe("sourceLabel", () => {
     expect(sourceLabel({ source: "form_submissions", params: {} })).toEqual({ key: "sourceAllForms" });
   });
 
+  it("app_rows with after_hours says it waits", () => {
+    expect(sourceLabel({ source: "app_rows", params: { table: "reservas", after_hours: 24 } })).toEqual({ key: "sourceRowsAfter", values: { table: "reservas", hours: "24" } });
+  });
+
   it("app_users says sign-ups", () => {
     expect(sourceLabel({ source: "app_users", params: {} })).toEqual({ key: "sourceAppUsers" });
   });

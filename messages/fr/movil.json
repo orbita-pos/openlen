@@ -159,6 +159,7 @@
     "records": "Historique",
     "noRecords": "Rien pour l’instant",
     "sourceRows": "Nouvelles lignes de {table}",
+    "sourceRowsAfter": "Lignes de {table} toujours concernées après {hours} h",
     "sourceForm": "Envois du formulaire {form}",
     "sourceAllForms": "Envois des formulaires",
     "sourceChatMessages": "Messages dans le chat de votre page",
