@@ -31,6 +31,15 @@ describe("toolSkeleton", () => {
     }
   });
 
+  it("types what the bridge really returns — found in the real turn, where Len had to probe forms() and cast projects()", () => {
+    const types = toolSkeleton({ title: "Herramienta", locale: "es" }).files["/src/openlen.d.ts"]!;
+    expect(types).toMatch(/projects(): Promise<Array<{ id: string; title: string; role: "dueno" | "editor" | "lector" }>>/);
+    expect(types).toMatch(/forms([^)]*): Promise<OpenLenFormsSummary>/);
+    expect(types).toMatch(/visits([^)]*): Promise<OpenLenVisitsSummary>/);
+    for (const field of ["sinVer", "hoy", "ayer", "total", "lista", "linea", "visto"]) expect(types).toContain(field);
+    for (const field of ["ultimos7", "ultimos30", "rango", "porDia", "deDonde", "recortadoDesde"]) expect(types).toContain(field);
+  });
+
   it("is an app skeleton underneath: the same shell, data.app and /src", () => {
     const s = toolSkeleton({ title: "Reservas", locale: "es" });
     const app = esqueletoDeApp({ titulo: "Reservas", idioma: "es" });
