@@ -139,7 +139,8 @@
       "artifact-image": "Fazer uma imagem promocional",
       "artifact-motion": "Fazer um vídeo animado",
       "artifact-audio": "Fazer um áudio ou uma narração",
-      "schedule": "Agendar uma tarefa para o Len fazer em um horário"
+      "schedule": "Agendar uma tarefa para o Len fazer em um horário",
+      "tool-development": "Construir, mudar, instalar ou verificar esta ferramenta"
     },
     "fileLimit": "Cabem 4 arquivos por mensagem.",
     "fileTooBig": "Esse arquivo passa de 20 MB.",

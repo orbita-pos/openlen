@@ -139,7 +139,8 @@
       "artifact-image": "制作宣传图片",
       "artifact-motion": "制作动态视频",
       "artifact-audio": "制作音频或旁白",
-      "schedule": "预约一个让 Len 在指定时间完成的任务"
+      "schedule": "预约一个让 Len 在指定时间完成的任务",
+      "tool-development": "构建、修改、安装或检查这个工具"
     },
     "fileLimit": "每条消息最多 4 个文件。",
     "fileTooBig": "该文件超过 20 MB。",

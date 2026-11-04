@@ -26,6 +26,8 @@ import { FROM_CLAUDE_FRONTEND_DESIGN } from "./frontend-design";
 export interface BundledContext {
   readonly app: AppDeProyecto | null;
   readonly env: Readonly<Record<string, string | undefined>>;
+  /** A project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len): `tool-development` is offered. */
+  readonly tool?: boolean;
 }
 
 export interface GeneratedSkill {
