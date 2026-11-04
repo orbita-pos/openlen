@@ -26,7 +26,8 @@ export interface EmailDomainRow {
   readonly createdAt: Date;
 }
 
-export type EmailKind = "app" | "auth" | "form";
+/** `reply`: the owner's reply to a person from an event task's card (spec local 2026-11-04-hazlo, §7.6.6). */
+export type EmailKind = "app" | "auth" | "form" | "reply";
 export type EmailMessageStatus = "sent" | "delivered" | "bounced" | "complained" | "rejected" | "not_sent_draft";
 
 /** One recipient of one email: what the Correos tab lists. Never the body. */

@@ -661,7 +661,8 @@
       "kinds": {
         "app": "App",
         "auth": "Connexion",
-        "form": "Formulaire"
+        "form": "Formulaire",
+        "reply": "Réponse"
       },
       "statuses": {
         "sent": "Envoyé",

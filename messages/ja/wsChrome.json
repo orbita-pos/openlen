@@ -661,7 +661,8 @@
       "kinds": {
         "app": "アプリ",
         "auth": "ログイン",
-        "form": "フォーム"
+        "form": "フォーム",
+        "reply": "返信"
       },
       "statuses": {
         "sent": "送信済み",

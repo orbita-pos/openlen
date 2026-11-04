@@ -10,6 +10,7 @@
 import { sql } from "drizzle-orm";
 
 import { db } from "../lib/db";
+import { EMAIL_MESSAGES_KIND_CHECK } from "./email-migrate-sql";
 
 async function main() {
   await db.execute(sql`
@@ -32,7 +33,7 @@ async function main() {
       "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
       "ownerId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
       "environment" text NOT NULL CHECK ("environment" IN ('draft', 'live')),
-      "kind" text NOT NULL CHECK ("kind" IN ('app', 'auth', 'form')),
+      "kind" text NOT NULL CHECK ("kind" IN ('app', 'auth', 'form', 'reply')),
       "toAddress" text NOT NULL,
       "subject" text NOT NULL,
       "status" text NOT NULL CHECK ("status" IN ('sent', 'delivered', 'bounced', 'complained', 'rejected', 'not_sent_draft')),
@@ -42,6 +43,8 @@ async function main() {
       "createdAt" timestamp NOT NULL DEFAULT now()
     );
   `);
+  // A table made before the owner's reply existed still refuses it.
+  for (const statement of EMAIL_MESSAGES_KIND_CHECK) await db.execute(sql.raw(statement));
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "emailMessages_project_idx" ON "emailMessages" ("projectId", "createdAt");`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "emailMessages_owner_idx" ON "emailMessages" ("ownerId", "kind", "createdAt");`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS "emailMessages_resend_idx" ON "emailMessages" ("resendId");`);

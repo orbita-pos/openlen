@@ -194,6 +194,25 @@ describe("what goes out", () => {
     expect(w.sent[0]!.email.html).toBe("<p>Listo</p>");
   });
 
+  it("the owner's reply to a person goes out like an app email: footer, Reply-To the owner, counted in the hourly cap, not braked like a form reply", async () => {
+    const w = await world();
+    const reply = (key: string): SendInput => ({
+      projectId: "p1",
+      environment: "live",
+      kind: "reply",
+      idempotencyKey: key,
+      email: { from: "noreply@notify.taller.mx", to: ["luis@ejemplo.com"], subject: "Tu reserva", text: "Hola Luis." },
+    });
+    expect(await sendProjectEmail(reply("event-card:c1:reply"), w.d)).toMatchObject({ kind: "sent" });
+    // A form reply would refuse a second email to the same address the same day; the owner's doesn't.
+    expect(await sendProjectEmail(reply("event-card:c2:reply"), w.d)).toMatchObject({ kind: "sent" });
+    const first = w.sent[0]!;
+    expect(first.email.reply_to).toEqual(["dueno@taller.mx"]);
+    expect(first.email.headers?.["List-Unsubscribe"]).toBeDefined();
+    expect(first.key).toBe("event-card:c1:reply:luis@ejemplo.com");
+    expect(await w.store.countSentSince("owner-1", "app", new Date(NOW.getTime() - 60_000))).toBe(2);
+  });
+
   it("reply_to defaults to the owner, and one given is kept", async () => {
     const w = await world();
     await sendProjectEmail(input(), w.d);
