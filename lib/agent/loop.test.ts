@@ -4594,6 +4594,17 @@ describe("the silent-turn reminder", () => {
     expect(c[5]).not.toContain(SILENT);
   });
 
+  it("a turn nobody follows (an event task's judge) never gets it", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "x" }], tools: [],
+      openStream: scripted(step(), step(), step(), step(), step(), step(), [{ type: "text_delta", text: "ok" }, done]),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+      unattended: true,
+    });
+    expect(contents(r).some((x) => x.includes(SILENT))).toBe(false);
+  });
+
   it("a step where Len says something starts the count over", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],

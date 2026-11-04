@@ -45,6 +45,7 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
     brain: (tools) => {
       offered.push(tools.map((t) => String(t.name)));
       return {
+        providersUsed: () => [{ provider: "fireworks", model: "the-model", inputTokens: 1000, cachedTokens: 0, outputTokens: 5, thinkingTokens: 0 }],
         openStream: (messages) => {
           if (o.fail) throw new Error("the provider went away");
           sent.push(messages);
@@ -119,6 +120,22 @@ describe("judgeCandidate", () => {
     expect(ask).toContain("…");
     expect(ask).toMatch(/more changes? not shown; read them with source_read/);
     expect(ask).toContain('"id":"r0"');
+  });
+
+  it("a judging turn is unattended: no chat reminder to keep a user updated", async () => {
+    const loops: unknown[] = [];
+    const s = setup([say("Nada.")]);
+    s.deps.runLoop = (async (args: Parameters<typeof runAgentLoop>[0]) => (loops.push(args.unattended), runAgentLoop(args))) as typeof runAgentLoop;
+    await judgeCandidate(record(), task(), s.deps);
+    expect(loops).toEqual([true]);
+  });
+
+  it("the charge carries each brain's provider, model and tokens, so the ledger has its real cost", async () => {
+    const s = setup([say("Nada.")]);
+    await judgeCandidate(record(), task(), s.deps);
+    expect(s.charges).toEqual([
+      expect.objectContaining({ uses: [{ provider: "fireworks", model: "the-model", inputTokens: 1000, cachedTokens: 0, outputTokens: 5, reasoningTokens: 0 }] }),
+    ]);
   });
 
   it("no automation_notify call means notified false and no card", async () => {
