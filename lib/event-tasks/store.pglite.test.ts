@@ -93,6 +93,36 @@ describe("event tasks", () => {
     expect((await pg().query<{ judge: string; notified: boolean }>(`SELECT "judge", "notified" FROM "eventTaskRecords"`)).rows).toEqual([{ judge: "done", notified: true }]);
   });
 
+  it("requeueRecord puts a judged record back to its judge with the owner's note, once, taking one judge slot", async () => {
+    const task = await store.createEventTask(eventInput());
+    const record = await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "delivered", candidate: { subject: "reservas", changes: [], summary: "1" }, at: NOW });
+    await store.markJudged(record.id, true);
+    const LATER = new Date(NOW.getTime() + 3_600_000);
+    expect(await store.requeueRecord(record.id, "Ofrécele la 8.", "2026-11-03", LATER)).toEqual({ ok: true });
+    // A second press while it waits takes no second slot.
+    expect(await store.requeueRecord(record.id, "Ofrécele la 8.", "2026-11-03", LATER)).toEqual({ ok: true });
+    const [again] = await store.pendingJudges();
+    expect(again).toMatchObject({ id: record.id, judge: "pending", note: "Ofrécele la 8.", lastAt: LATER });
+    expect((await pg().query<{ judgesThatDay: number }>(`SELECT "judgesThatDay" FROM "eventTasks"`)).rows).toEqual([{ judgesThatDay: 1 }]);
+  });
+
+  it("a re-judge past the day's 24 is refused with daily_limit and requeues nothing", async () => {
+    const task = await store.createEventTask(eventInput());
+    const record = await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "delivered", candidate: { subject: "reservas", changes: [], summary: "1" }, at: NOW });
+    await store.markJudged(record.id, true);
+    for (let i = 0; i < 24; i++) await store.takeJudgeSlot(task.id, "2026-11-03");
+    expect(await store.requeueRecord(record.id, "otra", "2026-11-03", NOW)).toEqual({ ok: false, reason: "daily_limit" });
+    expect(await store.pendingJudges()).toEqual([]);
+    expect((await pg().query<{ note: string | null }>(`SELECT "note" FROM "eventTaskRecords"`)).rows).toEqual([{ note: null }]);
+  });
+
+  it("only a delivered record can be judged again", async () => {
+    const task = await store.createEventTask(eventInput());
+    const failed = await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "failed", reason: "read_failed", at: NOW });
+    expect(await store.requeueRecord(failed.id, null, "2026-11-03", NOW)).toEqual({ ok: false, reason: "not_found" });
+    expect(await store.requeueRecord("nope", null, "2026-11-03", NOW)).toEqual({ ok: false, reason: "not_found" });
+  });
+
   it(`the daily judge slot refuses at ${24} and resets the next day`, async () => {
     expect(store.EVENT_TASK_DAILY_JUDGES).toBe(24);
     const task = await store.createEventTask(eventInput());

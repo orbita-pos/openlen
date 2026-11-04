@@ -13,14 +13,14 @@ const { exigirAcceso } = await import("@/lib/projects/acceso");
 const { decideAndLaunch } = await import("@/lib/event-tasks/accept");
 const { POST } = await import("./route");
 
-const post = (action: string) =>
-  POST(new Request("http://localhost/api/projects/p1/event-cards/c1", { method: "POST", body: JSON.stringify({ action }) }), { params: Promise.resolve({ id: "p1", cardId: "c1" }) });
+const post = (action: string, extra: Record<string, unknown> = {}) =>
+  POST(new Request("http://localhost/api/projects/p1/event-cards/c1", { method: "POST", body: JSON.stringify({ action, ...extra }) }), { params: Promise.resolve({ id: "p1", cardId: "c1" }) });
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u2");
   vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "u2" } as never);
-  vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
+  vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted", results: [], rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
 });
 
 describe("POST event-cards/[cardId]", () => {
@@ -33,7 +33,7 @@ describe("POST event-cards/[cardId]", () => {
   it("the owner accepts: 202", async () => {
     const res = await post("accept");
     expect(res.status).toBe(202);
-    expect(await res.json()).toEqual({ status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
+    expect(await res.json()).toEqual({ status: "accepted", results: [], rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
     expect(vi.mocked(exigirAcceso)).toHaveBeenCalledWith("p1", "u2", "editar");
     expect(vi.mocked(decideAndLaunch)).toHaveBeenCalledWith({ projectId: "p1", cardId: "c1", action: "accept", actorId: "u2" }, expect.anything());
   });
@@ -49,6 +49,47 @@ describe("POST event-cards/[cardId]", () => {
     const res = await post("accept");
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "not_pending" });
+  });
+
+  it("an editor can't accept, dismiss, look again or withdraw: 403", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+    for (const action of ["accept", "dismiss", "look_again", "withdraw_send"]) expect((await post(action, { index: 0, note: "x" })).status).toBe(403);
+    expect(vi.mocked(decideAndLaunch)).not.toHaveBeenCalled();
+  });
+
+  it("an accepted card with actions answers what each did", async () => {
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted", results: [{ kind: "data_change", state: "done", error: null }] });
+    const res = await post("accept");
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ status: "accepted", results: [{ kind: "data_change", state: "done", error: null }] });
+  });
+
+  it("dismiss carries the owner's note, trimmed; an empty note is none", async () => {
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "dismissed", lookingAgain: true });
+    const res = await post("dismiss", { note: "  Ofrécele la 8.  " });
+    expect(await res.json()).toEqual({ status: "dismissed", lookingAgain: true });
+    expect(vi.mocked(decideAndLaunch)).toHaveBeenLastCalledWith({ projectId: "p1", cardId: "c1", action: "dismiss", actorId: "u2", note: "Ofrécele la 8." }, expect.anything());
+    await post("dismiss", { note: "   " });
+    expect(vi.mocked(decideAndLaunch)).toHaveBeenLastCalledWith({ projectId: "p1", cardId: "c1", action: "dismiss", actorId: "u2", note: null }, expect.anything());
+  });
+
+  it("look_again and withdraw_send reach the card; withdraw_send needs the action's index", async () => {
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "looking_again" });
+    expect(await (await post("look_again")).json()).toEqual({ status: "looking_again" });
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "withdrawn" });
+    expect((await post("withdraw_send", { index: 1 })).status).toBe(200);
+    expect(vi.mocked(decideAndLaunch)).toHaveBeenLastCalledWith({ projectId: "p1", cardId: "c1", action: "withdraw_send", actorId: "u2", index: 1 }, expect.anything());
+    expect((await post("withdraw_send")).status).toBe(400);
+    expect((await post("withdraw_send", { index: "1" })).status).toBe(400);
+  });
+
+  it("a re-judge past the day's limit is 429 daily_limit; nothing blocked or sending is 409", async () => {
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: false, reason: "daily_limit" });
+    const res = await post("look_again");
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "daily_limit" });
+    vi.mocked(decideAndLaunch).mockResolvedValue({ ok: false, reason: "not_blocked" });
+    expect((await post("look_again")).status).toBe(409);
   });
 
   it("an unknown action is 400, and nobody signed in is 401", async () => {

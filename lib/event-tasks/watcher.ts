@@ -3,7 +3,8 @@
 // each task: a paid owner and a creator who can still talk to Len there, or the task stops with one email; then the
 // source is observed, the trigger decides, and the records are written. Only a candidate reaches the judge, within
 // its daily limit. One task's failure never stops the others. With the server stopped nothing runs; on boot each
-// task compares once what is there with what it saved, and a candidate whose judge never finished is judged once.
+// task compares once what is there with what it saved. Each pass hands the judge any record still waiting for it: a
+// candidate whose judge never finished, or one the owner put back (a note on «Ahora no», «Volver a mirar»).
 // A task's judges run one after another (spec §7.4: one queue per task), each with the task as saved then; a
 // delivery — the cursor, its records and the judge slot — commits at once or not at all.
 import "server-only";
@@ -31,8 +32,9 @@ export interface WatcherDeps {
   transaction<T>(work: () => Promise<T>): Promise<T>;
   /** Whether the owner has credits for a judging turn: one charged at zero would be paid by nobody (review I7). */
   hasCredits(ownerId: string): Promise<boolean>;
-  /** Whether a record already made its card: a restart after the notice doesn't notify twice (review I4). */
-  cardOf(recordId: string): Promise<boolean>;
+  /** Whether a record made its card since it was last queued: a restart after the notice doesn't notify twice (review
+   *  I4), and a record the owner put back doesn't count its old card. */
+  cardOf(recordId: string, since: Date): Promise<boolean>;
   /** The owner's replies still being sent whose wait is over (lib/event-tasks/actions/send.ts). */
   retrySends?(now: Date): Promise<void>;
   sourceOf(kind: EventTaskRow["source"]): EventSource<unknown, unknown>;
@@ -168,6 +170,7 @@ export async function tick(deps: WatcherDeps): Promise<void> {
     checked += due.length;
     if (due.length < DUE_PER_TICK) break;
   }
+  await resumePendingJudges(deps);
   // And the owner's replies that are due another try: stored work, like DeepSeek's channel sends.
   if (deps.retrySends) {
     try {
@@ -178,12 +181,13 @@ export async function tick(deps: WatcherDeps): Promise<void> {
   }
 }
 
-/** On boot: candidates delivered before the restart whose judge never finished. Never throws. */
+/** Every pass, and so on boot: the records waiting for their judge — delivered before a restart cut it, or put back
+ *  by the owner. One being judged in this process is not handed twice. Never throws. */
 export async function resumePendingJudges(deps: WatcherDeps): Promise<void> {
   for (const record of await deps.store.pendingJudges()) {
     try {
       // Its card was made before the restart cut the judge: it was judged, and noticed (final review I4).
-      if (await deps.cardOf(record.id)) {
+      if (await deps.cardOf(record.id, record.lastAt)) {
         await deps.store.markJudged(record.id, true);
         continue;
       }
@@ -222,7 +226,7 @@ async function defaultDeps(judgeCandidate: JudgeRunner): Promise<WatcherDeps> {
     ownerPlan: (ownerId) => getUserPlan(ownerId),
     transaction: (work) => inTransaction(work),
     hasCredits: async (ownerId) => (await getCreditState(ownerId)).balance > 0,
-    cardOf: async (recordId) => (await cardOfRecord(recordId)) !== null,
+    cardOf: async (recordId, since) => (await cardOfRecord(recordId, since)) !== null,
     judge: async (record, task) => {
       await judgeCandidate(record, task);
     },
@@ -242,7 +246,6 @@ export function startWatcher(judgeCandidate: JudgeRunner): { stop(): void } {
   let timer: ReturnType<typeof setInterval> | null = null;
   void defaultDeps(judgeCandidate)
     .then(async (deps) => {
-      await resumePendingJudges(deps);
       console.log(`[event-tasks] watcher on: a pass every ${TICK_MS / 1000} s`);
       const pass = async () => {
         if (ticking) return;

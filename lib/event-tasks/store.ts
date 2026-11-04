@@ -208,6 +208,19 @@ export async function takeJudgeSlot(taskId: string, day: string): Promise<boolea
   return rows.length > 0;
 }
 
+/** The owner asked to look again — a note on «Ahora no», or «Volver a mirar» on a blocked card (spec local
+ *  2026-11-04-hazlo, §7.3, §7.6.7): the delivered record goes back to its judge with the note, within the day's judges,
+ *  and the watcher's next pass hands it over. One already waiting takes no second slot. `lastAt` moves to now, so a
+ *  card made before doesn't count as this judge's (watcher.ts, `cardOf`). */
+export async function requeueRecord(recordId: string, note: string | null, day: string, now: Date): Promise<{ ok: true } | { ok: false; reason: "daily_limit" | "not_found" }> {
+  const [record] = await db.select({ taskId: r.taskId, kind: r.kind, judge: r.judge }).from(r).where(eq(r.id, recordId)).limit(1);
+  if (!record || record.kind !== "delivered") return { ok: false, reason: "not_found" };
+  if (record.judge === "pending") return { ok: true };
+  if (!(await takeJudgeSlot(record.taskId, day))) return { ok: false, reason: "daily_limit" };
+  await db.update(r).set({ judge: "pending", note, lastAt: now }).where(eq(r.id, recordId));
+  return { ok: true };
+}
+
 /** Records have their own bounds (spec §7.9): 30 days, and the newest 200 of each task. */
 export async function purgeOldRecords(now: Date): Promise<void> {
   await db.delete(r).where(lt(r.lastAt, new Date(now.getTime() - RECORD_KEEP_MS)));
