@@ -53,6 +53,8 @@ export interface JudgeDeps {
   castCheck(task: EventTaskRow, column: string, value: string): Promise<string | null>;
   createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; actions: readonly CardAction[]; subjectKey: string }): Promise<EventTaskCardRow>;
   decisionsSince(taskId: string, since: Date): Promise<EventTaskCardRow[]>;
+  /** The task's cards still waiting for the owner: the judge doesn't repeat one. */
+  pendingCards(taskId: string): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
   markJudged(recordId: string, notified: boolean): Promise<void>;
   charge(c: { ownerId: string; projectId: string; actorId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly JudgeUse[] }): Promise<void>;
@@ -122,9 +124,9 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
           castCheck: (column, value) => d.castCheck(task, column, value),
         }),
     });
-    const decisions = await d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt);
+    const [decisions, pending] = await Promise.all([d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt), d.pendingCards(task.id)]);
     const prior = kept((task.transcript ?? []) as Message[]);
-    const ask: Message = { role: "user", content: candidateMessage({ task, candidate: record.candidate as unknown as Candidate, decisions }) };
+    const ask: Message = { role: "user", content: candidateMessage({ task, candidate: record.candidate as unknown as Candidate, decisions, pending, note: record.note }) };
     const brains = [d.brain(tools)];
     const brain = brains[0]!;
     // Past the reading budget, ONE more call that can only notify: the verdict is a tool call, so a call without
@@ -210,6 +212,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
     castCheck: (task, column, value) => production.castCheck(task.projectId, (task.params as { table: string }).table, column, value),
     createCard: (o) => cards.createCard(o),
     decisionsSince: cards.decisionsSince,
+    pendingCards: cards.pendingCardsOfTask,
     saveTranscript: store.saveTranscript,
     markJudged: store.markJudged,
     charge: async (c) => {
