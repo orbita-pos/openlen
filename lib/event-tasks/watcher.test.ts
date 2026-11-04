@@ -218,6 +218,14 @@ describe("tick", () => {
     expect(most).toBeLessThanOrEqual(5);
   });
 
+  it("each pass also retries the owner's replies that are due (spec 2026-11-04-hazlo, §7.3)", async () => {
+    const s = setup();
+    const retried: Date[] = [];
+    s.deps.retrySends = async (now) => void retried.push(now);
+    await tick(s.deps);
+    expect(retried).toEqual([NOW]);
+  });
+
   it("a paused task is not claimed", async () => {
     const s = setup({ tasks: [taskRow({ pausedAt: NOW })] });
     await tick(s.deps);

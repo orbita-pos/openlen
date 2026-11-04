@@ -661,7 +661,8 @@
       "kinds": {
         "app": "应用",
         "auth": "登录",
-        "form": "表单"
+        "form": "表单",
+        "reply": "回复"
       },
       "statuses": {
         "sent": "已发送",

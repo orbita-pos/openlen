@@ -33,6 +33,8 @@ export interface WatcherDeps {
   hasCredits(ownerId: string): Promise<boolean>;
   /** Whether a record already made its card: a restart after the notice doesn't notify twice (review I4). */
   cardOf(recordId: string): Promise<boolean>;
+  /** The owner's replies still being sent whose wait is over (lib/event-tasks/actions/send.ts). */
+  retrySends?(now: Date): Promise<void>;
   sourceOf(kind: EventTaskRow["source"]): EventSource<unknown, unknown>;
   /** Whether the creator can still talk to Len in the project, and who owns it. Null: no access at all. */
   access(projectId: string, userId: string): Promise<{ canEdit: boolean; ownerId: string } | null>;
@@ -164,7 +166,15 @@ export async function tick(deps: WatcherDeps): Promise<void> {
       );
     }
     checked += due.length;
-    if (due.length < DUE_PER_TICK) return;
+    if (due.length < DUE_PER_TICK) break;
+  }
+  // And the owner's replies that are due another try: stored work, like DeepSeek's channel sends.
+  if (deps.retrySends) {
+    try {
+      await deps.retrySends(deps.now());
+    } catch (err) {
+      console.error("[event-tasks] retrying replies failed", err);
+    }
   }
 }
 
@@ -215,6 +225,10 @@ async function defaultDeps(judgeCandidate: JudgeRunner): Promise<WatcherDeps> {
     cardOf: async (recordId) => (await cardOfRecord(recordId)) !== null,
     judge: async (record, task) => {
       await judgeCandidate(record, task);
+    },
+    retrySends: async (now) => {
+      const { defaultSendReplyDeps, retryPendingSends } = await import("./actions/send");
+      await retryPendingSends(now, await defaultSendReplyDeps());
     },
     notifyStopped: (task, why) => notifyEventTaskStopped(task, why),
   };

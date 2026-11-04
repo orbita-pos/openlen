@@ -661,7 +661,8 @@
       "kinds": {
         "app": "앱",
         "auth": "로그인",
-        "form": "양식"
+        "form": "양식",
+        "reply": "답장"
       },
       "statuses": {
         "sent": "발송됨",

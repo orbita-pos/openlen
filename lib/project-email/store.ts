@@ -62,7 +62,7 @@ export function memoryEmailStore(now: () => Date = () => new Date()): EmailStore
       return before - messages.length;
     },
     async countSentSince(ownerId, kind, since) {
-      const kinds = kind === "app" ? ["app", "form"] : [kind];
+      const kinds = kind === "app" ? ["app", "form", "reply"] : [kind];
       return messages.filter((m) => m.ownerId === ownerId && kinds.includes(m.kind) && WENT_OUT.includes(m.status) && m.createdAt >= since).length;
     },
     async countMessages(f) {

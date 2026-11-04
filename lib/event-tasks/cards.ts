@@ -118,6 +118,11 @@ export async function updateCardAction(cardId: string, index: number, patch: Par
     .where(eq(c.id, cardId));
 }
 
+/** The cards with a reply still being sent: what the watcher's pass retries. */
+export async function cardsWithSendingActions(): Promise<EventTaskCardRow[]> {
+  return db.select().from(c).where(sql`${c.actions} @> '[{"state":"sending"}]'::jsonb`).limit(100);
+}
+
 export async function getCard(cardId: string): Promise<EventTaskCardRow | null> {
   const [card] = await db.select().from(c).where(eq(c.id, cardId)).limit(1);
   return card ?? null;
