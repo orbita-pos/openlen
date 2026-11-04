@@ -29,6 +29,15 @@ export interface Condition {
   readonly value?: string | number;
 }
 
+/** A field of the source that must equal a value: how the judge finds older items related to a change. */
+export interface SourceMatch {
+  readonly field: string;
+  readonly value: string;
+}
+
+/** Items a `match` read returns at most, newest first. */
+export const MATCHING_MAX = 50;
+
 /** A source failed in a way the owner can understand: its `reason` is a record's reason. */
 export class SourceError extends Error {
   constructor(
@@ -46,6 +55,7 @@ export interface EventSource<P, S> {
   /** Whether a task can watch this, and its first state: what exists now never fires. */
   validate(projectId: string, params: P): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
   observe(projectId: string, params: P, state: S): Promise<Observation<S>>;
-  /** The judge's read: the candidate's items and the ones before them, to compare. */
-  read(projectId: string, params: P, args: { readonly keys: readonly string[]; readonly state: S }): Promise<unknown>;
+  /** The judge's read: the candidate's items, the newest before them, and — with `match` — the items whose fields
+   *  equal those values, however old (Task 13: a clash with a booking from before the task). */
+  read(projectId: string, params: P, args: { readonly keys: readonly string[]; readonly state: S; readonly match?: readonly SourceMatch[] }): Promise<unknown>;
 }

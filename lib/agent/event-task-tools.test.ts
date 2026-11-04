@@ -9,7 +9,7 @@ const ok = { title: "Reserva de las 21:00 choca con la mesa 4", summary: "Ana y 
 
 function runner() {
   const notify = vi.fn(async () => ({ cardId: "c1" }));
-  const readSource = vi.fn(async (keys: readonly string[]) => ({ items: keys }));
+  const readSource = vi.fn(async (keys: readonly string[], _match?: readonly { field: string; value: string }[]) => ({ items: keys }));
   return { notify, readSource, run: eventTaskToolRunner({ notify, readSource }) };
 }
 
@@ -72,7 +72,7 @@ describe("source_read", () => {
   it("reads the candidate's items by key", async () => {
     const r = runner();
     const out = await r.run(SOURCE_READ, { keys: ["r10"] });
-    expect(r.readSource).toHaveBeenCalledWith(["r10"]);
+    expect(r.readSource).toHaveBeenCalledWith(["r10"], []);
     expect(out.response).toMatchObject({ ok: true });
   });
 
@@ -84,6 +84,15 @@ describe("source_read", () => {
     expect(out.tool_result).toContain('<event-data from="visitor">');
     expect(out.tool_result.match(/<\/event-data>/g)).toHaveLength(1);
     expect(out.tool_result.trimEnd().endsWith("</event-data>")).toBe(true);
+  });
+
+  it("finds older items by their fields with match (Task 13: a clash with a booking from before the task)", async () => {
+    const r = runner();
+    await r.run(SOURCE_READ, { match: [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: 4 }] });
+    expect(r.readSource).toHaveBeenCalledWith([], [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: "4" }]);
+    const decl = EVENT_TASK_TOOL_DECLARATIONS[0] as { parameters: { properties: Record<string, unknown>; required?: string[] } };
+    expect(Object.keys(decl.parameters.properties)).toEqual(["keys", "match"]);
+    expect(decl.parameters.required ?? []).toEqual([]);
   });
 
   it("a source that can't be read is the tool's error, not the end of the turn", async () => {

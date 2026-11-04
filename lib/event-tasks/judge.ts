@@ -33,7 +33,7 @@ export interface JudgeDeps {
   readDeclarations(): Record<string, unknown>[];
   brain(tools: Record<string, unknown>[]): { openStream(m: Message[]): AsyncIterable<StreamEvent>; closeOut(m: Message[]): AsyncIterable<StreamEvent> };
   runReadTool(session: AgentSession, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
-  readSource(task: EventTaskRow, keys: readonly string[]): Promise<unknown>;
+  readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
   createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; proposedAction: string }): Promise<EventTaskCardRow>;
   decisionsSince(taskId: string, since: Date): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
@@ -71,7 +71,7 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...EVENT_TASK_TOOL_DECLARATIONS];
     const runEventTool = eventTaskToolRunner({
       notify: async (c) => ({ cardId: (await d.createCard({ task, recordId: record.id, ...c })).id }),
-      readSource: (keys) => d.readSource(task, keys),
+      readSource: (keys, match) => d.readSource(task, keys, match),
     });
     const decisions = await d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt);
     const prior = kept((task.transcript ?? []) as Message[]);
@@ -142,7 +142,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
       };
     },
     runReadTool: (session, name, args) => tools.runAgentTool(session, deps, name, args),
-    readSource: (task, keys) => sourceOf(task.source).read(task.projectId, task.params, { keys, state: task.state }),
+    readSource: (task, keys, match) => sourceOf(task.source).read(task.projectId, task.params, { keys, state: task.state, match }),
     createCard: (o) => cards.createCard(o),
     decisionsSince: cards.decisionsSince,
     saveTranscript: store.saveTranscript,
