@@ -613,6 +613,9 @@ export default defineConfig({
       "lib/agent/subagents/**/*.test.ts",
       // «Len que avisa»: event tasks (spec local 2026-11-03-len-que-avisa). LISTA BLANCA.
       "lib/event-tasks/**/*.test.ts",
+      // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/tools/**/*.test.ts",
+      "app/api/tools/**/*.test.ts",
       // The atomic work of an isolated child's copy (`inTransaction`). LISTA BLANCA.
       "lib/db/transaction-scope.test.ts",
       "lib/agent/facts-kept.test.ts",
