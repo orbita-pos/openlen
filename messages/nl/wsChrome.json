@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "Klaar"
     }
+  },
+  "tools": {
+    "planRequired": "Je hebt een betaald abonnement nodig om deze tool te openen."
   }
 }
