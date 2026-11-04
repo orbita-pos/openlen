@@ -122,6 +122,15 @@ describe("event tasks", () => {
     expect(await store.listEventTasksOfProjects([])).toEqual([]);
   });
 
+  it("the lists and the minute's claim leave the judge's conversation out; the task by id has it (review I10)", async () => {
+    const t = await store.createEventTask(eventInput());
+    await store.saveTranscript(t.id, [{ role: "user", content: "x".repeat(1000) }], NOW);
+    expect((await store.listEventTasks("p1"))[0]!.transcript).toBeNull();
+    expect((await store.listEventTasksOfProjects(["p1"]))[0]!.transcript).toBeNull();
+    expect((await store.claimDueChecks(new Date(NOW.getTime() + 1), 10))[0]!.transcript).toBeNull();
+    expect((await store.getEventTaskById(t.id))!.transcript).toHaveLength(1);
+  });
+
   it("deleting the project deletes its tasks, records and cards", async () => {
     const task = await store.createEventTask(eventInput());
     await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "filtered", reason: "estado ≠ confirmada", at: NOW });

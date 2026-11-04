@@ -83,9 +83,10 @@ describe("decideAndLaunch", () => {
     expect(s.launched).toEqual([]);
   });
 
-  it("a card of another project is not_found", async () => {
-    const s = setup({ ok: true, card: card({ projectId: "p2" }) });
-    expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "accept", actorId: "u2" }, s.deps)).toEqual({ ok: false, reason: "not_found" });
+  it("the decision is asked for the route's project, so another project's card is never decided (review C2)", async () => {
+    const s = setup({ ok: false, reason: "not_found" });
+    expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "dismiss", actorId: "u2" }, s.deps)).toEqual({ ok: false, reason: "not_found" });
+    expect(s.deps.decide).toHaveBeenCalledWith("p1", "c1", "dismiss", "u2", expect.any(Date));
     expect(s.launched).toEqual([]);
   });
 });

@@ -56,23 +56,32 @@ export async function createCard(
       emailSubject: email.subject,
       emailText: email.text,
     },
-    card!.id,
+    // Keyed by the task: a notice still waiting (quiet hours) is replaced by the newest card's, so a night of
+    // replaced cards doesn't fire one push each in the morning (final review I11).
+    `len_aviso:${o.task.id}`,
   );
   return card!;
 }
 
 export type Decision = { ok: true; card: EventTaskCardRow } | { ok: false; reason: "not_pending" | "not_found" };
 
-/** «Hazlo» or «Ahora no»: once, whoever presses first. */
-export async function decideCard(cardId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<Decision> {
+/** «Hazlo» or «Ahora no»: once, whoever presses first, and only from the card's own project — the route checked
+ *  access to THAT project, so a card id of another one decides nothing (final review C2). */
+export async function decideCard(projectId: string, cardId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<Decision> {
   const [card] = await db
     .update(c)
     .set({ status: action === "accept" ? "accepted" : "dismissed", decidedBy: actorId, decidedAt: now })
-    .where(and(eq(c.id, cardId), eq(c.status, "pending")))
+    .where(and(eq(c.id, cardId), eq(c.projectId, projectId), eq(c.status, "pending")))
     .returning();
   if (card) return { ok: true, card };
-  const [exists] = await db.select({ id: c.id }).from(c).where(eq(c.id, cardId)).limit(1);
+  const [exists] = await db.select({ id: c.id }).from(c).where(and(eq(c.id, cardId), eq(c.projectId, projectId))).limit(1);
   return { ok: false, reason: exists ? "not_pending" : "not_found" };
+}
+
+/** The card a delivered record made, if it made one: a restart after the notice must not notify again. */
+export async function cardOfRecord(recordId: string): Promise<EventTaskCardRow | null> {
+  const [card] = await db.select().from(c).where(eq(c.recordId, recordId)).limit(1);
+  return card ?? null;
 }
 
 export async function getCard(cardId: string): Promise<EventTaskCardRow | null> {

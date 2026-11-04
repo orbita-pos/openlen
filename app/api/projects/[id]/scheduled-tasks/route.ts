@@ -3,7 +3,8 @@
 // who created each and how its last run went. For whoever can talk to Len there (owner and editors),
 // from the web or the phone (spec local 2026-10-31-len-movil). And the event tasks (spec local
 // 2026-11-03-len-que-avisa, §8) in `events`, each with its latest records: what each look found and what came of
-// it — never what a visitor sent (a record's candidate) nor the judge's conversation.
+// it — never what a visitor sent (a record's candidate) nor the judge's conversation. The owner's only (final
+// review I8): they read what the site's visitors send.
 import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
 import { listEventTasks, recordsOf } from "@/lib/event-tasks/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -36,7 +37,7 @@ export const GET = paraLaApp(async (req: Request, ctx: { params: Promise<{ id: s
       };
     }),
   );
-  const events = eventTasksEnabled()
+  const events = eventTasksEnabled() && acceso.rol === "dueno"
     ? await Promise.all(
         (await listEventTasks(id)).map(async (task) => ({
           id: task.id,

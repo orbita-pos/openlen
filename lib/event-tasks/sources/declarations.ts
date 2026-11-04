@@ -26,7 +26,11 @@ export const ON_DECLARATION: Record<string, unknown> = {
     source: { type: "STRING", enum: [...SOURCE_KINDS], description: "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page." },
     table: { type: "STRING", description: "app_rows: the table to watch for new rows." },
     created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },
-    form: { type: "STRING", description: "form_submissions: the form to watch, its own id (f…) or <page>:<index>; omit it for every form of the project." },
+    form: {
+      type: "STRING",
+      description:
+        "form_submissions: the form to watch — its own id (f…) when it has one, else its position: bare on the home page (0, 1…), <page>:<position> on another page. Omit it for every form of the project.",
+    },
     conditions: {
       type: "ARRAY",
       description: "Optional: only changes whose fields match all of these wake the task; they are checked before any model looks.",

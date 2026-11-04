@@ -47,12 +47,13 @@ const card = (task: Awaited<ReturnType<typeof newTask>>, title: string, n: Retur
   cards.createCard({ task, recordId: "r1", title, summary: "La reserva de Ana choca con la de Luis.", proposedAction: "Escribirle a Ana para ofrecerle las 21:30." }, { notify: n.notify, siteUrl: "https://openlen.com" });
 
 describe("createCard", () => {
-  it("schedules one len_aviso to the task's creator, in their language, keyed by the card", async () => {
+  it("schedules one len_aviso to the task's creator, in their language, keyed by the task", async () => {
     const task = await newTask();
     const n = notifier();
     const c = await card(task, "Reserva de las 21:00 choca con la mesa 4", n);
     expect(n.sent).toHaveLength(1);
-    expect(n.sent[0]!.dedupeKey).toBe(c.id);
+    // Keyed by the TASK: a notice held by quiet hours folds into the newest card instead of each firing (review I11).
+    expect(n.sent[0]!.dedupeKey).toBe(`len_aviso:${task.id}`);
     expect(n.sent[0]!.event).toMatchObject({
       type: "len_aviso",
       projectId: "p1",
@@ -91,7 +92,7 @@ describe("pendingCardsOfProjects", () => {
     const first = await card(task, "Primero", n);
     const other = await store.createEventTask({ projectId: "p1", createdBy: "u1", locale: "es", timeZone: "UTC", title: "Otra", prompt: "p", source: "form_submissions", params: {}, state: {}, now: NOW });
     const second = await card(other, "Segundo", n);
-    await cards.decideCard(first.id, "dismiss", "u1", NOW);
+    await cards.decideCard("p1", first.id, "dismiss", "u1", NOW);
     expect((await cards.pendingCardsOfProjects(["p1"])).map((c) => c.id)).toEqual([second.id]);
     expect(await cards.pendingCardsOfProjects([])).toEqual([]);
   });
@@ -100,19 +101,25 @@ describe("pendingCardsOfProjects", () => {
 describe("decideCard", () => {
   it("two concurrent decisions on one card: one wins, the other gets not_pending", async () => {
     const c = await card(await newTask(), "t", notifier());
-    const [x, y] = await Promise.all([cards.decideCard(c.id, "accept", "u1", NOW), cards.decideCard(c.id, "dismiss", "u1", NOW)]);
+    const [x, y] = await Promise.all([cards.decideCard("p1", c.id, "accept", "u1", NOW), cards.decideCard("p1", c.id, "dismiss", "u1", NOW)]);
     expect([x.ok, y.ok].sort()).toEqual([false, true]);
     expect([x, y].find((r) => !r.ok)).toEqual({ ok: false, reason: "not_pending" });
   });
 
   it("an unknown card is not_found", async () => {
-    expect(await cards.decideCard("nope", "accept", "u1", NOW)).toEqual({ ok: false, reason: "not_found" });
+    expect(await cards.decideCard("p1", "nope", "accept", "u1", NOW)).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("a card can't be decided from another project: not_found, and it stays pending (review C2)", async () => {
+    const c = await card(await newTask(), "t", notifier());
+    expect(await cards.decideCard("p2", c.id, "dismiss", "u1", NOW)).toEqual({ ok: false, reason: "not_found" });
+    expect((await cards.getCard(c.id))!.status).toBe("pending");
   });
 
   it("the decisions since a time are what the judge reads next", async () => {
     const task = await newTask();
     const c = await card(task, "t", notifier());
-    await cards.decideCard(c.id, "dismiss", "u1", NOW);
+    await cards.decideCard("p1", c.id, "dismiss", "u1", NOW);
     expect((await cards.decisionsSince(task.id, new Date(NOW.getTime() - 1))).map((d) => ({ id: d.id, status: d.status }))).toEqual([{ id: c.id, status: "dismissed" }]);
   });
 });

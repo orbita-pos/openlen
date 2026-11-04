@@ -19,12 +19,18 @@ const post = (action: string) =>
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u2");
-  vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+  vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "u2" } as never);
   vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
 });
 
 describe("POST event-cards/[cardId]", () => {
-  it("an editor accepts: 202", async () => {
+  it("an editor can't decide a card: it carries what visitors sent, the owner's (review I8)", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+    expect((await post("accept")).status).toBe(403);
+    expect(vi.mocked(decideAndLaunch)).not.toHaveBeenCalled();
+  });
+
+  it("the owner accepts: 202", async () => {
     const res = await post("accept");
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });

@@ -156,11 +156,11 @@ describe("buildTasksOverview", () => {
   const record = (taskId: string) =>
     ({ id: `r-${taskId}`, taskId, kind: "failed", reason: "table_missing", count: 2, notified: null, candidate: { secret: 1 }, lastAt: NOW }) as unknown as EventTaskRecordRow;
 
-  it("an editor's event tasks are listed with their source and records; a viewer's are not", async () => {
-    const eventTasksOf = vi.fn(async (ids: readonly string[]) => [eventTask("e1", "own"), eventTask("e3", "seen")].filter((t) => ids.includes(t.projectId)));
+  it("the event tasks of the projects they own are listed with their source and records; an editor's or viewer's are not (review I8)", async () => {
+    const eventTasksOf = vi.fn(async (ids: readonly string[]) => [eventTask("e1", "own"), eventTask("e2", "shared"), eventTask("e3", "seen")].filter((t) => ids.includes(t.projectId)));
     const eventRecordsOf = vi.fn(async (taskId: string) => [record(taskId)]);
     const out = await buildTasksOverview("owner", deps({ eventTasksOf, eventRecordsOf }));
-    expect(eventTasksOf).toHaveBeenCalledWith(["own", "shared"]);
+    expect(eventTasksOf).toHaveBeenCalledWith(["own"]);
     expect(out.events).toEqual([
       {
         id: "e1",
@@ -179,12 +179,12 @@ describe("buildTasksOverview", () => {
     expect(JSON.stringify(out.events)).not.toContain("secret");
   });
 
-  it("a pending card needs whoever can decide it, in the project's chat", async () => {
-    const card = { id: "c1", taskId: "e1", projectId: "shared", title: "Dos reservas a la misma hora", status: "pending", createdAt: NOW } as unknown as EventTaskCardRow;
-    const pendingCardsOf = vi.fn(async (ids: readonly string[]) => [card].filter((c) => ids.includes(c.projectId)));
+  it("a pending card needs the owner, who decides it, in the project's chat", async () => {
+    const cards = ["own", "shared"].map((projectId) => ({ id: `c-${projectId}`, taskId: "e1", projectId, title: "Dos reservas a la misma hora", status: "pending", createdAt: NOW }) as unknown as EventTaskCardRow);
+    const pendingCardsOf = vi.fn(async (ids: readonly string[]) => cards.filter((c) => ids.includes(c.projectId)));
     const out = await buildTasksOverview("owner", deps({ pendingCardsOf }));
-    expect(pendingCardsOf).toHaveBeenCalledWith(["own", "shared"]);
-    expect(out.needsYou).toEqual([{ kind: "aviso", projectId: "shared", projectTitle: "Del equipo", text: "Dos reservas a la misma hora", at: NOW.toISOString(), open: "chat", card: "c1" }]);
+    expect(pendingCardsOf).toHaveBeenCalledWith(["own"]);
+    expect(out.needsYou).toEqual([{ kind: "aviso", projectId: "own", projectTitle: "Mi tienda", text: "Dos reservas a la misma hora", at: NOW.toISOString(), open: "chat", card: "c-own" }]);
   });
 
   it("without event tasks wired, there are none", async () => {

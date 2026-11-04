@@ -100,6 +100,27 @@ describe("judgeCandidate", () => {
     expect(text.match(/<\/event-data>/g)).toHaveLength(1);
   });
 
+  it("after its reading budget the judge still decides: one last call offers only automation_notify (review I1)", async () => {
+    const reading = Array.from({ length: 6 }, () => call("Read", { file_path: "/LEN.md" }));
+    const s = setup([...reading, call("automation_notify", { title: "Choque en la mesa 4", summary: "Ana y Luis, viernes 21:00.", proposed_action: "Escribirle a Luis." })]);
+    const r = await judgeCandidate(record(), task(), s.deps);
+    expect(s.offered[1]).toEqual(["automation_notify"]);
+    expect(s.cards).toHaveLength(1);
+    expect(r.notified).toBe(true);
+    expect(userText(s.sent[6]!)).toContain("decide now");
+  });
+
+  it("a wide candidate is cut to fit: long fields shortened, the rest left to source_read (review I10)", async () => {
+    const changes = Array.from({ length: 200 }, (_, i) => ({ subject: "reservas", summary: `r${i}`, detail: { id: `r${i}`, nota: "x".repeat(5000) }, at: "x" }));
+    const s = setup([say("Nada.")]);
+    await judgeCandidate({ ...record(), candidate: { subject: "reservas", summary: "reservas: 200", changes } }, task(), s.deps);
+    const ask = userText(s.sent[0]!);
+    expect(ask.length).toBeLessThan(40_000);
+    expect(ask).toContain("…");
+    expect(ask).toMatch(/more changes? not shown; read them with source_read/);
+    expect(ask).toContain('"id":"r0"');
+  });
+
   it("no automation_notify call means notified false and no card", async () => {
     const s = setup([say("No choca con ninguna.")]);
     expect(await judgeCandidate(record(), task(), s.deps)).toEqual({ notified: false });

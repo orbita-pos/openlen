@@ -8,8 +8,8 @@
  *   working    Len's turns running now, and active goals.
  *   scheduled  the scheduled tasks they can edit (owner and editors, as the web clock).
  *   resolved   the last 7 days: runs of the tasks they created, completed goals, resolved incidents.
- *   events     their event tasks (spec local 2026-11-03-len-que-avisa, §8) with their records; and a pending
- *              card of one needs them, in its project's chat.
+ *   events     the event tasks of the projects they own (spec local 2026-11-03-len-que-avisa, §8) with their
+ *              records; and a pending card of one needs them, in its project's chat.
  *
  * Every read is injected (`TasksOverviewDeps`): the route passes the stores, the test passes doubles.
  */
@@ -110,6 +110,8 @@ export interface TasksOverviewDeps {
 }
 
 const canEdit = (p: VisibleProject) => p.role === "dueno" || p.role === "editor";
+/** Event tasks and their cards read what the site's visitors send: the owner's (final review I8). */
+const owns = (p: VisibleProject) => p.role === "dueno";
 const newestFirst = (a: OverviewItem, b: OverviewItem) => b.at.localeCompare(a.at);
 
 export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps): Promise<TasksOverview> {
@@ -155,17 +157,16 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
     deps.tasksOf(editable.map((p) => p.id)),
     deps.runsSince(ids, since),
     deps.resolvedIncidents(editable.map((p) => p.id), since),
-    deps.eventTasksOf ? deps.eventTasksOf(editable.map((p) => p.id)) : Promise.resolve([]),
-    // A card is decided by whoever can edit the project, like the web's buttons.
-    deps.pendingCardsOf ? deps.pendingCardsOf(editable.map((p) => p.id)) : Promise.resolve([]),
+    deps.eventTasksOf ? deps.eventTasksOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
+    deps.pendingCardsOf ? deps.pendingCardsOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
   ]);
   for (const c of cards) {
     const p = byId.get(c.projectId);
-    if (p && canEdit(p)) needsYou.push(item(p, { kind: "aviso", text: c.title, at: c.createdAt.toISOString(), open: "chat", card: c.id }));
+    if (p && owns(p)) needsYou.push(item(p, { kind: "aviso", text: c.title, at: c.createdAt.toISOString(), open: "chat", card: c.id }));
   }
   const events = await Promise.all(
     eventTasks
-      .filter((t) => byId.has(t.projectId) && canEdit(byId.get(t.projectId)!))
+      .filter((t) => byId.has(t.projectId) && owns(byId.get(t.projectId)!))
       .map(async (t): Promise<EventItem> => {
         const records = deps.eventRecordsOf ? await deps.eventRecordsOf(t.id, EVENT_RECORDS) : [];
         const p = byId.get(t.projectId)!;

@@ -6,6 +6,17 @@ import "server-only";
 
 import type { QueryOutcome } from "./cli-core";
 
+/** The read-only roles set up in this process, per database and password: setting one up rewrites its password
+ *  and grants, which a task's check every minute must not repeat (final review I9). One that failed is forgotten. */
+const READY = Symbol.for("openlen.backend.read-only-ready");
+type Ready = typeof globalThis & { [READY]?: Map<string, Promise<void>> };
+const ready = (): Map<string, Promise<void>> => ((globalThis as Ready)[READY] ??= new Map());
+
+/** For tests. */
+export function forgetReadOnlyRoles(): void {
+  ready().clear();
+}
+
 export async function queryBackendReadOnly(projectId: string, environment: "draft" | "live", sql: string): Promise<QueryOutcome | null> {
   const [{ getBackendByProject }, { getEnvironment, claimReadOnlyPassword }, { backendConfigured }] = await Promise.all([import("./registry"), import("./environments"), import("./pg")]);
   if (!backendConfigured()) return null;
@@ -15,7 +26,14 @@ export async function queryBackendReadOnly(projectId: string, environment: "draf
   const [{ encryptToken, decryptToken }, { newDatabasePassword }, { provisionReadOnlyRole }, { runLiveQuery }] = await Promise.all([import("../integrations/crypto"), import("./keys"), import("./read-only"), import("./sql-query")]);
   const encrypted = env.readOnlyPasswordEncrypted ?? await claimReadOnlyPassword(projectId, encryptToken(newDatabasePassword()), environment);
   const roPassword = decryptToken(encrypted);
-  await provisionReadOnlyRole({ scope: env.scope, ref: rec.ref, password: roPassword });
+  const key = `${env.scope}:${encrypted}`;
+  let setUp = ready().get(key);
+  if (!setUp) {
+    setUp = provisionReadOnlyRole({ scope: env.scope, ref: rec.ref, password: roPassword });
+    ready().set(key, setUp);
+    setUp.catch(() => ready().delete(key));
+  }
+  await setUp;
   // runLiveQuery is named for its original CLI consumer, but accepts any scope: both environments use its
   // SELECT-only role and READ ONLY transaction.
   return runLiveQuery({ scope: env.scope, roPassword }, sql);

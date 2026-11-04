@@ -26,17 +26,47 @@ export const STATUS_PREAMBLE =
 /** JSON that can't close the envelope: `<` and `>` travel escaped. */
 const inert = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
 
+/** A visitor's field in the judge's view: the full row is one `source_read` away (final review I10). */
+const FIELD_MAX = 500;
+/** The changes one candidate message carries; past it, the rest is named and left to `source_read`. */
+const CHANGES_MAX_CHARS = 24_000;
+
+/** Every string in `value` cut to FIELD_MAX characters, an object or array to that much JSON once it is deep. */
+export function shortened(value: unknown, depth = 0): unknown {
+  if (typeof value === "string") return value.length > FIELD_MAX ? `${value.slice(0, FIELD_MAX)}…` : value;
+  if (value === null || typeof value !== "object") return value;
+  if (depth >= 3) {
+    const json = JSON.stringify(value);
+    return json.length > FIELD_MAX ? `${json.slice(0, FIELD_MAX)}…` : value;
+  }
+  if (Array.isArray(value)) return value.map((v) => shortened(v, depth + 1));
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shortened(v, depth + 1)]));
+}
+
+/** What people outside the project wrote, as the judge reads it — the candidate and `source_read` alike (final
+ *  review I2): the preamble, then each value on its own inert line inside the envelope. */
+export function visitorEnvelope(values: readonly unknown[]): string[] {
+  return [OUTSIDE_TEXT, '<event-data from="visitor">', ...values.map((v) => inert(shortened(v))), "</event-data>"];
+}
+
 export function candidateMessage(o: { readonly task: EventTaskRow; readonly candidate: Candidate; readonly decisions: readonly EventTaskCardRow[] }): string {
   const lines = [
     `Task: ${o.task.title}`,
     `The owner's instruction: ${o.task.prompt}`,
     "",
     `What changed: ${o.candidate.summary}`,
-    OUTSIDE_TEXT,
-    '<event-data from="visitor">',
-    ...o.candidate.changes.map((c) => inert({ subject: c.subject, at: c.at, detail: c.detail })),
-    "</event-data>",
   ];
+  const shown: unknown[] = [];
+  let size = 0;
+  for (const c of o.candidate.changes) {
+    const value = { subject: c.subject, at: c.at, detail: c.detail };
+    size += inert(shortened(value)).length;
+    if (shown.length > 0 && size > CHANGES_MAX_CHARS) break;
+    shown.push(value);
+  }
+  lines.push(...visitorEnvelope(shown));
+  const hidden = o.candidate.changes.length - shown.length;
+  if (hidden > 0) lines.push(`… ${hidden} more ${hidden === 1 ? "change" : "changes"} not shown; read them with source_read.`);
   if (o.decisions.length > 0) {
     lines.push("", STATUS_PREAMBLE, inert(o.decisions.map((d) => ({ title: d.title, status: d.status }))));
   }

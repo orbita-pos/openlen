@@ -171,6 +171,8 @@ describe("the catalog", () => {
 
 // «LEN QUE AVISA» (spec local 2026-11-03-len-que-avisa, §7.1, §7.8, §7.10): `on` instead of a timing parameter.
 describe("event tasks through the schedule tools", () => {
+  // Event tasks read what the site's visitors send: the owner's, like the submissions (final review I8).
+  const owner = { ...session, personId: undefined } as AgentSession;
   const ROWS_ON = { prompt: "Avísame si una reserva choca con otra: misma fecha, hora y mesa.", title: "Reservas que chocan", on: { source: "app_rows", table: "reservas", created_column: "created_at" } };
 
   function withEvents(o: { plan?: "free" | "pro"; reason?: string; active?: number } = {}) {
@@ -196,7 +198,7 @@ describe("event tasks through the schedule tools", () => {
 
   it("create with on and a timing parameter is refused: exactly one of them", async () => {
     const { deps, events } = withEvents();
-    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, daily: { time: "09:03:00", time_zone: "UTC" } }));
+    const out = result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, daily: { time: "09:03:00", time_zone: "UTC" } }));
     expect(out.code).toBe("invalid_selector");
     expect(out.message).toContain("or on");
     expect(events.create).not.toHaveBeenCalled();
@@ -204,18 +206,18 @@ describe("event tasks through the schedule tools", () => {
 
   it("create on a table without a creation column returns the source's reason", async () => {
     const { deps, events } = withEvents({ reason: 'Table "reservas" has no timestamp or date column "created_at"' });
-    const out = result(await toolScheduleCreate(session, deps, ROWS_ON));
+    const out = result(await toolScheduleCreate(owner, deps, ROWS_ON));
     expect(out).toEqual({ code: "invalid_source", message: expect.stringContaining('no timestamp or date column "created_at"') });
     expect(events.create).not.toHaveBeenCalled();
   });
 
-  it("saves the task with its source, params and first state, as the person who asked", async () => {
+  it("saves the task with its source, params and first state, as the owner who asked", async () => {
     const { deps, events } = withEvents();
-    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { ...ROWS_ON.on, conditions: [{ field: "estado", op: "eq", value: "confirmada" }] } }));
+    const out = result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { ...ROWS_ON.on, conditions: [{ field: "estado", op: "eq", value: "confirmada" }] } }));
     expect(events.create).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: "p1",
-        createdBy: "member",
+        createdBy: "owner",
         locale: "es",
         source: "app_rows",
         params: { table: "reservas", created_column: "created_at", conditions: [{ field: "estado", op: "eq", value: "confirmada" }] },
@@ -227,31 +229,31 @@ describe("event tasks through the schedule tools", () => {
 
   it("create on a form says the per-lead email keeps coming", async () => {
     const { deps } = withEvents();
-    const out = result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "form_submissions", form: "fab12" } }));
+    const out = result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "form_submissions", form: "fab12" } }));
     expect(out.note).toBe("The owner still gets an email for each submission of this form.");
   });
 
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
-    expect(result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");
-    expect(result(await toolScheduleCreate(session, deps, { ...ROWS_ON, on: { source: "app_rows" } })).code).toBe("invalid_source");
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "app_rows" } })).code).toBe("invalid_source");
   });
 
   it("the eleventh active task of either kind is refused with too_many_schedules", async () => {
     const { deps } = withEvents({ active: 10 });
-    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("too_many_schedules");
+    expect(result(await toolScheduleCreate(owner, deps, ROWS_ON)).code).toBe("too_many_schedules");
   });
 
   it("on Free, create with on is plan_required", async () => {
     const { deps, events } = withEvents({ plan: "free" });
-    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("plan_required");
+    expect(result(await toolScheduleCreate(owner, deps, ROWS_ON)).code).toBe("plan_required");
     expect(events.validate).not.toHaveBeenCalled();
   });
 
   it("list shows an event task with its source, params and latest cards", async () => {
     const { deps } = withEvents();
-    await toolScheduleCreate(session, deps, ROWS_ON);
-    const out = result(await toolScheduleList(session, deps, {}));
+    await toolScheduleCreate(owner, deps, ROWS_ON);
+    const out = result(await toolScheduleList(owner, deps, {}));
     expect(out).toContainEqual(
       expect.objectContaining({ id: "e1", kind: "event", source: "app_rows", params: { table: "reservas", created_column: "created_at" }, latestNotices: [{ title: "Choca la mesa 4", status: "dismissed", at: new Date(NOW).toISOString() }] }),
     );
@@ -259,16 +261,30 @@ describe("event tasks through the schedule tools", () => {
 
   it("update of an event task changes its title and prompt, and refuses a timing parameter", async () => {
     const { deps, events } = withEvents();
-    await toolScheduleCreate(session, deps, ROWS_ON);
-    expect(result(await toolScheduleUpdate(session, deps, { id: "e1", every_seconds: 7200 })).code).toBe("invalid_selector");
-    expect(result(await toolScheduleUpdate(session, deps, { id: "e1", title: "Choques de reservas" }))).toMatchObject({ id: "e1", title: "Choques de reservas" });
+    await toolScheduleCreate(owner, deps, ROWS_ON);
+    expect(result(await toolScheduleUpdate(owner, deps, { id: "e1", every_seconds: 7200 })).code).toBe("invalid_selector");
+    expect(result(await toolScheduleUpdate(owner, deps, { id: "e1", title: "Choques de reservas" }))).toMatchObject({ id: "e1", title: "Choques de reservas" });
     expect(events.update).toHaveBeenCalledWith("p1", "e1", { title: "Choques de reservas" }, expect.any(Date));
+  });
+
+  it("a member can't create an event task, and their list and changes leave event tasks out (review I8)", async () => {
+    const { deps, events } = withEvents();
+    const refused = result(await toolScheduleCreate(session, deps, ROWS_ON));
+    expect(refused.code).toBe("owner_only");
+    expect(refused.message).toContain("owner");
+    expect(events.validate).not.toHaveBeenCalled();
+    await toolScheduleCreate(owner, deps, ROWS_ON);
+    expect(JSON.stringify(result(await toolScheduleList(session, deps, {})))).not.toContain("Reservas que chocan");
+    expect(result(await toolScheduleUpdate(session, deps, { id: "e1", title: "x" })).code).toBe("schedule_not_found");
+    expect(result(await toolScheduleDelete(session, deps, { id: "e1" }))).toMatchObject({ deleted: false });
+    expect(events.update).not.toHaveBeenCalled();
+    expect(events.remove).not.toHaveBeenCalled();
   });
 
   it("delete finds an event task too", async () => {
     const { deps } = withEvents();
-    await toolScheduleCreate(session, deps, ROWS_ON);
-    expect(result(await toolScheduleDelete(session, deps, { id: "e1" }))).toEqual({ id: "e1", deleted: true });
+    await toolScheduleCreate(owner, deps, ROWS_ON);
+    expect(result(await toolScheduleDelete(owner, deps, { id: "e1" }))).toEqual({ id: "e1", deleted: true });
   });
 
   it("with OPENLEN_EVENT_TASKS=0, schedule_create declares no on and refuses one", async () => {
@@ -276,6 +292,6 @@ describe("event tasks through the schedule tools", () => {
     expect(create({}).parameters.properties.on).toBeDefined();
     expect(create({ OPENLEN_EVENT_TASKS: "0" }).parameters.properties.on).toBeUndefined();
     const { deps } = fake();
-    expect(result(await toolScheduleCreate(session, deps, ROWS_ON)).code).toBe("invalid_selector");
+    expect(result(await toolScheduleCreate(owner, deps, ROWS_ON)).code).toBe("invalid_selector");
   });
 });

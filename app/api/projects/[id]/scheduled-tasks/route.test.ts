@@ -65,7 +65,7 @@ const taskCtx = { params: Promise.resolve({ id: "p1", taskId: "schedule-1" }) };
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(auth).mockResolvedValue({ user: { id: "ana" } } as never);
-  vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+  vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "ana" } as never);
   vi.mocked(listTasks).mockResolvedValue([row]);
   vi.mocked(getRun).mockResolvedValue({ id: "run-1", occurrenceAt: new Date("2026-10-26T15:03:00Z"), outcome: "no_credits", reason: "Sin créditos." } as never);
   vi.mocked(updateTask).mockImplementation(async (_p, _id, next) => ({ ...row, record: next, scheduledAt: new Date(next.scheduledAt) }));
@@ -117,6 +117,15 @@ describe("GET /api/projects/[id]/scheduled-tasks", () => {
     expect(JSON.stringify(events)).not.toContain("visitor data");
   });
 
+  it("a member's clock has no event tasks: they read what visitors send (review I8)", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+    vi.mocked(listEventTasks).mockResolvedValue([eventRow]);
+    const { tasks, events } = (await (await GET(new Request("http://x"), ctx)).json()) as { tasks: unknown[]; events: unknown[] };
+    expect(tasks).toHaveLength(1);
+    expect(events).toEqual([]);
+    expect(listEventTasks).not.toHaveBeenCalled();
+  });
+
   it("with event tasks off, there are none", async () => {
     vi.mocked(eventTasksEnabled).mockReturnValue(false);
     vi.mocked(listEventTasks).mockResolvedValue([eventRow]);
@@ -161,6 +170,17 @@ describe("PATCH / DELETE /api/projects/[id]/scheduled-tasks/[taskId]", () => {
     expect(refused.status).toBe(400);
     expect(((await refused.json()) as { code: string }).code).toBe("invalid_selector");
     expect(updateTask).not.toHaveBeenCalled();
+  });
+
+  it("a member can't change or delete an event task", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+    vi.mocked(getEventTask).mockResolvedValue(eventRow);
+    vi.mocked(deleteTask).mockResolvedValue(false);
+    vi.mocked(deleteEventTask).mockResolvedValue(true);
+    expect((await PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ title: "x" }) }), eventCtx)).status).not.toBe(200);
+    expect(updateEventTask).not.toHaveBeenCalled();
+    expect((await DELETE(new Request("http://x", { method: "DELETE" }), eventCtx)).status).toBe(404);
+    expect(deleteEventTask).not.toHaveBeenCalled();
   });
 
   it("deletes an event task", async () => {

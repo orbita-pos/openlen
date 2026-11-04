@@ -295,12 +295,18 @@ export async function toolScheduleList(session: AgentSession, deps: AgentDeps, _
     if (!sd) return internalError();
     const now = sd.now();
     const timed = (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
-    if (!sd.events) return timed;
+    if (!sd.events || !isOwner(session)) return timed;
     const events = sd.events;
     const watched = await Promise.all((await events.list(session.projectId)).map(async (row) => eventView(row, await events.latestCards(row.id, 3))));
     return [...timed, ...watched];
   });
 }
+
+/** Whether the person talking is the project's owner: event tasks read what the site's visitors send, which only
+ *  the owner sees (lib/projects/acceso.ts; final review I8). */
+const isOwner = (session: AgentSession) => !session.personId || session.personId === session.userId;
+const OWNER_ONLY =
+  "Only the project's owner can create an event task: it reads what the site's visitors send, which only the owner sees. Tell the user to ask the owner; nothing was created.";
 
 /** An event task as the model reads it (ours). */
 function eventView(row: EventTaskRow, cards: readonly { readonly title: string; readonly status: string; readonly createdAt: Date }[]) {
@@ -318,6 +324,7 @@ function eventView(row: EventTaskRow, cards: readonly { readonly title: string; 
 }
 
 async function createEventTaskFrom(session: AgentSession, sd: ScheduledTasksDeps, events: EventTasksToolDeps, args: Record<string, unknown>) {
+  if (!isOwner(session)) return { code: "owner_only", message: OWNER_ONLY };
   const on = parseOn(args.on);
   if (!on.ok) return { code: "invalid_source", message: on.message };
   const checked = await events.validate(on.source, session.projectId, on.params);
@@ -348,7 +355,7 @@ export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps,
     const sd = depsOf(deps);
     if (!sd) return internalError();
     if (await sd.remove(session.projectId, args.id)) return { id: args.id, deleted: true };
-    if (sd.events && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
+    if (sd.events && isOwner(session) && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
     return { id: args.id, deleted: false, code: "schedule_not_found" };
   });
 }
@@ -357,7 +364,7 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
   return guarded(async () => {
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    const event = sd.events && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
+    const event = sd.events && isOwner(session) && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
     if (event && sd.events) {
       const change = eventTaskPatch(args);
       if (!change.ok) return change.error;
