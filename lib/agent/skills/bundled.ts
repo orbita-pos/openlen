@@ -83,9 +83,14 @@ function offHere(ctx: BundledContext): ReadonlySet<string> {
   return new Set(scheduleEnabled(ctx.env) ? [] : ["schedule"]);
 }
 
-/** And the ones it doesn't OFFER here: `tool-development` outside a tool project (its files stay readable). */
+/** And the ones it doesn't OFFER here: `tool-development` outside a tool project, `tool-suggestions` unless the
+ *  person turned «Sugerencias de herramientas» on and this isn't a tool project (their files stay readable). */
 function notOffered(ctx: BundledContext): ReadonlySet<string> {
-  return new Set([...offHere(ctx), ...(ctx.tool ? [] : ["tool-development"])]);
+  return new Set([
+    ...offHere(ctx),
+    ...(ctx.tool ? [] : ["tool-development"]),
+    ...(ctx.toolSuggestions && !ctx.tool ? [] : ["tool-suggestions"]),
+  ]);
 }
 
 /** OpenLen's skills in this context: the ones on disk and the generated ones it offers, by name. */

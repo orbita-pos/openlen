@@ -140,7 +140,8 @@
       "artifact-motion": "Een geanimeerde video maken",
       "artifact-audio": "Een audio of voice-over maken",
       "schedule": "Een taak plannen die Len op een vast tijdstip doet",
-      "tool-development": "Deze tool bouwen, wijzigen, installeren of controleren"
+      "tool-development": "Deze tool bouwen, wijzigen, installeren of controleren",
+      "tool-suggestions": "Een tool voor je OpenLen voorstellen"
     },
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",

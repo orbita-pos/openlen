@@ -155,6 +155,7 @@ import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshace
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
 import { toolsEnabled } from "@/lib/tools/enabled";
+import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
 import { declarationsOfTool } from "@/lib/agent/tool-mode";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
@@ -1129,7 +1130,22 @@ async function correrTurno(
         conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
       ])
     : [[], []];
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): `tool-suggestions` (and Len's
+  // `propose_action`) for whoever speaks, with «Sugerencias de herramientas» on, a paid plan, outside a tool project.
+  const ofrecerSugerencias = await suggestionsOfferedTo(quien, toolDelTurno).catch(() => false);
+  if (ofrecerSugerencias) {
+    const idiomaDelCatalogo = typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en";
+    deps.suggestionCatalog = async () => {
+      const [{ listInstallations }, { toInstalledToolView }, { suggestionCatalog }] = await Promise.all([
+        import("@/lib/tools/store"),
+        import("@/lib/tools/view"),
+        import("@/lib/tools/cards/catalog"),
+      ]);
+      const rows = await listInstallations(quien);
+      return suggestionCatalog({ installed: rows.map((r) => toInstalledToolView(r, { locale: idiomaDelCatalogo, requestHost: null, plan: "pro", releaseExists: true })) });
+    };
+  }
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(

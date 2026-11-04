@@ -140,7 +140,8 @@
       "artifact-motion": "Creare un video animato",
       "artifact-audio": "Creare un audio o una narrazione",
       "schedule": "Programmare un'attività che Len farà a un'ora precisa",
-      "tool-development": "Costruire, cambiare, installare o verificare questo strumento"
+      "tool-development": "Costruire, cambiare, installare o verificare questo strumento",
+      "tool-suggestions": "Proporre uno strumento per il tuo OpenLen"
     },
     "fileLimit": "Massimo 4 file per messaggio.",
     "fileTooBig": "Quel file supera i 20 MB.",

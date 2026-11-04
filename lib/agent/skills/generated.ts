@@ -28,6 +28,9 @@ export interface BundledContext {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** A project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len): `tool-development` is offered. */
   readonly tool?: boolean;
+  /** «Sugerencias de herramientas» on for whoever speaks, outside a tool project (lib/tools/suggestions.ts):
+   *  `tool-suggestions` is offered. */
+  readonly toolSuggestions?: boolean;
 }
 
 export interface GeneratedSkill {

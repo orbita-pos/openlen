@@ -229,6 +229,9 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno, addChangesToTurn: mocks.addChangesToTurn }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
+// «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
+const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
+vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 vi.mock("@/lib/projects/chat", () => ({
@@ -2056,6 +2059,18 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ skillCatalogMessage?: string | null; personalSkills?: string | null }])[0];
     const fila = () =>
       (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skills?: string; skillsDigest?: string } | null }])[1];
+
+    it("«Sugerencias de herramientas» on for whoever speaks: tool-suggestions is in the catalog; off, it isn't", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      suggestionsTo.mockResolvedValueOnce(true);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/- `tool-suggestions`: /);
+      expect(suggestionsTo).toHaveBeenLastCalledWith("u1", false);
+      suggestionsTo.mockResolvedValueOnce(false);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage ?? "").not.toMatch(/tool-suggestions/);
+    });
 
     it("the first turn carries the catalog; the second, with nothing changed, none", async () => {
       turno();
