@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, count, desc, eq, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { MAX_ACTIVE_TASKS_PER_PROJECT, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
@@ -71,6 +71,16 @@ export async function listEventTasks(projectId: string, o: { readonly includeIna
     .from(t)
     .where(o.includeInactive ? eq(t.projectId, projectId) : and(eq(t.projectId, projectId), eq(t.status, "active")))
     .orderBy(asc(t.createdAt), asc(t.id));
+}
+
+/** The active tasks of several projects: the phone's «Tareas», across what a person can edit. */
+export async function listEventTasksOfProjects(projectIds: readonly string[]): Promise<EventTaskRow[]> {
+  if (projectIds.length === 0) return [];
+  return db
+    .select()
+    .from(t)
+    .where(and(inArray(t.projectId, [...projectIds]), eq(t.status, "active")))
+    .orderBy(asc(t.createdAt));
 }
 
 export async function getEventTask(projectId: string, id: string): Promise<EventTaskRow | null> {

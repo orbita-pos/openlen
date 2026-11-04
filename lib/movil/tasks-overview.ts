@@ -8,6 +8,8 @@
  *   working    Len's turns running now, and active goals.
  *   scheduled  the scheduled tasks they can edit (owner and editors, as the web clock).
  *   resolved   the last 7 days: runs of the tasks they created, completed goals, resolved incidents.
+ *   events     their event tasks (spec local 2026-11-03-len-que-avisa, §8) with their records; and a pending
+ *              card of one needs them, in its project's chat.
  *
  * Every read is injected (`TasksOverviewDeps`): the route passes the stores, the test passes doubles.
  */
@@ -20,9 +22,12 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { isRecurringScheduleRecord } from "@/lib/scheduled-tasks/deepseek/domain";
 import { waitingFrom } from "@/lib/scheduled-tasks/waiting";
 import type { RunRow, RunWithTask, TaskRow } from "@/lib/scheduled-tasks/store";
+import type { EventTaskCardRow, EventTaskRecordRow, EventTaskRow } from "@/lib/event-tasks/store";
 import { viewForModel, type OpenLenScheduleView } from "@/lib/scheduled-tasks/view";
 
 const RESOLVED_DAYS = 7;
+/** An event task's latest records on the phone: a screen, not the web clock's 50. */
+const EVENT_RECORDS = 20;
 const DAY_MS = 86_400_000;
 /** Len Watch states where the person has something to do. */
 const WATCH_NEEDS_YOU: readonly Incident["status"][] = ["fix_ready", "needs_owner", "fix_failed"];
@@ -30,7 +35,8 @@ const WATCH_NEEDS_YOU: readonly Incident["status"][] = ["fix_ready", "needs_owne
 export type { VisibleProject };
 
 export interface OverviewItem {
-  readonly kind: "question" | "waiting" | "goal" | "len_watch" | "turn" | "run" | "incident";
+  /** `aviso`: an event task's card waiting for «Hazlo» or «Ahora no» (spec local 2026-11-03-len-que-avisa). */
+  readonly kind: "question" | "waiting" | "goal" | "len_watch" | "turn" | "run" | "incident" | "aviso";
   readonly projectId: string;
   readonly projectTitle: string;
   readonly text: string;
@@ -39,6 +45,23 @@ export interface OverviewItem {
   readonly open: "chat" | "gestion";
   /** A run's outcome (`done`, `no_credits`…). */
   readonly outcome?: string | null;
+  /** An `aviso`'s card, which its chat brings into view. */
+  readonly card?: string;
+}
+
+/** An event task (spec local 2026-11-03-len-que-avisa, §8): what it watches, read-only, and its records — what
+ *  each look found, never what a visitor sent nor the judge's conversation. */
+export interface EventItem {
+  readonly id: string;
+  readonly projectId: string;
+  readonly projectTitle: string;
+  readonly title: string;
+  readonly prompt: string;
+  readonly source: string;
+  readonly params: Record<string, unknown>;
+  readonly paused: boolean;
+  readonly lastCheckedAt: string | null;
+  readonly records: { readonly id: string; readonly kind: string; readonly reason: string | null; readonly count: number; readonly notified: boolean | null; readonly at: string }[];
 }
 
 /** A file Len delivered in a scheduled task's last run, opened from «Programadas». */
@@ -62,6 +85,8 @@ export interface TasksOverview {
   readonly working: OverviewItem[];
   readonly scheduled: ScheduledItem[];
   readonly resolved: OverviewItem[];
+  /** Always sent by this server; optional for the phone, which an older server answers without it. */
+  readonly events?: EventItem[];
 }
 
 export interface TasksOverviewDeps {
@@ -78,6 +103,10 @@ export interface TasksOverviewDeps {
   /** What Len delivered in a project between two instants: a run's files (its row does not keep its turn,
    *  and a project runs one turn at a time). */
   deliveriesBetween(projectId: string, from: Date, to: Date): Promise<DeliveryIndexRow[]>;
+  /** Event tasks, when they are on: the active ones of these projects, a task's records, the pending cards. */
+  eventTasksOf?(projectIds: readonly string[]): Promise<EventTaskRow[]>;
+  eventRecordsOf?(taskId: string, limit: number): Promise<EventTaskRecordRow[]>;
+  pendingCardsOf?(projectIds: readonly string[]): Promise<EventTaskCardRow[]>;
 }
 
 const canEdit = (p: VisibleProject) => p.role === "dueno" || p.role === "editor";
@@ -85,7 +114,7 @@ const newestFirst = (a: OverviewItem, b: OverviewItem) => b.at.localeCompare(a.a
 
 export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps): Promise<TasksOverview> {
   const projects = await deps.visibleProjects(userId);
-  if (projects.length === 0) return { needsYou: [], working: [], scheduled: [], resolved: [] };
+  if (projects.length === 0) return { needsYou: [], working: [], scheduled: [], resolved: [], events: [] };
   const now = deps.now();
   const since = new Date(now.getTime() - RESOLVED_DAYS * DAY_MS);
   const byId = new Map(projects.map((p) => [p.id, p]));
@@ -122,11 +151,38 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
     }),
   );
 
-  const [tasks, runs, incidents] = await Promise.all([
+  const [tasks, runs, incidents, eventTasks, cards] = await Promise.all([
     deps.tasksOf(editable.map((p) => p.id)),
     deps.runsSince(ids, since),
     deps.resolvedIncidents(editable.map((p) => p.id), since),
+    deps.eventTasksOf ? deps.eventTasksOf(editable.map((p) => p.id)) : Promise.resolve([]),
+    // A card is decided by whoever can edit the project, like the web's buttons.
+    deps.pendingCardsOf ? deps.pendingCardsOf(editable.map((p) => p.id)) : Promise.resolve([]),
   ]);
+  for (const c of cards) {
+    const p = byId.get(c.projectId);
+    if (p && canEdit(p)) needsYou.push(item(p, { kind: "aviso", text: c.title, at: c.createdAt.toISOString(), open: "chat", card: c.id }));
+  }
+  const events = await Promise.all(
+    eventTasks
+      .filter((t) => byId.has(t.projectId) && canEdit(byId.get(t.projectId)!))
+      .map(async (t): Promise<EventItem> => {
+        const records = deps.eventRecordsOf ? await deps.eventRecordsOf(t.id, EVENT_RECORDS) : [];
+        const p = byId.get(t.projectId)!;
+        return {
+          id: t.id,
+          projectId: p.id,
+          projectTitle: p.title,
+          title: t.title,
+          prompt: t.prompt,
+          source: t.source,
+          params: t.params,
+          paused: t.pausedAt !== null,
+          lastCheckedAt: t.lastCheckedAt ? t.lastCheckedAt.toISOString() : null,
+          records: records.map((r) => ({ id: r.id, kind: r.kind, reason: r.reason, count: r.count, notified: r.notified, at: r.lastAt.toISOString() })),
+        };
+      }),
+  );
   const scheduled = await Promise.all(
     tasks
       .filter((t) => byId.has(t.projectId) && canEdit(byId.get(t.projectId)!))
@@ -158,5 +214,5 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
     const p = byId.get(i.projectId);
     if (p && i.resolvedAt) resolved.push(item(p, { kind: "incident", text: i.summary ?? "", at: i.resolvedAt.toISOString(), open: "gestion" }));
   }
-  return { needsYou: needsYou.sort(newestFirst), working: working.sort(newestFirst), scheduled, resolved: resolved.sort(newestFirst) };
+  return { needsYou: needsYou.sort(newestFirst), working: working.sort(newestFirst), scheduled, resolved: resolved.sort(newestFirst), events };
 }

@@ -2,9 +2,11 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 
 export type EstadoAvisos = {
   estado: "cargando" | "noDisponible" | "desactivados" | "activando" | "activos" | "denegados" | "error";
-  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: "mencion" | "len_watch" } | null;
+  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: Tipo; tarjeta?: string | null } | null;
 };
 type Permiso = "granted" | "denied" | "prompt";
+/** `len_aviso`: an event task's card (spec local 2026-11-03-len-que-avisa, §8). */
+type Tipo = "mencion" | "len_watch" | "len_aviso";
 export interface EventosAvisos {
   token(token: string): Promise<void>;
   error(): void;
@@ -29,6 +31,8 @@ export function crearControlDeAvisos(d: {
   onAbrirProyecto(id: string, destino?: "equipo" | "gestion"): void;
   /** A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4). */
   onAbrirEntregado?(id: string, url: string): void;
+  /** An event task's push opens the project's chat on its card (null: a card id that isn't one). */
+  onAbrirAviso?(id: string, tarjeta: string | null): void;
 }) {
   let vivo = true;
   let permitido = false;
@@ -42,14 +46,22 @@ export function crearControlDeAvisos(d: {
   const emitir = (nuevo: Partial<EstadoAvisos>) => { estado = { ...estado, ...nuevo }; if (vivo) d.onEstado(estado); };
   const cancelarEspera = () => { if (temporizador) clearTimeout(temporizador); temporizador = undefined; };
   const pedir = (ruta: string, init?: RequestInit) => d.cliente.pedir(ruta, { ...init, signal: AbortSignal.timeout(12_000) });
-  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: "mencion" | "len_watch"; abrir?: string } | null => {
+  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: Tipo; abrir?: string; tarjeta?: string | null } | null => {
     if (!datos || typeof datos !== "object") return null;
     const b = datos as Record<string, unknown>;
     if (typeof b.projectId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(b.projectId) || typeof b.recipientUserId !== "string" || b.recipientUserId !== usuario) return null;
     // Only a delivery of THIS project, through its route (the one that checks access): nothing else opens.
     const entrega = new RegExp(`^/api/projects/${b.projectId}/deliveries/[A-Za-z0-9_-]{1,100}/[0-9a-f]{8}-[^/?#]{1,300}$`);
     const abrir = typeof b.abrir === "string" && entrega.test(b.abrir) ? b.abrir : null;
-    return { projectId: b.projectId, recipientUserId: b.recipientUserId, ...(b.type === "mencion" || b.type === "len_watch" ? { type: b.type } : {}), ...(abrir ? { abrir } : {}) };
+    // A card's id only as an id: anything else opens the chat without one.
+    const tarjeta = b.type === "len_aviso" ? (typeof b.tarjeta === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.tarjeta) ? b.tarjeta : null) : undefined;
+    return {
+      projectId: b.projectId,
+      recipientUserId: b.recipientUserId,
+      ...(b.type === "mencion" || b.type === "len_watch" || b.type === "len_aviso" ? { type: b.type } : {}),
+      ...(abrir ? { abrir } : {}),
+      ...(tarjeta !== undefined ? { tarjeta } : {}),
+    };
   };
   async function abrir(datos: unknown) {
     if (!vivo) return;
@@ -64,6 +76,8 @@ export function crearControlDeAvisos(d: {
         else if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
         // LEN WATCH: Gestión has where the fix stands, its button and the switches.
         else if (b.type === "len_watch") d.onAbrirProyecto(b.projectId, "gestion");
+        // An event task's card: the project's chat, where its «Hazlo» is.
+        else if (b.type === "len_aviso" && d.onAbrirAviso) d.onAbrirAviso(b.projectId, b.tarjeta ?? null);
         else d.onAbrirProyecto(b.projectId);
       }
     } catch { if (vivo) emitir({ estado: "error" }); }

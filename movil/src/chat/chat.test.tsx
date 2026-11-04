@@ -16,6 +16,8 @@ vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../deslizar", () => ({ useDeslizar: () => null }));
 vi.mock("./use-nota", () => ({ useNota: () => ({ niveles: [], segundos: 0 }) }));
 vi.mock("../llamada/tarjetas", () => ({ TarjetaDeLaApp: () => null }));
+// An event task's cards poll their own route; they have their own test (avisos.test.tsx).
+vi.mock("./avisos", () => ({ AvisosDeLen: () => null }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root, host: HTMLDivElement;
 const cerrar = vi.fn();

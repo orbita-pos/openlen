@@ -22,6 +22,7 @@ import { useSeguirChat } from "./use-seguir-chat";
 import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
+import { AvisosDeLen } from "./avisos";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -42,9 +43,11 @@ interface Props {
   /** Desde «Entregado»: la clave del elemento del hilo que hay que traer a la vista (el turno que entregó). */
   enfocar?: string | null;
   onEnfocado?: () => void;
+  /** An event task's push: the card to bring into view over the conversation. */
+  resaltarAviso?: string | null;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -222,6 +225,8 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       </header>
 
       <div className="ch-historial">
+      {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): an event task's cards, over the conversation. */}
+      <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />
       <div className="ch-log" ref={log} role="log" aria-live="polite" aria-relevant="additions text">
         <div className="ch-contenido" ref={contenido}>
         {filas}

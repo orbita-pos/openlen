@@ -25,8 +25,9 @@ function prueba(o: { configurado?: boolean; activa?: boolean; permiso?: "granted
     return Response.json({ disponible: o.disponible ?? true, activa: o.activa ?? false, recipientUserId: "ana" });
   }) };
   const entregados: [string, string][] = [];
-  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); }, onAbrirEntregado: (p, url) => { entregados.push([p, url]); } });
-  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, entregados, eventos: () => eventos! };
+  const avisosDeLen: [string, string | null][] = [];
+  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); }, onAbrirEntregado: (p, url) => { entregados.push([p, url]); }, onAbrirAviso: (p, tarjeta) => { avisosDeLen.push([p, tarjeta]); } });
+  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, entregados, avisosDeLen, eventos: () => eventos! };
 }
 // A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
 describe("the push of a finished task", () => {
@@ -44,6 +45,28 @@ describe("the push of a finished task", () => {
     }
     expect(p.entregados).toEqual([]);
     expect(p.abiertos).toEqual(["p1", "p1", "p1"]);
+  });
+});
+
+// An event task's notice (spec local 2026-11-03-len-que-avisa, §8): its card, in the project's chat.
+describe("the push of an event task's card", () => {
+  it("opens the project's chat on its card, after checking recipient and access", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "otra", type: "len_aviso", tarjeta: "c1" });
+    expect(p.avisosDeLen).toEqual([]);
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "c1" });
+    expect(p.avisosDeLen).toEqual([["p1", "c1"]]);
+    expect(p.abiertos).toEqual([]);
+  });
+  it("a card id that isn't one opens the chat without a card", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "../../x?y" });
+    expect(p.avisosDeLen).toEqual([["p1", null]]);
+  });
+  it("received in the foreground, Abrir keeps its card", async () => {
+    const p = prueba(); await p.control.iniciar();
+    p.eventos().recibir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "c1" }, "Reservas", "Dos reservas");
+    await p.control.abrirRecibido(); expect(p.avisosDeLen).toEqual([["p1", "c1"]]);
   });
 });
 

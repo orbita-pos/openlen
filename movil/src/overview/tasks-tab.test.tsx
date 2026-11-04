@@ -126,4 +126,53 @@ describe("TasksTab", () => {
     const { host } = await paint({ needsYou: [], working: [], scheduled: [], resolved: [] });
     expect(host.textContent).toContain("vacioTareas");
   });
+
+  it("tasks tab lists an event task with its records", async () => {
+    const event = {
+      id: "e1",
+      projectId: "p1",
+      projectTitle: "Mi tienda",
+      title: "Reservas que chocan",
+      prompt: "Avísame si chocan.",
+      source: "app_rows",
+      params: { table: "reservas", created_column: "created_at" },
+      paused: false,
+      lastCheckedAt: "2026-11-10T17:59:00.000Z",
+      records: [
+        { id: "r1", kind: "delivered", reason: null, count: 1, notified: true, at: "2026-11-10T17:00:00.000Z" },
+        { id: "r2", kind: "failed", reason: "table_missing", count: 2, notified: null, at: "2026-11-10T16:00:00.000Z" },
+      ],
+    };
+    const { host } = await paint({ ...OVERVIEW, events: [event] } as unknown as TasksOverview);
+    expect([...host.querySelectorAll("h2")].map((h) => h.textContent)).toContain("eventTasks.filterEvents");
+    const row = host.querySelector('[data-event-task="e1"]')!;
+    expect(row.textContent).toContain("Reservas que chocan");
+    expect(row.textContent).toContain("Mi tienda");
+    expect(row.textContent).toContain('eventTasks.sourceRows {"table":"reservas"}');
+    act(() => row.querySelector<HTMLButtonElement>("[data-event-records]")!.click());
+    const lines = [...row.querySelectorAll("[data-event-record]")].map((li) => li.textContent);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("eventTasks.recNotified");
+    expect(lines[1]).toContain('eventTasks.recFailed {"reason":"table_missing"}');
+    expect(lines[1]).toContain('eventTasks.recCount {"count":2}');
+  });
+
+  it("an event task pauses and is deleted from the phone too", async () => {
+    const event = { id: "e1", projectId: "p1", projectTitle: "Mi tienda", title: "Reservas", prompt: "x", source: "form_submissions", params: {}, paused: false, lastCheckedAt: null, records: [] };
+    const { host } = await paint({ ...OVERVIEW, events: [event] } as unknown as TasksOverview);
+    const row = host.querySelector('[data-event-task="e1"]')!;
+    expect(row.textContent).toContain("eventTasks.sourceAllForms");
+    await act(async () => row.querySelector<HTMLButtonElement>("[data-pause]")!.click());
+    expect(setTaskPaused).toHaveBeenCalledWith(expect.anything(), "p1", "e1", true);
+    act(() => host.querySelector<HTMLButtonElement>('[data-event-task="e1"] [data-delete]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-event-task="e1"] [data-confirm-delete]')!.click());
+    expect(deleteScheduledTask).toHaveBeenCalledWith(expect.anything(), "p1", "e1");
+  });
+
+  it("a pending card of «Te necesita» opens its project's chat on that card", async () => {
+    const aviso = { kind: "aviso", projectId: "p1", projectTitle: "Mi tienda", text: "Dos reservas a la misma hora", at: "2026-11-10T18:00:00.000Z", open: "chat", card: "c1" };
+    const { host, onAbrir } = await paint({ ...OVERVIEW, needsYou: [aviso] } as unknown as TasksOverview);
+    act(() => host.querySelector<HTMLButtonElement>("[data-needs-you]")!.click());
+    expect(onAbrir).toHaveBeenCalledWith("p1", "chat", "c1");
+  });
 });
