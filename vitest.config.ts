@@ -130,6 +130,7 @@ export default defineConfig({
       "lib/agent/user-language.test.ts",
       // EL MODO DISEÑO de las apps (spec local 2026-10-11).
       "lib/agent/design-request.test.ts",
+      "lib/agent/usar-pagina-version.test.ts",
       "lib/agent/design-block.test.ts",
       "lib/agent/design-screenshots.browser.test.ts",
       "lib/agent/design-captures.test.ts",

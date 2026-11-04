@@ -973,6 +973,13 @@ const TAB_IDLE_MS = 3 * 60_000;
 /** What `standStill` means for the page, said where the tab carries on. */
 const STOOD_STILL = "Between your calls it stood still (its scripts, timers and animations waited), so a game's clock sees that gap as one long frame.";
 
+/** A TOOL'S THEME is part of what the tab shows (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): the tool reads
+ *  its context when it boots, so light → dark loads it again. A page without a tool keeps its version. */
+export function tabVersionOf(html: string, opciones: OpenTab["opciones"], toolTheme: "light" | "dark" | undefined): string {
+  const version = versionOf(html, opciones);
+  return toolTheme ? `${version}:${toolTheme}` : version;
+}
+
 function versionOf(html: string, opciones: OpenTab["opciones"]): string {
   const h = createHash("sha256");
   h.update(html);
@@ -1366,7 +1373,7 @@ async function visitTab(
       });
     }
   }
-  const version = versionOf(html, opciones);
+  const version = tabVersionOf(html, opciones, p.toolBridge ? (p.toolBridge.theme ?? "light") : undefined);
   const enUnaApp = Boolean(p.vista?.app);
   const inicio = (doc: DocumentoServido) => doc.url + (opciones?.hash ?? "");
 
