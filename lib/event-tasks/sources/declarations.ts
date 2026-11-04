@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { EventSourceKind } from "../store";
 
-export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat", "app_users"];
+export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat", "app_users", "traffic"];
 
 const conditionSchema = z.object({
   field: z.string().min(1),
@@ -23,12 +23,21 @@ export const appRowsParamsSchema = z.object({
 export const formSubmissionsParamsSchema = z.object({ form: z.string().min(1).optional(), conditions: z.array(conditionSchema).optional() });
 export const visitorChatParamsSchema = z.object({ watch: z.enum(["messages", "signups"]).optional(), conditions: z.array(conditionSchema).optional() });
 export const appUsersParamsSchema = z.object({ conditions: z.array(conditionSchema).optional() });
+export const trafficParamsSchema = z.object({
+  metric: z.enum(["views", "visitors"]).optional(),
+  page: z.string().min(1).optional(),
+  change_percent: z.number().min(5).max(1000).optional(),
+  direction: z.enum(["up", "down", "either"]).optional(),
+  min_views: z.number().int().min(1).optional(),
+  conditions: z.array(conditionSchema).optional(),
+});
 
 const PARAMS: Record<EventSourceKind, z.ZodTypeAny> = {
   app_rows: appRowsParamsSchema,
   form_submissions: formSubmissionsParamsSchema,
   visitor_chat: visitorChatParamsSchema,
   app_users: appUsersParamsSchema,
+  traffic: trafficParamsSchema,
 };
 
 /** `schedule_create`'s `on`, Gemini-style like the file's other schemas (no oneOf). Ours. */
@@ -40,7 +49,7 @@ export const ON_DECLARATION: Record<string, unknown> = {
       type: "STRING",
       enum: [...SOURCE_KINDS],
       description:
-        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it). app_users: new sign-ups to the app (its production users).",
+        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it). app_users: new sign-ups to the app (its production users). traffic: the published page's visits of each day against the same weekday a week before.",
     },
     table: { type: "STRING", description: "app_rows: the table to watch for new rows." },
     created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },
@@ -54,6 +63,11 @@ export const ON_DECLARATION: Record<string, unknown> = {
         "form_submissions: the form to watch — its own id (f…) when it has one, else its position: bare on the home page (0, 1…), <page>:<position> on another page. Omit it for every form of the project.",
     },
     watch: { type: "STRING", enum: ["messages", "signups"], description: "visitor_chat: messages (default) or signups." },
+    metric: { type: "STRING", enum: ["views", "visitors"], description: "traffic: what is compared — views (default) or visitors (people)." },
+    page: { type: "STRING", description: "traffic: one page by its slug (\"/\" for the home page); omit it for the whole site." },
+    change_percent: { type: "NUMBER", description: "traffic: how much the day must change against a week before to wake the task, in percent (default 30, at least 5)." },
+    direction: { type: "STRING", enum: ["up", "down", "either"], description: "traffic: a rise, a fall, or either (default)." },
+    min_views: { type: "NUMBER", description: "traffic: below this many on both days nothing wakes the task (default 20)." },
     conditions: {
       type: "ARRAY",
       description: "Optional: only changes whose fields match all of these wake the task; they are checked before any model looks.",

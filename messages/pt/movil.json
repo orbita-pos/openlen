@@ -165,6 +165,8 @@
     "sourceChatMessages": "Mensagens no chat da sua página",
     "sourceChatSignups": "Cadastros no chat da sua página",
     "sourceAppUsers": "Cadastros no seu app",
+    "sourceTraffic": "Visitas de {page}",
+    "sourceTrafficSite": "Visitas do site",
     "conditions": "Condições",
     "recDelivered": "Len olhou",
     "recNotified": "Len avisou",

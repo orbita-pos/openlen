@@ -165,6 +165,8 @@
     "sourceChatMessages": "你页面聊天中的消息",
     "sourceChatSignups": "你页面聊天的注册",
     "sourceAppUsers": "你的应用的注册",
+    "sourceTraffic": "{page} 的访问",
+    "sourceTrafficSite": "网站的访问",
     "conditions": "条件",
     "recDelivered": "Len 已查看",
     "recNotified": "Len 已提醒",

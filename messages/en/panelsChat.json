@@ -602,6 +602,8 @@
     "sourceChatMessages": "Messages in your page's chat",
     "sourceChatSignups": "Sign-ups to your page's chat",
     "sourceAppUsers": "Sign-ups to your app",
+    "sourceTraffic": "Visits of {page}",
+    "sourceTrafficSite": "Visits of the site",
     "conditions": "Conditions",
     "recDelivered": "Len looked",
     "recNotified": "Len notified",

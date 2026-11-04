@@ -165,6 +165,8 @@
     "sourceChatMessages": "Berichten in de chat van je pagina",
     "sourceChatSignups": "Aanmeldingen bij de chat van je pagina",
     "sourceAppUsers": "Aanmeldingen bij je app",
+    "sourceTraffic": "Bezoeken van {page}",
+    "sourceTrafficSite": "Bezoeken van de site",
     "conditions": "Voorwaarden",
     "recDelivered": "Len keek",
     "recNotified": "Len meldde",
