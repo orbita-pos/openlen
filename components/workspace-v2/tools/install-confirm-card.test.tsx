@@ -30,7 +30,7 @@ async function render() {
   const onCancelled = vi.fn();
   root = createRoot(document.body.appendChild(document.createElement("div")));
   await act(async () =>
-    root!.render(<InstallConfirmCard projectId="p1" install={{ action: "install", placement: "rail", title: "Reservas" }} onInstalled={onInstalled} onCancelled={onCancelled} />),
+    root!.render(<InstallConfirmCard projectId="p1" install={{ placement: "rail", title: "Reservas" }} onInstalled={onInstalled} onCancelled={onCancelled} />),
   );
   return { onInstalled, onCancelled };
 }

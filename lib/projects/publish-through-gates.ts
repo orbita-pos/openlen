@@ -2,6 +2,7 @@
 // with its data, functions and Stripe gates, and the publish route's map of errors to HTTP codes.
 // The publish route answers with it, and Len Watch publishes a fix with it — so a fix published at
 // 3 a.m. stops at exactly the 428s a person would see (spec local 2026-10-30-len-watch, §5.7).
+import { ProjectIsToolError } from "@/lib/tools/errors";
 import "server-only";
 
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
@@ -129,6 +130,7 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
     if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
     if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
+    if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
     // Una app web que no compila no se publica (spec local 2026-10-07-apps):
     // se dice qué fichero y qué línea, para el dueño y para Len.
     if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
