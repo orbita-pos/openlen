@@ -36,16 +36,54 @@ type OpenLenUpdateResult =
   | { status: "declined" }
   | { status: "refused"; reason: "draft_no_production" | "eyes_never_write" | "owner_only" | "bad_change" };
 
+/** forms(): counts over ALL the project's submissions, and `lista` — the ones in the range asked for (since/until),
+ *  newest first, at most 50. `total` is every submission ever, not the range's: count the range with `lista`. */
+interface OpenLenFormsSummary {
+  zona: string;
+  sinVer: number;
+  hoy: number;
+  ayer: number;
+  total: number;
+  lista: Array<{ id: string; fecha: string; pagina: string | null; de: string | null; linea: string; visto: boolean }>;
+}
+
+interface OpenLenVisitCount {
+  vistas: number;
+  personas: number;
+  clics: number;
+}
+
+/** visits(): fixed windows, and `rango` — the range asked for (from/to; the last 7 days by default). */
+interface OpenLenVisitsSummary {
+  zona: string;
+  hoy: OpenLenVisitCount;
+  ayer: OpenLenVisitCount;
+  ultimos7: OpenLenVisitCount;
+  ultimos30: OpenLenVisitCount;
+  rango: {
+    desde: string;
+    hasta: string;
+    total: OpenLenVisitCount;
+    porDia: Array<{ dia: string; vistas: number }>;
+    paginas: Array<{ pagina: string; vistas: number }>;
+    deDonde: Array<{ origen: string; vistas: number }>;
+    dispositivos: Array<{ dispositivo: string; vistas: number }>;
+  };
+  /** Set when the range asked for was cut to the days with detail. */
+  recortadoDesde: string | null;
+}
+
 interface OpenLenBridge {
   context(): Promise<OpenLenToolContext>;
   onContext(callback: (context: OpenLenToolContext) => void): () => void;
   /** This tool's own backend, signed in as the person. */
   backend(): Promise<{ url: string; key: string; session: { access_token: string; refresh_token: string } & Record<string, unknown> }>;
-  projects(): Promise<Array<{ id: string; title: string }>>;
+  /** The projects the person can open, with their role in each: forms, visits and query answer only for "dueno". */
+  projects(): Promise<Array<{ id: string; title: string; role: "dueno" | "editor" | "lector" }>>;
   /** Form submissions; dates as YYYY-MM-DD in the person's time zone. */
-  forms(projectId: string, options?: { since?: string; until?: string }): Promise<unknown>;
+  forms(projectId: string, options?: { since?: string; until?: string }): Promise<OpenLenFormsSummary>;
   /** Visits; dates as YYYY-MM-DD. */
-  visits(projectId: string, options?: { from?: string; to?: string }): Promise<unknown>;
+  visits(projectId: string, options?: { from?: string; to?: string }): Promise<OpenLenVisitsSummary>;
   /** SELECT only, on the project's production data. */
   query(projectId: string, sql: string): Promise<unknown>;
   /** Asks the person first, in a dialog OpenLen draws. */
