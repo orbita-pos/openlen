@@ -3621,6 +3621,7 @@ function NewV2Inner() {
         onPublish={soloLector || pantallaDeInicio ? undefined : onPublish}
         published={published}
         projectId={loadedProject?.id}
+        isTool={loadedProject?.tool === true}
         artifactsEnabled={loadedProject?.artifacts === true}
         artifactsReadOnly={soloLector}
         artifactsData={artifactsOn ? artifacts : undefined}

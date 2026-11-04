@@ -28,7 +28,8 @@ export function InstallConfirmCard({
   onCancelled,
 }: {
   projectId: string;
-  install: ToolInstallConfirm;
+  /** What Len's `publish` left (`ToolInstallConfirm`), or the top bar's title alone — it doesn't read the manifest. */
+  install: Pick<ToolInstallConfirm, "title"> & Partial<Pick<ToolInstallConfirm, "placement">>;
   onInstalled: (title: string) => void;
   onCancelled?: () => void;
 }) {
@@ -60,7 +61,9 @@ export function InstallConfirmCard({
   return (
     <div className="mt-2 rounded-xl border bd bg-elev px-3 py-2.5" data-install-card={state.kind}>
       <p className="text-[13px] font-semibold fg">{t("installCard.title", { title: install.title })}</p>
-      <p className="mt-0.5 text-[12px] fg-muted">{install.placement === "rail" ? t("installCard.inRail") : t("installCard.inProject")}</p>
+      {install.placement ? (
+        <p className="mt-0.5 text-[12px] fg-muted">{install.placement === "rail" ? t("installCard.inRail") : t("installCard.inProject")}</p>
+      ) : null}
       {state.kind === "security_findings" ? (
         <div className="mt-2 rounded-lg bg-[var(--hover)] px-2.5 py-1.5 text-[12px] fg">
           <p className="font-medium">{t("installCard.findings")}</p>
