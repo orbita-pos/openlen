@@ -36,8 +36,8 @@ type OpenLenUpdateResult =
   | { status: "declined" }
   | { status: "refused"; reason: "draft_no_production" | "eyes_never_write" | "owner_only" | "bad_change" };
 
-/** forms(): counts over ALL the project's submissions, and `lista` — the ones in the range asked for (since/until),
- *  newest first, at most 50. `total` is every submission ever, not the range's: count the range with `lista`. */
+/** forms(): counts over ALL the project's submissions, and "lista" — the ones in the range asked for (since/until),
+ *  newest first, at most 50. "total" is every submission ever, not the range's: count the range with "lista". */
 interface OpenLenFormsSummary {
   zona: string;
   sinVer: number;
@@ -53,7 +53,7 @@ interface OpenLenVisitCount {
   clics: number;
 }
 
-/** visits(): fixed windows, and `rango` — the range asked for (from/to; the last 7 days by default). */
+/** visits(): fixed windows, and "rango" — the range asked for (from/to; the last 7 days by default). */
 interface OpenLenVisitsSummary {
   zona: string;
   hoy: OpenLenVisitCount;

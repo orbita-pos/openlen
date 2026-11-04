@@ -33,9 +33,9 @@ describe("toolSkeleton", () => {
 
   it("types what the bridge really returns — found in the real turn, where Len had to probe forms() and cast projects()", () => {
     const types = toolSkeleton({ title: "Herramienta", locale: "es" }).files["/src/openlen.d.ts"]!;
-    expect(types).toMatch(/projects(): Promise<Array<{ id: string; title: string; role: "dueno" | "editor" | "lector" }>>/);
-    expect(types).toMatch(/forms([^)]*): Promise<OpenLenFormsSummary>/);
-    expect(types).toMatch(/visits([^)]*): Promise<OpenLenVisitsSummary>/);
+    expect(types).toContain(`projects(): Promise<Array<{ id: string; title: string; role: "dueno" | "editor" | "lector" }>>;`);
+    expect(types).toContain(`forms(projectId: string, options?: { since?: string; until?: string }): Promise<OpenLenFormsSummary>;`);
+    expect(types).toContain(`visits(projectId: string, options?: { from?: string; to?: string }): Promise<OpenLenVisitsSummary>;`);
     for (const field of ["sinVer", "hoy", "ayer", "total", "lista", "linea", "visto"]) expect(types).toContain(field);
     for (const field of ["ultimos7", "ultimos30", "rango", "porDia", "deDonde", "recortadoDesde"]) expect(types).toContain(field);
   });
