@@ -260,6 +260,28 @@ describe("resumePendingJudges", () => {
     expect(s.marked).toEqual([{ id: "r1", notified: true }]);
   });
 
+  it("each pass hands a record put back to its judge (a note, «Volver a mirar»), once", async () => {
+    const s = setup();
+    s.records.push({ id: "r9", taskId: "t1", kind: "delivered", judge: "pending", note: "Ofrécele la 8.", lastAt: NOW } as never);
+    await tick(s.deps);
+    await tick(s.deps);
+    expect(s.judged).toEqual(["r9"]);
+  });
+
+  it("whether a card was already made is asked since the record was last queued, so a requeue's old card doesn't count", async () => {
+    const s = setup();
+    const LATER = new Date(NOW.getTime() + 60_000);
+    s.records.push({ id: "r9", taskId: "t1", kind: "delivered", judge: "pending", lastAt: LATER } as never);
+    const asked: [string, Date][] = [];
+    s.deps.cardOf = async (recordId, since) => {
+      asked.push([recordId, since]);
+      return false;
+    };
+    await resumePendingJudges(s.deps);
+    expect(asked).toEqual([["r9", LATER]]);
+    expect(s.judged).toEqual(["r9"]);
+  });
+
   it("a pending record of a deleted or inactive task is not judged", async () => {
     const s = setup({ observe: async () => ({ state: {}, changes: [change("1", "confirmada")] }) });
     await tick(s.deps);

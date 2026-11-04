@@ -92,11 +92,12 @@ export async function createCard(
 export type Decision = { ok: true; card: EventTaskCardRow } | { ok: false; reason: "not_pending" | "not_found" };
 
 /** «Hazlo» or «Ahora no»: once, whoever presses first, and only from the card's own project — the route checked
- *  access to THAT project, so a card id of another one decides nothing (final review C2). */
-export async function decideCard(projectId: string, cardId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<Decision> {
+ *  access to THAT project, so a card id of another one decides nothing (final review C2). «Ahora no» keeps the
+ *  owner's note, «¿Qué cambiarías?» (spec local 2026-11-04-hazlo, §7.6.7). */
+export async function decideCard(projectId: string, cardId: string, action: "accept" | "dismiss", actorId: string, now: Date, note: string | null = null): Promise<Decision> {
   const [card] = await db
     .update(c)
-    .set({ status: action === "accept" ? "accepted" : "dismissed", decidedBy: actorId, decidedAt: now })
+    .set({ status: action === "accept" ? "accepted" : "dismissed", decidedBy: actorId, decidedAt: now, dismissNote: action === "dismiss" ? note : null })
     .where(and(eq(c.id, cardId), eq(c.projectId, projectId), eq(c.status, "pending")))
     .returning();
   if (card) return { ok: true, card };
@@ -104,9 +105,14 @@ export async function decideCard(projectId: string, cardId: string, action: "acc
   return { ok: false, reason: exists ? "not_pending" : "not_found" };
 }
 
-/** The card a delivered record made, if it made one: a restart after the notice must not notify again. */
-export async function cardOfRecord(recordId: string): Promise<EventTaskCardRow | null> {
-  const [card] = await db.select().from(c).where(eq(c.recordId, recordId)).limit(1);
+/** The card a delivered record made since `since`, if it made one: a restart after the notice must not notify again,
+ *  and a record put back to its judge doesn't count the card it made before. */
+export async function cardOfRecord(recordId: string, since?: Date): Promise<EventTaskCardRow | null> {
+  const [card] = await db
+    .select()
+    .from(c)
+    .where(and(eq(c.recordId, recordId), since ? gte(c.createdAt, since) : undefined))
+    .limit(1);
   return card ?? null;
 }
 

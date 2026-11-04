@@ -167,6 +167,21 @@ describe("decideCard", () => {
     expect([x, y].find((r) => !r.ok)).toEqual({ ok: false, reason: "not_pending" });
   });
 
+  it("«Ahora no» with a note keeps the note on the card; without one it keeps none", async () => {
+    const task = await newTask();
+    const n = notifier();
+    const a = await card(task, "a", n, "a");
+    const b = await card(task, "b", n, "b");
+    expect(await cards.decideCard("p1", a.id, "dismiss", "u1", NOW, "Ofrécele la 8.")).toMatchObject({ ok: true, card: { dismissNote: "Ofrécele la 8." } });
+    expect(await cards.decideCard("p1", b.id, "accept", "u1", NOW, "ignored")).toMatchObject({ ok: true, card: { dismissNote: null } });
+  });
+
+  it("cardOfRecord since a time finds only the cards made since then: a requeued record's old card doesn't count", async () => {
+    const c = await card(await newTask(), "t", notifier());
+    expect((await cards.cardOfRecord("r1", new Date(c.createdAt.getTime() - 1000)))?.id).toBe(c.id);
+    expect(await cards.cardOfRecord("r1", new Date(c.createdAt.getTime() + 1000))).toBeNull();
+  });
+
   it("an unknown card is not_found", async () => {
     expect(await cards.decideCard("p1", "nope", "accept", "u1", NOW)).toEqual({ ok: false, reason: "not_found" });
   });
