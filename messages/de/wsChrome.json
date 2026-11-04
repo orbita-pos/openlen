@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "Fertig"
     }
+  },
+  "tools": {
+    "planRequired": "Du brauchst einen kostenpflichtigen Tarif, um dieses Tool zu öffnen."
   }
 }

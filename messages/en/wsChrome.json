@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "Done"
     }
+  },
+  "tools": {
+    "planRequired": "You need a paid plan to open this tool."
   }
 }

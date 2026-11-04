@@ -11,6 +11,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
   loadSavedProject: vi.fn(async (projectId: string) => mocks.proyectos[projectId] ?? null),
 }));
+// AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its label lives in toolInstallations.
+const tools = vi.hoisted(() => ({ byLabel: {} as Record<string, unknown> }));
+vi.mock("@/lib/tools/store", () => ({
+  installationByLabel: vi.fn(async (label: string) => tools.byLabel[label] ?? null),
+  readRelease: vi.fn(async () => ({ "/index.html": { content: "<html><head></head><body>tool</body></html>", contentType: "text/html; charset=utf-8" } })),
+}));
+vi.mock("@/lib/limits", () => ({ getUserPlan: vi.fn(async () => "pro") }));
 vi.mock("@/lib/backend/files", () => ({
   listProjectFiles: vi.fn(async (projectId: string, prefix = "/") =>
     Object.fromEntries(Object.entries(mocks.carpetas[projectId] ?? {}).filter(([p]) => p.startsWith(prefix))),
@@ -303,5 +310,43 @@ describe("GET /api/lienzo/site — los binarios de la carpeta", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
     expect(Array.from(new Uint8Array(await res.arrayBuffer()))).toEqual(Array.from(PNG));
+  });
+});
+
+describe("GET /api/lienzo/site — tools made by Len", () => {
+  const TOOL_LABEL = "lienzo-00112233445566778899aabbccddeeff";
+  const row = { id: "i1", personId: "u1", projectId: P2, releaseSha: "sha1", placement: "rail", titles: {}, descriptions: {}, iconPath: "/icon.svg", hostLabel: TOOL_LABEL, enabled: true, installedAt: new Date(), updatedAt: new Date(), removedAt: null };
+
+  it("an installed tool's label serves its release with the bridge", async () => {
+    tools.byLabel = { [TOOL_LABEL]: row };
+    const res = await pide(`${TOOL_LABEL}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("tool");
+    expect(html).toContain('<script src="/openlen/tool-bridge.js"></script>');
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
+    tools.byLabel = {};
+  });
+
+  it("a label that is neither a canvas nor a tool is a 404, as before", async () => {
+    tools.byLabel = {};
+    expect((await pide(`${TOOL_LABEL}.openlen.app`, "/")).status).toBe(404);
+  });
+
+  it("with OPENLEN_TOOLS=0 an installed tool is not served", async () => {
+    tools.byLabel = { [TOOL_LABEL]: row };
+    vi.stubEnv("OPENLEN_TOOLS", "0");
+    expect((await pide(`${TOOL_LABEL}.openlen.app`, "/")).status).toBe(404);
+    tools.byLabel = {};
+  });
+
+  it("a tool project's canvas serves the bridge script; another project's doesn't", async () => {
+    guardarDocumento({ html: "<p>t</p>", projectId: P1, userId: "u1", pagina: null, tool: true });
+    const res = await pide(host(P1), "/openlen/tool-bridge.js");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("window.openlen");
+    vaciarAlmacenParaPruebas();
+    guardarDocumento({ html: "<p>p</p>", projectId: P1, userId: "u1", pagina: null });
+    expect((await pide(host(P1), "/openlen/tool-bridge.js")).status).toBe(404);
   });
 });

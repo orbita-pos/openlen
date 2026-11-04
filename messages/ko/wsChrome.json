@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "완료"
     }
+  },
+  "tools": {
+    "planRequired": "이 도구를 열려면 유료 요금제가 필요해요."
   }
 }

@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "Terminé"
     }
+  },
+  "tools": {
+    "planRequired": "Il vous faut une offre payante pour ouvrir cet outil."
   }
 }

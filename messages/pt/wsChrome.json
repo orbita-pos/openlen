@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "Pronto"
     }
+  },
+  "tools": {
+    "planRequired": "Você precisa de um plano pago para abrir esta ferramenta."
   }
 }

@@ -736,5 +736,8 @@
       "noSteps": "—",
       "finished": "完了"
     }
+  },
+  "tools": {
+    "planRequired": "このツールを開くには有料プランが必要です。"
   }
 }
