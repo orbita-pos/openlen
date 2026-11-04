@@ -18,6 +18,7 @@ import { isVideoFile } from "@/lib/projects/chat-files";
 import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
+import { InstallConfirmCard } from "../tools/install-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -267,6 +268,7 @@ export function LenTurn({
   onUndo,
   onRetry,
   onPublished,
+  onInstalled,
   onConfirmSettled,
   onAnswerQuestion,
   onDismissQuestion,
@@ -289,6 +291,8 @@ export function LenTurn({
   onUndo?: (turn: DesignTurn) => void;
   onRetry: (turn: DesignTurn) => void;
   onPublished: (url: string) => void;
+  /** A tool installed from its «Instalar» card (spec local 2026-11-04-herramientas-hechas-por-len, §4.2). */
+  onInstalled?: (title: string) => void;
   onConfirmSettled: (turnId: string) => void;
   /** Pieza 3: la respuesta a una pregunta de Len, desde su tarjeta. */
   onAnswerQuestion: (turnId: string, questions: readonly UserQuestion[], answers: QuestionAnswer[]) => void;
@@ -409,6 +413,17 @@ export function LenTurn({
           onPublished={(url) => {
             onConfirmSettled(turn.id);
             onPublished(url);
+          }}
+          onCancelled={() => onConfirmSettled(turn.id)}
+        />
+      )}
+      {turn.install && (
+        <InstallConfirmCard
+          projectId={projectId}
+          install={turn.install}
+          onInstalled={(title) => {
+            onConfirmSettled(turn.id);
+            onInstalled?.(title);
           }}
           onCancelled={() => onConfirmSettled(turn.id)}
         />

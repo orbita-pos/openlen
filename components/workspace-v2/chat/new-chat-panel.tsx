@@ -535,6 +535,7 @@ function AgentChatView({
                 {...(soloLectura ? {} : { onUndo: chat.handleUndo })}
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
+                onInstalled={chat.handleInstalled}
                 onConfirmSettled={settle}
                 onAnswerQuestion={chat.answerQuestion}
                 onDismissQuestion={(id) => void chat.dismissQuestion(id)}

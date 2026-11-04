@@ -635,5 +635,17 @@
     "doneSent": "已发送给 {to}",
     "actionFailed": "无法完成：{error}",
     "yourNote": "你的备注：{note}"
+  },
+  "installCard": {
+    "title": "安装「{title}」",
+    "inRail": "它会出现在你的侧边栏。",
+    "inProject": "它会出现在你的项目里，在页面旁边。",
+    "install": "安装",
+    "installAnyway": "仍然安装",
+    "cancel": "取消",
+    "findings": "安全审查发现：",
+    "destructive": "安装会删除它数据库中的数据。仍然安装吗？",
+    "failed": "无法安装（{reason}）。",
+    "installed": "已安装。"
   }
 }

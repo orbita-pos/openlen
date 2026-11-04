@@ -635,5 +635,17 @@
     "doneSent": "Envoyé à {to}",
     "actionFailed": "Impossible : {error}",
     "yourNote": "Votre note : {note}"
+  },
+  "installCard": {
+    "title": "Installer « {title} »",
+    "inRail": "Il apparaîtra dans votre barre latérale.",
+    "inProject": "Il apparaîtra dans vos projets, à côté de la page.",
+    "install": "Installer",
+    "installAnyway": "Installer quand même",
+    "cancel": "Annuler",
+    "findings": "La revue de sécurité a trouvé :",
+    "destructive": "L'installation supprime des données de sa base. Installer quand même ?",
+    "failed": "Impossible d'installer ({reason}).",
+    "installed": "Installé."
   }
 }

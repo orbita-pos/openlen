@@ -119,7 +119,9 @@
       "limit": "Je hebt de limiet voor gepubliceerde projecten van je abonnement bereikt.",
       "invalid": "Publiceren mislukt. Controleer het subdomein en probeer opnieuw.",
       "checking": "Controleren…",
-      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen."
+      "langsFailed": "{langs} kon niet worden vertaald — publiceer opnieuw om het nogmaals te proberen.",
+      "install": "Installeren",
+      "installed": "«{title}» is geïnstalleerd in je OpenLen."
     },
     "errors": {
       "turn_limit": "De agent heeft de limiet van stappen per beurt bereikt.",

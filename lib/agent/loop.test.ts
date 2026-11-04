@@ -994,6 +994,32 @@ describe("runAgentLoop", () => {
     expect(r.errorCode).toBeNull();
   });
 
+  // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card mechanism, its own waiting state.
+  it("an install confirm emits its card and feeds the model a fixed waiting state with the tool", async () => {
+    const events: AgentStreamEvent[] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "publish", args: {} }, done],
+      [{ type: "text_delta", text: "Toca Instalar." }, done],
+    );
+    const callsSeen: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "instálala" }], tools: [],
+      openStream: (messages) => {
+        callsSeen.push([...messages]);
+        return stream(messages);
+      },
+      runTool: async () => ({
+        response: { ok: true },
+        action: { tool: "publish", ok: true, summary: "Reservas" },
+        confirm: { action: "install", placement: "rail", title: "Reservas" },
+      }),
+      emit: (e) => events.push(e),
+    });
+    expect(events.find((e) => e.type === "confirm")).toMatchObject({ type: "confirm", action: "install", placement: "rail", title: "Reservas" });
+    expect(JSON.stringify(callsSeen[1])).toContain("waiting_for_user_confirmation");
+    expect(JSON.stringify(callsSeen[1])).toContain("Reservas");
+  });
+
   it("a confirm outcome emits a confirm event, feeds the model waiting_for_user_confirmation, and continues", async () => {
     const events: AgentStreamEvent[] = [];
     const callsSeen: Message[][] = [];

@@ -606,6 +606,9 @@ export default defineConfig({
       "lib/agent/manual-de-la-plataforma.test.ts",
       // F3 de las apps web: lo que lee Len cuando el proyecto es una app.
       "lib/agent/modo-app.test.ts",
+      // Len's tool posture and install (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/agent/tool-mode.test.ts",
+      "lib/agent/tool-install.test.ts",
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
       "lib/agent/types-and-lint.test.ts",

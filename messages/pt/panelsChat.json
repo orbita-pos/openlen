@@ -635,5 +635,17 @@
     "doneSent": "Enviado para {to}",
     "actionFailed": "Não foi possível: {error}",
     "yourNote": "Sua nota: {note}"
+  },
+  "installCard": {
+    "title": "Instalar «{title}»",
+    "inRail": "Vai aparecer na sua barra lateral.",
+    "inProject": "Vai aparecer dentro dos seus projetos, ao lado da página.",
+    "install": "Instalar",
+    "installAnyway": "Instalar mesmo assim",
+    "cancel": "Cancelar",
+    "findings": "A revisão de segurança encontrou:",
+    "destructive": "Instalar apaga dados da base dela. Instalar mesmo assim?",
+    "failed": "Não foi possível instalar ({reason}).",
+    "installed": "Instalada."
   }
 }

@@ -1140,6 +1140,9 @@ export interface AgentSession {
    *  devuelve Read, las guardas de la escritura y las herramientas que en una
    *  app hacen otra cosa (deshacer, publicar). */
   app?: AppDeProyecto | null;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): `publish` installs, and the eyes can open
+   *  the installed version. Absent = not a tool. */
+  tool?: boolean;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -1460,6 +1463,7 @@ export interface ToolOutcome {
         /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode. */
         stripe?: StripeForCard;
       }
+    | import("./tool-install").ToolInstallConfirm
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -2425,6 +2429,24 @@ async function toolPublicar(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // A TOOL INSTALLS (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card, another action.
+  if (session.tool) {
+    const { toolInstalar } = await import("./tool-install");
+    return toolInstalar(session, {
+      loadProject: async (p, u) => deps.loadProject(p, u),
+      projectFiles: async (p) => (deps.projectFiles ? ((await deps.projectFiles(p).catch(() => null)) ?? {}) : {}),
+      compileErrors: (data, files) =>
+        data.app
+          ? [
+              ...erroresDeLaApp(data.app, files).map(textoDeDiagnostico),
+              ...problemasDelCascaron(data.app, sinOpIds(data.html ?? ""), files).map((d) => `${d.ruta} — ${d.mensaje}`),
+            ]
+          : [],
+      securityReview: async (p, l) => (deps.securityReview ? deps.securityReview(p, l) : null),
+      previewDataChanges: async (p) => (deps.previewDataChanges ? deps.previewDataChanges(p) : null),
+    }) as Promise<ToolOutcome>;
+  }
+
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
 

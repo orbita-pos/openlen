@@ -29,6 +29,7 @@ import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaraci
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
+import { manualOfTool } from "./tool-mode";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import {
   CARPETA_DOCS,
@@ -372,6 +373,8 @@ export function buildManualDeLaPlataforma(
   app: AppDeProyecto | null = null,
   /** Whether this turn's terminal is the box (`realTerminalFor` its owner, as bash's description). */
   realTerminal: boolean = realTerminalFor(null, env),
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): the tool section after the app's manual. */
+  tool = false,
 ): string {
   const conSkills = skillsEnabled(env);
   const page = partirElManual(manualSinPartir(), conSkills).agents;
@@ -379,7 +382,8 @@ export function buildManualDeLaPlataforma(
   const withFunctions = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
-  return terminalOnly(mode, env) ? paraSoloLaTerminal(withArtifacts) : withArtifacts;
+  const withTool = tool && app ? manualOfTool(withArtifacts) : withArtifacts;
+  return terminalOnly(mode, env) ? paraSoloLaTerminal(withTool) : withTool;
 }
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
