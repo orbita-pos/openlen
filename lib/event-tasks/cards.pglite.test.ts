@@ -115,6 +115,28 @@ describe("createCard", () => {
     expect((await cards.pendingCardsOfTask(a.id)).map((c) => c.id).sort()).toEqual([r2.id, again.id].sort());
   });
 
+  it("updateCardAction changes one action's record and leaves the other", async () => {
+    const task = await newTask();
+    const made = await cards.createCard(
+      {
+        task,
+        recordId: "r1",
+        title: "Choque",
+        summary: "Ana y Luis.",
+        actions: [
+          { kind: "data_change", table: "reservas", key: { id: "r2" }, set: { mesa: "6" }, before: { mesa: "4" } },
+          { kind: "reply", channel: "email", to: "luis@ejemplo.com", subject: "Tu reserva", body: "Hola" },
+        ],
+        subjectKey: "r2",
+      },
+      { notify: notifier().notify, siteUrl: "https://openlen.com" },
+    );
+    await cards.updateCardAction(made.id, 0, { state: "done", result: "mesa 4 → 6" });
+    const after = (await cards.getCard(made.id))!.actions!;
+    expect(after[0]).toMatchObject({ state: "done", result: "mesa 4 → 6", attempts: 0 });
+    expect(after[1]).toMatchObject({ state: "pending", result: null });
+  });
+
   it("the migration adds the new columns to existing tables, and running it twice is harmless", async () => {
     for (const statement of [...ALTER_EVENT_TASK_CARDS, ...ALTER_EVENT_TASK_CARDS]) await pg.query(statement);
     const cols = (await pg.query<{ table_name: string; column_name: string }>(

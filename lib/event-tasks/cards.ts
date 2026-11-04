@@ -6,12 +6,12 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, gt, gte, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { LenAvisoEvent } from "@/lib/notifications/types";
 
-import { actionsLine, freshRecord, type CardAction } from "./actions/types";
+import { actionsLine, freshRecord, type CardAction, type CardActionRecord } from "./actions/types";
 import type { EventTaskCardRow, EventTaskRow } from "./store";
 import { cardEmail } from "./texts";
 
@@ -108,6 +108,14 @@ export async function decideCard(projectId: string, cardId: string, action: "acc
 export async function cardOfRecord(recordId: string): Promise<EventTaskCardRow | null> {
   const [card] = await db.select().from(c).where(eq(c.recordId, recordId)).limit(1);
   return card ?? null;
+}
+
+/** One action's record of a card changes, in one statement: the others stay as they are. */
+export async function updateCardAction(cardId: string, index: number, patch: Partial<Omit<CardActionRecord, "action">>): Promise<void> {
+  await db
+    .update(c)
+    .set({ actions: sql`jsonb_set(${c.actions}, ${`{${index}}`}::text[], (${c.actions} -> ${index}::int) || ${JSON.stringify(patch)}::jsonb)` })
+    .where(eq(c.id, cardId));
 }
 
 export async function getCard(cardId: string): Promise<EventTaskCardRow | null> {

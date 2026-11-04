@@ -193,6 +193,25 @@ export async function updateRow(project: BackendProject, table: string, key: Row
   return rows[0] ? { row: rows[0] } : { error: "that row no longer exists" };
 }
 
+/** `updateRow`, compared (spec local 2026-11-04-hazlo, §7.3): it changes the row only while the `before` columns still
+ *  have those values — they ride as filters beside the key — and answers `changed` when they don't, applying nothing.
+ *  An event task's card applies through here, as the owner, like merging a pull request. */
+export async function updateRowIf(project: BackendProject, table: string, key: Row, before: Row, values: Row): Promise<{ row: Row } | { changed: true } | Failure> {
+  const info = await findTable(project, table);
+  if ("error" in info) return info;
+  const q = keyFilter(info, key);
+  if ("error" in q) return q;
+  for (const [col, v] of Object.entries(before)) {
+    if (!SIMPLE_NAME.test(col) || !info.columns.some((c) => c.name === col)) return { error: `table "${table}" has no column "${col}"` };
+    q.append(col, v === null || v === undefined ? "is.null" : `eq.${String(v)}`);
+  }
+  q.set("select", "*");
+  const r = await rest(project, table, q, { method: "PATCH", body: values, prefer: "return=representation" });
+  if ("error" in r) return r;
+  const rows = r.body as Row[];
+  return rows[0] ? { row: rows[0] } : { changed: true };
+}
+
 export async function deleteRow(project: BackendProject, table: string, key: Row): Promise<{ ok: true } | Failure> {
   const info = await findTable(project, table);
   if ("error" in info) return info;

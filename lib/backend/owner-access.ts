@@ -23,6 +23,19 @@ export type OwnedBackend =
   | { readonly kind: "empty"; readonly url: string; readonly environment: Environment }
   | { readonly kind: "ready"; readonly url: string; readonly environment: Environment; readonly project: BackendProject };
 
+/** Production's backend of a project, for a route that already checked its owner (an event task's «Aplicar», spec local
+ *  2026-11-04-hazlo, §7.3): `ownedBackend`'s project without the session. Null without one. */
+export async function liveBackendProject(projectId: string): Promise<BackendProject | null> {
+  if (!backendConfigured()) return null;
+  const record = await getBackendByProject(projectId);
+  if (!record) return null;
+  await adoptLegacyEnvironment(record);
+  const e = await getEnvironment(projectId, "live");
+  if (!e?.provisionedAt) return null;
+  const [p] = await db.select({ subdomain: schema.projects.subdomain }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+  return backendProjectFor({ record, pageSub: p?.subdomain ?? null }, e);
+}
+
 /** El backend del proyecto en un entorno (spec local 2026-10-09). Sin pedir
  *  ninguno: producción si ya existe, si no el borrador. */
 export async function ownedBackend(projectId: string, wanted?: Environment): Promise<OwnedBackend> {
