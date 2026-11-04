@@ -169,6 +169,27 @@
     "filterAll": "Todas",
     "filterTime": "Por horário",
     "filterEvents": "Por evento",
-    "lastCheck": "Última verificação: {when}"
+    "lastCheck": "Última verificação: {when}",
+    "actionData": "Alteração em {table}",
+    "actionReply": "Para: {to} · Por: e-mail",
+    "apply": "Aplicar",
+    "applyAndSend": "Aplicar e enviar",
+    "rowChanged": "A linha mudou desde o aviso: nada foi aplicado.",
+    "rowNow": "Agora: {now}",
+    "lookAgain": "Olhar de novo",
+    "lookingAgain": "O Len está olhando de novo; outro aviso vai chegar.",
+    "dailyLimit": "Não restam revisões hoje para esta tarefa. Tente amanhã.",
+    "sending": "Enviando… (tentativa {attempts})",
+    "sendFailed": "Não foi enviado: {error}",
+    "withdraw": "Retirar",
+    "withdrawn": "Retirado",
+    "whatWouldYouChange": "O que você mudaria? (opcional)",
+    "askAgain": "Pedir outra",
+    "dismissConfirm": "Descartar",
+    "repliesGoTo": "As respostas chegarão a {email}",
+    "doneApplied": "Aplicado: {result}",
+    "doneSent": "Enviado para {to}",
+    "actionFailed": "Não foi possível: {error}",
+    "yourNote": "Sua nota: {note}"
   }
 }

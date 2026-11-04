@@ -169,6 +169,27 @@
     "filterAll": "すべて",
     "filterTime": "時刻",
     "filterEvents": "イベント",
-    "lastCheck": "最終確認: {when}"
+    "lastCheck": "最終確認: {when}",
+    "actionData": "{table} の変更",
+    "actionReply": "宛先: {to} · 方法: メール",
+    "apply": "適用",
+    "applyAndSend": "適用して送信",
+    "rowChanged": "お知らせの後で行が変わりました。何も適用していません。",
+    "rowNow": "現在: {now}",
+    "lookAgain": "もう一度確認",
+    "lookingAgain": "Len がもう一度確認しています。新しいお知らせが届きます。",
+    "dailyLimit": "このタスクの今日の確認回数は残っていません。明日お試しください。",
+    "sending": "送信中…（{attempts} 回目）",
+    "sendFailed": "送信できませんでした: {error}",
+    "withdraw": "取り消す",
+    "withdrawn": "取り消し済み",
+    "whatWouldYouChange": "何を変えますか？（任意）",
+    "askAgain": "別の提案を頼む",
+    "dismissConfirm": "見送る",
+    "repliesGoTo": "返信は {email} に届きます",
+    "doneApplied": "適用済み: {result}",
+    "doneSent": "{to} に送信しました",
+    "actionFailed": "できませんでした: {error}",
+    "yourNote": "あなたのメモ: {note}"
   }
 }
