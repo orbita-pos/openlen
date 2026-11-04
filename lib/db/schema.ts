@@ -2413,7 +2413,7 @@ export const eventTasks = pgTable(
     title: text("title").notNull(),
     /** The instruction, in the owner's words, with the facts the judgment needs. */
     prompt: text("prompt").notNull(),
-    source: text("source").$type<"app_rows" | "form_submissions" | "visitor_chat">().notNull(),
+    source: text("source").$type<"app_rows" | "form_submissions" | "visitor_chat" | "app_users">().notNull(),
     params: jsonb("params").$type<Record<string, unknown>>().notNull(),
     /** What the trigger last saw (the source's cursor). */
     state: jsonb("state").$type<Record<string, unknown>>(),

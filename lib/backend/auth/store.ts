@@ -332,6 +332,54 @@ export async function listEmailUsers(q: TxQuery, aud: string, limit: number): Pr
   return { emails: r.rows.map((x) => String(x.email)), total };
 }
 
+/** A sign-up as an event task reads it (lib/event-tasks/sources/app-users.ts): who, when (as Postgres wrote it), and
+ *  the user's own metadata — never a password, a token or the app's metadata. */
+export interface NewAuthUser {
+  id: string;
+  email: string | null;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
+const NEW_USER_COLUMNS = `id::text as id, email, created_at::text as created_at, coalesce(raw_user_meta_data, '{}'::jsonb) as metadata`;
+/** A real sign-up: dated, not deleted, not anonymous. */
+const SIGNED_UP = `aud = $1 and created_at is not null and deleted_at is null and not coalesce(is_anonymous, false)`;
+
+/** The sign-ups after a cursor (the time as text, then the id), oldest first. */
+export async function newAuthUsersAfter(q: TxQuery, aud: string, cursor: { readonly at: string; readonly id: string }, limit: number): Promise<NewAuthUser[]> {
+  const r = await q(
+    `select ${NEW_USER_COLUMNS} from auth.users where ${SIGNED_UP}
+       and (created_at > $2::timestamptz or (created_at = $2::timestamptz and id::text > $3))
+     order by created_at, id::text limit $4`,
+    [aud, cursor.at, cursor.id, limit],
+  );
+  return r.rows as unknown as NewAuthUser[];
+}
+
+export async function newestAuthUser(q: TxQuery, aud: string): Promise<NewAuthUser | null> {
+  return (await latestAuthUsers(q, aud, 1))[0] ?? null;
+}
+
+export async function latestAuthUsers(q: TxQuery, aud: string, limit: number): Promise<NewAuthUser[]> {
+  const r = await q(`select ${NEW_USER_COLUMNS} from auth.users where ${SIGNED_UP} order by created_at desc, id::text desc limit $2`, [aud, limit]);
+  return r.rows as unknown as NewAuthUser[];
+}
+
+export async function authUsersByIds(q: TxQuery, aud: string, ids: readonly string[]): Promise<NewAuthUser[]> {
+  if (ids.length === 0) return [];
+  const r = await q(`select ${NEW_USER_COLUMNS} from auth.users where ${SIGNED_UP} and id::text = any($2::text[]) order by created_at desc`, [aud, pgArray(ids)]);
+  return r.rows as unknown as NewAuthUser[];
+}
+
+/** The sign-ups whose email, or one field of their metadata, equals a value — the field as a parameter, never SQL. */
+export async function authUsersMatching(q: TxQuery, aud: string, field: string, value: string, limit: number): Promise<NewAuthUser[]> {
+  const r =
+    field === "email"
+      ? await q(`select ${NEW_USER_COLUMNS} from auth.users where ${SIGNED_UP} and email = $2 order by created_at desc limit $3`, [aud, value, limit])
+      : await q(`select ${NEW_USER_COLUMNS} from auth.users where ${SIGNED_UP} and raw_user_meta_data->>$3 = $2 order by created_at desc limit $4`, [aud, value, field, limit]);
+  return r.rows as unknown as NewAuthUser[];
+}
+
 export async function deleteUser(q: TxQuery, userId: string): Promise<boolean> {
   const r = await q(`delete from auth.users where id = $1 returning id`, [userId]);
   return r.rows.length > 0;

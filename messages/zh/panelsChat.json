@@ -600,6 +600,7 @@
     "sourceAllForms": "表单提交",
     "sourceChatMessages": "你页面聊天中的消息",
     "sourceChatSignups": "你页面聊天的注册",
+    "sourceAppUsers": "你的应用的注册",
     "conditions": "条件",
     "recDelivered": "Len 已查看",
     "recNotified": "Len 已提醒",

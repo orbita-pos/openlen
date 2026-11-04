@@ -247,6 +247,12 @@ describe("event tasks through the schedule tools", () => {
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "visitor_chat", watch: "everything" } })).code).toBe("invalid_source");
   });
 
+  it("schedule_create takes on.source app_users", async () => {
+    const { deps, events } = withEvents();
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "app_users" } }))).toMatchObject({ kind: "event", source: "app_users" });
+    expect(events.validate).toHaveBeenCalledWith("app_users", "p1", {}, expect.anything());
+  });
+
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");

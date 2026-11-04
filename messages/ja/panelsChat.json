@@ -600,6 +600,7 @@
     "sourceAllForms": "フォームの送信",
     "sourceChatMessages": "ページのチャットのメッセージ",
     "sourceChatSignups": "ページのチャットへの登録",
+    "sourceAppUsers": "アプリへの登録",
     "conditions": "条件",
     "recDelivered": "Len が確認",
     "recNotified": "Len が通知",
