@@ -167,6 +167,7 @@
     "sourceAppUsers": "Inscriptions à votre app",
     "sourceTraffic": "Visites de {page}",
     "sourceTrafficSite": "Visites du site",
+    "sourceGithub": "Issues, pull requests et CI du dépôt",
     "conditions": "Conditions",
     "recDelivered": "Len a regardé",
     "recNotified": "Len a prévenu",

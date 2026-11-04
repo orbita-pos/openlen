@@ -5,6 +5,7 @@ import type { EventSourceKind } from "../store";
 import { appRowsSource } from "./app-rows";
 import { appUsersSource } from "./app-users";
 import { formSubmissionsSource } from "./form-submissions";
+import { githubSource } from "./github";
 import { trafficSource } from "./traffic";
 import type { EventSource } from "./types";
 import { visitorChatSource } from "./visitor-chat";
@@ -15,6 +16,7 @@ const SOURCES: Record<EventSourceKind, EventSource<never, never>> = {
   visitor_chat: visitorChatSource as unknown as EventSource<never, never>,
   app_users: appUsersSource as unknown as EventSource<never, never>,
   traffic: trafficSource as unknown as EventSource<never, never>,
+  github: githubSource as unknown as EventSource<never, never>,
 };
 
 export function sourceOf(kind: EventSourceKind): EventSource<unknown, unknown> {

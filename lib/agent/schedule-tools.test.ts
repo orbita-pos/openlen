@@ -267,6 +267,12 @@ describe("event tasks through the schedule tools", () => {
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "traffic", change_percent: 1 } })).code).toBe("invalid_source");
   });
 
+  it("schedule_create takes on.source github", async () => {
+    const { deps, events } = withEvents();
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "github" } }))).toMatchObject({ kind: "event", source: "github" });
+    expect(events.validate).toHaveBeenCalledWith("github", "p1", {}, { timeZone: "America/Mexico_City", ownerId: "owner" });
+  });
+
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");

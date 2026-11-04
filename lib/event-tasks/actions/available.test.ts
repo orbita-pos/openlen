@@ -33,6 +33,15 @@ describe("availableActions", () => {
     expect(await availableActions(task("form_submissions"), "owner", ready(true))).toEqual({ project: true, dataChange: false, replyChannels: ["email"] });
   });
 
+  it("GitHub replies are offered only while a token can be had", async () => {
+    fakeSources.set("app_rows", { kind: "app_rows", offers: { dataChange: false, replies: ["github"] } });
+    expect(await availableActions(task("app_rows"), "owner", { ...ready(true), githubReady: vi.fn(async () => false) })).toEqual({ project: true, dataChange: false, replyChannels: [] });
+    const githubReady = vi.fn(async () => true);
+    expect(await availableActions(task("app_rows"), "owner", { ...ready(true), githubReady })).toEqual({ project: true, dataChange: false, replyChannels: ["github"] });
+    expect(githubReady).toHaveBeenCalledWith("p1", "owner");
+    fakeSources.clear();
+  });
+
   it("email is offered only with the project's email ready; other channels as the source offers them", async () => {
     fakeSources.set("app_rows", { kind: "app_rows", offers: { dataChange: false, replies: ["email", "chat"] } });
     expect(await availableActions(task("app_rows"), "owner", ready(false))).toEqual({ project: true, dataChange: false, replyChannels: ["chat"] });

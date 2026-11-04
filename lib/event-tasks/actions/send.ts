@@ -123,8 +123,9 @@ export async function defaultSendReplyDeps(): Promise<SendReplyDeps & { sending(
     import("./log"),
     import("./channels/chat"),
   ]);
+  const { defaultGithubSender } = await import("./channels/github");
   return {
-    senders: { chat: await chat.defaultChatSender() },
+    senders: { chat: await chat.defaultChatSender(), github: await defaultGithubSender() },
     log: await defaultActionLog(),
     send: (i) => sendProjectEmail(i, realSendDeps()),
     fromOf: async (projectId) => (await emailStateFor(projectId))?.from ?? null,

@@ -167,6 +167,7 @@
     "sourceAppUsers": "Sign-ups to your app",
     "sourceTraffic": "Visits of {page}",
     "sourceTrafficSite": "Visits of the site",
+    "sourceGithub": "Issues, pull requests and CI of the repository",
     "conditions": "Conditions",
     "recDelivered": "Len looked",
     "recNotified": "Len notified",

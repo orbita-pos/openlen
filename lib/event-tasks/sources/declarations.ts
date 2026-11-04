@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { EventSourceKind } from "../store";
 
-export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat", "app_users", "traffic"];
+export const SOURCE_KINDS: readonly EventSourceKind[] = ["app_rows", "form_submissions", "visitor_chat", "app_users", "traffic", "github"];
 
 const conditionSchema = z.object({
   field: z.string().min(1),
@@ -31,6 +31,7 @@ export const trafficParamsSchema = z.object({
   min_views: z.number().int().min(1).optional(),
   conditions: z.array(conditionSchema).optional(),
 });
+export const githubParamsSchema = z.object({ conditions: z.array(conditionSchema).optional() });
 
 const PARAMS: Record<EventSourceKind, z.ZodTypeAny> = {
   app_rows: appRowsParamsSchema,
@@ -38,6 +39,7 @@ const PARAMS: Record<EventSourceKind, z.ZodTypeAny> = {
   visitor_chat: visitorChatParamsSchema,
   app_users: appUsersParamsSchema,
   traffic: trafficParamsSchema,
+  github: githubParamsSchema,
 };
 
 /** `schedule_create`'s `on`, Gemini-style like the file's other schemas (no oneOf). Ours. */
@@ -49,7 +51,7 @@ export const ON_DECLARATION: Record<string, unknown> = {
       type: "STRING",
       enum: [...SOURCE_KINDS],
       description:
-        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it). app_users: new sign-ups to the app (its production users). traffic: the published page's visits of each day against the same weekday a week before.",
+        "app_rows: new rows of a table of the app's production base. form_submissions: what visitors send through the forms of a published page. visitor_chat: what visitors write to the business in the published page's chat (or, with watch signups, who signs up to it). app_users: new sign-ups to the app (its production users). traffic: the published page's visits of each day against the same weekday a week before. github: the connected GitHub repository's issues, pull requests and failed CI checks.",
     },
     table: { type: "STRING", description: "app_rows: the table to watch for new rows." },
     created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },

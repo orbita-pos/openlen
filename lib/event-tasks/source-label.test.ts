@@ -20,6 +20,10 @@ describe("sourceLabel", () => {
     expect(sourceLabel({ source: "traffic", params: {} })).toEqual({ key: "sourceTrafficSite" });
   });
 
+  it("github says what it watches", () => {
+    expect(sourceLabel({ source: "github", params: {} })).toEqual({ key: "sourceGithub" });
+  });
+
   it("app_users says sign-ups", () => {
     expect(sourceLabel({ source: "app_users", params: {} })).toEqual({ key: "sourceAppUsers" });
   });

@@ -167,6 +167,7 @@
     "sourceAppUsers": "Altas de tu app",
     "sourceTraffic": "Visitas de {page}",
     "sourceTrafficSite": "Visitas del sitio",
+    "sourceGithub": "Incidencias, pull requests y CI del repositorio",
     "conditions": "Condiciones",
     "recDelivered": "Len lo miró",
     "recNotified": "Len avisó",

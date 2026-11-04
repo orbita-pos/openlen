@@ -3,8 +3,9 @@
 // no token ever reaches the box or Len. It prints what the GitHub CLI prints without a terminal (./texts.ts). Its
 // repository is the one the project's remotes point to, found as gh finds it; its git is the project's own.
 import type { GitRunResult } from "@/lib/git/command";
-import { GITHUB_API, githubRepoOf, type GitHubInstallation } from "@/lib/integrations/github-app";
+import { rankedGithubRemote, type GitHubInstallation } from "@/lib/integrations/github-app";
 
+import { githubApi as api, githubMessage, type GitHubAnswer as Answer } from "./rest";
 import * as T from "./texts";
 
 export interface GhDeps {
@@ -83,31 +84,7 @@ const str = (p: Parsed, name: string) => {
 
 // ── GitHub's API ─────────────────────────────────────────────────────────────
 
-interface Answer {
-  readonly status: number;
-  // GitHub's JSON, read field by field below.
-  readonly body: any;
-  readonly url: string;
-}
-
-async function api(method: string, path: string, token: string, body?: unknown, accept = "application/vnd.github+json"): Promise<Answer> {
-  const url = `${GITHUB_API}${path}`;
-  const res = await fetch(url, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "OpenLen", ...(body ? { "Content-Type": "application/json" } : {}) },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  const text = await res.text();
-  let parsed: unknown = text;
-  try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    // A raw body (a README).
-  }
-  return { status: res.status, body: parsed, url };
-}
-
-const message = (a: Answer) => (a.body && typeof a.body === "object" && typeof a.body.message === "string" ? a.body.message : `HTTP ${a.status}`);
+const message = githubMessage;
 const httpFail = (a: Answer): never => exit(T.httpError(a.status, message(a), a.url));
 
 // ── The repository and its token ─────────────────────────────────────────────
@@ -127,8 +104,7 @@ async function baseRepo(deps: GhDeps): Promise<Repo> {
     if (m) urls.set(m[1]!, m[2]!);
   }
   if (urls.size === 0) exit(T.NO_REMOTES);
-  const rank = (n: string) => ["upstream", "github", "origin"].indexOf(n) === -1 ? 3 : ["upstream", "github", "origin"].indexOf(n);
-  const repo = [...urls.entries()].sort((a, b) => rank(a[0]) - rank(b[0])).map(([, u]) => githubRepoOf(u)).find((r) => r !== null);
+  const repo = rankedGithubRemote(Object.fromEntries([...urls].map(([name, url]) => [name, { url }])));
   if (!repo) exit(T.NO_GITHUB_REMOTE);
   return { owner: repo!.owner, name: repo!.repo, token: await repoToken(deps, repo!.owner, repo!.repo) };
 }
@@ -439,6 +415,24 @@ async function issueView(args: readonly string[], deps: GhDeps): Promise<GhResul
   );
 }
 
+/** `gh issue comment` and `gh pr comment` with --body: both post on the issue's conversation (a pull request is an
+ *  issue there), and print the comment's URL, as gh does without a terminal. */
+async function comment(kind: "issue" | "pr", args: readonly string[], ctx: { canEdit: boolean }, deps: GhDeps): Promise<GhResult> {
+  const p = parse(args, { value: ["--body"], short: { "-b": "--body" } });
+  const usage = kind === "issue" ? "gh issue comment {<number> | <url>} [flags]" : "gh pr comment [<number> | <url> | <branch>] [flags]";
+  const body = str(p, "--body");
+  // gh's own words when nothing gives it a body and it can't prompt.
+  if (!body) return fail(`flags required when not running interactively\n\nUsage:  ${usage}\n`);
+  const n = Number(String(p.positional[0] ?? "").replace(/^#/, "").replace(/^.*\/(?:issues|pull)\//, ""));
+  if (!n) return fail(`argument required: ${kind === "issue" ? "issue" : "pull request"} number or URL\n`);
+  if (!ctx.canEdit) return fail(T.PERMISSION_DENIED);
+  const repo = await baseRepo(deps);
+  const a = await api("POST", `/repos/${repo.owner}/${repo.name}/issues/${n}/comments`, repo.token, { body });
+  if (a.status === 404) return fail(`GraphQL: Could not resolve to an issue or pull request with the number of ${n}. (repository.issue)\n`);
+  if (a.status !== 201) httpFail(a);
+  return ok(`${a.body?.html_url ?? ""}\n`);
+}
+
 /** Known to gh, not here. */
 const ELSEWHERE: Readonly<Record<string, string>> = {
   api: "Use gh repo, gh pr or gh issue.",
@@ -478,12 +472,14 @@ export async function runGh(argv: readonly string[], ctx: { readonly canEdit: bo
       if (sub === "view") return await prView(rest, deps);
       if (sub === "checks") return await prChecks(rest, deps);
       if (sub === "merge") return await prMerge(rest, ctx, deps);
-      return fail(T.notHere(`pr ${sub ?? ""}`.trim(), "Use gh pr create, list, view, checks or merge."));
+      if (sub === "comment") return await comment("pr", rest, ctx, deps);
+      return fail(T.notHere(`pr ${sub ?? ""}`.trim(), "Use gh pr create, list, view, checks, merge or comment."));
     }
     if (cmd === "issue") {
       if (sub === "list") return await issueList(rest, deps);
       if (sub === "view") return await issueView(rest, deps);
-      return fail(T.notHere(`issue ${sub ?? ""}`.trim(), "Use gh issue list or gh issue view."));
+      if (sub === "comment") return await comment("issue", rest, ctx, deps);
+      return fail(T.notHere(`issue ${sub ?? ""}`.trim(), "Use gh issue list, view or comment."));
     }
     if (Object.hasOwn(ELSEWHERE, cmd)) return fail(T.notHere(cmd, ELSEWHERE[cmd]!));
     return fail(T.unknownCommand(cmd));

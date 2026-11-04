@@ -101,6 +101,18 @@ export function githubRepoOf(url: string): { owner: string; repo: string } | nul
   return repo ? { owner: parts[0]!, repo } : null;
 }
 
+/** gh's base repository among a project's remotes (remote_resolver.go): upstream first, then github, then origin, then
+ *  the rest in their order; the first that is a github.com repository. */
+export function rankedGithubRemote(remotes: Readonly<Record<string, { readonly url: string }>>): { owner: string; repo: string; url: string } | null {
+  const order = ["upstream", "github", "origin"];
+  const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : order.length);
+  for (const [, remote] of Object.entries(remotes).sort((a, b) => rank(a[0]) - rank(b[0]))) {
+    const found = githubRepoOf(remote.url);
+    if (found) return { ...found, url: remote.url };
+  }
+  return null;
+}
+
 /** The token for a remote's URL: only a github.com repository of an account the person installed the App on. */
 export async function tokenForRepoUrl(installations: readonly GitHubInstallation[], url: string): Promise<string | null> {
   const r = githubRepoOf(url);

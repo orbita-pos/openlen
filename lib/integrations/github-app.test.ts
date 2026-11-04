@@ -10,6 +10,7 @@ import {
   clearGitHubAppCache,
   githubAppConfigured,
   githubRepoOf,
+  rankedGithubRemote,
   installationToken,
   signInstallState,
   tokenForRepoUrl,
@@ -146,5 +147,19 @@ describe("the GitHub App", () => {
     expect(await userInstallation("ghu_tok", 88)).toBeNull();
     role = "admin";
     expect(await userInstallation("ghu_tok", 88)).toEqual({ installationId: 88, accountLogin: "acme", accountType: "Organization" });
+  });
+});
+
+describe("rankedGithubRemote", () => {
+  it("prefers upstream, then github, then origin, as gh does", () => {
+    expect(rankedGithubRemote({ origin: { url: "https://github.com/ana/web.git" }, upstream: { url: "https://github.com/acme/web.git" } })).toEqual({
+      owner: "acme",
+      repo: "web",
+      url: "https://github.com/acme/web.git",
+    });
+    expect(rankedGithubRemote({ origin: { url: "https://github.com/ana/web.git" }, github: { url: "https://github.com/ana/alt.git" } })).toMatchObject({ repo: "alt" });
+    expect(rankedGithubRemote({ gitlab: { url: "https://gitlab.com/a/b.git" }, origin: { url: "https://github.com/ana/web" } })).toMatchObject({ owner: "ana", repo: "web" });
+    expect(rankedGithubRemote({ gitlab: { url: "https://gitlab.com/a/b.git" } })).toBeNull();
+    expect(rankedGithubRemote({})).toBeNull();
   });
 });
