@@ -27,7 +27,7 @@ export interface InstallDeps {
   files(projectId: string): Promise<Record<string, string>>;
   securityGate(i: { projectId: string; actorId: string; accept?: string; locale: string }): Promise<{ stop: GatedPublishResult } | { fingerprint: string | null }>;
   entorno(projectId: string): Promise<Record<string, string>>;
-  build(p: { html: string; files: Record<string, string>; app: NonNullable<ProjectData["app"]>; entorno: Record<string, string>; iconPath: string }): Promise<{
+  build(p: { projectId: string; html: string; files: Record<string, string>; app: NonNullable<ProjectData["app"]>; entorno: Record<string, string>; iconPath: string }): Promise<{
     sha: string;
     files: Record<string, ToolReleaseFile>;
   }>;
@@ -125,7 +125,7 @@ export async function installTool(
   if ("stop" in gate) return gate.stop;
 
   try {
-    const release = await d.build({ html: project.data.html, files, app, entorno: await d.entorno(i.projectId), iconPath: manifest.manifest.iconPath });
+    const release = await d.build({ projectId: i.projectId, html: project.data.html, files, app, entorno: await d.entorno(i.projectId), iconPath: manifest.manifest.iconPath });
     const functions = await d.prepareFunctions(i.projectId, { skipMissingSecrets: i.skipMissingSecrets === true });
     await d.dataChanges({
       projectId: i.projectId,

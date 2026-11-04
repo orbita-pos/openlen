@@ -23,8 +23,8 @@ const deps = (over: Partial<ReleaseDeps> = {}): ReleaseDeps => ({
   ...over,
 });
 
-const build = (d: ReleaseDeps, files: Record<string, string> = FILES, html = SHELL) =>
-  buildToolRelease({ html, files, app: APP, entorno: { VITE_SUPABASE_URL: "https://ref.example" }, iconPath: "/icon.svg" }, d);
+const build = (d: ReleaseDeps, files: Record<string, string> = FILES, html = SHELL, projectId = "t1") =>
+  buildToolRelease({ projectId, html, files, app: APP, entorno: { VITE_SUPABASE_URL: "https://ref.example" }, iconPath: "/icon.svg" }, d);
 
 describe("buildToolRelease", () => {
   it("serves the shell, the production bundle at the entry, and what isn't a source", async () => {
@@ -42,7 +42,7 @@ describe("buildToolRelease", () => {
 
   it("the icon is in the release even if it weren't publishable", async () => {
     const r = await buildToolRelease(
-      { html: SHELL, files: { ...FILES, "/branding/mark.svg": "<svg/>" }, app: APP, entorno: {}, iconPath: "/branding/mark.svg" },
+      { projectId: "t1", html: SHELL, files: { ...FILES, "/branding/mark.svg": "<svg/>" }, app: APP, entorno: {}, iconPath: "/branding/mark.svg" },
       deps(),
     );
     expect(r.files["/branding/mark.svg"]?.content).toBe("<svg/>");
@@ -55,6 +55,12 @@ describe("buildToolRelease", () => {
     expect(a.sha).toMatch(/^[0-9a-f]{64}$/);
     expect(b.sha).toBe(a.sha);
     expect(c.sha).not.toBe(a.sha);
+  });
+
+  it("two tool projects with the same files get two releases: removing one project never takes the other's", async () => {
+    const a = await build(deps(), FILES, SHELL, "t1");
+    const b = await build(deps(), FILES, SHELL, "t2");
+    expect(b.sha).not.toBe(a.sha);
   });
 
   it("a source that doesn't compile refuses the install", async () => {
