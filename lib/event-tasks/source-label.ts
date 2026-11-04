@@ -12,6 +12,8 @@ export function sourceLabel(task: { readonly source: string; readonly params?: R
   switch (task.source) {
     case "app_rows":
       return text("after_hours") ? { key: "sourceRowsAfter", values: { table: text("table"), hours: text("after_hours") } } : { key: "sourceRows", values: { table: text("table") } };
+    case "github":
+      return { key: "sourceGithub" };
     case "traffic":
       return text("page") ? { key: "sourceTraffic", values: { page: text("page") } } : { key: "sourceTrafficSite" };
     case "app_users":

@@ -60,6 +60,8 @@ COMMANDS
   pr view:       View a pull request (--json)
   pr checks:     Show the checks of a pull request
   pr merge:      Merge a pull request (--merge|--squash|--rebase, --delete-branch)
+  pr comment:    Add a comment to a pull request (--body)
   issue list:    List issues (--state, --limit, --json)
   issue view:    View an issue (--json)
+  issue comment: Add a comment to an issue (--body)
 `;

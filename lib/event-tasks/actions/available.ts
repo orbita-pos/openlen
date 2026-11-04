@@ -16,14 +16,17 @@ export interface AvailableActions {
 
 export interface AvailableDeps {
   emailReady(projectId: string): Promise<boolean>;
+  /** Whether the owner's GitHub App gives a token for the project's repository now. */
+  githubReady?(projectId: string, ownerId: string): Promise<boolean>;
 }
 
 /** The owner travels with the task: a channel of the owner's own account (GitHub) asks about it. */
-export async function availableActions(task: EventTaskRow, _ownerId: string, deps: AvailableDeps): Promise<AvailableActions> {
+export async function availableActions(task: EventTaskRow, ownerId: string, deps: AvailableDeps): Promise<AvailableActions> {
   const offers = sourceOf(task.source).offers;
   const replyChannels: ReplyChannel[] = [];
   for (const channel of offers.replies) {
     if (channel === "email" && !(await deps.emailReady(task.projectId))) continue;
+    if (channel === "github" && !(await deps.githubReady?.(task.projectId, ownerId))) continue;
     replyChannels.push(channel);
   }
   return { project: true, dataChange: offers.dataChange, replyChannels };
@@ -36,6 +39,10 @@ export function defaultAvailableDeps(): AvailableDeps {
       const { emailStateFor } = await import("@/lib/project-email/state");
       const state = await emailStateFor(projectId);
       return state !== null && state.status === "ready" && state.plan !== "free";
+    },
+    githubReady: async (projectId, ownerId) => {
+      const [{ githubAppConfigured }, { githubRepoOfProject }] = await Promise.all([import("@/lib/integrations/github-app"), import("@/lib/integrations/github-app-store")]);
+      return githubAppConfigured() && (await githubRepoOfProject(projectId, ownerId)).ok;
     },
   };
 }

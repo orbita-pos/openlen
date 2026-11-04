@@ -167,6 +167,7 @@
     "sourceAppUsers": "Aanmeldingen bij je app",
     "sourceTraffic": "Bezoeken van {page}",
     "sourceTrafficSite": "Bezoeken van de site",
+    "sourceGithub": "Issues, pull requests en CI van de repository",
     "conditions": "Voorwaarden",
     "recDelivered": "Len keek",
     "recNotified": "Len meldde",

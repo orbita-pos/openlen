@@ -233,3 +233,28 @@ describe("gh issue", () => {
     expect((await gh("issue view 5")).stdout).toBe("title:\tFalla el menú\nstate:\tOPEN\nauthor:\teva\nlabels:\tbug\ncomments:\t0\nassignees:\t\nprojects:\t\nmilestone:\t\nnumber:\t5\n--\nNo abre\n");
   });
 });
+
+describe("gh issue comment and pr comment", () => {
+  it("issue comment posts the body and prints the comment's URL like gh", async () => {
+    routes["POST /repos/ana/web/issues/12/comments"] = () => json(201, { id: 5, html_url: "https://github.com/ana/web/issues/12#issuecomment-5" });
+    const r = await runGh(["issue", "comment", "12", "--body", "Lo miramos hoy."], { canEdit: true }, deps());
+    expect(r).toEqual({ stdout: "https://github.com/ana/web/issues/12#issuecomment-5\n", stderr: "", exitCode: 0 });
+    expect(calls.at(-1)).toMatchObject({ method: "POST", path: "/repos/ana/web/issues/12/comments", auth: "Bearer ghs_77_web", body: { body: "Lo miramos hoy." } });
+  });
+
+  it("pr comment posts on the pull request's conversation", async () => {
+    routes["POST /repos/ana/web/issues/7/comments"] = () => json(201, { html_url: "https://github.com/ana/web/pull/7#issuecomment-9" });
+    const r = await runGh(["pr", "comment", "#7", "-b", "Listo"], { canEdit: true }, deps());
+    expect(r.stdout).toBe("https://github.com/ana/web/pull/7#issuecomment-9\n");
+  });
+
+  it("a reader can't comment, and without a body it says what gh says", async () => {
+    expect((await runGh(["issue", "comment", "12", "--body", "x"], { canEdit: false }, deps())).stderr).toBe(T.PERMISSION_DENIED);
+    expect(await runGh(["issue", "comment", "12"], { canEdit: true }, deps())).toEqual({
+      stdout: "",
+      stderr: "flags required when not running interactively\n\nUsage:  gh issue comment {<number> | <url>} [flags]\n",
+      exitCode: 1,
+    });
+    expect(calls.filter((c) => c.method === "POST")).toEqual([]);
+  });
+});

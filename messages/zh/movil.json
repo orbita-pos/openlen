@@ -167,6 +167,7 @@
     "sourceAppUsers": "你的应用的注册",
     "sourceTraffic": "{page} 的访问",
     "sourceTrafficSite": "网站的访问",
+    "sourceGithub": "仓库的议题、拉取请求和 CI",
     "conditions": "条件",
     "recDelivered": "Len 已查看",
     "recNotified": "Len 已提醒",

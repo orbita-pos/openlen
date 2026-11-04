@@ -604,6 +604,7 @@
     "sourceAppUsers": "Anmeldungen in deiner App",
     "sourceTraffic": "Besuche von {page}",
     "sourceTrafficSite": "Besuche der Website",
+    "sourceGithub": "Issues, Pull Requests und CI des Repositorys",
     "conditions": "Bedingungen",
     "recDelivered": "Len hat nachgesehen",
     "recNotified": "Len hat Bescheid gegeben",

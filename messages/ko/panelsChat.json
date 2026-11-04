@@ -604,6 +604,7 @@
     "sourceAppUsers": "앱 가입",
     "sourceTraffic": "{page} 방문",
     "sourceTrafficSite": "사이트 방문",
+    "sourceGithub": "저장소의 이슈, 풀 리퀘스트, CI",
     "conditions": "조건",
     "recDelivered": "Len이 확인함",
     "recNotified": "Len이 알림",

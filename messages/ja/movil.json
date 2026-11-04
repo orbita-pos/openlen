@@ -167,6 +167,7 @@
     "sourceAppUsers": "アプリへの登録",
     "sourceTraffic": "{page} の訪問",
     "sourceTrafficSite": "サイトの訪問",
+    "sourceGithub": "リポジトリの Issue、プルリクエスト、CI",
     "conditions": "条件",
     "recDelivered": "Len が確認",
     "recNotified": "Len が通知",

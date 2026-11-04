@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
-import { githubAppConfigured, tokenForRepoUrl, type GitHubInstallation } from "./github-app";
+import { githubAppConfigured, rankedGithubRemote, tokenForRepoUrl, type GitHubInstallation } from "./github-app";
 
 export async function installationsOf(userId: string): Promise<GitHubInstallation[]> {
   const rows = await db
@@ -62,4 +62,21 @@ export function githubCredentials(ownerId: string): (url: string) => Promise<str
       return null;
     }
   };
+}
+
+/** A project's GitHub repository — the remote gh would pick — and the owner's installation token for it, asked for that
+ *  one repository and never stored (an event task's `github` source and its comments, spec local 2026-11-04-hazlo,
+ *  §7.4.5). Without it, why: no GitHub remote, the App not installed on the repository's account, or no token. */
+export async function githubRepoOfProject(
+  projectId: string,
+  ownerId: string,
+  token: typeof tokenForRepoUrl = tokenForRepoUrl,
+): Promise<{ ok: true; owner: string; repo: string; token: string } | { ok: false; reason: "no_remote" | "not_connected" | "no_token" }> {
+  const [row] = await db.select({ remotes: schema.projectGitRepos.remotes }).from(schema.projectGitRepos).where(eq(schema.projectGitRepos.projectId, projectId)).limit(1);
+  const found = rankedGithubRemote(row?.remotes ?? {});
+  if (!found) return { ok: false, reason: "no_remote" };
+  const installations = await installationsOf(ownerId);
+  if (!installations.some((i) => i.accountLogin.toLowerCase() === found.owner.toLowerCase())) return { ok: false, reason: "not_connected" };
+  const t = await token(installations, found.url);
+  return t ? { ok: true, owner: found.owner, repo: found.repo, token: t } : { ok: false, reason: "no_token" };
 }
