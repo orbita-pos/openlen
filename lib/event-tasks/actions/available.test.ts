@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/db", () => ({ db: {}, schema: { formSubmissions: {}, projects: {} } }));
+vi.mock("@/lib/db", async () => ({ db: {}, schema: await import("@/lib/db/schema") }));
 vi.mock("@/lib/backend/live-read", () => ({ queryLive: vi.fn() }));
 const fakeSources = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("../sources", async (original) => {
