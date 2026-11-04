@@ -52,6 +52,9 @@ export interface EventSource<P, S> {
   readonly kind: EventSourceKind;
   /** Its parameters' schema (./declarations.ts, shared with `schedule_create`'s `on`). */
   readonly paramsSchema: z.ZodType<P>;
+  /** What can be done with what it sees, beyond work in the project (spec local 2026-11-04-hazlo, §7.1): DeepSeek's
+   *  channels. A reply by email also needs the project's email ready (lib/event-tasks/actions/available.ts). */
+  readonly offers: { readonly dataChange: boolean; readonly replyByEmail: boolean };
   /** Whether a task can watch this, and its first state: what exists now never fires. */
   validate(projectId: string, params: P): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
   observe(projectId: string, params: P, state: S): Promise<Observation<S>>;

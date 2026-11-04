@@ -52,6 +52,8 @@ function summaryOf(data: Record<string, string>): string {
 export const formSubmissionsSource: EventSource<FormSubmissionsParams, FormSubmissionsState> = {
   kind: "form_submissions",
   paramsSchema,
+  // What a visitor sent is never changed; its sender can be answered.
+  offers: { dataChange: false, replyByEmail: true },
 
   async validate(projectId, params) {
     // A form the site has, or one whose submissions already came: a typo would watch nothing and say nothing
