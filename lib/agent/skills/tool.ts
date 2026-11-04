@@ -16,6 +16,8 @@ import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
 import { BUILT_IN_AGENT_TYPES } from "@/lib/agent/subagents/agent-paths";
 
 export const SKILL_TOOL = "skill";
+/** The «Crear» card's skill (spec local 2026-11-04-herramientas-hechas-por-len, §4.10). */
+export const TOOL_SUGGESTIONS = "tool-suggestions";
 
 export const DECLARACION_SKILL = {
   name: SKILL_TOOL,
@@ -82,7 +84,7 @@ export function foldLoadedSkills(
 export const forkedSkillLine = (name: string, id: string) => `Skill "${name}" started in subagent ${id}; its result arrives as a notice.`;
 export const ALREADY_RUNNING_IT = "You are the subagent already running this skill: follow its instructions above instead of starting it again.";
 
-export async function toolSkill(session: AgentSession, args: Record<string, unknown>, deps?: Pick<AgentDeps, "subagents">): Promise<ToolOutcome> {
+export async function toolSkill(session: AgentSession, args: Record<string, unknown>, deps?: Pick<AgentDeps, "subagents" | "suggestionCatalog">): Promise<ToolOutcome> {
   const name = typeof args.name === "string" ? args.name.trim() : "";
   if (!SKILL_NAME.test(name)) return { response: { ok: false, error: `invalid skill name "${String(args.name ?? "")}"` } };
   const found = session.skills?.get(name);
@@ -103,5 +105,10 @@ export async function toolSkill(session: AgentSession, args: Record<string, unkn
   const loaded = (session.loadedSkills ??= new Set());
   if (loaded.has(name)) return { response: { ok: true, tool_result: alreadyLoaded(name) } };
   loaded.add(name);
-  return { response: { ok: true, tool_result: renderSkillContent(found) }, action: { tool: SKILL_TOOL, ok: true, summary: name } };
+  // `tool-suggestions` carries what already exists, as DeepSeek's `personalized-pages` appends its official plugins.
+  const catalog = name === TOOL_SUGGESTIONS && deps?.suggestionCatalog ? await deps.suggestionCatalog().catch(() => null) : null;
+  const content = catalog ? `${renderSkillContent(found)}
+
+${catalog}` : renderSkillContent(found);
+  return { response: { ok: true, tool_result: content }, action: { tool: SKILL_TOOL, ok: true, summary: name } };
 }

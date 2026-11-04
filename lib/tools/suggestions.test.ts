@@ -23,7 +23,10 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const { suggestionsOffered, suggestionsOn, toolSuggestionsEnabled } = await import("./suggestions");
+const plan = vi.hoisted(() => ({ value: "pro", calls: 0 }));
+vi.mock("@/lib/limits", () => ({ getUserPlan: async () => (plan.calls++, plan.value) }));
+
+const { suggestionsOffered, suggestionsOfferedTo, suggestionsOn, toolSuggestionsEnabled } = await import("./suggestions");
 
 const all = { env: {}, plan: "pro", on: true, toolProject: false };
 
@@ -59,5 +62,19 @@ describe("suggestionsOn", () => {
     expect(await suggestionsOn("u1")).toBe(false);
     users.fail = true;
     expect(await suggestionsOn("u1")).toBe(false);
+  });
+});
+
+describe("suggestionsOfferedTo", () => {
+  it("reads the person's plan and switch only when the switches allow it", async () => {
+    users.fail = false;
+    users.value = true;
+    plan.calls = 0;
+    expect(await suggestionsOfferedTo("u1", false, { OPENLEN_TOOL_SUGGESTIONS: "0" })).toBe(false);
+    expect(await suggestionsOfferedTo("u1", true, {})).toBe(false);
+    expect(plan.calls).toBe(0);
+    expect(await suggestionsOfferedTo("u1", false, {})).toBe(true);
+    plan.value = "free";
+    expect(await suggestionsOfferedTo("u1", false, {})).toBe(false);
   });
 });

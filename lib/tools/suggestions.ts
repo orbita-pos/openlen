@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { getUserPlan } from "@/lib/limits";
 
 import { toolsEnabled } from "./enabled";
 
@@ -29,6 +30,13 @@ export async function suggestionsOn(personId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** For the turn of whoever speaks: reads their plan and switch only when the switches allow it at all. */
+export async function suggestionsOfferedTo(personId: string, toolProject: boolean, env: Env = process.env): Promise<boolean> {
+  if (!toolSuggestionsEnabled(env) || !subagentsEnabled(env) || toolProject) return false;
+  const [plan, on] = await Promise.all([getUserPlan(personId).catch(() => "free"), suggestionsOn(personId)]);
+  return suggestionsOffered({ env, plan, on, toolProject });
 }
 
 export async function setSuggestionsOn(personId: string, on: boolean): Promise<void> {

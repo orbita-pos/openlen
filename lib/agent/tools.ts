@@ -379,6 +379,9 @@ export interface AgentDeps {
   };
   /** The skills of `/.len/skills` and `~/.len/skills` (lib/agent/skills/store.ts). `ownerId` is the
    *  project for `project` and the person who speaks for `personal`. */
+  /** «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what already exists in OpenLen and the
+   *  person's installed tools, carried by the `tool-suggestions` skill. */
+  suggestionCatalog?: () => Promise<string>;
   skillStore?: {
     list(scope: SkillScope, ownerId: string): Promise<readonly StoredSkill[]>;
     upsert(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null): Promise<{ before: string | null }>;
