@@ -18,6 +18,7 @@ vi.mock("@/lib/db", async () => ({
 
 const { recordSubmission, formKeyOf } = await import("@/lib/projects/forms");
 const { formSubmissionsSource } = await import("./form-submissions");
+const CTX = { timeZone: "UTC", now: new Date("2026-11-04T12:00:00Z"), ownerId: "owner" };
 
 let pg: PGlite;
 beforeEach(async () => {
@@ -52,63 +53,63 @@ describe("the form a submission came from", () => {
 
 describe("formSubmissionsSource", () => {
   it("validate refuses a form the site doesn't have, naming the ones it does (review I12)", async () => {
-    const v = await formSubmissionsSource.validate("p1", { form: "home:0" });
+    const v = await formSubmissionsSource.validate("p1", { form: "home:0" }, CTX);
     expect(v.ok).toBe(false);
     if (!v.ok) for (const key of ["fhome1", "1", "contacto:0"]) expect(v.reason).toContain(key);
-    for (const form of ["fhome1", "1", "contacto:0"]) expect((await formSubmissionsSource.validate("p1", { form })).ok).toBe(true);
+    for (const form of ["fhome1", "1", "contacto:0"]) expect((await formSubmissionsSource.validate("p1", { form }, CTX)).ok).toBe(true);
     // A form whose submissions already came is accepted even if the page no longer has it.
     await submit("p2", "fold9", { nombre: "Ana" });
-    expect((await formSubmissionsSource.validate("p2", { form: "fold9" })).ok).toBe(true);
+    expect((await formSubmissionsSource.validate("p2", { form: "fold9" }, CTX)).ok).toBe(true);
     // Every form of the project: nothing to check.
-    expect((await formSubmissionsSource.validate("p2", {})).ok).toBe(true);
+    expect((await formSubmissionsSource.validate("p2", {}, CTX)).ok).toBe(true);
   });
 
   it("validate starts the cursor at the newest submission of that form", async () => {
     await submit("p1", "fab12", { nombre: "Ana" });
     await submit("p1", "fcd34", { nombre: "Otro formulario" });
-    const r = await formSubmissionsSource.validate("p1", { form: "fab12" });
+    const r = await formSubmissionsSource.validate("p1", { form: "fab12" }, CTX);
     expect(r.ok).toBe(true);
-    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never));
+    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never), CTX);
     expect(o.changes).toEqual([]);
   });
 
   it("observe returns submissions after the cursor, only of the asked form and the project", async () => {
-    const r = await formSubmissionsSource.validate("p1", { form: "fab12" });
+    const r = await formSubmissionsSource.validate("p1", { form: "fab12" }, CTX);
     await submit("p1", "fab12", { nombre: "Ana", correo: "ana@ejemplo.com", mensaje: "Hola" });
     await submit("p1", "fcd34", { nombre: "Otro formulario" });
     await submit("p2", "fab12", { nombre: "Otro proyecto" });
-    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never));
+    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never), CTX);
     expect(o.changes.map((c) => c.detail)).toEqual([{ nombre: "Ana", correo: "ana@ejemplo.com", mensaje: "Hola" }]);
     // jsonb keeps keys in its own order (shorter first, then bytewise), not the form's.
     expect(o.changes[0]).toMatchObject({ subject: "fab12", summary: "correo: ana@ejemplo.com · nombre: Ana" });
-    const again = await formSubmissionsSource.observe("p1", { form: "fab12" }, o.state);
+    const again = await formSubmissionsSource.observe("p1", { form: "fab12" }, o.state, CTX);
     expect(again.changes).toEqual([]);
   });
 
   it("without a form it watches every form of the project", async () => {
-    const r = await formSubmissionsSource.validate("p1", {});
+    const r = await formSubmissionsSource.validate("p1", {}, CTX);
     await submit("p1", "fab12", { nombre: "Ana" });
     await submit("p1", null, { nombre: "Sin id" });
-    const o = await formSubmissionsSource.observe("p1", {}, r.ok ? r.initialState : (null as never));
+    const o = await formSubmissionsSource.observe("p1", {}, r.ok ? r.initialState : (null as never), CTX);
     expect(o.changes.map((c) => c.subject)).toEqual(["fab12", "form"]);
   });
 
   it("two submissions in the same microsecond are both seen once", async () => {
-    const r = await formSubmissionsSource.validate("p1", {});
+    const r = await formSubmissionsSource.validate("p1", {}, CTX);
     await pg.exec(`INSERT INTO "formSubmissions" ("id","projectId","data","createdAt","formId") VALUES
       ('a', 'p1', '{"n":"1"}', '2030-01-01 00:00:00.123456', 'fab12'), ('b', 'p1', '{"n":"2"}', '2030-01-01 00:00:00.123456', 'fab12');`);
-    const first = await formSubmissionsSource.observe("p1", {}, r.ok ? r.initialState : (null as never));
+    const first = await formSubmissionsSource.observe("p1", {}, r.ok ? r.initialState : (null as never), CTX);
     expect(first.changes.map((c) => c.detail)).toEqual([{ n: "1" }, { n: "2" }]);
-    expect((await formSubmissionsSource.observe("p1", {}, first.state)).changes).toEqual([]);
+    expect((await formSubmissionsSource.observe("p1", {}, first.state, CTX)).changes).toEqual([]);
   });
 
   it("read returns the candidate's submissions and the previous 20 of that form", async () => {
     await submit("p1", "fab12", { nombre: "Eva" });
-    const r = await formSubmissionsSource.validate("p1", { form: "fab12" });
+    const r = await formSubmissionsSource.validate("p1", { form: "fab12" }, CTX);
     await submit("p1", "fab12", { nombre: "Ana" });
-    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never));
+    const o = await formSubmissionsSource.observe("p1", { form: "fab12" }, r.ok ? r.initialState : (null as never), CTX);
     const id = String(o.changes[0]!.link);
-    const read = (await formSubmissionsSource.read("p1", { form: "fab12" }, { keys: [id], state: o.state })) as { items: unknown[]; previous: unknown[] };
+    const read = (await formSubmissionsSource.read("p1", { form: "fab12" }, { keys: [id], state: o.state, ctx: CTX })) as { items: unknown[]; previous: unknown[] };
     expect(read.items).toEqual([{ id, data: { nombre: "Ana" } }]);
     expect(read.previous).toHaveLength(2);
   });
@@ -117,7 +118,7 @@ describe("formSubmissionsSource", () => {
     await submit("p1", "fab12", { nombre: "Ana", fecha: "2026-11-14" });
     await submit("p1", "fab12", { nombre: "Luis", fecha: "2026-11-15" });
     await submit("p2", "fab12", { nombre: "Otro", fecha: "2026-11-14" });
-    const out = (await formSubmissionsSource.read("p1", { form: "fab12" }, { keys: [], state: { cursor: { at: "-infinity", id: "" } }, match: [{ field: "fecha", value: "2026-11-14" }] })) as {
+    const out = (await formSubmissionsSource.read("p1", { form: "fab12" }, { keys: [], state: { cursor: { at: "-infinity", id: "" } }, match: [{ field: "fecha", value: "2026-11-14" }], ctx: CTX })) as {
       matching: { data: Record<string, string> }[];
     };
     expect(out.matching.map((r) => r.data.nombre)).toEqual(["Ana"]);

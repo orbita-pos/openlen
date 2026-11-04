@@ -23,6 +23,7 @@ vi.mock("@/lib/backend/live-read", () => ({
 }));
 
 const { appRowsSource } = await import("./app-rows");
+const CTX = { timeZone: "UTC", now: new Date("2026-11-04T12:00:00Z"), ownerId: "owner" };
 
 const pg = () => base.pg as PGlite;
 
@@ -42,7 +43,7 @@ beforeEach(async () => {
 
 describe("app_rows as the production read-only role", () => {
   it("finds the table's primary key and starts at its newest row", async () => {
-    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" }, CTX);
     expect(v).toEqual({ ok: true, initialState: { key_column: "id", cursor: { at: expect.any(String), key: "00000000-0000-0000-0000-000000000002" } } });
     // The cursor is Postgres's own text of the newest row's instant, in the session's zone.
     const at = v.ok ? (v.initialState as { cursor: { at: string } }).cursor.at : "";
@@ -50,35 +51,34 @@ describe("app_rows as the production read-only role", () => {
   });
 
   it("then sees a row added after it", async () => {
-    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" }, CTX);
     if (!v.ok) throw new Error(v.reason);
     await pg().exec(`RESET ROLE; INSERT INTO reservas (id, created_at, nombre) VALUES ('00000000-0000-0000-0000-000000000003', '2026-11-03 12:00:00+00', 'Marta'); SET ROLE ro;`);
-    const o = await appRowsSource.observe("p1", { table: "reservas", created_column: "created_at" }, v.initialState);
+    const o = await appRowsSource.observe("p1", { table: "reservas", created_column: "created_at" }, v.initialState, CTX);
     expect(o.changes.map((c) => c.detail.nombre)).toEqual(["Marta"]);
   });
 
   it("refuses a date column: rows of the same day can't be told apart by when they came", async () => {
-    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "dia" });
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "dia" }, CTX);
     expect(v.ok).toBe(false);
     if (!v.ok) expect(v.reason).toMatch(/timestamp/);
   });
 
   it("reads older rows by their fields, each value compared in its column's type (Task 13)", async () => {
-    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" }, CTX);
     if (!v.ok) throw new Error(v.reason);
     const out = (await appRowsSource.read("p1", { table: "reservas", created_column: "created_at" }, {
       keys: [],
       state: v.initialState,
-      match: [{ field: "dia", value: "2026-11-14" }, { field: "hora", value: "21:00" }, { field: "mesa", value: "4" }],
-    })) as { matching: { nombre: string }[] };
+      match: [{ field: "dia", value: "2026-11-14" }, { field: "hora", value: "21:00" }, { field: "mesa", value: "4" }], ctx: CTX })) as { matching: { nombre: string }[] };
     expect(out.matching.map((r) => r.nombre)).toEqual(["Ana"]);
   });
 
   it("a field that isn't a column of the table is said, with the columns there are", async () => {
-    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" }, CTX);
     if (!v.ok) throw new Error(v.reason);
     await expect(
-      appRowsSource.read("p1", { table: "reservas", created_column: "created_at" }, { keys: [], state: v.initialState, match: [{ field: "mesa\" OR 1=1 --", value: "4" }] }),
+      appRowsSource.read("p1", { table: "reservas", created_column: "created_at" }, { keys: [], state: v.initialState, match: [{ field: "mesa\" OR 1=1 --", value: "4" }], ctx: CTX }),
     ).rejects.toThrow(/no column .*Columns: .*mesa/);
   });
 });

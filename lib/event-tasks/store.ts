@@ -119,10 +119,11 @@ export async function resumeEventTask(projectId: string, id: string, now: Date):
   return row ?? null;
 }
 
-/** The tasks due a check, each claimed once: its `nextCheckAt` moves a minute on only if it is still as read. */
-export async function claimDueChecks(now: Date, limit: number): Promise<EventTaskRow[]> {
+/** The tasks due a check, each claimed once: its `nextCheckAt` moves on — a minute, or its source's own interval —
+ *  only if it is still as read. */
+export async function claimDueChecks(now: Date, limit: number, everyOf: (source: EventSourceKind) => number = () => CHECK_EVERY_MS): Promise<EventTaskRow[]> {
   const due = await db
-    .select({ id: t.id, nextCheckAt: t.nextCheckAt })
+    .select({ id: t.id, nextCheckAt: t.nextCheckAt, source: t.source })
     .from(t)
     .where(and(eq(t.status, "active"), isNull(t.pausedAt), lte(t.nextCheckAt, now)))
     .orderBy(asc(t.nextCheckAt))
@@ -131,7 +132,7 @@ export async function claimDueChecks(now: Date, limit: number): Promise<EventTas
   for (const task of due) {
     const [row] = await db
       .update(t)
-      .set({ nextCheckAt: new Date(now.getTime() + CHECK_EVERY_MS), lastCheckedAt: now })
+      .set({ nextCheckAt: new Date(now.getTime() + everyOf(task.source)), lastCheckedAt: now })
       // In milliseconds, JS's precision, as the scheduled tasks' claim.
       .where(and(eq(t.id, task.id), sql`date_trunc('milliseconds', ${t.nextCheckAt}) = ${task.nextCheckAt}`, eq(t.status, "active"), isNull(t.pausedAt)))
       .returning(WITHOUT_TRANSCRIPT);

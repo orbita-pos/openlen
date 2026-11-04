@@ -11,7 +11,7 @@ import "server-only";
 
 import type { Plan } from "@/lib/plan";
 
-import type { EventTaskRecordRow, EventTaskRow } from "./store";
+import { CHECK_EVERY_MS, type EventTaskRecordRow, type EventTaskRow } from "./store";
 import type * as store from "./store";
 import type { EventSource, Condition } from "./sources/types";
 import { SourceError } from "./sources/types";
@@ -116,7 +116,7 @@ async function check(task: EventTaskRow, deps: WatcherDeps): Promise<void> {
   const source = deps.sourceOf(task.source);
   let observation;
   try {
-    observation = await source.observe(task.projectId, task.params, task.state);
+    observation = await source.observe(task.projectId, task.params, task.state, { timeZone: task.timeZone, now, ownerId: access.ownerId });
   } catch (err) {
     const reason = err instanceof SourceError ? err.reason : "read_failed";
     if (!(err instanceof SourceError)) console.error(`[event-tasks] task ${task.id} could not observe its source`, err);
@@ -155,7 +155,7 @@ async function check(task: EventTaskRow, deps: WatcherDeps): Promise<void> {
 export async function tick(deps: WatcherDeps): Promise<void> {
   let checked = 0;
   while (checked < CHECKS_PER_PASS) {
-    const due = await deps.store.claimDueChecks(deps.now(), DUE_PER_TICK);
+    const due = await deps.store.claimDueChecks(deps.now(), DUE_PER_TICK, (s) => deps.sourceOf(s).checkEveryMs ?? CHECK_EVERY_MS);
     for (let i = 0; i < due.length; i += CHECKS_AT_ONCE) {
       await Promise.all(
         due.slice(i, i + CHECKS_AT_ONCE).map(async (task) => {

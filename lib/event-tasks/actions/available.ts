@@ -4,21 +4,29 @@
 import "server-only";
 
 import { sourceOf } from "../sources";
+import type { ReplyChannel } from "../sources/types";
 import type { EventTaskRow } from "../store";
 
 export interface AvailableActions {
   readonly project: true;
   readonly dataChange: boolean;
-  readonly reply: boolean;
+  /** The channels a reply can go by now: the source's, email only while the project's email is ready. */
+  readonly replyChannels: readonly ReplyChannel[];
 }
 
 export interface AvailableDeps {
   emailReady(projectId: string): Promise<boolean>;
 }
 
-export async function availableActions(task: EventTaskRow, deps: AvailableDeps): Promise<AvailableActions> {
+/** The owner travels with the task: a channel of the owner's own account (GitHub) asks about it. */
+export async function availableActions(task: EventTaskRow, _ownerId: string, deps: AvailableDeps): Promise<AvailableActions> {
   const offers = sourceOf(task.source).offers;
-  return { project: true, dataChange: offers.dataChange, reply: offers.replyByEmail && (await deps.emailReady(task.projectId)) };
+  const replyChannels: ReplyChannel[] = [];
+  for (const channel of offers.replies) {
+    if (channel === "email" && !(await deps.emailReady(task.projectId))) continue;
+    replyChannels.push(channel);
+  }
+  return { project: true, dataChange: offers.dataChange, replyChannels };
 }
 
 /** The project's email as it is now: on, a paid owner, a ready domain (lib/project-email/state.ts). */

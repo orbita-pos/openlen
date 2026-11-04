@@ -57,7 +57,7 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
     },
     runReadTool: async (session, name) => (reads.push({ session, name }), { response: { ok: true, tool_result: "contenido" } }),
     readSource: async () => ({ items: [], previous: [] }),
-    available: async () => ({ project: true, dataChange: true, reply: false }),
+    available: async () => ({ project: true, dataChange: true, replyChannels: [] }),
     tableInfo: async () => ({
       columns: [
         { name: "id", type: "uuid" },
